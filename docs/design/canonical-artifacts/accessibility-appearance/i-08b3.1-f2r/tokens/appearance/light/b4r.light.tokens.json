@@ -1,0 +1,127 @@
+{
+  "$description": "I-08B3.1-F2 — SURFACE AND READING, LIGHT APPEARANCE. This file fills the context I-08B3.1-B4R declared and deliberately left empty: 'DELIBERATELY EMPTY… the light expression has not been designed… Owned by I-08B3.1-F.' It supplies EXPRESSION values only. Not one semantic name is added, moved or re-pointed, and the dark set is untouched.",
+  "qandeel": {
+    "$type": "color",
+    "expression": {
+      "world": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.937255,
+            0.933333,
+            0.921569
+          ],
+          "hex": "#efeeeb"
+        },
+        "$description": "THE LIGHT WORLD. oklch(0.9491 0.0041 91.4).\n\nITS LIGHTNESS IS NOT A COMFORT JUDGEMENT AND NOT A MIRROR OF #101010. It is the highest lightness at which a meaning event can still be seen to HAPPEN: the search swept 0.880 to 0.985 and at 0.955 no expression family could produce a source that rises above this ground by more than the World-to-Surface step, because the ground had taken the ceiling the source needed. The World is as light as it can be while remaining a world a light can happen in.\n\nITS CHROMA IS THE LEAST THE SYSTEM CAN HOLD, which is the light-appearance instantiation of a rule the dark World states by being exactly achromatic: the ground is the quietest thing on screen. 0.0041 is the smallest authored chroma that survives 8-bit quantisation at this lightness with its hue intact — and the hue is 91.4, the mean of QANDEEL's own three reading inks, so the ground is not a new colour decision but the system's own warmth at the lowest volume it has.\n\nWHY NOT WHITE. Apple and Material both ship a white light background and QANDEEL departs from both. The reason is not glare in the abstract: it is that a World at the ceiling cannot hold a light, and this World's job is to hold one.\n\nMEASURED AGAINST THE OBVIOUS ANSWER RATHER THAN KEPT AWAY FROM IT: the calibration note in the frontend-design skill names 'a warm cream background near #F4F1EA' as one of three looks AI-generated design clusters on. This value sits dEok 0.0111 from it and carries 0.0041 of chroma against the cream's 0.0098 — less than half as coloured, because the ladder requires the ground to be the least chromatic band and a cream is not.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.light-remains-meaning",
+            "why": "A SEARCHED VALUE AGAINST A STATED BOUND, on one renderer, with a 12% margin on the requirement that fixed it. The CONTRACT is that the light World is a continuous low-chroma ground that is not white and can hold a light; 0.9491 is the lightness this proof was drawn at and is tunable downward on device evidence."
+          },
+          "com.qandeel.provenance": {
+            "derivedBy": "tools/f2-derive.mjs",
+            "rule": "the highest lightness at which an admissible meaning expression still exists; chroma = the least that survives quantisation with its hue intact; hue = the mean of the three frozen reading inks",
+            "authoredAs": {
+              "colorSpace": "oklch",
+              "L": 0.95,
+              "C": 0.004,
+              "H": 93.1
+            },
+            "recovered": {
+              "L": 0.9491,
+              "C": 0.0041,
+              "H": 91.4
+            }
+          }
+        }
+      },
+      "surface": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.905882,
+            0.901961,
+            0.890196
+          ],
+          "hex": "#e7e6e3"
+        },
+        "$description": "THE ONE FUNCTIONAL SURFACE VALUE, LIGHT APPEARANCE. oklch(0.9249 0.0042 91.4).\n\nIT IS DEEPER THAN THE WORLD, WHERE THE DARK SURFACE IS LIGHTER THAN IT — and that sign change is derived, not inverted. One sentence covers both appearances: THE SURFACE MOVES AWAY FROM THE EXTREME. In dark the extreme is black and the machinery is lifted off it; in light the extreme is white and the machinery is deepened away from it. Lifting it in light would push the functional chrome toward the ceiling, which is where the glare is and where Apple's materials guidance says a light surface stacked on a light surface loses its legibility.\n\nTHE MAGNITUDE IS THE FROZEN ONE, UNTOUCHED: 1.0716:1 against the World, the same ratio #181818 holds against #101010. That ratio is deliberately tiny and stays tiny, including the consequence — I-08B3.1-F1 had to introduce a contrast BOUNDARY token because the World and the Surface are separated by almost nothing, and the light appearance inherits that weakness along with the value rather than quietly repairing it. An appearance may not invent hierarchy, and 'fixing' this gap would be inventing one.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.reading-hierarchy-is-preserved",
+            "why": "the RATIO is inherited and frozen; this hex is the value that ratio resolves to against the light World."
+          }
+        }
+      },
+      "content": {
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.reading-hierarchy-is-preserved",
+            "why": "THE RATIOS ARE THE CONTRACT AND THESE THREE HEXES ARE WHERE THEY LAND. 12.95:1, 8.38:1 and 5.44:1 are frozen in I-08B3.1-A and are reproduced here against a different ground; the values that reproduce them are a consequence of that ground and move with it. Classified once on the group so all three rungs inherit it, because the three are one decision and not three."
+          }
+        },
+        "$description": "THE READING RAMP, LIGHT APPEARANCE. Every rung holds the exact WCAG contrast ratio its dark counterpart holds against its own ground, so the hierarchy is identical and not one value is shared. The rungs were solved IN ORDER under a running chroma cap: solved independently they come back in a different chroma order than they went in, because the three are 0.002 apart in chroma and the 8-bit grid is coarser than that at these lightnesses. The ladder is the contract.",
+        "primary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.160784,
+              0.152941,
+              0.121569
+            ],
+            "hex": "#29271f"
+          },
+          "$description": "Primary reading. 12.89:1 against the light World, against the frozen 12.95:1 in dark. oklch(0.2721 0.0145 95.6) — and it is NOT black. Pure black on this ground would be 18.1:1, and QANDEEL's reading hierarchy is a set of ratios rather than a race to the top; maximising the first rung would compress every rung below it."
+        },
+        "secondary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.278431,
+              0.266667,
+              0.235294
+            ],
+            "hex": "#47443c"
+          },
+          "$description": "Secondary reading. 8.36:1, against the frozen 8.38:1. oklch(0.3870 0.0138 89.9)."
+        },
+        "tertiary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.384314,
+              0.376471,
+              0.34902
+            ],
+            "hex": "#626059"
+          },
+          "$description": "Tertiary neutral. 5.43:1, against the frozen 5.44:1. oklch(0.4887 0.0112 93.7). Also the ink of a Map relation stroke, which is a graphical object under WCAG 2.2 SC 1.4.11 rather than text — so this rung carries the non-text contrast duty in both appearances."
+        }
+      },
+      "scrim": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 0.532,
+          "hex": "#000000"
+        },
+        "$description": "THE PASSAGE SCRIM, LIGHT APPEARANCE — AND IT IS STILL BLACK.\n\nThis is the single clearest instance of §4 in the package: the role an inversion would most obviously flip is the one role that must not flip at all. A scrim expresses WORLD SUPPRESSION and suppression is subtraction, in any appearance. A white scrim over a light World would be a light translucent surface stacked on another, which Apple's materials guidance names as the case where legibility collapses — it would destroy exactly the thing the scrim exists to protect.\n\nTHE ALPHA IS SOLVED FOR WHAT A SCRIM DOES, NOT FOR WHAT IT IS. An earlier rule preserved the suppressed-World-to-Surface contrast and returned 0.09, a scrim that suppresses nothing — it was measuring the GROUND, and a scrim is painted over the World AND EVERYTHING IN IT. What is preserved is the FACTOR by which the scrim collapses the World's own internal contrast: primary reading ink against the World falls 12.95:1 to 3.75:1 in dark, a factor of 3.456, and 12.89:1 to 3.74:1 in light, a factor of 3.450.\n\nAND THE TWO ALPHAS LAND 0.032 APART. Suppression is multiplicative, and a multiplication does not care which end of the lightness range it starts from. This is the one role in QANDEEL whose value barely moves between appearances, and the reason is arithmetic rather than taste.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.passage-is-suppressed",
+            "why": "the INK is contract — neutral black, in both appearances, because suppression is subtraction. The alpha is the magnitude that reproduces the frozen suppression factor on this ground."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,112 @@
+{
+  "generatedBy": "tools/f2-switch.mjs",
+  "tokenTree": {
+    "digest": "aae1316cb9ee65444f0ef600e793fc40e8800389b66de21d0a1ed2e6164adca7",
+    "files": 9
+  },
+  "state": "PASS",
+  "liveState": {
+    "world": "shared",
+    "interaction": "selected",
+    "textScale": 1.3529411764705883,
+    "boldText": true,
+    "contrast": "increased"
+  },
+  "contract": {
+    "crossfade": {
+      "value": 200,
+      "unit": "ms"
+    },
+    "crossfadeUnderReducedMotion": {
+      "value": 0,
+      "unit": "ms"
+    },
+    "removedNotShortenedUnderReducedMotion": true,
+    "note": "A full-viewport luminance ramp is the specific thing Apple's accessibility guidance names alongside slow looping oscillations. It carries no meaning — the appearance change is not a semantic event — so removing it costs no comprehension. I-08B3.1-F1's channel model defends channels that carry something."
+  },
+  "prohibitions": {
+    "1 no meaning replay": {
+      "ok": true,
+      "lightSourcesDark": 0,
+      "lightSourcesLight": 0,
+      "eventAttr": [
+        "none",
+        "none"
+      ]
+    },
+    "2 no semantic change": {
+      "ok": true,
+      "truthBytes": [
+        3894,
+        3894
+      ]
+    },
+    "3 no state reset": {
+      "ok": true,
+      "fieldsCompared": 11,
+      "differing": [],
+      "selectedRows": [
+        1,
+        1
+      ],
+      "focusables": [
+        6,
+        6
+      ],
+      "worldName": [
+        "عالم مشترك",
+        "عالم مشترك"
+      ]
+    },
+    "4 no new history": {
+      "ok": true,
+      "canonicalOrder": null,
+      "counts": {
+        "topic": 8,
+        "connection": 1,
+        "pattern": 1,
+        "insight": 1
+      }
+    },
+    "5 crossfade adds nothing": {
+      "ok": true,
+      "frames": [
+        {
+          "phase": 0,
+          "outside": 0,
+          "worstExcursion": 0
+        },
+        {
+          "phase": 0.25,
+          "outside": 0,
+          "worstExcursion": 0
+        },
+        {
+          "phase": 0.5,
+          "outside": 0,
+          "worstExcursion": 0
+        },
+        {
+          "phase": 0.75,
+          "outside": 0,
+          "worstExcursion": 0
+        },
+        {
+          "phase": 1,
+          "outside": 0,
+          "worstExcursion": 0
+        }
+      ]
+    }
+  },
+  "probe": {
+    "name": "a cross-fade that replays the meaning light at its midpoint",
+    "rejected": true,
+    "channelsOutsideSegment": 4980,
+    "worstExcursion": 45
+  },
+  "rasters": {
+    "dark": "783a97dd1b4a8ec10d246e93aaa3de0f1d4ee7838fa46809874325aa6cc4a406",
+    "light": "4b2861eba8fbde1515190a98a87c24cc3d9d39e570b50d66d94a690e27658821"
+  }
+}

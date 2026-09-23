@@ -1,0 +1,637 @@
+{
+  "generatedBy": "tools/f1-sr.mjs",
+  "projection": {
+    "provenance": "SYNTHETIC TEST FIXTURE — NOT PRODUCT DATA",
+    "scope": {
+      "exhaustive": false,
+      "fieldsSuppliedByThisFixture": [
+        "epistemic",
+        "temporal",
+        "actionable"
+      ],
+      "productContract": "Every user-exposable semantic fact legitimately disclosed in canonical V and required for understanding or operation must have an equivalent accessible expression. No accessibility projection may silently drop such a fact.",
+      "kindsOfFactTheContractCovers": [
+        "evidence",
+        "provenance",
+        "uncertainty / qualification",
+        "epistemic status",
+        "temporal truth",
+        "relationships",
+        "actions",
+        "any other user-exposable semantic field canonical V discloses"
+      ],
+      "whatTheProofEstablishes": "A BOUNDED PROOF. Every parity cell and every projection row is evidence about the dimensions this fixture supplies — epistemic status, temporal truth and actionability — plus structure, relationships and rendered presence. It is not evidence about a dimension the fixture does not supply.",
+      "whatTheProofDoesNotEstablish": [
+        "that the projection carries every semantic field a real canonical V may expose — no such V exists in this package",
+        "that the production mapping is exhaustive — it cannot be written until the canonical V schema is integrated",
+        "that three dimensions are the right number of dimensions for anything"
+      ],
+      "implementationDependency": "PRODUCTION ACCESSIBILITY MAPPING MUST BE EXHAUSTIVE AGAINST THE ACTUAL USER-EXPOSABLE V SCHEMA.",
+      "contractToken": "qandeel.accessibility.projection.completeness"
+    },
+    "unmappedFieldsDetected": [],
+    "referentialIntegrity": {
+      "complete": true,
+      "upstreamInvariant": "Canonical V is required to be referentially closed: every id a disclosed object references — a Connection endpoint, a Pattern member — must itself be disclosed in the SAME V. A view that references an object it does not disclose is malformed.",
+      "projectorBehaviour": "FAIL CLOSED, AND DO NOT RELY ON THE INVARIANT. Where a reference is not disclosed, the projection announces no substitute: no raw id, no name recovered from any other source, no member count, and no prose describing the relation. The inconsistency is recorded as a detectable referential-integrity failure instead of being turned into a sentence.",
+      "disclosedObjectsWithUndisclosedReferences": [],
+      "undisclosedReferenceCount": 0
+    },
+    "canonicalOrderSuppliedByV": null,
+    "implementationSeam": "If a runtime later supplies a canonical presentation order for a kind, it arrives as V.canonicalOrder[kind] and neutralOrder() uses it. Until then the order is the declared non-semantic one. I-08B3.1-F1R does not invent a canonical order here.",
+    "world": {
+      "name": "العالم الخاص",
+      "key": "personal",
+      "role": "region"
+    },
+    "title": "العالم الخاص — خريطة التحليل",
+    "summary": "8 مواضيع، علاقة واحدة، نمط واحد، وفهم جديد واحد.",
+    "axes": [
+      {
+        "kind": "topic",
+        "heading": "المواضيع",
+        "role": "list",
+        "peers": "EQUAL, UNRANKED",
+        "orderRule": "neutral",
+        "orderedBy": "NON-SEMANTIC: ascending Unicode code-point order of the object's stable id. Deterministic and reproducible, and it carries NO Product meaning — these items are EQUAL and UNRANKED. It is not importance, not confidence, not merit, not truth, not priority, not recency, not position, not size.",
+        "items": [
+          {
+            "id": "close-relations",
+            "kind": "topic",
+            "name": "العلاقات القريبة",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true
+          },
+          {
+            "id": "comparison",
+            "kind": "topic",
+            "name": "مقارنة بالآخرين",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemicSuppliedByV": false,
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true
+          },
+          {
+            "id": "energy-decline",
+            "kind": "topic",
+            "name": "تراجع الطاقة",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": false
+          },
+          {
+            "id": "fear-shortfall",
+            "kind": "topic",
+            "name": "الخوف من التقصير",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "historical",
+            "temporalText": "سابق",
+            "actionable": true
+          },
+          {
+            "id": "mastery",
+            "kind": "topic",
+            "name": "الرغبة في الإتقان",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true
+          },
+          {
+            "id": "sleep",
+            "kind": "topic",
+            "name": "قلّة النوم",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true
+          },
+          {
+            "id": "task-delay",
+            "kind": "topic",
+            "name": "تأجيل المهام",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true
+          },
+          {
+            "id": "weekend-fatigue",
+            "kind": "topic",
+            "name": "إرهاق آخر الأسبوع",
+            "productRole": "موضوع",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true
+          }
+        ]
+      },
+      {
+        "kind": "connection",
+        "heading": "العلاقات",
+        "role": "list",
+        "peers": "EQUAL, UNRANKED",
+        "orderRule": "neutral",
+        "orderedBy": "NON-SEMANTIC: ascending Unicode code-point order of the object's stable id. Deterministic and reproducible, and it carries NO Product meaning — these items are EQUAL and UNRANKED. It is not importance, not confidence, not merit, not truth, not priority, not recency, not position, not size.",
+        "items": [
+          {
+            "id": "connection:task-delay~comparison",
+            "kind": "connection",
+            "name": "علاقة",
+            "productRole": "علاقة",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true,
+            "relationship": "علاقة بين «تأجيل المهام» و«مقارنة بالآخرين»",
+            "from": "task-delay",
+            "to": "comparison"
+          }
+        ]
+      },
+      {
+        "kind": "pattern",
+        "heading": "الأنماط",
+        "role": "list",
+        "peers": "EQUAL, UNRANKED",
+        "orderRule": "neutral",
+        "orderedBy": "NON-SEMANTIC: ascending Unicode code-point order of the object's stable id. Deterministic and reproducible, and it carries NO Product meaning — these items are EQUAL and UNRANKED. It is not importance, not confidence, not merit, not truth, not priority, not recency, not position, not size.",
+        "items": [
+          {
+            "id": "pattern:four-topics",
+            "kind": "pattern",
+            "name": "نمط",
+            "productRole": "نمط",
+            "ariaRole": "listitem",
+            "epistemic": "observed",
+            "epistemicText": "ملاحَظ",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true,
+            "relationship": "نمط يجمع 4 مواضيع: «الرغبة في الإتقان» و«قلّة النوم» و«الخوف من التقصير» و«تراجع الطاقة»",
+            "members": [
+              "mastery",
+              "sleep",
+              "fear-shortfall",
+              "energy-decline"
+            ],
+            "membersAreASet": true
+          }
+        ]
+      },
+      {
+        "kind": "insight",
+        "heading": "ما فُهِم",
+        "role": "list",
+        "peers": "EQUAL, UNRANKED",
+        "orderRule": "neutral",
+        "orderedBy": "NON-SEMANTIC: ascending Unicode code-point order of the object's stable id. Deterministic and reproducible, and it carries NO Product meaning — these items are EQUAL and UNRANKED. It is not importance, not confidence, not merit, not truth, not priority, not recency, not position, not size.",
+        "items": [
+          {
+            "id": "insight:mastery-precedes-sleep",
+            "kind": "insight",
+            "name": "الإتقان يسبق السهر بيومين",
+            "productRole": "فهم",
+            "ariaRole": "listitem",
+            "epistemic": "hypothesis",
+            "epistemicText": "فرضية",
+            "temporal": "current",
+            "temporalText": "الآن",
+            "actionable": true,
+            "sublabel": "فهم جديد"
+          }
+        ]
+      }
+    ],
+    "notAnnounced": [
+      [
+        "QANDEEL LIGHT",
+        "a transient that carries nothing the settled state does not also carry"
+      ],
+      [
+        "the ambient contours",
+        "atmosphere — PRESENTATION_CONTRACT declares every one of their properties `encodes: null`"
+      ],
+      [
+        "depth planes and positions",
+        "geometry carries no analytical meaning in QANDEEL, so announcing it would invent one"
+      ],
+      [
+        "hue",
+        "the six atmosphere hues are isoluminant by construction and measure 1.02:1 against each other — colour distinguishes nothing here even visually"
+      ],
+      [
+        "a semantic value V did not supply",
+        "ABSENCE REMAINS ABSENCE. A field the view did not supply is not announced in any form. I-08B3.1-F1R announced an UNSPECIFIED word here and I-08B3.1-F1R2 withdrew it: the absence of a field does not mean the Product state is unspecified, and the projection has no authority to choose among not-applicable, not-disclosed-at-this-depth, unavailable and not-supplied. An explicit unknown state, if QANDEEL needs one, is supplied by canonical V as a value"
+      ],
+      [
+        "anything V does not disclose",
+        "a Connection endpoint or a Pattern member that is not in V is not named, not identified, not counted and not paraphrased — and never announced as a raw id"
+      ]
+    ]
+  },
+  "tree": "READ",
+  "ordering": {
+    "what": "The source array is reversed and re-sorted, and the projection is recomputed.",
+    "traversalOrderUnchanged": true,
+    "semanticFactsUnchanged": true,
+    "emitted": [
+      {
+        "kind": "topic",
+        "ids": "close-relations|comparison|energy-decline|fear-shortfall|mastery|sleep|task-delay|weekend-fatigue"
+      },
+      {
+        "kind": "connection",
+        "ids": "connection:task-delay~comparison"
+      },
+      {
+        "kind": "pattern",
+        "ids": "pattern:four-topics"
+      },
+      {
+        "kind": "insight",
+        "ids": "insight:mastery-precedes-sleep"
+      }
+    ],
+    "probe": {
+      "input": "the same comparison against an order sorted by a fabricated per-object strength",
+      "rejected": true
+    },
+    "pass": true
+  },
+  "fixturePreservation": {
+    "rows": [
+      {
+        "id": "task-delay",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "mastery",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "comparison",
+        "epistemic": {
+          "supplied": "ABSENT",
+          "projected": "ABSENT"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "sleep",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "fear-shortfall",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "historical",
+          "projected": "historical"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "weekend-fatigue",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "close-relations",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "energy-decline",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": false,
+          "projected": false
+        }
+      },
+      {
+        "id": "connection:task-delay~comparison",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "pattern:four-topics",
+        "epistemic": {
+          "supplied": "observed",
+          "projected": "observed"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      },
+      {
+        "id": "insight:mastery-precedes-sleep",
+        "epistemic": {
+          "supplied": "hypothesis",
+          "projected": "hypothesis"
+        },
+        "temporal": {
+          "supplied": "current",
+          "projected": "current"
+        },
+        "actionable": {
+          "supplied": true,
+          "projected": true
+        }
+      }
+    ],
+    "allSuppliedValuesPreserved": true,
+    "fixtureVaries": {
+      "epistemic": true,
+      "temporal": true,
+      "actionable": true
+    },
+    "objectsWithNoEpistemicStatusAsserted": [
+      "comparison"
+    ],
+    "probe": {
+      "input": "a view with the insight's epistemic status changed to observed",
+      "followed": true
+    },
+    "pass": true
+  },
+  "absence": {
+    "what": "A semantic field canonical V did not supply produces no value and no announcement.",
+    "rows": [
+      {
+        "id": "comparison",
+        "valueInData": "ABSENT",
+        "spokenLabel": "موضوع، مقارنة بالآخرين، الآن",
+        "epistemicVocabularyInLabel": []
+      }
+    ],
+    "absentDidNotBecomeAStatus": true,
+    "nothingIsAnnouncedInItsPlace": true,
+    "theWithdrawnStringAppearsNowhereInTheRenderedPage": true,
+    "aSuppliedValueIsStillAnnounced": true,
+    "probe": {
+      "input": "the WITHDRAWN composer, with its «غير مُحدَّد» fallback, applied to the same unstated row",
+      "label": "موضوع، مقارنة بالآخرين، غير مُحدَّد، الآن",
+      "detected": true
+    },
+    "pass": true
+  },
+  "disclosure": {
+    "upstreamInvariant": "Canonical V is required to be referentially closed: every id a disclosed object references — a Connection endpoint, a Pattern member — must itself be disclosed in the SAME V. A view that references an object it does not disclose is malformed.",
+    "projectorBehaviour": "FAIL CLOSED, AND DO NOT RELY ON THE INVARIANT. Where a reference is not disclosed, the projection announces no substitute: no raw id, no name recovered from any other source, no member count, and no prose describing the relation. The inconsistency is recorded as a detectable referential-integrity failure instead of being turned into a sentence.",
+    "cases": [
+      {
+        "what": "a CONNECTION whose destination is absent from V",
+        "brokenReferencesReported": [
+          {
+            "id": "connection:task-delay~comparison",
+            "undisclosedReferences": 1
+          }
+        ],
+        "detected": true,
+        "rawIdInARowField": false,
+        "rawIdInAnAccessibleLabel": false,
+        "hiddenNameRecovered": false,
+        "relationshipProseWritten": false,
+        "objectsStillProjected": 11,
+        "pass": true
+      },
+      {
+        "what": "a PATTERN one of whose members is absent from V",
+        "brokenReferencesReported": [
+          {
+            "id": "pattern:four-topics",
+            "undisclosedReferences": 1
+          }
+        ],
+        "detected": true,
+        "rawIdInARowField": false,
+        "rawIdInAnAccessibleLabel": false,
+        "hiddenNameRecovered": false,
+        "relationshipProseWritten": false,
+        "objectsStillProjected": 11,
+        "pass": true
+      },
+      {
+        "what": "a CONNECTION pointing at a REAL D2R topic that V does not disclose — the name is recoverable from TOPICS, and must not be recovered",
+        "brokenReferencesReported": [
+          {
+            "id": "connection:task-delay~comparison",
+            "undisclosedReferences": 1
+          }
+        ],
+        "detected": true,
+        "rawIdInARowField": false,
+        "rawIdInAnAccessibleLabel": false,
+        "hiddenNameRecovered": false,
+        "relationshipProseWritten": false,
+        "objectsStillProjected": 10,
+        "pass": true
+      }
+    ],
+    "probe": {
+      "input": "the WITHDRAWN `disclosed name ?? raw id` resolver, over the same broken view",
+      "label": "علاقة بين «تأجيل المهام» و«undisclosed-object-7f3a2c»",
+      "leaks": true
+    },
+    "pass": true
+  },
+  "checks": {
+    "axNodes": 183,
+    "namedNodes": 130,
+    "orderAgrees": [
+      {
+        "kind": "topic",
+        "rule": "neutral",
+        "emitted": [
+          "close-relations",
+          "comparison",
+          "energy-decline",
+          "fear-shortfall",
+          "mastery",
+          "sleep",
+          "task-delay",
+          "weekend-fatigue"
+        ],
+        "recomputed": [
+          "close-relations",
+          "comparison",
+          "energy-decline",
+          "fear-shortfall",
+          "mastery",
+          "sleep",
+          "task-delay",
+          "weekend-fatigue"
+        ],
+        "agrees": true
+      },
+      {
+        "kind": "connection",
+        "rule": "neutral",
+        "emitted": [
+          "connection:task-delay~comparison"
+        ],
+        "recomputed": [
+          "connection:task-delay~comparison"
+        ],
+        "agrees": true
+      },
+      {
+        "kind": "pattern",
+        "rule": "neutral",
+        "emitted": [
+          "pattern:four-topics"
+        ],
+        "recomputed": [
+          "pattern:four-topics"
+        ],
+        "agrees": true
+      },
+      {
+        "kind": "insight",
+        "rule": "neutral",
+        "emitted": [
+          "insight:mastery-precedes-sleep"
+        ],
+        "recomputed": [
+          "insight:mastery-precedes-sleep"
+        ],
+        "agrees": true
+      }
+    ],
+    "orderWordingClean": true,
+    "rankFieldsFound": [],
+    "expectedObjects": 11,
+    "missingAccessibleNames": [],
+    "headingsFound": [
+      "العالم الخاص — خريطة التحليل",
+      "المواضيع",
+      "العلاقات",
+      "الأنماط",
+      "ما فُهِم"
+    ],
+    "missingAxisHeadings": [],
+    "patternStatesItsMembersInWords": true,
+    "connectionStatesSourceAndDestination": true,
+    "probe": {
+      "label": "THIS ACCESSIBLE NAME DOES NOT EXIST",
+      "detectedAsMissing": true
+    },
+    "pass": true
+  }
+}

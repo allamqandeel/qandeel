@@ -1,0 +1,245 @@
+{
+  "$description": "I-08B3.1-F2 — THE APPEARANCE CONTRACT. Appearance-independent by construction: nothing in this file is a colour, because a statement that is true in both appearances cannot be one. It names what an appearance change IS ALLOWED TO DO and what it may never do, so that 'the light appearance did not change the Product' is a claim about a resolved token tree rather than about anyone's intentions.\n\nWHAT F2 DID NOT DO, AND IT MATTERS MORE THAN WHAT IT DID. F2 CREATES NO SEMANTIC NAME. Every role a light value is supplied for already existed: qandeel.world.fill, qandeel.surface.functional, qandeel.content.{primary,secondary,tertiary}, qandeel.passage.scrim, qandeel.identity.material, qandeel.illumination.{core,mid,low}, qandeel.status.error.ink, qandeel.state.disabled.ink. I-08B3.1-B4R separated the SEMANTIC layer from the EXPRESSION layer before any of this was designed — 'it names what things ARE, never what they look like' — and three of the inherited resolvers already carry an `appearance` modifier with a DELIBERATELY EMPTY `light` context, authored as an absence and owned by I-08B3.1-F. F2 fills those contexts. It does not stand a second palette beside the first, and §27's example names are not used because the canonical equivalents already exist.",
+  "qandeel": {
+    "appearance": {
+      "$description": "The appearance law, as tokens. Every entry is a STRING or a NUMBER: a contract that resolved to a colour would be a contract about one appearance.",
+      "law": {
+        "$type": "string",
+        "$value": "appearance-is-a-projection-of-product-semantics",
+        "$description": "APPEARANCE IS A PROJECTION OF PRODUCT SEMANTICS. Changing dark to light may change luminance, chroma, material rendering, edge treatment, local contrast, apparent depth, scrim strategy, atmospheric rendering, the Light's rendering technique and surface separation. It may not change analytical truth, object existence, relationship truth, confidence, importance, ownership, authority, temporal truth, Product hierarchy, state meaning, world membership, or the Product actions available. DARK and LIGHT are different perceptual environments; they are not different Products.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "It is the sentence the whole package exists to make checkable, and tools/f2-parity.mjs reads the same analytical truth back out of BOTH appearances' rendered documents to test it."
+          }
+        }
+      },
+      "roles-stay-separable": {
+        "$type": "string",
+        "$value": "no-role-family-collapses-into-another-in-either-appearance",
+        "$description": "THE SIX ROLE FAMILIES STAY TELLABLE APART IN BOTH APPEARANCES. Error is a status and not the identity material; Living Brass is MATTER and QANDEEL Light is MEANING, and no intensity of one is mistakable for the other; the Meaning Light is never mistakable for writing; the atmosphere is the world's field and not a reading tone. That is what an appearance change may not cost, and it is measured — check C-03 walks the Light against Living Brass at every intensity in both appearances, B-03 does it by behaviour as well as by distance, and E-02 and E-03 hold the status boundary.\n\nWHAT IS *NOT* CONTRACTUAL IS THE PARTICULAR ORDER. qandeel.appearance.chroma-order records the chroma ladder those separations currently fall into, and it is an OBSERVED property of eleven values chosen independently for eleven reasons, not a law the Product would defend against a better arrangement.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "I-08B3.1-F2R separated this from the ladder on instruction: 'freeze semantic separation', not 'freeze exact chroma-family ordering'. Separation is what a reader loses if it goes; an ordering is a description of how it is currently achieved."
+          }
+        }
+      },
+      "role-identity-survives-appearance": {
+        "$type": "string",
+        "$value": "a-chromatic-role-is-the-same-material-in-both-appearances",
+        "$description": "LIVING BRASS IS THE SAME MATERIAL IN LIGHT AS IN DARK, ERROR IS THE SAME ERROR, AND QANDEEL LIGHT IS THE SAME LIGHT. An appearance change relights the world; it does not re-cast it. This is the sentence §4 of the F2 brief is about, and the instrument that makes it checkable is HUE: a per-channel inversion of this system rotates every chromatic role to the opposite side of the wheel — Living Brass 75° to 256°, Error 30° to 214°, the reading ramp 94° to 273°, a mean rotation of 178° — so an inversion does not produce different values, it produces a BLUE identity material and a TEAL error.\n\nTHE THREE-DEGREE FIGURE IS NOT THIS. It is the tolerance the current derivation holds to, and it lives in qandeel.appearance.hue-constancy as a production default.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "identity across appearances is the thing §4 forbids losing; a numeric tolerance on the instrument that measures it is a calibration."
+          }
+        }
+      },
+      "reading-hierarchy-is-preserved": {
+        "$type": "string",
+        "$value": "the-reading-ramp-keeps-its-order-and-its-distinguishability",
+        "$description": "THE THREE READING TONES STAY IN ORDER AND STAY TELLABLE APART, IN BOTH APPEARANCES AND UNDER EVERY ACCESSIBILITY EXPRESSION. Primary is more present than secondary, secondary than tertiary, each by a difference a reader can actually see, and no appearance may promote or demote a tone. I-08B3.1-F1 established that importance is a relation and not a value when it forbade an increased-contrast expression from inventing importance.\n\nEXACT RATIO EQUALITY IS HOW F2 ACHIEVES THIS AND IS NOT ITSELF THE CONTRACT: qandeel.appearance.hierarchy-is-a-ratio carries that, as a production default. It is a strong and checkable way to preserve a hierarchy, and it is not the only one.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "I-08B3.1-F2R was explicit that 'reading hierarchy' is frozen and 'exact preserved contrast-ratio matching' is not. A future appearance on a medium where 12.95:1 is unreachable must be able to keep the hierarchy without keeping the number."
+          }
+        }
+      },
+      "light-remains-meaning": {
+        "$type": "string",
+        "$value": "a-meaning-event-is-perceivable-as-an-event-and-is-never-matter-reading-or-status",
+        "$description": "WHEN QANDEEL UNDERSTANDS SOMETHING, A READER MUST BE ABLE TO SEE THAT IT HAPPENED. The event must be perceivable AS AN EVENT — not detectable by a measurement, not visible under magnification, but legible at the scale the Product is used at; it must survive having its colour removed; it must not read as shadow, as stain, as the identity material, as writing or as a status; and it must settle to nothing, leaving no permanent glow.\n\nTHIS IS THE SENTENCE I-08B3.1-F2R WAS WRITTEN TO RESTORE. F2's own evidence recorded an event whose PEAK cleared the stated floor by three per cent, and independent review, looking at the rendered CONNECTION rather than at the number, found it near-static. Both were right: the requirement was on one point of a falloff and the event is a region. The floor is now on the event's area mean across the source's disc.\n\nWHAT THIS IS NOT. It is not 'the source must be lighter than the ground' — that is qandeel.appearance.meaning-has-a-source, a production default and the currently measured way of failing a stain. It is not the bloom's parameters. An expression may combine local lightening and darkening, edge response, chroma or material response, and still be QANDEEL Light, as long as it is perceivable, survives grayscale, stays separable and settles clean.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "it is LIGHT IS MEANING stated as something a renderer can fail, at the level the Product actually cares about. The technique, the magnitudes and the source rule are all how it is currently met."
+          }
+        }
+      },
+      "passage-is-suppressed": {
+        "$type": "string",
+        "$value": "a-passage-scrim-suppresses-the-worlds-own-internal-contrast",
+        "$description": "A PASSAGE SCRIM SUPPRESSES THE WORLD BEHIND IT, BY THE SAME FACTOR IN BOTH APPEARANCES. Suppression is not a direction on the lightness axis — it is subtraction — and what is preserved across appearances is the FACTOR by which the World's own internal contrast collapses: 3.456 in dark, 3.450 in light. Because suppression is multiplicative the two alphas land within 0.032 of each other, which is why the role an inversion would most obviously flip is the one that must not.\n\nTHAT THE INK IS BLACK IS NOT THIS SENTENCE. qandeel.appearance.suppression-is-subtraction records the direction as a production default: it is what the measurement returned on this ground, with Apple's own guidance that a light translucent surface must never be stacked on another as the corroborating reason. A medium where suppression were achieved otherwise would not be violating anything.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "I-08B3.1-F2R asked for the semantic requirement to be frozen and the implementation direction not to be. The requirement is that the passage's world recedes; the black ink is how."
+          }
+        }
+      },
+      "chroma-order": {
+        "$type": "string",
+        "$value": "error>brass>light>atmosphere>ink>ground",
+        "$description": "THE CHROMA LADDER THE SIX ROLE FAMILIES CURRENTLY FALL INTO, AND IT WAS FOUND RATHER THAN IMPOSED. Measured on the frozen dark system the one status colour is the most chromatic thing on screen, then the identity material, then meaning, then the world's atmosphere, then reading, then the ground. Nobody wrote it down: I-08B3.1-A, C3, D2R and E1 each chose their own value for their own reason and this is what fell out, which is exactly why it is worth recording — a regularity that emerges from independent decisions is load-bearing in a way an imposed rule is not. Check X-01 measures it in both appearances on the resolved tree. IT IS A LADDER OF ROLE FAMILIES, NOT OF VALUES — in dark the World and the functional Surface are both exactly achromatic, so their relative position among the individual literals is an artefact of a sort and not a fact about QANDEEL.\n\nI-08B3.1-F2R DEMOTED IT FROM PRODUCT CONTRACT. It is a description of how qandeel.appearance.roles-stay-separable is currently achieved on this palette, and a genuinely better arrangement — a more chromatic atmosphere, a quieter status colour — would be a Product decision and not a violation. It is kept, and kept checked, because silently reordering it is how a system loses its identity one value at a time.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.roles-stay-separable",
+            "why": "an observed regularity in eleven values chosen independently, not a sentence the Product would defend against a better arrangement."
+          }
+        }
+      },
+      "hue-constancy": {
+        "$type": "number",
+        "$value": 3,
+        "$description": "THE MAXIMUM HUE DRIFT, IN DEGREES, THAT A CHROMATIC ROLE MAY ACCUMULATE ACROSS APPEARANCES — measured on the RECOVERED hue of the quantised hex that ships, not on the authored triple, because at QANDEEL's chroma magnitudes the 8-bit grid moves a hue by more than a degree on its own.\n\nWHY THIS IS THE NUMBER THAT CARRIES §4. 'Do not derive light by inverting dark' is normally argued on taste. Here it is arithmetic: a per-channel inversion of this system rotates EVERY chromatic role to the opposite side of the colour wheel — Living Brass 75° to 256°, Error 30° to 214°, the reading ramp 94° to 273°, a mean rotation of 178°. An inversion does not produce different values; it produces a BLUE identity material and a TEAL error. Holding the hue is therefore not a stylistic preference, it is the difference between the same Product and a different one.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.role-identity-survives-appearance",
+            "why": "THE FIGURE IS THE TOLERANCE; THE CONTRACT IS THAT THE ROLE IS STILL THE SAME MATERIAL. Its own earlier note said so — 'the 3-degree figure is the tolerance; that the drift must be small is the contract' — and I-08B3.1-F2R moved the classification to match the sentence. 3 degrees is what this derivation holds to on this palette at this quantisation: the widest drift it actually spends is 2.85, on the Meaning Light's third rung, and its three rungs spend 0, 0.09 and 2.85. The drift is measured on the recovered hue of the hex that ships, because at QANDEEL's chroma magnitudes the 8-bit grid moves a hue by more than a degree on its own — which is also why the tie-break in tools/f2-derive.mjs prefers the ramp that moves LEAST IN TOTAL rather than the one whose worst rung is smallest.\n\nAND 2.85 OF 3 IS A THIN MARGIN, SO THE PACKAGE SAYS WHAT STOPS IT BEING SMALLER RATHER THAN LEAVING THE FIGURE TO BE TAKEN ON TRUST. A TOLERANCE IS A CEILING, NOT A BUDGET. Of the 480 configurations at the shipped magnitude that carry less total drift, none is admissible, and every one fails R-EVENT or R-SOURCE: putting the third rung on its dark counterpart's hue needs more chroma, and at a fixed hue more chroma lowers the lightness sRGB can hold, so the flooded core comes down with it and stops rising above the ground by a just-noticeable step. The best alternative sits at 0.36 degrees with a source that rises 0.018 against a floor of 0.020. That is not a preference being indulged, it is two requirements pulling against each other through the gamut boundary — and it is the reason this statement is a production default rather than a contract: a wider gamut moves the number, and the CONTRACT is that the role is still recognisably the same material.\n\nI-08B3.1-F2R also learned that this tolerance can be spent by accident. Comparing the event's magnitude at full float precision, a difference of 0.0001 in its peak departure — a fortieth of a just-noticeable step — outranked two degrees of drift, and the search returned a ramp 2.85 degrees off where a 0.98-degree one existed at the same perceptible magnitude. The magnitude objective is now quantised to a just-noticeable step so that a difference nobody can see cannot outbid role identity, and check X-03 asserts the shipped drift is the least available at the shipped magnitude."
+          }
+        }
+      },
+      "hierarchy-is-a-ratio": {
+        "$type": "string",
+        "$value": "reading-contrast-ratios-preserved-across-appearances",
+        "$description": "The three reading inks keep their WCAG contrast ratios against their own ground: 12.95:1, 8.38:1, 5.44:1. I-08B3.1-F1 established that importance is a RATIO when it forbade an increased-contrast expression from inventing importance, and guarded the ratio rather than the values. An appearance change is bound by the same argument for the same reason — it changes every value in the ramp and must leave the hierarchy exactly where it was.\n\nI-08B3.1-F2R DEMOTED IT FROM PRODUCT CONTRACT AND CHANGED NOTHING ELSE ABOUT IT. Exact ratio equality is an unusually strong way to preserve a hierarchy — it is why the light appearance can replace every reading value without moving the hierarchy one step, and it is measured rather than asserted — but it is a way, not the thing. The contract is qandeel.appearance.reading-hierarchy-is-preserved: order and distinguishability. A future appearance on a medium that cannot reach 12.95:1 must be able to keep the hierarchy without keeping the number, and under the old classification it could not have.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.reading-hierarchy-is-preserved",
+            "why": "exact ratio matching is how this derivation preserves the hierarchy; the hierarchy is what a reader would lose."
+          }
+        }
+      },
+      "suppression-is-subtraction": {
+        "$type": "string",
+        "$value": "scrim-darkens-in-both-appearances",
+        "$description": "THE PASSAGE SCRIM DOES NOT INVERT. A scrim expresses WORLD SUPPRESSION, and suppression is not a direction on the lightness axis — it is subtraction. Apple's own materials guidance is explicit that a light translucent surface must never be stacked on another because legibility collapses, so a 'light-mode scrim' produced by inverting the dark one would destroy the very thing it exists to protect. What is preserved across appearances is the FACTOR by which the scrim suppresses the World's own internal contrast — 3.456 in dark, 3.450 in light — and because suppression is multiplicative the two alphas land within 0.032 of each other.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.passage-is-suppressed",
+            "why": "IT IS THE CLEAREST SINGLE INSTANCE OF §4 — the role an inversion would most obviously flip is the one that must not — and I-08B3.1-F2R was still right to demote it. What the Product needs is that the passage's world RECEDES, by the factor it recedes by in dark; that the ink is black is the measured answer on this ground, corroborated by Apple's rule that a light translucent surface must never be stacked on another. A medium where suppression were achieved another way would not be violating anything, and the sentence that would be violated is qandeel.appearance.passage-is-suppressed."
+          }
+        }
+      },
+      "switch": {
+        "$description": "WHAT HAPPENS WHEN THE SYSTEM APPEARANCE CHANGES WHILE QANDEEL IS OPEN.",
+        "is-not-a-meaning-event": {
+          "$type": "string",
+          "$value": "reproject-only",
+          "$description": "An appearance change is NOT a meaning event, a new insight, a new analytical state, a navigation event or a temporal event. QANDEEL Light is not replayed, analytical motion is not restarted, semantic state is not altered, selection / focus / navigation are not reset, and no Timeline history is created. Only the appearance projection changes. tools/f2-switch.mjs proves it by reading the analytical truth out of both rendered documents and requiring the two to be byte-identical, and by requiring the count of enqueued meaning events across the switch to be zero.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "why": "replaying a meaning event on an appearance change would tell the user that something was understood when nothing was — an appearance preference manufacturing analytical truth."
+            }
+          }
+        },
+        "crossfade": {
+          "$type": "duration",
+          "$value": {
+            "value": 200,
+            "unit": "ms"
+          },
+          "$description": "The cross-fade between appearance projections. Apple's guidance asks for abrupt brightness jumps to be eased, and a dark-to-light switch is the largest brightness jump the Product can make. 200 ms is short enough that nothing reads as a transformation and long enough that nothing reads as a flash.\n\nIT IS DELIBERATELY NOT THE MEANING LIFECYCLE. I-08B3.1-D2R's meaning envelope is 260 ms of rise and 1150 ms of fall, asymmetric, because a meaning event ARRIVES. An appearance change does not arrive; it is the same world seen differently, so it is a symmetric cross-fade with no rise, no settle and no residue. A reader who cannot tell an appearance change from an insight has been told something untrue.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "serves": "qandeel.appearance.switch.is-not-a-meaning-event",
+              "why": "the magnitude is craft and is device-tunable. That the cross-fade must be SYMMETRIC and must not share the meaning envelope is the contract; 200 ms is the value this proof was drawn with."
+            }
+          }
+        },
+        "crossfade-reduced-motion": {
+          "$type": "duration",
+          "$value": {
+            "value": 0,
+            "unit": "ms"
+          },
+          "$description": "UNDER REDUCED MOTION THE CROSS-FADE IS REMOVED, NOT SHORTENED — and this is the one place F2 departs from the obvious reading of I-08B3.1-F1's channel model, which keeps opacity changes because they carry comprehension. A full-viewport luminance ramp is the specific thing Apple's accessibility guidance names alongside slow looping oscillations: it is large, it covers the whole field of view, and for a light-sensitive reader it is the transition itself that is the problem. The cross-fade carries no meaning — the appearance change is not a semantic event — so removing it costs no comprehension at all. A channel that carries nothing is not defended.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "why": "it is a decision about WHAT SURVIVES a setting, not a magnitude: the cross-fade is removed because it carries no meaning, and F1's rule protects channels that do."
+            }
+          }
+        }
+      },
+      "system-appearance": {
+        "$type": "string",
+        "$value": "follow-system-no-in-app-override",
+        "$description": "QANDEEL follows the system appearance. F2 does NOT introduce an in-app appearance toggle: an explicit override is a Product preference decision with its own surface, its own persistence and its own relationship to the Settings the Product does not yet have, and inventing one inside an appearance-derivation task would be deciding something this task has no authority over. Recorded as an open Product option rather than taken.\n\nAND PLATFORM THEMING MAY NOT REDEFINE IDENTITY. Android's dynamic colour derives a scheme from the user's wallpaper. QANDEEL's palette is its identity — Living Brass is the material the Product is made of — so dynamic colour is not adopted. Platform theming informs implementation; it does not author the system.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "both halves are decisions about AUTHORITY: whose choice the appearance is, and whose choice the palette is."
+          }
+        }
+      },
+      "light-world-lightness": {
+        "$type": "number",
+        "$value": 0.95,
+        "$description": "THE LIGHT WORLD'S OKLCh LIGHTNESS, AND IT IS A PRODUCTION DEFAULT RATHER THAN A LAW.\n\nIt is not chosen for comfort and it is not mirrored from the dark World. It is the HIGHEST lightness at which a meaning event can still be seen to happen: above it, no expression family in the search can produce a source that rises above its ground by more than the system's own smallest deliberate distinction, because the ground has reached the ceiling the source needed. The World is therefore as light as it can be while remaining a world a light can happen in, and the requirement that fixed it is qandeel.appearance.meaning-has-a-source.\n\nTHE MARGIN IS THIN AND IS DISCLOSED RATHER THAN SMOOTHED: the source clears its floor by about 12%. On a display that cannot reach the sRGB ceiling the source may be lost, and this value is tunable DOWNWARD for exactly that reason. Device validation owns it.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.light-remains-meaning",
+            "why": "a searched value against a stated bound on one renderer. I-08B3.1-D2R's own chosen Light cleared its floor by 0.5% and said so; this is the same discipline and the same disclosure."
+          }
+        }
+      },
+      "meaning-has-a-source": {
+        "$type": "string",
+        "$value": "peak-must-be-lighter-than-its-ground",
+        "$description": "AT ITS PEAK A MEANING EVENT MUST BE LIGHTER THAN THE GROUND IT SITS IN, AND MEASURABLY SO WITH THE COLOUR REMOVED.\n\nThis requirement exists because a search without it returned the answer §8 of the brief forbids by name. Given only a chroma-gain test for 'this is not a shadow', the DARKENING family — every insight gets deeper — was admissible and won on magnitude, because on a ground whose own chroma is 0.0041 any chromatic darkening gains chroma. What actually separates a light from a shadow is that a light HAS A SOURCE. The falloff may glaze DEEPER around it, which is what a warm light does to a light material and is where most of the event's magnitude lives in this appearance; but the place the light IS must be brighter than the place it is not.\n\nMeasured on the grayscale composite, deliberately: measured in full colour, a core that is merely warmer than its ground satisfies 'there is a light' on chroma alone. A source is a luminance fact.\n\nI-08B3.1-F2R DEMOTED THIS FROM PRODUCT CONTRACT ON INSTRUCTION, AND KEPT IT. Independent review was explicit that this is a derivation constraint rather than frozen Product truth, and that a light-appearance expression may legitimately combine local lightening and darkening, edge response, chroma or material response. That is right, and the demotion costs nothing here, because dropping the rule does not open a range of possibilities — it opens exactly one: F-B, the pure darkening family, which §8 forbids by name and F2R does not withdraw. It is retained as the currently measured way of failing a stain, under qandeel.appearance.light-remains-meaning, and a better test may replace it.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.light-remains-meaning",
+            "why": "'the source is lighter than its ground' is one measurable consequence of meaning reading as light on this ground, not the meaning of it. Demoted by I-08B3.1-F2R; kept because the only family it excludes is the one the brief excludes by name."
+          }
+        }
+      },
+      "light-not-reduced": {
+        "$type": "string",
+        "$value": "alternate-appearance-is-not-reduced-qandeel",
+        "$description": "AN ALTERNATE APPEARANCE MAY NOT COST THE PRODUCT ANALYTICAL QUALITY, DEPTH, ATMOSPHERE, COLOUR RICHNESS, AUTHORED MICRO-DETAIL, SPATIAL DISCOVERY, IDENTITY OR EMOTIONAL IMPACT. The ambient field is not simplified, no contour is dropped, no layer is removed, no topic loses its hue and the parallax ladder is untouched: the light appearance paints the SAME field with the same geometry, the same six hues, the same harmonics and the same ring counts, at lightnesses that preserve each layer's contour contrast against its own ground. Board J measures element-for-element parity between the two appearances.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "the Product Owner's non-negotiable, stated as a token so a future package that quietly simplifies the light field has something to have violated."
+          }
+        }
+      },
+      "dark-is-frozen": {
+        "$type": "string",
+        "$value": "no-dark-value-moves-for-light",
+        "$description": "F2 IS AUTHORISED TO CREATE LIGHT AND IS NOT AUTHORISED TO NORMALISE DARK. Every frozen dark value stays exactly where it was, including the ones it would have been convenient to move: the World at #101010, the functional Surface at #181818, the reading ramp, Living Brass at #a58e6f, the three QANDEEL Light stops, Error at #fe907e, and every I-08B3.1-F1 accessibility transformation of all of them. tools/f2-regression.mjs re-runs F1's own resolver over F1's own token files and re-renders F1's own default scene, and requires the raster to be byte-identical to the accepted one.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "shared tokens are the standard reason a second appearance damages the first, and the damage is always described afterwards as unification."
+          }
+        }
+      },
+      "status-colour-is-earned": {
+        "$type": "string",
+        "$value": "warning-success-informational-remain-neutral",
+        "$description": "WARNING, SUCCESS and INFORMATIONAL remain NEUTRAL in the light appearance, as they are in dark. I-08B3.1-E1 froze that status colour is EARNED and not assigned by taxonomy, and added exactly one status colour — Error — because exactly one status had earned one. An appearance change has no authority to expand the semantic colour system: a green success that exists only in light would be a Product decision smuggled in as a rendering detail. The three roles keep their aliases into the reading ramp in both appearances, and check E-03 asserts that every one of them still resolves to a reading-ramp rung with no hue of its own.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "inherited from I-08B3.1-E1 and restated here because an appearance boundary is exactly where a taxonomy tends to grow back."
+          }
+        }
+      },
+      "resolution-is-centralised": {
+        "$type": "string",
+        "$value": "one-projection-never-if-dark-else",
+        "$description": "THE APPEARANCE IS RESOLVED IN ONE PLACE. Product logic never branches on the appearance: there is no `if (dark) X else Y` anywhere in QANDEEL, because a system with that shape has as many appearance decisions as it has call sites and no way to check any of them. One projection resolves a semantic role to a value for the current appearance and the current accessibility state, and everything downstream consumes roles. tools/f2-resolve.mjs is that projection here, and F2_IMPLEMENTATION.md maps it onto React Native.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "implementation-strategy",
+            "serves": "qandeel.appearance.law",
+            "why": "the CENTRALISATION is a Product-level requirement because it is what makes the contract checkable; the specific mechanism — a DTCG resolver here, a context provider and a StyleSheet factory there — is a choice, and naming it a strategy keeps a prototype's structure from becoming Product law."
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,101 @@
+{
+  "generated": "tools/e1-scaffold.mjs",
+  "entries": [
+    {
+      "published": "vendor/c3/tokens/base/material.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/tokens/base/material.tokens.json",
+      "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928",
+      "bytes": 14376
+    },
+    {
+      "published": "vendor/c3/tokens/appearance/dark.material.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/tokens/appearance/dark.material.tokens.json",
+      "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367",
+      "bytes": 3441
+    },
+    {
+      "published": "vendor/c3/tokens/appearance/light.material.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/tokens/appearance/light.material.tokens.json",
+      "sha256": "f2f2f8b2578abfe6ad1d5a4ab0a462967bc26ef88fad91a09092f24fddd15f65",
+      "bytes": 587
+    },
+    {
+      "published": "vendor/c3/tokens/qandeel-living-brass.resolver.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/tokens/qandeel-living-brass.resolver.json",
+      "sha256": "d013dc03bccb2d246cc6313460d1776b79e9a767512a51d0dff32429c194ccb1",
+      "bytes": 2364
+    },
+    {
+      "published": "vendor/c3/b4r/semantic.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/vendor/b4r/semantic.tokens.json",
+      "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441",
+      "bytes": 4373
+    },
+    {
+      "published": "vendor/c3/b4r/dark.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/vendor/b4r/dark.tokens.json",
+      "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112",
+      "bytes": 2348
+    },
+    {
+      "published": "vendor/c3/b4r/light.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/vendor/b4r/light.tokens.json",
+      "sha256": "a8ca4c0bd22093ae5f3b418403e71ed60032e17e682844dd17a0ed89c5107c99",
+      "bytes": 387
+    },
+    {
+      "published": "vendor/c3/b4r/standard.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/vendor/b4r/standard.tokens.json",
+      "sha256": "0916a7a5520e0f3696fd0c7420665bb86298171c79aef3634e0475627da6116a",
+      "bytes": 223
+    },
+    {
+      "published": "vendor/c3/b4r/increased.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/vendor/b4r/increased.tokens.json",
+      "sha256": "8a9add10c89f10582954750979477ed5391c9fec1758b053b0053de5712de311",
+      "bytes": 509
+    },
+    {
+      "published": "vendor/c3/reference/QANDEEL_Q_BASE_MASTER.svg",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-C3-LIVING-BRASS-PRODUCTION-SPEC-FREEZE/reference/canonical/QANDEEL_Q_BASE_MASTER.svg",
+      "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05",
+      "bytes": 3183
+    },
+    {
+      "published": "vendor/d2r/tokens/base/illumination.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/tokens/base/illumination.tokens.json",
+      "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4",
+      "bytes": 30299
+    },
+    {
+      "published": "vendor/d2r/tokens/appearance/dark.illumination.tokens.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/tokens/appearance/dark.illumination.tokens.json",
+      "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157",
+      "bytes": 3794
+    },
+    {
+      "published": "vendor/d2r/tokens/qandeel-light.resolver.json",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/tokens/qandeel-light.resolver.json",
+      "sha256": "3e40342ede17d0370fa3c1461439d514bbc36eb71e1253273e19c9e8618f88bc",
+      "bytes": 1720
+    },
+    {
+      "published": "vendor/lib/color.mjs",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/color.mjs",
+      "sha256": "298a4b9147c6a9d55fff85367963f4c85dd4f00a7c32647d06ba76f80b30cbb5",
+      "bytes": 8901
+    },
+    {
+      "published": "vendor/lib/png.mjs",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/png.mjs",
+      "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5",
+      "bytes": 5851
+    },
+    {
+      "published": "fonts/Estedad[wght].ttf",
+      "source": "E:/QANDEEL/QANDEEL PROJECT/.i08b3-work/raw/estedad-v8.5/Estedad-v8.5/Estedad[wght].ttf",
+      "sha256": "3134e31a27d58e615967e714c7799fbfa2de952876f8597b33dc57ffe0e99d03",
+      "bytes": 284180
+    }
+  ]
+}

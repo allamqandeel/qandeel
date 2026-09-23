@@ -1,0 +1,1712 @@
+{
+  "engine": "chrome 153.0.8010.48",
+  "generated": "2026-09-20T14:24:50.541Z",
+  "ringOpening": {
+    "edgeA": [
+      1024.435,
+      935.565
+    ],
+    "edgeB": [
+      1092.9699999999998,
+      842.27
+    ],
+    "centre": [
+      1058.7024999999999,
+      888.9175
+    ],
+    "widthMarkUnits": 115.76,
+    "note": "Both radial edges are read out of the approved ring path data and asserted present before use."
+  },
+  "framing": {
+    "canonical": {
+      "logoDp": 66,
+      "scale": 0.312622,
+      "tx": 244.616708,
+      "ty": 340.621763,
+      "targetR": 312.8889
+    },
+    "android": {
+      "logoDp": 48,
+      "targetR": 227.5556,
+      "scale": 0.227361,
+      "tx": 317.539813,
+      "ty": 387.361532
+    },
+    "perceived": {
+      "ios": 0.6111,
+      "androidIfUnchanged": 0.9167,
+      "android": 0.6667,
+      "exactParityDp": 44
+    }
+  },
+  "results": {
+    "app-icon-ios": {
+      "label": "App icon, square / iOS view",
+      "kind": "icon",
+      "sizesTested": [
+        256,
+        128,
+        64,
+        40,
+        32,
+        29,
+        20
+      ],
+      "sizes": {
+        "20": {
+          "size": 20,
+          "raster": "20x20",
+          "contrast": {
+            "strokeLuma": 184.8,
+            "fieldLuma": 10.9,
+            "ratio": 10.02,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.306,
+            "tipInkness": 0.552
+          },
+          "ringOpening": {
+            "openness": 0.433,
+            "meanOpenness": 0.416,
+            "channelLengthPx": 0.71
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.211,
+            "coreAreaPx2": 0.14,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.576,
+            "peakLuma": 186.4,
+            "energyVsField": 2300
+          },
+          "halo": {
+            "chromaExcess": 50,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.025,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "29": {
+          "size": 29,
+          "raster": "29x29",
+          "contrast": {
+            "strokeLuma": 221.6,
+            "fieldLuma": 10.9,
+            "ratio": 14.6,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.257,
+            "tipInkness": 0.791
+          },
+          "ringOpening": {
+            "openness": 0.808,
+            "meanOpenness": 0.687,
+            "channelLengthPx": 1.02
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.306,
+            "coreAreaPx2": 0.29,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.97,
+            "peakLuma": 231.8,
+            "energyVsField": 2573
+          },
+          "halo": {
+            "chromaExcess": 53,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.0172,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "32": {
+          "size": 32,
+          "raster": "32x32",
+          "contrast": {
+            "strokeLuma": 222.8,
+            "fieldLuma": 10.9,
+            "ratio": 14.76,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.306,
+            "tipInkness": 0.8
+          },
+          "ringOpening": {
+            "openness": 0.581,
+            "meanOpenness": 0.504,
+            "channelLengthPx": 1.13
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.337,
+            "coreAreaPx2": 0.36,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.964,
+            "peakLuma": 232.4,
+            "energyVsField": 2799
+          },
+          "halo": {
+            "chromaExcess": 75,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "40": {
+          "size": 40,
+          "raster": "40x40",
+          "contrast": {
+            "strokeLuma": 234.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.45,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.393,
+            "tipInkness": 0.654
+          },
+          "ringOpening": {
+            "openness": 0.664,
+            "meanOpenness": 0.576,
+            "channelLengthPx": 1.41
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.422,
+            "coreAreaPx2": 0.56,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.759,
+            "peakLuma": 234.5,
+            "energyVsField": 3784
+          },
+          "halo": {
+            "chromaExcess": 77,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "64": {
+          "size": 64,
+          "raster": "64x64",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.364,
+            "tipInkness": 0.641
+          },
+          "ringOpening": {
+            "openness": 0.994,
+            "meanOpenness": 0.677,
+            "channelLengthPx": 2.26
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.675,
+            "coreAreaPx2": 1.43,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.911,
+            "peakLuma": 238.5,
+            "energyVsField": 9707
+          },
+          "halo": {
+            "chromaExcess": 73,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0.5
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0.0078
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "128": {
+          "size": 128,
+          "raster": "128x128",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.36,
+            "tipInkness": 0.617
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.797,
+            "channelLengthPx": 4.52
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 1.35,
+            "coreAreaPx2": 5.72,
+            "wholePixelsAtFullInk": 4,
+            "structuralPresence": 1,
+            "peakLuma": 242.8,
+            "energyVsField": 30942
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              0.5
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.0039,
+              0.0039
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "256": {
+          "size": 256,
+          "raster": "256x256",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.436,
+            "tipInkness": 0.928
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.825,
+            "channelLengthPx": 9.05
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 2.699,
+            "coreAreaPx2": 22.89,
+            "wholePixelsAtFullInk": 23,
+            "structuralPresence": 1,
+            "peakLuma": 248.3,
+            "energyVsField": 107229
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              0.5
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.002,
+              0.002
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        }
+      }
+    },
+    "app-icon-android-masked": {
+      "label": "App icon, Android masked view",
+      "kind": "icon",
+      "sizesTested": [
+        256,
+        128,
+        64,
+        40,
+        32,
+        29,
+        20
+      ],
+      "sizes": {
+        "20": {
+          "size": 20,
+          "raster": "20x20",
+          "contrast": {
+            "strokeLuma": 207.2,
+            "fieldLuma": 10.9,
+            "ratio": 12.71,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.498,
+            "tipInkness": 0.726
+          },
+          "ringOpening": {
+            "openness": 0.452,
+            "meanOpenness": 0.395,
+            "channelLengthPx": 0.77
+          },
+          "ringCounter": {
+            "openness": 0.979
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.23,
+            "coreAreaPx2": 0.17,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.903,
+            "peakLuma": 216,
+            "energyVsField": 2175
+          },
+          "halo": {
+            "chromaExcess": 24,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "29": {
+          "size": 29,
+          "raster": "29x29",
+          "contrast": {
+            "strokeLuma": 222.8,
+            "fieldLuma": 10.9,
+            "ratio": 14.76,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.306,
+            "tipInkness": 0.8
+          },
+          "ringOpening": {
+            "openness": 0.581,
+            "meanOpenness": 0.504,
+            "channelLengthPx": 1.13
+          },
+          "ringCounter": {
+            "openness": 0.995
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.337,
+            "coreAreaPx2": 0.36,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.964,
+            "peakLuma": 232.4,
+            "energyVsField": 2799
+          },
+          "halo": {
+            "chromaExcess": 75,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              -0.5
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.0172,
+              -0.0172
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "32": {
+          "size": 32,
+          "raster": "32x32",
+          "contrast": {
+            "strokeLuma": 232.7,
+            "fieldLuma": 10.9,
+            "ratio": 16.19,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 63,
+            "survival": 0.984,
+            "weakestColumn": 0.238,
+            "tipInkness": 0.583
+          },
+          "ringOpening": {
+            "openness": 0.847,
+            "meanOpenness": 0.654,
+            "channelLengthPx": 1.23
+          },
+          "ringCounter": {
+            "openness": 0.995
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.368,
+            "coreAreaPx2": 0.43,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.848,
+            "peakLuma": 209.5,
+            "energyVsField": 3215
+          },
+          "halo": {
+            "chromaExcess": 67,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.0156,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "40": {
+          "size": 40,
+          "raster": "40x40",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.351,
+            "tipInkness": 0.867
+          },
+          "ringOpening": {
+            "openness": 0.974,
+            "meanOpenness": 0.711,
+            "channelLengthPx": 1.54
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.46,
+            "coreAreaPx2": 0.67,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.81,
+            "peakLuma": 238.5,
+            "energyVsField": 3932
+          },
+          "halo": {
+            "chromaExcess": 81,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.0125,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "64": {
+          "size": 64,
+          "raster": "64x64",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 63,
+            "survival": 0.984,
+            "weakestColumn": 0.204,
+            "tipInkness": 0.813
+          },
+          "ringOpening": {
+            "openness": 0.976,
+            "meanOpenness": 0.756,
+            "channelLengthPx": 2.47
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.736,
+            "coreAreaPx2": 1.7,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.902,
+            "peakLuma": 238.8,
+            "energyVsField": 10240
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -0.5,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.0078,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "128": {
+          "size": 128,
+          "raster": "128x128",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.537,
+            "tipInkness": 0.742
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.778,
+            "channelLengthPx": 4.93
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 1.472,
+            "coreAreaPx2": 6.81,
+            "wholePixelsAtFullInk": 4,
+            "structuralPresence": 1,
+            "peakLuma": 249.8,
+            "energyVsField": 33087
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0.5
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0.0039
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        },
+        "256": {
+          "size": 256,
+          "raster": "256x256",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.71,
+            "tipInkness": 1
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.835,
+            "channelLengthPx": 9.87
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 2.945,
+            "coreAreaPx2": 27.25,
+            "wholePixelsAtFullInk": 24,
+            "structuralPresence": 1,
+            "peakLuma": 251.3,
+            "energyVsField": 122359
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              -1,
+              1
+            ],
+            "inkBBoxOffsetFrac": [
+              -0.0039,
+              0.0039
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 0,
+            "bordersTouched": 0,
+            "expectEdgeInk": false,
+            "pass": true
+          }
+        }
+      }
+    },
+    "q-luminous": {
+      "label": "Q luminous master",
+      "kind": "q",
+      "sizesTested": [
+        256,
+        128,
+        64,
+        32
+      ],
+      "sizes": {
+        "32": {
+          "size": 32,
+          "raster": "32x23",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 4,
+            "ratio": 17.44,
+            "inkVsField": 17.44
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.586,
+            "tipInkness": 0.595
+          },
+          "ringOpening": {
+            "openness": 0.991,
+            "meanOpenness": 0.641,
+            "channelLengthPx": 2.17
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.646,
+            "coreAreaPx2": 1.31,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.969,
+            "peakLuma": 238.5,
+            "energyVsField": 7933
+          },
+          "halo": {
+            "chromaExcess": 93,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 35,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "64": {
+          "size": 64,
+          "raster": "64x46",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 4,
+            "ratio": 17.44,
+            "inkVsField": 17.44
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.698,
+            "tipInkness": 0.936
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.776,
+            "channelLengthPx": 4.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 1.293,
+            "coreAreaPx2": 5.25,
+            "wholePixelsAtFullInk": 4,
+            "structuralPresence": 1,
+            "peakLuma": 249,
+            "energyVsField": 27166
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 43,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "128": {
+          "size": 128,
+          "raster": "128x93",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 4,
+            "ratio": 17.44,
+            "inkVsField": 17.44
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.432,
+            "tipInkness": 0.962
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.844,
+            "channelLengthPx": 8.66
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 2.585,
+            "coreAreaPx2": 21,
+            "wholePixelsAtFullInk": 18,
+            "structuralPresence": 1,
+            "peakLuma": 250.6,
+            "energyVsField": 102509
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 74,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "256": {
+          "size": 256,
+          "raster": "256x185",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 4,
+            "ratio": 17.44,
+            "inkVsField": 17.44
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.741,
+            "tipInkness": 1
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.842,
+            "channelLengthPx": 17.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 5.171,
+            "coreAreaPx2": 83.99,
+            "wholePixelsAtFullInk": 84,
+            "structuralPresence": 1,
+            "peakLuma": 251.5,
+            "energyVsField": 391630
+          },
+          "halo": {
+            "chromaExcess": 96,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 122,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        }
+      }
+    },
+    "q-base-on-dark": {
+      "label": "Q base master on dark",
+      "kind": "q",
+      "sizesTested": [
+        256,
+        128,
+        64,
+        32
+      ],
+      "sizes": {
+        "32": {
+          "size": 32,
+          "raster": "32x23",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.489,
+            "tipInkness": 0.498
+          },
+          "ringOpening": {
+            "openness": 0.991,
+            "meanOpenness": 0.681,
+            "channelLengthPx": 2.17
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.646,
+            "coreAreaPx2": 1.31,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.742,
+            "peakLuma": 236.5,
+            "energyVsField": 4906
+          },
+          "halo": {
+            "chromaExcess": 1,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 34,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "64": {
+          "size": 64,
+          "raster": "64x46",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.604,
+            "tipInkness": 0.902
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.786,
+            "channelLengthPx": 4.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 1.293,
+            "coreAreaPx2": 5.25,
+            "wholePixelsAtFullInk": 2,
+            "structuralPresence": 0.994,
+            "peakLuma": 236.5,
+            "energyVsField": 16076
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 42,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "128": {
+          "size": 128,
+          "raster": "128x93",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.397,
+            "tipInkness": 0.956
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.886,
+            "channelLengthPx": 8.66
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 2.585,
+            "coreAreaPx2": 21,
+            "wholePixelsAtFullInk": 12,
+            "structuralPresence": 1,
+            "peakLuma": 236.5,
+            "energyVsField": 58391
+          },
+          "halo": {
+            "chromaExcess": 1,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 50,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "256": {
+          "size": 256,
+          "raster": "256x185",
+          "contrast": {
+            "strokeLuma": 236.5,
+            "fieldLuma": 10.9,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.719,
+            "tipInkness": 1
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.867,
+            "channelLengthPx": 17.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 5.171,
+            "coreAreaPx2": 83.99,
+            "wholePixelsAtFullInk": 71,
+            "structuralPresence": 1,
+            "peakLuma": 236.5,
+            "energyVsField": 220416
+          },
+          "halo": {
+            "chromaExcess": 1,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 79,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        }
+      }
+    },
+    "q-monochrome": {
+      "label": "Q monochrome on white",
+      "kind": "q",
+      "sizesTested": [
+        256,
+        128,
+        64,
+        32
+      ],
+      "sizes": {
+        "32": {
+          "size": 32,
+          "raster": "32x23",
+          "contrast": {
+            "strokeLuma": 0,
+            "fieldLuma": 255,
+            "ratio": 21,
+            "inkVsField": 21
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.49,
+            "tipInkness": 0.502
+          },
+          "ringOpening": {
+            "openness": 0.989,
+            "meanOpenness": 0.679,
+            "channelLengthPx": 2.17
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.646,
+            "coreAreaPx2": 1.31,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.744,
+            "peakLuma": 255,
+            "energyVsField": 5568
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 0
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 35,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "64": {
+          "size": 64,
+          "raster": "64x46",
+          "contrast": {
+            "strokeLuma": 0,
+            "fieldLuma": 255,
+            "ratio": 21,
+            "inkVsField": 21
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.608,
+            "tipInkness": 0.906
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.785,
+            "channelLengthPx": 4.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 1.293,
+            "coreAreaPx2": 5.25,
+            "wholePixelsAtFullInk": 2,
+            "structuralPresence": 0.994,
+            "peakLuma": 255,
+            "energyVsField": 18200
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 0
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 42,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "128": {
+          "size": 128,
+          "raster": "128x93",
+          "contrast": {
+            "strokeLuma": 0,
+            "fieldLuma": 255,
+            "ratio": 21,
+            "inkVsField": 21
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.4,
+            "tipInkness": 0.961
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.886,
+            "channelLengthPx": 8.66
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 2.585,
+            "coreAreaPx2": 21,
+            "wholePixelsAtFullInk": 12,
+            "structuralPresence": 1,
+            "peakLuma": 255,
+            "energyVsField": 66070
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 0
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 50,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "256": {
+          "size": 256,
+          "raster": "256x185",
+          "contrast": {
+            "strokeLuma": 0,
+            "fieldLuma": 255,
+            "ratio": 21,
+            "inkVsField": 21
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.722,
+            "tipInkness": 1
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.867,
+            "channelLengthPx": 17.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 5.171,
+            "coreAreaPx2": 83.99,
+            "wholePixelsAtFullInk": 71,
+            "structuralPresence": 1,
+            "peakLuma": 255,
+            "energyVsField": 249295
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 0
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 79,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        }
+      }
+    },
+    "q-light-bg": {
+      "label": "Q light-background-safe",
+      "kind": "q",
+      "sizesTested": [
+        256,
+        128,
+        64,
+        32
+      ],
+      "sizes": {
+        "32": {
+          "size": 32,
+          "raster": "32x23",
+          "contrast": {
+            "strokeLuma": 10.9,
+            "fieldLuma": 236.5,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.494,
+            "tipInkness": 0.502
+          },
+          "ringOpening": {
+            "openness": 0.988,
+            "meanOpenness": 0.677,
+            "channelLengthPx": 2.17
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 0.646,
+            "coreAreaPx2": 1.31,
+            "wholePixelsAtFullInk": 0,
+            "structuralPresence": 0.745,
+            "peakLuma": 236.5,
+            "energyVsField": 4937
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 35,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "64": {
+          "size": 64,
+          "raster": "64x46",
+          "contrast": {
+            "strokeLuma": 10.9,
+            "fieldLuma": 236.5,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.609,
+            "tipInkness": 0.907
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.785,
+            "channelLengthPx": 4.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 1.293,
+            "coreAreaPx2": 5.25,
+            "wholePixelsAtFullInk": 2,
+            "structuralPresence": 0.994,
+            "peakLuma": 236.5,
+            "energyVsField": 16120
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 42,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "128": {
+          "size": 128,
+          "raster": "128x93",
+          "contrast": {
+            "strokeLuma": 10.9,
+            "fieldLuma": 236.5,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.404,
+            "tipInkness": 0.96
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.885,
+            "channelLengthPx": 8.66
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 2.585,
+            "coreAreaPx2": 21,
+            "wholePixelsAtFullInk": 12,
+            "structuralPresence": 1,
+            "peakLuma": 236.5,
+            "energyVsField": 58475
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 50,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        },
+        "256": {
+          "size": 256,
+          "raster": "256x185",
+          "contrast": {
+            "strokeLuma": 10.9,
+            "fieldLuma": 236.5,
+            "ratio": 16.75,
+            "inkVsField": 16.75
+          },
+          "tail": {
+            "columnsTested": 64,
+            "columnsWithInk": 64,
+            "survival": 1,
+            "weakestColumn": 0.724,
+            "tipInkness": 1
+          },
+          "ringOpening": {
+            "openness": 1,
+            "meanOpenness": 0.866,
+            "channelLengthPx": 17.33
+          },
+          "ringCounter": {
+            "openness": 1
+          },
+          "lightPoint": {
+            "coreRadiusPx": 5.171,
+            "coreAreaPx2": 83.99,
+            "wholePixelsAtFullInk": 71,
+            "structuralPresence": 1,
+            "peakLuma": 236.5,
+            "energyVsField": 220592
+          },
+          "halo": {
+            "chromaExcess": 0,
+            "baseChroma": 25
+          },
+          "centring": {
+            "inkBBoxOffsetPx": [
+              0,
+              0
+            ],
+            "inkBBoxOffsetFrac": [
+              0,
+              0
+            ]
+          },
+          "clipping": {
+            "edgePixelsWithInk": 79,
+            "bordersTouched": 4,
+            "expectEdgeInk": true,
+            "pass": true
+          }
+        }
+      }
+    }
+  }
+}

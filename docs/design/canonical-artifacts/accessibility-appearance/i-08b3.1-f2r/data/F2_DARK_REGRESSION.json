@@ -1,0 +1,465 @@
+{
+  "generatedBy": "tools/f2-regression.mjs",
+  "tokenTree": {
+    "digest": "aae1316cb9ee65444f0ef600e793fc40e8800389b66de21d0a1ed2e6164adca7",
+    "files": 9
+  },
+  "state": "PASS",
+  "frozenDark": {
+    "qandeel.world.fill": "#101010",
+    "qandeel.surface.functional": "#181818",
+    "qandeel.content.primary": "#d8d5ca",
+    "qandeel.content.secondary": "#afaca3",
+    "qandeel.content.tertiary": "#8b8982",
+    "qandeel.identity.material": "#a58e6f",
+    "qandeel.illumination.core": "#fbf2db",
+    "qandeel.illumination.mid": "#e8ddc2",
+    "qandeel.illumination.low": "#d6caa9",
+    "qandeel.status.error.ink": "#fe907e",
+    "qandeel.state.disabled.ink": "#696762",
+    "qandeel.passage.scrim": "#000000"
+  },
+  "frozenScrimAlpha": 0.5,
+  "rows": [
+    {
+      "layer": "VALUES",
+      "name": "qandeel.world.fill",
+      "expected": "#101010",
+      "got": "#101010",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.surface.functional",
+      "expected": "#181818",
+      "got": "#181818",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.content.primary",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.content.secondary",
+      "expected": "#afaca3",
+      "got": "#afaca3",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.content.tertiary",
+      "expected": "#8b8982",
+      "got": "#8b8982",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.identity.material",
+      "expected": "#a58e6f",
+      "got": "#a58e6f",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.illumination.core",
+      "expected": "#fbf2db",
+      "got": "#fbf2db",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.illumination.mid",
+      "expected": "#e8ddc2",
+      "got": "#e8ddc2",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.illumination.low",
+      "expected": "#d6caa9",
+      "got": "#d6caa9",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.status.error.ink",
+      "expected": "#fe907e",
+      "got": "#fe907e",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.state.disabled.ink",
+      "expected": "#696762",
+      "got": "#696762",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.passage.scrim",
+      "expected": "#000000",
+      "got": "#000000",
+      "ok": true
+    },
+    {
+      "layer": "VALUES",
+      "name": "qandeel.passage.scrim @alpha",
+      "expected": 0.5,
+      "got": 0.5,
+      "ok": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.world.fill",
+      "expected": "#101010",
+      "got": "#101010",
+      "chain": "qandeel.world.fill -> qandeel.expression.world",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.surface.functional",
+      "expected": "#181818",
+      "got": "#181818",
+      "chain": "qandeel.surface.functional -> qandeel.expression.surface",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.content.primary",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "chain": "qandeel.content.primary -> qandeel.expression.content.primary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.content.secondary",
+      "expected": "#afaca3",
+      "got": "#afaca3",
+      "chain": "qandeel.content.secondary -> qandeel.expression.content.secondary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.content.tertiary",
+      "expected": "#8b8982",
+      "got": "#8b8982",
+      "chain": "qandeel.content.tertiary -> qandeel.expression.content.tertiary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.identity.material",
+      "expected": "#a58e6f",
+      "got": "#a58e6f",
+      "chain": "qandeel.identity.material -> qandeel.expression.material.living-brass.body",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.identity.mark",
+      "expected": "#a58e6f",
+      "got": "#a58e6f",
+      "chain": "qandeel.identity.mark -> qandeel.identity.material -> qandeel.expression.material.living-brass.body",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.navigation.machinery",
+      "expected": "#a58e6f",
+      "got": "#a58e6f",
+      "chain": "qandeel.navigation.machinery -> qandeel.identity.material -> qandeel.expression.material.living-brass.body",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.control.functional",
+      "expected": "#8b8982",
+      "got": "#8b8982",
+      "chain": "qandeel.control.functional -> qandeel.content.tertiary -> qandeel.expression.content.tertiary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.illumination.core",
+      "expected": "#fbf2db",
+      "got": "#fbf2db",
+      "chain": "qandeel.illumination.core -> qandeel.expression.illumination.core",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.illumination.mid",
+      "expected": "#e8ddc2",
+      "got": "#e8ddc2",
+      "chain": "qandeel.illumination.mid -> qandeel.expression.illumination.mid",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.illumination.low",
+      "expected": "#d6caa9",
+      "got": "#d6caa9",
+      "chain": "qandeel.illumination.low -> qandeel.expression.illumination.low",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.state.rest.ink",
+      "expected": "#8b8982",
+      "got": "#8b8982",
+      "chain": "qandeel.state.rest.ink -> qandeel.control.functional -> qandeel.content.tertiary -> qandeel.expression.content.tertiary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.state.pressed.ink",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "chain": "qandeel.state.pressed.ink -> qandeel.content.primary -> qandeel.expression.content.primary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.state.focus.indicator",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "chain": "qandeel.state.focus.indicator -> qandeel.content.primary -> qandeel.expression.content.primary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.state.focus.companion",
+      "expected": "#101010",
+      "got": "#101010",
+      "chain": "qandeel.state.focus.companion -> qandeel.world.fill -> qandeel.expression.world",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.state.selected.ink",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "chain": "qandeel.state.selected.ink -> qandeel.content.primary -> qandeel.expression.content.primary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.state.selected.marker",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "chain": "qandeel.state.selected.marker -> qandeel.content.primary -> qandeel.expression.content.primary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.state.disabled.ink",
+      "expected": "#696762",
+      "got": "#696762",
+      "chain": "qandeel.state.disabled.ink -> qandeel.expression.state.disabled",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.status.error.ink",
+      "expected": "#fe907e",
+      "got": "#fe907e",
+      "chain": "qandeel.status.error.ink -> qandeel.expression.status.error",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.status.warning.ink",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "chain": "qandeel.status.warning.ink -> qandeel.content.primary -> qandeel.expression.content.primary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.status.success.ink",
+      "expected": "#d8d5ca",
+      "got": "#d8d5ca",
+      "chain": "qandeel.status.success.ink -> qandeel.content.primary -> qandeel.expression.content.primary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.status.informational.ink",
+      "expected": "#afaca3",
+      "got": "#afaca3",
+      "chain": "qandeel.status.informational.ink -> qandeel.content.secondary -> qandeel.expression.content.secondary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.accessibility.contrast.boundary",
+      "expected": "#8b8982",
+      "got": "#8b8982",
+      "chain": "qandeel.accessibility.contrast.boundary -> qandeel.content.tertiary -> qandeel.expression.content.tertiary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.accessibility.contrast.ground",
+      "expected": "#101010",
+      "got": "#101010",
+      "chain": "qandeel.accessibility.contrast.ground -> qandeel.world.fill -> qandeel.expression.world",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.accessibility.contrast.atmosphere-ink",
+      "expected": "#8b8982",
+      "got": "#8b8982",
+      "chain": "qandeel.accessibility.contrast.atmosphere-ink -> qandeel.content.tertiary -> qandeel.expression.content.tertiary",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.accessibility.transparency.scrim",
+      "expected": "#000000",
+      "got": "#000000",
+      "chain": "qandeel.accessibility.transparency.scrim -> qandeel.passage.scrim -> qandeel.expression.scrim",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "ROUTES",
+      "name": "qandeel.accessibility.transparency.field",
+      "expected": "#101010",
+      "got": "#101010",
+      "chain": "qandeel.accessibility.transparency.field -> qandeel.world.fill -> qandeel.expression.world",
+      "ok": true,
+      "sameValue": true,
+      "sameChain": true
+    },
+    {
+      "layer": "STATES",
+      "name": "DEFAULT",
+      "expected": 0,
+      "got": 0,
+      "ok": true
+    },
+    {
+      "layer": "STATES",
+      "name": "INCREASED CONTRAST",
+      "expected": 0,
+      "got": 0,
+      "ok": true
+    },
+    {
+      "layer": "STATES",
+      "name": "REDUCE TRANSPARENCY",
+      "expected": 0,
+      "got": 0,
+      "ok": true
+    },
+    {
+      "layer": "STATES",
+      "name": "CONTRAST + TRANSPARENCY",
+      "expected": 0,
+      "got": 0,
+      "ok": true
+    },
+    {
+      "layer": "STATES",
+      "name": "STANDARD + FULL (restated)",
+      "expected": 0,
+      "got": 0,
+      "ok": true
+    }
+  ],
+  "probes": [
+    {
+      "probe": "a World normalised from #101010 to #121212",
+      "rejected": true
+    },
+    {
+      "probe": "the identity mark re-pointed straight at the body, same colour, one hop shorter",
+      "rejected": true
+    },
+    {
+      "probe": "the increased-contrast far-layer lightness moved 0.491 -> 0.500",
+      "rejected": true
+    },
+    {
+      "probe": "the scrim alpha softened 0.5 -> 0.45 with the ink unchanged",
+      "rejected": true
+    }
+  ],
+  "pixel": {
+    "acceptedSha": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17",
+    "rerenderedSha": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17",
+    "identical": true,
+    "diff": {
+      "identical": true,
+      "pixels": 1804920,
+      "differing": 0,
+      "maxChannelDelta": 0
+    },
+    "probe": {
+      "name": "the same scene with the World lifted #101010 -> #111111",
+      "rejected": true,
+      "differingPixels": 1261959
+    }
+  }
+}

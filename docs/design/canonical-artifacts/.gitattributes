@@ -1,0 +1,4 @@
+# Preserved canonical artifacts are byte-exact copies of sealed local packages, verified by
+# SHA-256 in each domain's SOURCE-PROVENANCE.sha256. Some carry CRLF line endings. Never let git
+# normalise line endings here, on any checkout, or the recorded hashes stop matching.
+* -text

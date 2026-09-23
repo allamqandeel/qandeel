@@ -1,0 +1,238 @@
+{
+  "note": "Every file F1 inherits, with the sha256 of the SEALED PACKAGE it was taken from. tools/f1-resolve.mjs re-checks both ends on any host that still has the source packages, and reports SOURCE-ABSENT rather than PASS when it does not.",
+  "generatedBy": ".i08b31-f1-work/build/vendor.mjs",
+  "root": "project root, untracked design-research packages",
+  "entries": [
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/lib/color.mjs",
+      "published": "vendor/lib/color.mjs",
+      "sha256": "298a4b9147c6a9d55fff85367963f4c85dd4f00a7c32647d06ba76f80b30cbb5",
+      "bytes": 8901,
+      "why": "OkLab/OkLCh + WCAG contrast. Every measurement in F1 uses the same arithmetic every earlier package was judged on."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/lib/png.mjs",
+      "published": "vendor/lib/png.mjs",
+      "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5",
+      "bytes": 5851,
+      "why": "PNG decode/encode. F1 diffs rasters with the same decoder that produced them."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/tools/e1-cvd.mjs",
+      "published": "tools/f1-cvd.mjs",
+      "sha256": "b4d921ce4fdbef9d6d224ae17d235635d97198a2f477695bf63f4b4f3aa0863e",
+      "bytes": 6822,
+      "why": "Brettel/Vienot dichromacy simulation, byte-identical to I-08B3.1-E1's tools/e1-cvd.mjs, which self-checks against published confusion lines."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/tools/e1-cdp.mjs",
+      "published": "tools/f1-cdp.mjs",
+      "sha256": "44bc93db3f2b404b9ea43ee9d991ffb563ebfbc19167b8e468cc05475d4912f6",
+      "bytes": 6257,
+      "why": "The minimal Chrome DevTools Protocol client, byte-identical to E1's. Carried rather than rewritten because its flags are the accumulated result of four packages of Windows-Chrome defects - LCD subpixel antialiasing putting red and blue fringes on every glyph, and file:// font fetches being refused as cross-origin."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/b4r/semantic.tokens.json",
+      "published": "vendor/c3/b4r/semantic.tokens.json",
+      "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441",
+      "bytes": 4373,
+      "why": "FROZEN I-08B3.1-B4R. The four Surface roles and the reading ramp."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/b4r/dark.tokens.json",
+      "published": "vendor/c3/b4r/dark.tokens.json",
+      "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112",
+      "bytes": 2348,
+      "why": "FROZEN I-08B3.1-B4R. Dark appearance values."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/b4r/light.tokens.json",
+      "published": "vendor/c3/b4r/light.tokens.json",
+      "sha256": "a8ca4c0bd22093ae5f3b418403e71ed60032e17e682844dd17a0ed89c5107c99",
+      "bytes": 387,
+      "why": "FROZEN I-08B3.1-B4R. Light appearance — DELIBERATELY EMPTY, owned by I-08B3.1-F2."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/b4r/standard.tokens.json",
+      "published": "vendor/c3/b4r/standard.tokens.json",
+      "sha256": "0916a7a5520e0f3696fd0c7420665bb86298171c79aef3634e0475627da6116a",
+      "bytes": 223,
+      "why": "FROZEN I-08B3.1-B4R. Standard contrast context: overrides nothing, and says so."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/b4r/increased.tokens.json",
+      "published": "vendor/c3/b4r/increased.tokens.json",
+      "sha256": "8a9add10c89f10582954750979477ed5391c9fec1758b053b0053de5712de311",
+      "bytes": 509,
+      "why": "FROZEN I-08B3.1-B4R. The increased-contrast context B4R declared EMPTY and assigned to I-08B3.1-F. F1 fills it — see tokens/contrast/."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/tokens/base/material.tokens.json",
+      "published": "vendor/c3/tokens/base/material.tokens.json",
+      "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928",
+      "bytes": 14376,
+      "why": "FROZEN I-08B3.1-C3. Living Brass permission classes."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/tokens/appearance/dark.material.tokens.json",
+      "published": "vendor/c3/tokens/appearance/dark.material.tokens.json",
+      "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367",
+      "bytes": 3441,
+      "why": "FROZEN I-08B3.1-C3. Living Brass #a58e6f."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/tokens/appearance/light.material.tokens.json",
+      "published": "vendor/c3/tokens/appearance/light.material.tokens.json",
+      "sha256": "f2f2f8b2578abfe6ad1d5a4ab0a462967bc26ef88fad91a09092f24fddd15f65",
+      "bytes": 587,
+      "why": "FROZEN I-08B3.1-C3."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/tokens/qandeel-living-brass.resolver.json",
+      "published": "vendor/c3/tokens/qandeel-living-brass.resolver.json",
+      "sha256": "d013dc03bccb2d246cc6313460d1776b79e9a767512a51d0dff32429c194ccb1",
+      "bytes": 2364,
+      "why": "FROZEN I-08B3.1-C3 resolver — the one that declares the contrast modifier F1 fills."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/c3/reference/QANDEEL_Q_BASE_MASTER.svg",
+      "published": "vendor/c3/reference/QANDEEL_Q_BASE_MASTER.svg",
+      "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05",
+      "bytes": 3183,
+      "why": "The identity mark, for the boards that must show Living Brass unchanged."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/d2r/tokens/base/illumination.tokens.json",
+      "published": "vendor/d2r/tokens/base/illumination.tokens.json",
+      "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4",
+      "bytes": 30299,
+      "why": "D2R. QANDEEL LIGHT + ATMOSPHERE roles, including the reduced-motion scalars F1 inherits."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/d2r/tokens/appearance/dark.illumination.tokens.json",
+      "published": "vendor/d2r/tokens/appearance/dark.illumination.tokens.json",
+      "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157",
+      "bytes": 3794,
+      "why": "D2R. Light core/mid/low."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/vendor/d2r/tokens/qandeel-light.resolver.json",
+      "published": "vendor/d2r/tokens/qandeel-light.resolver.json",
+      "sha256": "3e40342ede17d0370fa3c1461439d514bbc36eb71e1253273e19c9e8618f88bc",
+      "bytes": 1720,
+      "why": "D2R resolver."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/scene/d2-foundation.mjs",
+      "published": "vendor/d2r/scene/d2-foundation.mjs",
+      "sha256": "cdcd403ffea7e9bf218b4f37eea71b356c0fdc5c26e4af8925e7de61956133b8",
+      "bytes": 13428,
+      "why": "D2R scene foundation: ATMOSPHERE, FRAME, VIEW, falloff."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/scene/d2-world.mjs",
+      "published": "vendor/d2r/scene/d2-world.mjs",
+      "sha256": "49ec36fb8e1bde33cf4430eb0fe24c15051ba55d387e4203f8033ab4e5f3f597",
+      "bytes": 17062,
+      "why": "D2R ambient world + PRESENTATION_CONTRACT. F1 renders THIS world, not a lookalike of it."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/scene/d2-render.mjs",
+      "published": "vendor/d2r/scene/d2-render.mjs",
+      "sha256": "0c97580c021eef76cbabfa82de601594d1526d0178a9b27f31d26bcf8da548b7",
+      "bytes": 16228,
+      "why": "D2R renderer: one state vector in, one document out."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/scene/d2-events.mjs",
+      "published": "vendor/d2r/scene/d2-events.mjs",
+      "sha256": "41043c6b23865f9105101d0234a85a225431789947021d68f5a06e1bd00de6f7",
+      "bytes": 15763,
+      "why": "D2R meaning events: CONNECTION, PATTERN, INSIGHT, and their reduced counterparts."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/scene/d2-connection.mjs",
+      "published": "vendor/d2r/scene/d2-connection.mjs",
+      "sha256": "debb4a0a7327c97e16ad7644262b25fa20a052288c6fad5c845f8f31d7db37b7",
+      "bytes": 3932,
+      "why": "D2R connection geometry."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/color.mjs",
+      "published": "vendor/d2r/vendor/color.mjs",
+      "sha256": "298a4b9147c6a9d55fff85367963f4c85dd4f00a7c32647d06ba76f80b30cbb5",
+      "bytes": 8901,
+      "why": "The colour library D2R's scene imports as ../vendor/color.mjs."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/png.mjs",
+      "published": "vendor/d2r/vendor/png.mjs",
+      "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5",
+      "bytes": 5851,
+      "why": "The PNG library D2R's tools import."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/d1/d1-scene.mjs",
+      "published": "vendor/d2r/vendor/d1/d1-scene.mjs",
+      "sha256": "841dea14f60dde91ac3fd903afdbb64e56300d3327f30902a7ba029d0d7e0e46",
+      "bytes": 27642,
+      "why": "I-08B3.1-D1 scene, inherited by D2R — the GUIDED THREAD lives here."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/d1/d1-arrivals.mjs",
+      "published": "vendor/d2r/vendor/d1/d1-arrivals.mjs",
+      "sha256": "915ff97618bb40cc4e04d4d0c6e42dcf4f2bd9178cd39cbafc690a74a4b19efd",
+      "bytes": 17684,
+      "why": "I-08B3.1-D1 ARRIVALS and their REDUCED counterparts."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/d1/d1-render.mjs",
+      "published": "vendor/d2r/vendor/d1/d1-render.mjs",
+      "sha256": "e1ea2960e19d36eb3547b135d3e7a36eb0855b46f065d4d666fabde238d20940",
+      "bytes": 21785,
+      "why": "I-08B3.1-D1 renderer."
+    },
+    {
+      "source": "I-08B3.1-D2R-QANDEEL-LIGHT-SYSTEM/source/vendor/QANDEEL_Q_BASE_MASTER.svg",
+      "published": "vendor/d2r/vendor/QANDEEL_Q_BASE_MASTER.svg",
+      "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05",
+      "bytes": 3183,
+      "why": "The identity mark as D2R's scene loads it."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/tokens/base/interaction.tokens.json",
+      "published": "vendor/e1/tokens/base/interaction.tokens.json",
+      "sha256": "6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce",
+      "bytes": 54134,
+      "why": "E1R. Interaction state and system status as roles."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/tokens/appearance/dark.interaction.tokens.json",
+      "published": "vendor/e1/tokens/appearance/dark.interaction.tokens.json",
+      "sha256": "397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252",
+      "bytes": 6162,
+      "why": "E1R. #fe907e error ink, #696762 disabled ink."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/tokens/appearance/light.interaction.tokens.json",
+      "published": "vendor/e1/tokens/appearance/light.interaction.tokens.json",
+      "sha256": "f13241f38fdf5e2f9213afb1aa05eddc92810707229b48a93cade83c09043b46",
+      "bytes": 927,
+      "why": "E1R. Light appearance — empty, owned by F2."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/tokens/qandeel-interaction.resolver.json",
+      "published": "vendor/e1/tokens/qandeel-interaction.resolver.json",
+      "sha256": "ef0566203581f5bea727209988b09c6cac3b863703d581b29657a71b1f980e5c",
+      "bytes": 1970,
+      "why": "E1R resolver — the chain F1 extends."
+    },
+    {
+      "source": "I-08B3.1-E1-INTERACTION-SYSTEM-SEMANTIC-COLOR/fonts/Estedad[wght].ttf",
+      "published": "fonts/Estedad[wght].ttf",
+      "sha256": "3134e31a27d58e615967e714c7799fbfa2de952876f8597b33dc57ffe0e99d03",
+      "bytes": 284180,
+      "why": "Estedad v8.5, FROZEN in I-08B3.0. Variable weight — which is what lets the Bold Text proof be real rather than synthetic."
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "qandeel": {
+    "$description": "QANDEEL, light appearance.",
+    "expression": {
+      "$description": "DELIBERATELY EMPTY. QANDEEL is dark-led and not dark-locked, and the light expression has not been designed. No value here is unassigned by accident: resolving against this set leaves every semantic token UNRESOLVED and names what is missing. Owned by I-08B3.1-F."
+    }
+  }
+}

@@ -1,0 +1,8 @@
+{
+  "qandeel": {
+    "$description": "QANDEEL, increased-contrast accessibility expression.",
+    "expression": {
+      "$description": "DELIBERATELY EMPTY. An increased-contrast expression is an OVERRIDE of the appearance it applies to, not a third appearance - Apple asks for \"light and dark variants, and an increased contrast option for each variant\". Its values are owned by I-08B3.1-F. Note that the B-track truth it will override is OPAQUE: Reduce Transparency has nothing to undo here."
+    }
+  }
+}

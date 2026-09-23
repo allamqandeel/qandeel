@@ -1,0 +1,26 @@
+A-voice-note-ar 601 frames 43796 ms
+A-voice-note-ar-reduced-motion 601 frames 43098 ms
+B-live-call-foreground-ar 913 frames 73925 ms
+B-live-call-foreground-ar-reduced-motion 913 frames 74149 ms
+C-background-restore-ar 877 frames 72302 ms
+C-background-restore-ar-reduced-motion 877 frames 72169 ms
+D1-permission-denied-ar 349 frames 25880 ms
+D1-permission-denied-ar-reduced-motion 349 frames 26789 ms
+D2-network-interruption-ar 781 frames 64046 ms
+D2-network-interruption-ar-reduced-motion 781 frames 61903 ms
+D3-ended-while-away-ar 493 frames 38632 ms
+D3-ended-while-away-ar-reduced-motion 493 frames 38214 ms
+C-background-restore-en 877 frames 70697 ms
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\A-voice-note-ar.mp4","bytes":4132312,"frames":601}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\A-voice-note-ar-reduced-motion.mp4","bytes":4023697,"frames":601}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\B-live-call-foreground-ar.mp4","bytes":6499740,"frames":913}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\B-live-call-foreground-ar-reduced-motion.mp4","bytes":5396993,"frames":913}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\C-background-restore-ar.mp4","bytes":7919344,"frames":877}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\C-background-restore-ar-reduced-motion.mp4","bytes":6887268,"frames":877}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\D1-permission-denied-ar.mp4","bytes":2528629,"frames":349}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\D1-permission-denied-ar-reduced-motion.mp4","bytes":2528629,"frames":349}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\D2-network-interruption-ar.mp4","bytes":5114067,"frames":781}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\D2-network-interruption-ar-reduced-motion.mp4","bytes":4477388,"frames":781}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\D3-ended-while-away-ar.mp4","bytes":4194548,"frames":493}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\D3-ended-while-away-ar-reduced-motion.mp4","bytes":3829766,"frames":493}
+{"mp4":"E:\\QANDEEL\\QANDEEL PROJECT\\.i08b31-g12-work\\out\\motion\\C-background-restore-en.mp4","bytes":8418849,"frames":877}

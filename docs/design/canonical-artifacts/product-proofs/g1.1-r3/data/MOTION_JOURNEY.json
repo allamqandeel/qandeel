@@ -1,0 +1,67 @@
+{
+ "fps": 60,
+ "endMs": 14300,
+ "frames": 859,
+ "settleMs": 700,
+ "easing": "cubic-bezier(0.23, 1, 0.32, 1)",
+ "durationsMs": {
+  "resolve": 140,
+  "markerLead": 200,
+  "markerTrail": 280,
+  "dock": 220,
+  "depthOut": 200,
+  "depthIn": 320,
+  "depthInDelay": 100,
+  "voice": 220
+ },
+ "events": [
+  {
+   "at": 908,
+   "target": "#mic",
+   "act": "note",
+   "label": "voice note starts (Conversation stays)"
+  },
+  {
+   "at": 3308,
+   "target": "#note-send",
+   "act": "notesend",
+   "label": "voice note sent — lands in the history"
+  },
+  {
+   "at": 4608,
+   "target": "#call",
+   "act": "call",
+   "label": "Live Call starts — Analysis-first"
+  },
+  {
+   "at": 6808,
+   "target": "#back",
+   "act": "leave",
+   "label": "«المحادثة» — Conversation, the call continues"
+  },
+  {
+   "at": 8608,
+   "target": "#door",
+   "act": "enter",
+   "label": "«تحليل المحادثة» — back to the same call"
+  },
+  {
+   "at": 10408,
+   "target": "#end-call",
+   "act": "endcall",
+   "label": "call ends — the reader stays where they are"
+  },
+  {
+   "at": 11808,
+   "target": "#back",
+   "act": "leave",
+   "label": "back to the Conversation — the call record"
+  },
+  {
+   "at": 13208,
+   "target": "#replay",
+   "act": "menu",
+   "label": "Replay entry"
+  }
+ ]
+}

@@ -1,0 +1,66 @@
+{
+  "qandeel": {
+    "$description": "I-08B3.1-F1 — THE REDUCE-TRANSPARENCY OVERRIDE, DARK APPEARANCE.\n\nWHAT THIS SETTING IS NOT, IN QANDEEL. It is not a chrome question. I-08B3.1-B4R recorded that before this task existed: the functional Surface is an opaque matte, the navigation is opaque, CHROME.opacity is 1, and \"Reduce Transparency has nothing to undo here\". QANDEEL has no Liquid Glass, no backdrop blur behind content, no vibrancy stack. A package that shipped an impressive-looking chrome transformation for this setting would be transforming something that does not exist.\n\nWHAT IT IS. A WORLD question, with exactly three subjects: the ambient field's composited contours, the PASSAGE scrim, and the Light's wash. Two of them change and the third deliberately does not.\n\nTHE SUBSTITUTION IS EXACT, NOT APPROXIMATE. Every ambient contour is composited against one flat opaque colour — the World, #101010 — so its alpha composite has a closed-form opaque equivalent, and drawing that equivalent changes the mechanism without changing a pixel. 90 stroke substitutions and 18 fill substitutions are enumerated in data/F1_DERIVATION.json. This is why Reduce Transparency does not cost the Living Analysis World any of its richness: the field is not simplified, it is pre-resolved.\n\nTHE ONE PLACE IT IS NOT EXACT, STATED RATHER THAN HIDDEN: where two contours CROSS. Translucent strokes tint each other at a crossing; opaque ones do not, and the nearer depth plane wins. That loses a crossing tint and loses no analytical content, because PRESENTATION_CONTRACT declares contour shape, radius and hue all `encodes: null` — there was never anything at a crossing to lose. It is recorded in F1_KNOWN_LIMITATIONS.md as a visible difference rather than claimed as invariance.",
+    "expression": {
+      "accessibility": {
+        "atmosphere": {
+          "$type": "number",
+          "stroke-alpha-multiplier": {
+            "$value": 0,
+            "$description": "The sentinel again: draw opaque. The value drawn IN is the composite the translucent stroke would have produced over the World, computed per (world, layer, ring, hue) — so the field does not become louder. That distinction is the whole difference between honouring the setting and using it as licence to change the design.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "product-contract",
+                "why": "draw opaque — in the value the translucent stroke would have produced, so the field does not become louder. The guarantee, not a magnitude."
+              }
+            }
+          },
+          "pre-composite": {
+            "$value": 1,
+            "$description": "Switches the renderer from 'stroke this ink at this alpha' to 'stroke the pre-computed opaque equivalent'. Present as a token rather than a code branch so that check T-02 can assert the mode from the resolved tree.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "product-contract",
+                "why": "the substitution is EXACT because the backdrop is one flat opaque colour. Present as a token so check T-02 can assert the mode from the resolved tree."
+              }
+            }
+          }
+        }
+      },
+      "scrim": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.031373,
+            0.031373,
+            0.031373
+          ],
+          "hex": "#080808"
+        },
+        "$description": "THE PASSAGE SCRIM, OPAQUE. Not a new colour: #080808 is exactly what black at alpha 0.5 produces over the World, which this package computes rather than eyeballs. \n\nAND IT IS MORE FAITHFUL THAN THE DEFAULT. I-08B3.1-B4R says the scrim expresses WORLD SUPPRESSION, and that \"background legibility is not one of its duties, because the World behind a PASSAGE is suspended\". A translucent scrim leaves a suspended World faintly visible; an opaque one does not. This is the one place in F1 where an accessibility expression states the Product's own intent more plainly than the default does, and it is worth a reviewer's attention for that reason rather than despite it.\n\nPrimary reading ink measures 13.63:1 on the scrimmed World, unchanged, because the ink did not move and neither did the value under it.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "the one computed literal F1 authors, and the decision that a suspended World is fully suppressed rather than faintly visible."
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "transparency": {
+        "$type": "number",
+        "light-alpha-floor": {
+          "$value": 0,
+          "$description": "UNCHANGED FROM THE DEFAULT, AND THE POINT OF THE OVERRIDE IS THAT IT IS UNCHANGED. QANDEEL LIGHT keeps its translucency under Reduce Transparency. A light is a thing whose nature is that what is behind it shows through; an opaque light is a disc. This setting exists so a translucent MATERIAL does not cost a reader the legibility of content on it, and the Light is content, not material — removing its alpha would delete a meaning event's intensity, which §3 of the brief forbids in as many words. The override restates the value so that a reviewer who expects it to have changed finds the reason where they look for the change.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "why": "QANDEEL LIGHT keeps its translucency. A light whose alpha is removed is a disc."
+            }
+          }
+        }
+      }
+    }
+  }
+}

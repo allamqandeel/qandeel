@@ -1,0 +1,107 @@
+{
+  "generated": "source/tools/d2-encode.mjs",
+  "encoder": "h264_mf",
+  "ffmpeg": "C:\\Users\\Al Asil Stores\\AppData\\Local\\CapCut\\Apps\\9.2.0.3931\\ffmpeg.exe",
+  "bitrate": "9M",
+  "files": [
+    {
+      "seq": "ambient",
+      "file": "D2_A_AMBIENT_WORLD_FIELD",
+      "frames": 270,
+      "fps": 30,
+      "bytes": 1206762,
+      "decodedFrames": 270,
+      "errors": [],
+      "meanError": 0.23534755134281202,
+      "verified": true
+    },
+    {
+      "seq": "connection",
+      "file": "D2_B_CONNECTION_INHERITED",
+      "frames": 210,
+      "fps": 30,
+      "bytes": 1145538,
+      "decodedFrames": 210,
+      "errors": [],
+      "meanError": 0.27703928180823917,
+      "verified": true
+    },
+    {
+      "seq": "pattern",
+      "file": "D2_C_PATTERN_CRYSTALLIZATION",
+      "frames": 210,
+      "fps": 30,
+      "bytes": 967953,
+      "decodedFrames": 210,
+      "errors": [],
+      "meanError": 0.23534755134281202,
+      "verified": true
+    },
+    {
+      "seq": "insight",
+      "file": "D2_D_INSIGHT_EMERGENCE",
+      "frames": 210,
+      "fps": 30,
+      "bytes": 827011,
+      "decodedFrames": 210,
+      "errors": [],
+      "meanError": 0.23534755134281202,
+      "verified": true
+    },
+    {
+      "seq": "ambient-rm",
+      "file": "D2_RM_A_AMBIENT_WORLD_FIELD",
+      "frames": 270,
+      "fps": 30,
+      "bytes": 1198661,
+      "decodedFrames": 270,
+      "errors": [],
+      "meanError": 0.23534755134281202,
+      "verified": true
+    },
+    {
+      "seq": "connection-rm",
+      "file": "D2_RM_B_CONNECTION_INHERITED",
+      "frames": 210,
+      "fps": 30,
+      "bytes": 815251,
+      "decodedFrames": 210,
+      "errors": [],
+      "meanError": 0.27703928180823917,
+      "verified": true
+    },
+    {
+      "seq": "pattern-rm",
+      "file": "D2_RM_C_PATTERN_CRYSTALLIZATION",
+      "frames": 210,
+      "fps": 30,
+      "bytes": 960730,
+      "decodedFrames": 210,
+      "errors": [],
+      "meanError": 0.23534755134281202,
+      "verified": true
+    },
+    {
+      "seq": "insight-rm",
+      "file": "D2_RM_D_INSIGHT_EMERGENCE",
+      "frames": 210,
+      "fps": 30,
+      "bytes": 759529,
+      "decodedFrames": 210,
+      "errors": [],
+      "meanError": 0.23534755134281202,
+      "verified": true
+    },
+    {
+      "seq": "coherence",
+      "file": "D2_COHERENCE_FOUR_CATEGORIES",
+      "frames": 996,
+      "fps": 30,
+      "bytes": 4328168,
+      "decodedFrames": 996,
+      "errors": [],
+      "meanError": 0.17739346619678373,
+      "verified": true
+    }
+  ]
+}

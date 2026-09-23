@@ -1,0 +1,149 @@
+{
+  "generatedBy": "tools/f2-boards.mjs",
+  "tokenTree": {
+    "digest": "aae1316cb9ee65444f0ef600e793fc40e8800389b66de21d0a1ed2e6164adca7",
+    "files": 9
+  },
+  "count": 12,
+  "boards": [
+    {
+      "id": "a-living-analysis-world-dark-control",
+      "sha": "1888fa0170e5d50fd406f9cd154dcb0f9ac1c53acbe20f16db239edddc8e0119",
+      "bytes": 388219
+    },
+    {
+      "id": "b-living-analysis-world-light",
+      "sha": "ebbc45b5a239ec6fb362833905dbfcaeacd590d7b4a240c13499378a371d5e7f",
+      "bytes": 555179
+    },
+    {
+      "id": "c-connection-light",
+      "sha": "a49bf84e9df6e85a096988a5d07c9169b597f0afc4d7a058326abf7d50eef3cb",
+      "bytes": 1204996
+    },
+    {
+      "id": "d-pattern-light",
+      "sha": "9257438f782ee0c2aa03a1efe419a360448b4f6d1eb1ce6d5bfeba2fb42a9930",
+      "bytes": 1454407
+    },
+    {
+      "id": "e-insight-light",
+      "sha": "cb45b52b77e0815b0e706ba6c97b6cc0e9c7b71a5d475d3bc483f70897907514",
+      "bytes": 1462610
+    },
+    {
+      "id": "f-conversation-light",
+      "sha": "43dbde90bc424b012b42c977f232b34f8f0d6545a57a69a6f59e0fc0bf9e1ad1",
+      "bytes": 407911
+    },
+    {
+      "id": "g-deep-analysis-reading-light",
+      "sha": "823f26fd632683c093d914ea76514a861ca0d3cf1a23445287f4373b1c1a9381",
+      "bytes": 709003
+    },
+    {
+      "id": "h-utility-form-error-light",
+      "sha": "21fd89becba4b16fef604d6d8e6f15dd1c0d983ec58669ea3db8b898199cc680",
+      "bytes": 522084
+    },
+    {
+      "id": "i-focus-selected-disabled-light",
+      "sha": "a987ba84e1be59257cab5bc745a7c06dc9172f4dc35240c6c2e2e7554ff420b0",
+      "bytes": 467461
+    },
+    {
+      "id": "j-dark-light-identity-comparison",
+      "sha": "43d21e1c3f2e209bb9f883f2fd8ccafb15ca1d5dbdda5d88eecfa4dbe880e14a",
+      "bytes": 622849
+    },
+    {
+      "id": "k-light-accessibility-combinations",
+      "sha": "cbee10a96d90426f1eff3fc5a598e7ef9b48a2ba90a8f99629244fa0276a36d7",
+      "bytes": 1380042
+    },
+    {
+      "id": "l-cross-appearance-role-map",
+      "sha": "70c049cb199af4f51f15e4045673fdaab83d33912b4b977132a0c0278cb68582",
+      "bytes": 481197
+    }
+  ],
+  "sceneExtentJND": 0.02,
+  "sceneExtent": [
+    {
+      "kind": "connection",
+      "peakAt": 1050,
+      "peakLevel": 0.8598,
+      "dark": {
+        "comparable": true,
+        "pixels": 329160,
+        "changedBeyondAJND": 11473,
+        "fractionOfTheWorld": 0.03486,
+        "worstDEok": 0.4647,
+        "distinctColourPairs": 519
+      },
+      "light": {
+        "comparable": true,
+        "pixels": 329160,
+        "changedBeyondAJND": 11065,
+        "fractionOfTheWorld": 0.03362,
+        "worstDEok": 0.2603,
+        "distinctColourPairs": 337
+      },
+      "lightOverDark": 0.9644,
+      "lightDoesNotExceedDark": true
+    },
+    {
+      "kind": "pattern",
+      "peakAt": 3010,
+      "peakLevel": 0.9587,
+      "dark": {
+        "comparable": true,
+        "pixels": 329160,
+        "changedBeyondAJND": 20025,
+        "fractionOfTheWorld": 0.06084,
+        "worstDEok": 0.5531,
+        "distinctColourPairs": 6786
+      },
+      "light": {
+        "comparable": true,
+        "pixels": 329160,
+        "changedBeyondAJND": 19026,
+        "fractionOfTheWorld": 0.0578,
+        "worstDEok": 0.2851,
+        "distinctColourPairs": 6283
+      },
+      "lightOverDark": 0.9501,
+      "lightDoesNotExceedDark": true
+    },
+    {
+      "kind": "insight",
+      "peakAt": 2920,
+      "peakLevel": 0.9219,
+      "dark": {
+        "comparable": true,
+        "pixels": 329160,
+        "changedBeyondAJND": 22731,
+        "fractionOfTheWorld": 0.06906,
+        "worstDEok": 0.5245,
+        "distinctColourPairs": 5635
+      },
+      "light": {
+        "comparable": true,
+        "pixels": 329160,
+        "changedBeyondAJND": 22029,
+        "fractionOfTheWorld": 0.06692,
+        "worstDEok": 0.227,
+        "distinctColourPairs": 5789
+      },
+      "lightOverDark": 0.9691,
+      "lightDoesNotExceedDark": true
+    }
+  ],
+  "sceneExtentProbe": {
+    "name": "the light INSIGHT peak measured against the DARK rest frame — a whole appearance apart, not one scene lit",
+    "fractionOfTheWorld": 0.99907,
+    "worstDEok": 0.7776,
+    "rejected": true,
+    "whatItProves": "the comparison can report a flood, so the three readings above are a property of the events rather than of the instrument"
+  }
+}

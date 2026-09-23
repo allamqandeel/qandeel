@@ -1,0 +1,157 @@
+{
+  "generated": "source/tools/d2-stills.mjs",
+  "files": [
+    {
+      "rel": "frames\\A\\D2_A_01_PERSONAL.png",
+      "bytes": 77315,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\A\\D2_A_02_PARALLAX.png",
+      "bytes": 86859,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\A\\D2_A_03_SHARED.png",
+      "bytes": 66178,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\A\\D2_A_04_PUBLIC.png",
+      "bytes": 56746,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\B\\D2_B_01_REST.png",
+      "bytes": 99139,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\B\\D2_B_02_EVENT.png",
+      "bytes": 163731,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\B\\D2_B_03_SETTLED.png",
+      "bytes": 103604,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\C\\D2_C_01_REST.png",
+      "bytes": 77315,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\C\\D2_C_02_EVENT.png",
+      "bytes": 114323,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\C\\D2_C_03_SETTLED.png",
+      "bytes": 89601,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\D\\D2_D_01_REST.png",
+      "bytes": 77315,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\D\\D2_D_02_EVENT.png",
+      "bytes": 117768,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\D\\D2_D_03_SETTLED.png",
+      "bytes": 84510,
+      "w": 780,
+      "h": 1688
+    },
+    {
+      "rel": "frames\\contact\\D2_A_CONTACT_SHEET.png",
+      "bytes": 131802,
+      "w": 1644,
+      "h": 1160
+    },
+    {
+      "rel": "frames\\contact\\D2_B_CONTACT_SHEET.png",
+      "bytes": 168096,
+      "w": 1644,
+      "h": 1160
+    },
+    {
+      "rel": "frames\\contact\\D2_C_CONTACT_SHEET.png",
+      "bytes": 111236,
+      "w": 1644,
+      "h": 1160
+    },
+    {
+      "rel": "frames\\contact\\D2_D_CONTACT_SHEET.png",
+      "bytes": 102547,
+      "w": 1644,
+      "h": 1160
+    },
+    {
+      "rel": "frames\\proof\\D2_COHERENCE_GRID.png",
+      "bytes": 360134,
+      "w": 1218,
+      "h": 3436
+    },
+    {
+      "rel": "frames\\proof\\D2_REDUCED_MOTION_PAIRS.png",
+      "bytes": 279469,
+      "w": 816,
+      "h": 2580
+    },
+    {
+      "rel": "frames\\proof\\D2_THREE_WORLDS.png",
+      "bytes": 80671,
+      "w": 1218,
+      "h": 868
+    },
+    {
+      "rel": "frames\\proof\\D2_LIGHT_SEPARATION.png",
+      "bytes": 11739,
+      "w": 1080,
+      "h": 520
+    }
+  ],
+  "lightSeparation": {
+    "diagnostic": {
+      "family": {
+        "CORE": "#fef1d6",
+        "MID": "#ecdcbc",
+        "LOW": "#dcc8a1"
+      },
+      "dE": 0.011829709874088903,
+      "stop": "LOW",
+      "ground": "#101010",
+      "alpha": 0.69921875,
+      "hex": "#9f9175"
+    },
+    "candidate": {
+      "family": {
+        "CORE": "#fbf2db",
+        "MID": "#e8ddc2",
+        "LOW": "#d6caa9"
+      },
+      "dE": 0.020074773494293062,
+      "stop": "LOW",
+      "ground": "#101010",
+      "alpha": 0.6953125,
+      "hex": "#9a917a"
+    }
+  }
+}

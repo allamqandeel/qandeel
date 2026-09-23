@@ -1,0 +1,81 @@
+I-08B1 / MID VISUAL + MOTION BASELINE - APPROVED / FROZEN / CANONICAL
+QANDEEL - Living Analysis Map - WS7R-R
+Frozen 2026-09-20 by Product / Architecture decision, following the WS7R-R motion review (PASS).
+
+This manifest is kept OUTSIDE the archive: a file cannot record the hash of an archive
+that contains it.
+
+ACCEPTED PROTOTYPE
+  file        wf-living-constellation.html
+  bytes       359265
+  sha256      6D8EFDBCF155BCF6BDCB83CAF9F32D54F88AAC3E8EB6585312048B23A1AEBFF6
+  status      CANONICAL. Single canonical MID visual and motion baseline.
+  unmodified  SHA-256 identical before the motion review, after the review, and after archiving.
+
+SUPERSEDED PREVIOUS MID BASELINE
+  file        wf-living-constellation.html
+  bytes       330640
+  sha256      5225B4607CB5339E8E3BEFC33A0DC3B8AAC97F525FCDEFC10F50AA8F21C2CDD0
+  status      SUPERSEDED BY PRODUCT OVERRIDE - HISTORICAL / NON-CANONICAL
+  archive     I-08B1-MID-BASELINE-APPROVED.zip            (PRESERVED, not deleted)
+  manifest    I-08B1-MID-BASELINE-APPROVED.manifest.txt   (PRESERVED, not deleted)
+
+ARCHIVE
+  file        I-08B1-MID-BASELINE-APPROVED-WS7R-R.zip
+  bytes       33017826
+  sha256      733D01750FBCB1553C4F53B36E99374ABBE09136DDCEA1713AC127864501FA15
+  entries     14 (flat, no folder prefix)
+  built       after the freeze record (notes section 25) was written, so the archived notes carry the freeze
+  verified    every entry extracted and compared byte-for-byte by SHA-256 against its source: 14 of 14 match, 0 mismatches
+
+ENTRIES (sha256 / bytes / name)
+  6D8EFDBCF155BCF6BDCB83CAF9F32D54F88AAC3E8EB6585312048B23A1AEBFF6    359265  wf-living-constellation.html
+  630C7B4EC1C05F849F4505C8B2F9A1DE34F904A95CA8B5991C858E03F13CE19D   5861052  ws7rr-mid-hero.png
+  D060FDC8F0C0A0896EBBF7E027C97C7F3F27A2EB8F6960444E5BCAF46EF8A8F0  10572471  ws7rr-reference01-vs-mid.png
+  5BB2EAFDB0485E04536B60BDDA874B5BA236D2F7784F23976CB2AB261D050865   2353016  ws7rr-reference02-vs-local.png
+  6AC31CC4B6F4B6C7B89CF4589B59DA827D5B331B3AF1B8847832D273840EC9A3    152961  I-08B1-WS7R-NOTES.md
+  A28B6E413A72ABA2EF80478F5E3706272013596B8FDDBA0C0D1EDE021DC9A31D     24125  I-08B1-WS7R-SKILL-USE.md
+  D8D2C23F42739A8B3C8DC75D2D7FF37B5802433E1CF5A6C11524DC04C3E6DF02      2471  board-server.mjs
+  B5FD97CB989ABD47D78D044C934C9F09DB2DB2D5FBA718CFE5565B9C06095C7A      7104  ws7rq-measure.js
+  1AD39B703D1DE381FCE8755052E12E14525D04AAD4871D46E3674CB70AD96398      4773  ws7rr-boards.js
+  56F413C706FD53B46BDE0F17B42F1A0F14CA1BCE94639E07E5BBD239EE301E91   3869364  ws7rr-reference-01.png
+  27C1F41E095319D09280D044486886E3C1329A83B63493B5B344CB44DBB720E5     72481  ws7rr-reference-02-micro.png
+  3BAFB06AA589AC745D10816530A7509F37A1F0D1BE3533822E08C188E5EE7775    687936  ws7rm-reference-target.png
+  92A1DB238E12E41A10D02FEEDB5FB4B59464EB54271CBDBB26F2CBDF46AFB44F   5194155  ws7rv2-near-hero.png
+  B4BD87C74805339CD043571CE4DACEEB069ABCD7895804A39CBC32DE416FA7AD   4361274  ws7rc-far-hero.png
+
+WHAT THE ENTRIES ARE
+  wf-living-constellation.html      the accepted prototype (canonical)
+  ws7rr-mid-hero.png                canonical MID hero, A = 0.5, 2100x1181, now = 0
+  ws7rr-reference01-vs-mid.png      REFERENCE 01 -> MID comparison board
+  ws7rr-reference02-vs-local.png    REFERENCE 02 -> local-pattern comparison board
+  I-08B1-WS7R-NOTES.md              final notes; section 23 reconstruction, 24 motion review, 25 freeze
+  I-08B1-WS7R-SKILL-USE.md          skill-use record
+  board-server.mjs                  capture / serving pipeline (node, port 8731)
+  ws7rq-measure.js                  measurement harness (frame stats, nest structure, preservation diff, settle)
+  ws7rr-boards.js                   board harness (both reference boards, transit sweep, parity, stratum toggles)
+  ws7rr-reference-01.png            REFERENCE 01, primary global visual reference
+  ws7rr-reference-02-micro.png      REFERENCE 02, local morphology reference
+  ws7rm-reference-target.png        the earlier section 17 reference, loaded by ws7rq-measure.js
+  ws7rv2-near-hero.png              preservation reference - frozen NEAR (A = 1)
+  ws7rc-far-hero.png                preservation reference - FAR (A = 0), unfinished and untouched
+
+PRESERVATION AT THE MOMENT OF FREEZING (fresh load, this SHA)
+  FAR   A = 0    0 of 2,480,100 pixels differ from ws7rc-far-hero.png
+  NEAR  A = 1    0 of 2,480,100 pixels differ from ws7rv2-near-hero.png
+  MID   A = 0.5  0 of 2,480,100 pixels differ from ws7rr-mid-hero.png
+  reduced-motion settled parity at MID: 0 of 620,550
+  MID after a 103-frame round trip 0.5 -> 1 -> 0 -> 0.5: identical
+
+STATE
+  NEAR       APPROVED / FROZEN, sha256 7D7D5B5502D7B18D6D35F89F8A2DB74213A55851F65DC98068FEC6A726E39A34 - unchanged
+  MID        APPROVED / FROZEN / CANONICAL at the accepted prototype SHA above
+  FAR        UNFINISHED / NOT APPROVED - never given a visual pass
+  I-08B1     OPEN
+
+REOPEN RULE
+  MID reopens only on a genuine contradiction: a preservation failure, an unsupported
+  semantic claim, a real accessibility or Arabic-readability failure, a portability defect
+  requiring visible correction, an actual motion regression, or a canonical-state
+  contradiction. A new visual preference, a fresh-eye critique or a new reference image
+  does not reopen MID.

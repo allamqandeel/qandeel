@@ -1,0 +1,124 @@
+QANDEEL - I-08B1 / FAR VISUAL + MOTION BASELINE
+APPROVED / FROZEN / CANONICAL - Product decision, 2026-09-20
+
+This manifest is kept OUTSIDE the archive it describes, because a file cannot
+record the hash of an archive that contains it.
+
+================ ACCEPTED UNIFIED PROTOTYPE ================
+
+file      wf-living-constellation.html
+size      388374 bytes
+SHA-256   4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413
+
+================ BASELINE SHA RECORD ================
+
+These are accepted STATE baselines. They are NOT superseded by the unified
+prototype having a later hash; they remain canonical evidence for their own
+distances. The unified prototype reproduces both, measured on a clean load:
+
+NEAR baseline  7D7D5B5502D7B18D6D35F89F8A2DB74213A55851F65DC98068FEC6A726E39A34
+               reproduced at A = 1    : 0 of 2,480,100 pixels differ
+MID  baseline  6D8EFDBCF155BCF6BDCB83CAF9F32D54F88AAC3E8EB6585312048B23A1AEBFF6
+               reproduced at A = 0.5  : 0 of 2,480,100 pixels differ
+FAR  baseline  4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413
+               first approved at the unified SHA; A = 0 : 0 of 2,480,100
+
+Stronger than two sampled boards: the FAR window is EXACTLY 0 for every
+A >= 0.12, so every frame from there to A = 1 renders bit-identically with
+the window on or off - measured at eleven values of A, 0 of 1,101,800 each.
+
+================ ARCHIVE ================
+
+file      I-08B1-FAR-BASELINE-APPROVED-WS7R-F.zip
+size      35175221 bytes
+SHA-256   279E4A10C8BEC9B337443EA6A559EBADA84E8A819B769316CED8B899818651DF
+entries   13, flat, no directories
+verified  13 / 13 extracted and compared by SHA-256 against source, 0 mismatches
+
+================ ENTRIES ================
+
+board-server.mjs
+  size     2471 bytes
+  SHA-256  D8D2C23F42739A8B3C8DC75D2D7FF37B5802433E1CF5A6C11524DC04C3E6DF02
+  what     capture pipeline - serves the workshop and accepts window.__shot
+
+I-08B1-WS7R-NOTES.md
+  size     185752 bytes
+  SHA-256  FBAA8712E1454132A681F8F478BA75EE35CEAE7AF392A49D3F374EBAD8440704
+  what     the canonical notes, carrying the FAR freeze (S28) and the I-08B1 closure (S29)
+
+I-08B1-WS7R-SKILL-USE.md
+  size     28576 bytes
+  SHA-256  C32D62D8BFF534BF01F54EA062947910305EB915B8BCA078AB0BACBC3C9504C2
+  what     the skill-use record, incl. the WS7R-F section
+
+wf-living-constellation.html
+  size     388374 bytes
+  SHA-256  4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413
+  what     the accepted unified prototype - FAR approved, MID and NEAR reproduced exactly
+
+ws7rf-far-hero.png
+  size     4800017 bytes
+  SHA-256  A6B179FF1BA3E63F4720E0C19A1133274798B6BB0416E062FDE02A241F421B28
+  what     FAR hero, A = 0, 2100x1181 - the approved FAR composition
+
+ws7rf-far-to-mid.png
+  size     8442868 bytes
+  SHA-256  9BA3876D058D29DB980BFE458A5B136447868DA3A59FC815E740D21B1F9BA4A5
+  what     FAR -> frozen MID continuity board, A = 0 / 0.10 / 0.22 / 0.50
+
+ws7rf-old-vs-new.png
+  size     6939899 bytes
+  SHA-256  2C3190F51A186B7784C77EDE723E353AA55770EE62DD62E85553D4CE84A21D17
+  what     inherited WS7 FAR beside WS7R-F, same A, same size
+
+ws7rq-measure.js
+  size     7104 bytes
+  SHA-256  B5FD97CB989ABD47D78D044C934C9F09DB2DB2D5FBA718CFE5565B9C06095C7A
+  what     measurement harness - __qStats/__qStruct/__qProf/__qDiff/__qSettle
+
+ws7rr-boards.js
+  size     4773 bytes
+  SHA-256  1AD39B703D1DE381FCE8755052E12E14525D04AAD4871D46E3674CB70AD96398
+  what     board harness - __rBoard/__rDetail/__rSweep/__rParity/__rStrata
+
+ws7rr-mid-hero.png
+  size     5861052 bytes
+  SHA-256  630C7B4EC1C05F849F4505C8B2F9A1DE34F904A95CA8B5991C858E03F13CE19D
+  what     frozen canonical MID hero, A = 0.5 - preservation reference, 0 px
+
+ws7rr-reference-01.png
+  size     3869364 bytes
+  SHA-256  56F413C706FD53B46BDE0F17B42F1A0F14CA1BCE94639E07E5BBD239EE301E91
+  what     Product global reference image (informed FAR atmosphere and colour comfort)
+
+ws7rr-reference-02-micro.png
+  size     72481 bytes
+  SHA-256  27C1F41E095319D09280D044486886E3C1329A83B63493B5B344CB44DBB720E5
+  what     Product local-morphology reference image
+
+ws7rv2-near-hero.png
+  size     5194155 bytes
+  SHA-256  92A1DB238E12E41A10D02FEEDB5FB4B59464EB54271CBDBB26F2CBDF46AFB44F
+  what     frozen NEAR hero, A = 1 - preservation reference, 0 px
+
+================ STATE ================
+
+FAR   APPROVED / FROZEN / CANONICAL  notes S26 reconstruction, S27 motion review PASS, S28 freeze
+MID   APPROVED / FROZEN / CANONICAL  notes S25 - archive I-08B1-MID-BASELINE-APPROVED-WS7R-R.zip, untouched
+NEAR  APPROVED / FROZEN              notes S16 - archive I-08B1-NEAR-BASELINE-APPROVED.zip, untouched
+
+Accepted non-blocking FAR findings - none of these reopens FAR:
+  1 Minor      chroma reduces over the first tenth of the approach (12.6 -> 9.0)
+               before rejoining the frozen MID material, without undershoot.
+  2 Minor      the money territory carries weaker amber identity at stable FAR
+               (4.8% warm share) than at MID (84.8%); it resolves continuously.
+  3 Cosmetic   canvas text re-rasterisation at size steps (inherited, S24/S25.3).
+  4 Cosmetic   the FAR band skip guards fall below the existing noise floor.
+
+REOPEN RULE. Closed to preference-driven iteration. A frozen state reopens only
+for a genuine contradiction - preservation failure, unsupported semantic
+representation, real accessibility failure, real Arabic-readability failure, a
+portability defect needing visible correction, a motion regression, or a
+canonical-state contradiction - and the reopening is targeted to that
+contradiction only.

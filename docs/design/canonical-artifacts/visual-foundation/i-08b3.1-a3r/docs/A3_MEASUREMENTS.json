@@ -1,0 +1,484 @@
+{
+  "task": "I-08B3.1-A3",
+  "generated": "2026-09-20",
+  "nothingIsFrozen": "Every value in this file is an incumbent, a candidate, a control or a diagnostic. No Product colour is declared canonical, no finalist is selected, and nothing is frozen.",
+  "evidenceClass": "CONTROLLED BROWSER RENDERS under two raster conditions. There are no participants and no perceptual measurement. This package can say what did and did not separate ON THESE BOARDS, UNDER THESE CONDITIONS. It is not a psychophysical study and it is not native platform validation.",
+  "decision": {
+    "madeByThisPackage": "none",
+    "forTheDesignDirector": "which of P1 and P2 closes B3.1-A, and whether #101010 is confirmed",
+    "worldBase": {
+      "hex": "#101010",
+      "status": "sole incumbent, preserved by A3, NOT canonical"
+    },
+    "control": {
+      "hex": "#e1ded3",
+      "status": "A1 Primary, reference only, NOT a third finalist"
+    },
+    "finalists": [
+      {
+        "key": "P1",
+        "hex": "#d8d5ca",
+        "drop": 0.0275
+      },
+      {
+        "key": "P2",
+        "hex": "#d2cfc4",
+        "drop": 0.0475
+      }
+    ],
+    "retired": {
+      "thesisB": "retired as challenger after A2R",
+      "thesisC": "remains retired"
+    }
+  },
+  "derivedFinalistCheck": [
+    {
+      "key": "P1",
+      "briefHex": "#d8d5ca",
+      "regeneratedHex": "#d8d5ca",
+      "matches": true,
+      "method": "OKLCH lightness of the control minus 0.0275, chroma and hue held, validated against the rendered sRGB"
+    },
+    {
+      "key": "P2",
+      "briefHex": "#d2cfc4",
+      "regeneratedHex": "#d2cfc4",
+      "matches": true,
+      "method": "OKLCH lightness of the control minus 0.0475, chroma and hue held, validated against the rendered sRGB"
+    }
+  ],
+  "typography": {
+    "frozen": "Estedad v8.5, I-08B3.0 roles, zero Arabic tracking. NOT reopened by A3.",
+    "metadataWeightInProduct": 500,
+    "metadataRole": "12/20/400-500",
+    "why": "Weight 500 is already inside the frozen role. A2 found 400 visually fragile at true size; A3 uses 500 in the Product proofs and keeps 400 as a control. No size, leading or tracking changed, and the Tertiary colour was NOT raised to compensate.",
+    "unitNote": "12 CSS px = 9 CSS pt (1 pt = 1.333 px) -> WCAG ordinary text, 4.5:1. Apple's 11 pt iOS minimum is a NATIVE platform point and this browser proof establishes no parity with it."
+  },
+  "render": {
+    "conditions": [
+      {
+        "key": "A2",
+        "viewport": 1440,
+        "dpr": 2,
+        "label": "established A2 proof condition",
+        "boardCanvasCssPx": 1440,
+        "rasterWidthPx": 2880,
+        "productFrameCssPx": 960,
+        "readingMeasureCssPx": 560,
+        "navStripCssPx": 54
+      },
+      {
+        "key": "MOBILE",
+        "viewport": 780,
+        "dpr": 3,
+        "frameCssPx": 390,
+        "label": "mobile-scale high-density condition - product laid out at 390 CSS px, deviceScaleFactor 3",
+        "productFrameCssPx": 390,
+        "readingMeasureCssPx": 350,
+        "navStripCssPx": 48,
+        "windowNote": "the window is 780 CSS px because Chrome on Windows refuses one below ~500; the product frame is a fixed 390 CSS px and is cut from the raster by its own reported box",
+        "measureNote": "the 350 px measure is below the frozen 520-600 comfort zone because a phone does not have 560 px to give. This condition is a RASTER robustness check, not a reading-measure proof."
+      }
+    ],
+    "constantAcrossConditions": [
+      "--headless=new",
+      "--disable-gpu",
+      "--no-sandbox",
+      "--hide-scrollbars",
+      "--disable-lcd-text",
+      "--disable-font-subpixel-positioning",
+      "--force-color-profile=srgb",
+      "--virtual-time-budget=25000",
+      "--run-all-compositor-stages-before-draw"
+    ],
+    "colourProfile": "srgb forced on both the measure pass and the screenshot pass",
+    "antialiasing": "greyscale forced (--disable-lcd-text, --disable-font-subpixel-positioning)",
+    "font": "Estedad v8.5, embedded base64, sha256 3134e31a27d58e615967e714c7799fbfa2de952876f8597b33dc57ffe0e99d03",
+    "antiGenericRefusalPatterns": 14,
+    "gamut": "every colour in this package is inside the sRGB gamut, so no CSS gamut-mapping algorithm is ever invoked - which matters because the current CSS Color 4 draft names three and lets an implementation choose between them"
+  },
+  "fairness": {
+    "contract": "ONE shared implementation. A candidate contributes exactly one CSS custom property, --ink-1. Five of the six values reaching the template are identical in every render in this package.",
+    "report": [
+      {
+        "env": "deep",
+        "cond": "A2",
+        "candidates": [
+          "P1",
+          "P2"
+        ],
+        "elements": 15,
+        "identical": true,
+        "firstDiff": null
+      },
+      {
+        "env": "deep",
+        "cond": "MOBILE",
+        "candidates": [
+          "P1",
+          "P2"
+        ],
+        "elements": 15,
+        "identical": true,
+        "firstDiff": null
+      },
+      {
+        "env": "map",
+        "cond": "A2",
+        "candidates": [
+          "P1",
+          "P2"
+        ],
+        "elements": 39,
+        "identical": true,
+        "firstDiff": null
+      },
+      {
+        "env": "quiet",
+        "cond": "A2",
+        "candidates": [
+          "P1",
+          "P2"
+        ],
+        "elements": 12,
+        "identical": true,
+        "firstDiff": null
+      },
+      {
+        "env": "util",
+        "cond": "A2",
+        "candidates": [
+          "P1",
+          "P2"
+        ],
+        "elements": 38,
+        "identical": true,
+        "firstDiff": null
+      }
+    ],
+    "failed": 0
+  },
+  "blindMapping": {
+    "note": "appears nowhere in BLIND_READING_X_Y.png",
+    "X": "P2",
+    "Y": "P1"
+  },
+  "probeLightnesses": [
+    0.92,
+    0.95,
+    0.98,
+    1
+  ],
+  "readingRamp": [
+    {
+      "candidate": "C",
+      "isFinalist": false,
+      "primary": "#e1ded3",
+      "primaryToSecondary_dL": 0.1556,
+      "secondaryToTertiary_dL": 0.1146,
+      "stepRatio": 1.3579,
+      "note": "stepRatio 1.000 would be a perfectly even three-level ramp. A number is not a decision; see HIERARCHY_RAMP.png for what the raster shows.",
+      "primary_vs_secondary_contrast": 1.685,
+      "lightnessAbovePrimary": 0.1001
+    },
+    {
+      "candidate": "P1",
+      "isFinalist": true,
+      "primary": "#d8d5ca",
+      "primaryToSecondary_dL": 0.128,
+      "secondaryToTertiary_dL": 0.1146,
+      "stepRatio": 1.1172,
+      "note": "stepRatio 1.000 would be a perfectly even three-level ramp. A number is not a decision; see HIERARCHY_RAMP.png for what the raster shows.",
+      "primary_vs_secondary_contrast": 1.5445,
+      "lightnessAbovePrimary": 0.1277
+    },
+    {
+      "candidate": "P2",
+      "isFinalist": true,
+      "primary": "#d2cfc4",
+      "primaryToSecondary_dL": 0.1095,
+      "secondaryToTertiary_dL": 0.1146,
+      "stepRatio": 0.9557,
+      "note": "stepRatio 1.000 would be a perfectly even three-level ramp. A number is not a decision; see HIERARCHY_RAMP.png for what the raster shows.",
+      "primary_vs_secondary_contrast": 1.455,
+      "lightnessAbovePrimary": 0.1462
+    }
+  ],
+  "colours": [
+    {
+      "group": "world",
+      "label": "World Base (sole incumbent, preserved)",
+      "hex": "#101010",
+      "authored_L": "0.1730",
+      "authored_C": "0.0000",
+      "authored_H": "",
+      "rendered_L": "0.1730",
+      "rendered_C": "0.0000",
+      "rendered_H": "",
+      "drift_L": "0.0000",
+      "drift_C": "0.0000",
+      "drift_H": "",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "1.000",
+      "vs_diagnostic_subtle": "1.072",
+      "worst_case": "1.000",
+      "lightness_above": "0.8270",
+      "context": "A3 preserves #101010 and does not search for another World value. NOT canonical."
+    },
+    {
+      "group": "surface-diagnostic",
+      "label": "Diagnostic Subtle, World + dL 0.035",
+      "hex": "#181818",
+      "authored_L": "0.2080",
+      "authored_C": "0.0000",
+      "authored_H": "",
+      "rendered_L": "0.2090",
+      "rendered_C": "0.0000",
+      "rendered_H": "",
+      "drift_L": "0.0010",
+      "drift_C": "0.0000",
+      "drift_H": "",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "1.072",
+      "vs_diagnostic_subtle": "1.000",
+      "worst_case": "1.000",
+      "lightness_above": "0.7910",
+      "context": "NON-CANONICAL proof scaffolding carried from A2 so a reading value can be judged on two surfaces. No Subtle ladder is being designed and no surface hierarchy is being decided."
+    },
+    {
+      "group": "non-text-diagnostic",
+      "label": "Analysis Map edge, solved to WCAG 1.4.11 3:1",
+      "hex": "#646464",
+      "authored_L": "0.5015",
+      "authored_C": "0.0000",
+      "authored_H": "",
+      "rendered_L": "0.5032",
+      "rendered_C": "0.0000",
+      "rendered_H": "",
+      "drift_L": "0.0018",
+      "drift_C": "0.0000",
+      "drift_H": "",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "3.216",
+      "vs_diagnostic_subtle": "3.001",
+      "worst_case": "3.001",
+      "lightness_above": "0.4968",
+      "wcag_role": "non-text",
+      "wcag_floor": "3.0",
+      "wcag_pass": true,
+      "context": "NON-CANONICAL diagnostic carried from A2, solved against the Subtle because that is the lighter of the two surfaces a mark can land on. Not promoted into a token by A3."
+    },
+    {
+      "group": "control",
+      "label": "CONTROL - A1 Primary - Primary Reading Neutral",
+      "hex": "#e1ded3",
+      "authored_L": "0.8999",
+      "authored_C": "0.0151",
+      "authored_H": "94.2",
+      "rendered_L": "0.8999",
+      "rendered_C": "0.0151",
+      "rendered_H": "94.2",
+      "drift_L": "0.0000",
+      "drift_C": "0.0000",
+      "drift_H": "0.00",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "14.127",
+      "vs_diagnostic_subtle": "13.182",
+      "worst_case": "13.182",
+      "lightness_above": "0.1001",
+      "wcag_role": "normal",
+      "wcag_floor": "4.5",
+      "wcag_pass": true,
+      "apple_dark_7to1": true,
+      "context": "A1 Primary. CONTROL ONLY - on the boards to show what was gained and lost, NOT a third finalist. Primary Body 17/30/400."
+    },
+    {
+      "group": "finalist",
+      "label": "PRIMARY P1 - Primary Reading Neutral",
+      "hex": "#d8d5ca",
+      "authored_L": "0.8723",
+      "authored_C": "0.0153",
+      "authored_H": "94.2",
+      "rendered_L": "0.8723",
+      "rendered_C": "0.0153",
+      "rendered_H": "94.2",
+      "drift_L": "0.0000",
+      "drift_C": "0.0000",
+      "drift_H": "0.00",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "12.948",
+      "vs_diagnostic_subtle": "12.083",
+      "worst_case": "12.083",
+      "lightness_above": "0.1277",
+      "wcag_role": "normal",
+      "wcag_floor": "4.5",
+      "wcag_pass": true,
+      "apple_dark_7to1": true,
+      "context": "FINALIST. A1 Primary lowered by OKLCH L -0.0275 with chroma and hue held. Primary Body 17/30/400. A3 does not choose between the finalists."
+    },
+    {
+      "group": "finalist",
+      "label": "PRIMARY P2 - Primary Reading Neutral",
+      "hex": "#d2cfc4",
+      "authored_L": "0.8538",
+      "authored_C": "0.0153",
+      "authored_H": "94.2",
+      "rendered_L": "0.8538",
+      "rendered_C": "0.0153",
+      "rendered_H": "94.2",
+      "drift_L": "0.0000",
+      "drift_C": "0.0000",
+      "drift_H": "0.00",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "12.198",
+      "vs_diagnostic_subtle": "11.383",
+      "worst_case": "11.383",
+      "lightness_above": "0.1462",
+      "wcag_role": "normal",
+      "wcag_floor": "4.5",
+      "wcag_pass": true,
+      "apple_dark_7to1": true,
+      "context": "FINALIST. A1 Primary lowered by OKLCH L -0.0475 with chroma and hue held. Primary Body 17/30/400. A3 does not choose between the finalists."
+    },
+    {
+      "group": "reading-unchanged",
+      "label": "Secondary (unchanged, not under test)",
+      "hex": "#afaca3",
+      "authored_L": "0.7443",
+      "authored_C": "0.0131",
+      "authored_H": "91.6",
+      "rendered_L": "0.7443",
+      "rendered_C": "0.0131",
+      "rendered_H": "91.6",
+      "drift_L": "0.0000",
+      "drift_C": "0.0000",
+      "drift_H": "0.00",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "8.384",
+      "vs_diagnostic_subtle": "7.823",
+      "worst_case": "7.823",
+      "lightness_above": "0.2557",
+      "wcag_role": "normal",
+      "wcag_floor": "4.5",
+      "wcag_pass": true,
+      "apple_dark_7to1": true,
+      "context": "Supporting Body 15/25/400 (= 11.25 CSS pt, NOT a native iOS pt). Worst case across both surfaces is 7.823:1."
+    },
+    {
+      "group": "reading-unchanged",
+      "label": "Tertiary (unchanged, not under test)",
+      "hex": "#8b8982",
+      "authored_L": "0.6297",
+      "authored_C": "0.0106",
+      "authored_H": "93.6",
+      "rendered_L": "0.6297",
+      "rendered_C": "0.0106",
+      "rendered_H": "93.6",
+      "drift_L": "0.0000",
+      "drift_C": "0.0000",
+      "drift_H": "0.00",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "5.435",
+      "vs_diagnostic_subtle": "5.072",
+      "worst_case": "5.072",
+      "lightness_above": "0.3703",
+      "wcag_role": "normal",
+      "wcag_floor": "4.5",
+      "wcag_pass": true,
+      "apple_dark_7to1": false,
+      "context": "Metadata 12/20/500 (= 9.00 CSS pt, NOT a native iOS pt). Worst case across both surfaces is 5.072:1. BELOW the 7:1 Apple asks of custom colours in Dark Mode, especially in small text - see A3_FAILURES."
+    },
+    {
+      "group": "diagnostic-probe",
+      "label": "achromatic probe L 0.92",
+      "hex": "#e4e4e4",
+      "authored_L": "0.9200",
+      "authored_C": "0.0000",
+      "authored_H": "",
+      "rendered_L": "0.9189",
+      "rendered_C": "0.0000",
+      "rendered_H": "",
+      "drift_L": "-0.0011",
+      "drift_C": "0.0000",
+      "drift_H": "",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "14.966",
+      "vs_diagnostic_subtle": "13.965",
+      "worst_case": "13.965",
+      "lightness_above": "0.0811",
+      "context": "NON-CANONICAL DIAGNOSTIC ONLY - not QANDEEL Light, not a proposal for it, chroma exactly 0, no hue, no glow, no gradient. Its entitlement stops at the solid fill it actually renders: it says nothing about levels for text, nothing about small marks, and nothing about a token ladder."
+    },
+    {
+      "group": "diagnostic-probe",
+      "label": "achromatic probe L 0.95",
+      "hex": "#eeeeee",
+      "authored_L": "0.9500",
+      "authored_C": "0.0000",
+      "authored_H": "",
+      "rendered_L": "0.9491",
+      "rendered_C": "0.0000",
+      "rendered_H": "",
+      "drift_L": "-0.0009",
+      "drift_C": "0.0000",
+      "drift_H": "",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "16.400",
+      "vs_diagnostic_subtle": "15.304",
+      "worst_case": "15.304",
+      "lightness_above": "0.0509",
+      "context": "NON-CANONICAL DIAGNOSTIC ONLY - not QANDEEL Light, not a proposal for it, chroma exactly 0, no hue, no glow, no gradient. Its entitlement stops at the solid fill it actually renders: it says nothing about levels for text, nothing about small marks, and nothing about a token ladder."
+    },
+    {
+      "group": "diagnostic-probe",
+      "label": "achromatic probe L 0.98",
+      "hex": "#f8f8f8",
+      "authored_L": "0.9800",
+      "authored_C": "0.0000",
+      "authored_H": "",
+      "rendered_L": "0.9791",
+      "rendered_C": "0.0000",
+      "rendered_H": "",
+      "drift_L": "-0.0009",
+      "drift_C": "0.0000",
+      "drift_H": "",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "17.917",
+      "vs_diagnostic_subtle": "16.719",
+      "worst_case": "16.719",
+      "lightness_above": "0.0209",
+      "context": "NON-CANONICAL DIAGNOSTIC ONLY - not QANDEEL Light, not a proposal for it, chroma exactly 0, no hue, no glow, no gradient. Its entitlement stops at the solid fill it actually renders: it says nothing about levels for text, nothing about small marks, and nothing about a token ladder."
+    },
+    {
+      "group": "diagnostic-probe",
+      "label": "achromatic probe L 1.00",
+      "hex": "#ffffff",
+      "authored_L": "1.0000",
+      "authored_C": "0.0000",
+      "authored_H": "",
+      "rendered_L": "1.0000",
+      "rendered_C": "0.0000",
+      "rendered_H": "",
+      "drift_L": "0.0000",
+      "drift_C": "0.0000",
+      "drift_H": "",
+      "in_srgb_gamut": true,
+      "gamut_clipped": false,
+      "vs_world_base": "19.028",
+      "vs_diagnostic_subtle": "17.756",
+      "worst_case": "17.756",
+      "lightness_above": "-0.0000",
+      "context": "NON-CANONICAL DIAGNOSTIC ONLY - not QANDEEL Light, not a proposal for it, chroma exactly 0, no hue, no glow, no gradient. Its entitlement stops at the solid fill it actually renders: it says nothing about levels for text, nothing about small marks, and nothing about a token ladder."
+    }
+  ]
+}

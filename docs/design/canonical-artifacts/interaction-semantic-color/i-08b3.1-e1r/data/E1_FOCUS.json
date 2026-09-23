@@ -1,0 +1,321 @@
+{
+  "generatedBy": "tools/e1-focus.mjs",
+  "obligations": [
+    {
+      "name": "the tab ring visits every reachable control, in document order",
+      "pass": true,
+      "detail": "visited [\"r1\",\"r3\",\"inp\",\"o1\",\"o2\",\"o3\",\"o4\",\"b1\",\"r4\"] expected [\"r1\",\"r3\",\"inp\",\"o1\",\"o2\",\"o3\",\"o4\",\"b1\",\"r4\"]"
+    },
+    {
+      "name": "a NATIVE NON-DISCOVERABLE unavailable control is skipped by the tab ring",
+      "pass": true,
+      "detail": "[\"r2\",\"b2\"] carry the HTML disabled attribute; focus landed on neither"
+    },
+    {
+      "name": "a DISCOVERABLE unavailable control REMAINS REACHABLE by the tab ring",
+      "pass": true,
+      "detail": "[\"o3\",\"o4\"] carry aria-disabled and no disabled attribute; focus reached [\"o3\",\"o4\"] — W3C APG: screen reader users are far less likely to discover disabled elements that are not focusable"
+    },
+    {
+      "name": "every focused control paints the indicator at the resolved width",
+      "pass": true,
+      "detail": "widths [\"2px\"] expected 2px solid"
+    },
+    {
+      "name": "the indicator is the resolved token colour, not a browser default",
+      "pass": true,
+      "detail": "saw [\"rgb(216, 213, 202)\"] expected rgb(216, 213, 202)"
+    },
+    {
+      "name": "the indicator is DETACHED at the resolved offset",
+      "pass": true,
+      "detail": "offsets [\"2px\"] expected 2px"
+    },
+    {
+      "name": "the dark companion is present outside the indicator",
+      "pass": true,
+      "detail": "box-shadow present on 10 of 10"
+    },
+    {
+      "name": "exactly one control carries the indicator at a time",
+      "pass": true,
+      "detail": "counted 1"
+    },
+    {
+      "name": "Shift+Tab returns to the previous control",
+      "pass": true,
+      "detail": "landed on r4"
+    },
+    {
+      "name": "the focus perimeter on an unavailable control is the focus token, NOT dimmed with the control",
+      "pass": true,
+      "detail": "o4 focused: rgb(216, 213, 202) at 2px — the perimeter belongs to the input system, and the input system is not unavailable (precedence rule P3)"
+    },
+    {
+      "name": "an AVAILABLE control activates under a real Enter key",
+      "pass": true,
+      "detail": "focus landed on b1, which then activated 1 time(s) — without this the obligation below would be vacuous, because a key that activates nothing passes it"
+    },
+    {
+      "name": "a DISCOVERABLE unavailable control CANNOT be activated by the same key",
+      "pass": true,
+      "detail": "o4 activated 0, o3 activated 0 — aria-disabled suppresses nothing on its own; MDN: \"web developers must manually ensure such elements have their functionality suppressed\""
+    },
+    {
+      "name": "the two availability patterns are VISUALLY IDENTICAL",
+      "pass": true,
+      "detail": "DISCOVERABLE o4 rgb(105, 103, 98) · NATIVE r2 rgb(105, 103, 98) · unavailable ink rgb(105, 103, 98) — a visible difference would encode an implementation decision as a Product meaning"
+    },
+    {
+      "name": "SELECTED + UNAVAILABLE keeps the record of the choice and gives up only the ink",
+      "pass": true,
+      "detail": "o3 marker present true in rgb(105, 103, 98), weight 600 (selected weight is 600), ink rgb(105, 103, 98) — precedence rule P1: the availability override takes every ink INCLUDING the marker’s, and takes neither the marker’s presence nor the weight"
+    },
+    {
+      "name": "SELECTED + UNAVAILABLE is distinguishable from UNAVAILABLE and from SELECTED",
+      "pass": true,
+      "detail": "against UNAVAILABLE o4: marker true vs false, weight 600 vs 500 · against SELECTED o2: ink rgb(105, 103, 98) vs rgb(216, 213, 202)"
+    }
+  ],
+  "probes": [
+    {
+      "name": "disabled-paint-without-the-attribute",
+      "fired": true,
+      "detail": "focus reached [\"r2\",\"b2\"] — the skip obligation MUST reject this"
+    },
+    {
+      "name": "outline-removed-with-no-replacement",
+      "fired": true,
+      "detail": "every stop reported outline-style [\"none\"] — the visibility obligation MUST reject this"
+    },
+    {
+      "name": "discoverable-unavailable-that-still-activates",
+      "fired": true,
+      "detail": "o4 activated 1, o3 activated 1 — reachable, painted unavailable, and fully operable. The activation obligation MUST reject this"
+    },
+    {
+      "name": "only-the-native-pattern-styled",
+      "fired": true,
+      "detail": "DISCOVERABLE o4 rgb(139, 137, 130) vs NATIVE r2 rgb(105, 103, 98) — the visual-invariance obligation MUST reject this"
+    },
+    {
+      "name": "the-override-taking-the-record-too",
+      "fired": true,
+      "detail": "o3 marker present false, weight 500 vs plain UNAVAILABLE o4 weight 500 — SELECTED + UNAVAILABLE becomes indistinguishable from UNAVAILABLE and the user’s choice is silently rewritten"
+    }
+  ],
+  "walk": {
+    "seen": [
+      {
+        "id": "r1",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      },
+      {
+        "id": "r3",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      },
+      {
+        "id": "inp",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      },
+      {
+        "id": "o1",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      },
+      {
+        "id": "o2",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      },
+      {
+        "id": "o3",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": true,
+        "nativeDisabled": false
+      },
+      {
+        "id": "o4",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": true,
+        "nativeDisabled": false
+      },
+      {
+        "id": "b1",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      },
+      {
+        "id": "r4",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      },
+      {
+        "id": null
+      },
+      {
+        "id": "r1",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "outlineOffset": "2px",
+        "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px",
+        "ariaDisabled": false,
+        "nativeDisabled": false
+      }
+    ],
+    "back": "r4",
+    "ringCount": 1,
+    "activation": {
+      "b1": {
+        "id": "b1",
+        "landed": "b1",
+        "activated": 1
+      },
+      "o4": {
+        "id": "o4",
+        "landed": "o4",
+        "activated": 0
+      },
+      "o3": {
+        "id": "o3",
+        "landed": "o3",
+        "activated": 0
+      }
+    },
+    "measured": {
+      "r3": {
+        "id": "r3",
+        "colour": "rgb(139, 137, 130)",
+        "weight": "500",
+        "borderColour": "rgb(139, 137, 130)",
+        "background": "rgba(0, 0, 0, 0)",
+        "transform": "none",
+        "markerPresent": false,
+        "markerColour": "rgba(0, 0, 0, 0)",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(139, 137, 130)",
+        "outlineStyle": "none",
+        "activated": 0,
+        "ariaDisabled": null,
+        "nativeDisabled": false
+      },
+      "o2": {
+        "id": "o2",
+        "colour": "rgb(216, 213, 202)",
+        "weight": "600",
+        "borderColour": "rgb(216, 213, 202)",
+        "background": "rgba(0, 0, 0, 0)",
+        "transform": "none",
+        "markerPresent": true,
+        "markerColour": "rgb(216, 213, 202)",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "none",
+        "activated": 0,
+        "ariaDisabled": null,
+        "nativeDisabled": false
+      },
+      "o3": {
+        "id": "o3",
+        "colour": "rgb(105, 103, 98)",
+        "weight": "600",
+        "borderColour": "rgb(105, 103, 98)",
+        "background": "rgba(0, 0, 0, 0)",
+        "transform": "none",
+        "markerPresent": true,
+        "markerColour": "rgb(105, 103, 98)",
+        "outlineWidth": "2px",
+        "outlineColor": "rgb(216, 213, 202)",
+        "outlineStyle": "solid",
+        "activated": 0,
+        "ariaDisabled": "true",
+        "nativeDisabled": false
+      },
+      "o4": {
+        "id": "o4",
+        "colour": "rgb(105, 103, 98)",
+        "weight": "500",
+        "borderColour": "rgb(105, 103, 98)",
+        "background": "rgba(0, 0, 0, 0)",
+        "transform": "none",
+        "markerPresent": false,
+        "markerColour": "rgb(105, 103, 98)",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(105, 103, 98)",
+        "outlineStyle": "none",
+        "activated": 0,
+        "ariaDisabled": "true",
+        "nativeDisabled": false
+      },
+      "r2": {
+        "id": "r2",
+        "colour": "rgb(105, 103, 98)",
+        "weight": "500",
+        "borderColour": "rgb(105, 103, 98)",
+        "background": "rgba(0, 0, 0, 0)",
+        "transform": "none",
+        "markerPresent": false,
+        "markerColour": "rgb(105, 103, 98)",
+        "outlineWidth": "3px",
+        "outlineColor": "rgb(105, 103, 98)",
+        "outlineStyle": "none",
+        "activated": 0,
+        "ariaDisabled": "true",
+        "nativeDisabled": true
+      }
+    },
+    "focusedUnavailable": {
+      "outlineWidth": "2px",
+      "outlineColor": "rgb(216, 213, 202)",
+      "outlineStyle": "solid",
+      "boxShadow": "rgb(16, 16, 16) 0px 0px 0px 5px"
+    }
+  }
+}

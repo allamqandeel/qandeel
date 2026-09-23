@@ -1,0 +1,67 @@
+{
+  "qandeel": {
+    "$description": "I-08B3.1-F2 — THE REDUCE-TRANSPARENCY OVERRIDE, LIGHT APPEARANCE.\n\nWHAT THIS SETTING IS IN QANDEEL DOES NOT CHANGE WITH THE APPEARANCE. I-08B3.1-B4R recorded, before any of this existed, that the functional Surface is an opaque matte, the navigation is opaque, chrome opacity is 1 and 'Reduce Transparency has nothing to undo here'. QANDEEL has no Liquid Glass, no backdrop blur behind content and no vibrancy stack in EITHER appearance — and the light appearance was the obvious place to acquire one, because translucent light chrome is the house style of every platform QANDEEL ships on. It is not adopted, and the reason is the same reason it was not adopted in dark: a translucent chrome would be a design F2 has no authority to add, wearing an appearance's name.\n\nSO THE SUBJECTS ARE THE SAME THREE: the ambient field's composited contours, the PASSAGE scrim, and the Light's wash. Two change and the third deliberately does not.\n\nTHE SUBSTITUTION IS STILL EXACT. Every ambient contour is composited against one flat opaque colour — now #efeeeb instead of #101010 — so its alpha composite still has a closed-form opaque equivalent, and drawing that equivalent changes the mechanism without changing a pixel. The light appearance costs this setting nothing: the field is not simplified, it is pre-resolved, exactly as in dark.\n\nAND THE ONE PLACE IT IS NOT EXACT IS THE SAME PLACE: where two contours CROSS. Translucent strokes tint each other at a crossing and opaque ones do not. That loses a crossing tint and no analytical content, because PRESENTATION_CONTRACT declares contour shape, radius, layer and hue all `encodes: null`. Recorded as a visible difference rather than claimed as invariance.",
+    "expression": {
+      "accessibility": {
+        "atmosphere": {
+          "$type": "number",
+          "stroke-alpha-multiplier": {
+            "$value": 0,
+            "$description": "The sentinel: draw opaque, in the value the translucent stroke would have produced over the light World. Appearance-independent in meaning and in mechanism — it names which path the renderer takes, and the path computes its own composite from whatever ground the appearance supplies.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "product-contract",
+                "why": "the guarantee that the field does not become LOUDER when it becomes opaque, which is the whole difference between honouring the setting and using it as licence."
+              }
+            }
+          },
+          "pre-composite": {
+            "$value": 1,
+            "$description": "Switches the renderer from 'stroke this ink at this alpha' to 'stroke the pre-computed opaque equivalent'. A token rather than a code branch so a check can assert the mode from the resolved tree.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "product-contract",
+                "why": "as in dark: the substitution is exact because the backdrop is one flat opaque colour, and the mode must be assertable from the tree."
+              }
+            }
+          }
+        }
+      },
+      "scrim": {
+        "$type": "color",
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.439216,
+            0.435294,
+            0.431373
+          ],
+          "hex": "#706f6e"
+        },
+        "$description": "THE PASSAGE SCRIM, OPAQUE, LIGHT APPEARANCE. Not a new colour: #706f6e is exactly what neutral black at alpha 0.532 produces over the light World #efeeeb, computed rather than eyeballed — the same relationship #080808 has to #101010 at alpha 0.5 in dark.\n\nAND IT IS MORE FAITHFUL THAN THE DEFAULT, for the same reason F1 found in dark. I-08B3.1-B4R says the scrim expresses WORLD SUPPRESSION and that 'background legibility is not one of its duties, because the World behind a PASSAGE is suspended'. A translucent scrim leaves a suspended World faintly visible; an opaque one does not. This is one of the two places in the whole accessibility system where a transformation states the Product's own intent more plainly than the default does.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "production-default",
+            "serves": "qandeel.appearance.passage-is-suppressed",
+            "why": "a COMPUTED literal, and the computation is the contract: it is the composite of the light scrim over the light World and it cannot be anything else. If either moves, this follows."
+          }
+        }
+      }
+    },
+    "accessibility": {
+      "transparency": {
+        "$type": "number",
+        "light-alpha-floor": {
+          "$value": 0,
+          "$description": "UNCHANGED FROM THE DEFAULT, IN BOTH APPEARANCES, AND THE POINT OF THE OVERRIDE IS THAT IT IS UNCHANGED. QANDEEL LIGHT keeps its translucency under Reduce Transparency. A light is a thing whose nature is that what is behind it shows through; an opaque light is a disc. The setting exists so a translucent MATERIAL does not cost a reader the legibility of content on it, and the Light is content, not material — removing its alpha would delete a meaning event's intensity.\n\nIT MATTERS MORE IN LIGHT THAN IT DID IN DARK. The light appearance's meaning expression is a SIGNED profile: a flooded source with a glaze laid around it. Both halves are alpha composites over the ground, so an opaque Light here would not merely flatten an intensity — it would delete the falloff and leave two hard discs where an illumination was.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "why": "QANDEEL LIGHT keeps its translucency. A light whose alpha is removed is a disc — and in the light appearance, two discs."
+            }
+          }
+        }
+      }
+    }
+  }
+}

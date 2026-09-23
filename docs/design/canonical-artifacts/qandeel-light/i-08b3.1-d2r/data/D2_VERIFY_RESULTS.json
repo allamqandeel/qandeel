@@ -1,0 +1,418 @@
+{
+  "generated": "source/tools/d2-verify.mjs",
+  "lightLine": 0.025706609965234342,
+  "lightFloor": 0.017550728400818418,
+  "spreadFloor": 0,
+  "sensitivityAlpha": 0.31,
+  "results": [
+    {
+      "id": "C1",
+      "title": "CONNECTION is I-08B3.1-D1's own function, not a copy of it",
+      "ok": true,
+      "detail": [
+        "4830 channel comparisons across 210 frames",
+        "largest difference 0"
+      ]
+    },
+    {
+      "id": "C2",
+      "title": "the reduced-motion correction touches exactly one channel",
+      "ok": true,
+      "detail": [
+        "channels that differ from D1's counterpart: receptionBlur",
+        "receptionBlur peak — D1 0.7988, D2 0.0000",
+        "reason: Apple HIG — Accessibility, Cognitive: \"Avoiding animating into and out of blurs\""
+      ]
+    },
+    {
+      "id": "C3",
+      "title": "no light survives the settle, in any of the six event sequences",
+      "ok": true,
+      "detail": [
+        "connection     largest transient value after 5800 ms: 0",
+        "connection-rm  largest transient value after 5800 ms: 0",
+        "pattern        largest transient value after 5800 ms: 0",
+        "pattern-rm     largest transient value after 5800 ms: 0",
+        "insight        largest transient value after 5800 ms: 0",
+        "insight-rm     largest transient value after 5800 ms: 0"
+      ]
+    },
+    {
+      "id": "C4",
+      "title": "DIRECTION, CONVERGENCE and EMERGENCE are three topologies, not three costumes",
+      "ok": true,
+      "detail": [
+        "CONNECTION  centroid travels 596 px, one source, no spread to collapse",
+        "PATTERN     centroid travels 40 px, spread 125 -> 83 px",
+        "INSIGHT     centroid travels 0 px, spread 115 -> 18 px"
+      ]
+    },
+    {
+      "id": "C5",
+      "title": "PATTERN is membership — nothing about it is derived from screen geometry",
+      "ok": true,
+      "detail": [
+        "the exported geometry is {links,locus,members} — forbidden derived keys present: none",
+        "52 frames carry light; frames in which two members differ in level: 0",
+        "every scalar channel recomputed from time alone; largest divergence 0",
+        "the locus is authored at (240, 470) — not a centroid, not a fit"
+      ]
+    },
+    {
+      "id": "C6",
+      "title": "INSIGHT gathers inward onto a site that was empty — it never emits",
+      "ok": true,
+      "detail": [
+        "nearest topic 'fear-shortfall' clears the site by 58.5 px",
+        "50 frames carry light; 0 of them move it OUTWARD",
+        "5 lobes, closing to a ring rather than to a point"
+      ]
+    },
+    {
+      "id": "C7",
+      "title": "AMBIENT does not move on its own — every still window is one state",
+      "ok": true,
+      "detail": [
+        "181 frames compared across 5 still windows",
+        "0 of them differ from the first frame of their window",
+        "the only channels that ever change are `dx` and `held`, and both are the user's hand"
+      ]
+    },
+    {
+      "id": "C8",
+      "title": "every reduced counterpart reaches the SAME settled meaning, with no travel",
+      "ok": true,
+      "detail": [
+        "pattern    settled residue identical: true over 4 NON-ZERO of 6 residue channels; frames in which a light MOVES: 0",
+        "insight    settled residue identical: true over 2 NON-ZERO of 6 residue channels; frames in which a light MOVES: 0",
+        "connection settled residue identical: true"
+      ]
+    },
+    {
+      "id": "C9",
+      "title": "BRASS IS MATTER — no analytical object carries the identity material",
+      "ok": true,
+      "detail": [
+        "the literal #a58e6f appears 2 times in the page's paint; 2 of them located and attributed, 0 outside the chrome allowlist",
+        "carried by: #q-base, #nav",
+        "the analytical objects on this page — link-0..3, mark-0..3, plocus, keel, inode, relation, thread-core — carry none of it",
+        "analysis.node and analysis.relation resolve to content.primary and content.tertiary"
+      ]
+    },
+    {
+      "id": "S6",
+      "title": "no shipping semantic surface reasserts a semantics REV-01 or REV-02 removed",
+      "ok": true,
+      "detail": [
+        "132 generated final-state strings inspected: the emitted token tree read back from disk, PRESENTATION_CONTRACT, 15 contract statements, 16 skill consequence blocks and 13 never-ship answers",
+        "active regressions found: 0",
+        "all 6 planted regressions detected: true",
+        "historical correction prose correctly ignored: true",
+        "denominator asserted (>= 120 strings): true"
+      ]
+    },
+    {
+      "id": "C9-P",
+      "title": "the identity-material check can fail, and does not fire on chrome",
+      "ok": true,
+      "detail": [
+        "planted paint on #link-0 detected: true",
+        "chrome declarations correctly ignored: true",
+        "selectors actually carrying the material: #q-base, #nav"
+      ]
+    },
+    {
+      "id": "R1",
+      "title": "the world is ALIVE while completely still — every rest window is one frame",
+      "ok": true,
+      "detail": [
+        "P_STILL  66 frames, 0 differ from the first",
+        "S_STILL  48 frames, 0 differ from the first",
+        "U_STILL  48 frames, 0 differ from the first"
+      ]
+    },
+    {
+      "id": "R2",
+      "title": "the document is a pure function of the state — captured twice, identically",
+      "ok": true,
+      "detail": [
+        "210 frames; DOM digests differing: 0; rasters differing: 0",
+        "the second pass ran after five other sequences had used the same elements"
+      ]
+    },
+    {
+      "id": "R3",
+      "title": "the settled world is STILL — a stable meaning needs no motion to be read",
+      "ok": true,
+      "detail": [
+        "connection     36 settled frames, 0 differ",
+        "connection-rm  36 settled frames, 0 differ",
+        "pattern        36 settled frames, 0 differ",
+        "pattern-rm     36 settled frames, 0 differ",
+        "insight        36 settled frames, 0 differ",
+        "insight-rm     36 settled frames, 0 differ"
+      ]
+    },
+    {
+      "id": "R4",
+      "title": "the three meaning events do not collapse into one visual event",
+      "ok": true,
+      "detail": [
+        "connection vs pattern: 222950 pixels differ (16.9 %)",
+        "connection vs insight: 146927 pixels differ (11.2 %)",
+        "pattern vs insight: 190670 pixels differ (14.5 %)"
+      ]
+    },
+    {
+      "id": "R5",
+      "title": "no Light survives into the settled analytical plane",
+      "ok": true,
+      "detail": [
+        "connection     0 Light pixels, max chroma 0.0197 (the atmosphere's own ceiling is 0.0197)",
+        "pattern        0 Light pixels, max chroma 0.0196 (the atmosphere's own ceiling is 0.0197)",
+        "insight        0 Light pixels, max chroma 0.0196 (the atmosphere's own ceiling is 0.0197)",
+        "pattern-rm     0 Light pixels, max chroma 0.0196 (the atmosphere's own ceiling is 0.0197)",
+        "insight-rm     0 Light pixels, max chroma 0.0196 (the atmosphere's own ceiling is 0.0197)",
+        "connection-rm  0 Light pixels, max chroma 0.0197 (the atmosphere's own ceiling is 0.0197)",
+        "sensitivity: this test sees the dimmest Light stop from alpha 0.310 upward"
+      ]
+    },
+    {
+      "id": "R6",
+      "title": "atmosphere is the quiet one — no ambient pixel outranks Light or Matter",
+      "ok": true,
+      "detail": [
+        "the whole resting field: max chroma 0.0196 over 1129440 pixels",
+        "Light's least chromatic stop 0.0317, Living Brass 0.0516",
+        "pixels in the warm band above the ink floor: 0",
+        "the six ring hues are 150°, 192°, 228°, 262°, 300°, 338° — none inside the warm band 60–120°"
+      ]
+    },
+    {
+      "id": "R7",
+      "title": "the navigation family does not participate in any meaning event",
+      "ok": true,
+      "detail": [
+        "7 of 9 sequences: the navigation region is BYTE-IDENTICAL at every frame",
+        "2 sequences take 2 values: connection, connection-rm",
+        "the entire difference between those two values: 2 pixels, worst channel delta 1/255, on the centre icon",
+        "THE DECISIVE PROPERTY — each of those sequences makes exactly ONE transition and never returns (1, 1 transitions each).",
+        "A meaning event rises AND DECAYS TO ZERO; anything responding to one must come back. This does not: it changes once, permanently, and every sequence ends on the same value.",
+        "That is a compositor artefact of layer promotion beneath the navigation, not a response — and it is measured here rather than absorbed into a tolerance."
+      ]
+    },
+    {
+      "id": "R8",
+      "title": "no new category is brighter than the Light the Product Owner already accepted",
+      "ok": true,
+      "detail": [
+        "connection (INHERITED CONTROL) peak Light luminance 242.3 at frame 32, 213868 Light pixels",
+        "pattern        peak 116.6 at frame 88 — 48.1 % of the control, 450 Light pixels",
+        "insight        peak 89.1 at frame 86 — 36.8 % of the control, 186 Light pixels",
+        "pattern-rm     peak 92.8, 1 Light pixels",
+        "insight-rm     peak 78.1, 1200 Light pixels"
+      ]
+    },
+    {
+      "id": "G1",
+      "title": "the atmosphere ceiling is derived from the Light and is strictly below it",
+      "ok": true,
+      "detail": [
+        "ceiling 0.0197 < Light 0.0317 and Matter 0.0516",
+        "the Light line this package measures against: 0.0257",
+        "probes detected: true, true"
+      ]
+    },
+    {
+      "id": "G2",
+      "title": "no captured category frame carries a title card",
+      "ok": true,
+      "detail": [
+        "190 frames sampled",
+        "frames showing a card: 0",
+        "probe detected a planted card frame: true"
+      ]
+    },
+    {
+      "id": "G3",
+      "title": "the navigation family is the identity material and nothing else",
+      "ok": true,
+      "detail": [
+        "723 pixels are exactly #a58e6f",
+        "0 warm pixels lie off the material/Surface blend line"
+      ]
+    },
+    {
+      "id": "G4",
+      "title": "the functional header is unchanged by the meaning event beneath it",
+      "ok": true,
+      "detail": [
+        "header region at rest and at the event peak: identical"
+      ]
+    },
+    {
+      "id": "G5",
+      "title": "I-08B3.1-D1's three scene files are vendored byte-identical",
+      "ok": true,
+      "detail": [
+        "vendor/d1/d1-scene.mjs  841dea14f60dde91…  unchanged",
+        "vendor/d1/d1-render.mjs  e1ea2960e19d36eb…  unchanged",
+        "vendor/d1/d1-arrivals.mjs  915ff97618bb40cc…  unchanged",
+        "probe detected a one-byte change: true"
+      ]
+    },
+    {
+      "id": "G6",
+      "title": "THE TYPEFACE IS A DEPENDENCY — not one font byte ships here",
+      "ok": true,
+      "detail": [
+        "every file under the package scanned",
+        "hits: none",
+        "probes: planted payload detected true; prose correctly ignored true"
+      ]
+    },
+    {
+      "id": "S1",
+      "title": "no ambient visual property claims analytical meaning without a canonical source",
+      "ok": true,
+      "detail": [
+        "7 visual properties declared, 6 of them encoding NOTHING",
+        "the one that encodes anything is 'world.treatment', and it names its source",
+        "undeclared keys — on a topic: 0; crossing to the page: 0",
+        "probes detected: true, true, true"
+      ]
+    },
+    {
+      "id": "S2",
+      "title": "a world treatment is one value applied identically to every topic",
+      "ok": true,
+      "detail": [
+        "3 worlds; per-topic collections found: none",
+        "shared dash: \"7 5\" — one pattern for the world, not per topic",
+        "probe detected: true"
+      ]
+    },
+    {
+      "id": "S3",
+      "title": "every membership link and mark is written identically — no link is a strength",
+      "ok": true,
+      "detail": [
+        "12 probe frames across three pattern sequences, read off the live elements",
+        "frames in which the links or marks differ from each other: 0",
+        "probe detected a planted difference: true"
+      ]
+    },
+    {
+      "id": "S4",
+      "title": "every topic is named in every world — dimness is never a claim about knowledge",
+      "ok": true,
+      "detail": [
+        "7 probe frames across all three worlds",
+        "frames with a suppressed label: 0",
+        "public-world label alpha is 0.74, applied to the whole field",
+        "probe detected: true"
+      ]
+    },
+    {
+      "id": "S5",
+      "title": "a dashed contour says WHICH WORLD, never how much of a topic is shared",
+      "ok": true,
+      "detail": [
+        "3 probe frames carried dashed contours",
+        "frames with more than one dash pattern: 0",
+        "I-08B3.1-D2 wrote a dash per topic, computed from an invented \"shared fraction\"",
+        "probe detected: true"
+      ]
+    }
+  ],
+  "probes": [
+    {
+      "name": "S6: a planted \"depth = temporal distance\" regression is detected",
+      "detected": true
+    },
+    {
+      "name": "S6: a planted \"near = recent\" regression is detected",
+      "detected": true
+    },
+    {
+      "name": "S6: a planted \"contour = identity\" regression is detected",
+      "detected": true
+    },
+    {
+      "name": "S6: a planted \"recognisable by shape\" regression is detected",
+      "detected": true
+    },
+    {
+      "name": "S6: a planted \"Pattern staggered\" regression is detected",
+      "detected": true
+    },
+    {
+      "name": "S6: a planted \"Pattern spine\" regression is detected",
+      "detected": true
+    },
+    {
+      "name": "S6: historical correction prose is NOT flagged",
+      "detected": true
+    },
+    {
+      "name": "C9: the identity material painted on a membership link IS detected",
+      "detected": true
+    },
+    {
+      "name": "C9: the chrome declarations are NOT flagged",
+      "detected": true
+    },
+    {
+      "name": "G1: a ceiling AT the Light's own chroma is rejected",
+      "detected": true
+    },
+    {
+      "name": "G1: a ceiling at the material's chroma is rejected",
+      "detected": true
+    },
+    {
+      "name": "G2: a real card frame IS detected by this test",
+      "detected": true
+    },
+    {
+      "name": "G5: a file whose hash does not match is rejected",
+      "detected": true
+    },
+    {
+      "name": "G6: a planted woff2 payload is detected",
+      "detected": true
+    },
+    {
+      "name": "G6: prose about `data:font` is NOT detected",
+      "detected": true
+    },
+    {
+      "name": "S1: a contract entry that claims to encode something with no source is rejected",
+      "detected": true
+    },
+    {
+      "name": "S1: a topic carrying an undeclared quantity is rejected",
+      "detected": true
+    },
+    {
+      "name": "S1: a quantity crossing the wire to the page is rejected",
+      "detected": true
+    },
+    {
+      "name": "S2: a per-topic world value is rejected",
+      "detected": true
+    },
+    {
+      "name": "S3: one link written differently from its siblings is detected",
+      "detected": true
+    },
+    {
+      "name": "S4: a suppressed label is detected",
+      "detected": true
+    },
+    {
+      "name": "S5: per-topic dash patterns are detected",
+      "detected": true
+    }
+  ]
+}

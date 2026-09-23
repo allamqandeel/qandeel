@@ -1,0 +1,55 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "version": "2025.10",
+  "name": "QANDEEL accessibility transformations, over the frozen Surface, Living Brass, QANDEEL Light and interaction systems",
+  "description": "I-08B3.1-F1 — REVIEW CANDIDATE. Extends the I-08B3.1-E1 resolver rather than standing beside it, so that the accessibility overrides and the things they must never reach come out of ONE resolution. That is the only way \"an accessibility setting changes representation and nothing else\" can be checked rather than asserted: it is a statement about reachability in a graph, and it is only that if both are in the same graph. Nothing here is frozen: independent Product and Design review owns that decision, and F itself stays OPEN until I-08B3.1-F2 completes.",
+  "sets": {
+    "interaction-semantic": {
+      "description": "INHERITED, BYTE-IDENTICAL, from I-08B3.1-E1R — which inherits D2R QANDEEL Light, which inherits C3 Living Brass, which inherits B4R Surface. F1 does not modify it and does not re-author it. Every published byte is re-hashed against the sealed source package by tools/f1-resolve.mjs verifyVendor().",
+      "sources": [{ "$ref": "../vendor/e1/tokens/qandeel-interaction.resolver.json" }]
+    },
+    "accessibility-semantic": {
+      "description": "AUTHORED BY F1. Accessibility transformations, as roles. No colour literal is introduced anywhere in this set — every colour in it is an alias to a rung of the frozen I-08B3.0 reading ramp.",
+      "sources": [{ "$ref": "./base/accessibility.tokens.json" }]
+    }
+  },
+  "modifiers": {
+    "appearance": {
+      "description": "System light/dark appearance. Dark is the canonical expression and the only one with values; LIGHT IS EXPLICITLY OUT OF SCOPE FOR F1 and is owned by I-08B3.1-F2, so resolving into it fails loudly rather than returning a colour nobody designed. F1 does not invert the palette and does not ship a provisional light mode to fill a matrix.",
+      "default": "dark",
+      "contexts": {
+        "dark": [{ "$ref": "./appearance/dark.accessibility.tokens.json" }],
+        "light": []
+      }
+    },
+    "contrast": {
+      "description": "Increased-contrast accessibility override, applied WITHIN an appearance — I-08B3.1-B4R's shape, kept: \"an OVERRIDE of the appearance it applies to, not a third appearance\". B4R declared this context and left it empty with its values assigned to I-08B3.1-F. F1 fills it for the dark appearance. Detected on iOS as AccessibilityInfo.isDarkerSystemColorsEnabled (@platform ios) and on Android as isHighTextContrastEnabled (@platform android) — two different settings with two different scopes, which F1_PLATFORM_MAPPING.md records rather than papers over.",
+      "default": "standard",
+      "contexts": {
+        "standard": [{ "$ref": "../vendor/c3/b4r/standard.tokens.json" }],
+        "increased": [{ "$ref": "./contrast/increased.accessibility.tokens.json" }]
+      }
+    },
+    "transparency": {
+      "description": "Reduce-transparency accessibility override, applied WITHIN an appearance. Detected on iOS as AccessibilityInfo.isReduceTransparencyEnabled (@platform ios); Android returns Promise.resolve(false) and has no equivalent system setting, which is a genuine platform asymmetry and not something an app can synthesise.",
+      "default": "full",
+      "contexts": {
+        "full": [{ "$ref": "./transparency/full.accessibility.tokens.json" }],
+        "reduced": [{ "$ref": "./transparency/reduced.accessibility.tokens.json" }]
+      }
+    }
+  },
+  "resolutionOrder": [
+    { "$ref": "#/sets/interaction-semantic" },
+    { "$ref": "#/sets/accessibility-semantic" },
+    { "$ref": "#/modifiers/appearance" },
+    { "$ref": "#/modifiers/contrast" },
+    { "$ref": "#/modifiers/transparency" }
+  ],
+  "notResolvedHere": {
+    "description": "THREE ACCESSIBILITY SETTINGS DELIBERATELY DO NOT APPEAR AS MODIFIERS, and the omission is the decision rather than an oversight.",
+    "motion": "REDUCED MOTION resolves to no colour. Its tokens live in the base set as plain scalars because a colour resolver that owned motion would be the authority on something it cannot check. The motion contract is proved by rendering frames, in tools/f1-motion.mjs, not by resolving a tree.",
+    "text": "LARGER TEXT and BOLD TEXT resolve to no colour either. They change metrics and layout, and their proof is a rendered page at 3.118×, not a token value.",
+    "grayscale-and-invert": "GRAYSCALE and INVERT COLOURS are DIAGNOSTICS in F1, not target expressions. They are display-level transforms the OS applies after the app has drawn; an app that repainted itself for them would be fighting the compositor. F1 renders under them to expose hidden colour dependence and ships no override for either."
+  }
+}

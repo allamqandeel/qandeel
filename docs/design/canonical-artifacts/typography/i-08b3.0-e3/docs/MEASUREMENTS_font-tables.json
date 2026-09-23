@@ -1,0 +1,106 @@
+{
+ "generated": "2026-09-20T16:07:43.019Z",
+ "file": "Estedad[wght].ttf",
+ "bytes": 284180,
+ "sha256": "3134E31A27D58E615967E714C7799FBFA2DE952876F8597B33DC57FFE0E99D03",
+ "name": {
+  "family": "Estedad",
+  "subfamily": "Regular",
+  "version": "Version 8.5",
+  "designer": "Amin Abedi",
+  "licence": "This Font Software is licensed under the SIL Open Font License, Version 1.1. This license is available with a FAQ at: https://openfontlicense.org",
+  "licenceURL": "https://openfontlicense.org",
+  "typoFamily": "Estedad"
+ },
+ "unitsPerEm": 1000,
+ "numGlyphs": 2276,
+ "usWeightClass": 400,
+ "fsSelection_USE_TYPO_METRICS": true,
+ "hhea": {
+  "ascender": 1025,
+  "descender": -500,
+  "lineGap": 0
+ },
+ "typo": {
+  "ascender": 1025,
+  "descender": -500,
+  "lineGap": 0
+ },
+ "win": {
+  "ascent": 1025,
+  "descent": 500
+ },
+ "sxHeight": 490,
+ "sCapHeight": 655,
+ "xHeight_em": 0.49,
+ "capHeight_em": 0.655,
+ "declaredLineBox_em": 1.525,
+ "declaredLineBoxSource": "OS/2 sTypo* (USE_TYPO_METRICS set)",
+ "variable": true,
+ "axes": [
+  {
+   "tag": "wght",
+   "min": 100,
+   "def": 400,
+   "max": 900
+  }
+ ],
+ "GSUB": {
+  "scripts": [
+   "DFLT",
+   "arab",
+   "latn"
+  ],
+  "features": [
+   "aalt",
+   "c2sc",
+   "ccmp",
+   "fina",
+   "frac",
+   "init",
+   "isol",
+   "locl",
+   "medi",
+   "onum",
+   "ordn",
+   "rlig",
+   "rvrn",
+   "sinf",
+   "smcp",
+   "ss01",
+   "ss02",
+   "ss03",
+   "ss10",
+   "ss11",
+   "ss12",
+   "ss20",
+   "subs",
+   "sups",
+   "tnum",
+   "zero"
+  ]
+ },
+ "GPOS": {
+  "scripts": [
+   "DFLT",
+   "arab",
+   "latn"
+  ],
+  "features": [
+   "kern",
+   "mark",
+   "mkmk"
+  ]
+ },
+ "rolesDeclaredRatio": {
+  "statement": 1.5625,
+  "screenTitle": 1.6154,
+  "sectionTitle": 1.6,
+  "body": 1.7647,
+  "supporting": 1.6667,
+  "action": 1.6429,
+  "metadata": 1.6667,
+  "numeric": 1.5
+ },
+ "note": "Every value above is read from the binary. The rendered-ink figures the report compares these against are in MEASUREMENTS_rendered-text.json and are measured from shaped text, not derived from this table."
+}

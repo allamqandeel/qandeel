@@ -1,0 +1,267 @@
+{
+  "generatedBy": "tools/f2-parity.mjs",
+  "tokenTree": {
+    "digest": "aae1316cb9ee65444f0ef600e793fc40e8800389b66de21d0a1ed2e6164adca7",
+    "files": 9
+  },
+  "appearances": [
+    "dark",
+    "light"
+  ],
+  "expressions": [
+    "DEFAULT",
+    "REDUCED MOTION",
+    "INCREASE CONTRAST",
+    "REDUCE TRANSPARENCY",
+    "CONTRAST + TRANSPARENCY",
+    "REDUCED MOTION + CONTRAST",
+    "GRAYSCALE (diagnostic)",
+    "LARGER TEXT xxxLarge",
+    "LARGER TEXT 200%",
+    "LARGER TEXT AX5 (311.8%)",
+    "BOLD TEXT"
+  ],
+  "objects": [
+    "task-delay",
+    "mastery",
+    "comparison",
+    "sleep",
+    "fear-shortfall",
+    "weekend-fatigue",
+    "close-relations",
+    "energy-decline",
+    "connection:task-delay~comparison",
+    "pattern:four-topics",
+    "insight:mastery-precedes-sleep"
+  ],
+  "facts": [
+    "EXISTS (rendered)",
+    "RELATIONSHIPS",
+    "TEMPORAL",
+    "EPISTEMIC",
+    "ACTIONS"
+  ],
+  "cellCount": 1452,
+  "failedCount": 0,
+  "failed": [],
+  "screenReader": {
+    "dark": {
+      "rows": 0,
+      "text": 605
+    },
+    "light": {
+      "rows": 0,
+      "text": 605
+    },
+    "identicalAcrossAppearances": true
+  },
+  "whatDidChange": {
+    "worldFillDiffers": true,
+    "truthBlockIdenticalAcrossAppearances": true,
+    "stateBlockDiffersOnlyByAppearance": true,
+    "lightSourcesInDefault": {
+      "dark": 0,
+      "light": 0
+    },
+    "noTruncationAnywhere": true
+  },
+  "probes": [
+    {
+      "probe": "the TOPIC removed from the light document",
+      "removed": "task-delay",
+      "removedSomething": true,
+      "matrixFailed": true,
+      "failedOnlyForTheRemovedObject": true,
+      "failedCells": [
+        "task-delay/EXISTS (rendered)",
+        "task-delay/CHANNELS"
+      ]
+    },
+    {
+      "probe": "the CONNECTION removed from the light document",
+      "removed": "connection:task-delay~comparison",
+      "removedSomething": true,
+      "matrixFailed": true,
+      "failedOnlyForTheRemovedObject": true,
+      "failedCells": [
+        "connection:task-delay~comparison/EXISTS (rendered)",
+        "connection:task-delay~comparison/CHANNELS"
+      ]
+    },
+    {
+      "probe": "the PATTERN removed from the light document",
+      "removed": "pattern:four-topics",
+      "removedSomething": true,
+      "matrixFailed": true,
+      "failedOnlyForTheRemovedObject": true,
+      "failedCells": [
+        "pattern:four-topics/EXISTS (rendered)",
+        "pattern:four-topics/CHANNELS"
+      ]
+    },
+    {
+      "probe": "the INSIGHT removed from the light document",
+      "removed": "insight:mastery-precedes-sleep",
+      "removedSomething": true,
+      "matrixFailed": true,
+      "failedOnlyForTheRemovedObject": true,
+      "failedCells": [
+        "insight:mastery-precedes-sleep/EXISTS (rendered)",
+        "insight:mastery-precedes-sleep/CHANNELS"
+      ]
+    }
+  ],
+  "state": "PASS",
+  "census": {
+    "dark | DEFAULT": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | REDUCED MOTION": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | INCREASE CONTRAST": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | REDUCE TRANSPARENCY": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | CONTRAST + TRANSPARENCY": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | REDUCED MOTION + CONTRAST": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | GRAYSCALE (diagnostic)": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | LARGER TEXT xxxLarge": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | LARGER TEXT 200%": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | LARGER TEXT AX5 (311.8%)": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | BOLD TEXT": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "dark | SCREEN READER": {
+      "truthObjects": null,
+      "rendered": null,
+      "lightSources": null,
+      "sr": {
+        "rows": 0,
+        "text": 605
+      }
+    },
+    "light | DEFAULT": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | REDUCED MOTION": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | INCREASE CONTRAST": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | REDUCE TRANSPARENCY": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | CONTRAST + TRANSPARENCY": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | REDUCED MOTION + CONTRAST": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | GRAYSCALE (diagnostic)": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | LARGER TEXT xxxLarge": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | LARGER TEXT 200%": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | LARGER TEXT AX5 (311.8%)": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | BOLD TEXT": {
+      "truthObjects": 11,
+      "rendered": 11,
+      "lightSources": 0,
+      "sr": null
+    },
+    "light | SCREEN READER": {
+      "truthObjects": null,
+      "rendered": null,
+      "lightSources": null,
+      "sr": {
+        "rows": 0,
+        "text": 605
+      }
+    }
+  }
+}

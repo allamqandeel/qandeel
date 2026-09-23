@@ -1,0 +1,555 @@
+{
+  "generatedBy": "tools/e1-derive.mjs",
+  "selfCheck": [
+    {
+      "check": "protan: grey 0 is a fixed point",
+      "pass": true,
+      "detail": "0.0000 0.0000 0.0000"
+    },
+    {
+      "check": "protan: grey 0.25 is a fixed point",
+      "pass": true,
+      "detail": "0.2500 0.2500 0.2500"
+    },
+    {
+      "check": "protan: grey 0.5 is a fixed point",
+      "pass": true,
+      "detail": "0.5000 0.5000 0.5000"
+    },
+    {
+      "check": "protan: grey 0.75 is a fixed point",
+      "pass": true,
+      "detail": "0.7500 0.7500 0.7500"
+    },
+    {
+      "check": "protan: grey 1 is a fixed point",
+      "pass": true,
+      "detail": "1.0000 1.0000 1.0000"
+    },
+    {
+      "check": "deutan: grey 0 is a fixed point",
+      "pass": true,
+      "detail": "0.0000 0.0000 0.0000"
+    },
+    {
+      "check": "deutan: grey 0.25 is a fixed point",
+      "pass": true,
+      "detail": "0.2500 0.2500 0.2500"
+    },
+    {
+      "check": "deutan: grey 0.5 is a fixed point",
+      "pass": true,
+      "detail": "0.5000 0.5000 0.5000"
+    },
+    {
+      "check": "deutan: grey 0.75 is a fixed point",
+      "pass": true,
+      "detail": "0.7500 0.7500 0.7500"
+    },
+    {
+      "check": "deutan: grey 1 is a fixed point",
+      "pass": true,
+      "detail": "1.0000 1.0000 1.0000"
+    },
+    {
+      "check": "tritan: grey 0 is a fixed point",
+      "pass": true,
+      "detail": "0.0000 0.0000 0.0000"
+    },
+    {
+      "check": "tritan: grey 0.25 is a fixed point",
+      "pass": true,
+      "detail": "0.2500 0.2500 0.2500"
+    },
+    {
+      "check": "tritan: grey 0.5 is a fixed point",
+      "pass": true,
+      "detail": "0.5000 0.5000 0.5000"
+    },
+    {
+      "check": "tritan: grey 0.75 is a fixed point",
+      "pass": true,
+      "detail": "0.7500 0.7500 0.7500"
+    },
+    {
+      "check": "tritan: grey 1 is a fixed point",
+      "pass": true,
+      "detail": "1.0000 1.0000 1.0000"
+    },
+    {
+      "check": "protan: pure red and pure green collapse to one hue",
+      "pass": true,
+      "detail": "red h=60.0 green h=60.0 delta=0.0"
+    },
+    {
+      "check": "protan: blue is NOT collapsed into the red/green pair",
+      "pass": true,
+      "detail": "blue h=240.0"
+    },
+    {
+      "check": "deutan: pure red and pure green collapse to one hue",
+      "pass": true,
+      "detail": "red h=60.0 green h=60.0 delta=0.0"
+    },
+    {
+      "check": "deutan: blue is NOT collapsed into the red/green pair",
+      "pass": true,
+      "detail": "blue h=240.0"
+    },
+    {
+      "check": "tritan: red and green stay apart (tritanopes keep red-green)",
+      "pass": true,
+      "detail": "delta=180.0"
+    },
+    {
+      "check": "tritan: single-plane limit — pure blue is a fixed point",
+      "pass": true,
+      "detail": "moved 0.00001; tritan is EXCLUDED from every derived floor"
+    },
+    {
+      "check": "protan: the projection is idempotent",
+      "pass": true,
+      "detail": "worst drift 0.00000"
+    },
+    {
+      "check": "deutan: the projection is idempotent",
+      "pass": true,
+      "detail": "worst drift 0.00000"
+    },
+    {
+      "check": "tritan: the projection is idempotent",
+      "pass": true,
+      "detail": "worst drift 0.00026"
+    },
+    {
+      "check": "protan: pure red loses most of its luminance",
+      "pass": true,
+      "detail": "0.2126 -> 0.1046"
+    },
+    {
+      "check": "deutan: pure red keeps most of its luminance",
+      "pass": true,
+      "detail": "0.2126 -> 0.2716"
+    }
+  ],
+  "FLOOR": 0.051294338032078474,
+  "CHROMATIC": 0.05159255742754802,
+  "brassGaps": {
+    "PRIMARY": 0.2160843928475506,
+    "SECONDARY": 0.09337880987210712,
+    "TERTIARY": 0.051294338032078474
+  },
+  "ERROR": {
+    "hex": "#fe907e",
+    "authored": {
+      "colorSpace": "oklch",
+      "L": 0.7675,
+      "C": 0.137,
+      "H": 29.9839
+    },
+    "recovered": {
+      "L": 0.7670589425207546,
+      "C": 0.13639984326992435,
+      "H": 30.32285665917874
+    },
+    "luminance": 0.4252370651095025,
+    "hueAnchor": 29.23388027962788,
+    "hueDeviation": 0.75,
+    "hueDirection": "toward orange",
+    "feasibleSamples": 3,
+    "feasibleL": [
+      0.7675,
+      0.7675
+    ],
+    "feasibleC": [
+      0.137,
+      0.138
+    ],
+    "sweepBounds": {
+      "L": [
+        0.4,
+        0.99
+      ],
+      "C": [
+        0.01,
+        0.4
+      ]
+    },
+    "gamutHeadroom": 0.001,
+    "floors": [
+      {
+        "name": "chroma at least Living Brass’s",
+        "value": 0.13639984326992435,
+        "floor": 0.05159255742754802,
+        "pass": true
+      },
+      {
+        "name": "contrast on WORLD",
+        "value": 8.612250867859231,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "name": "contrast on SURFACE",
+        "value": 8.03660488624054,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "name": "dEok from PRIMARY",
+        "value": 0.16759707488378325,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "dEok from SECONDARY",
+        "value": 0.13255188728589762,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "dEok from TERTIARY",
+        "value": 0.190503063057111,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "dEok from BRASS",
+        "value": 0.1510387942660075,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "dEok from LIGHT-low",
+        "value": 0.14076860410159525,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "dEok from LIGHT-mid",
+        "value": 0.17907515432226473,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "dEok from LIGHT-core",
+        "value": 0.23062165815432178,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "protan: contrast on WORLD",
+        "value": 7.258653166948223,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "name": "protan: contrast on SURFACE",
+        "value": 6.773482148171784,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "name": "protan: dEok from PRIMARY",
+        "value": 0.17038612820798776,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "protan: dEok from SECONDARY",
+        "value": 0.05302834233127689,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "protan: dEok from TERTIARY",
+        "value": 0.0843001859441166,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "protan: dEok from BRASS",
+        "value": 0.05540654503572654,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "protan: dEok from LIGHT-low",
+        "value": 0.13028863508899005,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "protan: dEok from LIGHT-mid",
+        "value": 0.1905821675404369,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "protan: dEok from LIGHT-core",
+        "value": 0.2554276972329657,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "deutan: contrast on WORLD",
+        "value": 9.31338800725876,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "name": "deutan: contrast on SURFACE",
+        "value": 8.690877764130313,
+        "floor": 4.5,
+        "pass": true
+      },
+      {
+        "name": "deutan: dEok from PRIMARY",
+        "value": 0.12280819478166424,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "deutan: dEok from SECONDARY",
+        "value": 0.07503869843507789,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "deutan: dEok from TERTIARY",
+        "value": 0.15746553164154234,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "deutan: dEok from BRASS",
+        "value": 0.1149351410543369,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "deutan: dEok from LIGHT-low",
+        "value": 0.07926852813483028,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "deutan: dEok from LIGHT-mid",
+        "value": 0.13571332784358062,
+        "floor": 0.051294338032078474,
+        "pass": true
+      },
+      {
+        "name": "deutan: dEok from LIGHT-core",
+        "value": 0.19914360255467486,
+        "floor": 0.051294338032078474,
+        "pass": true
+      }
+    ]
+  },
+  "DISABLED": {
+    "hex": "#696762",
+    "authored": {
+      "colorSpace": "oklch",
+      "L": 0.5151,
+      "C": 0.008,
+      "H": 93.1372
+    },
+    "recovered": {
+      "L": 0.5140092899819152,
+      "C": 0.008141093289770506,
+      "H": 88.69077822807327
+    },
+    "rung": 0.11460286940397402,
+    "rungs": [
+      0.12803726774309354,
+      0.11460286940397402
+    ],
+    "chromaStep": 0.0025816213974951315,
+    "hueMean": 93.13717929425768,
+    "belowTertiary": {
+      "dL": 0.11568442808244073,
+      "dEok": 0.11571257334937843
+    },
+    "contrast": {
+      "world": 3.3680834367665398,
+      "surface": 3.1429595143588926
+    }
+  },
+  "PRESS": {
+    "alpha": 0.1,
+    "derivedFloorStep": 0.035993777796532594,
+    "alphaThatWouldMeetTheFloor": 0.045,
+    "onSurface": "#2b2b2a",
+    "onWorld": "#242423",
+    "dLSurface": 0.07966899595153415,
+    "dLWorld": 0.08689818690649145,
+    "chromaSurface": 0.0017900487586793902,
+    "chromaWorld": 0.0018371600174309534,
+    "collidesWithSurface": false
+  },
+  "FOCUS": {
+    "indicator": "#d8d5ca",
+    "companion": "#101010",
+    "thickness": 2,
+    "companionThickness": 1,
+    "offset": 2,
+    "changeOfContrast": {
+      "onWorld": 12.948483770822598,
+      "onSurface": 12.083002404209589
+    },
+    "coverage": [
+      {
+        "against": "WORLD",
+        "hex": "#101010",
+        "ring": 12.948483770822598,
+        "companion": 1,
+        "ringAlone": true,
+        "covered": true
+      },
+      {
+        "against": "SURFACE",
+        "hex": "#181818",
+        "ring": 12.083002404209589,
+        "companion": 1.0716280058267211,
+        "ringAlone": true,
+        "covered": true
+      },
+      {
+        "against": "PRIMARY",
+        "hex": "#d8d5ca",
+        "ring": 1,
+        "companion": 12.948483770822598,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "SECONDARY",
+        "hex": "#afaca3",
+        "ring": 1.5444557119656737,
+        "companion": 8.383849190691707,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "TERTIARY",
+        "hex": "#8b8982",
+        "ring": 2.382359030705214,
+        "companion": 5.435152134474732,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "BRASS",
+        "hex": "#a58e6f",
+        "ring": 2.1333302221083357,
+        "companion": 6.069610619412601,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "LIGHT-low",
+        "hex": "#d6caa9",
+        "ring": 1.1094678476582283,
+        "companion": 11.670895914787591,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "LIGHT-mid",
+        "hex": "#e8ddc2",
+        "ring": 1.0883401320979673,
+        "companion": 14.092354537605454,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "LIGHT-core",
+        "hex": "#fbf2db",
+        "ring": 1.317364984276006,
+        "companion": 17.05787911914783,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "ERROR",
+        "hex": "#fe907e",
+        "ring": 1.5034958885308498,
+        "companion": 8.612250867859231,
+        "ringAlone": false,
+        "covered": true
+      },
+      {
+        "against": "DISABLED",
+        "hex": "#696762",
+        "ring": 3.844466449220013,
+        "companion": 3.3680834367665398,
+        "ringAlone": true,
+        "covered": true
+      },
+      {
+        "against": "pressed SURFACE",
+        "hex": "#2b2b2a",
+        "ring": 9.64454037199721,
+        "companion": 1.3425713690222443,
+        "ringAlone": true,
+        "covered": true
+      },
+      {
+        "against": "pressed WORLD",
+        "hex": "#242423",
+        "ring": 10.572640161955512,
+        "companion": 1.2247162082954737,
+        "ringAlone": true,
+        "covered": true
+      }
+    ],
+    "ringAloneCovers": 5,
+    "pairCovers": 13,
+    "total": 13
+  },
+  "COLLISION": {
+    "claim": "the disabled ink #5a5a58 sits close enough to the rest-state ink #8b8982 to be argued with",
+    "source": "I-08B3.1-C2 C2_FINDINGS.md, restated in I-08B3.1-C3 C3_FREEZE_RECORD.md 4.2 and C3_ICONOGRAPHY_MATERIAL_CONTRACT.md 6.4",
+    "dL": 0.16275629935469677,
+    "dEok": 0.1629291826799527,
+    "contrastRest": 5.071864588198882,
+    "contrastDisabled": 2.5688357903476366,
+    "rampRungs": [
+      0.12803726774309354,
+      0.11460286940397402
+    ],
+    "floor": 0.051294338032078474,
+    "survivesMeasurement": false
+  },
+  "WEIGHT": {
+    "rest": 500,
+    "selected": 600,
+    "arabicBand": [
+      400,
+      700
+    ]
+  },
+  "SELECTED": {
+    "ink": "#d8d5ca",
+    "marker": "#d8d5ca",
+    "markerThickness": 2
+  },
+  "REST": {
+    "ink": "#8b8982"
+  },
+  "FROZEN": {
+    "WORLD": "#101010",
+    "SURFACE": "#181818",
+    "PRIMARY": "#d8d5ca",
+    "SECONDARY": "#afaca3",
+    "TERTIARY": "#8b8982",
+    "BRASS": "#a58e6f",
+    "LIGHT-low": "#d6caa9",
+    "LIGHT-mid": "#e8ddc2",
+    "LIGHT-core": "#fbf2db"
+  },
+  "RETIRED": {
+    "disabledInk": "#5a5a58"
+  }
+}

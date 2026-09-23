@@ -1,0 +1,49 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "version": "2025.10",
+  "name": "QANDEEL Light, over the frozen Living Brass and Surface systems",
+  "description": "I-08B3.1-D2R — FREEZE CANDIDATE. Extends the frozen I-08B3.1-C3 resolver with QANDEEL LIGHT and ATMOSPHERE rather than standing beside it, so that the Light and the material it must stay separable from come out of ONE resolution. Nothing here is frozen: independent Product and Design review owns that decision.",
+  "sets": {
+    "living-brass": {
+      "description": "INHERITED, BYTE-IDENTICAL, FROZEN in I-08B3.1-C3 — which itself inherits I-08B3.1-B4R. D2 does not modify it and does not re-author it.",
+      "sources": [
+        {
+          "$ref": "../source/vendor/c3/tokens/qandeel-living-brass.resolver.json"
+        }
+      ]
+    },
+    "illumination-semantic": {
+      "description": "AUTHORED BY D2. QANDEEL LIGHT and ATMOSPHERE, as roles.",
+      "sources": [
+        {
+          "$ref": "./base/illumination.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "appearance": {
+      "description": "System light/dark appearance. Dark is the canonical expression and the only one with values; light is owned by later work and resolving into it fails loudly rather than returning a colour nobody designed.",
+      "default": "dark",
+      "contexts": {
+        "dark": [
+          {
+            "$ref": "./appearance/dark.illumination.tokens.json"
+          }
+        ],
+        "light": []
+      }
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/living-brass"
+    },
+    {
+      "$ref": "#/sets/illumination-semantic"
+    },
+    {
+      "$ref": "#/modifiers/appearance"
+    }
+  ]
+}

@@ -1,0 +1,2626 @@
+{
+ "conv-01-new-opener": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 600.015625,
+    "x1": 270.3125,
+    "y1": 664
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "shared"
+   ],
+   "turns": 1
+  },
+  "sha256": "4926a366f68646edd764bf47a65cd8853623d7fe4c157b184f6f9a982316cb57",
+  "bytes": 41379
+ },
+ "conv-01b-new-opener-en": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "marker": [
+   39,
+   91
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 578.03125,
+    "x1": 366,
+    "y1": 664
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "shared"
+   ],
+   "turns": 1
+  },
+  "sha256": "ad08296929def8e90a8c81ffc09b304de3dc6a50e45b6c15bccce6f76c61aacf",
+  "bytes": 48350
+ },
+ "conv-02-active-ar": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "4e558afb1a90958f4c4d778ea951c514bb024bde7e4b5de0ea83eeef0759e788",
+  "bytes": 134745
+ },
+ "conv-03-active-en": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "marker": [
+   39,
+   91
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 167.8125,
+    "x1": 302,
+    "y1": 268.765625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 284.765625,
+    "x1": 366,
+    "y1": 414.6875
+   },
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 442.6875,
+    "x1": 302,
+    "y1": 543.640625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 559.640625,
+    "x1": 366,
+    "y1": 663.578125
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "ffee92c64a30cf97f7f447058d1f4df5f540359b5fef95c4250924df14def5b9",
+  "bytes": 148533
+ },
+ "conv-04-mixed-bidi": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 246.9375,
+    "x1": 318,
+    "y1": 306.90625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 334.90625,
+    "x1": 390,
+    "y1": 417.875
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 423.875,
+    "x1": 390,
+    "y1": 506.84375
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 522.84375,
+    "x1": 317.796875,
+    "y1": 552.828125
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 580.828125,
+    "x1": 390,
+    "y1": 663.796875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 7
+  },
+  "sha256": "9aa50c7abc75713e05d72bb8884e27d6382b2ddab061b3fd7e1c948f2109010c",
+  "bytes": 130693
+ },
+ "conv-04b-mixed-first-strong-trap": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 246.9375,
+    "x1": 318,
+    "y1": 306.90625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 334.90625,
+    "x1": 390,
+    "y1": 417.875
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 423.875,
+    "x1": 390,
+    "y1": 506.84375
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 522.84375,
+    "x1": 317.796875,
+    "y1": 552.828125
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 580.828125,
+    "x1": 390,
+    "y1": 663.796875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 7
+  },
+  "sha256": "23d8985f5331137e08953bae13e138e144f80ca0c941200947e2926efcb2a9c8",
+  "bytes": 130531
+ },
+ "conv-04c-mixed-top-latin-name": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 149,
+    "x1": 288.359375,
+    "y1": 212.984375
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 240.984375,
+    "x1": 390,
+    "y1": 353.9375
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 369.9375,
+    "x1": 318,
+    "y1": 429.90625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 457.90625,
+    "x1": 390,
+    "y1": 540.875
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 546.875,
+    "x1": 390,
+    "y1": 629.84375
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 645.84375,
+    "x1": 317.796875,
+    "y1": 675.828125
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 7
+  },
+  "sha256": "74039bc1575e6be467e794ea1c0e740c576b24578add61e9be8d7369b41fee41",
+  "bytes": 129685
+ },
+ "conv-05-first-words-sent": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 489.046875,
+    "x1": 270.3125,
+    "y1": 553.03125
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 581.03125,
+    "x1": 390,
+    "y1": 664
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 2
+  },
+  "sha256": "15819e344ef06ad4e5eeedc6a88b0cdd5a09eb5afbd8351742246b0030cf76d3",
+  "bytes": 55038
+ },
+ "conv-06-a1-placement-superseded": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 135.890625,
+    "x1": 366,
+    "y1": 199.875
+   },
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 227.875,
+    "x1": 302,
+    "y1": 340.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 356.828125,
+    "x1": 366,
+    "y1": 446.78125
+   },
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 474.78125,
+    "x1": 302,
+    "y1": 587.734375
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.734375,
+    "x1": 366,
+    "y1": 663.703125
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "f712bfcb464d0ea6176c7ca0ac452ad3af9c66b94f1038cd1ac811d37f286b17",
+  "bytes": 137050
+ },
+ "modes-01-writing": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mine",
+    "public",
+    "replay",
+    "send",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "2c52505e32bd2804fe294eb3a61df749efbba37ae0fa077e63759c8f610a7848",
+  "bytes": 138970
+ },
+ "modes-02-voice-note-recording": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "599557860d2d57c93961407cf45c8b1a435c40f59ccddcff3697eb9b658a38bf",
+  "bytes": 139928
+ },
+ "modes-03-voice-note-in-history": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 260.765625,
+    "x1": 390,
+    "y1": 373.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 389.71875,
+    "x1": 318,
+    "y1": 449.6875
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 477.6875,
+    "x1": 390,
+    "y1": 586.6875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 602.6875,
+    "x1": 287.9375,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11
+  },
+  "sha256": "ad31d94b482b9520b60986c42bd69ca46b49593217802f0a54f253a8ba73829b",
+  "bytes": 133658
+ },
+ "modes-04-live-call-analysis": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "7c28da37c2a12143b0412feb36fa1cd7b7d1d0764ac82943ffaea9c06ed63248",
+  "bytes": 144378
+ },
+ "modes-05-live-call-conversation": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "fe048bf07f7f52635a290c117231f58036925d6fd124db37fdc5511f1cea9782",
+  "bytes": 150331
+ },
+ "modes-06-live-call-analysis-en": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "marker": [
+   39,
+   91
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 115.8125,
+    "x1": 302,
+    "y1": 216.765625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 232.765625,
+    "x1": 366,
+    "y1": 362.6875
+   },
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 390.6875,
+    "x1": 302,
+    "y1": 491.640625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 507.640625,
+    "x1": 366,
+    "y1": 611.578125
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "5b6252c61dd0a6daf25f773bc9eb166af0d7dcc3d48d89801e556c5040969a61",
+  "bytes": 145276
+ },
+ "modes-07-live-call-muted": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "d58ca4f2c273a9c2730769ff84212cdba6c7e9207dfd8bd2d610c77928059a26",
+  "bytes": 137695
+ },
+ "replay-02-analysis-chrome": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 175.875,
+    "x1": 390,
+    "y1": 288.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 304.828125,
+    "x1": 318,
+    "y1": 424.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 452.765625,
+    "x1": 390,
+    "y1": 565.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 581.71875,
+    "x1": 318,
+    "y1": 641.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "28796251ab8ad8cea4d84387c44883a4b0ba8de3f398fc68febbb73b2df17bf6",
+  "bytes": 130814
+ },
+ "replay-05-entry-menu": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": true,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "full",
+    "input",
+    "mic",
+    "mine",
+    "part",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "56f1d1ac2c8261a8661c1d882125b87094bc0d95cabd025a110cd7fd3fc66bcc",
+  "bytes": 136258
+ },
+ "replay-06-part-selected": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": true,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "mine",
+    "pick-cancel",
+    "pick-go",
+    "public",
+    "shared",
+    "t me",
+    "t me",
+    "t me",
+    "t me",
+    "t q",
+    "t q",
+    "t q",
+    "t q",
+    "t q opener"
+   ],
+   "turns": 9
+  },
+  "sha256": "aab646c5716038717187109cf64c14202346effe968b42b205886c187d6773ff",
+  "bytes": 136196
+ },
+ "replay-06b-part-empty": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": true,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "mine",
+    "pick-cancel",
+    "pick-go",
+    "public",
+    "shared",
+    "t me",
+    "t me",
+    "t me",
+    "t me",
+    "t q",
+    "t q",
+    "t q",
+    "t q",
+    "t q opener"
+   ],
+   "turns": 9
+  },
+  "sha256": "928591fffd41b6873c9c26f4a67bf30c08bdb681d6f997981d87585f97775a16",
+  "bytes": 141440
+ },
+ "replay-07-preview-boundary": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "rprev-x"
+   ],
+   "turns": 9
+  },
+  "sha256": "e3d2e17c31599279b799d7e568d60eedb3aa44988397edfad9b69070d6e0a01b",
+  "bytes": 79082
+ },
+ "replay-08-entry-menu-en": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "marker": [
+   39,
+   91
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 167.8125,
+    "x1": 302,
+    "y1": 268.765625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 284.765625,
+    "x1": 366,
+    "y1": 414.6875
+   },
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 442.6875,
+    "x1": 302,
+    "y1": 543.640625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 559.640625,
+    "x1": 366,
+    "y1": 663.578125
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": true,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "full",
+    "input",
+    "mic",
+    "mine",
+    "part",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "f534d3bcffc103d0084a5f19d8386a894e70d2d3b7499e31c0e543a9ece017e3",
+  "bytes": 150196
+ },
+ "shared-01-one": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   163.34375,
+   226.65625
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "shared",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "mine",
+    "public",
+    "row",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "659f1c5fa22de6417f3e6e82a72dc8a4ac1b09dbe48619bb1ffc36f18f726cfd",
+  "bytes": 37082
+ },
+ "shared-02-many": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   163.34375,
+   226.65625
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "shared",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "mine",
+    "public",
+    "row",
+    "row",
+    "row",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "f4961c48f8dab03841670118c3dd688fef25ce64e27183200f5fdb053f8c5d41",
+  "bytes": 48722
+ },
+ "shared-03-none": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   163.34375,
+   226.65625
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "shared",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "mine",
+    "public",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "484f680ff667a4b40a10cce46a0d5b4ff819ce156c22880304463d8fb8bc5556",
+  "bytes": 40221
+ },
+ "shared-04-en-one": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "marker": [
+   157.9375,
+   232.046875
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 167.8125,
+    "x1": 302,
+    "y1": 268.765625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 284.765625,
+    "x1": 366,
+    "y1": 414.6875
+   },
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 442.6875,
+    "x1": 302,
+    "y1": 543.640625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 559.640625,
+    "x1": 366,
+    "y1": 663.578125
+   }
+  ],
+  "truth": {
+   "world": "shared",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "mine",
+    "public",
+    "row",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "0c492d034afd16c8d048d0f1d29071acc81225eddfd460c0e049ae221583c313",
+  "bytes": 38299
+ },
+ "shared-05-en-many": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "marker": [
+   157.9375,
+   232.046875
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 167.8125,
+    "x1": 302,
+    "y1": 268.765625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 284.765625,
+    "x1": 366,
+    "y1": 414.6875
+   },
+   {
+    "who": "me",
+    "x0": 0,
+    "y0": 442.6875,
+    "x1": 302,
+    "y1": 543.640625
+   },
+   {
+    "who": "q",
+    "x0": 72,
+    "y0": 559.640625,
+    "x1": 366,
+    "y1": 663.578125
+   }
+  ],
+  "truth": {
+   "world": "shared",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "controls": [
+    "mine",
+    "public",
+    "row",
+    "row",
+    "row",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "02a03b433475693c265bed419bf38190eaf3c57c48b838ecb49e4b73a430fb38",
+  "bytes": 52116
+ },
+ "light-01-active": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "234f70aea0f69720f907b1f9e69b3f699f2e25a0df3797db96d7f70c41a63d71",
+  "bytes": 137995
+ },
+ "light-02-new-opener": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 600.015625,
+    "x1": 270.3125,
+    "y1": 664
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "shared"
+   ],
+   "turns": 1
+  },
+  "sha256": "e2ad9730318cab83a0ce5a6059d70b7c0d08b7e3cb4629c412c18dc6e200cf7e",
+  "bytes": 42848
+ },
+ "light-03-voice-note-in-history": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 260.765625,
+    "x1": 390,
+    "y1": 373.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 389.71875,
+    "x1": 318,
+    "y1": 449.6875
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 477.6875,
+    "x1": 390,
+    "y1": 586.6875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 602.6875,
+    "x1": 287.9375,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11
+  },
+  "sha256": "47eafb8eee3aa4384760ea40287ae9822fa58898a47d1621be5fa0ad135aa41a",
+  "bytes": 137364
+ },
+ "light-04-live-call-analysis": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "bb941022def881c333e6c724f8370345979c1c167001bad29f24dbf83348b736",
+  "bytes": 149335
+ },
+ "light-05-replay-menu": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": true,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "full",
+    "input",
+    "mic",
+    "mine",
+    "part",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "240cb7492db25d875021fee126fbef3727d6eba9756b7289302d0b52ba7db340",
+  "bytes": 139710
+ },
+ "a11y-01-contrast-more": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 193.875,
+    "x1": 390,
+    "y1": 308.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 324.828125,
+    "x1": 318,
+    "y1": 444.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 472.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "ed3e78821f99f8b02953667fd92dde2872f11ac3806afcb1f7744c6919e5353f",
+  "bytes": 136924
+ },
+ "a11y-02-contrast-more-light": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 193.875,
+    "x1": 390,
+    "y1": 308.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 324.828125,
+    "x1": 318,
+    "y1": 444.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 472.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "96a6878aed9157975a4f7412f91a41a3ee8e499f6927ee0941629b2c7328c38f",
+  "bytes": 139576
+ },
+ "a11y-03-text-200": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   289,
+   361
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 296.4375,
+    "x1": 318,
+    "y1": 596.359375
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "f14d999a3ba27b85fb935b7182bb36a70cb5f7c79e5d848d3a073a8d201b548f",
+  "bytes": 115493
+ },
+ "a11y-04-text-200-voice-note": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   289,
+   361
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 169.359375,
+    "x1": 390,
+    "y1": 436.359375
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 452.359375,
+    "x1": 318,
+    "y1": 596.359375
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11
+  },
+  "sha256": "2e00dcb6fafc6c18ae08f3e7d411933dbaedf3c68e3c34771f80306e34d88dcc",
+  "bytes": 111028
+ },
+ "a11y-05-focus-replay": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "09d415cd2e31a8d08c3fa5350961413e8f9b565add75febf6e298391cef34948",
+  "bytes": 138303
+ },
+ "a11y-06-focus-call": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "e54128740e76cb8194c2f1e93c12c689969fbaa44b2361b65f617d118534864e",
+  "bytes": 138319
+ },
+ "a11y-07-focus-end-call": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "6f143175750f9e4f22eb46fbf1dd1443ffa2a4a9e97dbd41bd55df484d2a9a48",
+  "bytes": 148177
+ },
+ "a11y-08-compact-360": {
+  "w": 360,
+  "h": 780,
+  "vw": 360,
+  "dir": "rtl",
+  "marker": [
+   282,
+   318
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 232.796875,
+    "x1": 288,
+    "y1": 352.734375
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 380.734375,
+    "x1": 360,
+    "y1": 493.6875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 509.6875,
+    "x1": 288,
+    "y1": 599.640625
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "5428261577eb50bd00dfc48d46894b77c77183391cfc0a9741631a99159e0dfa",
+  "bytes": 124594
+ },
+ "a11y-09-compact-360-call": {
+  "w": 360,
+  "h": 780,
+  "vw": 360,
+  "dir": "rtl",
+  "marker": [
+   282,
+   318
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 202.796875,
+    "x1": 288,
+    "y1": 322.734375
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 350.734375,
+    "x1": 360,
+    "y1": 463.6875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 479.6875,
+    "x1": 288,
+    "y1": 569.640625
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "639a560ffc8991601ae012dafc40b1a78947972113b9c4047ba358506eebec30",
+  "bytes": 138987
+ },
+ "a11y-10-reduced-motion-call": {
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "marker": [
+   307,
+   343
+  ],
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9
+  },
+  "sha256": "51312090527f2deb18245fa0bcc4dd0bbc179831d3c4a026f4fd06a72b4abc10",
+  "bytes": 137288
+ }
+}

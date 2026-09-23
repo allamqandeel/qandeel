@@ -1,0 +1,5 @@
+{
+  "qandeel": {
+    "$description": "QANDEEL, full transparency — the default. DELIBERATELY EMPTY AND DELIBERATELY PRESENT: this context overrides nothing, and saying so with a set is clearer than an absent one. The form is I-08B3.1-B4R's own, from standard.tokens.json, and it is copied on purpose so that a reader who knows one recognises the other."
+  }
+}

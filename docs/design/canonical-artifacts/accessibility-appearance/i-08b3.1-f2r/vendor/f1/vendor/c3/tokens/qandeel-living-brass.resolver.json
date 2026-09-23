@@ -1,0 +1,78 @@
+{
+  "$schema": "https://www.designtokens.org/schemas/2025.10/resolver.json",
+  "version": "2025.10",
+  "name": "QANDEEL Living Brass, over the frozen Surface system",
+  "description": "I-08B3.1-C3. Extends the frozen I-08B3.1-B4R Surface resolver with the Living Brass material rather than standing beside it, so that the material and the neutrals it is judged against come out of ONE resolution. Dark is the canonical expression and the only one with values; light and increased contrast are declared, empty, and owned by later work, so resolving into them fails loudly instead of returning a colour nobody designed.",
+  "sets": {
+    "surface-semantic": {
+      "description": "INHERITED, BYTE-IDENTICAL, FROZEN in I-08B3.1-B4R. The four Surface roles and the reading ramp. C3 does not modify it and does not re-author it.",
+      "sources": [
+        {
+          "$ref": "../vendor/b4r/semantic.tokens.json"
+        }
+      ]
+    },
+    "material-semantic": {
+      "description": "AUTHORED BY C3. Living Brass permission classes and the material behaviour contract.",
+      "sources": [
+        {
+          "$ref": "./base/material.tokens.json"
+        }
+      ]
+    }
+  },
+  "modifiers": {
+    "appearance": {
+      "description": "System light/dark appearance.",
+      "default": "dark",
+      "contexts": {
+        "dark": [
+          {
+            "$ref": "../vendor/b4r/dark.tokens.json"
+          },
+          {
+            "$ref": "./appearance/dark.material.tokens.json"
+          }
+        ],
+        "light": [
+          {
+            "$ref": "../vendor/b4r/light.tokens.json"
+          },
+          {
+            "$ref": "./appearance/light.material.tokens.json"
+          }
+        ]
+      }
+    },
+    "contrast": {
+      "description": "Increased-contrast accessibility override, applied within an appearance.",
+      "default": "standard",
+      "contexts": {
+        "standard": [
+          {
+            "$ref": "../vendor/b4r/standard.tokens.json"
+          }
+        ],
+        "increased": [
+          {
+            "$ref": "../vendor/b4r/increased.tokens.json"
+          }
+        ]
+      }
+    }
+  },
+  "resolutionOrder": [
+    {
+      "$ref": "#/sets/surface-semantic"
+    },
+    {
+      "$ref": "#/sets/material-semantic"
+    },
+    {
+      "$ref": "#/modifiers/appearance"
+    },
+    {
+      "$ref": "#/modifiers/contrast"
+    }
+  ]
+}

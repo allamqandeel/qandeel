@@ -1,0 +1,6 @@
+{
+  "$description": "QANDEEL INTERACTION STATE and SYSTEM STATUS — LIGHT APPEARANCE. DELIBERATELY EMPTY, AND THE EMPTINESS IS THE DELIVERABLE. Resolving the semantic layer against the light appearance leaves qandeel.status.error.ink and qandeel.state.disabled.ink UNRESOLVED and names what is missing. A light set containing a copy of the dark values would be a light-mode error colour invented by accident, shipping under a name someone trusted. THE DARK ERROR VALUE CANNOT SIMPLY BE REUSED: every floor that produced it is a statement about a NEAR-BLACK ground, and on a light ground its contrast relationships invert and the dichromacy floors are measured against different simulated neutrals. Owned by I-08B3.1-F. Apple is explicit that a custom colour needs light and dark variants AND an increased-contrast option for each, and this file is where the first of those will go.",
+  "qandeel": {
+    "expression": {}
+  }
+}

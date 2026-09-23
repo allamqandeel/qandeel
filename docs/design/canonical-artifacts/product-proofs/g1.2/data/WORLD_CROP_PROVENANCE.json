@@ -1,0 +1,38 @@
+[
+  {
+    "source": "I-08B3.1-F2-LIGHT-APPEARANCE-CROSS-APPEARANCE-INTEGRATION/review/src/a-dark-world.png",
+    "sourceSha256": "c7ac15584004a9394ebf30576e6f893cf58ebc7837b80fe90fbf9da5bf3aa23d",
+    "band2x": [
+      112,
+      1560
+    ],
+    "output": "world-dark.png",
+    "outputSha256": "1070e96077a0ccefb5895adffa06b95236b4e4acb91374b767c9c39daaea5195",
+    "size": [
+      780,
+      1448
+    ],
+    "inkExtentCss": [
+      116,
+      683
+    ]
+  },
+  {
+    "source": "I-08B3.1-F2-LIGHT-APPEARANCE-CROSS-APPEARANCE-INTEGRATION/review/src/b-light-world.png",
+    "sourceSha256": "fd3104aae07c61b960cbf38cb147e11e6cddc91069de4feb46cf62aec20b4609",
+    "band2x": [
+      112,
+      1560
+    ],
+    "output": "world-light.png",
+    "outputSha256": "8f864f51c718e5368e8e8eb6177531df55621eafa60b27be4ae4a78484048dd7",
+    "size": [
+      780,
+      1448
+    ],
+    "inkExtentCss": [
+      116,
+      683
+    ]
+  }
+]

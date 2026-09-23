@@ -1,0 +1,155 @@
+{
+  "$description": "QANDEEL Surface system - semantic layer. I-08B3.1-B4. Appearance-independent: it names what things ARE, never what they look like. Colours live in the expression layer that an appearance set supplies.",
+  "qandeel": {
+    "$type": "color",
+    "$description": "Product semantics. A name in this tree describes a ROLE. There is no lightness ladder, no elevation level and no numbered scale, because QANDEEL has one Surface tone and a ladder would be a set of names for distinctions that do not exist.",
+    "world": {
+      "$description": "The World. Not a Surface role.",
+      "fill": {
+        "$value": "{qandeel.expression.world}",
+        "$description": "The analytical ground. Nothing is \"on\" the World in a tonal sense; things are on it in a literal one."
+      }
+    },
+    "surface": {
+      "$description": "THE FUNCTIONAL SURFACE. One tone, shared by all four Product Surface roles. There is no second member of this group and adding one would be the whole B-track reopening.",
+      "functional": {
+        "$value": "{qandeel.expression.surface}",
+        "$description": "The single functional Surface. Every Product Surface role aliases THIS token, which is what makes the one-tone rule mechanically inspectable rather than a convention."
+      }
+    },
+    "content": {
+      "$description": "Reading roles, frozen in I-08B3.1-A.",
+      "primary": {
+        "$value": "{qandeel.expression.content.primary}",
+        "$description": "Primary reading."
+      },
+      "secondary": {
+        "$value": "{qandeel.expression.content.secondary}",
+        "$description": "Secondary reading."
+      },
+      "tertiary": {
+        "$value": "{qandeel.expression.content.tertiary}",
+        "$description": "Tertiary neutral. Also the ink of a Map relation stroke, which is a graphical object under WCAG 2.2 SC 1.4.11 rather than text."
+      }
+    },
+    "passage": {
+      "$description": "What a PASSAGE needs that no other role does.",
+      "scrim": {
+        "$value": "{qandeel.expression.scrim}",
+        "$description": "The scrim that marks World suspension. A scrim follows from BLOCKING, so only PASSAGE has one."
+      }
+    },
+    "role": {
+      "$description": "THE FOUR FROZEN PRODUCT SURFACE ROLES, I-08B3.1-B0R. These are QANDEEL PRODUCT roles. They are NOT accessibility roles and they do not map one-to-one to an ARIA or native role: the accessibility pattern is derived from the interaction actually inside the layer (I-08B3.1-B3R). Every fill below is an alias. None may ever carry a value of its own.",
+      "apparatus": {
+        "$description": "Standing Product machinery adjacent to the World. Told apart by POSITION AND ADJACENCY.",
+        "fill": {
+          "$value": "{qandeel.surface.functional}",
+          "$description": "Same tone as every other role. The APPARATUS is not raised; it is beside."
+        }
+      },
+      "aside": {
+        "$description": "Anchored, contextual, NONMODAL. The World stays live. Told apart by its ANCHOR and by local occlusion. It has no scrim token, and that absence is the contract.",
+        "fill": {
+          "$value": "{qandeel.surface.functional}",
+          "$description": "Same tone as PASSAGE. An ASIDE is not told apart from a PASSAGE by tone - it is told apart by what it does to the World."
+        }
+      },
+      "passage": {
+        "$description": "Genuinely modal. The World is suspended. Told apart by occlusion, a uniform scrim, and modal BEHAVIOUR - focus enters and cannot leave.",
+        "fill": {
+          "$value": "{qandeel.surface.functional}",
+          "$description": "Same tone as ASIDE. A PASSAGE is not lighter, bigger or heavier; it is BLOCKING."
+        },
+        "scrim": {
+          "$value": "{qandeel.passage.scrim}",
+          "$description": "The only scrim in the system. Its presence is what marks the suspension."
+        }
+      },
+      "field": {
+        "$description": "Authorship / commit boundary. Told apart by a Class S structural line on the boundary the user commits across - the FILL is subordinate to that duty. An editable FIELD must use real platform text-input semantics; see B4_REACT_NATIVE_MAPPING.md.",
+        "fill": {
+          "$value": "{qandeel.surface.functional}",
+          "$description": "Same tone. A FIELD is a boundary, not a box: the line does the work."
+        }
+      }
+    },
+    "expression": {
+      "world": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.062745,
+            0.062745,
+            0.062745
+          ],
+          "hex": "#101010"
+        },
+        "$description": "The World. Frozen in I-08B3.1-A. Not a Surface: nothing is painted with it in order to be told apart from something else - it is the ground everything else sits on."
+      },
+      "surface": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.094118,
+            0.094118,
+            0.094118
+          ],
+          "hex": "#181818"
+        },
+        "$description": "THE ONE FUNCTIONAL SURFACE VALUE. Lighter than the World, achromatic, opaque matte. This is the only place in the architecture where it exists; every Product Surface role reaches it through an alias chain."
+      },
+      "content": {
+        "primary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.847059,
+              0.835294,
+              0.792157
+            ],
+            "hex": "#d8d5ca"
+          },
+          "$description": "Primary reading. Frozen in I-08B3.1-A."
+        },
+        "secondary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.686275,
+              0.67451,
+              0.639216
+            ],
+            "hex": "#afaca3"
+          },
+          "$description": "Secondary reading. Frozen in I-08B3.1-A."
+        },
+        "tertiary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.545098,
+              0.537255,
+              0.509804
+            ],
+            "hex": "#8b8982"
+          },
+          "$description": "Tertiary neutral. Frozen in I-08B3.1-A."
+        }
+      },
+      "scrim": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 0.5,
+          "hex": "#000000"
+        },
+        "$description": "The PASSAGE scrim in the dark expression: neutral black at alpha 0.5. It expresses WORLD SUPPRESSION. Background legibility is not one of its duties, because the World behind a PASSAGE is suspended."
+      }
+    }
+  }
+}

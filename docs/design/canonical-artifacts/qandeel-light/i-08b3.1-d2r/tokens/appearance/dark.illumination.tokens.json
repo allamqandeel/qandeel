@@ -1,0 +1,87 @@
+{
+  "qandeel": {
+    "$type": "color",
+    "expression": {
+      "illumination": {
+        "$description": "QANDEEL LIGHT expression, dark appearance. I-08B3.1-D2R — FREEZE CANDIDATE.",
+        "core": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.984314,
+              0.94902,
+              0.858824
+            ],
+            "hex": "#fbf2db"
+          },
+          "$description": "LIGHT CORE. The centre of a light at full strength.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "mid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.909804,
+              0.866667,
+              0.760784
+            ],
+            "hex": "#e8ddc2"
+          },
+          "$description": "LIGHT MID. The body of a light.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "low": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.839216,
+              0.792157,
+              0.662745
+            ],
+            "hex": "#d6caa9"
+          },
+          "$description": "LIGHT LOW. The deep end, where the tint survives; the most chromatic stop.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "$extensions": {
+          "com.qandeel.provenance": {
+            "authoredAs": {
+              "colorSpace": "oklch",
+              "hue": 89,
+              "chromaMax": 0.046
+            },
+            "rampShapeInheritedFrom": "I-08B3.1-D0 diagnostic family",
+            "derivation": "source/tools/d2-lightsearch.mjs — a search, not a choice.",
+            "requirement": "minimum separation from qandeel.identity.material of ΔEok 0.02, measured along the WHOLE compositing path over the World and the functional Surface, at every alpha — not at full strength",
+            "requirementStatus": "ENGINEERING HEURISTIC ADOPTED BY I-08B3.1-D2, NOT A PERCEPTUAL LAW. It gave the search a floor that was not taste; it did not freeze a colour. Its justification is comparative: the superseded family measures 0.0118 and I-08B3.1-D1 could not tell that family's dim tail from the identity material. ACCEPTANCE REMAINS: this measurement, PLUS visual Product review, PLUS device validation.",
+            "measuredSeparation": 0.0201,
+            "supersedes": {
+              "family": "I-08B3.1-D0 diagnostic family #fef1d6 / #ecdcbc / #dcc8a1",
+              "separation": 0.0118,
+              "why": "I-08B3.1-D1 measured the diagnostic family passing within ΔEok 0.0163 of Living Brass on sampled rasters, and this package measured 0.0118 on the full analytical path. At that distance LIGHT and MATTER are not separable at low intensity, which is exactly the intensity an arrival decays through, so \"BRASS IS MATTER, LIGHT IS MEANING\" stops being checkable where it matters most."
+            },
+            "status": "FREEZE CANDIDATE — proposed by I-08B3.1-D2, frozen by nobody"
+          }
+        }
+      },
+      "atmosphere": {
+        "$description": "ATMOSPHERE expression, dark appearance. NOT illumination — see the semantic group."
+      }
+    }
+  }
+}

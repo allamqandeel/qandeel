@@ -1,0 +1,405 @@
+{
+  "generatedBy": "tools/e1-docs.mjs",
+  "note": "A MANIFEST CANNOT STATE ITS OWN HASH. This file and E1_MANIFEST.md are written by the same run and are therefore absent from the list below; the archive digest in the execution report covers them both.",
+  "entries": [
+    {
+      "path": "data/E1_BOARDS.json",
+      "bytes": 6052,
+      "sha256": "f4dbb00a7f51605d360aa697a7990b51adfcaf2003684231f5d9fe9dda7363b4"
+    },
+    {
+      "path": "data/E1_CONSISTENCY.json",
+      "bytes": 9379,
+      "sha256": "b53335c44bef703ae2c3e0f85ab987ffb8575cbfc78c8d5f58d9d0dd4233eb45"
+    },
+    {
+      "path": "data/E1_DERIVATION.json",
+      "bytes": 13746,
+      "sha256": "ee53b2dc6717935f429179723146b2a23987ef798ff1c8c1ade9efd703c8e3ea"
+    },
+    {
+      "path": "data/E1_FOCUS.json",
+      "bytes": 10924,
+      "sha256": "0633e58668ac7308818a37d994d6559f52be876eb4e2d2cfeb71c331b3cd6db0"
+    },
+    {
+      "path": "data/E1_SKILLS.json",
+      "bytes": 28669,
+      "sha256": "c3f04b574945f9b63cf1a1a114c54a5bf5327ca48b1caf27b4f75a1c6d5bd0b7"
+    },
+    {
+      "path": "data/E1_VALIDATION.json",
+      "bytes": 20907,
+      "sha256": "93fb29bd9d4f3b09dab17afce670b34a94962781a1825832247fed9a86a0ab65"
+    },
+    {
+      "path": "data/E1_VENDOR.json",
+      "bytes": 4898,
+      "sha256": "b3dbd82a29fd79d0b5a07e1478d1cd37202f1a0fc37690fb85180d7774d81afc"
+    },
+    {
+      "path": "docs/E1_ACCESSIBILITY_BASELINE.md",
+      "bytes": 10338,
+      "sha256": "41fda167d835fdfa3e5454b40a552f46b8033d11175b43e038e291c6bd661466"
+    },
+    {
+      "path": "docs/E1_ARABIC_COPY_CONTRACT.md",
+      "bytes": 6352,
+      "sha256": "264cd26bb4358a574bc5e2f99bcf59136ea16402532154407a3563ee1cb8739f"
+    },
+    {
+      "path": "docs/E1_COLOUR_DERIVATION.md",
+      "bytes": 10369,
+      "sha256": "7bd6adc34f7b29a33ad64b88242bba78f22ea8baf8b0bcb7ddd5623a2baa3360"
+    },
+    {
+      "path": "docs/E1_DESIGN_RATIONALE.md",
+      "bytes": 14274,
+      "sha256": "cfc1ff76c92f3c8ffed55896bf2d8447498bf8f25b0595e39ddcf2e9874c34d8"
+    },
+    {
+      "path": "docs/E1_DISABLED_COLLISION_RESOLUTION.md",
+      "bytes": 9454,
+      "sha256": "59d439ee8ef7b4ae40fca323f6be4110fb3f19bc09e3277af9598f7706fc1337"
+    },
+    {
+      "path": "docs/E1_FREEZE_BOUNDARY.md",
+      "bytes": 9389,
+      "sha256": "4dd9d541b8a89b774e567b328dfeabc2f259fe5888f7d9cf03b5e8ac03e09add"
+    },
+    {
+      "path": "docs/E1_FREEZE_CANDIDATE.md",
+      "bytes": 12933,
+      "sha256": "0f3174dafc27b0d623d39786b60473497a5a6e56a69d623a7f61307f71b7dd29"
+    },
+    {
+      "path": "docs/E1_FUNCTIONAL_SEMANTIC_ROLES.md",
+      "bytes": 12975,
+      "sha256": "42fb330271ce5451e703363ca8d0f0306bbdc997b35761f03a26507ae4850141"
+    },
+    {
+      "path": "docs/E1_IMPLEMENTATION_BOUNDARIES.md",
+      "bytes": 5922,
+      "sha256": "103f8260b3cdc0ae7f19307c3f5041e9bd88be8e4dbd846bb6fd3027045e7462"
+    },
+    {
+      "path": "docs/E1_KNOWN_LIMITATIONS.md",
+      "bytes": 11068,
+      "sha256": "73286ea4ad211673c5cbcf8b676586de0d8a25f3377a628e510de141f649882a"
+    },
+    {
+      "path": "docs/E1_NON_COLOUR_COMPANION.md",
+      "bytes": 6107,
+      "sha256": "1a13c2ce68145c2812da6bb116d98ee5f47f8ce6587c4cf7d73d572b4650fe02"
+    },
+    {
+      "path": "docs/E1_REACT_NATIVE_MAPPING.md",
+      "bytes": 6687,
+      "sha256": "10c74c14da851f2b68255b8df59c207c4fab9a2c70b82bbce437f2ac509b3dd9"
+    },
+    {
+      "path": "docs/E1_REFERENCE_GATE.md",
+      "bytes": 15576,
+      "sha256": "2522bd3f255966e73ec9c47d381705ed1bc73ecaa712b9f2be0f95b422c6e9e2"
+    },
+    {
+      "path": "docs/E1_REVIEW_BOARD.md",
+      "bytes": 8224,
+      "sha256": "9c964b45b10bc7952ae9c54de337f2d330c99c9c5cf8ae7ce8d9ea377f01eec5"
+    },
+    {
+      "path": "docs/E1_SEPARATION_CONTRACT.md",
+      "bytes": 7125,
+      "sha256": "950dc2e5acc78b2cc16733f69bcd6a3bb7cd86a0392275298933823985bbde0e"
+    },
+    {
+      "path": "docs/E1_SKILL_GATE.md",
+      "bytes": 19966,
+      "sha256": "a1da73486b0ead8903ea8b72a855b45befac763005f06f20d4cfcd9c0c461c70"
+    },
+    {
+      "path": "docs/E1_STATE_SEMANTIC_MAP.md",
+      "bytes": 18828,
+      "sha256": "ee3eba00927610053adae22ae84d0db2b6174de0b559b404840b5741dfb46561"
+    },
+    {
+      "path": "docs/E1_TOKEN_ARCHITECTURE.md",
+      "bytes": 9119,
+      "sha256": "f62a5185147f7bc0553d9ae074291e6db8d07e0b9af0b3a3c5ce27edc2205e1b"
+    },
+    {
+      "path": "docs/E1_VALIDATION_RESULTS.md",
+      "bytes": 29979,
+      "sha256": "476151af7dfd71ad2e2a63d6654ed673a2c8ad1a7b42e8bb196da3f46674d955"
+    },
+    {
+      "path": "docs/E1R_PRODUCT_SURFACE_AUDIT.md",
+      "bytes": 8608,
+      "sha256": "8698cc5e52e686910f56efc5351883d59db7b973d85c70431c9bc11ee50b3654"
+    },
+    {
+      "path": "docs/E1R_REVISION_RECORD.md",
+      "bytes": 13492,
+      "sha256": "40398a30bdf9d3f83e3cd730d8c4556d63577ac7d6547a169df0f99d985cbf94"
+    },
+    {
+      "path": "fonts/Estedad[wght].ttf",
+      "bytes": 284180,
+      "sha256": "3134e31a27d58e615967e714c7799fbfa2de952876f8597b33dc57ffe0e99d03"
+    },
+    {
+      "path": "README.md",
+      "bytes": 5579,
+      "sha256": "aa59c28f806acf77ce428df3f56d5ca2900d3435f4966d944dd9f3eadd6c8577"
+    },
+    {
+      "path": "review/board/b01-state-matrix-surface.png",
+      "bytes": 136030,
+      "sha256": "a6a27bc81757e1a3c95639de798a8cb4b62f40d3d70b56ee68a608d167d6221f"
+    },
+    {
+      "path": "review/board/b02-state-matrix-world.png",
+      "bytes": 131952,
+      "sha256": "7ff93f6b70f99d0096080c63c0b6e9e7816bfb2fe4bd61296b9228eba15a7787"
+    },
+    {
+      "path": "review/board/b03-focus.png",
+      "bytes": 122622,
+      "sha256": "31fa61e476cd832e90872fe569c470af138d4bb98eca108c6abc6e81439b135b"
+    },
+    {
+      "path": "review/board/b04-selected-vs-focus.png",
+      "bytes": 120664,
+      "sha256": "accdfd134035126a96a665448e017ebb5d1d512161cd9b5680058f3abede5e46"
+    },
+    {
+      "path": "review/board/b05-pressed-vs-selected.png",
+      "bytes": 180710,
+      "sha256": "befdf58456f19f60e69340f268e36f594602ce4de23d53ababf987a9b48c01c7"
+    },
+    {
+      "path": "review/board/b06-error.png",
+      "bytes": 160436,
+      "sha256": "8f7813cae768be1f64ccb183bc4adf74f438680d9d279690fffe438747546254"
+    },
+    {
+      "path": "review/board/b07-roles-without-colour.png",
+      "bytes": 202992,
+      "sha256": "dc5ea9cd38f78ff3d90f24c73267eef954cf6f26185fd7077380eb12eb133527"
+    },
+    {
+      "path": "review/board/b10-integrated-screen.png",
+      "bytes": 116194,
+      "sha256": "83ee11565550700c207409afc9c5f57216a41a68ca128a2b3f3e5220eeb8129a"
+    },
+    {
+      "path": "review/board/b11-separation.png",
+      "bytes": 206040,
+      "sha256": "f10924ea28e4020ea25ea94cc4ca673b20e3e83e82edc1d55a46e71c1bf30eb1"
+    },
+    {
+      "path": "review/board/b12-integrated-greyscale.png",
+      "bytes": 79294,
+      "sha256": "b12a94e65847953c6ed2e290e0a5d06d2b5c2f824bc8cb30cc344face7b7e19f"
+    },
+    {
+      "path": "review/board/b13-integrated-protanopia.png",
+      "bytes": 93583,
+      "sha256": "bae7902ae851a1c2468cd676577a96abd9b60d93867cf6d320711edc1138f0cf"
+    },
+    {
+      "path": "review/board/b14-integrated-deuteranopia.png",
+      "bytes": 93633,
+      "sha256": "d6ab5a1577182d537a6c9926ad0bc2ea701c5ae8eecff7fbc5c6bbb4371fa28e"
+    },
+    {
+      "path": "review/board/b15-disabled.png",
+      "bytes": 367709,
+      "sha256": "ddbad79f1f59033953951660fa767cc450d50b367ad187d54705b634f7ce4dec"
+    },
+    {
+      "path": "review/board/b16-text-200.png",
+      "bytes": 91558,
+      "sha256": "110700fd2b2844764aeac63261f53a261f2181283f957c644000bc83bd53b24d"
+    },
+    {
+      "path": "review/board/b17-state-composition.png",
+      "bytes": 680907,
+      "sha256": "e4571ac6a7b270945d0ae63812894d8bbf77191180ca2b21c1de14afb60eaee4"
+    },
+    {
+      "path": "tokens/appearance/dark.interaction.tokens.json",
+      "bytes": 6162,
+      "sha256": "397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252"
+    },
+    {
+      "path": "tokens/appearance/light.interaction.tokens.json",
+      "bytes": 927,
+      "sha256": "f13241f38fdf5e2f9213afb1aa05eddc92810707229b48a93cade83c09043b46"
+    },
+    {
+      "path": "tokens/base/interaction.tokens.json",
+      "bytes": 54134,
+      "sha256": "6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce"
+    },
+    {
+      "path": "tokens/qandeel-interaction.resolver.json",
+      "bytes": 1970,
+      "sha256": "ef0566203581f5bea727209988b09c6cac3b863703d581b29657a71b1f980e5c"
+    },
+    {
+      "path": "tools/e1-boards.mjs",
+      "bytes": 32882,
+      "sha256": "3d6b9a64a1996708659a92ef47a56422c5e6d999286c4b5496b44e71f9603d43"
+    },
+    {
+      "path": "tools/e1-cdp.mjs",
+      "bytes": 6257,
+      "sha256": "44bc93db3f2b404b9ea43ee9d991ffb563ebfbc19167b8e468cc05475d4912f6"
+    },
+    {
+      "path": "tools/e1-composition.mjs",
+      "bytes": 23301,
+      "sha256": "f1df6d1dce27a8940160bc47183dd4d734ff81929665ecbae5b37d906c692715"
+    },
+    {
+      "path": "tools/e1-consistency.mjs",
+      "bytes": 12847,
+      "sha256": "34f15225602ce92355aba07d03a2e36edce44f858286722c89051a3f5aec1be5"
+    },
+    {
+      "path": "tools/e1-cvd.mjs",
+      "bytes": 6822,
+      "sha256": "b4d921ce4fdbef9d6d224ae17d235635d97198a2f477695bf63f4b4f3aa0863e"
+    },
+    {
+      "path": "tools/e1-derive.mjs",
+      "bytes": 11247,
+      "sha256": "7f35b1e0b33051b2716b83027d2790ce9a1f1ba48b22c9de15d626b2f0cd1d9d"
+    },
+    {
+      "path": "tools/e1-docs.mjs",
+      "bytes": 12605,
+      "sha256": "5808dbd5ddf5b156d22f92dfb4cf4c24fd9eec08c22955840bf874b0af3596c9"
+    },
+    {
+      "path": "tools/e1-focus.mjs",
+      "bytes": 21347,
+      "sha256": "f020a1de12fe6fa1e66571867ef3d5209a3d9a8b4a7b81c2aae32a4a47df58e0"
+    },
+    {
+      "path": "tools/e1-render.mjs",
+      "bytes": 6777,
+      "sha256": "a60fb615dd818462722afee3e314ff86cfd1e8eeaf4e3380fe8651be517619e6"
+    },
+    {
+      "path": "tools/e1-resolve.mjs",
+      "bytes": 7479,
+      "sha256": "b7ae0b1004bd97dd7f38fb85050062467b8440e47f6a2618858ef20679dd86ab"
+    },
+    {
+      "path": "tools/e1-scene.mjs",
+      "bytes": 26272,
+      "sha256": "d08ddd08bef2df17f14801990e24352d023a58a5b6056de330d60d7544b68da8"
+    },
+    {
+      "path": "tools/e1-skills.mjs",
+      "bytes": 10686,
+      "sha256": "994dfeba669ebec644cd8611d0ed3476e0779d30ee99ae53f40844309096789f"
+    },
+    {
+      "path": "tools/e1-tokens.mjs",
+      "bytes": 37045,
+      "sha256": "6f36ba93e18f1a0fc7628852c0df36c5f21b17f794a74f3abe1fa81e9e04bc70"
+    },
+    {
+      "path": "tools/e1-verify.mjs",
+      "bytes": 43878,
+      "sha256": "e02bb33cff5abfde5e94647378b527fda16a09453f68fb3ea2ccc4692c97e5fa"
+    },
+    {
+      "path": "tools/e1-zip.mjs",
+      "bytes": 3913,
+      "sha256": "50a222cf1a639da52aa47a9e47f43530320689c8a14754129f1f9708ff5bfc78"
+    },
+    {
+      "path": "vendor/c3/b4r/dark.tokens.json",
+      "bytes": 2348,
+      "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112"
+    },
+    {
+      "path": "vendor/c3/b4r/increased.tokens.json",
+      "bytes": 509,
+      "sha256": "8a9add10c89f10582954750979477ed5391c9fec1758b053b0053de5712de311"
+    },
+    {
+      "path": "vendor/c3/b4r/light.tokens.json",
+      "bytes": 387,
+      "sha256": "a8ca4c0bd22093ae5f3b418403e71ed60032e17e682844dd17a0ed89c5107c99"
+    },
+    {
+      "path": "vendor/c3/b4r/semantic.tokens.json",
+      "bytes": 4373,
+      "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441"
+    },
+    {
+      "path": "vendor/c3/b4r/standard.tokens.json",
+      "bytes": 223,
+      "sha256": "0916a7a5520e0f3696fd0c7420665bb86298171c79aef3634e0475627da6116a"
+    },
+    {
+      "path": "vendor/c3/reference/QANDEEL_Q_BASE_MASTER.svg",
+      "bytes": 3183,
+      "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05"
+    },
+    {
+      "path": "vendor/c3/tokens/appearance/dark.material.tokens.json",
+      "bytes": 3441,
+      "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367"
+    },
+    {
+      "path": "vendor/c3/tokens/appearance/light.material.tokens.json",
+      "bytes": 587,
+      "sha256": "f2f2f8b2578abfe6ad1d5a4ab0a462967bc26ef88fad91a09092f24fddd15f65"
+    },
+    {
+      "path": "vendor/c3/tokens/base/material.tokens.json",
+      "bytes": 14376,
+      "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928"
+    },
+    {
+      "path": "vendor/c3/tokens/qandeel-living-brass.resolver.json",
+      "bytes": 2364,
+      "sha256": "d013dc03bccb2d246cc6313460d1776b79e9a767512a51d0dff32429c194ccb1"
+    },
+    {
+      "path": "vendor/d2r/tokens/appearance/dark.illumination.tokens.json",
+      "bytes": 3794,
+      "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157"
+    },
+    {
+      "path": "vendor/d2r/tokens/base/illumination.tokens.json",
+      "bytes": 30299,
+      "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4"
+    },
+    {
+      "path": "vendor/d2r/tokens/qandeel-light.resolver.json",
+      "bytes": 1720,
+      "sha256": "3e40342ede17d0370fa3c1461439d514bbc36eb71e1253273e19c9e8618f88bc"
+    },
+    {
+      "path": "vendor/lib/color.mjs",
+      "bytes": 8901,
+      "sha256": "298a4b9147c6a9d55fff85367963f4c85dd4f00a7c32647d06ba76f80b30cbb5"
+    },
+    {
+      "path": "vendor/lib/png.mjs",
+      "bytes": 5851,
+      "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5"
+    }
+  ],
+  "totals": {
+    "files": 81,
+    "bytes": 3848528
+  }
+}

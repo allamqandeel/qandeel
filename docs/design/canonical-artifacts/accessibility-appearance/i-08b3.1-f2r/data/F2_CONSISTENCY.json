@@ -1,0 +1,176 @@
+{
+  "generatedBy": "tools/f2-consistency.mjs",
+  "surfaces": 46,
+  "claims": 7,
+  "passed": 7,
+  "probes": 7,
+  "probesRejecting": 7,
+  "state": "PASS",
+  "results": [
+    {
+      "id": "C1",
+      "title": "every hex quoted on any authored surface is a value this package ships, rejects by name, or inherits",
+      "pass": true,
+      "detail": {
+        "surfaces": 46,
+        "allowedValues": 66,
+        "unknown": []
+      }
+    },
+    {
+      "id": "C2",
+      "title": "every oklch(L C H) quoted matches the hex nearest it",
+      "pass": true,
+      "detail": {
+        "mismatches": []
+      }
+    },
+    {
+      "id": "C3",
+      "title": "no surface quotes a stale check or probe count",
+      "pass": true,
+      "detail": {
+        "current": [
+          "38/38",
+          "39/39",
+          "7/7"
+        ],
+        "stale": []
+      }
+    },
+    {
+      "id": "C4",
+      "title": "every quoted configuration count is the counted one",
+      "pass": true,
+      "detail": {
+        "total": 104835,
+        "allowed": [
+          "104835",
+          "53886",
+          "50949",
+          "27",
+          "135",
+          "50760",
+          "2930",
+          "2379",
+          "45",
+          "480",
+          "0"
+        ],
+        "stale": []
+      }
+    },
+    {
+      "id": "C5",
+      "title": "the package states what it must and claims nothing it must not",
+      "pass": true,
+      "detail": {
+        "mustState": 10,
+        "missing": [],
+        "forbiddenClaimsFound": []
+      }
+    },
+    {
+      "id": "C7",
+      "title": "every dEok figure quoted on an authored surface is a value the derivation produced",
+      "pass": true,
+      "detail": {
+        "valuesInTheRecord": 820,
+        "unmeasured": []
+      }
+    },
+    {
+      "id": "C6",
+      "title": "the headline results agree across the data files that carry them",
+      "pass": true,
+      "detail": {
+        "rows": [
+          {
+            "what": "checks",
+            "a": 38,
+            "b": 38,
+            "ok": true
+          },
+          {
+            "what": "probes rejecting",
+            "a": 39,
+            "b": 39,
+            "ok": true
+          },
+          {
+            "what": "parity cells failing",
+            "a": 0,
+            "b": 0,
+            "ok": true
+          },
+          {
+            "what": "parity state",
+            "a": "PASS",
+            "b": "PASS",
+            "ok": true
+          },
+          {
+            "what": "dark regression",
+            "a": "PASS",
+            "b": "PASS",
+            "ok": true
+          },
+          {
+            "what": "appearance switch",
+            "a": "PASS",
+            "b": "PASS",
+            "ok": true
+          },
+          {
+            "what": "skill gate",
+            "a": "PASS",
+            "b": "PASS",
+            "ok": true
+          },
+          {
+            "what": "reference gate",
+            "a": "PASS",
+            "b": "PASS",
+            "ok": true
+          },
+          {
+            "what": "boards",
+            "a": 12,
+            "b": 12,
+            "ok": true
+          }
+        ]
+      }
+    }
+  ],
+  "probeResults": [
+    {
+      "name": "C1 fed a synthetic hex one channel-shift away from a real one",
+      "rejected": true
+    },
+    {
+      "name": "C2 fed a triple that describes a different lightness than its hex",
+      "rejected": true
+    },
+    {
+      "name": "C3 fed a count two revisions old",
+      "rejected": true
+    },
+    {
+      "name": "C4 fed the search size this package quoted before the count was made",
+      "rejected": true
+    },
+    {
+      "name": "C7 fed a dEok figure one step away from a measured one, on a line with no withdrawal",
+      "rejected": true
+    },
+    {
+      "name": "C5 fed a sentence claiming the North Star was achieved",
+      "rejected": true
+    },
+    {
+      "name": "C5 fed a sentence that MENTIONS the North Star while refusing the claim",
+      "rejected": true
+    }
+  ]
+}

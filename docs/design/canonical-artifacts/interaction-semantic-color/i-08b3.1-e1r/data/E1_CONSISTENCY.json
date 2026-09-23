@@ -1,0 +1,249 @@
+{
+  "generatedBy": "tools/e1-consistency.mjs",
+  "filesScanned": 34,
+  "forbidden": [
+    {
+      "label": "REV-01 — disabled focusability frozen as a universal",
+      "needle": "A DISABLED CONTROL IS NOT FOCUSABLE",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN. DISABLED describes AVAILABILITY. Focusability is decided by the control pattern and by whether the control must remain discoverable, and E1R ships two patterns. W3C APG: screen reader users are far less likely to discover disabled elements that are not focusable. Check R26 asserts the shipped patterns; this catches the prose half.",
+      "allowed": [
+        "docs/E1R_REVISION_RECORD.md"
+      ]
+    },
+    {
+      "label": "REV-02 — the exclusivity rule about visual channels",
+      "needle": "no channel is used by two states",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN AS FALSE, not as unhelpful. SELECTED writes the ink and DISABLED writes the ink. The expressions were right and the explanation was not. Replaced by the composition / ownership model, which declares the INK channel shared and resolves it by precedence rule P1. Check R28 derives the writers from the shipped matrix and rejects any model that claims exclusivity the matrix contradicts.",
+      "allowed": [
+        "docs/E1R_REVISION_RECORD.md"
+      ]
+    },
+    {
+      "label": "REV-03 — the number of status hues frozen as a cap",
+      "needle": "FOUR STATUS ROLES AND ONE STATUS COLOUR",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN. What is defensible is that a hue is EARNED and that QANDEEL uses no generic traffic-light palette. The COUNT was an absolute about every status role QANDEEL will ever have, frozen on the evidence of one of them. Check R29 reads the shipped product-contract list.",
+      "allowed": [
+        "docs/E1R_REVISION_RECORD.md"
+      ]
+    },
+    {
+      "label": "the universal navigation and entitlement law E1 made",
+      "needle": "BRASS-BEARING OBJECT … HAS A DISABLED STATE",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN as a Product law E1 had no authority to make; there is no canonical navigation or capability architecture that proves persistent destinations can never be unavailable, and the navigation morphology itself is an open reconciliation between two tracks. NARROWED to what actually is frozen: LIVING BRASS IS STATE-INVARIANT in value and in appearance, so E1R supplies no unavailable expression for a Brass-bearing object and does not claim the Product can never need one.",
+      "allowed": [
+        "docs/E1R_REVISION_RECORD.md",
+        "docs/E1_DISABLED_COLLISION_RESOLUTION.md"
+      ]
+    },
+    {
+      "label": "the reasoning that produced the universal law, restated as fact",
+      "needle": "a persistent navigation destination is never unavailable",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN with the law it supported. It may be true; nothing in the canonical record establishes it, and E1R is not the package that gets to decide it.",
+      "allowed": [
+        "docs/E1R_REVISION_RECORD.md",
+        "docs/E1_DISABLED_COLLISION_RESOLUTION.md"
+      ]
+    },
+    {
+      "label": "the press wash proved by composited chroma",
+      "needle": "never be mistaken for a meaning event by measurement",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN. The chroma-ceiling claim about the press wash could not fail: at these alphas over a near-black ground almost any wash composites to a nearly achromatic value. R11 checks the CHAIN.",
+      "allowed": []
+    },
+    {
+      "label": "the C2/C3 restatement of the disabled collision, asserted rather than quoted",
+      "needle": "sits close enough to the rest-state ink",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN as a statement of the collision E1 had to solve. It does not survive measurement — check R15. E1 may DISCUSS the claim, so this needle is scoped to the assertive form and the discussion quotes it with attribution.",
+      "allowed": [
+        "docs/E1_DISABLED_COLLISION_RESOLUTION.md",
+        "docs/E1_VALIDATION_RESULTS.md",
+        "data/E1_VALIDATION.json",
+        "data/E1_DERIVATION.json"
+      ]
+    },
+    {
+      "label": "the state and status groups still described as empty",
+      "needle": "RESERVED AND DELIBERATELY EMPTY",
+      "pass": true,
+      "hits": [],
+      "why": "C3 was right to say it; a surface E1 SHIPS that still says it has not picked up E1. Check R08 asserts the resolved group description, and this catches the prose half.",
+      "allowed": [
+        "docs/E1_TOKEN_ARCHITECTURE.md",
+        "docs/E1_VALIDATION_RESULTS.md",
+        "data/E1_VALIDATION.json"
+      ]
+    },
+    {
+      "label": "E1 described as adding two colours",
+      "needle": "E1 adds two colours",
+      "pass": true,
+      "hits": [],
+      "why": "WRONG SHAPE. E1 adds ONE colour plus one extension of the frozen reading ramp, and the distinction is the whole of why the second value is not a status colour.",
+      "allowed": []
+    },
+    {
+      "label": "tritanopia used as a derived floor",
+      "needle": "tritanopia floor",
+      "pass": true,
+      "hits": [],
+      "why": "WITHDRAWN. Tritan is excluded from every derived floor because the single-plane model is not validated for it.",
+      "allowed": []
+    }
+  ],
+  "probes": [
+    {
+      "needle": "A DISABLED CONTROL IS NOT FOCUSABLE",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"a disabled control is not focusable, is not in the tab ring, and states the re\""
+    },
+    {
+      "needle": "no channel is used by two states",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"THE ONE-CHANNEL RULE: each state owns a different visual channel and no channe\""
+    },
+    {
+      "needle": "FOUR STATUS ROLES AND ONE STATUS COLOUR",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"QANDEEL HAS FOUR STATUS ROLES AND ONE STATUS COLOUR. Error is the only role th\""
+    },
+    {
+      "needle": "BRASS-BEARING OBJECT … HAS A DISABLED STATE",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"NO BRASS-BEARING OBJECT IN QANDEEL HAS A DISABLED STATE. An identity object th\""
+    },
+    {
+      "needle": "a persistent navigation destination is never unavailable",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"A persistent navigation destination is never unavailable: a destination that e\""
+    },
+    {
+      "needle": "never be mistaken for a meaning event by measurement",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"the pressed ground can never be mistaken for a meaning event by measurement, n\""
+    },
+    {
+      "needle": "sits close enough to the rest-state ink",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"the disabled ink sits close enough to the rest-state ink to be argued with\""
+    },
+    {
+      "needle": "RESERVED AND DELIBERATELY EMPTY",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"qandeel.state is RESERVED AND DELIBERATELY EMPTY\""
+    },
+    {
+      "needle": "E1 adds two colours",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"E1 adds two colours to QANDEEL\""
+    },
+    {
+      "needle": "tritanopia floor",
+      "fired": true,
+      "detail": "a sentence stating the claim is caught: \"the tritanopia floor is 0.05129\""
+    }
+  ],
+  "counted": [
+    {
+      "what": "checks",
+      "value": "32 / 32",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "probes fired",
+      "value": "32 / 32",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "behavioural obligations",
+      "value": "15 / 15",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "dichromacy property tests",
+      "value": "26",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md",
+        "docs/E1_COLOUR_DERIVATION.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "boards",
+      "value": "15",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "vendored artefacts",
+      "value": "16",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "skills inventoried",
+      "value": "85",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "the error hex",
+      "value": "#fe907e",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md",
+        "docs/E1_COLOUR_DERIVATION.md",
+        "docs/E1_DESIGN_RATIONALE.md",
+        "README.md"
+      ],
+      "pass": true,
+      "missing": []
+    },
+    {
+      "what": "the unavailable hex",
+      "value": "#696762",
+      "where": [
+        "docs/E1_FREEZE_CANDIDATE.md",
+        "docs/E1_COLOUR_DERIVATION.md",
+        "docs/E1_DESIGN_RATIONALE.md",
+        "README.md"
+      ],
+      "pass": true,
+      "missing": []
+    }
+  ]
+}

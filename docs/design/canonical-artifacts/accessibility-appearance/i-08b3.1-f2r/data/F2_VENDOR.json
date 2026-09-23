@@ -1,0 +1,384 @@
+{
+  "note": "Every inherited file, byte-exact, with the sha256 of the package it came from. A directory name is not provenance. tools/f2-vendor.mjs and tools/f2-resolve.mjs each re-check both ends.",
+  "generatedBy": "tools/f2-vendor.mjs",
+  "entries": [
+    {
+      "published": "vendor/f1/tools/f1-boards.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-boards.mjs",
+      "bytes": 48139,
+      "sha256": "e9aaf07d8393a744817e992b0774cbde100109f40cb4e75e9c9985997d2174aa"
+    },
+    {
+      "published": "vendor/f1/tools/f1-cdp.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-cdp.mjs",
+      "bytes": 6257,
+      "sha256": "44bc93db3f2b404b9ea43ee9d991ffb563ebfbc19167b8e468cc05475d4912f6"
+    },
+    {
+      "published": "vendor/f1/tools/f1-consistency.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-consistency.mjs",
+      "bytes": 21994,
+      "sha256": "a0a9c462ae23db4226baf867b3e1e292fb77ba803d5fe1b089ef0e098c0efba5"
+    },
+    {
+      "published": "vendor/f1/tools/f1-cvd.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-cvd.mjs",
+      "bytes": 6822,
+      "sha256": "b4d921ce4fdbef9d6d224ae17d235635d97198a2f477695bf63f4b4f3aa0863e"
+    },
+    {
+      "published": "vendor/f1/tools/f1-derive.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-derive.mjs",
+      "bytes": 16896,
+      "sha256": "50c88f481162e0fc915740be47fa50c6b123fb2c86dbd7ddc16888d68edd5f6d"
+    },
+    {
+      "published": "vendor/f1/tools/f1-docs.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-docs.mjs",
+      "bytes": 9655,
+      "sha256": "2336af2f477e95b98996eb068d3a7a67663457c50c5960244d60a5646b74c99e"
+    },
+    {
+      "published": "vendor/f1/tools/f1-fixture.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-fixture.mjs",
+      "bytes": 12341,
+      "sha256": "5b32807c0fbe15564c2cf2839258433153323886e85552610354e3fa32b037c7"
+    },
+    {
+      "published": "vendor/f1/tools/f1-inherit.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-inherit.mjs",
+      "bytes": 16802,
+      "sha256": "a73fad0061670c473532e343fef86e54fef2b039ce19c57d44d2f60739616cc7"
+    },
+    {
+      "published": "vendor/f1/tools/f1-motion.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-motion.mjs",
+      "bytes": 18778,
+      "sha256": "64c9633f4ecf03707216228cafca8ef8312d0228c340323f1f01913e25b3a2da"
+    },
+    {
+      "published": "vendor/f1/tools/f1-parity.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-parity.mjs",
+      "bytes": 30630,
+      "sha256": "7c666b07392c8495f99ff6b97941c030e191c3d4cd5b07327fa8ad2c51b9c446"
+    },
+    {
+      "published": "vendor/f1/tools/f1-references.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-references.mjs",
+      "bytes": 23429,
+      "sha256": "9d0fdff5def934c83f0a7fddf69cb7e6f1b74b0e5bbc2faca8276651f935be85"
+    },
+    {
+      "published": "vendor/f1/tools/f1-resolve.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-resolve.mjs",
+      "bytes": 13154,
+      "sha256": "fa855d71ce8561ff41325f2b20f22ca91435ce555230a9d71dbc995bdddb72b0"
+    },
+    {
+      "published": "vendor/f1/tools/f1-scene.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-scene.mjs",
+      "bytes": 31519,
+      "sha256": "dfddab5470fb2798469f990e71ad460381f8d0a2c20b79b42be39c6d4742a863"
+    },
+    {
+      "published": "vendor/f1/tools/f1-skills.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-skills.mjs",
+      "bytes": 20532,
+      "sha256": "c59aa6dc90779b74191405ec6fe8c2f6b6633cd6fb32c3fa6927d4c0b2e7ca3f"
+    },
+    {
+      "published": "vendor/f1/tools/f1-spectacle.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-spectacle.mjs",
+      "bytes": 20433,
+      "sha256": "159dbd55ccb7974db7a51c53fa29692fec01ef408d1d8d814e45c996d1924df0"
+    },
+    {
+      "published": "vendor/f1/tools/f1-sr.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-sr.mjs",
+      "bytes": 50220,
+      "sha256": "7c9d963688e9387231c7fd81e1dc40ffb39ab5807cfb3c37bd3a487cbf4cccfc"
+    },
+    {
+      "published": "vendor/f1/tools/f1-verify.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-verify.mjs",
+      "bytes": 74470,
+      "sha256": "ba5630ce355ce9239bca41293a19b551545ccc36f2c8e91aa3538f8ae175c520"
+    },
+    {
+      "published": "vendor/f1/tools/f1-zip.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tools/f1-zip.mjs",
+      "bytes": 4178,
+      "sha256": "11999e650effbbdc4c66b037d19a44ad2d5f065a30a07b58176d4865a367e99f"
+    },
+    {
+      "published": "vendor/f1/tokens/appearance/dark.accessibility.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tokens/appearance/dark.accessibility.tokens.json",
+      "bytes": 3245,
+      "sha256": "3d2fbcca824255c5da8ee234f572f35bad68f143c47424ccc0057ad7e7407176"
+    },
+    {
+      "published": "vendor/f1/tokens/base/accessibility.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tokens/base/accessibility.tokens.json",
+      "bytes": 38216,
+      "sha256": "dd47c43cb72eb306f2b701a883ce7c48e280f4d8bcfbf00664d0abca681e35cc"
+    },
+    {
+      "published": "vendor/f1/tokens/contrast/increased.accessibility.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tokens/contrast/increased.accessibility.tokens.json",
+      "bytes": 9120,
+      "sha256": "5b27d13790e0ce051822c226aa8f3c11cac04467156210f9469c229f391c8f2a"
+    },
+    {
+      "published": "vendor/f1/tokens/qandeel-accessibility.resolver.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tokens/qandeel-accessibility.resolver.json",
+      "bytes": 4801,
+      "sha256": "3d1124f04f104806fa8c28df845c36507f46cfb57454493e8293c3203d2ec04d"
+    },
+    {
+      "published": "vendor/f1/tokens/transparency/full.accessibility.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tokens/transparency/full.accessibility.tokens.json",
+      "bytes": 362,
+      "sha256": "4551473f1fee8f6451e28d1c00bc4b5de66f2a5bfec6f6199c83ce7ec6bd90c5"
+    },
+    {
+      "published": "vendor/f1/tokens/transparency/reduced.accessibility.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/tokens/transparency/reduced.accessibility.tokens.json",
+      "bytes": 5699,
+      "sha256": "c682c06ae72e66819a9ccd18d0715ef836e993da47ae6d1cd40b826e01187772"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/b4r/dark.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/b4r/dark.tokens.json",
+      "bytes": 2348,
+      "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/b4r/increased.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/b4r/increased.tokens.json",
+      "bytes": 509,
+      "sha256": "8a9add10c89f10582954750979477ed5391c9fec1758b053b0053de5712de311"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/b4r/light.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/b4r/light.tokens.json",
+      "bytes": 387,
+      "sha256": "a8ca4c0bd22093ae5f3b418403e71ed60032e17e682844dd17a0ed89c5107c99"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/b4r/semantic.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/b4r/semantic.tokens.json",
+      "bytes": 4373,
+      "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/b4r/standard.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/b4r/standard.tokens.json",
+      "bytes": 223,
+      "sha256": "0916a7a5520e0f3696fd0c7420665bb86298171c79aef3634e0475627da6116a"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/reference/QANDEEL_Q_BASE_MASTER.svg",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/reference/QANDEEL_Q_BASE_MASTER.svg",
+      "bytes": 3183,
+      "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/tokens/appearance/dark.material.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/tokens/appearance/dark.material.tokens.json",
+      "bytes": 3441,
+      "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/tokens/appearance/light.material.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/tokens/appearance/light.material.tokens.json",
+      "bytes": 587,
+      "sha256": "f2f2f8b2578abfe6ad1d5a4ab0a462967bc26ef88fad91a09092f24fddd15f65"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/tokens/base/material.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/tokens/base/material.tokens.json",
+      "bytes": 14376,
+      "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928"
+    },
+    {
+      "published": "vendor/f1/vendor/c3/tokens/qandeel-living-brass.resolver.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/c3/tokens/qandeel-living-brass.resolver.json",
+      "bytes": 2364,
+      "sha256": "d013dc03bccb2d246cc6313460d1776b79e9a767512a51d0dff32429c194ccb1"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/scene/d2-connection.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/scene/d2-connection.mjs",
+      "bytes": 3932,
+      "sha256": "debb4a0a7327c97e16ad7644262b25fa20a052288c6fad5c845f8f31d7db37b7"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/scene/d2-events.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/scene/d2-events.mjs",
+      "bytes": 15763,
+      "sha256": "41043c6b23865f9105101d0234a85a225431789947021d68f5a06e1bd00de6f7"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/scene/d2-foundation.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/scene/d2-foundation.mjs",
+      "bytes": 13428,
+      "sha256": "cdcd403ffea7e9bf218b4f37eea71b356c0fdc5c26e4af8925e7de61956133b8"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/scene/d2-render.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/scene/d2-render.mjs",
+      "bytes": 16228,
+      "sha256": "0c97580c021eef76cbabfa82de601594d1526d0178a9b27f31d26bcf8da548b7"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/scene/d2-world.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/scene/d2-world.mjs",
+      "bytes": 17062,
+      "sha256": "49ec36fb8e1bde33cf4430eb0fe24c15051ba55d387e4203f8033ab4e5f3f597"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/tokens/appearance/dark.illumination.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/tokens/appearance/dark.illumination.tokens.json",
+      "bytes": 3794,
+      "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/tokens/base/illumination.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/tokens/base/illumination.tokens.json",
+      "bytes": 30299,
+      "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/tokens/qandeel-light.resolver.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/tokens/qandeel-light.resolver.json",
+      "bytes": 1720,
+      "sha256": "3e40342ede17d0370fa3c1461439d514bbc36eb71e1253273e19c9e8618f88bc"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/vendor/color.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/vendor/color.mjs",
+      "bytes": 8901,
+      "sha256": "298a4b9147c6a9d55fff85367963f4c85dd4f00a7c32647d06ba76f80b30cbb5"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/vendor/d1/d1-arrivals.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/vendor/d1/d1-arrivals.mjs",
+      "bytes": 17684,
+      "sha256": "915ff97618bb40cc4e04d4d0c6e42dcf4f2bd9178cd39cbafc690a74a4b19efd"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/vendor/d1/d1-render.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/vendor/d1/d1-render.mjs",
+      "bytes": 21785,
+      "sha256": "e1ea2960e19d36eb3547b135d3e7a36eb0855b46f065d4d666fabde238d20940"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/vendor/d1/d1-scene.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/vendor/d1/d1-scene.mjs",
+      "bytes": 27642,
+      "sha256": "841dea14f60dde91ac3fd903afdbb64e56300d3327f30902a7ba029d0d7e0e46"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/vendor/png.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/vendor/png.mjs",
+      "bytes": 5851,
+      "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5"
+    },
+    {
+      "published": "vendor/f1/vendor/d2r/vendor/QANDEEL_Q_BASE_MASTER.svg",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/d2r/vendor/QANDEEL_Q_BASE_MASTER.svg",
+      "bytes": 3183,
+      "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05"
+    },
+    {
+      "published": "vendor/f1/vendor/e1/tokens/appearance/dark.interaction.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/e1/tokens/appearance/dark.interaction.tokens.json",
+      "bytes": 6162,
+      "sha256": "397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252"
+    },
+    {
+      "published": "vendor/f1/vendor/e1/tokens/appearance/light.interaction.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/e1/tokens/appearance/light.interaction.tokens.json",
+      "bytes": 927,
+      "sha256": "f13241f38fdf5e2f9213afb1aa05eddc92810707229b48a93cade83c09043b46"
+    },
+    {
+      "published": "vendor/f1/vendor/e1/tokens/base/interaction.tokens.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/e1/tokens/base/interaction.tokens.json",
+      "bytes": 54134,
+      "sha256": "6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce"
+    },
+    {
+      "published": "vendor/f1/vendor/e1/tokens/qandeel-interaction.resolver.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/e1/tokens/qandeel-interaction.resolver.json",
+      "bytes": 1970,
+      "sha256": "ef0566203581f5bea727209988b09c6cac3b863703d581b29657a71b1f980e5c"
+    },
+    {
+      "published": "vendor/f1/vendor/lib/color.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/lib/color.mjs",
+      "bytes": 8901,
+      "sha256": "298a4b9147c6a9d55fff85367963f4c85dd4f00a7c32647d06ba76f80b30cbb5"
+    },
+    {
+      "published": "vendor/f1/vendor/lib/png.mjs",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/vendor/lib/png.mjs",
+      "bytes": 5851,
+      "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5"
+    },
+    {
+      "published": "vendor/f1/fonts/Estedad[wght].ttf",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/fonts/Estedad[wght].ttf",
+      "bytes": 284180,
+      "sha256": "3134e31a27d58e615967e714c7799fbfa2de952876f8597b33dc57ffe0e99d03"
+    },
+    {
+      "published": "fonts/Estedad[wght].ttf",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/fonts/Estedad[wght].ttf",
+      "bytes": 284180,
+      "sha256": "3134e31a27d58e615967e714c7799fbfa2de952876f8597b33dc57ffe0e99d03"
+    },
+    {
+      "published": "vendor/f1/data/F1_VENDOR.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/data/F1_VENDOR.json",
+      "bytes": 12290,
+      "sha256": "9989ae6e05d7d10fb8d202c85982d3cf6b056daeb15df6b546d1a2c42b538975"
+    },
+    {
+      "published": "vendor/f1/data/F1_VALIDATION.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/data/F1_VALIDATION.json",
+      "bytes": 56680,
+      "sha256": "c6045d7664c9a701196cbe939ae1662f852137c0a118a046189f3fd2e8481132"
+    },
+    {
+      "published": "vendor/f1/data/F1_SPECTACLE.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/data/F1_SPECTACLE.json",
+      "bytes": 11420,
+      "sha256": "e537855032351d5f0745865231eea00f90aee1441741231f6c93174320415f2c"
+    },
+    {
+      "published": "vendor/f1/data/F1_PARITY.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/data/F1_PARITY.json",
+      "bytes": 88080,
+      "sha256": "401b79ed050661ef68d5d35ded7ab02460c0abf450c07210dc7289be29144cde"
+    },
+    {
+      "published": "vendor/f1/data/F1_SCREEN_READER.json",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/data/F1_SCREEN_READER.json",
+      "bytes": 21936,
+      "sha256": "7982658882da24ba1693ef3d880f218a902fcca611ef64bc221711f654391ade"
+    },
+    {
+      "published": "vendor/f1/review/src/default.png",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/review/src/default.png",
+      "bytes": 151296,
+      "sha256": "0a8cb8e0c2ecaf2d9e2283920d28ce3736ef17e64573c81db40f09a0369f4d17"
+    },
+    {
+      "published": "vendor/f1/review/inherit/d2r-reference.png",
+      "source": "I-08B3.1-F1-ACCESSIBILITY-TRANSFORMATIONS-SEMANTIC-PARITY/review/inherit/d2r-reference.png",
+      "bytes": 65831,
+      "sha256": "0c52861c66b6427cecb61b93e50eb89969fe7300aa470b0deea1fa4520932e78"
+    }
+  ]
+}

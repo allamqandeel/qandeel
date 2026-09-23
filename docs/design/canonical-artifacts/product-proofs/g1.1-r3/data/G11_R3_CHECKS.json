@@ -1,0 +1,534 @@
+{
+ "checks": [
+  {
+   "id": "R3-01a",
+   "gate": "G1.1-R3-01",
+   "title": "The Arabic new-conversation opener is byte-for-byte the locked wording (and the English is the approved line)",
+   "ok": true,
+   "detail": "ar 79 bytes identical to the brief (sha256 25990762c938…); {display_name} is the only placeholder"
+  },
+  {
+   "id": "A01",
+   "gate": "carried",
+   "title": "Token agreement — resolved values match the frozen literals; the slab tone is the ONE functional Surface value",
+   "ok": true,
+   "detail": "every painted colour resolves from the vendored token tree; the reader slab's #181818 is qandeel.surface.functional (qandeel.surface.functional → qandeel.expression.surface), the same value as every Surface role — no new colour"
+  },
+  {
+   "id": "A02",
+   "gate": "G1.1-R3-07 / R3-09",
+   "title": "The rail carries exactly the three canonical World types — no mode and no Replay is a destination",
+   "ok": true,
+   "detail": "rail = kernel WORLD_TYPES [MY_WORLD, SHARED_WORLD, PUBLIC_WORLD]: no Replay, Voice-Note, Call or Analysis destination"
+  },
+  {
+   "id": "A03",
+   "gate": "carried",
+   "title": "BRASS IS MATTER — only the World rail labels and the one opener Q reach the Living Brass variables (Brass is no speaker code)",
+   "ok": true,
+   "detail": "Living Brass reaches only: #rail .lb, .t.opener .qm — never a speaker, a mode or Replay"
+  },
+  {
+   "id": "A04",
+   "gate": "carried",
+   "title": "Living Brass is state-invariant — no SELECTED / PRESSED / FOCUS rule repaints a rail label",
+   "ok": true,
+   "detail": "no state selector repaints a navigation label"
+  },
+  {
+   "id": "A05",
+   "gate": "G1.1-R3-14",
+   "title": "LIGHT IS MEANING — the shell references no Meaning Light stop; R3 adds no Analysis visual",
+   "ok": true,
+   "detail": "no QANDEEL Light stop in the shell — the Analysis spectacle is G2's"
+  },
+  {
+   "id": "A06",
+   "gate": "carried",
+   "title": "T-10 motion hygiene — one easing curve, no ease-in, no keyframes, no loops, no decorative motion",
+   "ok": true,
+   "detail": "one curve; no keyframes / transitions / loops; R3 adds no duration (resolve: 140, markerLead: 200, markerTrail: 280, dock: 220, depthOut: 200, depthIn: 320, depthInDelay: 100, voice: 220)"
+  },
+  {
+   "id": "A07",
+   "gate": "carried",
+   "title": "Copy hygiene (VI-01 §15, §3.6): no exclamation, no emoji, no anthropomorphised latency, no gendered fixed imperative",
+   "ok": true,
+   "detail": "123 strings: no «!», no emoji, no \"Thinking\", no gendered T1 imperative (the R3 part-selection hint is written without a second-person verb)"
+  },
+  {
+   "id": "A08",
+   "gate": "G1.1-R3-12",
+   "title": "Contrast — every text pair ≥ 4.5:1 and every meaningful non-text mark ≥ 3:1, both appearances, including the slab, the voice row and the part marks",
+   "ok": true,
+   "detail": "dark QANDEEL turn on World 12.95 · dark reader turn on its slab 12.08 · dark voice-note transcript on the slab 7.82 · dark QANDEEL voice-reply text on World 8.38 · dark day / call marker on World 5.44 · dark voice-note duration on the slab 5.07 · dark «تحليل المحادثة» / Replay on World 5.44 · dark mode controls on the composer Surface 5.07 · dark rail label (Brass) on Surface 5.66 · dark call / recording label, Replay menu items 12.08 · dark waveform bars (non-text) 5.07 · dark part-selection mark (non-text) 12.95 · dark unselected ring (non-text) 5.44 · dark call level trace, end-call ring (non-text) 12.08 · dark focus vs World 12.95 · dark focus vs Surface 12.08 · light QANDEEL turn on World 12.89 · light reader turn on its slab 11.98 · light voice-note transcript on the slab 7.79 · light QANDEEL voice-reply text on World 8.38 · light day / call marker on World 5.42 · light voice-note duration on the slab 5.04 · light «تحليل المحادثة» / Replay on World 5.42 · light mode controls on the composer Surface 5.04 · light rail label (Brass) on Surface 4.50 · light call / recording label, Replay menu items 11.98 · light waveform bars (non-text) 5.04 · light part-selection mark (non-text) 12.89 · light unselected ring (non-text) 5.42 · light call level trace, end-call ring (non-text) 11.98 · light focus vs World 12.89 · light focus vs Surface 11.98"
+  },
+  {
+   "id": "A09",
+   "gate": "G1.1-R3-14",
+   "title": "The Analysis imagery is the sealed F2 fixture world, unchanged (hash) — G1.1 does not redesign the Analysis",
+   "ok": true,
+   "detail": "world-dark.png ← a-dark-world.png c7ac15584004…; world-light.png ← b-light-world.png fd3104aae07c…"
+  },
+  {
+   "id": "A10",
+   "gate": "G1.1-R3-03",
+   "title": "Paragraph direction follows the script that carries the sentence, and the page inlines exactly this rule",
+   "ok": true,
+   "detail": "7 cases incl. a Latin-first Arabic sentence (rtl), a pasted English line (ltr) and the opener with a Latin display name (rtl); prototype inlines src/bidi.js verbatim"
+  },
+  {
+   "id": "A11",
+   "gate": "G1.1-R3-05",
+   "title": "The slab uses only the one functional Surface tone — no shadow, no second tone, no hue, no Brass",
+   "ok": true,
+   "detail": "4 speaker rules; the only fill is var(--functional) on .t.me; no shadow, literal, Brass or status colour"
+  },
+  {
+   "id": "R3-06a",
+   "gate": "G1.1-R3-06",
+   "title": "Analysis naming (source) — «تحليل المحادثة» from Conversation, «المحادثة» from Analysis, never «العالم»",
+   "ok": true,
+   "detail": "from Conversation «تحليل المحادثة», from Analysis «المحادثة»; no Analysis route or name contains «العالم»"
+  },
+  {
+   "id": "R3-11a",
+   "gate": "G1.1-R3-11",
+   "title": "Shared area — the primary navigation label is count-neutral",
+   "ok": true,
+   "detail": "rail «مع الآخرين» / \"With others\" — no singular or plural World noun that a count could falsify"
+  },
+  {
+   "id": "R3-13b",
+   "gate": "G1.1-R3-12",
+   "title": "Replay part summary uses true Arabic count grammar",
+   "ok": true,
+   "detail": "Arabic counted noun: 1 واحدة · 2 dual · 3–10 plural · 11+ singular — the part summary cannot misstate its count"
+  },
+  {
+   "id": "R3-10a",
+   "gate": "G1.1-R3-10",
+   "title": "Replay truth — nothing claims that Personal original Live Call audio is Replay-producible",
+   "ok": true,
+   "detail": "no Replay string offers or implies original audio; the preview boundary states that Personal Live Call / Voice Note audio is not a producible source (replay-runtime-v1 §7)"
+  },
+  {
+   "id": "B01",
+   "gate": "carried",
+   "title": "Estedad v8.5 is the applied face of every Product text element",
+   "ok": true,
+   "detail": "26 pages"
+  },
+  {
+   "id": "B02",
+   "gate": "carried",
+   "title": "No letter-spacing anywhere (Arabic is a connected script)",
+   "ok": true,
+   "detail": "26 pages"
+  },
+  {
+   "id": "B03",
+   "gate": "carried",
+   "title": "No italics on anything containing Arabic",
+   "ok": true,
+   "detail": "26 pages"
+  },
+  {
+   "id": "B04",
+   "gate": "G1.1-R3-12",
+   "title": "Arabic leading ≥ 1.63 on every Arabic text element, including at 200% text and in the voice-note transcript",
+   "ok": true,
+   "detail": "26 pages incl. ts=2"
+  },
+  {
+   "id": "B05",
+   "gate": "G1.1-R3-12",
+   "title": "No horizontal overflow or clipping of any text, at 100% and 200% text and at 360 px",
+   "ok": true,
+   "detail": "26 pages"
+  },
+  {
+   "id": "B06",
+   "gate": "G1.1-R3-12",
+   "title": "Every control has an accessible name (Replay, Voice Note, Live Call, mute, end call, play); the input has a <label>",
+   "ok": true,
+   "detail": "every button and the input named"
+  },
+  {
+   "id": "B07",
+   "gate": "G1.1-R3-12",
+   "title": "Label-in-Name (WCAG 2.5.3): every accessible name contains its visible label",
+   "ok": true,
+   "detail": "all aria-labels contain the visible text"
+  },
+  {
+   "id": "B08",
+   "gate": "G1.1-R3-12",
+   "title": "No critical action is precision-only — every visible control ≥ 44 × 44, at 100% and 200% text",
+   "ok": true,
+   "detail": "every visible control ≥ 44 × 44"
+  },
+  {
+   "id": "B09",
+   "gate": "carried",
+   "title": "Exactly one rail item is aria-current and it is the World on screen",
+   "ok": true,
+   "detail": "aria-current matches state on every page"
+  },
+  {
+   "id": "B10",
+   "gate": "G1.1-R3-12",
+   "title": "Mirroring by meaning — back mirrors in RTL; the Replay, handset and play glyphs never mirror",
+   "ok": true,
+   "detail": "back chevron mirrors per direction; Replay, handset and play never do"
+  },
+  {
+   "id": "R3-01b",
+   "gate": "G1.1-R3-01",
+   "title": "Rendered opener = the locked template with only {display_name} substituted, on QANDEEL's side, in every new conversation",
+   "ok": true,
+   "detail": "26 rendered openers (ar, en, and ar with a Latin display name) — each exactly the locked template with {display_name} substituted, spoken by QANDEEL"
+  },
+  {
+   "id": "R3-02",
+   "gate": "G1.1-R3-02",
+   "title": "Speaker geometry — Arabic USER = RIGHT, English USER = LEFT, QANDEEL opposite, in every state that shows turns",
+   "ok": true,
+   "detail": "127 turns on 16 pages: every reader slab on the RIGHT edge in Arabic and the LEFT in English, leaving QANDEEL ≥ 88.0 px; every QANDEEL turn ≥ 72.0 px clear of the reader's edge; containers keep the phone's direction"
+  },
+  {
+   "id": "R3-05",
+   "gate": "G1.1-R3-05",
+   "title": "Slab morphology — the approved partial / incomplete slab: attached, open toward the reader's edge, rounded only inward",
+   "ok": true,
+   "detail": "57 reader slabs: rounded only on the two corners facing into the conversation (18 px), square and open on the reader's edge, bled through the gutter to the screen edge — a partial slab, not a bubble"
+  },
+  {
+   "id": "R3-12a",
+   "gate": "G1.1-R3-12",
+   "title": "Speaker identity is not only visual — every turn announces its speaker before its words (WCAG 1.3.1)",
+   "ok": true,
+   "detail": "127 turns (text, voice and opener) each announce «كلامك» / «قنديل» (en You / Qandeel) before their words"
+  },
+  {
+   "id": "R3-03",
+   "gate": "G1.1-R3-03",
+   "title": "Bidi — paragraph direction cannot move a message to the other speaker's side; mixed Arabic / English reads correctly",
+   "ok": true,
+   "detail": "7 stress turns: each paragraph in the direction of its sentence («Q3 numbers لسه…» rtl, «Subject: …» ltr, «اهلا يا Nour …» rtl) while the English line's slab stays on the RIGHT edge"
+  },
+  {
+   "id": "R3-06b",
+   "gate": "G1.1-R3-06",
+   "title": "Analysis naming (rendered) — no user-facing «العالم» remains as the Conversation Analysis doorway",
+   "ok": true,
+   "detail": "Conversation: «تحليل المحادثة»; Analysis: «المحادثة»; during a call «المحادثة — المكالمة مستمرة»; the Analysis region is named «تحليل المحادثة»; «العالم» appears only in the PUBLIC_WORLD rail name"
+  },
+  {
+   "id": "R3-07",
+   "gate": "G1.1-R3-07",
+   "title": "Modes — Writing / Voice Note / Live Call reachable from the composer, one history, never separate destinations",
+   "ok": true,
+   "detail": "Writing («رسالتك لقنديل»), Voice Note («رسالة صوتية») and Live Call («مكالمة صوتية») all start from the one lower line; a recorded note stays Conversation-first and lands in the same history on the reader's side; the rail still has 3 Worlds"
+  },
+  {
+   "id": "R3-08",
+   "gate": "G1.1-R3-08",
+   "title": "Live Call opens Analysis-first; Conversation is reachable without ending the call; returning continues the same call",
+   "ok": true,
+   "detail": "call → Analysis (end call, mute and «المحادثة» reachable); «المحادثة» → Conversation with the call still live and its controls reachable; «تحليل المحادثة» → the SAME call (start instant unchanged)"
+  },
+  {
+   "id": "R3-09",
+   "gate": "G1.1-R3-09",
+   "title": "Replay placement — reachable from the Conversation / Analysis chrome, stable, never a main tab",
+   "ok": true,
+   "detail": "one Replay control («إعادة عرض المحادثة») at the END edge of the upper chrome, at the identical box [10, 49, 44, 44] in Conversation, Analysis and during a call — not a tab, not a World"
+  },
+  {
+   "id": "R3-10b",
+   "gate": "G1.1-R3-09 / R3-10",
+   "title": "Replay availability — not advertised on an empty conversation; reachable once eligible committed material exists",
+   "ok": true,
+   "detail": "new conversation (opener only): no Replay, visually or by keyboard; after the reader's first committed words: Replay reachable; its slot is reserved, so nothing shifts when it appears"
+  },
+  {
+   "id": "R3-13a",
+   "gate": "G1.1-R3-09",
+   "title": "Replay entry — whole conversation vs a part, chosen on the conversation's own turns, no generic editor",
+   "ok": true,
+   "detail": "entry = exactly «المحادثة كاملة» / «جزء من المحادثة» in an anchored ASIDE (no scrim, conversation live); Escape closes it and returns focus to Replay; a part is chosen as whole turns in source order (tapped 8 then 5 → 5..8, «4 رسائل»); no timeline, no trim, no editor"
+  },
+  {
+   "id": "R3-11b",
+   "gate": "G1.1-R3-11",
+   "title": "Shared grammar — one → «عالم مشترك», more → «عوالم مشتركة», zero → honest empty state; the rail never changes",
+   "ok": true,
+   "detail": "0 → «مع الآخرين» + «لسه مفيش عالم مشترك.»; 1 → «عالم مشترك»; 3 → «عوالم مشتركة» (en: Shared world / Shared worlds); the rail reads «مع الآخرين» at every count"
+  },
+  {
+   "id": "R3-12b",
+   "gate": "G1.1-R3-12",
+   "title": "Every primary path is operable without pointer precision — the controls of each mode and Replay are visible, named, un-inert and ≥ 44 px",
+   "ok": true,
+   "detail": "ar-active: door, replay, input, mic, call · ar-call: back, replay, mute, end-call · ar-call-conv: door, replay, mute, end-call · ar-note: note-send, note-cancel · ar-part: pick-cancel, pick-go"
+  },
+  {
+   "id": "R3-04",
+   "gate": "G1.1-R3-04",
+   "title": "Speaker recognition at a glance — in the shipped rasters, each speaker is told by WHICH EDGE and WHICH GROUND, never by colour or ink",
+   "ok": true,
+   "detail": "42 turns on 11 shipped rasters: sampled 6 px in from the reader's edge, every reader turn stands on the slab tone and every QANDEEL turn on the World — the side and the ground are both painted, in dark, Light and Increase Contrast"
+  },
+  {
+   "id": "R3-M1",
+   "gate": "G1.1-R3-12 / §17",
+   "title": "Reduced Motion parity — same destination, same controls, same call state, same Replay availability, same history",
+   "ok": true,
+   "detail": "16 records (8 acts × commit + settled): Reduced Motion reaches the same depth, call state, composer mode, Replay availability and history at every commit, and the same surface and the same reachable controls once settled"
+  },
+  {
+   "id": "C01",
+   "gate": "carried",
+   "title": "Every shipped raster is the capture recorded in SCREENS.json (sha256), and every MP4 decodes to its full frame count",
+   "ok": true,
+   "detail": "42 rasters verified; 3 MP4s × 859 frames at 60 fps"
+  },
+  {
+   "id": "R3-13",
+   "gate": "G1.1-R3-13",
+   "title": "Skill Usage Ledger Delta — every re-read Skill is cited by path and a hash that matches the file on this host",
+   "ok": true,
+   "detail": "11 Skill rows: every cited file exists on this host at exactly the stated sha256 prefix"
+  },
+  {
+   "id": "R3-10c",
+   "gate": "G1.1-R3-10 / R3-14",
+   "title": "The report carries the Replay audio dependency verbatim (and the opener, B4 status, G2 deferral)",
+   "ok": true,
+   "detail": "the report carries the brief's Replay audio dependency verbatim, the exact opener, the B4 reconciliation status and the G2 deferral"
+  }
+ ],
+ "probes": [
+  {
+   "id": "P-R3-01a",
+   "targets": "R3-01a",
+   "rejected": true,
+   "detail": "ar opener differs from the brief: «اهلا يا {display_name} ... انا مستنيك ... يلا نبدأ»"
+  },
+  {
+   "id": "P-R3-01a2",
+   "targets": "R3-01a",
+   "rejected": true,
+   "detail": "ar opener differs from the brief: «أهلاً يا {display_name} ... أنا في انتظارك ... يلا نبدأ»"
+  },
+  {
+   "id": "P-A01",
+   "targets": "A01",
+   "rejected": true,
+   "detail": "functional #181818 ≠ #1d1d1d"
+  },
+  {
+   "id": "P-A02",
+   "targets": "A02",
+   "rejected": true,
+   "detail": "rail MY_WORLD,SHARED_WORLD,PUBLIC_WORLD,replay vs kernel MY_WORLD,SHARED_WORLD,PUBLIC_WORLD"
+  },
+  {
+   "id": "P-A03",
+   "targets": "A03",
+   "rejected": true,
+   "detail": "Brass painted by: .t.me"
+  },
+  {
+   "id": "P-A04",
+   "targets": "A04",
+   "rejected": true,
+   "detail": "#rail .it.sel .lb"
+  },
+  {
+   "id": "P-A05",
+   "targets": "A05",
+   "rejected": true,
+   "detail": "Meaning Light in shell CSS: #fbf2db"
+  },
+  {
+   "id": "P-A06",
+   "targets": "A06",
+   "rejected": true,
+   "detail": "CSS animation; infinite repeat"
+  },
+  {
+   "id": "P-A07",
+   "targets": "A07",
+   "rejected": true,
+   "detail": "COPY.ar.probe: gendered imperative in fixed chrome"
+  },
+  {
+   "id": "P-A08",
+   "targets": "A08",
+   "rejected": true,
+   "detail": "dark planted 1.97 < 4.5"
+  },
+  {
+   "id": "P-A10",
+   "targets": "A10",
+   "rejected": true,
+   "detail": "«Q3 numbers لسه ما وصلتش، ه…» expected rtl"
+  },
+  {
+   "id": "P-A11",
+   "targets": "A11",
+   "rejected": true,
+   "detail": ".t.me: fill #23303a; .t.me: literal / Brass / status colour"
+  },
+  {
+   "id": "P-R3-06a",
+   "targets": "R3-06a",
+   "rejected": true,
+   "detail": "door «العالم»; door names «العالم»"
+  },
+  {
+   "id": "P-R3-11a",
+   "targets": "R3-11a",
+   "rejected": true,
+   "detail": "ar rail «عوالم مشتركة» carries a count-bearing World noun"
+  },
+  {
+   "id": "P-R3-13b",
+   "targets": "R3-13b",
+   "rejected": true,
+   "detail": "1: «1 رسالة» ≠ «رسالة واحدة»; 2: «2 رسالة» ≠ «رسالتين»; 3: «3 رسالة» ≠ «3 رسائل»; 10: «10 رسالة» ≠ «10 رسائل»"
+  },
+  {
+   "id": "P-R3-10a",
+   "targets": "R3-10a",
+   "rejected": true,
+   "detail": "Replay entry claims audio"
+  },
+  {
+   "id": "P-B10",
+   "targets": "B10",
+   "rejected": true,
+   "detail": "replay mirrored — media / handset glyphs never mirror"
+  },
+  {
+   "id": "P-R3-01b",
+   "targets": "R3-01b",
+   "rejected": true,
+   "detail": "x: «اهلا يا نور ... انا مستنيك ... يلا نبدأ»"
+  },
+  {
+   "id": "P-R3-02a",
+   "targets": "R3-02",
+   "rejected": true,
+   "detail": "x: reader turn not on the RIGHT edge [0.0, 302.0]; x: reader slab leaves QANDEEL only 0.0 px; x: QANDEEL turn reaches 24.0 px from the reader's edge; x: reader turn not on the RIGHT edge [0.0, 302.0]; x: reader slab leaves QANDEEL only 0.0 px; x: QANDEEL turn reaches 24.0 px from the reader's edge"
+  },
+  {
+   "id": "P-R3-02b",
+   "targets": "R3-02",
+   "rejected": true,
+   "detail": "x: a me container resolved ltr; x: reader turn not on the RIGHT edge [64.0, 366.0]; x: a me container resolved ltr; x: reader turn not on the RIGHT edge [64.0, 366.0]; x: a me container resolved ltr; x: reader turn not on the RIGHT edge [64.0, 366.0]"
+  },
+  {
+   "id": "P-R3-05",
+   "targets": "R3-05",
+   "rejected": true,
+   "detail": "x: edge-side corners rounded 18/18 — a full bubble; x: slab does not bleed to the edge (margin-inline-start 0px); x: edge-side corners rounded 18/18 — a full bubble; x: slab does not bleed to the edge (margin-inline-start 0px); x: edge-side corners rounded 18/18 — a full bubble"
+  },
+  {
+   "id": "P-R3-12a",
+   "targets": "R3-12a",
+   "rejected": true,
+   "detail": "x: me announces «null»"
+  },
+  {
+   "id": "P-R3-03",
+   "targets": "R3-03",
+   "rejected": true,
+   "detail": "Latin-first Arabic sentence ltr; «Q3 numbers لسه ما وص…» ltr"
+  },
+  {
+   "id": "P-R3-06b",
+   "targets": "R3-06b",
+   "rejected": true,
+   "detail": "Conversation chrome does not show «تحليل المحادثة»; ar-active: visible «العالم»"
+  },
+  {
+   "id": "P-R3-07",
+   "targets": "R3-07",
+   "rejected": true,
+   "detail": "recording a voice note moved the reader to «world»; sending the note left the Conversation"
+  },
+  {
+   "id": "P-R3-08a",
+   "targets": "R3-08",
+   "rejected": true,
+   "detail": "opening the Conversation ended or hid the call; returning to the Analysis started a different call"
+  },
+  {
+   "id": "P-R3-08b",
+   "targets": "R3-08",
+   "rejected": true,
+   "detail": "returning to the Analysis started a different call"
+  },
+  {
+   "id": "P-R3-09",
+   "targets": "R3-09",
+   "rejected": true,
+   "detail": "Replay moves between depths 10,49,44,44 vs 120,49,44,44"
+  },
+  {
+   "id": "P-R3-10b",
+   "targets": "R3-10b",
+   "rejected": true,
+   "detail": "Replay advertised on a brand-new conversation; hidden Replay still reachable by keyboard"
+  },
+  {
+   "id": "P-R3-13a",
+   "targets": "R3-13a",
+   "rejected": true,
+   "detail": "threw: page threw: SyntaxError: Identifier 'm' has already been declared"
+  },
+  {
+   "id": "P-R3-11b",
+   "targets": "R3-11b",
+   "rejected": true,
+   "detail": "ar-shared1: 1 rows, heading «عوالم مشتركة», empty-state false"
+  },
+  {
+   "id": "P-R3-12b",
+   "targets": "R3-12b",
+   "rejected": true,
+   "detail": "ar-call-conv: mute not reachable; ar-call-conv: end-call not reachable"
+  },
+  {
+   "id": "P-R3-04",
+   "targets": "R3-04",
+   "rejected": true,
+   "detail": "conv-06-a1-placement-superseded: reader turn not on its slab at the right edge (16,16,16); conv-06-a1-placement-superseded: reader turn not on its slab at the right edge (16,16,16)"
+  },
+  {
+   "id": "P-R3-M1",
+   "targets": "R3-M1",
+   "rejected": true,
+   "detail": "leave: reachable controls differ"
+  },
+  {
+   "id": "P-R3-13",
+   "targets": "R3-13",
+   "rejected": true,
+   "detail": "designing-arabic-frontends: stated 0000000000000000, file is ab70493bf1b15461"
+  },
+  {
+   "id": "P-R3-10c",
+   "targets": "R3-10c",
+   "rejected": true,
+   "detail": "the §11 Replay dependency sentence is missing or altered"
+  }
+ ],
+ "summary": {
+  "checks": "44/44",
+  "probes": "36/36"
+ }
+}

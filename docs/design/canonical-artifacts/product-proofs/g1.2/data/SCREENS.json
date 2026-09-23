@@ -1,0 +1,7245 @@
+{
+ "writ-01-writing-ar": {
+  "q": "state=typing",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mine",
+    "public",
+    "replay",
+    "send",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "2c52505e32bd2804fe294eb3a61df749efbba37ae0fa077e63759c8f610a7848",
+  "bytes": 138970
+ },
+ "writ-02-idle-three-ways": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "4e558afb1a90958f4c4d778ea951c514bb024bde7e4b5de0ea83eeef0759e788",
+  "bytes": 134745
+ },
+ "writ-03-new-conversation-opener": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "opener",
+    "x0": 24,
+    "y0": 600.015625,
+    "x1": 270.3125,
+    "y1": 664
+   }
+  ],
+  "boxes": {
+   "replay": null,
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "0",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "shared"
+   ],
+   "turns": 1,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "4926a366f68646edd764bf47a65cd8853623d7fe4c157b184f6f9a982316cb57",
+  "bytes": 41379
+ },
+ "vn-01-permission-intent": {
+  "q": "state=ask-note&perm=unknown",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "unknown",
+   "ask": "note",
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": true,
+   "controls": [],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "c25d3c4a88f5b41cb7ed22d0f5c452dd4e7a22b5826458b67ed5b6e31d345154",
+  "bytes": 124326
+ },
+ "vn-02-capture-active": {
+  "q": "state=note&voiceMs=6400",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    332.9375,
+    701,
+    37.0625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "بسجّل",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "بسجّل",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "ea4628f06b9ec9f3e003c187135c9c73c21a1a74667bc4fd428acc4c8f1ab1d5",
+  "bytes": 140709
+ },
+ "vn-03-capture-elapsed-long": {
+  "q": "state=note&voiceMs=74000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    332.9375,
+    701,
+    37.0625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "بسجّل",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "بسجّل",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "77487e3b2e9b61a2316c60734f0fa8c301be02c3006dc3893d35df3d0bac228e",
+  "bytes": 140168
+ },
+ "vn-04-cancel-focused": {
+  "q": "state=note&voiceMs=6400",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    332.9375,
+    701,
+    37.0625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "بسجّل",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "بسجّل",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "ef7f7ab227ff9974cdccd7906e452e5e8d6bba5c951822a6e17cfb2fd889a0df",
+  "bytes": 143941
+ },
+ "vn-05-committed-in-history": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 257.765625,
+    "x1": 390,
+    "y1": 370.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 386.71875,
+    "x1": 318,
+    "y1": 446.6875
+   },
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 136,
+    "y0": 474.6875,
+    "x1": 390,
+    "y1": 551.6875
+   },
+   {
+    "who": "q",
+    "kind": "spoken",
+    "x0": 24,
+    "y0": 567.6875,
+    "x1": 318,
+    "y1": 663.65625
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11,
+   "voiceTurns": 1,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "05a16381872b4bdbce6d4b13c3b89c813d7b2ed33a43da179a168359d6fa02fb",
+  "bytes": 124389
+ },
+ "vn-06-playback": {
+  "q": "state=playing&playMs=5200",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 257.765625,
+    "x1": 390,
+    "y1": 370.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 386.71875,
+    "x1": 318,
+    "y1": 446.6875
+   },
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 136,
+    "y0": 474.6875,
+    "x1": 390,
+    "y1": 551.6875
+   },
+   {
+    "who": "q",
+    "kind": "spoken",
+    "x0": 24,
+    "y0": 567.6875,
+    "x1": 318,
+    "y1": 663.65625
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11,
+   "voiceTurns": 1,
+   "callRecords": [],
+   "playing": "1",
+   "boots": 1
+  },
+  "sha256": "1ddafd60d65fdcc7399f17d4e5d8453333918a8b93d6f60e264725912c3e22d8",
+  "bytes": 124340
+ },
+ "vn-07-draft-after-leaving": {
+  "q": "state=draft&voiceMs=6400",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 148.875,
+    "x1": 390,
+    "y1": 261.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 277.828125,
+    "x1": 318,
+    "y1": 397.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 425.765625,
+    "x1": 390,
+    "y1": 538.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 554.71875,
+    "x1": 318,
+    "y1": 614.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    160.09375,
+    701,
+    209.90625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "توقّف التسجيل عند الخروج من قنديل",
+   "where": "strip",
+   "clipped": false
+  },
+  "strip": [
+   0,
+   641,
+   390,
+   49
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "draft",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "توقّف التسجيل عند الخروج من قنديل",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "426a00a1d6da114da962458e9a7ead401a7501c04da21a6bcd7731dc45a14c49",
+  "bytes": 140101
+ },
+ "pf-01-mic-denied-writing": {
+  "q": "state=denied&perm=denied",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 131.875,
+    "x1": 390,
+    "y1": 244.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 260.828125,
+    "x1": 318,
+    "y1": 380.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 408.765625,
+    "x1": 390,
+    "y1": 521.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 537.71875,
+    "x1": 318,
+    "y1": 597.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": [
+    0,
+    624,
+    390,
+    66
+   ],
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "denied",
+   "ask": null,
+   "notice": "denied",
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": true,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "notice-act",
+    "notice-x",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "17060fdd4dbb8fb9c3272dcf418e52ccf4e809b2693f9e965234b9a63aa716a7",
+  "bytes": 140126
+ },
+ "pf-02-call-permission-intent": {
+  "q": "state=ask-call&perm=unknown",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "unknown",
+   "ask": "call",
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": true,
+   "controls": [],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "c25d3c4a88f5b41cb7ed22d0f5c452dd4e7a22b5826458b67ed5b6e31d345154",
+  "bytes": 124326
+ },
+ "pf-03-reconnecting": {
+  "q": "state=reconnect&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 225.828125,
+    "x1": 318,
+    "y1": 345.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 373.765625,
+    "x1": 390,
+    "y1": 486.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 502.71875,
+    "x1": 318,
+    "y1": 562.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": null,
+   "vlabel": [
+    212.09375,
+    701,
+    157.90625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الاتصال انقطع. جاري إعادة الاتصال.",
+   "where": "strip",
+   "clipped": false
+  },
+  "strip": [
+   0,
+   641,
+   390,
+   49
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "reconnecting",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "الاتصال انقطع. جاري إعادة الاتصال.",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "4e5e7b8e9f05d1650b6074cb2eed79c2de9f411d267c714b795445a5ba4539ad",
+  "bytes": 139220
+ },
+ "pf-04-call-failed-writing": {
+  "q": "state=failed",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 236.828125,
+    "x1": 318,
+    "y1": 356.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 384.765625,
+    "x1": 390,
+    "y1": 497.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 513.71875,
+    "x1": 318,
+    "y1": 573.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": [
+    0,
+    630,
+    390,
+    60
+   ],
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": "failed",
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [
+    {
+     "callId": "call-3f9bb7",
+     "reason": "failed",
+     "away": false,
+     "ms": 192000
+    }
+   ],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": true,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "notice-x",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية · 3:12 · وقفت"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "c2f91d564e24aa1348ac5ce6adbc05dcbedcecdb12fbed245727e47ce11acce7",
+  "bytes": 137447
+ },
+ "lc-01-connecting": {
+  "q": "state=call&voiceMs=600",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": null,
+   "vlabel": [
+    296.359375,
+    701,
+    73.640625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "جاري الاتصال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "connecting",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "جاري الاتصال",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "076378baf060acdc8c94046233245d57d93b17e667651e405835007210919f71",
+  "bytes": 144206
+ },
+ "lc-02-analysis-first": {
+  "q": "state=call&voiceMs=81300",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "ef209ae169cb45ae6fc0acd6ec85aa2488d303082287d2c3c7351f215401d534",
+  "bytes": 147170
+ },
+ "lc-03-reader-speaking": {
+  "q": "state=call&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "27efd088b6d36bf898097c25e2d944dc2394203ab4dd41ec9ea9682c811719b1",
+  "bytes": 151775
+ },
+ "lc-04-qandeel-speaking": {
+  "q": "state=call&voiceMs=88000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    293.578125,
+    701,
+    76.421875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "57cfe733e33cc99746176817185b6c8d1035e4d9f76a14a2ce9318d1371260d5",
+  "bytes": 145015
+ },
+ "lc-05-conversation-same-call": {
+  "q": "state=call-conv&voiceMs=88000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    293.578125,
+    701,
+    76.421875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "d321d6cac57432a5c3bb2d11f6bf7bc145227524d7e2c6cab9243c17e4344829",
+  "bytes": 143857
+ },
+ "lc-06-muted": {
+  "q": "state=call-muted&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    264.859375,
+    701,
+    105.140625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون مكتوم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "none",
+   "muted": true,
+   "route": "speaker",
+   "label": "الميكروفون مكتوم",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "471c9cbe9637e67803e3d88d01becde7597a2322af0d8b55701eb23076ea3c4f",
+  "bytes": 147899
+ },
+ "lc-07-speaker-off": {
+  "q": "state=call-earpiece&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "earpiece",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "e1fb256b3d86beafbec8ef88c205fa64e66d73924a09b2a74abaab8c98d3ce5b",
+  "bytes": 155434
+ },
+ "lc-08-replay-during-call": {
+  "q": "state=call-replay-menu&voiceMs=88000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    293.578125,
+    701,
+    76.421875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": true,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "full",
+    "mine",
+    "mute",
+    "part",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "9afdf675e9b0757b601ea83d82dc584b88eb94d3b08b629004ff5f82868f07e0",
+  "bytes": 150005
+ },
+ "lc-09-barge-in-candidate": {
+  "q": "state=barge&voiceMs=88000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "e501bfa6018e82f963d4aabf8c32543767a1466ef50ff4518210ef8865afda17",
+  "bytes": 150094
+ },
+ "lc-10-ended-conversation": {
+  "q": "state=ended",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [
+    {
+     "callId": "call-3f9bb7",
+     "reason": "user",
+     "away": false,
+     "ms": 192000
+    }
+   ],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية · 3:12"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "c15e8fc006a1ea3b8df354d65584133af212872c4a8d75e970f03a99fc5b8468",
+  "bytes": 138429
+ },
+ "bg-01-locked-while-analysis": {
+  "q": "state=bg&voiceMs=84000&awayMs=48000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "background",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": true,
+   "osPerm": false,
+   "controls": [],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "3b07487cafcc3474e58770b4b1c92b576bf4ef5aaf1264f872e04b3a6b3d3dd8",
+  "bytes": 135833
+ },
+ "bg-02-returned-same-analysis": {
+  "q": "state=call&voiceMs=132000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "قلّة النوم",
+   "lctxCommits": 13,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "2e686611be72165fc0479e0a6f33df51b0e1ce8a63bf061bf73e7679fa59ed39",
+  "bytes": 148143
+ },
+ "bg-03-other-app-while-conversation": {
+  "q": "state=bg-conv&voiceMs=88000&awayMs=36000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    293.578125,
+    701,
+    76.421875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "background",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": true,
+   "osPerm": false,
+   "controls": [],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "2d4972f7c83cd9f2712377fcb9673efdd7bee684159389d50325108a02d5ba54",
+  "bytes": 136825
+ },
+ "bg-04-returned-same-conversation": {
+  "q": "state=call-conv&voiceMs=124000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 12,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "1affc84ace85399875eb922f2a8bbf4a6bd3178dbcb8e0093b27fb21baa5ae57",
+  "bytes": 149779
+ },
+ "bg-05-ended-while-away-returned": {
+  "q": "state=awayended",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 236.828125,
+    "x1": 318,
+    "y1": 356.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 384.765625,
+    "x1": 390,
+    "y1": 497.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 513.71875,
+    "x1": 318,
+    "y1": 573.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": [
+    0,
+    630,
+    390,
+    60
+   ],
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": "failed",
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [
+    {
+     "callId": "call-3f9bb7",
+     "reason": "dropped",
+     "away": true,
+     "ms": 192000
+    }
+   ],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": true,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "notice-x",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية · 3:12 · وقفت"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "c2f91d564e24aa1348ac5ce6adbc05dcbedcecdb12fbed245727e47ce11acce7",
+  "bytes": 137447
+ },
+ "bg-06-relaunch-after-force-quit": {
+  "q": "state=relaunch",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 2
+  },
+  "sha256": "4e558afb1a90958f4c4d778ea951c514bb024bde7e4b5de0ea83eeef0759e788",
+  "bytes": 134745
+ },
+ "bi-01-arabic-mixed-script": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 123.984375,
+    "x1": 390,
+    "y1": 236.9375
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 252.9375,
+    "x1": 318,
+    "y1": 312.90625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 340.90625,
+    "x1": 390,
+    "y1": 423.875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 439.875,
+    "x1": 317.796875,
+    "y1": 469.859375
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 497.859375,
+    "x1": 390,
+    "y1": 580.828125
+   },
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 136,
+    "y0": 586.828125,
+    "x1": 390,
+    "y1": 663.828125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 7,
+   "voiceTurns": 1,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "074636f969c7ccabfe5d40535e34b0ef3e13f3d826066c09999675660ee33752",
+  "bytes": 116809
+ },
+ "bi-02-arabic-mixed-during-call": {
+  "q": "state=call-conv&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 222.9375,
+    "x1": 318,
+    "y1": 282.90625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 310.90625,
+    "x1": 390,
+    "y1": 393.875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 409.875,
+    "x1": 317.796875,
+    "y1": 439.859375
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 467.859375,
+    "x1": 390,
+    "y1": 550.828125
+   },
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 136,
+    "y0": 556.828125,
+    "x1": 390,
+    "y1": 633.828125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "play",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 7,
+   "voiceTurns": 1,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "f2bbd9d44076e638232dc6ed9a462a35e3ea749110f5143b063c8516bd487299",
+  "bytes": 135734
+ },
+ "bi-03-en-idle": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 167.8125,
+    "x1": 302,
+    "y1": 268.765625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 284.765625,
+    "x1": 366,
+    "y1": 414.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 442.6875,
+    "x1": 302,
+    "y1": 543.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 559.640625,
+    "x1": 366,
+    "y1": 663.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    20,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "The wish to perfect",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "ffee92c64a30cf97f7f447058d1f4df5f540359b5fef95c4250924df14def5b9",
+  "bytes": 148533
+ },
+ "bi-04-en-voice-committed": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 233.6875,
+    "x1": 302,
+    "y1": 334.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 350.640625,
+    "x1": 366,
+    "y1": 454.578125
+   },
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 0,
+    "y0": 482.578125,
+    "x1": 254,
+    "y1": 559.578125
+   },
+   {
+    "who": "q",
+    "kind": "spoken",
+    "x0": 72,
+    "y0": 575.578125,
+    "x1": 366,
+    "y1": 663.546875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    20,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "The wish to perfect",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11,
+   "voiceTurns": 1,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "4ae6cb8ea9dbcef5609728c60ebbea7504c27c943387e898f8f682904b09e897",
+  "bytes": 136703
+ },
+ "bi-05-en-capture": {
+  "q": "state=note&voiceMs=6400",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 167.8125,
+    "x1": 302,
+    "y1": 268.765625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 284.765625,
+    "x1": 366,
+    "y1": 414.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 442.6875,
+    "x1": 302,
+    "y1": 543.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 559.640625,
+    "x1": 366,
+    "y1": 663.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    20,
+    701,
+    64.046875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "Recording",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "Recording",
+   "lctx": "The wish to perfect",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "cd21c3e40d01752bc0e7217e0d3fcd9d4cd5d30621c9b256b7830ec4dcee93ea",
+  "bytes": 155622
+ },
+ "bi-06-en-analysis-first": {
+  "q": "state=call&voiceMs=88000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 115.8125,
+    "x1": 302,
+    "y1": 216.765625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 232.765625,
+    "x1": 366,
+    "y1": 362.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 390.6875,
+    "x1": 302,
+    "y1": 491.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 507.640625,
+    "x1": 366,
+    "y1": 611.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    228,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    20,
+    701,
+    124.78125,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "Qandeel is speaking",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "Qandeel is speaking",
+   "lctx": "The wish to perfect",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "Voice call started 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "02259189ebc48ac881c05c69f70e2899c25fa330bd54fb37291dafec08bcba12",
+  "bytes": 147520
+ },
+ "bi-07-en-conversation-same-call": {
+  "q": "state=call-conv&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 137.8125,
+    "x1": 302,
+    "y1": 238.765625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 254.765625,
+    "x1": 366,
+    "y1": 384.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 412.6875,
+    "x1": 302,
+    "y1": 513.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 529.640625,
+    "x1": 366,
+    "y1": 633.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    228,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    20,
+    701,
+    94.3125,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "Microphone on",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "Microphone on",
+   "lctx": "End-of-week exhaustion",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "Voice call started 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "f456f963975cdcde4e87d6be57d5d8e87f22416908f0105f9d06daf630946bca",
+  "bytes": 151686
+ },
+ "bi-08-en-background": {
+  "q": "state=bg&voiceMs=84000&awayMs=48000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 115.8125,
+    "x1": 302,
+    "y1": 216.765625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 232.765625,
+    "x1": 366,
+    "y1": 362.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 390.6875,
+    "x1": 302,
+    "y1": 491.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 507.640625,
+    "x1": 366,
+    "y1": 611.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    228,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    20,
+    701,
+    94.3125,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "Microphone on",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "background",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "Microphone on",
+   "lctx": "End-of-week exhaustion",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": true,
+   "osPerm": false,
+   "controls": [],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "Voice call started 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "3b07487cafcc3474e58770b4b1c92b576bf4ef5aaf1264f872e04b3a6b3d3dd8",
+  "bytes": 135833
+ },
+ "bi-09-en-mic-denied": {
+  "q": "state=denied&perm=denied",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 193.765625,
+    "x1": 366,
+    "y1": 323.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 351.6875,
+    "x1": 302,
+    "y1": 452.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 468.640625,
+    "x1": 366,
+    "y1": 572.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    20,
+    714,
+    0,
+    0
+   ],
+   "notice": [
+    0,
+    599,
+    390,
+    91
+   ],
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "denied",
+   "ask": null,
+   "notice": "denied",
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "The wish to perfect",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": true,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "notice-act",
+    "notice-x",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "e7655c1fa71ec0eef4a4208add648b42288dde6bf56dd02163ce94d1fe47d686",
+  "bytes": 155259
+ },
+ "bi-10-en-call-failed": {
+  "q": "state=failed",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 188.765625,
+    "x1": 366,
+    "y1": 318.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 346.6875,
+    "x1": 302,
+    "y1": 447.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 463.640625,
+    "x1": 366,
+    "y1": 567.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    20,
+    714,
+    0,
+    0
+   ],
+   "notice": [
+    0,
+    624,
+    390,
+    66
+   ],
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": "failed",
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [
+    {
+     "callId": "call-3f9bb7",
+     "reason": "failed",
+     "away": false,
+     "ms": 192000
+    }
+   ],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "The wish to perfect",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": true,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "notice-x",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "Voice call · 3:12 · stopped"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "984540e5a83149eae7a0eed0cdeb96b36abab2ffdc1228b97e96003000c49495",
+  "bytes": 150660
+ },
+ "bi-11-en-reconnecting": {
+  "q": "state=reconnect&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "ltr",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 183.765625,
+    "x1": 366,
+    "y1": 313.6875
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 0,
+    "y0": 341.6875,
+    "x1": 302,
+    "y1": 442.640625
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 72,
+    "y0": 458.640625,
+    "x1": 366,
+    "y1": 562.578125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    336,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    280,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    332,
+    700,
+    44,
+    44
+   ],
+   "route": null,
+   "vlabel": [
+    20,
+    701,
+    157.90625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "The call dropped. Reconnecting.",
+   "where": "strip",
+   "clipped": false
+  },
+  "strip": [
+   0,
+   641,
+   390,
+   49
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "reconnecting",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "The call dropped. Reconnecting.",
+   "lctx": "The wish to perfect",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "Voice call started 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "568e3e1598aa22152b17a67c2c19de393bc06214e9b98d88037785b2312d817e",
+  "bytes": 138492
+ },
+ "light-01-voice-committed": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 257.765625,
+    "x1": 390,
+    "y1": 370.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 386.71875,
+    "x1": 318,
+    "y1": 446.6875
+   },
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 136,
+    "y0": 474.6875,
+    "x1": 390,
+    "y1": 551.6875
+   },
+   {
+    "who": "q",
+    "kind": "spoken",
+    "x0": 24,
+    "y0": 567.6875,
+    "x1": 318,
+    "y1": 663.65625
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11,
+   "voiceTurns": 1,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "8e20b7b2d32c9f64e04e96ebaff8ed56a375e7534f3e6c33d1f3e95461b1ce4d",
+  "bytes": 127590
+ },
+ "light-02-capture": {
+  "q": "state=note&voiceMs=6400",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    332.9375,
+    701,
+    37.0625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "بسجّل",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "بسجّل",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "dc8941d83b501e22aab365bc212340b66aacc3a48d6f336778d219174657e29c",
+  "bytes": 144030
+ },
+ "light-03-analysis-first": {
+  "q": "state=call&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "682aa2d72ea2d02c4dfc3e03f412394d00f93cc2daaaed33cdede8d90c1e18c7",
+  "bytes": 156748
+ },
+ "light-04-conversation-same-call": {
+  "q": "state=call-conv&voiceMs=88000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    293.578125,
+    701,
+    76.421875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "01cca8bdc8987700374327ceb4e34ee779ca6d0544467b5f3f845e2e63a0583f",
+  "bytes": 147552
+ },
+ "light-05-call-failed": {
+  "q": "state=failed",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 236.828125,
+    "x1": 318,
+    "y1": 356.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 384.765625,
+    "x1": 390,
+    "y1": 497.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 513.71875,
+    "x1": 318,
+    "y1": 573.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": [
+    0,
+    630,
+    390,
+    60
+   ],
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": "failed",
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [
+    {
+     "callId": "call-3f9bb7",
+     "reason": "failed",
+     "away": false,
+     "ms": 192000
+    }
+   ],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": true,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "notice-x",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية · 3:12 · وقفت"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "667c2f64921ea6e966e20ca00f8c263ecd3aeb5c97589c40f31aae9e5a092662",
+  "bytes": 141474
+ },
+ "a11y-01-contrast-more-call": {
+  "q": "state=call-conv&voiceMs=88000&contrast=more",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 163.875,
+    "x1": 390,
+    "y1": 278.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 294.828125,
+    "x1": 318,
+    "y1": 414.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 442.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    701,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    701,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    701,
+    44,
+    44
+   ],
+   "vlabel": [
+    293.578125,
+    702,
+    76.421875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "cffe0916d7c5a9cb6bdfe8c0b391b8f54da041d118b0036fa85178615b496d6c",
+  "bytes": 146528
+ },
+ "a11y-02-contrast-more-voice": {
+  "q": "state=active&contrast=more",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 253.765625,
+    "x1": 390,
+    "y1": 368.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 384.71875,
+    "x1": 318,
+    "y1": 444.6875
+   },
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 135,
+    "y0": 472.6875,
+    "x1": 390,
+    "y1": 551.6875
+   },
+   {
+    "who": "q",
+    "kind": "spoken",
+    "x0": 24,
+    "y0": 567.6875,
+    "x1": 318,
+    "y1": 663.65625
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    701,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    701,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    715,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11,
+   "voiceTurns": 1,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "653bb6b5e9aa5f7fff2dd6d8611815e6e50c3fc2c3eca98c538f97637407e898",
+  "bytes": 130299
+ },
+ "a11y-03-text-200-call-line": {
+  "q": "state=call-conv&voiceMs=88000&ts=2",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 172.4375,
+    "x1": 318,
+    "y1": 472.359375
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    58,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    632,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    632,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    632,
+    44,
+    44
+   ],
+   "vlabel": [
+    242.171875,
+    633,
+    127.828125,
+    46
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    622,
+    390,
+    94
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "strip",
+   "clipped": false
+  },
+  "strip": [
+   0,
+   548,
+   390,
+   74
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "b43b2885efd03eeceafcda1b923bef43e4d9ad20534ed71f201042c8b7676694",
+  "bytes": 115164
+ },
+ "a11y-04-text-200-reconnecting": {
+  "q": "state=reconnect&voiceMs=84000&ts=2",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [],
+  "boxes": {
+   "replay": [
+    10,
+    58,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    632,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    632,
+    44,
+    44
+   ],
+   "route": null,
+   "vlabel": [
+    242.171875,
+    633,
+    127.828125,
+    46
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    622,
+    390,
+    94
+   ]
+  },
+  "lineWords": {
+   "text": "الاتصال انقطع. جاري إعادة الاتصال.",
+   "where": "strip",
+   "clipped": false
+  },
+  "strip": [
+   0,
+   498,
+   390,
+   124
+  ],
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "reconnecting",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "الاتصال انقطع. جاري إعادة الاتصال.",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "65e61778f56bbde0d64ad7d4d31cf466d58c6f0f5ff9d98696edf6baeaa42a08",
+  "bytes": 145366
+ },
+ "a11y-05-text-200-voice": {
+  "q": "state=active&ts=2",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "voice",
+    "x0": 136,
+    "y0": 243.359375,
+    "x1": 390,
+    "y1": 352.359375
+   },
+   {
+    "who": "q",
+    "kind": "spoken",
+    "x0": 24,
+    "y0": 368.359375,
+    "x1": 318,
+    "y1": 596.3125
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    58,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    632,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    632,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    659,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    622,
+    390,
+    94
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "play",
+    "play",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 11,
+   "voiceTurns": 1,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "7816e7515e66fea239e73f341692ebeffaf231031f7742cbe3c9fcaac4a225f3",
+  "bytes": 105732
+ },
+ "a11y-06-focus-end-call": {
+  "q": "state=call&voiceMs=84000",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 145.875,
+    "x1": 390,
+    "y1": 258.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 274.828125,
+    "x1": 318,
+    "y1": 394.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 422.765625,
+    "x1": 390,
+    "y1": 535.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 551.71875,
+    "x1": 318,
+    "y1": 611.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "01f7723db001d40f5d315a2fdfe5c0b304c10da2505daf52387c024b61fa2a22",
+  "bytes": 155364
+ },
+ "a11y-07-focus-mic": {
+  "q": "state=active",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "call": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    370,
+    714,
+    0,
+    0
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "",
+   "where": "none",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "call",
+    "door",
+    "input",
+    "mic",
+    "mine",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "7bf5cb95f6a97564a42872f8b8c142683c2dc72aaf2a327940427ed6ed21b383",
+  "bytes": 138311
+ },
+ "a11y-08-compact-360-call": {
+  "q": "state=call&voiceMs=88000&w=360&h=780",
+  "w": 360,
+  "h": 780,
+  "vw": 360,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 180.796875,
+    "x1": 288,
+    "y1": 300.734375
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 328.734375,
+    "x1": 360,
+    "y1": 441.6875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 457.6875,
+    "x1": 288,
+    "y1": 547.640625
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    636,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    636,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    636,
+    44,
+    44
+   ],
+   "vlabel": [
+    263.578125,
+    637,
+    76.421875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    626,
+    360,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "قنديل بيتكلم",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "q",
+   "muted": false,
+   "route": "speaker",
+   "label": "قنديل بيتكلم",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 9,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "fd152cfdfbbdadd54632ebd82d1b8782d37a8d3cf3240b5572fc9ed5ff43fe9d",
+  "bytes": 131836
+ },
+ "a11y-09-reduced-motion-reader-speaking": {
+  "q": "state=call&voiceMs=84000&rm=1",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 167.875,
+    "x1": 390,
+    "y1": 280.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 296.828125,
+    "x1": 318,
+    "y1": 416.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 444.765625,
+    "x1": 390,
+    "y1": 557.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 573.71875,
+    "x1": 318,
+    "y1": 633.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": [
+    66,
+    700,
+    44,
+    44
+   ],
+   "endCall": [
+    14,
+    700,
+    44,
+    44
+   ],
+   "route": [
+    118,
+    700,
+    44,
+    44
+   ],
+   "vlabel": [
+    267.8125,
+    701,
+    102.1875,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "الميكروفون شغّال",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "world",
+   "call": "live",
+   "composer": "idle",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": "call-3f9bb7",
+   "conversation": "conv-7c21",
+   "callStarts": 1,
+   "ends": [],
+   "speaking": "me",
+   "muted": false,
+   "route": "speaker",
+   "label": "الميكروفون شغّال",
+   "lctx": "إرهاق آخر الأسبوع",
+   "lctxCommits": 8,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": true,
+   "convVisible": false,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "back",
+    "end-call",
+    "mine",
+    "mute",
+    "public",
+    "replay",
+    "route",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [
+    "مكالمة صوتية بدأت 9:52"
+   ],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "ea528daaac7c92e38c2815cafd9e8e44ac6c1c8701743c75fec4d6cdfc9fffde",
+  "bytes": 146796
+ },
+ "a11y-10-reduced-motion-capture": {
+  "q": "state=note&voiceMs=6400&rm=1",
+  "w": 390,
+  "h": 844,
+  "vw": 390,
+  "dir": "rtl",
+  "fonts": "loaded",
+  "turns": [
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 197.875,
+    "x1": 390,
+    "y1": 310.828125
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 326.828125,
+    "x1": 318,
+    "y1": 446.765625
+   },
+   {
+    "who": "me",
+    "kind": "text",
+    "x0": 88,
+    "y0": 474.765625,
+    "x1": 390,
+    "y1": 587.71875
+   },
+   {
+    "who": "q",
+    "kind": "text",
+    "x0": 24,
+    "y0": 603.71875,
+    "x1": 318,
+    "y1": 663.6875
+   }
+  ],
+  "boxes": {
+   "replay": [
+    10,
+    49,
+    44,
+    44
+   ],
+   "mic": null,
+   "call": null,
+   "mute": null,
+   "endCall": null,
+   "route": null,
+   "vlabel": [
+    332.9375,
+    701,
+    37.0625,
+    23
+   ],
+   "notice": null,
+   "composer": [
+    0,
+    690,
+    390,
+    64
+   ]
+  },
+  "lineWords": {
+   "text": "بسجّل",
+   "where": "line",
+   "clipped": false
+  },
+  "strip": null,
+  "truth": {
+   "world": "mine",
+   "depth": "conversation",
+   "call": "none",
+   "composer": "note",
+   "app": "foreground",
+   "perm": "granted",
+   "ask": null,
+   "notice": null,
+   "callId": null,
+   "conversation": "conv-7c21",
+   "callStarts": 0,
+   "ends": [],
+   "speaking": "none",
+   "muted": false,
+   "route": "speaker",
+   "label": "بسجّل",
+   "lctx": "الرغبة في الإتقان",
+   "lctxCommits": 0,
+   "replay": "1",
+   "menu": false,
+   "pick": false,
+   "worldVisible": false,
+   "convVisible": true,
+   "noticeVisible": false,
+   "osBg": false,
+   "osPerm": false,
+   "controls": [
+    "door",
+    "mine",
+    "note-cancel",
+    "note-send",
+    "public",
+    "replay",
+    "shared"
+   ],
+   "turns": 9,
+   "voiceTurns": 0,
+   "callRecords": [],
+   "playing": null,
+   "boots": 1
+  },
+  "sha256": "d19993826a56624c24a37436f7b734e2d1029527b9d23cbe5a2a92df8f6f2b25",
+  "bytes": 133617
+ }
+}
