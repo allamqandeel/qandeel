@@ -11,9 +11,11 @@ authority. For what VI-01 decided, read [`README.md`](README.md) and the documen
 - **Source workspace:** `prototypes/phase-vi/vi-01-bilingual-product-language/` — untracked,
   local, non-canonical. It was not cleaned, reset, stashed or deleted.
 
-`SHA-256` is of the archived file as committed. Because every archived deliverable is a
-byte-for-byte copy of its corrected source, the same digest identifies both. Verify with
-`sha256sum` / `Get-FileHash -Algorithm SHA256`.
+`SHA-256` in the table below records the **original VI-01 freeze archive bytes at closure**.
+A later controlled Product-language amendment from `I-08B3.1-G1.1` updates the current canonical
+Foundation / Terminology Matrix / Copy Patterns in place. The original hashes are intentionally
+preserved here as provenance of the VI-01 freeze baseline; they are **not current-file digests after
+that amendment**.
 
 ---
 
@@ -27,6 +29,32 @@ byte-for-byte copy of its corrected source, the same digest identifies both. Ver
 | `QANDEEL_VI01_REJECTED_LANGUAGE.md` | `prototypes/phase-vi/vi-01-bilingual-product-language/QANDEEL_VI01_REJECTED_LANGUAGE.md` | What may not ship and why, classified under the four rejection authorities that determine whether a rejection may ever be revisited | **REJECTION-AUTHORITY TAXONOMY FROZEN**; individual entries revisitable only through their own stated authority | 23398 | `d9a350ec136f1400cbac2501258e1c9cbc4b093cf7574418cab4c21663c91c53` |
 | `QANDEEL_VI01_LANGUAGE_STRESS_TEST.md` | `prototypes/phase-vi/vi-01-bilingual-product-language/QANDEEL_VI01_LANGUAGE_STRESS_TEST.md` | The evidence the freeze rests on: measured 375px label pressure, state and density gates, and the 31 recorded defects with their fixes | **SUPPORTING EVIDENCE — HISTORICAL.** Not the canonical rule; where it restates a rule the Foundation later scoped, the Foundation governs | 50152 | `4e30df2aa74c1480b082145b51ff5b5db1f7822bd49818c20e1af4293c5d739a` |
 | `README.md` | — (created by `VI-01 FREEZE-01`) | The freeze meaning: what closed, what stays editable, what is carried forward, and the canonical authority order | **CANONICAL CLOSURE RECORD** for VI-01 | 6244 | `03fdc864b3ba642519178e03f72ea837eb6d34bc858486f24d9bde783914fb8a` |
+
+---
+
+## Post-freeze controlled amendment — I-08B3.1-G1.1
+
+The original archive above remains the provenance record for VI-01's closure baseline.
+
+`I-08B3.1-G1.1` later made a narrow Product-level naming decision and applied a controlled
+amendment to the current canonical copies of:
+
+- `QANDEEL_VI01_BILINGUAL_PRODUCT_LANGUAGE_FOUNDATION.md`
+- `QANDEEL_VI01_TERMINOLOGY_MATRIX.md`
+- `QANDEEL_VI01_COPY_PATTERNS.md`
+- `README.md`
+
+The amendment changes only the Conversation surface/depth vocabulary:
+
+- **«المحادثة»** is the canonical Conversation surface / referential noun.
+- **«تحليل المحادثة»** is the Arabic Conversation → Analysis depth action.
+- **«القراءات»** remains the analytical-content vocabulary inside that depth.
+- Natural uses of «الكلام» remain valid and are not globally renamed.
+- English remains **Conversation** for the Conversation surface; the English depth label remains
+  `OPEN`.
+
+No VI-01 truth boundary, register architecture, accessibility rule, gender rule or bilingual
+authorship principle is reopened.
 
 ---
 
