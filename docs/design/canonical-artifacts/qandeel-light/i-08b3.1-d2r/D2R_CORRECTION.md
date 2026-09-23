@@ -248,3 +248,26 @@ to anything.
 That is why the fix is a data structure and a gate rather than a corrected paragraph. The
 question "does this visual property mean anything?" now has to be answered in a file the build
 reads, for every property, before a page can be written.
+
+---
+
+## FINAL INDEPENDENT REVIEW CLEANUP
+
+Independent review after the closure repair found three stale active documentary sentences that the
+out-of-band stale-semantics sweep had misclassified: one sentence still described contour
+morphology as a permanent topic identity, and two Truth Audit rows still implied depth-as-time or
+shape-as-identity. No scene, token, motion, prototype, still or film carried those semantics.
+
+The reviewer corrected those documentary sentences directly under the standing rule that trivial
+documentary defects do not require another executor cycle.
+
+The same review also strengthened **S6** so it now inspects the shipped final-state Design
+Rationale, Ambient/Meaning/Activity contract, Truth Audit, Freeze Candidate and README in
+addition to the generated token / contract / Skill surfaces. The strengthened semantic pass holds
+from a bare extraction: **11/11 state + semantic checks, 10/10 planted probes**.
+
+A full raster recapture was not rerun on the independent-review host because the project-approved
+Estedad v8.5 runtime is intentionally external to this package and is not present there. This does
+not alter the existing visual evidence: the final-review cleanup changes only documentation and
+the semantic verifier; all scene / rendering sources and all shipped visual artefacts remain
+byte-identical to the executor package.

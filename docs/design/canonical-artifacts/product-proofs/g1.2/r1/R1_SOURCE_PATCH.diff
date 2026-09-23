@@ -1,0 +1,170 @@
+--- /mnt/data/g12_review/I-08B3.1-G1.2-VOICE-LIVE-CONVERSATION-BACKGROUND-SAFE-PROOF/source/src/content.mjs	2026-09-23 14:30:54.000000000 +0000
++++ /mnt/data/QANDEEL_I-08B3.1-G1.2-R1_DIRECT_CORRECTION/source/src/content.mjs	2026-09-23 12:10:41.647444853 +0000
+@@ -32,7 +32,7 @@
+       label: { text: 'العوالم', status: 'PROOF — accessible name of the navigation landmark (G1.1 R3)' },
+       items: [
+         { key: 'mine', text: 'قنديل', status: 'G1.1 R3 proof label — MY_WORLD' },
+-        { key: 'shared', text: 'مع الآخرين', status: `${LOCKED} §1 — count-neutral primary navigation` },
++        { key: 'shared', text: 'العالم المشترك', status: 'LOCKED — G1.2 Product correction: stable Shared World area name, singular regardless of count' },
+         { key: 'public', text: 'العالم العام', status: 'G1.1 R3 proof label — PUBLIC_WORLD' },
+       ],
+     },
+@@ -68,12 +68,13 @@
+     // ---- Live Call
+     call: { text: 'مكالمة صوتية', status: `${OPEN} — V02 (call surface)` },
+     connecting: { text: 'جاري الاتصال', status: `${OPEN} — connection state; mechanical, no comprehension claim` },
+-    micOn: { text: 'الميكروفون شغّال', status: `${OPEN} — mechanical microphone state (VI-01 §14.1: name the mechanism). Not «بسمعك», not «بسجّل»` },
+-    muted: { text: 'الميكروفون مكتوم', status: `${OPEN} — mechanical` },
+-    qSpeaking: { text: 'قنديل بيتكلم', status: `${OPEN} — V05 illustrative «بيتكلم»: QANDEEL audio is playing` },
++    micOn: { text: 'الميكروفون شغّال', status: `${OPEN} — ACCESSIBILITY-ONLY normal call state; not persistently visible` },
++    muted: { text: 'الميكروفون مكتوم', status: `${OPEN} — ACCESSIBILITY-ONLY normal call state; not persistently visible` },
++    qSpeaking: { text: 'قنديل بيتكلم', status: `${OPEN} — ACCESSIBILITY-ONLY QANDEEL-output state; not persistently visible` },
+     reconnecting: { text: 'الاتصال انقطع. جاري إعادة الاتصال.', status: `${OPEN} — V06 illustrative, verbatim` },
+     callFailed: { text: 'المكالمة وقفت. الكتابة متاحة.', status: `${OPEN} — V07 illustrative, verbatim; used for every call end the reader did not choose` },
+-    mute: { text: 'كتم الميكروفون', status: 'PROOF — masdar; aria-pressed carries the state' },
++    mute: { text: 'كتم الميكروفون', status: 'PROOF — accessibility/control label' },
++    unmute: { text: 'تشغيل الميكروفون', status: 'PROOF — accessibility/control label for muted state' },
+     endCall: { text: 'إنهاء المكالمة', status: 'PROOF — masdar' },
+     route: { text: 'السماعة الخارجية', status: 'PROOF CANDIDATE — speaker toggle (aria-pressed). ON by default because an Analysis-first call is watched, not held to the ear (decision G12-J4); Bluetooth / other routes are the OS route picker\'s' },
+     callStarted: { text: 'مكالمة صوتية بدأت', status: 'PROOF (G1.1 R3) — live marker in the history while the call runs' },
+@@ -83,15 +84,15 @@
+     liveContextEmpty: { text: 'مفيش حاجة داخلة مع الكلام.', status: 'VI-01 T13 PROPOSED' },
+     today: { text: 'اليوم', status: 'PROOF' },
+     yesterday: { text: 'أمس', status: 'PROOF' },
+-    sharedOne: { text: 'عالم مشترك', status: `${LOCKED} §1` },
+-    sharedMany: { text: 'عوالم مشتركة', status: `${LOCKED} §1` },
++    sharedOne: { text: 'العالم المشترك', status: 'LOCKED — G1.2 Product correction: stable area/category name' },
++    sharedMany: { text: 'العالم المشترك', status: 'LOCKED — G1.2 Product correction: stable area/category name; count does not rename the area' },
+     speakerMe: { text: 'كلامك', status: 'PROOF (G1.1 A1) — visually hidden speaker label' },
+     speakerQ: { text: 'قنديل', status: 'PROOF (G1.1 A1) — visually hidden speaker label' },
+   },
+   en: {
+     dir: 'ltr', lang: 'en',
+     product: { text: 'Qandeel' },
+-    nav: { label: { text: 'Worlds' }, items: [{ key: 'mine', text: 'Qandeel' }, { key: 'shared', text: 'With others' }, { key: 'public', text: 'Public world' }] },
++    nav: { label: { text: 'Worlds' }, items: [{ key: 'mine', text: 'Qandeel' }, { key: 'shared', text: 'Shared World' }, { key: 'public', text: 'Public world' }] },
+     door: { text: 'Conversation analysis', status: 'G1.1 closure §2: the exact English depth label stays open to the English copy pass' },
+     back: { text: 'Conversation' },
+     backName: { text: 'Conversation — back' },
+@@ -127,6 +128,7 @@
+     reconnecting: { text: 'The call dropped. Reconnecting.' },
+     callFailed: { text: 'The call isn’t working. You can keep going in writing.' },
+     mute: { text: 'Mute microphone' },
++    unmute: { text: 'Turn microphone on' },
+     endCall: { text: 'End call' },
+     route: { text: 'Speaker' },
+     callStarted: { text: 'Voice call started' },
+@@ -136,8 +138,8 @@
+     liveContextEmpty: { text: 'Nothing is in play.' },
+     today: { text: 'Today' },
+     yesterday: { text: 'Yesterday' },
+-    sharedOne: { text: 'Shared world' },
+-    sharedMany: { text: 'Shared worlds' },
++    sharedOne: { text: 'Shared World' },
++    sharedMany: { text: 'Shared World' },
+     speakerMe: { text: 'You' },
+     speakerQ: { text: 'Qandeel' },
+   },
+--- /mnt/data/g12_review/I-08B3.1-G1.2-VOICE-LIVE-CONVERSATION-BACKGROUND-SAFE-PROOF/source/src/runtime.js	2026-09-23 14:30:54.000000000 +0000
++++ /mnt/data/QANDEEL_I-08B3.1-G1.2-R1_DIRECT_CORRECTION/source/src/runtime.js	2026-09-23 12:14:18.342332740 +0000
+@@ -95,7 +95,8 @@
+   var rmenu = el('rmenu'), rprev = el('rprev'), picks = el('picks'), pickCount = el('pick-count'), pickGo = el('pick-go');
+   var notice = el('notice'), noticeT = el('notice-t'), noticeAct = el('notice-act');
+   var osPerm = el('os-perm'), osBg = el('os-bg'), lctxV = el('lctx-v'), input = el('input');
+-  var cstate = el('cstate'), cstateT = el('cstate-t');
++  var cstate = el('cstate'), cstateT = el('cstate-t'), callA11y = el('call-a11y');
++  var lastCallA11y = '';
+ 
+   function labelBox(btn) {
+     var lab = btn.querySelector('.lb');
+@@ -150,7 +151,7 @@
+   var lctxBase = 0, lctxCommits = 0;
+   function tick() {
+     // connecting → live is decided by the clock alone (so standard and Reduced Motion agree exactly)
+-    if (S.call === 'connecting' && now() - S.callStart >= Q.script.connectMs) { S.call = 'live'; S.liveAt = S.callStart + Q.script.connectMs; syncCallDom(); announce(Q.copy.micOn.text); }
++    if (S.call === 'connecting' && now() - S.callStart >= Q.script.connectMs) { S.call = 'live'; S.liveAt = S.callStart + Q.script.connectMs; syncCallDom(); }
+     if (S.call === 'live' || S.call === 'reconnecting') {
+       var n = commitsNow();
+       if (S.call === 'live' && n !== lctxCommits) { lctxCommits = n; lctxV.textContent = Q.liveContext[(lctxBase + n) % Q.liveContext.length]; }
+@@ -271,7 +272,6 @@
+     liveLevel.start();
+     callMarker();
+     if (S.world === 'mine' && S.depth !== 'world') enterWorld(); else { go('dock', wantDock(), DUR.dock); commit(); }
+-    announce(Q.copy.connecting.text);
+   }
+   /** reason: 'user' (the reader pressed End) · 'failed' (reconnection failed) · 'dropped' (ended while away). */
+   function endCall(reason) {
+@@ -300,12 +300,12 @@
+   }
+   function toggleMute() { if (!inCall()) return; S.muted = !S.muted; el('mute').setAttribute('aria-pressed', S.muted ? 'true' : 'false'); commit(); }
+   function toggleRoute() { if (S.call !== 'live') return; S.route = S.route === 'speaker' ? 'earpiece' : 'speaker'; commit(); }
+-  function drop() { if (S.call !== 'live') return; S.call = 'reconnecting'; commit(); announce(Q.copy.reconnecting.text); }
++  function drop() { if (S.call !== 'live') return; S.call = 'reconnecting'; commit(); }
+   function recover() {
+     if (S.call !== 'reconnecting') return;
+     // Nothing was spoken while the line was down, so nothing committed: the script's commit instants that passed
+     // during the gap are absorbed, never shown as an Analysis change the reader did not cause.
+-    S.call = 'live'; lctxCommits = commitsNow(); commit(); announce('');
++    S.call = 'live'; lctxCommits = commitsNow(); commit();
+   }
+   function fail() { if (S.call !== 'reconnecting' && S.call !== 'live') return; endCall('failed'); }
+   function barge() {
+@@ -421,18 +421,27 @@
+     pickCount.textContent = n ? Q.counts[n] || String(n) : Q.copy.pickHint.text;
+     pickGo.setAttribute('aria-disabled', n ? 'false' : 'true');
+   }
+-  /** The call line's words: EVERY call phase has a name, so no state lives in motion or colour alone (G1.2 §30). */
++  /** Visible words are reserved for capture drafts and call transitions/errors. Ordinary live/mic/output states
++      are carried visually, while their semantic state remains available to assistive technology. */
+   function lineLabel() {
+     if (S.composer === 'note') return Q.copy.recording.text;
+     if (S.composer === 'draft') return Q.copy.noteStopped.text;
+     if (S.call === 'connecting') return Q.copy.connecting.text;
+     if (S.call === 'reconnecting') return Q.copy.reconnecting.text;
++    return '';
++  }
++  function callA11yLabel() {
++    if (S.call === 'connecting') return Q.copy.connecting.text;
++    if (S.call === 'reconnecting') return Q.copy.reconnecting.text;
+     if (S.call === 'live') return S.muted ? Q.copy.muted.text : speaking() === 'q' ? Q.copy.qSpeaking.text : Q.copy.micOn.text;
+     return '';
+   }
+   function syncCallDom() {
+     root.setAttribute('data-call', S.call);
+     el('route').setAttribute('aria-pressed', S.route === 'speaker' ? 'true' : 'false');
++    el('mute').setAttribute('aria-label', S.muted ? Q.copy.unmute.text : Q.copy.mute.text);
++    var a = callA11yLabel();
++    if (callA11y && a !== lastCallA11y) { callA11y.textContent = a; lastCallA11y = a; }
+   }
+   var lastAppVisible = true;
+   function commit() {
+@@ -535,6 +544,7 @@
+   var RTL = root.getAttribute('dir') === 'rtl';
+   function render() {
+     tick();
++    syncCallDom();
+     Object.keys(dests).forEach(function (k) {
+       var o = get('op-' + k); dests[k].style.opacity = o; dests[k].style.visibility = o > 0 ? 'visible' : 'hidden';
+     });
+--- /mnt/data/g12_review/I-08B3.1-G1.2-VOICE-LIVE-CONVERSATION-BACKGROUND-SAFE-PROOF/source/src/build.mjs	2026-09-23 14:30:54.000000000 +0000
++++ /mnt/data/QANDEEL_I-08B3.1-G1.2-R1_DIRECT_CORRECTION/source/src/build.mjs	2026-09-23 12:06:40.979863246 +0000
+@@ -158,8 +158,9 @@
+ /* --------------------------------------------- the lower interaction area (FIELD) --------- */
+ /* ONE line holds the three ways of talking (G1.1). Writing is the line itself; its two controls are the Voice
+    Note (microphone) and the Live Call (handset) — two different shapes, two different names, two different
+-   places, two different outcomes. During a voice note the line is the capture; during a call the line is
+-   the CALL: its state in words, its time, the microphone level, and the call's own controls. */
++   places, two different outcomes. During a voice note the line is the capture. During a call, ordinary
++   live/mic/output states are visual + accessible rather than persistent visible sentences; only transitional/error
++   states that need explanation remain visible. */
+ #composer{position:absolute;top:calc(var(--H) - var(--home) - var(--rail) - var(--comp));height:var(--comp);inset-inline:0;background:var(--surface);z-index:3;border-top:var(--boundary);
+   --v:0;will-change:transform}
+ .write{position:absolute;top:10px;inset-inline-start:20px;inset-inline-end:118px;height:44px}
+@@ -413,6 +414,7 @@
+ <div class="boundary">PROOF BOUNDARY — the Replay preview is not designed in G1.x. Original Personal Live Call / Voice Note audio is NOT a producible Replay source (docs/replay-runtime-v1.md §7); an ongoing call is open Live Head and cannot be frozen (§19).</div></div></div>
+ ${osHTML(lang)}
+ <div class="homebar"></div>
++<p id="call-a11y" class="sr" role="status" aria-live="polite"></p>
+ <p id="live" class="sr" aria-live="polite"></p>
+ </div>
+ ${review}

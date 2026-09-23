@@ -12,8 +12,9 @@
 
 **Lifecycle, stated exactly.** FROZEN per the downstream ledger, which is also this package's
 proposed freeze text. The package itself says "This document does not freeze anything. A freeze is
-a Design Director decision." **The `B2R2` and `B3R2` packages named by the preservation brief are
-NOT on this host.** B4R supersedes the proof chain they would belong to.
+a Design Director decision." The `B2R2` and `B3R2` packages named by the preservation brief are not
+on the laptop. Independent review found them in the project's ChatGPT Library and **did not promote
+them**: B4R supersedes the proof chain they belong to (PR #265 reconciliation, `../reconciliation/`).
 
 ## Source archive (local, not in Git)
 

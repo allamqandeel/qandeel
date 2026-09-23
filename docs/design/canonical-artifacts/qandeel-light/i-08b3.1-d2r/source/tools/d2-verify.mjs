@@ -1019,11 +1019,11 @@ export function verifySemantics() {
      * reasserts a semantics REV-01 or REV-02 removed. Reading the emitted file is the point --
      * it compares the generator with its output instead of trusting them to agree.
      *
-     * IT IS NOT A PROSE LINTER. It inspects STRUCTURED, GENERATED, FINAL-STATE strings only:
-     * token descriptions, the contract's own statements, the Skill Gate consequences and the
-     * non-token contract statements. Narrative documents are not scanned, because a document is
-     * allowed to say "D2 claimed X and D2R removed it" -- that sentence is the correction, not
-     * the regression.
+     * IT IS NOT A BROAD PROSE LINTER. It inspects the STRUCTURED / GENERATED semantic surfaces
+     * plus a small allowlist of FINAL-STATE contract and audit documents. Those documents are
+     * scanned line-by-line so an active claim cannot hide behind a neighbouring historical
+     * paragraph. Historical lines remain allowed only when the line itself names D2 (never D2R)
+     * with a removal / rejection verb, or explicitly denies the forbidden meaning.
      */
     const REGRESSIONS = [
       ['depth = recency / temporal distance',
@@ -1031,7 +1031,7 @@ export function verifySemantics() {
       ['near / far = recent / old',
         /^\s*(recent|long ago|older|the oldest)\.?\s*$/i],
       ['contour or shape = topic identity',
-        /\b(contour|shape|irregularit|level set)\b[^.]{0,170}?\b(its own identity|own stable id|analytical identity|is a signature|a SIGNATURE|identity channel is)\b/i],
+        /\b(contour|shape|irregularit|level set)\b[^.]{0,190}?\b(its own identity|own stable identit(?:y|ies)|analytical identity|is a signature|a SIGNATURE|identity channel is)\b/i],
       ['shape = a recognisable topic identity',
         /\brecogni[sz]able\b[^.]{0,90}?\b(before its label|by (its )?shape|topic)\b/i],
       ['Pattern = a staggered order',
@@ -1051,7 +1051,7 @@ export function verifySemantics() {
      * deliberately WITHOUT a STAGGER" is the corrected claim, and it must not be read as the
      * defect it exists to rule out.
      */
-    const HISTORICAL = /\bD2\b(?!R)[^.]{0,160}?\b(claimed|said|wrote|fitted|computed|attached|derived|staggered|shipped|used|removed|rejected)\b|\b(was|were|is|are) removed\b|\bno longer\b|\bsuperseded\b|\bused to\b/i;
+    const HISTORICAL = /\bD2\b(?!R)[^.]{0,160}?\b(claimed|said|wrote|fitted|fitting|computed|attached|derived|inferred|staggered|shipped|used|removed|rejected)\b|\b(was|were|is|are) removed\b|\bno longer\b|\bsuperseded\b|\bused to\b/i;
     const DENIED = /\b(without|no|not|never|none|nothing|encodes nothing|presentation only|simultaneous|cannot|does not|do not|carries no|is not)\b/i;
 
     const sentences = (s) => String(s).split(/(?<=[.!?])\s+|\s*;\s+/).filter(Boolean);
@@ -1078,6 +1078,27 @@ export function verifySemantics() {
     for (const s of USED) for (const [i, c] of (s.changed || []).entries()) surfaces.push(['skill:' + s.name + '.changed[' + i + ']', c]);
     for (const [q, a] of NEVER_SHIP) surfaces.push(['NEVER_SHIP:' + q, a]);
 
+    /*
+     * FINAL-STATE DOCUMENT SURFACES. The closure repair originally swept these out-of-band,
+     * which let three active stale sentences survive while S6 still passed. These are the
+     * documents that state or audit the canonical semantic boundary; scan their actual shipped
+     * lines as part of the guard so the result is reproducible from a bare extraction.
+     */
+    const FINAL_DOCS = [
+      'README.md',
+      'D2R_DESIGN_RATIONALE.md',
+      'D2R_AMBIENT_MEANING_ACTIVITY.md',
+      'D2R_TRUTH_AUDIT.md',
+      'D2R_FREEZE_CANDIDATE.md',
+    ];
+    for (const rel of FINAL_DOCS) {
+      const file = join(PKG, rel);
+      if (!existsSync(file)) continue;
+      for (const [i, line] of readFileSync(file, 'utf8').split(/\r?\n/).entries()) {
+        if (line.trim()) surfaces.push([rel + ':' + (i + 1), line]);
+      }
+    }
+
     const scan = (rows) => {
       const found = [];
       for (const [where, text] of rows) {
@@ -1100,6 +1121,7 @@ export function verifySemantics() {
       ['depth = temporal distance', [['tokens/base/a.$description', 'One lightness per depth plane. Depth is TEMPORAL DISTANCE, how recently a topic was active.']]],
       ['near = recent', [['tokens/base/b.$description', 'Recent.']]],
       ['contour = identity', [['tokens/base/c.$description', 'A topic is drawn as contour lines whose shape comes from its own identity, so the field is specific.']]],
+      ['contour = stable identity', [['D2R_DESIGN_RATIONALE.md:48', 'The contour shape is derived from the topic own stable identity and is the same on every device.']]],
       ['recognisable by shape', [['skill:d.changed[0]', 'A topic is recognisable before its label is read.']]],
       ['Pattern staggered', [['NEVER_SHIP:e', 'The pattern four membership links are staggered across the span.']]],
       ['Pattern spine', [['CONTRACT_STATEMENTS[0]', 'The pattern is drawn as a spine fitted to the member positions.']]],
@@ -1113,7 +1135,7 @@ export function verifySemantics() {
 
     record('S6', 'no shipping semantic surface reasserts a semantics REV-01 or REV-02 removed',
       hits.length === 0 && enough && detected.every(Boolean) && histOk,
-      [surfaces.length + ' generated final-state strings inspected: the emitted token tree read back from disk, PRESENTATION_CONTRACT, ' + CONTRACT_STATEMENTS.length + ' contract statements, ' + USED.length + ' skill consequence blocks and ' + NEVER_SHIP.length + ' never-ship answers',
+      [surfaces.length + ' final-state semantic strings / document lines inspected: emitted token trees read back from disk, PRESENTATION_CONTRACT, ' + CONTRACT_STATEMENTS.length + ' contract statements, ' + USED.length + ' skill consequence blocks, ' + NEVER_SHIP.length + ' never-ship answers, and ' + FINAL_DOCS.length + ' final-state contract/audit documents',
         'active regressions found: ' + hits.length + (hits.length ? ' -- ' + hits.join('; ') : ''),
         'all ' + planted.length + ' planted regressions detected: ' + detected.every(Boolean),
         'historical correction prose correctly ignored: ' + histOk,

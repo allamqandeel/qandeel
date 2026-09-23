@@ -14,7 +14,7 @@ from independent review resolved and the freeze boundary drawn.
 Review found that D2 had attached Product meaning to presentation geometry that nothing
 authorised — ring radius as quantity, depth as recency, a contour gap as a sharing fraction,
 dimness as how much was known, contour shape as a permanent identity — and that PATTERN inferred
-its structure by fitting a principal axis to four screen positions. **Both are removed.** Every
+D2 inferred its structure by fitting a principal axis to four screen positions; **both defects are removed.** Every
 ambient property now declares what it encodes in a structure the build reads and refuses to
 proceed without, and PATTERN draws membership and nothing else. The freeze boundary is stamped on
 every token, and the ΔEok 0.020 figure is stated as the engineering heuristic it is rather than a

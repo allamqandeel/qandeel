@@ -95,7 +95,8 @@
   var rmenu = el('rmenu'), rprev = el('rprev'), picks = el('picks'), pickCount = el('pick-count'), pickGo = el('pick-go');
   var notice = el('notice'), noticeT = el('notice-t'), noticeAct = el('notice-act');
   var osPerm = el('os-perm'), osBg = el('os-bg'), lctxV = el('lctx-v'), input = el('input');
-  var cstate = el('cstate'), cstateT = el('cstate-t');
+  var cstate = el('cstate'), cstateT = el('cstate-t'), callA11y = el('call-a11y');
+  var lastCallA11y = '';
 
   function labelBox(btn) {
     var lab = btn.querySelector('.lb');
@@ -150,7 +151,7 @@
   var lctxBase = 0, lctxCommits = 0;
   function tick() {
     // connecting → live is decided by the clock alone (so standard and Reduced Motion agree exactly)
-    if (S.call === 'connecting' && now() - S.callStart >= Q.script.connectMs) { S.call = 'live'; S.liveAt = S.callStart + Q.script.connectMs; syncCallDom(); announce(Q.copy.micOn.text); }
+    if (S.call === 'connecting' && now() - S.callStart >= Q.script.connectMs) { S.call = 'live'; S.liveAt = S.callStart + Q.script.connectMs; syncCallDom(); }
     if (S.call === 'live' || S.call === 'reconnecting') {
       var n = commitsNow();
       if (S.call === 'live' && n !== lctxCommits) { lctxCommits = n; lctxV.textContent = Q.liveContext[(lctxBase + n) % Q.liveContext.length]; }
@@ -271,7 +272,6 @@
     liveLevel.start();
     callMarker();
     if (S.world === 'mine' && S.depth !== 'world') enterWorld(); else { go('dock', wantDock(), DUR.dock); commit(); }
-    announce(Q.copy.connecting.text);
   }
   /** reason: 'user' (the reader pressed End) · 'failed' (reconnection failed) · 'dropped' (ended while away). */
   function endCall(reason) {
@@ -300,12 +300,12 @@
   }
   function toggleMute() { if (!inCall()) return; S.muted = !S.muted; el('mute').setAttribute('aria-pressed', S.muted ? 'true' : 'false'); commit(); }
   function toggleRoute() { if (S.call !== 'live') return; S.route = S.route === 'speaker' ? 'earpiece' : 'speaker'; commit(); }
-  function drop() { if (S.call !== 'live') return; S.call = 'reconnecting'; commit(); announce(Q.copy.reconnecting.text); }
+  function drop() { if (S.call !== 'live') return; S.call = 'reconnecting'; commit(); }
   function recover() {
     if (S.call !== 'reconnecting') return;
     // Nothing was spoken while the line was down, so nothing committed: the script's commit instants that passed
     // during the gap are absorbed, never shown as an Analysis change the reader did not cause.
-    S.call = 'live'; lctxCommits = commitsNow(); commit(); announce('');
+    S.call = 'live'; lctxCommits = commitsNow(); commit();
   }
   function fail() { if (S.call !== 'reconnecting' && S.call !== 'live') return; endCall('failed'); }
   function barge() {
@@ -421,10 +421,16 @@
     pickCount.textContent = n ? Q.counts[n] || String(n) : Q.copy.pickHint.text;
     pickGo.setAttribute('aria-disabled', n ? 'false' : 'true');
   }
-  /** The call line's words: EVERY call phase has a name, so no state lives in motion or colour alone (G1.2 §30). */
+  /** Visible words are reserved for capture drafts and call transitions/errors. Ordinary live/mic/output states
+      are carried visually, while their semantic state remains available to assistive technology. */
   function lineLabel() {
     if (S.composer === 'note') return Q.copy.recording.text;
     if (S.composer === 'draft') return Q.copy.noteStopped.text;
+    if (S.call === 'connecting') return Q.copy.connecting.text;
+    if (S.call === 'reconnecting') return Q.copy.reconnecting.text;
+    return '';
+  }
+  function callA11yLabel() {
     if (S.call === 'connecting') return Q.copy.connecting.text;
     if (S.call === 'reconnecting') return Q.copy.reconnecting.text;
     if (S.call === 'live') return S.muted ? Q.copy.muted.text : speaking() === 'q' ? Q.copy.qSpeaking.text : Q.copy.micOn.text;
@@ -433,6 +439,9 @@
   function syncCallDom() {
     root.setAttribute('data-call', S.call);
     el('route').setAttribute('aria-pressed', S.route === 'speaker' ? 'true' : 'false');
+    el('mute').setAttribute('aria-label', S.muted ? Q.copy.unmute.text : Q.copy.mute.text);
+    var a = callA11yLabel();
+    if (callA11y && a !== lastCallA11y) { callA11y.textContent = a; lastCallA11y = a; }
   }
   var lastAppVisible = true;
   function commit() {
@@ -535,6 +544,7 @@
   var RTL = root.getAttribute('dir') === 'rtl';
   function render() {
     tick();
+    syncCallDom();
     Object.keys(dests).forEach(function (k) {
       var o = get('op-' + k); dests[k].style.opacity = o; dests[k].style.visibility = o > 0 ? 'visible' : 'hidden';
     });

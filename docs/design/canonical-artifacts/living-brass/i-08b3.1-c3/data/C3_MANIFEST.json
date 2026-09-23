@@ -1,12 +1,6 @@
 {
   "files": [
     {
-      "path": "data/C3_MANIFEST.json",
-      "bytes": 18709,
-      "sha256": "799047099200fc3fe436aca3476343d124a30bbb659ade08abe7bc73c7a20dc3",
-      "what": "generated data"
-    },
-    {
       "path": "data/C3_MEASUREMENTS.csv",
       "bytes": 10544,
       "sha256": "eadc6027d7dcd4c11e39445137ab8b20eeef7c9e0551ab72b7639e352698ed95",
@@ -34,6 +28,12 @@
       "path": "docs/C3_EXPRESSIVE_HEADROOM_CONTRACT.md",
       "bytes": 5343,
       "sha256": "51a09b63591c4edadcd80efb819c48006a9d280785f7fafdaa5259d9d8cc9687",
+      "what": "document"
+    },
+    {
+      "path": "docs/C3_FINAL_CLOSURE_RECORD.md",
+      "bytes": 2469,
+      "sha256": "6db709747760bb96595650484422c83564fa9473c97a7a8eafcaf30f6cf2c374",
       "what": "document"
     },
     {
@@ -206,8 +206,8 @@
     },
     {
       "path": "tools/c3-manifest.mjs",
-      "bytes": 6840,
-      "sha256": "383b7a27a8271bfbd43428fa9ef9efba25df808219cb12e7c196dda3b69ad58d",
+      "bytes": 7018,
+      "sha256": "b5b735558d010035bc59ffe24459252915b82e21be336e42425d51a060b4829e",
       "what": "tool"
     },
     {
@@ -470,8 +470,8 @@
     }
   ],
   "byDir": {
-    "data": 3,
-    "docs": 15,
+    "data": 2,
+    "docs": 16,
     "reference/canonical": 1,
     "review/proof": 9,
     "tokens/appearance": 2,
@@ -486,8 +486,8 @@
     "vendor/schemas/2025.10/format/values": 13,
     "vendor/schemas/2025.10/resolver": 3
   },
-  "total": 2133088,
-  "workNote": "present with 0 entries, EXCLUDED from the package and removed",
+  "total": 2117026,
+  "workNote": "not present",
   "predecessors": [
     {
       "name": "I-08B3.1-C2-LIVING-BRASS-PRODUCT-INTEGRATION.zip",

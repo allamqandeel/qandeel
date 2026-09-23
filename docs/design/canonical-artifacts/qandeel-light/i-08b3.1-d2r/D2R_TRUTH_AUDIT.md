@@ -169,7 +169,7 @@ it kept is reporting half of itself.
 | Considered | Rejected because |
 |---|---|
 | **Topic rings that breathe** | Frequency: off the top of `animate`'s table. And the natural period is 0.2 Hz, named twice as the frequency people are most sensitive to. And `withRepeat` infinite does not start under reduced motion, so the world would arrive dead for those users |
-| **A slow drift or float on the far plane** | Same gate, and it would make depth read as instability rather than as time |
+| **A slow drift or float on the far plane** | Same gate, and it would make presentation depth read as autonomous instability while adding ambient motion with no Product meaning |
 | **Members nudged into alignment for PATTERN** | Semantic falsehood. Position is the map's truth; a tidier line would be a wrong map |
 | **A fitted axis through the members, with residuals drawn** | **SHIPPED IN I-08B3.1-D2 AND REMOVED HERE.** A statistic of the layout presented as a statement about the user. It looked like rigour, which is why it survived a review |
 | **A staggered arrival of the membership links** | A stagger is an ORDER, and the Product has no order for a set. The house guidance against simultaneous entrance is inverted deliberately and recorded |
@@ -177,7 +177,7 @@ it kept is reporting half of itself.
 | **A haptic on "QANDEEL understood"** | `animate-expo` §8: one haptic per user action, never on something the user did not cause. All three events are QANDEEL acting |
 | **An emphasis ring or badge on the new INSIGHT node** | The node settles at the same ink as every other analytical node. Emphasis would encode confidence, which QANDEEL does not have and may not imply |
 | **A fourth easing curve for the gather** | The vocabulary is three curves, inherited. A fourth would confound "a different category" with "a different curve taste" |
-| **Unique hues for all eight topics** | The palette would have to enter the warm band or exceed the Light's chroma. Shape is the fine identity channel; colour is the coarse one |
+| **Unique hues for all eight topics** | The palette would have to enter the warm band or exceed the Light's chroma. Fine visual differentiation remains presentation-only; the topic name is the identity channel in this proof |
 
 ---
 

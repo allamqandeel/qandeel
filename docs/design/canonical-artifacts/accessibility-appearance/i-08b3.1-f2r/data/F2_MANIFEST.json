@@ -1,7 +1,7 @@
 {
   "generatedBy": "tools/f2-docs.mjs",
   "files": 300,
-  "bytes": 22518570,
+  "bytes": 22518604,
   "byDirectory": {
     "(root)": {
       "n": 1,
@@ -13,7 +13,7 @@
     },
     "docs": {
       "n": 21,
-      "bytes": 271129
+      "bytes": 271093
     },
     "fonts": {
       "n": 1,
@@ -33,14 +33,14 @@
     },
     "vendor": {
       "n": 62,
-      "bytes": 1476413
+      "bytes": 1476483
     }
   },
   "entries": [
     {
       "path": "README.md",
       "bytes": 9938,
-      "sha256": "6c1b3e55419c2399f329491357fecc2739da9d4882608da4a5ed8657975f410b"
+      "sha256": "2abc9f1d052a3318a75c40c1b25431ea0bf306c0c7eb3fec5b83b2226089bfc5"
     },
     {
       "path": "data/F2_BOARDS.json",
@@ -65,7 +65,7 @@
     {
       "path": "data/F2_MANIFEST.json",
       "bytes": 52153,
-      "sha256": "4c45a15726d9c87c81554e6b5c5d0f75196706fb1feaad600fbbc05f9ae1e38d"
+      "sha256": "d2dae8840b5014a9da8b383e54ec500cb8a8f510b7d2feec41cf6ddd57943219"
     },
     {
       "path": "data/F2_PARITY.json",
@@ -144,8 +144,8 @@
     },
     {
       "path": "docs/F2_FREEZE_CANDIDATE.md",
-      "bytes": 8836,
-      "sha256": "cc575650f6a44591ca1538e9452c1a9446dd05c48240b72ae0143c31dca4171f"
+      "bytes": 8800,
+      "sha256": "3cc7d71da59e4be6ace52913d3c0ebab9c0ed59afcb8c206df8d9a1e2dda5444"
     },
     {
       "path": "docs/F2_IMPLEMENTATION.md",
@@ -165,7 +165,7 @@
     {
       "path": "docs/F2_MANIFEST.md",
       "bytes": 27573,
-      "sha256": "13ff6ef829d5eae084692e0e663b4f6f42b03d15561a69ab7933db1e0090f19c"
+      "sha256": "5dc36ddc20a4051c33d0305ba24870d129785df814c12151309871e0f36019d2"
     },
     {
       "path": "docs/F2_NORTH_STAR_CARRY_FORWARD.md",
@@ -340,7 +340,7 @@
     {
       "path": "review/parity/dark-default.html",
       "bytes": 48676,
-      "sha256": "94b0ad020514f5363eb90ca6db06e3e9f4640c59ed74461f04d32ef13499d021"
+      "sha256": "d2e172b62f636bd58e7999108b8d4febb7fd3184ca51472f391ab968088d28a6"
     },
     {
       "path": "review/parity/dark-grayscale-diagnostic.html",
@@ -490,7 +490,7 @@
     {
       "path": "review/regression/f1-default-rerendered.html",
       "bytes": 49299,
-      "sha256": "540ade54748524840c1feeade9950aacdfe42d4ef1b5defcf72fa2b20141d564"
+      "sha256": "a0821ed95dd69d7259a782a4b4665528d33c90671e20c1cce47a831751929d8f"
     },
     {
       "path": "review/regression/probe-world-nudged.html",
@@ -1304,8 +1304,8 @@
     },
     {
       "path": "vendor/f1/tools/f1-cdp.mjs",
-      "bytes": 6257,
-      "sha256": "44bc93db3f2b404b9ea43ee9d991ffb563ebfbc19167b8e468cc05475d4912f6"
+      "bytes": 6327,
+      "sha256": "798b63c34eadb8f5ee8b9fb64ff57aa909904af744a83d3143c1da7412db11c4"
     },
     {
       "path": "vendor/f1/tools/f1-consistency.mjs",

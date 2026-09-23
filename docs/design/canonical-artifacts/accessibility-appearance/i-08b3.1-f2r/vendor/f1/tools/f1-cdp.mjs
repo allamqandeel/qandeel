@@ -19,6 +19,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
 export const CHROME_CANDIDATES = [
+  '/usr/bin/chromium',
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
@@ -38,6 +39,8 @@ export const findChrome = () => CHROME_CANDIDATES.find((p) => existsSync(p)) ?? 
  */
 export const CHROME_FLAGS = [
   '--headless=new',
+  '--no-sandbox',
+  '--disable-dev-shm-usage',
   '--allow-file-access-from-files',
   '--disable-gpu',
   '--hide-scrollbars',

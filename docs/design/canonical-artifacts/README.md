@@ -19,7 +19,10 @@ package was admitted or refused, is
    prototypes. Product ruled that they remain canonical states.
 2. **Sealed ZIP first.** Every file was copied out of the domain's final **sealed ZIP**, the object
    whose SHA-256 the closure records name. The loose on-disk folder was used only as a cross-check.
-   All 731 preserved files are identical in both places.
+   All 731 files of the first pass are identical in both places. The PR #265 reconciliation then
+   applied, byte-exact, 27 files from five final archives that exist only in the project's ChatGPT
+   Library (A3R2, C3R, the latest D2R, F2 FINAL_CANONICAL and G1.2 R1): 21 of the 731 were
+   replaced and 6 were added. See [`reconciliation/`](reconciliation/README.md).
 3. **Byte-identical.** Each file was hashed at the source, copied and then hashed again at the
    destination. A second, independent pass re-hashed every destination file. There are 0 mismatches.
    [`.gitattributes`](.gitattributes) disables line-ending conversion here, because four I-08B1 files
@@ -46,13 +49,14 @@ cd docs/design/canonical-artifacts/living-analysis && sha256sum -c SOURCE-PROVEN
 | `living-analysis/` | I-08B1 Living Analysis World — FAR / MID / NEAR |
 | `brand/` | I-08B2.5 final brand asset package (Q mark, wordmark, app icon) |
 | `typography/` | I-08B3.0-E3 typography system |
-| `visual-foundation/` | I-08B3.1-A3R World / Reading neutral |
+| `visual-foundation/` | I-08B3.1-A3R2 World / Reading neutral (A3R + A3R2 reconciliation) |
 | `surfaces/` | I-08B3.1-B4R Surface / Content hierarchy |
-| `living-brass/` | I-08B3.1-C3 Living Brass |
-| `qandeel-light/` | I-08B3.1-D2R QANDEEL Light |
+| `living-brass/` | I-08B3.1-C3 Living Brass, closed by C3R |
+| `qandeel-light/` | I-08B3.1-D2R QANDEEL Light (latest D2R state) |
 | `interaction-semantic-color/` | I-08B3.1-E1R interaction + system semantic colour |
-| `accessibility-appearance/` | I-08B3.1-F1R2 accessibility, I-08B3.1-F2R Light appearance |
-| `product-proofs/` | I-08B3.1-G1.1-R3 and I-08B3.1-G1.2 Product proof sources |
+| `accessibility-appearance/` | I-08B3.1-F1R2 accessibility, I-08B3.1-F2 FINAL_CANONICAL Light appearance |
+| `product-proofs/` | I-08B3.1-G1.1-R3 and I-08B3.1-G1.2 Product proof sources, with the G1.2 R1 final source |
+| `reconciliation/` | the PR #265 final-authority patch instructions and manifest, byte-exact |
 
 There are no `matching/` or `replay/` folders. No final local Matching or Replay Product/visual
 source exists beyond what `product-proofs/` already carries. The index explains this layer by layer.

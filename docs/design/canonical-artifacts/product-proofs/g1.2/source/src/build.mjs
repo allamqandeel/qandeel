@@ -158,8 +158,9 @@ bdi{unicode-bidi:isolate}
 /* --------------------------------------------- the lower interaction area (FIELD) --------- */
 /* ONE line holds the three ways of talking (G1.1). Writing is the line itself; its two controls are the Voice
    Note (microphone) and the Live Call (handset) — two different shapes, two different names, two different
-   places, two different outcomes. During a voice note the line is the capture; during a call the line is
-   the CALL: its state in words, its time, the microphone level, and the call's own controls. */
+   places, two different outcomes. During a voice note the line is the capture. During a call, ordinary
+   live/mic/output states are visual + accessible rather than persistent visible sentences; only transitional/error
+   states that need explanation remain visible. */
 #composer{position:absolute;top:calc(var(--H) - var(--home) - var(--rail) - var(--comp));height:var(--comp);inset-inline:0;background:var(--surface);z-index:3;border-top:var(--boundary);
   --v:0;will-change:transform}
 .write{position:absolute;top:10px;inset-inline-start:20px;inset-inline-end:118px;height:44px}
@@ -413,6 +414,7 @@ ${statusBar()}
 <div class="boundary">PROOF BOUNDARY — the Replay preview is not designed in G1.x. Original Personal Live Call / Voice Note audio is NOT a producible Replay source (docs/replay-runtime-v1.md §7); an ongoing call is open Live Head and cannot be frozen (§19).</div></div></div>
 ${osHTML(lang)}
 <div class="homebar"></div>
+<p id="call-a11y" class="sr" role="status" aria-live="polite"></p>
 <p id="live" class="sr" aria-live="polite"></p>
 </div>
 ${review}

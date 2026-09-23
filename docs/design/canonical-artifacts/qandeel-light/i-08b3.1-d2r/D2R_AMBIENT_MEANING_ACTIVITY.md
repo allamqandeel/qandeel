@@ -177,7 +177,7 @@ composition; it identifies no topic and distinguishes none. **What identifies a 
 LABEL**, and every topic is named in every world — guard **S4**.
 
 I-08B3.1-D2 answered this differently and wrongly, and the difference is worth keeping visible.
-It said shape was the fine identity channel: a topic "recognisable before its label is read".
+D2 claimed shape was the fine identity channel: a topic "recognisable before its label is read".
 That would have been an identity guarantee the Product never granted, and it would have become a
 compatibility constraint the moment anyone relied on it. **The correct answer was simpler and was
 there all along: the topic's name is written on it.**

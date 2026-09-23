@@ -5,8 +5,10 @@ The World ground and the three-level reading-neutral ramp that every later visua
 - **Frozen values.** World `#101010`; Primary reading `#d8d5ca` (P1); Secondary `#afaca3`; Tertiary
   `#8b8982`. They are carried byte-for-byte into the Surface tokens at
   `../surfaces/i-08b3.1-b4r/tokens/`, which are the production form.
-- **Evidence and method.** `i-08b3.1-a3r/docs/` (A3 closure proof + A3R canonical-state correction),
-  with the measurement tools in `i-08b3.1-a3r/tools/`.
+- **Final status.** `i-08b3.1-a3r/docs/A3R2_REVISION_RECORD.md` is the A3R2 final-status
+  reconciliation: the current manifest now records the Director's post-A3 selections. It changes no
+  raster, measurement, colour or decision.
+- **Evidence and method.** `i-08b3.1-a3r/docs/` (A3 closure proof, A3R canonical-state correction,
+  A3R2 reconciliation), with the measurement tools in `i-08b3.1-a3r/tools/`.
 
-Provenance, lifecycle, the missing A3R2 record and exclusions:
-[`SOURCE-PROVENANCE.md`](SOURCE-PROVENANCE.md).
+Provenance, lifecycle and exclusions: [`SOURCE-PROVENANCE.md`](SOURCE-PROVENANCE.md).

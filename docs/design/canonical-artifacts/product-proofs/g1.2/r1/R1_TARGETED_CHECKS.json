@@ -1,0 +1,87 @@
+{
+  "status": "PASS",
+  "passed": 16,
+  "total": 16,
+  "checks": [
+    {
+      "name": "R1-01 shared area fixed Arabic singular",
+      "ok": true,
+      "detail": "nav + area heading use العالم المشترك"
+    },
+    {
+      "name": "R1-02 old Arabic nav label removed from current proof source",
+      "ok": true,
+      "detail": "no count-dependent/old shared-area label in current content source"
+    },
+    {
+      "name": "R1-03 English equivalent stable singular",
+      "ok": true,
+      "detail": "Shared World is the exact stable singular Product-area name in English"
+    },
+    {
+      "name": "R1-04 normal live call words removed from visible line",
+      "ok": true,
+      "detail": "visible line keeps transitions only; ordinary live/mic/output states absent"
+    },
+    {
+      "name": "R1-05 normal call truth retained for accessibility",
+      "ok": true,
+      "detail": "normal state strings moved to assistive-technology channel"
+    },
+    {
+      "name": "R1-06 mute accessible label changes with state",
+      "ok": true,
+      "detail": "muted control exposes action semantically without visible sentence"
+    },
+    {
+      "name": "R1-07 microphone education is first-need/recovery only",
+      "ok": true,
+      "detail": "granted skips prompt; denied shows recovery; unknown invokes OS prompt at intent"
+    },
+    {
+      "name": "R1-08 iconography untouched",
+      "ok": true,
+      "detail": "glyphs.mjs SHA-256 2290e460d5fd0046b81675d2f04c96a678e68f3da03f3fa15ceb72759343940e unchanged"
+    },
+    {
+      "name": "R1-09 audio activity strip logic untouched",
+      "ok": true,
+      "detail": "drawTrace/audio activity implementation is byte-identical to original G1.2 source"
+    },
+    {
+      "name": "R1-10 toBackground background contract untouched",
+      "ok": true,
+      "detail": "toBackground byte-identical"
+    },
+    {
+      "name": "R1-10 toForeground background contract untouched",
+      "ok": true,
+      "detail": "toForeground byte-identical"
+    },
+    {
+      "name": "R1-11 rebuilt Arabic prototype carries corrected shared name",
+      "ok": true,
+      "detail": "index.html"
+    },
+    {
+      "name": "R1-12 index.html contains assistive call status channel",
+      "ok": true,
+      "detail": "index.html"
+    },
+    {
+      "name": "R1-12 index-en.html contains assistive call status channel",
+      "ok": true,
+      "detail": "index-en.html"
+    },
+    {
+      "name": "R1-12 index-voice-history.html contains assistive call status channel",
+      "ok": true,
+      "detail": "index-voice-history.html"
+    },
+    {
+      "name": "R1-13 call-state accessibility has one announcement channel",
+      "ok": true,
+      "detail": "normal/connecting/reconnecting/mute state changes are carried by #call-a11y only; generic announce() is not called with the same state"
+    }
+  ]
+}

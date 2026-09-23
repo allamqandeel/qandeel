@@ -137,7 +137,7 @@ node tools/f2-docs.mjs          # the generated documents + manifest
 
 ## Result
 
-**38/38 checks. 38/38 probes rejecting. 1,452 parity cells, 0 failures. 12 boards.**
+**38/38 checks. 39/39 probes rejecting. 1,452 parity cells, 0 failures. 12 boards.**
 
 Every guard is fed an input that must make it fail, because **a check that cannot fail is a
 sentence**. Three defects in F2's own checks were found that way and each is recorded on the check

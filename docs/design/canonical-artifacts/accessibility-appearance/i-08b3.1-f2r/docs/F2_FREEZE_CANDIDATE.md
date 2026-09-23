@@ -7,46 +7,41 @@ conditions under which the proposal should be rejected.
 
 ---
 
-## What F2 proposes as PRODUCT CONTRACT — 16 statements
+## What F2 proposes as PRODUCT CONTRACT — 16 token values
 
-None of them is a colour. **A contract that resolved to a colour would be a contract about one
-appearance.**
+The authoritative classification is the shipped token tree and check **K-01**. F2R deliberately
+demoted five earlier derivation heuristics — `chroma-order`, `hue-constancy`,
+`hierarchy-is-a-ratio`, `suppression-is-subtraction`, and `meaning-has-a-source` — to
+**production-default**. They remain measured implementation/calibration evidence, not Product law.
 
-| token | the statement |
-|---|---|
-| `appearance.law` | **APPEARANCE IS A PROJECTION OF PRODUCT SEMANTICS.** It may change luminance, chroma, material rendering, edge treatment, local contrast, apparent depth, scrim strategy, atmospheric rendering, the Light's technique and surface separation. It may not change analytical truth, object existence, relationship truth, confidence, importance, ownership, authority, temporal truth, hierarchy, state meaning, world membership or available actions. |
-| `appearance.chroma-order` | **ERROR > BRASS > LIGHT > ATMOSPHERE > INK > GROUND**, as a ladder of role families, in both appearances. |
-| `appearance.hue-constancy` | every chromatic role holds its hue across appearances, within 3°, measured on the recovered hue of the shipped hex. |
-| `appearance.hierarchy-is-a-ratio` | the reading ramp preserves its WCAG contrast ratios against its own ground. |
-| `appearance.suppression-is-subtraction` | the PASSAGE scrim darkens in **both** appearances. |
-| `appearance.meaning-has-a-source` | at its peak a meaning event is lighter than its ground, measurably, with the colour removed. |
-| `appearance.light-not-reduced` | an alternate appearance may not cost the Product analytical quality, depth, atmosphere, colour richness, micro-detail, spatial discovery, identity or emotional impact. |
-| `appearance.dark-is-frozen` | no dark value moves for light. |
-| `appearance.status-colour-is-earned` | Warning, Success and Informational remain neutral in both appearances. |
-| `appearance.system-appearance` | follow the system; no in-app override; platform theming does not author identity. |
-| `appearance.switch.is-not-a-meaning-event` | re-project only: no replay, no restart, no state change, no reset, no new history. |
-| `appearance.switch.crossfade-reduced-motion` | the cross-fade is **removed** under reduced motion, not shortened. |
-| `expression.accessibility.atmosphere.stroke-alpha-multiplier` (both contexts) | the sentinel: which mechanism runs, not what colour comes out. |
-| `expression.accessibility.atmosphere.pre-composite` | the opaque substitution is exact because the backdrop is one flat colour. |
-| `accessibility.transparency.light-alpha-floor` | QANDEEL Light keeps its translucency under Reduce Transparency. |
-| *(the reading-ramp group's classification)* | the three light rungs are a **consequence** of the ratio contract, not contracts themselves. |
+The Product-level contracts are the semantic requirements they serve:
 
-## What F2 proposes be left TUNABLE — 29 production defaults
+- **APPEARANCE IS A PROJECTION OF PRODUCT SEMANTICS.** Appearance may change expression, never Product truth.
+- **Role families remain separable.** Error, Living Brass, Meaning Light, atmosphere, reading and ground may not collapse into one another.
+- **Role identity survives appearance.** Living Brass remains the same identity material, Error the same Error family, and QANDEEL Light the same meaning family.
+- **Reading hierarchy is preserved.** Primary / secondary / tertiary remain ordered and perceptibly distinct; exact contrast-ratio equality is not itself Product law.
+- **LIGHT REMAINS MEANING.** A meaning event is visibly perceivable as an event, survives removal of colour as sole carrier, remains distinct from Matter/reading/status, and settles cleanly.
+- **Passage remains suppressed.** The World behind a passage recedes; exact scrim direction/value is implementation craft.
+- **Appearance switching is re-projection only.** No meaning replay, state reset, semantic change or new history.
+- **Reduced Motion removes the appearance cross-fade.** The appearance change carries no Product meaning.
+- **Default appearance follows the system.** F2 introduces no app-specific override; a future explicit QANDEEL appearance preference remains a separate Product decision. Platform/dynamic theming may not author QANDEEL identity.
+- **Light is not reduced QANDEEL.** Alternate appearance may not cost analytical quality, identity or Product ambition.
+- **Dark remains frozen.** Light derivation does not normalise or move the accepted Dark system.
+- **Status colour remains earned.** Warning / Success / Informational stay neutral in the current appearance system unless a later real Product case earns a dedicated expression.
+- The inherited F1 **Increase Contrast / Reduce Transparency** transformation contracts remain in force in Light; their exact current expression values are carried in the token tree.
 
-**Every colour F2 ships.** The twelve light expression literals, the computed opaque scrim, the
-three atmosphere layer lightnesses, the light chroma ceiling, the three increased-contrast
-lightnesses, the bloom's three shape parameters, the cross-fade duration and the Light World's
-lightness.
+## What remains TUNABLE — 33 production-default token values
 
-Each names what it `serves`. **Exact calibration values do not become Product law because a
-prototype used them**, and the values most likely to move on device evidence are named in
-`F2_DEVICE_VALIDATION.md`.
+This includes the Light appearance's literal colours and calibration values, the current chroma ladder
+and hue tolerance, exact reading-ratio matching, scrim direction/calibration, the current
+`meaning-has-a-source` heuristic, atmosphere values, bloom parameters, and other measured defaults.
+Every non-contract value names the Product contract it serves.
 
-## What F2 proposes as IMPLEMENTATION STRATEGY — 3
+## IMPLEMENTATION STRATEGY — 3 token values
 
-The two meaning-light techniques (`additive-over-ground`, `signed-bloom`) and the centralisation
-mechanism. **How a contract is currently met, chosen by measured search, re-openable by a better
-way.**
+The current Dark/Light Meaning-Light rendering techniques and the centralised appearance-resolution
+mechanism are implementation strategies: replaceable by a better implementation that preserves the
+contracts above.
 
 ---
 
@@ -55,7 +50,7 @@ way.**
 | | result |
 |---|---|
 | checks | **38/38** |
-| probes rejecting | **38/38** |
+| probes rejecting | **39/39** |
 | cross-appearance parity cells | **1,452**, 0 failures |
 | planted object removals | **4/4**, each failing for its own object and no other |
 | dark regression | **PASS** — 13 values, 28 routes, 5 states, 1 raster, 5 probes |
@@ -117,20 +112,20 @@ B-track or E-track decision.
 
 ---
 
-## What must happen before F is frozen, whatever the review decides
+## Mandatory implementation / integration gates carried forward AFTER the F design freeze
 
-**These are gates, not opinions.**
+These remain mandatory before production integration/release validation, but they are **not blockers
+to freezing the Product/visual/semantic contract of F**. F1 already established this boundary, and F2
+does not create an F3 merely because hardware or the real runtime integration is unavailable here.
 
-1. **A real VoiceOver and TalkBack run, in both appearances.** I-08B3.1-F1's mandatory
-   implementation / integration validation gate. **Browser accessibility-tree evidence does not
-   satisfy it.**
-2. **Device validation of the light appearance** — glare, the meaning-light source, Living Brass,
-   Error, and banding in the bloom on a weaker panel.
-3. **`android:configChanges="uiMode"` and a device test that Product state survives a real system
-   appearance change.** The platform's default behaviour recreates the Activity, which is what §16
-   forbids.
-4. **The exhaustive accessibility mapping against the real canonical V schema** — I-08B3.1-F1R2's
-   recorded implementation dependency, still open.
+1. **A real VoiceOver and TalkBack run, in both appearances.** Browser accessibility-tree evidence
+   does not satisfy it.
+2. **Real-device validation of the Light appearance** — glare, Meaning-Light source visibility,
+   Living Brass, Error, and bloom/banding on representative devices including weaker hardware.
+3. **Android appearance-change integration validation.** Product state must survive a real system
+   appearance change; the implementation must handle Activity recreation or its chosen equivalent
+   truthfully. `android:configChanges="uiMode"` is an implementation option, not Product law.
+4. **Exhaustive accessibility mapping against the real canonical `V` schema**, as carried from F1R2.
 
 ---
 

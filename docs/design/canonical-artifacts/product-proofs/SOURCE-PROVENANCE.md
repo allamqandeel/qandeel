@@ -18,12 +18,30 @@
 | Closure | `docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md`: **CLOSED / FROZEN AS PRODUCT + INTERACTION + BACKGROUND-CALL PROOF** |
 | Closure-recorded hashes | reviewed proof ZIP `1b297be9402960928dfc85574cdf7fc3a88b1c59e6777af806e5a1d9f7ec3e96`, and final bounded **R1** correction ZIP `2e5e0ac41b44be19b5a773aec3a8da060b4a5f5221ef6cb0d1999146f8d23e11` |
 | Local archive | `E:\QANDEEL\QANDEEL PROJECT\I-08B3.1-G1.2-VOICE-LIVE-CONVERSATION-BACKGROUND-SAFE-PROOF.zip`, 97,380,377 B, 283 entries, SHA-256 **`1b297be9402960928dfc85574cdf7fc3a88b1c59e6777af806e5a1d9f7ec3e96`**, **equal** to the reviewed-proof hash |
-| **R1 correction** | **NOT ON THIS HOST.** No archive hashing to `2e5e0ac4…8d23e11` exists under the project root, `E:\QANDEEL` or Downloads. The local G1.2 source, prototypes and work folder (`.i08b31-g12-work\`) all still carry the pre-R1 wording «مع الآخرين». R1 was applied somewhere else |
+| **R1 correction (final)** | `QANDEEL_I-08B3.1-G1.2-R1_DIRECT_CORRECTION.zip`, 43,890 B, SHA-256 **`2e5e0ac41b44be19b5a773aec3a8da060b4a5f5221ef6cb0d1999146f8d23e11`**, **equal** to the closure-recorded R1 hash (also recorded in `docs/qandeel-canonical-backlog-v1.md`). It is in the project ChatGPT Library, was recovered by independent review, and is **not on the laptop**. Its `R1_MANIFEST.json` names the parent proof ZIP as `1b297be9402960928dfc85574cdf7fc3a88b1c59e6777af806e5a1d9f7ec3e96`, the archive preserved here |
+| R1 content | stable singular **«العالم المشترك»** / **Shared World** regardless of count; no persistent normal-state call prose («الميكروفون شغّال», «الميكروفون مكتوم», «قنديل بيتكلم»), with transitional states still explained; normal call state carried by one dedicated assistive live-status channel (`#call-a11y`) and a mute control whose accessible label changes; microphone education on first need and recovery only. Icons, glyphs, the audio strip and the background / foreground call contract are byte-identical to the reviewed proof (R1-08 … R1-10) |
+| R1 verified here | Applying `r1/R1_SOURCE_PATCH.diff` to the reviewed-proof `source/src/{build.mjs, content.mjs, runtime.js}` in a scratch copy yields **exactly** the three R1 files preserved here, byte for byte. All seven R1 files also match `r1/R1_MANIFEST.json` and the PR #265 patch manifest. `r1/R1_TARGETED_CHECKS.json` records 16/16 PASS; that run was **not** repeated here |
 
-70 files were preserved under `g1.2/`. They are the **reviewed proof source**, which the closure
-keeps as "the behavioral evidence of record". They are **not** the R1-corrected source.
+74 files are preserved under `g1.2/`:
 
-Every preserved file is byte-identical to its archive entry and to the loose folder. Hashes are in
+- **Final R1 source:** `source/src/build.mjs`, `content.mjs`, `runtime.js`, replaced with the R1 bytes.
+- **R1 record:** `r1/R1_CORRECTION_RECORD.md`, `R1_SOURCE_PATCH.diff`, `R1_TARGETED_CHECKS.json`,
+  `R1_MANIFEST.json`, byte-exact from the R1 archive.
+- **Reviewed proof (unchanged):** the other 67 files, byte-identical to their entry in the
+  `1b297be9…` archive and to the loose folder. The closure keeps this proof as "the behavioral
+  evidence of record".
+
+**Pre-R1 build outputs kept as proof evidence.** R1 rebuilt the prototypes, but its archive carries
+only the corrected source, so the rebuilt HTML is not preserved. The preserved
+`prototype/index.html` and `prototype/index-voice-history.html` still show «مع الآخرين» and the
+persistent «الميكروفون شغّال» line, and no prototype has the `#call-a11y` channel. They are rebuildable
+from the R1 source with `source/REGENERATE.md`, and that was not done here because this task does
+not build or render. Likewise `source/tools/checks.mjs` and `data/G12_CHECKS.json` still lock the
+pre-R1 names (`shared: 'مع الآخرين'`). For the R1 source, `r1/R1_TARGETED_CHECKS.json` is the
+verification of record.
+
+The files that came through the PR #265 reconciliation patch are listed in
+`../reconciliation/pr265-final-authority/PATCH_MANIFEST.json`. Hashes of every preserved file are in
 [`SOURCE-PROVENANCE.sha256`](SOURCE-PROVENANCE.sha256).
 
 ## What was preserved, and why that is enough
@@ -46,9 +64,9 @@ rebuilt and the checks re-run.
 
 | Preserved content | Superseded by |
 |---|---|
-| G1.1-R3 and G1.2 Product-area name «مع الآخرين» / "With others", count-dependent «عالم مشترك» / «عوالم مشتركة» | G1.2 closure §3: stable singular **«العالم المشترك»** / **Shared World** |
-| G1.2 persistent normal-call sentences («الميكروفون شغّال», «الميكروفون مكتوم», «قنديل بيتكلم») and duplicate live regions | G1.2 closure §4 and §9 (R1): prose removed; one assistive live-status channel |
-| G1.2 microphone education repeating when permission is already granted | G1.2 closure §5 and §9 |
+| G1.1-R3 Product-area name «مع الآخرين» / "With others", count-dependent «عالم مشترك» / «عوالم مشتركة»; the same names in G1.2's pre-R1 prototypes, checks and reports | G1.2 closure §3, applied in the preserved G1.2 R1 source: stable singular **«العالم المشترك»** / **Shared World** |
+| G1.2 pre-R1 persistent normal-call sentences («الميكروفون شغّال», «الميكروفون مكتوم», «قنديل بيتكلم») and duplicate live regions, still in the built prototypes | G1.2 closure §4 and §9, applied in the R1 source: prose removed; one assistive live-status channel |
+| Any reading of G1.2 microphone education as repeating when permission is already granted | G1.2 closure §5 and §9. R1 records that the proof runtime already behaved as first-need / recovery only |
 | G1.2 icons, glyphs and audio-strip morphology | G1.2 closure §6: **PROOF ONLY — NOT A VISUAL FREEZE** |
 | Simplified Living Analysis image in both proofs | G1.1 closure §5: proof scaffolding. **G2** owns the spectacle |
 | R3 Replay noun and selection / preview screens | G1.1 closure §5: the Replay noun stays editable, and `QAN-BL-NAV-02` stays open |

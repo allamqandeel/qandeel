@@ -45,8 +45,9 @@ is not made of Light. See `D2R_AMBIENT_MEANING_ACTIVITY.md`.
 
 **Not an animation at all**, and therefore not on that list. The field is the world's
 atmosphere: eight topics, each drawn as a set of **contour lines** — a level set, the way a hill
-is drawn on a map — whose shape is derived from the topic's own stable identity and is the same
-on every device, forever.
+is drawn on a map — whose morphology comes from an **AUTHORED PRESENTATION SEED** used only for
+composition. It carries no analytical identity and no persistence guarantee across devices,
+users or releases.
 
 It is **completely still**. The only motion it has is the user's own hand, and that is a gesture
 rather than an animation: 1:1 tracking with no duration, and on release Apple's exact momentum

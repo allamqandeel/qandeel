@@ -13,18 +13,18 @@
     },
     {
       "path": "D2R_AMBIENT_MEANING_ACTIVITY.md",
-      "bytes": 10569,
-      "sha256": "ef5cd477869907bedfa9f3c94a387f3be059957733be4d5854e97eb4eda70578"
+      "bytes": 10572,
+      "sha256": "326da654e6e4e396f52c55dce815cc018630318d60bc16a96223befca1195a05"
     },
     {
       "path": "D2R_CORRECTION.md",
-      "bytes": 13640,
-      "sha256": "2ce4a45dd040eb7990ba96d5f9b3fb0007f41763d2d4631b97564a6cd46246e9"
+      "bytes": 15010,
+      "sha256": "8be0c5ffb856519bbea89633358d43e025db5678bdbe3cebbc4689f954cc71f7"
     },
     {
       "path": "D2R_DESIGN_RATIONALE.md",
-      "bytes": 11816,
-      "sha256": "d49c110d03598e5693f531329ac83f76e4f73773358701c31ec5952223205f58"
+      "bytes": 11901,
+      "sha256": "ce9518ac67ec491f22c788df96cdd2a80ba661a858b363dcb56f0067ad9e771f"
     },
     {
       "path": "D2R_FREEZE_CANDIDATE.md",
@@ -63,8 +63,8 @@
     },
     {
       "path": "D2R_TRUTH_AUDIT.md",
-      "bytes": 14500,
-      "sha256": "1777c6932d5cfcd3efef72e2728cb932b87aa5d60fe65d08749a226e746f937e"
+      "bytes": 14603,
+      "sha256": "2f8912ed1e7be5e17981f4d2725bed2b3cb8c0a3fdcdded278b10e3fd3df99cf"
     },
     {
       "path": "data/D2_CAPTURE_REPORT.json",
@@ -88,8 +88,8 @@
     },
     {
       "path": "data/D2_MANIFEST.json",
-      "bytes": 17632,
-      "sha256": "0eef77b13a08d31f7bb832bfbd01a8318bd65430068c2b51db8b9293363629a0"
+      "bytes": 17749,
+      "sha256": "8b4a8a73fb5b84515de8585ccb38600cfb14dfa7e1f7a17bef138b8bd5a599f6"
     },
     {
       "path": "data/D2_RESOLUTION.json",
@@ -218,8 +218,8 @@
     },
     {
       "path": "README.md",
-      "bytes": 8091,
-      "sha256": "2751a7c106dc7372dc21a2c1fee81d322057e68d6ae907fea1aa3b578a67e09f"
+      "bytes": 8111,
+      "sha256": "d5b48af4ee280c17d72a3cd121fd7cc334ae18d7cf94cc7d180ba1eccfa247ab"
     },
     {
       "path": "source/scene/d2-connection.mjs",
@@ -313,8 +313,8 @@
     },
     {
       "path": "source/tools/d2-verify.mjs",
-      "bytes": 65857,
-      "sha256": "2a0f2e9ff0d2d619a40eefbfc5acd257c31990f660d88384c8a386a8542dd7a3"
+      "bytes": 67045,
+      "sha256": "105b98445db4b0ff1b717fecb23ffe211fc25d2818ca034b657901dce1b86b46"
     },
     {
       "path": "source/tools/d2-zip.mjs",
@@ -495,8 +495,9 @@
     {
       "id": "P10",
       "title": "the recorded skill sources verify on this host",
-      "ok": true,
-      "detail": "86 skills enumerated; 23 claimed; 23 present; 0 whose bytes no longer match the recorded hash. Probe: an inventory pointing at absent sources returns UNVERIFIABLE rather than FAIL — true. Off this host that is the state this check reports."
+      "ok": null,
+      "unverifiable": true,
+      "detail": "UNVERIFIABLE — EXTERNAL SKILL SOURCE NOT PRESENT. 23 skill files were recorded with their paths and SHA-256 on the executing host; none is present here, which is expected off that host and is NOT a package defect. data/D2_GATE_INVENTORY.json carries every path, size and hash for independent checking wherever the sources exist."
     },
     {
       "id": "P11",
@@ -529,5 +530,5 @@
       "detail": "every visual property is written imperatively from apply(t)"
     }
   ],
-  "totalBytes": 16087914
+  "totalBytes": 16090800
 }

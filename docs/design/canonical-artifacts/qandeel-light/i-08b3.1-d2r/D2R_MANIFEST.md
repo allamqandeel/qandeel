@@ -1,13 +1,13 @@
 # I-08B3.1-D2R — MANIFEST
 
-**87 files, 16,087,914 bytes.** Every hash below is a SHA-256 of the file as
+**87 files, 16,090,800 bytes.** Every hash below is a SHA-256 of the file as
 shipped. The manifest itself is excluded, because a file cannot contain its own hash.
 
 ---
 
 ## Preflight
 
-**15 of 15 verifiable checks hold.**
+**14 of 14 verifiable checks hold; 1 could not be verified here and is NOT claimed.**
 
 A check whose inputs are absent returns a THIRD state. Reporting it as a failure would tell a
 reviewer their extraction was broken when nothing is; reporting it as a pass would claim a
@@ -24,7 +24,7 @@ verification that did not happen.
 | P7 | the settled relation passes WCAG 2.2 SC 1.4.11 on the World | **HOLDS** | #8b8982 on #101010 is 5.44:1 (the superseded literal measured 2.05:1) |
 | P8 | the candidate Light meets its own requirement and improves on what it replaces | **HOLDS** | candidate 0.0201, required 0.02, diagnostic 0.0118 — 1.70x |
 | P9 | I-08B3.1-D1's three scene files are vendored byte-identical | **HOLDS** | 3 inherited files, 0 changed |
-| P10 | the recorded skill sources verify on this host | **HOLDS** | 86 skills enumerated; 23 claimed; 23 present; 0 whose bytes no longer match the recorded hash. Probe: an inventory pointing at absent sources returns UNVERIFIABLE rather than FAIL — true. Off this host that is the state this check reports. |
+| P10 | the recorded skill sources verify on this host | **UNVERIFIABLE HERE** | UNVERIFIABLE — EXTERNAL SKILL SOURCE NOT PRESENT. 23 skill files were recorded with their paths and SHA-256 on the executing host; none is present here, which is expected off that host and is NOT a package defect. data/D2_GATE_INVENTORY.json carries every path, size and hash for independent checking wherever the sources exist. |
 | P11 | every file the review board points at exists in this package | **HOLDS** | 24 local references, 0 missing |
 | P12 | the review board is RTL Arabic with an unbroken heading outline | **HOLDS** | dir/lang present; one h1; h2 only below it, no skipped level |
 | P13 | no shipped document is a stub | **HOLDS** | 13 documents, 0 under 700 bytes |
@@ -39,9 +39,9 @@ verification that did not happen.
 |---|---:|---|
 | `D2_PRODUCT_OWNER_REVIEW_BOARD.html` | 14,178 | `b673d39f01efc2d1bb5b526ef53a8e82dc35be4b1512c8e78bd02f4054354639` |
 | `D2R_ACCESSIBILITY.md` | 7,110 | `a81f197ed6e52a338fc945afa99284bdfebbc52593804842840ada7bddd83c84` |
-| `D2R_AMBIENT_MEANING_ACTIVITY.md` | 10,569 | `ef5cd477869907bedfa9f3c94a387f3be059957733be4d5854e97eb4eda70578` |
-| `D2R_CORRECTION.md` | 13,640 | `2ce4a45dd040eb7990ba96d5f9b3fb0007f41763d2d4631b97564a6cd46246e9` |
-| `D2R_DESIGN_RATIONALE.md` | 11,816 | `d49c110d03598e5693f531329ac83f76e4f73773358701c31ec5952223205f58` |
+| `D2R_AMBIENT_MEANING_ACTIVITY.md` | 10,572 | `326da654e6e4e396f52c55dce815cc018630318d60bc16a96223befca1195a05` |
+| `D2R_CORRECTION.md` | 15,010 | `8be0c5ffb856519bbea89633358d43e025db5678bdbe3cebbc4689f954cc71f7` |
+| `D2R_DESIGN_RATIONALE.md` | 11,901 | `ce9518ac67ec491f22c788df96cdd2a80ba661a858b363dcb56f0067ad9e771f` |
 | `D2R_FREEZE_CANDIDATE.md` | 11,980 | `82108d8f4e363a722a5cfe119766fb3155474ce37b74cc954b1c2c9227adaa9b` |
 | `D2R_IMPLEMENTATION_BOUNDARIES.md` | 8,031 | `2091370506a7053d3ff1ff660331b55ed18858882768a012b7d32a21e2c0fc69` |
 | `D2R_IMPLEMENTATION_FEASIBILITY.md` | 9,779 | `31934aeb3d1584fca099d881ee2e9d756ef77d7fcc2cfcff1ffffcfd096aedb2` |
@@ -49,12 +49,12 @@ verification that did not happen.
 | `D2R_MOTION_AND_REDUCED_MOTION.md` | 8,688 | `cabfc75bffbf2ab76a16d0f423ed29457fdd96e5c721aebc2bd482c16b5a055d` |
 | `D2R_REFERENCE_GATE.md` | 8,861 | `e567c07fdf22ed4601f97e637f08633d9ca44d6184b04ff6e10a1776b2341ab3` |
 | `D2R_SKILL_GATE.md` | 26,526 | `2d40389e5bc75467ae32d21c9bfcf427474c8a4b880f4cc5d5913475ceb2dc77` |
-| `D2R_TRUTH_AUDIT.md` | 14,500 | `1777c6932d5cfcd3efef72e2728cb932b87aa5d60fe65d08749a226e746f937e` |
+| `D2R_TRUTH_AUDIT.md` | 14,603 | `2f8912ed1e7be5e17981f4d2725bed2b3cb8c0a3fdcdded278b10e3fd3df99cf` |
 | `data/D2_CAPTURE_REPORT.json` | 394,939 | `0bc980d675f99e829fb9f9a676320067babb6ef0bcab9fe10029de488ab69790` |
 | `data/D2_ENCODE_REPORT.json` | 2,508 | `37ff1a8188d0ea8d120726d52d6c0708b00cd0b811abe7c4437d9ca5526fbf42` |
 | `data/D2_GATE_INVENTORY.json` | 56,801 | `3acfc177cf28bb3a0908a6b769a9363bd836a050085291e484c0b977ee7c3a3b` |
 | `data/D2_LIGHT_DERIVATION.json` | 23,010 | `7738b9532d89c8dfd3be859115d983e44fa5744a39c02774883fb3b6159072b5` |
-| `data/D2_MANIFEST.json` | 17,632 | `0eef77b13a08d31f7bb832bfbd01a8318bd65430068c2b51db8b9293363629a0` |
+| `data/D2_MANIFEST.json` | 17,749 | `8b4a8a73fb5b84515de8585ccb38600cfb14dfa7e1f7a17bef138b8bd5a599f6` |
 | `data/D2_RESOLUTION.json` | 11,122 | `4f199dbea66c297f4e1765ee31cab5de6b7e128a672d251f50d178ed26c30ab0` |
 | `data/D2_STILLS_REPORT.json` | 3,078 | `4b751ef61cdd66cb83d5de4e5ee46607fb59eb92968faa2c70718ffca737f1a8` |
 | `data/D2_VERIFY_RESULTS.json` | 15,253 | `839fbd3d1137ad5c0c69618b26bd503d319af4300117732d3513ea98c6362a90` |
@@ -80,7 +80,7 @@ verification that did not happen.
 | `frames/proof/D2_REDUCED_MOTION_PAIRS.png` | 279,469 | `e80b1a6b7dee87a4cefe10d55a7b0dbcc17713167bd43eefe76f0e58a40b25ad` |
 | `frames/proof/D2_THREE_WORLDS.png` | 80,671 | `5b2b958f6b2f32a47c9db5f2e1ceaa3187aac71e05e1c5dfeac3bbd8c8fd94cb` |
 | `prototypes/D2_LIGHT_SYSTEM.html` | 231,528 | `e6c760958c8ac89c5b85b2b1108a2f971134cf36c946cd16ffbacc8c036359db` |
-| `README.md` | 8,091 | `2751a7c106dc7372dc21a2c1fee81d322057e68d6ae907fea1aa3b578a67e09f` |
+| `README.md` | 8,111 | `d5b48af4ee280c17d72a3cd121fd7cc334ae18d7cf94cc7d180ba1eccfa247ab` |
 | `source/scene/d2-connection.mjs` | 3,932 | `debb4a0a7327c97e16ad7644262b25fa20a052288c6fad5c845f8f31d7db37b7` |
 | `source/scene/d2-events.mjs` | 15,763 | `41043c6b23865f9105101d0234a85a225431789947021d68f5a06e1bd00de6f7` |
 | `source/scene/d2-foundation.mjs` | 13,428 | `cdcd403ffea7e9bf218b4f37eea71b356c0fdc5c26e4af8925e7de61956133b8` |
@@ -99,7 +99,7 @@ verification that did not happen.
 | `source/tools/d2-manifest.mjs` | 15,472 | `c75c404e5260a6db737aed5606683d7b5f3c862bbf0c65152103d67fc915f20a` |
 | `source/tools/d2-stills.mjs` | 9,192 | `00eab9abdd44c155231c5738bc68614ee39204d1ba30bd4b9c3372e2cfa3a0cb` |
 | `source/tools/d2-tokens.mjs` | 32,398 | `0149ff6678d709ac5fb672489b0aefc8902680c2f004c7cbc18296498067c772` |
-| `source/tools/d2-verify.mjs` | 65,857 | `2a0f2e9ff0d2d619a40eefbfc5acd257c31990f660d88384c8a386a8542dd7a3` |
+| `source/tools/d2-verify.mjs` | 67,045 | `105b98445db4b0ff1b717fecb23ffe211fc25d2818ca034b657901dce1b86b46` |
 | `source/tools/d2-zip.mjs` | 7,374 | `f2fc1cd2cbbdeea9fcc8009c520a0e7852cb11905eababb853bc2cfdac539288` |
 | `source/vendor/c3/b4r/dark.tokens.json` | 2,348 | `4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112` |
 | `source/vendor/c3/b4r/semantic.tokens.json` | 4,373 | `2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441` |

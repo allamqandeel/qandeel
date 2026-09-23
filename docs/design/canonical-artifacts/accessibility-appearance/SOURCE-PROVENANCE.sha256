@@ -94,7 +94,7 @@ b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5  i-08b3.1-f1r2/
 9971e6da41e40fe53b97bda0061ea2d0ef00ec09ac625035c18c5a3612553f65  i-08b3.1-f2r/data/F2_CONSISTENCY.json
 40ef3cb80d8a24f117ddda8ab5072bdc6b299829da57fa56068f19d0ec07256b  i-08b3.1-f2r/data/F2_DARK_REGRESSION.json
 7db3efd6faee78d4410bb6e97ef2036e34669af4cffce9e442c537ae6f105382  i-08b3.1-f2r/data/F2_DERIVATION.json
-d2dae8840b5014a9da8b383e54ec500cb8a8f510b7d2feec41cf6ddd57943219  i-08b3.1-f2r/data/F2_MANIFEST.json
+f67e1b2b810f8ce8dab7ff41f178b203d854285d091eca81eb7c7ab59680bd78  i-08b3.1-f2r/data/F2_MANIFEST.json
 a064a8174acb375bb3e3cae1d89ed6b8bbba8f7467b5f4e0aabbf7ed4ae1fd0b  i-08b3.1-f2r/data/F2_PARITY.json
 ea0929d2c8d0c616916077dd652420cb49a0f06bbdbc14a43a0600c843c14105  i-08b3.1-f2r/data/F2_REFERENCES.json
 24eee9916d881c987b20de9ed6d7f15e262e0affce18c83bacd75af3a07b2286  i-08b3.1-f2r/data/F2_SKILLS.json
@@ -108,11 +108,11 @@ eac7092005629f0613764e9e583f9eb422dbd4c72e797841257a58b2925ec735  i-08b3.1-f2r/d
 a04f63cdd7742f1bac0e9ed94e6e1025c54bdc97b4e6b2305fd55af890138432  i-08b3.1-f2r/docs/F2_DARK_REGRESSION.md
 da5e61c6bbfb598b97e5789cdcd3709df51ebdb6e419632f33f241be501538ef  i-08b3.1-f2r/docs/F2_DESIGN_RATIONALE.md
 86c13ee0e3a2e4d2794914a111b7dea96144e411020ce0375dd10a5a5e435c89  i-08b3.1-f2r/docs/F2_DEVICE_VALIDATION.md
-cc575650f6a44591ca1538e9452c1a9446dd05c48240b72ae0143c31dca4171f  i-08b3.1-f2r/docs/F2_FREEZE_CANDIDATE.md
+3cc7d71da59e4be6ace52913d3c0ebab9c0ed59afcb8c206df8d9a1e2dda5444  i-08b3.1-f2r/docs/F2_FREEZE_CANDIDATE.md
 e2cc7fb6334d5bb2f4499b13155028eb13dcefdbf57abad9a04744d8b56bf83f  i-08b3.1-f2r/docs/F2_IMPLEMENTATION.md
 82a8f21b3ff4ea4a6ea4b1ae364ebe3e21ed5a7624a365f2f6ab9f753c0291ec  i-08b3.1-f2r/docs/F2_KNOWN_LIMITATIONS.md
 1105c91d16c7f1ccaefe46bce568491859f4a4b7b2df3949e8fc5ff05715bd5b  i-08b3.1-f2r/docs/F2_LIGHT_DERIVATION.md
-5dc36ddc20a4051c33d0305ba24870d129785df814c12151309871e0f36019d2  i-08b3.1-f2r/docs/F2_MANIFEST.md
+d70e0fe6dbd37900c4fcf2b6eb28850be2cedb8619ce4840d34672b9ea788246  i-08b3.1-f2r/docs/F2_MANIFEST.md
 71e020a0154534b6015272b7e9e93cf53526eb9a2ba036c75fc94c9aa3e7103f  i-08b3.1-f2r/docs/F2_NORTH_STAR_CARRY_FORWARD.md
 f07c88c1fb429971056e9ade0432d3c7d1af7551e3a269764276aa766df5522d  i-08b3.1-f2r/docs/F2_PRODUCT_OWNER_REVIEW.md
 792f06d63a399b824994af2d20bb82fa7e37798f6707d33d97bef42ea1a2e614  i-08b3.1-f2r/docs/F2_REFERENCE_GATE.md
@@ -122,7 +122,7 @@ d6162d72b498e95e1d0269e688d74b6a5412792c1af199476c56df2487578d68  i-08b3.1-f2r/d
 f9f2af3f4dfef6c5c1d7af07420aa087d8c6f9d208999b38972ccfb732630d8a  i-08b3.1-f2r/docs/F2_VALIDATION_RESULTS.md
 9e01b0a929d3146b1cae7a6b8fb4bddf1b04f35bd97ba37b97892f02cd646ff2  i-08b3.1-f2r/docs/F2R_CLEAN_EXTRACTION.md
 f51b9fcb05410ae8160f69735aa4279398d55389e0a541a5899873d1bf6ee591  i-08b3.1-f2r/docs/F2R_REVISION.md
-6c1b3e55419c2399f329491357fecc2739da9d4882608da4a5ed8657975f410b  i-08b3.1-f2r/README.md
+2abc9f1d052a3318a75c40c1b25431ea0bf306c0c7eb3fec5b83b2226089bfc5  i-08b3.1-f2r/README.md
 93b5fa8138c6ce9dea047f2ab34ba7c1a8c4de8aa9b89b2ac6da22c8ca4441c9  i-08b3.1-f2r/tokens/appearance/dark/f2.dark.illumination-technique.tokens.json
 8176490548ca7105f4b3a20f5c72c298d6de0c14289743887f411e3c4ab0ab0e  i-08b3.1-f2r/tokens/appearance/light/b4r.light.tokens.json
 f8066672414cefe95d46105620ca1b6e48d6f42fc44c715e69d60e99d280572d  i-08b3.1-f2r/tokens/appearance/light/c3.light.material.tokens.json
@@ -163,7 +163,7 @@ dd47c43cb72eb306f2b701a883ce7c48e280f4d8bcfbf00664d0abca681e35cc  i-08b3.1-f2r/v
 4551473f1fee8f6451e28d1c00bc4b5de66f2a5bfec6f6199c83ce7ec6bd90c5  i-08b3.1-f2r/vendor/f1/tokens/transparency/full.accessibility.tokens.json
 c682c06ae72e66819a9ccd18d0715ef836e993da47ae6d1cd40b826e01187772  i-08b3.1-f2r/vendor/f1/tokens/transparency/reduced.accessibility.tokens.json
 e9aaf07d8393a744817e992b0774cbde100109f40cb4e75e9c9985997d2174aa  i-08b3.1-f2r/vendor/f1/tools/f1-boards.mjs
-44bc93db3f2b404b9ea43ee9d991ffb563ebfbc19167b8e468cc05475d4912f6  i-08b3.1-f2r/vendor/f1/tools/f1-cdp.mjs
+798b63c34eadb8f5ee8b9fb64ff57aa909904af744a83d3143c1da7412db11c4  i-08b3.1-f2r/vendor/f1/tools/f1-cdp.mjs
 a0a9c462ae23db4226baf867b3e1e292fb77ba803d5fe1b089ef0e098c0efba5  i-08b3.1-f2r/vendor/f1/tools/f1-consistency.mjs
 b4d921ce4fdbef9d6d224ae17d235635d97198a2f477695bf63f4b4f3aa0863e  i-08b3.1-f2r/vendor/f1/tools/f1-cvd.mjs
 50c88f481162e0fc915740be47fa50c6b123fb2c86dbd7ddc16888d68edd5f6d  i-08b3.1-f2r/vendor/f1/tools/f1-derive.mjs

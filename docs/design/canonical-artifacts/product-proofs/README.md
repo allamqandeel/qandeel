@@ -1,4 +1,4 @@
-# Product proofs — I-08B3.1-G1.1-R3 and I-08B3.1-G1.2
+# Product proofs — I-08B3.1-G1.1-R3 and I-08B3.1-G1.2 (+ R1)
 
 The source and built prototypes of the two closed G1 Product proofs. Their canonical **closure
 records** were already on `main`, and those records are the authority for what was decided:
@@ -13,8 +13,10 @@ What was local-only is preserved here.
   (checks, manifest, screens, token resolution, motion truth) and the R3 reports, including the B4
   `UTTERANCE` reconciliation note.
 - `g1.2/`: the reviewed G1.2 proof, with the same layout plus the audio-runtime and
-  background-call platform notes.
+  background-call platform notes. **`g1.2/source/src/` is the final R1-corrected source**, and
+  `g1.2/r1/` holds the R1 correction record, source patch, targeted checks and manifest.
 
-**Read before reuse:** the local G1.2 source is the **pre-R1** state, and its Product-area name and
-persistent call prose are superseded. [`SOURCE-PROVENANCE.md`](SOURCE-PROVENANCE.md) explains
-exactly what is superseded and what is missing.
+**Read before reuse:** in `g1.2/`, only `source/src/` and `r1/` carry R1. The built
+`prototype/*.html`, `data/G12_CHECKS.json`, `source/tools/checks.mjs` and the G1.2 reports are the
+reviewed proof's pre-R1 evidence and still use the superseded Product-area name and persistent call
+prose. [`SOURCE-PROVENANCE.md`](SOURCE-PROVENANCE.md) explains exactly what is superseded.

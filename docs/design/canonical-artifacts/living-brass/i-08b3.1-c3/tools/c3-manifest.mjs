@@ -1,8 +1,9 @@
 /**
  * I-08B3.1-C3 — THE MANIFEST.
  *
- * Every shipped file, hashed, with what it is and where it came from. Generated last, from a walk of
- * the package, so it describes what is actually there rather than what was intended to be.
+ * Every shipped non-manifest file, hashed, with what it is and where it came from. Generated last, from a walk of
+ * the package, so it describes what is actually there rather than what was intended to be. The two manifest
+ * outputs are deliberately excluded because a file cannot contain a stable hash of itself.
  *
  * IT ALSO ENFORCES TWO PACKAGING RULES rather than merely reporting on them:
  *
@@ -67,7 +68,7 @@ export function build() {
       const rel = relative(PKG, p).replace(/\\/g, '/');
       return { path: rel, bytes: statSync(p).size, sha256: sha(p), what: what(rel) };
     })
-    .filter((f) => f.path !== 'docs/C3_MANIFEST.md')   // it cannot hash itself
+    .filter((f) => f.path !== 'docs/C3_MANIFEST.md' && f.path !== 'data/C3_MANIFEST.json')   // manifest outputs cannot hash themselves
     .sort((a, b) => a.path.localeCompare(b.path));
 
   const FONT = /\.(ttf|otf|woff2?|eot|ttc|pfb)$/i;

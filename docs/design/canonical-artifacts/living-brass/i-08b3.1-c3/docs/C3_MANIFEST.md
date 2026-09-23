@@ -3,12 +3,12 @@
 **I-08B3.1-C3.** Every shipped file, hashed. **GENERATED** last, from a walk of the package, so
 it describes what is actually there rather than what was intended to be.
 
-**78 files · 2,133,088 bytes.**
+**78 files · 2,117,026 bytes.**
 
 | Directory | Files |
 |---|---|
-| `data` | 3 |
-| `docs` | 15 |
+| `data` | 2 |
+| `docs` | 16 |
 | `reference/canonical` | 1 |
 | `review/proof` | 9 |
 | `tokens` | 1 |
@@ -31,7 +31,7 @@ it describes what is actually there rather than what was intended to be.
 found. The Arabic face is a LOCAL RUNTIME DEPENDENCY — referenced, hashed before use, never
 redistributed. Invariant I-18 scans independently.
 
-**No work directory inside the package.** `.i08b31-c2-work/`: present with 0 entries, EXCLUDED from the package and removed.
+**No work directory inside the package.** `.i08b31-c2-work/`: not present.
 
 That directory is created by importing the vendored C2 renderer, which computes its scratch path
 from its own module URL — and the vendored copy lives inside this package. It is a real
@@ -55,12 +55,12 @@ quietly deleted and forgotten. C3's own renderer writes outside the package, to
 
 | Path | Bytes | SHA-256 | What it is |
 |---|---|---|---|
-| `data/C3_MANIFEST.json` | 18709 | `799047099200fc3fe436aca3476343d124a30bbb659ade08abe7bc73c7a20dc3` | generated data |
 | `data/C3_MEASUREMENTS.csv` | 10544 | `eadc6027d7dcd4c11e39445137ab8b20eeef7c9e0551ab72b7639e352698ed95` | generated data |
 | `data/C3_VALIDATION.json` | 98771 | `960d17c1f25646cf70bcf3fbe5e6640a0378b85c18b7425b99c9c133a03c5649` | generated data |
 | `docs/C3_ANTI_MINIMALISM_MISREAD.md` | 5365 | `d73d2e8721e0b9ada4060662c4d478c427ce0389bc5fe24f76fe24fc19d0039d` | document |
 | `docs/C3_CANONICAL_LIVING_BRASS_SPEC.md` | 9868 | `e9650778ffbeee0a203d703c23be61d40baf5d21b1d0d3d436fbc57d88351bc9` | document |
 | `docs/C3_EXPRESSIVE_HEADROOM_CONTRACT.md` | 5343 | `51a09b63591c4edadcd80efb819c48006a9d280785f7fafdaa5259d9d8cc9687` | document |
+| `docs/C3_FINAL_CLOSURE_RECORD.md` | 2469 | `6db709747760bb96595650484422c83564fa9473c97a7a8eafcaf30f6cf2c374` | document |
 | `docs/C3_FREEZE_RECORD.md` | 9726 | `1f02ed4d65f94086e3320a856d13c835441ab5bfa5a44ee38f6ace35d6eae7ee` | document |
 | `docs/C3_ICONOGRAPHY_MATERIAL_CONTRACT.md` | 10460 | `9f4aca9c23bf0bd83559c63f98a155b55ef681e8fe8ec6b7210d6bafa5364e72` | document |
 | `docs/C3_INVARIANTS.md` | 10301 | `28de7da290c39ebf9b90f912f9805a6d86a439ba7b86a5558b0d183cc15e83d0` | document |
@@ -89,7 +89,7 @@ quietly deleted and forgotten. C3's own renderer writes outside the package, to
 | `tokens/qandeel-living-brass.resolver.json` | 2364 | `d013dc03bccb2d246cc6313460d1776b79e9a767512a51d0dff32429c194ccb1` | DTCG 2025.10 token file — AUTHORED BY C3 |
 | `tools/c3-docs.mjs` | 23548 | `df0ac758fe38f3552153231e766bd95d796d173a6d7cf30be752bb507eb43fea` | tool |
 | `tools/c3-invariants.mjs` | 45334 | `ec0f7d415db8bcc7557f4349e2b4746d58fef4f9cc142490c5782edbe7cb46b8` | tool |
-| `tools/c3-manifest.mjs` | 6840 | `383b7a27a8271bfbd43428fa9ef9efba25df808219cb12e7c196dda3b69ad58d` | tool |
+| `tools/c3-manifest.mjs` | 7018 | `b5b735558d010035bc59ffe24459252915b82e21be336e42425d51a060b4829e` | tool |
 | `tools/c3-reference.mjs` | 16793 | `337750c88cd507f00ecf3661bbe7dd46933fac6f4ed5e943387623247f2bf0aa` | tool |
 | `tools/c3-render.mjs` | 4675 | `a059c58e2501f1f8cc02487a15f7f454960a46ec1c0ffdaa9efd3fcb4738c226` | tool |
 | `tools/c3-repro.mjs` | 14883 | `412a3c7af5c77179dc89e1571d8a6caf2b2a66f82b9a35f75d1baecd19ca5812` | tool |
