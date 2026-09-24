@@ -134,6 +134,7 @@ recorded in `g2.3/README.md` (C1–C12 and the 28-step live check) were not re-r
 | `docs/design/i-08b3.1-g2.3/QANDEEL_G2_3_CANONICAL_CLOSURE.md` (PR #266, `a55af616…`) | G2.3 CLOSED / FROZEN: the exact Matching opening and QANDEEL-view / privacy copy, the Matching process, the compact Return direction |
 | `docs/design/i-08b3.1-g2.3/T11_RETURN_PRESENTATION_CONTROLLED_AMENDMENT.md` | «طرق العودة» as the one permitted Return grouping. It supersedes the package's amendment candidate |
 | `docs/design/i-08b3.1-g2/QANDEEL_G2_CANONICAL_CLOSURE.md`, **binding once PR #267 merges** | the G2 Product laws; the narrow F2 → G2 scoped supersession for the Living Analysis World (§F); Q-LIGHT-SHELL open; the S-04 boundary |
+| `docs/design/i-08b3.1-g3/G2_F2_ANALYSIS_SHELL_CONTROLLED_AMENDMENT.md` and `T11_T12_TEMPORAL_ORIENTATION_CONTROLLED_AMENDMENT.md`, with the G3 closure | Q-LIGHT-SHELL **resolved** (the Analysis shell is dark under both appearances); S-04 **resolved** in its narrower form (only the temporal line above the Timeline). The "open" and "evidence only" statements in this file are historical |
 
 The three preserved files are hashed in [`SOURCE-PROVENANCE.sha256`](SOURCE-PROVENANCE.sha256). Check them
 with `sha256sum -c` from this folder. As in every domain folder here, the authored `README.md` and this

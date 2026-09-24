@@ -154,6 +154,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -406,6 +407,30 @@ misread as a decision:
 
 The backlog records the obligation only (BG-07).
 
+### `QAN-BL-VIS-01` — Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof
+
+- **Title / Finding:** the canonical I-08B1 Living Analysis World has only been proved on its fixture world. Nothing
+  shows how its density, level of detail, legibility and performance behave when a reader's conversation history is
+  long-term and heavy.
+- **Source:** [G2 closure §G item 8](design/i-08b3.1-g2/QANDEEL_G2_CANONICAL_CLOSURE.md) ("HEAVY-HISTORY /
+  LONG-TERM WORLD DENSITY + LOD STRESS PROOF — future stress proof"), carried unchanged by the
+  [G3 readiness handoff §7](design/i-08b3.1-g2/QANDEEL_G3_READINESS_HANDOFF.md); the density half of F1R2's
+  `F1_F2_CARRY_FORWARD.md` §C item 11
+  (`design/canonical-artifacts/accessibility-appearance/i-08b3.1-f1r2/docs/`), which carried density to G. Admitted by
+  the [I-08B3.1-G3 closure §H](design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) when parent G closed.
+- **Why deferred:** G3 was forbidden to redesign I-08B1, and its fixture world stays canonical. A stress proof needs
+  heavy-history material and may need a reconciliation with the frozen D-track contract. Parent G closes without it and
+  can no longer hold it.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `HIGH`, because if reopened it can affect an already-frozen capability, the I-08B1 world.
+- **Reopen condition:** Architecture or Product opens a world-scale density / level-of-detail proof task; or a production
+  port, or real long-term history, shows the frozen world losing legibility, semantic truth or performance at scale.
+- **Status:** `OPEN — UNASSIGNED`
+
+This entry defines no density, no level-of-detail rule, no token and no world change. F1's observation that no token
+constrains density is not a permission. Any change to the world still passes through I-08B1's own reopen rule. The
+Product Owner's ruling that the North Star spectacle requirement is met (G3 closure §E) does not answer this item.
+
 ---
 
 ## 6. Tombstones
@@ -553,13 +578,13 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | --- | ---: |
 | `DEFERRED — OWNED` | 1 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 6 |
+| `OPEN — UNASSIGNED` | 7 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **19** |
+| **Total** | **20** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 10 |
+| `HIGH` | 11 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
@@ -577,6 +602,9 @@ onboarding, account deletion, account linking, "remember me", a password visibil
 sign-out chrome — is anti-scope, and BG-06 admits none of it: none has an existing `OPEN` identifier,
 none is deferred to a future task by a canonical document, none is carried forward for validation,
 and Architecture designated none.
+
+The I-08B3.1-G3 closure admitted `QAN-BL-VIS-01`. It is the one open item parent `I-08B3.1-G` could no longer hold once
+it closed, so the register now counts seven `OPEN — UNASSIGNED` items.
 
 ---
 
@@ -935,3 +963,33 @@ two complete Focused Database Verification rounds for migrations `0115`–`0118`
 predecessor regressions, and exact-head API/Mobile CI. `I-07A`, `I-07B`, `I-07C`, `I-07D` and parent
 `I-07` are now `CLOSED / FROZEN`. Launch readiness is explicitly not implied; production-enabling
 safety/entitlement/Launch Gate work remains fail-closed and owned by the later launch phase.
+
+### I-08B3.1-G3 and parent I-08B3.1-G — design-track BG-08 reconciliation
+
+This is a design-track record. `I-08B3.1-G3` is not Connected Worlds phase `I-08`, and this section is not a phase
+record for it. The primary record is
+[`design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md`](design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md), and it
+carries G3's and parent G's lifecycle state itself (BG-09).
+
+**Inherited: none.** No item names G3, parent G or any I-08B3.1 task as its Owner task. The adjacent items stay where
+they are:
+- `QAN-BL-NAV-02` still owns the Product Analysis Replay surface;
+- `QAN-BL-VOICE-01` still owns the Personal Voice / Live Call runtime. The G3 Matching / Live-Call rule consumes that
+  item's future call authority and takes nothing from it;
+- `QAN-BL-SEC-01` is untouched.
+
+**Admitted: one, `QAN-BL-VIS-01`.**
+- **Why it qualifies:** it is the heavy-history density / level-of-detail stress proof that G2 §G deferred by name and
+  that F1 carried to G.
+- **Why now:** parent G closes and can no longer hold it.
+- **Why it is not a laundered blocker (BG-01):** G3's contract forbade touching the world.
+
+**Not admitted:** every other G3 carry-forward, for the reasons the closure record §H states. None is admitted (BG-06):
+- the proof copy;
+- the device gates;
+- the production implementation of the frozen presentation contracts;
+- the Matching / Live-Call presentation, owned by Connected Worlds `I-08`.
+
+**A disposition that needs no backlog entry.** The F1 / F2 North Star spectacle requirement, which the F records gave to
+G, is dispositioned by the Product Owner's decision recorded in the closure record §E: met by the accepted canonical
+I-08B1 world. That leaves no obligation to register.

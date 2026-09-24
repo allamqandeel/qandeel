@@ -38,3 +38,10 @@ canonical elsewhere. [`SOURCE-PROVENANCE.md`](SOURCE-PROVENANCE.md) records:
   - orientation sits above the Timeline (S-04).
 - **It cannot be regenerated from preserved material.** Its build inputs are identified by hash in its
   manifest.
+- **Later: both caveats above are resolved by G3.**
+  - The Analysis shell is dark under both system appearances:
+    `docs/design/i-08b3.1-g3/G2_F2_ANALYSIS_SHELL_CONTROLLED_AMENDMENT.md`.
+  - Only the concise temporal line stands above the Timeline:
+    `docs/design/i-08b3.1-g3/T11_T12_TEMPORAL_ORIENTATION_CONTROLLED_AMENDMENT.md`.
+
+  This build's whole-orientation placement stays evidence only. The final proof is in `../g3/`.
