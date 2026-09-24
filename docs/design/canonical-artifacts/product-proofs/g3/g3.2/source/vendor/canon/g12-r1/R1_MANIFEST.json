@@ -1,0 +1,36 @@
+{
+  "package": "QANDEEL_I-08B3.1-G1.2-R1_DIRECT_CORRECTION",
+  "original_g12_zip_sha256": "1b297be9402960928dfc85574cdf7fc3a88b1c59e6777af806e5a1d9f7ec3e96",
+  "files": [
+    {
+      "path": "R1_CORRECTION_RECORD.md",
+      "bytes": 5041,
+      "sha256": "9f565673ab71bfb6d8b588b8e7a5d5d719ef278d6ebfa2e7aa2a3e4249ecfa49"
+    },
+    {
+      "path": "R1_SOURCE_PATCH.diff",
+      "bytes": 12225,
+      "sha256": "999b06a1162b343eadbd23ba921cf04e09ee4da8165fe1098fe6b0a03ac56334"
+    },
+    {
+      "path": "R1_TARGETED_CHECKS.json",
+      "bytes": 2853,
+      "sha256": "a13ebc9f1150ed34958a84ec1d1527a8dd6466762cee1d16893593d06c1d2126"
+    },
+    {
+      "path": "source/src/build.mjs",
+      "bytes": 37685,
+      "sha256": "b78e69b2a8309b6ba587c2512a542ca52253e21b907e5562bb096a6cff12ea35"
+    },
+    {
+      "path": "source/src/content.mjs",
+      "bytes": 18083,
+      "sha256": "2f5fe6da0b22dc18b1df5a3a3dd1052715bb7893afd489be0254ac4877a992e0"
+    },
+    {
+      "path": "source/src/runtime.js",
+      "bytes": 48695,
+      "sha256": "467f5b762e63c88b19337acef5c4b3d0224a74fd82d6c858a7f234715d933bd7"
+    }
+  ]
+}

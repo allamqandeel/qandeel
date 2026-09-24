@@ -1,0 +1,755 @@
+{
+  "$description": "QANDEEL INTERACTION STATE and SYSTEM STATUS — semantic layer. I-08B3.1-E1. Extends the frozen I-08B3.1-D2R illumination layer, which extends C3 Living Brass, which extends B4R Surface. The four are resolved TOGETHER and none is complete alone.",
+  "qandeel": {
+    "state": {
+      "$description": "INTERACTION STATE. THIS GROUP WAS RESERVED AND EMPTY IN I-08B3.1-C3 AND IS FILLED HERE; a resolved tree that still calls it empty has not picked up E1. STATE IS THE USER’S POSITION: where input is going, what the user chose, whether the user is touching, whether the user may. It is not what a thing is made of (BRASS IS MATTER) and not what the system understood (LIGHT IS MEANING). THE STATE COMPOSITION MODEL is in com.qandeel.composition on this group, and it REPLACES a false statement I-08B3.1-E1 shipped: E1 said each state owned a different channel and that no channel was used twice, which was untrue the moment it was written, because SELECTED writes the ink and DISABLED writes the ink. THREE channels are exclusively owned, ONE is shared and resolved by declared precedence, and DISABLED is an OVERRIDE rather than a peer. NO MEMBER OF THIS GROUP RESOLVES TO A LITERAL EXCEPT disabled.ink: interaction state adds NO COLOUR to QANDEEL, and invariant I-06 checks it. NO MEMBER MAY EVER ALIAS THE IDENTITY MATERIAL OR THE ILLUMINATION (C3 invariant I-04, carried forward as E1 I-04).",
+      "$extensions": {
+        "com.qandeel.composition": {
+          "model": "STATE COMPOSITION / OWNERSHIP. Not an exclusivity rule. A channel has an OWNER — the state that may introduce a change on it — and a channel may also be WRITTEN by another state, in which case a precedence rule resolves it. Listing the owners is not the same as claiming no channel is shared, and I-08B3.1-E1 made exactly that mistake.",
+          "withdrawn": "I-08B3.1-E1’s exclusivity rule about visual channels, whose wording is quoted only in docs/E1R_REVISION_RECORD.md. It is contradicted by this very document: the INK channel below names two writers.",
+          "states": [
+            "pressed",
+            "focus",
+            "selected",
+            "disabled"
+          ],
+          "channels": [
+            {
+              "channel": "GROUND",
+              "field": "ground",
+              "owner": "pressed",
+              "alsoWritten": [],
+              "exclusive": true,
+              "precedenceRule": null,
+              "note": "The control’s own ground, washed with the Product’s reading ink. Transient, on pointer-down."
+            },
+            {
+              "channel": "DETACHED PERIMETER",
+              "field": "perimeter",
+              "owner": "focus",
+              "alsoWritten": [],
+              "exclusive": true,
+              "precedenceRule": null,
+              "note": "Two-tone, outside the control, separated by a gap. It is apparatus adjacent to the object, not a property of it, which is why it contests nothing. DISABLED does not write it: availability decides whether focus can ARRIVE, which is a question about the focus order and not about paint."
+            },
+            {
+              "channel": "ATTACHED MARKER — PRESENCE",
+              "field": "marker",
+              "owner": "selected",
+              "alsoWritten": [],
+              "exclusive": true,
+              "precedenceRule": null,
+              "note": "The marker’s PRESENCE is owned by selection and by nothing else. Its INK is not: see the INK channel."
+            },
+            {
+              "channel": "INK",
+              "field": "ink",
+              "owner": "selected",
+              "alsoWritten": [
+                "disabled"
+              ],
+              "exclusive": false,
+              "precedenceRule": "P1",
+              "note": "SHARED, AND THIS IS THE CHANNEL THE OLD SLOGAN DENIED. SELECTED promotes the control’s inks one rung up the frozen ramp; DISABLED collapses every ink the control carries — including the selection marker’s — to the single unavailable ink. Resolved by precedence rule P1, not by ownership."
+            },
+            {
+              "channel": "TYPE WEIGHT",
+              "field": "weight",
+              "owner": "selected",
+              "alsoWritten": [],
+              "exclusive": true,
+              "precedenceRule": null,
+              "note": "Weight is the record of a choice, and availability is not a reason to withdraw a record. DISABLED does not write it, which is what keeps SELECTED + UNAVAILABLE distinguishable from UNAVAILABLE."
+            },
+            {
+              "channel": "AVAILABILITY",
+              "field": null,
+              "owner": "disabled",
+              "alsoWritten": [],
+              "exclusive": true,
+              "precedenceRule": null,
+              "note": "NOT A VISUAL CHANNEL, which is why it carries no matrix field. It is the affordance itself, and that is why DISABLED is an override rather than a peer state."
+            }
+          ],
+          "precedence": [
+            {
+              "id": "P1",
+              "rule": "AVAILABILITY OVERRIDES INK.",
+              "detail": "When a control is unavailable every ink it carries resolves to qandeel.state.disabled.ink, INCLUDING the selection marker’s. Selection’s ink promotion is suppressed. Selection’s marker and selection’s weight are not.",
+              "why": "A control that is not acting has no internal hierarchy to express, because hierarchy is for reading and acting. The choice the user already made is a different fact from the control’s availability, and it survives."
+            },
+            {
+              "id": "P2",
+              "rule": "AVAILABILITY SUPPRESSES THE PRESS RESPONSE.",
+              "detail": "An unavailable control produces no ground response at any point in a pointer interaction.",
+              "why": "The ground response means \"I am receiving your physical interaction.\" An unavailable control is not. This is the rule that makes four of the sixteen combinations unreachable rather than merely unusual."
+            },
+            {
+              "id": "P3",
+              "rule": "FOCUS IS ORTHOGONAL AND IS NEVER SUPPRESSED BY ANOTHER STATE.",
+              "detail": "The perimeter is detached apparatus; it contests no channel. Whether it can appear on an UNAVAILABLE control is decided by that control’s availability pattern — see com.qandeel.availability — and not by precedence.",
+              "why": "Focus is a fact about the input system, not about the object. E1 previously concluded from its own expression rule that focus and unavailability could never co-occur; that was an accessibility claim dressed as a composition claim, and it was wrong."
+            }
+          ],
+          "matrix": [
+            {
+              "states": [],
+              "verdict": "REACHABLE",
+              "ground": "rest",
+              "perimeter": "none",
+              "marker": "absent",
+              "ink": "rest ink",
+              "weight": "rest",
+              "rule": "—",
+              "why": "REST is the absence of state.",
+              "combination": "rest"
+            },
+            {
+              "states": [
+                "pressed"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "wash",
+              "perimeter": "none",
+              "marker": "absent",
+              "ink": "rest ink",
+              "weight": "rest",
+              "rule": "—",
+              "why": "The ground moves and returns. Nothing persists.",
+              "combination": "pressed"
+            },
+            {
+              "states": [
+                "focus"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "rest",
+              "perimeter": "indicator + companion",
+              "marker": "absent",
+              "ink": "rest ink",
+              "weight": "rest",
+              "rule": "—",
+              "why": "Input is going here.",
+              "combination": "focus"
+            },
+            {
+              "states": [
+                "selected"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "rest",
+              "perimeter": "none",
+              "marker": "present, selected marker ink",
+              "ink": "promoted one rung",
+              "weight": "promoted",
+              "rule": "—",
+              "why": "The user chose this and it stayed chosen.",
+              "combination": "selected"
+            },
+            {
+              "states": [
+                "disabled"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "rest",
+              "perimeter": "none",
+              "marker": "absent",
+              "ink": "unavailable ink, whole control",
+              "weight": "rest",
+              "rule": "P1, P2",
+              "why": "Unavailable. Every ink the control carries resolves to one value, the press response is suppressed, and the reason is stated in a real adjacent element. Whether focus can ARRIVE here is the next row’s question, not this one’s.",
+              "combination": "disabled"
+            },
+            {
+              "states": [
+                "pressed",
+                "focus"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "wash",
+              "perimeter": "indicator + companion",
+              "marker": "absent",
+              "ink": "rest ink",
+              "weight": "rest",
+              "rule": "P3",
+              "why": "Ordinary on every platform E1 targets: a pointer press on an already-focused control, and a keyboard activation held down. The two channels are disjoint, so nothing has to be decided.",
+              "combination": "pressed+focus"
+            },
+            {
+              "states": [
+                "pressed",
+                "selected"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "wash",
+              "perimeter": "none",
+              "marker": "present, selected marker ink",
+              "ink": "promoted one rung",
+              "weight": "promoted",
+              "rule": "—",
+              "why": "A chosen thing being pressed again. The ground moves under an object that keeps its marker.",
+              "combination": "pressed+selected"
+            },
+            {
+              "states": [
+                "pressed",
+                "disabled"
+              ],
+              "verdict": "UNREACHABLE",
+              "ground": "rest — the press response is suppressed",
+              "perimeter": "none",
+              "marker": "absent",
+              "ink": "unavailable ink, whole control",
+              "weight": "rest",
+              "rule": "P2",
+              "why": "NOT REACHABLE AS AN EXPRESSION. A pointer-down on an unavailable control is discarded: a ground response would say the interaction was received, and it was not. The control may still be touched; there is no state to paint.",
+              "combination": "pressed+disabled"
+            },
+            {
+              "states": [
+                "focus",
+                "selected"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "rest",
+              "perimeter": "indicator + companion",
+              "marker": "present, selected marker ink",
+              "ink": "promoted one rung",
+              "weight": "promoted",
+              "rule": "P3",
+              "why": "THE PAIR THE WHOLE EXPRESSION WAS BUILT TO KEEP APART. Detached apparatus outside, attached marker inside, ground between them.",
+              "combination": "focus+selected"
+            },
+            {
+              "states": [
+                "focus",
+                "disabled"
+              ],
+              "verdict": "CONDITIONAL",
+              "ground": "rest",
+              "perimeter": "indicator + companion, in the DISCOVERABLE pattern only",
+              "marker": "absent",
+              "ink": "unavailable ink, whole control",
+              "weight": "rest",
+              "rule": "P3 + availability pattern",
+              "why": "CONDITIONAL ON THE PATTERN. In NATIVE NON-DISCOVERABLE UNAVAILABLE it cannot occur, because the control is not in the focus order. In DISCOVERABLE UNAVAILABLE it occurs routinely and must be expressed — this is the combination E1 declared impossible.",
+              "combination": "focus+disabled"
+            },
+            {
+              "states": [
+                "selected",
+                "disabled"
+              ],
+              "verdict": "CONDITIONAL",
+              "ground": "rest",
+              "perimeter": "none",
+              "marker": "PRESENT, in the unavailable ink",
+              "ink": "unavailable ink, whole control",
+              "weight": "promoted — RETAINED",
+              "rule": "P1",
+              "why": "CONDITIONAL ON THE CONTROL TYPE — see com.qandeel.selected-unavailable. Where it is reachable, the choice is a record and the record survives: the marker stays and the weight stays, and the ink obeys the availability override. Two channels distinguish it from UNAVAILABLE (marker, weight) and one from SELECTED (ink).",
+              "combination": "selected+disabled"
+            },
+            {
+              "states": [
+                "pressed",
+                "focus",
+                "selected"
+              ],
+              "verdict": "REACHABLE",
+              "ground": "wash",
+              "perimeter": "indicator + companion",
+              "marker": "present, selected marker ink",
+              "ink": "promoted one rung",
+              "weight": "promoted",
+              "rule": "P3",
+              "why": "All three channels are disjoint. A keyboard user activating the row they have focused and already chosen.",
+              "combination": "pressed+focus+selected"
+            },
+            {
+              "states": [
+                "pressed",
+                "focus",
+                "disabled"
+              ],
+              "verdict": "UNREACHABLE",
+              "ground": "rest — suppressed",
+              "perimeter": "indicator + companion, in the DISCOVERABLE pattern only",
+              "marker": "absent",
+              "ink": "unavailable ink, whole control",
+              "weight": "rest",
+              "rule": "P2",
+              "why": "Unreachable for the same reason as pressed + disabled. Focus may be present; the press response is not.",
+              "combination": "pressed+focus+disabled"
+            },
+            {
+              "states": [
+                "pressed",
+                "selected",
+                "disabled"
+              ],
+              "verdict": "UNREACHABLE",
+              "ground": "rest — suppressed",
+              "perimeter": "none",
+              "marker": "PRESENT, in the unavailable ink",
+              "ink": "unavailable ink, whole control",
+              "weight": "promoted — RETAINED",
+              "rule": "P2",
+              "why": "Unreachable. P2 removes the press wherever unavailability is present.",
+              "combination": "pressed+selected+disabled"
+            },
+            {
+              "states": [
+                "focus",
+                "selected",
+                "disabled"
+              ],
+              "verdict": "CONDITIONAL",
+              "ground": "rest",
+              "perimeter": "indicator + companion, in the DISCOVERABLE pattern only",
+              "marker": "PRESENT, in the unavailable ink",
+              "ink": "unavailable ink, whole control",
+              "weight": "promoted — RETAINED",
+              "rule": "P1 + P3 + availability pattern",
+              "why": "CONDITIONAL, and it is the ordinary case for a chosen option that has become unavailable inside a set the user is tabbing through. Board b17.",
+              "combination": "focus+selected+disabled"
+            },
+            {
+              "states": [
+                "pressed",
+                "focus",
+                "selected",
+                "disabled"
+              ],
+              "verdict": "UNREACHABLE",
+              "ground": "rest — suppressed",
+              "perimeter": "indicator + companion, in the DISCOVERABLE pattern only",
+              "marker": "PRESENT, in the unavailable ink",
+              "ink": "unavailable ink, whole control",
+              "weight": "promoted — RETAINED",
+              "rule": "P2",
+              "why": "Unreachable. P2.",
+              "combination": "pressed+focus+selected+disabled"
+            }
+          ],
+          "matrixIsComplete": "All 16 subsets of the four non-rest states are present, each with a verdict and the rule that produced it. A combination that is not in this list is a specification gap, and check R27 fails on one."
+        }
+      },
+      "rest": {
+        "$description": "REST is the ABSENCE of state, not a state with its own colour. The ink belongs to the control’s permission class, which C3 owns; this alias exists so REST is visible in the graph and is obviously not a state colour.",
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.control.functional}",
+          "$description": "The control’s own rest ink, by way of C3’s permission class. Reaching a different value here would mean E1 had taken ownership of something C3 froze.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 500,
+          "$description": "Rest type weight. Inside 400-700, which is the band Arabic requires at UI sizes: below 400 the connected script thins to illegibility at small sizes.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "pressed": {
+        "$description": "PRESSED — \"I am receiving your physical interaction.\" TRANSIENT, and it belongs to the GROUND, not to the ink and not to the object. It is not selection, not meaning emergence, not success and not identity. It begins on POINTER-DOWN, never on release. THE SEPARATION FROM QANDEEL LIGHT IS THE CHAIN, NOT THE COMPOSITED CHROMA, AND THAT IS A CORRECTION: an earlier version of this contract claimed the pressed ground’s chroma proved it could not be a meaning event, and the probe for that claim STAYED SILENT — at these alphas over a near-black ground almost any wash composites to a nearly achromatic value, so the measurement passes whatever ink you feed it. What is falsifiable is that pressed.ink resolves into the frozen reading ramp and may never reach the illumination. Check R11. The deeper separation is behavioural in any case: a meaning event rises, decays and reaches exactly zero, and a press has no lifecycle at all.",
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.content.primary}",
+          "$description": "THE WASH IS THE PRODUCT’S OWN INK, NOT WHITE. QANDEEL has no pure white and a white wash would introduce a neutral colder than anything in the system. Material 3 states the same construction for its state layers: the overlay \"uses the same color as the content\".",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "presence": {
+          "$type": "number",
+          "$value": 0.1,
+          "$description": "The wash alpha. VALUE from Material 3's pressed state-layer opacity, and it is a PRODUCTION DEFAULT, not a Product decision. What is DERIVED is the FLOOR it must clear: it moves the functional Surface by 0.0797 in OkLCh lightness, against a floor of 0.0360 — the frozen World-to-Surface step, which is the smallest tonal distinction the frozen system asserts anywhere.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "focus": {
+        "$description": "FOCUS — \"this control currently receives interaction.\" It belongs to the INPUT SYSTEM, not to the content, so it is drawn OUTSIDE the control, DETACHED by a gap: a piece of apparatus adjacent to the object rather than a property of it. That is what keeps it distinct from SELECTED, which is attached. FOCUS IS NOT MEANING LIGHT AND IS NOT BRASS. It introduces no colour: the indicator is the Product’s own primary reading ink and the companion is the World.",
+        "indicator": {
+          "$type": "color",
+          "$value": "{qandeel.content.primary}",
+          "$description": "The indicator proper. Reaches 12.95:1 against the World and 12.08:1 against the functional Surface, which is the change-of-contrast WCAG 2.2 SC 2.4.13 measures between the focused and unfocused states of the same pixels.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "companion": {
+          "$type": "color",
+          "$value": "{qandeel.world.fill}",
+          "$description": "THE COMPANION IS NOT DECORATION. WCAG 2.2 SC 1.4.11 measures a focus indicator against its ADJACENT colours, and the indicator alone reaches 3:1 against only 5 of the 13 colours QANDEEL can paint beside it — it fails against every ink, against the identity material, against the Light and against the error. The pair reaches 3:1 against all 13. Measured in data/E1_DERIVATION.json.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "thickness": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2,
+            "unit": "px"
+          },
+          "$description": "WCAG 2.2 SC 2.4.13 states the area requirement as \"at least as large as the area of a 2 CSS pixel thick perimeter of the unfocused component\". This is that figure, so it is a FLOOR taken from the specification rather than a number chosen here. An implementation may exceed it.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "companion-thickness": {
+          "$type": "dimension",
+          "$value": {
+            "value": 1,
+            "unit": "px"
+          },
+          "$description": "The companion carries no area requirement of its own — SC 2.4.13 counts only the part that meets the change-of-contrast test, which is the indicator. One device-independent pixel is enough to do its job.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "offset": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2,
+            "unit": "px"
+          },
+          "$description": "The gap between the control and the indicator, equal to the indicator’s own thickness, so the ring cannot be read as a thicker border ON the control. DETACHMENT IS THE CONTRACT; the exact gap is craft.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "selected": {
+        "$description": "SELECTED — \"the user chose this.\" STABLE, and it survives the interaction that produced it. It is ATTACHED to the control: a marker on the control’s own anchored edge, plus a promotion of ink and of type weight. THREE CHANNELS, NONE OF THEM A HUE. Selection is deliberately NOT Living Brass: C3 has no state sibling of qandeel.navigation.machinery to reach for, and this is the expression that makes that absence workable rather than merely forbidden.",
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.content.primary}",
+          "$description": "Selected items are read in the primary reading ink; unselected ones in their own rest ink. The promotion is a move UP the frozen ramp, not a new colour.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "marker": {
+          "$type": "color",
+          "$value": "{qandeel.content.primary}",
+          "$description": "THE PERSISTENT MARKER, on the control’s own edge on the side its group is anchored to — the top edge for a bottom navigation item, the inline-start edge for a list row, which in RTL is the RIGHT edge. One rule, every morphology. Attached, where the focus indicator is detached.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "marker-thickness": {
+          "$type": "dimension",
+          "$value": {
+            "value": 2,
+            "unit": "px"
+          },
+          "$description": "Craft. The marker’s PRESENCE is the contract; its weight is not.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        },
+        "weight": {
+          "$type": "fontWeight",
+          "$value": 600,
+          "$description": "Selected type weight. THE RELATION is the contract — selected is heavier than rest — and the two values are craft. Weight is load-bearing here for a reason specific to the script: Arabic has no italic tradition and letter-spacing visibly breaks the connected script, so weight is the only typographic emphasis channel Arabic leaves open. Both values sit inside 400-700.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "meaning": "A calibrated production default. Changing it within its stated bound changes how the product FEELS, not what it says. NOT Product-frozen, and expected to move once a real device has been seen."
+            }
+          }
+        }
+      },
+      "disabled": {
+        "$description": "DISABLED — \"this action is currently unavailable.\" DISABLED DESCRIBES AVAILABILITY. IT DOES NOT DESCRIBE FOCUSABILITY, and I-08B3.1-E1 was wrong to freeze that it did: focusability is determined by the control pattern and by whether the control must remain discoverable, and the two patterns are in com.qandeel.availability on this group. A disabled control RESOLVES EVERY INK IT CARRIES TO ONE VALUE and so loses its internal hierarchy: hierarchy is for reading and acting, and the control is doing neither. It cannot be activated, and it states its reason in words. LIVING BRASS IS STATE-INVARIANT IN VALUE AND IN APPEARANCE, so E1R supplies NO unavailable expression for a Brass-bearing object and does not claim the Product can never need one — see E1_DISABLED_COLLISION_RESOLUTION.md and com.qandeel.selected-unavailable.",
+        "$extensions": {
+          "com.qandeel.availability": {
+            "contract": "DISABLED DESCRIBES AVAILABILITY, NOT FOCUSABILITY. A control that is unavailable cannot be activated. Whether it stays in the focus order is determined by the control pattern and by whether its absence can be inferred from its neighbours.",
+            "patterns": [
+              {
+                "name": "NATIVE NON-DISCOVERABLE UNAVAILABLE",
+                "available": false,
+                "focusable": false,
+                "activates": false,
+                "when": "A standalone control whose unavailability a keyboard or screen-reader user can reasonably infer from what is around it — the commit button at the foot of a form whose fields are visibly incomplete, an action whose reason is stated in the adjacent text the user has just read.",
+                "web": "the HTML `disabled` attribute. Browsers remove it from the tab sequence.",
+                "native": "Pressable `disabled` plus accessibilityState={{ disabled: true }}.",
+                "cost": "It is skipped, which costs a screen-reader user the chance to discover it at all. That is the trade being made, and it is only acceptable when the neighbourhood carries the information."
+              },
+              {
+                "name": "DISCOVERABLE UNAVAILABLE",
+                "available": false,
+                "focusable": true,
+                "activates": false,
+                "when": "A control inside a set, where skipping it would hide the shape of the set: an option in a list of options, an item in a menu or a toolbar, a tab, a filter or scope chip, a row in a chooser. Also any single control whose existence is itself the information — a capability the user is meant to know about and does not yet have.",
+                "web": "`aria-disabled=\"true\"` with the control kept in the tab order, and activation suppressed in script. aria-disabled does not change focusability and applies no user-agent styling, so the expression below must be applied explicitly.",
+                "native": "accessibilityState={{ disabled: true }} with the control left focusable and onPress suppressed. NOT VERIFIED ON A DEVICE — see E1_REACT_NATIVE_MAPPING.md D-E1-6.",
+                "cost": "It is reachable, which costs every keyboard user a keystroke. That is acceptable where the set would otherwise be misread."
+              }
+            ],
+            "visualInvariance": "THE TWO PATTERNS ARE VISUALLY IDENTICAL. Both are the single unavailable ink applied to the whole control. Nothing in the expression depends on whether the control stayed focusable, because the user is being told the same thing in both cases: this is unavailable. A visible difference would encode an implementation decision as a Product meaning.",
+            "focusOnAnUnavailableControl": "In the DISCOVERABLE pattern the focus perimeter appears exactly as it does anywhere else, drawn in the focus indicator’s own tokens. It is not dimmed with the control: the perimeter belongs to the input system and the input system is not unavailable.",
+            "whatEveryPatternShips": [
+              "the single unavailable ink across the whole control",
+              "the platform-appropriate programmatic disabled state",
+              "activation suppressed, by the attribute or in script",
+              "a stated reason, in a real adjacent element the control points at"
+            ]
+          },
+          "com.qandeel.selected-unavailable": {
+            "question": "Can a control be SELECTED and UNAVAILABLE at the same time?",
+            "answer": "AT SOME CONTROL TYPES, YES. E1R does not have the Product authority to rule it out everywhere, and does not try to: the question is answered one control type at a time, below.",
+            "byControlType": [
+              {
+                "controlType": "a chosen value in a set — a filter, a scope chip, an option row",
+                "verdict": "REACHABLE, AND EXPRESSED",
+                "why": "The selection is a VALUE the user chose. A value can stop being available while remaining the value that was chosen: the user must be able to see both what they picked and that it no longer applies. Hiding the marker would silently rewrite their choice; hiding the control would silently rewrite the set.",
+                "proof": "board b17, and the behavioural obligations in data/E1_FOCUS.json"
+              },
+              {
+                "controlType": "a list row that is the current destination",
+                "verdict": "PRODUCT-OWNED — NOT RULED OUT",
+                "why": "Here the selection is a POSITION rather than a value, and a position that becomes unavailable is arguably a navigation event rather than a control state. E1R does not decide this: it depends on what QANDEEL does when the world you are standing in stops being available to you, which is a Connected Worlds question and not a colour question.",
+                "proof": "open — E1R_REVISION_RECORD.md §6"
+              },
+              {
+                "controlType": "a persistent navigation item",
+                "verdict": "NOT EXPRESSIBLE IN E1R — AND THAT IS A SCOPE STATEMENT, NOT A PRODUCT LAW",
+                "why": "The item carries LIVING BRASS, and Living Brass is state-invariant in value AND in appearance. E1R therefore supplies NO unavailable expression for it, and does not claim that the Product can never need one. If a destination must be shown as unavailable, that is a navigation-contract decision; two of the three obvious expressions — dimming the Brass and recolouring it — are forbidden by the material, and the third is absence or an empty state at the destination.",
+                "proof": "board b15, and check R30 on the shipping stylesheet"
+              },
+              {
+                "controlType": "a button",
+                "verdict": "NOT APPLICABLE",
+                "why": "E1 gives a button no SELECTED expression at all. A button is pressed, never chosen. The combination has nothing to resolve.",
+                "proof": "the shipped stylesheet has no selected rule for .btn"
+              }
+            ]
+          }
+        },
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.expression.state.disabled}",
+          "$description": "THE READING RAMP EXTENDED BY ITS OWN RULE — one lightness rung below the dimmest rung the Product reads with, continuing the ramp’s own step and its own chroma trend. Not an opacity and not an invented colour. It sits dEok 0.1157 below the tertiary neutral, which is a full rung by construction, so no disabled control can be confused with an enabled one whatever ink it started from. Apple's own foreground ladder has exactly this fourth rung (quaternaryLabel), arrived at independently.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        }
+      }
+    },
+    "status": {
+      "$description": "SYSTEM STATUS. THIS GROUP WAS RESERVED AND EMPTY IN I-08B3.1-C3 AND IS FILLED HERE. STATUS COLOUR IS EARNED, NOT ASSIGNED BY TAXONOMY: a role does not receive a dedicated hue because it has a name. QANDEEL DOES NOT USE A GENERIC TRAFFIC-LIGHT PALETTE, and that is the part that is frozen. ERROR CURRENTLY OWNS THE ONLY DEDICATED SYSTEM-STATUS HUE. The other three remain neutral UNTIL a real Product case proves their required attention, persistence or detached presentation cannot be carried truthfully and accessibly by position, copy, glyph, state change, boundary or hierarchy — and such a case requires PRODUCT EVIDENCE, which com.qandeel.status-policy on each role records. THE COUNT IS NOT A CAP. I-08B3.1-E1 froze the number of dedicated status hues as a product contract on the evidence of one role; I-08B3.1-E1R withdraws that absolute while keeping the principle that produced it, and quotes the withdrawn wording only in docs/E1R_REVISION_RECORD.md. COLOUR IS NEVER THE SOLE CARRIER (WCAG 2.2 SC 1.4.1): every role below names the non-colour channels it must ship with, in $extensions, because those are a contract and not a value.",
+      "$extensions": {
+        "com.qandeel.status-policy": {
+          "principle": "STATUS COLOUR IS EARNED, NOT ASSIGNED BY TAXONOMY. A role does not receive a dedicated hue because it has a name.",
+          "preserved": "QANDEEL DOES NOT USE A GENERIC TRAFFIC-LIGHT PALETTE. Three hues assigned by category is the failure this policy exists to prevent, and nothing below reopens it.",
+          "current": "ERROR CURRENTLY OWNS THE ONLY DEDICATED SYSTEM-STATUS HUE IN QANDEEL.",
+          "route": "WARNING, SUCCESS and INFORMATIONAL remain neutral UNTIL a real Product case proves that their required attention, persistence or detached presentation cannot be carried truthfully and accessibly by position, copy, glyph, state change, boundary or hierarchy. A future dedicated status expression requires PRODUCT EVIDENCE. It is NOT prohibited by E1R, and the count of dedicated hues is NOT a frozen cap.",
+          "whatIsFrozen": "That a hue must be EARNED, and that the evidence is a Product case rather than a taxonomy. Not the number."
+        }
+      },
+      "error": {
+        "$description": "ERROR — something failed, or what is here is not valid. THE ONLY ROLE THAT HAS EARNED A DEDICATED HUE, and it earned it rather than receiving it by taxonomy. Retrospective and about state, which is what colour is good at marking. THE VALUE IS PRODUCT-OWNER VISUALLY APPROVED; see com.qandeel.status-policy.",
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.expression.status.error}",
+          "$description": "Text, glyph and boundary. ONE VALUE, not a family: a second tone would be a ladder, and a ladder is how a palette starts.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "$extensions": {
+          "com.qandeel.status-policy": {
+            "dedicatedHue": true,
+            "earnedBy": [
+              "it is the one status a user must not act past — every other status tolerates being missed for a moment, and an invalid field acted on is a cost the user pays",
+              "it is the one status the platforms agree about, so users arrive carrying the expectation. Familiarity is a real design input and it is declared as a decision, not disguised as a measurement",
+              "Material 3 ships 26 standard colour roles in six groups and error is the only status role among them"
+            ],
+            "productOwnerJudgement": "THE VALUE #fe907e IS PRODUCT-OWNER VISUALLY APPROVED. Its acceptance rests on Product visual judgement, plus contrast and accessibility evidence, plus semantic-separation evidence. The OkLCh / dichromacy derivation is engineering evidence for THIS palette on THIS ground; it is not a universal accessibility law and it does not prove that no other valid error red could exist."
+          },
+          "com.qandeel.companion": {
+            "required": [
+              "a glyph that is not a colour",
+              "copy that names what failed",
+              "the field boundary drawn in the error ink",
+              "aria-invalid / accessibilityState invalid on the control",
+              "the message linked to the control by aria-describedby / accessibilityLabelledBy"
+            ],
+            "why": "WCAG 2.2 SC 1.4.1 is satisfied by a lightness difference of 3:1 OR by a non-colour cue. E1 measured the first: the error ink reaches only 1.03:1 against the secondary reading ink and 1.58:1 against the tertiary, so the lightness route is NOT available and the non-colour channels are load-bearing rather than belt-and-braces."
+          }
+        }
+      },
+      "warning": {
+        "$description": "WARNING — \"this will happen if you proceed.\" NO DEDICATED HUE YET, and that is a current state with a route out rather than a prohibition. Warning is PROSPECTIVE and about consequence, which copy is good at stating and colour is not; and in every QANDEEL surface audited so far a warning is attached to a commit the user is making, so the boundary they commit across is already the right carrier and it already exists in the frozen Surface contract. THE CONDITION THAT OVERTURNS THIS — a warning that must appear AMBIENTLY, detached from any commit — HAS BEEN MET ONCE, by transient connection or service degradation in a Shared or Public world. That does not create a hue by itself; it means the refusal is no longer automatic and the case is handed to Product with the evidence com.qandeel.status-policy requires.",
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.content.primary}",
+          "$description": "The Product’s own primary reading ink. That this resolves into the frozen ramp rather than to a literal IS the current decision, made visible in the graph.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "$extensions": {
+          "com.qandeel.status-policy": {
+            "dedicatedHue": false,
+            "currentExpression": "the commit boundary promoted to the primary reading ink at double weight, a triangle glyph, and copy that names the consequence",
+            "whyNotYet": "In every QANDEEL warning surface audited, the warning is attached to a commit the user is performing, so the boundary they are committing across is already the carrier and the frozen Surface contract already owns it.",
+            "overturnedBy": "A warning that must appear AMBIENTLY — persistent, detached from any commit the user is performing.",
+            "auditFinding": "MET, ONCE. Transient connection or service degradation in a Shared or Public world is persistent, ambient and not a failure of anything the user just did. See E1R_PRODUCT_SURFACE_AUDIT.md §3.7. The condition being met does NOT itself create a hue; it means the refusal is no longer automatic and the case is handed to Product.",
+            "productEvidenceRequired": "A surface where the ambient warning must be noticed without interrupting, and where position, copy, glyph and boundary have been tried and are demonstrably insufficient."
+          },
+          "com.qandeel.companion": {
+            "required": [
+              "the commit boundary promoted to the primary reading ink at double weight",
+              "a glyph that is not a colour",
+              "copy that names the CONSEQUENCE, not the risk"
+            ],
+            "why": "Apple: a confirmation dialog belongs to \"genuinely destructive, irreversible actions (use sparingly; overusing it trains people to click through)\". The weight of a QANDEEL warning is carried by where it stands and what it says."
+          }
+        }
+      },
+      "success": {
+        "$description": "SUCCESS / CONFIRMATION — NO DEDICATED HUE YET. A successful operation in QANDEEL resolves INTO STATE: the thing is now published, the member has joined, the answer has arrived. The interface already shows that, and a persistent green would be a second, weaker statement of a fact the state system is making better — and it would spend attention on the one outcome that needs none. THE CONDITION THAT OVERTURNS THIS — an operation whose result CANNOT be shown in place — HAS BEEN MET ONCE, by a background analysis or replay that completes after the user has navigated away. The first answers there are a place to land, a glyph and copy; a hue is a separate argument and it now has a route rather than a prohibition.",
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.content.primary}",
+          "$description": "The Product’s own primary reading ink.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "$extensions": {
+          "com.qandeel.status-policy": {
+            "dedicatedHue": false,
+            "currentExpression": "the changed state shown changed, a bare check glyph, and copy in the perfect tense of the verb the commit used",
+            "whyNotYet": "A successful operation in QANDEEL resolves INTO STATE, and the state system shows it better than a colour could.",
+            "overturnedBy": "An operation whose result CANNOT be shown in place — a background job whose outcome has no visible home.",
+            "auditFinding": "MET, ONCE. A background analysis or replay whose result lands after the user has navigated away has no visible home. See E1R_PRODUCT_SURFACE_AUDIT.md §3.8. The answer is still a place to land, a glyph and copy before it is a hue.",
+            "productEvidenceRequired": "A surface where the result genuinely cannot be shown in place AND a glyph plus copy in that surface has been tried and is demonstrably insufficient."
+          },
+          "com.qandeel.companion": {
+            "required": [
+              "the state that changed, shown changed",
+              "a glyph that is not a colour",
+              "copy in the perfect tense"
+            ],
+            "why": "Material 3 ships 26 standard colour roles in six groups and ERROR is the only status role among them. There is no success role to inherit."
+          }
+        }
+      },
+      "informational": {
+        "$description": "INFORMATIONAL — NO DEDICATED HUE YET. The frozen three-step reading ramp was built for exactly this: information that is present but subordinate is secondary or tertiary ink. A blue would add a fourth hue to a product that has three, to say something the ramp already says. THE CONDITION THAT OVERTURNS THIS — information that is a distinct KIND rather than a rank — was NOT met in the audited surfaces; the closest case, a privacy or authority boundary, reads correctly at secondary rank with a lock glyph. If it is met later, the first answer is still the glyph.",
+        "ink": {
+          "$type": "color",
+          "$value": "{qandeel.content.secondary}",
+          "$description": "Secondary reading ink. Subordinate by RANK, which is what the ramp encodes.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            }
+          }
+        },
+        "$extensions": {
+          "com.qandeel.status-policy": {
+            "dedicatedHue": false,
+            "currentExpression": "rank in the frozen reading ramp, plus a glyph where the information is a distinct KIND rather than a subordinate detail",
+            "whyNotYet": "This is what the frozen three-step reading ramp was built for. A blue would add a fourth hue to say what the ramp already says by rank.",
+            "overturnedBy": "Information that is a distinct KIND rather than a rank — and then the first answer is the glyph, not the hue.",
+            "auditFinding": "NOT MET in the audited surfaces. Privacy and authority-boundary statements are the closest case and they read correctly at secondary rank with a lock glyph.",
+            "productEvidenceRequired": "A kind of information that a glyph cannot distinguish and that rank actively misreports."
+          },
+          "com.qandeel.companion": {
+            "required": [
+              "rank in the reading ramp",
+              "a glyph where the information is a distinct kind rather than a subordinate detail"
+            ],
+            "why": "Apple: \"don’t use the separator color as a text color, or secondary text label color as a background color\" — dynamic roles are semantic, and the ramp’s semantics already cover subordinate information."
+          }
+        }
+      }
+    }
+  },
+  "$extensions": {
+    "com.qandeel.freeze-boundary": {
+      "note": "A token exists so an implementation is CONSISTENT. Freezing exists so a PRODUCT DECISION is irreversible. Every token above carries com.qandeel.freeze saying which it has. The important half of the contract is not tokens at all, and is listed here.",
+      "productContract": [
+        "STATE IS THE USER’S POSITION. BRASS IS MATTER. LIGHT IS MEANING. ACTIVITY IS PROCESS. A fourth term is a new Product decision.",
+        "THE STATE COMPOSITION MODEL, in com.qandeel.composition: PRESSED owns the ground, FOCUS owns a detached perimeter, SELECTED owns the marker’s presence and the type weight, DISABLED owns availability. THE INK IS SHARED BY SELECTED AND DISABLED and is resolved by precedence rule P1, not by ownership. Three precedence rules govern every combination, and all sixteen are enumerated with a verdict.",
+        "Interaction state introduces NO colour. Every state colour is an alias into the frozen reading ramp, except the disabled ink, which is that ramp extended by its own rung.",
+        "FOCUS IS DETACHED AND SELECTED IS ATTACHED. That is the whole of how they are told apart, and it holds when both are true at once.",
+        "PRESSED IS TRANSIENT AND BELONGS TO THE GROUND; SELECTED IS PERSISTENT AND BELONGS TO THE OBJECT. A press never leaves a residue.",
+        "PRESS FEEDBACK BEGINS ON POINTER-DOWN, never on release — and it is suppressed entirely on an unavailable control, which is precedence rule P2.",
+        "DISABLED DESCRIBES AVAILABILITY, NOT FOCUSABILITY. An unavailable control cannot be activated and states the reason it is unavailable. Whether it stays in the focus order is decided by its control pattern under com.qandeel.availability, which defines exactly two: NATIVE NON-DISCOVERABLE UNAVAILABLE and DISCOVERABLE UNAVAILABLE. THE TWO ARE VISUALLY IDENTICAL.",
+        "LIVING BRASS IS STATE-INVARIANT IN VALUE AND IN APPEARANCE. No interaction state and no availability state may dim, recolour or composite a Brass-bearing object. E1R therefore supplies no unavailable expression for one; how availability is expressed around an identity object is a Product and navigation-contract decision that E1R does not own.",
+        "STATUS COLOUR IS EARNED, NOT ASSIGNED BY TAXONOMY, and QANDEEL DOES NOT USE A GENERIC TRAFFIC-LIGHT PALETTE. ERROR currently owns the only dedicated system-status hue. The others remain neutral until a real Product case proves position, copy, glyph, state change, boundary and hierarchy cannot carry them. THE COUNT IS NOT A CAP: a future dedicated status expression requires Product evidence and is not prohibited.",
+        "COLOUR IS NEVER THE SOLE CARRIER OF A STATE OR A STATUS. Every critical role ships with the non-colour channels named in its com.qandeel.companion extension.",
+        "THE ERROR ROLE HAS EXACTLY ONE VALUE. A second tone would be a ladder.",
+        "NOTHING IN qandeel.state OR qandeel.status MAY EVER RESOLVE TO THE IDENTITY MATERIAL OR TO THE ILLUMINATION.",
+        "HOVER IS NOT A QANDEEL STATE. It is not designed here and it is not reserved as an expression: QANDEEL ships touch-first, and a touch device fires hover on tap, which turns a hover expression into a false press."
+      ],
+      "revisedByE1R": [
+        "NOTE ON WORDING. The four withdrawn statements are named below but NOT restated. A shipping contract that quotes a claim it has withdrawn can be grepped for that claim and found, and tools/e1-consistency.mjs treats the token files as shipping surfaces rather than as commentary. The verbatim wording of each, with its quotation attributed, is in docs/E1R_REVISION_RECORD.md, which is the one document allowed to hold it.",
+        "STATEMENT 2 — the exclusivity rule about visual channels. FALSE as written, because two states write the ink. Replaced by the composition / ownership model in com.qandeel.composition, which keeps every accepted expression and explains it truthfully.",
+        "STATEMENT 7 — the absolute about the focusability of an unavailable control. Too absolute, and contradicted by the accessibility patterns E1 had itself read. Replaced by DISABLED DESCRIBES AVAILABILITY plus the two control patterns in com.qandeel.availability.",
+        "STATEMENT 8 — the universal about identity-bearing objects and availability. A navigation and entitlement law E1 had no Product authority to make. Narrowed to the requirement that actually is frozen: the material is state-invariant in value and in appearance.",
+        "STATEMENT 9 — the cap on the number of dedicated status hues, frozen on the evidence of one role. Replaced by the earned-colour policy in com.qandeel.status-policy, which keeps the discipline and adds a Product-evidence route."
+      ]
+    }
+  }
+}

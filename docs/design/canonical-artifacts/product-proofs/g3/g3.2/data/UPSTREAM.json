@@ -1,0 +1,42 @@
+{
+ "g31Manifest": {
+  "sha256": "c6e236a4c8167517d04a0b18ea84f85448b11b5338c4e1126cb1738c8b68c377",
+  "prototype": "47dfe29ec1fceeeb9d05b9dae886074710c75abde0575291802647673847b264"
+ },
+ "vendoredInputs": [
+  {
+   "file": "vendor/upstream-g31/src/app.js",
+   "sha256": "8ba06d7e77e81663fc510c0fb780b6b4ec5be93a2cc08f84455ef44ad171276f",
+   "g31Manifest": "8ba06d7e77e81663fc510c0fb780b6b4ec5be93a2cc08f84455ef44ad171276f",
+   "equal": true
+  },
+  {
+   "file": "vendor/upstream-g31/src/build.mjs",
+   "sha256": "8dbbda2fd11027f17019860c4daf1ddd9a631295144f0a08d652e7396b55d71c",
+   "g31Manifest": "8dbbda2fd11027f17019860c4daf1ddd9a631295144f0a08d652e7396b55d71c",
+   "equal": true
+  },
+  {
+   "file": "vendor/upstream-g31/src/content.mjs",
+   "sha256": "32a62b318bd4edcd9b70de48fc66c506d680d1b1afc546e96db28cae808bb618",
+   "g31Manifest": "32a62b318bd4edcd9b70de48fc66c506d680d1b1afc546e96db28cae808bb618",
+   "equal": true
+  }
+ ],
+ "sharedUnchanged": [],
+ "problems": [],
+ "sharedFilesChecked": 79,
+ "rebuiltG31": {
+  "exit": 0,
+  "sha256": "47dfe29ec1fceeeb9d05b9dae886074710c75abde0575291802647673847b264",
+  "bytes": 1347329,
+  "byteIdenticalToReviewedG31": true
+ },
+ "g31Zip": {
+  "path": "../I-08B3.1-G3.1-INTEGRATED-END-TO-END-PRODUCT-PROOF.zip",
+  "bytes": 40331309,
+  "sha256": "a5d286a888b7b851193aa4c2805c443766284fc45b3521daae356677f7e3316e",
+  "equalsReviewedIdentity": true,
+  "manifestEntryEqualsVendored": true
+ }
+}

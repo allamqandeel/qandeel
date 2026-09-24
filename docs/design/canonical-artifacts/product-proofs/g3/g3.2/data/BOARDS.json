@@ -1,0 +1,76 @@
+{
+ "boards": [
+  {
+   "board": "01-g31-vs-g32-pinned-comparison.png",
+   "title": "PINNED(14): G3.1 separated the explanation from its act — G3.2 reconnects them to the Timeline",
+   "size": "2290×1187",
+   "tiles": 4
+  },
+  {
+   "board": "02-ar-pinned-390.png",
+   "title": "Arabic PINNED at 390 × 844 — settled",
+   "size": "1724×1166",
+   "tiles": 3
+  },
+  {
+   "board": "03-ar-pinned-return-ways-open.png",
+   "title": "PINNED + «طرق العودة» expanded",
+   "size": "1724×1166",
+   "tiles": 3
+  },
+  {
+   "board": "04-near-inspection-non-overfit.png",
+   "title": "NEAR inspection — the refinement does not overfit PINNED",
+   "size": "1826×1166",
+   "tiles": 4
+  },
+  {
+   "board": "05-live-follow-live-clean.png",
+   "title": "LIVE / FOLLOW_LIVE — no stale sentence, no placeholder gap",
+   "size": "1754×1144",
+   "tiles": 4
+  },
+  {
+   "board": "06-stress-320x568.png",
+   "title": "320 × 568 stress — the world keeps its floor; the line is paid for by the support",
+   "size": "2092×890",
+   "tiles": 5
+  },
+  {
+   "board": "07-larger-phone-430x932.png",
+   "title": "430 × 932 — more of the same world; the support does not grow",
+   "size": "1682×1205",
+   "tiles": 3
+  },
+  {
+   "board": "08-system-light-surface-boundary.png",
+   "title": "System Light — Conversation (light) → Analysis (dark shell) → Conversation (light)",
+   "size": "2266×1166",
+   "tiles": 5
+  },
+  {
+   "board": "09-system-light-live-call-boundary.png",
+   "title": "System Light + a Live Call — Analysis (dark) → Conversation (light) → the same call in the Analysis (dark)",
+   "size": "2074×1154",
+   "tiles": 4
+  },
+  {
+   "board": "10-system-dark-non-regression.png",
+   "title": "System Dark — no regression; and the G3.1 fixture-B failure is gone",
+   "size": "1884×1159",
+   "tiles": 4
+  },
+  {
+   "board": "11-accessibility-reading-order.png",
+   "title": "Accessibility — reading order, focus, expanded state, targets",
+   "size": "1754×1166",
+   "tiles": 4
+  },
+  {
+   "board": "12-reduced-motion-parity.png",
+   "title": "Reduced Motion — the same truth and the same hierarchy, simpler motion",
+   "size": "2473×1139",
+   "tiles": 5
+  }
+ ]
+}

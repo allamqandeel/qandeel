@@ -1,0 +1,5 @@
+# g3.2/ is the reviewed G3.2 package preserved byte-exact from its sealed ZIP (SOURCE-PROVENANCE.md). Some of its files
+# carry trailing spaces exactly as sealed: the vendored copies of canonical records, and the Estedad OFL licence. They
+# are evidence and are never normalised, so git's whitespace checks do not apply to them. Line-ending conversion is
+# already disabled for this whole tree by ../../.gitattributes.
+g3.2/** -whitespace

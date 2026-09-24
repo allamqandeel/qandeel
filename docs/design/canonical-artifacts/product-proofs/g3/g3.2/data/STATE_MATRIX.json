@@ -1,0 +1,4554 @@
+{
+ "captures": 44,
+ "states": [
+  {
+   "id": "pinned",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "pinned-open",
+   "state": "P4_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD",
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 471,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "GO_LIVE_AND_LOCATE",
+     "name": "العودة إلى المحادثة والانتقال إلى موضعها",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "الرجوع خطوة واحدة",
+    "العودة إلى العالم كله",
+    "العودة إلى المحادثة والانتقال إلى موضعها",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "pinned-return-live",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [
+    [
+     "RETURN_LIVE_HEAD"
+    ]
+   ],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 17,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD"
+   ],
+   "dominant": "BACK_ONE_STEP",
+   "direct": [
+    "BACK_ONE_STEP"
+   ],
+   "grouped": [
+    "RETURN_WORLD"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "BACK_ONE_STEP"
+   ],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "الرجوع خطوة واحدة",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "preview",
+   "state": "P2_LIVE17",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [
+    [
+     "previewAt",
+     15
+    ]
+   ],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 17,
+   "PTC": 15,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD"
+   ],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [
+    "نظرة مؤقتة على اللحظة 15، ولم يتغير موضعك."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": null,
+     "name": "إلغاء النظرة",
+     "expanded": null
+    },
+    {
+     "id": null,
+     "name": "الذهاب إلى اللحظة 15",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "نظرة مؤقتة على اللحظة 15، ولم يتغير موضعك.",
+    "إلغاء النظرة",
+    "الذهاب إلى اللحظة 15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "far",
+   "state": "P1",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 571,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "mid",
+   "state": "P2",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD"
+   ],
+   "dominant": "BACK_ONE_STEP",
+   "direct": [
+    "BACK_ONE_STEP"
+   ],
+   "grouped": [
+    "RETURN_WORLD"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "BACK_ONE_STEP"
+   ],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "الرجوع خطوة واحدة",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "near",
+   "state": "P3",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "dominant": "BACK_ONE_STEP",
+   "direct": [
+    "BACK_ONE_STEP"
+   ],
+   "grouped": [
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "BACK_ONE_STEP"
+   ],
+   "ctxLines": [],
+   "bandLines": [
+    "قيد المعاينة: تركيز ناشئ."
+   ],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 490,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قيد المعاينة: تركيز ناشئ.",
+    "الرجوع خطوة واحدة",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "near-open",
+   "state": "P3_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "dominant": "BACK_ONE_STEP",
+   "direct": [
+    "BACK_ONE_STEP"
+   ],
+   "grouped": [
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "ctxLines": [],
+   "bandLines": [
+    "قيد المعاينة: تركيز ناشئ."
+   ],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 446,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "EXACT_RETURN",
+     "name": "العودة إلى المعاينة الأصلية",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قيد المعاينة: تركيز ناشئ.",
+    "الرجوع خطوة واحدة",
+    "طرق العودة",
+    "العودة إلى المعاينة الأصلية",
+    "العودة إلى العالم كله",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "near-exact",
+   "state": "P3_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [
+    [
+     "EXACT_RETURN"
+    ]
+   ],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "dark-conv",
+   "state": "CONV",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "conversation",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 0,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": null,
+   "controls": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "input",
+     "name": "رسالتك لقنديل",
+     "expanded": null
+    },
+    {
+     "id": "call",
+     "name": "مكالمة صوتية",
+     "expanded": null
+    },
+    {
+     "id": "mic",
+     "name": "رسالة صوتية",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "تحليل المحادثة",
+    "ده اللي فهمته: الملف كان جاهز، والوقت راح في تفاصيل محدش هيشوفها.",
+    "اليوم 9:40",
+    "اهلا يا نور ... انا في انتظارك ... يلا نبدأ",
+    "نور",
+    "عندي presentation للـclient يوم الخميس الساعة 10:30، ولسه مخلّصتش.",
+    "آخر أربع مرات، الإعداد كان بيطوّل، والنوم بيقلّ قبل التسليم بيومين، وبعدها الطاقة بتنزل. ده اللي شايفه في عالمك، ومش متأكد من السبب.",
+    "الأرقام بس اللي ناقصة. الـQ3 numbers لسه ما وصلتش من finance.",
+    "يعني اللي ناقص دلوقتي مش في إيدك. لما الأرقام توصل، إيه أول خطوة في العرض؟",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "call",
+   "state": "CALL_ANALYSIS",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 16,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9bb7",
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   },
+   "worldH": 507,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "0:15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "call-conv",
+   "state": "CALL_CONV",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "conversation",
+   "TM": "FOLLOW_LIVE",
+   "TC": 16,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9d6e",
+   "analysisShellDark": 0,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   },
+   "worldH": null,
+   "controls": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "تحليل المحادثة",
+    "اليوم 9:40",
+    "اهلا يا نور ... انا في انتظارك ... يلا نبدأ",
+    "نور",
+    "عندي presentation للـclient يوم الخميس الساعة 10:30، ولسه مخلّصتش.",
+    "آخر أربع مرات، الإعداد كان بيطوّل، والنوم بيقلّ قبل التسليم بيومين، وبعدها الطاقة بتنزل. ده اللي شايفه في عالمك، ومش متأكد من السبب.",
+    "الأرقام بس اللي ناقصة. الـQ3 numbers لسه ما وصلتش من finance.",
+    "يعني اللي ناقص دلوقتي مش في إيدك. لما الأرقام توصل، إيه أول خطوة في العرض؟",
+    "مكالمة صوتية بدأت 9:41",
+    "0:15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "ar-conv-cross",
+   "state": "CONV",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [
+    [
+     "type",
+     "cross"
+    ],
+    [
+     "send"
+    ]
+   ],
+   "place": "conversation",
+   "TM": "FOLLOW_LIVE",
+   "TC": 15,
+   "PTC": null,
+   "LH": 15,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 0,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": null,
+   "controls": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "input",
+     "name": "رسالتك لقنديل",
+     "expanded": null
+    },
+    {
+     "id": "call",
+     "name": "مكالمة صوتية",
+     "expanded": null
+    },
+    {
+     "id": "mic",
+     "name": "رسالة صوتية",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "تحليل المحادثة",
+    "اهلا يا نور ... انا في انتظارك ... يلا نبدأ",
+    "نور",
+    "عندي presentation للـclient يوم الخميس الساعة 10:30، ولسه مخلّصتش.",
+    "آخر أربع مرات، الإعداد كان بيطوّل، والنوم بيقلّ قبل التسليم بيومين، وبعدها الطاقة بتنزل. ده اللي شايفه في عالمك، ومش متأكد من السبب.",
+    "الأرقام بس اللي ناقصة. الـQ3 numbers لسه ما وصلتش من finance.",
+    "يعني اللي ناقص دلوقتي مش في إيدك. لما الأرقام توصل، إيه أول خطوة في العرض؟",
+    "The numbers land tomorrow morning",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "focus-live-edge",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "focus-more",
+   "state": "P4_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD",
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 471,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "GO_LIVE_AND_LOCATE",
+     "name": "العودة إلى المحادثة والانتقال إلى موضعها",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "الرجوع خطوة واحدة",
+    "العودة إلى العالم كله",
+    "العودة إلى المحادثة والانتقال إلى موضعها",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "focus-track",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "s320-pinned",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 383,
+    "worldFloor": 191.5,
+    "ctxExtra": 22,
+    "bandRoom": 81
+   },
+   "worldH": 218,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "s320-pinned-open",
+   "state": "P4_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD",
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 383,
+    "worldFloor": 191.5,
+    "ctxExtra": 22,
+    "bandRoom": 81
+   },
+   "worldH": 193,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "GO_LIVE_AND_LOCATE",
+     "name": "العودة إلى المحادثة والانتقال إلى موضعها",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "الرجوع خطوة واحدة",
+    "العودة إلى العالم كله",
+    "العودة إلى المحادثة والانتقال إلى موضعها",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "s320-call-pinned",
+   "state": "CALL_PINNED",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9bb7",
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   },
+   "worldH": 161,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "0:15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "s320-call-pinned-open",
+   "state": "CALL_PINNED_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9d6e",
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD",
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   },
+   "worldH": 161,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "GO_LIVE_AND_LOCATE",
+     "name": "العودة إلى المحادثة والانتقال إلى موضعها",
+     "expanded": null
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "الرجوع خطوة واحدة",
+    "العودة إلى العالم كله",
+    "العودة إلى المحادثة والانتقال إلى موضعها",
+    "0:15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "s320-near-open",
+   "state": "P3_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "dominant": "BACK_ONE_STEP",
+   "direct": [
+    "BACK_ONE_STEP"
+   ],
+   "grouped": [
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "ctxLines": [],
+   "bandLines": [
+    "قيد المعاينة: تركيز ناشئ."
+   ],
+   "room": {
+    "usable": 383,
+    "worldFloor": 191.5,
+    "ctxExtra": 0,
+    "bandRoom": 103
+   },
+   "worldH": 192,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "EXACT_RETURN",
+     "name": "العودة إلى المعاينة الأصلية",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قيد المعاينة: تركيز ناشئ.",
+    "الرجوع خطوة واحدة",
+    "طرق العودة",
+    "العودة إلى المعاينة الأصلية",
+    "العودة إلى العالم كله",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "s320-far",
+   "state": "P1",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 383,
+    "worldFloor": 191.5,
+    "ctxExtra": 0,
+    "bandRoom": 103
+   },
+   "worldH": 295,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "s320-light-call-pinned",
+   "state": "CALL_PINNED",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9bb7",
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   },
+   "worldH": 161,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "0:15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "l430-pinned",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "430x932",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 747,
+    "worldFloor": 373.5,
+    "ctxExtra": 0,
+    "bandRoom": 285
+   },
+   "worldH": 603,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "l430-pinned-open",
+   "state": "P4_OPEN",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "430x932",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD",
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 747,
+    "worldFloor": 373.5,
+    "ctxExtra": 0,
+    "bandRoom": 285
+   },
+   "worldH": 559,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "GO_LIVE_AND_LOCATE",
+     "name": "العودة إلى المحادثة والانتقال إلى موضعها",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "الرجوع خطوة واحدة",
+    "العودة إلى العالم كله",
+    "العودة إلى المحادثة والانتقال إلى موضعها",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "l430-far",
+   "state": "P1",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "430x932",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 747,
+    "worldFloor": 373.5,
+    "ctxExtra": 0,
+    "bandRoom": 285
+   },
+   "worldH": 659,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-conv",
+   "state": "CONV",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "conversation",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 0,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": null,
+   "controls": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "input",
+     "name": "رسالتك لقنديل",
+     "expanded": null
+    },
+    {
+     "id": "call",
+     "name": "مكالمة صوتية",
+     "expanded": null
+    },
+    {
+     "id": "mic",
+     "name": "رسالة صوتية",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "تحليل المحادثة",
+    "ده اللي فهمته: الملف كان جاهز، والوقت راح في تفاصيل محدش هيشوفها.",
+    "اليوم 9:40",
+    "اهلا يا نور ... انا في انتظارك ... يلا نبدأ",
+    "نور",
+    "عندي presentation للـclient يوم الخميس الساعة 10:30، ولسه مخلّصتش.",
+    "آخر أربع مرات، الإعداد كان بيطوّل، والنوم بيقلّ قبل التسليم بيومين، وبعدها الطاقة بتنزل. ده اللي شايفه في عالمك، ومش متأكد من السبب.",
+    "الأرقام بس اللي ناقصة. الـQ3 numbers لسه ما وصلتش من finance.",
+    "يعني اللي ناقص دلوقتي مش في إيدك. لما الأرقام توصل، إيه أول خطوة في العرض؟",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-far",
+   "state": "P1",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 571,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-near",
+   "state": "P3",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "dominant": "BACK_ONE_STEP",
+   "direct": [
+    "BACK_ONE_STEP"
+   ],
+   "grouped": [
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "BACK_ONE_STEP"
+   ],
+   "ctxLines": [],
+   "bandLines": [
+    "قيد المعاينة: تركيز ناشئ."
+   ],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 490,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قيد المعاينة: تركيز ناشئ.",
+    "الرجوع خطوة واحدة",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-pinned",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-pinned-open",
+   "state": "P4_OPEN",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD",
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 471,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "true"
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "الرجوع خطوة واحدة",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "العودة إلى العالم كله",
+     "expanded": null
+    },
+    {
+     "id": "GO_LIVE_AND_LOCATE",
+     "name": "العودة إلى المحادثة والانتقال إلى موضعها",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "الرجوع خطوة واحدة",
+    "العودة إلى العالم كله",
+    "العودة إلى المحادثة والانتقال إلى موضعها",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-call",
+   "state": "CALL_ANALYSIS",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 16,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9bb7",
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   },
+   "worldH": 507,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "0:15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-call-conv",
+   "state": "CALL_CONV",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "conversation",
+   "TM": "FOLLOW_LIVE",
+   "TC": 16,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9d6e",
+   "analysisShellDark": 0,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   },
+   "worldH": null,
+   "controls": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "تحليل المحادثة",
+    "اليوم 9:40",
+    "اهلا يا نور ... انا في انتظارك ... يلا نبدأ",
+    "نور",
+    "عندي presentation للـclient يوم الخميس الساعة 10:30، ولسه مخلّصتش.",
+    "آخر أربع مرات، الإعداد كان بيطوّل، والنوم بيقلّ قبل التسليم بيومين، وبعدها الطاقة بتنزل. ده اللي شايفه في عالمك، ومش متأكد من السبب.",
+    "الأرقام بس اللي ناقصة. الـQ3 numbers لسه ما وصلتش من finance.",
+    "يعني اللي ناقص دلوقتي مش في إيدك. لما الأرقام توصل، إيه أول خطوة في العرض؟",
+    "مكالمة صوتية بدأت 9:41",
+    "0:15",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-call-back",
+   "state": "CALL_CONV",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [
+    [
+     "enterAnalysis"
+    ]
+   ],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 16,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9f25",
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   },
+   "worldH": 507,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "0:16",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-prop",
+   "state": "M2_PROPOSAL_A",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "proposal",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 0,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": null,
+   "controls": [
+    {
+     "id": "prop-back",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "proceed",
+     "name": "أكمّل",
+     "expanded": null
+    },
+    {
+     "id": "not-now",
+     "name": "لأ، شكراً",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "تحليل المحادثة",
+    "قنديل شايف إن بينكم نقاط اتفاق كثيرة، وفي نفس الوقت في اختلافات تستحق إنكم تفهموها بهدوء. لو قررتوا تبدأوا التعارف، قنديل هيكون معاكم يساعدكم تفهموا بعض، ويتكلم معاكم عن نقاط الاتفاق والاختلاف في الوقت المناسب.",
+    "خصوصيتك محفوظة.",
+    "بياناتك وتحليلاتك الخاصة لن تُعرض على الطرف الآخر، ولن يُشارك منها شيء إلا ما تختار أنت مشاركته. وقنديل هيكون معك خطوة بخطوة لحد ما تكون مرتاح ومطمئن.",
+    "لو كمّلت، هيتعرض التعارف على الطرف التاني.",
+    "أكمّل",
+    "لأ، شكراً",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "light-replay",
+   "state": "REPLAY",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 571,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "true"
+    },
+    {
+     "id": "full",
+     "name": "المحادثة كاملة",
+     "expanded": null
+    },
+    {
+     "id": "part",
+     "name": "جزء من المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "المحادثة كاملة",
+    "جزء من المحادثة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "rm-pinned",
+   "state": "P4",
+   "lang": "ar",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": true,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 515,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "أنت عند اللحظة 14.",
+    "استمرت المحادثة بعد هذه اللحظة.",
+    "العودة إلى المحادثة الجارية",
+    "طرق العودة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "rm-light-far",
+   "state": "P1",
+   "lang": "ar",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": true,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 571,
+   "controls": [
+    {
+     "id": "back",
+     "name": "المحادثة — رجوع",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "المحادثة",
+    "قنديل",
+    "العالم المشترك",
+    "العالم العام"
+   ]
+  },
+  {
+   "id": "en-pinned",
+   "state": "P4",
+   "lang": "en",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "Reading at moment 14.",
+    "The conversation has continued since this moment."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 22,
+    "bandRoom": 219
+   },
+   "worldH": 494,
+   "controls": [
+    {
+     "id": "back",
+     "name": "Conversation — back",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "Rejoin the conversation",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "Ways back",
+     "expanded": "false"
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "Conversation",
+    "Reading at moment 14.",
+    "The conversation has continued since this moment.",
+    "Rejoin the conversation",
+    "Ways back",
+    "Qandeel",
+    "Shared World",
+    "Public world"
+   ]
+  },
+  {
+   "id": "en-pinned-open",
+   "state": "P4_OPEN",
+   "lang": "en",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 17,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD",
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "ctxLines": [
+    "Reading at moment 14.",
+    "The conversation has continued since this moment."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 22,
+    "bandRoom": 219
+   },
+   "worldH": 406,
+   "controls": [
+    {
+     "id": "back",
+     "name": "Conversation — back",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "Rejoin the conversation",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "Ways back",
+     "expanded": "true"
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "Back one step",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "Return to the whole world",
+     "expanded": null
+    },
+    {
+     "id": "GO_LIVE_AND_LOCATE",
+     "name": "Rejoin the conversation and move there",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "Conversation",
+    "Reading at moment 14.",
+    "The conversation has continued since this moment.",
+    "Rejoin the conversation",
+    "Ways back",
+    "Back one step",
+    "Return to the whole world",
+    "Rejoin the conversation and move there",
+    "Qandeel",
+    "Shared World",
+    "Public world"
+   ]
+  },
+  {
+   "id": "en-near-open",
+   "state": "P3_OPEN",
+   "lang": "en",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 14,
+   "PTC": null,
+   "LH": 14,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "dominant": "BACK_ONE_STEP",
+   "direct": [
+    "BACK_ONE_STEP"
+   ],
+   "grouped": [
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "moreOpen": true,
+   "rendered": [
+    "BACK_ONE_STEP",
+    "EXACT_RETURN",
+    "RETURN_WORLD"
+   ],
+   "ctxLines": [],
+   "bandLines": [
+    "You are inspecting an emerging focus."
+   ],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": 402,
+   "controls": [
+    {
+     "id": "back",
+     "name": "Conversation — back",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "Following the conversation as it continues",
+     "expanded": null
+    },
+    {
+     "id": "BACK_ONE_STEP",
+     "name": "Back one step",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "Ways back",
+     "expanded": "true"
+    },
+    {
+     "id": "EXACT_RETURN",
+     "name": "Return to the original inspection",
+     "expanded": null
+    },
+    {
+     "id": "RETURN_WORLD",
+     "name": "Return to the whole world",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "Conversation",
+    "You are inspecting an emerging focus.",
+    "Back one step",
+    "Ways back",
+    "Return to the original inspection",
+    "Return to the whole world",
+    "Qandeel",
+    "Shared World",
+    "Public world"
+   ]
+  },
+  {
+   "id": "en-conv-cross",
+   "state": "CONV",
+   "lang": "en",
+   "scheme": "dark",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [
+    [
+     "type",
+     "cross"
+    ],
+    [
+     "send"
+    ]
+   ],
+   "place": "conversation",
+   "TM": "FOLLOW_LIVE",
+   "TC": 15,
+   "PTC": null,
+   "LH": 15,
+   "call": "none",
+   "callId": null,
+   "analysisShellDark": 0,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 659,
+    "worldFloor": 329.5,
+    "ctxExtra": 0,
+    "bandRoom": 241
+   },
+   "worldH": null,
+   "controls": [
+    {
+     "id": "door",
+     "name": "Conversation analysis",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "expanded": "false"
+    },
+    {
+     "id": "input",
+     "name": "Your message to Qandeel",
+     "expanded": null
+    },
+    {
+     "id": "call",
+     "name": "Voice call",
+     "expanded": null
+    },
+    {
+     "id": "mic",
+     "name": "Voice message",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "Conversation analysis",
+    "I’ve got a presentation for the client on Thursday at 10:30, and it’s still not done.",
+    "The last four times, the preparation ran long, sleep got shorter two days before the deadline, and then your energy dropped. That’s what I see in your world. I’m not sure why.",
+    "It’s just the numbers. The Q3 numbers still haven’t come in from finance.",
+    "So what’s missing right now isn’t in your hands. When the numbers arrive, what’s the first step in the presentation?",
+    "الأرقام هتوصل بكرة الصبح",
+    "Qandeel",
+    "Shared World",
+    "Public world"
+   ]
+  },
+  {
+   "id": "en-s320-call-pinned",
+   "state": "CALL_PINNED",
+   "lang": "en",
+   "scheme": "dark",
+   "size": "320x568",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "PINNED",
+   "TC": 14,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9bb7",
+   "analysisShellDark": 1,
+   "offered": [
+    "BACK_ONE_STEP",
+    "RETURN_LIVE_HEAD",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "dominant": "RETURN_LIVE_HEAD",
+   "direct": [],
+   "grouped": [
+    "BACK_ONE_STEP",
+    "RETURN_WORLD",
+    "GO_LIVE_AND_LOCATE"
+   ],
+   "moreOpen": false,
+   "rendered": [
+    "LIVE_EDGE:RETURN_LIVE_HEAD"
+   ],
+   "ctxLines": [
+    "Reading at moment 14.",
+    "The conversation has continued since this moment."
+   ],
+   "bandLines": [],
+   "room": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   },
+   "worldH": 161,
+   "controls": [
+    {
+     "id": "back",
+     "name": "Conversation — the call continues",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "Rejoin the conversation",
+     "expanded": null
+    },
+    {
+     "id": "more-t",
+     "name": "Ways back",
+     "expanded": "false"
+    },
+    {
+     "id": "route",
+     "name": "Speaker",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "Mute microphone",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "End call",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "Conversation",
+    "Reading at moment 14.",
+    "The conversation has continued since this moment.",
+    "Rejoin the conversation",
+    "Ways back",
+    "0:15",
+    "Qandeel",
+    "Shared World",
+    "Public world"
+   ]
+  },
+  {
+   "id": "en-light-call",
+   "state": "CALL_ANALYSIS",
+   "lang": "en",
+   "scheme": "light",
+   "size": "390x844",
+   "reducedMotion": false,
+   "acts": [],
+   "place": "analysis",
+   "TM": "FOLLOW_LIVE",
+   "TC": 16,
+   "PTC": null,
+   "LH": 16,
+   "call": "live",
+   "callId": "call-3f9bb7",
+   "analysisShellDark": 1,
+   "offered": [],
+   "dominant": null,
+   "direct": [],
+   "grouped": [],
+   "moreOpen": false,
+   "rendered": [],
+   "ctxLines": [],
+   "bandLines": [],
+   "room": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   },
+   "worldH": 507,
+   "controls": [
+    {
+     "id": "back",
+     "name": "Conversation — the call continues",
+     "expanded": null
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "expanded": "false"
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "expanded": null
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "expanded": null
+    },
+    {
+     "id": "tl-live",
+     "name": "Following the conversation as it continues",
+     "expanded": null
+    },
+    {
+     "id": "route",
+     "name": "Speaker",
+     "expanded": null
+    },
+    {
+     "id": "mute",
+     "name": "Mute microphone",
+     "expanded": null
+    },
+    {
+     "id": "end-call",
+     "name": "End call",
+     "expanded": null
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "expanded": null
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "expanded": null
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "expanded": null
+    }
+   ],
+   "visibleText": [
+    "Conversation",
+    "0:15",
+    "Qandeel",
+    "Shared World",
+    "Public world"
+   ]
+  }
+ ]
+}

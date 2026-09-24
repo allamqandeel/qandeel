@@ -1,0 +1,930 @@
+{
+ "prototype": {
+  "path": "prototype/index.html",
+  "sha256": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
+ },
+ "checks": 29,
+ "passed": 29,
+ "results": [
+  {
+   "id": "K01",
+   "group": "baseline",
+   "title": "origin/main is the brief's expected canonical SHA",
+   "pass": true,
+   "evidence": {
+    "originMain": "da4cf0c9ebcb573f8f186f60b6affbf8a4bd6752",
+    "expected": "da4cf0c9ebcb573f8f186f60b6affbf8a4bd6752"
+   }
+  },
+  {
+   "id": "K02",
+   "group": "baseline",
+   "title": "G3.1 is the immutable upstream: its ZIP identity holds, and its reviewed prototype rebuilds byte-identically from the vendored G3.1 inputs",
+   "pass": true,
+   "evidence": {
+    "g31Zip": {
+     "path": "../I-08B3.1-G3.1-INTEGRATED-END-TO-END-PRODUCT-PROOF.zip",
+     "bytes": 40331309,
+     "sha256": "a5d286a888b7b851193aa4c2805c443766284fc45b3521daae356677f7e3316e",
+     "equalsReviewedIdentity": true,
+     "manifestEntryEqualsVendored": true
+    },
+    "g31PrototypeRebuilt": "47dfe29ec1fceeeb9d05b9dae886074710c75abde0575291802647673847b264",
+    "vendoredInputs": [
+     "vendor/upstream-g31/src/app.js = G3.1 MANIFEST",
+     "vendor/upstream-g31/src/build.mjs = G3.1 MANIFEST",
+     "vendor/upstream-g31/src/content.mjs = G3.1 MANIFEST"
+    ],
+    "sharedUnchanged": 79
+   }
+  },
+  {
+   "id": "K03",
+   "group": "world",
+   "title": "The I-08B1 world is byte-exact: vendored = pin = main blob = the bytes inlined in the G3.2 prototype",
+   "pass": true,
+   "evidence": {
+    "pin": "4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413",
+    "vendored": "4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413",
+    "inlined": "4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413",
+    "blob": "0a18a4f6d8f804a0851f1dedfcf1ebc7a1188986"
+   }
+  },
+  {
+   "id": "K04",
+   "group": "baseline",
+   "title": "Every vendored canonical record equals its main blob (none modified)",
+   "pass": true,
+   "evidence": {
+    "files": 35,
+    "differing": []
+   }
+  },
+  {
+   "id": "K05",
+   "group": "baseline",
+   "title": "No repository change: no tracked file modified, no G3.2 branch",
+   "pass": true,
+   "evidence": {
+    "trackedChanges": 0,
+    "branch": "fix/connected-worlds-rem03-privacy-cross-phase-governance",
+    "g32Branches": "none"
+   }
+  },
+  {
+   "id": "K06",
+   "group": "world",
+   "title": "World pixels identical to the G3.1 baseline at the same state: FAR, MID, NEAR, PINNED(14), in a call",
+   "pass": true,
+   "evidence": [
+    "g31-far ↔ far: 0 / 1316640",
+    "g31-mid ↔ mid: 0 / 1316640",
+    "g31-near ↔ near: 0 / 1316640",
+    "g31-pinned ↔ pinned: 0 / 1316640",
+    "g31-call ↔ call: 0 / 1316640"
+   ]
+  },
+  {
+   "id": "K07",
+   "group": "world",
+   "title": "The same dark world under system Light and Reduced Motion — no repaint, no veil (world alone, 0 px)",
+   "pass": true,
+   "evidence": [
+    "far ↔ light-far: 0 / 1316640",
+    "near ↔ light-near: 0 / 1316640",
+    "pinned ↔ light-pinned: 0 / 1316640",
+    "call ↔ light-call: 0 / 1316640",
+    "far ↔ rm-light-far: 0 / 1316640",
+    "pinned ↔ rm-pinned: 0 / 1316640"
+   ]
+  },
+  {
+   "id": "K08",
+   "group": "world",
+   "title": "No new world object, relation, candidate, badge, marker or veil: world state equals G3.1's at every paired state",
+   "pass": true,
+   "evidence": {
+    "pairs": [
+     {
+      "pair": "g31-far ↔ far",
+      "same": true
+     },
+     {
+      "pair": "g31-mid ↔ mid",
+      "same": true
+     },
+     {
+      "pair": "g31-near ↔ near",
+      "same": true
+     },
+     {
+      "pair": "g31-pinned ↔ pinned",
+      "same": true
+     },
+     {
+      "pair": "g31-call ↔ call",
+      "same": true
+     }
+    ],
+    "cssFilterOnTheWorld": false
+   }
+  },
+  {
+   "id": "K09",
+   "group": "decision-B",
+   "title": "PINNED / preview: the temporal line stands DIRECTLY above the Track, in the Timeline cluster, at every size and language",
+   "pass": true,
+   "evidence": {
+    "captures": 20,
+    "failing": [],
+    "gaps": [
+     17
+    ]
+   }
+  },
+  {
+   "id": "K10",
+   "group": "decision-B",
+   "title": "One truth, said once: no temporal sentence in OrientationChrome; the line's words are T-08's and appear once",
+   "pass": true,
+   "evidence": {
+    "duplicated": [],
+    "notT08": []
+   }
+  },
+  {
+   "id": "K11",
+   "group": "decision-B",
+   "title": "Only when context genuinely exists: no temporal row (and no gap) in LIVE, NEAR, in a call; OrientationChrome at NEAR is G3.1's",
+   "pass": true,
+   "evidence": {
+    "liveCaptures": 17,
+    "staleLine": [],
+    "unchangedFromG31": [
+     {
+      "pair": "far",
+      "tlY": [
+       710,
+       710
+      ],
+      "band": [
+       "",
+       ""
+      ],
+      "ok": true
+     },
+     {
+      "pair": "near",
+      "tlY": [
+       629,
+       629
+      ],
+      "band": [
+       "قيد المعاينة: تركيز ناشئ.",
+       "قيد المعاينة: تركيز ناشئ."
+      ],
+      "ok": true
+     },
+     {
+      "pair": "mid",
+      "tlY": [
+       654,
+       654
+      ],
+      "band": [
+       "",
+       ""
+      ],
+      "ok": true
+     },
+     {
+      "pair": "call",
+      "tlY": [
+       646,
+       646
+      ],
+      "band": [
+       "",
+       ""
+      ],
+      "ok": true
+     }
+    ],
+    "afterReturnLive": {
+     "TM": "FOLLOW_LIVE",
+     "line": []
+    }
+   }
+  },
+  {
+   "id": "K12",
+   "group": "decision-B",
+   "title": "T-08 untouched: offered, dominant, direct, grouped and rendered Return sets equal G3.1's; rendered ⊆ offered; no act twice",
+   "pass": true,
+   "evidence": {
+    "equalToG31": [
+     {
+      "pair": "pinned",
+      "same": true
+     },
+     {
+      "pair": "pinned-open",
+      "same": true
+     },
+     {
+      "pair": "near",
+      "same": true
+     },
+     {
+      "pair": "mid",
+      "same": true
+     },
+     {
+      "pair": "far",
+      "same": true
+     },
+     {
+      "pair": "call",
+      "same": true
+     }
+    ],
+    "renderedNotOffered": [],
+    "duplicated": [],
+    "returnLiveAtLiveEdge": true
+   }
+  },
+  {
+   "id": "K13",
+   "group": "decision-B",
+   "title": "«طرق العودة» stays Return-only: T-08 words, T-08 order, expanded-state truth",
+   "pass": true,
+   "evidence": {
+    "open": 10,
+    "failing": [],
+    "expandedTrueWhenOpen": true,
+    "expandedFalseWhenClosed": true
+   }
+  },
+  {
+   "id": "K14",
+   "group": "decision-B",
+   "title": "The world is still sized first: ≥ max(160, usable / 2) in every Analysis capture — the line is paid for by the support, never by the world",
+   "pass": true,
+   "evidence": {
+    "captures": 37,
+    "failing": [],
+    "tightest": [
+     {
+      "id": "s320-near-open",
+      "size": "320x568",
+      "worldH": 192,
+      "floor": 191.5,
+      "ok": true
+     },
+     {
+      "id": "s320-call-pinned",
+      "size": "320x568",
+      "worldH": 161,
+      "floor": 160,
+      "ok": true
+     },
+     {
+      "id": "s320-call-pinned-open",
+      "size": "320x568",
+      "worldH": 161,
+      "floor": 160,
+      "ok": true
+     }
+    ]
+   }
+  },
+  {
+   "id": "K15",
+   "group": "decision-B",
+   "title": "320 × 568: the primary temporal meaning (line + Return Live) is never inside the scroller; «طرق العودة» is reachable in OrientationChrome's own room",
+   "pass": true,
+   "evidence": {
+    "captures": [
+     {
+      "id": "s320-pinned",
+      "ok": true
+     },
+     {
+      "id": "s320-pinned-open",
+      "ok": true
+     },
+     {
+      "id": "s320-call-pinned",
+      "ok": true
+     },
+     {
+      "id": "s320-call-pinned-open",
+      "ok": true
+     },
+     {
+      "id": "s320-light-call-pinned",
+      "ok": true
+     },
+     {
+      "id": "en-s320-call-pinned",
+      "ok": true
+     }
+    ],
+    "lastDisclosedActReachedAndPressed": {
+     "TM": "FOLLOW_LIVE",
+     "TC": 16
+    }
+   }
+  },
+  {
+   "id": "K16",
+   "group": "decision-B",
+   "title": "430 × 932: more of the same world at the same scale; the support is the SAME size, not a larger dashboard",
+   "pass": true,
+   "evidence": {
+    "unitsPerPt": [
+     1.01125,
+     1.01125
+    ],
+    "visibleW": [
+     394.4,
+     434.8
+    ],
+    "supportHeight": {
+     "pinned": [
+      140,
+      140
+     ],
+     "open": [
+      184,
+      184
+     ]
+    },
+    "worldH": [
+     515,
+     603
+    ]
+   }
+  },
+  {
+   "id": "K17",
+   "group": "decision-A",
+   "title": "System Light: the Analysis shell is dark (status row, rail, call line, ground); Conversation, proposal follow the system",
+   "pass": true,
+   "evidence": {
+    "analysisUnderLight": [
+     {
+      "id": "light-far",
+      "rail": 0.018,
+      "status": 0.0172,
+      "shellDark": 1,
+      "call": null
+     },
+     {
+      "id": "light-pinned",
+      "rail": 0.018,
+      "status": 0.0182,
+      "shellDark": 1,
+      "call": null
+     },
+     {
+      "id": "light-pinned-open",
+      "rail": 0.018,
+      "status": 0.0182,
+      "shellDark": 1,
+      "call": null
+     },
+     {
+      "id": "light-call",
+      "rail": 0.018,
+      "status": 0.0172,
+      "shellDark": 1,
+      "call": 0.0297
+     },
+     {
+      "id": "light-call-back",
+      "rail": 0.018,
+      "status": 0.0172,
+      "shellDark": 1,
+      "call": 0.0289
+     },
+     {
+      "id": "light-replay",
+      "rail": 0.018,
+      "status": 0.0172,
+      "shellDark": 1,
+      "call": null
+     },
+     {
+      "id": "s320-light-call-pinned",
+      "rail": 0.0199,
+      "status": 0.0218,
+      "shellDark": 1,
+      "call": 0.0303
+     },
+     {
+      "id": "en-light-call",
+      "rail": 0.0203,
+      "status": 0.0172,
+      "shellDark": 1,
+      "call": 0.0297
+     }
+    ],
+    "systemFollowing": [
+     {
+      "id": "light-conv",
+      "rail": 0.7703,
+      "status": 0.837,
+      "shellDark": 0,
+      "call": null
+     },
+     {
+      "id": "light-call-conv",
+      "rail": 0.7703,
+      "status": 0.837,
+      "shellDark": 0,
+      "call": 0.7597
+     },
+     {
+      "id": "light-prop",
+      "rail": 0.7703,
+      "status": 0.837,
+      "shellDark": 0,
+      "call": null
+     }
+    ],
+    "note": "mean relative luminance of the rendered region (0 black … 1 white)"
+   }
+  },
+  {
+   "id": "K18",
+   "group": "decision-A",
+   "title": "Status-region legibility: ink vs the ground actually behind it ≥ 4.5:1 on every surface, both appearances (the G3.1 fixture-B failure is gone)",
+   "pass": true,
+   "evidence": {
+    "g32": [
+     {
+      "id": "dark-conv",
+      "sel": "#status",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0052,
+      "groundP95": 0.0052,
+      "ratio": 12.95
+     },
+     {
+      "id": "call",
+      "sel": "#status",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0043,
+      "groundP95": 0.0055,
+      "ratio": 12.88
+     },
+     {
+      "id": "s320-light-call-pinned",
+      "sel": "#status",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0051,
+      "groundP95": 0.0102,
+      "ratio": 11.86
+     },
+     {
+      "id": "light-conv",
+      "sel": "#status",
+      "ink": "rgb(41, 39, 31)",
+      "groundP5": 0.855,
+      "groundP95": 0.855,
+      "ratio": 12.89
+     },
+     {
+      "id": "light-far",
+      "sel": "#status",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0043,
+      "groundP95": 0.0055,
+      "ratio": 12.88
+     },
+     {
+      "id": "light-pinned",
+      "sel": "#status",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0047,
+      "groundP95": 0.0078,
+      "ratio": 12.37
+     },
+     {
+      "id": "light-call",
+      "sel": "#status",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0043,
+      "groundP95": 0.0055,
+      "ratio": 12.88
+     },
+     {
+      "id": "light-call-conv",
+      "sel": "#status",
+      "ink": "rgb(41, 39, 31)",
+      "groundP5": 0.855,
+      "groundP95": 0.855,
+      "ratio": 12.89
+     },
+     {
+      "id": "light-call-back",
+      "sel": "#status",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0043,
+      "groundP95": 0.0055,
+      "ratio": 12.88
+     }
+    ],
+    "g31FixtureB_forReference": {
+     "id": "g31-light-far-B",
+     "sel": "#status",
+     "ink": "rgb(41, 39, 31)",
+     "groundP5": 0.0043,
+     "groundP95": 0.0055,
+     "ratio": 1.27
+    }
+   }
+  },
+  {
+   "id": "K19",
+   "group": "decision-A",
+   "title": "Surface-scoped, not an override: no appearance control or shell parameter in the Product; F2 system-follow stays the only appearance input",
+   "pass": true,
+   "evidence": {
+    "productAppearanceControl": false,
+    "shellFixtureRemains": false,
+    "followsSystem": true
+   }
+  },
+  {
+   "id": "K20",
+   "group": "decision-A",
+   "title": "System Light + a Live Call: Analysis (dark) → Conversation (light) → Analysis (dark), ONE call identity, no call prose",
+   "pass": true,
+   "evidence": {
+    "clips": [
+     {
+      "clip": "04-light-live-call-analysis-conversation-analysis",
+      "places": "analysis→conversation→analysis",
+      "ids": [
+       "call-3f9bb7"
+      ],
+      "shellAfter": [
+       1,
+       0,
+       1
+      ],
+      "prose": 0,
+      "ok": true
+     },
+     {
+      "clip": "06-light-call-reduced-motion",
+      "places": "analysis→conversation→analysis",
+      "ids": [
+       "call-3f9bb7"
+      ],
+      "shellAfter": [
+       1,
+       0,
+       1
+      ],
+      "prose": 0,
+      "ok": true
+     }
+    ],
+    "realInput": [
+     true,
+     true
+    ]
+   }
+  },
+  {
+   "id": "K21",
+   "group": "decision-A",
+   "title": "The shell's tone change is F2's appearance cross-fade: ≈ 200 ms under standard motion, REMOVED (a cut) under Reduced Motion",
+   "pass": true,
+   "evidence": {
+    "standard": [
+     {
+      "act": "enterAnalysis",
+      "firstFrame": 0.693,
+      "midVisible": true,
+      "doneAfter": 175
+     },
+     {
+      "act": "leaveAnalysis",
+      "firstFrame": 0.831,
+      "midVisible": true,
+      "doneAfter": 208
+     }
+    ],
+    "reducedMotion": [
+     {
+      "act": "enterAnalysis",
+      "firstFrame": 1,
+      "midVisible": false,
+      "doneAfter": 41
+     },
+     {
+      "act": "leaveAnalysis",
+      "firstFrame": 0,
+      "midVisible": false,
+      "doneAfter": 8
+     }
+    ],
+    "source": "DUR.appearance = 200 ms (F2 qandeel.appearance.switch.crossfade); blend() is a cut under Reduced Motion"
+   }
+  },
+  {
+   "id": "K22",
+   "group": "motion",
+   "title": "Reduced Motion keeps the same truth at every act and the same settled Product (01↔02, 03↔07, 04↔06)",
+   "pass": true,
+   "evidence": [
+    {
+     "pair": "01-pinned-return-live ↔ 02-pinned-return-live-reduced-motion",
+     "acts": 5,
+     "equalAtEveryAct": true,
+     "equalWhenSettled": true
+    },
+    {
+     "pair": "03-light-conversation-analysis-conversation ↔ 07-light-conversation-analysis-reduced-motion",
+     "acts": 2,
+     "equalAtEveryAct": true,
+     "equalWhenSettled": true
+    },
+    {
+     "pair": "04-light-live-call-analysis-conversation-analysis ↔ 06-light-call-reduced-motion",
+     "acts": 3,
+     "equalAtEveryAct": true,
+     "equalWhenSettled": true
+    }
+   ]
+  },
+  {
+   "id": "K23",
+   "group": "motion",
+   "title": "The temporal line never travels on its own and never runs ahead of the truth: fixed to the Track in every frame; it exists only while the state says so",
+   "pass": true,
+   "evidence": [
+    {
+     "clip": "01-pinned-return-live",
+     "framesWithLine": 48,
+     "offsetsTrackToLine": [
+      16
+     ],
+     "lingering": 0,
+     "futureMoment": 0,
+     "ok": true
+    },
+    {
+     "clip": "02-pinned-return-live-reduced-motion",
+     "framesWithLine": 46,
+     "offsetsTrackToLine": [
+      16
+     ],
+     "lingering": 0,
+     "futureMoment": 0,
+     "ok": true
+    },
+    {
+     "clip": "05-stress-320-disclosure-reachability",
+     "framesWithLine": 43,
+     "offsetsTrackToLine": [
+      16
+     ],
+     "lingering": 0,
+     "futureMoment": 0,
+     "ok": true
+    }
+   ]
+  },
+  {
+   "id": "K24",
+   "group": "motion",
+   "title": "Every clip decodes back to exactly the frames it was encoded from",
+   "pass": true,
+   "evidence": [
+    {
+     "clip": "01-pinned-return-live",
+     "encoded": 169,
+     "decoded": 169,
+     "size": "780x1688 (390x844 @2x)",
+     "reducedMotion": false
+    },
+    {
+     "clip": "02-pinned-return-live-reduced-motion",
+     "encoded": 169,
+     "decoded": 169,
+     "size": "780x1688 (390x844 @2x)",
+     "reducedMotion": true
+    },
+    {
+     "clip": "03-light-conversation-analysis-conversation",
+     "encoded": 139,
+     "decoded": 139,
+     "size": "780x1688 (390x844 @2x)",
+     "reducedMotion": false
+    },
+    {
+     "clip": "04-light-live-call-analysis-conversation-analysis",
+     "encoded": 246,
+     "decoded": 246,
+     "size": "780x1688 (390x844 @2x)",
+     "reducedMotion": false
+    },
+    {
+     "clip": "05-stress-320-disclosure-reachability",
+     "encoded": 145,
+     "decoded": 145,
+     "size": "640x1136 (320x568 @2x)",
+     "reducedMotion": false
+    },
+    {
+     "clip": "06-light-call-reduced-motion",
+     "encoded": 246,
+     "decoded": 246,
+     "size": "780x1688 (390x844 @2x)",
+     "reducedMotion": true
+    },
+    {
+     "clip": "07-light-conversation-analysis-reduced-motion",
+     "encoded": 139,
+     "decoded": 139,
+     "size": "780x1688 (390x844 @2x)",
+     "reducedMotion": true
+    }
+   ]
+  },
+  {
+   "id": "K25",
+   "group": "a11y",
+   "title": "Real input: focus order = visual order, the line read before the slider, expanded state, focus return, ≥ 44 pt, Return Live by a press",
+   "pass": true,
+   "evidence": {
+    "steps": [
+     {
+      "f": "reading / DOM order",
+      "pass": true
+     },
+     {
+      "f": "Tab order: Timeline",
+      "pass": true
+     },
+     {
+      "f": "aria-expanded true",
+      "pass": true
+     },
+     {
+      "f": "Tab reaches the first disclosed act",
+      "pass": true
+     },
+     {
+      "f": "Escape closes it",
+      "pass": true
+     },
+     {
+      "f": "≥ 44 × 44 pt",
+      "pass": true
+     },
+     {
+      "f": "a press on the Live edge",
+      "pass": true
+     },
+     {
+      "f": "focus is not dropped onto the page",
+      "pass": true
+     },
+     {
+      "f": "box and focus ring do not overlap",
+      "pass": true
+     }
+    ],
+    "liveRun": "38/38"
+   }
+  },
+  {
+   "id": "K26",
+   "group": "a11y",
+   "title": "The temporal line is legible on the world (ink vs the ground behind it ≥ 4.5:1), Arabic line-height ≥ 1.6, no letter-spacing",
+   "pass": true,
+   "evidence": {
+    "legibility": [
+     {
+      "id": "pinned",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.005,
+      "groundP95": 0.0087,
+      "ratio": 12.17
+     },
+     {
+      "id": "pinned-open",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0051,
+      "groundP95": 0.0111,
+      "ratio": 11.7
+     },
+     {
+      "id": "preview",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.005,
+      "groundP95": 0.0087,
+      "ratio": 12.17
+     },
+     {
+      "id": "s320-pinned",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0055,
+      "groundP95": 0.0123,
+      "ratio": 11.47
+     },
+     {
+      "id": "s320-call-pinned",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0058,
+      "groundP95": 0.0133,
+      "ratio": 11.29
+     },
+     {
+      "id": "s320-light-call-pinned",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.0058,
+      "groundP95": 0.0133,
+      "ratio": 11.29
+     },
+     {
+      "id": "light-pinned",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.005,
+      "groundP95": 0.0087,
+      "ratio": 12.17
+     },
+     {
+      "id": "en-pinned",
+      "sel": "#tl-ctx",
+      "ink": "rgb(216, 213, 202)",
+      "groundP5": 0.005,
+      "groundP95": 0.0087,
+      "ratio": 12.18
+     }
+    ],
+    "lineHeightAndSpacing": true
+   }
+  },
+  {
+   "id": "K27",
+   "group": "language",
+   "title": "Bidi and sides hold: English line starts LEFT with the Live edge RIGHT; speaker sides and paragraph direction unchanged from G3.1",
+   "pass": true,
+   "evidence": {
+    "english": {
+     "lineStartX": 24,
+     "liveEdgeRight": 384
+    },
+    "arabic": {
+     "lineStartRight": 366,
+     "liveEdgeLeft": 6
+    },
+    "crossScript": {
+     "arUI_enLine": "ltr",
+     "enUI_arLine": "rtl"
+    }
+   }
+  },
+  {
+   "id": "K28",
+   "group": "harness",
+   "title": "Captures are Product only; the harness is labelled \"PROOF HARNESS — NOT PRODUCT UI\" and shows no Q-LIGHT-SHELL switch",
+   "pass": true,
+   "evidence": {
+    "harnessInCaptures": []
+   }
+  },
+  {
+   "id": "K29",
+   "group": "rebuild",
+   "title": "Source-only rebuild: this source tree rebuilds the checked prototype byte-identically",
+   "pass": true,
+   "evidence": {
+    "checked": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71",
+    "rebuilt": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
+   }
+  }
+ ],
+ "probes": {
+  "total": 10,
+  "rejected": 10
+ },
+ "live": {
+  "total": 38,
+  "passed": 38
+ }
+}

@@ -1,0 +1,772 @@
+{
+ "task": "I-08B3.1-G3.1 — Integrated End-to-End Product Coherence Proof",
+ "status": "READY FOR PRODUCT REVIEW — review candidate only; NOT closed, NOT frozen; G3 is not closed by this package",
+ "baseline": "da4cf0c9ebcb573f8f186f60b6affbf8a4bd6752",
+ "worldSha256": "4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413",
+ "prototype": {
+  "path": "prototype/index.html",
+  "sha256": "47dfe29ec1fceeeb9d05b9dae886074710c75abde0575291802647673847b264",
+  "bytes": 1347329,
+  "rebuiltFromSource": true,
+  "byteIdenticalToReviewedBuild": true
+ },
+ "checks": {
+  "passed": 32,
+  "total": 32,
+  "probesRejected": 8,
+  "probes": 8
+ },
+ "liveRun": {
+  "passed": 65,
+  "total": 65
+ },
+ "evidence": {
+  "boards": 19,
+  "motionClips": 9
+ },
+ "canonicalDependencies": "source/CANON_DEPENDENCIES.json",
+ "selfExcluded": "data/MANIFEST.json cannot list its own hash; the ZIP's SHA-256 is written beside it as .zip.sha256",
+ "fileCount": 149,
+ "files": [
+  {
+   "path": "G3.1_CANONICAL_RECONCILIATION.md",
+   "bytes": 9754,
+   "sha256": "fd487c099d3aa6674babc281e89caf126d45e855a41c68b64e8c6b47dc5e5fd6"
+  },
+  {
+   "path": "G3.1_INTEGRATION_FINDINGS.md",
+   "bytes": 10291,
+   "sha256": "99ef6f94b362dbce7359e971d73f7531adbf0b2b97acae9db5033032287fcf3b"
+  },
+  {
+   "path": "G3.1_OPEN_QUESTIONS.md",
+   "bytes": 3742,
+   "sha256": "ab098af8092e3523c78c582d275de0dba18901322e7881bd8bd064b1fa14fa92"
+  },
+  {
+   "path": "G3.1_SKILL_USE.md",
+   "bytes": 5985,
+   "sha256": "a96e0d6e64fcc761ec5c9579585414be17fc899d62001566a269e5fb73d9a0cc"
+  },
+  {
+   "path": "README.md",
+   "bytes": 7606,
+   "sha256": "e9874a44dec5a419d87370ba01e9067554be9fdec32f05deccdc127e327927ee"
+  },
+  {
+   "path": "boards/01-ar-conversation-writing.png",
+   "bytes": 215857,
+   "sha256": "d9f570b7a25a5498660fdbc9df94555ed35134963180bd563fbcbb31db2bcb9d"
+  },
+  {
+   "path": "boards/02-ar-analysis-far-live.png",
+   "bytes": 901384,
+   "sha256": "3a7e51315d47770b0f4f0f962cbba203f92d49108553eb885c5337ba49c4a9d1"
+  },
+  {
+   "path": "boards/03-ar-analysis-mid-inspection.png",
+   "bytes": 553379,
+   "sha256": "d4d6cc777e6bb6d61a404d5a5eff666f6898a2f4efc9f5f2ce41bf219eddfe24"
+  },
+  {
+   "path": "boards/04-ar-analysis-near-inspection.png",
+   "bytes": 834041,
+   "sha256": "5b18dba74f813d960915d3af720ab098ec69c17236a9cda30feca206dd10e8a8"
+  },
+  {
+   "path": "boards/05-ar-pinned-compact-return.png",
+   "bytes": 882682,
+   "sha256": "e52aadf7114bd7c439fbfa81bc493d8b0a2ae267eea0605b379197787f640668"
+  },
+  {
+   "path": "boards/06-ar-live-call-analysis.png",
+   "bytes": 585977,
+   "sha256": "3fde8ebd59b2c977173bce188e8212be9b5cd0fccb8977970816d86d9bc7fcfd"
+  },
+  {
+   "path": "boards/07-ar-live-call-conversation-same-call.png",
+   "bytes": 433818,
+   "sha256": "647fdd0b0829732289cf3e21e771df524336f363977edfeb8702d3429c3e5fcc"
+  },
+  {
+   "path": "boards/08-ar-replay-entry.png",
+   "bytes": 470338,
+   "sha256": "05adba3907a98a99fbdaed784b339d58b2dae395791c05607bbf28256711c269"
+  },
+  {
+   "path": "boards/09-ar-matching-attention.png",
+   "bytes": 450654,
+   "sha256": "483554e88d64c41030c8683dd26f25782ebbb6a0cbf6cd90d52f8985ed7b7416"
+  },
+  {
+   "path": "boards/10-ar-matching-proposal.png",
+   "bytes": 206860,
+   "sha256": "2b87c37a323a0bcc199d1fb03b834a64381064246c6364896b9c7b9544dbba98"
+  },
+  {
+   "path": "boards/11-ar-second-accepter-mutual-match.png",
+   "bytes": 129298,
+   "sha256": "6ca4cdde72926d31d977dba8d368816917420c69bb12974d3a96561ce0e9b255"
+  },
+  {
+   "path": "boards/12-ar-first-accepter-later-arrival.png",
+   "bytes": 439099,
+   "sha256": "ba1e3a60ee51a9685f68e5c733e5d1107d4a6a7f32fe6420001994952ff87ed1"
+  },
+  {
+   "path": "boards/13-ar-shared-world-introduction-handoff.png",
+   "bytes": 394127,
+   "sha256": "11e957b32c569e27a98a280c345eb47e0d17b57df87b19e712678f16f23663ef"
+  },
+  {
+   "path": "boards/14-en-conversation.png",
+   "bytes": 214311,
+   "sha256": "00a6e5b1553ebe57e186786ad28dd27df3ce05bf602c5464b4cf19c84d42f63b"
+  },
+  {
+   "path": "boards/15-en-analysis.png",
+   "bytes": 1119045,
+   "sha256": "6a990a30c4f28e5e4869704c39c0aa4dcded339872a6b88c4789c6133be5d92e"
+  },
+  {
+   "path": "boards/16-dark-light-world-invariance.png",
+   "bytes": 475269,
+   "sha256": "70952b04590eff2cbfd4cb09f3908edbb95a0e8322771f0be9f290514de064d5"
+  },
+  {
+   "path": "boards/17-reduced-motion-key-state.png",
+   "bytes": 621939,
+   "sha256": "37c3f79c187a5840865d8fc8f62f8d14a9978f3fd5fb5f658febfc4ea012199d"
+  },
+  {
+   "path": "boards/18-size-envelopes.png",
+   "bytes": 1050935,
+   "sha256": "80de2b14b18f6a50937455c1b800b823490d2d471db8af1d4eef831613e2e3ef"
+  },
+  {
+   "path": "boards/19-accessibility-routing.png",
+   "bytes": 1168071,
+   "sha256": "e54c6d860d648e20578e723ac112bebd8ac10c0d4fae21f49ae06549ba5bc920"
+  },
+  {
+   "path": "data/BOARDS.json",
+   "bytes": 3477,
+   "sha256": "31d48cd6944e78f197410b3ea3fe0fc71dddaacec3ecc3df8d97f5815a75abec"
+  },
+  {
+   "path": "data/CHECKS.json",
+   "bytes": 17545,
+   "sha256": "0749bbd7aafd3b789b10e221ffaef31e299d69b9a8dea0d62ae2dc7cfefbaf30"
+  },
+  {
+   "path": "data/LIVECHECK.json",
+   "bytes": 13077,
+   "sha256": "4eb450c3bf0f3f5d2ada1578bf583159302e85dd3d2730bd324bb6b7ca61b1ef"
+  },
+  {
+   "path": "data/PARITY.json",
+   "bytes": 1077,
+   "sha256": "407252b0025226db8c05065615b2d9cbf4fb95b8c98dfbb51730118e6c830937"
+  },
+  {
+   "path": "data/STATE_MATRIX.json",
+   "bytes": 125700,
+   "sha256": "1342fc4a24df789ae9a68efc9ab4e6a389c1f5c34aa0e84fb60ff358befa5154"
+  },
+  {
+   "path": "data/motion/01-conversation-to-analysis.truth.json",
+   "bytes": 6053,
+   "sha256": "594675f8507e57dd902748566a24575b3e672440439b4e26fbff0b3b5b267238"
+  },
+  {
+   "path": "data/motion/02-analysis-zoom-inspect-pinned-return.truth.json",
+   "bytes": 16325,
+   "sha256": "fba364ab20277d16f0d63edadea9f12aca55ac7133404d115a2687190c89e289"
+  },
+  {
+   "path": "data/motion/03-live-call-analysis-conversation-analysis.truth.json",
+   "bytes": 8635,
+   "sha256": "65ca62caa406011f1cd8b901914cd57e17d6c31b3a8d9d91cf7134460525fdc0"
+  },
+  {
+   "path": "data/motion/04-second-accepter-mutual-match-birth.truth.json",
+   "bytes": 6492,
+   "sha256": "8856b8736c0004399300d8bed3368d45190f51617582938cfa78b4726d554308"
+  },
+  {
+   "path": "data/motion/05-first-accepter-later-arrival.truth.json",
+   "bytes": 9819,
+   "sha256": "5701dd3f9967176345865fa5ad0e2dbeadb9237d8177804b8cb2e7f29c5dfc5f"
+  },
+  {
+   "path": "data/motion/06-reduced-motion-counterpart.truth.json",
+   "bytes": 8663,
+   "sha256": "e9f2a1d231b4a89583bd81edaf4b17bb751e7a3ba1d8c4816bc7d5ea76e45757"
+  },
+  {
+   "path": "data/motion/06b-reduced-motion-zoom-inspect-pinned-return.truth.json",
+   "bytes": 16366,
+   "sha256": "69a02ad533bbdf32ef1717177503b338aa7cc755d255005ee2119940838e63f5"
+  },
+  {
+   "path": "data/motion/07-english-conversation-analysis.truth.json",
+   "bytes": 10337,
+   "sha256": "6f4abf4c30c9ce8c8ccbf60bd07baa8237052e03445fbaeaf747625c363771ae"
+  },
+  {
+   "path": "data/motion/08-system-appearance-same-dark-world.truth.json",
+   "bytes": 8627,
+   "sha256": "b50bdb31520ccb0a70c15726c5ffb6582fec58d97b4df7f72180bac1e3d6fe23"
+  },
+  {
+   "path": "motion/01-conversation-to-analysis.mp4",
+   "bytes": 1421974,
+   "sha256": "98f4c3f3ba54dd56a6baa18323ff776bed6a0578548e96d56956de8e41a5be57"
+  },
+  {
+   "path": "motion/02-analysis-zoom-inspect-pinned-return.mp4",
+   "bytes": 7007735,
+   "sha256": "1c0e10c4d4aa0155cab4b0fce33cf8d11529c9a191022812b4fee7ec053ff575"
+  },
+  {
+   "path": "motion/03-live-call-analysis-conversation-analysis.mp4",
+   "bytes": 3642354,
+   "sha256": "3bf66fa171000c84ffcc32ce3c7304d59be0b2bf8977fce340f838def186ef59"
+  },
+  {
+   "path": "motion/04-second-accepter-mutual-match-birth.mp4",
+   "bytes": 1216669,
+   "sha256": "281a00d6009d1507003ec09fb5879b220ecee83fe846e69064c1bb7b5207e8d8"
+  },
+  {
+   "path": "motion/05-first-accepter-later-arrival.mp4",
+   "bytes": 2326720,
+   "sha256": "54fa9b1e96de8163c4a9da1c600e0a255aa2c32afedcadacf4fd992fcfa289b8"
+  },
+  {
+   "path": "motion/06-reduced-motion-counterpart.mp4",
+   "bytes": 2800926,
+   "sha256": "e56dab975730a858bdb3c0020c53164dac7b013ab4e7af61e285af780c01f524"
+  },
+  {
+   "path": "motion/06b-reduced-motion-zoom-inspect-pinned-return.mp4",
+   "bytes": 4826954,
+   "sha256": "da8d9048a57c3e591cee0db0731e17c052b90971b72453e5b5573326ec8325ec"
+  },
+  {
+   "path": "motion/07-english-conversation-analysis.mp4",
+   "bytes": 3992948,
+   "sha256": "83e4a8081a7046c64cc857b0def665734db439da9d1e8251cb3400b13fce9d6f"
+  },
+  {
+   "path": "motion/08-system-appearance-same-dark-world.mp4",
+   "bytes": 3062098,
+   "sha256": "63c0923e5b6ae488e2475d9b234d6ca7b22032214c9bba8c6fecd3553c9016a3"
+  },
+  {
+   "path": "prototype/index.html",
+   "bytes": 1347329,
+   "sha256": "47dfe29ec1fceeeb9d05b9dae886074710c75abde0575291802647673847b264"
+  },
+  {
+   "path": "source/CANON_DEPENDENCIES.json",
+   "bytes": 20397,
+   "sha256": "479ba76476a2a530cc3930e6122c040673627a43fddbc7c1addd207793780bef"
+  },
+  {
+   "path": "source/REGENERATE.md",
+   "bytes": 4643,
+   "sha256": "678bf4ad171b59ebc8a8a578bb3e4b6f346dea94bd0ed2a3a99ec19658354974"
+  },
+  {
+   "path": "source/src/app.js",
+   "bytes": 81612,
+   "sha256": "8ba06d7e77e81663fc510c0fb780b6b4ec5be93a2cc08f84455ef44ad171276f"
+  },
+  {
+   "path": "source/src/bidi.js",
+   "bytes": 1534,
+   "sha256": "40f8033a3031f3327e2e0674b64a8a72366d32a744086e87a9c6d4388ef608b5"
+  },
+  {
+   "path": "source/src/bridge.js",
+   "bytes": 9025,
+   "sha256": "2846017daa93803def4c5ceec86f7a1831ca5c27a49914b6c6182deb5f3396db"
+  },
+  {
+   "path": "source/src/build.mjs",
+   "bytes": 42000,
+   "sha256": "8dbbda2fd11027f17019860c4daf1ddd9a631295144f0a08d652e7396b55d71c"
+  },
+  {
+   "path": "source/src/content.mjs",
+   "bytes": 20259,
+   "sha256": "32a62b318bd4edcd9b70de48fc66c506d680d1b1afc546e96db28cae808bb618"
+  },
+  {
+   "path": "source/src/glyphs.mjs",
+   "bytes": 8970,
+   "sha256": "2290e460d5fd0046b81675d2f04c96a678e68f3da03f3fa15ceb72759343940e"
+  },
+  {
+   "path": "source/src/tokens.mjs",
+   "bytes": 6737,
+   "sha256": "435f4dafa44be9045b07669bdb485385b7d51b07ea08713031b2b94a6de21911"
+  },
+  {
+   "path": "source/tools/boards.mjs",
+   "bytes": 22041,
+   "sha256": "83387f999e50be276d5e5e7bc483b482e0bc5388d2ccf14d0b7a9c11f3fdb649"
+  },
+  {
+   "path": "source/tools/capture.mjs",
+   "bytes": 14878,
+   "sha256": "d788995182bd5bc723a2ca937ed8c19bf942de8c7089c2a233e956f975f2bb22"
+  },
+  {
+   "path": "source/tools/checks.mjs",
+   "bytes": 35744,
+   "sha256": "a212faa931c0098277aef4e9595ff412dfaf56e06deb511a7530a084bc598444"
+  },
+  {
+   "path": "source/tools/deps.mjs",
+   "bytes": 6481,
+   "sha256": "922201f6734b0ba2323cb4d47406273ed22d46b34f9dca632c95bb51cc1e4c53"
+  },
+  {
+   "path": "source/tools/lib/audit.mjs",
+   "bytes": 5212,
+   "sha256": "22ae8064dd277ba328b0ed4d8917c187cb9690f1e16874dee1673c692195ff53"
+  },
+  {
+   "path": "source/tools/lib/cdp.mjs",
+   "bytes": 7530,
+   "sha256": "ab4d7523f98bcdfe0e68be1596bf889f005706f552a78b6e281d0d9641851959"
+  },
+  {
+   "path": "source/tools/lib/png.mjs",
+   "bytes": 5851,
+   "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5"
+  },
+  {
+   "path": "source/tools/lib/server.mjs",
+   "bytes": 1167,
+   "sha256": "0e6793889665ecc9481192795c2092d28402a60f5ae2afecd6199419abc6c4b2"
+  },
+  {
+   "path": "source/tools/lib/session.mjs",
+   "bytes": 4797,
+   "sha256": "ada6f7531d1b0df38dbe8b8497eda854060832f925e21565525bb8325109e64b"
+  },
+  {
+   "path": "source/tools/lib/zipr.mjs",
+   "bytes": 1637,
+   "sha256": "b92138dee6a0493d3e957648c2aae362f5609fc82344497b28220e0ccb30c2a5"
+  },
+  {
+   "path": "source/tools/lib/zipw.cjs",
+   "bytes": 4264,
+   "sha256": "0cf4e81a65fe617ccf5f46536fe1c8e880745386bf9745afc1f17535fff3bc3e"
+  },
+  {
+   "path": "source/tools/livecheck.mjs",
+   "bytes": 21912,
+   "sha256": "2dad81b214012c741031ccd3b3a5f414baabfaf4f944099608fa0126aa7b002e"
+  },
+  {
+   "path": "source/tools/package.mjs",
+   "bytes": 8445,
+   "sha256": "46e1ef613abe1c596e5a00ccbfdf7cde1a7d7ecf648013b56c7d72a331caf36c"
+  },
+  {
+   "path": "source/tools/parity.mjs",
+   "bytes": 2937,
+   "sha256": "3573ff7951ccf340b318204e85e6cd43e7bec91138e8c7c72c314f4e717799ca"
+  },
+  {
+   "path": "source/tools/pipeline.mjs",
+   "bytes": 2154,
+   "sha256": "cfdbae5bc74b67c8deebe4d63af58cf0cf669420603cdad012892a70cb6b3644"
+  },
+  {
+   "path": "source/tools/smoke.mjs",
+   "bytes": 1234,
+   "sha256": "38d6963b0172a70452bbfa07f01aefdb0784cbda233c2a1b830e029cf2bc8787"
+  },
+  {
+   "path": "source/vendor/canon/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md",
+   "bytes": 7661,
+   "sha256": "ca72b17a94206475022a101e746d819e9dc26b3379dffb1ce9b1d4c739423625"
+  },
+  {
+   "path": "source/vendor/canon/QANDEEL_G1_2_CANONICAL_CLOSURE.md",
+   "bytes": 8006,
+   "sha256": "040a474269aed193778003a218b11706da61a6f4134597b396da5fea2cad60ce"
+  },
+  {
+   "path": "source/vendor/canon/QANDEEL_Q_BASE_MASTER.svg",
+   "bytes": 3183,
+   "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05"
+  },
+  {
+   "path": "source/vendor/canon/g12-r1/R1_MANIFEST.json",
+   "bytes": 1119,
+   "sha256": "aabeab121d851b8a7a504bb4dcd02f41453cf6cc29419790af2391508da4d536"
+  },
+  {
+   "path": "source/vendor/canon/g12-r1/content.mjs",
+   "bytes": 18083,
+   "sha256": "2f5fe6da0b22dc18b1df5a3a3dd1052715bb7893afd489be0254ac4877a992e0"
+  },
+  {
+   "path": "source/vendor/canon/g12-r1/runtime.js",
+   "bytes": 48695,
+   "sha256": "467f5b762e63c88b19337acef5c4b3d0224a74fd82d6c858a7f234715d933bd7"
+  },
+  {
+   "path": "source/vendor/canon/g2/G2.3-MANIFEST.json",
+   "bytes": 32906,
+   "sha256": "f900935fe653d469b488d63514d79668f613e5356126b81965d0185b320b5660"
+  },
+  {
+   "path": "source/vendor/canon/g2/QANDEEL_G2_3_CANONICAL_CLOSURE.md",
+   "bytes": 7622,
+   "sha256": "bc79b7378f1685a2263491b7a929d9b36bf500e71699b84305d117c774a80c1c"
+  },
+  {
+   "path": "source/vendor/canon/g2/QANDEEL_G2_CANONICAL_CLOSURE.md",
+   "bytes": 15702,
+   "sha256": "4fb6065efe4c11c870fbc687679dc58c82cea20d0bc1f86ef0726b62e0cd1da2"
+  },
+  {
+   "path": "source/vendor/canon/g2/QANDEEL_G3_READINESS_HANDOFF.md",
+   "bytes": 9031,
+   "sha256": "d38bb1da207a1b8eb6063397fdd64c685ed3a0825b67ec847a63a8003fba78dd"
+  },
+  {
+   "path": "source/vendor/canon/g2/T11_RETURN_PRESENTATION_CONTROLLED_AMENDMENT.md",
+   "bytes": 6593,
+   "sha256": "79b6d3b794292389a1af59ddf448c1d0ced987be773c64e9dc6cefe15aa985ea"
+  },
+  {
+   "path": "source/vendor/canon/orientation-types.ts",
+   "bytes": 21343,
+   "sha256": "dfb8692ed633f297f226697200ed684e8805aaeaaf36728caa65c12bbd6d943c"
+  },
+  {
+   "path": "source/vendor/canon/product-copy.ts",
+   "bytes": 28469,
+   "sha256": "11f21cbe041f8ce6453bc001dd49497a4e7f3c968c6e9c4bf2a9d663b209ca5c"
+  },
+  {
+   "path": "source/vendor/canon/wf-living-constellation.html",
+   "bytes": 388374,
+   "sha256": "4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413"
+  },
+  {
+   "path": "source/vendor/canon/world.types.ts",
+   "bytes": 4163,
+   "sha256": "7ca9adb104dfabcce124c6afb2afd854302bcec067e6a7f7e6d5fed8b10546b0"
+  },
+  {
+   "path": "source/vendor/fonts/Estedad-OFL.txt",
+   "bytes": 4388,
+   "sha256": "0417da48fc44780476e074f02f8400028ee704b3e222be5855fa6d960b9200ca"
+  },
+  {
+   "path": "source/vendor/fonts/Estedad-wght-v8.5.woff2",
+   "bytes": 120924,
+   "sha256": "b40ce2504e442a79e8adddf1d7b27bc4bd171bb94c9e7c93e0732d095bc051b0"
+  },
+  {
+   "path": "source/vendor/fonts/google/01d285447409c8a5.woff2",
+   "bytes": 14888,
+   "sha256": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22"
+  },
+  {
+   "path": "source/vendor/fonts/google/04c730b4292731cc.woff2",
+   "bytes": 44280,
+   "sha256": "04c730b4292731ccedadd5bd80756124364ae4923895145d9cd7b1f28e443de1"
+  },
+  {
+   "path": "source/vendor/fonts/google/08949f728dc52d52.woff2",
+   "bytes": 14708,
+   "sha256": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7"
+  },
+  {
+   "path": "source/vendor/fonts/google/0c4e072fcf4f07a3.woff2",
+   "bytes": 1476,
+   "sha256": "0c4e072fcf4f07a388448ae321d51fd3915797371a7378270e5630c6d023ea6b"
+  },
+  {
+   "path": "source/vendor/fonts/google/0f7c03bb523b8084.woff2",
+   "bytes": 6680,
+   "sha256": "0f7c03bb523b8084a84c4b7d95a5c7b294b7318f88b2e51829d5fe7aaef0d0bb"
+  },
+  {
+   "path": "source/vendor/fonts/google/1144843a05a0eaef.woff2",
+   "bytes": 1448,
+   "sha256": "1144843a05a0eaef92032c0406ee3f001804f2caddba9522e8a265e0a79d46ea"
+  },
+  {
+   "path": "source/vendor/fonts/google/16734a5adb27b0f3.woff2",
+   "bytes": 45688,
+   "sha256": "16734a5adb27b0f363e566cbbeacec480da0dc0baa19c8f0053251c2e2bc0eac"
+  },
+  {
+   "path": "source/vendor/fonts/google/1935fa1a3326fcd4.woff2",
+   "bytes": 6656,
+   "sha256": "1935fa1a3326fcd48e20abe864bb30ace43fe58bd572f354c24271ea66208e04"
+  },
+  {
+   "path": "source/vendor/fonts/google/1d89462e86cb8e87.woff2",
+   "bytes": 8460,
+   "sha256": "1d89462e86cb8e87e7e9d6f6635605bd7c3081baca6caaecee84916bf7b60edc"
+  },
+  {
+   "path": "source/vendor/fonts/google/2fff61c7ed83ed8a.woff2",
+   "bytes": 1444,
+   "sha256": "2fff61c7ed83ed8a3ac19e3e7079f8f293e8485a1994b01e88b69056fecdf295"
+  },
+  {
+   "path": "source/vendor/fonts/google/3febe5c7f22e4b07.woff2",
+   "bytes": 6972,
+   "sha256": "3febe5c7f22e4b07b4552738673c3dbe8bced2dc5f48b866edf7ccd9552d109a"
+  },
+  {
+   "path": "source/vendor/fonts/google/441410df8013ca6c.woff2",
+   "bytes": 45048,
+   "sha256": "441410df8013ca6c9a732c0497bb65aa6c9fc4abeb917b907a38fabe44263e2c"
+  },
+  {
+   "path": "source/vendor/fonts/google/6010e7fd0dce5d52.woff2",
+   "bytes": 42848,
+   "sha256": "6010e7fd0dce5d527583951750728cbe3c895efbd16aa0f809ab8c824878c9d8"
+  },
+  {
+   "path": "source/vendor/fonts/google/62632b6375305e70.woff2",
+   "bytes": 5868,
+   "sha256": "62632b6375305e70ddcafdd895218e6ae41a184fcd280a69c739460604ca00a9"
+  },
+  {
+   "path": "source/vendor/fonts/google/63f4757271e403f7.woff2",
+   "bytes": 20500,
+   "sha256": "63f4757271e403f7baec0862f284ffaa4560ea6096ba9fe8bc6e585ca656e724"
+  },
+  {
+   "path": "source/vendor/fonts/google/6bb06407c97584b0.woff2",
+   "bytes": 13432,
+   "sha256": "6bb06407c97584b0867a959e05e8874693bfeb8c317de190811c51598f2d99ea"
+  },
+  {
+   "path": "source/vendor/fonts/google/6bc0f226a5b7884a.woff2",
+   "bytes": 13348,
+   "sha256": "6bc0f226a5b7884a8170e3f62c63d7675609d4631bdc5931b5cdab81821f00eb"
+  },
+  {
+   "path": "source/vendor/fonts/google/7635422bd10ddbbc.woff2",
+   "bytes": 8356,
+   "sha256": "7635422bd10ddbbcb0e0caa1154b928298f5c8319b8c00b30978d4395f4783ce"
+  },
+  {
+   "path": "source/vendor/fonts/google/781633d95de88040.woff2",
+   "bytes": 6040,
+   "sha256": "781633d95de88040fb77141d1e65d928c87c0144691fbc74da5a64d137a7e910"
+  },
+  {
+   "path": "source/vendor/fonts/google/90aef64fea9794f2.woff2",
+   "bytes": 45296,
+   "sha256": "90aef64fea9794f232332e907d45810ab268d1a11721340025eba2a2cdb36d5c"
+  },
+  {
+   "path": "source/vendor/fonts/google/93ae908392a01f9a.woff2",
+   "bytes": 1456,
+   "sha256": "93ae908392a01f9af1f73e86e99f1665f899a5b58fe9e56517abd199e47dcd01"
+  },
+  {
+   "path": "source/vendor/fonts/google/95875e4fa8928fa6.woff2",
+   "bytes": 1476,
+   "sha256": "95875e4fa8928fa68e01e53e0b2cdb0f6dbec1ac61d9af493bb05d2ed230f350"
+  },
+  {
+   "path": "source/vendor/fonts/google/9ed8dcb02e6c7246.woff2",
+   "bytes": 19164,
+   "sha256": "9ed8dcb02e6c7246de4c120295fafa39a7bb73085f4951a4524a07dc911069f2"
+  },
+  {
+   "path": "source/vendor/fonts/google/FONT_MANIFEST.json",
+   "bytes": 22495,
+   "sha256": "1150286bf46e52ef70a82f3244658b1a5c1c38c846e351b0389cce2d50455dce"
+  },
+  {
+   "path": "source/vendor/fonts/google/a989ab031ad08b81.css",
+   "bytes": 14853,
+   "sha256": "a989ab031ad08b81448d8088686429619d0637c48ca3a98518d45ac4f8119d7e"
+  },
+  {
+   "path": "source/vendor/fonts/google/ab0b9584271f4923.woff2",
+   "bytes": 6564,
+   "sha256": "ab0b9584271f492336d9eadcef96f99b0da07e8e7046220aea5084f1644a9c9d"
+  },
+  {
+   "path": "source/vendor/fonts/google/ae2d59f91ecf9f7e.woff2",
+   "bytes": 19504,
+   "sha256": "ae2d59f91ecf9f7ed279e4a1fc1a9da8170fb0ce5b9152917a8f759033f5777c"
+  },
+  {
+   "path": "source/vendor/fonts/google/ae5c1a58c18d253e.woff2",
+   "bytes": 6540,
+   "sha256": "ae5c1a58c18d253e20691f00e401319f01fc568d24d0e50165f276d1a99035b5"
+  },
+  {
+   "path": "source/vendor/fonts/google/be6a3b2e37f3ad67.woff2",
+   "bytes": 20088,
+   "sha256": "be6a3b2e37f3ad67aa822a55ce356d28c416331c97530a1ec076c2118240ca2d"
+  },
+  {
+   "path": "source/vendor/fonts/google/dd27720fab7b4f3a.woff2",
+   "bytes": 6828,
+   "sha256": "dd27720fab7b4f3af3beb39ee8e2061f0aefa3f7824ae7214e6947b86a1f8dd0"
+  },
+  {
+   "path": "source/vendor/fonts/google/dde6d3b23792b89c.woff2",
+   "bytes": 20284,
+   "sha256": "dde6d3b23792b89c365f557d8af5fac776118517e1aa20921a3e0ed67b1d7ef8"
+  },
+  {
+   "path": "source/vendor/fonts/google/f8c22ec1804bd696.woff2",
+   "bytes": 6912,
+   "sha256": "f8c22ec1804bd6966b70f43ac7c327025645b4c09597117fca2a5a6c750106fe"
+  },
+  {
+   "path": "source/vendor/lineage/g23-inputs/app.js",
+   "bytes": 64502,
+   "sha256": "e2b507f5a7de20b95e254f6162a743684fd0d6734530ce0310695dd923e3507b"
+  },
+  {
+   "path": "source/vendor/lineage/g23-inputs/bidi.js",
+   "bytes": 1534,
+   "sha256": "40f8033a3031f3327e2e0674b64a8a72366d32a744086e87a9c6d4388ef608b5"
+  },
+  {
+   "path": "source/vendor/lineage/g23-inputs/bridge.js",
+   "bytes": 9025,
+   "sha256": "2846017daa93803def4c5ceec86f7a1831ca5c27a49914b6c6182deb5f3396db"
+  },
+  {
+   "path": "source/vendor/lineage/g23-inputs/build.mjs",
+   "bytes": 39497,
+   "sha256": "72b76743e8abaef587e9484ecdc835ae2632249ad617f1fdf9388bc84edd44bf"
+  },
+  {
+   "path": "source/vendor/lineage/g23-inputs/content.mjs",
+   "bytes": 22972,
+   "sha256": "ae06f3805d80b8dbdf4d1886bb649f6caf791f5fbc95de9a28732f2bf97124e5"
+  },
+  {
+   "path": "source/vendor/lineage/g23-inputs/glyphs.mjs",
+   "bytes": 8970,
+   "sha256": "2290e460d5fd0046b81675d2f04c96a678e68f3da03f3fa15ceb72759343940e"
+  },
+  {
+   "path": "source/vendor/lineage/g23-inputs/tokens.mjs",
+   "bytes": 6692,
+   "sha256": "d4759be24cdaeff3599da48079a5bc02c7387caa67d0ec6c175b02042de2ca47"
+  },
+  {
+   "path": "source/vendor/tokens/base/b4r.semantic.tokens.json",
+   "bytes": 4373,
+   "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441"
+  },
+  {
+   "path": "source/vendor/tokens/base/c3.material.tokens.json",
+   "bytes": 14376,
+   "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928"
+  },
+  {
+   "path": "source/vendor/tokens/base/d2r.illumination.tokens.json",
+   "bytes": 30299,
+   "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4"
+  },
+  {
+   "path": "source/vendor/tokens/base/e1.interaction.tokens.json",
+   "bytes": 54134,
+   "sha256": "6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce"
+  },
+  {
+   "path": "source/vendor/tokens/base/f1.accessibility.tokens.json",
+   "bytes": 38216,
+   "sha256": "dd47c43cb72eb306f2b701a883ce7c48e280f4d8bcfbf00664d0abca681e35cc"
+  },
+  {
+   "path": "source/vendor/tokens/base/f2.appearance.tokens.json",
+   "bytes": 30947,
+   "sha256": "513f5dfa419e1a5b7c5729e7b062ea282c32df0a3284e73596bc10b9e652cadc"
+  },
+  {
+   "path": "source/vendor/tokens/base/g11.utterance.alias.tokens.json",
+   "bytes": 528,
+   "sha256": "bdc05957547f28786ff0d3388b5e4c4f0ce8bfafbd548e8d763b525d01fd033b"
+  },
+  {
+   "path": "source/vendor/tokens/contrast/f1.dark.increased.tokens.json",
+   "bytes": 9120,
+   "sha256": "5b27d13790e0ce051822c226aa8f3c11cac04467156210f9469c229f391c8f2a"
+  },
+  {
+   "path": "source/vendor/tokens/contrast/f2.light.increased.tokens.json",
+   "bytes": 5601,
+   "sha256": "a382d1a486be780f9c6419347e3f24fcf832bdb3d68607bbf0975a1ee9b2224b"
+  },
+  {
+   "path": "source/vendor/tokens/dark/b4r.dark.tokens.json",
+   "bytes": 2348,
+   "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112"
+  },
+  {
+   "path": "source/vendor/tokens/dark/c3.dark.material.tokens.json",
+   "bytes": 3441,
+   "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367"
+  },
+  {
+   "path": "source/vendor/tokens/dark/d2r.dark.illumination.tokens.json",
+   "bytes": 3794,
+   "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157"
+  },
+  {
+   "path": "source/vendor/tokens/dark/e1.dark.interaction.tokens.json",
+   "bytes": 6162,
+   "sha256": "397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252"
+  },
+  {
+   "path": "source/vendor/tokens/dark/f1.dark.accessibility.tokens.json",
+   "bytes": 3245,
+   "sha256": "3d2fbcca824255c5da8ee234f572f35bad68f143c47424ccc0057ad7e7407176"
+  },
+  {
+   "path": "source/vendor/tokens/light/b4r.light.tokens.json",
+   "bytes": 9736,
+   "sha256": "8176490548ca7105f4b3a20f5c72c298d6de0c14289743887f411e3c4ab0ab0e"
+  },
+  {
+   "path": "source/vendor/tokens/light/c3.light.material.tokens.json",
+   "bytes": 4917,
+   "sha256": "f8066672414cefe95d46105620ca1b6e48d6f42fc44c715e69d60e99d280572d"
+  },
+  {
+   "path": "source/vendor/tokens/light/d2r.light.illumination.tokens.json",
+   "bytes": 18654,
+   "sha256": "6d74182584c420182ec004db3ba3097923aff6f16cb42138214c580c52a47260"
+  },
+  {
+   "path": "source/vendor/tokens/light/e1.light.interaction.tokens.json",
+   "bytes": 5021,
+   "sha256": "1c408ba0ac42a9241e8b6a0697a692606a7461f2fa864ef526146cf231fd0393"
+  },
+  {
+   "path": "source/vendor/tokens/light/f1.light.accessibility.tokens.json",
+   "bytes": 3693,
+   "sha256": "2b3861432472683aa2bd9f9199463da52502a7ba746d620cbfaa827122975952"
+  }
+ ]
+}
