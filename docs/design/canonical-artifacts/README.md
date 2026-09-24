@@ -55,7 +55,7 @@ cd docs/design/canonical-artifacts/living-analysis && sha256sum -c SOURCE-PROVEN
 | `qandeel-light/` | I-08B3.1-D2R QANDEEL Light (latest D2R state) |
 | `interaction-semantic-color/` | I-08B3.1-E1R interaction + system semantic colour |
 | `accessibility-appearance/` | I-08B3.1-F1R2 accessibility, I-08B3.1-F2 FINAL_CANONICAL Light appearance |
-| `product-proofs/` | I-08B3.1-G1.1-R3 and I-08B3.1-G1.2 Product proof sources, with the G1.2 R1 final source |
+| `product-proofs/` | I-08B3.1-G1.1-R3, I-08B3.1-G1.2 (+ R1), and the preserved final I-08B3.1-G2 proof artifact |
 | `reconciliation/` | the PR #265 final-authority patch instructions and manifest, byte-exact |
 
 There are no `matching/` or `replay/` folders. No final local Matching or Replay Product/visual
