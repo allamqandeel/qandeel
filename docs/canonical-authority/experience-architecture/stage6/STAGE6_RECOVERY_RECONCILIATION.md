@@ -38,6 +38,7 @@ No transcript content is preserved here.
 | `final-authority/execution-authorizations/` | 6 — 6.1 … 6.6 | `SUPPORTING EVIDENCE ONLY` |
 | `final-authority/supporting-authority/` | 3 — `AUTHORITY_MANIFEST.md`, `STAGE1_2_CONVERSATIONAL_UNIT_MODEL.md`, `STAGE1_3_THREAD_ESTABLISHMENT_GRAMMAR.md` | `SUPPORTING EVIDENCE ONLY` (6.6 bundle members) |
 | `approved-candidate-source/` | 12 — main document, `START_HERE.md` and `SHA256SUMS.txt` for each approved final candidate below | `FROZEN SOURCE — LATER AMENDMENTS BIND` |
+| `implementation-authority-bundle/members/` | 4 — exact Stage 0, Stage 1.10, Stage 2.2 and Stage 2.3 bundle members recovered during independent review | `CANONICAL — HISTORICAL / UPSTREAM` (bundle support) |
 
 The rulings, gates and authorizations are the steps that led to each freeze. The Final Freeze Records govern.
 Where a Final Freeze Record adds Architecture Freeze Clarifications to the candidate it approves, the
@@ -71,10 +72,11 @@ each package's `SHA256SUMS.txt`.
 | `QANDEEL_T05_MANDATORY_FREEZE_REFERENCES.zip` | `ORIGINAL CONTAINER NOT RECOVERED — AUTHORITY PAYLOAD PRESERVED SEPARATELY`. The two members [`docs/timeline-presentation-window-v1.md`](../../../timeline-presentation-window-v1.md) names (the Stage 6.2 and 6.4 Final Freeze Records) are in `final-authority/freeze-records/` |
 | `QANDEEL_STAGE6_6_IMPLEMENTATION_AUTHORITY_BUNDLE_v1.zip` | `ORIGINAL CONTAINER NOT RECOVERED — AUTHORITY PAYLOAD PRESERVED SEPARATELY`. See [`implementation-authority-bundle/IMPLEMENTATION_AUTHORITY_BUNDLE_MAP.md`](implementation-authority-bundle/IMPLEMENTATION_AUTHORITY_BUNDLE_MAP.md) |
 
-Neither ZIP was recreated.
+Neither ZIP was recreated. The Stage 6.6 bundle payload itself is now complete: 7 byte-exact originals plus the Navigation `START_HERE.md` byte-exact equivalent. See the bundle map.
 
 ## 6. No semantic reconstruction
 
 - No recovered document was edited, merged, summarised or completed.
-- No missing candidate, freeze act or bundle member was written from other text.
+- No missing candidate or freeze act was written from other text.
+- Four previously missing bundle members were copied byte-exact from their original ChatGPT Library artifacts after their full SHA-256 values matched the bundle-recorded digests; they were not reconstructed.
 - This record and the bundle map are new metadata, and they define no Stage 6 rule.

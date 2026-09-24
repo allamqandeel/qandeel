@@ -51,8 +51,8 @@ The same check applies to `core-checkpoint/`, `navigation-checkpoint/` and `stag
 | `connected-worlds-v2/` | Connected Worlds v2 master package: product vision, CW2-00, CW2-01 … CW2-08 (frozen), eight Final Freeze Reviews, architecture closure |
 | `experience-architecture/core-checkpoint/` | `QANDEEL_CANONICAL_CORE_CHECKPOINT_v2.md` — historical upstream checkpoint (2026-09-03) |
 | `experience-architecture/navigation-checkpoint/` | Navigation Canonical Checkpoint v1, the Stage 0–4 closure chain, with its Stage 3 foundation |
-| `experience-architecture/stage5/` | Stage 5 Final Freeze Record and the approved final Stage 5 sources it names |
-| `experience-architecture/stage6/` | the 28 recovered Stage 6 authority files, the approved Stage 6.2 / 6.4 / 6.5 / 6.6 candidate sources, the recovery reconciliation and the Implementation Authority Bundle map |
+| `experience-architecture/stage5/` | Stage 5 Final Freeze Record, Stage 5.1 source package, approved final candidates, the 5.3 / 5.4 / 5.5 Architecture Freeze Addenda and the AMB-01 ruling |
+| `experience-architecture/stage6/` | the 28 recovered Stage 6 authority files, the approved Stage 6.2 / 6.4 / 6.5 / 6.6 candidate sources, all eight Implementation Authority Bundle payload members (7 exact originals + 1 byte-exact equivalent), the recovery reconciliation and bundle map |
 
 The Connected Worlds assurance finding `ASSURE-F05` is evidence, not authority. It is preserved separately in
 [`../assurance/connected-worlds/`](../assurance/connected-worlds/README.md).
