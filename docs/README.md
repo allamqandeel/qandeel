@@ -11,14 +11,15 @@ they schedule no task.
   lifecycle / closure map and the historical traps.
 - [`qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) — the one canonical cross-task backlog.
 - [`canonical-authority/CANONICAL_AUTHORITY_INDEX.md`](canonical-authority/CANONICAL_AUTHORITY_INDEX.md) —
-  recovered upstream authority: Experience Architecture Stages 0–6 and Connected Worlds v2. Historical /
-  upstream, not an entry point.
+  recovered authority omitted from GitHub: Experience Architecture Stages 0–6, Connected Worlds v2, plus the
+  final I-08A Product Shell / IA / Naming and I-08N-01 Notification / Proactive Attention authority. Preservation,
+  not an entry point.
 - [`design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md)
   — the locator for final Product / design artifacts.
 
 This index predates much of the later work, and the sections below are not a complete list. The later
-records are T-04 … T-14, Connected Worlds I-01 … I-07 with their remediations, and the I-08B design
-closures. The lifecycle / closure map in [`../QANDEEL_PROJECT_MAP.md`](../QANDEEL_PROJECT_MAP.md) locates
+records include T-04 … T-14, Connected Worlds I-01 … I-07 with their remediations, I-08A / I-08N-01 Product
+authority, and the I-08B design closures. The lifecycle / closure map in [`../QANDEEL_PROJECT_MAP.md`](../QANDEEL_PROJECT_MAP.md) locates
 them. Some sections below record lifecycle and navigation state as it stood when they were written, and
 are marked where later canonical work superseded them.
 
@@ -59,8 +60,9 @@ Markdown files record implementation-facing contracts and reconciliations used b
 Engineering Foundation set, [`implementation-foundation/README.md`](implementation-foundation/README.md)
 records that the original Word documents remain the canonical archive, and those Word files are not in this
 repository. Since 2026-09-24 the upstream Experience Architecture and Connected Worlds v2 authority is
-preserved byte-exact in [`canonical-authority/`](canonical-authority/README.md). The final Product / design
-artifacts are in [`design/canonical-artifacts/`](design/canonical-artifacts/README.md).
+preserved byte-exact in [`canonical-authority/`](canonical-authority/README.md); independent review on
+2026-09-25 added the missing final I-08A and I-08N-01 Product authority there as byte-exact Library originals.
+The final Product / design artifacts are in [`design/canonical-artifacts/`](design/canonical-artifacts/README.md).
 
 ## Foundation closure
 

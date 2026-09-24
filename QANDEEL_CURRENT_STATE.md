@@ -105,24 +105,26 @@ was added later.
 | Connected Worlds `I-08` and `I-09` | named later phases and not started (§7). The governance contract calls `I-08` "real, unstarted" | [`docs/matching-introduction-runtime-v1.md`](docs/matching-introduction-runtime-v1.md) §11, §24; [`tests/task-closure-governance-contract.test.mjs`](tests/task-closure-governance-contract.test.mjs) |
 | `CW2-08` Safety / moderation / entitlements / Launch Gate | no executable runtime exists. Every launch prerequisite is a fail-closed seam answering `NOT_EVALUATED` | [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md), I-05 and I-06 closure records |
 
-### 3.5 Visual / Product design system
+### 3.5 Product shell, attention contract, and visual / Product design system
 
 | Domain | Lifecycle | Primary record |
 |---|---|---|
+| I-08A — Product Shell / IA / Canonical Naming | `I-08A4 — CLOSED / CANONICAL FREEZE COMPLETE`; integrated `I-08A — CANONICAL PRODUCT SHELL / IA / NAMING FOUNDATION — FROZEN`. Later explicit G1.1 / G1.2 amendments bind where they supersede A4 naming or shell statements | [`docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md`](docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md) |
+| I-08N-01 — Notification & Proactive Attention Product Contract | `CLOSED / NOTIFICATION & PROACTIVE ATTENTION PRODUCT CONTRACT FROZEN`. This is Product behavior / attention policy, not a production notification runtime | [`docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md) |
 | Phase V — Visual Language Discovery | `CLOSED` — `FREEZE WITH EXPLICIT OPEN ITEMS`, in the archive's own words | [`docs/design/phase-v/README.md`](docs/design/phase-v/README.md) |
 | Phase VI: VI-01, VI-02 | each `CLOSED / FROZEN` as its archive states. VI-01 naming was amended by G1.1 | [`docs/design/phase-vi/`](docs/design/phase-vi/) |
 | Phase VI: VI-03 and the Phase VI parent | `HISTORICAL TRACK STATE — SUPERSEDED BY LATER CANONICAL WORK`. VI-03-01 is a brief "NOT A FREEZE". The artifact audit classifies the later VI-03 explorations as "exploration, superseded by I-08B1". Phase VI has no closure record | [`docs/design/canonical-artifacts/LOCAL_ONLY_CANONICAL_ARTIFACT_AUDIT.md`](docs/design/canonical-artifacts/LOCAL_ONLY_CANONICAL_ARTIFACT_AUDIT.md) |
 | I-08B1 Living Analysis World (FAR / MID / NEAR) | `CLOSED / FROZEN` (2026-09-20). PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN | [`docs/design/canonical-artifacts/living-analysis/README.md`](docs/design/canonical-artifacts/living-analysis/README.md) |
 | I-08B2.5 brand, I-08B3.0-E3 typography, I-08B3.1 A–F material and appearance system | as stated per domain in the artifact index: C and F are `CLOSED / FROZEN`; D2R and E1R are `CLOSED / FROZEN` per the downstream ledger; typography, A3R2 and B4R are frozen per the downstream ledger; brand is a final production package with no standalone closure record | [`docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md) |
 | I-08B3.1-G: G1.1, G1.2, G2, G2.3, G3, and parent G | `CLOSED / FROZEN` | [`docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md`](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) §J |
-| The I-08B3.1 parent, the I-08B parent, and any `I-08A` | NOT ESTABLISHED BY CURRENT REPOSITORY AUTHORITY. No closure record for any of them exists on `main` | — |
+| The I-08B3.1 parent and the I-08B parent | NOT ESTABLISHED BY CURRENT REPOSITORY AUTHORITY. No closure record for either parent exists on `main` | — |
 
 ### 3.6 Cross-cutting
 
 | Domain | Lifecycle | Primary record |
 |---|---|---|
 | Voice / Live Call | the Product interaction is `CLOSED / FROZEN` at proof level. The runtime is `OPEN — UNASSIGNED` (`QAN-BL-VOICE-01`) | [`docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md`](docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md), [backlog](docs/qandeel-canonical-backlog-v1.md) |
-| Notifications / proactive attention | no canonical runtime exists, and no owner. It is "deferred beyond this phase" by QHIA. G3 §D freezes one presentation rule: Matching must not interrupt a Live Call. That rule defines no transport. Beyond that, NOT ESTABLISHED BY CURRENT REPOSITORY AUTHORITY | [`docs/human-intelligence-activation-freeze-v1.md`](docs/human-intelligence-activation-freeze-v1.md), [G3 closure §D](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) |
+| Notifications / proactive attention | the Product contract is frozen by `I-08N-01`; no production notification runtime is established on `main`. G3 §D later freezes one compatible presentation rule: Matching must not interrupt a Live Call. Neither record defines the runtime transport/mechanism | [`I-08N-01`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md), [G3 closure §D](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) |
 | Security / pre-release | `QAN-BL-SEC-01` `DEFERRED — OWNED`; `QAN-BL-CW-01` `OPEN — UNASSIGNED`; the launch prerequisites fail closed | [`docs/t12-auth-storage-at-rest-disposition-v1.md`](docs/t12-auth-storage-at-rest-disposition-v1.md), [backlog](docs/qandeel-canonical-backlog-v1.md) |
 | Governance | the canonical backlog is `ACTIVE — governance authority` | [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) |
 
@@ -140,6 +142,7 @@ production implementation. The table keeps three things apart:
 | Area | Decided (Product / Architecture / Design) | In production code today | Still open |
 |---|---|---|---|
 | Conversation and intelligence | Foundation, QHIA and QIR contracts | the NestJS API in `apps/api/src/`. Its HTTP controllers exist only under `conversation/` and `health/` | Provider / LLM selection is deferred (QIR-001) |
+| Product shell / Global navigation / first use | I-08A4 freezes the Personal-centered App Shell, three-area Global Switcher, local-only Back, Direct Entry, bilingual Product language and first-use foundation; later G1.1 / G1.2 naming amendments bind | no complete production Global Shell implementing the I-08A contract is established on `main`; current mobile composition is the T-series / T-12 shell | production realization of the frozen I-08A shell while preserving later amendments |
 | Living Analysis Map (Personal World) | Stages 0–6 and the T-series contracts | the mobile client in `apps/mobile/src/`: world projection, camera, Timeline, temporal navigation, Return, chrome, motion, responsive composition, recovery and sign-in. **The Map's paint is still the neutral grey structural placeholder** (T-12 §12) | the I-08B1 world is not ported: G3 §F records "no Skia / Reanimated port of the world". `QAN-BL-VIS-01` |
 | Visual system (Living Brass, Light, typography, surfaces, colour, accessibility, appearance, brand) | the frozen I-08B design canon (§3.5) | none. No commit after T-14's merge (`615e586f`) changes `apps/mobile/` | the whole production port |
 | Conversation / Analysis shell | G1.1; G3 Decisions A and B; the G2.3 and G3 controlled amendments to T-11 / T-12 | the T-12 app-root composition | G3 §F lists these as unimplemented: the Analysis shell, the appearance cross-fade, the temporal-line placement and yield rule, compact `ReturnControls`, and device certification |
@@ -147,6 +150,7 @@ production implementation. The table keeps three things apart:
 | Matching / Introductions | CW2-06; the G2.3 copy and process; the G3 §D Live-Call rule | the I-07 database runtime (0108–0118, 0120) | the mobile Matching UI, the final Introduction screen and the navigation surfaces, owned by Connected Worlds `I-08`. G3 §G holds the `OPEN COPY` items |
 | Replay | CW2-05; the G1.1 placement ("an action on the current Conversation / Analysis context") | the I-06 backend runtime (0100–0107) | the Product Replay surface (`QAN-BL-NAV-02`). No media, storage or transport. Distribution is `NOT CLEARED / FAIL-CLOSED` |
 | Voice / Live Call | G1.2 | none | all of it (`QAN-BL-VOICE-01`) |
+| Notifications / proactive attention | I-08N-01 freezes the Product gate, attention budgets, interruption classes, privacy/disclosure contract, Direct Entry constraints and user controls | no production notification runtime / transport is established on `main` | implementation mechanism, platform code, thresholds and final notification UI remain unfrozen by N-01 |
 | Sign-in / auth | T-12P, T-14 | implemented | `QAN-BL-SEC-01`. T-14 recorded sign-up, password reset and onboarding, among others, as anti-scope (backlog §7) |
 
 ---
@@ -194,11 +198,12 @@ An entry authorizes no implementation (BG-07).
 
 ## 6. Administrative truth
 
-- **The recovered upstream authority is in GitHub.** The Experience Architecture chain (Core Checkpoint v2,
-  Stages 0–4, Stage 5, Stage 6) and Connected Worlds v2 (CW2-00 … CW2-08) are preserved byte-exact in
+- **Recovered authority is in GitHub.** The Experience Architecture chain (Core Checkpoint v2, Stages 0–6),
+  Connected Worlds v2 (CW2-00 … CW2-08), the final I-08A Product Shell / IA / Naming closure and the final
+  I-08N-01 Notification / Proactive Attention contract are preserved byte-exact in
   [`docs/canonical-authority/`](docs/canonical-authority/README.md).
-- **That directory is historical / upstream preservation, not the current entry point.** Its own README says
-  so, and it never outranks a later T-series, Connected Worlds or I-08B record.
+- **That directory is preservation, not the current entry point.** Some contents are historical / upstream;
+  I-08A and I-08N-01 are later frozen Product authority. Explicit later amendments still bind.
 - **[`docs/design/canonical-artifacts/`](docs/design/canonical-artifacts/README.md) is the canonical locator
   for Product / design artifacts.** Its index,
   [`QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md),
