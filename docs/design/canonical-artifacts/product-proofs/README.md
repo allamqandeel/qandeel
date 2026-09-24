@@ -1,7 +1,6 @@
 # Product proofs — I-08B3.1-G1.1-R3, I-08B3.1-G1.2 (+ R1) and I-08B3.1-G2
 
-The source and built prototypes of the two closed G1 Product proofs. Their canonical **closure
-records** were already on `main`, and those records are the authority for what was decided:
+This folder preserves the reusable proof artifacts for the closed G1 Product proofs and the final G2 proof artifact. Canonical **closure records**, not preserved build files, remain the authority for what was decided:
 
 - `docs/design/i-08b3.1-g1.1/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md`
 - `docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md`
