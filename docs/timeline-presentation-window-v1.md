@@ -12,6 +12,11 @@ proof-board shorthand. The Stage 6.2 v2 candidate and boards S6.2 A/B and
 S6.4 B were also inspected. No styling, annotation layout or debug-board labels
 are imported into the component.
 
+> Locator note (added 2026-09-24, recovered canonical authority preservation; the text above is unchanged):
+> both Final Freeze Records are now preserved in
+> [`canonical-authority/experience-architecture/stage6/final-authority/freeze-records/`](canonical-authority/experience-architecture/stage6/final-authority/freeze-records/).
+> The ZIP that supplied them was not recovered.
+
 - Stage 6.2 sections 3–5/13–15: invariant ordinal geometry, windowing, disclosed
   membership only, no aggregation, and narrow-device parity are preserved.
 - Stage 6.2 sections 8–10: the optional outboard Live presentation slot is outside

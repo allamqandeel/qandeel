@@ -11,6 +11,14 @@ locator for every domain. The audit that produced it, including what was found m
 package was admitted or refused, is
 [`LOCAL_ONLY_CANONICAL_ARTIFACT_AUDIT.md`](LOCAL_ONLY_CANONICAL_ARTIFACT_AUDIT.md).
 
+**Upstream architecture authority lives elsewhere.** This directory holds Product / design artifacts only.
+Since 2026-09-24, the upstream authority that the design and runtime records consume is preserved separately
+in [`docs/canonical-authority/`](../../canonical-authority/README.md):
+
+- the Experience Architecture chain: Core Checkpoint v2, Navigation Canonical Checkpoint v1 (Stages 0–4),
+  Stage 5 and Stage 6;
+- the Connected Worlds v2 architecture: CW2-00 … CW2-08, the Final Freeze Reviews and the architecture closure.
+
 ## Rules this directory follows
 
 1. **Final only.** One authority per domain: the final state, plus the minimum support needed to

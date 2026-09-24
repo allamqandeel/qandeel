@@ -155,6 +155,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -427,6 +428,50 @@ The backlog records the obligation only (BG-07).
 
 This entry defines no density, no level-of-detail rule, no token and no world change. Any change to the world still passes through I-08B1's own reopen rule. The Product Owner's ruling that the F1 / F2 North Star spectacle requirement is met (G3 closure §E) is a separate, fully dispositioned obligation and does not answer this G2 heavy-history stress item.
 
+### `QAN-BL-CW-01` — Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`)
+
+- **Title / Finding:** owner deletion of Shared material never reaches the Public DRAFT derivative. Preparing a
+  Public Experience manifest copies the author's Shared material into
+  `public_experience_text_derivative_bodies` as a `SOURCE_CONTENT_BEARING_DERIVATIVE`. That row has no deleter
+  and is immutable. `resolve_public_experience_review_v1`, executable by `service_role`, returns the body
+  without checking current source availability. After the author deletes the material, a different human, the
+  Experience's controller, can still read the deleted text through that review boundary, permanently. Every
+  outward Public surface correctly goes dark; the internal controller review surface does not.
+- **Source:** assurance finding `ASSURE-F05` (severity `HIGH`), in the `QAN-CW-ASSURE-01` register, preserved as
+  evidence in
+  [`assurance/connected-worlds/QANDEEL_CONNECTED_WORLDS_ASSURANCE_FINDINGS_v1.md`](assurance/connected-worlds/QANDEEL_CONNECTED_WORLDS_ASSURANCE_FINDINGS_v1.md)
+  (SHA-256 `53ccf85f…68d8fe4`). The frozen invariants it cites are CW2-02 §27 (B19 / B20), CW2-03 §37 (C32),
+  CW2-01 A18 and CW2-08 §2 ("deleted-content non-serving" is non-waivable), now preserved in
+  [`canonical-authority/connected-worlds-v2/architecture/`](canonical-authority/connected-worlds-v2/architecture/).
+- **Current truth:** not implemented on `main` in any form. Migration `0121` states "It implements no part of
+  ASSURE-F05". Migration `0122` states "ASSURE-F05 is not implemented here in any form", and its deploy-time
+  self-assertion `B7` refuses an owner-deletion body that touches Public state ("ASSURE-F05 is not authorized
+  here"). Their tests assert that neither implements it
+  (`database/tests/public-replay-consistency-historical-retry-remediation-v1.test.mjs`,
+  `database/tests/introduction-disclosure-privacy-erasure-v1.test.mjs`).
+- **Why deferred:** no remediation task has owned it. `QAN-CW-REM-01` … `REM-03` remediated other findings of
+  the same register and explicitly excluded this one. The finding is cross-phase: I-05A owns the derivative
+  and review boundary, I-04G / I-07D the deletion primitive, and I-05C the disappearance census. Its full
+  remedy includes an open Product ruling: whether the retained bytes must also be destroyed, which would need
+  a reviewed exception to the `0092` immutability guard. No write path reaches it today, because
+  `prepare_public_experience_manifest_v1` is executable by no application role. The read boundary is already
+  `service_role`-reachable.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `HIGH`, as the source states. The register keeps HIGH over one refuter's MEDIUM, because CW2-08
+  §2 makes deleted-content non-serving non-waivable and the retention is permanent.
+- **Reopen condition:** Architecture opens a Connected Worlds remediation or integration task for Public
+  derivative source availability; or any task proposes opening Public draft creation or manifest preparation
+  to an application role (the CW2-08 launch gate); or any task adds a reader of
+  `public_experience_text_derivative_bodies`.
+- **Required future property:** after owner deletion, no internal or public boundary serves a
+  source-content-bearing Public derivative of the deleted material. This is the property CW2-02 §27 and CW2-08
+  §2 already state; this entry adds none.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by the recovered canonical authority preservation, at the explicit direction of Architecture / the
+Product Owner (BG-06). This entry chooses no remedy. The register's "remediation direction" is evidence, not a
+decision, and nothing here authorizes implementation (BG-07).
+
 ---
 
 ## 6. Tombstones
@@ -574,15 +619,17 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | --- | ---: |
 | `DEFERRED — OWNED` | 1 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 7 |
+| `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **20** |
+| **Total** | **22** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 11 |
+| `HIGH` | 13 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
+
+These totals are counted mechanically from the §4 index, one row per ID.
 
 T-12 inherited ten items and all ten are now tombstoned. `QAN-BL-SEC-01` was the sole new BG-08
 admission made *at* T-12 closure. `QAN-BL-AUTH-01` is a later BG-08 reconciliation: the residue was
@@ -601,6 +648,18 @@ and Architecture designated none.
 
 The I-08B3.1-G3 closure admitted `QAN-BL-VIS-01`. It is the one open item parent `I-08B3.1-G` could no longer hold once
 it closed, so the register now counts seven `OPEN — UNASSIGNED` items.
+
+**Count correction (recovered canonical authority preservation, 2026-09-24).** The table above had gone
+stale. At the PR #268 baseline (`84f507d0`) the §4 index held 21 rows, not 20:
+
+- 8 `OPEN — UNASSIGNED`, not 7;
+- 12 `HIGH`, not 11.
+
+The sentence above is left as it was written. It undercounted by one: the §4 index already held eight open
+items once `QAN-BL-VIS-01` was admitted.
+
+The preservation then admitted `QAN-BL-CW-01` (`ASSURE-F05`, `HIGH`, `OPEN — UNASSIGNED`). The register now
+holds 22 items: 9 `OPEN — UNASSIGNED`, 13 `HIGH`. The correction reopens nothing and changes no other item.
 
 ---
 
