@@ -414,10 +414,8 @@ The backlog records the obligation only (BG-07).
   long-term and heavy.
 - **Source:** [G2 closure §G item 8](design/i-08b3.1-g2/QANDEEL_G2_CANONICAL_CLOSURE.md) ("HEAVY-HISTORY /
   LONG-TERM WORLD DENSITY + LOD STRESS PROOF — future stress proof"), carried unchanged by the
-  [G3 readiness handoff §7](design/i-08b3.1-g2/QANDEEL_G3_READINESS_HANDOFF.md); the density half of F1R2's
-  `F1_F2_CARRY_FORWARD.md` §C item 11
-  (`design/canonical-artifacts/accessibility-appearance/i-08b3.1-f1r2/docs/`), which carried density to G. Admitted by
-  the [I-08B3.1-G3 closure §H](design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) when parent G closed.
+  [G3 readiness handoff §7](design/i-08b3.1-g2/QANDEEL_G3_READINESS_HANDOFF.md), and admitted by the
+  [I-08B3.1-G3 closure §H](design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) when parent G closed.
 - **Why deferred:** G3 was forbidden to redesign I-08B1, and its fixture world stays canonical. A stress proof needs
   heavy-history material and may need a reconciliation with the frozen D-track contract. Parent G closes without it and
   can no longer hold it.
@@ -427,9 +425,7 @@ The backlog records the obligation only (BG-07).
   port, or real long-term history, shows the frozen world losing legibility, semantic truth or performance at scale.
 - **Status:** `OPEN — UNASSIGNED`
 
-This entry defines no density, no level-of-detail rule, no token and no world change. F1's observation that no token
-constrains density is not a permission. Any change to the world still passes through I-08B1's own reopen rule. The
-Product Owner's ruling that the North Star spectacle requirement is met (G3 closure §E) does not answer this item.
+This entry defines no density, no level-of-detail rule, no token and no world change. Any change to the world still passes through I-08B1's own reopen rule. The Product Owner's ruling that the F1 / F2 North Star spectacle requirement is met (G3 closure §E) is a separate, fully dispositioned obligation and does not answer this G2 heavy-history stress item.
 
 ---
 
@@ -979,8 +975,7 @@ they are:
 - `QAN-BL-SEC-01` is untouched.
 
 **Admitted: one, `QAN-BL-VIS-01`.**
-- **Why it qualifies:** it is the heavy-history density / level-of-detail stress proof that G2 §G deferred by name and
-  that F1 carried to G.
+- **Why it qualifies:** it is the heavy-history density / level-of-detail stress proof that G2 §G deferred by name and the G3 readiness handoff carried forward unchanged.
 - **Why now:** parent G closes and can no longer hold it.
 - **Why it is not a laundered blocker (BG-01):** G3's contract forbade touching the world.
 
