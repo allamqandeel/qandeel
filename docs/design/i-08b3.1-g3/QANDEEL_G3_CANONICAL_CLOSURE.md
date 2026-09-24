@@ -85,7 +85,7 @@ The full statement is in `G2_F2_ANALYSIS_SHELL_CONTROLLED_AMENDMENT.md`:
 - the shell scope;
 - the unchanged world;
 - the Conversation, private proposal and Shared World following the system;
-- F2's 200 ms cross-fade at the Conversation ↔ Analysis boundary, a cut under Reduced Motion;
+- F2's appearance-switch semantics at the Conversation ↔ Analysis boundary. The reviewed proof used 200 ms, which remains F2's `production-default` / device-tunable craft value; under Reduced Motion the cross-fade is removed entirely;
 - the status content as a legibility requirement rather than a mechanism.
 
 It is not an app-wide dark mode, a user appearance override or toggle, a change to any F2 token, or a Light repaint or
@@ -165,8 +165,7 @@ G2 §A kept it open and owned by G. Parent G cannot close with it silent.
 - **Not a new measurement.** F1's recorded ratios stay in F1 as history, unchanged.
 - **Not a change to any token or Product value.** It does not relax the D-track atmosphere chroma ceiling (D is CLOSED /
   FROZEN), grant density to anyone, or change the world.
-- **Not a verdict on the world at scale.** The part of F1's item 11 that concerns **density** at long-term, heavy
-  history is admitted separately to the backlog as `QAN-BL-VIS-01` (§H).
+- **Not a verdict on heavy-history scale.** The separate G2 §G item 8 obligation — **Heavy-History / Long-Term World Density + LOD Stress Proof** — is admitted to the backlog as `QAN-BL-VIS-01` (§H). It is not a remaining part of the F1 / F2 North Star obligation.
 
 ---
 
@@ -196,7 +195,7 @@ Nothing below keeps G3 or parent G open. Each item keeps the owner and class sho
 |---|---|---|
 | Matching proof lines: cue label «ليه؟», first-accepter acknowledgement, neutral unavailable line, second-accepter line, later arrival, welcome | G2 §G 1–6 | `OPEN COPY`, unchanged. Product copy owner |
 | Q-LIGHT-SHELL | G2 §G 7 | **resolved** (§C.1) |
-| Heavy-history / long-term density and LOD stress proof | G2 §G 8; F1 §C.11 (density) | **admitted** as `QAN-BL-VIS-01` (§H) |
+| Heavy-history / long-term density and LOD stress proof | G2 §G item 8; G3 readiness handoff §7 | **admitted** as `QAN-BL-VIS-01` (§H) |
 | Final Introduction screen | G2 §G 9 | later Product work; Connected Worlds `I-08` |
 | Production compact Return grouping | G2 §G 10; G2.3 T-11 amendment §7 | `IMPLEMENTATION GAP`, unchanged |
 | Orientation above the Timeline (S-04) | G2 §E; handoff §7; G3.1 N1 | **resolved** in its narrower form (§C.2) |
@@ -232,9 +231,7 @@ Nothing below keeps G3 or parent G open. Each item keeps the owner and class sho
 
 **Admitted: one.** `QAN-BL-VIS-01 — Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof`,
 `OPEN — UNASSIGNED`, with the full §2 schema.
-- **Why it qualifies under BG-06:** a canonical document explicitly defers it:
-  - G2 §G item 8 names it a future stress proof;
-  - F1's `F1_F2_CARRY_FORWARD.md` §C item 11 carries density to G.
+- **Why it qualifies under BG-06:** G2 §G item 8 explicitly names it as a future heavy-history / long-term density + LOD stress proof, and the G3 readiness handoff §7 carries that obligation forward unchanged.
 - **Why it must be admitted now:** G is closing and can no longer hold it.
 - **Not blocker laundering (BG-01):** G3's contract forbade redesigning the world, and G2 already recorded the item as
   not keeping G2 open.
