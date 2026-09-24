@@ -64,14 +64,14 @@ Product laws its surfaces must honor.
 | G2.3 — Matching copy + Return amendment | `I-08B3.1-G2.3-MATCHING-COPY-RETURN-AMENDMENT.zip`, 4,308,615 B, SHA-256 `12CCA79C35D74DA8BC951B87B4827029AA50B2D4EB8FCA050934A46C4077C370` | integrated the exact Matching copy; proved the compact Return presentation |
 | G2.3 canonical closure | PR #266, merged to `main` as `a55af616fbde646bcaa4fcc01b63c78a6e5bc089` | `docs/design/i-08b3.1-g2.3/QANDEEL_G2_3_CANONICAL_CLOSURE.md` and `docs/design/i-08b3.1-g2.3/T11_RETURN_PRESENTATION_CONTROLLED_AMENDMENT.md` |
 | Living Analysis source | `docs/design/canonical-artifacts/living-analysis/i-08b1/wf-living-constellation.html`, SHA-256 `4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413` | the one world every G2 package loads; unchanged at the baseline |
-| Preserved final source | `docs/design/canonical-artifacts/product-proofs/g2/g2.3/prototype/index.html`, 1,308,967 B, SHA-256 `F0B11310AC9561BC7C14F3DFA2864EB450B78D02D9ADB6E747BA1D56B9680BEC` | the final effective G2 proof, preserved byte-exact from the G2.3 archive with its manifest and README |
+| Preserved final proof build | `docs/design/canonical-artifacts/product-proofs/g2/g2.3/prototype/index.html`, 1,308,967 B, SHA-256 `F0B11310AC9561BC7C14F3DFA2864EB450B78D02D9ADB6E747BA1D56B9680BEC` | the final effective G2 proof artifact, preserved byte-exact from the G2.3 archive with its manifest and README |
 
 **Where the packages live.** The three sealed review archives stay local, in
 `E:\QANDEEL\QANDEEL PROJECT\design-workshops\`, following the canonical artifact index's convention:
 none is in Git, and each SHA-256 is its identity.
 
-**The preserved final source.** The minimum reusable G2 source is in the repository at
-`docs/design/canonical-artifacts/product-proofs/g2/`.
+**The preserved final proof artifact.** The minimum reusable G2 proof build is in the repository at
+`docs/design/canonical-artifacts/product-proofs/g2/`. Its original build inputs were never sealed and are therefore not promoted as canonical source; that limitation is recorded in `SOURCE-PROVENANCE.md`.
 - **What it holds:** the G2.3 build, which is the final effective proof, with its manifest and README,
   byte-exact from the sealed G2.3 archive.
 - **What it leaves out:** G2.1 and G2.2 contribute no file, because the G2.3 build supersedes their
@@ -113,7 +113,7 @@ These laws bind the Analysis surface.
 9. **Replay is a quiet action derived from the current Conversation / Analysis context, not a World or
    a tab** (G1.1 §1; Replay runtime §1: "A Replay is **not** a World").
 10. **Matching is a QANDEEL-mediated Product doorway outside the world's geography:** §D.
-11. **Analysis is one dark immersive surface in both system appearances:** §F.
+11. **The Living Analysis World remains the same dark immersive world in both system appearances; surrounding shell treatment remains open:** §F.
 
 ---
 
@@ -194,7 +194,7 @@ T-11 §4, §10 and §14 only.
 
 ## F. Dark / Light
 
-> **Analysis is one dark immersive surface in both system appearances.**
+> **The Living Analysis World remains the same dark immersive world in both system appearances.**
 
 That law is about the **Living Analysis World**, the immersive world surface of the Analysis. It is all
 that G2 freezes about appearance.
@@ -225,7 +225,7 @@ Under both, it keeps the same:
 - Living Brass behavior.
 
 There is no Light repaint of the Living Analysis World, no pale Light veil over it and no
-appearance-dependent world redesign. G2.2 measured the Analysis at a 0 px difference between the two
+appearance-dependent world redesign. G2.2 measured the Living Analysis rendering at a 0 px difference between the two
 system appearances, still and in motion.
 
 This is the Product Owner's decision (G2.2, D5) about the spectacle F2 left "OWNED BY G". It is a
