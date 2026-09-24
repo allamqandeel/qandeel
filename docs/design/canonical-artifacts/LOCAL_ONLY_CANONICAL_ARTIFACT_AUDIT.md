@@ -164,3 +164,15 @@ files, 6 new).
 - the G1.2 closure and backlog on `main` record the same R1 hash;
 - the four other archive hashes could **not** be recomputed, because the archives are not on this
   host. They are the hashes the patch records.
+
+## G. Later disposition (2026-09-24, recovered canonical authority preservation)
+
+Sections A–F above are the audit as it stood on 2026-09-23. They are left as written. A later preservation
+changed the state of some rows and single-copy risks:
+
+| Row / risk | Then | Now |
+|---|---|---|
+| M · `QANDEEL_CANONICAL_CORE_CHECKPOINT_v2.md` and the Navigation Canonical Checkpoint | **REPORTED, NOT PRESERVED** (outside that task's root) | **Preserved** byte-exact in [`docs/canonical-authority/experience-architecture/`](../../canonical-authority/CANONICAL_AUTHORITY_INDEX.md): Core Checkpoint v2 as historical upstream authority; the Navigation Checkpoint as the Stage 0–4 chain |
+| M · Connected Worlds assurance: `QANDEEL_CONNECTED_WORLDS_ASSURANCE_FINDINGS_v1.md` | **OPEN — DO NOT CANONICALIZE**, single-copy risk | **Preserved as assurance evidence only**, not canonicalized, in [`docs/assurance/connected-worlds/`](../../assurance/connected-worlds/README.md). `ASSURE-F05` is admitted to the backlog as `QAN-BL-CW-01`. The other two assurance reports are still not in Git |
+| M · CW-01 / CW-02 architecture reports | **OPEN — DO NOT CANONICALIZE** | **Unchanged.** They are not admitted. The frozen CW2-00 … CW2-08 chain that superseded them is preserved in [`docs/canonical-authority/connected-worlds-v2/`](../../canonical-authority/connected-worlds-v2/CW2_SOURCE_PROVENANCE.sha256) |
+| E.3 / E.4 single-copy risk | laptop only | partly retired: the core and navigation checkpoints and the assurance register are now in Git. The backend contract `.docx` set, the other assurance reports and the CW-01 / CW-02 reports remain laptop-only |

@@ -17,6 +17,9 @@ the original sealed package is.
 - **"Frozen per downstream ledger"** means the package describes itself as a candidate. Its freeze was
   a Director / Product decision made outside it, and that decision is recorded by the later packages
   that inherit it. The recording packages are named in each domain's `SOURCE-PROVENANCE.md`.
+- **Upstream architecture authority** is not indexed here. Core Checkpoint v2, the Navigation Checkpoint
+  (Stages 0–4), Stage 5, Stage 6 and Connected Worlds v2 CW2-00 … CW2-08 are located by
+  [`docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md`](../../canonical-authority/CANONICAL_AUTHORITY_INDEX.md).
 
 ## Design system and Product proofs
 

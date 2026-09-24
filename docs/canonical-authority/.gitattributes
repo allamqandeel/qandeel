@@ -1,0 +1,11 @@
+# Recovered canonical authority is preserved byte-exact and verified by SHA-256 (*_SOURCE_PROVENANCE.sha256).
+# Some sources carry CRLF, a BOM or Markdown hard-break trailing spaces. Never normalise or whitespace-check them.
+# The generated locator / provenance files in this tree are ordinary LF text; only line-ending conversion is off for them.
+* -text
+connected-worlds-v2/*/** -whitespace
+experience-architecture/core-checkpoint/QANDEEL_*.md -whitespace
+experience-architecture/navigation-checkpoint/** -whitespace
+experience-architecture/stage5/QANDEEL_*.md -whitespace
+experience-architecture/stage5/approved-source/** -whitespace
+experience-architecture/stage6/final-authority/** -whitespace
+experience-architecture/stage6/approved-candidate-source/** -whitespace

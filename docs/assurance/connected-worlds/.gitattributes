@@ -1,0 +1,3 @@
+# The assurance finding is preserved byte-exact as evidence (ASSURANCE_SOURCE_PROVENANCE.sha256). Never normalise it.
+* -text
+QANDEEL_*.md -whitespace
