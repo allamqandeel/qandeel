@@ -22,9 +22,13 @@ port of the I-08B1 world remains open, as I-08B1's own closure states. Productio
 does not yet implement the compact grouping (T-11 amendment §7).
 
 It reopens nothing it consumed:
-- the design records I-08B1, G1.1, G1.2, G2.3 and its T-11 amendment, and F2;
+- the design records I-08B1, G1.1, G1.2, G2.3 and its T-11 amendment;
 - the frozen contracts T-04, T-08, T-10, T-11 and T-12;
 - the Replay runtime (`I-06`) and the Matching / Introduction runtime (`I-07`).
+
+F2 is the one narrower case. G2 supersedes F2's general follow-system presentation for the Living
+Analysis World on the Analysis surface, and nowhere else (§F). F2 is not reopened globally and stays the
+general appearance authority.
 
 `I-08B3.1-G2` is a design-track identifier, not Connected Worlds phase `I-08`. That phase owns:
 - the mobile Matching UI;
@@ -60,13 +64,23 @@ Product laws its surfaces must honor.
 | G2.3 — Matching copy + Return amendment | `I-08B3.1-G2.3-MATCHING-COPY-RETURN-AMENDMENT.zip`, 4,308,615 B, SHA-256 `12CCA79C35D74DA8BC951B87B4827029AA50B2D4EB8FCA050934A46C4077C370` | integrated the exact Matching copy; proved the compact Return presentation |
 | G2.3 canonical closure | PR #266, merged to `main` as `a55af616fbde646bcaa4fcc01b63c78a6e5bc089` | `docs/design/i-08b3.1-g2.3/QANDEEL_G2_3_CANONICAL_CLOSURE.md` and `docs/design/i-08b3.1-g2.3/T11_RETURN_PRESENTATION_CONTROLLED_AMENDMENT.md` |
 | Living Analysis source | `docs/design/canonical-artifacts/living-analysis/i-08b1/wf-living-constellation.html`, SHA-256 `4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413` | the one world every G2 package loads; unchanged at the baseline |
+| Preserved final source | `docs/design/canonical-artifacts/product-proofs/g2/g2.3/prototype/index.html`, 1,308,967 B, SHA-256 `F0B11310AC9561BC7C14F3DFA2864EB450B78D02D9ADB6E747BA1D56B9680BEC` | the final effective G2 proof, preserved byte-exact from the G2.3 archive with its manifest and README |
 
-**Where the packages live.** They are local review archives in
+**Where the packages live.** The three sealed review archives stay local, in
 `E:\QANDEEL\QANDEEL PROJECT\design-workshops\`, following the canonical artifact index's convention:
 none is in Git, and each SHA-256 is its identity.
 
-**Their lifecycle.** Each package keeps its own review-candidate wording. This record is their
-lifecycle authority.
+**The preserved final source.** The minimum reusable G2 source is in the repository at
+`docs/design/canonical-artifacts/product-proofs/g2/`.
+- **What it holds:** the G2.3 build, which is the final effective proof, with its manifest and README,
+  byte-exact from the sealed G2.3 archive.
+- **What it leaves out:** G2.1 and G2.2 contribute no file, because the G2.3 build supersedes their
+  builds and source.
+- **Its record:** `SOURCE-PROVENANCE.md` there records what was admitted, what stayed in the archives
+  and why.
+
+**Their lifecycle.** Each package, and the preserved copy of G2.3's files, keeps its own
+review-candidate wording. This record is their lifecycle authority.
 
 ---
 
@@ -182,23 +196,56 @@ T-11 §4, §10 and §14 only.
 
 > **Analysis is one dark immersive surface in both system appearances.**
 
-**The world does not change.** Its appearance, its Meaning Light morphology and its Meaning Light
-motion are the same under system Dark and system Light. G2.2 measured the Analysis at a 0 px
-difference between the two, still and in motion. There is no Light repaint and no Light veil, and G2
-authorizes none.
+That law is about the **Living Analysis World**, the immersive world surface of the Analysis. It is all
+that G2 freezes about appearance.
 
-**Relationship to F2.** Three facts about F2 (`CLOSED / FROZEN`) bear on this:
-- it keeps "Default appearance follows the system" for the Product;
-- it introduces no override of its own;
-- it leaves the North Star spectacle "OWNED BY G".
+### General F2 rule
 
-This law is the Product Owner's decision about one surface, the Analysis, within the spectacle F2
-assigned to G. It changes no F2 token, literal or rule, and it creates no Light world. Every other
-surface keeps F2's rules, subject only to the open boundary question below.
+F2 (`CLOSED / FROZEN`) remains the general Product appearance authority:
 
-**Not decided here: Q-LIGHT-SHELL.** While the Analysis is shown, does the shell chrome outside the
-Analysis world (the rail, the status area, the call line) stay dark with it, or follow the system
-appearance? G2.2's proof shows one answer. That answer is evidence, not a decision.
+> **Default appearance follows the system.**
+
+F2 records it as `qandeel.appearance.system-appearance` = `follow-system-no-in-app-override`, in
+`docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/base/appearance.tokens.json`.
+No user-facing QANDEEL appearance override is introduced here.
+
+### Later G2 scoped supersession
+
+G2 supersedes that general presentation behavior **only for the Living Analysis World on the Analysis
+surface**:
+
+> The Living Analysis World remains the same dark immersive world under both system Dark Mode and system
+> Light Mode.
+
+Under both, it keeps the same:
+- world darkness and atmosphere;
+- visible world appearance;
+- QANDEEL Meaning Light morphology;
+- QANDEEL Meaning Light motion;
+- Living Brass behavior.
+
+There is no Light repaint of the Living Analysis World, no pale Light veil over it and no
+appearance-dependent world redesign. G2.2 measured the Analysis at a 0 px difference between the two
+system appearances, still and in motion.
+
+This is the Product Owner's decision (G2.2, D5) about the spectacle F2 left "OWNED BY G". It is a
+**surface-scoped Product exception, not an app-wide appearance override.** It does not:
+- reopen F2 globally;
+- change any F2 token;
+- create an app-wide dark mode;
+- create a user appearance toggle;
+- decide Q-LIGHT-SHELL.
+
+### Q-LIGHT-SHELL remains open
+
+While the Analysis is open, does the surrounding Product shell stay dark with the Analysis surface, or
+follow the system appearance? This record does not decide it. It claims no frozen dark treatment for:
+- the rest of the Analysis screen;
+- the status region;
+- the rail;
+- the call chrome.
+
+G2.2's proof shows one answer. That answer is evidence, not a decision.
 
 ---
 

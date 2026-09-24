@@ -25,17 +25,24 @@ owner and decides nothing G2 left open.
 | Conversation shell, navigation, Replay placement | `docs/design/i-08b3.1-g1.1/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md` |
 | Writing, Voice Note, Live Call, background call | `docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md` |
 | Analysis composition, Matching laws, Dark / Light | `docs/design/i-08b3.1-g2/QANDEEL_G2_CANONICAL_CLOSURE.md` |
+| Final G2 proof source | `docs/design/canonical-artifacts/product-proofs/g2/`: the self-contained build `g2.3/prototype/index.html`, with its manifest and README |
 | Matching copy; compact Return | `docs/design/i-08b3.1-g2.3/`: the G2.3 closure and the controlled T-11 amendment |
 | Return meanings; responsive composition | T-08 `docs/inspection-orientation-return-chrome-v1.md`; T-11 `docs/responsive-recomposition-v1.md`; T-12 `docs/final-living-analysis-map-integration-v1.md` |
 | Replay truth; Matching / Introduction truth | `docs/replay-runtime-v1.md`; `docs/matching-introduction-runtime-v1.md` |
-| Appearance | F2, `docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/` |
+| Appearance | F2, the general authority: `docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/`. G2 closure §F: the scoped supersession for the Living Analysis World |
 
-Two starting conditions, neither of them a blocker:
+Three starting conditions, none of them a blocker:
 
 - **G1.2's preserved built prototypes are pre-R1.** Rebuild them from
   `docs/design/canonical-artifacts/product-proofs/g1.2/source/` before reuse (canonical artifact index,
   "Later amendments").
-- **The G2.1–G2.3 packages are not in Git.** They are local archives identified by hash (G2 closure §B).
+- **Start from the preserved G2 source.**
+  - The minimum final reusable G2 source is preserved at
+    `docs/design/canonical-artifacts/product-proofs/g2/`.
+  - Prefer it, with the closure and amendment records, over any workshop folder.
+  - The three sealed review ZIPs stay local as provenance, identified by SHA-256 (G2 closure §B).
+- **The preserved G2 build is Arabic-only.** The G2 line's only English build is G2.1's. It is
+  superseded and stays in its archive (`product-proofs/g2/SOURCE-PROVENANCE.md`).
 
 ## 3. Minimum integrated journeys
 
@@ -65,9 +72,10 @@ for a new surface.
    - Nothing specific before the Introduction.
    - The two accepters' moments stay temporally distinct.
    - Nothing private crosses into the new World.
-6. **System Dark and system Light entering the same dark immersive Analysis** (G2 closure §F).
-   - G3 shows what the surrounding shell does.
-   - G3 does not decide Q-LIGHT-SHELL.
+6. **System Dark and system Light entering the same dark Living Analysis World** (G2 closure §F).
+   - Both system appearances enter the same dark Living Analysis World.
+   - The world's appearance and light behavior do not change between them.
+   - The surrounding shell's treatment is still Q-LIGHT-SHELL, and G3 must not silently decide it.
 7. **Reduced Motion parity.** Journeys 1–6 again with Reduced Motion on:
    - the same committed truth;
    - T-10's reduced-motion behavior;
