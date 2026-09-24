@@ -2,9 +2,11 @@
 
 **Status:** `PRESERVATION RECORD — CREATES NO NEW AUTHORITY, NO NEW PRODUCT SEMANTICS`
 
-This directory holds byte-exact copies of upstream canonical authority. Current repository runtime and
-design records cite this authority, but its source files were never in GitHub. It was recovered from the
-Product Owner's laptop on 2026-09-24 and preserved here unchanged.
+This directory holds byte-exact copies of canonical authority that was missing from GitHub. The first recovery
+preserved upstream Experience Architecture and Connected Worlds sources on 2026-09-24; independent review on
+2026-09-25 also recovered the final I-08A Product Shell / IA / Naming closure and the I-08N-01 Notification /
+Proactive Attention Product contract from their original ChatGPT Library artifacts. All preserved source bytes
+remain unchanged.
 
 **Start here:** [`CANONICAL_AUTHORITY_INDEX.md`](CANONICAL_AUTHORITY_INDEX.md) locates every domain.
 [`RECOVERY_PROVENANCE.md`](RECOVERY_PROVENANCE.md) records where each file came from and how it was
@@ -12,15 +14,16 @@ verified.
 
 ## What this directory is not
 
-- **Not a current entry point.** It records upstream history that later work built on. The current project state
-  and next task are outside its scope.
+- **Not a current entry point.** It preserves authority that later work built on or still consumes. Some material
+  is historical/upstream; I-08A and I-08N-01 are later frozen Product authority. Current orientation still begins
+  at the root current-state and project-map locators.
 - **Not an override.** A historical checkpoint or a frozen upstream source never outranks a later canonical
   record already in this repository: T-series amendments, the closed Connected Worlds runtime phases I-04 … I-07
   and their remediations, or the I-08B design closures. **Later amendments bind.**
 - **Not the design-artifact store.** Final Product / design proofs (I-08B1, brand, typography, I-08B3.1 A–G)
   live in [`../design/canonical-artifacts/`](../design/canonical-artifacts/README.md). This directory holds the
-  Experience Architecture chain (Stages 0–6) and the Connected Worlds v2 architecture that those runtime and
-  design records consume.
+  recovered Experience Architecture chain (Stages 0–6), Connected Worlds v2 architecture, and the recovered
+  final I-08A / I-08N-01 Product authority.
 
 ## Rules this directory follows
 
@@ -41,8 +44,8 @@ cd docs/canonical-authority/connected-worlds-v2 && sha256sum -c CW2_SOURCE_PROVE
 cd docs/canonical-authority/experience-architecture/stage6 && sha256sum -c STAGE6_SOURCE_PROVENANCE.sha256
 ```
 
-The same check applies to `core-checkpoint/`, `navigation-checkpoint/` and `stage5/`, and to
-`docs/assurance/connected-worlds/`.
+The same check applies to `core-checkpoint/`, `navigation-checkpoint/`, `stage5/`,
+`final-product-experience/`, and to `docs/assurance/connected-worlds/`.
 
 ## Layout
 
@@ -53,6 +56,8 @@ The same check applies to `core-checkpoint/`, `navigation-checkpoint/` and `stag
 | `experience-architecture/navigation-checkpoint/` | Navigation Canonical Checkpoint v1, the Stage 0–4 closure chain, with its Stage 3 foundation |
 | `experience-architecture/stage5/` | Stage 5 Final Freeze Record, Stage 5.1 source package, approved final candidates, the 5.3 / 5.4 / 5.5 Architecture Freeze Addenda and the AMB-01 ruling |
 | `experience-architecture/stage6/` | the 28 recovered Stage 6 authority files, the approved Stage 6.2 / 6.4 / 6.5 / 6.6 candidate sources, all eight Implementation Authority Bundle payload members (7 exact originals + 1 byte-exact equivalent), the recovery reconciliation and bundle map |
+| `final-product-experience/i-08a/` | `I-08A4 — CLOSED / CANONICAL FREEZE COMPLETE`, the canonical Product Shell / IA / Naming foundation; later G1.1 / G1.2 amendments bind where they explicitly supersede it |
+| `final-product-experience/i-08n/` | `I-08N-01 — CLOSED / NOTIFICATION & PROACTIVE ATTENTION PRODUCT CONTRACT FROZEN`; Product behavior only, not runtime implementation |
 
 The Connected Worlds assurance finding `ASSURE-F05` is evidence, not authority. It is preserved separately in
 [`../assurance/connected-worlds/`](../assurance/connected-worlds/README.md).
