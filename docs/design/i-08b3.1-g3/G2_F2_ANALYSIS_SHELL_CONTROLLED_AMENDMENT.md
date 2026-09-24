@@ -75,12 +75,10 @@ own appearance quantities:
 
 | Setting | Quantity | F2 token |
 |---|---|---|
-| Normal motion | a 200 ms cross-fade, the same in both directions | `qandeel.appearance.switch.crossfade` |
+| Normal motion | a symmetric appearance cross-fade using F2's appearance-switch semantics; the reviewed proof used 200 ms, which remains F2's `production-default` / device-tunable craft value | `qandeel.appearance.switch.crossfade` |
 | Reduced Motion | a cut: no appearance cross-fade | `qandeel.appearance.switch.crossfade-reduced-motion` (0 ms) |
 
-This record does **not** extend the 200 ms rule to the private Matching proposal or to the Shared World. Their end-state
-appearance is settled above (they follow the system). The timing of those transitions stays with their existing Product
-and motion owners, and G3.2 left it unchanged (finding F-05).
+This record does **not freeze 200 ms as a Product law**. F2 classifies that magnitude as `production-default`: craft and device-tunable. The frozen appearance-switch contract is that the normal transition is symmetric and does not use the Meaning lifecycle; under Reduced Motion the cross-fade is removed entirely. This record also does not extend the reviewed Conversation ↔ Analysis timing to the private Matching proposal or to the Shared World. Their end-state appearance is settled above (they follow the system), while transition timing stays with their existing Product and motion owners (G3.2 finding F-05).
 
 ## 4. Status content: a requirement, not a mechanism
 
