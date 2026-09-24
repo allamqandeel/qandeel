@@ -1,0 +1,184 @@
+{
+ "probes": [
+  {
+   "id": "PR1",
+   "target": "K17",
+   "defect": "a light Analysis shell under system Light (nothing around the world takes the dark scope)",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "light-far",
+    "light-pinned",
+    "light-call"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"analysisUnderLight\":[{\"id\":\"light-far\",\"rail\":0.7703,\"status\":0.0051,\"shellDark\":1,\"call\":null},{\"id\":\"light-pinned\",\"rail\":0.7703,\"status\":0.006,\"shellDark\":1,\"call\":null},{\"id\":\"light-pinned-open\",\"rail\":0.018,\"status\":0.0182,\"shellDark\":1,\"call\":null},{\"id\":\"light-call\",\"rail\":0.7703,\"status\":0.0051,\"shellDark\":1,\"call\":0.7597},{\"id\":\"light-call-back\",\"rail\":0.018,\"status\":0.0172,\"shellDark\":1,\"call\":0.0289},{\"id\":\"light-replay\",\"rail\":0.018,\"status\":0.0172,\"shellDark\":1,\"call\":null},{\"id\":\"s320-light-call-pinned\",\"rail\":0.0199,\"status\":0.0218,\"shellDark\":1,\"call\":0.0303},{\"id\":\"en-light-call\",\"rail\":0.0203,\"status\":0.0172,\"shellDark\":1,\"call\":0.0297}],\"systemFollowing\":[{\"id\":\"light-co"
+  },
+  {
+   "id": "PR2",
+   "target": "K09",
+   "defect": "the temporal line moved back below the Timeline",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "pinned",
+    "pinned-open",
+    "s320-pinned",
+    "en-pinned"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"captures\":20,\"failing\":[{\"id\":\"pinned\",\"gap\":-97,\"ok\":false},{\"id\":\"pinned-open\",\"gap\":-97,\"ok\":false},{\"id\":\"s320-pinned\",\"gap\":-97,\"ok\":false},{\"id\":\"en-pinned\",\"gap\":-97,\"ok\":false}],\"gaps\":[-97,17]}"
+  },
+  {
+   "id": "PR3",
+   "target": "K12",
+   "defect": "a Return act rendered twice (Return Live also disclosed under «طرق العودة»)",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "pinned-open",
+    "light-pinned-open"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"equalToG31\":[{\"pair\":\"pinned\",\"same\":true},{\"pair\":\"pinned-open\",\"same\":false},{\"pair\":\"near\",\"same\":true},{\"pair\":\"mid\",\"same\":true},{\"pair\":\"far\",\"same\":true},{\"pair\":\"call\",\"same\":true}],\"renderedNotOffered\":[],\"duplicated\":[\"pinned-open\",\"light-pinned-open\"],\"returnLiveAtLiveEdge\":true}"
+  },
+  {
+   "id": "PR4",
+   "target": "K14",
+   "defect": "the world squeezed below the T-11 floor at 320 × 568 (OrientationChrome takes 60 pt more than its room)",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "s320-pinned-open",
+    "s320-call-pinned-open"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"captures\":37,\"failing\":[{\"id\":\"s320-pinned-open\",\"size\":\"320x568\",\"worldH\":133,\"floor\":191.5,\"ok\":false},{\"id\":\"s320-call-pinned-open\",\"size\":\"320x568\",\"worldH\":101,\"floor\":160,\"ok\":false}],\"tightest\":[{\"id\":\"s320-call-pinned-open\",\"size\":\"320x568\",\"worldH\":101,\"floor\":160,\"ok\":false},{\"id\":\"s320-pinned-open\",\"size\":\"320x568\",\"worldH\":133,\"floor\":191.5,\"ok\":false},{\"id\":\"s320-near-open\",\"size\":\"320x568\",\"worldH\":192,\"floor\":191.5,\"ok\":true}]}"
+  },
+  {
+   "id": "PR10",
+   "target": "K14",
+   "defect": "G3.1's fixed OrientationChrome minimum kept (54 pt) — the line then pushes the world below its floor at 320 × 568",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "s320-call-pinned",
+    "en-s320-call-pinned"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"captures\":37,\"failing\":[{\"id\":\"s320-call-pinned\",\"size\":\"320x568\",\"worldH\":156,\"floor\":160,\"ok\":false},{\"id\":\"en-s320-call-pinned\",\"size\":\"320x568\",\"worldH\":156,\"floor\":160,\"ok\":false}],\"tightest\":[{\"id\":\"s320-call-pinned\",\"size\":\"320x568\",\"worldH\":156,\"floor\":160,\"ok\":false},{\"id\":\"en-s320-call-pinned\",\"size\":\"320x568\",\"worldH\":156,\"floor\":160,\"ok\":false},{\"id\":\"s320-near-open\",\"size\":\"320x568\",\"worldH\":192,\"floor\":191.5,\"ok\":true}]}"
+  },
+  {
+   "id": "PR5",
+   "target": "K18",
+   "defect": "status-region legibility broken (the status row keeps the system-Light ink over the dark Analysis)",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "light-far",
+    "light-call",
+    "light-call-back"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"g32\":[{\"id\":\"dark-conv\",\"sel\":\"#status\",\"ink\":\"rgb(216, 213, 202)\",\"groundP5\":0.0052,\"groundP95\":0.0052,\"ratio\":12.95},{\"id\":\"call\",\"sel\":\"#status\",\"ink\":\"rgb(216, 213, 202)\",\"groundP5\":0.0043,\"groundP95\":0.0055,\"ratio\":12.88},{\"id\":\"s320-light-call-pinned\",\"sel\":\"#status\",\"ink\":\"rgb(216, 213, 202)\",\"groundP5\":0.0051,\"groundP95\":0.0102,\"ratio\":11.86},{\"id\":\"light-conv\",\"sel\":\"#status\",\"ink\":\"rgb(41, 39, 31)\",\"groundP5\":0.855,\"groundP95\":0.855,\"ratio\":12.89},{\"id\":\"light-far\",\"sel\":\"#status\",\"ink\":\"rgb(41, 39, 31)\",\"groundP5\":0.0043,\"groundP95\":0.0055,\"ratio\":1.27},{\"id\":\"light-pinned\",\"sel\":\"#status\",\"ink\":\"rgb(216, 213, 202)\",\"groundP5\":0.0047,\"groundP95\":0.0078,\"ratio\":12.37},{\"id\":\"ligh"
+  },
+  {
+   "id": "PR6",
+   "target": "K06",
+   "defect": "rendered world pixels changed (a 2 % brightness filter on the world frame)",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "pinned",
+    "far",
+    "mid",
+    "near",
+    "call"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "[\"g31-far ↔ far: 528144 / 1316640\",\"g31-mid ↔ mid: 1141634 / 1316640\",\"g31-near ↔ near: 1307770 / 1316640\",\"g31-pinned ↔ pinned: 1141634 / 1316640\",\"g31-call ↔ call: 528144 / 1316640\"]"
+  },
+  {
+   "id": "PR7",
+   "target": "K03",
+   "defect": "world bytes changed (one byte of the vendored canonical world flipped)",
+   "plantApplied": true,
+   "build": {
+    "exit": 1,
+    "refused": "if (sha(worldBytes).toUpperCase() !== WORLD_PIN) throw new Error(`REFUSING TO BUILD: canonical world is ${sha(worldBytes)}, pinned ${WORLD_PIN}`);\r"
+   },
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"pin\":\"4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413\",\"vendored\":\"4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413\",\"inlined\":\"afce0a8b07f99ae0c5752d71536e57f36f9521c9a45387835f8709fb2e0d9237\",\"blob\":\"0a18a4f6d8f804a0851f1dedfcf1ebc7a1188986\"}"
+  },
+  {
+   "id": "PR8",
+   "target": "K11",
+   "defect": "a stale PINNED sentence left in LIVE (the line shown whatever the stance)",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "pinned-return-live",
+    "far",
+    "mid",
+    "near",
+    "call"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "{\"liveCaptures\":17,\"staleLine\":[\"pinned-return-live\",\"far\",\"mid\",\"near\",\"call\"],\"unchangedFromG31\":[{\"pair\":\"far\",\"tlY\":[710,710],\"band\":[\"\",\"\"],\"ok\":true},{\"pair\":\"near\",\"tlY\":[629,629],\"band\":[\"قيد المعاينة: تركيز ناشئ.\",\"قيد المعاينة: تركيز ناشئ.\"],\"ok\":true},{\"pair\":\"mid\",\"tlY\":[654,654],\"band\":[\"\",\"\"],\"ok\":true},{\"pair\":\"call\",\"tlY\":[646,646],\"band\":[\"\",\"\"],\"ok\":true}],\"afterReturnLive\":{\"TM\":\"FOLLOW_LIVE\",\"line\":[\"أنت عند اللحظة 17.\"]}}"
+  },
+  {
+   "id": "PR9",
+   "target": "K07",
+   "defect": "a pale veil over the world under system Light",
+   "plantApplied": true,
+   "build": {
+    "exit": 0,
+    "refused": null
+   },
+   "plantedCaptures": [
+    "light-far",
+    "light-near",
+    "light-pinned",
+    "light-call"
+   ],
+   "checkVerdict": "FAIL",
+   "rejected": true,
+   "evidence": "[\"far ↔ light-far: 1156873 / 1316640\",\"near ↔ light-near: 1287101 / 1316640\",\"pinned ↔ light-pinned: 1136683 / 1316640\",\"call ↔ light-call: 1156994 / 1316640\",\"far ↔ rm-light-far: 0 / 1316640\",\"pinned ↔ rm-pinned: 0 / 1316640\"]"
+  }
+ ],
+ "total": 10,
+ "rejected": 10
+}

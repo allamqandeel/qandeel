@@ -1,0 +1,67 @@
+{
+  "$description": "I-08B3.1-F2 — INTERACTION STATE AND SYSTEM STATUS, LIGHT APPEARANCE. This file fills the set I-08B3.1-E1 shipped as a deliberate emptiness: 'Resolving the semantic layer against the light appearance leaves qandeel.status.error.ink and qandeel.state.disabled.ink UNRESOLVED and names what is missing… THE DARK ERROR VALUE CANNOT SIMPLY BE REUSED: every floor that produced it is a statement about a NEAR-BLACK ground.'\n\nTWO LITERALS, AND ONLY TWO. Every other interaction and status role in QANDEEL is an ALIAS in dark and stays an alias in light: REST, PRESSED, FOCUS, SELECTED, WARNING, SUCCESS and INFORMATIONAL all reach the reading ramp or the identity material and change in the light appearance BECAUSE THOSE CHANGED. That is the architecture working, and it is why F2 adds two values rather than thirteen.",
+  "qandeel": {
+    "$type": "color",
+    "expression": {
+      "status": {
+        "error": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.678431,
+              0.278431,
+              0.223529
+            ],
+            "hex": "#ad4739"
+          },
+          "$description": "ERROR, LIGHT APPEARANCE. oklch(0.5309 0.1368 30.1).\n\nTHE HUE IS HELD TO 0.2 OF A DEGREE — 30.3 in dark, 30.1 here — AND SO IS THE CHROMA, 0.1364 to 0.1368. Error remains the most chromatic thing on a QANDEEL screen in both appearances, which is its rung of the cross-appearance ladder and is the reason it reads as the same error rather than as a different one. An inverted #fe907e lands at hue 214, which is TEAL; the distance between 'same family' and 'unrecognisable' is this one number.\n\nTHE RULE IS THE MATERIAL'S RULE, NOT THE READING RAMP'S. Error is painted as text and as a boundary, so 4.5:1 binds as a FLOOR; it is not a rung in a hierarchy, so there is no ratio to reproduce. Meet the floor against both grounds, then move the smallest distance that allows: 4.84:1 against the World, 4.50:1 against the functional Surface, dEok 0.2361 from the frozen dark Error.\n\nTHE ROAD NOT TAKEN: reproducing dark Error's 8.61:1 gives #801c11 at dEok 0.3716 — 57% further from the frozen value, and visibly a maroon rather than a coral. The Product Owner approved the warm coral direction; a ratio nobody required is not a reason to leave it.\n\nCOLOUR IS STILL NOT THE ONLY CARRIER, in either appearance. The error row carries its ink, a glyph and its message in words, exactly as I-08B3.1-E1 and F1 require, and check N-01 measures that the error remains identifiable with the colour removed.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "serves": "qandeel.appearance.role-identity-survives-appearance",
+              "why": "THE CONTRACT IS: one Error family across appearances, hue and chroma held, 4.5:1 met, non-colour companions present. This hex is where that lands on this ground."
+            },
+            "com.qandeel.provenance": {
+              "frozenDarkError": "#fe907e",
+              "hueDarkToLight": [
+                30.3,
+                30.1
+              ],
+              "chromaDarkToLight": [
+                0.1364,
+                0.1368
+              ],
+              "dEokFromDarkError": 0.2361,
+              "rejectedCandidate": {
+                "hex": "#801c11",
+                "rule": "reproduce the dark contrast ratio 8.61:1",
+                "dEokFromDarkError": 0.3716
+              }
+            }
+          }
+        }
+      },
+      "state": {
+        "disabled": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.513725,
+              0.505882,
+              0.486275
+            ],
+            "hex": "#83817c"
+          },
+          "$description": "DISABLED / UNAVAILABLE, LIGHT APPEARANCE. oklch(0.6034 0.0078 88.7), hue held to 0.0 of a degree.\n\nIT KEEPS ITS RELATION RATHER THAN A FLOOR, and the relation is the signal. In dark it sits at 3.37:1 against the World — below 4.5:1, which WCAG 2.2 exempts for inactive components — and BELOW the tertiary reading ink. Both facts are what 'de-emphasis without illegibility' actually consists of, and both are re-instantiated here: 3.37:1 against the light World, still below the light tertiary ink. Raising it to meet 4.5:1 would compress its distance from the resting ink, and THAT DISTANCE IS THE AVAILABILITY SIGNAL.\n\nAnd as in dark, unavailability is never carried by ink alone: the unavailable row states its reason in words, through a real accessible description on a real control.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "serves": "qandeel.appearance.reading-hierarchy-is-preserved",
+              "why": "the CONTRACT is the pair of relations — below the resting ink, below the tertiary rung, exempt from 4.5:1 — and this hex is where they land."
+            }
+          }
+        }
+      }
+    }
+  }
+}

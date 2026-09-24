@@ -29,7 +29,10 @@ package was admitted or refused, is
    carry CRLF.
 4. **No historical ZIPs in Git.** Archives stay on the laptop. Each domain's `SOURCE-PROVENANCE.md`
    gives the archive's path, size and SHA-256, and lists what was left in it. Review boards, frame
-   captures, videos and font binaries were not copied.
+   captures, videos and font binaries were not copied. **One recorded exception:** the final G3.2
+   integrated Product-coherence proof is preserved whole in `product-proofs/g3/g3.2/`, boards, motion
+   clips and vendored fonts included, by the G3 closure's direction. Its ZIP is still not committed
+   (`product-proofs/g3/SOURCE-PROVENANCE.md`).
 5. **Later amendments stay binding.** A preserved source is the original final authority for its
    own phase. Where a later canonical record already in this repository amends it, the later record
    wins. Each provenance file names the amendments that apply.
@@ -55,7 +58,7 @@ cd docs/design/canonical-artifacts/living-analysis && sha256sum -c SOURCE-PROVEN
 | `qandeel-light/` | I-08B3.1-D2R QANDEEL Light (latest D2R state) |
 | `interaction-semantic-color/` | I-08B3.1-E1R interaction + system semantic colour |
 | `accessibility-appearance/` | I-08B3.1-F1R2 accessibility, I-08B3.1-F2 FINAL_CANONICAL Light appearance |
-| `product-proofs/` | I-08B3.1-G1.1-R3, I-08B3.1-G1.2 (+ R1), and the preserved final I-08B3.1-G2 proof artifact |
+| `product-proofs/` | I-08B3.1-G1.1-R3, I-08B3.1-G1.2 (+ R1), the preserved final I-08B3.1-G2 proof artifact, and the complete final I-08B3.1-G3.2 proof |
 | `reconciliation/` | the PR #265 final-authority patch instructions and manifest, byte-exact |
 
 There are no `matching/` or `replay/` folders. No final local Matching or Replay Product/visual

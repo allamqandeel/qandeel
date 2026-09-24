@@ -1,0 +1,298 @@
+{
+  "qandeel": {
+    "accessibility": {
+      "$description": "I-08B3.1-F1 — ACCESSIBILITY TRANSFORMATIONS. Every token in this group describes HOW an already-decided thing is expressed when a user asks for a different expression. Not one of them decides WHAT exists. An accessibility setting in QANDEEL changes representation and nothing else: not privacy, not ownership, not authority, not confidence, not evidence strength, not importance, not temporal truth, not relationship truth, not world membership, not Product eligibility. tools/f1-verify.mjs check S-01 asserts that by resolution: no accessibility override may reach a token of $type color under the identity material, QANDEEL LIGHT, a state ink or a status ink. A NON-COLOUR MAGNITUDE of a state — a thickness, an offset, a weight — may be overridden, and S-01 generates the complete list of those from the files rather than keeping one by hand.",
+      "$extensions": {
+        "com.qandeel.freeze": {
+          "class": "mixed",
+          "meaning": "Each token carries its own class, and I-08B3.1-F1R added the third one because F1 froze implementation technique at the same height as Product meaning.",
+          "classes": {
+            "product-contract": "WHAT THE PRODUCT MEANS under a setting. Changing it changes the product. A reviewer freezing this package freezes these.",
+            "production-default": "TUNABLE CRAFT. A number this package measured on one viewport with one font at one density. It is the value the proof was drawn with and it is expected to move; what may not move is the product-contract requirement it instantiates, and every one of these names that requirement in `serves`.",
+            "implementation-strategy": "THE CURRENT TECHNIQUE for meeting a requirement with today's libraries and platforms. It is correct now, it is not the contract, and it is expected to be replaced when the library or the platform changes. Every one of these names the product-contract token it serves in `serves`, and tools/f1-verify.mjs check K-02 rejects one that does not."
+          }
+        }
+      },
+      "motion": {
+        "$type": "number",
+        "$description": "REDUCED MOTION, AS FOUR SWITCHES AND NOT ONE FLAG. I-08B3.1-D2R established the principle for the four QANDEEL LIGHT categories and F1 neither restates nor reopens it: KEEP LEVEL, INK AND DRAW; DROP TRAVEL, CONTRACTION, SCALE AND BLUR. These tokens are that principle as values a runtime can read, extended by F1 to the surfaces D2R did not cover — E1's interaction states, the GUIDED THREAD inherited from I-08B3.1-D0R, and the camera. A value of 0 means the channel is SUPPRESSED under Reduced Motion; a value of 1 means it SURVIVES. Nothing here is a duration: F1 does not retune a single millisecond of the frozen lifecycle, and a shorter default would be exactly the contamination §6 of the brief forbids.",
+        "travel": {
+          "$value": "{qandeel.illumination.reduced.travel}",
+          "$description": "SUPPRESSED. Aliased to D2R's own scalar rather than restated, so the two can never drift. Travel is the channel that carries no meaning: a Connection's truth is its source, its destination and that it happened, and none of those is the journey.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "blur": {
+          "$value": "{qandeel.illumination.reduced.blur}",
+          "$description": "SUPPRESSED. Apple: \"Avoiding animating into and out of blurs.\" D2R corrected the inherited I-08B3.1-D1 Connection for exactly this — receptionBlur peak 0.7988 → 0.0000 in the reduced counterpart only.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "scale": {
+          "$value": 0,
+          "$description": "SUPPRESSED. Apple asks for \"reducing automatic and repetitive animations, including zooming, scaling\". This is the F1 addition that D2R's table left implicit for the interaction plane: the press response's scale is a SCALE, and it goes. What replaces it is the ground response E1 already owns — qandeel.state.pressed.presence — which is a LEVEL change and survives.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "parallax-differential": {
+          "$value": "{qandeel.illumination.reduced.parallax-differential}",
+          "$description": "SUPPRESSED. Every depth plane pans at the NEAR rate, so the layers move together and there is no relative motion. THE PARALLAX ITSELF STAYS: panning is a Product capability, and removing it would remove access to the part of the Map that is off-screen — which is deleting analysis, not reducing motion.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "decay": {
+          "$value": 0,
+          "$description": "SUPPRESSED. The map stops where the finger let go. This is Reanimated's real documented behaviour — withDecay under reduced motion \"returns the current value immediately, taking into account the clamp parameter\" — and not an approximation of it with a shorter glide.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "level": {
+          "$value": 1,
+          "$description": "SURVIVES. A change in luminance at a fixed position. This is the channel every suppressed one hands its meaning to, and it is why Reduced Motion in QANDEEL is a different expression rather than a deletion.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "ink": {
+          "$value": 1,
+          "$description": "SURVIVES. A change in opacity at a fixed position and a fixed extent. The membership links of a PATTERN arrive by ink at FULL LENGTH — they do not wipe, because a wipe is motion across the screen and a fade is not.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "draw": {
+          "$value": 1,
+          "$description": "SURVIVES. A structure coming into existence. The distinction from TRAVEL is that nothing crosses the frame: the object appears where it belongs.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "semantic-events-must-survive": {
+          "$value": 1,
+          "$description": "THE PRODUCT CONTRACT FOR REDUCED MOTION, AND I-08B3.1-F1R ADDED IT BECAUSE F1 HAD ONLY THE TECHNIQUE. Under Reduced Motion, every REQUIRED SEMANTIC EVENT must still occur and the FINAL MEANING must still arrive — a Connection must still be seen to happen, a Pattern must still gather, an Insight must still resolve, and the settled residue must be the same settled residue. Reduced Motion is a different EXPRESSION of a meaning event, never its deletion. That is the requirement. WHICH CHANNEL carries it, and WHICH library call produces it, are the sibling tokens above and the implementation-strategy token below, and both are replaceable without touching this.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "system-default-is-wrong-here": {
+          "$value": 1,
+          "$description": "THE CURRENT PRODUCTION STRATEGY FOR MEETING semantic-events-must-survive ON TODAY'S REANIMATED — and I-08B3.1-F1R reclassified it, because F1 froze it as Product truth and it is not. The Product contract is NOT \"Reanimated must use ReduceMotion.Never forever\"; it is the sibling token above. THE FINDING, WHICH REMAINS THE MOST LOAD-BEARING SENTENCE IN THIS FILE: Reanimated's documented behaviour under ReduceMotion.System is that withTiming and withSpring \"return the toValue immediately\", entering animations \"instantaneously reach their endpoints\", withRepeat \"does not start\", and EXITING ANIMATIONS ARE OMITTED ENTIRELY. Applied globally that does not make a QANDEEL meaning event gentler — it makes it a CUT, and an omitted exit deletes the settle that carries the result. So a QANDEEL implementation on this library must NOT set a global ReduceMotion.System and stop there: the replacement animation is declared ReduceMotion.Never and the suppressed channels are switched off by the tokens above. THE RUNTIME DEFAULT IS THE FAILURE MODE, AND IT IS THE DEFAULT. If Reanimated's behaviour changes, or the renderer changes, this token is the one that moves and the contract above is the one that does not.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "implementation-strategy",
+              "serves": "qandeel.accessibility.motion.semantic-events-must-survive",
+              "library": "react-native-reanimated — ReduceMotion.System / ReduceMotion.Never, behaviour read from the documented API, not inferred",
+              "replaceableWhen": "the library's reduced-motion behaviour stops omitting exiting animations, or QANDEEL stops using it"
+            }
+          }
+        }
+      },
+      "contrast": {
+        "$description": "INCREASED CONTRAST. The law is that a class moves along the frozen reading ramp; no literal is introduced. HIGH CONTRAST IS NOT HIGH IMPORTANCE, and because importance is a RATIO rather than a value, the check is on the ratio: the gap between the weakest analytical object and the loudest atmosphere contour may WIDEN and may not shrink. tools/f1-verify.mjs check C-04 measures it.",
+        "boundary": {
+          "$type": "color",
+          "$value": "{qandeel.content.tertiary}",
+          "$description": "The defined, contrasting border Apple asks for under prefers-contrast: more — \"near-solid backgrounds with a defined, contrasting border\". It exists because the functional Surface and the World are separated by 1.072:1, which is a separation a low-vision reader cannot use. It is an EXISTING rung of the frozen reading ramp and not a new colour: 5.07:1 against the Surface, 5.44:1 against the World. qandeel.state.disabled.ink was rejected as the border at 3.14:1 — not on contrast, which it meets, but on MEANING: E1 owns that literal as AVAILABILITY, and a border drawn in it would say unavailable.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "ground": {
+          "$type": "color",
+          "$value": "{qandeel.world.fill}",
+          "$description": "THE GROUND DOES NOT MOVE, AND THIS TOKEN EXISTS TO SAY SO WHERE A READER WILL LOOK. Darkening the World to pure black was measured: it buys 1.1036× on tertiary reading ink and 1.0041× on a far contour. The World is frozen in I-08B3.1-A and a 0.4% gain is not a reason to unfreeze it.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "atmosphere-ink": {
+          "$type": "color",
+          "$value": "{qandeel.content.tertiary}",
+          "$description": "A CEILING EXPRESSED AS A TOKEN, not a paint. No atmosphere contour, under any accessibility expression, may reach the on-screen strength of the weakest ANALYTICAL object. In the default expression that object is the analytical relation at 5.44:1 and the loudest contour is 4.21:1. This token names what the ceiling IS so that check C-05 can read it from the tree instead of from a constant in a script.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "boundary-width": {
+          "$type": "dimension",
+          "$value": { "value": 1, "unit": "px" },
+          "$description": "The border's width. PRODUCTION DEFAULT — one device-independent pixel is what this proof was drawn with, and a device pass may want more.",
+          "$extensions": { "com.qandeel.freeze": { "class": "production-default", "serves": "qandeel.accessibility.contrast.boundary — the CONTRACT is that a defined, contrasting border exists under increased contrast; one device-independent pixel is what this proof was drawn with and a device pass may want more." } }
+        },
+        "focus-thickness": {
+          "$type": "dimension",
+          "$value": { "value": 3, "unit": "px" },
+          "$description": "The focus perimeter under increased contrast: E1's frozen 2 px, thickened. WCAG 2.2 SC 2.4.13 Focus Appearance (AAA) asks for an indicator at least as large as a 2 CSS px perimeter, which the DEFAULT already meets — so this is a strengthening of something that passes, not a repair of something that fails. It is a NON-COLOUR strengthening on purpose: thickening a perimeter cannot make an object look more important, and brightening one can.",
+          "$extensions": { "com.qandeel.freeze": { "class": "production-default", "serves": "qandeel.state.focus.indicator — the CONTRACT is that the focus perimeter is strengthened WITHOUT changing its colour, because thickening a perimeter cannot make an object look more important and brightening one can. 3 px is the magnitude this proof was drawn with; WCAG 2.2 SC 2.4.13 sets the floor at a 2 CSS px perimeter, which the default already meets." } }
+        }
+      },
+      "transparency": {
+        "$description": "REDUCE TRANSPARENCY. QANDEEL's functional chrome is ALREADY OPAQUE — I-08B3.1-B4R recorded that before this task existed: \"the B-track truth it will override is OPAQUE: Reduce Transparency has nothing to undo here.\" So this setting is not a chrome question in QANDEEL. It is a WORLD question, and its three real subjects are the ambient field's composited contours, the PASSAGE scrim, and the Light's wash.",
+        "scrim": {
+          "$type": "color",
+          "$value": "{qandeel.passage.scrim}",
+          "$description": "The PASSAGE scrim, translucent by default. Under Reduce Transparency it is replaced by its own exact opaque equivalent over the World — see the reduced context. B4R says the scrim expresses WORLD SUPPRESSION and that \"background legibility is not one of its duties, because the World behind a PASSAGE is suspended\". Making it opaque is therefore MORE faithful to what it means, not less; this is the one place in F1 where an accessibility expression states the Product's own intent more plainly than the default does.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "field": {
+          "$type": "color",
+          "$value": "{qandeel.world.fill}",
+          "$description": "The backdrop every ambient contour is composited against. Naming it is what makes the opaque substitution EXACT rather than approximate: where the backdrop is one flat opaque colour, an alpha composite has a closed-form opaque equivalent, and substituting it changes the mechanism without changing a pixel.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "atmosphere-alpha": {
+          "$type": "number",
+          "$value": 1,
+          "$description": "Under Reduce Transparency every contour is drawn opaque. The value it is drawn IN is the composite it would have produced, so the field does not become louder — which is the difference between honouring the setting and using it as an excuse to change the design.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "light-alpha-floor": {
+          "$type": "number",
+          "$value": 0,
+          "$description": "ZERO, AND THE ZERO IS A DECISION. QANDEEL LIGHT KEEPS ITS TRANSLUCENCY UNDER REDUCE TRANSPARENCY. A light is a thing whose whole nature is that what is behind it shows through; an opaque light is a disc. Reduce Transparency exists so that a translucent MATERIAL does not cost a reader the legibility of the content on it — and the Light is content, not material. Removing its alpha would delete a meaning event's intensity, which is exactly what §3 of the brief forbids. If a device pass finds the Light unreadable under this setting, the answer is intensity, not opacity.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        }
+      },
+      "text": {
+        "$description": "LARGER TEXT AND BOLD TEXT. QANDEEL is Arabic-native and the constraints below are the script's, not a layout preference.",
+        "max-scale": {
+          "$type": "number",
+          "$value": 3.118,
+          "$description": "The largest Dynamic Type multiplier QANDEEL must survive: iOS Body is 17 pt at the default Large size and 53 pt at AX5, so 53/17 = 3.118. Apple's Accessibility guidance asks for at least 200 percent; AX5 is 311.8 percent and it is what the system can actually produce, so it is what the proof is drawn at. THE CONTRACT IS \"WHATEVER THE PLATFORM'S MAXIMUM IS\" AND THIS NUMBER MERELY INSTANTIATES IT for iOS today: Android's nonlinear font scaling produces a different figure, and a later iOS table would produce another. PRODUCTION DEFAULT, and the thing that may not be traded away is the requirement that the largest size the platform can produce is survived without truncation or shrinking.",
+          "$extensions": { "com.qandeel.freeze": { "class": "production-default", "serves": "the requirement that the platform's largest text size is survived with no truncation and no shrinking — measured by checks X-02 and X-04 at the rendered size rather than against this number" } }
+        },
+        "arabic-must-not-clip": {
+          "$type": "string",
+          "$value": "adequate-glyph-extents",
+          "$description": "THE PRODUCT CONTRACT, AND IT IS NOT A NUMBER. ARABIC TEXT MUST NOT CLIP, LOSE DIACRITICS, COLLIDE DESTRUCTIVELY, OR BECOME UNREADABLE AT ANY SUPPORTED TEXT SCALE. Every Arabic-bearing element must be laid out with enough vertical room for the ascenders, the descenders and the diacritics of the face actually in use, and that room may NOT be traded for space when text grows — the clipping gets worse as the glyphs get bigger, not better, and clipping a diacritic changes the word. I-08B3.1-F1R2 separated this from the numeric threshold underneath it, because F1R froze a line-height of 1.6 as universal Product truth and it is not: the line-height that satisfies this contract depends on the FONT, the SIZE, the RENDERER, the PLATFORM METRICS and the CONTENT. What is irreversible is the outcome — no clipping — and a later face or platform that needs a different number to reach it has not weakened this contract, it has instantiated it differently. Check X-02 measures the rendered result.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "leading-floor": {
+          "$type": "number",
+          "$value": 1.6,
+          "$description": "THE CURRENT TESTED / VALIDATION THRESHOLD, and I-08B3.1-F1R2 reclassified it. Below roughly this ratio, Estedad's Arabic ascenders, descenders and diacritics clip at this proof's sizes on this renderer — measured, and it is the number check X-02 validates the current proof against. IT IS NOT A UNIVERSAL PRODUCT LAW. F1R classified 1.6 as an irreversible product contract binding every Arabic-bearing element at every size forever, which froze a measurement of one face on one renderer at the height of a Product decision. The contract is qandeel.accessibility.text.arabic-must-not-clip; this number is the instrument that currently tests it, and another font, size, renderer or platform metric set may require a different one. Lowering it is only legitimate as a MEASURED result, never as a space saving.",
+          "$extensions": { "com.qandeel.freeze": { "class": "production-default", "serves": "qandeel.accessibility.text.arabic-must-not-clip" } }
+        },
+        "leading-ratio": {
+          "$type": "number",
+          "$value": 1.7,
+          "$description": "THE VALUE THIS PROOF WAS DRAWN WITH, above the current threshold. Inherited from I-08B3.1-D2R, which set it at 1.7 on both its surfaces. PRODUCTION DEFAULT / TUNABLE CRAFT: a device pass, another face or a denser layout may move it, and moving it is an ordinary craft decision. What it may never do is produce a rendered result that clips Arabic — check X-02 measures the RENDERED line-height of every Arabic-bearing element against the threshold token rather than against this number, and the contract it reports against is arabic-must-not-clip.",
+          "$extensions": { "com.qandeel.freeze": { "class": "production-default", "serves": "qandeel.accessibility.text.arabic-must-not-clip" } }
+        },
+        "label-escape-scale": {
+          "$type": "number",
+          "$value": 1.6,
+          "$description": "THE SCALE AT WHICH A MAP LABEL STOPS TRYING TO LIVE ON THE MAP. Above this multiplier an analytical topic label no longer fits beside its contour at any position the field can offer, and the label moves to the INSPECTION LIST — a real, scrollable, fully-sized reading of the same objects, reachable from the same place. It is NOT a truncation and NOT a shrink: Apple's own guidance is to avoid truncating text in scrollable regions \"unless people can open a separate view to read the rest of the content\", and that separate view is what this token switches on. PRODUCTION DEFAULT: the exact multiplier is a measured property of this proof's 390 pt viewport and will differ on another one.",
+          "$extensions": { "com.qandeel.freeze": { "class": "production-default", "serves": "qandeel.accessibility.text.max-scale — the CONTRACT is that a label which no longer fits beside its contour moves to a full-size inspection view rather than truncating or shrinking. 1.6 is a measured property of this proof’s 390 pt viewport and will differ on another one." } }
+        },
+        "selected-step-must-survive-bold": {
+          "$type": "string",
+          "$value": "apply-the-delta-to-every-rung",
+          "$description": "THE PRODUCT CONTRACT. Bold Text may not erase the typographic distinction I-08B3.1-E1 gives SELECTED. Whatever Bold Text does to weight, it must do to EVERY rung rather than to one, so the gap between rest and selected survives unchanged. The mechanism is stated as a rule rather than as a number because the rule is the part that is irreversible: applying a delta to the selected weight alone, or clamping one rung at the axis maximum and not the other, would silently collapse a state distinction that nothing else carries typographically. I-08B3.1-F1R separated this from the magnitude below.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "bold-weight-delta": {
+          "$type": "number",
+          "$value": 100,
+          "$description": "THE MAGNITUDE, and it is PRODUCTION DEFAULT / TUNABLE CRAFT. What Bold Text adds to every weight in the system. Estedad is a variable face, so this is a real axis move and not a synthetic emboldening; 100 lands rest at 600 and selected at 700, both inside the 400–700 band the Arabic guidance sets for UI sizes. Another face, another size band or a device pass may want a different delta, and that is an ordinary craft decision. What may not change is the rule above — and check X-03 measures the RENDERED weight step at every text setting rather than trusting this number.",
+          "$extensions": { "com.qandeel.freeze": { "class": "production-default", "serves": "qandeel.accessibility.text.selected-step-must-survive-bold" } }
+        }
+      },
+      "nonColorCue": {
+        "$description": "DIFFERENTIATE WITHOUT COLOUR. QANDEEL keeps its colour. The rule is that colour may support meaning and may not be the only carrier of it. These tokens name the companion channel each colour-bearing distinction ships with, so that a check can assert the companion EXISTS rather than a document claiming it does.\n\nEVERY ENTRY HERE IS A DISTINCTION THAT CARRIES ANALYTICAL MEANING. That is what makes a companion channel an obligation. I-08B3.1-F1R2 removed `depth` from this group: near-from-far is a PRESENTATION property whose every component I-08B3.1-D2R's PRESENTATION_CONTRACT declares `encodes: null`, so requiring a non-colour carrier for it asserted a semantic parity obligation over something that carries no semantics — reintroducing, inside the accessibility layer, exactly the authority D2R removed. It now lives under `presentationCraft`. Check K-05 keeps it out.",
+        "topic-identity": {
+          "$type": "string",
+          "$value": "label",
+          "$description": "A topic is told from another topic by ITS WRITTEN NAME, in every world, at every size. Not by hue: the six atmosphere hues are isoluminant by construction and measure a maximum of 1.02:1 against each other, which is to say colour does not distinguish them even for a reader with full colour vision. That measurement is the strongest form of this contract — the channel cannot be relied on because it does not exist.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "pattern-membership": {
+          "$type": "string",
+          "$value": "identical-mark+link",
+          "$description": "Membership in a PATTERN: an identical mark at every member and a link to the locus. Identical, because a set has no strengths — one width and one opacity for every link.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "selected": {
+          "$type": "string",
+          "$value": "marker+weight",
+          "$description": "SELECTED: an attached marker on the inline-start edge, plus a 100-unit weight step. E1's channels, unchanged. Neither is a colour, which is why SELECTED survives grayscale, both dichromacies and Bold Text.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "focus": {
+          "$type": "string",
+          "$value": "detached-perimeter+companion",
+          "$description": "FOCUS: a detached perimeter at an offset, with a dark companion. A perimeter is a SHAPE and an offset is a POSITION; the indicator's colour is the part that can fail, and the two-part construction is why it does not.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "unavailable": {
+          "$type": "string",
+          "$value": "ink+stated-reason",
+          "$description": "UNAVAILABLE: the availability ink, plus a reason stated in words and associated with the control. The ink alone would be colour-only; the sentence is the carrier that survives grayscale and reaches a screen reader.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "error": {
+          "$type": "string",
+          "$value": "ink+glyph+copy+role",
+          "$description": "ERROR: E1's companion, inherited whole. The one QANDEEL colour whose hue carries meaning is also the one that ships with three non-colour carriers, and the reason is measurable — the error ink reaches 1.03:1 against secondary ink, so WCAG 1.4.1's lightness escape hatch is CLOSED here and the companion is an obligation rather than a courtesy.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        }
+      },
+      "presentationCraft": {
+        "$description": "PRESENTATION CRAFT — VISUAL WORK THAT CARRIES NO ANALYTICAL MEANING AND IS NOT A SEMANTIC CARRIER.\n\nThis group exists so that a useful piece of craft can be recorded WITHOUT being mistaken for a parity obligation. Everything here is real, deliberate and worth keeping; none of it is something an accessible expression must preserve in order to preserve the analysis, because none of it encodes anything. Accessibility must preserve the analytical OBJECTS and TRUTHS. It must not be made responsible for a decorative distinction that I-08B3.1-D2R already declared meaningless.\n\nA token in this group declares `carriesNoAnalyticalMeaning: true` and names the inherited `encodes: null` presentation properties it is about. Check K-05 asserts that no token here is product-contract and that no product-contract accessibility token names one of those properties as a required carrier.",
+        "depth": {
+          "$type": "string",
+          "$value": "level-line-count+scale",
+          "$description": "NEAR FROM FAR: 3 / 2 / 1 level lines and a scale, alongside the luminance. Two of the three survive a grayscale rendering and all three survive both dichromacies — which is a true and pleasing property of the drawing, and I-08B3.1-F1 wrote it down as a PRODUCT CONTRACT, in the non-colour-carrier group, beside topic identity and error. That was wrong and I-08B3.1-F1R2 corrects it. D2R's PRESENTATION_CONTRACT declares `ring.contourCount` and `ring.layer` `encodes: null`: the level-line count is a depth cue and the depth is composition. A distinction that encodes NOTHING cannot have a semantic parity obligation attached to it, and attaching one quietly restores the authority D2R removed — near would have become something an accessible expression was required to preserve, which is to say something that means something. IT REMAINS AS CRAFT. The default and the grayscale diagnostic keep it, it is good work, and nothing visual changes.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "serves": null,
+              "carriesNoAnalyticalMeaning": true,
+              "inheritedEncodesNull": ["ring.contourCount", "ring.layer"],
+              "why": "`serves` is null and that is the honest value: this token serves no product-contract requirement, because there is no analytical truth underneath it to require anything. Every other production-default names the contract it instantiates."
+            }
+          }
+        }
+      },
+      "projection": {
+        "$description": "THE ACCESSIBLE SEMANTIC PROJECTION. What a screen-reader user reaches instead of the spatial field. These are contract statements, not strings: the copy is Product's.",
+        "completeness": {
+          "$type": "string",
+          "$value": "exhaustive-against-user-exposable-V",
+          "$description": "THE PRODUCT CONTRACT ON SCOPE. EVERY USER-EXPOSABLE SEMANTIC FACT LEGITIMATELY DISCLOSED IN CANONICAL V, AND REQUIRED FOR UNDERSTANDING OR OPERATION, MUST HAVE AN EQUIVALENT ACCESSIBLE EXPRESSION. NO ACCESSIBILITY PROJECTION MAY SILENTLY DROP SUCH A FACT. That covers, where canonical V exposes them: evidence, provenance, uncertainty or qualification, epistemic status, temporal truth, relationships, actions, and any other user-exposable semantic field. Those are KINDS OF ANALYTICAL FACT named by the accessibility contract — they are deliberately NOT runtime field names, because inventing canonical field names in order to look exhaustive is the same failure as inventing semantic values.\n\nTHE IMPLEMENTATION DEPENDENCY, RECORDED RATHER THAN ANSWERED: PRODUCTION ACCESSIBILITY MAPPING MUST BE EXHAUSTIVE AGAINST THE ACTUAL USER-EXPOSABLE V SCHEMA, and that mapping cannot be written until the canonical V schema is integrated. I-08B3.1-F1R2 added this token because F1R's proof harness described its own three-field synthetic allowlist as \"the complete list of what a projection may carry\" — a bounded test fixture describing itself as the Product's semantic model. The fixture proves preservation for the dimensions it supplies and for no others; this token is the obligation the fixture does not discharge. Checks B-01 and B-02.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "disclosure-boundary": {
+          "$type": "string",
+          "$value": "same-V-fail-closed",
+          "$description": "THE ACCESSIBILITY LAYER MAY NOT EXPAND DISCLOSURE. It operates from the SAME disclosed V as the visual renderer and field navigation, so a relationship description may name only objects legitimately present in that V. A Connection or a Pattern must never cause the projection to expose a hidden object's NAME, an undisclosed object's technical ID, hidden membership, or an unavailable context, merely because a disclosed object references it.\n\nAND THE FALLBACK IS THE SPECIFIC THING THIS FORBIDS. I-08B3.1-F1R's projector resolved a reference as `disclosed name ?? raw id`: an undisclosed endpoint would have been announced to a screen-reader user as its raw technical identifier — a leak that the visual expression, which simply draws nothing there, does not have. An accessible expression that discloses more than the default is as serious a failure as one that discloses less.\n\nFAIL CLOSED. Where a reference is not disclosed in V, the projection announces NO substitute: no id, no recovered name, no count, and no prose describing the relation. The inconsistency is RECORDED as a detectable referential-integrity failure instead of being turned into a sentence. Canonical V is required to be referentially closed — that is an UPSTREAM INVARIANT and it is stated as one — but the projector does not rely on it, because a projector that trusts an invariant it cannot check leaks the first time the invariant is broken. Check A-06, with planted fixtures for an undisclosed Connection endpoint and an undisclosed Pattern member.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "derivation": {
+          "$type": "string",
+          "$value": "project-V",
+          "$description": "ACCESSIBLE SEMANTICS = PROJECT(V), AND NEVER = INFER FROM VISUAL GEOMETRY OR FROM THE RENDERER. The visual renderer, the accessible semantic surface and field navigation all operate from the SAME disclosed view. The accessibility layer may PROJECT semantic truth; it may not AUTHOR it. Every disclosed analytical object that needs accessible exposure has an accessible semantic representation DERIVED FROM V — and where V supplies no value for a field, the projection carries no value for it either, because announcing a plausible default is inventing runtime data. I-08B3.1-F1R added this token because F1's proof scene manufactured epistemic status, temporal state and actionability that no inherited package had established, and there was no contract sentence anywhere that forbade it. Checks A-01, A-02 and A-03 assert it.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "traversal": {
+          "$type": "string",
+          "$value": "by-kind",
+          "$description": "TRAVERSAL IS BY KIND, NOT BY GEOMETRY AND NOT BY RANK. The reader chooses an axis — topics, connections, patterns, insights — and moves within it. Deriving one linear order from x/y would invent a reading the Map does not have, and sorting by any strength would invent importance the Product never computed. VoiceOver's own default is the locale's reading order, which for an Arabic UI is right-to-left and top-to-bottom; that default is a GEOMETRIC order and QANDEEL must override it rather than inherit it.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "equality": {
+          "$type": "string",
+          "$value": "peers-are-peers",
+          "$description": "Several legitimate readings of the same material are announced as PEERS. The projection may not select a main one, because no Product authority ranks them.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "relationship": {
+          "$type": "string",
+          "$value": "stated-in-words",
+          "$description": "Every relationship that is carried visually by adjacency, a line or a shared mark is STATED IN WORDS in the projection. Apple: \"Examine your app for places where relationships among elements are visual only. Then, describe these relationships to VoiceOver.\" In QANDEEL the largest of these is a PATTERN — a locus and four links is not readable to anyone who cannot see it, and it must become a sentence naming its members.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "transient": {
+          "$type": "string",
+          "$value": "announce-the-result-not-the-light",
+          "$description": "THE LIGHT ITSELF IS NOT ANNOUNCED. It is a transient that carries nothing the settled state does not also carry — the same property that makes the settled state readable with no animation at all. What is announced is the RESULT, once.",
+          "$extensions": { "com.qandeel.freeze": { "class": "product-contract" } }
+        },
+        "canvas": {
+          "$type": "string",
+          "$value": "text-views-over-canvas",
+          "$description": "THE CURRENT IMPLEMENTATION ARCHITECTURE for meeting projection.derivation on React Native and Skia — and I-08B3.1-F1R reclassified it, because F1 called it \"an implementation constraint that is also a Product constraint\" and then froze it as though the second half were the whole. THE FINDING IS UNCHANGED AND STILL BINDING TODAY: a Skia Canvas exposes nothing inside it to an accessibility API, so the analytical content cannot live only in the drawing, and every analytical object needs a real view with a real accessible name composed over it. Inherited from I-08B3.1-D2R §5. But the PRODUCT contract is projection.derivation — every disclosed analytical object that needs accessible exposure has an accessible semantic representation derived from V. Text-views-over-canvas is how that is achieved with this renderer. Another renderer that exposed its contents to the platform accessibility API would meet the same contract a different way, and this token would move while the contract did not.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "implementation-strategy",
+              "serves": "qandeel.accessibility.projection.derivation",
+              "library": "react-native-skia — Canvas contents are not exposed to UIAccessibility or the Android accessibility node tree",
+              "replaceableWhen": "the renderer exposes its contents to the platform accessibility API, or QANDEEL stops drawing the field on a canvas"
+            }
+          }
+        }
+      }
+    }
+  }
+}

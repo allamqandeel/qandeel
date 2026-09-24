@@ -1,0 +1,687 @@
+{
+ "input": "real CDP mouse presses (asserted pressable at the control centre), wheel and keys; real time; system appearance and Reduced Motion emulated as media features",
+ "total": 38,
+ "passed": 38,
+ "failed": 0,
+ "steps": [
+  {
+   "journey": "B-PINNED",
+   "step": "following Live: no temporal line, no placeholder gap (the Timeline sits on the chrome)",
+   "pass": true,
+   "detail": {
+    "ctx": null,
+    "ctxOpacity": 0,
+    "ctxText": "",
+    "track": {
+     "x": 56,
+     "y": 654,
+     "w": 318,
+     "h": 44,
+     "b": 698,
+     "r": 374
+    },
+    "live": {
+     "x": 6,
+     "y": 654,
+     "w": 44,
+     "h": 44,
+     "b": 698,
+     "r": 50
+    },
+    "liveLabel": null,
+    "band": {
+     "x": 0,
+     "y": 698,
+     "w": 390,
+     "h": 56,
+     "b": 754,
+     "r": 390
+    },
+    "bandText": "الرجوع خطوة واحدةيستعيد موضعك قبل خطوتك الأخيرة. لا يعيدك إلى المحادثة الجارية.طرق العودة",
+    "domCtxBeforeTrack": true
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "keyboard preview: the preview line stands directly above the Track (and is not in OrientationChrome)",
+   "pass": true,
+   "detail": {
+    "PTC": 15,
+    "k": {
+     "ctx": {
+      "x": 22,
+      "y": 613,
+      "w": 348,
+      "h": 25,
+      "b": 638,
+      "r": 370
+     },
+     "ctxOpacity": 1,
+     "ctxText": "نظرة مؤقتة على اللحظة 15، ولم يتغير موضعك.",
+     "track": {
+      "x": 56,
+      "y": 654,
+      "w": 318,
+      "h": 44,
+      "b": 698,
+      "r": 374
+     },
+     "live": {
+      "x": 6,
+      "y": 654,
+      "w": 44,
+      "h": 44,
+      "b": 698,
+      "r": 50
+     },
+     "liveLabel": null,
+     "band": {
+      "x": 0,
+      "y": 698,
+      "w": 390,
+      "h": 56,
+      "b": 754,
+      "r": 390
+     },
+     "bandText": "إلغاء النظرةالذهاب إلى اللحظة 15",
+     "domCtxBeforeTrack": true
+    }
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "Enter commits PINNED(15); the line now says where in time and that the conversation continued",
+   "pass": true,
+   "detail": {
+    "TM": "PINNED",
+    "TC": 15,
+    "ctx": [
+     "أنت عند اللحظة 15.",
+     "استمرت المحادثة بعد هذه اللحظة."
+    ]
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "one local cluster: line → Live-edge act → Track, the line directly above, nothing between",
+   "pass": true,
+   "detail": {
+    "ctx": {
+     "x": 22,
+     "y": 613,
+     "w": 348,
+     "h": 25,
+     "b": 638,
+     "r": 370
+    },
+    "ctxOpacity": 1,
+    "ctxText": "أنت عند اللحظة 15. استمرت المحادثة بعد هذه اللحظة.",
+    "track": {
+     "x": 56,
+     "y": 654,
+     "w": 318,
+     "h": 44,
+     "b": 698,
+     "r": 374
+    },
+    "live": {
+     "x": 6,
+     "y": 638,
+     "w": 168.8,
+     "h": 60,
+     "b": 698,
+     "r": 174.8
+    },
+    "liveLabel": {
+     "x": 10,
+     "y": 638,
+     "w": 160.8,
+     "h": 23,
+     "b": 661,
+     "r": 170.8
+    },
+    "band": {
+     "x": 0,
+     "y": 698,
+     "w": 390,
+     "h": 56,
+     "b": 754,
+     "r": 390
+    },
+    "bandText": "طرق العودة",
+    "domCtxBeforeTrack": true
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "no duplicate orientation truth: OrientationChrome says nothing temporal",
+   "pass": true,
+   "detail": {
+    "band": [],
+    "bandText": "طرق العودة"
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "reading / DOM order: the line comes before the Timeline slider",
+   "pass": true,
+   "detail": true
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "the Live-edge act's box and focus ring do not overlap the line",
+   "pass": true,
+   "detail": {
+    "live": {
+     "x": 6,
+     "y": 638,
+     "w": 168.8,
+     "h": 60,
+     "b": 698,
+     "r": 174.8
+    },
+    "ctx": {
+     "x": 22,
+     "y": 613,
+     "w": 348,
+     "h": 25,
+     "b": 638,
+     "r": 370
+    }
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "Return Live is the dominant act at the Live edge; «طرق العودة» holds the rest (T-08 order)",
+   "pass": true,
+   "detail": {
+    "rendered": [
+     "LIVE_EDGE:RETURN_LIVE_HEAD"
+    ],
+    "grouped": [
+     "BACK_ONE_STEP",
+     "RETURN_WORLD",
+     "GO_LIVE_AND_LOCATE"
+    ]
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "focus is not dropped after the commit",
+   "pass": true,
+   "detail": "tl-track"
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "Tab order: Timeline → Live-edge act → «طرق العودة» (visual order; the line is not a stop)",
+   "pass": true,
+   "detail": [
+    "tl-live",
+    "more-t"
+   ]
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "«طرق العودة» Enter: aria-expanded true, aria-controls names the group, the acts are disclosed at once",
+   "pass": true,
+   "detail": {
+    "exp": "true",
+    "ctl": "more-acts",
+    "rendered": [
+     "LIVE_EDGE:RETURN_LIVE_HEAD",
+     "BACK_ONE_STEP",
+     "RETURN_WORLD",
+     "GO_LIVE_AND_LOCATE"
+    ]
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "Tab reaches the first disclosed act in T-08 order",
+   "pass": true,
+   "detail": "BACK_ONE_STEP"
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "the line stays where it was: opening «طرق العودة» does not move it off the Timeline",
+   "pass": true,
+   "detail": {
+    "ctx": {
+     "x": 22,
+     "y": 612.8,
+     "w": 348,
+     "h": 25,
+     "b": 637.8,
+     "r": 370
+    },
+    "ctxOpacity": 1,
+    "ctxText": "أنت عند اللحظة 15. استمرت المحادثة بعد هذه اللحظة.",
+    "track": {
+     "x": 56,
+     "y": 653.8,
+     "w": 318,
+     "h": 44,
+     "b": 697.8,
+     "r": 374
+    },
+    "live": {
+     "x": 6,
+     "y": 637.8,
+     "w": 168.8,
+     "h": 60,
+     "b": 697.8,
+     "r": 174.8
+    },
+    "liveLabel": {
+     "x": 10,
+     "y": 637.8,
+     "w": 160.8,
+     "h": 23,
+     "b": 660.8,
+     "r": 170.8
+    },
+    "band": {
+     "x": 0,
+     "y": 654,
+     "w": 390,
+     "h": 100,
+     "b": 754,
+     "r": 390
+    },
+    "bandText": "طرق العودةالرجوع خطوة واحدةيستعيد موضعك قبل خطوتك الأخيرة. لا يعيدك إلى المحادثة الجارية.العودة إلى العالم كلهيعود إلى العالم كله عند اللحظة نفسها.العودة إلى المحادثة والانتقال إلى موضعهايعود إلى المحادثة الجارية، وإذا أمكن تحديد موضع الاهتمام هناك، ينقل العرض إليه في الخطوة نفسها.",
+    "domCtxBeforeTrack": true
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "Escape closes it; focus returns to «طرق العودة»",
+   "pass": true,
+   "detail": {
+    "exp": "false",
+    "focus": "more-t"
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "every visible control is ≥ 44 × 44 pt",
+   "pass": true,
+   "detail": []
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "a press on the Live edge returns to Live (FOLLOW_LIVE at 17)",
+   "pass": true,
+   "detail": {
+    "TM": "FOLLOW_LIVE",
+    "TC": 17
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "LIVE: no stale PINNED sentence remains, and no empty gap is left above the Timeline",
+   "pass": true,
+   "detail": {
+    "ctx": null,
+    "ctxOpacity": 0,
+    "ctxText": "",
+    "track": {
+     "x": 56,
+     "y": 654,
+     "w": 318,
+     "h": 44,
+     "b": 698,
+     "r": 374
+    },
+    "live": {
+     "x": 6,
+     "y": 654,
+     "w": 44,
+     "h": 44,
+     "b": 698,
+     "r": 50
+    },
+    "liveLabel": null,
+    "band": {
+     "x": 0,
+     "y": 698,
+     "w": 390,
+     "h": 56,
+     "b": 754,
+     "r": 390
+    },
+    "bandText": "الرجوع خطوة واحدةيستعيد موضعك قبل خطوتك الأخيرة. لا يعيدك إلى المحادثة الجارية.طرق العودة",
+    "domCtxBeforeTrack": true
+   }
+  },
+  {
+   "journey": "B-PINNED",
+   "step": "focus is not dropped onto the page after Return Live",
+   "pass": true,
+   "detail": "tl-live"
+  },
+  {
+   "journey": "B-NEAR",
+   "step": "NEAR by the wheel, then a press inspects: the inspection line stays in OrientationChrome, no temporal row appears",
+   "pass": true,
+   "detail": {
+    "IF": {
+     "family": "EMERGING_FOCUS",
+     "familyWord": "تركيز ناشئ",
+     "focusSingleton": true
+    },
+    "ctx": null,
+    "band": [
+     "قيد المعاينة: تركيز ناشئ."
+    ]
+   }
+  },
+  {
+   "journey": "B-NEAR",
+   "step": "the Return set is T-08's, unchanged (BACK dominant; EXACT_RETURN, RETURN_WORLD grouped)",
+   "pass": true,
+   "detail": {
+    "offered": [
+     "BACK_ONE_STEP",
+     "EXACT_RETURN",
+     "RETURN_WORLD"
+    ],
+    "direct": [
+     "BACK_ONE_STEP"
+    ],
+    "grouped": [
+     "EXACT_RETURN",
+     "RETURN_WORLD"
+    ]
+   }
+  },
+  {
+   "journey": "A-LIGHT",
+   "step": "system Light: the Conversation follows it (light ground, dark status ink)",
+   "pass": true,
+   "detail": {
+    "status": "rgb(41, 39, 31)",
+    "phone": "rgb(239, 238, 235)",
+    "rail": "rgb(231, 230, 227)",
+    "composer": "rgb(231, 230, 227)",
+    "conv": "rgb(239, 238, 235)",
+    "homebar": "rgb(41, 39, 31)"
+   }
+  },
+  {
+   "journey": "A-LIGHT",
+   "step": "«تحليل المحادثة»: the Analysis shell is dark — phone ground, rail, home indicator ink light",
+   "pass": true,
+   "detail": {
+    "status": "rgb(216, 213, 202)",
+    "phone": "rgb(16, 16, 16)",
+    "rail": "rgb(24, 24, 24)",
+    "composer": "rgb(24, 24, 24)",
+    "conv": "rgb(239, 238, 235)",
+    "homebar": "rgb(216, 213, 202)"
+   }
+  },
+  {
+   "journey": "A-LIGHT",
+   "step": "status region: light ink on the dark Analysis (contrast ≥ 4.5 against the shell ground)",
+   "pass": true,
+   "detail": {
+    "status": "rgb(216, 213, 202)",
+    "ground": "rgb(16, 16, 16)",
+    "ratio": 12.95
+   }
+  },
+  {
+   "journey": "A-LIGHT",
+   "step": "focus moves to «المحادثة»",
+   "pass": true,
+   "detail": "back"
+  },
+  {
+   "journey": "A-LIGHT",
+   "step": "«المحادثة»: back to the system-Light Conversation shell",
+   "pass": true,
+   "detail": {
+    "status": "rgb(41, 39, 31)",
+    "phone": "rgb(239, 238, 235)",
+    "rail": "rgb(231, 230, 227)",
+    "composer": "rgb(231, 230, 227)",
+    "conv": "rgb(239, 238, 235)",
+    "homebar": "rgb(41, 39, 31)"
+   }
+  },
+  {
+   "journey": "A-LIGHT-CALL",
+   "step": "the call starts Analysis-first, in the dark Analysis shell (call line dark too)",
+   "pass": true,
+   "detail": {
+    "id": "call-3f9bb7",
+    "s": {
+     "status": "rgb(216, 213, 202)",
+     "phone": "rgb(16, 16, 16)",
+     "rail": "rgb(24, 24, 24)",
+     "composer": "rgb(24, 24, 24)",
+     "conv": "rgb(239, 238, 235)",
+     "homebar": "rgb(216, 213, 202)"
+    }
+   }
+  },
+  {
+   "journey": "A-LIGHT-CALL",
+   "step": "«المحادثة» during the call: the Conversation is system Light, call line included; the SAME call",
+   "pass": true,
+   "detail": {
+    "id": "call-3f9bb7",
+    "s": {
+     "status": "rgb(41, 39, 31)",
+     "phone": "rgb(239, 238, 235)",
+     "rail": "rgb(231, 230, 227)",
+     "composer": "rgb(231, 230, 227)",
+     "conv": "rgb(239, 238, 235)",
+     "homebar": "rgb(41, 39, 31)"
+    }
+   }
+  },
+  {
+   "journey": "A-LIGHT-CALL",
+   "step": "no persistent call prose; call state on the one assistive channel",
+   "pass": true,
+   "detail": {
+    "line": "",
+    "a11y": "الميكروفون شغّال"
+   }
+  },
+  {
+   "journey": "A-LIGHT-CALL",
+   "step": "«تحليل المحادثة»: the SAME call, back in the dark Analysis shell",
+   "pass": true,
+   "detail": {
+    "id": "call-3f9bb7",
+    "starts": 1,
+    "s": {
+     "status": "rgb(216, 213, 202)",
+     "phone": "rgb(16, 16, 16)",
+     "rail": "rgb(24, 24, 24)",
+     "composer": "rgb(24, 24, 24)",
+     "conv": "rgb(239, 238, 235)",
+     "homebar": "rgb(216, 213, 202)"
+    }
+   }
+  },
+  {
+   "journey": "A-SYSTEM",
+   "step": "system switches to Dark while in the Analysis: still the same dark Analysis",
+   "pass": true,
+   "detail": {
+    "status": "rgb(216, 213, 202)",
+    "phone": "rgb(16, 16, 16)",
+    "rail": "rgb(24, 24, 24)",
+    "composer": "rgb(24, 24, 24)",
+    "conv": "rgb(16, 16, 16)",
+    "homebar": "rgb(216, 213, 202)"
+   }
+  },
+  {
+   "journey": "A-SYSTEM",
+   "step": "and back to Light: the Analysis shell does not turn pale",
+   "pass": true,
+   "detail": {
+    "status": "rgb(216, 213, 202)",
+    "phone": "rgb(16, 16, 16)",
+    "rail": "rgb(24, 24, 24)",
+    "composer": "rgb(24, 24, 24)",
+    "conv": "rgb(239, 238, 235)",
+    "homebar": "rgb(216, 213, 202)"
+   }
+  },
+  {
+   "journey": "RM",
+   "step": "the system Reduced Motion setting is honoured",
+   "pass": true,
+   "detail": null
+  },
+  {
+   "journey": "RM",
+   "step": "Conversation → Analysis under Light: the shell is dark at once (the cross-fade is removed, not shortened)",
+   "pass": true,
+   "detail": {
+    "status": "rgb(216, 213, 202)",
+    "phone": "rgb(16, 16, 16)",
+    "rail": "rgb(24, 24, 24)",
+    "composer": "rgb(24, 24, 24)",
+    "conv": "rgb(239, 238, 235)",
+    "homebar": "rgb(216, 213, 202)"
+   }
+  },
+  {
+   "journey": "RM",
+   "step": "PINNED under Reduced Motion: the same line, in the same place above the Track",
+   "pass": true,
+   "detail": {
+    "TC": 15,
+    "k": {
+     "ctx": {
+      "x": 22,
+      "y": 613,
+      "w": 348,
+      "h": 25,
+      "b": 638,
+      "r": 370
+     },
+     "ctxOpacity": 1,
+     "ctxText": "أنت عند اللحظة 15. استمرت المحادثة بعد هذه اللحظة.",
+     "track": {
+      "x": 56,
+      "y": 654,
+      "w": 318,
+      "h": 44,
+      "b": 698,
+      "r": 374
+     },
+     "live": {
+      "x": 6,
+      "y": 638,
+      "w": 168.8,
+      "h": 60,
+      "b": 698,
+      "r": 174.8
+     },
+     "liveLabel": {
+      "x": 10,
+      "y": 638,
+      "w": 160.8,
+      "h": 23,
+      "b": 661,
+      "r": 170.8
+     },
+     "band": {
+      "x": 0,
+      "y": 698,
+      "w": 390,
+      "h": 56,
+      "b": 754,
+      "r": 390
+     },
+     "bandText": "طرق العودة",
+     "domCtxBeforeTrack": true
+    }
+   }
+  },
+  {
+   "journey": "RM",
+   "step": "Return Live under Reduced Motion: FOLLOW_LIVE, the line gone at once",
+   "pass": true,
+   "detail": "FOLLOW_LIVE"
+  },
+  {
+   "journey": "RM",
+   "step": "the same call survives Analysis → Conversation under Reduced Motion",
+   "pass": true,
+   "detail": {
+    "id": "call-3f9bb7"
+   }
+  },
+  {
+   "journey": "RM",
+   "step": "and returns with it to the dark Analysis",
+   "pass": true,
+   "detail": "call-3f9bb7"
+  },
+  {
+   "journey": "EN",
+   "step": "English PINNED: the line starts at the LEFT (start) edge above the Track; the Live edge is at the RIGHT",
+   "pass": true,
+   "detail": {
+    "k": {
+     "ctx": {
+      "x": 20,
+      "y": 588,
+      "w": 348,
+      "h": 50,
+      "b": 638,
+      "r": 368
+     },
+     "ctxOpacity": 1,
+     "ctxText": "Reading at moment 14. The conversation has continued since this moment.",
+     "track": {
+      "x": 16,
+      "y": 654,
+      "w": 318,
+      "h": 44,
+      "b": 698,
+      "r": 334
+     },
+     "live": {
+      "x": 216.8,
+      "y": 638,
+      "w": 167.2,
+      "h": 60,
+      "b": 698,
+      "r": 384
+     },
+     "liveLabel": {
+      "x": 220.8,
+      "y": 638,
+      "w": 159.2,
+      "h": 23,
+      "b": 661,
+      "r": 380
+     },
+     "band": {
+      "x": 0,
+      "y": 698,
+      "w": 390,
+      "h": 56,
+      "b": 754,
+      "r": 390
+     },
+     "bandText": "Ways back",
+     "domCtxBeforeTrack": true
+    },
+    "ctx": [
+     "Reading at moment 14.",
+     "The conversation has continued since this moment."
+    ]
+   }
+  }
+ ]
+}

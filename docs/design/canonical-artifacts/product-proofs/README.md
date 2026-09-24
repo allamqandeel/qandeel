@@ -1,6 +1,7 @@
-# Product proofs — I-08B3.1-G1.1-R3, I-08B3.1-G1.2 (+ R1) and I-08B3.1-G2
+# Product proofs — I-08B3.1-G1.1-R3, I-08B3.1-G1.2 (+ R1), I-08B3.1-G2 and I-08B3.1-G3
 
-This folder preserves the reusable proof artifacts for the closed G1 Product proofs and the final G2 proof artifact. Canonical **closure records**, not preserved build files, remain the authority for what was decided:
+This folder preserves the reusable proof artifacts for the closed G1 Product proofs, the final G2 proof artifact and
+the final G3 proof. Canonical **closure records**, not preserved build files, remain the authority for what was decided:
 
 - `docs/design/i-08b3.1-g1.1/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md`
 - `docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md`
@@ -19,6 +20,14 @@ What was local-only is preserved here.
   `docs/design/i-08b3.1-g2/QANDEEL_G2_CANONICAL_CLOSURE.md`, binding once PR #267 merges. `g2/` carries
   its own `README.md`, `SOURCE-PROVENANCE.md` and `SOURCE-PROVENANCE.sha256`; the two provenance files at
   this level cover G1 only.
+- `g3/`: **the final accepted integrated Product-coherence proof, G3.2, preserved whole.**
+  - **What it holds:** all 145 files of the reviewed package, byte-exact. That covers source, prototype, data, docs,
+    the 12 boards and the 7 motion clips.
+  - **Its closure record:** `docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md`, which also closes parent G, with
+    its two controlled amendments beside it.
+  - **Its own records:** `g3/` carries its own `README.md`, `SOURCE-PROVENANCE.md` and `SOURCE-PROVENANCE.sha256`.
+  - **A later authority:** it supersedes the G2 build's Q-LIGHT-SHELL and S-04 caveats. The G2 build stays the G2
+    record.
 
 **Read before reuse:** in `g1.2/`, only `source/src/` and `r1/` carry R1. The built
 `prototype/*.html`, `data/G12_CHECKS.json`, `source/tools/checks.mjs` and the G1.2 reports are the
