@@ -1,6 +1,6 @@
 # G2 Product proof — I-08B3.1-G2 (G2.1 → G2.3)
 
-This folder holds the final reusable source of the G2 Living Analysis + Product composition proof. The
+This folder holds the final reusable proof artifact of the G2 Living Analysis + Product composition work. The
 canonical records are the authority for what was decided:
 
 - `docs/design/i-08b3.1-g2/QANDEEL_G2_CANONICAL_CLOSURE.md`: the G2 parent closure, binding once PR #267
@@ -11,7 +11,7 @@ canonical records are the authority for what was decided:
 
 ## What is here
 
-- **`g2.3/prototype/index.html`: the final effective G2 proof.**
+- **`g2.3/prototype/index.html`: the final effective G2 proof build.**
   - It is one self-contained, offline HTML file.
   - It embeds the canonical I-08B1 world and hash-checks it in the page.
   - Its runtime source is inline.
