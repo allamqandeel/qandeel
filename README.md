@@ -1,15 +1,35 @@
 # Qandeel
 
-Qandeel is entering controlled implementation.
-
 This repository is the canonical codebase for the product. Engineering implements the frozen contracts and does not invent missing product logic.
+
+## Start here
+
+1. [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md) — where the project stands, per domain, and where each
+   domain's authority lives.
+2. [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md) — the repository map, the authority precedence, and the
+   historical documents that must not be read as current.
+3. [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) — the one canonical cross-task
+   backlog.
+
+Coding agents also follow [`AGENTS.md`](AGENTS.md). These entry points are locators. They create no Product
+authority, and they schedule no task.
 
 ## Current status
 
-- Engineering Foundation: frozen for controlled implementation
-- First target: project skeleton, then the first authenticated end-to-end text vertical slice
-- Model provider: configurable behind Model Router
-- Voice provider: configurable behind Voice Adapter
+The repository holds two different kinds of material. Keep them apart.
+
+- **Merged runtime implementation.** This covers the NestJS conversation and intelligence runtime, the
+  Living Analysis Map mobile client, and the Connected Worlds database runtime phases. Several of these are
+  closed and frozen, and each one's lifecycle is stated by its own record.
+- **Frozen Product / design authority that production code does not yet implement.** This covers the I-08B
+  visual system and the Product proofs, among others.
+
+Neither is the finished Product. For each domain's lifecycle, what is implemented as opposed to only
+decided, and the open register, see [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md). Those entry points
+do not schedule a next Product or implementation task.
+
+Provider rule (frozen): model providers sit behind the Model Router, and a realtime voice provider will sit
+behind a Voice Adapter. No voice runtime exists yet (`QAN-BL-VOICE-01`).
 
 ## Working rule
 

@@ -1,5 +1,29 @@
 # Qandeel Documentation
 
+## START HERE / CURRENT STATE
+
+Read these before anything else in this index. They are locators: they create no Product authority, and
+they schedule no task.
+
+- [`../QANDEEL_CURRENT_STATE.md`](../QANDEEL_CURRENT_STATE.md) — the current state per domain. It keeps what
+  is implemented separate from what is only decided, and gives the open register.
+- [`../QANDEEL_PROJECT_MAP.md`](../QANDEEL_PROJECT_MAP.md) — the repository map, the authority precedence, the
+  lifecycle / closure map and the historical traps.
+- [`qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) — the one canonical cross-task backlog.
+- [`canonical-authority/CANONICAL_AUTHORITY_INDEX.md`](canonical-authority/CANONICAL_AUTHORITY_INDEX.md) —
+  recovered upstream authority: Experience Architecture Stages 0–6 and Connected Worlds v2. Historical /
+  upstream, not an entry point.
+- [`design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md)
+  — the locator for final Product / design artifacts.
+
+This index predates much of the later work, and the sections below are not a complete list. The later
+records are T-04 … T-14, Connected Worlds I-01 … I-07 with their remediations, and the I-08B design
+closures. The lifecycle / closure map in [`../QANDEEL_PROJECT_MAP.md`](../QANDEEL_PROJECT_MAP.md) locates
+them. Some sections below record lifecycle and navigation state as it stood when they were written, and
+are marked where later canonical work superseded them.
+
+## Index
+
 - [Hypothesis Reasoning Consumption Integration v1](hypothesis-reasoning-consumption-integration-v1.md)
 - [Hypothesis Generation Trigger Classification v1](hypothesis-generation-trigger-classification-v1.md)
 - [Hypothesis Generation Eligibility Orchestrator Integration v1](hypothesis-generation-eligibility-orchestrator-integration-v1.md)
@@ -31,7 +55,12 @@
 
 Implementation-facing Markdown specifications live here.
 
-The original Word documents remain the canonical archive. Markdown files record implementation-facing contracts and reconciliations used by the repository.
+Markdown files record implementation-facing contracts and reconciliations used by the repository. For the
+Engineering Foundation set, [`implementation-foundation/README.md`](implementation-foundation/README.md)
+records that the original Word documents remain the canonical archive, and those Word files are not in this
+repository. Since 2026-09-24 the upstream Experience Architecture and Connected Worlds v2 authority is
+preserved byte-exact in [`canonical-authority/`](canonical-authority/README.md). The final Product / design
+artifacts are in [`design/canonical-artifacts/`](design/canonical-artifacts/README.md).
 
 ## Foundation closure
 
@@ -69,15 +98,37 @@ normative and frozen; each keeps its own registered executable guard.
 
 ## Phase VI — Final Visual Design + Design Systemization
 
-**QANDEEL Phase VI — Final Visual Design + Design Systemization — IN PROGRESS.**
+> **HISTORICAL TRACK STATE — SUPERSEDED BY LATER CANONICAL WORK.**
+>
+> This section records Phase VI's navigation state as it stood at VI-02 closure. It is not current, and
+> it is kept as written, apart from the markers on the three stale lines.
+>
+> - **Phase VI never received a closure record.**
+> - **The later visual and Product authority is the I-08B design track.** That covers the I-08B1 Living
+>   Analysis World, the I-08B2.5 brand, I-08B3.0 typography and I-08B3.1 A–G, located by
+>   [`design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md).
+> - **The later VI-03 explorations were superseded.** The repository's
+>   [artifact audit](design/canonical-artifacts/LOCAL_ONLY_CANONICAL_ARTIFACT_AUDIT.md) classifies them as
+>   "exploration, superseded by I-08B1".
+> - **VI-03 is not the next task,** and no next task is scheduled here
+>   ([`../QANDEEL_CURRENT_STATE.md`](../QANDEEL_CURRENT_STATE.md) §7).
+> - **No per-item resolution is claimed.** No later canonical record resolves each VI-02 carry-forward
+>   item individually, and this note claims no such resolution.
+> - **VI-01 and VI-02 stay frozen as recorded.** VI-01's Conversation naming was later amended by the
+>   I-08B3.1-G1.1 closure.
+
+**QANDEEL Phase VI — Final Visual Design + Design Systemization — IN PROGRESS** *(historical state as
+recorded at VI-02 closure; superseded, see the note above)*.
 
 - [VI-01 — Bilingual Product Language & UX Vocabulary Foundation](design/phase-vi/vi-01-bilingual-product-language/README.md) — **CLOSED / FROZEN AS LANGUAGE SYSTEM + SEMANTIC CONTRACTS** the canonical archive of the closed VI-01: native bilingual authorship/transcreation, one Arabic product language for v1, the Arabic register architecture, truth/semantic guardrails, naming-minimization, gender policy, peer-scaling language constraints, provenance/correction semantics, accessibility language invariants, the rejection-authority taxonomy and the exact core vocabulary marked `APPROVED`. `PROPOSED`, `OPEN`, `PROVISIONAL` entries and ordinary microcopy remain editable so long as the frozen semantic contract, runtime truth, accessibility contract and bilingual meaning hold. Documentation only; no production, runtime or database behaviour.
 
 - [VI-02 — Analysis Navigation & Density Scalability](design/phase-vi/vi-02-analysis-navigation-density/README.md) — **CLOSED / FROZEN AS BEHAVIORAL + NAVIGATION ARCHITECTURE** the canonical archive of the closed VI-02: the frozen clauses `F-01 … F-12` — the whole peer set precedes any reading, no system-selected winner, peers equal and unranked, every exposed peer reachable, the full statement as the canonical human-facing identity source, full identity reachable without commitment, reversible reader-chosen foreground, a permanent named route back to the set, orientation that is never currency, deep links only with that route intact, bilingual/keyboard/assistive parity, and no new runtime contract required for the validated architecture. `F3 — Overview ⇄ Focus` is the behavioural reference. Documentation only; no production, runtime or database behaviour.
 
-**VI-02 visual morphology — OPEN / carried into VI-03.** VI-02 froze *what is true for the reader*, never what the reader looks at. Vertical rows, paragraph-heavy presentation, cards, typography, colour, surfaces, iconography, brand expression, motion, generative graphics, density styling, search/filter/jump behaviour, visual anchors, spatial field, circles/grouping, relation threads and recomposition animation all remain explicitly **not** frozen. The governing rule for whatever is drawn later: *a visual relationship may be drawn only if it is true of the runtime.*
+**VI-02 visual morphology — OPEN / carried into VI-03** *(historical, as recorded at VI-02 closure; the
+later visual authority is the I-08B design track, see the note above)*. VI-02 froze *what is true for the reader*, never what the reader looks at. Vertical rows, paragraph-heavy presentation, cards, typography, colour, surfaces, iconography, brand expression, motion, generative graphics, density styling, search/filter/jump behaviour, visual anchors, spatial field, circles/grouping, relation threads and recomposition animation all remain explicitly **not** frozen. The governing rule for whatever is drawn later: *a visual relationship may be drawn only if it is true of the runtime.*
 
-Next task: **VI-03 — Visual North Star + Graphic Language**.
+Next task *(historical, as recorded at VI-02 closure; **not a current instruction**)*: **VI-03 — Visual
+North Star + Graphic Language**.
 
 ## Project Governance
 

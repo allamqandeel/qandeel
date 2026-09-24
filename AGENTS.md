@@ -3,11 +3,27 @@
 These instructions apply to coding agents working in this repository.
 
 ## 1. Read before coding
-For implementation work, read the relevant files under `docs/implementation-foundation/`, starting with:
-1. `QANDEEL_FOUNDATION_FREEZE_v1.0.md`
-2. `QANDEEL_Recommended_TECH_STACK_v1.0.md`
-3. `QANDEEL_PROJECT_SKELETON_v1.0.md`
-Then read the runtime specification(s) relevant to the task.
+Before any task-specific work, read in this order:
+1. `QANDEEL_CURRENT_STATE.md` — current lifecycle per domain, what is implemented as opposed to only
+   decided, the open register, and the fact that no next task is scheduled by it.
+2. `QANDEEL_PROJECT_MAP.md` — where authority lives, what binds over what, and the historical traps.
+3. `docs/qandeel-canonical-backlog-v1.md` — in full, for the items your task inherits (BG-05).
+4. The task-relevant current canonical record(s) that `QANDEEL_CURRENT_STATE.md` and
+   `QANDEEL_PROJECT_MAP.md` point to, including the later amendments that bind over them.
+5. Where implementation work requires them, the foundation documents under `docs/implementation-foundation/`,
+   starting with:
+   1. `QANDEEL_FOUNDATION_FREEZE_v1.0.md`
+   2. `QANDEEL_Recommended_TECH_STACK_v1.0.md`
+   3. `QANDEEL_PROJECT_SKELETON_v1.0.md`
+
+   Then read the runtime specification(s) relevant to the task.
+6. Historical / upstream authority (`docs/canonical-authority/`) only when exact provenance or an audit needs it.
+
+Historical documents may describe themselves as "current" relative to their original date. Current
+repository orientation comes from `QANDEEL_CURRENT_STATE.md` plus the later authority it cites.
+
+These entry points are locators. They create no Product authority, and they schedule no task. The task you
+were given, under its own Task Contract, defines your scope.
 
 ## 2. Source-of-truth rule
 Engineering implements canonical contracts; it does not invent missing product logic.
