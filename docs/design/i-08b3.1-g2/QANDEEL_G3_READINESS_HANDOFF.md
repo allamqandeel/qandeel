@@ -25,7 +25,7 @@ owner and decides nothing G2 left open.
 | Conversation shell, navigation, Replay placement | `docs/design/i-08b3.1-g1.1/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md` |
 | Writing, Voice Note, Live Call, background call | `docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md` |
 | Analysis composition, Matching laws, Dark / Light | `docs/design/i-08b3.1-g2/QANDEEL_G2_CANONICAL_CLOSURE.md` |
-| Final G2 proof source | `docs/design/canonical-artifacts/product-proofs/g2/`: the self-contained build `g2.3/prototype/index.html`, with its manifest and README |
+| Final G2 proof artifact | `docs/design/canonical-artifacts/product-proofs/g2/`: the self-contained proof build `g2.3/prototype/index.html`, with its manifest and README |
 | Matching copy; compact Return | `docs/design/i-08b3.1-g2.3/`: the G2.3 closure and the controlled T-11 amendment |
 | Return meanings; responsive composition | T-08 `docs/inspection-orientation-return-chrome-v1.md`; T-11 `docs/responsive-recomposition-v1.md`; T-12 `docs/final-living-analysis-map-integration-v1.md` |
 | Replay truth; Matching / Introduction truth | `docs/replay-runtime-v1.md`; `docs/matching-introduction-runtime-v1.md` |
@@ -36,8 +36,8 @@ Three starting conditions, none of them a blocker:
 - **G1.2's preserved built prototypes are pre-R1.** Rebuild them from
   `docs/design/canonical-artifacts/product-proofs/g1.2/source/` before reuse (canonical artifact index,
   "Later amendments").
-- **Start from the preserved G2 source.**
-  - The minimum final reusable G2 source is preserved at
+- **Start from the preserved G2 proof artifact.**
+  - The minimum final reusable G2 proof build is preserved at
     `docs/design/canonical-artifacts/product-proofs/g2/`.
   - Prefer it, with the closure and amendment records, over any workshop folder.
   - The three sealed review ZIPs stay local as provenance, identified by SHA-256 (G2 closure §B).
