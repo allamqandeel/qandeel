@@ -141,7 +141,7 @@ production implementation. The table keeps three things apart:
 
 | Area | Decided (Product / Architecture / Design) | In production code today | Still open |
 |---|---|---|---|
-| Conversation and intelligence | Foundation, QHIA and QIR contracts | the NestJS API in `apps/api/src/`. Its HTTP controllers exist only under `conversation/` and `health/` | Provider / LLM selection is deferred (QIR-001) |
+| Conversation and intelligence | Foundation, QHIA and QIR contracts | the NestJS API in `apps/api/src/`. Its HTTP controllers exist only under `conversation/` and `health/` | Provider / LLM selection is deferred (QIR-001); the Product roadmap places QANDEEL-specific benchmark/selection alongside the End-to-End Product Experience Completeness Audit |
 | Product shell / Global navigation / first use | I-08A4 freezes the Personal-centered App Shell, three-area Global Switcher, local-only Back, Direct Entry, bilingual Product language and first-use foundation; later G1.1 / G1.2 naming amendments bind | no complete production Global Shell implementing the I-08A contract is established on `main`; current mobile composition is the T-series / T-12 shell | production realization of the frozen I-08A shell while preserving later amendments |
 | Living Analysis Map (Personal World) | Stages 0–6 and the T-series contracts | the mobile client in `apps/mobile/src/`: world projection, camera, Timeline, temporal navigation, Return, chrome, motion, responsive composition, recovery and sign-in. **The Map's paint is still the neutral grey structural placeholder** (T-12 §12) | the I-08B1 world is not ported: G3 §F records "no Skia / Reanimated port of the world". `QAN-BL-VIS-01` |
 | Visual system (Living Brass, Light, typography, surfaces, colour, accessibility, appearance, brand) | the frozen I-08B design canon (§3.5) | none. No commit after T-14's merge (`615e586f`) changes `apps/mobile/` | the whole production port |
@@ -150,7 +150,10 @@ production implementation. The table keeps three things apart:
 | Matching / Introductions | CW2-06; the G2.3 copy and process; the G3 §D Live-Call rule | the I-07 database runtime (0108–0118, 0120) | the mobile Matching UI, the final Introduction screen and the navigation surfaces, owned by Connected Worlds `I-08`. G3 §G holds the `OPEN COPY` items |
 | Replay | CW2-05; the G1.1 placement ("an action on the current Conversation / Analysis context") | the I-06 backend runtime (0100–0107) | the Product Replay surface (`QAN-BL-NAV-02`). No media, storage or transport. Distribution is `NOT CLEARED / FAIL-CLOSED` |
 | Voice / Live Call | G1.2 | none | all of it (`QAN-BL-VOICE-01`) |
-| Notifications / proactive attention | I-08N-01 freezes the Product gate, attention budgets, interruption classes, privacy/disclosure contract, Direct Entry constraints and user controls | no production notification runtime / transport is established on `main` | implementation mechanism, platform code, thresholds and final notification UI remain unfrozen by N-01 |
+| User Profile / Identity / Preferences / QANDEEL Understanding | no integrated canonical Product contract currently defines the complete Profile model or its separation from Memory / derived Understanding. Existing frozen records define adjacent authority, naming, Memory placement and World boundaries | NOT ESTABLISHED BY CURRENT REPOSITORY AUTHORITY as a complete Product surface/model | the roadmap's immediate next Product track (P1); no Task Contract is open yet |
+| Final iconography | G1.2 explicitly says its current small icons/glyphs are proof-only and that the final iconography system is not frozen | no final iconography system is established as production authority | roadmap P2 |
+| Notifications / proactive attention | I-08N-01 freezes the Product gate, attention budgets, interruption classes, privacy/disclosure contract, Direct Entry constraints and user controls | no production notification runtime / transport is established on `main` | P3 closes the remaining Product realization; implementation mechanism, platform code, numeric thresholds and final UI are not frozen by N-01 itself |
+| Plans / Credits / Usage Economy | CW2-08 freezes only the high-level law: entitlement restricts actions rather than ownership, and Credits are resource/compute availability only and never alter consent/ownership/truth | no complete plan/credit/billing Product system is established on `main` | roadmap places the Product economy work alongside the End-to-End audit, using provider/workload evidence; no formula or pricing is frozen |
 | Sign-in / auth | T-12P, T-14 | implemented | `QAN-BL-SEC-01`. T-14 recorded sign-up, password reset and onboarding, among others, as anti-scope (backlog §7) |
 
 ---
@@ -213,23 +216,37 @@ An entry authorizes no implementation (BG-07).
 
 ---
 
-## 7. What is next
+## 7. Forward roadmap
 
-```text
-NO SINGLE NEXT PRODUCT / IMPLEMENTATION TASK IS CANONICALLY SCHEDULED BY THIS STATE RECORD.
-```
+The Product Owner has now frozen the **forward sequencing**, recorded in
+[`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md).
 
-No record on `main` opens a task contract for the next piece of work.
+The current roadmap phase is:
 
-**The decision boundary:**
+> **Final Product Decision Closure**
 
-- Product / Architecture chooses the next task. It chooses from the implementation gaps in §4, the named
-  owners below and the backlog's obligations.
-- The chosen task gets its own Task Contract. At kickoff it inherits backlog items under BG-05.
-- Backlog entries are not self-executing, and severity does not order them.
+Ordered Product tracks:
 
-**Owners that current records name for future work.** Each is a named owner, not a schedule, and none has a
-task contract on `main`:
+1. **P1 — User Profile / Identity / Preferences / QANDEEL Understanding**
+2. **P2 — Final Iconography System**
+3. **P3 — Notification Final Realization**
+4. **P4 — Remaining Product / Visual Gaps Census & Closure**
+
+After P1–P4 close:
+
+> **QANDEEL End-to-End Product Experience Completeness Audit**
+
+That phase also carries the evidence-led QANDEEL Model / Provider benchmark and selection, Plans / Credits /
+Usage Economy work, and the complete account/authentication lifecycle review. Production Integration follows the
+audit and its resulting closures; Release Hardening / Launch comes after production integration.
+
+**Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1 is the
+next Product discussion/work track, but no P1 Task Contract exists yet.
+
+The canonical backlog remains separate: backlog entries are not self-executing, and severity does not order them.
+
+**Owners that current records name for future work.** Each is a named owner and does not override the roadmap or
+create an implementation task:
 
 | Owner named by a record | What the record assigns to it | Source |
 |---|---|---|
@@ -249,11 +266,12 @@ identifier against the closed record that uses it.
 1. `QANDEEL_CURRENT_STATE.md` — this file.
 2. [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md) — where everything is, what binds over what, and the
    known traps.
-3. [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) — read it in full at every
+3. [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) — Product Owner sequencing; it opens no task by itself.
+4. [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) — read it in full at every
    task kickoff (BG-05).
-4. The current canonical record(s) for the task: the primary records cited in §3, and the
+5. The current canonical record(s) for the task: the primary records cited in §3, and the
    [artifact index](docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md) for Product / design work.
-5. Historical / upstream authority in [`docs/canonical-authority/`](docs/canonical-authority/README.md), only
+6. Historical / upstream authority in [`docs/canonical-authority/`](docs/canonical-authority/README.md), only
    when exact provenance or an audit needs it.
 
 Coding agents also follow [`AGENTS.md`](AGENTS.md).
