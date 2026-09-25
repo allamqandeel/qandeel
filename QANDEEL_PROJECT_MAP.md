@@ -51,6 +51,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | [`README.md`](README.md) | repository entry point and local development instructions |
 | [`AGENTS.md`](AGENTS.md) | guardrails and the reading order for coding agents |
 | [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md) | current-state snapshot (locator) |
+| [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) | Product Owner sequencing from Final Product Decision Closure through End-to-End audit, Production Integration and Release Hardening; opens no implementation task by itself |
 | `QANDEEL_PROJECT_MAP.md` | this map (locator) |
 | [`package.json`](package.json), [`package-lock.json`](package-lock.json), [`tsconfig.base.json`](tsconfig.base.json) | root npm workspace (`apps/*`, `packages/*`) with 201 scripts at this baseline, and one lockfile |
 | [`.env.example`](.env.example) | names of local integration variables. The real `.env` is ignored |
@@ -76,6 +77,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | Looking for | Start at | Then |
 |---|---|---|
 | current project state | [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md) | the primary record it cites |
+| current forward roadmap / sequencing | [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) | use it for ordering only; a concrete task still needs its own Task Contract |
 | open obligations | [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) §4–§5 | the item's own `Source` |
 | historical Experience Architecture (Stages 0–6) | [`docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md`](docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md) | its "Superseded by / later amendments" column |
 | current Product / design canon | [`docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md) | its "Later amendments that override preserved sources" table |
@@ -130,7 +132,28 @@ any of them closed.
 
 ---
 
-## 5. Historical and superseded traps
+## 5. Current forward roadmap
+
+The roadmap is intentionally not duplicated here. Read
+[`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md).
+
+Current sequence:
+
+1. Final Product Decision Closure:
+   - P1 User Profile / Identity / Preferences / QANDEEL Understanding;
+   - P2 Final Iconography System;
+   - P3 Notification Final Realization;
+   - P4 Remaining Product / Visual Gaps Census & Closure.
+2. QANDEEL End-to-End Product Experience Completeness Audit, including evidence-led Model / Provider selection,
+   Plans / Credits / Usage Economy and complete account/auth lifecycle review.
+3. Production Integration & Implementation.
+4. Release Hardening & Launch.
+
+This sequencing creates no runtime semantics and opens no implementation task by itself.
+
+---
+
+## 6. Historical and superseded traps
 
 Each of these has misled, or could mislead, a new reader or agent. The documents themselves are
 historical and are not edited. Only the entry points that pointed at them were corrected.
@@ -156,7 +179,7 @@ historical and are not edited. Only the entry points that pointed at them were c
 
 ---
 
-## 6. No local-machine paths as authority
+## 7. No local-machine paths as authority
 
 Orientation must work from any fresh clone. None of the following is a required source:
 

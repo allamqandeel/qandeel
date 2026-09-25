@@ -8,11 +8,13 @@ This repository is the canonical codebase for the product. Engineering implement
    domain's authority lives.
 2. [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md) — the repository map, the authority precedence, and the
    historical documents that must not be read as current.
-3. [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) — the one canonical cross-task
+3. [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) — the Product Owner's current forward sequencing;
+   it opens no implementation task by itself.
+4. [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) — the one canonical cross-task
    backlog.
 
-Coding agents also follow [`AGENTS.md`](AGENTS.md). These entry points are locators. They create no Product
-authority, and they schedule no task.
+Coding agents also follow [`AGENTS.md`](AGENTS.md). Current State and Project Map are locators. The Product
+Roadmap records Product Owner sequencing but creates no Product/runtime semantics and does not authorize coding.
 
 ## Current status
 
@@ -25,8 +27,9 @@ The repository holds two different kinds of material. Keep them apart.
   visual system and the Product proofs, among others.
 
 Neither is the finished Product. For each domain's lifecycle, what is implemented as opposed to only
-decided, and the open register, see [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md). Those entry points
-do not schedule a next Product or implementation task.
+decided, and the open register, see [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md). The forward order is
+now recorded in [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md); each concrete task still requires its
+own Task Contract.
 
 Provider rule (frozen): model providers sit behind the Model Router, and a realtime voice provider will sit
 behind a Voice Adapter. No voice runtime exists yet (`QAN-BL-VOICE-01`).

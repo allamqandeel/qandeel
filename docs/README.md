@@ -2,13 +2,15 @@
 
 ## START HERE / CURRENT STATE
 
-Read these before anything else in this index. They are locators: they create no Product authority, and
-they schedule no task.
+Read these before anything else in this index. Current State and Project Map are locators. The Product Roadmap
+records sequencing only; no file in this start-here set authorizes implementation without a scoped Task Contract.
 
 - [`../QANDEEL_CURRENT_STATE.md`](../QANDEEL_CURRENT_STATE.md) — the current state per domain. It keeps what
   is implemented separate from what is only decided, and gives the open register.
 - [`../QANDEEL_PROJECT_MAP.md`](../QANDEEL_PROJECT_MAP.md) — the repository map, the authority precedence, the
   lifecycle / closure map and the historical traps.
+- [`../QANDEEL_PRODUCT_ROADMAP.md`](../QANDEEL_PRODUCT_ROADMAP.md) — the Product Owner's current sequencing;
+  it creates no Product/runtime semantics and opens no implementation task by itself.
 - [`qandeel-canonical-backlog-v1.md`](qandeel-canonical-backlog-v1.md) — the one canonical cross-task backlog.
 - [`canonical-authority/CANONICAL_AUTHORITY_INDEX.md`](canonical-authority/CANONICAL_AUTHORITY_INDEX.md) —
   recovered authority omitted from GitHub: Experience Architecture Stages 0–6, Connected Worlds v2, plus the
