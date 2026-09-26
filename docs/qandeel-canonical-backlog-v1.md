@@ -652,8 +652,8 @@ explicitly named in the T-12 document but missed this register, and it was admit
 remains `CLOSED / FROZEN`.
 
 T-14 tombstoned two: its own `QAN-BL-AUTH-01`, and `QAN-BL-T13-01`, which T-13 delivered but did not
-reconcile here before closing. `QAN-BL-SEC-01` is now the only `DEFERRED — OWNED` item in the
-register, and it is unchanged. **T-14 admitted no new item.** Its anti-scope — sign-up, email
+reconcile here before closing. At T-14 closure, `QAN-BL-SEC-01` was the only `DEFERRED — OWNED` item in the
+register, and it was unchanged. **T-14 admitted no new item.** Its anti-scope — sign-up, email
 verification, password reset, magic link, OTP, social auth, biometrics, passkeys, profile,
 onboarding, account deletion, account linking, "remember me", a password visibility toggle and
 sign-out chrome — is anti-scope, and BG-06 admits none of it: none has an existing `OPEN` identifier,
