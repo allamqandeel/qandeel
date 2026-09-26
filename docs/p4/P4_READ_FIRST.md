@@ -90,7 +90,7 @@ Two further markers appear in APP-OPS-01:
 
 ---
 
-## 6. What P4-A and P4-B did not do
+## 6. What P4-A, P4-B and P4-C1 did not do
 
 - They did not close or freeze P4, or APP-OPS-01. P4 stays **ACTIVE, NOT CLOSED / NOT FROZEN**; APP-OPS-01 stays
   **CANDIDATE / NOT FROZEN**.
@@ -100,7 +100,7 @@ Two further markers appear in APP-OPS-01:
 - P4-A decided no open Decision Queue row beyond recording Product Owner decisions already supplied. P4-B answered no
   Decision Queue row other than resolving `P4-DQ-10`. Neither wrote new Product copy or made a prototype, screenshot
   or design board.
-- Neither implemented anything, started a further P4 decision task, or started the End-to-End audit.
+- None of P4-A, P4-B or P4-C1 implements production behavior or starts the End-to-End audit. P4-C1 **does** make the named Product decisions and admit `QAN-BL-CTX-01`; it does not implement that future runtime.
 - P4-A did not edit the backlog, the Canonical Authority Index, the Canonical Artifact Index, or the P1, P2, P3,
   G-series, I-08A, I-08N, CW2, T-series or implementation-foundation records. P4-B edited none of these either, apart
   from adding CW2-08A and its Canonical Authority Index entry.
