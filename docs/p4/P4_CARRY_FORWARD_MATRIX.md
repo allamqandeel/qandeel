@@ -7,7 +7,7 @@
 | Track | P4, task P4-A |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
 | Role | separates **future work** from **Product decisions**. A Product decision is in the [Decision Queue](P4_PRODUCT_OWNER_DECISION_QUEUE.md). Everything here is work a later phase owns, bounded by a constraint that is already frozen or proposed |
-| Governance | nothing here is a backlog entry (BG-07). §3 states the backlog-impact candidate for the later P4 closure to review under BG-06 / BG-08 |
+| Governance | nothing here is a backlog entry (BG-07). §3 states the backlog-impact candidate (**NONE**) for the later P4 closure to confirm under BG-06 / BG-08 |
 
 ---
 
@@ -24,7 +24,7 @@ extends the roadmap's gap matrix. It does not replace it. The extended matrix re
 The two new fields are filled inside the closed APP-OPS-01. Each uses only what the contract admits:
 
 - **`Operational Events Required`** names events from the admitted domains (§5), never content (§6).
-- **`Company Controls Required`** names controls from the seven families (§11), within §10.
+- **`Company Controls Required`** names controls from the currently approved control families (§11), within §10.
 
 The audit designs no schema and chooses no vendor. It has **not** started, and P4-A performs none of it.
 
@@ -44,7 +44,10 @@ The audit designs no schema and chooses no vendor. It has **not** started, and P
 | The Approved Remote Configuration family register | `P4-DQ-16` recommends approval through controlled change | APP-OPS-01 §11 family 6; Foundation Freeze ceiling | Product Owner + Architecture | before any Remote Configuration exists | **no** |
 | Code delivery (store / over-the-air) governance | a release-operations decision (`P4-DQ-17`) | APP-OPS-01 §12: code delivery is not a control | App Operations & Release Lead; Release Hardening | Release Hardening | **no** |
 | Operational-readiness validation (observability, failure recovery) | validation, not decision | APP-OPS-01 §8, §15 | Release Hardening & Launch | Release Hardening | **no.** The roadmap §5 already names it |
-| **The controlled CW2-08 amendment** (§8 / H7, and by dependency §7, §36, §44 item 5) | P4-A may not edit frozen CW2 authority (Task Contract §20, §33) | `PO-OPS-02`; APP-OPS-01 §18; `P4-DQ-10` | a controlled CW2-08 amendment task; the Product Owner opens it | before or together with APP-OPS-01 closure (APP-OPS-01 §23 item 2) | **conditional.** See §3 |
+
+Case-scoped Safety / Moderation (CW2-08 §8, H7, §44 item 5) is **not** an APP-OPS-01 carry-forward. It is separate
+authority, unchanged, and already owned by Connected Worlds `I-09` / CW2-08 (APP-OPS-01 §18; resolved record
+`P4-DQ-10`).
 
 ### 2.2 Residual Product / visual canon
 
@@ -65,29 +68,21 @@ The audit designs no schema and chooses no vendor. It has **not** started, and P
 
 ## 3. Backlog impact candidate
 
-> **`Backlog impact candidate: PROPOSED — pending closure review`**
+> **`Backlog impact candidate: NONE`**
 
 **P4-A itself changes no backlog row.** It admits nothing, tombstones nothing and re-owns nothing (Task Contract §32).
-APP-OPS-01 gets no backlog row, because it is active inside the authorized P4 task.
 
-**One conditional candidate for the later P4 closure.** If P4 closes **before** the controlled CW2-08 amendment has
-landed, then a canonical document (the closed APP-OPS-01 / P4 record) will explicitly defer a concrete obligation to
-a named future task, namely the CW2-08 amendment. That is BG-06's admission route "explicitly deferred to a future
-task by a canonical document". A qualifying residue must not survive only in a closure note (BG-08).
+Why the candidate is NONE:
 
-The closing change must then decide, under independent review, between two options:
-
-- **(a)** admit a backlog entry for it, with the full §2 schema; or
-- **(b)** record why no entry is needed, for example because the amendment has already landed.
-
-**P4-A invents no ID for it.**
-
-**Every other carry-forward: NONE.** Each row above states why:
-
-- implementation of a frozen contract that the roadmap already sequences;
-- an existing backlog owner, so no duplicate alias;
-- a named owner under a frozen contract;
-- or roadmap-owned audit work.
+- **APP-OPS-01 is active P4 work.** It gets no backlog row while it is inside the authorized P4 task.
+- **The Human Review clarification creates no future amendment obligation.** Product Owner clarification A
+  (`P4-DQ-10`) separates Company Operations from CW2-08 Safety / Moderation. CW2-08 stays unchanged, so no concrete
+  obligation is deferred to a future amendment task.
+- **The remaining APP-OPS implementation is roadmap-sequenced Production Integration** (§2.1).
+- **The Voice dependencies already have `QAN-BL-VOICE-01`**, so a new entry would be a duplicate alias (§2.2).
+- **Release and device validation are roadmap-owned** by Release Hardening & Launch (§2.2).
+- **This correction creates no new BG-06 admission.** Every other row above names an existing owner under a frozen
+  contract, or roadmap-owned audit work.
 
 This follows the precedents of P2 §15, P3 §20 and the I-04 … I-07 closure records.
 
@@ -99,7 +94,8 @@ These are not carry-forwards. They are the remainder of P4 itself. They are list
 them silently (AGENTS §10.6):
 
 1. the Product Owner's answers to `P4-DQ-01` … `P4-DQ-09`, and the visual proofs they require;
-2. the Product Owner's answers to `P4-DQ-10` … `P4-DQ-17`, and the independent review of APP-OPS-01;
+2. the Product Owner's answers to `P4-DQ-11` … `P4-DQ-17`, and the independent review of APP-OPS-01 (`P4-DQ-10`
+   is already resolved);
 3. the P4 closure change, which does all of the following:
    - moves APP-OPS-01 and the P4 record to their final lifecycle (BG-09);
    - performs the BG-08 reconciliation of §3;

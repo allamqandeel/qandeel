@@ -13,6 +13,7 @@
 | P1 · P2 · P3 | `CLOSED / FROZEN`, and unchanged by P4-A |
 | **P4** | **ACTIVE — census / closure track opened by P4-A. NOT CLOSED, NOT FROZEN** |
 | **APP-OPS-01** | **`PRODUCT / ARCHITECTURE CONTRACT CANDIDATE — NOT FROZEN`** |
+| Correction pass | applies Product Owner clarification A: the Human Review prohibition belongs to Company Operations / App Operations. CW2-08's separate case-scoped Safety / Moderation authority is **preserved unchanged**. `P4-DQ-10` is resolved; **16** Product Owner decisions remain open |
 | Implementation | **none authorized.** P4-A changes no code, schema, migration, dependency, workflow, backlog row or canonical authority record |
 | End-to-End Product Experience Completeness Audit | **not started** |
 
@@ -57,10 +58,11 @@ HR, admin tooling, generic analytics and internal automation.
 3. [`APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md`](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) —
    the contract candidate. It has 23 sections.
 4. [`P4_AUTHORITY_COMPATIBILITY_MATRIX.md`](P4_AUTHORITY_COMPATIBILITY_MATRIX.md) — APP-OPS-01 against every
-   authority it touches, plus the residual-canon precedence notes. It records **one real conflict:
-   `CONTROLLED AMENDMENT REQUIRED — CW2-08`**.
-5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — the 17 questions only the Product
-   Owner can answer: `P4-DQ-01` … `P4-DQ-09` for the residual canon, and `P4-DQ-10` … `P4-DQ-17` for APP-OPS-01.
+   authority it touches, plus the residual-canon precedence notes. It finds **no authority conflict after Product
+   Owner clarification A**: APP-OPS-01 governs Company Operations, CW2-08 governs case-scoped Safety / Moderation.
+5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — the **16 open** questions only the
+   Product Owner can answer: `P4-DQ-01` … `P4-DQ-09` for the residual canon, and `P4-DQ-11` … `P4-DQ-17` for
+   APP-OPS-01. `P4-DQ-10` stays as a resolved record (option A / scope clarification).
 6. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — the future work that is not a P4 decision. It
    includes the mandatory audit fields and the backlog-impact candidate.
 
@@ -87,8 +89,10 @@ Two further markers appear in APP-OPS-01:
 ## 6. What P4-A did not do
 
 - It did not close or freeze P4, or APP-OPS-01.
-- It did not amend CW2-08 or any other authority. The CW2-08 conflict is recorded and stopped at (`P4-DQ-10`).
-- It did not decide any Decision Queue row. It did not write new Product copy. It made no prototype, screenshot or
+- It did not amend CW2-08 or any other authority. No CW2-08 amendment is required by APP-OPS-01 (`P4-DQ-10`,
+  resolved).
+- It did not decide any open Decision Queue row. It only recorded the Product Owner's own resolution of `P4-DQ-10`.
+  It did not write new Product copy. It made no prototype, screenshot or
   design board.
 - It did not implement anything. It did not start P4-B, and it did not start the End-to-End audit.
 - It did not edit the backlog, the Canonical Authority Index, the Canonical Artifact Index, or the P1, P2, P3, G-series,

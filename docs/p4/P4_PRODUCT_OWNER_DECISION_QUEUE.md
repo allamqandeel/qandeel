@@ -6,7 +6,9 @@
 |---|---|
 | Track | P4, task P4-A |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
-| Rule | every row is a choice existing authority does **not** settle. P4-A answers none of them. Where the evidence supports one, a **recommended option** is given. A recommendation is not a decision |
+| Rule | every open row is a choice existing authority does **not** settle. P4-A answers none of them. Where the evidence supports one, a **recommended option** is given. A recommendation is not a decision |
+| Open decisions | **16**: `P4-DQ-01` … `09` and `P4-DQ-11` … `17` |
+| Resolved records | **1**: `P4-DQ-10`, resolved by the Product Owner (option A / scope clarification). It is kept for traceability, blocks nothing and is not counted as open. IDs are not renumbered |
 | Excluded on purpose | an unknown implementation detail is not a Product decision. Such items are in the [Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) instead |
 | Traceability | each row cites its [census](P4_RESIDUAL_GAP_CENSUS.md) rows and, for APP-OPS, its [contract candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) section |
 
@@ -30,7 +32,7 @@ The last two fields of each row mean:
 | `P4-DQ-07` | Boundary: which undrawn screens P4 designs, and which the audit carries | yes | — | no (it is a boundary) |
 | `P4-DQ-08` | Voice visual language: what closes now, and what waits for runtime truth | yes | — | yes |
 | `P4-DQ-09` | Residual copy: which clusters freeze before the audit | yes | — | copy in context |
-| `P4-DQ-10` | **`CONTROLLED AMENDMENT REQUIRED — CW2-08`**: human access in case-scoped moderation | yes (P4 records it) | yes, for the safety-monitoring half | no |
+| `P4-DQ-10` | Scope of the Human Review prohibition — **RESOLVED BY PRODUCT OWNER — OPTION A / SCOPE CLARIFICATION** (record only; not open) | no | no | no |
 | `P4-DQ-11` | `IDENTITY / RETENTION / ACCESS MODEL FOR USER-SPECIFIC OPERATIONAL DIAGNOSTICS` | — | the access principle: yes | no |
 | `P4-DQ-12` | Ratings / reviews: the exact boundary | — | no, if the narrower default is kept | no |
 | `P4-DQ-13` | Control-state freshness, integrity and audit, outside CW2-08 | — | no | no |
@@ -186,20 +188,21 @@ Per cluster:
 
 ## B. APP-OPS-01
 
-### `P4-DQ-10` — `CONTROLLED AMENDMENT REQUIRED — CW2-08`
+### `P4-DQ-10` — Scope of the Human Review prohibition — **RESOLVED BY PRODUCT OWNER — OPTION A / SCOPE CLARIFICATION**
+
+This row is a **resolved decision record**, kept for traceability. It is not open, is not counted among the open
+decisions, and blocks neither P4 nor APP-OPS-01.
 
 | Field | |
 |---|---|
-| Question | How is CW2-08's `CASE_SCOPED_MODERATION_ACCESS` brought into line with `PO-OPS-02`? The Product Owner has decided: no routine **or exceptional** human review of private QANDEEL conversation content as part of Company operations **or safety monitoring** |
-| Why it matters | CW2-08 §8 binds moderator access to "evidence scope" and "authorized role/service/**person**". Its only private-World limit is "No blanket private-World browsing follows from the moderator role itself". So exceptional, case-scoped human access to private conversation evidence is permitted. Both are canonical, and they conflict |
-| Existing authority | CW2-08 §8, H7; and by dependency §7 (`REPORT_CASE`, report evidence), §36 (actor / role audit) and §44 item 5 (moderation / report UX + appeals, still open). The Safety Runtime `ESCALATE` names no human reviewer. CW2-02 §58 defers "moderation/block/report policy" |
-| Not viable | narrowing `PO-OPS-02` to App Operations only (the Product Owner directed against it); reinterpreting CW2-08 §8 as "service only" without an amendment, which would erase its explicit "person"; inventing a replacement moderation mechanism inside P4-A |
-| Viable options | **A.** Amend CW2-08 §8 / H7. `CASE_SCOPED_MODERATION_ACCESS` never grants a person access to private conversation content. A person may act on the case's non-content metadata (target, restriction class, decision, policy basis, audit). Automated Safety processing inside the runtime is unchanged. **B.** Option A, plus an explicit statement on **user-submitted report evidence**: content a reporter chooses to submit is a user-initiated sharing path, which `PO-OPS-02` says needs separate, explicit Product authority. The amendment either forbids it or names the future contract that would govern it. **C.** Option A or B, plus an explicit statement that human moderation of **already-public, owner-published** Public content (CW2-08 §15–§18) is outside `PO-OPS-02`, because it is not private content |
-| Architecture consequences | a controlled change to a frozen CW2 record. The fail-closed Safety / Launch seams (`NOT_EVALUATED`) are unaffected, because no moderation runtime exists. §44 item 5 and the future `I-09` moderation work inherit the amended rule |
-| Recommended | **B + C.** B closes the ambiguity the Product Owner's own text anticipates ("any future user-initiated content-sharing path … is NOT established here"). C prevents the amendment from silently widening into public-content moderation, which the decision's word "private" does not reach. The Product Owner confirms both |
-| Blocks | P4 closure: P4 only records it. APP-OPS-01 closure: **yes**, for the safety-monitoring half (candidate §18.4, §23) |
-| Proof | no |
-| Census / candidate | P4-GAP-057; APP-OPS-01 candidate §18 |
+| Question it settled | Does the `PO-OPS-02` Human Review prohibition reach CW2-08's separate case-scoped Safety / Moderation access? |
+| Decision | **Option A.** The Human Review prohibition belongs to Company Operations / App Operations only. Separate CW2-08 case-scoped Safety / Moderation authority remains unchanged |
+| Decided by | the Product Owner (clarification A), after independent review of P4-A |
+| Effect | Company Operations, the App Operations & Release Lead and the Company Command Center have no routine or exceptional human-review access to private conversation content, and operational diagnostics / telemetry / incident handling expose none. `CASE_SCOPED_MODERATION_ACCESS` (CW2-08 §8, H7) stays valid and unchanged: case-scoped, evidence-scoped, purpose-bound, bound to an authorized role / service / person, validity-bound, auditable, with no blanket private-World browsing |
+| Authority conflict | **none.** APP-OPS-01 and CW2-08 are compatible, separate authorities (candidate §6.3, §18) |
+| CW2-08 | unchanged. **No controlled amendment is required by APP-OPS-01** |
+| Blocks | nothing |
+| Census / candidate | P4-GAP-057; APP-OPS-01 candidate §3 (`PO-OPS-02`), §6, §18 |
 
 ### `P4-DQ-11` — `IDENTITY / RETENTION / ACCESS MODEL FOR USER-SPECIFIC OPERATIONAL DIAGNOSTICS`
 
@@ -207,7 +210,7 @@ Per cluster:
 |---|---|
 | Question | How are user-specific operational diagnostics identified, retained and accessed? |
 | Why it matters | `PO-OPS-04` admits user-specific diagnostics. Existing telemetry deliberately minimizes user linkage |
-| Existing authority, and what it already fixes | **fixed:** no content, no semantic profiling, no human review, purpose limited to troubleshooting / support / reliability (`PO-OPS-02` … `04`). **Fixed:** correlation IDs never become metric labels (Telemetry v1). **Fixed:** the internal `user_id` is never user-facing (P1 §13). **Fixed:** Safety Runtime "Least Data, Least Access, Least Retention, Purpose Limitation". **Existing fact:** outbox envelopes already carry opaque user / session / turn IDs, classed `SENSITIVE`, with `OPERATIONAL_EVENT_V1` retention (Outbox v1). **Not fixed:** see the classification below |
+| Existing authority, and what it already fixes | **fixed:** no content, no semantic profiling, no Company Operations human review, purpose limited to troubleshooting / support / reliability (`PO-OPS-02` … `04`). **Fixed:** correlation IDs never become metric labels (Telemetry v1). **Fixed:** the internal `user_id` is never user-facing (P1 §13). **Fixed:** Safety Runtime "Least Data, Least Access, Least Retention, Purpose Limitation". **Existing fact:** outbox envelopes already carry opaque user / session / turn IDs, classed `SENSITIVE`, with `OPERATIONAL_EVENT_V1` retention (Outbox v1). **Not fixed:** see the classification below |
 | Classification of the parts | (1) **Access principle.** Who may view one user's operational state, and on what trigger. For example: only on a user-initiated support request, or for reliability triage by the App Operations role. **P4 must decide; it is a Product / privacy boundary.** (2) **Identifier format, hashing / pseudonymization, storage location, query mechanism.** **Security / privacy implementation after the audit**, within (1). (3) **Retention duration.** **Security / privacy implementation**, bounded by Least Retention. (4) **Whether aggregate domains (feature usage, cost) may carry per-user linkage at all.** Part of (1) |
 | Viable options, for (1) | **A.** User-linked operational state is viewable only after a user-initiated support request, scoped to that user. **B.** It is viewable by the App Operations role for reliability triage without a user request, audited. **C.** A combination: automated per-user reliability rules without human viewing; human viewing only on a user request |
 | Architecture consequences | A and C need a support-request trigger that is not designed today. B needs audited role access (Production Integration: RBAC, audit log) |
@@ -239,7 +242,7 @@ Per cluster:
 | Existing authority, and what it already forces | **forced:** a control acts only when valid, authenticated and currently effective (approved outage-isolation law). **Forced:** the effective state is runtime-held (candidate §10.1). **Forced:** CW2-08 §5 / §36 give versioning and audit to Safety / launch restrictions. **Forced:** CW2-08 §38 makes old / unknown client state fail safely |
 | Viable options | **A.** Freeze only the principles now. Production Integration's security design chooses TTL, signing, last-known-good and retention. **B.** Freeze specific guarantees now, for example every control versioned and audited, and every Remote Config value expiring to its default |
 | Architecture consequences | B commits the control plane before the audit has named its User Moments |
-| Recommended | **A**, with one addition the Product Owner may wish to freeze now: **every control family is versioned and audited**, extending CW2-08 §5 / §36 to all seven families. That is low-risk and matches existing law |
+| Recommended | **A**, with one addition the Product Owner may wish to freeze now: **every control family is versioned and audited**, extending CW2-08 §5 / §36 to every currently approved family. That is low-risk and matches existing law |
 | Blocks | APP-OPS-01 closure: **no** |
 | Proof | no |
 | Candidate | §10.1, §15 |
@@ -264,8 +267,8 @@ Per cluster:
 |---|---|
 | Question | Do CW2-08 §24–§28, §38 and §40 also bind Personal conversation, Voice, Analysis and the rest of the App? Those laws are: server-canonical flags; client flags as hints; the Launch Gate Snapshot and emergency-disable invalidation; history-preserving disable; multi-user consistency; capability-scoped requirements; fail-safe old clients; fail-closed unknown state |
 | Why it matters | Feature Flags, Kill Switch and Rollout Control are approved app-wide (`PO-OPS-07`). CW2-08 is written for Connected Worlds. Without an answer, a non-Connected-Worlds kill switch has no stated semantics |
-| Existing authority | CW2-08 (Connected Worlds scope); `PO-OPS-13` (app-wide may / may-not invariants); the candidate §10 / §13 |
-| Viable options | **A.** Yes: the same laws apply app-wide, with CW2-08 unchanged as their source for Connected Worlds. **B.** Only the `PO-OPS-13` invariants apply outside Connected Worlds; the flag and snapshot mechanics are chosen per capability later |
+| Existing authority | CW2-08 (Connected Worlds scope); `PO-OPS-07` / `PO-OPS-08` (the approved families; no generic remote execution); the candidate §10 / §13. The may-not limits of candidate §10.2 are `FORCED BY` CW2-08 / CW2-02 in Connected Worlds scope and only **CANDIDATE** outside it |
+| Viable options | **A.** Yes: the same laws apply app-wide, with CW2-08 unchanged as their source for Connected Worlds. **B.** Only the candidate §10.2 may-not limits apply outside Connected Worlds; the flag and snapshot mechanics are chosen per capability later |
 | Architecture consequences | A gives one control model across the App and no second flag authority. B risks two models |
 | Recommended | **A** |
 | Blocks | APP-OPS-01 closure: **yes** |
@@ -310,5 +313,5 @@ The Task Contract §30 suggested these as likely candidates. Each was tested and
 |---|---|
 | Runtime-dependent speaking indicator | P2 §11.1 already decides what can be decided: no fake signal, and truth waits on `QAN-BL-VOICE-01`. What remains is dependency-gated, not a choice (P4-GAP-023) |
 | Stale / unavailable operational-control behavior | the principle is forced by the approved outage law and CW2-08 §40 (candidate §15). Only the mechanism is open, and it sits in `P4-DQ-13` |
-| Exact human-review scope versus CW2-08 moderation | queued, as `P4-DQ-10` |
+| Exact human-review scope versus CW2-08 moderation | resolved by Product Owner clarification A; kept as the `P4-DQ-10` record |
 | Native call behaviors, spoken-reply control, Voice Note transcript | dependency-gated on Voice runtime and provider evidence (P4-GAP-024 … 026) |

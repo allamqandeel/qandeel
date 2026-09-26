@@ -182,7 +182,7 @@ The final roadmap layer is release readiness, including the scopes already owned
 Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
-P1, P2 and P3 are `CLOSED / FROZEN` as Product / design contracts. The next Product discussion/work track is:
+P1, P2 and P3 are `CLOSED / FROZEN` as Product / design contracts. The current Product work track is:
 > **P4 — Remaining Product / Visual Gaps Census & Closure**
-It is deliberately **not yet opened as a Task Contract**. Product discussion comes first.
-After P4, begin the End-to-End Product Experience Completeness Audit.
+P4-A has opened P4. P4 is **ACTIVE** and remains **NOT CLOSED / NOT FROZEN** while its Product decisions and required proofs are resolved before closure.
+The End-to-End Product Experience Completeness Audit starts only after P4 closes.
