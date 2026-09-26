@@ -1,0 +1,926 @@
+{
+ "task": "I-08B3.1-G2.3 — Matching Copy + Return Presentation Amendment Proof",
+ "status": "WORKSHOP / REVIEW CANDIDATE — NOT FROZEN — READY FOR PRODUCT REVIEW",
+ "created": "2026-09-24T09:26:33.642Z",
+ "canonicalMain": "b089c86fb05a286a287a29c32530f39a528df2ad",
+ "brief": {
+  "file": "QANDEEL_G2_3_MATCHING_COPY_RETURN_AMENDMENT.md",
+  "sha256": "266ab716ae5ae83431c1b4bb03c20f697b3a22d802ab948b99022f5fc6dda7f9",
+  "approvedCopyReadFromBrief": {
+   "opening": "قنديل شايف إن في شخص يستحق إنك تتعرف عليه. بناءً على فهمه لكل منكما، شايف إن بينكم مساحة تستحق إنكم تكتشفوها سوا.",
+   "view": "قنديل شايف إن بينكم نقاط اتفاق كثيرة، وفي نفس الوقت في اختلافات تستحق إنكم تفهموها بهدوء. لو قررتوا تبدأوا التعارف، قنديل هيكون معاكم يساعدكم تفهموا بعض، ويتكلم معاكم عن نقاط الاتفاق والاختلاف في الوقت المناسب.",
+   "privacy": "خصوصيتك محفوظة. بياناتك وتحليلاتك الخاصة لن تُعرض على الطرف الآخر، ولن يُشارك منها شيء إلا ما تختار أنت مشاركته. وقنديل هيكون معك خطوة بخطوة لحد ما تكون مرتاح ومطمئن."
+  }
+ },
+ "base": {
+  "task": "I-08B3.1-G2.2 (READY FOR PRODUCT REVIEW, not frozen)",
+  "folder": "design-workshops/I-08B3.1-G2.2-MATCHING-PROCESS-REFINEMENT",
+  "zipSha256": "887DECEFBCE86C33BE768CE05551BC9F7158E8A6EE3116B554D2C37D139451C7",
+  "reusedReadOnly": [
+   "G2.2 source (copied, then changed as sourceDelta shows)",
+   "G2.2 recorded evidence: shots/dark/index.json + captures, validation.json (V5 samples), boards.json (G2.1 measures)",
+   "G2.1 source/vendor (world, fonts, tokens, product-copy.ts)",
+   "G2.1 tools/cdp.mjs, tools/lib/{server,png,measure,audit}.mjs, tools/lib/zipw.cjs"
+  ]
+ },
+ "world": {
+  "path": "docs/design/canonical-artifacts/living-analysis/i-08b1/wf-living-constellation.html",
+  "blob": "0a18a4f6d8f804a0851f1dedfcf1ebc7a1188986",
+  "sha256": "4DFD9D27D752C3A445168C0CC7067D71DF4ADA84BC61B806D12C8BB3202BC413",
+  "inlinedInPrototype": true
+ },
+ "canonRead": [
+  {
+   "path": "docs/inspection-orientation-return-chrome-v1.md",
+   "blob": "5897f18ea7169e69873ffaa9fcaa6915804e4c29",
+   "sections": "§6, §7, §10, §12, §13 (T-08)"
+  },
+  {
+   "path": "docs/responsive-recomposition-v1.md",
+   "blob": "9071da9e9409cc8d0653ba009ae765538288d532",
+   "sections": "§1, §4, §10, §14, §16 (T-11 — NOT edited)"
+  },
+  {
+   "path": "docs/matching-introduction-runtime-v1.md",
+   "blob": "a62afd4e7d69f0d886432876729cbd66565668bf",
+   "sections": "§18–§22, §31, §35 (privacy, first vs second recipient)"
+  },
+  {
+   "path": "docs/design/canonical-artifacts/brand/i-08b2.5/masters/QANDEEL_Q_BASE_MASTER.svg",
+   "blob": "70e795b8741333f547a36379d97035eb467130b2",
+   "use": "the cue Q is proved identical (C6)"
+  }
+ ],
+ "source": [
+  {
+   "path": ".i08b31-g23-work/source/src/app.js",
+   "bytes": 64502,
+   "sha256": "e2b507f5a7de20b95e254f6162a743684fd0d6734530ce0310695dd923e3507b"
+  },
+  {
+   "path": ".i08b31-g23-work/source/src/bidi.js",
+   "bytes": 1534,
+   "sha256": "40f8033a3031f3327e2e0674b64a8a72366d32a744086e87a9c6d4388ef608b5"
+  },
+  {
+   "path": ".i08b31-g23-work/source/src/bridge.js",
+   "bytes": 9025,
+   "sha256": "2846017daa93803def4c5ceec86f7a1831ca5c27a49914b6c6182deb5f3396db"
+  },
+  {
+   "path": ".i08b31-g23-work/source/src/build.mjs",
+   "bytes": 39497,
+   "sha256": "72b76743e8abaef587e9484ecdc835ae2632249ad617f1fdf9388bc84edd44bf"
+  },
+  {
+   "path": ".i08b31-g23-work/source/src/content.mjs",
+   "bytes": 22972,
+   "sha256": "ae06f3805d80b8dbdf4d1886bb649f6caf791f5fbc95de9a28732f2bf97124e5"
+  },
+  {
+   "path": ".i08b31-g23-work/source/src/glyphs.mjs",
+   "bytes": 8970,
+   "sha256": "2290e460d5fd0046b81675d2f04c96a678e68f3da03f3fa15ceb72759343940e"
+  },
+  {
+   "path": ".i08b31-g23-work/source/src/tokens.mjs",
+   "bytes": 6692,
+   "sha256": "d4759be24cdaeff3599da48079a5bc02c7387caa67d0ec6c175b02042de2ca47"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/boards.mjs",
+   "bytes": 33503,
+   "sha256": "5acb3680c882bb9a3d620cc7c50b926e518cc7913bdd7b7a3a8e778974ab38fd"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/frames.mjs",
+   "bytes": 5764,
+   "sha256": "49331c6f21f69e65f1bea62bcd5880a68e52517530f75bb30d8ca230df18e9e0"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/livecheck.mjs",
+   "bytes": 10406,
+   "sha256": "6e78783ba716bce4a2a019e01c94da63cd1a5c6785635385c5d46f282913bc6a"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/package.mjs",
+   "bytes": 12799,
+   "sha256": "2099a219c87a10c16b503fdab56826d621d96b9a70d908625a054e40c7e87acd"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/pipeline.mjs",
+   "bytes": 1487,
+   "sha256": "10e575af29c692b8359f93e4d2af7da781c2cee10496dedef3573f841643e417"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/pxdiff.mjs",
+   "bytes": 1624,
+   "sha256": "10ff90f93c85d19fd5cb486db13c17b585307fd3e3f21f019aece633a45f200f"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/readme.mjs",
+   "bytes": 10094,
+   "sha256": "65b829eb0610b4688de46f90426ff543a2260d6eb7486b9882f88005c78262c6"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/shots.mjs",
+   "bytes": 8337,
+   "sha256": "8aa4a9f915ee87041f35caaf7322e72c1758d12f27bd0fb5a9badc42548b9a06"
+  },
+  {
+   "path": ".i08b31-g23-work/tools/validate.mjs",
+   "bytes": 32829,
+   "sha256": "5f2c319d2807701a71f1f943a0bc7ef9a3b124d83d86045f41b2d32246a97786"
+  }
+ ],
+ "sourceDelta": [
+  {
+   "file": "app.js",
+   "sha256": "e2b507f5a7de20b95e254f6162a743684fd0d6734530ce0310695dd923e3507b",
+   "g22Sha256": "771c5fdb5d172f204774cc57f7b5ba50d89a1e6eadfbcb0c8cdfc26142843f68",
+   "identicalToG22": false
+  },
+  {
+   "file": "bidi.js",
+   "sha256": "40f8033a3031f3327e2e0674b64a8a72366d32a744086e87a9c6d4388ef608b5",
+   "g22Sha256": "40f8033a3031f3327e2e0674b64a8a72366d32a744086e87a9c6d4388ef608b5",
+   "identicalToG22": true
+  },
+  {
+   "file": "bridge.js",
+   "sha256": "2846017daa93803def4c5ceec86f7a1831ca5c27a49914b6c6182deb5f3396db",
+   "g22Sha256": "2846017daa93803def4c5ceec86f7a1831ca5c27a49914b6c6182deb5f3396db",
+   "identicalToG22": true
+  },
+  {
+   "file": "build.mjs",
+   "sha256": "72b76743e8abaef587e9484ecdc835ae2632249ad617f1fdf9388bc84edd44bf",
+   "g22Sha256": "7aff5fe01efad9c8a13fe002ee72d63a5cfc8644423f3e1b1910f56d8ff52fa3",
+   "identicalToG22": false
+  },
+  {
+   "file": "content.mjs",
+   "sha256": "ae06f3805d80b8dbdf4d1886bb649f6caf791f5fbc95de9a28732f2bf97124e5",
+   "g22Sha256": "f417bd7c8bbdb0d4e46f9083b3955a5f732673ecb9f8aa37ff2c5cda8dd64a09",
+   "identicalToG22": false
+  },
+  {
+   "file": "glyphs.mjs",
+   "sha256": "2290e460d5fd0046b81675d2f04c96a678e68f3da03f3fa15ceb72759343940e",
+   "g22Sha256": "2290e460d5fd0046b81675d2f04c96a678e68f3da03f3fa15ceb72759343940e",
+   "identicalToG22": true
+  },
+  {
+   "file": "tokens.mjs",
+   "sha256": "d4759be24cdaeff3599da48079a5bc02c7387caa67d0ec6c175b02042de2ca47",
+   "g22Sha256": "d4759be24cdaeff3599da48079a5bc02c7387caa67d0ec6c175b02042de2ca47",
+   "identicalToG22": true
+  }
+ ],
+ "appearanceCodeUnchanged": {
+  "all": true,
+  "items": [
+   {
+    "where": "app.js function blend",
+    "same": true
+   },
+   {
+    "where": "app.js function appearance",
+    "same": true
+   },
+   {
+    "where": "app.js function applyAppearance",
+    "same": true
+   },
+   {
+    "where": "app.js function hexRgb",
+    "same": true
+   },
+   {
+    "where": "app.js function mixRgb",
+    "same": true
+   },
+   {
+    "where": "app.js function paint",
+    "same": true
+   },
+   {
+    "where": "app.js function enterAnalysis",
+    "same": true
+   },
+   {
+    "where": "app.js function leaveAnalysis",
+    "same": true
+   },
+   {
+    "where": "app.js function closeProposal",
+    "same": true
+   },
+   {
+    "where": "app.js function enterShared",
+    "same": true
+   },
+   {
+    "where": "app.js MIXV / MIX_EL",
+    "same": true
+   },
+   {
+    "where": "app.js system-appearance listener",
+    "same": true
+   },
+   {
+    "where": "build.mjs vars()",
+    "same": true
+   },
+   {
+    "where": "build.mjs PALETTES",
+    "same": true
+   },
+   {
+    "where": "build.mjs: #phone[data-appearance=\"dark\"]{${vars('dark')}}",
+    "same": true
+   },
+   {
+    "where": "build.mjs: #phone[data-appearance=\"light\"]{${vars('light')}}",
+    "same": true
+   },
+   {
+    "where": "build.mjs: #phone .dk{${vars('dark')}}",
+    "same": true
+   },
+   {
+    "where": "build.mjs: ph.setAttribute('data-appearance',p.get('appearance')||sys());",
+    "same": true
+   },
+   {
+    "where": "tokens.mjs (the resolved palettes)",
+    "same": true
+   },
+   {
+    "where": "bridge.js (the world driver)",
+    "same": true
+   },
+   {
+    "where": "built page: the Analysis dark scope (#phone .dk{…}) as shipped",
+    "same": true
+   }
+  ],
+  "consequence": "brief §8: the Analysis appearance code is G2.2's, so the Dark / Light 11-frame proof was not rerun (G2.2 V7 stands)"
+ },
+ "validation": {
+  "ran": "2026-09-24T09:25:25.446Z",
+  "host": "Windows 11, headless Chrome (GPU raster), CDP",
+  "passed": 11,
+  "of": 11,
+  "results": [
+   {
+    "id": "C1",
+    "title": "Living Analysis canonical hash unchanged",
+    "pass": true,
+    "detail": "pin 4DFD9D27D752… = the blob on main b089c86fb (0a18a4f6d8f8) (true) = the vendored copy G2.1 / G2.2 / G2.3 read (true) = the bytes inlined in prototype/index.html (true) = the page's own SHA-256 check before loading (true)"
+   },
+   {
+    "id": "C2",
+    "title": "Repository tracked files unchanged; no branch, commit or PR",
+    "pass": true,
+    "detail": "HEAD 7eb2017da = the baseline taken before G2.3 wrote anything (true); branch fix/connected-worlds-rem03-privacy-cross-phase-governance, unchanged; 0 tracked changes (canonical T-11 docs/responsive-recomposition-v1.md untouched); 40 untracked files under apps/ packages/ database/ docs/ — all pre-existing and byte-identical to the baseline (0 differ); no G2.3 branch, local or remote"
+   },
+   {
+    "id": "C3",
+    "title": "The approved opening message appears exactly",
+    "pass": true,
+    "detail": "the D1 text, read from the brief file itself (113 characters), is the cue's visible text, code point for code point, at 390 × 844 FAR and MID and at 320 × 568 (true · true · true); the cue's accessible name begins with it (true); its two sentences start their own lines (1+2 lines · 1+2 lines · 2+3 lines) and rejoin exactly; the G2.2 cue is gone from the page (true); the completed Q sits beside it (see C6)"
+   },
+   {
+    "id": "C4",
+    "title": "The approved QANDEEL-view / privacy message appears exactly",
+    "pass": true,
+    "detail": "both D2 paragraphs, read from the brief file itself, are the proposal's text exactly — QANDEEL's view, then the privacy message — for the first and the second accepter, after the first accepter's decision, at 390 × 844 and 320 × 568, under system Dark and system Light (6 renders: view true, privacy true, in that order true); the privacy message's first sentence is a run-in lead that rejoins exactly (the build refuses otherwise)"
+   },
+   {
+    "id": "C5",
+    "title": "No specific agreement / disagreement details in the Product proposal",
+    "pass": true,
+    "detail": "every visible text block in every proposal render (7 renders, 38 blocks) is exactly one of: the back label, the approved view, the approved privacy message (its lead and its rest), what continuing does, the two decisions, the acknowledgement, the unavailable line (0 other); 0 lists (ul / ol / li) in the proposal (0 found); none of G2.2's three reasons, its frame line or its \"offer, not verdict\" note — nor 7 of their key fragments — exists anywhere in the built page (0 found). The only agreement / difference words are the approved ones, which name no trait, similarity or difference."
+   },
+   {
+    "id": "C6",
+    "title": "No candidate name, photo, score, %, ranking or feed",
+    "pass": true,
+    "detail": "15 Matching renders scanned (Dark, Light, 320 × 568): 0 score / ranking / % words, 0 numbers (the only digits are the Shared World's time «اليوم 9:41» / «اليوم 9:18»), 0 names (the fixture's one name is the reader's own, in the Conversation only), 0 images or photos in the prototype, at most ONE Matching item on screen in any state (1): no list, no feed, no candidate card; the world's own state is identical with and without Matching (true): no candidate object enters it; the cue's mark is the completed QANDEEL Q — paths identical and viewBox identical to the I-08B2.5 master on main (blob 70e795b87413)"
+   },
+   {
+    "id": "C7",
+    "title": "P3 / P4 keep exactly G2.2's underlying Return offered sets",
+    "pass": true,
+    "detail": "P2: offered BACK_ONE_STEP · RETURN_WORLD — identical to G2.2's recorded P2 and to G2.1's (true), same reasons (true), same shown / grouped acts (true), same T-08 sentences (true); the whole frame vs G2.2's capture: 0 px differ | P3: offered BACK_ONE_STEP · EXACT_RETURN · RETURN_WORLD — identical to G2.2's recorded R_P3_COMPACT and to G2.1's (true), same reasons (true), same shown / grouped acts (true), same T-08 sentences (true); the whole frame vs G2.2's capture: 0 px differ | P3_OPEN: offered BACK_ONE_STEP · EXACT_RETURN · RETURN_WORLD — identical to G2.2's recorded R_P3_OPEN and to G2.1's (true), same reasons (true), same shown / grouped acts (true), same T-08 sentences (true); the whole frame vs G2.2's capture: 0 px differ | P4: offered BACK_ONE_STEP · RETURN_LIVE_HEAD · RETURN_WORLD · GO_LIVE_AND_LOCATE — identical to G2.2's recorded R_P4_COMPACT and to G2.1's (true), same reasons (true), same shown / grouped acts (true), same T-08 sentences (true); the whole frame vs G2.2's capture: 0 px differ | P4_OPEN: offered BACK_ONE_STEP · RETURN_LIVE_HEAD · RETURN_WORLD · GO_LIVE_AND_LOCATE — identical to G2.2's recorded R_P4_OPEN and to G2.1's (true), same reasons (true), same shown / grouped acts (true), same T-08 sentences (true); the whole frame vs G2.2's capture: 0 px differ"
+   },
+   {
+    "id": "C8",
+    "title": "«طرق العودة» contains only secondary Return acts",
+    "pass": true,
+    "detail": "opened in P2, P3 and P4, «طرق العودة» discloses exactly the offered acts other than the dominant one, in T-08's order, each with its frozen T-08 label (verbatim in product-copy.ts) — 1 · 2 · 3 acts, none twice, nothing that is not a Return act; the trigger is T-08's own «طرق العودة» with aria-expanded / aria-controls; no generic More / Options / overflow word anywhere on screen. The closed rule over 11 offered sets (11 correct): one act never gets «طرق العودة»; nothing offered renders no group; with no dominant act every act is shown directly. G2.2's rule gives the same answer in every row this fixture can reach and differs only in: no Back, not PINNED (unreachable here); origin + World, no Back (unreachable here)"
+   },
+   {
+    "id": "C9",
+    "title": "The dominant Return act stays directly visible",
+    "pass": true,
+    "detail": "P2: BACK_ONE_STEP (band) shown directly — visible, labelled with its T-08 words, ≥ 44 pt, and a real press at its centre reaches it (true) · P3: BACK_ONE_STEP (band) shown directly — visible, labelled with its T-08 words, ≥ 44 pt, and a real press at its centre reaches it (true) · P3_OPEN: BACK_ONE_STEP (band) shown directly — visible, labelled with its T-08 words, ≥ 44 pt, and a real press at its centre reaches it (true) · P4: RETURN_LIVE_HEAD (live edge) shown directly — visible, labelled with its T-08 words, ≥ 44 pt, and a real press at its centre reaches it (true) · P4_OPEN: RETURN_LIVE_HEAD (live edge) shown directly — visible, labelled with its T-08 words, ≥ 44 pt, and a real press at its centre reaches it (true) — with «طرق العودة» closed AND open, the dominant act never moves into the group"
+   },
+   {
+    "id": "C10",
+    "title": "The first and second accepter processes stay distinct — and unchanged from G2.2",
+    "pass": true,
+    "detail": "second accepter: their own «أكمّل» commits (proceed→born/born); the proposal dissolves, an empty beat (true), the World RISES (true), QANDEEL's welcome arrives after it (true), «اليوم 9:41». First accepter: a system arrival, then their own tap (matchArrives→arrived/- · enterShared→entered/entered); no rise (true), the welcome already there on every sample (true), «اليوم 9:18». Sampled exactly as G2.2's V5: all 26 samples are identical to G2.2's recorded numbers (second true, first true); the 12 Matching state-machine functions are G2.2's, statement for statement (12/12; the only addition is openProposal's scroll reset)"
+   },
+   {
+    "id": "C11",
+    "title": "The Shared World contains no private Matching reasoning",
+    "pass": true,
+    "detail": "the born and the entered Shared World show its kind «العالم المشترك», its phase «تعارف», a time and QANDEEL's welcome — none of the 14 Matching sentences (every sentence of both approved messages included), none of 15 key fragments (agreement, differences, privacy, data, analyses, the other side, the reasons G2.2 had, a name): 0 found; no proposal or cue text is on screen there (true); Replay is not offered there (true)"
+   }
+  ],
+  "C12": "checked at packaging: this manifest lists every other file; the ZIP is read back entry by entry against the folder; its SHA-256 is written beside it (.zip.sha256)"
+ },
+ "frames": {
+  "second-accepter-match": {
+   "who": "B",
+   "startState": "M2_PROPOSAL_B",
+   "events": [
+    {
+     "at": 800,
+     "tap": "#proceed",
+     "act": "proceed"
+    }
+   ],
+   "instantsMs": [
+    767,
+    817,
+    900,
+    1000,
+    1117,
+    1200,
+    1300,
+    2400
+   ],
+   "commits": [
+    {
+     "at": 800,
+     "act": "proceed",
+     "place": "shared",
+     "matching": "born",
+     "sharedHow": "born",
+     "cue": null
+    }
+   ]
+  },
+  "first-accepter-arrival": {
+   "who": "A",
+   "startState": "M3_AFTER",
+   "events": [
+    {
+     "at": 700,
+     "system": "matchArrives"
+    },
+    {
+     "at": 2300,
+     "tap": "#cue",
+     "finger": "#cue-act",
+     "act": "enterShared"
+    }
+   ],
+   "instantsMs": [
+    600,
+    750,
+    833,
+    1600,
+    2267,
+    2350,
+    2450,
+    2533,
+    3400
+   ],
+   "commits": [
+    {
+     "at": 700,
+     "act": "matchArrives",
+     "place": "analysis",
+     "matching": "arrived",
+     "sharedHow": null,
+     "cue": "arrival"
+    },
+    {
+     "at": 2300,
+     "act": "enterShared",
+     "place": "shared",
+     "matching": "entered",
+     "sharedHow": "entered",
+     "cue": null
+    }
+   ]
+  },
+  "cue-arrives": {
+   "who": "A",
+   "startState": "P1",
+   "events": [
+    {
+     "at": 300,
+     "system": "showCue"
+    }
+   ],
+   "instantsMs": [
+    300,
+    370,
+    440,
+    510,
+    580,
+    900
+   ],
+   "commits": [
+    {
+     "at": 300,
+     "act": "showCue",
+     "place": "analysis",
+     "matching": "available",
+     "sharedHow": null,
+     "cue": "awaiting"
+    }
+   ]
+  },
+  "proposal-opens": {
+   "who": "A",
+   "startState": "M1_CUE",
+   "events": [
+    {
+     "at": 300,
+     "tap": "#cue",
+     "finger": "#cue-act",
+     "act": "openProposal"
+    }
+   ],
+   "instantsMs": [
+    300,
+    400,
+    460,
+    520,
+    600,
+    700,
+    1000
+   ],
+   "commits": [
+    {
+     "at": 300,
+     "act": "openProposal",
+     "place": "proposal",
+     "matching": "reviewing",
+     "sharedHow": null,
+     "cue": null
+    }
+   ]
+  }
+ },
+ "motionReference": {
+  "note": "no new motion was recorded (brief §10): the longer copy breaks no transition. G2.2's clips remain the motion; their opening frames carry G2.2's superseded proposal words.",
+  "clips": [
+   {
+    "path": "design-workshops/I-08B3.1-G2.2-MATCHING-PROCESS-REFINEMENT/motion/second-accepter-match.mp4",
+    "bytes": 754938,
+    "sha256": "51776272cd1c009e58a73b8f60367f38cf0bd69cc821f30a340a1016024ae093"
+   },
+   {
+    "path": "design-workshops/I-08B3.1-G2.2-MATCHING-PROCESS-REFINEMENT/motion/first-accepter-arrival.mp4",
+    "bytes": 1974042,
+    "sha256": "229cd3b7b3521cac4362232d7fec1c441d292b915f2f616e4d317f5a2997ebfa"
+   }
+  ]
+ },
+ "boards": [
+  {
+   "file": "01-compact-return-p3.png",
+   "width": 1680,
+   "height": 1404,
+   "bytes": 598102
+  },
+  {
+   "file": "02-compact-return-p4.png",
+   "width": 2391,
+   "height": 1544,
+   "bytes": 580096
+  },
+  {
+   "file": "03-matching-opening-cue.png",
+   "width": 2154,
+   "height": 1378,
+   "bytes": 831055
+  },
+  {
+   "file": "04-qandeel-proposal-view.png",
+   "width": 1656,
+   "height": 1738,
+   "bytes": 494714
+  },
+  {
+   "file": "05-first-accepter.png",
+   "width": 1686,
+   "height": 1570,
+   "bytes": 500681
+  },
+  {
+   "file": "06-second-accepter-match.png",
+   "width": 1718,
+   "height": 960,
+   "bytes": 187055
+  },
+  {
+   "file": "07-first-accepter-later-arrival.png",
+   "width": 1744,
+   "height": 911,
+   "bytes": 267156
+  },
+  {
+   "file": "08-shared-world-handoff.png",
+   "width": 1975,
+   "height": 1002,
+   "bytes": 183603
+  }
+ ],
+ "returnMetrics": {
+  "compact": {
+   "P3": {
+    "rows": 2,
+    "words": 9,
+    "acts": 1,
+    "height": 72,
+    "share": 0.645,
+    "worstContrast": 5.04
+   },
+   "P4": {
+    "rows": 2,
+    "words": 11,
+    "acts": 1,
+    "height": 72,
+    "share": 0.645,
+    "worstContrast": 5.14
+   }
+  },
+  "g21AsMeasuredByG22": {
+   "P3": {
+    "rows": 3,
+    "words": 15,
+    "acts": 3,
+    "controls": 4,
+    "height": 116,
+    "top": 556,
+    "share": 0.577,
+    "worstContrast": 5.04
+   },
+   "P4": {
+    "rows": 4,
+    "words": 22,
+    "acts": 4,
+    "controls": 4,
+    "height": 141,
+    "top": 531,
+    "share": 0.543,
+    "worstContrast": 5
+   }
+  }
+ },
+ "cue": {
+  "FAR": {
+   "height": 112,
+   "s1": 1,
+   "s2": 2,
+   "worst": {
+    "where": "#cue-act",
+    "text": "ليه؟",
+    "min": 5.4,
+    "p5": 5.43,
+    "median": 5.47,
+    "n": 2100,
+    "threshold": 4.5
+   }
+  },
+  "MID": {
+   "height": 112,
+   "worst": {
+    "where": "#cue-act",
+    "text": "ليه؟",
+    "min": 5.11,
+    "p5": 5.33,
+    "median": 5.4,
+    "n": 2100,
+    "threshold": 4.5
+   }
+  },
+  "g22Height": 84
+ },
+ "liveCheck": {
+  "ran": "2026-09-24T09:25:57.993Z",
+  "ok": true,
+  "steps": [
+   {
+    "label": "panel: first accepter",
+    "ok": true
+   },
+   {
+    "label": "Analysis: a proposal awaits → the cue (approved opening message)",
+    "ok": true
+   },
+   {
+    "label": "tap the cue → the private proposal",
+    "ok": true
+   },
+   {
+    "label": "header fix: the proposal's own back button takes the press",
+    "ok": true
+   },
+   {
+    "label": "«تحليل المحادثة» (back) → the Analysis, the proposal still awaits",
+    "ok": true
+   },
+   {
+    "label": "tap the cue again → the proposal",
+    "ok": true
+   },
+   {
+    "label": "«أكمّل» → the first accepter's acknowledgement",
+    "ok": true
+   },
+   {
+    "label": "back → the Analysis, nothing pending",
+    "ok": true
+   },
+   {
+    "label": "the other side agrees → the later arrival in the Q place",
+    "ok": true
+   },
+   {
+    "label": "tap «عالمكم المشترك» → the World that already exists",
+    "ok": true
+   },
+   {
+    "label": "panel: second accepter",
+    "ok": true
+   },
+   {
+    "label": "panel: M2 proposal (second accepter)",
+    "ok": true
+   },
+   {
+    "label": "«أكمّل» → the Mutual Match: the World is born",
+    "ok": true
+   },
+   {
+    "label": "panel: first accepter again",
+    "ok": true
+   },
+   {
+    "label": "panel: P3 → Back shown directly, the rest under «طرق العودة»",
+    "ok": true
+   },
+   {
+    "label": "«طرق العودة» opens (a real click)",
+    "ok": true
+   },
+   {
+    "label": "Escape closes it, focus stays on «طرق العودة»",
+    "ok": true
+   },
+   {
+    "label": "open again, then the disclosed «العودة إلى العالم كله» does its own act",
+    "ok": true
+   },
+   {
+    "label": "…and focus lands back on «طرق العودة», not on the page",
+    "ok": true
+   },
+   {
+    "label": "keyboard: Enter on «طرق العودة» opens it",
+    "ok": true
+   },
+   {
+    "label": "keyboard: Tab reaches the disclosed act right after the trigger, in T-08 order",
+    "ok": true
+   },
+   {
+    "label": "keyboard: Escape closes it again",
+    "ok": true
+   },
+   {
+    "label": "panel: P4 → the Live Head at the live edge, the rest under «طرق العودة»",
+    "ok": true
+   },
+   {
+    "label": "«طرق العودة» opens",
+    "ok": true
+   },
+   {
+    "label": "«طرق العودة» closes by its own click",
+    "ok": true
+   },
+   {
+    "label": "the live edge «العودة إلى المحادثة الجارية» does its own act",
+    "ok": true
+   },
+   {
+    "label": "panel: Analysis FAR",
+    "ok": true
+   },
+   {
+    "label": "system → Light: the Analysis stays dark (D5 unchanged)",
+    "ok": true
+   }
+  ],
+  "errors": []
+ },
+ "copy": [
+  {
+   "key": "matchCue",
+   "ar": "قنديل شايف إن في شخص يستحق إنك تتعرف عليه. بناءً على فهمه لكل منكما، شايف إن بينكم مساحة تستحق إنكم تكتشفوها سوا.",
+   "en": "Qandeel sees that there is someone worth your getting to know. Based on its understanding of each of you, it sees between you a space worth discovering together.",
+   "status": "PO-APPROVED (G2.3)",
+   "note": "D1 — the opening message, verbatim; AWAITING_YOU"
+  },
+  {
+   "key": "propView",
+   "ar": "قنديل شايف إن بينكم نقاط اتفاق كثيرة، وفي نفس الوقت في اختلافات تستحق إنكم تفهموها بهدوء. لو قررتوا تبدأوا التعارف، قنديل هيكون معاكم يساعدكم تفهموا بعض، ويتكلم معاكم عن نقاط الاتفاق والاختلاف في الوقت المناسب.",
+   "en": "Qandeel sees many points of agreement between you, and at the same time differences worth understanding calmly. If you decide to begin the introduction, Qandeel will be with you, helping you understand each other, and will talk with you about the points of agreement and difference at the right time.",
+   "status": "PO-APPROVED (G2.3)",
+   "note": "D2 — QANDEEL's view, verbatim. Replaces the G2.2 three-reason list; no trait, similarity or difference is named before the Introduction"
+  },
+  {
+   "key": "propPrivacy",
+   "ar": "خصوصيتك محفوظة. بياناتك وتحليلاتك الخاصة لن تُعرض على الطرف الآخر، ولن يُشارك منها شيء إلا ما تختار أنت مشاركته. وقنديل هيكون معك خطوة بخطوة لحد ما تكون مرتاح ومطمئن.",
+   "en": "Your privacy is protected. Your private data and analyses will not be shown to the other side, and nothing of them will be shared except what you yourself choose to share. And Qandeel will be with you step by step until you feel comfortable and reassured.",
+   "status": "PO-APPROVED (G2.3)",
+   "note": "D2 — the privacy message, verbatim"
+  },
+  {
+   "key": "matchCueAct",
+   "ar": "ليه؟",
+   "en": "Why?",
+   "status": "PROOF COPY — OPEN",
+   "note": "the cue's ONE action label (G2.2 candidate, not frozen — brief §15)"
+  },
+  {
+   "key": "propNextA",
+   "ar": "لو كمّلت، هيتعرض التعارف على الطرف التاني.",
+   "en": "If you continue, the introduction will be offered to the other side.",
+   "status": "PROOF COPY — OPEN",
+   "note": "FIRST_RECIPIENT: continuing approves forwarding (runtime §14, §21). G2.3 drops G2.2's second clause («ومش هيشوف عنك غير اللي سمحت بيه»): the approved privacy message now says it, and saying it twice reads as small print"
+  },
+  {
+   "key": "propNextB",
+   "ar": "لو كمّلت، هيتفتح لكم عالم مشترك للتعارف على طول.",
+   "en": "If you continue, a shared world for your introduction opens for you both, right away.",
+   "status": "PROOF COPY — OPEN",
+   "note": "CANDIDATE: continuing IS the Mutual Match commit (I-07C §27) — the reader must know before pressing"
+  },
+  {
+   "key": "proceed",
+   "ar": "أكمّل",
+   "en": "Continue",
+   "status": "PROOF COPY — OPEN",
+   "note": "interested in proceeding; first person, gender-neutral"
+  },
+  {
+   "key": "notNow",
+   "ar": "لأ، شكراً",
+   "en": "No, thanks",
+   "status": "PROOF COPY — OPEN",
+   "note": "not interested; CLOSED_BY_YOU"
+  },
+  {
+   "key": "ack",
+   "ar": "وصل ردّك لقنديل، ولو جدّ جديد هيقولك.",
+   "en": "Your answer reached Qandeel, and if something new happens, he will tell you.",
+   "status": "PROOF COPY — OPEN",
+   "note": "IN_PROGRESS, as the reader may see it: received; the rest stays private until a new truth exists"
+  },
+  {
+   "key": "unavailable",
+   "ar": "التعارف ده مبقاش متاح.",
+   "en": "This introduction is no longer available.",
+   "status": "PROOF COPY — OPEN",
+   "note": "NO_LONGER_AVAILABLE — one answer for every hidden cause (runtime §21, §31)"
+  },
+  {
+   "key": "endedAct",
+   "ar": "تمام",
+   "en": "OK",
+   "status": "PROOF COPY — OPEN",
+   "note": "dismisses the ended notice (first accepter only)"
+  },
+  {
+   "key": "arrivalLine",
+   "ar": "الطرفين وافقوا على التعارف",
+   "en": "Both sides agreed to the introduction",
+   "status": "PROOF COPY — OPEN",
+   "note": "MATCH_CONCLUDED for the first accepter: the new truth, not a replay of their own press"
+  },
+  {
+   "key": "arrivalAct",
+   "ar": "عالمكم المشترك",
+   "en": "Your shared world",
+   "status": "PROOF COPY — OPEN",
+   "note": "names the place that already exists"
+  },
+  {
+   "key": "phaseIntroduction",
+   "ar": "تعارف",
+   "en": "Introduction",
+   "status": "PROOF COPY — OPEN",
+   "note": "the INTRODUCTION phase, named plainly"
+  },
+  {
+   "key": "welcome",
+   "ar": "أهلاً بيكم. أنا هنا معاكم في البداية، وكل واحد فيكم يقرر يشارك إيه وإمتى.",
+   "en": "Welcome, both of you. I'm here with you at the start, and each of you decides what to share and when.",
+   "status": "PROOF COPY — OPEN",
+   "note": "QANDEEL may welcome the pair (L1280–1284); disclosure is each human's own grant"
+  },
+  {
+   "key": "revealReturns",
+   "ar": "طرق العودة",
+   "en": "Ways back (T-08's own group name)",
+   "status": "FROZEN-T08",
+   "note": "T-08 returnControlsLabel, verbatim; the Product Owner named it as the ONE affordance for secondary Return acts (G2.3 §4)"
+  },
+  {
+   "key": "sharedTitle",
+   "ar": "العالم المشترك",
+   "en": "Shared World",
+   "status": "LOCKED-G1",
+   "note": "G1.2 closure §3 — the rail label, reused as the destination's name"
+  }
+ ],
+ "files": [
+  {
+   "path": "G2.3_DECISIONS.md",
+   "bytes": 14921,
+   "sha256": "07cb5bb2bfb47717f011896dd846235993bf7296d20e656e48ef9230b06577aa"
+  },
+  {
+   "path": "G2.3_OPEN_QUESTIONS.md",
+   "bytes": 5581,
+   "sha256": "2483abd715741a08f7025ac005807af0df1472dd391f0b650e4f77582a4526cf"
+  },
+  {
+   "path": "G2.3_T11_RETURN_PRESENTATION_AMENDMENT_CANDIDATE.md",
+   "bytes": 11540,
+   "sha256": "11e009817133525786d2cb9eeeddaf903cb50c95fb0a21d2a2e9899b0c46bbcb"
+  },
+  {
+   "path": "README.md",
+   "bytes": 17070,
+   "sha256": "61299856e5b4712cd568d9720103e4c903df7ac3d5bfbcb99e413ee53d2d88a3"
+  },
+  {
+   "path": "boards/01-compact-return-p3.png",
+   "bytes": 598102,
+   "sha256": "470ce03ffe34800944cc34aa445989af32be6634d4fc74fc367e974f86fbc218"
+  },
+  {
+   "path": "boards/02-compact-return-p4.png",
+   "bytes": 580096,
+   "sha256": "dd56283bd057ad77863ee3c27b25b1403dd67d3c32ac66627215a00cb600ebd7"
+  },
+  {
+   "path": "boards/03-matching-opening-cue.png",
+   "bytes": 831055,
+   "sha256": "a6a48b1f54ab50766aa3513f11a05c51de546abc22ea4222e2a99b4a4a049647"
+  },
+  {
+   "path": "boards/04-qandeel-proposal-view.png",
+   "bytes": 494714,
+   "sha256": "5a1c7e787fd209345258c32f5075638f508d035412594fbcd3438e7b88e71b73"
+  },
+  {
+   "path": "boards/05-first-accepter.png",
+   "bytes": 500681,
+   "sha256": "6a3a37055b7f65b3cf69ec8521b506ec9c646ef013c7b099a669bc4694eda552"
+  },
+  {
+   "path": "boards/06-second-accepter-match.png",
+   "bytes": 187055,
+   "sha256": "ef458f161a20adf118ed85e9b49926ce188aeea2e44e9522c5663039be0fb724"
+  },
+  {
+   "path": "boards/07-first-accepter-later-arrival.png",
+   "bytes": 267156,
+   "sha256": "955ec3e8b135c36d52b10ad6605a995927e80b8688519b91bc374f69118787e2"
+  },
+  {
+   "path": "boards/08-shared-world-handoff.png",
+   "bytes": 183603,
+   "sha256": "9b0370957582e08faca32f8853cadbbecabbf1806fc1aa2e60b07dbdebef0266"
+  },
+  {
+   "path": "prototype/index.html",
+   "bytes": 1308967,
+   "sha256": "f0b11310ac9561bc7c14f3dfa2864eb450b78d02d9adb6e747ba1d56b9680bec"
+  }
+ ],
+ "fileCount": 14
+}

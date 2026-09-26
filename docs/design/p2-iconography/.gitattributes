@@ -1,0 +1,6 @@
+# The P2-A package is verified byte-for-byte by its MANIFEST.json (SHA-256 per file). Never let git normalise line
+# endings here, on any checkout, or the recorded hashes stop matching.
+* -text
+# The vendored canon (byte-exact copies of the G3.2 package's vendored records, with Markdown hard-break trailing spaces)
+# and the vendored licences are evidence and are never normalised, so git's whitespace checks do not apply to them.
+QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/source/vendor/** -whitespace
