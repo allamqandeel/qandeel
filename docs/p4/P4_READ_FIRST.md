@@ -9,7 +9,8 @@
 | | |
 |---|---|
 | Repository | `allamqandeel/qandeel` |
-| Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` (GitHub `main`, PR #277) |
+| P4-A census baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` (pre-P4 canonical main after PR #277) |
+| P4-B amendment baseline | `576b010dcf78276c982f5052cfee7dd1bcbfcbcb` (canonical main after merged PR #278) |
 | P1 · P2 · P3 | `CLOSED / FROZEN`, and unchanged by P4-A |
 | **P4** | **ACTIVE — census / closure track opened by P4-A. NOT CLOSED, NOT FROZEN** |
 | **APP-OPS-01** | **`PRODUCT / ARCHITECTURE CONTRACT CANDIDATE — NOT FROZEN`** |

@@ -571,8 +571,10 @@ mean "service".
 - **CW2-08A is the later binding authority** for CW2-08 §8's actor / access wording, H7, and the §44 item 5
   boundary. The original CW2-08 remains frozen, historical and byte-identical.
 - **Safety / Moderation cannot use human review of private conversation content.** Where a case's evidence scope
-  contains it, only authorized non-human Safety / Moderation processing under existing Safety authority may reach it.
-  Case scope, purpose, validity and audit still apply. `ESCALATE` does not by itself authorize human access.
+  contains it, **within CW2-08 §8's `CASE_SCOPED_MODERATION_ACCESS` path** only authorized non-human Safety /
+  Moderation processing under existing Safety authority may access / process that evidence. This does not narrow the
+  ordinary QANDEEL Conversation / Memory / Analysis runtime authority. Case scope, purpose, validity and audit still
+  apply. `ESCALATE` does not by itself authorize human access.
 - **Automated Safety processing remains allowed**, purpose-limited and least-data, and never becomes ordinary
   telemetry.
 - **No replacement moderation mechanism was selected**: no service, classifier, vendor, queue, dashboard, appeal

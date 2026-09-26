@@ -121,11 +121,17 @@ For future interpretation, the historical CW2-08 wording is read as follows.
 > the historical "authorized role/service/person" wording does **not** authorize a human role or person to receive,
 > inspect or review that content.
 
-The only authority over that content is:
+Within **CW2-08 §8's `CASE_SCOPED_MODERATION_ACCESS` path**, the only permitted form of access / processing for that
+private conversation evidence is:
 
 > **authorized non-human Safety / Moderation processing**, under existing Safety authority.
 
-That phrase is a boundary, not an implementation design. It prescribes no service topology or processing architecture.
+This is a boundary on the §8 Safety / Moderation evidence-access path, not a global ownership statement about private
+conversation content. It does **not** narrow or replace the ordinary QANDEEL runtime authorities that already process
+conversation content for Conversation, Memory, Analysis / QANDEEL Understanding, or other already-authorized Product
+functions.
+
+The phrase is not an implementation design. It prescribes no service topology or processing architecture.
 
 **Not decided — evidence that is not private QANDEEL conversation content.** For such evidence this amendment does not
 decide whether a human moderation actor exists. Public moderation, reporting and appeals remain governed by their own
