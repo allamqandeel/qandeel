@@ -1,10 +1,10 @@
 # QANDEEL — P4-C1 Shell / Chrome Product Decisions + Live Context Controlled Amendment v1.0
 
-**Status:** `CANONICAL PRODUCT DECISION RECORD / CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`  
-**Date:** 2026-09-27  
-**Track:** P4 — Remaining Product / Visual Gaps Census & Closure  
-**Evidence:** [P4-C comparative proof](../../../design/p4-shell/QANDEEL_P4-C_SHELL_CHROME_INTEGRATED_DECISION_PROOF/P4C_READ_FIRST.md) at pre-decision proof head `65fc05e4c5f37ee4936956f187585a4044e059e6`  
-**Scope:** `P4-DQ-01` … `P4-DQ-04` only, plus the narrow retirement of the dedicated Live Context Product surface and the preservation/re-ownership of contextual relevance as a future runtime-backed capability.  
+**Status:** `CANONICAL PRODUCT DECISION RECORD / CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`
+**Date:** 2026-09-27
+**Track:** P4 — Remaining Product / Visual Gaps Census & Closure
+**Evidence:** [P4-C comparative proof](../../../design/p4-shell/QANDEEL_P4-C_SHELL_CHROME_INTEGRATED_DECISION_PROOF/P4C_READ_FIRST.md) at pre-decision proof head `65fc05e4c5f37ee4936956f187585a4044e059e6`
+**Scope:** `P4-DQ-01` … `P4-DQ-04` only, plus the narrow retirement of the dedicated Live Context Product surface and the preservation/re-ownership of contextual relevance as a future runtime-backed capability.
 **P4 lifecycle:** **P4 remains ACTIVE, NOT CLOSED / NOT FROZEN.**
 
 ---
