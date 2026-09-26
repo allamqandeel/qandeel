@@ -53,8 +53,8 @@ Each row is `PO-APPROVED` input to this candidate.
 | ID | Decision |
 |---|---|
 | `PO-OPS-01` | **Operational relationship.** QANDEEL Company must be operationally connected to the QANDEEL App after launch, so that the Company can operate, observe and govern the released Product. This is a Product / Architecture relationship only. It authorizes no implementation |
-| `PO-OPS-02` | **No Human Review by Company Operations.** QANDEEL Company Operations / App Operations has **no routine or exceptional human-review access to private QANDEEL conversation content.** As clarified by the Product Owner (clarification A, recorded in [`P4-DQ-10`](P4_PRODUCT_OWNER_DECISION_QUEUE.md)), this is a Company Operations decision. It does not amend or narrow the separate Safety / Moderation authority of CW2-08 (§6, §18) |
-| `PO-OPS-03` | **Company Operations receives no private content.** Company Operations does not receive, inspect or review conversation text, audio, transcripts, Memory content or Analysis content. The following are not admitted either: prompts, model outputs, HIM / hypothesis payloads, private World content, raw request bodies and credentials (§6) |
+| `PO-OPS-02` | **No Human Review of private conversation content.** No routine or exceptional human review of private QANDEEL conversation content is authorized through QANDEEL Company Operations / App Operations **or safety-monitoring flows**. This decision is not narrowed to Company Operations in order to preserve CW2-08; the resulting authority conflict is recorded in §18 and `P4-DQ-10` |
+| `PO-OPS-03` | **Company private-content boundary.** **Operational telemetry is always content-free. APP-OPS-01 establishes no Company Operations path for receiving private user content.** Any future user-initiated support path in which the user deliberately shares selected content is **outside APP-OPS-01**, requires separate explicit Product authority, and is not established here (§6) |
 | `PO-OPS-04` | **Operational telemetry only (App → Company).** The admitted domains are: service / app health; crashes / errors; latency / performance; session status; call status; AI provider; model; runtime path / runtime state; cost / usage cost; feature usage; subscriptions / business metrics; releases / version adoption; ratings / reviews; and user-specific operational diagnostics without user content (§5) |
 | `PO-OPS-05` | **Asynchronous, off every critical path.** App → Company integration is asynchronous / event-driven and outside all user critical paths (§8) |
 | `PO-OPS-06` | **Deterministic monitoring.** Monitoring is deterministic / event-driven by default. It is not continuous LLM polling (§9) |
@@ -79,7 +79,7 @@ existing authority in the scope that authority governs, supported by `PO-OPS-07`
 |---|---|---|
 | What it is | the App: mobile client, API, PostgreSQL and their frozen runtime owners (Conversation Orchestrator, Model Router, Safety Runtime, Behavioral Runtime, Memory, Connected Worlds authority) | the Company-side function that operates the released App: the App Operations & Release Lead (§16), the Company Command Center (§17), and any future monitoring destination or control surface Production Integration builds (§20) |
 | What it owns | all Product truth: conversation, Memory, Analysis, World, Matching, Public and authority state. It also owns the **effective** value of every operational control, which it holds in its own canonical state (§10.1) | the operational picture, the incident decisions, and the **issuing** of governed controls within §10 |
-| What it may not do | depend synchronously on Company Operations for normal work (§8) | create, read or change Product truth; receive private content (§6); execute code in the App (§12) |
+| What it may not do | depend synchronously on Company Operations for normal work (§8) | create, read or change Product truth; receive private user content **through APP-OPS-01** (§6); execute code in the App (§12) |
 
 Operational state that crosses the boundary is **operational, not semantic.** It must not become:
 
@@ -127,7 +127,7 @@ keeps the two apart, from the records named in the
 
 `PO-APPROVED` (§3) unless marked otherwise.
 
-- **Content-minimized.** No private content crosses (§6).
+- **Always content-free.** Operational telemetry carries no private user content. APP-OPS-01 creates no other Company Operations path for receiving private user content (§6).
 - **Non-semantic** (§4).
 - **Asynchronous and off the critical path** (§8).
 - **Failure-isolated.** An export failure never fails successful user work. `FORCED BY` Telemetry v1: "Export
@@ -155,33 +155,28 @@ Three questions stay open, and this candidate answers none of them:
 
 ---
 
-## 6. Prohibited content / no Company Operations human review
+## 6. Private-content boundary / No Human Review
 
-### 6.1 The law
+### 6.1 No Human Review law
 
-`PO-APPROVED` (`PO-OPS-02`, as clarified by Product Owner clarification A):
+`PO-APPROVED` (`PO-OPS-02`):
 
-> **No Human Review by Company Operations.** QANDEEL Company Operations / App Operations has no routine or
-> exceptional human-review access to private QANDEEL conversation content.
+> **No routine or exceptional human review of private QANDEEL conversation content is authorized through Company
+> Operations / App Operations or safety-monitoring flows.**
 
-It covers:
+This is not narrowed to the App Operations role, the Company Command Center, or ordinary telemetry. It is the
+Product Owner's human-review boundary. Where existing frozen Safety / Moderation authority permits a person to access
+case-scoped private evidence, §18 records the conflict rather than narrowing this decision.
 
-- QANDEEL Company Operations / App Operations as a whole;
-- the QANDEEL App Operations & Release Lead (§16);
-- the Company Command Center (§17);
-- every operational telemetry, diagnostic, monitoring and incident-handling surface, current or future.
+### 6.2 Operational telemetry is always content-free
 
-Private conversation content here means everything in §6.2: conversation text, audio, transcripts, Memory content,
-Analysis content, prompts and model outputs wherever an operational surface could carry them, and private World
-content.
+`PO-APPROVED` (`PO-OPS-03`) and consistent with the existing Telemetry / Outbox foundations:
 
-This law does **not** amend or narrow the separate Safety / Moderation authority of CW2-08 (§6.3, §18).
+> **Operational telemetry is always content-free.**
 
-### 6.2 What Company Operations never receives
+The APP-OPS operational path does not carry:
 
-`PO-APPROVED` (`PO-OPS-03`). This holds under every control, every incident and every diagnostic.
-
-| Never received | Also never received |
+| Not carried | Also not carried |
 |---|---|
 | conversation text | prompts |
 | audio (Voice Notes, Live Call) | model outputs |
@@ -190,7 +185,7 @@ This law does **not** amend or narrow the separate Safety / Moderation authority
 | Analysis content, including QANDEEL Understanding | raw request bodies |
 | | credentials |
 
-`FORCED BY` existing law as well:
+Existing implementation is already narrower in the same direction:
 
 - Telemetry v1: "Telemetry never contains messages, outputs, prompts, Memory or HIM payloads, credentials, bodies,
   query strings, raw rows";
@@ -200,28 +195,41 @@ This law does **not** amend or narrow the separate Safety / Moderation authority
   default";
 - AGENTS.md §5.
 
-### 6.3 Safety / Moderation is a separate authority
+### 6.3 APP-OPS-01 establishes no Company content-receipt path
 
-CW2-08 may permit case-scoped moderation access under its own frozen contract (§8, `CASE_SCOPED_MODERATION_ACCESS`).
-That is Safety / Moderation authority, not Company Operations. Under APP-OPS-01 that access:
+> **APP-OPS-01 establishes no Company Operations path for receiving private user content.**
 
-- does not flow through Company Operations;
-- gives the App Operations & Release Lead no private-content access;
-- gives the Company Command Center no private-content access;
-- never becomes ordinary operational telemetry;
-- creates no blanket browsing.
+That statement is stronger and more precise than a bare "does not receive by default": this contract contains no
+unspecified operational exception.
 
-APP-OPS-01 invents no moderation mechanism and changes nothing in CW2-08 (§18).
+A future **user-initiated support flow** in which the user deliberately chooses to share selected content:
 
-### 6.4 What this candidate does not establish
+- is **outside APP-OPS-01**;
+- requires separate, explicit Product authority before it exists;
+- does not become operational telemetry;
+- does not retroactively widen this contract.
 
-- **No Company Operations access path to private conversation content, of any kind.** A future path in which a user
-  chooses to share their own content with support is not established here. It would need separate, explicit Product
-  authority.
-- **No exception for incidents.** An operational incident is diagnosed from operational state (§5), never from
-  content.
+APP-OPS-01 therefore neither authorizes nor designs such a path.
 
----
+### 6.4 Safety / Moderation conflict is recorded, not hidden
+
+CW2-08 §8 separately defines `CASE_SCOPED_MODERATION_ACCESS` bound to an exact case, evidence scope, purpose,
+"authorized role/service/person", validity and audit, and then says that no **blanket** private-World browsing follows
+from the moderator role. Read together with §7's `REPORT_CASE` evidence, this permits a human "person" to access
+case-scoped evidence, including private-World evidence where that evidence is within the case scope.
+
+That conflicts with `PO-OPS-02` when the case evidence is private QANDEEL conversation content.
+
+P4-A does **not** resolve the conflict by reinterpretation. §18 records:
+
+> **CONTROLLED AMENDMENT REQUIRED — CW2-08**
+
+P4-A does not amend CW2-08 and does not invent the replacement moderation mechanism.
+
+### 6.5 Incidents create no Company Operations exception
+
+An operational incident is diagnosed from the content-free operational state admitted by §5. APP-OPS-01 creates no
+incident exception that routes private user content into Company Operations.
 
 ## 7. User-specific operational diagnostics boundary
 
@@ -509,43 +517,97 @@ and none is implemented.
 
 ---
 
-## 18. Company Operations / Safety–Moderation authority separation
+## 18. Safety / Moderation authority conflict
 
-> **APP-OPS-01 Company Operations boundary and CW2-08 Safety / Moderation authority are compatible and separate.**
+> **CONTROLLED AMENDMENT REQUIRED — CW2-08**
 
-This follows from Product Owner clarification A, recorded as resolved in
-[`P4-DQ-10`](P4_PRODUCT_OWNER_DECISION_QUEUE.md): the Human Review prohibition of `PO-OPS-02` belongs to Company
-Operations / App Operations. It does not govern Safety / Moderation.
+P4-A re-checked the frozen source rather than reconciling it by scope narrowing.
 
-### 18.1 Two authorities
+### 18.1 Exact conflicting authority
 
-| | APP-OPS-01 — Company Operations | CW2-08 — Safety / Moderation |
-|---|---|---|
-| Governs | the operational relationship between the QANDEEL Company and the released App | safety restrictions, reports and moderator operational access (CW2-08 §7, §8, H7) |
-| Human access to private conversation content | **none**, routine or exceptional (`PO-OPS-02`, §6.1) | `CASE_SCOPED_MODERATION_ACCESS`, bound to exact case, evidence scope, purpose, authorized role/service/person, validity and audit. "No blanket private-World browsing follows from the moderator role itself" (CW2-08 §8; H7) |
-| Lifecycle | candidate, not frozen | frozen. **Unchanged by P4-A** |
+CW2-08 §8, **Moderator operational access**, defines:
 
-### 18.2 Neither is a bypass into the other
+> `CASE_SCOPED_MODERATION_ACCESS`
 
-- **APP-OPS-01 governs Company Operations; CW2-08 governs case-scoped Safety / Moderation access.**
-- Moderation access does not flow through Company Operations. The App Operations & Release Lead and the Company
-  Command Center gain no private-content access from it (§6.3).
-- Operational telemetry stays content-free (§5.2, §6.2). Case-scoped Safety evidence is not Company Operations
-  telemetry. `FORCED BY` CW2-08 §7 ("Report evidence does not become ordinary World/Public material") and the Safety
-  Runtime ("Private conversation content must not become ordinary telemetry").
-- No Company Operations control relaxes a Safety restriction or a non-waivable invariant (§10.2, §10.3).
-- CW2-08 §42 rollout / incident metrics are operational data, consumed under §13.
+bound to:
 
-### 18.3 What stays unchanged
+- exact case;
+- evidence scope;
+- purpose;
+- **authorized role/service/person**;
+- validity;
+- audit.
 
-- **CW2-08 is byte-unchanged and fully authoritative in its scope**, including §8, H7, §36 (actor / role audit) and
-  §44 item 5 (detailed moderation / report UX and appeals, still owned by Connected Worlds `I-09` / CW2-08).
-- The Safety Runtime's automated evaluation, including `ESCALATE`, is Safety authority. APP-OPS-01 does not
-  interpret it.
-- APP-OPS-01 invents no moderation mechanism. It requires no amendment to CW2-08, and its closure has no dependency
-  on one (§23).
+It then states:
 
----
+> No blanket private-World browsing follows from the moderator role itself.
+
+Related authority:
+
+- CW2-08 §7: `REPORT_CASE` is protected operational state bound to an exact target/context and carries report
+  evidence;
+- CW2-08 H7: "Moderator access is case-scoped and auditable";
+- CW2-08 §36 records actor / role in protected operational actions;
+- CW2-08 §44 item 5 leaves detailed moderation / report UX + appeals intentionally open.
+
+### 18.2 Why this is an actual conflict
+
+The text does not merely authorize an automated service. It explicitly includes an authorized **person**, gives that
+actor an **evidence scope**, and limits only **blanket** private-World browsing. Its plain reading therefore permits
+human, case-scoped access to private-World evidence when that evidence is within the exact moderation case.
+
+Where that evidence is private QANDEEL conversation content, this conflicts with the Product Owner decision
+`PO-OPS-02`:
+
+> **No routine or exceptional human review of private QANDEEL conversation content is authorized through Company
+> Operations or safety-monitoring flows.**
+
+The conflict cannot be removed by narrowing `PO-OPS-02` to Company Operations, and P4-A does not reinterpret
+"person" to mean "service".
+
+### 18.3 What P4-A does — and does not do
+
+P4-A:
+
+- records the conflict precisely;
+- keeps the Company Operations boundary in §6;
+- preserves CW2-08 byte-unchanged;
+- requires a later **controlled amendment to CW2-08** before this authority conflict can be closed.
+
+P4-A does **not**:
+
+- amend CW2-08;
+- invent a replacement moderation mechanism;
+- decide how future user-submitted report evidence is handled;
+- turn Safety case evidence into Company Operations telemetry.
+
+### 18.4 Non-conflicting CW2-08 authority remains preserved
+
+Every non-conflicting part of CW2-08 remains binding, including:
+
+- typed and versioned Safety restrictions;
+- `SAFETY_PRIVATE_OPERATIONAL_STATE`;
+- protected `REPORT_CASE` state apart from the conflicting human-access rule;
+- Block and anti-enumeration law;
+- Public moderation serving states and owner-deletion precedence;
+- entitlements;
+- feature flags, Launch Gate, fail-closed launch law and non-regression;
+- operational telemetry as non-semantic state;
+- capability-scoped launch requirements.
+
+The future controlled amendment must be narrowly scoped to the human-access conflict and its necessary dependent
+wording. It must not reopen these unrelated laws.
+
+### 18.5 Effect on APP-OPS-01 / P4
+
+The Company Operations contract remains a valid candidate, but the Human Review authority conflict is unresolved.
+
+`P4-DQ-10` therefore remains an open Product / Architecture blocking item:
+
+- **APP-OPS-01 cannot close / freeze while the conflict remains in frozen canon;**
+- P4-A records the required amendment and stops;
+- a later controlled CW2-08 amendment task owns the reconciliation;
+- exact replacement moderation mechanics are intentionally not selected here.
 
 ## 19. End-to-End Audit handoff
 
@@ -649,11 +711,12 @@ APP-OPS-01 does not decide, design or implement any of the following.
 ## 22. Unresolved decisions
 
 These sit in the [Product Owner Decision Queue](P4_PRODUCT_OWNER_DECISION_QUEUE.md) and are not answered here.
-`P4-DQ-10` (the scope of the Human Review prohibition) is **resolved** by Product Owner clarification A and is kept
-there as a record only (§18); it blocks nothing.
+`P4-DQ-10` is an open Product / Architecture authority-conflict item: the Product Owner has fixed the No Human Review
+rule, while a later controlled amendment must reconcile CW2-08 §8 without inventing the replacement inside P4-A.
 
 | Row | Question | Blocks APP-OPS-01 closure? |
 |---|---|---|
+| `P4-DQ-10` | `CONTROLLED AMENDMENT REQUIRED — CW2-08`: reconcile §8 / H7 with the No Human Review law; replacement moderation mechanism not chosen in P4-A | **yes** |
 | `P4-DQ-11` | identity / retention / access model for user-specific operational diagnostics | the **access principle** part: yes. The mechanism: no |
 | `P4-DQ-12` | ratings / reviews exact boundary | no, if closure keeps §5.3's narrower default |
 | `P4-DQ-13` | control-state freshness, integrity and audit guarantees outside CW2-08 | no. The principle is set (§10.1, §15); the mechanism goes to Production Integration |
@@ -670,15 +733,15 @@ APP-OPS-01 may move from this candidate to `CLOSED / FROZEN` only in a later P4 
 the following hold:
 
 1. The Product Owner and an independent reviewer have reviewed this candidate.
-2. `P4-DQ-11` (access principle) and `P4-DQ-15` are answered by the Product Owner. The other open APP-OPS rows are
+2. The controlled CW2-08 amendment required by `P4-DQ-10` has landed, so frozen Safety / Moderation authority no
+   longer authorizes human review of private conversation content contrary to `PO-OPS-02`.
+3. `P4-DQ-11` (access principle) and `P4-DQ-15` are answered by the Product Owner. The other open APP-OPS rows are
    either answered or explicitly carried forward, each with a named owner.
-3. The closing change reconciles every APP-OPS carry-forward under BG-06 / BG-08 against the canonical backlog, and
+4. The closing change reconciles every APP-OPS carry-forward under BG-06 / BG-08 against the canonical backlog, and
    decides whether any concrete obligation deferred to a named future task needs a backlog entry
    ([Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) §3).
-4. The closing change moves this document's banner to its final lifecycle state (BG-09), and updates the entry
+5. The closing change moves this document's banner to its final lifecycle state (BG-09), and updates the entry
    points and the indexes it names.
-5. `npm run test:task-closure-governance-contract` passes on the closing head.
-
-`P4-DQ-10` sets no closure condition: it is resolved, and CW2-08 stays unchanged (§18).
+6. `npm run test:task-closure-governance-contract` passes on the closing head.
 
 Until then, APP-OPS-01 is **NOT FROZEN**. It binds no implementation, and nothing may be built from it (§20).

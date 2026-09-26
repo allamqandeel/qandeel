@@ -7,8 +7,8 @@
 | Track | P4, task P4-A |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
 | Rule | every open row is a choice existing authority does **not** settle. P4-A answers none of them. Where the evidence supports one, a **recommended option** is given. A recommendation is not a decision |
-| Open decisions | **16**: `P4-DQ-01` … `09` and `P4-DQ-11` … `17` |
-| Resolved records | **1**: `P4-DQ-10`, resolved by the Product Owner (option A / scope clarification). It is kept for traceability, blocks nothing and is not counted as open. IDs are not renumbered |
+| Open decisions / blocking authority items | **17**: `P4-DQ-01` … `17`. `P4-DQ-10` is now a required controlled-authority reconciliation, not a scope-narrowing option |
+| Resolved records | **0**. IDs are not renumbered |
 | Excluded on purpose | an unknown implementation detail is not a Product decision. Such items are in the [Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) instead |
 | Traceability | each row cites its [census](P4_RESIDUAL_GAP_CENSUS.md) rows and, for APP-OPS, its [contract candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) section |
 
@@ -32,7 +32,7 @@ The last two fields of each row mean:
 | `P4-DQ-07` | Boundary: which undrawn screens P4 designs, and which the audit carries | yes | — | no (it is a boundary) |
 | `P4-DQ-08` | Voice visual language: what closes now, and what waits for runtime truth | yes | — | yes |
 | `P4-DQ-09` | Residual copy: which clusters freeze before the audit | yes | — | copy in context |
-| `P4-DQ-10` | Scope of the Human Review prohibition — **RESOLVED BY PRODUCT OWNER — OPTION A / SCOPE CLARIFICATION** (record only; not open) | no | no | no |
+| `P4-DQ-10` | **`CONTROLLED AMENDMENT REQUIRED — CW2-08`**: §8 / H7 human case-evidence access conflicts with the No Human Review law | yes | yes | no |
 | `P4-DQ-11` | `IDENTITY / RETENTION / ACCESS MODEL FOR USER-SPECIFIC OPERATIONAL DIAGNOSTICS` | — | the access principle: yes | no |
 | `P4-DQ-12` | Ratings / reviews: the exact boundary | — | no, if the narrower default is kept | no |
 | `P4-DQ-13` | Control-state freshness, integrity and audit, outside CW2-08 | — | no | no |
@@ -188,21 +188,20 @@ Per cluster:
 
 ## B. APP-OPS-01
 
-### `P4-DQ-10` — Scope of the Human Review prohibition — **RESOLVED BY PRODUCT OWNER — OPTION A / SCOPE CLARIFICATION**
-
-This row is a **resolved decision record**, kept for traceability. It is not open, is not counted among the open
-decisions, and blocks neither P4 nor APP-OPS-01.
+### `P4-DQ-10` — `CONTROLLED AMENDMENT REQUIRED — CW2-08`
 
 | Field | |
 |---|---|
-| Question it settled | Does the `PO-OPS-02` Human Review prohibition reach CW2-08's separate case-scoped Safety / Moderation access? |
-| Decision | **Option A.** The Human Review prohibition belongs to Company Operations / App Operations only. Separate CW2-08 case-scoped Safety / Moderation authority remains unchanged |
-| Decided by | the Product Owner (clarification A), after independent review of P4-A |
-| Effect | Company Operations, the App Operations & Release Lead and the Company Command Center have no routine or exceptional human-review access to private conversation content, and operational diagnostics / telemetry / incident handling expose none. `CASE_SCOPED_MODERATION_ACCESS` (CW2-08 §8, H7) stays valid and unchanged: case-scoped, evidence-scoped, purpose-bound, bound to an authorized role / service / person, validity-bound, auditable, with no blanket private-World browsing |
-| Authority conflict | **none.** APP-OPS-01 and CW2-08 are compatible, separate authorities (candidate §6.3, §18) |
-| CW2-08 | unchanged. **No controlled amendment is required by APP-OPS-01** |
-| Blocks | nothing |
-| Census / candidate | P4-GAP-057; APP-OPS-01 candidate §3 (`PO-OPS-02`), §6, §18 |
+| Question / obligation | How must frozen CW2-08 §8 / H7 be amended so it no longer authorizes human review of private QANDEEL conversation content through safety-monitoring flows, while preserving every non-conflicting Safety / Moderation law? |
+| Product Owner decision already fixed | **No routine or exceptional human review of private QANDEEL conversation content is authorized through Company Operations or safety-monitoring flows.** This must not be narrowed merely to preserve CW2-08 |
+| Exact conflicting authority | CW2-08 §8: `CASE_SCOPED_MODERATION_ACCESS` is bound to exact case, **evidence scope**, purpose, authorized role/service/**person**, validity and audit; it says only that no **blanket** private-World browsing follows from the moderator role. H7: "Moderator access is case-scoped and auditable." §7 supplies protected `REPORT_CASE` evidence |
+| Why this conflicts | The frozen text expressly permits an authorized **person** to case-scoped evidence and distinguishes that from blanket private-World browsing. Where the scoped evidence is private conversation content, that is exceptional human review for Safety / Moderation — exactly what the Product Owner decision forbids |
+| Required disposition | **Controlled amendment to CW2-08.** P4-A does not edit CW2-08. The amendment must be narrowly scoped to the conflict and any necessary dependent wording |
+| Deliberately not decided in P4-A | the replacement moderation mechanism; whether/how user-submitted report evidence is shared; implementation schema; moderator tooling |
+| Preserve unchanged | all non-conflicting CW2-08 Safety restrictions, private operational state, Block law, Public moderation serving law, entitlements, feature flags, Launch Gate, fail-closed law, operational telemetry and non-regression requirements |
+| Blocks | P4 closure: **yes**, until the authority conflict is reconciled or a controlled closure sequence explicitly lands the amendment first. APP-OPS-01 closure: **yes** |
+| Proof | no visual proof |
+| Census / candidate | P4-GAP-057; APP-OPS-01 candidate §6, §18 |
 
 ### `P4-DQ-11` — `IDENTITY / RETENTION / ACCESS MODEL FOR USER-SPECIFIC OPERATIONAL DIAGNOSTICS`
 
@@ -313,5 +312,5 @@ The Task Contract §30 suggested these as likely candidates. Each was tested and
 |---|---|
 | Runtime-dependent speaking indicator | P2 §11.1 already decides what can be decided: no fake signal, and truth waits on `QAN-BL-VOICE-01`. What remains is dependency-gated, not a choice (P4-GAP-023) |
 | Stale / unavailable operational-control behavior | the principle is forced by the approved outage law and CW2-08 §40 (candidate §15). Only the mechanism is open, and it sits in `P4-DQ-13` |
-| Exact human-review scope versus CW2-08 moderation | resolved by Product Owner clarification A; kept as the `P4-DQ-10` record |
+| Exact human-review scope versus CW2-08 moderation | real conflict confirmed; `P4-DQ-10` requires a controlled CW2-08 amendment and deliberately leaves the replacement mechanism to that task |
 | Native call behaviors, spoken-reply control, Voice Note transcript | dependency-gated on Voice runtime and provider evidence (P4-GAP-024 … 026) |
