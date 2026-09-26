@@ -111,6 +111,7 @@ was added later.
 |---|---|---|
 | I-08A — Product Shell / IA / Canonical Naming | `I-08A4 — CLOSED / CANONICAL FREEZE COMPLETE`; integrated `I-08A — CANONICAL PRODUCT SHELL / IA / NAMING FOUNDATION — FROZEN`. Later explicit G1.1 / G1.2 amendments bind where they supersede A4 naming or shell statements, and so does P1 (`Readings` naming for its surface, General Settings placement) | [`docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md`](docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md) |
 | P1 — User Identity / Preferences / QANDEEL Understanding | `P1 — CLOSED / FROZEN — USER IDENTITY / PREFERENCES / QANDEEL UNDERSTANDING PRODUCT CONTRACT`. PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN. It narrowly amends I-08A4 naming, the F2 / G2 / G3 non-Analysis appearance rule and the T-14 final sign-in requirement (its §15) | [`docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md`](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) |
+| P2 — Final Iconography System | `P2 — CLOSED / FROZEN — FINAL ICONOGRAPHY SYSTEM`. PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN. The Hybrid QANDEEL Icon System: N1 "Open" signature geometry, the navigation glyph above the destination word, Call Rail A "Keyed Seam" with End Call at 27 px, Temporal Spine + Aperture C "Parting", Hugeicons Free as the curated utility source (no runtime package), Calm State Morphing. It narrowly supersedes G1.2 §6 for the icon glyphs and call controls; the audio strip and broader Voice visual language stay unfrozen (its §13). Evidence: the merged P2-A package | [`docs/qandeel-p2-final-iconography-canonical-closure.md`](docs/qandeel-p2-final-iconography-canonical-closure.md); evidence [`docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/`](docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/P2_READ_FIRST.md) |
 | I-08N-01 — Notification & Proactive Attention Product Contract | `CLOSED / NOTIFICATION & PROACTIVE ATTENTION PRODUCT CONTRACT FROZEN`. This is Product behavior / attention policy, not a production notification runtime | [`docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md) |
 | Phase V — Visual Language Discovery | `CLOSED` — `FREEZE WITH EXPLICIT OPEN ITEMS`, in the archive's own words | [`docs/design/phase-v/README.md`](docs/design/phase-v/README.md) |
 | Phase VI: VI-01, VI-02 | each `CLOSED / FROZEN` as its archive states. VI-01 naming was amended by G1.1 | [`docs/design/phase-vi/`](docs/design/phase-vi/) |
@@ -152,7 +153,7 @@ production implementation. The table keeps three things apart:
 | Replay | CW2-05; the G1.1 placement ("an action on the current Conversation / Analysis context") | the I-06 backend runtime (0100–0107) | the Product Replay surface (`QAN-BL-NAV-02`). No media, storage or transport. Distribution is `NOT CLEARED / FAIL-CLOSED` |
 | Voice / Live Call | G1.2 | none | all of it (`QAN-BL-VOICE-01`) |
 | User Identity / Preferences / QANDEEL Understanding | P1 (`CLOSED / FROZEN`): one account identity with context-scoped projections; private Login ID, verified Email, Name, Shared ID and unique Public ID; no traditional Profile page; one General Settings destination; Memory versus «فهم قنديل / QANDEEL Understanding»; the exposure matrix; the Dark / Light / System preference (default Dark, Analysis always dark); the Shared-ID reachability law; three-stage sequential Introduction image disclosure | none of it. No Login ID, Shared-ID surface, Public ID policy, General Settings, sign-up, Understanding surface or appearance preference exists in production code | the whole production implementation and the implementation/runtime carry-forwards in P1 §16 |
-| Final iconography | G1.2 explicitly says its current small icons/glyphs are proof-only and that the final iconography system is not frozen | no final iconography system is established as production authority | roadmap P2, the current / next Product decision-closure track; no Task Contract is open yet |
+| Final iconography | P2 (`CLOSED / FROZEN`): the Hybrid QANDEEL Icon System, frozen by reference to the merged P2-A package's geometry, machines and utility sourcing rule. G1.2's icon glyphs are superseded; its audio strip and the broader Voice visual language are still not frozen | none. No final icon, rail, spine or utility glyph exists in `apps/mobile/`; the production port and integration are not yet established. `react-native-svg` is not a dependency and is not authorized by P2 | the production vector / component port and device accessibility validation (P2 §14); a truthful speaking indicator waits on `QAN-BL-VOICE-01` |
 | Notifications / proactive attention | I-08N-01 freezes the Product gate, attention budgets, interruption classes, privacy/disclosure contract, Direct Entry constraints and user controls | no production notification runtime / transport is established on `main` | P3 closes the remaining Product realization; implementation mechanism, platform code, numeric thresholds and final UI are not frozen by N-01 itself |
 | Plans / Credits / Usage Economy | CW2-08 freezes only the high-level law: entitlement restricts actions rather than ownership, and Credits are resource/compute availability only and never alter consent/ownership/truth | no complete plan/credit/billing Product system is established on `main` | roadmap places the Product economy work alongside the End-to-End audit, using provider/workload evidence; no formula or pricing is frozen |
 | Sign-in / auth | T-12P, T-14; P1 §3 now sets the final Product requirement: one `Login ID OR Email` identifier plus Password, with generic failure wording | T-14 is implemented and Email-only | the Login ID route, sign-up and the rest of the account lifecycle; `QAN-BL-SEC-01`. T-14 recorded sign-up, password reset and onboarding, among others, as anti-scope (backlog §7) |
@@ -231,9 +232,11 @@ Ordered Product tracks:
 1. **P1 — User Profile / Identity / Preferences / QANDEEL Understanding** — `CLOSED / FROZEN` by
    [`docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md`](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md).
    Production implementation remains open.
-2. **P2 — Final Iconography System** — the current / next Product decision-closure track.
-3. **P3 — Notification Final Realization**
-4. **P4 — Remaining Product / Visual Gaps Census & Closure**
+2. **P2 — Final Iconography System** — `CLOSED / FROZEN` by
+   [`docs/qandeel-p2-final-iconography-canonical-closure.md`](docs/qandeel-p2-final-iconography-canonical-closure.md).
+   Production implementation remains open.
+3. **P3 — Notification Final Realization** — the current / next Product decision-closure track.
+4. **P4 — Remaining Product / Visual Gaps Census & Closure**, after P3.
 
 After P1–P4 close:
 
@@ -243,9 +246,9 @@ That phase also carries the evidence-led QANDEEL Model / Provider benchmark and 
 Usage Economy work, and the complete account/authentication lifecycle review. Production Integration follows the
 audit and its resulting closures; Release Hardening / Launch comes after production integration.
 
-**Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1 is closed
-as a Product contract and implements nothing. P2 is the immediate Product decision-closure track, and no P2 Task
-Contract exists yet.
+**Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1 and P2
+are closed as Product / design contracts and implement nothing. P3 is the immediate Product decision-closure track, and
+no P3 Task Contract exists yet.
 
 The canonical backlog remains separate: backlog entries are not self-executing, and severity does not order them.
 

@@ -40,8 +40,14 @@ The track's original scope, kept as written:
 - what belongs in Profile, Settings, Memory inspection, and Understanding inspection.
 No specific field set, screen morphology or storage schema is frozen by this roadmap.
 ### P2 — Final Iconography System
-**P2 — CURRENT / NEXT PRODUCT DECISION CLOSURE — NOT YET OPENED AS A TASK CONTRACT**
-After P1, close the final Product iconography system.
+**P2 — CLOSED / FROZEN** — closed by
+[`docs/qandeel-p2-final-iconography-canonical-closure.md`](docs/qandeel-p2-final-iconography-canonical-closure.md),
+with the merged P2-A proof
+([`docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/`](docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/P2_READ_FIRST.md))
+as its evidence. That record is the Product / design authority for this track; this section only records the
+lifecycle. Production implementation remains open. It supersedes G1.2's "PROOF ONLY — NOT A VISUAL FREEZE" for the
+icon glyphs and the call controls; the audio strip and the broader Voice visual language stay unfrozen (its §13.1).
+The track's original scope, kept as written:
 It must cover the icon language needed across the frozen Product, including where relevant:
 - Global shell and navigation;
 - Conversation / Analysis;
@@ -52,8 +58,8 @@ It must cover the icon language needed across the frozen Product, including wher
 - interaction states;
 - RTL / LTR behavior;
 - accessibility and perceivability.
-G1.2 remains authoritative that its current small icon/glyph shapes are **PROOF ONLY — NOT A VISUAL FREEZE**.
 ### P3 — Notification Final Realization
+**P3 — CURRENT / NEXT PRODUCT DECISION CLOSURE — NOT YET OPENED AS A TASK CONTRACT**
 Consume the already-frozen `I-08N-01` Product contract and close the Product realization it deliberately
 left open.
 This includes, where Product decisions are required:
@@ -166,7 +172,7 @@ The final roadmap layer is release readiness, including the scopes already owned
 Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
-P1 is `CLOSED / FROZEN` as a Product contract. The next Product discussion/work track is:
-> **P2 — Final Iconography System**
+P1 and P2 are `CLOSED / FROZEN` as Product / design contracts. The next Product discussion/work track is:
+> **P3 — Notification Final Realization**
 It is deliberately **not yet opened as a Task Contract**. Product discussion comes first.
-Continue in the order P2 → P3 → P4, then begin the End-to-End Product Experience Completeness Audit.
+Continue in the order P3 → P4, then begin the End-to-End Product Experience Completeness Audit.
