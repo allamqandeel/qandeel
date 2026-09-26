@@ -2,109 +2,109 @@
  "B17": {
   "file": "boards/17-accessibility-reduced-motion.png",
   "question": "Is every control named and at least 44 pt, is every decorative glyph hidden, is focus perceivable, is no state colour-only, is RTL mirrored by meaning — and does the strip under Reduced Motion keep the same meaning with no travel?",
-  "bytes": 332215,
-  "sha256": "fbfdbca5fd2d6927305f5f5b8a103700c12d69f09b6ab896e0317b87c6375c34"
+  "bytes": 529955,
+  "sha256": "ef474c38ab45dd691f9daf5eb392a2e1999c919ed87de7668ac02df793c61bea"
  },
  "B18": {
   "file": "boards/18-decision-summary.png",
-  "question": "The integrated direction in one view: what the user sees, where, and when — realizing the accepted P3 direction without reopening I-08N-01, P1 or P2 — and the only questions left, which are craft.",
-  "bytes": 331518,
-  "sha256": "5209499d5cc00fb62cbae579ec931bcaa2ac952cbf913f501f207506d8322098"
+  "question": "The integrated direction in one view after the P3-A refinement: what the user sees, where, and when — realizing the accepted P3 direction and the Product Owner’s refinement decisions without reopening I-08N-01, P1, P2 or G3 — and the only questions left, which are craft.",
+  "bytes": 480260,
+  "sha256": "d3152eb6870a879d22ff7a9d40cbbeb3e870448148df5e2ace40b3ee6afc405a"
  },
  "B01": {
   "file": "boards/01-activity-arabic-dark.png",
   "question": "Is Activity one quiet chronological feed — every category present without noise, the attention mark small and attached, one coalesced item, one inline action only where it is obvious — and not a card wall or a red unread wall?",
-  "bytes": 286214,
-  "sha256": "825e4c04da2c9375f5fb07d955634cc62fad38d8ee6490df6b326fc72cb1a874"
+  "bytes": 285902,
+  "sha256": "c102fe3187a7c01d2f2ae2de6f1009da4c95c26f09528c530800d404bbeb972a"
  },
  "B02": {
   "file": "boards/02-activity-english-light.png",
   "question": "Does the same feed hold in English left-to-right under Light — the same semantics, the mark at the upper END corner (now the right), the source column at the START (now the left) — without painting Activity as the dark Analysis?",
-  "bytes": 258628,
-  "sha256": "da6b04c664b4d468ff6e09117c205e0af5cf12f0e2028a4992d32d8b132294d1"
+  "bytes": 258146,
+  "sha256": "28cc51a1afd5e4e7d26fc8e9a109e209cb6302401df115c0239b2d2821a6b623"
  },
  "B03": {
   "file": "boards/03-activity-filters.png",
   "question": "Do All · From Qandeel · Shared · Public · Introductions · System work as quiet filters over ONE feed (All by default) — each item keeping its category, no destination of its own, and Introductions showing presence only?",
-  "bytes": 189561,
-  "sha256": "f226cd6084daa1b8ff03e06eb5e2cbb271d349306d40f4ae05cc38424100eb11"
+  "bytes": 189348,
+  "sha256": "b305665649e1b7e863f8f398c96797cadef6ed6e1c40e3612513bf8cade0cc8c"
  },
  "B04": {
   "file": "boards/04-attention-states.png",
   "question": "Can unseen, seen, opened, actionable, coalesced and stale be told apart — by form and words, never by colour alone and never by pressure — while none of them resolves the source event?",
-  "bytes": 228280,
-  "sha256": "41dc1a1c1e9dca0e7c762758abd4f0d993646ef337bd83e2634886d78fb785d2"
+  "bytes": 228117,
+  "sha256": "c84091d975b8d92222eb37bac630a762f88213e50d3db1371e7024681384728c"
  },
  "B05": {
   "file": "boards/05-global-activity-entry.png",
-  "question": "Does the Activity entry sit in the global upper chrome beside the frozen shell without replacing the three-World navigation, stay neutral in every state (never Brass), and show attention as presence — distinguishable from selection, pressed and focus?",
-  "bytes": 248833,
-  "sha256": "c7073c347272cbcd6bbb5caf9dc47ad12c86791a02474ca6043f675e341939f0"
+  "question": "Does the accepted Open Ledger entry sit in the global upper chrome of the non-Analysis shell without replacing the three-World navigation, stay neutral in every state (never Brass), show attention as presence — and stay OUT of the frozen Analysis chrome?",
+  "bytes": 452655,
+  "sha256": "3a304223991d1dfc94857991e6c41f70c40f90eca8dae5e9562fa0d5512c4a6a"
  },
  "B06": {
   "file": "boards/06-attention-strip.png",
-  "question": "Does the strip appear only when QANDEEL already has the user’s attention outside the event’s originating context — attached to the upper chrome, short, dismissible, Direct-Entry capable — and stay absent in the same context and during an active Live Call?",
-  "bytes": 292697,
-  "sha256": "9cc9efbb5db8cf4e5784ad1d8821d6e3b5c76796b9fda6b5c46c4c9998f719f1"
+  "question": "Does the strip appear only when QANDEEL already has the user’s attention outside the event’s originating context — attached to the upper chrome, short, dismissible, Direct-Entry capable — and stay absent in the same context and, during an active Live Call, for everything except critical security and a requested exact-time reminder, which get a small call-safe strip that covers nothing frozen?",
+  "bytes": 934050,
+  "sha256": "6de8b82d1dddf8d5c930e8fd0004b7c87865c36cc26a1a19cb257d8b0a011d18"
  },
  "B07": {
   "file": "boards/07-settings-arabic.png",
   "question": "Are the controls organised by Product meaning — Proactive QANDEEL, Shared (with per-World mute), Public (Discovery opt-in), Introductions (only once entered), Security & Account, Quiet Hours, Snooze, Lock Screen previews, and a separate handoff to the device — without faking ownership of OS settings?",
-  "bytes": 326873,
-  "sha256": "8968eaf4c9b9c35193c92929ac8cac276b68903f64ba52a36ecf6e0b22812751"
+  "bytes": 385281,
+  "sha256": "7d25f494e35c127ec20537689374a866b7d88641a01ab6f89f1f487591ff8b42"
  },
  "B08": {
   "file": "boards/08-settings-english.png",
   "question": "Does the English surface keep exactly the same information architecture, order and meanings, left-to-right?",
-  "bytes": 327163,
-  "sha256": "d83da5923a5e3f62b122809d3397e03471756b9d668d9fa0bcd8d5b82678ea88"
+  "bytes": 283195,
+  "sha256": "b02dee6925cf79aa3af3973a6c18ab22152d53af55dc18211338e4f9b9c31c13"
  },
  "B09": {
   "file": "boards/09-permission-education.png",
   "question": "Is notification permission asked only at a legitimate moment, explained by QANDEEL first (value, no fear or guilt, Product usable either way), and then handed to the OS prompt that QANDEEL neither draws nor imitates?",
-  "bytes": 218683,
-  "sha256": "32280477489e5280d0a3a768719d359b3b974bf9158b74e6087ba188f2c98f1d"
+  "bytes": 218828,
+  "sha256": "6eca74dac5c63d4dec1f7baa3596d4460cdc6826f01a88337899d281145871e9"
  },
  "B10": {
   "file": "boards/10-lock-screen-disclosure.png",
-  "question": "For each category, what may appear outside the authenticated Product at each ceiling — with Introductions defaulting to L0 (not even revealing it is an introduction), L3 never a default, and a critical event still only L2?",
-  "bytes": 362348,
-  "sha256": "f602a75f8706909ab59bfd43916008d1f06fcfaf103f548c7b6cbe4f80790cac"
+  "question": "For each category, what may appear outside the authenticated Product at each ceiling the USER sets — with Introductions defaulting to L0 (not even revealing it is an introduction) but with no category cap, L3 never a default, and a critical event still only L2?",
+  "bytes": 471632,
+  "sha256": "dad2b7cbcdd88d38de309dde0a21f64966870728c27ab341f99a66d5dc5902e5"
  },
  "B11": {
   "file": "boards/11-badges-attention-indicators.png",
   "question": "Is the global indicator presence only (never a number, never red, never Brass), do the categories show a count only where it is useful and safe — Shared yes, System only for actionable items, Introductions never — and does it all survive Dark, Light and Increased Contrast?",
-  "bytes": 139244,
-  "sha256": "c0bcc2dfb8cf0f08dadba1bc79350652b99a9d7bb5704a337b6a241a63f817ff"
+  "bytes": 139378,
+  "sha256": "3fe4e4aa8a368dd4e03e3cf8b0ead28eafef2a2e7b50dc0193a288142ff75fce"
  },
  "B12": {
   "file": "boards/12-quiet-hours-snooze.png",
   "question": "With Quiet Hours ON (23:00 → 08:00 local) and five candidates overnight, does the morning bring a re-evaluation into a few valid outcomes — not five Pushes — with only the two frozen exceptions allowed to interrupt at night, and no coalescing across Worlds?",
-  "bytes": 190192,
-  "sha256": "a8c76cb1c74de8631de78fdf8a78067aad60a30ee5771e622455363aa6a60d10"
+  "bytes": 190958,
+  "sha256": "fcb313b6b7a86ff62b254b645113cf704090f27709f409fee69c7ed7882224da"
  },
  "B13": {
   "file": "boards/13-frequency-ceilings.png",
   "question": "Across a deterministic 7-day trace, do the Product Owner’s v1 ceilings hold — ordinary 4 / rolling 24 h and 12 / rolling 7 d; Proactive QANDEEL 1 / 24 h and 3 / 7 d; the same thread not before 48 h; a third same-subject interruption only with new context; Public Discovery 1 / 7 d and opt-in — with the two exceptions outside, and unused budget never creating a send?",
-  "bytes": 260321,
-  "sha256": "50d0f1123ed5618b718e4488cea37bd992e4ff5a9fb370fe13d829118a978779"
+  "bytes": 260463,
+  "sha256": "b116436adea47b6ee4e221d2dcf6f9ada756d2ab8920f2fc3c305e0a5a3f6f31"
  },
  "B14": {
   "file": "boards/14-foreground-background.png",
-  "question": "When QANDEEL already has the user’s attention, is an external Push avoided — the event lands in place in the same context, as a strip in a different context, deferred during a Live Call — while in the background Push is used only when eligible and permitted, and Activity is always the fallback?",
-  "bytes": 311713,
-  "sha256": "e7947a65a8498125e71510693cbb29fe5cd469dbb3934ea86b0bfb17e8a9b4dc"
+  "question": "When QANDEEL already has the user’s attention, is an external Push avoided — the event lands in place in the same context, as a strip in a different context, deferred during a Live Call (except critical security and a requested exact-time reminder, which get the call-safe strip) — while in the background Push is used only when eligible and permitted, and Activity is always the fallback?",
+  "bytes": 659836,
+  "sha256": "445d95cbca65aace025fa82a6aa68a9f7171f2cbbf0b91caccc89b95e5258787"
  },
  "B15": {
   "file": "boards/15-stress-320x568.png",
   "question": "At the narrowest supported phone, with the longest localized labels, do Activity, the strip, the settings and the education still read — no clipping, no horizontal scroll, targets still 44 pt?",
-  "bytes": 249935,
-  "sha256": "9f933589facb10cdc941de935b04175cdfcb10e7ccf33602093c0d11cbe7d15c"
+  "bytes": 251610,
+  "sha256": "f9adec3544bb58b7e870a1f6d64db1d9f35949b66c91191ff879751d11b40fff"
  },
  "B16": {
   "file": "boards/16-responsive-390-430.png",
   "question": "Does the composition scale from 390 to 430 without stretching into a card wall — the same row grammar, the entry at the same edge, the strip still attached to the chrome?",
-  "bytes": 409474,
-  "sha256": "65b652895c5587047f03d852ed247f15b5baec14d861d8faa0c260fe3b4270a9"
+  "bytes": 405366,
+  "sha256": "6ddc805a74a1233b5e2d696933d4e3dde95c9aca22f56257b46401e172398b15"
  }
 }

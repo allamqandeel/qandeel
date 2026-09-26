@@ -177,5 +177,12 @@
    "bytes": 1637,
    "sha256": "b92138dee6a0493d3e957648c2aae362f5609fc82344497b28220e0ccb30c2a5"
   }
+ },
+ "g32": {
+  "note": "G3.2 reviewed prototype, byte-exact (G3 CLOSED / FROZEN). Loaded unchanged in a frame for the Analysis surface; never edited.",
+  "from": "docs/design/canonical-artifacts/product-proofs/g3/g3.2/prototype/index.html",
+  "to": "prototype/g3.2/index.html",
+  "bytes": 1354593,
+  "sha256": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
  }
 }

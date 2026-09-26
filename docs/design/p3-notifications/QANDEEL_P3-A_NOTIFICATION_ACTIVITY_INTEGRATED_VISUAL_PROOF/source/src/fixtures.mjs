@@ -52,9 +52,25 @@ export const FEED_SETTINGS = (() => { const s = defaultSettings(); s.os = 'grant
 
 // ------------------------------------------------------------------------- one event per required family
 // (task §22) — each is used by a scenario below, a board, and at least one check.
+//
+// `reduceEligible` (Proactive only) is NOT a score: it is the fixture's explicit statement of what the already-run
+// Proactive Gate found — whether this candidate is strong enough (value or timing) to keep interrupting under «أقل» /
+// Reduce. `requested` (reminders) states that the user explicitly asked for this exact time.
 export const EV = {
-  proactive: { id: 'E-pro', category: 'qandeel', kind: 'proactive', cls: 3, context: 'personal', thread: 'thu-presentation', safeMax: 'L3',
+  proactive: { id: 'E-pro', category: 'qandeel', kind: 'proactive', cls: 3, context: 'personal', thread: 'thu-presentation', safeMax: 'L3', reduceEligible: false,
     text: F('F2'), bounded: t2('بخصوص عرض الخميس', 'About Thursday\'s presentation'), preview: t2('عرض الخميس الساعة 10:30. تحب نراجع الأرقام؟', 'Thursday\'s presentation is at 10:30. Want to go over the numbers?') },
+  proTimely: { id: 'E-pro-t', category: 'qandeel', kind: 'proactive', cls: 2, context: 'personal', thread: 'thu-leave', safeMax: 'L3', reduceEligible: true,
+    text: t2('عرضك بعد ساعة، والطريق زحمة. لو هتتحرك، ده وقت كويس.', 'Your presentation is in an hour and traffic is heavy. If you\'re heading out, now is a good time.'),
+    bounded: t2('بخصوص عرض النهارده', 'About today\'s presentation'), preview: t2('عرضك بعد ساعة، والطريق زحمة.', 'Your presentation is in an hour and traffic is heavy.') },
+  proTimelyWeak: { id: 'E-pro-w', category: 'qandeel', kind: 'proactive', cls: 2, context: 'personal', thread: 'cafe', safeMax: 'L3', reduceEligible: false,
+    text: t2('القهوة اللي كنت بتدور عليها رجعت في المحل اللي جنبك.', 'The coffee you were looking for is back at the shop near you.'),
+    bounded: t2('حاجة كنت بتدور عليها', 'Something you were looking for'), preview: t2('القهوة رجعت في المحل اللي جنبك.', 'The coffee is back at the shop near you.') },
+  proHighValue: { id: 'E-pro-h', category: 'qandeel', kind: 'proactive', cls: 3, context: 'personal', thread: 'results', safeMax: 'L2', reduceEligible: true,
+    text: t2('قلت لي إن نتيجة التحليل هتطلع النهارده. لو حابب نتكلم فيها، أنا هنا.', 'You told me the test results come out today. If you\'d like to talk them through, I\'m here.'),
+    bounded: t2('بخصوص حاجة قلتها لي', 'About something you told me'), preview: t2('نتيجة التحليل هتطلع النهارده.', 'The test results come out today.') },
+  proAmbient: { id: 'E-pro-a', category: 'qandeel', kind: 'proactive', cls: 4, context: 'personal', thread: 'reading', safeMax: 'L3', reduceEligible: true,
+    text: t2('لقيت مقال عن القراءة البطيئة ممكن يعجبك.', 'I found an article about slow reading you might like.'),
+    bounded: t2('حاجة ممكن تعجبك', 'Something you might like'), preview: t2('مقال عن القراءة البطيئة', 'An article about slow reading') },
   sharedReply: { id: 'E-reply', category: 'shared', kind: 'reply', cls: 3, context: 'w-summer', ctx: true, safeMax: 'L3',
     text: t2('سارة ردّت عليك', 'Sara replied to you'), bounded: t2('سارة ردّت عليك', 'Sara replied to you'), preview: t2('سارة: تمام، هحجز التذاكر النهارده', 'Sara: Great, I\'ll book the tickets today') },
   sharedGov: { id: 'E-gov', category: 'shared', kind: 'governance', cls: 3, context: 'w-summer', ctx: true, safeMax: 'L2',
@@ -65,13 +81,18 @@ export const EV = {
     text: t2('تفاعل جديد على منشورك', 'A new reaction to your post'), bounded: t2('تفاعل جديد على منشورك', 'A new reaction to your post'), preview: t2('تفاعل جديد على منشورك', 'A new reaction to your post') },
   discovery: { id: 'E-disc', category: 'public', kind: 'discovery', cls: 4, context: 'public', safeMax: 'L2',
     text: t2('نقاش جديد عن القراءة البطيئة قد يهمك', 'A new discussion about slow reading you might like'), bounded: t2('نقاش جديد قد يهمك', 'A new discussion you might like'), preview: t2('نقاش عن القراءة البطيئة', 'A discussion about slow reading') },
-  introProposal: { id: 'E-intro', category: 'intro', kind: 'proposal', cls: 3, context: 'intro', safeMax: 'L1',
+  // Introductions: default L0 (D15) and NO category cap. `safeMax` below is EVENT-specific: a pending proposal carries
+  // no content beyond its bounded context — nothing about the other person may be shown before both accept (G2.3) — so
+  // its own safe projection stops at L2. The acceptance has a bounded L3 preview (still no names).
+  introProposal: { id: 'E-intro', category: 'intro', kind: 'proposal', cls: 3, context: 'intro', safeMax: 'L2',
     text: F('F5'), bounded: t2('فيه تعارف جديد في انتظارك', 'A new introduction is waiting for you'), preview: t2('فيه تعارف جديد في انتظارك', 'A new introduction is waiting for you') },
-  introAccept: { id: 'E-accept', category: 'intro', kind: 'acceptance', cls: 2, context: 'intro', safeMax: 'L1',
-    text: F('F11'), bounded: t2('قَبِل الطرفان التعارف', 'You both accepted the introduction'), preview: t2('قَبِل الطرفان التعارف', 'You both accepted the introduction') },
+  introAccept: { id: 'E-accept', category: 'intro', kind: 'acceptance', cls: 2, context: 'intro',
+    text: F('F11'), bounded: t2('قَبِل الطرفان التعارف', 'You both accepted the introduction'), preview: t2('قَبِل الطرفان التعارف. افتح التعارف لتكمل.', 'You both accepted the introduction. Open Introductions to continue.') },
   security: { id: 'E-sec', category: 'system', kind: 'security', cls: 1, critical: true, context: 'account', safeMax: 'L2',
+    short: t2('تسجيل دخول جديد', 'New sign-in'),
     text: F('F3'), bounded: t2('تسجيل دخول جديد على حسابك', 'A new sign-in to your account'), preview: t2('تسجيل دخول جديد من جهاز Pixel 8 في القاهرة', 'New sign-in from a Pixel 8 in Cairo') },
-  reminder: { id: 'E-rem', category: 'qandeel', kind: 'reminder', cls: 2, context: 'personal', safeMax: 'L3',
+  reminder: { id: 'E-rem', category: 'qandeel', kind: 'reminder', cls: 2, context: 'personal', safeMax: 'L3', requested: true,
+    short: t2('كلّم العيادة، 4:00', 'Call the clinic, 4:00'),
     text: F('F10'), bounded: t2('تذكير طلبته للساعة 4:00', 'A reminder you set for 4:00'), preview: t2('كلّم العيادة الساعة 4:00', 'Call the clinic at 4:00') },
   staleShared: { id: 'E-stale', category: 'shared', kind: 'message', cls: 3, context: 'w-work', targetGone: true,
     text: F('F9'), bounded: t2('ملف جديد', 'A new file'), preview: t2('كريم شارك ملفًا', 'Karim shared a file') },
@@ -99,11 +120,31 @@ export const SCENARIOS = [
   { id: 'S13', name: 'stale Shared target', app: 'background', ev: 'staleShared', expect: 'stale' },
   { id: 'S14', name: 'Proactive QANDEEL off', app: 'background', ev: 'proactive', proactive: 'off', expect: 'next-conversation' },
   { id: 'S15', name: 'critical security, OS denied', app: 'background', ev: 'security', os: 'denied', expect: 'activity' },
+  // ---- refinement §8: active Live Call — ordinary attention waits; only the two call-safe cases show a call-safe strip
+  { id: 'S16', name: 'active Live Call (normal Proactive QANDEEL)', app: 'foreground', here: 'personal', liveCall: true, ev: 'proactive', expect: 'deferred' },
+  { id: 'S17', name: 'active Live Call (critical security)', app: 'foreground', here: 'personal', liveCall: true, ev: 'security', expect: 'call-strip' },
+  { id: 'S18', name: 'active Live Call (requested exact-time reminder)', app: 'foreground', here: 'personal', liveCall: true, ev: 'reminder', expect: 'call-strip' },
+  { id: 'S19', name: 'Live Call continuing in the background (Shared reply)', app: 'background', liveCall: true, ev: 'sharedReply', expect: 'deferred' },
+  { id: 'S20', name: 'Live Call continuing in the background (critical security)', app: 'background', liveCall: true, ev: 'security', expect: 'push', expectLevel: 'L2' },
+  // ---- refinement §7: «أقل» / Reduce tightens the Proactive Gate; it is not a class rule
+  { id: 'S21', name: 'Reduce — Class 2, Gate: strong enough', app: 'background', proactive: 'reduce', ev: 'proTimely', expect: 'push' },
+  { id: 'S22', name: 'Reduce — Class 2, Gate: not strong enough', app: 'background', proactive: 'reduce', ev: 'proTimelyWeak', expect: 'next-conversation' },
+  { id: 'S23', name: 'Reduce — ordinary Class 3', app: 'background', proactive: 'reduce', ev: 'proactive', expect: 'next-conversation' },
+  { id: 'S24', name: 'Reduce — high-value Class 3, Gate: strong enough', app: 'background', proactive: 'reduce', ev: 'proHighValue', expect: 'push', expectLevel: 'L1' },
+  { id: 'S25', name: 'Reduce — Class 4 (ambient)', app: 'background', proactive: 'reduce', ev: 'proAmbient', expect: 'activity' },
+  { id: 'S26', name: 'Reduce — strong enough, but inside Quiet Hours', app: 'background', proactive: 'reduce', ev: 'proHighValue', now: at(3, '02:00'), expect: 'deferred' },
+  { id: 'S27', name: 'Reduce — strong enough, but the Proactive 1 / 24 h ceiling is used', app: 'background', proactive: 'reduce', ev: 'proHighValue', hist: [{ at: at(3, '10:00'), kind: 'proactive', thread: 'thu-leave', engaged: false }], expect: 'next-conversation' },
+  // ---- refinement §5: Introductions — default L0, the user may raise the ceiling, the event's own projection may render less
+  { id: 'S28', name: 'Introductions — default ceiling (proposal)', app: 'background', ev: 'introProposal', expect: 'push', expectLevel: 'L0' },
+  { id: 'S29', name: 'Introductions — ceiling raised to «إظهار المعاينة» (proposal: its own projection stops at L2)', app: 'background', ev: 'introProposal', lock: { intro: 'L3' }, expect: 'push', expectLevel: 'L2' },
+  { id: 'S30', name: 'Introductions — ceiling raised to «إظهار المعاينة» (acceptance: renders L3)', app: 'background', ev: 'introAccept', lock: { intro: 'L3' }, expect: 'push', expectLevel: 'L3' },
+  { id: 'S31', name: 'Introductions — ceiling raised to «إظهار النوع»', app: 'background', ev: 'introAccept', lock: { intro: 'L1' }, expect: 'push', expectLevel: 'L1' },
 ];
 export function scenarioCtx(sc, now = at(3, '14:00')) {
   const s = defaultSettings(); s.os = sc.os ?? 'granted'; s.intro.entered = sc.introEntered ?? true;
   if (sc.muted) s.shared.muted = sc.muted; if (sc.proactive) s.proactive = sc.proactive;
-  return { settings: s, hist: [], app: sc.app, here: sc.here ?? null, liveCall: !!sc.liveCall, now };
+  if (sc.lock) Object.assign(s.lock, sc.lock);
+  return { settings: s, hist: sc.hist ? sc.hist.map((h) => ({ ...h })) : [], app: sc.app, here: sc.here ?? null, liveCall: !!sc.liveCall, now: sc.now ?? now };
 }
 
 // ------------------------------------------------------------------------------ the Quiet Hours overnight cluster

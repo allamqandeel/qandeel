@@ -18,9 +18,10 @@ exists; `apps/mobile/` has no notification code; the final P2 icons are not in p
 | Quiet Hours end | a re-evaluation pass at the boundary, not a queue flush | a scheduler; semantic expiry per candidate (D59) |
 | Disclosure | the bounded projection built per level from ONE event | the renderer receives only that projection (§10) |
 | Activity | a user-facing projection with attention state per item | storage and retention by Product meaning (D32) — not designed here |
-| Attention Mark / strip | foreground presentation from the same decision | knowledge of "where the user is" and "is a Live Call active" — the latter is a required property of `QAN-BL-VOICE-01` (G3 §D) |
+| Attention Mark / strip | foreground presentation from the same decision | knowledge of "where the user is" and "is a Live Call active" (on either surface, foreground or background) — the latter is a required property of `QAN-BL-VOICE-01` (G3 §D); the call-safe strip needs the Analysis chrome row's measured free slot |
 | Platform | APNs / FCM delivery; iOS categories and interruption levels; Android channels and Lock Screen visibility; the permission request | the platform owns the prompt, the frame, Focus / DND, channel importance and entitlements (P3_PLATFORM_REFERENCE_GATE.md) |
-| Icons | the Open Ledger glyph and the Introductions source mark are SVG path data in P2's grammar | the same production vector path P2 §14 describes (no new dependency beyond what P2 already names) |
+| Proactive Gate under Reduce | the Gate's own finding whether a candidate is strong enough to interrupt under Reduce | the proof states it as a fixture boolean (`reduceEligible`); a production Gate decides it — the proof defines no score, weight, threshold or field |
+| Icons | the Open Ledger glyph and the Introductions source mark (Open Link) are SVG path data in P2's grammar | the same production vector path P2 §14 describes (no new dependency beyond what P2 already names) |
 
 ## 3. Constraints to respect
 
@@ -39,5 +40,7 @@ device Reduce Motion / Increase Contrast, and touch latency. The proof uses fixt
 ## 5. Carried to the P3 closure (not admitted here)
 
 The later canonical P3 closure will have to disposition, under BG-06: the production realization itself; the device
-gates above; the four proof interpretations (Reduce; the 08:00 rule; critical security during a Live Call; the entry's
-absence from the Analysis chrome) once the Product Owner answers them. This proof admits no backlog item.
+gates above; the proof interpretation of the 08:00 rule; and the open craft items the report lists (the Introductions
+mark choice, the call-safe strip's place and its lack of Direct Entry, the PROOF copy). Reduce, critical security during
+a Live Call and the entry's absence from the Analysis chrome were answered by the Product Owner in the refinement. This
+proof admits no backlog item.

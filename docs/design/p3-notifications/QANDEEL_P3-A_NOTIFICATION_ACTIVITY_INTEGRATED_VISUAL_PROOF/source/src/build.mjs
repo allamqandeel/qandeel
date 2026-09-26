@@ -7,6 +7,8 @@
 //   - the frozen token tree through src/tokens.mjs (it refuses to emit if a frozen literal disagrees);
 //   - Estedad v8.5 (the typography foundation), inlined;
 //   - the G1.1 / G3.2 shell geometry (status 47 pt, upper chrome 48 pt, navigation 56 pt + home 34 pt, line 64 pt).
+// The Analysis is G3.2's own reviewed prototype (prototype/g3.2/index.html, byte-exact, vendored by tools/p3vendor.mjs),
+// loaded unchanged in a frame; this page adds nothing to its chrome and draws only a strip above its chrome row.
 // What is new (and only this): p3glyphs.mjs (the Activity entry, the Introductions source mark), the Attention Mark,
 // the Attention Strip, Activity, the Notifications & Activity settings and the permission education — all built from the
 // one Surface tone, E1R's state channels and the canon's text-button actions.
@@ -20,7 +22,7 @@ import { palette } from './tokens.mjs';
 import { sigSvg } from './sig.mjs';
 import { utilSvg } from './utility.mjs';
 import { railArt, RAIL_RECOMMENDED, END_GLYPH_PX } from './machines.mjs';
-import { p3Svg, ACTIVITY_RECOMMENDED } from './p3glyphs.mjs';
+import { p3Svg, ACTIVITY_ACCEPTED } from './p3glyphs.mjs';
 import { COPY } from './content.mjs';
 import * as FX from './fixtures.mjs';
 
@@ -152,6 +154,19 @@ h1:focus-visible,h2:focus-visible{box-shadow:none !important}
 .strip .meta{display:block;color:var(--secondary)}
 .strip .say{display:block;color:var(--primary);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .strip .x{flex:none;align-self:center;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;color:var(--rest);margin-inline-end:4px}
+/* THE CALL-SAFE STRIP (refinement §8): the same ASIDE, without Direct Entry — its body is text, its one act is dismiss. */
+.strip .vis{display:contents}
+.strip.callsafe .go{cursor:default}
+/* In the Analysis (G3's own page, in a frame under P3): the strip lives in the upper chrome row only, beside «المحادثة»,
+   over the Replay slot. Its box is MEASURED from G3's elements (app.js chromeSlot); it never reaches the world (y ≥ 95). */
+#g32host{position:absolute;inset:0;z-index:1}
+#g32host iframe{display:block;width:100%;height:100%;border:0}
+.strip.inchrome{min-height:0;border-radius:12px;align-items:center}
+.strip.inchrome .go{align-items:center;gap:8px;padding:0 2px 0 10px;border-radius:12px}
+#phone[dir="rtl"] .strip.inchrome .go{padding:0 10px 0 2px}
+.strip.inchrome .src{margin-top:0}
+.strip.inchrome .say{color:var(--primary)}
+.strip.inchrome .x{margin-inline-end:0}
 
 /* ---------------------------------------------------------------------------------- pushed pages */
 .page{position:absolute;inset:0;background:var(--world);z-index:16;--ground:var(--world)}
@@ -194,6 +209,7 @@ h1:focus-visible,h2:focus-visible{box-shadow:none !important}
 /* --------------------------------------------------------------------------------------- SETTINGS */
 .set h2{color:var(--secondary);padding:22px 24px 6px}
 .set .note{color:var(--tertiary);padding:4px 24px 0;max-width:380px}
+.set .note.pro-opt{color:var(--secondary);padding-top:8px}
 .srow{position:relative;display:flex;align-items:center;gap:12px;width:100%;min-height:52px;padding:8px 20px 8px 24px;color:var(--primary);text-align:start}
 #phone[dir="rtl"] .srow{padding:8px 24px 8px 20px}
 .srow .lb{flex:1;min-width:0}
@@ -254,7 +270,9 @@ function glyphs() {
   g.depth22 = sigSvg('depth', { size: 22 }); g.replay22 = sigSvg('replay', { size: 22 });
   g.call24 = sigSvg('call'); g.mic24 = sigSvg('mic');
   g.muted24 = sigSvg('muted', { id: 'p3' }); g.route24 = sigSvg('routeOn'); g.end = sigSvg('endCall', { size: END_GLYPH_PX });
-  g.introMark20 = p3Svg('introMark', { size: 20 });
+  // the Introductions row mark: Open Link (recommended), At the Door (comparison), and the WITHDRAWN two-arc drawing
+  // (history; reachable only through planted defect D23, ?defect=oldintro)
+  g.introLink20 = p3Svg('link', { size: 20 }); g.introDoor20 = p3Svg('door', { size: 20 }); g.introTwoArcs20 = p3Svg('introTwoArcs', { size: 20 });
   g.settings20 = utilSvg('settings', { size: 20 }); g.settings22 = utilSvg('settings', { size: 22 });
   g.close20 = utilSvg('close', { size: 20 }); g.back22 = utilSvg('back', { size: 22, cls: 'mirror' });
   g.chev16 = utilSvg('chevron', { size: 16, cls: 'mirror' });
@@ -267,7 +285,7 @@ export function page() {
   vars('dark'); vars('light'); vars('dark', 'increased'); vars('light', 'increased');   // fills PALETTES
   const serialCopy = JSON.parse(JSON.stringify(COPY));
   const data = {
-    copy: serialCopy, glyphs: glyphs(), palettes: PALETTES, activityRecommended: ACTIVITY_RECOMMENDED, endGlyphPx: END_GLYPH_PX,
+    copy: serialCopy, glyphs: glyphs(), palettes: PALETTES, activityAccepted: ACTIVITY_ACCEPTED, endGlyphPx: END_GLYPH_PX,
     fx: { CONTEXTS: FX.CONTEXTS, SOURCE_GLYPH: FX.SOURCE_GLYPH, NOW: FX.NOW, FEED: FX.FEED, FEED_SETTINGS: FX.FEED_SETTINGS, EV: FX.EV, SCENARIOS: FX.SCENARIOS },
   };
   return `<!doctype html>

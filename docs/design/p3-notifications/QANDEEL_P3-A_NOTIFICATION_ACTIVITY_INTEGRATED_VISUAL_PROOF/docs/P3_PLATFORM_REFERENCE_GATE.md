@@ -64,3 +64,16 @@ plugin copies (SHA-256 compared). No skill, plugin or package was installed.
 | React Native / Expo / media skills (`react-native-best-practices`, `expo-horizon`, `fishjam`, `moq-kit`, `pulsar-haptics`, …) | INSPECTED — NOT APPLICABLE | descriptions | No production code or dependency is in scope; haptics are an implementation choice (P3_IMPLEMENTATION_FEASIBILITY.md). |
 
 Repository canon and the Product Owner's accepted direction outranked every skill.
+
+### 3a. Skills Gate — P3-A refinement (2026-09-26)
+
+No platform statement changed in the refinement, so no source was re-fetched (refinement §14). Skills actually used:
+
+| Skill | Concrete effect on the refinement |
+|---|---|
+| `fixing-accessibility` | The call-safe strip is a named region whose visible text is `aria-hidden` and whose single accessible sentence says the call continues (no double reading); its only control is the named 44-pt dismiss. Announced once through the ONE persistent P3 live region, never through the call's own channel. C-A11Y-1/2/3 now include the Analysis and Conversation call-safe pages. |
+| `designing-arabic-frontends` | The in-chrome slot is computed by meaning from G3's own elements, not from physical sides: in Arabic it runs from Replay (END, left) to 8 pt before «المحادثة» (START, right); in English the same slot mirrors. The Open Link mark is an identity glyph and is never mirrored (C-A11Y-6 family). |
+| `writing-eloquent-arabic` | The Allow / Reduce / Off lines keep the QANDEEL Egyptian register, verb-first and without calques («قنديل هيقاطعك أقل، ومش هينبّهك غير للحاجات الأهم أو اللي وقتها ميستناش.»); the Introductions line is MSA and honest by default («افتراضيًا، لا تكشف…»); the call-safe region keeps the formal «تنبيه» because it names a security-grade alert, not a friendly nudge. Fixture sentences were deliberately left as FIXTURE. |
+| `animate-expo` | Frequency gate: the call-safe strip is rare (occasional tier) and earns the standard entrance, but with 6 pt of travel inside the 48-pt chrome row; only `transform` and `opacity`; no bounce (no finger momentum); Reduced Motion is opacity only with the same hold (M08r; C-CALL-6). |
+| `apple-design` | "Separate to keep flow": the call-safe strip is nonmodal with no scrim and exits along its entry path; it never covers the controls the call depends on (the switch, the Timeline, Return Live, the Call Rail). |
+| `ui-ux-pro-max` | Data queried directly (no Python on this host): `ux-guidelines.csv` rows 100–101 "Focus Not Obscured … dismiss or move persistent overlays … close the overlay before focus moves behind it" → the strip steps aside if G3's Replay (under it) takes keyboard focus; row 2 "fixed nav should not obscure content" → the strip may not lie over the world; row 116 "compact label … expose the full text" → the chrome-row strip shows the short line and carries the whole sentence in its name and in Activity. |

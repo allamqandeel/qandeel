@@ -14,6 +14,7 @@ import { execFileSync } from 'node:child_process';
 import { openState, kbdFocus, closeBrowser, closeServers, WORK, PKG, SOURCE } from './lib/session.mjs';
 import * as FX from '../src/fixtures.mjs';
 import { COPY, projectionWords } from '../src/content.mjs';
+import * as GL from '../src/p3glyphs.mjs';
 
 const args = process.argv.slice(2), NO_GIT = args.includes('--no-git');
 const OUT = args.includes('--out') ? args[args.indexOf('--out') + 1] : join(PKG, 'data', 'CHECKS.json');
@@ -88,13 +89,67 @@ const MODEL_CHECKS = [
   ['C-FREQ-8', 'Frequency', 'unused budget never causes a notification (ceiling ≠ quota): an empty trace sends nothing', (M) => { const r = M.runTrace([], FX.WEEK_SETTINGS); return { pass: r.pushes.length === 0 && r.rows.length === 0, detail: 'pushes ' + r.pushes.length }; }],
   ['C-FREQ-9', 'Frequency', 'the exact reminder and the critical security event sit outside the ordinary ceiling (W06, W20)', (M) => { const t = wk(M); return { pass: t.W06.surface === 'push' && t.W20.surface === 'push' && has(t.W20, 'outside') && t.W20.ord7 === 12, detail: `${t.W06.surface} / ${t.W20.surface}` }; }],
   ['C-FREQ-10', 'Frequency', 'the whole 7-day trace equals the independently stated expectations', (M) => { const t = wk(M), bad = Object.entries(FX.WEEK_EXPECT).filter(([k, v]) => t[k].surface !== v).map(([k]) => k); return { pass: bad.length === 0, detail: bad.join(',') || '20 / 20' }; }],
-  ['C-FG-1', 'Foreground', 'all 15 foreground / background scenarios resolve as expected (same context suppresses; different context may strip)', (M) => { const bad = FX.SCENARIOS.filter((s) => sc(M, s.id).surface !== s.expect).map((s) => s.id); return { pass: bad.length === 0, detail: bad.join(',') || '15 / 15' }; }],
+  ['C-FG-1', 'Foreground', `all ${FX.SCENARIOS.length} scenarios resolve as independently stated — surface, and disclosure level where stated`, (M) => { const bad = FX.SCENARIOS.filter((s) => { const r = sc(M, s.id); return r.surface !== s.expect || (s.expectLevel && r.level !== s.expectLevel); }).map((s) => s.id); return { pass: bad.length === 0 && FX.SCENARIOS.length >= 31, detail: bad.join(',') || `${FX.SCENARIOS.length} / ${FX.SCENARIOS.length}` }; }],
+  // ---- P3-A refinement §5: Introductions — default L0, NO category cap; the user may raise the ceiling; the event may render less
+  ['C-PRIV-6', 'Privacy', 'no Introductions category cap: default L0, and a ceiling the user raises above L1 is honoured up to the event\'s own safe projection (S28–S31)', (M) => {
+    const r = Object.fromEntries(['S28', 'S29', 'S30', 'S31'].map((id) => [id, sc(M, id)]));
+    const capped = Object.entries(FX.EV).filter(([, e]) => e.category === 'intro' && e.safeMax && M.LEVELS.indexOf(e.safeMax) <= 1).map(([k]) => k);
+    return { pass: M.DISCLOSURE_DEFAULTS.intro === 'L0' && r.S28.level === 'L0' && r.S30.level === 'L3' && r.S31.level === 'L1' && capped.length === 0, detail: `default ${r.S28.level}; raised to L3 → acceptance ${r.S30.level}; raised to L1 → ${r.S31.level}; fixture intro caps ≤ L1: ${capped.join(',') || 'none'}` };
+  }],
+  ['C-PRIV-7', 'Privacy', 'the user\'s ceiling is a ceiling: an Introduction whose own bounded projection stops lower renders lower (S29), and even the raised L3 words name no person', (M) => {
+    const a = sc(M, 'S29'), p = JSON.stringify([pj(M, FX.EV.introAccept, 'L3', 'ar'), pj(M, FX.EV.introAccept, 'L3', 'en'), pj(M, FX.EV.introProposal, a.level, 'ar')]);
+    return { pass: a.surface === 'push' && a.level === 'L2' && !/سارة|Sara|كريم|Karim|مها|Maha|@/.test(p), detail: `proposal under an L3 ceiling → ${a.level}; ${p.slice(0, 120)}…` };
+  }],
+  // ---- §7: «أقل» / Reduce tightens the Proactive Gate; it is not a class rule; no scores
+  ['C-RED-1', 'Reduce', 'Reduce is not "Class 2 only": a Gate-strong Class 3 still interrupts (S24) and a Gate-weak Class 2 waits (S22); a Gate-strong Class 2 interrupts (S21)', (M) => { const a = sc(M, 'S21'), b = sc(M, 'S22'), c = sc(M, 'S24'); return { pass: a.surface === 'push' && b.surface === 'next-conversation' && c.surface === 'push', detail: `S21 ${a.surface} · S22 ${b.surface} · S24 ${c.surface}` }; }],
+  ['C-RED-2', 'Reduce', 'under Reduce an ordinary Class 3 waits for the next conversation (S23) and Class 4 never interrupts (S25); Reduce is not Off', (M) => { const a = sc(M, 'S23'), b = sc(M, 'S25'), off = sc(M, 'S14'); return { pass: a.surface === 'next-conversation' && b.surface === 'activity' && sc(M, 'S21').surface === 'push' && off.surface === 'next-conversation' && has(off, 'proactive-off'), detail: `S23 ${a.surface} · S25 ${b.surface}` }; }],
+  ['C-RED-3', 'Reduce', 'Quiet Hours and the Proactive ceilings still constrain a Gate-strong candidate under Reduce (S26, S27)', (M) => { const a = sc(M, 'S26'), b = sc(M, 'S27'); return { pass: a.surface === 'deferred' && has(a, 'quiet-hours') && b.surface !== 'push' && has(b, 'proactive-24h'), detail: `S26 ${a.surface} · S27 ${b.surface} ${b.reasons}` }; }],
+  // ---- §8: an active Live Call
+  ['C-CALL-1m', 'Live Call', 'ordinary Shared, Introductions and Proactive attention waits during an active Live Call — foreground and background (S7, S8, S16, S19)', (M) => { const r = ['S7', 'S8', 'S16', 'S19'].map((id) => sc(M, id).surface); return { pass: r.every((x) => x === 'deferred'), detail: r.join(' / ') }; }],
+  ['C-CALL-2m', 'Live Call', 'only critical security and a requested exact-time reminder may show the call-safe strip (S17, S18); a reminder that was not requested, and a non-critical security notice, still wait', (M) => {
+    const a = sc(M, 'S17'), b = sc(M, 'S18'), ctx = FX.scenarioCtx(FX.SCENARIOS.find((s) => s.id === 'S17'));
+    const c = M.decide({ ...FX.EV.reminder, requested: false }, ctx), d = M.decide({ ...FX.EV.security, critical: false }, ctx), e = sc(M, 'S20');
+    return { pass: a.surface === 'call-strip' && b.surface === 'call-strip' && c.surface === 'deferred' && d.surface === 'deferred' && e.surface === 'push' && e.level === 'L2', detail: `S17 ${a.surface} · S18 ${b.surface} · unrequested ${c.surface} · non-critical ${d.surface} · background ${e.surface} ${e.level}` };
+  }],
+];
+const CODE = (src) => src.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
+const MODEL_STATIC = [
+  ['C-RED-4', 'Reduce', 'no score, weight or threshold: the Reduce decision reads one explicit boolean the fixture states (reduceEligible), never a class', (src) => {
+    const line = src.split('\n').find((l) => l.includes("s.proactive === 'reduce'")) || '';
+    const flags = Object.values(FX.EV).filter((e) => 'reduceEligible' in e).map((e) => typeof e.reduceEligible);
+    return { pass: /reduceEligible !== true/.test(line) && !/\bcls\b/.test(line) && !/\b(score|weight|threshold)s?\b/i.test(CODE(src)) && flags.length >= 5 && flags.every((t) => t === 'boolean'), detail: line.trim().slice(0, 140) };
+  }],
 ];
 
 // ------------------------------------------------------------------------------------------ DOM checks
 const rgbOf = (hex) => { const n = parseInt(hex.slice(1), 16); return `rgb(${n >> 16}, ${(n >> 8) & 255}, ${n & 255})`; };
 const PAL = (() => { const t = readFileSync(join(PKG, 'prototype', 'index.html'), 'utf8'); const m = t.match(/window\.P3DATA=(\{.*?\});<\/script>/s); return JSON.parse(m[1]).palettes; })();
 async function page(o) { return openState({ ...o, q: { ...(o.q || {}), ...(o.defect ? { defect: o.defect } : {}) } }); }
+/** Reads a rendered glyph's GEOMETRY in the browser (paths sampled along their length, dots as circles): how much of the
+ *  N1 ring keyline (centre 12,12, r 8) it covers, how many openings that ring has, where its points of light sit, its
+ *  strokes, terminals and extent. A drawing is a ring when it covers ≥ 150° of the keyline (P2's porous Public ring
+ *  covers ≈ 170°; the square ledger ≈ 110°). An opening is an uncovered run of ≥ 3°. */
+const GLYPH_JS = `(sel, html) => {
+  let svg, host = null;
+  if (html) { host = document.createElement('div'); host.style.cssText = 'position:fixed;left:-999px;top:0'; host.innerHTML = html; document.body.appendChild(host); svg = host.querySelector('svg'); }
+  else svg = document.querySelector(sel);
+  const cov = new Array(360).fill(0), strokes = [], caps = [], dots = []; let lo = 24, hi = 0;
+  for (const p of svg.querySelectorAll('path')) {
+    if (p.getAttribute('fill') !== 'none') continue;
+    strokes.push(+p.getAttribute('stroke-width')); caps.push(p.getAttribute('stroke-linecap'));
+    const sw = +p.getAttribute('stroke-width') / 2, L = p.getTotalLength();
+    for (let s = 0; s <= L; s += 0.05) { const q = p.getPointAtLength(s), r = Math.hypot(q.x - 12, q.y - 12);
+      if (Math.abs(r - 8) < 0.3) cov[(Math.round(Math.atan2(q.y - 12, q.x - 12) * 180 / Math.PI) + 360) % 360] = 1;
+      lo = Math.min(lo, q.x - sw, q.y - sw); hi = Math.max(hi, q.x + sw, q.y + sw); }
+  }
+  for (const c of svg.querySelectorAll('circle')) { const x = +c.getAttribute('cx'), y = +c.getAttribute('cy'), r = +c.getAttribute('r'); dots.push([x, y, r]); lo = Math.min(lo, x - r, y - r); hi = Math.max(hi, x + r, y + r); }
+  const coverage = cov.reduce((a, b) => a + b, 0), ring = coverage >= 150; let gaps = 0;
+  if (ring) for (let i = 0; i < 360; i++) if (!cov[i] && cov[(i + 359) % 360]) { let n = 0; while (n < 360 && !cov[(i + n) % 360]) n++; if (n >= 3) gaps++; }
+  let face = false; for (let i = 0; i < dots.length; i++) for (let j = i + 1; j < dots.length; j++) if (Math.abs(dots[i][1] - dots[j][1]) < 1 && Math.abs(dots[i][0] - dots[j][0]) > 2) face = true;
+  const out = { viewBox: svg.getAttribute('viewBox'), coverage, ring, gaps, dots: dots.map((d) => d.slice(0, 2)), dotsOnRing: dots.filter(([x, y]) => Math.abs(Math.hypot(x - 12, y - 12) - 8) < 0.6).length, face, strokes, caps, ext: [+lo.toFixed(2), +hi.toFixed(2)] };
+  if (host) host.remove();
+  return out;
+}`;
 const DOM_CHECKS = [
   ['C-ACT-1', 'Activity', 'one Activity destination reached from the chrome; the navigation keeps its three Worlds and Activity is not one of them', async (d) => {
     const c = await page({ state: 'conv', defect: d }); const r = await c.eval(`({n:document.querySelectorAll('#rail .it').length,names:[...document.querySelectorAll('#rail .it')].map(e=>e.textContent.trim()),entry:!!document.querySelector('.hdr #act-entry')})`);
@@ -159,8 +214,8 @@ const DOM_CHECKS = [
     return { pass: !r.sheet && r.entry && r.rail === 3 && r.again === false, detail: JSON.stringify(r) };
   }],
   ['C-A11Y-1', 'Accessibility', 'every control is named (conversation, strip, Activity, settings, education, call)', async (d) => {
-    const bad = []; for (const [st, lang, h] of [['conv-strip-shared', 'ar'], ['activity', 'ar'], ['activity', 'en'], ['notif', 'ar', 1960], ['edu', 'en'], ['conv-call', 'ar'], ['notif-lock', 'ar']]) { const c = await page({ state: st, lang, h: h || 844, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && !x.name) bad.push(`${st}:${x.tag}`); }
-    return { pass: bad.length === 0, detail: bad.join(', ') || '7 pages' };
+    const bad = []; for (const [st, lang, h] of [['conv-strip-shared', 'ar'], ['activity', 'ar'], ['activity', 'en'], ['notif', 'ar', 1960], ['edu', 'en'], ['conv-call', 'ar'], ['notif-lock', 'ar'], ['analysis-call-security', 'ar'], ['conv-call-reminder', 'en']]) { const c = await page({ state: st, lang, h: h || 844, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && !x.name) bad.push(`${st}:${x.tag}`); }
+    return { pass: bad.length === 0, detail: bad.join(', ') || '9 pages' };
   }],
   ['C-A11Y-1b', 'Accessibility', 'no name is glued from several text pieces (a control named by more than one text element carries an explicit label)', async (d) => {
     const bad = []; for (const [st, lang, h] of [['conv-strip-shared', 'ar'], ['activity', 'en'], ['notif', 'ar', 1960], ['notif', 'en', 1960], ['notif-lock', 'ar'], ['settings-root', 'en']]) { const c = await page({ state: st, lang, h: h || 844, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && x.glued) bad.push(`${st}:${x.name}`); }
@@ -171,12 +226,12 @@ const DOM_CHECKS = [
     return { pass: out.every((x) => x.inS >= 2 && x.out === 0 && x.closed), detail: JSON.stringify(out) };
   }],
   ['C-A11Y-2', 'Accessibility', 'every decorative glyph is hidden from the accessibility tree', async (d) => {
-    const bad = []; for (const st of ['conv-strip-shared', 'activity', 'notif', 'conv-call']) { const c = await page({ state: st, defect: d }); const g = await c.eval('P3.decorative()'); bad.push(...g.filter((x) => !x.hidden && !x.labelled).map(() => st)); }
+    const bad = []; for (const st of ['conv-strip-shared', 'activity', 'notif', 'conv-call', 'analysis-call-security', 'conv-call-security']) { const c = await page({ state: st, defect: d }); const g = await c.eval('P3.decorative()'); bad.push(...g.filter((x) => !x.hidden && !x.labelled).map(() => st)); }
     return { pass: bad.length === 0, detail: bad.join(',') || 'all hidden' };
   }],
   ['C-A11Y-3', 'Accessibility', 'every control target is at least 44 × 44 pt (320, 390 and 430)', async (d) => {
-    const bad = []; for (const [st, w, h] of [['conv-strip-shared', 390, 844], ['activity', 320, 568], ['notif', 390, 1960], ['edu', 320, 568], ['conv-call', 430, 932], ['notif-lock', 390, 844]]) { const c = await page({ state: st, w, h, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && (x.w < 44 || x.h < 44)) bad.push(`${st}@${w}:${x.name}(${x.w}×${x.h})`); }
-    return { pass: bad.length === 0, detail: bad.slice(0, 6).join(', ') || '6 pages' };
+    const bad = []; for (const [st, w, h] of [['conv-strip-shared', 390, 844], ['activity', 320, 568], ['notif', 390, 1960], ['edu', 320, 568], ['conv-call', 430, 932], ['notif-lock', 390, 844], ['analysis-call-security', 320, 568], ['analysis-call-reminder', 430, 932]]) { const c = await page({ state: st, w, h, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && (x.w < 44 || x.h < 44)) bad.push(`${st}@${w}:${x.name}(${x.w}×${x.h})`); }
+    return { pass: bad.length === 0, detail: bad.slice(0, 6).join(', ') || '8 pages' };
   }],
   ['C-A11Y-4', 'Accessibility', 'keyboard focus is visible (E1R perimeter) on the entry, a filter, a switch and the strip', async (d) => {
     const out = []; for (const [st, sel, h] of [['conv', '#act-entry'], ['activity', '.fchip[data-filter=shared]'], ['notif', '[data-sw=shared]', 1960], ['conv-strip-shared', '.strip .x']]) { const c = await page({ state: st, h: h || 844, defect: d }); await kbdFocus(c, sel); out.push(await c.eval(`getComputedStyle(document.querySelector(${JSON.stringify(sel)})).boxShadow`)); }
@@ -207,6 +262,83 @@ const DOM_CHECKS = [
     const c = await page({ state: 'conv', defect: d }); const r = await c.eval(`({nav:getComputedStyle(document.querySelector('#rail .ic')).color,entry:getComputedStyle(document.getElementById('act-entry')).color})`);
     return { pass: r.nav === rgbOf(PAL['dark-standard'].brass) && r.entry === rgbOf(PAL['dark-standard'].restInk) && r.entry !== r.nav, detail: JSON.stringify(r) };
   }],
+  // ---- P3-A refinement §4: the accepted selections
+  ['C-SEL-1', 'Selections', 'Open Ledger is the accepted Activity entry (Quiet Bell is comparison / history only) and the one the shell draws', async (d) => {
+    const c = await page({ state: 'conv', defect: d }); const r = await c.eval(`(()=>{const s=document.querySelector('#act-entry svg');const as=(k)=>{const t=document.createElement('div');t.innerHTML=P3DATA.glyphs[k];return t.firstElementChild.outerHTML};return {ledger:s.outerHTML===as('act-ledger'),bell:s.outerHTML===as('act-bell')}})()`);
+    return { pass: GL.ACTIVITY_ACCEPTED === 'ledger' && GL.ACTIVITY_VARIANTS.ledger.accepted === true && GL.ACTIVITY_VARIANTS.bell.accepted === false && r.ledger && !r.bell, detail: JSON.stringify(r) };
+  }],
+  ['C-ANL-1', 'Analysis', 'the Analysis never gains the Activity entry (G3 composition untouched); the non-Analysis shell keeps it', async (d) => {
+    const out = [];
+    for (const [st, lang, w, h] of [['analysis', 'ar', 390, 844], ['analysis', 'en', 390, 844], ['analysis-call', 'ar', 390, 844], ['analysis-call-security', 'ar', 320, 568], ['analysis-call-reminder', 'en', 430, 932]]) {
+      const c = await page({ state: st, lang, w, h, defect: d }); out.push({ st, lang, w, place: await c.eval(`document.getElementById('phone').dataset.place`), entry: await c.eval(`!!document.getElementById('act-entry')`) });
+    }
+    for (const st of ['conv', 'shared-strip-qandeel']) { const c = await page({ state: st, defect: d }); out.push({ st, place: await c.eval(`document.getElementById('phone').dataset.place`), entry: await c.eval(`!!document.getElementById('act-entry')`) }); }
+    return { pass: out.every((x) => (x.place === 'analysis' ? !x.entry : x.entry)), detail: out.map((x) => `${x.st}${x.w ? '@' + x.w : ''}:${x.entry ? 'entry' : 'none'}`).join(' ') };
+  }],
+  ['C-ANL-2', 'Analysis', 'Activity stays one step away: «المحادثة» leads from the Analysis back to the Conversation, where the entry is', async (d) => {
+    const c = await page({ state: 'analysis', defect: d }); await c.eval(`document.getElementById('g32').contentDocument.getElementById('back').click()`); await c.eval('P3.tick(400)');
+    const r = await c.eval(`({place:P3.S.place,entry:!!document.getElementById('act-entry')})`); return { pass: r.place === 'conv' && r.entry, detail: JSON.stringify(r) };
+  }],
+  // ---- §6: the L1 words
+  ['C-COPY-1', 'Copy', 'L1 reads «إظهار النوع» / "Show type" everywhere it is shown; the withdrawn «تنبيه عام» / "General" is gone', async (d) => {
+    const html = readFileSync(join(PKG, 'prototype', 'index.html'), 'utf8'); const out = [];
+    for (const lang of ['ar', 'en']) { const c = await page({ state: 'notif-lock', lang, defect: d }); out.push(await c.eval(`document.querySelector('[data-level="L1"]').textContent`)); }
+    return { pass: COPY.ar.levels.L1.text === 'إظهار النوع' && COPY.en.levels.L1.text === 'Show type' && out[0].startsWith('إظهار النوع') && out[1].startsWith('Show type') && !/تنبيه عام/.test(out.join()) && !/^General/.test(out[1]) && !html.includes('"text":"تنبيه عام"') && !html.includes('"text":"General"'), detail: out.map((t) => t.slice(0, 24)).join(' | ') };
+  }],
+  ['C-RED-5', 'Reduce', 'Settings explain «أقل» / Reduce in words, with no class, number or threshold', async (d) => {
+    const out = []; for (const lang of ['ar', 'en']) { const c = await page({ state: 'notif', lang, h: 1960, q: { proactive: 'reduce' }, defect: d }); out.push(await c.eval(`({t:document.getElementById('pro-help').textContent,on:document.querySelector('[data-pro="reduce"]').getAttribute('aria-checked'),desc:document.querySelector('.seg').getAttribute('aria-describedby')})`)); }
+    return { pass: out[0].t === COPY.ar.proactiveOptHelp.reduce.text && out[1].t === COPY.en.proactiveOptHelp.reduce.text && out.every((x) => x.on === 'true' && x.desc === 'pro-help' && !/[0-9٠-٩]|class|فئة/i.test(x.t)), detail: out.map((x) => x.t).join(' | ') };
+  }],
+  // ---- §8: the call-safe strip
+  ['C-CALL-3', 'Live Call', 'the call-safe strip covers nothing frozen — measured on G3\'s own elements: inside the chrome row (y ≤ 95, so never the world), clear of «المحادثة», the Timeline, Return Live, the band and the call line — at 320, 390 and 430', async (d) => {
+    const hit = (a, b) => !!b && a.x < b.r && a.x + a.w > b.x && a.y < b.b && a.y + a.h > b.y; const bad = [], seen = [];
+    for (const [st, lang, w, h] of [['analysis-call-security', 'ar', 320, 568], ['analysis-call-security', 'en', 320, 568], ['analysis-call-reminder', 'en', 320, 568], ['analysis-call-security', 'ar', 390, 844], ['analysis-call-reminder', 'en', 390, 844], ['analysis-call-security', 'en', 430, 932]]) {
+      const c = await page({ state: st, lang, w, h, defect: d }); const g = await c.eval('P3.g32()'), s = (await c.eval(`P3.rects('.strip')`))[0];
+      const id = `${st}/${lang}@${w}`; if (!s) { bad.push(id + ':no strip'); continue; }
+      seen.push(`${id}:${g.state}`);
+      if (s.y < 47 || s.y + s.h > 95) bad.push(id + ':leaves chrome row'); if (s.x < 0 || s.x + s.w > w) bad.push(id + ':off phone');
+      for (const k of ['back', 'tl', 'live', 'band', 'line']) if (hit(s, g[k])) bad.push(`${id}:covers ${k}`);
+      if (g.place !== 'analysis' || g.call !== 'live') bad.push(id + ':call ' + g.call);
+    }
+    return { pass: bad.length === 0 && seen.length === 6, detail: bad.join(', ') || seen.join(' ') };
+  }],
+  ['C-CALL-4', 'Live Call', 'ordinary Shared, Introduction and Proactive arrivals during a call show no strip on the Analysis (they wait, marked, in Activity)', async (d) => {
+    const c = await page({ state: 'analysis-call', defect: d }); const r = await c.eval(`({strip:!!document.querySelector('.strip'),d:P3.S.deferred.length,log:P3.S.log.slice(0,3)})`);
+    return { pass: !r.strip && r.d === 3, detail: JSON.stringify(r) };
+  }],
+  ['C-CALL-5', 'Live Call', 'critical security and a requested reminder show the call-safe strip on both call surfaces; it has no Direct Entry, dismissing it leaves the call running, and the security item still waits in Activity', async (d) => {
+    const out = [];
+    for (const [st, lang] of [['analysis-call-security', 'ar'], ['analysis-call-reminder', 'en'], ['conv-call-security', 'ar'], ['conv-call-reminder', 'en']]) {
+      const c = await page({ state: st, lang, defect: d });
+      const a = await c.eval(`({s:!!document.querySelector('.strip.callsafe'),go:!!document.querySelector('.strip button.go'),lab:(document.querySelector('.strip')||{getAttribute(){return ''}}).getAttribute('aria-label')})`);
+      await c.eval(`document.querySelector('.strip .x')&&document.querySelector('.strip .x').click()`); await c.eval('P3.tick(400)');
+      const b = await c.eval(`({s:!!document.querySelector('.strip'),call:P3.S.call,g:P3.g32()&&P3.g32().call,sec:P3.S.feed.filter(i=>i.kind==='security'&&i.actionable).length})`);
+      out.push({ st, ok: a.s && !a.go && a.lab === COPY[lang].callSafeRegion.text && !b.s && b.call === true && (!st.startsWith('analysis') || b.g === 'live') && (!st.endsWith('security') || b.sec >= 1) });
+    }
+    return { pass: out.every((x) => x.ok), detail: out.map((x) => `${x.st}:${x.ok}`).join(' ') };
+  }],
+  ['C-CALL-6', 'Live Call', 'call-safe motion: no pulse, bounce or loop; Reduced Motion keeps the same appear, hold and dismiss with no travel (M08 / M08r)', async () => {
+    const a = JSON.parse(readFileSync(join(PKG, 'data', 'motion', 'M08-call-safe-security-analysis.json'), 'utf8')).truth, b = JSON.parse(readFileSync(join(PKG, 'data', 'motion', 'M08r-call-safe-security-reduced-motion.json'), 'utf8')).truth;
+    const y = (f) => (f.strip && f.strip.t ? parseFloat(f.strip.t.match(/-?[\d.]+(?:e-?\d+)?/)[0]) : 0);
+    const span = (t) => { const on = t.filter((f) => f.strip).map((f) => f.i); return [on[0], on[on.length - 1]]; };
+    let prev = -Infinity, mono = true; for (const f of a) { if (!f.strip) continue; if (f.t > 1000) break; if (y(f) < prev - 1e-6) mono = false; prev = y(f); }
+    const sa = span(a), sb = span(b), travel = b.some((f) => f.strip && f.strip.t && /translateY\((?!0px)/.test(f.strip.t));
+    return { pass: mono && a.every((f) => y(f) <= 0 && y(f) >= -6) && !travel && Math.abs(sa[0] - sb[0]) <= 1 && Math.abs(sa[1] - sb[1]) <= 3, detail: `standard frames ${sa}; reduced ${sb}` };
+  }],
+  // ---- §9: the Introductions row mark
+  ['C-GLY-1', 'Glyph', 'the Introductions mark obeys P2 N1 with no exception: no ring with more than one opening (both the recommended Open Link and the At the Door comparison)', async (d) => {
+    const out = []; for (const v of [null, 'door']) { const c = await page({ state: 'activity', q: { filter: 'intro', ...(v ? { introglyph: v } : {}) }, defect: d }); out.push({ v: v || 'link', ...(await c.eval(`(${GLYPH_JS})('.row[data-cat="intro"] .gl svg')`)) }); }
+    return { pass: out.every((x) => !x.ring || x.gaps === 1) && !out[0].ring, detail: out.map((x) => `${x.v}: ring ${x.ring} (${x.coverage}°) openings ${x.gaps}`).join(' · ') };
+  }],
+  ['C-GLY-2', 'Glyph', 'no face-reading (points never side by side on a horizontal) and no collision with the World glyphs or the Activity ledger', async (d) => {
+    const c = await page({ state: 'activity', q: { filter: 'intro' }, defect: d }); const me = await c.eval(`(${GLYPH_JS})('.row[data-cat="intro"] .gl svg')`); const sig = (x) => [x.ring ? 1 : 0, x.gaps, x.dots.length, x.dotsOnRing].join('|');
+    const others = {}; for (const k of ['navMine20', 'navShared20', 'navPublic20', 'act-ledger']) others[k] = sig(await c.eval(`(${GLYPH_JS})(null, P3DATA.glyphs[${JSON.stringify(k)}])`));
+    return { pass: !me.face && me.dots.length === 2 && Object.values(others).every((s) => s !== sig(me)), detail: `intro ${sig(me)} vs ${JSON.stringify(others)}; face ${me.face}` };
+  }],
+  ['C-GLY-3', 'Glyph', 'the same optical system: the stroke is P2\'s optical stroke for 20 px, round terminals, the 24-unit grid, everything inside the live area', async (d) => {
+    const c = await page({ state: 'activity', q: { filter: 'intro' }, defect: d }); const x = await c.eval(`(${GLYPH_JS})('.row[data-cat="intro"] .gl svg')`);
+    return { pass: x.viewBox === '0 0 24 24' && x.strokes.length > 0 && x.strokes.every((s) => s === 1.75) && x.caps.every((k) => k === 'round') && x.ext[0] >= 2 && x.ext[1] <= 22, detail: JSON.stringify({ strokes: x.strokes, caps: x.caps, ext: x.ext }) };
+  }],
 ];
 
 // ------------------------------------------------------------------------------------------ static checks
@@ -224,6 +356,10 @@ const STATIC_CHECKS = [
     const pr = JSON.parse(readFileSync(join(SOURCE, 'PROVENANCE.json'), 'utf8')); const p2 = join(REPO, 'docs', 'design', 'p2-iconography', 'QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF', 'source'); const bad = [];
     for (const [to, e] of Object.entries(pr.files)) { const b = readFileSync(join(SOURCE, to)); if (sha(b) !== e.sha256) bad.push(to); if (existsSync(join(p2, e.from)) && sha(readFileSync(join(p2, e.from))) !== e.sha256) bad.push('P2:' + e.from); }
     return { pass: bad.length === 0 && Object.keys(pr.files).length > 30, detail: `${Object.keys(pr.files).length} files; ${bad.join(', ') || 'identical'}` };
+  }],
+  ['C-SCOPE-4', 'Scope', 'the Analysis is G3\'s own frozen page: prototype/g3.2/index.html is byte-identical to the preserved G3.2 canonical artifact (G3 closure: 10611f35…83d71)', () => {
+    const g = JSON.parse(readFileSync(join(SOURCE, 'PROVENANCE.json'), 'utf8')).g32; const here = sha(readFileSync(join(PKG, 'prototype', 'g3.2', 'index.html'))), canon = sha(readFileSync(join(REPO, ...g.from.split('/'))));
+    return { pass: here === g.sha256 && canon === g.sha256 && here.startsWith('10611f35') && here.endsWith('83d71'), detail: `${here.slice(0, 8)}…${here.slice(-5)} (canonical ${canon.slice(0, 8)})` };
   }],
   ['C-LIFE-1', 'Lifecycle', 'the package never claims P3 CLOSED / FROZEN', () => {
     const files = walk(PKG).filter((p) => /\.(md|json|html|mjs|js)$/.test(p)); if (!files.length) throw new Error('scanned nothing');
@@ -243,6 +379,11 @@ const MUT = {
   D12: ['the Introductions L0 notification names Introductions', (s) => mutate(s, "if (level === 'L0') return { title: null, body: w.l0 };", "if (level === 'L0') return { title: null, body: w.generic[subjectOf(e)] };"), null, ['C-PRIV-1']],
   D13: ['a critical event raises disclosure to L3', (s) => mutate(s, "const level = minLevel(e.safeMax ?? 'L3', s.lock[subj] ?? DISCLOSURE_DEFAULTS[subj]);", "const level = e.critical ? 'L3' : minLevel(e.safeMax ?? 'L3', s.lock[subj] ?? DISCLOSURE_DEFAULTS[subj]);"), null, ['C-PRIV-4']],
   D14: ['Quiet Hours exceptions widened to Proactive QANDEEL', (s) => mutate(s, "export const isQuietException = (e) => e.kind === 'reminder' ||", "export const isQuietException = (e) => e.kind === 'reminder' || e.kind === 'proactive' ||"), null, ['C-QUIET-2']],
+  // ---- P3-A refinement
+  D17: ['a universal Introductions cap (every Introduction ≤ L1)', (s) => mutate(s, "const level = minLevel(e.safeMax ?? 'L3', s.lock[subj] ?? DISCLOSURE_DEFAULTS[subj]);", "const level = minLevel(subj === 'intro' ? 'L1' : (e.safeMax ?? 'L3'), s.lock[subj] ?? DISCLOSURE_DEFAULTS[subj]);"), null, ['C-PRIV-6', 'C-FG-1']],
+  D19: ['Reduce implemented as a hard "Class 2 only" rule', (s) => mutate(s, "s.proactive === 'reduce' && e.reduceEligible !== true)", "s.proactive === 'reduce' && e.cls >= 3)"), null, ['C-RED-1', 'C-RED-4']],
+  D20: ['critical security deferred during a Live Call', (s) => mutate(s, "export const isCallSafe = (e) =>", "export const isCallSafe = (e) => false &&"), 'calldefer', ['C-CALL-2m', 'C-CALL-5']],
+  D21: ['an ordinary Shared reply shown during a Live Call', (s) => mutate(s, "if (ctx.liveCall && !isCallSafe(e))", "if (ctx.liveCall && !isCallSafe(e) && e.category !== 'shared')"), 'callshared', ['C-CALL-1m', 'C-CALL-4', 'C-STRIP-2']],
 };
 const DOMDEF = {
   D1: ['a red global “37” badge', 'redbadge', ['C-MARK-2', 'C-MARK-3']],
@@ -252,17 +393,25 @@ const DOMDEF = {
   D10: ['a Brass attention dot', 'brassdot', ['C-MARK-1']],
   D15: ['a settings row whose accessible name is glued from two texts', 'gluedname', ['C-A11Y-1b']],
   D16: ['a modal that leaves the page behind it reachable', 'noinert', ['C-A11Y-9']],
+  D18: ['the withdrawn L1 label «تنبيه عام» / "General" restored', 'oldl1', ['C-COPY-1']],
+  D22: ['the Activity entry added to the Analysis chrome', 'analysisentry', ['C-ANL-1']],
+  D23: ['the withdrawn two-opening Introductions ring restored', 'oldintro', ['C-GLY-1']],
 };
 
-async function runModel(M, only = null) { const out = []; for (const [id, g, title, fn] of MODEL_CHECKS) { if (only && !only.includes(id)) continue; let r; try { r = fn(M); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } out.push({ id, group: g, title, ...r }); } return out; }
+async function runModel(M, only = null, src = MODEL_SRC) {
+  const out = [];
+  for (const [id, g, title, fn] of MODEL_CHECKS) { if (only && !only.includes(id)) continue; let r; try { r = fn(M); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } out.push({ id, group: g, title, ...r }); }
+  for (const [id, g, title, fn] of MODEL_STATIC) { if (only && !only.includes(id)) continue; let r; try { r = fn(src); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } out.push({ id, group: g, title, ...r }); }
+  return out;
+}
 async function runDom(defect = null, only = null) { const out = []; for (const [id, g, title, fn] of DOM_CHECKS) { if (only && !only.includes(id)) continue; let r; try { r = await fn(defect); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } out.push({ id, group: g, title, ...r }); } return out; }
 
 const M0 = await loadModel(MODEL_SRC, 'base');
 const results = [...STATIC_CHECKS.map(([id, g, title, fn]) => { let r; try { r = fn(); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } return { id, group: g, title, ...r }; }), ...await runModel(M0), ...await runDom()];
 const planted = [];
 for (const [id, [desc, mut, domDefect, targets]] of Object.entries(MUT)) {
-  const Mm = await loadModel(mut(MODEL_SRC), id);
-  const rr = [...await runModel(Mm, targets), ...(domDefect ? await runDom(domDefect, targets) : [])];
+  const src = mut(MODEL_SRC), Mm = await loadModel(src, id);
+  const rr = [...await runModel(Mm, targets, src), ...(domDefect ? await runDom(domDefect, targets) : [])];
   const caught = rr.filter((x) => !x.pass).map((x) => x.id);
   planted.push({ id, desc, via: domDefect ? `model mutation + ?defect=${domDefect}` : 'model mutation', targets, caughtBy: caught, rejected: caught.length > 0 });
 }

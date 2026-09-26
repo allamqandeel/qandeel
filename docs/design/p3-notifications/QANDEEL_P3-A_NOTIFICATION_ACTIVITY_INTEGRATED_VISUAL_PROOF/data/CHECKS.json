@@ -1,20 +1,20 @@
 {
  "baseline": "b9e087ba366c9df6843b6b880ff5e790f1fde045",
- "prototypeSha256": "19c19b7edd70e16ae8d34d14c6946555b465b01f937c0cc792424a60f6f9866d",
+ "prototypeSha256": "992df037344f7977249de22a1c756008ac0d068e870583136a69c2047decbf76",
  "checks": [
   {
    "id": "C-SCOPE-1",
    "group": "Scope",
    "title": "only the P3 proof package changes against canonical main; no production source, dependency, locator, backlog or canonical authority",
    "pass": true,
-   "detail": "0 tracked changes + 125 new package files; outside: none"
+   "detail": "126 tracked changes + 11 new package files; outside: none"
   },
   {
    "id": "C-SCOPE-2",
    "group": "Scope",
    "title": "no dependency or production manifest inside the package",
    "pass": true,
-   "detail": "124 files; none"
+   "detail": "136 files; none"
   },
   {
    "id": "C-SCOPE-3",
@@ -24,11 +24,18 @@
    "detail": "35 files; identical"
   },
   {
+   "id": "C-SCOPE-4",
+   "group": "Scope",
+   "title": "the Analysis is G3's own frozen page: prototype/g3.2/index.html is byte-identical to the preserved G3.2 canonical artifact (G3 closure: 10611f35…83d71)",
+   "pass": true,
+   "detail": "10611f35…83d71 (canonical 10611f35)"
+  },
+  {
    "id": "C-LIFE-1",
    "group": "Lifecycle",
    "title": "the package never claims P3 CLOSED / FROZEN",
    "pass": true,
-   "detail": "72 files scanned; no claim"
+   "detail": "77 files scanned; no claim"
   },
   {
    "id": "C-ACT-4m",
@@ -215,9 +222,65 @@
   {
    "id": "C-FG-1",
    "group": "Foreground",
-   "title": "all 15 foreground / background scenarios resolve as expected (same context suppresses; different context may strip)",
+   "title": "all 31 scenarios resolve as independently stated — surface, and disclosure level where stated",
    "pass": true,
-   "detail": "15 / 15"
+   "detail": "31 / 31"
+  },
+  {
+   "id": "C-PRIV-6",
+   "group": "Privacy",
+   "title": "no Introductions category cap: default L0, and a ceiling the user raises above L1 is honoured up to the event's own safe projection (S28–S31)",
+   "pass": true,
+   "detail": "default L0; raised to L3 → acceptance L3; raised to L1 → L1; fixture intro caps ≤ L1: none"
+  },
+  {
+   "id": "C-PRIV-7",
+   "group": "Privacy",
+   "title": "the user's ceiling is a ceiling: an Introduction whose own bounded projection stops lower renders lower (S29), and even the raised L3 words name no person",
+   "pass": true,
+   "detail": "proposal under an L3 ceiling → L2; [{\"title\":\"التعارف\",\"body\":\"قَبِل الطرفان التعارف. افتح التعارف لتكمل.\"},{\"title\":\"Introductions\",\"body\":\"You both accep…"
+  },
+  {
+   "id": "C-RED-1",
+   "group": "Reduce",
+   "title": "Reduce is not \"Class 2 only\": a Gate-strong Class 3 still interrupts (S24) and a Gate-weak Class 2 waits (S22); a Gate-strong Class 2 interrupts (S21)",
+   "pass": true,
+   "detail": "S21 push · S22 next-conversation · S24 push"
+  },
+  {
+   "id": "C-RED-2",
+   "group": "Reduce",
+   "title": "under Reduce an ordinary Class 3 waits for the next conversation (S23) and Class 4 never interrupts (S25); Reduce is not Off",
+   "pass": true,
+   "detail": "S23 next-conversation · S25 activity"
+  },
+  {
+   "id": "C-RED-3",
+   "group": "Reduce",
+   "title": "Quiet Hours and the Proactive ceilings still constrain a Gate-strong candidate under Reduce (S26, S27)",
+   "pass": true,
+   "detail": "S26 deferred · S27 next-conversation ceiling:proactive-24h"
+  },
+  {
+   "id": "C-CALL-1m",
+   "group": "Live Call",
+   "title": "ordinary Shared, Introductions and Proactive attention waits during an active Live Call — foreground and background (S7, S8, S16, S19)",
+   "pass": true,
+   "detail": "deferred / deferred / deferred / deferred"
+  },
+  {
+   "id": "C-CALL-2m",
+   "group": "Live Call",
+   "title": "only critical security and a requested exact-time reminder may show the call-safe strip (S17, S18); a reminder that was not requested, and a non-critical security notice, still wait",
+   "pass": true,
+   "detail": "S17 call-strip · S18 call-strip · unrequested deferred · non-critical deferred · background push L2"
+  },
+  {
+   "id": "C-RED-4",
+   "group": "Reduce",
+   "title": "no score, weight or threshold: the Reduce decision reads one explicit boolean the fixture states (reduceEligible), never a class",
+   "pass": true,
+   "detail": "if (e.kind === 'proactive' && s.proactive === 'reduce' && e.reduceEligible !== true) { R.push('proactive-reduced'); return out('next-convers"
   },
   {
    "id": "C-ACT-1",
@@ -336,7 +399,7 @@
    "group": "Accessibility",
    "title": "every control is named (conversation, strip, Activity, settings, education, call)",
    "pass": true,
-   "detail": "7 pages"
+   "detail": "9 pages"
   },
   {
    "id": "C-A11Y-1b",
@@ -364,7 +427,7 @@
    "group": "Accessibility",
    "title": "every control target is at least 44 × 44 pt (320, 390 and 430)",
    "pass": true,
-   "detail": "6 pages"
+   "detail": "8 pages"
   },
   {
    "id": "C-A11Y-4",
@@ -407,10 +470,94 @@
    "title": "P2 consumed, not forked: navigation glyphs in Living Brass, the entry in neutral rest ink (never Brass)",
    "pass": true,
    "detail": "{\"nav\":\"rgb(165, 142, 111)\",\"entry\":\"rgb(139, 137, 130)\"}"
+  },
+  {
+   "id": "C-SEL-1",
+   "group": "Selections",
+   "title": "Open Ledger is the accepted Activity entry (Quiet Bell is comparison / history only) and the one the shell draws",
+   "pass": true,
+   "detail": "{\"ledger\":true,\"bell\":false}"
+  },
+  {
+   "id": "C-ANL-1",
+   "group": "Analysis",
+   "title": "the Analysis never gains the Activity entry (G3 composition untouched); the non-Analysis shell keeps it",
+   "pass": true,
+   "detail": "analysis@390:none analysis@390:none analysis-call@390:none analysis-call-security@320:none analysis-call-reminder@430:none conv:entry shared-strip-qandeel:entry"
+  },
+  {
+   "id": "C-ANL-2",
+   "group": "Analysis",
+   "title": "Activity stays one step away: «المحادثة» leads from the Analysis back to the Conversation, where the entry is",
+   "pass": true,
+   "detail": "{\"place\":\"conv\",\"entry\":true}"
+  },
+  {
+   "id": "C-COPY-1",
+   "group": "Copy",
+   "title": "L1 reads «إظهار النوع» / \"Show type\" everywhere it is shown; the withdrawn «تنبيه عام» / \"General\" is gone",
+   "pass": true,
+   "detail": "إظهار النوعيظهر نوع الإش | Show typeOnly shows the "
+  },
+  {
+   "id": "C-RED-5",
+   "group": "Reduce",
+   "title": "Settings explain «أقل» / Reduce in words, with no class, number or threshold",
+   "pass": true,
+   "detail": "قنديل هيقاطعك أقل، ومش هينبّهك غير للحاجات الأهم أو اللي وقتها ميستناش. | Qandeel interrupts you less, and only for what matters most or can't wait."
+  },
+  {
+   "id": "C-CALL-3",
+   "group": "Live Call",
+   "title": "the call-safe strip covers nothing frozen — measured on G3's own elements: inside the chrome row (y ≤ 95, so never the world), clear of «المحادثة», the Timeline, Return Live, the band and the call line — at 320, 390 and 430",
+   "pass": true,
+   "detail": "analysis-call-security/ar@320:CALL_PINNED analysis-call-security/en@320:CALL_PINNED analysis-call-reminder/en@320:CALL_PINNED analysis-call-security/ar@390:CALL_ANALYSIS analysis-call-reminder/en@390:CALL_ANALYSIS analysis-call-security/en@430:CALL_ANALYSIS"
+  },
+  {
+   "id": "C-CALL-4",
+   "group": "Live Call",
+   "title": "ordinary Shared, Introduction and Proactive arrivals during a call show no strip on the Analysis (they wait, marked, in Activity)",
+   "pass": true,
+   "detail": "{\"strip\":false,\"d\":3,\"log\":[\"E-pro → deferred (live-call-deferred)\",\"E-intro → deferred (live-call-deferred)\",\"E-reply → deferred (live-call-deferred)\"]}"
+  },
+  {
+   "id": "C-CALL-5",
+   "group": "Live Call",
+   "title": "critical security and a requested reminder show the call-safe strip on both call surfaces; it has no Direct Entry, dismissing it leaves the call running, and the security item still waits in Activity",
+   "pass": true,
+   "detail": "analysis-call-security:true analysis-call-reminder:true conv-call-security:true conv-call-reminder:true"
+  },
+  {
+   "id": "C-CALL-6",
+   "group": "Live Call",
+   "title": "call-safe motion: no pulse, bounce or loop; Reduced Motion keeps the same appear, hold and dismiss with no travel (M08 / M08r)",
+   "pass": true,
+   "detail": "standard frames 15,200; reduced 15,199"
+  },
+  {
+   "id": "C-GLY-1",
+   "group": "Glyph",
+   "title": "the Introductions mark obeys P2 N1 with no exception: no ring with more than one opening (both the recommended Open Link and the At the Door comparison)",
+   "pass": true,
+   "detail": "link: ring false (2°) openings 0 · door: ring true (298°) openings 1"
+  },
+  {
+   "id": "C-GLY-2",
+   "group": "Glyph",
+   "title": "no face-reading (points never side by side on a horizontal) and no collision with the World glyphs or the Activity ledger",
+   "pass": true,
+   "detail": "intro 0|0|2|0 vs {\"navMine20\":\"1|1|1|0\",\"navShared20\":\"1|1|2|0\",\"navPublic20\":\"1|3|4|3\",\"act-ledger\":\"0|0|0|0\"}; face false"
+  },
+  {
+   "id": "C-GLY-3",
+   "group": "Glyph",
+   "title": "the same optical system: the stroke is P2's optical stroke for 20 px, round terminals, the 24-unit grid, everything inside the live area",
+   "pass": true,
+   "detail": "{\"strokes\":[1.75],\"caps\":[\"round\"],\"ext\":[3.41,20.59]}"
   }
  ],
- "pass": 58,
- "total": 58,
+ "pass": 79,
+ "total": 79,
  "planted": [
   {
    "id": "D1",
@@ -609,8 +756,102 @@
     "C-A11Y-9"
    ],
    "rejected": true
+  },
+  {
+   "id": "D17",
+   "desc": "a universal Introductions cap (every Introduction ≤ L1)",
+   "via": "model mutation",
+   "targets": [
+    "C-PRIV-6",
+    "C-FG-1"
+   ],
+   "caughtBy": [
+    "C-FG-1",
+    "C-PRIV-6"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D18",
+   "desc": "the withdrawn L1 label «تنبيه عام» / \"General\" restored",
+   "via": "?defect=oldl1",
+   "targets": [
+    "C-COPY-1"
+   ],
+   "caughtBy": [
+    "C-COPY-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D19",
+   "desc": "Reduce implemented as a hard \"Class 2 only\" rule",
+   "via": "model mutation",
+   "targets": [
+    "C-RED-1",
+    "C-RED-4"
+   ],
+   "caughtBy": [
+    "C-RED-1",
+    "C-RED-4"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D20",
+   "desc": "critical security deferred during a Live Call",
+   "via": "model mutation + ?defect=calldefer",
+   "targets": [
+    "C-CALL-2m",
+    "C-CALL-5"
+   ],
+   "caughtBy": [
+    "C-CALL-2m",
+    "C-CALL-5"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D21",
+   "desc": "an ordinary Shared reply shown during a Live Call",
+   "via": "model mutation + ?defect=callshared",
+   "targets": [
+    "C-CALL-1m",
+    "C-CALL-4",
+    "C-STRIP-2"
+   ],
+   "caughtBy": [
+    "C-CALL-1m",
+    "C-STRIP-2",
+    "C-CALL-4"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D22",
+   "desc": "the Activity entry added to the Analysis chrome",
+   "via": "?defect=analysisentry",
+   "targets": [
+    "C-ANL-1"
+   ],
+   "caughtBy": [
+    "C-ANL-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D23",
+   "desc": "the withdrawn two-opening Introductions ring restored",
+   "via": "?defect=oldintro",
+   "targets": [
+    "C-GLY-1"
+   ],
+   "caughtBy": [
+    "C-GLY-1"
+   ],
+   "rejected": true
   }
  ],
- "plantedRejected": 16,
- "plantedTotal": 16
+ "plantedRejected": 23,
+ "plantedTotal": 23
 }

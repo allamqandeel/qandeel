@@ -65,5 +65,35 @@
    "السماح بالإشعارات",
    "مش دلوقتي"
   ]
+ },
+ {
+  "st": "analysis-call-security",
+  "lang": "ar",
+  "n": 1,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 2,
+  "exposed": 0,
+  "sample": [
+   "إغلاق التنبيه"
+  ]
+ },
+ {
+  "st": "conv-call-reminder",
+  "lang": "en",
+  "n": 10,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 15,
+  "exposed": 0,
+  "sample": [
+   "Activity, new items",
+   "Conversation analysis",
+   "Replay this conversation",
+   "Speaker",
+   "Mute microphone",
+   "End call",
+   "Dismiss"
+  ]
  }
 ]

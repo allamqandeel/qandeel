@@ -1,10 +1,13 @@
-# P3-A — Bilingual copy table (generated from `source/src/content.mjs`)
+# P3-A — Bilingual copy table (generated from `source/src/content.mjs` and `source/src/fixtures.mjs`)
 
-**Status:** `P3-A PROOF COPY — NOT CANONICAL COPY`. Statuses: **APPROVED** = the Product Owner's exact accepted name or
-wording; **CANON** = frozen by an earlier record (source named); **DIRECTION** = the Product Owner's directional proof
-copy, used as given, not automatically final; **PROOF** = written for this proof; **OPEN** = wording left as open craft.
+**Status:** `P3-A PROOF COPY — NOT CANONICAL COPY` (refinement: a bounded cleanup of the important Product UI only).
+Statuses: **APPROVED** = the Product Owner's exact accepted name or wording (for example the Lock Screen levels
+«خاصة جدًا» / «إظهار النوع» / «إظهار السياق» / «إظهار المعاينة», accepted in the P3-A refinement §6); **CANON** = frozen by
+an earlier record (source named); **DIRECTION** = the Product Owner's directional proof copy, used as given, not
+automatically final; **PROOF** = written for this proof, reviewable, not final; **OPEN** = wording left as open craft;
+**FIXTURE** = synthetic event text (second table), never Product copy.
 
-Strings: 120. Rows with an APPROVED side: 12 · CANON: 20 · DIRECTION: 13 · OPEN: 3.
+Interface strings: 125. Rows with an APPROVED side: 16 · CANON: 20 · DIRECTION: 10 · OPEN: 2. Fixture strings: 63.
 
 | key | Arabic | status | English | status | source |
 |---|---|---|---|---|---|
@@ -41,8 +44,10 @@ Strings: 120. Rows with an APPROVED side: 12 · CANON: 20 · DIRECTION: 13 · OP
 | `staleOpen` | فتح {0} | PROOF | Open {0} | PROOF | — |
 | `muted` | مكتوم | PROOF | Muted | PROOF | — |
 | `empty` | مفيش حاجة هنا دلوقتي. | PROOF | Nothing here right now. | PROOF | — |
-| `stripRegion` | تنبيه | PROOF | Notice | PROOF | — |
+| `stripRegion` | تنبيه | PROOF | Alert | PROOF | — |
 | `stripDismiss` | إغلاق التنبيه | PROOF | Dismiss | PROOF | — |
+| `callSafeRegion` | تنبيه أثناء المكالمة | PROOF | Alert during your call | PROOF | refinement §8 |
+| `callSafeOn` | المكالمة مستمرة | PROOF | your call continues | PROOF | refinement §8 (accessible state only) |
 | `eduTitle` | خليني أوصلك لما يكون في حاجة تستاهل | DIRECTION | Let me reach you when it's worth it | PROOF | task §9 · English equivalent of the task §9 direction |
 | `eduBody` | مش هبعتلك علشان أرجعك للتطبيق وخلاص. هستخدم الإشعارات لما يكون في سبب له قيمة ليك، وتقدر تقللها أو توقفها في أي وقت. | DIRECTION | I won't notify you just to pull you back into the app. I'll use notifications when there's a reason that matters to you, and you can reduce or turn them off anytime. | PROOF | task §9 · English equivalent of the task §9 direction |
 | `eduAllow` | السماح بالإشعارات | DIRECTION | Allow notifications | PROOF | task §9 |
@@ -66,6 +71,9 @@ Strings: 120. Rows with an APPROVED side: 12 · CANON: 20 · DIRECTION: 13 · OP
 | `proactiveOpts.reduce` | أقل | DIRECTION | Reduce | APPROVED | task §12 |
 | `proactiveOpts.off` | إيقاف | DIRECTION | Off | APPROVED | task §12 |
 | `proactiveHelp` | ده بيتحكم في إن قنديل يبدأ معاك الكلام بس. ذاكرته وفهمه والتحليل بيفضلوا زي ما هم. | PROOF | This only controls when Qandeel starts a conversation with you. Memory, understanding and analysis stay the same. | PROOF | D35 |
+| `proactiveOptHelp.allow` | قنديل يقدر يبدأ معاك الكلام لما يكون عنده سبب يستاهل. | PROOF | Qandeel can reach out when there's a good reason. | PROOF | — |
+| `proactiveOptHelp.reduce` | قنديل هيقاطعك أقل، ومش هينبّهك غير للحاجات الأهم أو اللي وقتها ميستناش. | PROOF | Qandeel interrupts you less, and only for what matters most or can't wait. | PROOF | refinement §7 meaning |
+| `proactiveOptHelp.off` | قنديل مش هيبدأ معاك الكلام من نفسه. تقدر تكلّمه وقت ما تحب. | PROOF | Qandeel won't start a conversation on its own. You can talk to it whenever you like. | PROOF | — |
 | `sharedSec` | العالم المشترك | CANON | Shared World | CANON | — |
 | `sharedAll` | تنبيهات العالم المشترك | PROOF | Shared World alerts | PROOF | — |
 | `on` | مفعّل | PROOF | On | PROOF | — |
@@ -77,14 +85,14 @@ Strings: 120. Rows with an APPROVED side: 12 · CANON: 20 · DIRECTION: 13 · OP
 | `publicDiscHelp` | اختياري — مرة في الأسبوع على الأكثر | PROOF | Optional — at most once a week | PROOF | P3-P |
 | `introSec` | التعارف | CANON | Introductions | CANON | — |
 | `introOn` | تنبيهات التعارف | PROOF | Introduction alerts | PROOF | — |
-| `introHelp` | على شاشة القفل لن يظهر أن الإشعار عن التعارف. | PROOF | On the Lock Screen, it won't show that a notification is about Introductions. | PROOF | D15 |
+| `introHelp` | افتراضيًا، لا تكشف شاشة القفل أن الإشعار عن التعارف. | PROOF | By default, the Lock Screen doesn't show that a notification is about Introductions. | PROOF | D15 default; the ceiling is the user's |
 | `systemSec` | الأمان والحساب | PROOF | Security & Account | PROOF | — |
 | `securityAlways` | تنبيهات الأمان المهمة تصلك دائمًا، حتى في ساعات الهدوء، ولا يمكنها تجاوز إعدادات جهازك. | PROOF | Important security alerts always reach you, even during Quiet Hours. They can't override your device settings. | PROOF | D36 |
 | `systemOther` | تحديثات الحساب الأخرى | PROOF | Other account updates | PROOF | — |
 | `quiet` | ساعات الهدوء | PROOF | Quiet Hours | PROOF | — |
 | `quietOn` | تفعيل ساعات الهدوء | PROOF | Use Quiet Hours | PROOF | — |
 | `quietRange` | من {0} إلى {1} | PROOF | {0} to {1} | PROOF | — |
-| `quietHelp` | خلالها لا يصلك إلا تذكير طلبته لوقت محدد أو تنبيه أمان مهم. وما ينتظر يُراجَع صباحًا، ولا يصل دفعة واحدة. | PROOF | Only reminders you set for an exact time and important security alerts come through. Everything else is reviewed in the morning, not sent all at once. | PROOF | D06; P3-M |
+| `quietHelp` | خلالها لا يصلك إلا تذكير طلبته في موعد محدد أو تنبيه أمان مهم. وما ينتظر يُراجَع في الصباح، ولا يصلك دفعة واحدة. | PROOF | Only reminders you set for an exact time and important security alerts come through. Everything else is reviewed in the morning, not sent all at once. | PROOF | D06; P3-M |
 | `snooze` | إيقاف مؤقت | PROOF | Snooze | PROOF | task §12 |
 | `snoozeOpts.1h` | ساعة | PROOF | 1 hour | APPROVED | — |
 | `snoozeOpts.8h` | 8 ساعات | PROOF | 8 hours | APPROVED | — |
@@ -92,10 +100,10 @@ Strings: 120. Rows with an APPROVED side: 12 · CANON: 20 · DIRECTION: 13 · OP
 | `snoozeOpts.custom` | مدة أخرى | PROOF | Custom | APPROVED | — |
 | `lockSec` | معاينات شاشة القفل | DIRECTION | Lock Screen previews | PROOF | task §10 |
 | `lockHelp` | هذا حدّ أقصى: قد يُظهر قنديل تفاصيل أقل. | PROOF | This is a limit: Qandeel may show less. | PROOF | D17 |
-| `levels.L0` | خاصة جدًا | DIRECTION | Very private | PROOF | task §10 |
-| `levels.L1` | تنبيه عام | OPEN | General | OPEN | no directional word for L1 was given |
-| `levels.L2` | إظهار السياق | DIRECTION | Show context | PROOF | task §10 |
-| `levels.L3` | إظهار المعاينة | DIRECTION | Show preview | PROOF | task §10 |
+| `levels.L0` | خاصة جدًا | APPROVED | Very private | APPROVED | refinement §6 |
+| `levels.L1` | إظهار النوع | APPROVED | Show type | APPROVED | refinement §6 |
+| `levels.L2` | إظهار السياق | APPROVED | Show context | APPROVED | refinement §6 |
+| `levels.L3` | إظهار المعاينة | APPROVED | Show preview | APPROVED | refinement §6 |
 | `levelHelp.L0` | لا يظهر إلا أن هناك إشعارًا جديدًا. | PROOF | Only shows that there is a new notification. | PROOF | — |
 | `levelHelp.L1` | يظهر نوع الإشعار فقط. | PROOF | Only shows the kind of notification. | PROOF | — |
 | `levelHelp.L2` | يظهر المكان ومن فعل ماذا، دون المحتوى. | PROOF | Shows where and who did what, without the content. | PROOF | — |
@@ -129,5 +137,73 @@ Strings: 120. Rows with an APPROVED side: 12 · CANON: 20 · DIRECTION: 13 · OP
 | `ctxTitle.shared` | العالم المشترك | PROOF | Shared World | PROOF | — |
 | `now` | الآن | PROOF | now | PROOF | — |
 
-Activity sentences, strip sentences and Lock Screen words for the fixture events live in `source/src/fixtures.mjs`;
-all of them are **PROOF** copy about synthetic events.
+## Synthetic fixture text — status FIXTURE
+
+These sentences describe invented events (`source/src/fixtures.mjs`). They exist to exercise the surfaces; none of them
+is proposed as Product copy, and none was polished in the refinement.
+
+| key | Arabic | English | status |
+|---|---|---|---|
+| `EV.proactive.text` | عرض الخميس الساعة 10:30. تحب نراجع الأرقام اللي كانت ناقصة قبلها؟ | Your Thursday presentation is at 10:30. Want to go over the missing numbers before then? | FIXTURE |
+| `EV.proactive.bounded` | بخصوص عرض الخميس | About Thursday's presentation | FIXTURE |
+| `EV.proactive.preview` | عرض الخميس الساعة 10:30. تحب نراجع الأرقام؟ | Thursday's presentation is at 10:30. Want to go over the numbers? | FIXTURE |
+| `EV.proTimely.text` | عرضك بعد ساعة، والطريق زحمة. لو هتتحرك، ده وقت كويس. | Your presentation is in an hour and traffic is heavy. If you're heading out, now is a good time. | FIXTURE |
+| `EV.proTimely.bounded` | بخصوص عرض النهارده | About today's presentation | FIXTURE |
+| `EV.proTimely.preview` | عرضك بعد ساعة، والطريق زحمة. | Your presentation is in an hour and traffic is heavy. | FIXTURE |
+| `EV.proTimelyWeak.text` | القهوة اللي كنت بتدور عليها رجعت في المحل اللي جنبك. | The coffee you were looking for is back at the shop near you. | FIXTURE |
+| `EV.proTimelyWeak.bounded` | حاجة كنت بتدور عليها | Something you were looking for | FIXTURE |
+| `EV.proTimelyWeak.preview` | القهوة رجعت في المحل اللي جنبك. | The coffee is back at the shop near you. | FIXTURE |
+| `EV.proHighValue.text` | قلت لي إن نتيجة التحليل هتطلع النهارده. لو حابب نتكلم فيها، أنا هنا. | You told me the test results come out today. If you'd like to talk them through, I'm here. | FIXTURE |
+| `EV.proHighValue.bounded` | بخصوص حاجة قلتها لي | About something you told me | FIXTURE |
+| `EV.proHighValue.preview` | نتيجة التحليل هتطلع النهارده. | The test results come out today. | FIXTURE |
+| `EV.proAmbient.text` | لقيت مقال عن القراءة البطيئة ممكن يعجبك. | I found an article about slow reading you might like. | FIXTURE |
+| `EV.proAmbient.bounded` | حاجة ممكن تعجبك | Something you might like | FIXTURE |
+| `EV.proAmbient.preview` | مقال عن القراءة البطيئة | An article about slow reading | FIXTURE |
+| `EV.sharedReply.text` | سارة ردّت عليك | Sara replied to you | FIXTURE |
+| `EV.sharedReply.bounded` | سارة ردّت عليك | Sara replied to you | FIXTURE |
+| `EV.sharedReply.preview` | سارة: تمام، هحجز التذاكر النهارده | Sara: Great, I'll book the tickets today | FIXTURE |
+| `EV.sharedGov.text` | كريم غيّر مين يقدر يضيف أعضاء | Karim changed who can add members | FIXTURE |
+| `EV.sharedGov.bounded` | تغيير في صلاحيات الأعضاء | A change to member permissions | FIXTURE |
+| `EV.sharedGov.preview` | كريم غيّر مين يقدر يضيف أعضاء | Karim changed who can add members | FIXTURE |
+| `EV.publicReply.text` | ردّ جديد من @saharreads على منشورك | A new reply from @saharreads on your post | FIXTURE |
+| `EV.publicReply.bounded` | ردّ جديد على منشورك | A new reply on your post | FIXTURE |
+| `EV.publicReply.preview` | @saharreads: فكرة جميلة، جربتها امبارح | @saharreads: Lovely idea, I tried it yesterday | FIXTURE |
+| `EV.publicReaction.text` | تفاعل جديد على منشورك | A new reaction to your post | FIXTURE |
+| `EV.publicReaction.bounded` | تفاعل جديد على منشورك | A new reaction to your post | FIXTURE |
+| `EV.publicReaction.preview` | تفاعل جديد على منشورك | A new reaction to your post | FIXTURE |
+| `EV.discovery.text` | نقاش جديد عن القراءة البطيئة قد يهمك | A new discussion about slow reading you might like | FIXTURE |
+| `EV.discovery.bounded` | نقاش جديد قد يهمك | A new discussion you might like | FIXTURE |
+| `EV.discovery.preview` | نقاش عن القراءة البطيئة | A discussion about slow reading | FIXTURE |
+| `EV.introProposal.text` | فيه تعارف جديد في انتظارك | A new introduction is waiting for you | FIXTURE |
+| `EV.introProposal.bounded` | فيه تعارف جديد في انتظارك | A new introduction is waiting for you | FIXTURE |
+| `EV.introProposal.preview` | فيه تعارف جديد في انتظارك | A new introduction is waiting for you | FIXTURE |
+| `EV.introAccept.text` | قَبِل الطرفان التعارف | You both accepted the introduction | FIXTURE |
+| `EV.introAccept.bounded` | قَبِل الطرفان التعارف | You both accepted the introduction | FIXTURE |
+| `EV.introAccept.preview` | قَبِل الطرفان التعارف. افتح التعارف لتكمل. | You both accepted the introduction. Open Introductions to continue. | FIXTURE |
+| `EV.security.text` | تسجيل دخول جديد من جهاز Pixel 8 | New sign-in from a Pixel 8 | FIXTURE |
+| `EV.security.short` | تسجيل دخول جديد | New sign-in | FIXTURE |
+| `EV.security.bounded` | تسجيل دخول جديد على حسابك | A new sign-in to your account | FIXTURE |
+| `EV.security.preview` | تسجيل دخول جديد من جهاز Pixel 8 في القاهرة | New sign-in from a Pixel 8 in Cairo | FIXTURE |
+| `EV.reminder.text` | زي ما طلبت: كلّم العيادة الساعة 4:00 | As you asked: call the clinic at 4:00 | FIXTURE |
+| `EV.reminder.short` | كلّم العيادة، 4:00 | Call the clinic, 4:00 | FIXTURE |
+| `EV.reminder.bounded` | تذكير طلبته للساعة 4:00 | A reminder you set for 4:00 | FIXTURE |
+| `EV.reminder.preview` | كلّم العيادة الساعة 4:00 | Call the clinic at 4:00 | FIXTURE |
+| `EV.staleShared.text` | كريم شارك ملفًا | Karim shared a file | FIXTURE |
+| `EV.staleShared.bounded` | ملف جديد | A new file | FIXTURE |
+| `EV.staleShared.preview` | كريم شارك ملفًا | Karim shared a file | FIXTURE |
+| `EV.mutedShared.text` | مها كتبت رسالة جديدة | Maha wrote a new message | FIXTURE |
+| `EV.mutedShared.bounded` | رسالة جديدة | A new message | FIXTURE |
+| `EV.mutedShared.preview` | مها: الاجتماع اتأجل | Maha: The meeting moved | FIXTURE |
+| `FEED.F1.text` | 3 رسائل جديدة من سارة وكريم | 3 new messages from Sara and Karim | FIXTURE |
+| `FEED.F2.text` | عرض الخميس الساعة 10:30. تحب نراجع الأرقام اللي كانت ناقصة قبلها؟ | Your Thursday presentation is at 10:30. Want to go over the missing numbers before then? | FIXTURE |
+| `FEED.F3.text` | تسجيل دخول جديد من جهاز Pixel 8 | New sign-in from a Pixel 8 | FIXTURE |
+| `FEED.F3.second` | إن لم يكن هذا أنت، فراجِع الأجهزة المتصلة. | If this wasn't you, review your signed-in devices. | FIXTURE |
+| `FEED.F3.action` | مراجعة | Review | FIXTURE |
+| `FEED.F4.text` | ردّ جديد من @saharreads على منشورك | A new reply from @saharreads on your post | FIXTURE |
+| `FEED.F5.text` | فيه تعارف جديد في انتظارك | A new introduction is waiting for you | FIXTURE |
+| `FEED.F6.text` | تفاعلان جديدان على منشورك | 2 new reactions to your post | FIXTURE |
+| `FEED.F7.text` | كريم غيّر مين يقدر يضيف أعضاء | Karim changed who can add members | FIXTURE |
+| `FEED.F8.text` | 4 رسائل جديدة من مها | 4 new messages from Maha | FIXTURE |
+| `FEED.F9.text` | كريم شارك ملفًا | Karim shared a file | FIXTURE |
+| `FEED.F10.text` | زي ما طلبت: كلّم العيادة الساعة 4:00 | As you asked: call the clinic at 4:00 | FIXTURE |
+| `FEED.F11.text` | قَبِل الطرفان التعارف | You both accepted the introduction | FIXTURE |

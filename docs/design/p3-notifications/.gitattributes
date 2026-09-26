@@ -4,3 +4,5 @@
 # The vendored P2 material (byte-exact copies, including licence texts) is evidence and is never normalised, so git's
 # whitespace checks do not apply to it.
 QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/source/vendor/** -whitespace
+# G3.2's reviewed prototype, byte-exact (the Analysis surface): evidence, never normalised — as its canonical copy is.
+QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/prototype/g3.2/** -whitespace

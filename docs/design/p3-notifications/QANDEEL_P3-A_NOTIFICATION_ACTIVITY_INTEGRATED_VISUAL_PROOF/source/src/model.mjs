@@ -9,7 +9,9 @@
 // D12 (surfaces), D14–D17 (disclosure levels, default matrix, ceiling), D26 (Introductions need entered capability),
 // D31/D40/D47 (seen ≠ resolved), D34 (per-World mute), D35 (Proactive off ≠ understanding off), D36 (critical ≠ OS
 // bypass), D38/D39 (tap revalidates; no guessed destination), D50 (OS permission is a hard Push boundary), D51
-// (foreground suppression), D59 (no delivery past semantic expiry); G3 §D (nothing interrupts an active Live Call).
+// (foreground suppression), D59 (no delivery past semantic expiry); G3 §D (Matching never interrupts an active Live
+// Call), and the P3-A refinement §8 (ordinary attention waits during a call; only critical security and a requested
+// exact-time reminder may show a call-safe strip).
 //
 // Product Owner numbers it encodes (task §13–§14, "v1 safety ceilings — ceilings, never quotas"): ordinary Push
 // 4 / rolling 24 h and 12 / rolling 7 d; Proactive QANDEEL 1 / 24 h and 3 / 7 d; same proactive thread ≥ 48 h after no
@@ -89,6 +91,12 @@ export function quietEnd(t, quiet) {
 }
 /** The two exceptions D06 / D37 name — and nothing else. */
 export const isQuietException = (e) => e.kind === 'reminder' || (e.kind === 'security' && e.critical === true);
+/**
+ * The ONLY two things that may be presented during an active Live Call (P3-A refinement §8), as a small non-blocking
+ * call-safe strip: a genuinely critical security / account event, and an exact-time reminder the user explicitly asked
+ * for (kind 'reminder' is, by the fixture contract, a user-requested exact-time reminder). Everything else waits.
+ */
+export const isCallSafe = (e) => (e.kind === 'security' && e.critical === true) || (e.kind === 'reminder' && e.requested === true);
 
 // ----------------------------------------------------------------------------------------------- budgets
 /** Is this event competing in the ORDINARY interrupting budget? The two exceptions sit outside it (D08). */
@@ -129,7 +137,8 @@ export function budgetVerdict(e, hist) {
 // ------------------------------------------------------------------------------------------- the decision
 /**
  * Where does one candidate go right now? Returns { surface, level, reasons[], mark }.
- *   surface ∈ 'push' | 'strip' | 'in-place' | 'activity' | 'next-conversation' | 'deferred' | 'suppressed' | 'stale'
+ *   surface ∈ 'push' | 'strip' | 'call-strip' | 'in-place' | 'activity' | 'next-conversation' | 'deferred' | 'suppressed' | 'stale'
+ *   ('call-strip' = the small, non-blocking call-safe strip; only isCallSafe() events, only during an active Live Call)
  * `ctx` = { settings, hist (earlier pushes), app: 'foreground' | 'background', here: contextId | null, liveCall: bool }.
  * Every non-suppressed outcome also leaves (or keeps) a truthful Activity item; `mark` says whether it is
  * attention-worthy (the Attention Mark), which is ATTENTION STATE, never event state (D31, D44).
@@ -148,14 +157,22 @@ export function decide(e, ctx) {
     (e.category === 'intro' && !s.intro.on) || (e.category === 'system' && e.kind !== 'security' && !s.system.other);
   if (muted) { R.push('muted-context'); return out('activity', { mark: false }); }
   if (e.kind === 'proactive' && s.proactive === 'off') { R.push('proactive-off'); return out('next-conversation', { mark: false }); }
-  // PROOF INTERPRETATION — "Reduce": QANDEEL interrupts only for a Timely (Class 2) reason; a Meaningful (Class 3)
-  // reason waits for the next conversation. The accepted direction names the option, not its rule (report §Open).
-  if (e.kind === 'proactive' && s.proactive === 'reduce' && e.cls >= 3) { R.push('proactive-reduced'); return out('next-conversation', { mark: false }); }
+  // "Reduce" (Product Owner meaning, refinement §7): Reduce TIGHTENS the Proactive Gate's interruption decision — it
+  // keeps interruption for the highest-value or strongest-timing reasons. It is not a class rule: a Class 2 candidate
+  // may still wait and a Class 3 Meaningful candidate may still interrupt. The proof does not score anything; the fixture
+  // states, as an explicit boolean, the already-run Gate's finding (`reduceEligible`: strong enough to interrupt under
+  // Reduce). No weight, score, threshold or schema is implied. Every later rule (Class 4, Quiet Hours, ceilings,
+  // disclosure, authority) still applies on top.
+  if (e.kind === 'proactive' && s.proactive === 'reduce' && e.reduceEligible !== true) { R.push('proactive-reduced'); return out('next-conversation', { mark: false }); }
   // 3. ambient events never interrupt (D10 Class 4, D25): Activity only, no mark pressure.
   if (e.cls >= 4 && e.kind !== 'discovery') { R.push('ambient'); return out('activity', { mark: false }); }
+  // 3b. an active Live Call (G3 §D; refinement §8) — on either surface, foreground or background: ordinary Shared /
+  // Public / Introductions / Proactive attention is deferred and re-evaluated after the call. Only the two call-safe
+  // cases may be presented now — in the foreground as the small call-safe strip; in the background by the normal path.
+  if (ctx.liveCall && !isCallSafe(e)) { R.push('live-call-deferred'); return out('deferred', { mark: true }); }
   // 4. the Product already has the user's attention (D51; task §8)
   if (ctx.app === 'foreground') {
-    if (ctx.liveCall) { R.push('live-call-deferred'); return out('deferred', { mark: true }); }            // G3 §D, task §8
+    if (ctx.liveCall) { R.push('live-call-safe'); return out('call-strip', { mark: true }); }
     if (ctx.here && ctx.here === e.context) { R.push('same-context'); return out('in-place', { mark: false }); }
     if (e.kind === 'discovery') { R.push('discovery-no-strip'); return out('activity', { mark: false }); }
     R.push('different-context'); return out('strip');
@@ -173,6 +190,8 @@ export function decide(e, ctx) {
   if (!b.ok) { R.push('ceiling:' + b.reason); return out(e.kind === 'proactive' ? 'next-conversation' : e.kind === 'discovery' ? 'suppressed' : 'activity', { mark: e.kind === 'proactive' || e.kind === 'discovery' ? false : undefined }); }
   if (b.outside) R.push('outside-ordinary-budget');
   // 7. disclosure: the user's ceiling, never more; the rendered level may be lower (D17). Importance never raises it.
+  // `safeMax` is EVENT-specific (what this one event's bounded safe projection can truthfully carry); no category —
+  // Introductions included — has a permanent cap of its own beyond its D15 default and the user's explicit ceiling.
   const subj = subjectOf(e);
   const level = minLevel(e.safeMax ?? 'L3', s.lock[subj] ?? DISCLOSURE_DEFAULTS[subj]);
   R.push('push'); return out('push', { level });
@@ -271,5 +290,6 @@ export function indicators(items) {
 export function markSeen(item) { return { ...item, attention: item.attention === 'unseen' ? 'seen' : item.attention }; }
 export function markOpened(item) { return { ...item, attention: 'opened' }; }   // `resolved` is NOT changed here, ever
 
-/** Strip eligibility (task §8): only in the foreground, only outside the originating context, never in a Live Call. */
+/** Strip eligibility (task §8): only in the foreground, only outside the originating context, never in a Live Call
+ *  (the call-safe strip is a separate surface: see isCallSafe). */
 export const stripEligible = (e, ctx) => decide(e, { ...ctx, app: 'foreground' }).surface === 'strip';

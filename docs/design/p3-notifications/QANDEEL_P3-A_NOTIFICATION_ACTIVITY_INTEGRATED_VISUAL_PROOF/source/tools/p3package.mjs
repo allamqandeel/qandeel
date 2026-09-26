@@ -36,7 +36,7 @@ walk(PKG);
 const entries = files.map((f) => relative(PKG, f).split(sep).join('/')).filter((r) => r !== 'MANIFEST.json').sort()
   .map((r) => { const buf = readFileSync(join(PKG, r)); return { path: r, bytes: buf.length, sha256: sha(buf) }; });
 const count = (pre) => entries.filter((e) => e.path.startsWith(pre)).length;
-const manifest = { package: NAME, status: 'P3-A — VISUAL PROOF / DECISION GATE — READY FOR PRODUCT OWNER + INDEPENDENT REVIEW — P3 is NOT CLOSED / NOT FROZEN — no production runtime',
+const manifest = { package: NAME, status: 'P3-A REFINEMENT — READY FOR PRODUCT OWNER + INDEPENDENT REVIEW — P3 remains NOT CLOSED / NOT FROZEN — no production runtime',
   baseline: 'b9e087ba366c9df6843b6b880ff5e790f1fde045', prototypeSha256: a, rebuiltByteIdentical: true,
   checks: { pass: chk.pass, total: chk.total, plantedRejected: chk.plantedRejected, plantedTotal: chk.plantedTotal },
   counts: { files: entries.length, boards: count('boards/'), motionClips: entries.filter((e) => e.path.startsWith('motion/') && e.path.endsWith('.mp4')).length, captures: count('captures/'), docs: count('docs/') },

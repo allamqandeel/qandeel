@@ -78,6 +78,32 @@ for (const v of ['ad', 'el']) { add(`w430-act-${v}`, { state: 'activity', ...V[v
 add('w430-act-ed', { state: 'activity', ...V.ed, w: 430, h: 932 });
 add('system-appearance-light', { state: 'activity', lang: 'ar', appearance: 'system', scheme: 'light' });
 add('system-appearance-dark', { state: 'activity', lang: 'ar', appearance: 'system', scheme: 'dark' });
+// ---- P3-A refinement: the Analysis (G3's own page in a frame) never gains the Activity entry (§4.2)
+add('analysis-ad', { state: 'analysis', ...V.ad });
+add('analysis-el', { state: 'analysis', ...V.el });                       // system Light: the Analysis stays dark (G3 §C.1)
+add('analysis-call-ad', { state: 'analysis-call', ...V.ad });             // ordinary Shared + Introduction + Proactive → all deferred
+add('analysis-call-el', { state: 'analysis-call', ...V.el });
+add('analysis-strip-shared-ad', { state: 'analysis-strip-shared', ...V.ad });
+// ---- the call-safe strip (§8): critical security and a requested exact-time reminder, on both call surfaces
+add('callsafe-sec-a390-ad', { state: 'analysis-call-security', ...V.ad });
+add('callsafe-rem-a390-ad', { state: 'analysis-call-reminder', ...V.ad });
+add('callsafe-sec-a390-ed', { state: 'analysis-call-security', ...V.ed });
+add('callsafe-sec-a320-ad', { state: 'analysis-call-security', ...V.ad, w: 320, h: 568 });
+add('callsafe-rem-a320-ed', { state: 'analysis-call-reminder', ...V.ed, w: 320, h: 568 });
+add('callsafe-sec-a430-el', { state: 'analysis-call-security', ...V.el, w: 430, h: 932 });
+add('callsafe-sec-conv-ad', { state: 'conv-call-security', ...V.ad });
+add('callsafe-rem-conv-al', { state: 'conv-call-reminder', ...V.al });
+add('callsafe-rem-conv-el', { state: 'conv-call-reminder', ...V.el });
+add('callsafe-focus-ad', { state: 'analysis-call-security', ...V.ad, focus: '.strip .x' });
+add('callsafe-rm-ad', { state: 'analysis-call-security', ...V.ad, rm: true });
+add('callsafe-dismissed-ad', { state: 'analysis-call-security', ...V.ad, steps: [{ eval: 'P3.dismissStrip()' }, { tick: 400 }] });
+// ---- Reduce (§7), the raised Introductions ceiling (§5), the Introductions mark comparison (§9)
+add('notif-reduce-ad', { state: 'notif', q: { proactive: 'reduce' }, ...V.ad, h: 1960 });
+add('notif-reduce-el', { state: 'notif', q: { proactive: 'reduce' }, ...V.el, h: 1960 });
+add('notif-lock-intro-raised-ad', { state: 'notif-lock', q: { lockintro: 'L3' }, ...V.ad });
+add('notif-lock-intro-raised-el', { state: 'notif-lock', q: { lockintro: 'L3' }, ...V.el });
+add('filter-intro-door-ad', { state: 'activity', q: { filter: 'intro', introglyph: 'door' }, ...V.ad });
+add('filter-intro-link-el', { state: 'activity', q: { filter: 'intro' }, ...V.el });
 
 async function runSteps(c, steps = []) {
   for (const s of steps) {
@@ -97,7 +123,7 @@ export async function shots(only = null) {
     writeFileSync(join(SHOTS, `${s.name}.png`), png);
     const rects = {};
     for (const sel of RECT_SEL) { const r = await c.eval(`P3.rects(${JSON.stringify(sel)})`); if (r.length) rects[sel] = r; }
-    const probe = await c.eval(`(()=>{const ph=document.getElementById('phone');const m=document.querySelector('#act-entry .amark');const pg=document.querySelector('.page');return {appearance:ph.dataset.appearance,dir:ph.dir,place:ph.dataset.place,markBg:m?getComputedStyle(m).backgroundColor:null,pageBg:pg?getComputedStyle(pg).backgroundColor:getComputedStyle(ph).backgroundColor,sw:document.documentElement.scrollWidth,iw:innerWidth,strip:!!document.querySelector('.strip'),a11y:document.getElementById('a11y').textContent}})()`);
+    const probe = await c.eval(`(()=>{const ph=document.getElementById('phone');const m=document.querySelector('#act-entry .amark');const pg=document.querySelector('.page');return {appearance:ph.dataset.appearance,dir:ph.dir,place:ph.dataset.place,markBg:m?getComputedStyle(m).backgroundColor:null,pageBg:pg?getComputedStyle(pg).backgroundColor:getComputedStyle(ph).backgroundColor,sw:document.documentElement.scrollWidth,iw:innerWidth,strip:!!document.querySelector('.strip'),a11y:document.getElementById('a11y').textContent,g32:window.P3.g32?P3.g32():null,entry:!!document.getElementById('act-entry')}})()`);
     if (probe.sw > probe.iw) throw new Error(`${s.name}: horizontal overflow ${probe.sw} > ${probe.iw}`);
     meta[s.name] = { ...s, file: `shots/${s.name}.png`, bytes: png.length, sha256: sha(png), rects, probe };
     process.stdout.write('.');
@@ -125,6 +151,10 @@ const CLIPS = [
     acts: [{ at: 2600, eval: `document.querySelector('.row[data-id="F2"] .go').click()` }, { at: 3800, eval: 'P3.back()' }] },
   { id: 'M07r-seen-opened-reduced-motion', state: 'activity', ...V.ad, rm: true, dur: 5600,
     acts: [{ at: 2600, eval: `document.querySelector('.row[data-id="F2"] .go').click()` }, { at: 3800, eval: 'P3.back()' }] },
+  // refinement §8 — the call-safe strip in the Analysis during a Live Call (G3's own page underneath, unchanged)
+  { id: 'M08-call-safe-security-analysis', note: 'active Live Call, Analysis: a critical security event shows the small call-safe strip in the chrome row (appear, 6 s hold, dismiss by itself); the call, the world and every G3 control stay as they are', state: 'analysis-call', q: { arrive: '0' }, ...V.ad, dur: 7800, acts: [{ at: 500, eval: `P3.arrive('security')` }] },
+  { id: 'M08r-call-safe-security-reduced-motion', note: 'M08 under Reduced Motion: opacity only, the same hold', state: 'analysis-call', q: { arrive: '0' }, ...V.ad, rm: true, dur: 7800, acts: [{ at: 500, eval: `P3.arrive('security')` }] },
+  { id: 'M09-call-safe-reminder-320', note: 'active Live Call, Analysis at 320 × 568 (PINNED, the tightest G3 case): a reminder the user set for this time shows the call-safe strip; dismissing it leaves the call running', state: 'analysis-call', q: { arrive: '0' }, ...V.ed, w: 320, h: 568, dur: 4800, acts: [{ at: 500, eval: `P3.arrive('reminder')` }, { at: 3200, eval: 'P3.dismissStrip()' }] },
 ];
 function encode(dir, out) {
   const r = spawnSync(FFMPEG, ['-y', '-framerate', String(FPS), '-i', join(dir, 'f%04d.png'), '-c:v', 'h264_mf', '-b:v', '8M', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', out], { encoding: 'utf8' });
@@ -139,7 +169,7 @@ export async function clips(only = null) {
   for (const k of CLIPS) {
     if (only && !only.includes(k.id)) continue;
     const dir = join(WORK, 'frames', k.id); rmSync(dir, { recursive: true, force: true }); mkdirSync(dir, { recursive: true });
-    const c = await openState({ state: k.state, lang: k.lang, appearance: k.appearance, rm: !!k.rm, q: k.q || {} });
+    const c = await openState({ state: k.state, lang: k.lang, appearance: k.appearance, rm: !!k.rm, q: k.q || {}, w: k.w || 390, h: k.h || 844 });
     // start the clip from a settled page (entrances done): the virtual clock is read, not reset
     const t0 = await c.eval('P3.T()');
     const acts = [...k.acts].sort((a, b) => a.at - b.at); const truth = [];
@@ -154,7 +184,7 @@ export async function clips(only = null) {
     }
     const out = join(PKG, 'motion', `${k.id}.mp4`);
     const frames = encode(dir, out);
-    writeFileSync(join(PKG, 'data', 'motion', `${k.id}.json`), JSON.stringify({ id: k.id, note: k.note || null, state: k.state, lang: k.lang, appearance: k.appearance, rm: !!k.rm, fps: FPS, durMs: k.dur, framesWritten: nF, framesDecoded: frames, startT: t0, acts: k.acts, truth }, null, 0));
+    writeFileSync(join(PKG, 'data', 'motion', `${k.id}.json`), JSON.stringify({ id: k.id, note: k.note || null, state: k.state, lang: k.lang, appearance: k.appearance, rm: !!k.rm, w: k.w || 390, h: k.h || 844, fps: FPS, durMs: k.dur, framesWritten: nF, framesDecoded: frames, startT: t0, acts: k.acts, truth }, null, 0));
     console.log(k.id, nF, 'frames →', frames, 'decoded');
   }
 }
@@ -165,7 +195,7 @@ if (process.argv[1] && process.argv[1].endsWith('p3capture.mjs')) {
   if (what === 'shots' || what === 'all') await shots(only);
   if (what === 'clips' || what === 'all') await clips(only);
   // the key phones are carried in the package as full captures (all of them are composed into the boards)
-  const KEY = ['act-ad', 'act-el', 'conv-ad', 'strip-shared-ad', 'strip-qandeel-ad', 'strip-system-ad', 'inplace-ad', 'call-ad', 'call-ended-ad', 'notif-ad', 'notif-el', 'edu-ad', 'edu-el', 'edu-boundary-ad', 's320-activity', 'w430-act-el'];
+  const KEY = ['act-ad', 'act-el', 'conv-ad', 'strip-shared-ad', 'strip-qandeel-ad', 'strip-system-ad', 'inplace-ad', 'call-ad', 'call-ended-ad', 'notif-ad', 'notif-el', 'edu-ad', 'edu-el', 'edu-boundary-ad', 's320-activity', 'w430-act-el', 'analysis-call-ad', 'callsafe-sec-a390-ad', 'callsafe-rem-a320-ed', 'callsafe-sec-conv-ad'];
   mkdirSync(join(PKG, 'captures'), { recursive: true });
   for (const f of readdirSync(join(PKG, 'captures'))) rmSync(join(PKG, 'captures', f));
   for (const k of KEY) if (existsSync(join(SHOTS, `${k}.png`))) copyFileSync(join(SHOTS, `${k}.png`), join(PKG, 'captures', `${k}.png`));

@@ -10,6 +10,7 @@
 | Laptop before the task | branch `docs/p2-final-iconography-canonical-closure` at `cd52632`, clean; 1 ahead / 1 behind `origin/main` only because #274 was squash-merged (the trees are identical: `git diff cd52632 b9e087b` is empty). Nothing was reset or cleaned |
 | Branch | `design/p3-notification-activity-integrated-visual-proof`, cut from exact `b9e087b` |
 | Scope of change | only `docs/design/p3-notifications/` (checked by C-SCOPE-1) |
+| **Refinement (P3-A refinement task, 2026-09-26)** | on the same branch and Draft PR #275, from reviewed head `579648f3828345a4ffb434daa15507e011899d46`; `main` re-verified at `b9e087b`; laptop clean on the branch at `579648f`, 0 ahead / 0 behind the remote branch |
 
 ## 2. Authorities read
 
@@ -23,8 +24,9 @@
 - P1 closure (§8 one General Settings destination, §8.1 placement, §12 Dark / Light / System with the Analysis kept
   dark); P2 closure and the merged P2-A package (N1 geometry, the nav family, Call Rail A, End Call 27 px, Hugeicons
   Free as the curated source, Calm State Morphing); G1.1 and G1.2 closures (the shell, `UTTERANCE`, the call surfaces,
-  no persistent call prose, one assistive channel); G3 closure (§C.1 the dark Analysis, §D Matching never interrupts an
-  active Live Call); G2.3 (the frozen Matching copy — not redrawn); the vendored C3, B4R, E1R and F1 / F2 token tree.
+  no persistent call prose, one assistive channel); G3 closure (§C.1 the dark Analysis, §C.2 the world sized first at its floor, §D
+  Matching never interrupts an active Live Call) and the preserved G3.2 reviewed prototype (used, byte-exact, as the
+  Analysis surface); G2.3 (the frozen Matching copy — not redrawn); the vendored C3, B4R, E1R and F1 / F2 token tree.
 
 ## 3. Frozen semantics this proof realizes and does not reopen (I-08N-01)
 
@@ -56,16 +58,20 @@
 - the Product Owner's **accepted P3 direction** (task §5–§15) made visible: Activity «النشاط» / Activity, its entry,
   the Attention Mark, the Attention Strip, the settings, the permission education, the Lock Screen words, Quiet Hours
   and Snooze, the ceilings;
-- **bounded craft** where the direction needed a drawing (listed as open questions in the report): the Activity entry
-  glyph (two variants, one recommended), the Introductions source mark, the hollow WAITING mark, the L1 human label,
-  the Proactive "Reduce" interpretation, and the placement of the entry.
+- **bounded craft** where the direction needed a drawing: the hollow WAITING mark and the other items the report
+  lists;
+- the **Product Owner's refinement decisions** (P3-A refinement §4–§10): Open Ledger accepted; no Activity entry in the
+  Analysis chrome; L1 = «إظهار النوع» / "Show type"; Reduce = a tighter Proactive Gate, not a class rule; no
+  Introductions category cap (default L0 kept); the two call-safe exceptions during a Live Call; a P2-compliant
+  Introductions source mark (two bounded variants, one recommended); a bounded copy cleanup.
 
 ## 5. Explicit non-scope (kept)
 
 No production React Native, no APNs / FCM, no database schema, no workers, no device tokens, no native channels or
 categories, no dependency, no P3 closure, no P4, no change to I-08N-01, P1, P2, the locators, the backlog or any
 canonical artifact. The Analysis is not repainted or redesigned, and the Call Rail is untouched (it is the P2 file,
-byte-exact).
+byte-exact). The Analysis is G3.2's own reviewed page, byte-exact (C-SCOPE-4), loaded unchanged in a frame; P3 draws
+only a transient strip over its chrome row and never inside it.
 
 ## 6. Governance note
 

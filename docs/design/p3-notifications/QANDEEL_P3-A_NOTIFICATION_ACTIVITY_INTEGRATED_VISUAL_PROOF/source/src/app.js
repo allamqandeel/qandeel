@@ -17,9 +17,14 @@
     capture: Q.get('capture') === '1',
     state: Q.get('state') || 'conv',
     defect: Q.get('defect') || '',
-    entry: Q.get('entry') || D.activityRecommended,
+    entry: Q.get('entry') || D.activityAccepted,
+    // the Introductions row source mark: the recommended Open Link; ?introglyph=door shows the compliant ring comparison;
+    // planted defect D23 restores the withdrawn two-opening drawing
+    introGlyph: Q.get('defect') === 'oldintro' ? 'introTwoArcs20' : Q.get('introglyph') === 'door' ? 'introDoor20' : 'introLink20',
   };
   const L = D.copy[P.lang];
+  // planted defect D18: the withdrawn L1 label comes back
+  if (P.defect === 'oldl1') L.levels.L1.text = P.lang === 'ar' ? 'تنبيه عام' : 'General';
   const tx = (k) => L[k].text;
   const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
   // designing-arabic-frontends §4: a Latin handle inside an Arabic sentence is an LTR island, or its '@' lands on the
@@ -74,12 +79,18 @@
   if (Q.get('os')) S.settings.os = Q.get('os');
   if (Q.get('intro') === '0') S.settings.intro.entered = false;
   if (Q.get('mark') === '0') S.feed.forEach((i) => { if (i.attention === 'unseen') i.attention = 'seen'; i.actionable = false; });
+  if (Q.get('proactive')) S.settings.proactive = Q.get('proactive');
+  if (Q.get('lockintro')) S.settings.lock.intro = Q.get('lockintro');   // the user raised the Introductions ceiling
   const ind = () => M.indicators(S.feed);
-  const ctxFor = (extra = {}) => ({ settings: S.settings, hist: [], app: 'foreground', here: S.place === 'shared' ? S.here : S.place === 'conv' ? 'personal' : null, liveCall: S.call, now: FX.NOW, ...extra });
+  // The Analysis is the Personal conversation's own analysis (G1.1): its originating context is 'personal'.
+  const ctxFor = (extra = {}) => ({ settings: S.settings, hist: [], app: 'foreground', here: S.place === 'shared' ? S.here : S.place === 'conv' || S.place === 'analysis' ? 'personal' : null, liveCall: S.call, now: FX.NOW, ...extra });
 
   /** An event arrives while the app is in the foreground. The MODEL decides the surface; the page only renders it. */
   function arrive(ev, { quiet = false } = {}) {
-    const r = M.decide(ev, ctxFor());
+    let r = M.decide(ev, ctxFor());
+    // planted defects D20 / D21 (page side): a call-safe event deferred; an ordinary Shared event shown during a call
+    if (P.defect === 'calldefer' && r.surface === 'call-strip') r = { ...r, surface: 'deferred' };
+    if (P.defect === 'callshared' && r.surface === 'deferred' && S.call && ev.category === 'shared') r = { ...r, surface: 'call-strip' };
     S.log.unshift(`${ev.id} → ${r.surface} (${r.reasons.join(', ')})`);
     if (r.surface === 'suppressed') return r;
     const wasPresent = ind().global.present;
@@ -89,6 +100,7 @@
     if (r.surface === 'in-place') S.inplace = ev;
     if (r.surface === 'deferred') S.deferred.push(ev);
     if (r.surface === 'strip') showStrip(ev, quiet);
+    else if (r.surface === 'call-strip') showStrip(ev, quiet, true);
     else render();
     if (!wasPresent && ind().global.present) markArrives();   // only a mark that was ABSENT arrives; a present one stays still
     return r;
@@ -102,24 +114,69 @@
 
   // ------------------------------------------------------------------------------------ the Attention Strip
   const HOLD = 6000;   // readable hold (craft value, not frozen); paused while the strip has focus or a finger on it
-  function showStrip(ev, quiet) {
-    S.strip = { ev, shownAt: T, held: false };
+  /** `callSafe`: the refinement §8 call-safe strip — only for isCallSafe() events during an active Live Call. It is
+   *  small and non-blocking, carries NO Direct Entry (entering another place mid-call is not asked for; the item waits
+   *  in Activity, still actionable), and leaves the call exactly as it was. */
+  function showStrip(ev, quiet, callSafe = false) {
+    S.strip = { ev, shownAt: T, held: false, callSafe };
     render();
     const a11y = document.getElementById('a11y');
-    if (a11y && !quiet) a11y.textContent = `${tx('stripRegion')}: ${sourceName(ev)} — ${ev.text[P.lang]}`;
+    if (a11y && !quiet) a11y.textContent = callSafe ? `${tx('callSafeRegion')}: ${sourceName(ev)} — ${ev.text[P.lang]} (${tx('callSafeOn')})` : `${tx('stripRegion')}: ${sourceName(ev)} — ${ev.text[P.lang]}`;
+    const travel = S.place === 'analysis' ? 6 : 10;   // in the Analysis chrome row the strip has less room to travel
     if (P.rm) animate('.strip', { opacity: [0, 1] }, 160, EASE_OUT);
-    else animate('.strip', { opacity: [0, 1], y: [-10, 0] }, 240, EASE_OUT);
+    else animate('.strip', { opacity: [0, 1], y: [-travel, 0] }, 240, EASE_OUT);
     const id = S.strip;
     after(HOLD, () => { if (S.strip === id && !S.strip.held) dismissStrip(); });
   }
   function dismissStrip(then) {
     if (!S.strip) return;
     const fin = () => { S.strip = null; render(); if (then) then(); };
+    const travel = S.place === 'analysis' ? 6 : 10;
     if (P.rm) animate('.strip', { opacity: [1, 0] }, 140, EASE_OUT, 0, fin);
-    else animate('.strip', { opacity: [1, 0], y: [0, -10] }, 180, EASE_OUT, 0, fin);
+    else animate('.strip', { opacity: [1, 0], y: [0, -travel] }, 180, EASE_OUT, 0, fin);
   }
   const sourceName = (ev) => (ev.category === 'qandeel' ? tx('product') : ev.category === 'intro' ? L.filters.intro.text : ev.category === 'system' ? ctxName('account') : ctxName(ev.context));
-  const glyphFor = (cat) => ({ qandeel: G.navMine20, shared: G.navShared20, public: G.navPublic20, intro: G.introMark20, system: G.settings20 }[cat]);
+  const glyphFor = (cat) => ({ qandeel: G.navMine20, shared: G.navShared20, public: G.navPublic20, intro: G[P.introGlyph], system: G.settings20 }[cat]);
+
+  // ------------------------------------------------------------------------------------ the Analysis (G3, frozen)
+  // The Analysis is not redrawn: it is G3.2's own reviewed prototype (prototype/g3.2/index.html, byte-exact) running in
+  // a frame the size of the phone. P3 adds NOTHING to its chrome — no Activity entry (refinement §4.2) — and draws only
+  // one transient thing above it: a strip, placed in the upper chrome row (y 47–95) beside «المحادثة», over the Replay
+  // slot. It never enters the world (which starts at y 95 and is sized at its floor, T-11 §3), the Timeline, Return
+  // Live, the band or the call line, and it never covers the Conversation ↔ Analysis switch. All of this is measured
+  // from G3's own elements, never assumed.
+  let G32 = null, g32Ready = null;
+  function g32Frame() {
+    if (G32) return g32Ready;
+    const st = Q.get('g32') || (S.call ? (P.w <= 320 ? 'CALL_PINNED' : 'CALL_ANALYSIS') : 'P1');
+    const q = new URLSearchParams({ capture: '1', state: st, lang: P.lang, w: String(P.w), h: String(P.h), appearance: P.appearance });
+    G32 = Object.assign(document.createElement('iframe'), { id: 'g32', title: tx('door') + ' — G3' });
+    G32.dataset.state = st;
+    G32.src = 'g3.2/index.html?' + q.toString();
+    document.getElementById('g32host').appendChild(G32);
+    g32Ready = new Promise((res) => G32.addEventListener('load', () => {
+      const d = G32.contentDocument;
+      // a covered control must never take keyboard focus unseen: if G3's Replay (under the strip) is focused, the strip
+      // steps aside (WCAG 2.4.11 focus not obscured)
+      if (d) d.addEventListener('focusin', (e) => { if (S.strip && S.place === 'analysis' && e.target && e.target.id === 'replay') dismissStrip(); });
+      // «المحادثة» leaves the Analysis for P3's Conversation, where the Activity entry lives: one step away (§4.2)
+      if (d) d.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('#back')) { e.preventDefault(); e.stopPropagation(); back(); } }, true);
+      // settle exactly as G3.2's own capture tool does: its ready promise, its virtual clock at 0, enter the state, then
+      // two frames and 250 ms (g3.2/source/tools/capture.mjs, lib/session.mjs `settle`)
+      const w = G32.contentWindow, api = w && w.__G32;
+      Promise.resolve(api && api.ready).then(() => { if (api) { api.clock(0); api.enter(st); } })
+        .then(() => new Promise((r) => w.requestAnimationFrame(() => w.requestAnimationFrame(() => setTimeout(r, 250))))).then(res);
+    }, { once: true }));
+    return g32Ready;
+  }
+  const g32Rect = (id) => { const d = G32 && G32.contentDocument, e = d && d.getElementById(id); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom, w: r.width, h: r.height }; };
+  /** The strip's place in the Analysis: the chrome row, from the Replay slot to 8 pt before «المحادثة». */
+  function chromeSlot() {
+    const back = g32Rect('back'), rep = g32Rect('replay'); if (!back || !rep) return null;
+    const rtl = back.x > rep.x;
+    const x0 = rtl ? rep.x - 4 : back.r + 8, x1 = rtl ? back.x - 8 : rep.r + 4;
+    return { x: Math.round(x0), y: Math.round(back.y), w: Math.round(x1 - x0), h: Math.round(back.h) };
+  }
 
   // ------------------------------------------------------------------------------------ Direct Entry
   /** D38/D39: authority is revalidated at tap time (the fixture's `targetGone` is the revalidation result); a stale
@@ -137,6 +194,7 @@
   function go(place, here) {
     if (place !== S.place) S.stack.push({ place: S.place, here: S.here });
     S.place = place; if (here) S.here = here; S.sheet = null; S.osbox = false;
+    if (place === 'analysis') g32Frame();
     S.focusAfter = place === 'activity' || place === 'settings' || place === 'notif' ? 'h1' : null;
     render();
     if (!P.rm) animate('#view', { opacity: [0, 1] }, 200, EASE_OUT); else animate('#view', { opacity: [0, 1] }, 120, EASE_OUT);
@@ -240,10 +298,19 @@
   }
   function stripHTML() {
     if (!S.strip) return '';
-    const ev = S.strip.ev;
-    return `<section class="strip" role="region" aria-label="${esc(tx('stripRegion'))}" data-cat="${ev.category}" data-ev="${ev.id}">` +
-      `<button class="go pz" type="button" aria-label="${esc(sourceName(ev) + (P.lang === 'ar' ? ': ' : ': ') + ev.text[P.lang])}"><span class="src">${glyphFor(ev.category)}</span><span class="tx"><span class="meta r-meta">${esc(sourceName(ev))} · ${esc(tx('now'))}</span><span class="say r-support">${fmt(ev.text[P.lang])}</span></span></button>` +
-      `<button class="x pz" type="button" aria-label="${esc(tx('stripDismiss'))}">${G.close20}</button></section>`;
+    const ev = S.strip.ev, cs = S.strip.callSafe, inChrome = S.place === 'analysis';
+    const name = sourceName(ev) + ': ' + ev.text[P.lang] + (cs ? (P.lang === 'ar' ? '، ' : ', ') + tx('callSafeOn') : '');
+    // in the Analysis chrome row only the short line fits (the whole sentence is in the name and in Activity)
+    const inner = inChrome
+      ? `<span class="src">${glyphFor(ev.category)}</span><span class="tx"><span class="say r-meta">${fmt((ev.short || ev.text)[P.lang])}</span></span>`
+      : `<span class="src">${glyphFor(ev.category)}</span><span class="tx"><span class="meta r-meta">${esc(sourceName(ev))} · ${esc(tx('now'))}</span><span class="say r-support">${fmt(ev.text[P.lang])}</span></span>`;
+    let geo = '';
+    if (inChrome) { const s = chromeSlot(); if (s) geo = ` style="left:${s.x}px;right:auto;top:${s.y}px;width:${s.w}px;height:${s.h}px"`; }
+    // a call-safe strip has NO Direct Entry: its body is text (read with the region), and its one act is dismiss
+    const body = cs ? `<div class="go body"><span class="vis" aria-hidden="true">${inner}</span><span class="sr">${esc(name)}</span></div>`
+      : `<button class="go pz" type="button" aria-label="${esc(name)}">${inner}</button>`;
+    return `<section class="strip${cs ? ' callsafe' : ''}${inChrome ? ' inchrome' : ''}" role="region" aria-label="${esc(tx(cs ? 'callSafeRegion' : 'stripRegion'))}" data-cat="${ev.category}" data-ev="${ev.id}"${geo}>` +
+      body + `<button class="x pz" type="button" aria-label="${esc(tx('stripDismiss'))}">${G.close20}</button></section>`;
   }
   function hostHTML() {
     const onShared = S.place === 'shared';
@@ -317,7 +384,8 @@
   }
   function notifHTML() {
     const s = S.settings;
-    const seg = `<div class="seg" role="radiogroup" aria-label="${esc(tx('proactive'))}">${['allow', 'reduce', 'off'].map((k) => `<button class="pz" type="button" role="radio" aria-checked="${s.proactive === k}" data-pro="${k}"><span class="lb">${esc(L.proactiveOpts[k].text)}</span></button>`).join('')}</div>`;
+    const seg = `<div class="seg" role="radiogroup" aria-label="${esc(tx('proactive'))}" aria-describedby="pro-help">${['allow', 'reduce', 'off'].map((k) => `<button class="pz" type="button" role="radio" aria-checked="${s.proactive === k}" data-pro="${k}"><span class="lb">${esc(L.proactiveOpts[k].text)}</span></button>`).join('')}</div>` +
+      `<p id="pro-help" class="note r-support pro-opt">${esc(L.proactiveOptHelp[s.proactive].text)}</p>`;
     const worlds = ['w-summer', 'w-work'].map((w) => nav(ctxName(w), s.shared.muted.includes(w) ? tx('mutedWorld') : tx('on'), `data-world="${w}"`)).join('');
     const lockRows = ['qandeel', 'shared', 'public', 'discovery', 'intro', 'reminder', 'security'].map((k) => nav(L.lockSubjects[k].text, L.levels[s.lock[k]].text, `data-lock="${k}"`)).join('');
     const osNote = s.os !== 'granted' ? `<div class="osoff r-support" role="note">${esc(tx('osOff'))}</div>` : '';
@@ -355,17 +423,28 @@
     return `<section class="page" aria-label="handoff">${statusBar()}<div class="hdr"><button class="ibtn pz" type="button" data-back aria-label="${esc(tx('back'))}">${G.back22}</button></div><div class="osbox" role="note"><span class="tag">DIRECT ENTRY TARGET · FROZEN ELSEWHERE</span><span class="r-support">${esc(note)}</span></div></section>`;
   }
 
+  /** The Analysis view: G3's frame (persistent, under everything) plus only what P3 may lay over it — the strip. */
+  function analysisHTML() {
+    // planted defect D22: the Activity entry pushed into the Analysis chrome
+    const bad = P.defect === 'analysisentry' ? `<div class="hdr" style="pointer-events:none;justify-content:center"><span style="pointer-events:auto">${entryHTML()}</span></div>` : '';
+    return bad + stripHTML();
+  }
   function render() {
-    const view = S.place === 'activity' ? activityHTML() : S.place === 'settings' ? settingsRootHTML() : S.place === 'notif' ? notifHTML() : S.place === 'handoff' ? handoffHTML() : hostHTML();
-    const phone = document.getElementById('phone');
+    const inA = S.place === 'analysis';
+    const view = S.place === 'activity' ? activityHTML() : S.place === 'settings' ? settingsRootHTML() : S.place === 'notif' ? notifHTML() : S.place === 'handoff' ? handoffHTML() : inA ? analysisHTML() : hostHTML();
+    const phone = document.getElementById('phone'), ui = document.getElementById('ui');
     const bodyScroll = document.querySelector('.page .body'); const keep = bodyScroll ? bodyScroll.scrollTop : 0;
-    phone.innerHTML = `<span class="fprobe" aria-hidden="true"><span style="font-weight:400">ا</span><span style="font-weight:500">ا</span><span style="font-weight:600">ا</span></span>` +
-      `<div id="view">${view}</div>${sheetHTML()}${osboxHTML()}<div class="homebar" aria-hidden="true"></div>`;
+    // the G3 frame is persistent (re-creating it would reload the Analysis); P3 re-renders only its own layer
+    document.getElementById('g32host').hidden = !inA;
+    ui.innerHTML = `<span class="fprobe" aria-hidden="true"><span style="font-weight:400">ا</span><span style="font-weight:500">ا</span><span style="font-weight:600">ا</span></span>` +
+      `<div id="view">${view}</div>${sheetHTML()}${osboxHTML()}${inA ? '' : '<div class="homebar" aria-hidden="true"></div>'}`;
     phone.appendChild(A11Y);   // ONE persistent assistive channel: a re-created live region never announces
     // A modal (the education, the preview chooser, the platform boundary) makes everything behind it inert: focus and
     // the accessibility tree stay inside it (fixing-accessibility §3).
     if ((S.sheet || S.osbox) && P.defect !== 'noinert') document.getElementById('view').setAttribute('inert', '');
     phone.dataset.place = S.place; phone.dataset.call = S.call ? 'active' : 'none';
+    // G3 §C.1: the Analysis is one dark place under either system appearance; what P3 lays over it takes the dark tokens
+    phone.dataset.appearance = inA ? 'dark' : P.appearance;
     const b2 = document.querySelector('.page .body'); if (b2 && S.keepScroll) b2.scrollTop = keep;
     S.keepScroll = false;
     const selChip = phone.querySelector('.fchip[aria-pressed="true"]'), fl = phone.querySelector('.filters');
@@ -379,6 +458,7 @@
   function onClick(e) {
     const b = e.target.closest('button'); if (!b || !document.getElementById('phone').contains(b)) return;
     if (b.id === 'act-entry') return go('activity');
+    if (b.id === 'door') return go('analysis');
     if (b.matches('[data-back]')) return back();
     if (b.dataset.to) return go(b.dataset.to);
     if (b.closest('.strip')) {
@@ -412,12 +492,12 @@
   function harness() {
     const h = document.getElementById('harness'); if (!h) return;
     const base = (st) => { const q = new URLSearchParams(location.search); q.set('state', st); q.delete('capture'); return '?' + q.toString(); };
-    const states = ['conv', 'conv-strip-shared', 'shared-strip-qandeel', 'conv-strip-system', 'shared-inplace', 'conv-call', 'activity', 'activity-stale', 'settings-root', 'notif', 'notif-lock', 'edu', 'edu-boundary', 'edu-notnow'];
+    const states = ['conv', 'conv-strip-shared', 'shared-strip-qandeel', 'conv-strip-system', 'shared-inplace', 'conv-call', 'conv-call-security', 'conv-call-reminder', 'analysis', 'analysis-strip-shared', 'analysis-call', 'analysis-call-security', 'analysis-call-reminder', 'activity', 'activity-stale', 'settings-root', 'notif', 'notif-lock', 'edu', 'edu-boundary', 'edu-notnow'];
     const tog = (k, v, label) => { const q = new URLSearchParams(location.search); if (q.get(k) === v) q.delete(k); else q.set(k, v); q.delete('capture'); return `<a href="?${q}" class="${new URLSearchParams(location.search).get(k) === v ? 'on' : ''}">${label}</a>`; };
     h.innerHTML = `<span class="flag">PROOF HARNESS — NOT PRODUCT UI</span><h1>P3-A Notification + Activity</h1>` +
       `<p>P3 is NOT CLOSED / NOT FROZEN. Every surface below is decided by the model (src/model.mjs).</p>` +
       `<h2>States</h2>${states.map((s) => `<a href="${base(s)}" class="${P.state === s ? 'on' : ''}">${s}</a>`).join('')}` +
-      `<h2>Device stand-ins</h2>${tog('lang', 'en', 'English')}${tog('appearance', 'light', 'Light')}${tog('appearance', 'system', 'System')}${tog('rm', '1', 'Reduced Motion')}${tog('contrast', 'more', 'Increased contrast')}${tog('w', '320', '320 × 568')}${tog('w', '430', '430 × 932')}${tog('os', 'denied', 'OS denied')}${tog('intro', '0', 'Introductions not entered')}${tog('entry', 'bell', 'Entry variant: bell')}` +
+      `<h2>Device stand-ins</h2>${tog('lang', 'en', 'English')}${tog('appearance', 'light', 'Light')}${tog('appearance', 'system', 'System')}${tog('rm', '1', 'Reduced Motion')}${tog('contrast', 'more', 'Increased contrast')}${tog('w', '320', '320 × 568')}${tog('w', '430', '430 × 932')}${tog('os', 'denied', 'OS denied')}${tog('intro', '0', 'Introductions not entered')}${tog('proactive', 'reduce', 'Proactive: Reduce')}${tog('entry', 'bell', 'Entry: Quiet Bell (history only)')}${tog('introglyph', 'door', 'Introductions mark: At the Door (comparison)')}` +
       `<h2>Arrivals (foreground)</h2>${Object.keys(FX.EV).map((k) => `<button data-arrive="${k}">${k}</button>`).join('')}` +
       `<h2>Decisions</h2><pre>${esc(S.log.slice(0, 12).join('\n') || '—')}</pre>`;
   }
@@ -425,7 +505,7 @@
   // ------------------------------------------------------------------------------------------------ boot
   function boot() {
     const mount = document.getElementById('mount');
-    mount.innerHTML = `<div id="phone" dir="${L.dir}" lang="${L.lang}" data-appearance="${P.appearance}" data-appearance-setting="${esc(P.appearanceSetting)}" data-contrast="${P.contrast}" data-lang="${P.lang}" data-rm="${P.rm ? 1 : 0}" style="--W:${P.w}px;--H:${P.h}px"></div>` + (P.capture ? '' : '<aside id="harness" class="harness"></aside>');
+    mount.innerHTML = `<div id="phone" dir="${L.dir}" lang="${L.lang}" data-appearance="${P.appearance}" data-appearance-setting="${esc(P.appearanceSetting)}" data-contrast="${P.contrast}" data-lang="${P.lang}" data-rm="${P.rm ? 1 : 0}" style="--W:${P.w}px;--H:${P.h}px"><div id="g32host" hidden></div><div id="ui"></div></div>` + (P.capture ? '' : '<aside id="harness" class="harness"></aside>');
     if (!P.capture) document.body.classList.add('live');
     document.documentElement.lang = L.lang;
     const phone = document.getElementById('phone');
@@ -451,14 +531,35 @@
       edu: () => { S.settings.os = 'not-requested'; S.place = 'shared'; S.here = 'w-summer'; render(); eduFor('shared-first-entry'); },
       'edu-boundary': () => { S.settings.os = 'not-requested'; S.place = 'shared'; S.here = 'w-summer'; S.osbox = true; render(); },
       'edu-notnow': () => { S.settings.os = 'not-requested'; S.place = 'shared'; S.here = 'w-summer'; S.eduDeclined = true; S.notNow = true; render(); },
+      // ---- refinement §8: an active Live Call on the Conversation surface (G1.2: opening «المحادثة» does not end it)
+      'conv-call-security': () => { callBase(); render(); arrive({ ...FX.EV.security }); },
+      'conv-call-reminder': () => { callBase(); render(); arrive({ ...FX.EV.reminder }); },
+      // ---- the Analysis (G3's own page in a frame; refinement §4.2 and §8)
+      analysis: () => { S.place = 'analysis'; g32Frame(); render(); },
+      'analysis-call': () => { callBase(); S.place = 'analysis'; g32Frame(); render(); },
     };
+    // arrivals that need G3's measured chrome run once the frame is ready
+    const later = {
+      'analysis-call': () => { if (Q.get('arrive') !== '0') { arrive({ ...FX.EV.sharedReply }); arrive({ ...FX.EV.introProposal }); arrive({ ...FX.EV.proactive }); } },
+      'analysis-call-security': () => arrive({ ...FX.EV.security }),
+      'analysis-call-reminder': () => arrive({ ...FX.EV.reminder }),
+      'analysis-strip-shared': () => arrive({ ...FX.EV.sharedReply }),
+    };
+    setup['analysis-call-security'] = setup['analysis-call-reminder'] = () => { callBase(); S.place = 'analysis'; g32Frame(); render(); };
+    setup['analysis-strip-shared'] = setup.analysis;
     (setup[st] || setup.conv)();
     if (P.defect === 'firstlaunch' && st === 'conv') { S.settings.os = 'not-requested'; S.sheet = { kind: 'edu', trigger: 'launch' }; render(); }
     if (P.defect === 'samectx' && st === 'shared-inplace') { S.inplace = null; showStrip({ ...FX.EV.sharedReply }, true); }
     if (Q.get('press') === 'entry') document.getElementById('act-entry')?.classList.add('down');
     if (P.capture) tick(1000); // settle entrances; the strip's hold (6 s) is still running
-    document.fonts.ready.then(() => { phone.setAttribute('data-ready', '1'); });
+    Promise.all([document.fonts.ready, S.place === 'analysis' ? g32Ready : null]).then(() => {
+      if (later[st]) { render(); later[st](); if (P.capture) tick(1000); }
+      else if (S.place === 'analysis') render();
+      phone.setAttribute('data-ready', '1');
+    });
   }
+  /** A Live Call already running: the older items are seen, so only what arrives now can change attention. */
+  function callBase() { S.call = true; S.feed.forEach((i) => { i.attention = 'seen'; i.actionable = false; }); }
 
   // ------------------------------------------------------------------------------------------------ capture API
   window.P3 = {
@@ -471,6 +572,13 @@
       return { tag: e.tagName, role: e.getAttribute('role') || '', name: (lab || '').trim(), w: Math.round(r.width), h: Math.round(r.height), hidden: !!e.closest('[aria-hidden="true"]'), glued: !e.getAttribute('aria-label') && !e.getAttribute('aria-labelledby') && texts > 1 };
     }),
     decorative: () => [...document.querySelectorAll('#phone svg')].map((s) => ({ hidden: s.getAttribute('aria-hidden') === 'true' || !!s.closest('[aria-hidden="true"]'), labelled: !!s.getAttribute('aria-label') })),
+    /** G3's own geometry, read from its own elements in the frame (never assumed), plus its own truth. */
+    g32: () => {
+      if (!G32) return null;
+      const w = G32.contentWindow, t = w && w.__G32 ? w.__G32.truth() : {}, mic = G32.contentDocument.getElementById('mic');
+      const line = mic && mic.parentElement ? (() => { const r = mic.parentElement.getBoundingClientRect(); return { x: r.left, y: r.top, r: r.right, b: r.bottom }; })() : null;
+      return { state: G32.dataset.state, place: t.place, call: t.call, TM: t.TM, back: g32Rect('back'), replay: g32Rect('replay'), tl: g32Rect('tl-track'), live: g32Rect('tl-live'), band: g32Rect('band'), line, slot: chromeSlot() };
+    },
   };
   boot();
 })();
