@@ -44,7 +44,7 @@ import { COPY, THREAD, OPENER, DAYS, FIXTURE, TYPING, CALL_SCRIPT } from './cont
 import { qMarkSVG } from './glyphs.mjs';
 import { sigSvg } from './sig.mjs';
 import { utilSvg, UTILITY_DEFAULT } from './utility.mjs';
-import { railArt, RAIL_RECOMMENDED, SPINE_RECOMMENDED } from './machines.mjs';
+import { railArt, RAIL_RECOMMENDED, SPINE_RECOMMENDED, END_GLYPH_PX, END_GLYPH_STUDY } from './machines.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 export const SOURCE = join(HERE, '..');
@@ -462,7 +462,7 @@ ${cue}
   <button id="note-send" class="cbtn m m-note slot-o" type="button" aria-label="${esc(L.voiceSend.text)}">${sigSvg('send')}</button>
   <button id="route" class="cbtn m m-call slot-ii" type="button" aria-label="${esc(L.route.text)}" aria-pressed="true">${sigSvg('routeMorph', { cls: 'g-route' })}</button>
   <button id="mute" class="cbtn m m-call slot-i" type="button" aria-label="${esc(L.mute.text)}" aria-pressed="false">${sigSvg('muted', { cls: 'g-mm', id: lang })}</button>
-  <button id="end-call" class="cbtn m m-call slot-o" type="button" aria-label="${esc(L.endCall.text)}">${sigSvg('endCall')}</button>
+  <button id="end-call" class="cbtn m m-call slot-o" type="button" aria-label="${esc(L.endCall.text)}">${sigSvg('endCall', { size: END_GLYPH_PX, cls: 'g-end' })}</button>
 </div>
 ${proposal}
 <nav id="rail" aria-label="${esc(L.nav.label.text)}"><div class="items">${railItems}</div><div id="marker"></div></nav>
@@ -505,6 +505,10 @@ ${harness()}
  /* P2-A harness stand-ins (NOT Product): the Call Rail and Temporal Spine variants under comparison. */
  ph.setAttribute('data-rail',/^[ABC]$/.test(p.get('rail')||'')?p.get('rail'):'${RAIL_RECOMMENDED}');
  ph.setAttribute('data-spine',/^[ABC]$/.test(p.get('spine')||'')?p.get('spine'):'${SPINE_RECOMMENDED}');
+ /* P2-A refinement, harness only: the End Call glyph-size study (${END_GLYPH_STUDY.join(' / ')} px). The Product size is
+    ${END_GLYPH_PX} px, built into the page; ?end= only re-renders the SAME drawing at a study size for comparison. */
+ var es=+(p.get('end')||0);if([${END_GLYPH_STUDY.join(',')}].indexOf(es)>=0){ph.querySelectorAll('#end-call svg').forEach(function(s){s.setAttribute('width',es);s.setAttribute('height',es);});}
+ ph.setAttribute('data-end-px',ph.querySelector('#end-call svg')?ph.querySelector('#end-call svg').getAttribute('width'):'');
  window.__G32BOOT={lang:lang};
 })();
 </script>
@@ -520,9 +524,9 @@ function harness() {
   return `<aside class="harness" aria-label="Proof harness">
 <span class="flag">PROOF HARNESS — NOT PRODUCT UI</span>
 <h1>QANDEEL · P2-A — Final Iconography, integrated visual proof</h1>
-<p><b>RECOMMENDED FOR PRODUCT OWNER REVIEW — NOT FROZEN. P2 is not closed.</b> The G3.2 Product state machine, unchanged in its laws, carrying the P2 signature family, the Call Rail and the Temporal Spine + Aperture.</p>
+<p><b>PRODUCT OWNER VISUAL SELECTIONS ACCEPTED — P2 NOT CLOSED / NOT FROZEN.</b> The G3.2 Product state machine, unchanged in its laws, carrying the P2 signature family, the accepted Call Rail and the accepted Temporal Spine + Aperture. Canonical P2 closure is a later P2-B task.</p>
 <h2>Variants under comparison (harness only)</h2>
-<p>Call Rail: <a href="?rail=A" style="color:#ddd">A Keyed seam (rec.)</a> · <a href="?rail=B" style="color:#ddd">B Open tray</a> · <a href="?rail=C" style="color:#ddd">C Break line</a><br>Temporal Spine: <a href="?spine=C" style="color:#ddd">C Parting (rec.)</a> · <a href="?spine=A" style="color:#ddd">A Lens</a> · <a href="?spine=B" style="color:#ddd">B Gate</a></p>
+<p>Call Rail: <a href="?rail=A" style="color:#ddd">A Keyed seam (accepted)</a> · <a href="?rail=B" style="color:#ddd">B Open tray</a> · <a href="?rail=C" style="color:#ddd">C Break line</a> (B, C: preserved comparison evidence)<br>Temporal Spine: <a href="?spine=C" style="color:#ddd">C Parting (accepted)</a> · <a href="?spine=A" style="color:#ddd">A Lens</a> · <a href="?spine=B" style="color:#ddd">B Gate</a> (A, B: preserved comparison evidence)<br>End Call glyph study: ${END_GLYPH_STUDY.map((s) => `<a href="?end=${s}" style="color:#ddd">${s} px${s === END_GLYPH_PX ? ' (selected)' : ''}</a>`).join(' · ')}</p>
 <p>Everything in the phone is Product; everything here simulates the device, the other human, or jumps to a start state. World: <code id="sha-state">verifying…</code></p>
 <h2>Start states</h2>
 <div class="btns">${b('CONV', 'Conversation')}${b('P1', 'Analysis · FAR · Live')}${b('P3', 'NEAR · inspecting')}${b('P4', 'PINNED(14)')}${b('P4_OPEN', 'PINNED + «طرق العودة»')}${b('CALL_ANALYSIS', 'In a call · Analysis')}${b('CALL_CONV', 'Same call · Conversation')}${b('CALL_PINNED', 'In a call · PINNED')}${b('REPLAY', 'Replay entry')}${b('M1_CUE', 'Matching attention')}</div>

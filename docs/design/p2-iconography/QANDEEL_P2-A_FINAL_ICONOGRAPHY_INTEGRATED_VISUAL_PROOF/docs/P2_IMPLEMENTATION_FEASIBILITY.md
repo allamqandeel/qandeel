@@ -11,7 +11,9 @@ task owns everything below, and each dependency named here needs explicit approv
   render size.
 - For production, the recommended form is a small typed registry, for example `QandeelGlyph = { name, size → paths[],
   solids[], cut?, morph? }`, generated **once** from `sig.mjs` into static path strings.
-  - There are 15 glyphs × 4 sizes at most.
+  - There are 15 glyphs × 4 sizes at most. End Call has one render size, **27 pt** (the P2-A refinement). It is a
+    solid mark, so it is the 24-unit drawing scaled, with no stroke to re-weight. Centred in its 44-pt target it sits
+    8.5 pt from the edge; on 3× devices, snap its origin to a whole device pixel (`PixelRatio.roundToNearestPixel`).
   - No runtime geometry maths is needed, and no font or icon build step.
 - The morphing members (`muted`, `routeMorph`) carry their extra parts:
   - Mute: the slash, and the mask band.
@@ -42,13 +44,20 @@ The proof harness is HTML/SVG, but every primitive it uses is one `react-native-
 - Every P2 mark is a vector path with a stroke, a fill, a mask or a dash. Every P2 motion is an opacity, a dash offset
   or a transform. `react-native-svg` + Reanimated animated props express all of them.
 - The Living Analysis World is a separate question, owned by the world's native port.
-- **Skia ↔ Reanimated.**
-  - The repository pins Skia 2.6.2 (peer `react-native-reanimated >= 3.19.1`) with Reanimated 4.5.1.
-  - The latest Skia, 2.13.0, peers on Reanimated ≥ 4 and worklets ≥ 0.7, which shows the integration contract moved
-    after 2.6.2.
-  - Shared-value-driven Skia drawing at 2.6.2 + 4.5.1 was **not verified on a device**, so P2 does not depend on it.
-  - If a later task wants Skia for the icons, it must first verify that pairing on devices, or upgrade under its own
-    approval. **No upgrade is proposed here.**
+- **Skia ↔ Reanimated (wording corrected by the P2-A refinement).**
+  - **The repository currently declares Skia 2.6.2 and Reanimated 4.5.1. Their exact integration pairing is not
+    certified by P2-A and was not device-validated here. P2-A does not rely on Skia. The recommended implementation
+    path remains static / vector SVG rendering plus Reanimated where appropriate, subject to a future implementation
+    task and device verification.**
+  - Skia's own documentation is version-dependent.
+    - Animations page: from Skia 2.10, the Reanimated integration requires Reanimated v4 or above; lower versions are
+      described with Reanimated v3.
+    - Installation page: current native Skia with Reanimated requires Reanimated ≥ 4.0.0 and worklets ≥ 0.7.0.
+
+    Neither page certifies the repository's exact 2.6.2 + 4.5.1 pairing, and a declared peer range is not taken as
+    proof (`P2_REFERENCE_GATE.md` §2).
+  - If a later task wants Skia for the icons, it must first verify the pairing on devices, or change versions under
+    its own approval. **No dependency is changed or upgraded here**, and `apps/mobile/package.json` is untouched.
 
 ## 5. RTL
 
@@ -86,6 +95,6 @@ The proof harness is HTML/SVG, but every primitive it uses is one `react-native-
 | Dependency | Why | Approval |
 |---|---|---|
 | `react-native-svg` (Expo 57 → 15.15.4) | render the glyphs, the rail art and the spine | **required** from the Product Owner / Architecture |
-| (none else) | utility glyphs vendored; Reanimated, Gesture Handler already present; Skia not needed | — |
+| (none else) | utility glyphs vendored; Reanimated, Gesture Handler already present; P2 does not rely on Skia | — |
 
 **Not required:** Hugeicons packages (vendored instead); any Pro licence; any Skia / Reanimated upgrade; Lottie.

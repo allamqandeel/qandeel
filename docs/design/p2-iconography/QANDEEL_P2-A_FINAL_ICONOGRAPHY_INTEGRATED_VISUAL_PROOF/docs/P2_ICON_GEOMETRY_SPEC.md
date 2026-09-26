@@ -1,6 +1,7 @@
 # P2-A — Icon Geometry Specification ("Open Geometry Hybrid")
 
-**Status:** `P2-A CANDIDATE SPECIFICATION — RECOMMENDED FOR PRODUCT OWNER REVIEW — NOT FROZEN`.
+**Status:** `P2-A SPECIFICATION — N1 "OPEN" ACCEPTED BY THE PRODUCT OWNER AFTER INDEPENDENT REVIEW — P2 NOT CLOSED / NOT
+FROZEN`. N2 "Architectural" is comparison evidence only.
 
 The source of truth for every number below is `source/src/sig.mjs`. Its glyphs are pure functions of a nuance and a
 render size, so the rules are executable rather than descriptive. Board 01 shows the construction, and board 10 shows
@@ -13,7 +14,7 @@ the real rasters.
 | Drawing grid | 24 × 24 units (u), one per point at 24 px |
 | Live area (optical safe area) | 2 … 22 u (20 u). Nothing but a stroke's round cap may enter the 2-u margin |
 | Keylines | circle ⌀16 u (r 8); portrait capsule 6 × 11.2 u; square 16 u; landscape handset 17.2 × 7.6 u |
-| Render sizes | 24 px: navigation, the Call Rail, the Conversation line. 22 px: upper chrome (door, back, Replay). 20 px: the voice-message transport. 16 px: the documented minimum (board 10) |
+| Render sizes | 24 px: navigation, the Call Rail's Mic and Route, the Conversation line. **27 px: End Call only** (P2-A refinement, board 16; the solid handset scaled, no stroke). 22 px: upper chrome (door, back, Replay). 20 px: the voice-message transport. 16 px: the documented minimum (board 10) |
 | Relation to the target | the glyph is centred in a **44 × 44 pt** target (Call Rail, upper chrome) or a 56-pt-high navigation item. The glyph never grows to meet the target; the target is the control's box (animate-expo §7) |
 | Exceptional sizes | 28–48 px keep the same drawing with a lighter optical stroke (`STROKE` table). No large "hero" size exists in P2 |
 
@@ -42,7 +43,7 @@ per render size so the drawn line stays ≥ 1.3 device px:
 
 ## 3. Terminals and corners
 
-- **Terminals.** Round caps and round joins everywhere in N1 "Open", the recommended nuance. N2 "Architectural" uses
+- **Terminals.** Round caps and round joins everywhere in N1 "Open", the accepted nuance. N2 "Architectural" uses
   **flat** caps at the cut only.
 - **Corners.** Radius 2 u on rectilinear forms (N2: 1.2 u), concentric on nested forms. The capsule is a full radius
   (3 u).

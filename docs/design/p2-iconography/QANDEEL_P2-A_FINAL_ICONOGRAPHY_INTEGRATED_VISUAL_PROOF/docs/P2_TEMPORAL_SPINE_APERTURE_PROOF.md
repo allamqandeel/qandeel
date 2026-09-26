@@ -1,6 +1,8 @@
 # P2-A — Temporal Spine + Aperture Proof
 
-**Status:** `P2-A VISUAL PROOF — VARIANT C RECOMMENDED FOR PRODUCT OWNER REVIEW — NOT FROZEN`.
+**Status:** `P2-A VISUAL PROOF — VARIANT C "PARTING" ACCEPTED BY THE PRODUCT OWNER AFTER INDEPENDENT REVIEW — P2 NOT
+CLOSED / NOT FROZEN`. A and B are preserved as comparison evidence, not open alternatives. The refinement did not
+change the Spine.
 
 **Boards:** 06 (the three variants × four states), 07 (the recommendation through every state), 08 / 09 (RTL / LTR),
 13 (320), 15 (geometry, targets, focus order, Reduced Motion).
@@ -46,7 +48,7 @@
 
 ## 3. The three variants (board 06)
 
-| | A · Lens | B · Gate | **C · Parting (recommended)** |
+| | A · Lens (evidence only) | B · Gate (evidence only) | **C · Parting (accepted)** |
 |---|---|---|---|
 | Aperture | the spine breaks; a floating lens holds the Moment; committed = lens + core | the spine breaks and turns into two lips; committed = heavier lips + core | the spine **itself** parts around the Moment and rejoins; committed = the Moment's mark inside the opening |
 | Preview | a lighter lens | hairline lips | a lighter parting, no mark |

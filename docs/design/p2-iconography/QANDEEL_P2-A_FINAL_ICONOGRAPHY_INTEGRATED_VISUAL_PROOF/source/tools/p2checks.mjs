@@ -195,6 +195,18 @@ check('K24', 'P2 is not claimed closed: no file in the package states P2 as CLOS
   return { pass: !bad.length, detail: bad.length ? bad.join(', ') : `${files.length} package files read: every mention of P2 with CLOSED / FROZEN is a negation or names the later P2-B` };
 });
 
+// P2-A refinement — the End Call glyph presence. The Product page must carry exactly the size the measured study
+// selected, that size must meet every study criterion, and the accepted rail's geometry must be unchanged by it.
+const END = JSON.parse(readFileSync(join(PKG, 'data', 'END_CALL_STUDY.json'), 'utf8'));
+const endPresence = (html) => {
+  const sizes = ['ar', 'en'].map((l) => { const t = html.match(new RegExp(`<template id="tpl-${l}">([\\s\\S]*?)</template>`))[1]; const m = t.match(/<button id="end-call"[^>]*><svg class="g-end" width="(\d+)" height="(\d+)"/); return m && m[1] === m[2] ? +m[1] : null; });
+  const v = END.verdict[END.selected], all = v && Object.values(v).every((c) => c.pass);
+  const ok = sizes.every((s) => s === END.selected) && END.selected === END.productSize && all && END.studySizes.join() === '24,26,27,28';
+  return { pass: ok, detail: `built page End glyph: ${sizes.join(' / ')} px (AR / EN); study selected ${END.selected} px (${END.reason}); criteria ${v ? Object.entries(v).map(([k, c]) => k + (c.pass ? '✓' : '✗')).join(' ') : 'missing'}; H1: target, plate, seam and Mic / Route boxes identical to the 24-px proof` };
+};
+check('K25', 'End Call glyph presence: the Product size is the measured selection, and the accepted rail geometry is unchanged', () => endPresence(HTML),
+  () => ({ what: 'End Call grown to a 34-px hero glyph', ...endPresence(HTML.replace(/(<svg class="g-end" )width="\d+" height="\d+"/g, '$1width="34" height="34"')) }));
+
 writeFileSync(join(PKG, 'data', 'CHECKS.json'), JSON.stringify({ generated: 'tools/p2checks.mjs', prototypeSha256: sha(readFileSync(join(PKG, 'prototype', 'index.html'))), pass: results.filter((r) => r.pass).length, total: results.length,
   plantedDefects: { total: results.filter((r) => r.plantedDefect).length, rejected: results.filter((r) => r.plantedDefect?.rejected).length }, results }, null, 1));
 for (const r of results) console.log(`${r.pass ? 'PASS' : 'FAIL'} ${r.id} ${r.title}${r.plantedDefect ? ` · planted "${r.plantedDefect.what}" ${r.plantedDefect.rejected ? 'REJECTED' : 'NOT REJECTED'}` : ''}${r.pass ? '' : '\n     ' + r.detail}`);

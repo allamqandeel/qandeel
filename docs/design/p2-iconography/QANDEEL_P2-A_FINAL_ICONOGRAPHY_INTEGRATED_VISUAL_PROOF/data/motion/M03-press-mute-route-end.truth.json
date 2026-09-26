@@ -2423,5 +2423,5 @@
   }
  ],
  "encoder": "CapCut ffmpeg h264_mf 6 Mb/s yuv420p",
- "encodeTail": "frame=   91 fps=0.0 q=-0.0 Lsize=     741KiB time=00:00:03.00 bitrate=2022.4kbits/s speed=5.27x    \r | "
+ "encodeTail": "frame=   91 fps=0.0 q=-0.0 Lsize=     741KiB time=00:00:03.00 bitrate=2024.3kbits/s speed=5.48x    \r | "
 }

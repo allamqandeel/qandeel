@@ -1,0 +1,2053 @@
+{
+ "generated": "tools/p2endstudy.mjs",
+ "method": "see the file header",
+ "criteria": {
+  "H1": "the target, the terminal plate, the group plate and the Mic / Route glyph boxes are identical to the 24-px proof in every capture (no rail redesign, no spacing change)",
+  "H2": "the End ink stays inside its 44-pt target with ≥ 8 pt clear on every side, at rest, focused and pressed (the wash's 12-pt corners and the 2-pt focus perimeter frame the glyph, never touch it)",
+  "H3": "visibly stronger than the 24-px proof: End's contrast-weighted ink ≥ 1.10 × its 24-px value (Arabic, Analysis)",
+  "H4": "balanced in the machine: End weighs at least as much as its heaviest neighbour (Mic or Route) and no more than the two together — unmistakably the terminal, still subordinate to the whole rail (Arabic, English and Light)",
+  "H5": "not a hero icon: End's ink width ≤ 22 pt (half its target)",
+  "H6": "direction by meaning: the End target's pixels are byte-identical in Arabic and English (never mirrored, no direction-dependent drawing)",
+  "H7": "state is the ground and the perimeter, not the glyph: the ink box under FOCUS and under PRESS equals REST's"
+ },
+ "studySizes": [
+  24,
+  26,
+  27,
+  28
+ ],
+ "productSize": 27,
+ "selected": 27,
+ "selectionRule": "task §4: choose 27 px unless measured proof shows a clear optical reason for 26 or 28",
+ "reason": "27 px meets every criterion, so the task's default stands; no measurement gives a clear reason for 26 or 28",
+ "verdict": {
+  "24": {
+   "H1": {
+    "pass": true,
+    "detail": "identical in all six captures"
+   },
+   "H2": {
+    "pass": true,
+    "detail": "minimum clearance 13.5 pt"
+   },
+   "H3": {
+    "pass": false,
+    "detail": "1 × the 24-px weight"
+   },
+   "H4": {
+    "pass": false,
+    "detail": "live-ar: End 66.43 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; live-en: End 66.43 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; light-ar: End 67.24 · Mic 44.75 · Route 74.45 pt² → LIGHTER than a neighbour, ≤ group"
+   },
+   "H5": {
+    "pass": true,
+    "detail": "ink 17 × 7.5 pt"
+   },
+   "H6": {
+    "pass": true,
+    "detail": "AR f7d94038a41e3536 · EN f7d94038a41e3536"
+   },
+   "H7": {
+    "pass": true,
+    "detail": "rest {\"x\":25.5,\"y\":719,\"w\":17,\"h\":7.5}; focus same; press same"
+   }
+  },
+  "26": {
+   "H1": {
+    "pass": true,
+    "detail": "identical in all six captures"
+   },
+   "H2": {
+    "pass": true,
+    "detail": "minimum clearance 12.5 pt"
+   },
+   "H3": {
+    "pass": true,
+    "detail": "1.16 × the 24-px weight"
+   },
+   "H4": {
+    "pass": true,
+    "detail": "live-ar: End 77.19 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; live-en: End 77.19 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; light-ar: End 78.14 · Mic 44.75 · Route 74.45 pt² → ≥ heaviest, ≤ group"
+   },
+   "H5": {
+    "pass": true,
+    "detail": "ink 19 × 8.5 pt"
+   },
+   "H6": {
+    "pass": true,
+    "detail": "AR acd5aab71699254e · EN acd5aab71699254e"
+   },
+   "H7": {
+    "pass": true,
+    "detail": "rest {\"x\":24.5,\"y\":718.5,\"w\":19,\"h\":8.5}; focus same; press same"
+   }
+  },
+  "27": {
+   "H1": {
+    "pass": true,
+    "detail": "identical in all six captures"
+   },
+   "H2": {
+    "pass": true,
+    "detail": "minimum clearance 12 pt"
+   },
+   "H3": {
+    "pass": true,
+    "detail": "1.24 × the 24-px weight"
+   },
+   "H4": {
+    "pass": true,
+    "detail": "live-ar: End 82.54 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; live-en: End 82.54 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; light-ar: End 83.55 · Mic 44.75 · Route 74.45 pt² → ≥ heaviest, ≤ group"
+   },
+   "H5": {
+    "pass": true,
+    "detail": "ink 19 × 8.5 pt"
+   },
+   "H6": {
+    "pass": true,
+    "detail": "AR ae1f49d9c11dd6f8 · EN ae1f49d9c11dd6f8"
+   },
+   "H7": {
+    "pass": true,
+    "detail": "rest {\"x\":25,\"y\":719,\"w\":19,\"h\":8.5}; focus same; press same"
+   }
+  },
+  "28": {
+   "H1": {
+    "pass": true,
+    "detail": "identical in all six captures"
+   },
+   "H2": {
+    "pass": true,
+    "detail": "minimum clearance 12 pt"
+   },
+   "H3": {
+    "pass": true,
+    "detail": "1.35 × the 24-px weight"
+   },
+   "H4": {
+    "pass": true,
+    "detail": "live-ar: End 89.35 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; live-en: End 89.35 · Mic 37.71 · Route 62.71 pt² → ≥ heaviest, ≤ group; light-ar: End 90.44 · Mic 44.75 · Route 74.45 pt² → ≥ heaviest, ≤ group"
+   },
+   "H5": {
+    "pass": true,
+    "detail": "ink 20 × 9 pt"
+   },
+   "H6": {
+    "pass": true,
+    "detail": "AR 7cf9593c8b93245a · EN 7cf9593c8b93245a"
+   },
+   "H7": {
+    "pass": true,
+    "detail": "rest {\"x\":24,\"y\":718.5,\"w\":20,\"h\":9}; focus same; press same"
+   }
+  }
+ },
+ "summary": {
+  "24": {
+   "allPass": false,
+   "endWeightAr": 66.43,
+   "micWeightAr": 37.71,
+   "routeWeightAr": 62.71,
+   "inkAr": {
+    "x": 25.5,
+    "y": 719,
+    "w": 17,
+    "h": 7.5
+   },
+   "minClearance": 13.5
+  },
+  "26": {
+   "allPass": true,
+   "endWeightAr": 77.19,
+   "micWeightAr": 37.71,
+   "routeWeightAr": 62.71,
+   "inkAr": {
+    "x": 24.5,
+    "y": 718.5,
+    "w": 19,
+    "h": 8.5
+   },
+   "minClearance": 12.5
+  },
+  "27": {
+   "allPass": true,
+   "endWeightAr": 82.54,
+   "micWeightAr": 37.71,
+   "routeWeightAr": 62.71,
+   "inkAr": {
+    "x": 25,
+    "y": 719,
+    "w": 19,
+    "h": 8.5
+   },
+   "minClearance": 12
+  },
+  "28": {
+   "allPass": true,
+   "endWeightAr": 89.35,
+   "micWeightAr": 37.71,
+   "routeWeightAr": 62.71,
+   "inkAr": {
+    "x": 24,
+    "y": 718.5,
+    "w": 20,
+    "h": 9
+   },
+   "minClearance": 12
+  }
+ },
+ "captures": {
+  "live-ar": "Analysis, in a call, Arabic (End at the left END edge)",
+  "live-en": "Analysis, in a call, English (End at the right END edge)",
+  "s320-ar": "320 × 568, in a call, PINNED",
+  "focus-ar": "keyboard FOCUS on End Call",
+  "press-ar": "PRESSED End Call (the E1R ground wash)",
+  "light-ar": "Conversation, same call, system Light"
+ },
+ "bySize": {
+  "24": {
+   "px": 24,
+   "shots": {
+    "live-ar": {
+     "id": "end24-live-ar",
+     "endPxInPage": 24,
+     "end": {
+      "weight": 66.43,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 25.5,
+       "y": 719,
+       "w": 17,
+       "h": 7.5
+      },
+      "marginToTarget": 13.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "f7d94038a41e3536"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "live-en": {
+     "id": "end24-live-en",
+     "endPxInPage": 24,
+     "end": {
+      "weight": 66.43,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 347.5,
+       "y": 719,
+       "w": 17,
+       "h": 7.5
+      },
+      "marginToTarget": 13.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "f7d94038a41e3536"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 316,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 216,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 278,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 234,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 283,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 268,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 237,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 224,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "s320-ar": {
+     "id": "end24-s320-ar",
+     "endPxInPage": 24,
+     "end": {
+      "weight": 66.43,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 25.5,
+       "y": 443,
+       "w": 17,
+       "h": 7.5
+      },
+      "marginToTarget": 13.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "f7d94038a41e3536"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 422,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 422,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "focus-ar": {
+     "id": "end24-focus-ar",
+     "endPxInPage": 24,
+     "end": {
+      "weight": 66.43,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 25.5,
+       "y": 719,
+       "w": 17,
+       "h": 7.5
+      },
+      "marginToTarget": 13.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "f7d94038a41e3536"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "press-ar": {
+     "id": "end24-press-ar",
+     "endPxInPage": 24,
+     "end": {
+      "weight": 59.41,
+      "fullInkDeltaL": 168.92,
+      "groundLuma": 43.93,
+      "ink": {
+       "x": 25.5,
+       "y": 719,
+       "w": 17,
+       "h": 7.5
+      },
+      "marginToTarget": 13.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "5cfd3c89e137a1ab"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "light-ar": {
+     "id": "end24-light-ar",
+     "endPxInPage": 24,
+     "end": {
+      "weight": 67.24,
+      "fullInkDeltaL": 191.15,
+      "groundLuma": 230,
+      "ink": {
+       "x": 25.5,
+       "y": 719,
+       "w": 17,
+       "h": 7.5
+      },
+      "marginToTarget": 13.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "d983b70bc55e2825"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 44.75,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "307971a739dd2d41"
+     },
+     "route": {
+      "weight": 74.45,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "67747f1af27c57b2"
+     }
+    }
+   }
+  },
+  "26": {
+   "px": 26,
+   "shots": {
+    "live-ar": {
+     "id": "end26-live-ar",
+     "endPxInPage": 26,
+     "end": {
+      "weight": 77.19,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 24.5,
+       "y": 718.5,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "acd5aab71699254e"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "live-en": {
+     "id": "end26-live-en",
+     "endPxInPage": 26,
+     "end": {
+      "weight": 77.19,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 346.5,
+       "y": 718.5,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "acd5aab71699254e"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 316,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 216,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 278,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 234,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 283,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 268,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 237,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 224,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "s320-ar": {
+     "id": "end26-s320-ar",
+     "endPxInPage": 26,
+     "end": {
+      "weight": 77.19,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 24.5,
+       "y": 442.5,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "acd5aab71699254e"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 422,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 422,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "focus-ar": {
+     "id": "end26-focus-ar",
+     "endPxInPage": 26,
+     "end": {
+      "weight": 77.19,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 24.5,
+       "y": 718.5,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "acd5aab71699254e"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "press-ar": {
+     "id": "end26-press-ar",
+     "endPxInPage": 26,
+     "end": {
+      "weight": 69.03,
+      "fullInkDeltaL": 168.92,
+      "groundLuma": 43.93,
+      "ink": {
+       "x": 24.5,
+       "y": 718.5,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "bdf5e7ae1c91455a"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "light-ar": {
+     "id": "end26-light-ar",
+     "endPxInPage": 26,
+     "end": {
+      "weight": 78.14,
+      "fullInkDeltaL": 191.15,
+      "groundLuma": 230,
+      "ink": {
+       "x": 24.5,
+       "y": 718.5,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12.5,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "9bafdadf0c700425"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 44.75,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "307971a739dd2d41"
+     },
+     "route": {
+      "weight": 74.45,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "67747f1af27c57b2"
+     }
+    }
+   }
+  },
+  "27": {
+   "px": 27,
+   "shots": {
+    "live-ar": {
+     "id": "end27-live-ar",
+     "endPxInPage": 27,
+     "end": {
+      "weight": 82.54,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 25,
+       "y": 719,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "ae1f49d9c11dd6f8"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "live-en": {
+     "id": "end27-live-en",
+     "endPxInPage": 27,
+     "end": {
+      "weight": 82.54,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 347,
+       "y": 719,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "ae1f49d9c11dd6f8"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 316,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 216,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 278,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 234,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 283,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 268,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 237,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 224,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "s320-ar": {
+     "id": "end27-s320-ar",
+     "endPxInPage": 27,
+     "end": {
+      "weight": 82.54,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 25,
+       "y": 443,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "ae1f49d9c11dd6f8"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 422,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 422,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "focus-ar": {
+     "id": "end27-focus-ar",
+     "endPxInPage": 27,
+     "end": {
+      "weight": 82.54,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 25,
+       "y": 719,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "ae1f49d9c11dd6f8"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "press-ar": {
+     "id": "end27-press-ar",
+     "endPxInPage": 27,
+     "end": {
+      "weight": 73.81,
+      "fullInkDeltaL": 168.92,
+      "groundLuma": 43.93,
+      "ink": {
+       "x": 25,
+       "y": 719,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "f5618dac8f2dcfa1"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "light-ar": {
+     "id": "end27-light-ar",
+     "endPxInPage": 27,
+     "end": {
+      "weight": 83.55,
+      "fullInkDeltaL": 191.15,
+      "groundLuma": 230,
+      "ink": {
+       "x": 25,
+       "y": 719,
+       "w": 19,
+       "h": 8.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "770df7b6bc19d7c3"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 44.75,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "307971a739dd2d41"
+     },
+     "route": {
+      "weight": 74.45,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "67747f1af27c57b2"
+     }
+    }
+   }
+  },
+  "28": {
+   "px": 28,
+   "shots": {
+    "live-ar": {
+     "id": "end28-live-ar",
+     "endPxInPage": 28,
+     "end": {
+      "weight": 89.35,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 24,
+       "y": 718.5,
+       "w": 20,
+       "h": 9
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "7cf9593c8b93245a"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "live-en": {
+     "id": "end28-live-en",
+     "endPxInPage": 28,
+     "end": {
+      "weight": 89.35,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 346,
+       "y": 718.5,
+       "w": 20,
+       "h": 9
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "7cf9593c8b93245a"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 334,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 316,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 216,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 278,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 234,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 37.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 283,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 268,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "649f3d24d841e0d2"
+     },
+     "route": {
+      "weight": 62.71,
+      "fullInkDeltaL": 112.92,
+      "groundLuma": 24,
+      "ink": {
+       "x": 237,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 224,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "00186142f0f55f8d"
+     }
+    },
+    "s320-ar": {
+     "id": "end28-s320-ar",
+     "endPxInPage": 28,
+     "end": {
+      "weight": 89.35,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 24,
+       "y": 442.5,
+       "w": 20,
+       "h": 9
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "7cf9593c8b93245a"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 424,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 422,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 422,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 434,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "focus-ar": {
+     "id": "end28-focus-ar",
+     "endPxInPage": 28,
+     "end": {
+      "weight": 89.35,
+      "fullInkDeltaL": 188.84,
+      "groundLuma": 24,
+      "ink": {
+       "x": 24,
+       "y": 718.5,
+       "w": 20,
+       "h": 9
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "7cf9593c8b93245a"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "press-ar": {
+     "id": "end28-press-ar",
+     "endPxInPage": 28,
+     "end": {
+      "weight": 79.9,
+      "fullInkDeltaL": 168.92,
+      "groundLuma": 43.93,
+      "ink": {
+       "x": 24,
+       "y": 718.5,
+       "w": 20,
+       "h": 9
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "a407c71d63ff6603"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     }
+    },
+    "light-ar": {
+     "id": "end28-light-ar",
+     "endPxInPage": 28,
+     "end": {
+      "weight": 90.44,
+      "fullInkDeltaL": 191.15,
+      "groundLuma": 230,
+      "ink": {
+       "x": 24,
+       "y": 718.5,
+       "w": 20,
+       "h": 9
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "65fabe296ef64c82"
+     },
+     "geometry": {
+      "endTarget": {
+       "x": 12,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "terminalPlate": {
+       "x": 6,
+       "y": 698,
+       "w": 68,
+       "h": 48
+      },
+      "groupPlate": {
+       "x": 70,
+       "y": 698,
+       "w": 104,
+       "h": 48
+      },
+      "micGlyph": {
+       "x": 88,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      },
+      "routeGlyph": {
+       "x": 132,
+       "y": 710,
+       "w": 24,
+       "h": 24
+      }
+     },
+     "mic": {
+      "weight": 44.75,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 93,
+       "y": 712,
+       "w": 14,
+       "h": 19.5
+      },
+      "marginToTarget": 12,
+      "inkWindowFree": true,
+      "target": {
+       "x": 78,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "307971a739dd2d41"
+     },
+     "route": {
+      "weight": 74.45,
+      "fullInkDeltaL": 134.08,
+      "groundLuma": 230,
+      "ink": {
+       "x": 135,
+       "y": 714.5,
+       "w": 17.5,
+       "h": 15
+      },
+      "marginToTarget": 13,
+      "inkWindowFree": true,
+      "target": {
+       "x": 122,
+       "y": 700,
+       "w": 44,
+       "h": 44
+      },
+      "sha256": "67747f1af27c57b2"
+     }
+    }
+   }
+  }
+ }
+}

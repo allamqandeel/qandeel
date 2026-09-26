@@ -3,6 +3,19 @@
 **Status:** `P2-A — VISUAL PROOF / DECISION GATE — NOT A FREEZE`. **P2 is not closed.** This package makes no canonical
 amendment and changes no lifecycle record.
 
+**P2-A refinement (2026-09-26).** This is a small, Product-Owner-authorised refinement on the same branch and the same
+Draft PR #273.
+- It was made after independent review and the Product Owner's visual selections.
+- Repository truth at the refinement:
+  - `main` was still `209ca7269181e447f0c5192e49979aa391103871`;
+  - PR #273 was Draft / open / unmerged at head `23c8af1029273c9a3a462bd3db90293419c3fa27`;
+  - the laptop was on the branch at that head, clean, 0 ahead / 0 behind.
+- Scope:
+  - record the accepted selections (`P2_PRODUCT_PROOF_REPORT.md` §J);
+  - polish the End Call glyph presence (§K; `P2_CALL_RAIL_PROOF.md` §6);
+  - correct the Skia / Reanimated wording (`P2_REFERENCE_GATE.md` §2).
+- It opens no new alternative, and it closes and freezes nothing. Canonical P2 closure is the later P2-B task.
+
 ## 1. Repository truth (task §1)
 
 | Item | Value |

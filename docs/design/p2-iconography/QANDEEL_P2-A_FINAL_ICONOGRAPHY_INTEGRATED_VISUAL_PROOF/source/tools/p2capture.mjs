@@ -7,6 +7,7 @@ import { writeFileSync, mkdirSync, rmSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { openPage, closeServers, settle, WORK, PKG, key } from './lib/session.mjs';
+import { END_GLYPH_STUDY } from '../src/machines.mjs';
 
 const mode = process.argv[2] || 'shots';
 const only = process.argv[3] ? process.argv[3].split(',') : null;
@@ -27,6 +28,7 @@ const MEASURE = `(()=>{const P=document.getElementById('phone').getBoundingClien
  const sp=document.getElementById('spine');o.notches=sp?[...sp.querySelectorAll('path')].length:0;
  const tk=document.getElementById('tl-track').getBoundingClientRect();o.sps=[];for(let i=1;i<=t.LH;i++){const x=window.__P2.spX(i);if(x<0||x>tk.width)continue;const X=tk.left+x,Y=tk.top+tk.height/2;const at=document.elementFromPoint(X,Y);o.sps.push({sp:i,x:+(tk.left-P.left+x).toFixed(3),hitsTrack:!!at&&(at.id==='tl-track'||!!at.closest('#tl-track')),at:at&&(at.id||at.className&&String(at.className.baseVal??at.className)||at.tagName)});}
  const te=document.querySelector('#tl-live .term');o.term=box(te);o.probe=window.__P2.probe();
+ const ph=document.getElementById('phone'),rv=ph.getAttribute('data-rail'),q=(s)=>box(document.querySelector(s));o.g_end=q('#end-call svg');o.g_mute=q('#mute svg');o.g_route=q('#route svg');o.cr_term=q('.crail[data-v="'+rv+'"] .cr-term');o.cr_group=q('.crail[data-v="'+rv+'"] .cr-group');o.endPx=ph.getAttribute('data-end-px');
  return {truth:{state:t.state,lang:t.lang,place:t.place,TM:t.TM,TC:t.TC,PTC:t.PTC,LH:t.LH,call:t.call,muted:t.muted,appearance:t.appearance,analysisShellDark:t.analysisShellDark,reducedMotion:t.reducedMotion,ctxLines:t.ctxLines,rendered:t.rendered,controls:t.controls,room:t.room,callA11y:t.callA11y,rail:document.getElementById('phone').getAttribute('data-rail'),spine:document.getElementById('phone').getAttribute('data-spine')},boxes:o,
   focusOrder:[...document.querySelectorAll('#phone button, #phone [tabindex="0"], #phone input')].filter(e=>e.getClientRects().length&&getComputedStyle(e).visibility!=='hidden'&&!e.closest('[hidden]')).map(e=>({id:e.id||e.getAttribute('data-act')||e.getAttribute('data-world')||e.className,name:e.getAttribute('aria-label')||e.textContent.trim().slice(0,40),box:box(e)})),
   world:(()=>{const u=t.room;return u})()}})()`;
@@ -88,6 +90,18 @@ add('press-end-ar', { state: 'CALL_ANALYSIS', script: 'press', sel: '#end-call' 
 add('press-mute-ar', { state: 'CALL_ANALYSIS', script: 'press', sel: '#mute' });
 add('rm-call-pinned-ar', { state: 'CALL_PINNED', rm: true, q: R + '&rm=1' });
 add('rm-scrub-ar', { state: 'P4', rm: true, q: R + '&rm=1', script: 'scrubHold', sp: 16 });
+// P2-A refinement — the End Call glyph-presence study: the ACCEPTED rail A, the same states, End at 24 (the reviewed
+// proof) / 26 / 27 / 28 px (?end= re-renders the same drawing; the Product size is END_GLYPH_PX). Measured by
+// tools/p2endstudy.mjs → data/END_CALL_STUDY.json; composed in board 16.
+for (const px of END_GLYPH_STUDY) {
+  const E = R + `&end=${px}`;
+  add(`end${px}-live-ar`, { state: 'CALL_ANALYSIS', q: E });
+  add(`end${px}-live-en`, { state: 'CALL_ANALYSIS', lang: 'en', q: E });
+  add(`end${px}-s320-ar`, { state: 'CALL_PINNED', w: 320, h: 568, q: E });
+  add(`end${px}-focus-ar`, { state: 'CALL_ANALYSIS', script: 'focus', sel: '#end-call', q: E });
+  add(`end${px}-press-ar`, { state: 'CALL_ANALYSIS', script: 'press', sel: '#end-call', q: E });
+  add(`end${px}-light-ar`, { state: 'CALL_CONV', scheme: 'light', q: E });
+}
 // Navigation family across states (for the material-invariance measurement)
 add('nav-mine-ar', { state: 'CONV' });
 add('nav-shared-ar', { state: 'M6_ENTERED' });

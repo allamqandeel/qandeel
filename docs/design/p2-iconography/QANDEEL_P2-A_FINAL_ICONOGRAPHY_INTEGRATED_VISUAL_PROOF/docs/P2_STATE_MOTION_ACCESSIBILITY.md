@@ -1,7 +1,12 @@
 # P2-A — State, Motion and Accessibility
 
-**Status:** `P2-A EVIDENCE — NOT FROZEN`. The checks are in `data/CHECKS.json`: **24 / 24 pass, 8 / 8 planted defects
-rejected**.
+**Status:** `P2-A EVIDENCE — NOT FROZEN`. The checks are in `data/CHECKS.json`: **25 / 25 pass, 9 / 9 planted defects
+rejected**. The P2-A refinement added K25 (End Call glyph presence).
+
+**P2-A refinement: End Call at 27 px.** The larger glyph changes no accessibility semantics. The target stays
+44 × 44 pt at the same slot; the glyph stays `aria-hidden`; the button keeps its name (K08, K19). FOCUS is still the
+detached perimeter and PRESSED the ground wash, and the ink box is identical at rest, focused and pressed (board 16,
+H7). No motion was added.
 
 **Browser evidence only.** This proof runs in headless Chrome. VoiceOver / TalkBack, device Reduce Motion, Increase
 Contrast, CallKit / Telecom and real touch remain device gates for the implementation (G1.2 §7; G3 §F). They are not

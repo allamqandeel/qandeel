@@ -17,7 +17,16 @@ export const RAIL_VARIANTS = {
   B: { name: 'Open tray', note: 'the group rests in an open tray; the terminal\'s tray rises on its outer side only' },
   C: { name: 'Break line', note: 'no enclosure: one baseline carries the group and flicks up where it breaks; the terminal stands on its own plinth' },
 };
-export const RAIL_RECOMMENDED = 'A';
+export const RAIL_RECOMMENDED = 'A';     // P2-A refinement: ACCEPTED by the Product Owner after independent review
+
+// P2-A refinement — END CALL GLYPH PRESENCE. The accepted rail is unchanged; only the End glyph's render size moves.
+// Because End stays neutral (no red, no Brass), its rank is carried by position, separation, terminal form, the one
+// solid mark and — after this refinement — a slightly larger optical size. The drawing is the same solid handset on the
+// same 24-unit grid, scaled (a solid mark has no stroke to re-weight). The 44 × 44 target, the slot, the plate and the
+// seam are NOT changed by the size (animate-expo §7: the target is the box; the glyph never grows to meet it).
+// The study measured 24 (the reviewed proof) and 26 / 27 / 28 in the real rail (board 16, data/END_CALL_STUDY.json).
+export const END_GLYPH_STUDY = [24, 26, 27, 28];
+export const END_GLYPH_PX = 27;
 
 const HAIR = 'fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke"';
 const art = (cls, end, w, h, top, d, extra = '') =>
@@ -51,6 +60,6 @@ export const SPINE_VARIANTS = {
   B: { name: 'Gate', note: 'the spine breaks and turns into two lips; committed = heavier lips + core, preview = hairline lips' },
   C: { name: 'Parting', note: 'the spine itself parts around the Moment and rejoins; committed = the Moment\'s mark inside the opening' },
 };
-export const SPINE_RECOMMENDED = 'C';
+export const SPINE_RECOMMENDED = 'C';   // P2-A refinement: ACCEPTED by the Product Owner after independent review
 export const STEP = 48;          // T-05: every committed Moment occupies 48 RN layout pixels (unchanged)
 export const RAIL_H = 44;        // T-05: the position rail / interaction band is 44 pixels high (unchanged)

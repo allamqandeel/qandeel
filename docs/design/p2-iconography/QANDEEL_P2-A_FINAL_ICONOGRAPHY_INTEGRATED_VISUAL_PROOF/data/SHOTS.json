@@ -259,7 +259,38 @@
      "pvSp": 17,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -612,7 +643,38 @@
      "pvSp": 16,
      "notchesInView": 7,
      "fingerDown": true
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -982,7 +1044,38 @@
      "pvSp": 16,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -1338,7 +1431,38 @@
      "pvSp": 15,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -1701,7 +1825,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -2056,7 +2211,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -2421,7 +2607,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -2785,7 +3002,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -3162,7 +3410,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -3533,7 +3812,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -3881,7 +4191,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -4245,7 +4586,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -4607,7 +4979,38 @@
      "pvSp": 17,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -4960,7 +5363,38 @@
      "pvSp": 16,
      "notchesInView": 7,
      "fingerDown": true
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -5328,7 +5762,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -5692,7 +6157,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -6049,7 +6545,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -6423,7 +6950,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -6784,7 +7342,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -7126,7 +7715,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -7487,7 +8107,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -7822,7 +8473,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -8197,7 +8879,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -8552,7 +9265,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -8897,7 +9641,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -9258,7 +10033,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -9584,7 +10390,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -9868,7 +10705,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 60,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -10245,7 +11113,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 60,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -10616,7 +11515,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 60,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -10950,7 +11880,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 60,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -11327,7 +12288,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 60,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -11698,7 +12690,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 60,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -12046,7 +13069,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -12410,7 +13464,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -12772,7 +13857,38 @@
      "pvSp": 17,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -13125,7 +14241,38 @@
      "pvSp": 16,
      "notchesInView": 7,
      "fingerDown": true
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -13493,7 +14640,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -13857,7 +15035,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -14219,7 +15428,38 @@
      "pvSp": 17,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -14572,7 +15812,38 @@
      "pvSp": 16,
      "notchesInView": 7,
      "fingerDown": true
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -14939,7 +16210,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 342.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -15313,7 +16615,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 342.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -15674,7 +17007,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 342.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -16022,7 +17386,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -16385,7 +17780,38 @@
      "pvSp": 16,
      "notchesInView": 7,
      "fingerDown": true
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -16736,7 +18162,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -17070,7 +18527,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -17431,7 +18919,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -17762,7 +19281,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -18093,7 +19643,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -18424,7 +20005,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 342.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -18759,7 +20371,38 @@
      "pvSp": null,
      "notchesInView": 5,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 432.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -19158,7 +20801,38 @@
      "pvSp": null,
      "notchesInView": 5,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 432.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -19562,7 +21236,38 @@
      "pvSp": 16,
      "notchesInView": 5,
      "fingerDown": true
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 432.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -19931,7 +21636,38 @@
      "pvSp": null,
      "notchesInView": 6,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 432.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -20266,7 +22002,38 @@
      "pvSp": null,
      "notchesInView": 5,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 272.5,
+     "y": 432.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 208,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 164,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 246,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 146,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -20653,7 +22420,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 796.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 798,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 798,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 786,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 786,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -21041,7 +22839,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -21408,7 +23237,38 @@
      "pvSp": null,
      "notchesInView": 7,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -21791,7 +23651,38 @@
      "pvSp": 16,
      "notchesInView": 7,
      "fingerDown": true
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -22143,7 +24034,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -22475,7 +24397,38 @@
      "pvSp": null,
      "notchesInView": 8,
      "fingerDown": false
-    }
+    },
+    "g_end": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_mute": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "g_route": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_term": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "cr_group": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "endPx": "27"
    },
    "focusOrder": [
     {
@@ -22564,6 +24517,9406 @@
     "worldFloor": 329.5,
     "ctxExtra": 0,
     "bandRoom": 241
+   }
+  }
+ },
+ "end24-live-ar": {
+  "id": "end24-live-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=24",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 22,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "24"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end24-focus-ar": {
+  "id": "end24-focus-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=24",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 22,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "24"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end24-press-ar": {
+  "id": "end24-press-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=24",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 22,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "24"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end24-live-en": {
+  "id": "end24-live-en",
+  "lang": "en",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=24",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "en",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "Qandeel is speaking",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 268,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 224,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 334,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 142.7,
+     "y": 49,
+     "w": 189.3,
+     "h": 44
+    },
+    "back": {
+     "x": 10,
+     "y": 49,
+     "w": 136.09,
+     "h": 44
+    },
+    "replay": {
+     "x": 336,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 22,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 70,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 118,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 166,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 214,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 262,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 310,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 344,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "24"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "Conversation — the call continues",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 136.09,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "box": {
+      "x": 336,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "box": {
+      "x": 16,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "Following the conversation as it continues",
+     "box": {
+      "x": 340,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "Speaker",
+     "box": {
+      "x": 224,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "Mute microphone",
+     "box": {
+      "x": 268,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "End call",
+     "box": {
+      "x": 334,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end24-s320-ar": {
+  "id": "end24-s320-ar",
+  "lang": "ar",
+  "w": 320,
+  "h": 568,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=24",
+  "state": "CALL_PINNED",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_PINNED",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "PINNED",
+    "TC": 14,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [
+     "أنت عند اللحظة 14.",
+     "استمرت المحادثة بعد هذه اللحظة."
+    ],
+    "rendered": [
+     "LIVE_EDGE:RETURN_LIVE_HEAD"
+    ],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "more-t",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 319,
+     "worldFloor": 160,
+     "ctxExtra": 22,
+     "bandRoom": 49
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 305,
+     "w": 168.83,
+     "h": 60
+    },
+    "mute": {
+     "x": 78,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 209.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 277,
+     "w": 320,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 414,
+     "w": 320,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 478,
+     "w": 320,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 12,
+     "y": 255,
+     "w": 288,
+     "h": 50
+    },
+    "rail_items": [
+     {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     },
+     {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 254.67,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 148.02,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 41.34,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [
+     {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    ],
+    "notches": 7,
+    "sps": [
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "rect"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 321,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 0,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": 120,
+     "pvX": null,
+     "apO": 1,
+     "pvO": 0,
+     "settle": 0,
+     "off": 520,
+     "trackW": 248,
+     "variant": "C",
+     "apSp": 14,
+     "pvSp": null,
+     "notchesInView": 5,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 22,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "24"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 209.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 568
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 321,
+      "w": 248,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "box": {
+      "x": 6,
+      "y": 305,
+      "w": 168.83,
+      "h": 60
+     }
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "box": {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   }
+  }
+ },
+ "end24-light-ar": {
+  "id": "end24-light-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "light",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=24",
+  "state": "CALL_CONV",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_CONV",
+    "lang": "ar",
+    "place": "conversation",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "light",
+    "analysisShellDark": 0,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "door",
+     "replay",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": false,
+      "at": "thread"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 22,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "24"
+   },
+   "focusOrder": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 58,
+      "y": 49,
+      "w": 138.77,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end26-live-ar": {
+  "id": "end26-live-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=26",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 21,
+     "y": 709,
+     "w": 26,
+     "h": 26
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "26"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end26-focus-ar": {
+  "id": "end26-focus-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=26",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 21,
+     "y": 709,
+     "w": 26,
+     "h": 26
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "26"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end26-press-ar": {
+  "id": "end26-press-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=26",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 21,
+     "y": 709,
+     "w": 26,
+     "h": 26
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "26"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end26-live-en": {
+  "id": "end26-live-en",
+  "lang": "en",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=26",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "en",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "Qandeel is speaking",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 268,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 224,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 334,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 142.7,
+     "y": 49,
+     "w": 189.3,
+     "h": 44
+    },
+    "back": {
+     "x": 10,
+     "y": 49,
+     "w": 136.09,
+     "h": 44
+    },
+    "replay": {
+     "x": 336,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 22,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 70,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 118,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 166,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 214,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 262,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 310,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 343,
+     "y": 709,
+     "w": 26,
+     "h": 26
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "26"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "Conversation — the call continues",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 136.09,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "box": {
+      "x": 336,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "box": {
+      "x": 16,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "Following the conversation as it continues",
+     "box": {
+      "x": 340,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "Speaker",
+     "box": {
+      "x": 224,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "Mute microphone",
+     "box": {
+      "x": 268,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "End call",
+     "box": {
+      "x": 334,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end26-s320-ar": {
+  "id": "end26-s320-ar",
+  "lang": "ar",
+  "w": 320,
+  "h": 568,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=26",
+  "state": "CALL_PINNED",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_PINNED",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "PINNED",
+    "TC": 14,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [
+     "أنت عند اللحظة 14.",
+     "استمرت المحادثة بعد هذه اللحظة."
+    ],
+    "rendered": [
+     "LIVE_EDGE:RETURN_LIVE_HEAD"
+    ],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "more-t",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 319,
+     "worldFloor": 160,
+     "ctxExtra": 22,
+     "bandRoom": 49
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 305,
+     "w": 168.83,
+     "h": 60
+    },
+    "mute": {
+     "x": 78,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 209.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 277,
+     "w": 320,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 414,
+     "w": 320,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 478,
+     "w": 320,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 12,
+     "y": 255,
+     "w": 288,
+     "h": 50
+    },
+    "rail_items": [
+     {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     },
+     {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 254.67,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 148.02,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 41.34,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [
+     {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    ],
+    "notches": 7,
+    "sps": [
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "rect"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 321,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 0,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": 120,
+     "pvX": null,
+     "apO": 1,
+     "pvO": 0,
+     "settle": 0,
+     "off": 520,
+     "trackW": 248,
+     "variant": "C",
+     "apSp": 14,
+     "pvSp": null,
+     "notchesInView": 5,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 21,
+     "y": 433,
+     "w": 26,
+     "h": 26
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "26"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 209.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 568
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 321,
+      "w": 248,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "box": {
+      "x": 6,
+      "y": 305,
+      "w": 168.83,
+      "h": 60
+     }
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "box": {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   }
+  }
+ },
+ "end26-light-ar": {
+  "id": "end26-light-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "light",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=26",
+  "state": "CALL_CONV",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_CONV",
+    "lang": "ar",
+    "place": "conversation",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "light",
+    "analysisShellDark": 0,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "door",
+     "replay",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": false,
+      "at": "thread"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 21,
+     "y": 709,
+     "w": 26,
+     "h": 26
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "26"
+   },
+   "focusOrder": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 58,
+      "y": 49,
+      "w": 138.77,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end27-live-ar": {
+  "id": "end27-live-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=27",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end27-focus-ar": {
+  "id": "end27-focus-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=27",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end27-press-ar": {
+  "id": "end27-press-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=27",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end27-live-en": {
+  "id": "end27-live-en",
+  "lang": "en",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=27",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "en",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "Qandeel is speaking",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 268,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 224,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 334,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 142.7,
+     "y": 49,
+     "w": 189.3,
+     "h": 44
+    },
+    "back": {
+     "x": 10,
+     "y": 49,
+     "w": 136.09,
+     "h": 44
+    },
+    "replay": {
+     "x": 336,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 22,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 70,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 118,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 166,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 214,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 262,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 310,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 342.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "Conversation — the call continues",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 136.09,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "box": {
+      "x": 336,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "box": {
+      "x": 16,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "Following the conversation as it continues",
+     "box": {
+      "x": 340,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "Speaker",
+     "box": {
+      "x": 224,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "Mute microphone",
+     "box": {
+      "x": 268,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "End call",
+     "box": {
+      "x": 334,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end27-s320-ar": {
+  "id": "end27-s320-ar",
+  "lang": "ar",
+  "w": 320,
+  "h": 568,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=27",
+  "state": "CALL_PINNED",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_PINNED",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "PINNED",
+    "TC": 14,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [
+     "أنت عند اللحظة 14.",
+     "استمرت المحادثة بعد هذه اللحظة."
+    ],
+    "rendered": [
+     "LIVE_EDGE:RETURN_LIVE_HEAD"
+    ],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "more-t",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 319,
+     "worldFloor": 160,
+     "ctxExtra": 22,
+     "bandRoom": 49
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 305,
+     "w": 168.83,
+     "h": 60
+    },
+    "mute": {
+     "x": 78,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 209.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 277,
+     "w": 320,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 414,
+     "w": 320,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 478,
+     "w": 320,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 12,
+     "y": 255,
+     "w": 288,
+     "h": 50
+    },
+    "rail_items": [
+     {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     },
+     {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 254.67,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 148.02,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 41.34,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [
+     {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    ],
+    "notches": 7,
+    "sps": [
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "rect"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 321,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 0,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": 120,
+     "pvX": null,
+     "apO": 1,
+     "pvO": 0,
+     "settle": 0,
+     "off": 520,
+     "trackW": 248,
+     "variant": "C",
+     "apSp": 14,
+     "pvSp": null,
+     "notchesInView": 5,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 432.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 209.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 568
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 321,
+      "w": 248,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "box": {
+      "x": 6,
+      "y": 305,
+      "w": 168.83,
+      "h": 60
+     }
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "box": {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   }
+  }
+ },
+ "end27-light-ar": {
+  "id": "end27-light-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "light",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=27",
+  "state": "CALL_CONV",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_CONV",
+    "lang": "ar",
+    "place": "conversation",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "light",
+    "analysisShellDark": 0,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "door",
+     "replay",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": false,
+      "at": "thread"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20.5,
+     "y": 708.5,
+     "w": 27,
+     "h": 27
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "27"
+   },
+   "focusOrder": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 58,
+      "y": 49,
+      "w": 138.77,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end28-live-ar": {
+  "id": "end28-live-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=28",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20,
+     "y": 708,
+     "w": 28,
+     "h": 28
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "28"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end28-focus-ar": {
+  "id": "end28-focus-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=28",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20,
+     "y": 708,
+     "w": 28,
+     "h": 28
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "28"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end28-press-ar": {
+  "id": "end28-press-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=28",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "sel": "#end-call",
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20,
+     "y": 708,
+     "w": 28,
+     "h": 28
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "28"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 279.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "أنت عند آخر المحادثة",
+     "box": {
+      "x": 6,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end28-live-en": {
+  "id": "end28-live-en",
+  "lang": "en",
+  "w": 390,
+  "h": 844,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=28",
+  "state": "CALL_ANALYSIS",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_ANALYSIS",
+    "lang": "en",
+    "place": "analysis",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "Qandeel is speaking",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 268,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 224,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 334,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 142.7,
+     "y": 49,
+     "w": 189.3,
+     "h": 44
+    },
+    "back": {
+     "x": 10,
+     "y": 49,
+     "w": 136.09,
+     "h": 44
+    },
+    "replay": {
+     "x": 336,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 16,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 22,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 11,
+      "x": 70,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 12,
+      "x": 118,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 166,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 214,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 15,
+      "x": 262,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 310,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 340,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 342,
+     "y": 708,
+     "w": 28,
+     "h": 28
+    },
+    "g_mute": {
+     "x": 278,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 234,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 316,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 216,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "28"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "Conversation — the call continues",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 136.09,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "Replay this conversation",
+     "box": {
+      "x": 336,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "Conversation analysis",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 390,
+      "h": 844
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "Conversation timeline",
+     "box": {
+      "x": 16,
+      "y": 646,
+      "w": 318,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "Following the conversation as it continues",
+     "box": {
+      "x": 340,
+      "y": 646,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "Speaker",
+     "box": {
+      "x": 224,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "Mute microphone",
+     "box": {
+      "x": 268,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "End call",
+     "box": {
+      "x": 334,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "Qandeel",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "Shared World",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "Public world",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
+   }
+  }
+ },
+ "end28-s320-ar": {
+  "id": "end28-s320-ar",
+  "lang": "ar",
+  "w": 320,
+  "h": 568,
+  "scheme": "dark",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=28",
+  "state": "CALL_PINNED",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_PINNED",
+    "lang": "ar",
+    "place": "analysis",
+    "TM": "PINNED",
+    "TC": 14,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "dark",
+    "analysisShellDark": 1,
+    "reducedMotion": false,
+    "ctxLines": [
+     "أنت عند اللحظة 14.",
+     "استمرت المحادثة بعد هذه اللحظة."
+    ],
+    "rendered": [
+     "LIVE_EDGE:RETURN_LIVE_HEAD"
+    ],
+    "controls": [
+     "back",
+     "replay",
+     "gesture",
+     "tl-track",
+     "tl-live",
+     "more-t",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 319,
+     "worldFloor": 160,
+     "ctxExtra": 22,
+     "bandRoom": 49
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 305,
+     "w": 168.83,
+     "h": 60
+    },
+    "mute": {
+     "x": 78,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 424,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 209.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 321,
+     "w": 248,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 277,
+     "w": 320,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 414,
+     "w": 320,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 478,
+     "w": 320,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 12,
+     "y": 255,
+     "w": 288,
+     "h": 50
+    },
+    "rail_items": [
+     {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     },
+     {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 254.67,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 148.02,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 41.34,
+      "y": 482.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [
+     {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    ],
+    "notches": 7,
+    "sps": [
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": true,
+      "at": "rect"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": true,
+      "at": "path"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": true,
+      "at": "path"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 321,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 0,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": 120,
+     "pvX": null,
+     "apO": 1,
+     "pvO": 0,
+     "settle": 0,
+     "off": 520,
+     "trackW": 248,
+     "variant": "C",
+     "apSp": 14,
+     "pvSp": null,
+     "notchesInView": 5,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20,
+     "y": 432,
+     "w": 28,
+     "h": 28
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 434,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 422,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 422,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "28"
+   },
+   "focusOrder": [
+    {
+     "id": "back",
+     "name": "المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 209.38,
+      "y": 49,
+      "w": 100.63,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "gesture",
+     "name": "تحليل المحادثة",
+     "box": {
+      "x": 0,
+      "y": 0,
+      "w": 320,
+      "h": 568
+     }
+    },
+    {
+     "id": "tl-track",
+     "name": "خط المحادثة",
+     "box": {
+      "x": 56,
+      "y": 321,
+      "w": 248,
+      "h": 44
+     }
+    },
+    {
+     "id": "tl-live",
+     "name": "العودة إلى المحادثة الجارية",
+     "box": {
+      "x": 6,
+      "y": 305,
+      "w": 168.83,
+      "h": 60
+     }
+    },
+    {
+     "id": "more-t",
+     "name": "طرق العودة",
+     "box": {
+      "x": 221.16,
+      "y": 369,
+      "w": 84.84,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 424,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 213.34,
+      "y": 478,
+      "w": 106.66,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 106.67,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 478,
+      "w": 106.67,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 319,
+    "worldFloor": 160,
+    "ctxExtra": 22,
+    "bandRoom": 49
+   }
+  }
+ },
+ "end28-light-ar": {
+  "id": "end28-light-ar",
+  "lang": "ar",
+  "w": 390,
+  "h": 844,
+  "scheme": "light",
+  "rm": false,
+  "q": "&rail=A&spine=C&end=28",
+  "state": "CALL_CONV",
+  "script": null,
+  "measured": {
+   "truth": {
+    "state": "CALL_CONV",
+    "lang": "ar",
+    "place": "conversation",
+    "TM": "FOLLOW_LIVE",
+    "TC": 16,
+    "PTC": null,
+    "LH": 16,
+    "call": "live",
+    "muted": false,
+    "appearance": "light",
+    "analysisShellDark": 0,
+    "reducedMotion": false,
+    "ctxLines": [],
+    "rendered": [],
+    "controls": [
+     "door",
+     "replay",
+     "route",
+     "mute",
+     "end-call",
+     "mine",
+     "shared",
+     "public"
+    ],
+    "room": {
+     "usable": 595,
+     "worldFloor": 297.5,
+     "ctxExtra": 0,
+     "bandRoom": 209
+    },
+    "callA11y": "قنديل بيتكلم",
+    "rail": "A",
+    "spine": "C"
+   },
+   "boxes": {
+    "tl-track": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "tl-live": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "mute": {
+     "x": 78,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "route": {
+     "x": 122,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "end-call": {
+     "x": 12,
+     "y": 700,
+     "w": 44,
+     "h": 44
+    },
+    "call": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "door": {
+     "x": 58,
+     "y": 49,
+     "w": 138.77,
+     "h": 44
+    },
+    "back": {
+     "x": 279.38,
+     "y": 49,
+     "w": 100.63,
+     "h": 44
+    },
+    "replay": {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44
+    },
+    "spine": {
+     "x": 56,
+     "y": 646,
+     "w": 318,
+     "h": 44
+    },
+    "timeline": {
+     "x": 0,
+     "y": 602,
+     "w": 390,
+     "h": 88
+    },
+    "composer": {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64
+    },
+    "rail": {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90
+    },
+    "tl-ctx": {
+     "x": 0,
+     "y": 0,
+     "w": 0,
+     "h": 0
+    },
+    "rail_items": [
+     {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     },
+     {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    ],
+    "rail_icons": [
+     {
+      "x": 313,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 183,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     },
+     {
+      "x": 53,
+      "y": 758.5,
+      "w": 24,
+      "h": 24
+     }
+    ],
+    "returns": [],
+    "notches": 9,
+    "sps": [
+     {
+      "sp": 10,
+      "x": 368,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 11,
+      "x": 320,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 12,
+      "x": 272,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 13,
+      "x": 224,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 14,
+      "x": 176,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 15,
+      "x": 128,
+      "hitsTrack": false,
+      "at": "thread"
+     },
+     {
+      "sp": 16,
+      "x": 80,
+      "hitsTrack": false,
+      "at": "thread"
+     }
+    ],
+    "term": {
+     "x": 6,
+     "y": 646,
+     "w": 44,
+     "h": 44
+    },
+    "probe": {
+     "term": 1,
+     "muteP": 0,
+     "routeP": 1,
+     "apX": null,
+     "pvX": null,
+     "apO": 0,
+     "pvO": 0,
+     "settle": 0,
+     "off": 450,
+     "trackW": 318,
+     "variant": "C",
+     "apSp": null,
+     "pvSp": null,
+     "notchesInView": 8,
+     "fingerDown": false
+    },
+    "g_end": {
+     "x": 20,
+     "y": 708,
+     "w": 28,
+     "h": 28
+    },
+    "g_mute": {
+     "x": 88,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "g_route": {
+     "x": 132,
+     "y": 710,
+     "w": 24,
+     "h": 24
+    },
+    "cr_term": {
+     "x": 6,
+     "y": 698,
+     "w": 68,
+     "h": 48
+    },
+    "cr_group": {
+     "x": 70,
+     "y": 698,
+     "w": 104,
+     "h": 48
+    },
+    "endPx": "28"
+   },
+   "focusOrder": [
+    {
+     "id": "door",
+     "name": "تحليل المحادثة — المكالمة مستمرة",
+     "box": {
+      "x": 58,
+      "y": 49,
+      "w": 138.77,
+      "h": 44
+     }
+    },
+    {
+     "id": "replay",
+     "name": "إعادة عرض المحادثة",
+     "box": {
+      "x": 10,
+      "y": 49,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "route",
+     "name": "السماعة الخارجية",
+     "box": {
+      "x": 122,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mute",
+     "name": "كتم الميكروفون",
+     "box": {
+      "x": 78,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "end-call",
+     "name": "إنهاء المكالمة",
+     "box": {
+      "x": 12,
+      "y": 700,
+      "w": 44,
+      "h": 44
+     }
+    },
+    {
+     "id": "mine",
+     "name": "قنديل",
+     "box": {
+      "x": 260,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "shared",
+     "name": "العالم المشترك",
+     "box": {
+      "x": 130,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    },
+    {
+     "id": "public",
+     "name": "العالم العام",
+     "box": {
+      "x": 0,
+      "y": 754,
+      "w": 130,
+      "h": 56
+     }
+    }
+   ],
+   "world": {
+    "usable": 595,
+    "worldFloor": 297.5,
+    "ctxExtra": 0,
+    "bandRoom": 209
    }
   }
  }

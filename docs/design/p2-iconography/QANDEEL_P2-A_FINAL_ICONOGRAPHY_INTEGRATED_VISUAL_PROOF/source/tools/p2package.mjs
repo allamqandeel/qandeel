@@ -1,5 +1,5 @@
 // P2-A — seals the package.
-//   1. copies the key full-resolution Product captures into captures/ (the boards compose all 63);
+//   1. copies the key full-resolution Product captures into captures/ (the boards compose all 87);
 //   2. rebuilds the prototype from source/ into a scratch folder and requires it to be byte-identical;
 //   3. writes MANIFEST.json: every file of the package (except the manifest itself) with bytes and SHA-256;
 //   4. writes the review ZIP OUTSIDE the repository (env P2_ZIP, default E:\QANDEEL\<package>.zip) and reads every entry
@@ -19,7 +19,9 @@ const sha = (b) => createHash('sha256').update(b).digest('hex');
 const NAME = 'QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF';
 
 // 1 — the key captures (the recommended system through the states a reviewer will want at full resolution)
-export const KEY = ['rec-follow', 'rec-pinned14', 'rec-pinnedLH', 'rec-scrub', 'rec-returnlive', 'rec-call-live', 'rec-call-pinned', 'rec-conv-call', 'en-call-pinned', 's320-call-pinned-ar', 'light-conv-call-ar'];
+export const KEY = ['rec-follow', 'rec-pinned14', 'rec-pinnedLH', 'rec-scrub', 'rec-returnlive', 'rec-call-live', 'rec-call-pinned', 'rec-conv-call', 'en-call-pinned', 's320-call-pinned-ar', 'light-conv-call-ar',
+  // P2-A refinement: the End Call presence, before (24 px) and after (27 px), where the review's concern measured worst
+  'end24-light-ar', 'end27-light-ar'];
 const cap = join(PKG, 'captures'); rmSync(cap, { recursive: true, force: true }); mkdirSync(cap, { recursive: true });
 for (const id of KEY) copyFileSync(join(WORK, 'shots', id + '.png'), join(cap, id + '.png'));
 
@@ -36,7 +38,7 @@ walk(PKG);
 const entries = files.map((f) => relative(PKG, f).split(sep).join('/')).filter((r) => r !== 'MANIFEST.json').sort()
   .map((r) => { const buf = readFileSync(join(PKG, r)); return { path: r, bytes: buf.length, sha256: sha(buf) }; });
 const count = (pre) => entries.filter((e) => e.path.startsWith(pre)).length;
-const manifest = { package: NAME, status: 'P2-A — VISUAL PROOF / DECISION GATE — RECOMMENDED FOR PRODUCT OWNER REVIEW — NOT FROZEN (P2 is not closed)',
+const manifest = { package: NAME, status: 'P2-A — VISUAL PROOF / DECISION GATE — PRODUCT OWNER VISUAL SELECTIONS ACCEPTED AFTER INDEPENDENT REVIEW (refinement: End Call 27 px) — P2 NOT CLOSED / NOT FROZEN until the later P2-B canonical closure task',
   prototypeSha256: a, rebuiltByteIdentical: true, counts: { files: entries.length, boards: count('boards/'), motionClips: count('motion/'), captures: count('captures/'), docs: count('docs/') },
   totalBytes: entries.reduce((s, e) => s + e.bytes, 0), entries };
 writeFileSync(join(PKG, 'MANIFEST.json'), JSON.stringify(manifest, null, 1) + '\n');

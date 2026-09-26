@@ -1,6 +1,7 @@
 # P2-A — Icon Inventory and Ownership
 
-**Status:** `P2-A EVIDENCE — RECOMMENDED FOR PRODUCT OWNER REVIEW — NOT FROZEN`.
+**Status:** `P2-A EVIDENCE — PRODUCT OWNER VISUAL SELECTIONS ACCEPTED AFTER INDEPENDENT REVIEW — P2 NOT CLOSED / NOT
+FROZEN`.
 
 This inventory lists every icon or control need that the **frozen Product already has**, and classifies each one. It
 adds no control. Where no authority has placed or named a control, the row says so rather than inventing it (task §7).

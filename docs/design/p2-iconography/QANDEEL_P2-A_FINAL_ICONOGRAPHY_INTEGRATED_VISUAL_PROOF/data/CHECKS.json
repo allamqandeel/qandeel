@@ -1,24 +1,24 @@
 {
  "generated": "tools/p2checks.mjs",
- "prototypeSha256": "03c2d9ce1d7dcd3a7585d600ac45fbfd7780528f291d6ef20d185cecc18b5155",
- "pass": 24,
- "total": 24,
+ "prototypeSha256": "0f04f4e425b5346be0468792b31c628b7b409be3e91dcfa6534fb7369c8975f2",
+ "pass": 25,
+ "total": 25,
  "plantedDefects": {
-  "total": 8,
-  "rejected": 8
+  "total": 9,
+  "rejected": 9
  },
  "results": [
   {
    "id": "K01",
    "title": "Scope: only the P2-A package changed; no production code, dependency or lifecycle file",
    "pass": true,
-   "detail": "161 changed/new paths, all under docs/design/p2-iconography/; apps/, packages/, database/, package manifests, the backlog and the locators are untouched (base 209ca72691)"
+   "detail": "164 changed/new paths, all under docs/design/p2-iconography/; apps/, packages/, database/, package manifests, the backlog and the locators are untouched (base 209ca72691)"
   },
   {
    "id": "K02",
    "title": "The prototype rebuilds byte-identically from source/ and pins the canonical world",
    "pass": true,
-   "detail": "two builds → 03c2d9ce1d7dcd3a… and 03c2d9ce1d7dcd3a…; the world pin 4DFD9D27… is enforced by the build and carried in the page"
+   "detail": "two builds → 0f04f4e425b5346b… and 0f04f4e425b5346b…; the world pin 4DFD9D27… is enforced by the build and carried in the page"
   },
   {
    "id": "K03",
@@ -57,7 +57,7 @@
    "id": "K06",
    "title": "Every committed Moment keeps the 48-pt ordinal step (T-05), measured in every Analysis capture",
    "pass": true,
-   "detail": "280 adjacent Moment pairs measured, every one exactly 48.00 pt apart (G3.2 drew 16 pt; restored)",
+   "detail": "392 adjacent Moment pairs measured, every one exactly 48.00 pt apart (G3.2 drew 16 pt; restored)",
    "plantedDefect": {
     "what": "a 16-pt pitch (the G3.2 proof value)",
     "rejected": true,
@@ -68,7 +68,7 @@
    "id": "K07",
    "title": "The Timeline's interaction band stays 44 pt high (T-05 rail) at every size",
    "pass": true,
-   "detail": "48 Analysis captures (320, 390, 430 pt; AR / EN; Light / Dark; RM): band = 44 pt in all; the visible spine is a 1-pt hairline inside it"
+   "detail": "68 Analysis captures (320, 390, 430 pt; AR / EN; Light / Dark; RM): band = 44 pt in all; the visible spine is a 1-pt hairline inside it"
   },
   {
    "id": "K08",
@@ -80,7 +80,7 @@
    "id": "K09",
    "title": "Every Moment in view is reachable on the Track; the Live act never covers it (F-P2-02; T-11 §6)",
    "pass": true,
-   "detail": "328 Moment positions hit-tested at the band's centre: every one lands on the Track (G3.2's act box had covered the Track's end)"
+   "detail": "460 Moment positions hit-tested at the band's centre: every one lands on the Track (G3.2's act box had covered the Track's end)"
   },
   {
    "id": "K10",
@@ -190,7 +190,18 @@
    "id": "K24",
    "title": "P2 is not claimed closed: no file in the package states P2 as CLOSED / FROZEN",
    "pass": true,
-   "detail": "34 package files read: every mention of P2 with CLOSED / FROZEN is a negation or names the later P2-B"
+   "detail": "36 package files read: every mention of P2 with CLOSED / FROZEN is a negation or names the later P2-B"
+  },
+  {
+   "id": "K25",
+   "title": "End Call glyph presence: the Product size is the measured selection, and the accepted rail geometry is unchanged",
+   "pass": true,
+   "detail": "built page End glyph: 27 / 27 px (AR / EN); study selected 27 px (27 px meets every criterion, so the task's default stands; no measurement gives a clear reason for 26 or 28); criteria H1✓ H2✓ H3✓ H4✓ H5✓ H6✓ H7✓; H1: target, plate, seam and Mic / Route boxes identical to the 24-px proof",
+   "plantedDefect": {
+    "what": "End Call grown to a 34-px hero glyph",
+    "rejected": true,
+    "detail": "built page End glyph: 34 / 34 px (AR / EN); study selected 27 px (27 px meets every criterion, so the task's default stands; no measurement gives a clear reason for 26 or 28); criteria H1✓ H2✓ H3✓ H4✓ H5✓ H6✓ H7✓; H1: target, plate, seam and Mic / Route boxes identical to the 24-px proof"
+   }
   }
  ]
 }

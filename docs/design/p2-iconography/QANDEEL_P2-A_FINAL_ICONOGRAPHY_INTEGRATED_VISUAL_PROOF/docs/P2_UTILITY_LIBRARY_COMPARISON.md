@@ -1,6 +1,7 @@
 # P2-A — Utility Library Comparison
 
-**Status:** `P2-A EVIDENCE — RECOMMENDATION FOR PRODUCT OWNER REVIEW — NOT A FROZEN LIBRARY CHOICE`.
+**Status:** `P2-A EVIDENCE — HUGEICONS FREE ACCEPTED BY THE PRODUCT OWNER AS THE CURATED SOURCE / REFERENCE (NOT A
+RUNTIME DEPENDENCY) — P2 NOT CLOSED / NOT FROZEN`.
 
 **Visual evidence:** board 02 (`boards/02-utility-library-comparison.png`) and board 10 (the real 16 / 20 / 24 px rasters).
 **Glyph data:** `source/vendor/utility/utility-glyphs.json` (fetched from each library's own npm package, with URL and
@@ -65,7 +66,9 @@ path. It needs explicit approval, like any dependency.
 
 **Hugeicons Pro is out of scope** and was not used or evaluated. It is a paid licence (task §5).
 
-## 5. Open to the Product Owner
+## 5. Product Owner selection (accepted after independent review)
 
-- Whether the utility family should visibly **match** the signature family (Hugeicons, recommended) or stay a
-  neutral, more anonymous companion (Lucide). Both normalise cleanly; this is taste, and the boards show both.
+- **Accepted:** Hugeicons Free as the preferred curated **source / reference** for mundane utility glyphs, visibly
+  matching the signature family.
+- This authorises **no** runtime package adoption, **no** Pro or paid asset path, and **no** dependency change.
+- Lucide stays the benchmark. The comparison above is preserved as evidence.

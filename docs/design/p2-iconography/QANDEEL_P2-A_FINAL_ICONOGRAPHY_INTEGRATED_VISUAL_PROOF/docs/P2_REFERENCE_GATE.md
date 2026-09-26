@@ -53,12 +53,18 @@ Expo SDK 57's own pins come from `cdn.jsdelivr.net/npm/expo@57.0.21/bundledNativ
 
 The repository's pins **equal** Expo's.
 
-Compatibility, from each package's declared peer range in the registry:
+Declared peer ranges, as recorded from the registry:
 - `react-native-reanimated@4.5.1` peers on `react-native 0.83 – 0.86` and `react-native-worklets 0.10.x`. RN 0.86.3 and worklets 0.10.1 **satisfy** both.
-- `@shopify/react-native-skia@2.6.2` peers on `react-native-reanimated >= 3.19.1`, and declares **no** worklets peer. Reanimated 4.5.1 satisfies it.
-- The latest Skia, **2.13.0** (2026-09-24), peers on `react-native-reanimated >= 4.0.0` and `react-native-worklets >= 0.7.0`. Its Reanimated/worklets integration contract therefore changed after 2.6.2.
+- `@shopify/react-native-skia@2.6.2` peers on `react-native-reanimated >= 3.19.1`, and declares **no** worklets peer.
+- The latest Skia, **2.13.0** (2026-09-24), peers on `react-native-reanimated >= 4.0.0` and `react-native-worklets >= 0.7.0`.
 
-**Conclusion.** The declared ranges are consistent. Whether a Skia ↔ Reanimated shared-value integration behaves correctly at 2.6.2 + 4.5.1 was **not** verified on a device here. That is the reason this proof does not need Skia (P2_IMPLEMENTATION_FEASIBILITY.md §4). **Nothing was upgraded.**
+React Native Skia's own documentation is **version-dependent**, and a broad peer range does not certify an exact pairing:
+- the Animations page (`shopify.github.io/react-native-skia/docs/animations/animations/`, read 2026-09-26): "Starting version `2.10` and above, this integration requires **Reanimated v4 or above**. For lower version numbers, you can use Reanimated v3."
+- the Installation page (`shopify.github.io/react-native-skia/docs/getting-started/installation/`, read 2026-09-26): "To use React Native Skia with Reanimated on native platforms, react-native-reanimated@>=4.0.0 (with react-native-worklets@>=0.7.0) is required." This describes current Skia.
+
+**Conclusion (corrected by the P2-A refinement).** The repository currently declares Skia 2.6.2 and Reanimated 4.5.1. Their exact integration pairing is **not certified by P2-A** and was **not device-validated** here. P2-A does not rely on Skia. The recommended implementation path remains static / vector SVG rendering plus Reanimated where appropriate, subject to a future implementation task and device verification. **Nothing was upgraded or changed.**
+
+The first P2-A text called the declared ranges "consistent", treating a peer range as evidence that the pairing works. The Skia documentation above does not support that inference for a version below 2.10, so the claim is withdrawn.
 
 The latest `react-native-reanimated` is 4.7.0, which peers on RN 0.86–0.88 and worklets 0.13.x. It is recorded for the future implementation task only.
 
@@ -89,7 +95,7 @@ The latest `react-native-reanimated` is 4.7.0, which peers on RN 0.86–0.88 and
   - render them with the same renderer as the signature family;
   - add **no** runtime icon-library dependency (P2_UTILITY_LIBRARY_COMPARISON.md §4).
 - **Phosphor is excluded as a utility family.** The React Native path is not first-party, and a single icon carries all six weights.
-- **Skia is not required.** Every mark and morph in P2 is a vector path, a mask, a dash offset or an opacity, all of which `react-native-svg` + Reanimated animated props express. P2 therefore does not depend on the unverified Skia 2.6.2 ↔ Reanimated 4.5.1 integration.
+- **Skia is not required.** Every mark and morph in P2 is a vector path, a mask, a dash offset or an opacity, all of which `react-native-svg` + Reanimated animated props express. P2 therefore does not depend on the Skia 2.6.2 ↔ Reanimated 4.5.1 pairing, which P2-A neither certifies nor device-validated.
 
 ## 5. The Skill Gate
 
