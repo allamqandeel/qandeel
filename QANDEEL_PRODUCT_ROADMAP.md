@@ -82,7 +82,9 @@ This includes, where Product decisions are required:
 Do not reopen I-08N-01's frozen authority, privacy, interruption-class, Direct Entry or disclosure semantics.
 Platform/runtime implementation remains separate unless a later task explicitly owns it.
 ### P4 — Remaining Product / Visual Gaps Census & Closure
-**P4 — CURRENT / NEXT PRODUCT / VISUAL CLOSURE TRACK — NOT YET OPENED AS A TASK CONTRACT**
+**P4 — ACTIVE — CENSUS / CLOSURE TRACK OPENED; NOT CLOSED**
+APP-OPS-01 (QANDEEL App ↔ QANDEEL Company Operations Contract) is one explicit Product-Owner-approved cross-cutting
+exception to the normal residual-canon boundary below; its P4-A material is in [`docs/p4/`](docs/p4/P4_READ_FIRST.md).
 Perform a bounded census of the **existing Product and visual canon** for items deliberately left:
 - `NOT FROZEN`;
 - `PROOF ONLY`;

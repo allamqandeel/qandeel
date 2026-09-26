@@ -239,7 +239,9 @@ Ordered Product tracks:
 3. **P3 — Notification Final Realization** — `CLOSED / FROZEN` by
    [`docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md`](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md).
    Production implementation remains open.
-4. **P4 — Remaining Product / Visual Gaps Census & Closure** — the current / next Product / visual closure track.
+4. **P4 — Remaining Product / Visual Gaps Census & Closure** — **ACTIVE, NOT CLOSED.** Task P4-A opened it with a
+   residual-gap census, the `APP-OPS-01` App ↔ Company Operations contract candidate (`NOT FROZEN`) and a Product Owner
+   decision queue, in [`docs/p4/`](docs/p4/P4_READ_FIRST.md). P4-A decides and implements nothing.
 
 After P1–P4 close:
 
@@ -250,8 +252,8 @@ Usage Economy work, and the complete account/authentication lifecycle review. Pr
 audit and its resulting closures; Release Hardening / Launch comes after production integration.
 
 **Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1, P2 and P3
-are closed as Product / design contracts and implement nothing. P4 is the immediate Product / visual closure track, and
-no P4 Task Contract exists yet.
+are closed as Product / design contracts and implement nothing. P4 is the active Product / visual closure track: its
+first Task Contract, P4-A, is open and P4 is not closed.
 
 The canonical backlog remains separate: backlog entries are not self-executing, and severity does not order them.
 

@@ -1,0 +1,84 @@
+# QANDEEL — P4 Authority Compatibility Matrix
+
+**Status:** `P4-A COMPATIBILITY MATRIX — CANDIDATE — EDITS NO AUTHORITY`
+
+| | |
+|---|---|
+| Track | P4, task P4-A |
+| Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
+| Scope | how the [APP-OPS-01 candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) stands against every existing authority it touches. §2 adds the P4 residual-canon precedence notes |
+| Result | **one real conflict: CW2-08 §8 / H7 → `CONTROLLED AMENDMENT REQUIRED — CW2-08` (`P4-DQ-10`).** Every other authority is consumed and **preserved unchanged**. No authority file is edited by P4-A |
+
+Column meaning:
+
+- **Existing law** is quoted or closely summarized from the source.
+- **APP-OPS effect** is what the candidate does with that law.
+- **Preserved unchanged?** refers to the source record.
+
+---
+
+## 1. APP-OPS-01 against existing authority
+
+### 1.1 Telemetry, events and health
+
+| Authority | Existing law | APP-OPS effect | Conflict? | Resolution / decision needed | Preserved unchanged? |
+|---|---|---|---|---|---|
+| [Correlation & Telemetry Foundation v1](../correlation-telemetry-foundation-v1.md) | bounded `qandeel.*` attributes. Telemetry "never contains messages, outputs, prompts, Memory or HIM payloads, credentials, bodies, query strings, raw rows, idempotency keys, or correlation IDs as metric labels". Sentry has PII disabled and is sanitized. Metrics are provider / model / duration / tokens. **"monetary cost is not calculated"**. Observability is fail-soft and cannot alter output, routing, safety, Memory or HIM. Product analytics, voice correlation and prompt / response monitoring are **deferred** | consumed as the floor for the data plane (candidate §5.2, §6.2). The candidate separates approved **domains** from **implemented** telemetry (§5.1). Cost, feature usage, call status and mobile crash reporting are marked `NOT IMPLEMENTED` or `PARTLY` | **no.** `PO-OPS-04` approves future domains without claiming they exist. Nothing here reopens the deferral of prompt / response monitoring, and APP-OPS forbids it outright (§6.2) | none. Implementation → Production Integration | **yes** |
+| [Runtime Event Outbox + Publisher v1](../runtime-event-outbox-publisher-v1.md) | "Redis is never contacted by the interactive path". Envelopes are `contains_content=false`, `SENSITIVE`, `OPERATIONAL_EVENT_V1` retention, and carry opaque user / session / turn IDs. Text, provider data, prompts, Memory / HIM, credentials and bodies are prohibited. The API continues when transport or boundary is absent. Delivery is at-least-once. The v1 domain is narrow; the other domains are deferred | used as **architectural evidence** for the async law (§8) and content minimization (§6). **Not** frozen as the required Company Operations channel (§20). The opaque-ID fact feeds `P4-DQ-11` | **no** | `P4-DQ-11` must respect the existing envelope classification | **yes** |
+| [Runtime Event Publisher Startup Recovery v1](../runtime-event-publisher-startup-recovery-v1.md) | API startup is fail-soft. A transport outage never claims rows or burns attempts. The same instance resumes automatically. The health probe stays passive | evidence that an infrastructure outage does not break user work. It is the pattern `PO-OPS-05` generalizes (§8, §15) | **no** | none | **yes** |
+| [Health / Readiness / Dependency Probes v1](../health-readiness-dependency-probes-v1.md) | liveness is dependency-free. Readiness is required for DB + model-provider configuration only. Runtime events and observability are **optional**: their degradation stays HTTP 200. Responses carry bounded states only. Health "is not a … user-specific diagnostic, … alerting, dashboard … system" | consumed. Company Operations availability joins the "optional" class conceptually: never a readiness prerequisite (§8). User-specific diagnostics are a separate future surface (§7), never folded into health | **no** | none | **yes** |
+
+### 1.2 Runtime ownership and routing
+
+| Authority | Existing law | APP-OPS effect | Conflict? | Resolution / decision needed | Preserved unchanged? |
+|---|---|---|---|---|---|
+| [Model Router v1.0](../implementation-foundation/QANDEEL_MODEL_ROUTER_v1.0.md) | provider-neutral; "Remove unhealthy providers"; fallback "must never downgrade required behavior or safety"; must not "expose provider details to mobile" or "hard-code one model as 'the Qandeel brain'"; final selection is benchmark-driven | **Route Hold** is defined as a negative eligibility constraint that acts only where the Router already filters (§14). It never selects or ranks, never forces a lower-capability route, and never reaches mobile | **no** | none | **yes** |
+| [FAST / DEEP Runtime Decision Policy v2](../fast-deep-runtime-decision-policy-v2.md) | FAST / DEEP is "execution / routing authority only"; "no subsystem gains semantic authority from the routing decision"; routing telemetry has 4 bounded dimensions and no vendor / model identity as a label; "Provider / LLM product selection: EXPLICITLY DEFERRED" | the "runtime path" domain consumes the existing routing metric (§5.1). Route Hold does not alter the path decision (§14). Operational state stays non-semantic (§4) | **no** | none | **yes** |
+| [Safety Runtime v1.0](../implementation-foundation/QANDEEL_SAFETY_RUNTIME_v1.0.md) | "Private conversation content must not become ordinary telemetry"; "Raw audio is not logged by default"; Least Data / Access / Retention; routing safety requirements are hard constraints; `ESCALATE` is a decision class, with no human reviewer named | consumed for §6 and §14. `ESCALATE` is preserved as automated runtime handling; any future human-review reading of it falls under `PO-OPS-02` (§18.3) | **no** | none. Reading `ESCALATE` as human content review would need `P4-DQ-10` | **yes** |
+| [Foundation Freeze v1.0](../implementation-foundation/QANDEEL_FOUNDATION_FREEZE_v1.0.md) "Configurable Without Breaking Freeze" | provider / model choices, routing thresholds, cost / latency budgets, non-behavior-changing prompt wording, operational timeouts / retries, retrieval tuning, observability thresholds, deployment sizing, non-behavioral UI details | the **ceiling** for Approved Remote Configuration (§11 family 6). Remote configuration can never carry behavior-changing prompt wording or frozen semantics | **no** | `P4-DQ-16` (family register) | **yes** |
+
+### 1.3 Connected Worlds
+
+| Authority | Existing law | APP-OPS effect | Conflict? | Resolution / decision needed | Preserved unchanged? |
+|---|---|---|---|---|---|
+| [CW2-02 Authority / Consent / Audience](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-02_AUTHORITY_CONSENT_AUDIENCE_RUNTIME_v1.0_FROZEN.md) | §45 entitlement is "conjunctive, never overriding"; §46 safety / system policy "can never manufacture missing human privacy authority"; §47 minimum-necessary error disclosure; §49 audit "minimizes protected-content duplication"; B30–B35; §58 defers "moderation/block/report policy" | every control is tested against these (§10.3). Controls only narrow. Audit stays content-minimized | **no** | none | **yes** |
+| [CW2-03 Shared World Runtime](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-03_SHARED_WORLD_RUNTIME_ARCHITECTURE_v1.0_FROZEN.md) | §45 World Presence Projection "does not reveal private telemetry, identity, topic, content or entry rights"; Shared material is private to the World's authority | Shared World conversation is **private conversation content** under §6 and never reaches Company Operations. Rollout of Shared capabilities obeys CW2-08 §27 | **no** | none | **yes** |
+| [CW2-04 Public World Runtime](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-04_PUBLIC_WORLD_RUNTIME_ARCHITECTURE_v1.0_FROZEN.md) | "Internal legal/safety/audit records remain outside Public World semantics"; deletion leaves no public tombstone | operational data never becomes Public ranking truth (§4). No control resurrects deleted Public content (§10.3) | **no** | none | **yes** |
+| [CW2-08](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08_SAFETY_MODERATION_ENTITLEMENTS_LAUNCH_v1.0_FROZEN.md) §8, H7 — **moderator access** | "`CASE_SCOPED_MODERATION_ACCESS` bound to: exact case; evidence scope; purpose; authorized role/service/**person**; validity; audit. No blanket private-World browsing follows from the moderator role itself." H7: "Moderator access is case-scoped and auditable." By dependency: §7 report evidence, §36 actor / role audit, §44 item 5 moderation / report UX + appeals | the Product Owner decision `PO-OPS-02` forbids routine **or exceptional** human review of private conversation content for **safety monitoring** | **YES — real conflict.** CW2-08 permits exceptional, case-scoped human access to private-World evidence; `PO-OPS-02` forbids it | **`CONTROLLED AMENDMENT REQUIRED — CW2-08`** → `P4-DQ-10`. P4-A records it and stops. It does not edit, amend or reinterpret CW2-08, and does not narrow `PO-OPS-02` | **yes, in P4-A.** It is unchanged until a controlled amendment lands |
+| CW2-08 §1–§7, §9–§14 — **Safety state, reports, Block** | typed restrictions; versioning; `SAFETY_PRIVATE_OPERATIONAL_STATE` excluded from Memory / reasoning; `REPORT_CASE` protected; Block semantics and anti-enumeration | preserved. Safety operational state is not Company-Operations telemetry by default (§4) | **no**, apart from the §7 evidence dependency covered by the row above | none beyond `P4-DQ-10` | **yes** |
+| CW2-08 §15–§19 — **Public moderation serving** | moderation states for **already-public** content; owner deletion dominates; Public Servable Context; the canonical serving gate | preserved. Public published content is not private conversation content (§18.3) | **no** | `P4-DQ-10` option C would state this explicitly | **yes** |
+| CW2-08 §20–§23 — **entitlement, credits** | entitlement controls actions, not ownership; Credits never modify consent, ownership or truth | the "subscriptions / business metrics" domain is operational only. No control is an entitlement (§10.3) | **no** | none | **yes** |
+| CW2-08 §24–§29, §38–§40 — **feature flags, Launch Gate, fail-closed** | server-canonical `FEATURE_FLAG_STATE`; client flags are hints; the snapshot is revalidated; emergency disable invalidates in-flight eligibility; disable preserves history; multi-user consistency; capability-scoped requirements; non-waivable invariants; old clients fail safely; unknown / unconfigured fails closed | **consumed as the one feature-flag authority** (§11 family 1, §13). Company Operations is only the issuer. Outage ≠ `UNKNOWN`: runtime-held state is unchanged (§10.1, §15) | **no** | `P4-DQ-15`: does it reach beyond Connected Worlds? | **yes** |
+| CW2-08 §42 — **operational telemetry** | rollout / incident metrics "do not become: semantic World truth; candidate truth; Public importance/rank truth; user-visible social scoring" | generalized app-wide as `PO-OPS-04`'s non-semantic rule (§4) | **no.** APP-OPS is stricter, and adds Memory, Analysis, psychological inference and behavioral scoring | none | **yes** |
+
+### 1.4 Product closures, entry points and governance
+
+| Authority | Existing law | APP-OPS effect | Conflict? | Resolution / decision needed | Preserved unchanged? |
+|---|---|---|---|---|---|
+| [G1.2 Voice / Live Call closure](../design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md) | the frozen interaction and background-call contract; "OS-owned privacy indicators remain OS-owned"; no production Voice runtime claimed; `QAN-BL-VOICE-01` | "call status" is approved as a domain but **not implemented** (§5.1). Audio and transcripts never reach Company Operations (§6.2). Live Call never waits on Company Operations (§8) | **no** | none. Call-status events are named by the audit's `Operational Events Required` (§19) | **yes** |
+| [P1 closure](../qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) | the internal `user_id` is never user-facing (§2, §13); Login ID / Email private; QANDEEL Understanding private ("internal reasoning only under exact permission; no raw disclosure"); Memory is user-scoped and selective; General Settings "Support / App" group (§8.1) | Understanding and Memory content never reach Company Operations (§6.2). User-specific diagnostics expose no identifier to users, and their identity model waits on `P4-DQ-11`. Support placement stays as P1 fixed it | **no** | `P4-DQ-11` | **yes** |
+| [P3 closure](../qandeel-p3-notification-activity-final-realization-canonical-closure.md) / [I-08N-01](../canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md) | notification privacy (L0–L3), Activity ≠ truth, the Live Call attention law, Quiet Hours; no production notification runtime; runtime carry-forwards (P3 §18) | "notification delivery" is an audit User Moment for the two new fields (§19). No control may override notification privacy or Quiet Hours semantics (§10.2). No Company Operations message becomes a user notification through APP-OPS-01 | **no** | none. Any future user-facing operational notice (such as a maintenance notice) is `P4-DQ-14`'s audit moment, under I-08N-01 / P3 | **yes** |
+| [AGENTS.md](../../AGENTS.md) §4–§5, §9 | "Do not log private transcripts, raw audio, memory content, or sensitive data"; no provider keys in the client; default-deny; controlled change for material contract changes | consumed (§6.2, §12, §11 family 6) | **no** | none | **yes** |
+| [Canonical backlog](../qandeel-canonical-backlog-v1.md), release owners | BG-01 … BG-09; `QAN-BL-SEC-01` owned by `QAN-SEC-01`; `QAN-BL-VOICE-01`; `QAN-BL-CW-01`; Connected Worlds `I-09` / CW2-08 own the Launch Gate | P4-A adds **no** backlog row (Task Contract §32). APP-OPS carry-forwards are reconciled under BG-06 / BG-08 at the later P4 closure ([Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) §3). Control-plane authentication is a security carry-forward, not `QAN-BL-SEC-01` | **no** | backlog impact candidate: see the Carry-Forward Matrix §3 | **yes** (not edited) |
+| [Roadmap](../../QANDEEL_PRODUCT_ROADMAP.md) | P4 is the census and closure track; the End-to-End audit follows P1–P4; Production Integration follows the audit; "observability, failure recovery and operational readiness" belongs to Release Hardening | APP-OPS-01 is the one Product-Owner-admitted cross-cutting exception. Its implementation is sequenced to Production Integration after the audit (§20). Operational readiness validation stays with Release Hardening | **no** | none | P4 lifecycle line updated only, as the task allows |
+
+---
+
+## 2. P4 residual-canon precedence notes
+
+These records the census found superseded. They are listed so no reader treats the older wording as live. Each is
+only a pointer to the later record, which already binds.
+
+| Older statement | Later authority | Effect |
+|---|---|---|
+| G2 "Q-LIGHT-SHELL remains open" | G3 §C.1; P1 §12 | closed |
+| G1.2 §6 icon / glyph shapes, final iconography | P2 §13.1 | closed |
+| G1.2 §6 audio strip / Voice visual language | P2 §13.1 "still not frozen"; P2 §15 → P4 | open; `P4-DQ-08` |
+| C3 §8 canonical Q on every screen | P2 §13.2 "not answered"; P3 §19.6 → P4 | open; `P4-DQ-03` |
+| I-08N-01 §21 UI / visual deferrals | P3 | closed |
+| VI-01 / VI-02 "Numeral policy — OPEN" | T-12 §9 (`latn` v1) | closed for v1 |
+| VI-01 "never fall back to masculine" vs the G2.3 opener | G2.3 §1 "No gender-neutral rewrite is authorized by G2.3" | the later explicit freeze binds for those strings |
+| G1.1 "post-registration Welcome remains a separate copy moment" | I-08A4 §14 | closed. The opener relation stays open under `P4-DQ-09` |
+| T-14 Email-only sign-in | P1 §3 | closed; wording under `P4-DQ-09` |
+| Brand package "Not closed, not frozen, not canonical" | none; consumed downstream, never ratified | open; `P4-DQ-05` |
+| VI-01 owners "Phase VII", "Brand Integration"; VI-02 owner "VI-10" | no live track exists | orphaned owners; re-owned in the Carry-Forward Matrix |
