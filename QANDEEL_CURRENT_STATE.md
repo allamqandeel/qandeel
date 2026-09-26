@@ -176,7 +176,7 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 | `CLOSED — TOMBSTONE` | 12 |
 | **Total** | **23** |
 
-| Severity (all 22) | Count |
+| Severity (all 23) | Count |
 |---|---:|
 | `HIGH` | 14 |
 | `MEDIUM` | 8 |
@@ -265,6 +265,7 @@ create an implementation task:
 | Connected Worlds `I-08` | the mobile Matching UI, candidate cards or feed, the final visual proposal experience and navigation surfaces. It also owns the final Introduction screen and the Matching / Live-Call presentation | [`docs/matching-introduction-runtime-v1.md`](docs/matching-introduction-runtime-v1.md) §24; [G3 closure](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) §D, §G |
 | Connected Worlds `I-09` / `CW2-08` | report, block, moderation, the safety policy engine, entitlements, the production Launch Gate and feature rollout | [`docs/matching-introduction-runtime-v1.md`](docs/matching-introduction-runtime-v1.md) §24; backlog I-05, I-06, I-07 closure records |
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01`. Its reopen condition is "automatic before the first production-store release" | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
+| `QAN-CTX-01 — Conversational Relevance Runtime` | `QAN-BL-CTX-01`. It owns the future runtime/client authority for item-level relation to the current conversation; no relevance-driven world behavior may be claimed before that contract exists | [P4-C1 §5–§6](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md); [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 
 **These numbers differ from the architecture closure.** The phase numbers above are the ones the closed
 records use. The Connected Worlds architecture closure §14 recommended a different numbering, and said
