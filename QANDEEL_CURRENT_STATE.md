@@ -113,6 +113,7 @@ was added later.
 | P1 — User Identity / Preferences / QANDEEL Understanding | `P1 — CLOSED / FROZEN — USER IDENTITY / PREFERENCES / QANDEEL UNDERSTANDING PRODUCT CONTRACT`. PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN. It narrowly amends I-08A4 naming, the F2 / G2 / G3 non-Analysis appearance rule and the T-14 final sign-in requirement (its §15) | [`docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md`](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) |
 | P2 — Final Iconography System | `P2 — CLOSED / FROZEN — FINAL ICONOGRAPHY SYSTEM`. PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN. The Hybrid QANDEEL Icon System: N1 "Open" signature geometry, the navigation glyph above the destination word, Call Rail A "Keyed Seam" with End Call at 27 px, Temporal Spine + Aperture C "Parting", Hugeicons Free as the curated utility source (no runtime package), Calm State Morphing. It narrowly supersedes G1.2 §6 for the icon glyphs and call controls; the audio strip and broader Voice visual language stay unfrozen (its §13). Evidence: the merged P2-A package | [`docs/qandeel-p2-final-iconography-canonical-closure.md`](docs/qandeel-p2-final-iconography-canonical-closure.md); evidence [`docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/`](docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/P2_READ_FIRST.md) |
 | P3 — Notification & Activity Final Product Realization | `P3 — CLOSED / FROZEN — NOTIFICATION & ACTIVITY FINAL PRODUCT REALIZATION`. PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN. It consumes `I-08N-01` and closes only the realization `I-08N-01` §21 left open: Activity «النشاط» / ACTIVITY (one global destination, not a World, entry in the non-Analysis upper chrome, none in the Analysis); the Open Ledger and Open Link glyphs; the neutral attention mark with no global count; the ordinary Attention Strip; ordinary attention deferred inside the Analysis and during a Live Call, with two call-safe exceptions (dismiss only; Replay the one temporarily occluded control); the L0–L3 labels; Notifications & Activity settings; Quiet Hours 23:00 → 08:00; the v1 ceilings. It supersedes no `I-08N-01` semantics and keeps G3 §D (its §19). Evidence: the merged P3-A package | [`docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md`](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md); evidence [`docs/design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/`](docs/design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/P3_READ_FIRST.md) |
+| P4-C1 — Shell / Chrome Product Decisions + Live Context amendment | `EFFECTIVE / FROZEN ON MERGE` for its narrow decisions; P4 parent remains ACTIVE. Selects S-B + U-A + Q-A + SW-3; retires the dedicated «سياق الكلام» / Live Context surface; preserves contextual relevance as a runtime-gated future capability | [`docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md`](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) |
 | I-08N-01 — Notification & Proactive Attention Product Contract | `CLOSED / NOTIFICATION & PROACTIVE ATTENTION PRODUCT CONTRACT FROZEN`. This is Product behavior / attention policy, not a production notification runtime. It stays the foundational notification semantic authority; P3 is its final Product realization | [`docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md) |
 | Phase V — Visual Language Discovery | `CLOSED` — `FREEZE WITH EXPLICIT OPEN ITEMS`, in the archive's own words | [`docs/design/phase-v/README.md`](docs/design/phase-v/README.md) |
 | Phase VI: VI-01, VI-02 | each `CLOSED / FROZEN` as its archive states. VI-01 naming was amended by G1.1 | [`docs/design/phase-vi/`](docs/design/phase-vi/) |
@@ -169,20 +170,20 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 
 | Status | Count |
 |---|---:|
-| `DEFERRED — OWNED` | 1 |
+| `DEFERRED — OWNED` | 2 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **22** |
+| **Total** | **23** |
 
 | Severity (all 22) | Count |
 |---|---:|
-| `HIGH` | 13 |
+| `HIGH` | 14 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
-The severity table counts all 22 rows, tombstones included. The 10 active (non-tombstone) items split
-4 `HIGH`, 5 `MEDIUM` and 1 `LOW`. Here they are in the backlog's own index order:
+The severity table counts all 23 rows, tombstones included. The 11 active (non-tombstone) items split
+5 `HIGH`, 5 `MEDIUM` and 1 `LOW`. Here they are in the backlog's own index order:
 
 | ID | Title | Owner | Severity | Status |
 |---|---|---|---|---|
@@ -195,6 +196,7 @@ The severity table counts all 22 rows, tombstones included. The 10 active (non-t
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 Severity states the consequence *if an item is reopened*. It is not a priority or a schedule (backlog §2).
@@ -239,9 +241,7 @@ Ordered Product tracks:
 3. **P3 — Notification Final Realization** — `CLOSED / FROZEN` by
    [`docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md`](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md).
    Production implementation remains open.
-4. **P4 — Remaining Product / Visual Gaps Census & Closure** — **ACTIVE, NOT CLOSED.** Task P4-A opened it with a
-   residual-gap census, the `APP-OPS-01` App ↔ Company Operations contract candidate (`NOT FROZEN`) and a Product Owner
-   decision queue, in [`docs/p4/`](docs/p4/P4_READ_FIRST.md). P4-A decides and implements nothing.
+4. **P4 — Remaining Product / Visual Gaps Census & Closure** — **ACTIVE, NOT CLOSED.** P4-A opened the census / queue; P4-B resolved DQ-10 through CW2-08A; P4-C supplied comparative visual evidence; **P4-C1 resolves DQ-01 … DQ-04** as S-B + U-A + Q-A + SW-3, retires the dedicated Live Context surface, and admits `QAN-BL-CTX-01`. The remaining P4 decisions stay open in [`docs/p4/`](docs/p4/P4_READ_FIRST.md).
 
 After P1–P4 close:
 

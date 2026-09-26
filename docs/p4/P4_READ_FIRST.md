@@ -1,6 +1,6 @@
 # QANDEEL — P4 Read First
 
-**Status:** `P4-A MERGED — P4-B CW2-08A MERGED / EFFECTIVE — P4-C SHELL / PLACEMENT / SMALL-CHROME COMPARATIVE PROOF READY FOR PRODUCT OWNER + INDEPENDENT REVIEW — P4 ACTIVE, NOT CLOSED`
+**Status:** `P4-A MERGED — P4-B EFFECTIVE — P4-C PROOF COMPLETE — P4-C1 DQ-01…04 PRODUCT OWNER DECISIONS RECORDED — P4 ACTIVE, NOT CLOSED`
 
 ---
 
@@ -15,9 +15,10 @@
 | **P4** | **ACTIVE — census / closure track opened by P4-A. NOT CLOSED, NOT FROZEN** |
 | **APP-OPS-01** | **`PRODUCT / ARCHITECTURE CONTRACT CANDIDATE — NOT FROZEN`** |
 | Correction pass | applies the Product Owner's three-rule boundary: operational telemetry is **always content-free**; APP-OPS-01 creates **no Company Operations private-content receipt path**; and No Human Review is **not narrowed** to Company Operations. Re-reading CW2-08 §8 confirmed one authority conflict (`P4-DQ-10`) |
-| P4-B controlled amendment | on `576b010dcf78276c982f5052cfee7dd1bcbfcbcb`, P4-B adds the [CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md), effective on merge: no human role or person may receive, inspect or review private QANDEEL conversation content under Safety / Moderation authority. The original CW2-08 stays frozen, historical and byte-identical. `P4-DQ-10` is **RESOLVED BY CONTROLLED CW2-08A AMENDMENT**. **16** Product Owner decisions remain open; **22** census rows still need a P4 decision |
-| P4-C comparative proof | the [P4-C shell / placement / small-chrome decision proof](../design/p4-shell/QANDEEL_P4-C_SHELL_CHROME_INTEGRATED_DECISION_PROOF/P4C_READ_FIRST.md) for `P4-DQ-01` … `P4-DQ-04` is ready for Product Owner decision. The four rows **remain OPEN**; no candidate is selected or frozen, and the Decision Queue and census are unchanged until the Product Owner decides |
-| Implementation | **none authorized.** P4-A and P4-B change no code, schema, migration, dependency, workflow or backlog row. P4-B's only authority change is the additive CW2-08A record and its Canonical Authority Index entry |
+| P4-B controlled amendment | on `576b010dcf78276c982f5052cfee7dd1bcbfcbcb`, P4-B adds the [CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md), effective on merge. `P4-DQ-10` is resolved |
+| P4-C comparative proof | the [P4-C shell / placement / small-chrome decision proof](../design/p4-shell/QANDEEL_P4-C_SHELL_CHROME_INTEGRATED_DECISION_PROOF/P4C_READ_FIRST.md) remains the evidence package. P4-C itself still decides nothing |
+| **P4-C1 Product decisions / amendment** | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) selects **S-B + U-A + Q-A + SW-3**, retires the dedicated «سياق الكلام» / Live Context Product surface, preserves Context Activation + Live Focus, and records the missing runtime-backed contextual-relevance capability as `P4-GAP-065` / `QAN-BL-CTX-01`. **12** Product Owner decisions remain open; **17** census rows still need a P4 decision |
+| Implementation | **none authorized.** P4-C1 changes Product authority/documentation only. It adds one owned backlog obligation (`QAN-BL-CTX-01`) but creates no runtime, schema, migration, dependency or production UI |
 | End-to-End Product Experience Completeness Audit | **not started** |
 
 ---
@@ -56,19 +57,18 @@ HR, admin tooling, generic analytics and internal automation.
 ## 4. Reading order
 
 1. **This file.**
-2. [`P4_RESIDUAL_GAP_CENSUS.md`](P4_RESIDUAL_GAP_CENSUS.md) — the evidence. There are 65 rows (`APP-OPS-01` plus
-   `P4-GAP-001` … `P4-GAP-064`), each with its source, later authority, current truth and classification.
+2. [`P4_RESIDUAL_GAP_CENSUS.md`](P4_RESIDUAL_GAP_CENSUS.md) — the evidence. There are 66 rows (`APP-OPS-01` plus
+   `P4-GAP-001` … `P4-GAP-065`), each with its source, later authority, current truth and classification.
 3. [`APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md`](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) —
    the contract candidate. It has 23 sections.
 4. [`P4_AUTHORITY_COMPATIBILITY_MATRIX.md`](P4_AUTHORITY_COMPATIBILITY_MATRIX.md) — APP-OPS-01 against every
    authority it touches, plus the residual-canon precedence notes. It records **no open authority conflict**: the one
    conflict P4-A found (historical CW2-08 §8 / H7 let an authorized person reach case-scoped private conversation
    content) is superseded in that narrow scope by the CW2-08A controlled amendment.
-5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — the **16 open** rows:
-   `P4-DQ-01` … `P4-DQ-09` for the residual canon and `P4-DQ-11` … `P4-DQ-17` for APP-OPS-01. `P4-DQ-10` stays as a
-   resolved record.
-6. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — the future work that is not a P4 decision. It
-   includes the mandatory audit fields and the backlog-impact candidate.
+5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — the **12 open** rows:
+   `P4-DQ-05` … `P4-DQ-09` for the residual canon and `P4-DQ-11` … `P4-DQ-17` for APP-OPS-01. `P4-DQ-01` … `04` and `P4-DQ-10` stay as resolved records.
+6. [P4-C1 Product decision / controlled amendment](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) — the binding owner decisions for DQ-01 … DQ-04 and the contextual-relevance re-ownership.
+7. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — future work that is not a P4 decision, including the new `QAN-BL-CTX-01` carry-forward.
 
 ---
 

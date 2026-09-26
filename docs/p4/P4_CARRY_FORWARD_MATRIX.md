@@ -56,6 +56,7 @@ The controlled CW2-08 amendment that P4-A deferred is **no longer a carry-forwar
 |---|---|---|---|---|---|
 | Model / Provider benchmark and selection, text and realtime / voice | the roadmap couples it to the audit, and it needs workload evidence | Model Router (provider-neutral, benchmark-driven); FAST / DEEP v2 (selection deferred); APP-OPS-01 §14 (a Route Hold is not selection) | End-to-End audit | the audit phase | **no.** The roadmap §3 owns it |
 | Voice runtime dependencies: speaking indicator, native call behavior, Voice Note transcript, spoken-reply control, voice / call state strings (P4-GAP-023 … 026, 035) | they cannot close without runtime truth | P2 §11.1 (no fake signal); G1.2 §1–§5, §7; VI-01 ("A state string must name what the architecture actually does"); APP-OPS-01 §6 (no transcript or audio to the Company) | the future Voice runtime task under `QAN-BL-VOICE-01` | when `QAN-BL-VOICE-01` reopens | **no new item.** `QAN-BL-VOICE-01` already requires "truthful microphone and route state" and the Voice lifecycle, and a second entry would be a duplicate alias (backlog §8; P2 §15 precedent). The closing change should note the string dependency in that item's current truth, if the Product Owner agrees |
+| Runtime-backed Conversational Relevance (`P4-GAP-065`) | P4-C1 retires the old dedicated Live Context surface and freezes only the Product boundary; the relevance runtime/architecture does not exist yet and P4 implements nothing | P4-C1 §5–§6; V10 A15/A22/A23: relevance is runtime-backed, non-ordinal, not importance/truth/confidence/rank, and any spatial expression needs accessible non-spatial parity; explicit Context Activation stays explicit | `QAN-CTX-01 — Conversational Relevance Runtime` | automatic when `QAN-CTX-01` opens; must precede any production claim that contextual relevance drives Living Analysis recomposition / item-level relevance behavior | **yes — `QAN-BL-CTX-01` admitted by P4-C1** |
 | Device / release validation: VoiceOver / TalkBack, CallKit / Telecom, status bar, 320 pt large text, on-device icons and adaptive-icon framing, real Push (P4-GAP-052, 014) | not provable in proofs | G1.2 §7; G3 §F; P2 §14.6; P3 §16, §18 | Release Hardening & Launch | pre-release | **no.** It is the same disposition G1.2, G3, P2 and P3 already took |
 | App-store / release operations: store listings, ratings ingestion, version-adoption tracking, icon wiring (`app.json`), splash implementation | implementation and operations | APP-OPS-01 §5.3 (store signals only); `P4-DQ-05`, `P4-DQ-06` outcomes | App Operations & Release Lead; Production Integration; Release Hardening | Production Integration → Release | **no** |
 | Residual copy the Product Owner leaves to the audit under `P4-DQ-09`: sign-in failure and Login ID help; the VI-01 `PROPOSED` / `OPEN` residue; P3's education sheet; any Matching lines not frozen in P4 | the audit's copy pass owns journey copy | P1 §3 (generic failure wording); VI-01 principles; P3 §11 | End-to-End audit, then its scoped closures | the audit phase | **no.** It is the same disposition as P3 §17 / §20 |
@@ -67,11 +68,11 @@ The controlled CW2-08 amendment that P4-A deferred is **no longer a carry-forwar
 
 ---
 
-## 3. Backlog impact candidate
+## 3. Backlog impact
 
-> **`Backlog impact candidate: NONE`**
+> **`P4-C1 backlog admission: QAN-BL-CTX-01`**
 
-**Neither P4-A nor P4-B changes a backlog row.** They admit nothing, tombstone nothing and re-own nothing.
+P4-A and P4-B admitted no backlog row. **P4-C1 admits one owned HIGH-severity obligation:** `QAN-BL-CTX-01 — Runtime-backed Conversational Relevance`, owned by `QAN-CTX-01 — Conversational Relevance Runtime`.
 
 P4-A's one conditional candidate, the controlled CW2-08 amendment in `P4-DQ-10`, is gone:
 
@@ -80,9 +81,7 @@ P4-A's one conditional candidate, the controlled CW2-08 amendment in `P4-DQ-10`,
 - the remaining moderation / report work is existing named-owner work (Connected Worlds `I-09` / CW2-08 §44 item 5),
   now bounded by CW2-08A.
 
-Every other carry-forward is NONE for backlog impact because it is roadmap-sequenced implementation, an existing
-backlog owner, release/device validation, or a named owner under frozen authority. The later P4 closure confirms this
-under BG-06 / BG-08.
+Every other carry-forward remains unchanged. P4-C1's new admission exists because Architecture explicitly designates the contextual-relevance residue under BG-06 / BG-08; the backlog entry authorizes no implementation by itself (BG-07).
 
 This follows the precedents of P2 §15, P3 §20 and the I-04 … I-07 closure records.
 
@@ -93,7 +92,7 @@ This follows the precedents of P2 §15, P3 §20 and the I-04 … I-07 closure re
 These are not carry-forwards. They are the remainder of P4 itself. They are listed so no successor task inherits
 them silently (AGENTS §10.6):
 
-1. the Product Owner's answers to `P4-DQ-01` … `P4-DQ-09`, and the visual proofs they require;
+1. the remaining Product Owner answers to `P4-DQ-05` … `P4-DQ-09`, and the visual / copy proofs they require; `P4-DQ-01` … `04` are resolved by P4-C1;
 2. the Product Owner's answers to `P4-DQ-11` … `P4-DQ-17`, and the independent review of APP-OPS-01. (`P4-DQ-10` is
    resolved by CW2-08A);
 3. the P4 closure change, which does all of the following:

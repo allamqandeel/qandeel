@@ -1,14 +1,14 @@
 # QANDEEL — P4 Product Owner Decision Queue
 
-**Status:** `P4-A DECISION QUEUE — QUESTIONS ONLY — NO ANSWER HERE IS A DECISION`
+**Status:** `P4-C1 SYNCHRONIZED — DQ-01 … DQ-04 RESOLVED BY PRODUCT OWNER — P4 STILL ACTIVE`
 
 | | |
 |---|---|
 | Track | P4, task P4-A |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
 | Rule | every open row is a choice existing authority does **not** settle. P4-A answers none of them. Where the evidence supports one, a **recommended option** is given. A recommendation is not a decision |
-| Open decisions | **16**: `P4-DQ-01` … `09` and `P4-DQ-11` … `17` |
-| Resolved records | **1**: `P4-DQ-10`, **RESOLVED BY CONTROLLED CW2-08A AMENDMENT** (P4-B). It is kept for traceability and blocks nothing. IDs are not renumbered |
+| Open decisions | **12**: `P4-DQ-05` … `09` and `P4-DQ-11` … `17` |
+| Resolved records | **5**: `P4-DQ-01` … `04` by the [P4-C1 Product decision / controlled amendment](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md), plus `P4-DQ-10` by CW2-08A. They remain for traceability and block nothing. IDs are not renumbered |
 | Excluded on purpose | an unknown implementation detail is not a Product decision. Such items are in the [Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) instead |
 | Traceability | each row cites its [census](P4_RESIDUAL_GAP_CENSUS.md) rows and, for APP-OPS, its [contract candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) section |
 
@@ -23,10 +23,10 @@ The last two fields of each row mean:
 
 | ID | Question | Blocks P4 closure | Blocks APP-OPS-01 closure | Visual proof |
 |---|---|---|---|---|
-| `P4-DQ-01` | Where is the General Settings entry placed in the shell? | yes | — | yes |
-| `P4-DQ-02` | Where is the QANDEEL Understanding entry, and what form does it take? | yes | — | yes |
-| `P4-DQ-03` | Does the canonical Q appear on every screen, and where? | yes | — | yes |
-| `P4-DQ-04` | Final small chrome: Global Switcher container form, tab depth and active-indicator geometry; «سياق الكلام» placement | yes | — | yes |
+| `P4-DQ-01` | **RESOLVED — S-B:** General Settings entry from Personal QANDEEL | no (resolved) | — | completed |
+| `P4-DQ-02` | **RESOLVED — U-A:** QANDEEL Understanding persistent Personal row | no (resolved) | — | completed |
+| `P4-DQ-03` | **RESOLVED — Q-A:** Q only at named identity moments; no persistent shell Q | no (resolved) | — | completed |
+| `P4-DQ-04` | **RESOLVED:** SW-3 Keyed Seam; dedicated «سياق الكلام» / Live Context surface retired | no (resolved) | — | completed |
 | `P4-DQ-05` | Ratify the I-08B2.5 brand package, and settle its open items | yes | — | partly |
 | `P4-DQ-06` | Launch / splash / gateway brand application, including the lantern: P4 or audit? | yes (the sequencing answer) | — | if P4 takes it |
 | `P4-DQ-07` | Boundary: which undrawn screens P4 designs, and which the audit carries | yes | — | no (it is a boundary) |
@@ -45,61 +45,51 @@ The last two fields of each row mean:
 
 ## A. Residual Product / visual / copy canon
 
-### `P4-DQ-01` — General Settings entry placement
+### `P4-DQ-01` — RESOLVED — General Settings entry placement
 
 | Field | |
 |---|---|
-| Question | Where in the shell does the one General Settings destination get entered? |
-| Why it matters | every account, privacy, appearance and notification control hangs off it. The End-to-End audit cannot walk "Profile / Settings" without an entry to walk from |
-| Existing authority | P1 §8: exactly one destination, "secondary Global Shell utility" (I-08A4 §7). P3 places a separate Activity entry in the non-Analysis upper chrome, and none in the Analysis. P2 §11 / P3 §17 / §19.5 and the artifact index hand the placement to P4 |
-| Viable options | **A.** An entry in the non-Analysis upper chrome, beside P3's Activity entry. **B.** An entry reached from Personal QANDEEL's own surface. **C.** Another utility location that proof shows to be more discoverable |
-| Architecture consequences | none at runtime. It is a shell composition choice. It must stay outside the Analysis, which P3 keeps free of global entries, and must respect I-08A4's local-only Back |
-| Recommended | **no recommendation.** The evidence does not favour one option without a visual proof. A and B each have precedent: P3's non-Analysis upper chrome for A, the Understanding entry "from Personal QANDEEL" for B |
-| Blocks | P4 closure: **yes**. The roadmap names "final small chrome", and P2 / P3 hand this item to P4 |
-| Proof | **yes.** Integrated AR / EN and RTL / LTR shell proof beside the Activity entry |
-| Census | P4-GAP-001 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C1** |
+| Decision | **S-B.** The one General Settings destination remains application-global in scope, but its entry is reached from **Personal QANDEEL's own surface**, not as a persistent non-Analysis upper-chrome utility |
+| Important consequence | Personal-rooted placement does not create a second settings destination or narrow Settings to Personal-only semantics |
+| Evidence | P4-C Board 02 and S-B captures |
+| Canonical record | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) §1–§2 |
+| Census | P4-GAP-001 — resolved |
 
-### `P4-DQ-02` — QANDEEL Understanding entry placement and form
+### `P4-DQ-02` — RESOLVED — QANDEEL Understanding entry placement and form
 
 | Field | |
 |---|---|
-| Question | Where exactly does the Understanding entry sit on Personal QANDEEL, and what control is it? |
-| Why it matters | P1 froze that the entry is "stable, discoverable … from Personal QANDEEL". The audit's "Memory / Understanding inspection" moment needs its entry |
-| Existing authority | P1 §10, §11, §16.1; P2 §11, §13.5 (the glyph comes from P2 once placed); P3 §19.6 |
-| Viable options | **A.** A persistent control on the Personal QANDEEL surface. **B.** An entry inside the Conversation / Analysis context. B must not collide with the in-Analysis «القراءات» vocabulary, which P1 preserves. **C.** A General Settings item, which would be weaker than P1's "stable, discoverable" rule |
-| Architecture consequences | none at runtime |
-| Recommended | exclude **C**, because it conflicts with P1's "stable, discoverable entry from Personal QANDEEL". Choose between A and B by visual proof |
-| Blocks | P4 closure: **yes** |
-| Proof | **yes** |
-| Census | P4-GAP-002 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C1** |
+| Decision | **U-A.** «فهم قنديل» / QANDEEL Understanding is a persistent **Personal-QANDEEL row beneath the upper chrome** |
+| Excluded | not inside General Settings; not promoted beside the Conversation / Analysis control |
+| Evidence | P4-C Board 03 and U-A captures |
+| Canonical record | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) §1 |
+| Census | P4-GAP-002 — resolved |
 
-### `P4-DQ-03` — Canonical Q presence and placement
+### `P4-DQ-03` — RESOLVED — Canonical Q presence and placement
 
 | Field | |
 |---|---|
-| Question | Does the canonical Q appear on every screen? If not, where does it appear? |
-| Why it matters | this is brand presence across the whole Product. C3 §8 calls it "a **placement** question" that material law cannot resolve |
-| Existing authority | C3 §8 (open); P2 §13.2 ("not answered"); P3 §19.6; the artifact index. G2.3 §1 already fixes the Q at the Matching attention moment. C3 §8 cites Apple's HIG against pervasive logo display |
-| Viable options | **A.** No persistent Q; the Q only at named identity moments: launch, gateway, Matching (already frozen), empty states. **B.** A persistent Q in the shell chrome. **C.** A persistent Q on Personal QANDEEL only |
-| Architecture consequences | none at runtime. The Q's material is governed by C3 (`qandeel.identity.mark`) wherever it appears |
-| Recommended | **A**, weakly. It is the option C3 §8's cited guidance supports, and it is consistent with G2.3's one frozen placement. It still needs proof |
-| Blocks | P4 closure: **yes** |
-| Proof | **yes** |
-| Census | P4-GAP-003 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C1** |
+| Decision | **Q-A.** No persistent shell Q. The Q appears only at named identity moments. The normal QANDEEL conversation opening is an identity moment; the already-frozen Matching attention moment remains one |
+| Boundary | this does not answer DQ-06 launch / splash / gateway composition |
+| Evidence | P4-C Board 04 |
+| Canonical record | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) §1 |
+| Census | P4-GAP-003 — resolved |
 
-### `P4-DQ-04` — Final small chrome
+### `P4-DQ-04` — RESOLVED — Final small chrome + Live Context disposition
 
 | Field | |
 |---|---|
-| Question | (a) the Global Switcher's container form, tab depth and active-indicator geometry, beyond what P2 froze; (b) where «سياق الكلام» sits in the Analysis |
-| Why it matters | the roadmap's "final small chrome". Without it the shell cannot be drawn to production truth |
-| Existing authority | C3 freeze record ("Final selected-tab design", "Tab geometry, tab container form, tab depth" → Product / UI integration); I-08A4 §21; P2 §5 (the glyph family, glyph above the word, SELECTED shown by the E1R marker and word weight); G3 §G for (b) ("VI-01 / Product; not decided") |
-| Viable options | (a) container forms are proof-driven; no option is pre-set by canon. (b) placement inside the existing G3 Analysis shell composition |
-| Architecture consequences | none at runtime |
-| Recommended | **none.** The answer comes from visual proof. It must consume P2 / E1R unchanged and invent no new status colour (P2 §11) |
-| Blocks | P4 closure: **yes** |
-| Proof | **yes** |
-| Census | P4-GAP-004, P4-GAP-005 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C1** |
+| Switcher decision | **SW-3 — Keyed Seam** |
+| Live Context decision | the dedicated «سياق الكلام» / Live Context **surface, entry control, drawer/panel and empty-state UI are retired**. X-A / X-B / X-C are not placement candidates any more |
+| Preserved capability | explicit Context Activation and T-03D Live Focus remain; Phase V contextual relevance remains a runtime-gated future capability, no longer scoped to a dedicated Live Context surface |
+| New gap | P4-GAP-065 / QAN-BL-CTX-01 — Runtime-backed Conversational Relevance |
+| Evidence | P4-C Boards 05–06. Board 06 is retained as comparison evidence; it no longer authorizes a Live Context control |
+| Canonical record | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) §1, §3–§7 |
+| Census | P4-GAP-004 resolved; P4-GAP-005 resolved / superseded |
 
 ### `P4-DQ-05` — Brand package ratification and its open items
 

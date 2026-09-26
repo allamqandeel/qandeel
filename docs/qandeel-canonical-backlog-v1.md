@@ -155,6 +155,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 ---
@@ -408,6 +409,19 @@ misread as a decision:
 
 The backlog records the obligation only (BG-07).
 
+### `QAN-BL-CTX-01` — Runtime-backed Conversational Relevance
+
+- **Title / Finding:** QANDEEL has current conversational attention (Live Focus), explicit user-owned cross-context bindings, Memory/HIM/Hypothesis/Question foreground lanes and a Living Analysis World, but no single runtime/client authority that says which eligible analytical items are more or less related to **what the current conversation is about right now**.
+- **Source:** [P4-C1 §5–§6](canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md), preserving and re-owning Phase V V10 A22/A23 after retiring the dedicated Live Context Product surface.
+- **Why deferred:** P4 closes Product / visual decisions and implements no runtime. P4-C1 deliberately removes the obsolete dedicated Live Context drawer/panel rather than shipping a UI that pretends the missing relevance signal exists. The runtime authority, integration contract and proof need one dedicated Architecture/Runtime task.
+- **Owner task:** `QAN-CTX-01 — Conversational Relevance Runtime`
+- **Severity:** `HIGH`
+- **Reopen condition:** automatic when `QAN-CTX-01` starts; and it MUST be opened before any production feature claims that item-level contextual relevance drives Living Analysis spatial recomposition, motion, presence, or a general cross-domain relevance selection.
+- **Required future properties:** one explicit runtime-backed relevance contract; fail-closed absence (no fabricated default/neutral score); preserve A15 non-equivalence (relevance is not importance, truth, confidence, evidence strength, priority, rank, certainty or correctness); preserve explicit user Context Activation as explicit and never silently auto-bind Goal / Situation / Decision / Relationship targets from inferred relevance; expose a client-consumable signal before visual spatialization; provide a non-spatial accessible equivalent and reduced-motion parity for any visual expression; do not let response-context selection and visual-world behavior silently invent incompatible independent meanings of "relevant".
+- **Status:** `DEFERRED — OWNED`
+
+This entry freezes **no algorithm**. It does not choose embeddings, scores, thresholds, provider/model, storage, refresh cadence, ranking shape or UI. Those require the future Task Contract. The dedicated «سياق الكلام» / Live Context surface remains retired by P4-C1.
+
 ### `QAN-BL-VIS-01` — Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof
 
 - **Title / Finding:** the canonical I-08B1 Living Analysis World has only been proved on its fixture world. Nothing
@@ -617,15 +631,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 1 |
+| `DEFERRED — OWNED` | 2 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **22** |
+| **Total** | **23** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 13 |
+| `HIGH` | 14 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
@@ -658,8 +672,9 @@ stale. At the PR #268 baseline (`84f507d0`) the §4 index held 21 rows, not 20:
 The sentence above is left as it was written. It undercounted by one: the §4 index already held eight open
 items once `QAN-BL-VIS-01` was admitted.
 
-The preservation then admitted `QAN-BL-CW-01` (`ASSURE-F05`, `HIGH`, `OPEN — UNASSIGNED`). The register now
-holds 22 items: 9 `OPEN — UNASSIGNED`, 13 `HIGH`. The correction reopens nothing and changes no other item.
+The preservation then admitted `QAN-BL-CW-01` (`ASSURE-F05`, `HIGH`, `OPEN — UNASSIGNED`). That brought the register to 22 items.
+
+**P4-C1 admission (2026-09-27).** P4-C1 retires the dedicated Live Context Product surface while preserving the runtime-gated contextual-relevance capability and admits `QAN-BL-CTX-01` (`HIGH`, `DEFERRED — OWNED`) with owner `QAN-CTX-01 — Conversational Relevance Runtime`. The register now holds **23** items: 2 `DEFERRED — OWNED`, 9 `OPEN — UNASSIGNED`, 12 `CLOSED — TOMBSTONE`, and 14 `HIGH`. This admission authorizes no implementation (BG-07).
 
 ---
 
@@ -699,6 +714,7 @@ Inherited after T-12 closure reconciliation:
 | --- | --- |
 | `T-11` | none |
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01` |
+| `QAN-CTX-01 — Conversational Relevance Runtime` | `QAN-BL-CTX-01` |
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` — delivered; tombstoned under BG-08 by T-14 |
 | `T-12 — Final Integration` | none — reconciled and tombstoned under BG-08 / PR #220 |
 | `T-14 — Mobile Product Sign-In Gateway v1` | `QAN-BL-AUTH-01` — explicitly claimed by the T-14 contract |
