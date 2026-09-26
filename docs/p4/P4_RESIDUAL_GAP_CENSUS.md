@@ -66,21 +66,21 @@ for supersession. Where nothing later answers the item, the column says **none**
 
 | Classification | Rows |
 |---|---:|
-| `P4 — PRODUCT DECISION REQUIRED` | 6 |
-| `P4 — VISUAL DECISION REQUIRED` | 8 |
+| `P4 — PRODUCT DECISION REQUIRED` | 4 |
+| `P4 — VISUAL DECISION REQUIRED` | 5 |
 | `P4 — COPY DECISION REQUIRED` | 7 |
 | `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | 1 |
-| `ALREADY CLOSED / SUPERSEDED` | 9 |
-| `IMPLEMENTATION ONLY — NOT P4` | 12 |
+| `ALREADY CLOSED / SUPERSEDED` | 14 |
+| `IMPLEMENTATION ONLY — NOT P4` | 13 |
 | `DEVICE / RELEASE VALIDATION — NOT P4` | 1 |
 | `END-TO-END AUDIT OWNED` | 4 |
 | `BACKLOG OWNED` | 3 |
 | `DEPENDENCY-GATED — CANNOT CLOSE YET` | 6 |
 | `HISTORICAL / EVIDENCE ONLY` | 2 |
 | `NO ACTION` | 6 |
-| **Total** | **65** |
+| **Total** | **66** |
 
-That is 64 `P4-GAP` rows (`P4-GAP-001` … `P4-GAP-065`) plus `APP-OPS-01`. §5 lists every row by class, so the
+That is 65 `P4-GAP` rows (`P4-GAP-001` … `P4-GAP-065`) plus `APP-OPS-01`. §5 lists every row by class, so the
 count can be checked.
 
 **Current residual gaps needing a P4 decision: 17 rows.** Those are the four `P4 — …` classes. They reduce to 12
@@ -246,7 +246,7 @@ duplicate alias for them.
 
 ## 5. Count reconciliation
 
-Counted row by row from §3. There are 65 rows: `APP-OPS-01` and `P4-GAP-001` … `P4-GAP-065`.
+Counted row by row from §3. There are 66 rows: `APP-OPS-01` and `P4-GAP-001` … `P4-GAP-065`.
 
 `P4-GAP-057` sits in §3.6, beside APP-OPS-01, because it was found by the APP-OPS reconciliation.
 
