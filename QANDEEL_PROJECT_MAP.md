@@ -24,7 +24,9 @@ The rules below are the repository's own, each cited to where it is stated.
    - a T-series amendment;
    - a closed Connected Worlds phase, I-04 … I-07 with their REM remediations;
    - an I-08B design closure;
-   - the frozen I-08A Product Shell / IA / Naming foundation and I-08N-01 attention contract where those records own the Product rule.
+   - the frozen I-08A Product Shell / IA / Naming foundation and I-08N-01 attention contract where those records own the Product rule;
+   - the P1 User Identity / Preferences / QANDEEL Understanding Product closure, which narrowly amends named statements
+     of I-08A4, F2 / G2 / G3 and the T-14 sign-in requirement (its §15).
 
    Source: [`docs/canonical-authority/README.md`](docs/canonical-authority/README.md), "What this directory is not".
 3. **Current records do not erase upstream history.** Upstream sources stay preserved byte-exact as the
@@ -85,7 +87,8 @@ The rules below are the repository's own, each cited to where it is stated.
 | the Living Analysis Map (runtime) | [`docs/living-analysis-map-runtime-v1.md`](docs/living-analysis-map-runtime-v1.md) (T-04), [`docs/final-living-analysis-map-integration-v1.md`](docs/final-living-analysis-map-integration-v1.md) (T-12) | [`apps/mobile/README.md`](apps/mobile/README.md), `apps/mobile/src/` |
 | time, Timeline, Return, chrome | [`docs/timeline-presentation-window-v1.md`](docs/timeline-presentation-window-v1.md) (T-05), [`docs/temporal-navigation-layer-v1.md`](docs/temporal-navigation-layer-v1.md) (T-06), [`docs/return-navigation-layer-v1.md`](docs/return-navigation-layer-v1.md) (T-07), [`docs/inspection-orientation-return-chrome-v1.md`](docs/inspection-orientation-return-chrome-v1.md) (T-08) | the G2.3 and G3 amendments below |
 | motion, responsive layout | [`docs/living-analysis-map-motion-system-v1.md`](docs/living-analysis-map-motion-system-v1.md) (T-10), [`docs/responsive-recomposition-v1.md`](docs/responsive-recomposition-v1.md) (T-11) | [`docs/visual-motion-authority-boundary-v1.md`](docs/visual-motion-authority-boundary-v1.md) (QAN-GOV-02) |
-| Product shell / Global navigation / canonical naming / first use | [`I-08A4`](docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md) | later G1.1 / G1.2 Product naming and shell amendments bind where explicit |
+| Product shell / Global navigation / canonical naming / first use | [`I-08A4`](docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md) | later G1.1 / G1.2 Product naming and shell amendments bind where explicit, and so does P1 (below) |
+| account identity, identifiers, sign-in / sign-up Product semantics, General Settings, Memory versus QANDEEL Understanding, appearance preference, exposure boundaries, Introduction image stages | [P1 closure](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) | its §15 precedence matrix names every earlier statement it supersedes; its §16 lists what it leaves undecided |
 | the Conversation / Analysis shell | [`docs/design/i-08b3.1-g1.1/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md`](docs/design/i-08b3.1-g1.1/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md), [`docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md`](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) | [`G2_F2_ANALYSIS_SHELL_CONTROLLED_AMENDMENT.md`](docs/design/i-08b3.1-g3/G2_F2_ANALYSIS_SHELL_CONTROLLED_AMENDMENT.md), [`T11_T12_TEMPORAL_ORIENTATION_CONTROLLED_AMENDMENT.md`](docs/design/i-08b3.1-g3/T11_T12_TEMPORAL_ORIENTATION_CONTROLLED_AMENDMENT.md), [`T11_RETURN_PRESENTATION_CONTROLLED_AMENDMENT.md`](docs/design/i-08b3.1-g2.3/T11_RETURN_PRESENTATION_CONTROLLED_AMENDMENT.md) |
 | Matching / Introductions | runtime: [`docs/matching-introduction-runtime-v1.md`](docs/matching-introduction-runtime-v1.md) (I-07). Product: [`docs/design/i-08b3.1-g2.3/QANDEEL_G2_3_CANONICAL_CLOSURE.md`](docs/design/i-08b3.1-g2.3/QANDEEL_G2_3_CANONICAL_CLOSURE.md) and G3 §D | architecture: [CW2-06](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06_INTRODUCTIONS_MATCHING_RUNTIME_ARCHITECTURE_v1.0_FROZEN.md); the artifact index's Matching table |
 | Replay | runtime: [`docs/replay-runtime-v1.md`](docs/replay-runtime-v1.md) (I-06). Placement: G1.1 closure | architecture: [CW2-05](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-05_REPLAY_RUNTIME_ARCHITECTURE_v1.0_FROZEN.md); `QAN-BL-NAV-02`; the artifact index's Replay table |
@@ -119,6 +122,7 @@ There is one primary record per closed track. Reach anything finer through that 
 | Phase V | [`docs/design/phase-v/README.md`](docs/design/phase-v/README.md) | its `ARCHIVE-MANIFEST.md` |
 | VI-01, VI-02 | [VI-01](docs/design/phase-vi/vi-01-bilingual-product-language/README.md), [VI-02](docs/design/phase-vi/vi-02-analysis-navigation-density/README.md) | their `ARCHIVE-MANIFEST.md` |
 | I-08A Product Shell / IA / Naming | [`I-08A4 closure synthesis`](docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md) | [`CANONICAL_AUTHORITY_INDEX.md`](docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md); later G1.1 / G1.2 amendments |
+| P1 User Identity / Preferences / QANDEEL Understanding | [P1 canonical closure](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) (`CLOSED / FROZEN`) | its §15 precedence matrix; [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) §2 |
 | I-08N-01 Notification / Proactive Attention | [`I-08N-01 final closure package`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md) | [`CANONICAL_AUTHORITY_INDEX.md`](docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md); G3 §D for the compatible Matching-during-call rule |
 | I-08B1 Living Analysis World | [`docs/design/canonical-artifacts/living-analysis/README.md`](docs/design/canonical-artifacts/living-analysis/README.md) | the artifact index |
 | I-08B3.1-C Living Brass | [`C3_FINAL_CLOSURE_RECORD.md`](docs/design/canonical-artifacts/living-brass/i-08b3.1-c3/docs/C3_FINAL_CLOSURE_RECORD.md) | the artifact index |
@@ -140,8 +144,10 @@ The roadmap is intentionally not duplicated here. Read
 Current sequence:
 
 1. Final Product Decision Closure:
-   - P1 User Profile / Identity / Preferences / QANDEEL Understanding;
-   - P2 Final Iconography System;
+   - P1 User Profile / Identity / Preferences / QANDEEL Understanding — **CLOSED / FROZEN**
+     ([P1 closure](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md)); production
+     implementation open;
+   - P2 Final Iconography System — **CURRENT / NEXT** Product decision-closure track, not yet opened as a Task Contract;
    - P3 Notification Final Realization;
    - P4 Remaining Product / Visual Gaps Census & Closure.
 2. QANDEEL End-to-End Product Experience Completeness Audit, including evidence-led Model / Provider selection,
@@ -175,6 +181,9 @@ historical and are not edited. Only the entry points that pointed at them were c
 | Pre-closure banners with no closure record: T-04 (`awaiting independent Architecture review`), T-12P (`CANDIDATE`), QAN-INF-05 (`CANDIDATE`) | awaiting review | none is recorded as closed. `QAN-GOV-03` reported T-04 and T-12P to Architecture rather than correct them. They are not closed and not failed; their lifecycle is not established |
 | T-03B2b3 / T-03B3 `PRODUCTION-INERT` banners | nothing wired | historical: T-03D performed the production cutover |
 | Backlog §7 prose "seven `OPEN — UNASSIGNED` items" | 7 | its own correction paragraph fixes it. The mechanically counted register holds 22 items, 9 of them `OPEN — UNASSIGNED` |
+| I-08A4 §8 / §9 `Readings` = «القراءات», `Reading` = «قراءة» | the user-facing name of the understanding surface | P1 §10 renames that surface **QANDEEL Understanding / «فهم قنديل»**. The in-Analysis peer-reading vocabulary of VI-01, G1.1 §2 and the T-08 chrome is not amended by P1 (P1 §16.2) |
+| F2 "Default appearance follows the system" (`follow-system-no-in-app-override`); the G2 / F2 Analysis-shell amendment and G3 §C.1 "Non-Analysis surfaces keep following the system appearance" and "not a user appearance override or toggle" | no in-app appearance choice | P1 §12: non-Analysis surfaces follow a Dark / Light / System preference, default Dark. The Analysis stays one dark place under every value. No token or preserved byte changed |
+| T-14 Email-only sign-in and its copy "Email or password is incorrect." | the Product sign-in | the implemented v1 gateway, still `CLOSED / FROZEN`. The final Product requirement is one `Login ID OR Email` identifier plus Password (P1 §3) |
 | Preserved proofs, boards, prototypes, assurance "remediation direction" | look like decisions | they are evidence. Only a closure record decides (§1, rule 5) |
 
 ---

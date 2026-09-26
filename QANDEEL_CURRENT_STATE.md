@@ -109,7 +109,8 @@ was added later.
 
 | Domain | Lifecycle | Primary record |
 |---|---|---|
-| I-08A — Product Shell / IA / Canonical Naming | `I-08A4 — CLOSED / CANONICAL FREEZE COMPLETE`; integrated `I-08A — CANONICAL PRODUCT SHELL / IA / NAMING FOUNDATION — FROZEN`. Later explicit G1.1 / G1.2 amendments bind where they supersede A4 naming or shell statements | [`docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md`](docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md) |
+| I-08A — Product Shell / IA / Canonical Naming | `I-08A4 — CLOSED / CANONICAL FREEZE COMPLETE`; integrated `I-08A — CANONICAL PRODUCT SHELL / IA / NAMING FOUNDATION — FROZEN`. Later explicit G1.1 / G1.2 amendments bind where they supersede A4 naming or shell statements, and so does P1 (`Readings` naming for its surface, General Settings placement) | [`docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md`](docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md) |
+| P1 — User Identity / Preferences / QANDEEL Understanding | `P1 — CLOSED / FROZEN — USER IDENTITY / PREFERENCES / QANDEEL UNDERSTANDING PRODUCT CONTRACT`. PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN. It narrowly amends I-08A4 naming, the F2 / G2 / G3 non-Analysis appearance rule and the T-14 final sign-in requirement (its §15) | [`docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md`](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) |
 | I-08N-01 — Notification & Proactive Attention Product Contract | `CLOSED / NOTIFICATION & PROACTIVE ATTENTION PRODUCT CONTRACT FROZEN`. This is Product behavior / attention policy, not a production notification runtime | [`docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md) |
 | Phase V — Visual Language Discovery | `CLOSED` — `FREEZE WITH EXPLICIT OPEN ITEMS`, in the archive's own words | [`docs/design/phase-v/README.md`](docs/design/phase-v/README.md) |
 | Phase VI: VI-01, VI-02 | each `CLOSED / FROZEN` as its archive states. VI-01 naming was amended by G1.1 | [`docs/design/phase-vi/`](docs/design/phase-vi/) |
@@ -145,16 +146,16 @@ production implementation. The table keeps three things apart:
 | Product shell / Global navigation / first use | I-08A4 freezes the Personal-centered App Shell, three-area Global Switcher, local-only Back, Direct Entry, bilingual Product language and first-use foundation; later G1.1 / G1.2 naming amendments bind | no complete production Global Shell implementing the I-08A contract is established on `main`; current mobile composition is the T-series / T-12 shell | production realization of the frozen I-08A shell while preserving later amendments |
 | Living Analysis Map (Personal World) | Stages 0–6 and the T-series contracts | the mobile client in `apps/mobile/src/`: world projection, camera, Timeline, temporal navigation, Return, chrome, motion, responsive composition, recovery and sign-in. **The Map's paint is still the neutral grey structural placeholder** (T-12 §12) | the I-08B1 world is not ported: G3 §F records "no Skia / Reanimated port of the world". `QAN-BL-VIS-01` |
 | Visual system (Living Brass, Light, typography, surfaces, colour, accessibility, appearance, brand) | the frozen I-08B design canon (§3.5) | none. No commit after T-14's merge (`615e586f`) changes `apps/mobile/` | the whole production port |
-| Conversation / Analysis shell | G1.1; G3 Decisions A and B; the G2.3 and G3 controlled amendments to T-11 / T-12 | the T-12 app-root composition | G3 §F lists these as unimplemented: the Analysis shell, the appearance cross-fade, the temporal-line placement and yield rule, compact `ReturnControls`, and device certification |
+| Conversation / Analysis shell | G1.1; G3 Decisions A and B; the G2.3 and G3 controlled amendments to T-11 / T-12; P1 §12, under which non-Analysis surfaces follow the user's Dark / Light / System preference (default Dark) while the Analysis stays one dark place | the T-12 app-root composition | G3 §F lists these as unimplemented: the Analysis shell, the appearance cross-fade, the temporal-line placement and yield rule, compact `ReturnControls`, and device certification. The P1 appearance preference is unimplemented too |
 | Shared World, Public World | CW2-01 … CW2-04; I-04, I-05 | the database runtime (migrations 0075–0099) and server modules in `apps/api/src/connected-worlds/` | no authenticated Product routes and no mobile surfaces. Launch prerequisites fail closed |
 | Matching / Introductions | CW2-06; the G2.3 copy and process; the G3 §D Live-Call rule | the I-07 database runtime (0108–0118, 0120) | the mobile Matching UI, the final Introduction screen and the navigation surfaces, owned by Connected Worlds `I-08`. G3 §G holds the `OPEN COPY` items |
 | Replay | CW2-05; the G1.1 placement ("an action on the current Conversation / Analysis context") | the I-06 backend runtime (0100–0107) | the Product Replay surface (`QAN-BL-NAV-02`). No media, storage or transport. Distribution is `NOT CLEARED / FAIL-CLOSED` |
 | Voice / Live Call | G1.2 | none | all of it (`QAN-BL-VOICE-01`) |
-| User Profile / Identity / Preferences / QANDEEL Understanding | no integrated canonical Product contract currently defines the complete Profile model or its separation from Memory / derived Understanding. Existing frozen records define adjacent authority, naming, Memory placement and World boundaries | NOT ESTABLISHED BY CURRENT REPOSITORY AUTHORITY as a complete Product surface/model | the roadmap's immediate next Product track (P1); no Task Contract is open yet |
-| Final iconography | G1.2 explicitly says its current small icons/glyphs are proof-only and that the final iconography system is not frozen | no final iconography system is established as production authority | roadmap P2 |
+| User Identity / Preferences / QANDEEL Understanding | P1 (`CLOSED / FROZEN`): one account identity with context-scoped projections; private Login ID, verified Email, Name, Shared ID and Public ID; no traditional Profile page; one General Settings destination; Memory versus «فهم قنديل / QANDEEL Understanding»; the exposure matrix; the Dark / Light / System preference (default Dark, Analysis always dark); the Shared-ID reachability law; three-stage Introduction image disclosure | none of it. No Login ID, Shared-ID surface, Public ID policy, General Settings, sign-up, Understanding surface or appearance preference exists in production code | the whole production implementation, and the items P1 §16 leaves undecided |
+| Final iconography | G1.2 explicitly says its current small icons/glyphs are proof-only and that the final iconography system is not frozen | no final iconography system is established as production authority | roadmap P2, the current / next Product decision-closure track; no Task Contract is open yet |
 | Notifications / proactive attention | I-08N-01 freezes the Product gate, attention budgets, interruption classes, privacy/disclosure contract, Direct Entry constraints and user controls | no production notification runtime / transport is established on `main` | P3 closes the remaining Product realization; implementation mechanism, platform code, numeric thresholds and final UI are not frozen by N-01 itself |
 | Plans / Credits / Usage Economy | CW2-08 freezes only the high-level law: entitlement restricts actions rather than ownership, and Credits are resource/compute availability only and never alter consent/ownership/truth | no complete plan/credit/billing Product system is established on `main` | roadmap places the Product economy work alongside the End-to-End audit, using provider/workload evidence; no formula or pricing is frozen |
-| Sign-in / auth | T-12P, T-14 | implemented | `QAN-BL-SEC-01`. T-14 recorded sign-up, password reset and onboarding, among others, as anti-scope (backlog §7) |
+| Sign-in / auth | T-12P, T-14; P1 §3 now sets the final Product requirement: one `Login ID OR Email` identifier plus Password, with generic failure wording | T-14 is implemented and Email-only | the Login ID route, sign-up and the rest of the account lifecycle; `QAN-BL-SEC-01`. T-14 recorded sign-up, password reset and onboarding, among others, as anti-scope (backlog §7) |
 
 ---
 
@@ -227,8 +228,10 @@ The current roadmap phase is:
 
 Ordered Product tracks:
 
-1. **P1 — User Profile / Identity / Preferences / QANDEEL Understanding**
-2. **P2 — Final Iconography System**
+1. **P1 — User Profile / Identity / Preferences / QANDEEL Understanding** — `CLOSED / FROZEN` by
+   [`docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md`](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md).
+   Production implementation remains open.
+2. **P2 — Final Iconography System** — the current / next Product decision-closure track.
 3. **P3 — Notification Final Realization**
 4. **P4 — Remaining Product / Visual Gaps Census & Closure**
 
@@ -240,8 +243,9 @@ That phase also carries the evidence-led QANDEEL Model / Provider benchmark and 
 Usage Economy work, and the complete account/authentication lifecycle review. Production Integration follows the
 audit and its resulting closures; Release Hardening / Launch comes after production integration.
 
-**Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1 is the
-next Product discussion/work track, but no P1 Task Contract exists yet.
+**Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1 is closed
+as a Product contract and implements nothing. P2 is the immediate Product decision-closure track, and no P2 Task
+Contract exists yet.
 
 The canonical backlog remains separate: backlog entries are not self-executing, and severity does not order them.
 
