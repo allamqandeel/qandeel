@@ -1,0 +1,109 @@
+{
+ "method": "For each capture, the three rail glyph boxes (page-measured, 24 × 24 pt at 2×) are decoded. \"brassBodyPx\" = pixels painted with the Living Brass body itself (#a58e6f, each channel ±3): the fully covered pixels of the glyph, which no ground can change. \"chromatic\" = channel spread > 12 (body + its anti-aliased edge, which blends with whatever ground is under it). Exact equality compares every RGB byte of the glyph box against REST (nav-mine-ar, only «قنديل» selected).",
+ "states": {
+  "nav-mine-ar": {
+   "what": "REST · «قنديل» selected",
+   "glyphs": [
+    {
+     "item": "mine",
+     "brassBodyPx": 224,
+     "chromaticPx": 379,
+     "sha256": "157c725c62d65351",
+     "identicalToRest": true
+    },
+    {
+     "item": "shared",
+     "brassBodyPx": 252,
+     "chromaticPx": 418,
+     "sha256": "183cc431fe848952",
+     "identicalToRest": true
+    },
+    {
+     "item": "public",
+     "brassBodyPx": 202,
+     "chromaticPx": 343,
+     "sha256": "fcfba721bdcbe62d",
+     "identicalToRest": true
+    }
+   ]
+  },
+  "nav-shared-ar": {
+   "what": "selection moved to «العالم المشترك»",
+   "glyphs": [
+    {
+     "item": "mine",
+     "brassBodyPx": 224,
+     "chromaticPx": 379,
+     "sha256": "157c725c62d65351",
+     "identicalToRest": true
+    },
+    {
+     "item": "shared",
+     "brassBodyPx": 252,
+     "chromaticPx": 418,
+     "sha256": "183cc431fe848952",
+     "identicalToRest": true
+    },
+    {
+     "item": "public",
+     "brassBodyPx": 202,
+     "chromaticPx": 343,
+     "sha256": "fcfba721bdcbe62d",
+     "identicalToRest": true
+    }
+   ]
+  },
+  "nav-focus-ar": {
+   "what": "keyboard FOCUS on «العالم المشترك»",
+   "glyphs": [
+    {
+     "item": "mine",
+     "brassBodyPx": 224,
+     "chromaticPx": 379,
+     "sha256": "157c725c62d65351",
+     "identicalToRest": true
+    },
+    {
+     "item": "shared",
+     "brassBodyPx": 252,
+     "chromaticPx": 418,
+     "sha256": "183cc431fe848952",
+     "identicalToRest": true
+    },
+    {
+     "item": "public",
+     "brassBodyPx": 202,
+     "chromaticPx": 343,
+     "sha256": "fcfba721bdcbe62d",
+     "identicalToRest": true
+    }
+   ]
+  },
+  "nav-press-ar": {
+   "what": "PRESSED «العالم العام»",
+   "glyphs": [
+    {
+     "item": "mine",
+     "brassBodyPx": 224,
+     "chromaticPx": 379,
+     "sha256": "157c725c62d65351",
+     "identicalToRest": true
+    },
+    {
+     "item": "shared",
+     "brassBodyPx": 252,
+     "chromaticPx": 418,
+     "sha256": "183cc431fe848952",
+     "identicalToRest": true
+    },
+    {
+     "item": "public",
+     "brassBodyPx": 202,
+     "chromaticPx": 344,
+     "sha256": "651a17a632b1d61a",
+     "identicalToRest": false
+    }
+   ]
+  }
+ }
+}

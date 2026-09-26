@@ -1,0 +1,196 @@
+{
+ "generated": "tools/p2checks.mjs",
+ "prototypeSha256": "03c2d9ce1d7dcd3a7585d600ac45fbfd7780528f291d6ef20d185cecc18b5155",
+ "pass": 24,
+ "total": 24,
+ "plantedDefects": {
+  "total": 8,
+  "rejected": 8
+ },
+ "results": [
+  {
+   "id": "K01",
+   "title": "Scope: only the P2-A package changed; no production code, dependency or lifecycle file",
+   "pass": true,
+   "detail": "161 changed/new paths, all under docs/design/p2-iconography/; apps/, packages/, database/, package manifests, the backlog and the locators are untouched (base 209ca72691)"
+  },
+  {
+   "id": "K02",
+   "title": "The prototype rebuilds byte-identically from source/ and pins the canonical world",
+   "pass": true,
+   "detail": "two builds → 03c2d9ce1d7dcd3a… and 03c2d9ce1d7dcd3a…; the world pin 4DFD9D27… is enforced by the build and carried in the page"
+  },
+  {
+   "id": "K03",
+   "title": "Living Brass only on the persistent navigation family (C3 §2)",
+   "pass": true,
+   "detail": "var(--brass) appears only on #rail .ic and #rail .lb (the persistent navigation family); no call, timeline, focus, selection or status selector uses it",
+   "plantedDefect": {
+    "what": "End Call painted in Brass",
+    "rejected": true,
+    "detail": "Brass outside the navigation family: #end-call"
+   }
+  },
+  {
+   "id": "K04",
+   "title": "Call Rail and Timeline are neutral: no Brass, no error ink, no new colour (C3 §2B; E1R error is retrospective)",
+   "pass": true,
+   "detail": "27 Call Rail / Timeline rules use only neutral tokens (rest, primary, tertiary); End Call is primary ink; the rail art is tertiary; no Brass, no error ink, no literal colour",
+   "plantedDefect": {
+    "what": "a red End Call",
+    "rejected": true,
+    "detail": "non-neutral: #end-call"
+   }
+  },
+  {
+   "id": "K05",
+   "title": "No fake waveform: nothing draws a simulated audio level",
+   "pass": true,
+   "detail": "drawTrace() draws only the flat line and nothing samples a simulated level; the trace is display:none during a call; the spine draws only Moments that exist",
+   "plantedDefect": {
+    "what": "the G3.2 simulated level restored",
+    "rejected": true,
+    "detail": "drawTrace flat=false hiddenInCall=true"
+   }
+  },
+  {
+   "id": "K06",
+   "title": "Every committed Moment keeps the 48-pt ordinal step (T-05), measured in every Analysis capture",
+   "pass": true,
+   "detail": "280 adjacent Moment pairs measured, every one exactly 48.00 pt apart (G3.2 drew 16 pt; restored)",
+   "plantedDefect": {
+    "what": "a 16-pt pitch (the G3.2 proof value)",
+    "rejected": true,
+    "detail": "a 16-pt pair is rejected by the same comparison"
+   }
+  },
+  {
+   "id": "K07",
+   "title": "The Timeline's interaction band stays 44 pt high (T-05 rail) at every size",
+   "pass": true,
+   "detail": "48 Analysis captures (320, 390, 430 pt; AR / EN; Light / Dark; RM): band = 44 pt in all; the visible spine is a 1-pt hairline inside it"
+  },
+  {
+   "id": "K08",
+   "title": "Every control target is ≥ 44 pt on both axes",
+   "pass": true,
+   "detail": "every button in every capture ≥ 44 × 44 pt (Call Rail 44 × 44; nav items 56 pt high; Return Live 60 pt; the Track band 44 pt)"
+  },
+  {
+   "id": "K09",
+   "title": "Every Moment in view is reachable on the Track; the Live act never covers it (F-P2-02; T-11 §6)",
+   "pass": true,
+   "detail": "328 Moment positions hit-tested at the band's centre: every one lands on the Track (G3.2's act box had covered the Track's end)"
+  },
+  {
+   "id": "K10",
+   "title": "The Live edge is a TERMINAL outside the Track, never a Moment; PINNED(LH) is not Live (T-06)",
+   "pass": true,
+   "detail": "terminal box disjoint from the Track in every Analysis capture; PINNED(17 = LH): the aperture opens on SP17 while the terminal stays AVAILABLE (term 0) and Return Live is offered at the Live edge"
+  },
+  {
+   "id": "K11",
+   "title": "Direct manipulation is 1:1: the preview aperture is under the finger in every held frame (T-06, T-10 M0)",
+   "pass": true,
+   "detail": "standard: 57 held frames, max |finger − aperture| = 0.04 pt; Reduced Motion: 57 frames, max 0.04 pt (no easing under the hand)",
+   "plantedDefect": {
+    "what": "an aperture lagging the finger by 6 pt",
+    "rejected": true,
+    "detail": "rejected by the same bound"
+   }
+  },
+  {
+   "id": "K12",
+   "title": "Release: retarget to the Moment in ≤ 140 ms + one settle; Reduced Motion: 0 ms and no settle (T-06 M1/M2)",
+   "pass": true,
+   "detail": "standard: released 15.0 pt off-centre, on its Moment after 133 ms, settle peak 0.84; RM: on its Moment in the first PINNED frame, settle 0"
+  },
+  {
+   "id": "K13",
+   "title": "No pulse, no loop: a still state stays still (10 s PINNED during a live call)",
+   "pass": true,
+   "detail": "307 frames: aperture, terminal, settle, window and preview values constant — no semantic pulse, no breathing Live, no decorative loop"
+  },
+  {
+   "id": "K14",
+   "title": "Return Live closes the aperture IN PLACE and engages the terminal; Reduced Motion cuts (T-06, T-10)",
+   "pass": true,
+   "detail": "aperture x constant (168 pt) while it closes; closed 133 ms after the act, terminal engaged by 100 ms; RM: the aperture is gone in the first Live frame"
+  },
+  {
+   "id": "K15",
+   "title": "Cancel commits nothing: stance and committed Moment unchanged; the preview leaves (T-06)",
+   "pass": true,
+   "detail": "stance throughout: PINNED14; a preview existed; at the end PTC = null and the preview mark is gone"
+  },
+  {
+   "id": "K16",
+   "title": "A new Moment while PINNED: a new notch, no movement of the aperture or the window (T-06)",
+   "pass": true,
+   "detail": "LH 16 → 17; aperture x and window offset unchanged"
+  },
+  {
+   "id": "K17",
+   "title": "The Analysis composition is unchanged: Timeline row 88 pt, call line 64 pt, world floor ≥ 160 pt",
+   "pass": true,
+   "detail": "every Analysis capture keeps G3.2's heights (the K14 world-floor evidence therefore stands); 320 × 568 in a call, PINNED: usable 319 pt, floor 160 pt"
+  },
+  {
+   "id": "K18",
+   "title": "Brass material is invariant across navigation states (C3 §6), measured in pixels",
+   "pass": true,
+   "detail": "selection moved: glyph pixels byte-identical true; focus: identical true; pressed: the Brass body is unchanged true (224/252/202 body px; REST 224/252/202)"
+  },
+  {
+   "id": "K19",
+   "title": "Glyphs are decorative; every control is named (fixing-accessibility §1)",
+   "pass": true,
+   "detail": "16 glyphs inside controls, every one aria-hidden=\"true\" focusable=\"false\"; the control carries the name; every focusable control in every capture has an accessible name",
+   "plantedDefect": {
+    "what": "the mic glyph exposed without a name",
+    "rejected": true,
+    "detail": "1 glyph(s) inside a control are exposed to assistive technology"
+   }
+  },
+  {
+   "id": "K20",
+   "title": "Direction by meaning: never-mirrored glyphs, a mirrored chevron, logical Track (SP1 at the start edge)",
+   "pass": true,
+   "detail": "never mirrored (media / call / world / send): none carries .mirror; back chevron mirrors by meaning: true; the Call Rail's layout art mirrors under RTL: true; the Track runs SP1 → Live from the START edge (right in Arabic, left in English) in every capture: true",
+   "plantedDefect": {
+    "what": "the microphone mirrored under RTL",
+    "rejected": true,
+    "detail": "never mirrored (media / call / world / send): VIOLATED by mute; back chevron mirrors by meaning: true; the Call Rail's layout art mirrors under RTL: true"
+   }
+  },
+  {
+   "id": "K21",
+   "title": "Toggle state is form, not colour alone (Mute, Route)",
+   "pass": true,
+   "detail": "Mute = a slash plus a negative-space cut through the microphone (mask); Route = body fill + outer wave; both are aria-pressed toggles — state is FORM, never colour alone",
+   "plantedDefect": {
+    "what": "mute shown only by a colour change (slash removed)",
+    "rejected": true,
+    "detail": "toggle state is not carried by form"
+   }
+  },
+  {
+   "id": "K22",
+   "title": "Reduced Motion keeps the same truth (F1: an accessibility setting changes representation and nothing else)",
+   "pass": true,
+   "detail": "same stance, same Moment, same offered acts, same line, same controls under Reduced Motion"
+  },
+  {
+   "id": "K23",
+   "title": "Every motion clip decodes back to its exact frame count",
+   "pass": true,
+   "detail": "10 clips; M01-mic-mute-unmute 73/73, M01r-mic-mute-unmute-reduced-motion 73/73, M02-route-toggle 73/73, M03-press-mute-route-end 91/91, M04-scrub-commit 97/97, M04r-scrub-commit-reduced-motion 97/97, M05-preview-cancel 67/67, M06-return-live 67/67, M06r-return-live-reduced-motion 67/67, M07-new-moment-while-pinned 307/307"
+  },
+  {
+   "id": "K24",
+   "title": "P2 is not claimed closed: no file in the package states P2 as CLOSED / FROZEN",
+   "pass": true,
+   "detail": "34 package files read: every mention of P2 with CLOSED / FROZEN is a negation or names the later P2-B"
+  }
+ ]
+}

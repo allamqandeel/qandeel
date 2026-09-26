@@ -1,0 +1,811 @@
+{
+ "package": "QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF",
+ "status": "P2-A — VISUAL PROOF / DECISION GATE — RECOMMENDED FOR PRODUCT OWNER REVIEW — NOT FROZEN (P2 is not closed)",
+ "prototypeSha256": "03c2d9ce1d7dcd3a7585d600ac45fbfd7780528f291d6ef20d185cecc18b5155",
+ "rebuiltByteIdentical": true,
+ "counts": {
+  "files": 159,
+  "boards": 15,
+  "motionClips": 10,
+  "captures": 11,
+  "docs": 10
+ },
+ "totalBytes": 33435396,
+ "entries": [
+  {
+   "path": "P2_READ_FIRST.md",
+   "bytes": 3715,
+   "sha256": "8f876c0f1f7d5dbc78d2d4def8065435178859464098f43c5eb84daec8836d34"
+  },
+  {
+   "path": "boards/01-signature-family.png",
+   "bytes": 223247,
+   "sha256": "e2d472880d4ea7d3763a3cea70222e0b7c4bc4b7d8f4f8ede200036875a57dba"
+  },
+  {
+   "path": "boards/02-utility-library-comparison.png",
+   "bytes": 150843,
+   "sha256": "217f2acabf4d9e82b5cb1d7b5aa7b92f7416759d32d04b7daa9560a8cdab3121"
+  },
+  {
+   "path": "boards/03-navigation-material-state.png",
+   "bytes": 182538,
+   "sha256": "14a46b56bb5bfa742217de9dc362fa050bc3251f7800074690836fbb6c1a47b0"
+  },
+  {
+   "path": "boards/04-call-rail-variants.png",
+   "bytes": 374236,
+   "sha256": "77b14cb6a0370781336ab7375f9c71e5c94fce7967c376e6e1a3c23b4b18a8eb"
+  },
+  {
+   "path": "boards/05-call-rail-recommended.png",
+   "bytes": 640001,
+   "sha256": "3fcb9f5f5ae422c6663e3116881cc0e75216c6a0c70147d722f0efcc0b89b598"
+  },
+  {
+   "path": "boards/06-temporal-spine-variants.png",
+   "bytes": 689872,
+   "sha256": "5066c20f97e838b03a19b3682a7241ce446fe0d1fc0c6610b48e291e869213d7"
+  },
+  {
+   "path": "boards/07-temporal-spine-recommended.png",
+   "bytes": 541101,
+   "sha256": "ca334d01d894820aa1bacf5de6be71dc297cf3bb8f11191b4d7a00b9cbf4961a"
+  },
+  {
+   "path": "boards/08-arabic-rtl.png",
+   "bytes": 720245,
+   "sha256": "f0602d91716e2e6d28ba620450edda0d8f97edfe3595a9d51b71187ebeacf164"
+  },
+  {
+   "path": "boards/09-english-ltr.png",
+   "bytes": 712755,
+   "sha256": "3aee4a8c651edc6446b1d11c61c2df7c553b9ee7f9e22a31cf2949948f7e2d12"
+  },
+  {
+   "path": "boards/10-legibility-16-20-24.png",
+   "bytes": 136342,
+   "sha256": "7ff373c260792aa0a1fbe610cf6ef4989908c402cff3b8a1906205fb90560cd3"
+  },
+  {
+   "path": "boards/11-state-board.png",
+   "bytes": 271967,
+   "sha256": "8a47f80b147981bc32a6748cf5a5aa097f71f033fa53ff4904d6698bd4a66f04"
+  },
+  {
+   "path": "boards/12-dark-light.png",
+   "bytes": 475731,
+   "sha256": "58b67fea48d5c03b5f34f1edef466e1a23f363913ce930d93b85a3e5a196e117"
+  },
+  {
+   "path": "boards/13-stress-320x568.png",
+   "bytes": 389821,
+   "sha256": "7ad07bf2c52208a78e90b66a9fa5fd22283d003d5105fa5f24b7c3328b511802"
+  },
+  {
+   "path": "boards/14-sizes-390-430.png",
+   "bytes": 899680,
+   "sha256": "cb4e2edbe4ba6e410f187cb9f74c955116b9b3a67ec6bf9ea64667322c838b02"
+  },
+  {
+   "path": "boards/15-accessibility-reduced-motion.png",
+   "bytes": 1250321,
+   "sha256": "deb2a675a3ed904c5e2c072cbc8cad05ff1b8cff5c9430c81f31a373435be673"
+  },
+  {
+   "path": "captures/en-call-pinned.png",
+   "bytes": 1243812,
+   "sha256": "ffa043d6db0baa36c127c0d4c228c9ecc76e6e17fc343649e7d6c973de7e8955"
+  },
+  {
+   "path": "captures/light-conv-call-ar.png",
+   "bytes": 147554,
+   "sha256": "3e1bdfa21250b2339f2e2c18498dffb4077125abe13e45d6e3fb5aef8d821aa1"
+  },
+  {
+   "path": "captures/rec-call-live.png",
+   "bytes": 1092595,
+   "sha256": "b342eec5449b5ee6b5b06f41c3688d353e4ea17c3d58f75eda8756078fd4c163"
+  },
+  {
+   "path": "captures/rec-call-pinned.png",
+   "bytes": 1268188,
+   "sha256": "f9c45b8f424b6757bb7f194e4a7fcfc85efadaa13651ab10010802d2fc6cea99"
+  },
+  {
+   "path": "captures/rec-conv-call.png",
+   "bytes": 142576,
+   "sha256": "fe5efea642bcaffdf7806fd11750ac6e73eed7fe6b83558716c9c03c1b87b6f5"
+  },
+  {
+   "path": "captures/rec-follow.png",
+   "bytes": 1408389,
+   "sha256": "53e025e937ee4cc08ad0874864ae18d341188f2141363e92163604063bb92329"
+  },
+  {
+   "path": "captures/rec-pinned14.png",
+   "bytes": 1384327,
+   "sha256": "844e21e2785136155fe29eb8019f3e9612b6afe199b7ab41f10d7b9c01dd56a9"
+  },
+  {
+   "path": "captures/rec-pinnedLH.png",
+   "bytes": 1387451,
+   "sha256": "9f1fba2ae1c8fff6e75ebfab67ed9799544ec50600b6800a3097c298dcda8f67"
+  },
+  {
+   "path": "captures/rec-returnlive.png",
+   "bytes": 1410343,
+   "sha256": "aa41c39dde787c1a572202063f2aca5ae5ad66f3aff770121b4aad12b8499c38"
+  },
+  {
+   "path": "captures/rec-scrub.png",
+   "bytes": 1395242,
+   "sha256": "3be6b135ecdbf01d107f51747a961be74897ab2796d0c5ccb0f2a0f9987c9b4c"
+  },
+  {
+   "path": "captures/s320-call-pinned-ar.png",
+   "bytes": 546695,
+   "sha256": "ee4680921ca90a2f7139744c888321bf1338616b8eabf92d84144354726b817c"
+  },
+  {
+   "path": "data/BOARDS.json",
+   "bytes": 6215,
+   "sha256": "3adf3657833ae8c9dd56d7e2cd167706a8f47a2763e4cb32bff156f036197b98"
+  },
+  {
+   "path": "data/CHECKS.json",
+   "bytes": 8957,
+   "sha256": "060bf275e1db00b88f160ae78d3ea1bcb01ca34a289b1051527f63bb3b43f04a"
+  },
+  {
+   "path": "data/NAV_MATERIAL.json",
+   "bytes": 2712,
+   "sha256": "75d3edf4f74bd0115dd8f6d90bd669382642ab6c828fb8d14c14de432a3604db"
+  },
+  {
+   "path": "data/SHOTS.json",
+   "bytes": 340371,
+   "sha256": "62d048b213c0fc5d5b1efbbd6fe9404ec32226547eb052e9cac06343c3d29a13"
+  },
+  {
+   "path": "data/motion/M01-mic-mute-unmute.truth.json",
+   "bytes": 29539,
+   "sha256": "638c9fcc02478adefbe3fa9dfe22c69b5188a6de254d992efc83eee47fcf9641"
+  },
+  {
+   "path": "data/motion/M01r-mic-mute-unmute-reduced-motion.truth.json",
+   "bytes": 29556,
+   "sha256": "baa3088b00bf119ed9d14c88acada8cd94421aa1bd335c073959b0c9fd566f3c"
+  },
+  {
+   "path": "data/motion/M02-route-toggle.truth.json",
+   "bytes": 29573,
+   "sha256": "63c94ca4d3935880e4c7a7eb2ee5fd1398be677edc9138968564a6afd04f5232"
+  },
+  {
+   "path": "data/motion/M03-press-mute-route-end.truth.json",
+   "bytes": 37925,
+   "sha256": "a86034d9d850b74fa104f5bb251898206b5a84dfa482e8e44a83e8b264787fd6"
+  },
+  {
+   "path": "data/motion/M04-scrub-commit.truth.json",
+   "bytes": 41513,
+   "sha256": "a7203424c0dcf94db5ed0889d6c84e0a07ab58ef03fb93720dce81e3ada2d9cb"
+  },
+  {
+   "path": "data/motion/M04r-scrub-commit-reduced-motion.truth.json",
+   "bytes": 41437,
+   "sha256": "811cc1921fc184a8a1813326e06587d4fa17344c638af382985c9092d2b58717"
+  },
+  {
+   "path": "data/motion/M05-preview-cancel.truth.json",
+   "bytes": 26771,
+   "sha256": "f1353c764d5692ca5704d23bfd2044b3b101f626d3011f21e7dfa0db125a4c73"
+  },
+  {
+   "path": "data/motion/M06-return-live.truth.json",
+   "bytes": 26685,
+   "sha256": "a96d46a215a640b68c2ecba096da75034709193f5c2eb024cc0aaeebb8bdb84c"
+  },
+  {
+   "path": "data/motion/M06r-return-live-reduced-motion.truth.json",
+   "bytes": 26659,
+   "sha256": "1527e3514637ce3cfb00dc7be35a3c36d87475d8849bc0eee33487ef651b4b63"
+  },
+  {
+   "path": "data/motion/M07-new-moment-while-pinned.truth.json",
+   "bytes": 118048,
+   "sha256": "95f204f6517a937f8460ed852b8c7e4e6d523e811f60b44954c4020812553e93"
+  },
+  {
+   "path": "docs/P2_AUTHORITY_AND_SCOPE.md",
+   "bytes": 5987,
+   "sha256": "d7214980a3ce730c28278f457665d51b7c5c4b1f815eef5ee542324eeed0856e"
+  },
+  {
+   "path": "docs/P2_CALL_RAIL_PROOF.md",
+   "bytes": 6344,
+   "sha256": "df660d01a9181ade5ae0b00ef3b135f74535c2246f987e21108b5ff3010b5196"
+  },
+  {
+   "path": "docs/P2_ICON_GEOMETRY_SPEC.md",
+   "bytes": 7561,
+   "sha256": "6937375e9fa7aa3cf2cf206cfb0981239b089e416cb9e43e57d21eccb3f000b3"
+  },
+  {
+   "path": "docs/P2_ICON_INVENTORY_AND_OWNERSHIP.md",
+   "bytes": 12236,
+   "sha256": "4398ff56df78fd1fc6d095652c9d8b723b6a64ea747398e70f628700119f3431"
+  },
+  {
+   "path": "docs/P2_IMPLEMENTATION_FEASIBILITY.md",
+   "bytes": 5712,
+   "sha256": "0e83951b877bec30928fb7dd749fe983cfbaf0580b45e804c2530250c4d45eb0"
+  },
+  {
+   "path": "docs/P2_PRODUCT_PROOF_REPORT.md",
+   "bytes": 9128,
+   "sha256": "a28abb6dda97d3b4a2f6b39c742c87ec83626763da5826c3612de20f8052074c"
+  },
+  {
+   "path": "docs/P2_REFERENCE_GATE.md",
+   "bytes": 11244,
+   "sha256": "876c90868a9334235c28c3d96fbb0b504dfcb26f3d49c2683f5dbc83b38f3e56"
+  },
+  {
+   "path": "docs/P2_STATE_MOTION_ACCESSIBILITY.md",
+   "bytes": 6438,
+   "sha256": "79a5cedd86d6ac656b2a073c1a188215ee48cfc84bdd368e06e7b04554884377"
+  },
+  {
+   "path": "docs/P2_TEMPORAL_SPINE_APERTURE_PROOF.md",
+   "bytes": 7441,
+   "sha256": "1338f87fc264c7a317231ef1a75451627e9de71ccc007a5caf329c9521f69304"
+  },
+  {
+   "path": "docs/P2_UTILITY_LIBRARY_COMPARISON.md",
+   "bytes": 5352,
+   "sha256": "ed5b692b83067e93636552d4ee5f402b744c9b53d025a07934495ee5b91d35b1"
+  },
+  {
+   "path": "motion/M01-mic-mute-unmute.mp4",
+   "bytes": 515331,
+   "sha256": "91f6b2d99b3af6389fc66ee3333f6f58d3b85579581ca74212e279d8a36ad32a"
+  },
+  {
+   "path": "motion/M01r-mic-mute-unmute-reduced-motion.mp4",
+   "bytes": 515331,
+   "sha256": "d2da90e3f4b3ff35e1ec3b0438a9f1bc10773b0e403d652956ec11bd09381b70"
+  },
+  {
+   "path": "motion/M02-route-toggle.mp4",
+   "bytes": 514583,
+   "sha256": "e7f8e671409f8e296e1811fd89d44a0632a413dc00f61b4c2f3de4b444844501"
+  },
+  {
+   "path": "motion/M03-press-mute-route-end.mp4",
+   "bytes": 758409,
+   "sha256": "6e9c0afcdcce6abd270941f3ad40446f20d6432e1c76f81a48d4ee4b8a8a9906"
+  },
+  {
+   "path": "motion/M04-scrub-commit.mp4",
+   "bytes": 1211284,
+   "sha256": "1bb6156d18ab0bab57c556b2d00ef4330e3cb34d05ba03c92e103e562e672548"
+  },
+  {
+   "path": "motion/M04r-scrub-commit-reduced-motion.mp4",
+   "bytes": 1199691,
+   "sha256": "0644ccc8b3f9bdd993ee03bbda3d3f8c7ae9615e8cb665bf21263f9d3ec6ee60"
+  },
+  {
+   "path": "motion/M05-preview-cancel.mp4",
+   "bytes": 875756,
+   "sha256": "4160972eabb946615d594e5c789041aca0390d69090ff78110dca2fbba6009f9"
+  },
+  {
+   "path": "motion/M06-return-live.mp4",
+   "bytes": 854895,
+   "sha256": "7708f334795cf0988519ec146b5b4b920949555ec879331617d4861fbd446898"
+  },
+  {
+   "path": "motion/M06r-return-live-reduced-motion.mp4",
+   "bytes": 843899,
+   "sha256": "f91c33e081ab825686d90cec14db6b90083cd139660460ccc5da6a4012fe26d1"
+  },
+  {
+   "path": "motion/M07-new-moment-while-pinned.mp4",
+   "bytes": 2989683,
+   "sha256": "059193270d5f66163209e53d859b36baeae7a96fa568d3ff1072e90d7392bd4c"
+  },
+  {
+   "path": "prototype/index.html",
+   "bytes": 1378654,
+   "sha256": "03c2d9ce1d7dcd3a7585d600ac45fbfd7780528f291d6ef20d185cecc18b5155"
+  },
+  {
+   "path": "source/REGENERATE.md",
+   "bytes": 1851,
+   "sha256": "a2309774cb347d9fbe027e6e96d9874b03711533a977b9f2c333073ca088f102"
+  },
+  {
+   "path": "source/src/app.js",
+   "bytes": 100536,
+   "sha256": "bcbd688ccb0bc23a3b2c8800065e462633e67328e1e454aa0a61d73bc8111edd"
+  },
+  {
+   "path": "source/src/bidi.js",
+   "bytes": 1534,
+   "sha256": "40f8033a3031f3327e2e0674b64a8a72366d32a744086e87a9c6d4388ef608b5"
+  },
+  {
+   "path": "source/src/bridge.js",
+   "bytes": 9025,
+   "sha256": "2846017daa93803def4c5ceec86f7a1831ca5c27a49914b6c6182deb5f3396db"
+  },
+  {
+   "path": "source/src/build.mjs",
+   "bytes": 48141,
+   "sha256": "7fcf83b2f0143d87f20e17db57ac100f5d4df07d00dbdfc364ba56ccb83e1cd1"
+  },
+  {
+   "path": "source/src/content.mjs",
+   "bytes": 20259,
+   "sha256": "32a62b318bd4edcd9b70de48fc66c506d680d1b1afc546e96db28cae808bb618"
+  },
+  {
+   "path": "source/src/glyphs.mjs",
+   "bytes": 8970,
+   "sha256": "2290e460d5fd0046b81675d2f04c96a678e68f3da03f3fa15ceb72759343940e"
+  },
+  {
+   "path": "source/src/machines.mjs",
+   "bytes": 4342,
+   "sha256": "e4b3cedb078308be0626f202c8464b004e090c016f94d52e0a0a6ebe0fe4e4f1"
+  },
+  {
+   "path": "source/src/sig.mjs",
+   "bytes": 11160,
+   "sha256": "960ecd84edd75da91ee6a7c391504bb0ee4f15b92c8bea120847289caca4dde2"
+  },
+  {
+   "path": "source/src/tokens.mjs",
+   "bytes": 6737,
+   "sha256": "435f4dafa44be9045b07669bdb485385b7d51b07ea08713031b2b94a6de21911"
+  },
+  {
+   "path": "source/src/utility.mjs",
+   "bytes": 3228,
+   "sha256": "5ab7bad45019e33d85f455b9c3f19e403aaf1d591a8ebee344182ab3017c5df9"
+  },
+  {
+   "path": "source/tools/lib/cdp.mjs",
+   "bytes": 7530,
+   "sha256": "ab4d7523f98bcdfe0e68be1596bf889f005706f552a78b6e281d0d9641851959"
+  },
+  {
+   "path": "source/tools/lib/png.mjs",
+   "bytes": 5851,
+   "sha256": "b570f49d68ce49aef6bc4dbb80334f74349ed726d8d40a26215168b2df0f77e5"
+  },
+  {
+   "path": "source/tools/lib/server.mjs",
+   "bytes": 1167,
+   "sha256": "0e6793889665ecc9481192795c2092d28402a60f5ae2afecd6199419abc6c4b2"
+  },
+  {
+   "path": "source/tools/lib/session.mjs",
+   "bytes": 4941,
+   "sha256": "c5a4cea3c41bc7e309cb38dcdb85d9744266598093fc25d50bcfe9ad36940856"
+  },
+  {
+   "path": "source/tools/lib/sheet.mjs",
+   "bytes": 1384,
+   "sha256": "0f09cba0af5bbd23d9f1046d9e1a031b380039ae1ac8542826518f327ca07988"
+  },
+  {
+   "path": "source/tools/lib/zipr.mjs",
+   "bytes": 1637,
+   "sha256": "b92138dee6a0493d3e957648c2aae362f5609fc82344497b28220e0ccb30c2a5"
+  },
+  {
+   "path": "source/tools/lib/zipw.cjs",
+   "bytes": 4264,
+   "sha256": "0cf4e81a65fe617ccf5f46536fe1c8e880745386bf9745afc1f17535fff3bc3e"
+  },
+  {
+   "path": "source/tools/p2boards.mjs",
+   "bytes": 38506,
+   "sha256": "2ffce929e45a5b95974306857a41b93418c94d4b96256376e7e19e5f774c7afb"
+  },
+  {
+   "path": "source/tools/p2capture.mjs",
+   "bytes": 19358,
+   "sha256": "5222a8b5792749d19cb75245220ddbd3307a15176288d8bb1ecde18591ceeaa5"
+  },
+  {
+   "path": "source/tools/p2checks.mjs",
+   "bytes": 22222,
+   "sha256": "6ca761d3e8f0811fe94367db767abec8a16faec0ab82c5d92e87ee32baabd914"
+  },
+  {
+   "path": "source/tools/p2package.mjs",
+   "bytes": 3810,
+   "sha256": "94cf5df8de28271404a469cde25be8545f212c1b54208a0c86b437b011ad279b"
+  },
+  {
+   "path": "source/tools/vendor-utility.mjs",
+   "bytes": 5006,
+   "sha256": "d788ef9a37fb6f216a9020cb6c1d95f0c5d2db1bf1fa608ea5ae5d45692ef568"
+  },
+  {
+   "path": "source/vendor/canon/QANDEEL_G1_1_CANONICAL_CLOSURE_AND_AMENDMENTS.md",
+   "bytes": 7661,
+   "sha256": "ca72b17a94206475022a101e746d819e9dc26b3379dffb1ce9b1d4c739423625"
+  },
+  {
+   "path": "source/vendor/canon/QANDEEL_G1_2_CANONICAL_CLOSURE.md",
+   "bytes": 8006,
+   "sha256": "040a474269aed193778003a218b11706da61a6f4134597b396da5fea2cad60ce"
+  },
+  {
+   "path": "source/vendor/canon/QANDEEL_Q_BASE_MASTER.svg",
+   "bytes": 3183,
+   "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05"
+  },
+  {
+   "path": "source/vendor/canon/g12-r1/R1_MANIFEST.json",
+   "bytes": 1119,
+   "sha256": "aabeab121d851b8a7a504bb4dcd02f41453cf6cc29419790af2391508da4d536"
+  },
+  {
+   "path": "source/vendor/canon/g12-r1/content.mjs",
+   "bytes": 18083,
+   "sha256": "2f5fe6da0b22dc18b1df5a3a3dd1052715bb7893afd489be0254ac4877a992e0"
+  },
+  {
+   "path": "source/vendor/canon/g12-r1/runtime.js",
+   "bytes": 48695,
+   "sha256": "467f5b762e63c88b19337acef5c4b3d0224a74fd82d6c858a7f234715d933bd7"
+  },
+  {
+   "path": "source/vendor/canon/g2/G2.3-MANIFEST.json",
+   "bytes": 32906,
+   "sha256": "f900935fe653d469b488d63514d79668f613e5356126b81965d0185b320b5660"
+  },
+  {
+   "path": "source/vendor/canon/g2/QANDEEL_G2_3_CANONICAL_CLOSURE.md",
+   "bytes": 7622,
+   "sha256": "bc79b7378f1685a2263491b7a929d9b36bf500e71699b84305d117c774a80c1c"
+  },
+  {
+   "path": "source/vendor/canon/g2/QANDEEL_G2_CANONICAL_CLOSURE.md",
+   "bytes": 15702,
+   "sha256": "4fb6065efe4c11c870fbc687679dc58c82cea20d0bc1f86ef0726b62e0cd1da2"
+  },
+  {
+   "path": "source/vendor/canon/g2/QANDEEL_G3_READINESS_HANDOFF.md",
+   "bytes": 9031,
+   "sha256": "d38bb1da207a1b8eb6063397fdd64c685ed3a0825b67ec847a63a8003fba78dd"
+  },
+  {
+   "path": "source/vendor/canon/g2/T11_RETURN_PRESENTATION_CONTROLLED_AMENDMENT.md",
+   "bytes": 6593,
+   "sha256": "79b6d3b794292389a1af59ddf448c1d0ced987be773c64e9dc6cefe15aa985ea"
+  },
+  {
+   "path": "source/vendor/canon/orientation-types.ts",
+   "bytes": 21343,
+   "sha256": "dfb8692ed633f297f226697200ed684e8805aaeaaf36728caa65c12bbd6d943c"
+  },
+  {
+   "path": "source/vendor/canon/product-copy.ts",
+   "bytes": 28469,
+   "sha256": "11f21cbe041f8ce6453bc001dd49497a4e7f3c968c6e9c4bf2a9d663b209ca5c"
+  },
+  {
+   "path": "source/vendor/canon/wf-living-constellation.html",
+   "bytes": 388374,
+   "sha256": "4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413"
+  },
+  {
+   "path": "source/vendor/canon/world.types.ts",
+   "bytes": 4163,
+   "sha256": "7ca9adb104dfabcce124c6afb2afd854302bcec067e6a7f7e6d5fed8b10546b0"
+  },
+  {
+   "path": "source/vendor/fonts/Estedad-OFL.txt",
+   "bytes": 4388,
+   "sha256": "0417da48fc44780476e074f02f8400028ee704b3e222be5855fa6d960b9200ca"
+  },
+  {
+   "path": "source/vendor/fonts/Estedad-wght-v8.5.woff2",
+   "bytes": 120924,
+   "sha256": "b40ce2504e442a79e8adddf1d7b27bc4bd171bb94c9e7c93e0732d095bc051b0"
+  },
+  {
+   "path": "source/vendor/fonts/google/01d285447409c8a5.woff2",
+   "bytes": 14888,
+   "sha256": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22"
+  },
+  {
+   "path": "source/vendor/fonts/google/04c730b4292731cc.woff2",
+   "bytes": 44280,
+   "sha256": "04c730b4292731ccedadd5bd80756124364ae4923895145d9cd7b1f28e443de1"
+  },
+  {
+   "path": "source/vendor/fonts/google/08949f728dc52d52.woff2",
+   "bytes": 14708,
+   "sha256": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7"
+  },
+  {
+   "path": "source/vendor/fonts/google/0c4e072fcf4f07a3.woff2",
+   "bytes": 1476,
+   "sha256": "0c4e072fcf4f07a388448ae321d51fd3915797371a7378270e5630c6d023ea6b"
+  },
+  {
+   "path": "source/vendor/fonts/google/0f7c03bb523b8084.woff2",
+   "bytes": 6680,
+   "sha256": "0f7c03bb523b8084a84c4b7d95a5c7b294b7318f88b2e51829d5fe7aaef0d0bb"
+  },
+  {
+   "path": "source/vendor/fonts/google/1144843a05a0eaef.woff2",
+   "bytes": 1448,
+   "sha256": "1144843a05a0eaef92032c0406ee3f001804f2caddba9522e8a265e0a79d46ea"
+  },
+  {
+   "path": "source/vendor/fonts/google/16734a5adb27b0f3.woff2",
+   "bytes": 45688,
+   "sha256": "16734a5adb27b0f363e566cbbeacec480da0dc0baa19c8f0053251c2e2bc0eac"
+  },
+  {
+   "path": "source/vendor/fonts/google/1935fa1a3326fcd4.woff2",
+   "bytes": 6656,
+   "sha256": "1935fa1a3326fcd48e20abe864bb30ace43fe58bd572f354c24271ea66208e04"
+  },
+  {
+   "path": "source/vendor/fonts/google/1d89462e86cb8e87.woff2",
+   "bytes": 8460,
+   "sha256": "1d89462e86cb8e87e7e9d6f6635605bd7c3081baca6caaecee84916bf7b60edc"
+  },
+  {
+   "path": "source/vendor/fonts/google/2fff61c7ed83ed8a.woff2",
+   "bytes": 1444,
+   "sha256": "2fff61c7ed83ed8a3ac19e3e7079f8f293e8485a1994b01e88b69056fecdf295"
+  },
+  {
+   "path": "source/vendor/fonts/google/3febe5c7f22e4b07.woff2",
+   "bytes": 6972,
+   "sha256": "3febe5c7f22e4b07b4552738673c3dbe8bced2dc5f48b866edf7ccd9552d109a"
+  },
+  {
+   "path": "source/vendor/fonts/google/441410df8013ca6c.woff2",
+   "bytes": 45048,
+   "sha256": "441410df8013ca6c9a732c0497bb65aa6c9fc4abeb917b907a38fabe44263e2c"
+  },
+  {
+   "path": "source/vendor/fonts/google/6010e7fd0dce5d52.woff2",
+   "bytes": 42848,
+   "sha256": "6010e7fd0dce5d527583951750728cbe3c895efbd16aa0f809ab8c824878c9d8"
+  },
+  {
+   "path": "source/vendor/fonts/google/62632b6375305e70.woff2",
+   "bytes": 5868,
+   "sha256": "62632b6375305e70ddcafdd895218e6ae41a184fcd280a69c739460604ca00a9"
+  },
+  {
+   "path": "source/vendor/fonts/google/63f4757271e403f7.woff2",
+   "bytes": 20500,
+   "sha256": "63f4757271e403f7baec0862f284ffaa4560ea6096ba9fe8bc6e585ca656e724"
+  },
+  {
+   "path": "source/vendor/fonts/google/6bb06407c97584b0.woff2",
+   "bytes": 13432,
+   "sha256": "6bb06407c97584b0867a959e05e8874693bfeb8c317de190811c51598f2d99ea"
+  },
+  {
+   "path": "source/vendor/fonts/google/6bc0f226a5b7884a.woff2",
+   "bytes": 13348,
+   "sha256": "6bc0f226a5b7884a8170e3f62c63d7675609d4631bdc5931b5cdab81821f00eb"
+  },
+  {
+   "path": "source/vendor/fonts/google/7635422bd10ddbbc.woff2",
+   "bytes": 8356,
+   "sha256": "7635422bd10ddbbcb0e0caa1154b928298f5c8319b8c00b30978d4395f4783ce"
+  },
+  {
+   "path": "source/vendor/fonts/google/781633d95de88040.woff2",
+   "bytes": 6040,
+   "sha256": "781633d95de88040fb77141d1e65d928c87c0144691fbc74da5a64d137a7e910"
+  },
+  {
+   "path": "source/vendor/fonts/google/90aef64fea9794f2.woff2",
+   "bytes": 45296,
+   "sha256": "90aef64fea9794f232332e907d45810ab268d1a11721340025eba2a2cdb36d5c"
+  },
+  {
+   "path": "source/vendor/fonts/google/93ae908392a01f9a.woff2",
+   "bytes": 1456,
+   "sha256": "93ae908392a01f9af1f73e86e99f1665f899a5b58fe9e56517abd199e47dcd01"
+  },
+  {
+   "path": "source/vendor/fonts/google/95875e4fa8928fa6.woff2",
+   "bytes": 1476,
+   "sha256": "95875e4fa8928fa68e01e53e0b2cdb0f6dbec1ac61d9af493bb05d2ed230f350"
+  },
+  {
+   "path": "source/vendor/fonts/google/9ed8dcb02e6c7246.woff2",
+   "bytes": 19164,
+   "sha256": "9ed8dcb02e6c7246de4c120295fafa39a7bb73085f4951a4524a07dc911069f2"
+  },
+  {
+   "path": "source/vendor/fonts/google/FONT_MANIFEST.json",
+   "bytes": 22495,
+   "sha256": "1150286bf46e52ef70a82f3244658b1a5c1c38c846e351b0389cce2d50455dce"
+  },
+  {
+   "path": "source/vendor/fonts/google/a989ab031ad08b81.css",
+   "bytes": 14853,
+   "sha256": "a989ab031ad08b81448d8088686429619d0637c48ca3a98518d45ac4f8119d7e"
+  },
+  {
+   "path": "source/vendor/fonts/google/ab0b9584271f4923.woff2",
+   "bytes": 6564,
+   "sha256": "ab0b9584271f492336d9eadcef96f99b0da07e8e7046220aea5084f1644a9c9d"
+  },
+  {
+   "path": "source/vendor/fonts/google/ae2d59f91ecf9f7e.woff2",
+   "bytes": 19504,
+   "sha256": "ae2d59f91ecf9f7ed279e4a1fc1a9da8170fb0ce5b9152917a8f759033f5777c"
+  },
+  {
+   "path": "source/vendor/fonts/google/ae5c1a58c18d253e.woff2",
+   "bytes": 6540,
+   "sha256": "ae5c1a58c18d253e20691f00e401319f01fc568d24d0e50165f276d1a99035b5"
+  },
+  {
+   "path": "source/vendor/fonts/google/be6a3b2e37f3ad67.woff2",
+   "bytes": 20088,
+   "sha256": "be6a3b2e37f3ad67aa822a55ce356d28c416331c97530a1ec076c2118240ca2d"
+  },
+  {
+   "path": "source/vendor/fonts/google/dd27720fab7b4f3a.woff2",
+   "bytes": 6828,
+   "sha256": "dd27720fab7b4f3af3beb39ee8e2061f0aefa3f7824ae7214e6947b86a1f8dd0"
+  },
+  {
+   "path": "source/vendor/fonts/google/dde6d3b23792b89c.woff2",
+   "bytes": 20284,
+   "sha256": "dde6d3b23792b89c365f557d8af5fac776118517e1aa20921a3e0ed67b1d7ef8"
+  },
+  {
+   "path": "source/vendor/fonts/google/f8c22ec1804bd696.woff2",
+   "bytes": 6912,
+   "sha256": "f8c22ec1804bd6966b70f43ac7c327025645b4c09597117fca2a5a6c750106fe"
+  },
+  {
+   "path": "source/vendor/tokens/base/b4r.semantic.tokens.json",
+   "bytes": 4373,
+   "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441"
+  },
+  {
+   "path": "source/vendor/tokens/base/c3.material.tokens.json",
+   "bytes": 14376,
+   "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928"
+  },
+  {
+   "path": "source/vendor/tokens/base/d2r.illumination.tokens.json",
+   "bytes": 30299,
+   "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4"
+  },
+  {
+   "path": "source/vendor/tokens/base/e1.interaction.tokens.json",
+   "bytes": 54134,
+   "sha256": "6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce"
+  },
+  {
+   "path": "source/vendor/tokens/base/f1.accessibility.tokens.json",
+   "bytes": 38216,
+   "sha256": "dd47c43cb72eb306f2b701a883ce7c48e280f4d8bcfbf00664d0abca681e35cc"
+  },
+  {
+   "path": "source/vendor/tokens/base/f2.appearance.tokens.json",
+   "bytes": 30947,
+   "sha256": "513f5dfa419e1a5b7c5729e7b062ea282c32df0a3284e73596bc10b9e652cadc"
+  },
+  {
+   "path": "source/vendor/tokens/base/g11.utterance.alias.tokens.json",
+   "bytes": 528,
+   "sha256": "bdc05957547f28786ff0d3388b5e4c4f0ce8bfafbd548e8d763b525d01fd033b"
+  },
+  {
+   "path": "source/vendor/tokens/contrast/f1.dark.increased.tokens.json",
+   "bytes": 9120,
+   "sha256": "5b27d13790e0ce051822c226aa8f3c11cac04467156210f9469c229f391c8f2a"
+  },
+  {
+   "path": "source/vendor/tokens/contrast/f2.light.increased.tokens.json",
+   "bytes": 5601,
+   "sha256": "a382d1a486be780f9c6419347e3f24fcf832bdb3d68607bbf0975a1ee9b2224b"
+  },
+  {
+   "path": "source/vendor/tokens/dark/b4r.dark.tokens.json",
+   "bytes": 2348,
+   "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112"
+  },
+  {
+   "path": "source/vendor/tokens/dark/c3.dark.material.tokens.json",
+   "bytes": 3441,
+   "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367"
+  },
+  {
+   "path": "source/vendor/tokens/dark/d2r.dark.illumination.tokens.json",
+   "bytes": 3794,
+   "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157"
+  },
+  {
+   "path": "source/vendor/tokens/dark/e1.dark.interaction.tokens.json",
+   "bytes": 6162,
+   "sha256": "397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252"
+  },
+  {
+   "path": "source/vendor/tokens/dark/f1.dark.accessibility.tokens.json",
+   "bytes": 3245,
+   "sha256": "3d2fbcca824255c5da8ee234f572f35bad68f143c47424ccc0057ad7e7407176"
+  },
+  {
+   "path": "source/vendor/tokens/light/b4r.light.tokens.json",
+   "bytes": 9736,
+   "sha256": "8176490548ca7105f4b3a20f5c72c298d6de0c14289743887f411e3c4ab0ab0e"
+  },
+  {
+   "path": "source/vendor/tokens/light/c3.light.material.tokens.json",
+   "bytes": 4917,
+   "sha256": "f8066672414cefe95d46105620ca1b6e48d6f42fc44c715e69d60e99d280572d"
+  },
+  {
+   "path": "source/vendor/tokens/light/d2r.light.illumination.tokens.json",
+   "bytes": 18654,
+   "sha256": "6d74182584c420182ec004db3ba3097923aff6f16cb42138214c580c52a47260"
+  },
+  {
+   "path": "source/vendor/tokens/light/e1.light.interaction.tokens.json",
+   "bytes": 5021,
+   "sha256": "1c408ba0ac42a9241e8b6a0697a692606a7461f2fa864ef526146cf231fd0393"
+  },
+  {
+   "path": "source/vendor/tokens/light/f1.light.accessibility.tokens.json",
+   "bytes": 3693,
+   "sha256": "2b3861432472683aa2bd9f9199463da52502a7ba746d620cbfaa827122975952"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-hugeicons.txt",
+   "bytes": 1066,
+   "sha256": "1658d8213209df7b9b86dfc05d724ede48d00dbc27abc15976ec7adec9601cde"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-iconoir.txt",
+   "bytes": 1068,
+   "sha256": "869b60da1ada5b896d1f285c3c24ca193d612e308d1710a77a58f2f572eb4fa2"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-lucide.txt",
+   "bytes": 3208,
+   "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-phosphor.txt",
+   "bytes": 1092,
+   "sha256": "ddbe6082ec3cf979db47e5af549d2849c5d6182b3e005ef91ce1dbb9eb122f11"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-tabler.txt",
+   "bytes": 1073,
+   "sha256": "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db"
+  },
+  {
+   "path": "source/vendor/utility/utility-glyphs.json",
+   "bytes": 31456,
+   "sha256": "54d059f63b92988ae06e7e37a44eee24e71775e76206b4d0f0f1b9c1ffbfea23"
+  }
+ ]
+}

@@ -1,0 +1,92 @@
+{
+ "B01": {
+  "file": "boards/01-signature-family.png",
+  "bytes": 223247,
+  "sha256": "e2d472880d4ea7d3763a3cea70222e0b7c4bc4b7d8f4f8ede200036875a57dba",
+  "question": "Is there ONE owned family (open geometry, one cut, optical weight, solid anchors only where they carry meaning), and is it immediately recognisable? Fifteen glyphs, recommended nuance N1 “Open”, shown large for craft and at 24 px for use; navigation in Living Brass, every functional glyph neutral."
+ },
+ "B02": {
+  "file": "boards/02-utility-library-comparison.png",
+  "bytes": 150843,
+  "sha256": "217f2acabf4d9e82b5cb1d7b5aa7b92f7416759d32d04b7daa9560a8cdab3121",
+  "question": "Which open-source family can sit beside the signature family without looking like a different product — at the same perceived size, on both appearances? Left: as published. Right: normalised to QANDEEL's optical stroke (the only change; no path edited). The last three glyphs of every row are QANDEEL's own (mic · send · replay) as the optical reference."
+ },
+ "B03": {
+  "file": "boards/03-navigation-material-state.png",
+  "bytes": 182538,
+  "sha256": "14a46b56bb5bfa742217de9dc362fa050bc3251f7800074690836fbb6c1a47b0",
+  "question": "Does the persistent navigation family carry Living Brass as ONE family, with state expressed only by E1R's neutral channels (marker, weight, ground, perimeter) and never by the material? (C3 §2A, §6; E1R.)"
+ },
+ "B04": {
+  "file": "boards/04-call-rail-variants.png",
+  "bytes": 374236,
+  "sha256": "77b14cb6a0370781336ab7375f9c71e5c94fce7967c376e6e1a3c23b4b18a8eb",
+  "question": "Which rail best makes Mic + audio route ONE group and End Call a related but separated terminal — without circles, a full pill, red, Brass or a literal Q? Same call, same moment, three machines. Neutral hairline only; End's rank = separation + terminal form + its solid glyph in primary ink."
+ },
+ "B05": {
+  "file": "boards/05-call-rail-recommended.png",
+  "bytes": 640001,
+  "sha256": "3fcb9f5f5ae422c6663e3116881cc0e75216c6a0c70147d722f0efcc0b89b598",
+  "question": "In the real Live Call surfaces, is the mic readable, the mute state readable without colour, the audio route readable, End Call unmistakable, and does the rail stay one family without taking the world, the temporal floor or the Conversation ↔ Analysis switch?"
+ },
+ "B06": {
+  "file": "boards/06-temporal-spine-variants.png",
+  "bytes": 689872,
+  "sha256": "5066c20f97e838b03a19b3682a7241ce446fe0d1fc0c6610b48e291e869213d7",
+  "question": "Which aperture opens time most clearly — committed vs preview distinguishable, never a generic circular thumb, and a Live terminal that can never be read as a Moment? Rows: variant. Columns: FOLLOW_LIVE · PINNED(14) · PINNED(17 = Moment(LH)) · preview of 16 under the finger (committed 14 stays)."
+ },
+ "B07": {
+  "file": "boards/07-temporal-spine-recommended.png",
+  "bytes": 541101,
+  "sha256": "ca334d01d894820aa1bacf5de6be71dc297cf3bb8f11191b4d7a00b9cbf4961a",
+  "question": "Does the recommended spine show each state of T-06 / T-07 / the G3 amendment truthfully: FOLLOW_LIVE, PINNED at an older Moment, PINNED at Moment(LH) while clearly not Live, an active scrub, the commit after release, a cancel, Return Live at its one home, and the temporal line above the Timeline?"
+ },
+ "B08": {
+  "file": "boards/08-arabic-rtl.png",
+  "bytes": 720245,
+  "sha256": "f0602d91716e2e6d28ba620450edda0d8f97edfe3595a9d51b71187ebeacf164",
+  "question": "Under RTL, does every directional part follow MEANING: the Track starts at SP1 on the right and the Live edge is on the left (T-06), the rail's terminal sits at the END edge, the back chevron mirrors — and do the media, call and world glyphs stay unmirrored?"
+ },
+ "B09": {
+  "file": "boards/09-english-ltr.png",
+  "bytes": 712755,
+  "sha256": "3aee4a8c651edc6446b1d11c61c2df7c553b9ee7f9e22a31cf2949948f7e2d12",
+  "question": "Does the same system read correctly left-to-right with no second rule: SP1 left, Live right, End at the right end, chevron pointing left?"
+ },
+ "B10": {
+  "file": "boards/10-legibility-16-20-24.png",
+  "bytes": 136342,
+  "sha256": "7ff373c260792aa0a1fbe610cf6ef4989908c402cff3b8a1906205fb90560cd3",
+  "question": "Do the cut, the slash and the waves survive the smallest sizes at one device pixel per point, on the dark and light grounds, and does the utility family hold the same weight at the same size?"
+ },
+ "B11": {
+  "file": "boards/11-state-board.png",
+  "bytes": 271967,
+  "sha256": "8a47f80b147981bc32a6748cf5a5aa097f71f033fa53ff4904d6698bd4a66f04",
+  "question": "For each control of the two machines: REST (absence), PRESSED (the ground), FOCUS (a detached perimeter), the toggle states (a change of FORM), DISABLED (one availability ink), and the timeline marks — is every state distinguishable without colour?"
+ },
+ "B12": {
+  "file": "boards/12-dark-light.png",
+  "bytes": 475731,
+  "sha256": "58b67fea48d5c03b5f34f1edef466e1a23f363913ce930d93b85a3e5a196e117",
+  "question": "Under the resolved appearance (P1: Dark / Light / System; the proof stands in with the system value), does the family hold on the light Conversation and stay in the dark Analysis shell without a new colour?"
+ },
+ "B13": {
+  "file": "boards/13-stress-320x568.png",
+  "bytes": 389821,
+  "sha256": "7ad07bf2c52208a78e90b66a9fa5fd22283d003d5105fa5f24b7c3328b511802",
+  "question": "At the G3 stress size, with a call running and PINNED, do the machines fit without squeezing the world below its 160-pt floor, and do the targets stay 44 pt?"
+ },
+ "B14": {
+  "file": "boards/14-sizes-390-430.png",
+  "bytes": 899680,
+  "sha256": "cb4e2edbe4ba6e410f187cb9f74c955116b9b3a67ec6bf9ea64667322c838b02",
+  "question": "On a mainstream and a large phone, do the rail and the spine keep their size (a larger phone shows MORE of the Track, never a bigger control)?"
+ },
+ "B15": {
+  "file": "boards/15-accessibility-reduced-motion.png",
+  "bytes": 1250321,
+  "sha256": "deb2a675a3ed904c5e2c072cbc8cad05ff1b8cff5c9430c81f31a373435be673",
+  "question": "Are the targets ≥ 44 pt, the focus order equal to the visual order, every icon-only control named by its control (the glyph decorative), and does Reduced Motion keep the same truth with the movement removed?"
+ }
+}
