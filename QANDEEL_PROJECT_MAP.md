@@ -75,6 +75,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | [`docs/implementation-foundation/`](docs/implementation-foundation/README.md) | the Engineering Foundation set: Foundation Freeze, Tech Stack, Project Skeleton, Core Runtime, Model Router, Memory, Conversation Orchestrator, Safety and Behavioral Runtime |
 | [`docs/canonical-authority/`](docs/canonical-authority/README.md) | recovered authority missing from GitHub: Experience Architecture Stages 0–6, Connected Worlds v2 CW2-00 … CW2-08, plus final I-08A Product Shell / IA / Naming and I-08N-01 Notification / Proactive Attention authority. Preservation, **not the entry point** |
 | [`docs/design/`](docs/design/) | design-track records: `phase-v/`, `phase-vi/`, the I-08B3.1-G closures in `i-08b3.1-g1.1/`, `i-08b3.1-g1.2/`, `i-08b3.1-g2/`, `i-08b3.1-g2.3/` and `i-08b3.1-g3/`, the P2-A iconography proof package in `p2-iconography/` (evidence for the P2 closure), and the P3-A notification & Activity proof package in `p3-notifications/` (evidence for the P3 closure) |
+| [`docs/p4/`](docs/p4/P4_READ_FIRST.md) | the active P4 evidence / candidate package: the residual-gap census, the `APP-OPS-01` App ↔ Company Operations contract candidate (`NOT FROZEN`), the authority compatibility matrix, the Product Owner decision queue and the carry-forward matrix. **Candidate material, not closure authority**; P4 is not closed |
 | [`docs/design/canonical-artifacts/`](docs/design/canonical-artifacts/README.md) | byte-exact final Product / design artifacts: I-08B1, brand, typography, I-08B3.1 A–G proofs. Located by its index |
 | [`docs/assurance/connected-worlds/`](docs/assurance/connected-worlds/README.md) | the `QAN-CW-ASSURE-01` findings register. **Evidence only** |
 
@@ -161,8 +162,8 @@ Current sequence:
    - P3 Notification Final Realization — **CLOSED / FROZEN**
      ([P3 closure](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md)); production
      implementation open;
-   - P4 Remaining Product / Visual Gaps Census & Closure — **CURRENT / NEXT** Product / visual closure track, not yet
-     opened as a Task Contract.
+   - P4 Remaining Product / Visual Gaps Census & Closure — **ACTIVE, NOT CLOSED.** P4-A's evidence and candidate
+     package is [`docs/p4/`](docs/p4/P4_READ_FIRST.md).
 2. QANDEEL End-to-End Product Experience Completeness Audit, including evidence-led Model / Provider selection,
    Plans / Credits / Usage Economy and complete account/auth lifecycle review.
 3. Production Integration & Implementation.

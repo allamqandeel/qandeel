@@ -82,7 +82,9 @@ This includes, where Product decisions are required:
 Do not reopen I-08N-01's frozen authority, privacy, interruption-class, Direct Entry or disclosure semantics.
 Platform/runtime implementation remains separate unless a later task explicitly owns it.
 ### P4 — Remaining Product / Visual Gaps Census & Closure
-**P4 — CURRENT / NEXT PRODUCT / VISUAL CLOSURE TRACK — NOT YET OPENED AS A TASK CONTRACT**
+**P4 — ACTIVE — CENSUS / CLOSURE TRACK OPENED; NOT CLOSED**
+APP-OPS-01 (QANDEEL App ↔ QANDEEL Company Operations Contract) is one explicit Product-Owner-approved cross-cutting
+exception to the normal residual-canon boundary below; its P4-A material is in [`docs/p4/`](docs/p4/P4_READ_FIRST.md).
 Perform a bounded census of the **existing Product and visual canon** for items deliberately left:
 - `NOT FROZEN`;
 - `PROOF ONLY`;
@@ -180,7 +182,7 @@ The final roadmap layer is release readiness, including the scopes already owned
 Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
-P1, P2 and P3 are `CLOSED / FROZEN` as Product / design contracts. The next Product discussion/work track is:
+P1, P2 and P3 are `CLOSED / FROZEN` as Product / design contracts. The current Product work track is:
 > **P4 — Remaining Product / Visual Gaps Census & Closure**
-It is deliberately **not yet opened as a Task Contract**. Product discussion comes first.
-After P4, begin the End-to-End Product Experience Completeness Audit.
+P4-A has opened P4. P4 is **ACTIVE** and remains **NOT CLOSED / NOT FROZEN** while its Product decisions and required proofs are resolved before closure.
+The End-to-End Product Experience Completeness Audit starts only after P4 closes.
