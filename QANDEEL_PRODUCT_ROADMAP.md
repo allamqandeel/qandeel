@@ -23,8 +23,13 @@ The project is currently in **Final Product Decision Closure**.
 Before the whole Product is audited from first launch to long-term use, close the known Product/visual decision
 tracks that would otherwise make the audit repeatedly stop on already-known unresolved areas.
 ### P1 — User Profile / Identity / Preferences / QANDEEL Understanding
-**NEXT PRODUCT TRACK — NOT YET OPENED AS A TASK CONTRACT**
-This track must define the Product model and authority boundaries for, at minimum:
+**P1 — CLOSED / FROZEN** — closed by
+[`docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md`](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md).
+That record is the Product authority for this track; this section only records the lifecycle. Production
+implementation remains open. P1 froze that QANDEEL has **no traditional general Profile page**: account identity lives in
+one General Settings destination. So later mentions of "Profile" in this roadmap read as account identity / General
+Settings, apart from the capability-owned Introduction Profile.
+The track's original scope, kept as written:
 - Account Identity;
 - user-controlled preferences;
 - QANDEEL Memory versus user-authored profile data;
@@ -35,6 +40,7 @@ This track must define the Product model and authority boundaries for, at minimu
 - what belongs in Profile, Settings, Memory inspection, and Understanding inspection.
 No specific field set, screen morphology or storage schema is frozen by this roadmap.
 ### P2 — Final Iconography System
+**P2 — CURRENT / NEXT PRODUCT DECISION CLOSURE — NOT YET OPENED AS A TASK CONTRACT**
 After P1, close the final Product iconography system.
 It must cover the icon language needed across the frozen Product, including where relevant:
 - Global shell and navigation;
@@ -160,8 +166,7 @@ The final roadmap layer is release readiness, including the scopes already owned
 Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
-The next Product discussion/work track is:
-> **P1 — User Profile / Identity / Preferences / QANDEEL Understanding**
+P1 is `CLOSED / FROZEN` as a Product contract. The next Product discussion/work track is:
+> **P2 — Final Iconography System**
 It is deliberately **not yet opened as a Task Contract**. Product discussion comes first.
-After P1 closes, continue in the order P2 → P3 → P4, then begin the End-to-End Product Experience Completeness
-Audit.
+Continue in the order P2 → P3 → P4, then begin the End-to-End Product Experience Completeness Audit.
