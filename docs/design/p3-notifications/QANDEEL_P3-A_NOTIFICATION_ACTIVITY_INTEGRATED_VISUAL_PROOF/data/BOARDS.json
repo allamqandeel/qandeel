@@ -1,0 +1,114 @@
+{
+ "B17": {
+  "file": "boards/17-accessibility-reduced-motion.png",
+  "question": "Is every control named and at least 44 pt, is every decorative glyph hidden, is focus perceivable (never hidden under the call-safe strip), is no state colour-only, is RTL mirrored by meaning, does ordinary attention inside the Analysis stay silent (no region, no announcement) — and does the strip under Reduced Motion keep the same meaning with no travel?",
+  "bytes": 582135,
+  "sha256": "5a5219d9789c3f1d73e7131da6558a95b272bd3f91604e99db3f42c46bef7525"
+ },
+ "B18": {
+  "file": "boards/18-decision-summary.png",
+  "question": "The integrated direction in one view after the P3-A final micro-refinement: what the user sees, where, and when — realizing the accepted P3 direction and every Product Owner refinement decision without reopening I-08N-01, P1, P2 or G3 — with no Product or craft question left open; only copy and device / implementation gates remain.",
+  "open": [
+   "Copy only: the wording of the lines still marked PROOF (the Allow / Reduce / Off help lines, the call-safe region name «تنبيه أثناء المكالمة») and every FIXTURE sentence — the bounded cleanup did not freeze them.",
+   "Device / implementation: VoiceOver / TalkBack, device Reduce Motion and Increase Contrast, haptics, real delivery and the platform mapping stay later device and implementation gates; this is browser evidence."
+  ],
+  "bytes": 498110,
+  "sha256": "39a3b396ded9b1a4053792ef3d5cdee164af9de1e2a4f138b9df931a5ada709d"
+ },
+ "B01": {
+  "file": "boards/01-activity-arabic-dark.png",
+  "question": "Is Activity one quiet chronological feed — every category present without noise, the attention mark small and attached, one coalesced item, one inline action only where it is obvious — and not a card wall or a red unread wall?",
+  "bytes": 285902,
+  "sha256": "c102fe3187a7c01d2f2ae2de6f1009da4c95c26f09528c530800d404bbeb972a"
+ },
+ "B02": {
+  "file": "boards/02-activity-english-light.png",
+  "question": "Does the same feed hold in English left-to-right under Light — the same semantics, the mark at the upper END corner (now the right), the source column at the START (now the left) — without painting Activity as the dark Analysis?",
+  "bytes": 258125,
+  "sha256": "73a95259b87d8481964d0f4bc07ebd63bbfce41e304198ae216d987321ab7acc"
+ },
+ "B03": {
+  "file": "boards/03-activity-filters.png",
+  "question": "Do All · From Qandeel · Shared · Public · Introductions · System work as quiet filters over ONE feed (All by default) — each item keeping its category, no destination of its own, and Introductions showing presence only?",
+  "bytes": 189348,
+  "sha256": "b305665649e1b7e863f8f398c96797cadef6ed6e1c40e3612513bf8cade0cc8c"
+ },
+ "B04": {
+  "file": "boards/04-attention-states.png",
+  "question": "Can unseen, seen, opened, actionable, coalesced and stale be told apart — by form and words, never by colour alone and never by pressure — while none of them resolves the source event?",
+  "bytes": 228117,
+  "sha256": "c84091d975b8d92222eb37bac630a762f88213e50d3db1371e7024681384728c"
+ },
+ "B05": {
+  "file": "boards/05-global-activity-entry.png",
+  "question": "Does the accepted Open Ledger entry sit in the global upper chrome of the non-Analysis shell without replacing the three-World navigation, stay neutral in every state (never Brass), show attention as presence — and stay OUT of the frozen Analysis chrome?",
+  "bytes": 459587,
+  "sha256": "003929a81d3d97ce401fe8263d2581060fd0855aea148d2ef03648759dc908fb"
+ },
+ "B06": {
+  "file": "boards/06-attention-strip.png",
+  "question": "Does the strip appear only when QANDEEL already has the user’s attention outside the event’s originating context and outside the Analysis — attached to the upper chrome, short, dismissible, Direct-Entry capable — stay absent in the same context and inside the Analysis (ordinary attention waits there and is re-evaluated on exit: at most one strip), and, during an active Live Call, stay absent for everything except critical security and a requested exact-time reminder, whose small call-safe strip has no Direct Entry and temporarily, intentionally occludes the Replay slot only?",
+  "bytes": 1162661,
+  "sha256": "0aba2e7f0837b68a0046049920686224a7615999ade66a8de35b2b85b7440e4d"
+ },
+ "B07": {
+  "file": "boards/07-settings-arabic.png",
+  "question": "Are the controls organised by Product meaning — Proactive QANDEEL, Shared (with per-World mute), Public (Discovery opt-in), Introductions (only once entered), Security & Account, Quiet Hours, Snooze, Lock Screen previews, and a separate handoff to the device — without faking ownership of OS settings?",
+  "bytes": 385281,
+  "sha256": "7d25f494e35c127ec20537689374a866b7d88641a01ab6f89f1f487591ff8b42"
+ },
+ "B08": {
+  "file": "boards/08-settings-english.png",
+  "question": "Does the English surface keep exactly the same information architecture, order and meanings, left-to-right?",
+  "bytes": 283195,
+  "sha256": "b02dee6925cf79aa3af3973a6c18ab22152d53af55dc18211338e4f9b9c31c13"
+ },
+ "B09": {
+  "file": "boards/09-permission-education.png",
+  "question": "Is notification permission asked only at a legitimate moment, explained by QANDEEL first (value, no fear or guilt, Product usable either way), and then handed to the OS prompt that QANDEEL neither draws nor imitates?",
+  "bytes": 218828,
+  "sha256": "6eca74dac5c63d4dec1f7baa3596d4460cdc6826f01a88337899d281145871e9"
+ },
+ "B10": {
+  "file": "boards/10-lock-screen-disclosure.png",
+  "question": "For each category, what may appear outside the authenticated Product at each ceiling the USER sets — with Introductions defaulting to L0 (not even revealing it is an introduction) but with no category cap, L3 never a default, and a critical event still only L2?",
+  "bytes": 471632,
+  "sha256": "dad2b7cbcdd88d38de309dde0a21f64966870728c27ab341f99a66d5dc5902e5"
+ },
+ "B11": {
+  "file": "boards/11-badges-attention-indicators.png",
+  "question": "Is the global indicator presence only (never a number, never red, never Brass), do the categories show a count only where it is useful and safe — Shared yes, System only for actionable items, Introductions never — and does it all survive Dark, Light and Increased Contrast?",
+  "bytes": 139378,
+  "sha256": "3fe4e4aa8a368dd4e03e3cf8b0ead28eafef2a2e7b50dc0193a288142ff75fce"
+ },
+ "B12": {
+  "file": "boards/12-quiet-hours-snooze.png",
+  "question": "With Quiet Hours ON (23:00 → 08:00 local) and five candidates overnight, does the morning bring a re-evaluation into a few valid outcomes — not five Pushes — with only the two frozen exceptions allowed to interrupt at night, and no coalescing across Worlds?",
+  "bytes": 190958,
+  "sha256": "fcb313b6b7a86ff62b254b645113cf704090f27709f409fee69c7ed7882224da"
+ },
+ "B13": {
+  "file": "boards/13-frequency-ceilings.png",
+  "question": "Across a deterministic 7-day trace, do the Product Owner’s v1 ceilings hold — ordinary 4 / rolling 24 h and 12 / rolling 7 d; Proactive QANDEEL 1 / 24 h and 3 / 7 d; the same thread not before 48 h; a third same-subject interruption only with new context; Public Discovery 1 / 7 d and opt-in — with the two exceptions outside, and unused budget never creating a send?",
+  "bytes": 260463,
+  "sha256": "b116436adea47b6ee4e221d2dcf6f9ada756d2ab8920f2fc3c305e0a5a3f6f31"
+ },
+ "B14": {
+  "file": "boards/14-foreground-background.png",
+  "question": "When QANDEEL already has the user’s attention, is an external Push avoided — the event lands in place in the same context, as a strip in a different context, deferred inside the Analysis (re-evaluated on exit, at most one strip) and during a Live Call (except critical security and a requested exact-time reminder, which get the call-safe strip) — while in the background Push is used only when eligible and permitted, and Activity is always the fallback?",
+  "bytes": 990750,
+  "sha256": "2ef0f9f99e74722f2881615aba03c2da31378c0ca0448a429d107504867e92f0"
+ },
+ "B15": {
+  "file": "boards/15-stress-320x568.png",
+  "question": "At the narrowest supported phone, with the longest localized labels, do Activity, the strip, the settings and the education still read — no clipping, no horizontal scroll, targets still 44 pt?",
+  "bytes": 251610,
+  "sha256": "f9adec3544bb58b7e870a1f6d64db1d9f35949b66c91191ff879751d11b40fff"
+ },
+ "B16": {
+  "file": "boards/16-responsive-390-430.png",
+  "question": "Does the composition scale from 390 to 430 without stretching into a card wall — the same row grammar, the entry at the same edge, the strip still attached to the chrome?",
+  "bytes": 405366,
+  "sha256": "6ddc805a74a1233b5e2d696933d4e3dde95c9aca22f56257b46401e172398b15"
+ }
+}

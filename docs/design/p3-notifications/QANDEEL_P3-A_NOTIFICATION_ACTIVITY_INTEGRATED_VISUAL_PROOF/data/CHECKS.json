@@ -1,0 +1,1009 @@
+{
+ "baseline": "b9e087ba366c9df6843b6b880ff5e790f1fde045",
+ "prototypeSha256": "7daecd28e495b5c38e7073793d13bfc190201935774871f056cfe23aade0f3db",
+ "checks": [
+  {
+   "id": "C-SCOPE-1",
+   "group": "Scope",
+   "title": "only the P3 proof package changes against canonical main; no production source, dependency, locator, backlog or canonical authority",
+   "pass": true,
+   "detail": "137 tracked changes + 4 new package files; outside: none"
+  },
+  {
+   "id": "C-SCOPE-2",
+   "group": "Scope",
+   "title": "no dependency or production manifest inside the package",
+   "pass": true,
+   "detail": "140 files; none"
+  },
+  {
+   "id": "C-SCOPE-3",
+   "group": "Scope",
+   "title": "the vendored P2 material is byte-identical to its provenance record and to the merged P2-A package",
+   "pass": true,
+   "detail": "35 files; identical"
+  },
+  {
+   "id": "C-SCOPE-4",
+   "group": "Scope",
+   "title": "the Analysis is G3's own frozen page: prototype/g3.2/index.html is byte-identical to the preserved G3.2 canonical artifact (G3 closure: 10611f35…83d71)",
+   "pass": true,
+   "detail": "10611f35…83d71 (canonical 10611f35)"
+  },
+  {
+   "id": "C-LIFE-1",
+   "group": "Lifecycle",
+   "title": "the package never claims P3 CLOSED / FROZEN",
+   "pass": true,
+   "detail": "78 files scanned; no claim"
+  },
+  {
+   "id": "C-DOC-1",
+   "group": "Documentation",
+   "title": "the words match the geometry: nothing claims the call-safe strip covers no frozen control; the accepted wording (Replay is the one temporarily, intentionally occluded control) is stated; the rejected ordinary Analysis strip appears only labelled REJECTED; the decision summary leaves only copy and device / implementation items open",
+   "pass": true,
+   "detail": "13 documents; open items: 2 (copy / device only)"
+  },
+  {
+   "id": "C-ACT-4m",
+   "group": "Activity",
+   "title": "coalescing never crosses Worlds or authorities (D09)",
+   "pass": true,
+   "detail": "a+c | b | d+e"
+  },
+  {
+   "id": "C-ACT-6",
+   "group": "Activity",
+   "title": "seen / opened are attention state only: opening never resolves the event; an actionable item keeps attention after it is seen (D31, D40, D47)",
+   "pass": true,
+   "detail": "resolved undefined · global true"
+  },
+  {
+   "id": "C-MARK-3m",
+   "group": "Attention",
+   "title": "the global indicator is presence only — no count field exists (D45)",
+   "pass": true,
+   "detail": "{\"present\":true}"
+  },
+  {
+   "id": "C-MARK-4m",
+   "group": "Attention",
+   "title": "Introductions: presence only, never a numeric count (P3-F, D48)",
+   "pass": true,
+   "detail": "{\"present\":true}"
+  },
+  {
+   "id": "C-STRIP-1m",
+   "group": "Strip",
+   "title": "same originating context → in place, never a strip or a Push (S1)",
+   "pass": true,
+   "detail": "in-place"
+  },
+  {
+   "id": "C-STRIP-2m",
+   "group": "Strip",
+   "title": "an active Live Call defers ordinary attention and an Introduction (S7, S8; G3 §D)",
+   "pass": true,
+   "detail": "deferred / deferred"
+  },
+  {
+   "id": "C-PRIV-1",
+   "group": "Privacy",
+   "title": "Introductions default L0, and the L0 words reveal neither Introductions nor a person (D15)",
+   "pass": true,
+   "detail": "[{\"title\":null,\"body\":\"إشعار جديد\"},{\"title\":null,\"body\":\"New notification\"}]"
+  },
+  {
+   "id": "C-PRIV-2",
+   "group": "Privacy",
+   "title": "no category defaults to L3 (content preview is never a default)",
+   "pass": true,
+   "detail": "{\"qandeel\":\"L1\",\"shared\":\"L2\",\"public\":\"L2\",\"discovery\":\"L1\",\"intro\":\"L0\",\"reminder\":\"L2\",\"system\":\"L2\",\"security\":\"L2\"}"
+  },
+  {
+   "id": "C-PRIV-3",
+   "group": "Privacy",
+   "title": "the user ceiling is never exceeded, at every level and subject (D17)",
+   "pass": true,
+   "detail": "36 combinations"
+  },
+  {
+   "id": "C-PRIV-4",
+   "group": "Privacy",
+   "title": "a critical event does not raise disclosure: security is L2 by default (D14, D15)",
+   "pass": true,
+   "detail": "push L2"
+  },
+  {
+   "id": "C-PRIV-5",
+   "group": "Privacy",
+   "title": "a preview is built from ONE event and names only its own World (no cross-World preview)",
+   "pass": true,
+   "detail": "{\"title\":\"رحلة الصيف\",\"body\":\"سارة: تمام، هحجز التذاكر النهارده\"}"
+  },
+  {
+   "id": "C-PERM-4",
+   "group": "Permission",
+   "title": "OS permission denied: Push unavailable, Activity still used — even for a critical event (D50, D36)",
+   "pass": true,
+   "detail": "activity / activity"
+  },
+  {
+   "id": "C-QUIET-1",
+   "group": "Quiet Hours",
+   "title": "default Quiet Hours ON, 23:00 → 08:00 device-local",
+   "pass": true,
+   "detail": "{\"on\":true,\"from\":\"23:00\",\"to\":\"08:00\"}"
+  },
+  {
+   "id": "C-QUIET-2",
+   "group": "Quiet Hours",
+   "title": "only the exact reminder and the critical security event are exceptions (D06)",
+   "pass": true,
+   "detail": "reminder,security"
+  },
+  {
+   "id": "C-QUIET-3",
+   "group": "Quiet Hours",
+   "title": "no morning dump: 5 overnight candidates → at most 1 Push at 08:00, every waiting candidate re-evaluated",
+   "pass": true,
+   "detail": "08:00 pushes 1; Q3:stale Q1:activity Q4:push"
+  },
+  {
+   "id": "C-QUIET-4",
+   "group": "Quiet Hours",
+   "title": "the morning outcome coalesces nothing across Worlds",
+   "pass": true,
+   "detail": "Q1"
+  },
+  {
+   "id": "C-FREQ-1",
+   "group": "Frequency",
+   "title": "ordinary Push: the 5th in a rolling 24 h is refused (W05)",
+   "pass": true,
+   "detail": "activity ceiling:ordinary-24h"
+  },
+  {
+   "id": "C-FREQ-2",
+   "group": "Frequency",
+   "title": "ordinary Push: the 13th in a rolling 7 d is refused (W19), after exactly 12 (W18)",
+   "pass": true,
+   "detail": "activity ord7=12"
+  },
+  {
+   "id": "C-FREQ-3",
+   "group": "Frequency",
+   "title": "Proactive QANDEEL: a 2nd Push 6 h after the first is refused for proactive-24h ALONE (ordinary budget free)",
+   "pass": true,
+   "detail": "next-conversation ceiling:proactive-24h"
+  },
+  {
+   "id": "C-FREQ-4",
+   "group": "Frequency",
+   "title": "Proactive QANDEEL: 3 / rolling 7 d (W18 is the 3rd; a 4th the same week is refused)",
+   "pass": true,
+   "detail": "pro7=3; 4th: next-conversation ceiling:ordinary-7d"
+  },
+  {
+   "id": "C-FREQ-5",
+   "group": "Frequency",
+   "title": "same proactive thread, no engagement: not before 48 h (W09 refused at 25.5 h, W10 allowed at 48.5 h)",
+   "pass": true,
+   "detail": "next-conversation / push"
+  },
+  {
+   "id": "C-FREQ-6",
+   "group": "Frequency",
+   "title": "a third same-subject interruption needs new meaningful context (W17 refused, W18 allowed)",
+   "pass": true,
+   "detail": "next-conversation / push"
+  },
+  {
+   "id": "C-FREQ-7",
+   "group": "Frequency",
+   "title": "Public Discovery: opt-in, at most 1 / rolling 7 d, first to be suppressed (W11, W14, S12)",
+   "pass": true,
+   "detail": "push / suppressed / not opted in: suppressed"
+  },
+  {
+   "id": "C-FREQ-8",
+   "group": "Frequency",
+   "title": "unused budget never causes a notification (ceiling ≠ quota): an empty trace sends nothing",
+   "pass": true,
+   "detail": "pushes 0"
+  },
+  {
+   "id": "C-FREQ-9",
+   "group": "Frequency",
+   "title": "the exact reminder and the critical security event sit outside the ordinary ceiling (W06, W20)",
+   "pass": true,
+   "detail": "push / push"
+  },
+  {
+   "id": "C-FREQ-10",
+   "group": "Frequency",
+   "title": "the whole 7-day trace equals the independently stated expectations",
+   "pass": true,
+   "detail": "20 / 20"
+  },
+  {
+   "id": "C-FG-1",
+   "group": "Foreground",
+   "title": "all 39 scenarios resolve as independently stated — surface, and disclosure level where stated",
+   "pass": true,
+   "detail": "39 / 39"
+  },
+  {
+   "id": "C-PRIV-6",
+   "group": "Privacy",
+   "title": "no Introductions category cap: default L0, and a ceiling the user raises above L1 is honoured up to the event's own safe projection (S28–S31)",
+   "pass": true,
+   "detail": "default L0; raised to L3 → acceptance L3; raised to L1 → L1; fixture intro caps ≤ L1: none"
+  },
+  {
+   "id": "C-PRIV-7",
+   "group": "Privacy",
+   "title": "the user's ceiling is a ceiling: an Introduction whose own bounded projection stops lower renders lower (S29), and even the raised L3 words name no person",
+   "pass": true,
+   "detail": "proposal under an L3 ceiling → L2; [{\"title\":\"التعارف\",\"body\":\"قَبِل الطرفان التعارف. افتح التعارف لتكمل.\"},{\"title\":\"Introductions\",\"body\":\"You both accep…"
+  },
+  {
+   "id": "C-RED-1",
+   "group": "Reduce",
+   "title": "Reduce is not \"Class 2 only\": a Gate-strong Class 3 still interrupts (S24) and a Gate-weak Class 2 waits (S22); a Gate-strong Class 2 interrupts (S21)",
+   "pass": true,
+   "detail": "S21 push · S22 next-conversation · S24 push"
+  },
+  {
+   "id": "C-RED-2",
+   "group": "Reduce",
+   "title": "under Reduce an ordinary Class 3 waits for the next conversation (S23) and Class 4 never interrupts (S25); Reduce is not Off",
+   "pass": true,
+   "detail": "S23 next-conversation · S25 activity"
+  },
+  {
+   "id": "C-RED-3",
+   "group": "Reduce",
+   "title": "Quiet Hours and the Proactive ceilings still constrain a Gate-strong candidate under Reduce (S26, S27)",
+   "pass": true,
+   "detail": "S26 deferred · S27 next-conversation ceiling:proactive-24h"
+  },
+  {
+   "id": "C-CALL-1m",
+   "group": "Live Call",
+   "title": "ordinary Shared, Introductions and Proactive attention waits during an active Live Call — foreground and background (S7, S8, S16, S19)",
+   "pass": true,
+   "detail": "deferred / deferred / deferred / deferred"
+  },
+  {
+   "id": "C-CALL-2m",
+   "group": "Live Call",
+   "title": "only critical security and a requested exact-time reminder may show the call-safe strip (S17, S18); a reminder that was not requested, and a non-critical security notice, still wait",
+   "pass": true,
+   "detail": "S17 call-strip · S18 call-strip · unrequested deferred · non-critical deferred · background push L2"
+  },
+  {
+   "id": "C-ANL-3m",
+   "group": "Analysis",
+   "title": "inside the Analysis, with no call, ordinary Shared, Public, Introductions and Proactive attention — and critical security too (no new exception) — is deferred, never a strip; it stays in Activity with the mark (S32–S36)",
+   "pass": true,
+   "detail": "S32 deferred (analysis-deferred) · S33 deferred (analysis-deferred) · S34 deferred (analysis-deferred) · S35 deferred (analysis-deferred) · S36 deferred (analysis-deferred)"
+  },
+  {
+   "id": "C-ANL-4m",
+   "group": "Analysis",
+   "title": "inside the Analysis during an active Live Call only the two call-safe cases present — critical security and a requested exact-time reminder (S37, S38); an ordinary Shared reply waits (S39); isCallSafe admits exactly those two fixture events",
+   "pass": true,
+   "detail": "S37 call-strip · S38 call-strip · S39 deferred · call-safe set: reminder,security"
+  },
+  {
+   "id": "C-EXIT-1m",
+   "group": "Exit",
+   "title": "leaving the Analysis re-evaluates what waited there against the CURRENT context: one Shared reply → one strip (X1); if the call continues, it keeps waiting (X4)",
+   "pass": true,
+   "detail": "X1 strip E-reply · X4 deferred, pending E-reply"
+  },
+  {
+   "id": "C-EXIT-2m",
+   "group": "Exit",
+   "title": "never a dump: at most ONE strip after leaving (X2: four waited → one strip, the others in Activity or in place); stale, muted and same-context candidates are not forced (X3: no strip) — every case equals its independently stated outcome",
+   "pass": true,
+   "detail": "X1: 1 strip (E-reply:strip) | X2: 1 strip (E-reply:strip E-preply:activity E-intro:activity E-pro:in-place) | X3: 0 strips (E-reply:activity E-stale:stale E-pro:in-place) | X4: 0 strips (E-reply:deferred)"
+  },
+  {
+   "id": "C-RED-4",
+   "group": "Reduce",
+   "title": "no score, weight or threshold: the Reduce decision reads one explicit boolean the fixture states (reduceEligible), never a class",
+   "pass": true,
+   "detail": "if (e.kind === 'proactive' && s.proactive === 'reduce' && e.reduceEligible !== true) { R.push('proactive-reduced'); return out('next-convers"
+  },
+  {
+   "id": "C-ACT-1",
+   "group": "Activity",
+   "title": "one Activity destination reached from the chrome; the navigation keeps its three Worlds and Activity is not one of them",
+   "pass": true,
+   "detail": "قنديل · العالم المشترك · العالم العام → activity"
+  },
+  {
+   "id": "C-ACT-2",
+   "group": "Activity",
+   "title": "filters are lightweight toggles over one feed — no tablist, no five permanent tabs; All by default",
+   "pass": true,
+   "detail": "{\"tabs\":0,\"grp\":\"group\",\"n\":6,\"on\":[\"all\"]}"
+  },
+  {
+   "id": "C-ACT-3",
+   "group": "Activity",
+   "title": "every item keeps its semantic category and its one originating context",
+   "pass": true,
+   "detail": "11 rows"
+  },
+  {
+   "id": "C-ACT-4",
+   "group": "Activity",
+   "title": "no rendered row merges two Worlds",
+   "pass": true,
+   "detail": "none"
+  },
+  {
+   "id": "C-ACT-5",
+   "group": "Activity",
+   "title": "at most one explicit inline action per item",
+   "pass": true,
+   "detail": "00100000000"
+  },
+  {
+   "id": "C-MARK-1",
+   "group": "Attention",
+   "title": "the attention mark is never Living Brass (Dark and Light)",
+   "pass": true,
+   "detail": "dark rgb(216, 213, 202) rgb(165, 142, 111) | light rgb(41, 39, 31) rgb(122, 100, 70)"
+  },
+  {
+   "id": "C-MARK-2",
+   "group": "Attention",
+   "title": "no default red: the mark is the neutral primary ink, never the error ink, and never a badge pill",
+   "pass": true,
+   "detail": "{\"bg\":\"rgb(216, 213, 202)\",\"w\":6,\"h\":6}"
+  },
+  {
+   "id": "C-MARK-3",
+   "group": "Attention",
+   "title": "no global raw count: the entry shows no number",
+   "pass": true,
+   "detail": "\"\""
+  },
+  {
+   "id": "C-MARK-4",
+   "group": "Attention",
+   "title": "Introductions shows presence only — no numeric candidate count anywhere in Activity",
+   "pass": true,
+   "detail": "التعارف|فيه تعارف جديد في انتظارك|قَبِل الطرفان التعارف"
+  },
+  {
+   "id": "C-STRIP-1",
+   "group": "Strip",
+   "title": "no strip in the same originating context (the reply lands in the thread)",
+   "pass": true,
+   "detail": "{\"strip\":false,\"inplace\":true}"
+  },
+  {
+   "id": "C-STRIP-2",
+   "group": "Strip",
+   "title": "no strip during an active Live Call; the call line keeps Call Rail A with End Call at 27 px; the event waits in Activity with the mark",
+   "pass": true,
+   "detail": "{\"strip\":false,\"end\":\"27\",\"rail\":true,\"mark\":true,\"d\":2}"
+  },
+  {
+   "id": "C-STRIP-3",
+   "group": "Strip",
+   "title": "no bounce, pulse or loop: strip motion is monotonic, never overshoots, and nothing in the page animates forever",
+   "pass": true,
+   "detail": "appear y: -10.0 -4.8 -1.8 -0.7 -0.2 -0.1…"
+  },
+  {
+   "id": "C-STRIP-4",
+   "group": "Strip",
+   "title": "pressing the strip enters its originating context (Direct Entry preserved)",
+   "pass": true,
+   "detail": "{\"place\":\"shared\",\"here\":\"w-summer\",\"title\":\"رحلة الصيف\"}"
+  },
+  {
+   "id": "C-PERM-1",
+   "group": "Permission",
+   "title": "no permission education at first launch; the education carries a legitimate trigger",
+   "pass": true,
+   "detail": "launch sheet: false; trigger: shared-first-entry"
+  },
+  {
+   "id": "C-PERM-2",
+   "group": "Permission",
+   "title": "education comes BEFORE the OS boundary, and the OS prompt is not drawn by QANDEEL",
+   "pass": true,
+   "detail": "[{\"sheet\":true,\"os\":false},{\"sheet\":false,\"os\":\"PLATFORM-OWNED · iOS / ANDROID · NOT DRAWN\"}]"
+  },
+  {
+   "id": "C-PERM-3",
+   "group": "Permission",
+   "title": "«مش دلوقتي» leaves the Product usable and never re-asks on its own",
+   "pass": true,
+   "detail": "{\"sheet\":false,\"entry\":true,\"rail\":3,\"again\":false}"
+  },
+  {
+   "id": "C-A11Y-1",
+   "group": "Accessibility",
+   "title": "every control is named (conversation, strip, Activity, settings, education, call)",
+   "pass": true,
+   "detail": "10 pages"
+  },
+  {
+   "id": "C-A11Y-1b",
+   "group": "Accessibility",
+   "title": "no name is glued from several text pieces (a control named by more than one text element carries an explicit label)",
+   "pass": true,
+   "detail": "6 pages"
+  },
+  {
+   "id": "C-A11Y-9",
+   "group": "Accessibility",
+   "title": "a modal keeps focus inside: nothing behind the education or the preview chooser is reachable, and Escape closes it",
+   "pass": true,
+   "detail": "[{\"st\":\"edu\",\"inS\":2,\"out\":0,\"closed\":true},{\"st\":\"notif-lock\",\"inS\":4,\"out\":0,\"closed\":true}]"
+  },
+  {
+   "id": "C-A11Y-2",
+   "group": "Accessibility",
+   "title": "every decorative glyph is hidden from the accessibility tree",
+   "pass": true,
+   "detail": "all hidden"
+  },
+  {
+   "id": "C-A11Y-3",
+   "group": "Accessibility",
+   "title": "every control target is at least 44 × 44 pt (320, 390 and 430)",
+   "pass": true,
+   "detail": "9 pages"
+  },
+  {
+   "id": "C-A11Y-4",
+   "group": "Accessibility",
+   "title": "keyboard focus is visible (E1R perimeter) on the entry, a filter, a switch and the strip",
+   "pass": true,
+   "detail": "4 focus rings"
+  },
+  {
+   "id": "C-A11Y-5",
+   "group": "Accessibility",
+   "title": "state is never colour-only: rows say NEW / WAITING / NO LONGER AVAILABLE in words; switches and radios expose their state",
+   "pass": true,
+   "detail": "words true; switches true; checked radios 1"
+  },
+  {
+   "id": "C-A11Y-6",
+   "group": "Direction",
+   "title": "RTL mirrors by meaning: the entry sits at the START edge in both scripts; back mirrors; the ledger, World and call glyphs never do",
+   "pass": true,
+   "detail": "ar x 336, en x 10, back matrix(-1, 0, 0, 1, 0, 0)"
+  },
+  {
+   "id": "C-A11Y-7",
+   "group": "Accessibility",
+   "title": "Reduced Motion parity: the strip keeps its meaning, hold and acts with no travel",
+   "pass": true,
+   "detail": "standard frames 15,200; reduced 15,199"
+  },
+  {
+   "id": "C-A11Y-8",
+   "group": "Appearance",
+   "title": "Activity follows Dark / Light / System (non-Analysis): never painted Analysis-dark under Light",
+   "pass": true,
+   "detail": "light rgb(239, 238, 235) | system rgb(239, 238, 235) | dark rgb(16, 16, 16)"
+  },
+  {
+   "id": "C-P2-1",
+   "group": "P2",
+   "title": "P2 consumed, not forked: navigation glyphs in Living Brass, the entry in neutral rest ink (never Brass)",
+   "pass": true,
+   "detail": "{\"nav\":\"rgb(165, 142, 111)\",\"entry\":\"rgb(139, 137, 130)\"}"
+  },
+  {
+   "id": "C-SEL-1",
+   "group": "Selections",
+   "title": "Open Ledger is the accepted Activity entry (Quiet Bell is comparison / history only) and the one the shell draws",
+   "pass": true,
+   "detail": "{\"ledger\":true,\"bell\":false}"
+  },
+  {
+   "id": "C-SEL-2",
+   "group": "Selections",
+   "title": "Open Link is the FINAL Introductions row mark and the one the shell draws by default; At the Door is comparison / history only; the two-opening drawing is only a withdrawn (rejected) drawing",
+   "pass": true,
+   "detail": "{\"meta\":true,\"accepted\":\"link\",\"link\":true,\"door\":false,\"old\":false}"
+  },
+  {
+   "id": "C-ANL-1",
+   "group": "Analysis",
+   "title": "the Analysis never gains the Activity entry (G3 composition untouched); the non-Analysis shell keeps it",
+   "pass": true,
+   "detail": "analysis@390:none analysis@390:none analysis-call@390:none analysis-call-security@320:none analysis-call-reminder@430:none conv:entry shared-strip-qandeel:entry"
+  },
+  {
+   "id": "C-ANL-2",
+   "group": "Analysis",
+   "title": "Activity stays one step away: «المحادثة» leads from the Analysis back to the Conversation, where the entry is",
+   "pass": true,
+   "detail": "{\"place\":\"conv\",\"entry\":true}"
+  },
+  {
+   "id": "C-ANL-3",
+   "group": "Analysis",
+   "title": "inside the Analysis (no call) a Shared reply, a Public reply, an Introduction and a Proactive note create NO strip, no transient region and no announcement; each waits, marked, for Activity — Arabic 390, English 320",
+   "pass": true,
+   "detail": "[{\"place\":\"analysis\",\"strip\":false,\"regions\":0,\"said\":\"\",\"shown\":0,\"waiting\":\"E-reply,E-preply,E-intro,E-pro\",\"feed\":\"qandeel:unseen,intro:unseen,public:unseen,shared:unseen\",\"g3\":\"analysis\"},{\"place\":\"analysis\",\"strip\":false,\"regions\":0,\"said\":\"\",\"shown\":0,\"waiting\":\"E-reply,E-preply,E-intro,E-pro\",\"feed\":\"qandeel:unseen,intro:unseen,public:unseen,shared:unseen\",\"g3\":\"analysis\"}]"
+  },
+  {
+   "id": "C-EXIT-3",
+   "group": "Exit",
+   "title": "leaving the Analysis by «المحادثة» (G3's own control) re-evaluates what waited: exactly ONE strip over the next 9 s — never a dump, never nothing — and the others stay in Activity with the mark",
+   "pass": true,
+   "detail": "[{\"place\":\"conv\",\"shown\":\"E-reply\",\"waiting\":0,\"unseen\":4},{\"place\":\"conv\",\"shown\":\"E-reply\",\"waiting\":0,\"unseen\":1}]"
+  },
+  {
+   "id": "C-EXIT-4",
+   "group": "Exit",
+   "title": "nothing is shown merely because it once waited: a Shared reply deferred in the Analysis whose World is muted before the user leaves gives no strip on exit, and stays in Activity",
+   "pass": true,
+   "detail": "{\"place\":\"conv\",\"shown\":\"\",\"inFeed\":true}"
+  },
+  {
+   "id": "C-COPY-1",
+   "group": "Copy",
+   "title": "L1 reads «إظهار النوع» / \"Show type\" everywhere it is shown; the withdrawn «تنبيه عام» / \"General\" is gone",
+   "pass": true,
+   "detail": "إظهار النوعيظهر نوع الإش | Show typeOnly shows the "
+  },
+  {
+   "id": "C-RED-5",
+   "group": "Reduce",
+   "title": "Settings explain «أقل» / Reduce in words, with no class, number or threshold",
+   "pass": true,
+   "detail": "قنديل هيقاطعك أقل، ومش هينبّهك غير للحاجات الأهم أو اللي وقتها ميستناش. | Qandeel interrupts you less, and only for what matters most or can't wait."
+  },
+  {
+   "id": "C-CALL-3",
+   "group": "Live Call",
+   "title": "the one bounded exception, measured on G3's own elements at 320, 390 and 430: the call-safe strip temporarily and intentionally occludes the Replay slot and nothing else — it stays in the chrome row (y ≤ 95, so the world floor is untouched) and clear of «المحادثة», the Timeline, Return Live, the band and the call line",
+   "pass": true,
+   "detail": "analysis-call-security/ar@320:CALL_PINNED analysis-call-security/en@320:CALL_PINNED analysis-call-reminder/en@320:CALL_PINNED analysis-call-security/ar@390:CALL_ANALYSIS analysis-call-reminder/en@390:CALL_ANALYSIS analysis-call-security/en@430:CALL_ANALYSIS"
+  },
+  {
+   "id": "C-CALL-4",
+   "group": "Live Call",
+   "title": "ordinary Shared, Introduction and Proactive arrivals during a call show no strip on the Analysis (they wait, marked, in Activity)",
+   "pass": true,
+   "detail": "{\"strip\":false,\"d\":3,\"log\":[\"E-pro → deferred (live-call-deferred)\",\"E-intro → deferred (live-call-deferred)\",\"E-reply → deferred (live-call-deferred)\"]}"
+  },
+  {
+   "id": "C-CALL-5",
+   "group": "Live Call",
+   "title": "critical security and a requested reminder show the call-safe strip on both call surfaces; it has no Direct Entry, dismissing it leaves the call running, and the security item still waits in Activity",
+   "pass": true,
+   "detail": "analysis-call-security:true analysis-call-reminder:true conv-call-security:true conv-call-reminder:true"
+  },
+  {
+   "id": "C-CALL-6",
+   "group": "Live Call",
+   "title": "call-safe motion: no pulse, bounce or loop; Reduced Motion keeps the same appear, hold and dismiss with no travel (M08 / M08r)",
+   "pass": true,
+   "detail": "standard frames 15,200; reduced 15,199"
+  },
+  {
+   "id": "C-CALL-7",
+   "group": "Live Call",
+   "title": "focus is never hidden under the occluded Replay: when G3's Replay takes keyboard focus, the call-safe strip steps aside at once and the call continues",
+   "pass": true,
+   "detail": "[{\"lang\":\"ar\",\"before\":true,\"after\":false,\"focus\":\"replay\",\"call\":true},{\"lang\":\"en\",\"before\":true,\"after\":false,\"focus\":\"replay\",\"call\":true}]"
+  },
+  {
+   "id": "C-GLY-1",
+   "group": "Glyph",
+   "title": "the Introductions mark obeys P2 N1 with no exception: no ring with more than one opening (both the accepted Open Link and the At the Door comparison)",
+   "pass": true,
+   "detail": "link: ring false (2°) openings 0 · door: ring true (298°) openings 1"
+  },
+  {
+   "id": "C-GLY-2",
+   "group": "Glyph",
+   "title": "no face-reading (points never side by side on a horizontal) and no collision with the World glyphs or the Activity ledger",
+   "pass": true,
+   "detail": "intro 0|0|2|0 vs {\"navMine20\":\"1|1|1|0\",\"navShared20\":\"1|1|2|0\",\"navPublic20\":\"1|3|4|3\",\"act-ledger\":\"0|0|0|0\"}; face false"
+  },
+  {
+   "id": "C-GLY-3",
+   "group": "Glyph",
+   "title": "the same optical system: the stroke is P2's optical stroke for 20 px, round terminals, the 24-unit grid, everything inside the live area",
+   "pass": true,
+   "detail": "{\"strokes\":[1.75],\"caps\":[\"round\"],\"ext\":[3.41,20.59]}"
+  }
+ ],
+ "pass": 89,
+ "total": 89,
+ "planted": [
+  {
+   "id": "D1",
+   "desc": "a red global “37” badge",
+   "via": "?defect=redbadge",
+   "targets": [
+    "C-MARK-2",
+    "C-MARK-3"
+   ],
+   "caughtBy": [
+    "C-MARK-2",
+    "C-MARK-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D2",
+   "desc": "an Introductions count “12”",
+   "via": "?defect=introcount",
+   "targets": [
+    "C-MARK-4"
+   ],
+   "caughtBy": [
+    "C-MARK-4"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D3",
+   "desc": "a cross-World coalesced row",
+   "via": "model mutation + ?defect=crossworld",
+   "targets": [
+    "C-ACT-4m",
+    "C-ACT-4"
+   ],
+   "caughtBy": [
+    "C-ACT-4m",
+    "C-ACT-4"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D4",
+   "desc": "a first-launch permission popup",
+   "via": "?defect=firstlaunch",
+   "targets": [
+    "C-PERM-1"
+   ],
+   "caughtBy": [
+    "C-PERM-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D5",
+   "desc": "a morning dump: every waiting candidate pushed at 08:00",
+   "via": "model mutation",
+   "targets": [
+    "C-QUIET-3"
+   ],
+   "caughtBy": [
+    "C-QUIET-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D6",
+   "desc": "the fifth ordinary Push in 24 h allowed",
+   "via": "model mutation",
+   "targets": [
+    "C-FREQ-1"
+   ],
+   "caughtBy": [
+    "C-FREQ-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D7",
+   "desc": "a second Proactive QANDEEL Push 6 h after the first",
+   "via": "model mutation",
+   "targets": [
+    "C-FREQ-3"
+   ],
+   "caughtBy": [
+    "C-FREQ-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D8",
+   "desc": "an Attention Strip in the same originating context",
+   "via": "model mutation + ?defect=samectx",
+   "targets": [
+    "C-STRIP-1m",
+    "C-STRIP-1"
+   ],
+   "caughtBy": [
+    "C-STRIP-1m",
+    "C-STRIP-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D9",
+   "desc": "Activity painted Analysis-dark under Light",
+   "via": "?defect=actdark",
+   "targets": [
+    "C-A11Y-8"
+   ],
+   "caughtBy": [
+    "C-A11Y-8"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D10",
+   "desc": "a Brass attention dot",
+   "via": "?defect=brassdot",
+   "targets": [
+    "C-MARK-1"
+   ],
+   "caughtBy": [
+    "C-MARK-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D11",
+   "desc": "Shared previews default to L3",
+   "via": "model mutation",
+   "targets": [
+    "C-PRIV-2"
+   ],
+   "caughtBy": [
+    "C-PRIV-2"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D12",
+   "desc": "the Introductions L0 notification names Introductions",
+   "via": "model mutation",
+   "targets": [
+    "C-PRIV-1"
+   ],
+   "caughtBy": [
+    "C-PRIV-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D13",
+   "desc": "a critical event raises disclosure to L3",
+   "via": "model mutation",
+   "targets": [
+    "C-PRIV-4"
+   ],
+   "caughtBy": [
+    "C-PRIV-4"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D14",
+   "desc": "Quiet Hours exceptions widened to Proactive QANDEEL",
+   "via": "model mutation",
+   "targets": [
+    "C-QUIET-2"
+   ],
+   "caughtBy": [
+    "C-QUIET-2"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D15",
+   "desc": "a settings row whose accessible name is glued from two texts",
+   "via": "?defect=gluedname",
+   "targets": [
+    "C-A11Y-1b"
+   ],
+   "caughtBy": [
+    "C-A11Y-1b"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D16",
+   "desc": "a modal that leaves the page behind it reachable",
+   "via": "?defect=noinert",
+   "targets": [
+    "C-A11Y-9"
+   ],
+   "caughtBy": [
+    "C-A11Y-9"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D17",
+   "desc": "a universal Introductions cap (every Introduction ≤ L1)",
+   "via": "model mutation",
+   "targets": [
+    "C-PRIV-6",
+    "C-FG-1"
+   ],
+   "caughtBy": [
+    "C-FG-1",
+    "C-PRIV-6"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D18",
+   "desc": "the withdrawn L1 label «تنبيه عام» / \"General\" restored",
+   "via": "?defect=oldl1",
+   "targets": [
+    "C-COPY-1"
+   ],
+   "caughtBy": [
+    "C-COPY-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D19",
+   "desc": "Reduce implemented as a hard \"Class 2 only\" rule",
+   "via": "model mutation",
+   "targets": [
+    "C-RED-1",
+    "C-RED-4"
+   ],
+   "caughtBy": [
+    "C-RED-1",
+    "C-RED-4"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D20",
+   "desc": "critical security deferred during a Live Call",
+   "via": "model mutation + ?defect=calldefer",
+   "targets": [
+    "C-CALL-2m",
+    "C-CALL-5"
+   ],
+   "caughtBy": [
+    "C-CALL-2m",
+    "C-CALL-5"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D21",
+   "desc": "an ordinary Shared reply shown during a Live Call",
+   "via": "model mutation + ?defect=callshared",
+   "targets": [
+    "C-CALL-1m",
+    "C-CALL-4",
+    "C-STRIP-2"
+   ],
+   "caughtBy": [
+    "C-CALL-1m",
+    "C-STRIP-2",
+    "C-CALL-4"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D22",
+   "desc": "the Activity entry added to the Analysis chrome",
+   "via": "?defect=analysisentry",
+   "targets": [
+    "C-ANL-1"
+   ],
+   "caughtBy": [
+    "C-ANL-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D23",
+   "desc": "the withdrawn two-opening Introductions ring restored",
+   "via": "?defect=oldintro",
+   "targets": [
+    "C-GLY-1",
+    "C-SEL-2"
+   ],
+   "caughtBy": [
+    "C-SEL-2",
+    "C-GLY-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D24",
+   "desc": "REJECTED / PLANTED DEFECT — ORDINARY STRIP INSIDE ANALYSIS: a Shared reply becomes a normal strip in the Analysis",
+   "via": "model mutation + ?defect=analysisstrip",
+   "targets": [
+    "C-ANL-3m",
+    "C-FG-1",
+    "C-ANL-3"
+   ],
+   "caughtBy": [
+    "C-FG-1",
+    "C-ANL-3m",
+    "C-ANL-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D25",
+   "desc": "a deferred Analysis event is never re-evaluated on exit",
+   "via": "model mutation + ?defect=noreeval",
+   "targets": [
+    "C-EXIT-1m",
+    "C-EXIT-3"
+   ],
+   "caughtBy": [
+    "C-EXIT-1m",
+    "C-EXIT-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D26",
+   "desc": "multiple deferred Analysis events dump multiple strips on exit",
+   "via": "model mutation + ?defect=dump",
+   "targets": [
+    "C-EXIT-2m",
+    "C-EXIT-3"
+   ],
+   "caughtBy": [
+    "C-EXIT-2m",
+    "C-EXIT-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D27",
+   "desc": "the call-safe strip \"covers no frozen control\": moved off the Replay slot, below the chrome row, into the world floor",
+   "via": "?defect=badslot",
+   "targets": [
+    "C-CALL-3"
+   ],
+   "caughtBy": [
+    "C-CALL-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D28",
+   "desc": "the call-safe strip gets a Direct Entry",
+   "via": "?defect=callentry",
+   "targets": [
+    "C-CALL-5"
+   ],
+   "caughtBy": [
+    "C-CALL-5"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D29",
+   "desc": "the Attention Strip spec claims the call-safe strip covers no frozen control",
+   "via": "document mutation",
+   "targets": [
+    "C-DOC-1"
+   ],
+   "caughtBy": [
+    "C-DOC-1"
+   ],
+   "rejected": true
+  }
+ ],
+ "plantedRejected": 29,
+ "plantedTotal": 29
+}

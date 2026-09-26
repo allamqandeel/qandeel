@@ -1,0 +1,188 @@
+{
+ "note": "Byte-exact copies of merged P2-A material (main, P2 CLOSED / FROZEN by PR #274). Never edited here; re-verified by tools/p3checks.mjs.",
+ "from": "docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/source",
+ "files": {
+  "src/sig.mjs": {
+   "from": "src/sig.mjs",
+   "bytes": 11160,
+   "sha256": "960ecd84edd75da91ee6a7c391504bb0ee4f15b92c8bea120847289caca4dde2"
+  },
+  "src/utility.mjs": {
+   "from": "src/utility.mjs",
+   "bytes": 3228,
+   "sha256": "5ab7bad45019e33d85f455b9c3f19e403aaf1d591a8ebee344182ab3017c5df9"
+  },
+  "src/machines.mjs": {
+   "from": "src/machines.mjs",
+   "bytes": 5294,
+   "sha256": "6360e8c0959f049c7186487a26473466fb07573b7cff1d111276526ab44c807c"
+  },
+  "src/tokens.mjs": {
+   "from": "src/tokens.mjs",
+   "bytes": 6737,
+   "sha256": "435f4dafa44be9045b07669bdb485385b7d51b07ea08713031b2b94a6de21911"
+  },
+  "vendor/fonts/Estedad-wght-v8.5.woff2": {
+   "from": "vendor/fonts/Estedad-wght-v8.5.woff2",
+   "bytes": 120924,
+   "sha256": "b40ce2504e442a79e8adddf1d7b27bc4bd171bb94c9e7c93e0732d095bc051b0"
+  },
+  "vendor/fonts/Estedad-OFL.txt": {
+   "from": "vendor/fonts/Estedad-OFL.txt",
+   "bytes": 4388,
+   "sha256": "0417da48fc44780476e074f02f8400028ee704b3e222be5855fa6d960b9200ca"
+  },
+  "vendor/utility/utility-glyphs.json": {
+   "from": "vendor/utility/utility-glyphs.json",
+   "bytes": 31456,
+   "sha256": "54d059f63b92988ae06e7e37a44eee24e71775e76206b4d0f0f1b9c1ffbfea23"
+  },
+  "vendor/utility/LICENSE-hugeicons.txt": {
+   "from": "vendor/utility/LICENSE-hugeicons.txt",
+   "bytes": 1066,
+   "sha256": "1658d8213209df7b9b86dfc05d724ede48d00dbc27abc15976ec7adec9601cde"
+  },
+  "vendor/utility/LICENSE-iconoir.txt": {
+   "from": "vendor/utility/LICENSE-iconoir.txt",
+   "bytes": 1068,
+   "sha256": "869b60da1ada5b896d1f285c3c24ca193d612e308d1710a77a58f2f572eb4fa2"
+  },
+  "vendor/utility/LICENSE-lucide.txt": {
+   "from": "vendor/utility/LICENSE-lucide.txt",
+   "bytes": 3208,
+   "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+  },
+  "vendor/utility/LICENSE-phosphor.txt": {
+   "from": "vendor/utility/LICENSE-phosphor.txt",
+   "bytes": 1092,
+   "sha256": "ddbe6082ec3cf979db47e5af549d2849c5d6182b3e005ef91ce1dbb9eb122f11"
+  },
+  "vendor/utility/LICENSE-tabler.txt": {
+   "from": "vendor/utility/LICENSE-tabler.txt",
+   "bytes": 1073,
+   "sha256": "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db"
+  },
+  "vendor/tokens/base/b4r.semantic.tokens.json": {
+   "from": "vendor/tokens/base/b4r.semantic.tokens.json",
+   "bytes": 4373,
+   "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441"
+  },
+  "vendor/tokens/base/c3.material.tokens.json": {
+   "from": "vendor/tokens/base/c3.material.tokens.json",
+   "bytes": 14376,
+   "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928"
+  },
+  "vendor/tokens/base/d2r.illumination.tokens.json": {
+   "from": "vendor/tokens/base/d2r.illumination.tokens.json",
+   "bytes": 30299,
+   "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4"
+  },
+  "vendor/tokens/base/e1.interaction.tokens.json": {
+   "from": "vendor/tokens/base/e1.interaction.tokens.json",
+   "bytes": 54134,
+   "sha256": "6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce"
+  },
+  "vendor/tokens/base/f1.accessibility.tokens.json": {
+   "from": "vendor/tokens/base/f1.accessibility.tokens.json",
+   "bytes": 38216,
+   "sha256": "dd47c43cb72eb306f2b701a883ce7c48e280f4d8bcfbf00664d0abca681e35cc"
+  },
+  "vendor/tokens/base/f2.appearance.tokens.json": {
+   "from": "vendor/tokens/base/f2.appearance.tokens.json",
+   "bytes": 30947,
+   "sha256": "513f5dfa419e1a5b7c5729e7b062ea282c32df0a3284e73596bc10b9e652cadc"
+  },
+  "vendor/tokens/base/g11.utterance.alias.tokens.json": {
+   "from": "vendor/tokens/base/g11.utterance.alias.tokens.json",
+   "bytes": 528,
+   "sha256": "bdc05957547f28786ff0d3388b5e4c4f0ce8bfafbd548e8d763b525d01fd033b"
+  },
+  "vendor/tokens/contrast/f1.dark.increased.tokens.json": {
+   "from": "vendor/tokens/contrast/f1.dark.increased.tokens.json",
+   "bytes": 9120,
+   "sha256": "5b27d13790e0ce051822c226aa8f3c11cac04467156210f9469c229f391c8f2a"
+  },
+  "vendor/tokens/contrast/f2.light.increased.tokens.json": {
+   "from": "vendor/tokens/contrast/f2.light.increased.tokens.json",
+   "bytes": 5601,
+   "sha256": "a382d1a486be780f9c6419347e3f24fcf832bdb3d68607bbf0975a1ee9b2224b"
+  },
+  "vendor/tokens/dark/b4r.dark.tokens.json": {
+   "from": "vendor/tokens/dark/b4r.dark.tokens.json",
+   "bytes": 2348,
+   "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112"
+  },
+  "vendor/tokens/dark/c3.dark.material.tokens.json": {
+   "from": "vendor/tokens/dark/c3.dark.material.tokens.json",
+   "bytes": 3441,
+   "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367"
+  },
+  "vendor/tokens/dark/d2r.dark.illumination.tokens.json": {
+   "from": "vendor/tokens/dark/d2r.dark.illumination.tokens.json",
+   "bytes": 3794,
+   "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157"
+  },
+  "vendor/tokens/dark/e1.dark.interaction.tokens.json": {
+   "from": "vendor/tokens/dark/e1.dark.interaction.tokens.json",
+   "bytes": 6162,
+   "sha256": "397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252"
+  },
+  "vendor/tokens/dark/f1.dark.accessibility.tokens.json": {
+   "from": "vendor/tokens/dark/f1.dark.accessibility.tokens.json",
+   "bytes": 3245,
+   "sha256": "3d2fbcca824255c5da8ee234f572f35bad68f143c47424ccc0057ad7e7407176"
+  },
+  "vendor/tokens/light/b4r.light.tokens.json": {
+   "from": "vendor/tokens/light/b4r.light.tokens.json",
+   "bytes": 9736,
+   "sha256": "8176490548ca7105f4b3a20f5c72c298d6de0c14289743887f411e3c4ab0ab0e"
+  },
+  "vendor/tokens/light/c3.light.material.tokens.json": {
+   "from": "vendor/tokens/light/c3.light.material.tokens.json",
+   "bytes": 4917,
+   "sha256": "f8066672414cefe95d46105620ca1b6e48d6f42fc44c715e69d60e99d280572d"
+  },
+  "vendor/tokens/light/d2r.light.illumination.tokens.json": {
+   "from": "vendor/tokens/light/d2r.light.illumination.tokens.json",
+   "bytes": 18654,
+   "sha256": "6d74182584c420182ec004db3ba3097923aff6f16cb42138214c580c52a47260"
+  },
+  "vendor/tokens/light/e1.light.interaction.tokens.json": {
+   "from": "vendor/tokens/light/e1.light.interaction.tokens.json",
+   "bytes": 5021,
+   "sha256": "1c408ba0ac42a9241e8b6a0697a692606a7461f2fa864ef526146cf231fd0393"
+  },
+  "vendor/tokens/light/f1.light.accessibility.tokens.json": {
+   "from": "vendor/tokens/light/f1.light.accessibility.tokens.json",
+   "bytes": 3693,
+   "sha256": "2b3861432472683aa2bd9f9199463da52502a7ba746d620cbfaa827122975952"
+  },
+  "tools/lib/cdp.mjs": {
+   "from": "tools/lib/cdp.mjs",
+   "bytes": 7530,
+   "sha256": "ab4d7523f98bcdfe0e68be1596bf889f005706f552a78b6e281d0d9641851959"
+  },
+  "tools/lib/server.mjs": {
+   "from": "tools/lib/server.mjs",
+   "bytes": 1167,
+   "sha256": "0e6793889665ecc9481192795c2092d28402a60f5ae2afecd6199419abc6c4b2"
+  },
+  "tools/lib/zipw.cjs": {
+   "from": "tools/lib/zipw.cjs",
+   "bytes": 4264,
+   "sha256": "0cf4e81a65fe617ccf5f46536fe1c8e880745386bf9745afc1f17535fff3bc3e"
+  },
+  "tools/lib/zipr.mjs": {
+   "from": "tools/lib/zipr.mjs",
+   "bytes": 1637,
+   "sha256": "b92138dee6a0493d3e957648c2aae362f5609fc82344497b28220e0ccb30c2a5"
+  }
+ },
+ "g32": {
+  "note": "G3.2 reviewed prototype, byte-exact (G3 CLOSED / FROZEN). Loaded unchanged in a frame for the Analysis surface; never edited.",
+  "from": "docs/design/canonical-artifacts/product-proofs/g3/g3.2/prototype/index.html",
+  "to": "prototype/g3.2/index.html",
+  "bytes": 1354593,
+  "sha256": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
+ }
+}

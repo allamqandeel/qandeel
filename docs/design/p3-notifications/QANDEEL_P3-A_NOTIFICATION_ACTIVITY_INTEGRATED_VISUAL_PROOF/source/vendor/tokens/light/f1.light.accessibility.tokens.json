@@ -1,0 +1,57 @@
+{
+  "$description": "I-08B3.1-F2 — THE I-08B3.1-F1 ACCESSIBILITY EXPRESSION, LIGHT APPEARANCE. F1 shipped this file's dark counterpart with the note 'The LIGHT appearance of every one of these is owned by I-08B3.1-F2 and does not exist yet; the resolver fails loudly rather than returning a colour nobody designed.' This is it.\n\nTHE HEADLINE IS HOW LITTLE IS HERE, AND IT IS A RESULT RATHER THAN A SHORTCUT. F1's accessibility transformations are almost entirely RE-ROUTES — a class is pointed at a different rung of the frozen reading ramp — and an alias is appearance-independent by construction: it resolves through whatever the appearance supplies. So F1's hardest decision, the one that keeps HIGH CONTRAST from becoming HIGH IMPORTANCE by raising the analytical relation along with the atmosphere, needs nothing at all from F2. Re-measured on the light values it reproduces itself: the meaning-hierarchy ratio is 1.379 by default, collapses to 1.003 if only the atmosphere rises, and widens to 1.550 when the relation rises with it. Dark's three figures were 1.291, 1.028 and 1.524.\n\nFOUR THINGS ARE APPEARANCE-BOUND. Three of them are in this file; the fourth is the opaque scrim literal, which lives with the reduce-transparency override because that is the context that needs it.",
+  "qandeel": {
+    "expression": {
+      "accessibility": {
+        "atmosphere": {
+          "$type": "number",
+          "$description": "The ambient field's derived expression values, LIGHT appearance. As in dark, every one of them lands on a property I-08B3.1-D2R's PRESENTATION_CONTRACT declares `encodes: null`.",
+          "lightness-near": {
+            "$value": 0.4944,
+            "$description": "Default. The near layer, at the lightness that preserves its dark counterpart's 5.263:1 contour contrast against its own ground. Present so the increased-contrast override has a NAME to override rather than a scene constant to patch — F1's reason, kept.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "serves": "qandeel.appearance.light-not-reduced",
+                "why": "derived by contour-contrast parity against the light World. The CONTRACT is that the field keeps its presence; this is the number that gives it."
+              }
+            }
+          },
+          "lightness-mid": {
+            "$value": 0.5618,
+            "$description": "Default. Preserves 3.941:1.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "serves": "qandeel.appearance.light-not-reduced",
+                "why": "as lightness-near."
+              }
+            }
+          },
+          "lightness-far": {
+            "$value": 0.6356,
+            "$description": "Default. Preserves 2.921:1.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "serves": "qandeel.appearance.light-not-reduced",
+                "why": "as lightness-near."
+              }
+            }
+          },
+          "stroke-alpha-multiplier": {
+            "$value": 1,
+            "$description": "Default. The field is drawn at I-08B3.1-D2R's own per-world stroke alphas, untouched — the same sentinel, the same meaning, in both appearances.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "serves": "qandeel.appearance.light-not-reduced",
+                "why": "the DEFAULT sentinel, inherited unchanged."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
