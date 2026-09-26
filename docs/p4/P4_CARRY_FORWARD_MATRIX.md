@@ -45,7 +45,10 @@ The audit designs no schema and chooses no vendor. It has **not** started, and P
 | Code delivery (store / over-the-air) governance | a release-operations decision (`P4-DQ-17`) | APP-OPS-01 §12: code delivery is not a control | App Operations & Release Lead; Release Hardening | Release Hardening | **no** |
 | Operational-readiness validation (observability, failure recovery) | validation, not decision | APP-OPS-01 §8, §15 | Release Hardening & Launch | Release Hardening | **no.** The roadmap §5 already names it |
 
-| **Controlled CW2-08 amendment** — §8 / H7 and only necessary dependent wording | P4-A is not authorized to edit frozen CW2 authority and must not invent the replacement moderation mechanism | `PO-OPS-02`; APP-OPS-01 §18; `P4-DQ-10`: no human review of private conversation content through Company Operations or safety-monitoring flows | controlled CW2-08 amendment task under Product Owner / Architecture governance | before APP-OPS-01 / P4 can close the conflicting authority | **conditional.** If the amendment has not already landed before P4 closure, BG-06 / BG-08 require explicit backlog disposition (§3) |
+The controlled CW2-08 amendment that P4-A deferred is **no longer a carry-forward**: P4-B lands it as the
+[CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md)
+(`P4-DQ-10`, resolved). Any future moderation / report UX and appeals stay with their existing owner, Connected Worlds
+`I-09` / CW2-08 §44 item 5, and must obey CW2-08A. That owner and item already exist, so nothing new is deferred.
 
 ### 2.2 Residual Product / visual canon
 
@@ -66,17 +69,20 @@ The audit designs no schema and chooses no vendor. It has **not** started, and P
 
 ## 3. Backlog impact candidate
 
-> **`Backlog impact candidate: PROPOSED — pending closure review`**
+> **`Backlog impact candidate: NONE`**
 
-**P4-A itself changes no backlog row.** It admits nothing, tombstones nothing and re-owns nothing (Task Contract §32).
+**Neither P4-A nor P4-B changes a backlog row.** They admit nothing, tombstone nothing and re-own nothing.
 
-There is one conditional candidate for later closure reconciliation: the required controlled CW2-08 amendment in
-`P4-DQ-10`. If that amendment has not landed before P4 closes, the closed P4 / APP-OPS record would otherwise defer a
-concrete obligation to a named future authority task; BG-06 / BG-08 then require explicit backlog disposition rather
-than leaving it only in a closure note.
+P4-A's one conditional candidate, the controlled CW2-08 amendment in `P4-DQ-10`, is gone:
 
-Every other carry-forward remains NONE for backlog impact because it is roadmap-sequenced implementation, an existing
-backlog owner, release/device validation, or a named owner under frozen authority.
+- the concrete amendment obligation is completed in P4-B itself (CW2-08A);
+- no new future task is deferred for `P4-DQ-10`;
+- the remaining moderation / report work is existing named-owner work (Connected Worlds `I-09` / CW2-08 §44 item 5),
+  now bounded by CW2-08A.
+
+Every other carry-forward is NONE for backlog impact because it is roadmap-sequenced implementation, an existing
+backlog owner, release/device validation, or a named owner under frozen authority. The later P4 closure confirms this
+under BG-06 / BG-08.
 
 This follows the precedents of P2 §15, P3 §20 and the I-04 … I-07 closure records.
 
@@ -88,8 +94,8 @@ These are not carry-forwards. They are the remainder of P4 itself. They are list
 them silently (AGENTS §10.6):
 
 1. the Product Owner's answers to `P4-DQ-01` … `P4-DQ-09`, and the visual proofs they require;
-2. the controlled CW2-08 amendment required by `P4-DQ-10`, plus the Product Owner's answers to `P4-DQ-11` …
-   `P4-DQ-17`, and the independent review of APP-OPS-01;
+2. the Product Owner's answers to `P4-DQ-11` … `P4-DQ-17`, and the independent review of APP-OPS-01. (`P4-DQ-10` is
+   resolved by CW2-08A);
 3. the P4 closure change, which does all of the following:
    - moves APP-OPS-01 and the P4 record to their final lifecycle (BG-09);
    - performs the BG-08 reconciliation of §3;

@@ -1,6 +1,6 @@
 # QANDEEL — P4 Read First
 
-**Status:** `P4-A — RESIDUAL GAP CENSUS + APP-OPS-01 CONTRACT CANDIDATE — READY FOR PRODUCT OWNER + INDEPENDENT REVIEW — P4 ACTIVE, NOT CLOSED`
+**Status:** `P4-A — RESIDUAL GAP CENSUS + APP-OPS-01 CONTRACT CANDIDATE (MERGED) — P4-B CW2-08A CONTROLLED AMENDMENT READY FOR PRODUCT OWNER + INDEPENDENT REVIEW — P4 ACTIVE, NOT CLOSED`
 
 ---
 
@@ -13,8 +13,9 @@
 | P1 · P2 · P3 | `CLOSED / FROZEN`, and unchanged by P4-A |
 | **P4** | **ACTIVE — census / closure track opened by P4-A. NOT CLOSED, NOT FROZEN** |
 | **APP-OPS-01** | **`PRODUCT / ARCHITECTURE CONTRACT CANDIDATE — NOT FROZEN`** |
-| Correction pass | applies the Product Owner's three-rule boundary: operational telemetry is **always content-free**; APP-OPS-01 creates **no Company Operations private-content receipt path**; and No Human Review is **not narrowed** to Company Operations. Re-reading CW2-08 §8 confirms one authority conflict → `CONTROLLED AMENDMENT REQUIRED — CW2-08` (`P4-DQ-10`) |
-| Implementation | **none authorized.** P4-A changes no code, schema, migration, dependency, workflow, backlog row or canonical authority record |
+| Correction pass | applies the Product Owner's three-rule boundary: operational telemetry is **always content-free**; APP-OPS-01 creates **no Company Operations private-content receipt path**; and No Human Review is **not narrowed** to Company Operations. Re-reading CW2-08 §8 confirmed one authority conflict (`P4-DQ-10`) |
+| P4-B controlled amendment | on `576b010dcf78276c982f5052cfee7dd1bcbfcbcb`, P4-B adds the [CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md), effective on merge: no human role or person may receive, inspect or review private QANDEEL conversation content under Safety / Moderation authority. The original CW2-08 stays frozen, historical and byte-identical. `P4-DQ-10` is **RESOLVED BY CONTROLLED CW2-08A AMENDMENT**. **16** Product Owner decisions remain open; **22** census rows still need a P4 decision |
+| Implementation | **none authorized.** P4-A and P4-B change no code, schema, migration, dependency, workflow or backlog row. P4-B's only authority change is the additive CW2-08A record and its Canonical Authority Index entry |
 | End-to-End Product Experience Completeness Audit | **not started** |
 
 ---
@@ -58,11 +59,12 @@ HR, admin tooling, generic analytics and internal automation.
 3. [`APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md`](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) —
    the contract candidate. It has 23 sections.
 4. [`P4_AUTHORITY_COMPATIBILITY_MATRIX.md`](P4_AUTHORITY_COMPATIBILITY_MATRIX.md) — APP-OPS-01 against every
-   authority it touches, plus the residual-canon precedence notes. It records **one real authority conflict**:
-   CW2-08 §8 / H7 permits an authorized person case-scoped evidence access where `PO-OPS-02` forbids human review of
-   private conversation content through safety-monitoring flows. `CONTROLLED AMENDMENT REQUIRED — CW2-08`.
-5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — the **17 open / blocking** rows:
-   `P4-DQ-01` … `P4-DQ-09` for the residual canon and `P4-DQ-10` … `P4-DQ-17` for APP-OPS-01.
+   authority it touches, plus the residual-canon precedence notes. It records **no open authority conflict**: the one
+   conflict P4-A found (historical CW2-08 §8 / H7 let an authorized person reach case-scoped private conversation
+   content) is superseded in that narrow scope by the CW2-08A controlled amendment.
+5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — the **16 open** rows:
+   `P4-DQ-01` … `P4-DQ-09` for the residual canon and `P4-DQ-11` … `P4-DQ-17` for APP-OPS-01. `P4-DQ-10` stays as a
+   resolved record.
 6. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — the future work that is not a P4 decision. It
    includes the mandatory audit fields and the backlog-impact candidate.
 
@@ -86,13 +88,17 @@ Two further markers appear in APP-OPS-01:
 
 ---
 
-## 6. What P4-A did not do
+## 6. What P4-A and P4-B did not do
 
-- It did not close or freeze P4, or APP-OPS-01.
-- It did not amend CW2-08 or any other authority. It records **`CONTROLLED AMENDMENT REQUIRED — CW2-08`** in
-  `P4-DQ-10`, with the exact §8 / H7 conflict, and deliberately does not invent the replacement moderation mechanism.
-- It did not decide any open Decision Queue row beyond recording Product Owner decisions already supplied. It did not
-  write new Product copy. It made no prototype, screenshot or design board.
-- It did not implement anything. It did not start P4-B, and it did not start the End-to-End audit.
-- It did not edit the backlog, the Canonical Authority Index, the Canonical Artifact Index, or the P1, P2, P3, G-series,
-  I-08A, I-08N, CW2, T-series or implementation-foundation records.
+- They did not close or freeze P4, or APP-OPS-01. P4 stays **ACTIVE, NOT CLOSED / NOT FROZEN**; APP-OPS-01 stays
+  **CANDIDATE / NOT FROZEN**.
+- P4-A amended no authority; it recorded the CW2-08 §8 / H7 conflict in `P4-DQ-10`. P4-B resolved it only by the
+  additive CW2-08A amendment. Neither edited the original CW2-08 or its provenance, and neither invented a replacement
+  moderation mechanism.
+- P4-A decided no open Decision Queue row beyond recording Product Owner decisions already supplied. P4-B answered no
+  Decision Queue row other than resolving `P4-DQ-10`. Neither wrote new Product copy or made a prototype, screenshot
+  or design board.
+- Neither implemented anything, started a further P4 decision task, or started the End-to-End audit.
+- P4-A did not edit the backlog, the Canonical Authority Index, the Canonical Artifact Index, or the P1, P2, P3,
+  G-series, I-08A, I-08N, CW2, T-series or implementation-foundation records. P4-B edited none of these either, apart
+  from adding CW2-08A and its Canonical Authority Index entry.
