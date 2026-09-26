@@ -10,8 +10,9 @@
 // D31/D40/D47 (seen ≠ resolved), D34 (per-World mute), D35 (Proactive off ≠ understanding off), D36 (critical ≠ OS
 // bypass), D38/D39 (tap revalidates; no guessed destination), D50 (OS permission is a hard Push boundary), D51
 // (foreground suppression), D59 (no delivery past semantic expiry); G3 §D (Matching never interrupts an active Live
-// Call), and the P3-A refinement §8 (ordinary attention waits during a call; only critical security and a requested
-// exact-time reminder may show a call-safe strip).
+// Call), the P3-A refinement §8 (ordinary attention waits during a call; only critical security and a requested
+// exact-time reminder may show a call-safe strip), and the final micro-refinement §5–§7 (no ordinary attention is ever
+// presented transiently inside the Analysis; it is re-evaluated when the user leaves, and at most one strip follows).
 //
 // Product Owner numbers it encodes (task §13–§14, "v1 safety ceilings — ceilings, never quotas"): ordinary Push
 // 4 / rolling 24 h and 12 / rolling 7 d; Proactive QANDEEL 1 / 24 h and 3 / 7 d; same proactive thread ≥ 48 h after no
@@ -139,7 +140,8 @@ export function budgetVerdict(e, hist) {
  * Where does one candidate go right now? Returns { surface, level, reasons[], mark }.
  *   surface ∈ 'push' | 'strip' | 'call-strip' | 'in-place' | 'activity' | 'next-conversation' | 'deferred' | 'suppressed' | 'stale'
  *   ('call-strip' = the small, non-blocking call-safe strip; only isCallSafe() events, only during an active Live Call)
- * `ctx` = { settings, hist (earlier pushes), app: 'foreground' | 'background', here: contextId | null, liveCall: bool }.
+ * `ctx` = { settings, hist (earlier pushes), app: 'foreground' | 'background', here: contextId | null, liveCall: bool,
+ *          view: 'analysis' | 'conversation' | 'shared' | … (proof context: the Product view in front of the user) }.
  * Every non-suppressed outcome also leaves (or keeps) a truthful Activity item; `mark` says whether it is
  * attention-worthy (the Attention Mark), which is ATTENTION STATE, never event state (D31, D44).
  */
@@ -173,6 +175,13 @@ export function decide(e, ctx) {
   // 4. the Product already has the user's attention (D51; task §8)
   if (ctx.app === 'foreground') {
     if (ctx.liveCall) { R.push('live-call-safe'); return out('call-strip', { mark: true }); }
+    // 4a. the Analysis (final micro-refinement §5–§6): the Analysis is not an attention surface. While the user is inside
+    // it, ordinary attention is NEVER presented transiently — call or no call. It is deferred: it stays truthfully in
+    // Activity (with the mark where it is attention-worthy) and is re-evaluated when the user leaves (reevaluatePending).
+    // The only thing ever laid over the Analysis is the call-safe strip above, during an active Live Call. There is no
+    // other exception: critical security outside a call waits here too (no frozen rule names another surface).
+    // `ctx.view` is PROOF CONTEXT (where the user is looking), not a production schema.
+    if (ctx.view === 'analysis') { R.push('analysis-deferred'); return out('deferred'); }
     if (ctx.here && ctx.here === e.context) { R.push('same-context'); return out('in-place', { mark: false }); }
     if (e.kind === 'discovery') { R.push('discovery-no-strip'); return out('activity', { mark: false }); }
     R.push('different-context'); return out('strip');
@@ -254,6 +263,28 @@ export function reevaluateAtQuietEnd(pending, ctx) {
   return { results, activityGroups: acts, pushes: results.filter((r) => r.surface === 'push').length };
 }
 
+// ------------------------------------------------------------- leaving a deferring state: re-evaluate, never replay
+/**
+ * Final micro-refinement §7 (and the same law after a Live Call, G3 §D): when a deferring condition ends — the user
+ * leaves the Analysis, or the call ends — every waiting candidate is decided AGAIN against current truth, authority,
+ * eligibility and context. Nothing is presented merely because it waited: a candidate that went stale, whose World was
+ * muted meanwhile, or whose originating context the user is now in, gets that answer instead. AT MOST ONE strip: if
+ * several are strip-eligible now, the one with the highest attention value is presented (lowest Interruption Class; on a
+ * tie, the one that has waited longest — PROOF INTERPRETATION of "higher attention value", and the same order the first P3-A pass used after a call) and the others stay in Activity, marked.
+ * A candidate that is still deferred now (e.g. the call continues) keeps waiting.
+ * Returns { results: [{ id, surface, reasons, mark }], strip: id | null, pending: [id] }.
+ */
+export function reevaluatePending(pending, ctx) {
+  const results = pending.map((e) => ({ id: e.id, e, ...decide(e, ctx) }));
+  const strips = results.filter((r) => r.surface === 'strip').sort((a, b) => a.e.cls - b.e.cls || (a.e.at ?? 0) - (b.e.at ?? 0));
+  for (const r of strips.slice(1)) { r.surface = 'activity'; r.reasons = [...r.reasons, 'one-strip-at-a-time']; }
+  return {
+    results: results.map(({ e, ...r }) => r),
+    strip: strips.length ? strips[0].id : null,
+    pending: results.filter((r) => r.surface === 'deferred').map((r) => r.id),
+  };
+}
+
 /** Run a whole candidate trace (time-ordered) through decide(), recording the pushes it makes. */
 export function runTrace(events, settings, { app = 'background', here = null, liveCall = false } = {}) {
   const hist = [], rows = [];
@@ -291,5 +322,5 @@ export function markSeen(item) { return { ...item, attention: item.attention ===
 export function markOpened(item) { return { ...item, attention: 'opened' }; }   // `resolved` is NOT changed here, ever
 
 /** Strip eligibility (task §8): only in the foreground, only outside the originating context, never in a Live Call
- *  (the call-safe strip is a separate surface: see isCallSafe). */
+ *  (the call-safe strip is a separate surface: see isCallSafe), never while the user is inside the Analysis. */
 export const stripEligible = (e, ctx) => decide(e, { ...ctx, app: 'foreground' }).surface === 'strip';

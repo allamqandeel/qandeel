@@ -11,6 +11,7 @@
 | Branch | `design/p3-notification-activity-integrated-visual-proof`, cut from exact `b9e087b` |
 | Scope of change | only `docs/design/p3-notifications/` (checked by C-SCOPE-1) |
 | **Refinement (P3-A refinement task, 2026-09-26)** | on the same branch and Draft PR #275, from reviewed head `579648f3828345a4ffb434daa15507e011899d46`; `main` re-verified at `b9e087b`; laptop clean on the branch at `579648f`, 0 ahead / 0 behind the remote branch |
+| **Final micro-refinement (2026-09-26)** | on the same branch and Draft PR #275 (open, Draft, unmerged, mergeable), from head `d92c67b94ce56ab8d295353868619c422994c7da`; `main` re-verified at `b9e087b`; laptop clean on the branch at `d92c67b`, 0 ahead / 0 behind the remote branch |
 
 ## 2. Authorities read
 
@@ -49,7 +50,7 @@
 | Quiet Hours / Snooze affect interruption only (D37) | deferred, never deleted; board 12 |
 | Badges = attention state; global derived, not summed; count visibility = disclosure (D44–D48) | `indicators()`; C-MARK-3m/4m |
 | OS permission is a hard Push boundary; no repeated pressure (D50) | S6, S15; C-PERM-3 |
-| Foreground suppression (D51) | S1–S4; C-STRIP-1 |
+| Foreground suppression (D51) | S1–S4; C-STRIP-1; inside the Analysis ordinary attention is deferred and re-evaluated on exit (S32–S36, X1–X4; C-ANL-3m, C-EXIT-1m…4) |
 | Retry revalidates; no retry past semantic expiry (D54, D55, D59) | the overnight Q3 goes stale at 08:00 |
 | No psychological inference from silence (D05) | the same-thread rule only counts time and engagement |
 
@@ -63,18 +64,25 @@
 - the **Product Owner's refinement decisions** (P3-A refinement §4–§10): Open Ledger accepted; no Activity entry in the
   Analysis chrome; L1 = «إظهار النوع» / "Show type"; Reduce = a tighter Proactive Gate, not a class rule; no
   Introductions category cap (default L0 kept); the two call-safe exceptions during a Live Call; a P2-compliant
-  Introductions source mark (two bounded variants, one recommended); a bounded copy cleanup.
+  Introductions source mark (two bounded variants); a bounded copy cleanup;
+- the **Product Owner's final micro-refinement decisions** (§4–§9): Open Link is the final Introductions row mark (At
+  the Door comparison / history only); no ordinary Attention Strip inside the Analysis — the model defers it (proof
+  context `view`, not a production schema), keeps it in Activity and re-evaluates it on exit (at most one strip); the
+  call-safe exception set unchanged; the call-safe strip dismiss-only (no Direct Entry); Replay-slot occlusion only for
+  the two call-safe cases during an active Live Call. No authority conflict was found: no frozen rule requires another
+  surface for critical security inside the Analysis outside a call, so none was invented (S36).
 
 ## 5. Explicit non-scope (kept)
 
 No production React Native, no APNs / FCM, no database schema, no workers, no device tokens, no native channels or
 categories, no dependency, no P3 closure, no P4, no change to I-08N-01, P1, P2, the locators, the backlog or any
 canonical artifact. The Analysis is not repainted or redesigned, and the Call Rail is untouched (it is the P2 file,
-byte-exact). The Analysis is G3.2's own reviewed page, byte-exact (C-SCOPE-4), loaded unchanged in a frame; P3 draws
-only a transient strip over its chrome row and never inside it.
+byte-exact). The Analysis is G3.2's own reviewed page, byte-exact (C-SCOPE-4), loaded unchanged in a frame; P3 lays
+nothing ordinary over it, and draws only the transient call-safe strip in its chrome row during an active Live Call —
+temporarily and intentionally occluding the Replay slot, never anything else.
 
 ## 6. Governance note
 
 This is a proof, not a closing change: BG-08 / BG-09 do not apply to it, and it proposes no backlog item. Candidates a
-later P3-B closure will have to disposition are listed in the report (§Open craft questions) and in
+later P3-B closure will have to disposition are listed in the report (§Still open — copy and device / implementation only) and in
 P3_IMPLEMENTATION_FEASIBILITY.md; none is admitted here.

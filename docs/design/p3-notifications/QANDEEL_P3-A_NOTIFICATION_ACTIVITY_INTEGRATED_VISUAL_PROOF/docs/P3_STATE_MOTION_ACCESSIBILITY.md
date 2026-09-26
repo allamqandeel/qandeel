@@ -1,8 +1,8 @@
 # P3-A — State, motion and accessibility (proof)
 
-**Status:** `P3-A EVIDENCE — NOT FROZEN` (refined: P3-A refinement §8, §9). Evidence: boards 04, 05, 06, 11, 17;
-clips M01–M09 (+ Reduced Motion counterparts); checks C-A11Y-1…9, C-A11Y-1b, C-STRIP-3, C-CALL-5, C-CALL-6, C-GLY-1…3,
-C-P2-1. **Browser evidence only.**
+**Status:** `P3-A EVIDENCE — NOT FROZEN` (refined: P3-A refinement §8, §9; final micro-refinement §5–§13). Evidence:
+boards 04, 05, 06, 11, 14, 17; clips M01–M10 (+ Reduced Motion counterparts); checks C-A11Y-1…9, C-A11Y-1b, C-STRIP-3,
+C-CALL-5…7, C-ANL-3, C-EXIT-3, C-GLY-1…3, C-P2-1. **Browser evidence only.**
 
 ## 1. State channels (E1R, consumed unchanged)
 
@@ -32,6 +32,7 @@ or words in the accessible name (C-A11Y-5). Living Brass stays the navigation fa
 | M07 / M07r | seen / opened / waiting | seen marks fade 260 ms after a 1.2 s dwell; opening a row, then Back | 160 ms fades |
 | M08 / M08r | the call-safe strip in the Analysis during a Live Call (critical security): appear · 6 s hold · dismiss by itself; G3's page underneath does not move | 240 ms ease-out, 6 pt from the chrome; exit 180 ms back up | opacity only, 160 / 140 ms |
 | M09 | the call-safe strip at 320 × 568, PINNED (a requested reminder, English), dismissed by ×; the call keeps running | as M08 | — (M08r shows the Reduced Motion form) |
+| M10 | inside the Analysis four ordinary events arrive: **nothing moves** (deferred; no deferral animation is invented). «المحادثة» leaves the Analysis: the model re-evaluates and ONE strip appears with the approved ordinary strip motion | the Conversation fades in 200 ms; the strip as M02 | — (M04 is the ordinary strip's Reduced Motion form; no new motion language) |
 
 No bounce language (no finger momentum is involved), no loop, no pulse, no countdown, no fake loading, no speaking or
 audio signal, and no animation that creates event truth. Only `transform` and `opacity` animate. Every clip is 30 fps,
@@ -52,12 +53,15 @@ transform). **Timings are craft, not frozen**; feel is a device gate.
   behind them is `inert` (nothing behind is reachable or read), and Escape = "Not now" / close (C-A11Y-9). This proof's
   own board 17 name table first showed the page behind the education still reachable; it was fixed, and planted defect
   D16 proves the check can fail.
-- **Announcements:** one persistent polite live region; a strip is announced once. During a Live Call nothing
+- **Announcements:** one persistent polite live region; a strip is announced once. Inside the Analysis ordinary
+  attention creates **no transient region and no announcement** (no phantom live-region text; C-ANL-3, board 17) — the
+  event is announced only if a strip follows when the user leaves, and it stays reachable in Activity. During a Live Call nothing
   ordinary is announced; only the call-safe strip is, once, through the same P3 region — «تنبيه أثناء المكالمة: … (المكالمة
   مستمرة)» — and never through the call's own live-status channel (G1.2's single channel for call-state changes).
-- **The call-safe strip:** a named region with no Direct Entry; its one control is the named 44-pt dismiss (C-CALL-5,
-  C-A11Y-1, C-A11Y-3). In the Analysis it lies over G3's Replay slot for its hold; if Replay takes keyboard focus there,
-  the strip steps aside (focus not obscured).
+- **The call-safe strip:** a named region (named once) with no Direct Entry; its one control is the named 44-pt dismiss
+  (C-CALL-5, C-A11Y-1, C-A11Y-3); dismissing it does not resolve the event or end the call. In the Analysis it
+  temporarily and intentionally occludes G3's Replay slot for its hold (the one bounded exception); if Replay takes
+  keyboard focus there, the strip steps aside at once, so focus is never hidden (C-CALL-7).
 - **Glyph grammar:** the Introductions source mark is measured on the rendered glyph (C-GLY-1…3) — no ring with more
   than one opening, points never side by side, the P2 optical stroke and round terminals.
 - **Direction:** mirror by meaning (C-A11Y-6). Chevrons mirror; the ledger, World, call and media glyphs never do; the

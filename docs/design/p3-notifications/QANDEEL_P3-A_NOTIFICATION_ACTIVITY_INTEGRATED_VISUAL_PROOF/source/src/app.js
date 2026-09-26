@@ -18,9 +18,9 @@
     state: Q.get('state') || 'conv',
     defect: Q.get('defect') || '',
     entry: Q.get('entry') || D.activityAccepted,
-    // the Introductions row source mark: the recommended Open Link; ?introglyph=door shows the compliant ring comparison;
-    // planted defect D23 restores the withdrawn two-opening drawing
-    introGlyph: Q.get('defect') === 'oldintro' ? 'introTwoArcs20' : Q.get('introglyph') === 'door' ? 'introDoor20' : 'introLink20',
+    // the Introductions row source mark: the ACCEPTED (final) Open Link; ?introglyph=door shows the At the Door
+    // comparison (history only); planted defect D23 restores the withdrawn two-opening drawing
+    introGlyph: Q.get('defect') === 'oldintro' ? 'introTwoArcs20' : ({ link: 'introLink20', door: 'introDoor20' })[Q.get('introglyph') || D.introAccepted],
   };
   const L = D.copy[P.lang];
   // planted defect D18: the withdrawn L1 label comes back
@@ -74,7 +74,7 @@
   const S = {
     place: 'conv', here: 'personal', stack: [], filter: Q.get('filter') || 'all', call: false,
     settings: clone(FX.FEED_SETTINGS), feed: clone(FX.FEED), strip: null, deferred: [], inplace: null,
-    sheet: null, osbox: false, notNow: false, eduDeclined: false, staleOpen: null, log: [], focusAfter: null,
+    sheet: null, osbox: false, notNow: false, eduDeclined: false, staleOpen: null, log: [], focusAfter: null, shown: [],
   };
   if (Q.get('os')) S.settings.os = Q.get('os');
   if (Q.get('intro') === '0') S.settings.intro.entered = false;
@@ -83,7 +83,9 @@
   if (Q.get('lockintro')) S.settings.lock.intro = Q.get('lockintro');   // the user raised the Introductions ceiling
   const ind = () => M.indicators(S.feed);
   // The Analysis is the Personal conversation's own analysis (G1.1): its originating context is 'personal'.
-  const ctxFor = (extra = {}) => ({ settings: S.settings, hist: [], app: 'foreground', here: S.place === 'shared' ? S.here : S.place === 'conv' || S.place === 'analysis' ? 'personal' : null, liveCall: S.call, now: FX.NOW, ...extra });
+  // `view` tells the model which Product view is in front of the user (proof context): inside the Analysis no ordinary
+  // attention is presented transiently (final micro-refinement §5–§6) — the model decides that, not this page.
+  const ctxFor = (extra = {}) => ({ settings: S.settings, hist: [], app: 'foreground', here: S.place === 'shared' ? S.here : S.place === 'conv' || S.place === 'analysis' ? 'personal' : null, liveCall: S.call, view: S.place === 'conv' ? 'conversation' : S.place, now: FX.NOW, ...extra });
 
   /** An event arrives while the app is in the foreground. The MODEL decides the surface; the page only renders it. */
   function arrive(ev, { quiet = false } = {}) {
@@ -91,6 +93,8 @@
     // planted defects D20 / D21 (page side): a call-safe event deferred; an ordinary Shared event shown during a call
     if (P.defect === 'calldefer' && r.surface === 'call-strip') r = { ...r, surface: 'deferred' };
     if (P.defect === 'callshared' && r.surface === 'deferred' && S.call && ev.category === 'shared') r = { ...r, surface: 'call-strip' };
+    // planted defect D24 (page side): REJECTED / PLANTED DEFECT — ORDINARY STRIP INSIDE ANALYSIS
+    if (P.defect === 'analysisstrip' && r.surface === 'deferred' && r.reasons.includes('analysis-deferred')) r = { ...r, surface: 'strip' };
     S.log.unshift(`${ev.id} → ${r.surface} (${r.reasons.join(', ')})`);
     if (r.surface === 'suppressed') return r;
     const wasPresent = ind().global.present;
@@ -98,7 +102,8 @@
       attention: r.mark ? 'unseen' : 'seen', actionable: !!ev.actionable || ev.kind === 'security', text: ev.text, critical: ev.critical };
     if (r.surface !== 'in-place') S.feed.unshift(item);
     if (r.surface === 'in-place') S.inplace = ev;
-    if (r.surface === 'deferred') S.deferred.push(ev);
+    // a waiting candidate keeps its arrival order (the model's tie-break is "the one that has waited longest")
+    if (r.surface === 'deferred') S.deferred.push({ ...ev, at: ev.at ?? FX.NOW + (S.arrivals = (S.arrivals || 0) + 1) / 60 });
     if (r.surface === 'strip') showStrip(ev, quiet);
     else if (r.surface === 'call-strip') showStrip(ev, quiet, true);
     else render();
@@ -119,6 +124,7 @@
    *  in Activity, still actionable), and leaves the call exactly as it was. */
   function showStrip(ev, quiet, callSafe = false) {
     S.strip = { ev, shownAt: T, held: false, callSafe };
+    S.shown.push(ev.id);   // every strip ever presented (the checks count them: never a dump)
     render();
     const a11y = document.getElementById('a11y');
     if (a11y && !quiet) a11y.textContent = callSafe ? `${tx('callSafeRegion')}: ${sourceName(ev)} — ${ev.text[P.lang]} (${tx('callSafeOn')})` : `${tx('stripRegion')}: ${sourceName(ev)} — ${ev.text[P.lang]}`;
@@ -140,11 +146,13 @@
 
   // ------------------------------------------------------------------------------------ the Analysis (G3, frozen)
   // The Analysis is not redrawn: it is G3.2's own reviewed prototype (prototype/g3.2/index.html, byte-exact) running in
-  // a frame the size of the phone. P3 adds NOTHING to its chrome — no Activity entry (refinement §4.2) — and draws only
-  // one transient thing above it: a strip, placed in the upper chrome row (y 47–95) beside «المحادثة», over the Replay
-  // slot. It never enters the world (which starts at y 95 and is sized at its floor, T-11 §3), the Timeline, Return
-  // Live, the band or the call line, and it never covers the Conversation ↔ Analysis switch. All of this is measured
-  // from G3's own elements, never assumed.
+  // a frame the size of the phone. P3 adds NOTHING to its chrome — no Activity entry (refinement §4.2) — and no ordinary
+  // Attention Strip ever appears over it (final micro-refinement §5: the model defers ordinary attention while the user is
+  // inside the Analysis). The ONE thing P3 may lay over it is the call-safe strip, during an active Live Call, for the two
+  // call-safe exceptions only: in the upper chrome row (y 47–95) beside «المحادثة», temporarily and intentionally
+  // occluding the Replay slot — the one bounded exception. It never enters the world (which starts at y 95 and is sized
+  // at its floor, T-11 §3), the Timeline, Return Live, the band or the call line, and it never covers the Conversation ↔
+  // Analysis switch. All of this is measured from G3's own elements, never assumed.
   let G32 = null, g32Ready = null;
   function g32Frame() {
     if (G32) return g32Ready;
@@ -173,6 +181,8 @@
   /** The strip's place in the Analysis: the chrome row, from the Replay slot to 8 pt before «المحادثة». */
   function chromeSlot() {
     const back = g32Rect('back'), rep = g32Rect('replay'); if (!back || !rep) return null;
+    // planted defect D27: the strip "avoids" Replay by dropping below the chrome row — into the world's floor
+    if (P.defect === 'badslot') return { x: 16, y: Math.round(back.b) + 6, w: P.w - 32, h: Math.round(back.h) };
     const rtl = back.x > rep.x;
     const x0 = rtl ? rep.x - 4 : back.r + 8, x1 = rtl ? back.x - 8 : rep.r + 4;
     return { x: Math.round(x0), y: Math.round(back.y), w: Math.round(x1 - x0), h: Math.round(back.h) };
@@ -200,7 +210,11 @@
     if (!P.rm) animate('#view', { opacity: [0, 1] }, 200, EASE_OUT); else animate('#view', { opacity: [0, 1] }, 120, EASE_OUT);
     if (place === 'activity') scheduleSeen();
   }
-  function back() { const p = S.stack.pop() || { place: 'conv', here: 'personal' }; S.place = p.place; S.here = p.here; S.staleOpen = null; render(); }
+  function back() {
+    const from = S.place, p = S.stack.pop() || { place: 'conv', here: 'personal' }; S.place = p.place; S.here = p.here; S.staleOpen = null; render();
+    // leaving the Analysis: what waited there is RE-EVALUATED now (final micro-refinement §7); planted defect D25 skips it
+    if (from === 'analysis' && S.place !== 'analysis' && P.defect !== 'noreeval') releaseDeferred();
+  }
 
   // Seen = the row was on screen (≥ half) for a moment while Activity is open (D31, D47). Actionable items keep a
   // WAITING mark after they are seen; nothing here resolves an event.
@@ -245,12 +259,22 @@
   // ------------------------------------------------------------------------------------ Live Call end
   function endCall() {
     S.call = false;
-    // The deferred events are RE-EVALUATED now (G3 §D; task §8) — not replayed. At most the first strip-eligible one is
-    // presented; the rest stay where they already are: in Activity, with the mark.
-    const pend = S.deferred.splice(0);
     render();
-    const first = pend.find((ev) => M.decide(ev, ctxFor()).surface === 'strip');
-    if (first) after(P.rm ? 200 : 400, () => showStrip(first));
+    releaseDeferred();
+  }
+  /** A deferring condition ended (the call ended, or the user left the Analysis). The MODEL re-evaluates every waiting
+   *  candidate against the current context (G3 §D; task §8; final micro-refinement §7) — nothing is replayed. At most one
+   *  strip follows; the rest stay where they already are: in Activity, with the mark. What is still deferred now (the
+   *  user is still in the Analysis, or the call continues) keeps waiting. */
+  function releaseDeferred() {
+    const pend = S.deferred.splice(0); if (!pend.length) return;
+    const r = M.reevaluatePending(pend, ctxFor());
+    S.deferred = pend.filter((e) => r.pending.includes(e.id));
+    for (const x of r.results) S.log.unshift(`${x.id} ⟲ ${x.surface} (${x.reasons.join(', ')})`);
+    // planted defect D26: every candidate that is strip-eligible on its own is presented — a dump
+    const show = P.defect === 'dump' ? pend.filter((e) => M.decide(e, ctxFor()).surface === 'strip') : pend.filter((e) => e.id === r.strip);
+    show.forEach((ev, i) => after((P.rm ? 200 : 400) + i * 1500, () => showStrip(ev)));
+    harness();
   }
 
   // ------------------------------------------------------------------------------------------------ views
@@ -307,7 +331,8 @@
     let geo = '';
     if (inChrome) { const s = chromeSlot(); if (s) geo = ` style="left:${s.x}px;right:auto;top:${s.y}px;width:${s.w}px;height:${s.h}px"`; }
     // a call-safe strip has NO Direct Entry: its body is text (read with the region), and its one act is dismiss
-    const body = cs ? `<div class="go body"><span class="vis" aria-hidden="true">${inner}</span><span class="sr">${esc(name)}</span></div>`
+    // (planted defect D28 gives it a Direct Entry button)
+    const body = cs && P.defect !== 'callentry' ?`<div class="go body"><span class="vis" aria-hidden="true">${inner}</span><span class="sr">${esc(name)}</span></div>`
       : `<button class="go pz" type="button" aria-label="${esc(name)}">${inner}</button>`;
     return `<section class="strip${cs ? ' callsafe' : ''}${inChrome ? ' inchrome' : ''}" role="region" aria-label="${esc(tx(cs ? 'callSafeRegion' : 'stripRegion'))}" data-cat="${ev.category}" data-ev="${ev.id}"${geo}>` +
       body + `<button class="x pz" type="button" aria-label="${esc(tx('stripDismiss'))}">${G.close20}</button></section>`;
@@ -423,7 +448,8 @@
     return `<section class="page" aria-label="handoff">${statusBar()}<div class="hdr"><button class="ibtn pz" type="button" data-back aria-label="${esc(tx('back'))}">${G.back22}</button></div><div class="osbox" role="note"><span class="tag">DIRECT ENTRY TARGET · FROZEN ELSEWHERE</span><span class="r-support">${esc(note)}</span></div></section>`;
   }
 
-  /** The Analysis view: G3's frame (persistent, under everything) plus only what P3 may lay over it — the strip. */
+  /** The Analysis view: G3's frame (persistent, under everything) plus only what P3 may lay over it — the call-safe
+   *  strip, during an active Live Call (an ordinary strip reaches here only through planted defect D24). */
   function analysisHTML() {
     // planted defect D22: the Activity entry pushed into the Analysis chrome
     const bad = P.defect === 'analysisentry' ? `<div class="hdr" style="pointer-events:none;justify-content:center"><span style="pointer-events:auto">${entryHTML()}</span></div>` : '';
@@ -492,12 +518,12 @@
   function harness() {
     const h = document.getElementById('harness'); if (!h) return;
     const base = (st) => { const q = new URLSearchParams(location.search); q.set('state', st); q.delete('capture'); return '?' + q.toString(); };
-    const states = ['conv', 'conv-strip-shared', 'shared-strip-qandeel', 'conv-strip-system', 'shared-inplace', 'conv-call', 'conv-call-security', 'conv-call-reminder', 'analysis', 'analysis-strip-shared', 'analysis-call', 'analysis-call-security', 'analysis-call-reminder', 'activity', 'activity-stale', 'settings-root', 'notif', 'notif-lock', 'edu', 'edu-boundary', 'edu-notnow'];
+    const states = ['conv', 'conv-strip-shared', 'shared-strip-qandeel', 'conv-strip-system', 'shared-inplace', 'conv-call', 'conv-call-security', 'conv-call-reminder', 'analysis', 'analysis-deferred', 'analysis-exit', 'analysis-call', 'analysis-call-security', 'analysis-call-reminder', 'activity', 'activity-stale', 'settings-root', 'notif', 'notif-lock', 'edu', 'edu-boundary', 'edu-notnow'];
     const tog = (k, v, label) => { const q = new URLSearchParams(location.search); if (q.get(k) === v) q.delete(k); else q.set(k, v); q.delete('capture'); return `<a href="?${q}" class="${new URLSearchParams(location.search).get(k) === v ? 'on' : ''}">${label}</a>`; };
     h.innerHTML = `<span class="flag">PROOF HARNESS — NOT PRODUCT UI</span><h1>P3-A Notification + Activity</h1>` +
       `<p>P3 is NOT CLOSED / NOT FROZEN. Every surface below is decided by the model (src/model.mjs).</p>` +
       `<h2>States</h2>${states.map((s) => `<a href="${base(s)}" class="${P.state === s ? 'on' : ''}">${s}</a>`).join('')}` +
-      `<h2>Device stand-ins</h2>${tog('lang', 'en', 'English')}${tog('appearance', 'light', 'Light')}${tog('appearance', 'system', 'System')}${tog('rm', '1', 'Reduced Motion')}${tog('contrast', 'more', 'Increased contrast')}${tog('w', '320', '320 × 568')}${tog('w', '430', '430 × 932')}${tog('os', 'denied', 'OS denied')}${tog('intro', '0', 'Introductions not entered')}${tog('proactive', 'reduce', 'Proactive: Reduce')}${tog('entry', 'bell', 'Entry: Quiet Bell (history only)')}${tog('introglyph', 'door', 'Introductions mark: At the Door (comparison)')}` +
+      `<h2>Device stand-ins</h2>${tog('lang', 'en', 'English')}${tog('appearance', 'light', 'Light')}${tog('appearance', 'system', 'System')}${tog('rm', '1', 'Reduced Motion')}${tog('contrast', 'more', 'Increased contrast')}${tog('w', '320', '320 × 568')}${tog('w', '430', '430 × 932')}${tog('os', 'denied', 'OS denied')}${tog('intro', '0', 'Introductions not entered')}${tog('proactive', 'reduce', 'Proactive: Reduce')}${tog('entry', 'bell', 'Entry: Quiet Bell (history only)')}${tog('introglyph', 'door', 'Introductions mark: At the Door (comparison / history only)')}` +
       `<h2>Arrivals (foreground)</h2>${Object.keys(FX.EV).map((k) => `<button data-arrive="${k}">${k}</button>`).join('')}` +
       `<h2>Decisions</h2><pre>${esc(S.log.slice(0, 12).join('\n') || '—')}</pre>`;
   }
@@ -543,10 +569,15 @@
       'analysis-call': () => { if (Q.get('arrive') !== '0') { arrive({ ...FX.EV.sharedReply }); arrive({ ...FX.EV.introProposal }); arrive({ ...FX.EV.proactive }); } },
       'analysis-call-security': () => arrive({ ...FX.EV.security }),
       'analysis-call-reminder': () => arrive({ ...FX.EV.reminder }),
-      'analysis-strip-shared': () => arrive({ ...FX.EV.sharedReply }),
+      // final micro-refinement §5–§7: ordinary attention while the user is inside the Analysis (no call) — deferred, no
+      // strip, no announcement; `analysis-exit` then leaves by «المحادثة» and the model re-evaluates (at most one strip).
+      // ?arrive=reply keeps only the Shared reply; ?mute=<World> mutes that World before the user leaves.
+      'analysis-deferred': () => analysisArrivals(),
+      'analysis-exit': () => { analysisArrivals(); if (Q.get('mute')) S.settings.shared.muted.push(Q.get('mute')); back(); },
     };
+    const analysisArrivals = () => { const ks = Q.get('arrive') === 'reply' ? ['sharedReply'] : ['sharedReply', 'publicReply', 'introProposal', 'proactive']; for (const k of ks) arrive({ ...FX.EV[k] }); };
     setup['analysis-call-security'] = setup['analysis-call-reminder'] = () => { callBase(); S.place = 'analysis'; g32Frame(); render(); };
-    setup['analysis-strip-shared'] = setup.analysis;
+    setup['analysis-deferred'] = setup['analysis-exit'] = () => { callBase(); S.call = false; S.place = 'analysis'; g32Frame(); render(); };
     (setup[st] || setup.conv)();
     if (P.defect === 'firstlaunch' && st === 'conv') { S.settings.os = 'not-requested'; S.sheet = { kind: 'edu', trigger: 'launch' }; render(); }
     if (P.defect === 'samectx' && st === 'shared-inplace') { S.inplace = null; showStrip({ ...FX.EV.sharedReply }, true); }

@@ -13,11 +13,11 @@
 //    drew two arcs of the Shared ring (two openings: a second exception to P2's one-opening-per-ring grammar). That
 //    drawing is WITHDRAWN and kept below only as history and as the planted defect the checks must reject. Two bounded
 //    variants replace it, both inside the grammar with no exception:
-//    link    "Open Link" (RECOMMENDED — non-ring): navShared's two points of light, on the same 45° diagonal through
+//    link    "Open Link" (ACCEPTED, FINAL — non-ring): navShared's two points of light, on the same 45° diagonal through
 //            the cut, but with NO ring (before a Mutual Match there is no Shared World to draw). Each point reaches
 //            toward the other with one straight stroke; the two strokes stop short of each other, so the link stays
 //            open in the middle — offered, not made. No ring, so no ring opening at all.
-//    door    "At the Door" (comparison — ring-based, compliant): ONE open ring with the one N1 cut at 45°, one point
+//    door    "At the Door" (comparison / history only — ring-based, compliant): ONE open ring with the one N1 cut at 45°, one point
 //            inside, and the second point standing in the opening. It obeys the grammar (one opening), but a ring
 //            means a World in P2, so it risks reading as navMine with a visitor — kept only as the compliant ring option.
 //    Points never sit on a horizontal (P2 face rule): both variants keep them on the 45° diagonal.
@@ -51,13 +51,13 @@ export const P3G = {
     // dome: from the END side (lower END is left open by the cut) over the crown to the START side, then the lip.
     return P('M17.6 13.4V11.1A5.6 5.6 0 0 0 6.4 11.1V16.2', sw) + P('M4.6 16.4H14.9', sw) + P('M12 3.7V5.3', sw) + P('M10.2 19.5A1.9 1.9 0 0 0 13.8 19.5', sw);
   },
-  // RECOMMENDED Introductions source mark (non-ring).
+  // The ACCEPTED (final) Introductions source mark (non-ring).
   link: (sz) => {
     const sw = strokeFor(sz), nu = NUANCES.open, k = (LINK.gap / 2 + sw / 2) / Math.SQRT2;   // where each stroke's cap ends
     return P(`M${LINK.a} ${LINK.a}L${f(12 - k)} ${f(12 - k)}M${LINK.b} ${LINK.b}L${f(12 + k)} ${f(12 + k)}`, sw) +
       dot(LINK.a, LINK.a, nu.core * 0.92) + dot(LINK.b, LINK.b, nu.core * 0.92);
   },
-  // Comparison Introductions source mark (ring, one opening — compliant).
+  // Comparison / history only (ring, one opening — compliant; not the accepted mark).
   door: (sz) => {
     const sw = strokeFor(sz), nu = NUANCES.open;
     return P(openRing(sw), sw) + dot(9.5, 9.5, nu.core * 0.92) + dot(17.657, 17.657, nu.core * 0.92);
@@ -73,8 +73,10 @@ export const WITHDRAWN = {
 };
 export const ACTIVITY_VARIANTS = { ledger: { name: 'Open Ledger', accepted: true }, bell: { name: 'Quiet Bell', accepted: false, role: 'comparison / history only' } };
 export const ACTIVITY_ACCEPTED = 'ledger';
-export const INTRO_VARIANTS = { link: { name: 'Open Link', recommended: true, ring: false }, door: { name: 'At the Door', recommended: false, ring: true } };
-export const INTRO_RECOMMENDED = 'link';
+// Final micro-refinement §4.1: the Product Owner ACCEPTED Open Link as the FINAL Introductions row mark. At the Door is
+// comparison / history evidence only; the two-opening drawing (WITHDRAWN) stays rejected / planted-defect evidence only.
+export const INTRO_VARIANTS = { link: { name: 'Open Link', accepted: true, ring: false }, door: { name: 'At the Door', accepted: false, ring: true, role: 'comparison / history only' } };
+export const INTRO_ACCEPTED = 'link';
 
 const draw = (name, size) => (P3G[name] || WITHDRAWN[name])(size);
 export const p3Svg = (name, { size = 22, cls = '', label = null } = {}) =>

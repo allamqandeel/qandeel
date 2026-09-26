@@ -83,7 +83,13 @@ add('analysis-ad', { state: 'analysis', ...V.ad });
 add('analysis-el', { state: 'analysis', ...V.el });                       // system Light: the Analysis stays dark (G3 §C.1)
 add('analysis-call-ad', { state: 'analysis-call', ...V.ad });             // ordinary Shared + Introduction + Proactive → all deferred
 add('analysis-call-el', { state: 'analysis-call', ...V.el });
-add('analysis-strip-shared-ad', { state: 'analysis-strip-shared', ...V.ad });
+// ---- final micro-refinement §5–§7: ordinary attention inside the Analysis is deferred (no strip); leaving re-evaluates
+add('analysis-deferred-ad', { state: 'analysis-deferred', ...V.ad });       // Shared + Public + Introduction + Proactive → all deferred
+add('analysis-deferred-el', { state: 'analysis-deferred', ...V.el });
+add('analysis-deferred-s320-ed', { state: 'analysis-deferred', ...V.ed, w: 320, h: 568 });
+add('analysis-exit-ad', { state: 'analysis-exit', ...V.ad });               // left by «المحادثة»: re-evaluated → one strip
+add('analysis-exit-el', { state: 'analysis-exit', ...V.el, w: 430, h: 932 });
+add('analysis-exit-muted-ad', { state: 'analysis-exit', q: { arrive: 'reply', mute: 'w-summer' }, ...V.ad });   // muted meanwhile → no strip
 // ---- the call-safe strip (§8): critical security and a requested exact-time reminder, on both call surfaces
 add('callsafe-sec-a390-ad', { state: 'analysis-call-security', ...V.ad });
 add('callsafe-rem-a390-ad', { state: 'analysis-call-reminder', ...V.ad });
@@ -154,6 +160,9 @@ const CLIPS = [
   // refinement §8 — the call-safe strip in the Analysis during a Live Call (G3's own page underneath, unchanged)
   { id: 'M08-call-safe-security-analysis', note: 'active Live Call, Analysis: a critical security event shows the small call-safe strip in the chrome row (appear, 6 s hold, dismiss by itself); the call, the world and every G3 control stay as they are', state: 'analysis-call', q: { arrive: '0' }, ...V.ad, dur: 7800, acts: [{ at: 500, eval: `P3.arrive('security')` }] },
   { id: 'M08r-call-safe-security-reduced-motion', note: 'M08 under Reduced Motion: opacity only, the same hold', state: 'analysis-call', q: { arrive: '0' }, ...V.ad, rm: true, dur: 7800, acts: [{ at: 500, eval: `P3.arrive('security')` }] },
+  // final micro-refinement §7 — leaving the Analysis: the waiting events are re-evaluated; ONE strip, with the approved
+  // ordinary strip motion (no new motion language; nothing animates in the Analysis itself because nothing appears there)
+  { id: 'M10-analysis-exit-reevaluation', note: 'inside the Analysis a Shared reply, a Public reply, an Introduction and a Proactive note arrive: nothing appears (deferred). «المحادثة» leaves the Analysis: the model re-evaluates them and presents ONE strip with the ordinary strip motion; the rest stay in Activity, marked', state: 'analysis', ...V.ad, dur: 5400, acts: [{ at: 300, eval: `['sharedReply','publicReply','introProposal','proactive'].forEach((k)=>P3.arrive(k))` }, { at: 1800, eval: `document.getElementById('g32').contentDocument.getElementById('back').click()` }] },
   { id: 'M09-call-safe-reminder-320', note: 'active Live Call, Analysis at 320 × 568 (PINNED, the tightest G3 case): a reminder the user set for this time shows the call-safe strip; dismissing it leaves the call running', state: 'analysis-call', q: { arrive: '0' }, ...V.ed, w: 320, h: 568, dur: 4800, acts: [{ at: 500, eval: `P3.arrive('reminder')` }, { at: 3200, eval: 'P3.dismissStrip()' }] },
 ];
 function encode(dir, out) {
@@ -195,7 +204,7 @@ if (process.argv[1] && process.argv[1].endsWith('p3capture.mjs')) {
   if (what === 'shots' || what === 'all') await shots(only);
   if (what === 'clips' || what === 'all') await clips(only);
   // the key phones are carried in the package as full captures (all of them are composed into the boards)
-  const KEY = ['act-ad', 'act-el', 'conv-ad', 'strip-shared-ad', 'strip-qandeel-ad', 'strip-system-ad', 'inplace-ad', 'call-ad', 'call-ended-ad', 'notif-ad', 'notif-el', 'edu-ad', 'edu-el', 'edu-boundary-ad', 's320-activity', 'w430-act-el', 'analysis-call-ad', 'callsafe-sec-a390-ad', 'callsafe-rem-a320-ed', 'callsafe-sec-conv-ad'];
+  const KEY = ['act-ad', 'act-el', 'conv-ad', 'strip-shared-ad', 'strip-qandeel-ad', 'strip-system-ad', 'inplace-ad', 'call-ad', 'call-ended-ad', 'notif-ad', 'notif-el', 'edu-ad', 'edu-el', 'edu-boundary-ad', 's320-activity', 'w430-act-el', 'analysis-call-ad', 'callsafe-sec-a390-ad', 'callsafe-rem-a320-ed', 'callsafe-sec-conv-ad', 'analysis-deferred-ad', 'analysis-exit-ad'];
   mkdirSync(join(PKG, 'captures'), { recursive: true });
   for (const f of readdirSync(join(PKG, 'captures'))) rmSync(join(PKG, 'captures', f));
   for (const k of KEY) if (existsSync(join(SHOTS, `${k}.png`))) copyFileSync(join(SHOTS, `${k}.png`), join(PKG, 'captures', `${k}.png`));

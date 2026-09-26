@@ -8,7 +8,7 @@
 //   - Estedad v8.5 (the typography foundation), inlined;
 //   - the G1.1 / G3.2 shell geometry (status 47 pt, upper chrome 48 pt, navigation 56 pt + home 34 pt, line 64 pt).
 // The Analysis is G3.2's own reviewed prototype (prototype/g3.2/index.html, byte-exact, vendored by tools/p3vendor.mjs),
-// loaded unchanged in a frame; this page adds nothing to its chrome and draws only a strip above its chrome row.
+// loaded unchanged in a frame; this page adds nothing to its chrome and draws only the call-safe strip in its chrome row (active Live Call only).
 // What is new (and only this): p3glyphs.mjs (the Activity entry, the Introductions source mark), the Attention Mark,
 // the Attention Strip, Activity, the Notifications & Activity settings and the permission education — all built from the
 // one Surface tone, E1R's state channels and the canon's text-button actions.
@@ -22,7 +22,7 @@ import { palette } from './tokens.mjs';
 import { sigSvg } from './sig.mjs';
 import { utilSvg } from './utility.mjs';
 import { railArt, RAIL_RECOMMENDED, END_GLYPH_PX } from './machines.mjs';
-import { p3Svg, ACTIVITY_ACCEPTED } from './p3glyphs.mjs';
+import { p3Svg, ACTIVITY_ACCEPTED, INTRO_ACCEPTED } from './p3glyphs.mjs';
 import { COPY } from './content.mjs';
 import * as FX from './fixtures.mjs';
 
@@ -157,8 +157,9 @@ h1:focus-visible,h2:focus-visible{box-shadow:none !important}
 /* THE CALL-SAFE STRIP (refinement §8): the same ASIDE, without Direct Entry — its body is text, its one act is dismiss. */
 .strip .vis{display:contents}
 .strip.callsafe .go{cursor:default}
-/* In the Analysis (G3's own page, in a frame under P3): the strip lives in the upper chrome row only, beside «المحادثة»,
-   over the Replay slot. Its box is MEASURED from G3's elements (app.js chromeSlot); it never reaches the world (y ≥ 95). */
+/* In the Analysis (G3's own page, in a frame under P3) only the CALL-SAFE strip may appear, and only during an active Live
+   Call: in the upper chrome row beside «المحادثة», temporarily and intentionally occluding the Replay slot (the one bounded
+   exception). Its box is MEASURED from G3's elements (app.js chromeSlot); it never reaches the world (y ≥ 95). */
 #g32host{position:absolute;inset:0;z-index:1}
 #g32host iframe{display:block;width:100%;height:100%;border:0}
 .strip.inchrome{min-height:0;border-radius:12px;align-items:center}
@@ -270,7 +271,7 @@ function glyphs() {
   g.depth22 = sigSvg('depth', { size: 22 }); g.replay22 = sigSvg('replay', { size: 22 });
   g.call24 = sigSvg('call'); g.mic24 = sigSvg('mic');
   g.muted24 = sigSvg('muted', { id: 'p3' }); g.route24 = sigSvg('routeOn'); g.end = sigSvg('endCall', { size: END_GLYPH_PX });
-  // the Introductions row mark: Open Link (recommended), At the Door (comparison), and the WITHDRAWN two-arc drawing
+  // the Introductions row mark: Open Link (ACCEPTED, final), At the Door (comparison / history only), and the WITHDRAWN two-arc drawing
   // (history; reachable only through planted defect D23, ?defect=oldintro)
   g.introLink20 = p3Svg('link', { size: 20 }); g.introDoor20 = p3Svg('door', { size: 20 }); g.introTwoArcs20 = p3Svg('introTwoArcs', { size: 20 });
   g.settings20 = utilSvg('settings', { size: 20 }); g.settings22 = utilSvg('settings', { size: 22 });
@@ -285,7 +286,7 @@ export function page() {
   vars('dark'); vars('light'); vars('dark', 'increased'); vars('light', 'increased');   // fills PALETTES
   const serialCopy = JSON.parse(JSON.stringify(COPY));
   const data = {
-    copy: serialCopy, glyphs: glyphs(), palettes: PALETTES, activityAccepted: ACTIVITY_ACCEPTED, endGlyphPx: END_GLYPH_PX,
+    copy: serialCopy, glyphs: glyphs(), palettes: PALETTES, activityAccepted: ACTIVITY_ACCEPTED, introAccepted: INTRO_ACCEPTED, endGlyphPx: END_GLYPH_PX,
     fx: { CONTEXTS: FX.CONTEXTS, SOURCE_GLYPH: FX.SOURCE_GLYPH, NOW: FX.NOW, FEED: FX.FEED, FEED_SETTINGS: FX.FEED_SETTINGS, EV: FX.EV, SCENARIOS: FX.SCENARIOS },
   };
   return `<!doctype html>
@@ -298,7 +299,7 @@ export function page() {
 <script>window.P3DATA=${JSON.stringify(data).replace(/</g, '\\u003c')};</script>
 <script>
 ${MODEL}
-window.P3MODEL={decide,project,indicators,coalesce,coalesceKey,markSeen,markOpened,defaultSettings,DISCLOSURE_DEFAULTS,CEILINGS,QUIET_DEFAULT,at,clock,inQuiet};
+window.P3MODEL={decide,reevaluatePending,project,indicators,coalesce,coalesceKey,markSeen,markOpened,defaultSettings,DISCLOSURE_DEFAULTS,CEILINGS,QUIET_DEFAULT,at,clock,inQuiet};
 </script>
 <script>
 ${APP}

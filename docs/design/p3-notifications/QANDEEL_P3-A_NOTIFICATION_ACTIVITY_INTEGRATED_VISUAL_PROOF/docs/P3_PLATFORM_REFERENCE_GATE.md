@@ -77,3 +77,17 @@ No platform statement changed in the refinement, so no source was re-fetched (re
 | `animate-expo` | Frequency gate: the call-safe strip is rare (occasional tier) and earns the standard entrance, but with 6 pt of travel inside the 48-pt chrome row; only `transform` and `opacity`; no bounce (no finger momentum); Reduced Motion is opacity only with the same hold (M08r; C-CALL-6). |
 | `apple-design` | "Separate to keep flow": the call-safe strip is nonmodal with no scrim and exits along its entry path; it never covers the controls the call depends on (the switch, the Timeline, Return Live, the Call Rail). |
 | `ui-ux-pro-max` | Data queried directly (no Python on this host): `ux-guidelines.csv` rows 100–101 "Focus Not Obscured … dismiss or move persistent overlays … close the overlay before focus moves behind it" → the strip steps aside if G3's Replay (under it) takes keyboard focus; row 2 "fixed nav should not obscure content" → the strip may not lie over the world; row 116 "compact label … expose the full text" → the chrome-row strip shows the short line and carries the whole sentence in its name and in Activity. |
+
+### 3b. Skills Gate — P3-A final micro-refinement (2026-09-26)
+
+No platform statement changed, so no source was re-fetched. Of the Skills the task names, `fixing-accessibility` and
+`apple-design` are **not installed on this host at this run** (the Skill tool answers "Unknown skill"; no skill
+directory exists), so they were not used and nothing is claimed for them; their earlier effects (§3a) stand as
+recorded. Nothing was installed.
+
+| Skill | Concrete effect on the final micro-refinement |
+|---|---|
+| `ui-ux-pro-max` | Data queried directly (no Python): `ux-guidelines.csv` row 118 "one appropriate atomic status message … never make every badge a competing live region" → ordinary attention inside the Analysis makes **no** announcement and no transient region; only a strip that actually follows on exit is announced, once (C-ANL-3, board 17). Rows 100–101 "Focus Not Obscured … close the persistent overlay before focus moves behind it" → Replay is the one occluded control, so focus reaching it makes the call-safe strip step aside at once, now proved by its own check (C-CALL-7). Row 119 "cancel or replace prior motion" → leaving the Analysis never queues a sequence of strips: one strip at most (C-EXIT-2m, C-EXIT-3; planted defect D26 plays the dump). |
+| `animate-expo` | Frequency / purpose gate: ordinary deferral inside the Analysis has **no purpose to animate** (nothing appears), so no "deferral animation" was invented; the one strip after exit reuses the approved ordinary strip motion (clip M10, no new language, no loop / pulse / bounce); the call-safe motion (M08 / M08r / M09) is unchanged. |
+| `designing-arabic-frontends` | The new captures run Arabic RTL and English LTR at 320, 390 and 430; the exit strip is the ordinary strip (logical properties, START-edge entry unchanged); the new board text keeps Arabic names inside nowrap `<bdi>` islands; the D27 geometry check measures by G3's own elements, not by physical sides. |
+| `writing-eloquent-arabic` | Consulted for register only: the final micro-refinement adds **no** Arabic Product copy (deferral is silent by design), so nothing new was written; the call-safe name «تنبيه أثناء المكالمة» stays PROOF copy. |

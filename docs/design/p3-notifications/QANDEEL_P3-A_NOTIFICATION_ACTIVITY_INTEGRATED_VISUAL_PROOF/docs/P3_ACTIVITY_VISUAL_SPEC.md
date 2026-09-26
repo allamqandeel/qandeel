@@ -28,17 +28,17 @@ Product law. Source of truth: `source/src/build.mjs` (CSS) and `source/src/app.j
 | Direction | never mirrored (symmetric except the cut, as every P2 glyph) |
 | Construction | `source/src/p3glyphs.mjs` (uses `sig.mjs`'s `strokeFor` and `arc`, unchanged) |
 
-## 2a. The Introductions source mark (refinement §9)
+## 2a. The Introductions source mark (refinement §9; final micro-refinement §4.1)
 
 The first pass drew two arcs of the Shared ring (two openings — a second exception to P2's one-opening-per-ring
-grammar). It is **withdrawn** (kept only as history and as planted defect D23). Two bounded variants replace it, both
-fully inside P2 N1 with no exception:
+grammar). It is **withdrawn** (kept only as history and as planted defect D23). Two bounded variants were compared, both
+fully inside P2 N1 with no exception; the Product Owner has **accepted Open Link as final**:
 
 | | |
 |---|---|
-| **Recommended** | **Open Link** — no ring. navShared's two points of light on the same 45° diagonal through the cut, each reaching toward the other with one straight stroke; the strokes stop 2.6 u apart (P2's cut minimum is 2 u). Before a Mutual Match there is no Shared World to draw: the link is offered, not made |
-| Comparison | **At the Door** — one open ring with the one N1 cut at 45°, one point inside and one standing in the opening. Compliant, but a ring means a World in P2, so it risks reading as «قنديل» with a visitor |
-| Checks | C-GLY-1 (no ring with more than one opening: Open Link covers 2° of the ring keyline, At the Door has exactly one opening), C-GLY-2 (points on the diagonal, never a face; signature distinct from the World glyphs and the ledger), C-GLY-3 (stroke 1.75 u at 20 px, round terminals, 24-unit grid, inside the live area) |
+| **Accepted — final** | **Open Link** — no ring. navShared's two points of light on the same 45° diagonal through the cut, each reaching toward the other with one straight stroke; the strokes stop 2.6 u apart (P2's cut minimum is 2 u). Before a Mutual Match there is no Shared World to draw: the link is offered, not made |
+| Comparison / history only | **At the Door** — one open ring with the one N1 cut at 45°, one point inside and one standing in the opening. Compliant, but a ring means a World in P2, so it risks reading as «قنديل» with a visitor. Not an open decision; reachable only through `?introglyph=door` |
+| Checks | C-SEL-2 (Open Link is the accepted mark the shell draws by default; At the Door is comparison / history only; the two-opening drawing only withdrawn), C-GLY-1 (no ring with more than one opening: Open Link covers 2° of the ring keyline, At the Door has exactly one opening), C-GLY-2 (points on the diagonal, never a face; signature distinct from the World glyphs and the ledger), C-GLY-3 (stroke 1.75 u at 20 px, round terminals, 24-unit grid, inside the live area) |
 
 ## 3. The Attention Mark (P3-E / P3-W)
 

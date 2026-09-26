@@ -13112,8 +13112,8 @@
   "appearance": "system",
   "scheme": "light",
   "file": "shots/system-appearance-light.png",
-  "bytes": 142833,
-  "sha256": "e28f421eaab3a3c1016511388150e1e2441bb28740521f3e538fedbf34774ce8",
+  "bytes": 142827,
+  "sha256": "a996e947a740afd32770e6e17045c72d812997527d29dc8f359059b1c37c1f22",
   "rects": {
    ".hdr": [
     {
@@ -13833,27 +13833,15 @@
    "entry": false
   }
  },
- "analysis-strip-shared-ad": {
-  "name": "analysis-strip-shared-ad",
-  "state": "analysis-strip-shared",
+ "analysis-deferred-ad": {
+  "name": "analysis-deferred-ad",
+  "state": "analysis-deferred",
   "lang": "ar",
   "appearance": "dark",
-  "file": "shots/analysis-strip-shared-ad.png",
-  "bytes": 1145795,
-  "sha256": "c389359061deb682dcf51c42f318a990133a36bfc0dba591476478ff2f42ef46",
-  "rects": {
-   ".strip": [
-    {
-     "x": 6,
-     "y": 49,
-     "w": 265,
-     "h": 44,
-     "id": "",
-     "cls": "strip inchrome",
-     "text": "سارة ردّت عليك"
-    }
-   ]
-  },
+  "file": "shots/analysis-deferred-ad.png",
+  "bytes": 1170410,
+  "sha256": "b32d431bc161280551177e9f155184e32dac849587548b988694d4c0dd028bac",
+  "rects": {},
   "probe": {
    "appearance": "dark",
    "dir": "rtl",
@@ -13862,8 +13850,8 @@
    "pageBg": "rgb(16, 16, 16)",
    "sw": 390,
    "iw": 390,
-   "strip": true,
-   "a11y": "تنبيه: رحلة الصيف — سارة ردّت عليك",
+   "strip": false,
+   "a11y": "",
    "g32": {
     "state": "P1",
     "place": "analysis",
@@ -13923,6 +13911,604 @@
     }
    },
    "entry": false
+  }
+ },
+ "analysis-deferred-el": {
+  "name": "analysis-deferred-el",
+  "state": "analysis-deferred",
+  "lang": "en",
+  "appearance": "light",
+  "file": "shots/analysis-deferred-el.png",
+  "bytes": 1172865,
+  "sha256": "238f6ef7a7e03ec4786b3a17b70b42646768388aac262f4d9679d7cfb90375bb",
+  "rects": {},
+  "probe": {
+   "appearance": "dark",
+   "dir": "ltr",
+   "place": "analysis",
+   "markBg": null,
+   "pageBg": "rgb(16, 16, 16)",
+   "sw": 390,
+   "iw": 390,
+   "strip": false,
+   "a11y": "",
+   "g32": {
+    "state": "P1",
+    "place": "analysis",
+    "call": "none",
+    "TM": "FOLLOW_LIVE",
+    "back": {
+     "x": 10,
+     "y": 49,
+     "r": 146.09375,
+     "b": 93,
+     "w": 136.09375,
+     "h": 44
+    },
+    "replay": {
+     "x": 336,
+     "y": 49,
+     "r": 380,
+     "b": 93,
+     "w": 44,
+     "h": 44
+    },
+    "tl": {
+     "x": 16,
+     "y": 710,
+     "r": 334,
+     "b": 754,
+     "w": 318,
+     "h": 44
+    },
+    "live": {
+     "x": 340,
+     "y": 710,
+     "r": 384,
+     "b": 754,
+     "w": 44,
+     "h": 44
+    },
+    "band": {
+     "x": 0,
+     "y": 750,
+     "r": 390,
+     "b": 760,
+     "w": 390,
+     "h": 10
+    },
+    "line": {
+     "x": 0,
+     "y": 754,
+     "r": 390,
+     "b": 818
+    },
+    "slot": {
+     "x": 154,
+     "y": 49,
+     "w": 230,
+     "h": 44
+    }
+   },
+   "entry": false
+  }
+ },
+ "analysis-deferred-s320-ed": {
+  "name": "analysis-deferred-s320-ed",
+  "state": "analysis-deferred",
+  "lang": "en",
+  "appearance": "dark",
+  "w": 320,
+  "h": 568,
+  "file": "shots/analysis-deferred-s320-ed.png",
+  "bytes": 629190,
+  "sha256": "cee2ea54009f924d5ae9dc5b2e197455013fc00a207078dfe7e3465b93015b54",
+  "rects": {},
+  "probe": {
+   "appearance": "dark",
+   "dir": "ltr",
+   "place": "analysis",
+   "markBg": null,
+   "pageBg": "rgb(16, 16, 16)",
+   "sw": 320,
+   "iw": 320,
+   "strip": false,
+   "a11y": "",
+   "g32": {
+    "state": "P1",
+    "place": "analysis",
+    "call": "none",
+    "TM": "FOLLOW_LIVE",
+    "back": {
+     "x": 10,
+     "y": 49,
+     "r": 146.09375,
+     "b": 93,
+     "w": 136.09375,
+     "h": 44
+    },
+    "replay": {
+     "x": 266,
+     "y": 49,
+     "r": 310,
+     "b": 93,
+     "w": 44,
+     "h": 44
+    },
+    "tl": {
+     "x": 16,
+     "y": 434,
+     "r": 264,
+     "b": 478,
+     "w": 248,
+     "h": 44
+    },
+    "live": {
+     "x": 270,
+     "y": 434,
+     "r": 314,
+     "b": 478,
+     "w": 44,
+     "h": 44
+    },
+    "band": {
+     "x": 0,
+     "y": 474,
+     "r": 320,
+     "b": 484,
+     "w": 320,
+     "h": 10
+    },
+    "line": {
+     "x": 0,
+     "y": 478,
+     "r": 320,
+     "b": 542
+    },
+    "slot": {
+     "x": 154,
+     "y": 49,
+     "w": 160,
+     "h": 44
+    }
+   },
+   "entry": false
+  }
+ },
+ "analysis-exit-ad": {
+  "name": "analysis-exit-ad",
+  "state": "analysis-exit",
+  "lang": "ar",
+  "appearance": "dark",
+  "file": "shots/analysis-exit-ad.png",
+  "bytes": 137847,
+  "sha256": "c1625572439ffcb13f8c0c92ba50b39b5ba62e35309baf1c9782f3612207c0f7",
+  "rects": {
+   ".hdr": [
+    {
+     "x": 0,
+     "y": 47,
+     "w": 390,
+     "h": 48,
+     "id": "",
+     "cls": "hdr",
+     "text": "تحليل المحادثة"
+    }
+   ],
+   "#act-entry": [
+    {
+     "x": 336,
+     "y": 49,
+     "w": 44,
+     "h": 44,
+     "id": "act-entry",
+     "cls": "ibtn pz",
+     "text": ""
+    }
+   ],
+   "#act-entry .amark": [
+    {
+     "x": 345,
+     "y": 58,
+     "w": 6,
+     "h": 6,
+     "id": "",
+     "cls": "amark",
+     "text": ""
+    }
+   ],
+   ".strip": [
+    {
+     "x": 10,
+     "y": 93,
+     "w": 370,
+     "h": 65,
+     "id": "",
+     "cls": "strip",
+     "text": "رحلة الصيف · الآنسارة ردّت عليك"
+    }
+   ],
+   ".composer": [
+    {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64,
+     "id": "",
+     "cls": "composer",
+     "text": "كلامك هنا"
+    }
+   ],
+   "#rail": [
+    {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90,
+     "id": "rail",
+     "cls": "",
+     "text": "قنديلالعالم المشتركالعالم العام"
+    }
+   ]
+  },
+  "probe": {
+   "appearance": "dark",
+   "dir": "rtl",
+   "place": "conv",
+   "markBg": "rgb(216, 213, 202)",
+   "pageBg": "rgb(16, 16, 16)",
+   "sw": 390,
+   "iw": 390,
+   "strip": true,
+   "a11y": "تنبيه: رحلة الصيف — سارة ردّت عليك",
+   "g32": {
+    "state": "P1",
+    "place": "analysis",
+    "call": "none",
+    "TM": "FOLLOW_LIVE",
+    "back": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "replay": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "tl": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "live": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "band": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "line": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0
+    },
+    "slot": {
+     "x": 8,
+     "y": 0,
+     "w": -4,
+     "h": 0
+    }
+   },
+   "entry": true
+  }
+ },
+ "analysis-exit-el": {
+  "name": "analysis-exit-el",
+  "state": "analysis-exit",
+  "lang": "en",
+  "appearance": "light",
+  "w": 430,
+  "h": 932,
+  "file": "shots/analysis-exit-el.png",
+  "bytes": 152281,
+  "sha256": "b3b4d073ae86f5277b49639d13293931ac4591ed8972d6cc7bbf4c9b6e596537",
+  "rects": {
+   ".hdr": [
+    {
+     "x": 0,
+     "y": 47,
+     "w": 430,
+     "h": 48,
+     "id": "",
+     "cls": "hdr",
+     "text": "Conversation analysis"
+    }
+   ],
+   "#act-entry": [
+    {
+     "x": 10,
+     "y": 49,
+     "w": 44,
+     "h": 44,
+     "id": "act-entry",
+     "cls": "ibtn pz",
+     "text": ""
+    }
+   ],
+   "#act-entry .amark": [
+    {
+     "x": 39,
+     "y": 58,
+     "w": 6,
+     "h": 6,
+     "id": "",
+     "cls": "amark",
+     "text": ""
+    }
+   ],
+   ".strip": [
+    {
+     "x": 10,
+     "y": 93,
+     "w": 410,
+     "h": 65,
+     "id": "",
+     "cls": "strip",
+     "text": "Summer trip · nowSara replied to you"
+    }
+   ],
+   ".composer": [
+    {
+     "x": 0,
+     "y": 778,
+     "w": 430,
+     "h": 64,
+     "id": "",
+     "cls": "composer",
+     "text": "Write here"
+    }
+   ],
+   "#rail": [
+    {
+     "x": 0,
+     "y": 842,
+     "w": 430,
+     "h": 90,
+     "id": "rail",
+     "cls": "",
+     "text": "QandeelShared WorldPublic world"
+    }
+   ]
+  },
+  "probe": {
+   "appearance": "light",
+   "dir": "ltr",
+   "place": "conv",
+   "markBg": "rgb(41, 39, 31)",
+   "pageBg": "rgb(239, 238, 235)",
+   "sw": 430,
+   "iw": 430,
+   "strip": true,
+   "a11y": "Alert: Summer trip — Sara replied to you",
+   "g32": {
+    "state": "P1",
+    "place": "analysis",
+    "call": "none",
+    "TM": "FOLLOW_LIVE",
+    "back": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "replay": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "tl": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "live": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "band": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "line": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0
+    },
+    "slot": {
+     "x": 8,
+     "y": 0,
+     "w": -4,
+     "h": 0
+    }
+   },
+   "entry": true
+  }
+ },
+ "analysis-exit-muted-ad": {
+  "name": "analysis-exit-muted-ad",
+  "state": "analysis-exit",
+  "q": {
+   "arrive": "reply",
+   "mute": "w-summer"
+  },
+  "lang": "ar",
+  "appearance": "dark",
+  "file": "shots/analysis-exit-muted-ad.png",
+  "bytes": 129007,
+  "sha256": "6778cc9f6d264da647dbac781d5f6c2d5e13e815951c90c362126ac677a317ad",
+  "rects": {
+   ".hdr": [
+    {
+     "x": 0,
+     "y": 47,
+     "w": 390,
+     "h": 48,
+     "id": "",
+     "cls": "hdr",
+     "text": "تحليل المحادثة"
+    }
+   ],
+   "#act-entry": [
+    {
+     "x": 336,
+     "y": 49,
+     "w": 44,
+     "h": 44,
+     "id": "act-entry",
+     "cls": "ibtn pz",
+     "text": ""
+    }
+   ],
+   "#act-entry .amark": [
+    {
+     "x": 345,
+     "y": 58,
+     "w": 6,
+     "h": 6,
+     "id": "",
+     "cls": "amark",
+     "text": ""
+    }
+   ],
+   ".composer": [
+    {
+     "x": 0,
+     "y": 690,
+     "w": 390,
+     "h": 64,
+     "id": "",
+     "cls": "composer",
+     "text": "كلامك هنا"
+    }
+   ],
+   "#rail": [
+    {
+     "x": 0,
+     "y": 754,
+     "w": 390,
+     "h": 90,
+     "id": "rail",
+     "cls": "",
+     "text": "قنديلالعالم المشتركالعالم العام"
+    }
+   ]
+  },
+  "probe": {
+   "appearance": "dark",
+   "dir": "rtl",
+   "place": "conv",
+   "markBg": "rgb(216, 213, 202)",
+   "pageBg": "rgb(16, 16, 16)",
+   "sw": 390,
+   "iw": 390,
+   "strip": false,
+   "a11y": "",
+   "g32": {
+    "state": "P1",
+    "place": "analysis",
+    "call": "none",
+    "TM": "FOLLOW_LIVE",
+    "back": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "replay": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "tl": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "live": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "band": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0,
+     "w": 0,
+     "h": 0
+    },
+    "line": {
+     "x": 0,
+     "y": 0,
+     "r": 0,
+     "b": 0
+    },
+    "slot": {
+     "x": 8,
+     "y": 0,
+     "w": -4,
+     "h": 0
+    }
+   },
+   "entry": true
   }
  },
  "callsafe-sec-a390-ad": {

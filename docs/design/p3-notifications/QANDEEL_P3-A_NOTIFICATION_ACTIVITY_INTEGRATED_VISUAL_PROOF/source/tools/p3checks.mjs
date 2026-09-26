@@ -89,7 +89,7 @@ const MODEL_CHECKS = [
   ['C-FREQ-8', 'Frequency', 'unused budget never causes a notification (ceiling ≠ quota): an empty trace sends nothing', (M) => { const r = M.runTrace([], FX.WEEK_SETTINGS); return { pass: r.pushes.length === 0 && r.rows.length === 0, detail: 'pushes ' + r.pushes.length }; }],
   ['C-FREQ-9', 'Frequency', 'the exact reminder and the critical security event sit outside the ordinary ceiling (W06, W20)', (M) => { const t = wk(M); return { pass: t.W06.surface === 'push' && t.W20.surface === 'push' && has(t.W20, 'outside') && t.W20.ord7 === 12, detail: `${t.W06.surface} / ${t.W20.surface}` }; }],
   ['C-FREQ-10', 'Frequency', 'the whole 7-day trace equals the independently stated expectations', (M) => { const t = wk(M), bad = Object.entries(FX.WEEK_EXPECT).filter(([k, v]) => t[k].surface !== v).map(([k]) => k); return { pass: bad.length === 0, detail: bad.join(',') || '20 / 20' }; }],
-  ['C-FG-1', 'Foreground', `all ${FX.SCENARIOS.length} scenarios resolve as independently stated — surface, and disclosure level where stated`, (M) => { const bad = FX.SCENARIOS.filter((s) => { const r = sc(M, s.id); return r.surface !== s.expect || (s.expectLevel && r.level !== s.expectLevel); }).map((s) => s.id); return { pass: bad.length === 0 && FX.SCENARIOS.length >= 31, detail: bad.join(',') || `${FX.SCENARIOS.length} / ${FX.SCENARIOS.length}` }; }],
+  ['C-FG-1', 'Foreground', `all ${FX.SCENARIOS.length} scenarios resolve as independently stated — surface, and disclosure level where stated`, (M) => { const bad = FX.SCENARIOS.filter((s) => { const r = sc(M, s.id); return r.surface !== s.expect || (s.expectLevel && r.level !== s.expectLevel); }).map((s) => s.id); return { pass: bad.length === 0 && FX.SCENARIOS.length >= 39, detail: bad.join(',') || `${FX.SCENARIOS.length} / ${FX.SCENARIOS.length}` }; }],
   // ---- P3-A refinement §5: Introductions — default L0, NO category cap; the user may raise the ceiling; the event may render less
   ['C-PRIV-6', 'Privacy', 'no Introductions category cap: default L0, and a ceiling the user raises above L1 is honoured up to the event\'s own safe projection (S28–S31)', (M) => {
     const r = Object.fromEntries(['S28', 'S29', 'S30', 'S31'].map((id) => [id, sc(M, id)]));
@@ -110,6 +110,29 @@ const MODEL_CHECKS = [
     const a = sc(M, 'S17'), b = sc(M, 'S18'), ctx = FX.scenarioCtx(FX.SCENARIOS.find((s) => s.id === 'S17'));
     const c = M.decide({ ...FX.EV.reminder, requested: false }, ctx), d = M.decide({ ...FX.EV.security, critical: false }, ctx), e = sc(M, 'S20');
     return { pass: a.surface === 'call-strip' && b.surface === 'call-strip' && c.surface === 'deferred' && d.surface === 'deferred' && e.surface === 'push' && e.level === 'L2', detail: `S17 ${a.surface} · S18 ${b.surface} · unrequested ${c.surface} · non-critical ${d.surface} · background ${e.surface} ${e.level}` };
+  }],
+  // ---- final micro-refinement §5–§7: the Analysis is not an attention surface; leaving it re-evaluates, never replays
+  ['C-ANL-3m', 'Analysis', 'inside the Analysis, with no call, ordinary Shared, Public, Introductions and Proactive attention — and critical security too (no new exception) — is deferred, never a strip; it stays in Activity with the mark (S32–S36)', (M) => {
+    const r = ['S32', 'S33', 'S34', 'S35', 'S36'].map((id) => [id, sc(M, id)]);
+    return { pass: r.every(([, x]) => x.surface === 'deferred' && has(x, 'analysis-deferred') && x.activity === true && x.mark === true), detail: r.map(([id, x]) => `${id} ${x.surface} (${x.reasons})`).join(' · ') };
+  }],
+  ['C-ANL-4m', 'Analysis', 'inside the Analysis during an active Live Call only the two call-safe cases present — critical security and a requested exact-time reminder (S37, S38); an ordinary Shared reply waits (S39); isCallSafe admits exactly those two fixture events', (M) => {
+    const a = sc(M, 'S37'), b = sc(M, 'S38'), c = sc(M, 'S39'), set = Object.entries(FX.EV).filter(([, e]) => M.isCallSafe(e)).map(([k]) => k).sort().join();
+    return { pass: a.surface === 'call-strip' && b.surface === 'call-strip' && c.surface === 'deferred' && has(c, 'live-call-deferred') && set === 'reminder,security', detail: `S37 ${a.surface} · S38 ${b.surface} · S39 ${c.surface} · call-safe set: ${set}` };
+  }],
+  ['C-EXIT-1m', 'Exit', 'leaving the Analysis re-evaluates what waited there against the CURRENT context: one Shared reply → one strip (X1); if the call continues, it keeps waiting (X4)', (M) => {
+    const x1 = FX.ANALYSIS_EXIT.find((x) => x.id === 'X1'), x4 = FX.ANALYSIS_EXIT.find((x) => x.id === 'X4');
+    const a = M.reevaluatePending(x1.pending, FX.exitCtx(x1)), b = M.reevaluatePending(x4.pending, FX.exitCtx(x4));
+    return { pass: a.strip === 'E-reply' && a.results[0].surface === 'strip' && b.strip === null && b.pending.join() === 'E-reply' && has(b.results[0], 'live-call-deferred'), detail: `X1 strip ${a.strip} · X4 ${b.results[0].surface}, pending ${b.pending}` };
+  }],
+  ['C-EXIT-2m', 'Exit', 'never a dump: at most ONE strip after leaving (X2: four waited → one strip, the others in Activity or in place); stale, muted and same-context candidates are not forced (X3: no strip) — every case equals its independently stated outcome', (M) => {
+    const bad = [], d = [];
+    for (const x of FX.ANALYSIS_EXIT) {
+      const r = M.reevaluatePending(x.pending, FX.exitCtx(x)), n = r.results.filter((q) => q.surface === 'strip').length;
+      if (n > 1 || r.strip !== x.expect.strip || r.results.some((q) => x.expect.surfaces[q.id] !== q.surface)) bad.push(x.id);
+      d.push(`${x.id}: ${n} strip${n === 1 ? '' : 's'} (${r.results.map((q) => q.id + ':' + q.surface).join(' ')})`);
+    }
+    return { pass: bad.length === 0 && FX.ANALYSIS_EXIT.length >= 4, detail: (bad.length ? 'FAIL ' + bad.join(',') + ' · ' : '') + d.join(' | ') };
   }],
 ];
 const CODE = (src) => src.split('\n').map((l) => l.replace(/\/\/.*$/, '')).join('\n');
@@ -214,8 +237,8 @@ const DOM_CHECKS = [
     return { pass: !r.sheet && r.entry && r.rail === 3 && r.again === false, detail: JSON.stringify(r) };
   }],
   ['C-A11Y-1', 'Accessibility', 'every control is named (conversation, strip, Activity, settings, education, call)', async (d) => {
-    const bad = []; for (const [st, lang, h] of [['conv-strip-shared', 'ar'], ['activity', 'ar'], ['activity', 'en'], ['notif', 'ar', 1960], ['edu', 'en'], ['conv-call', 'ar'], ['notif-lock', 'ar'], ['analysis-call-security', 'ar'], ['conv-call-reminder', 'en']]) { const c = await page({ state: st, lang, h: h || 844, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && !x.name) bad.push(`${st}:${x.tag}`); }
-    return { pass: bad.length === 0, detail: bad.join(', ') || '9 pages' };
+    const bad = []; for (const [st, lang, h] of [['conv-strip-shared', 'ar'], ['activity', 'ar'], ['activity', 'en'], ['notif', 'ar', 1960], ['edu', 'en'], ['conv-call', 'ar'], ['notif-lock', 'ar'], ['analysis-call-security', 'ar'], ['conv-call-reminder', 'en'], ['analysis-exit', 'en']]) { const c = await page({ state: st, lang, h: h || 844, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && !x.name) bad.push(`${st}:${x.tag}`); }
+    return { pass: bad.length === 0, detail: bad.join(', ') || '10 pages' };
   }],
   ['C-A11Y-1b', 'Accessibility', 'no name is glued from several text pieces (a control named by more than one text element carries an explicit label)', async (d) => {
     const bad = []; for (const [st, lang, h] of [['conv-strip-shared', 'ar'], ['activity', 'en'], ['notif', 'ar', 1960], ['notif', 'en', 1960], ['notif-lock', 'ar'], ['settings-root', 'en']]) { const c = await page({ state: st, lang, h: h || 844, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && x.glued) bad.push(`${st}:${x.name}`); }
@@ -230,8 +253,8 @@ const DOM_CHECKS = [
     return { pass: bad.length === 0, detail: bad.join(',') || 'all hidden' };
   }],
   ['C-A11Y-3', 'Accessibility', 'every control target is at least 44 × 44 pt (320, 390 and 430)', async (d) => {
-    const bad = []; for (const [st, w, h] of [['conv-strip-shared', 390, 844], ['activity', 320, 568], ['notif', 390, 1960], ['edu', 320, 568], ['conv-call', 430, 932], ['notif-lock', 390, 844], ['analysis-call-security', 320, 568], ['analysis-call-reminder', 430, 932]]) { const c = await page({ state: st, w, h, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && (x.w < 44 || x.h < 44)) bad.push(`${st}@${w}:${x.name}(${x.w}×${x.h})`); }
-    return { pass: bad.length === 0, detail: bad.slice(0, 6).join(', ') || '8 pages' };
+    const bad = []; for (const [st, w, h] of [['conv-strip-shared', 390, 844], ['activity', 320, 568], ['notif', 390, 1960], ['edu', 320, 568], ['conv-call', 430, 932], ['notif-lock', 390, 844], ['analysis-call-security', 320, 568], ['analysis-call-reminder', 430, 932], ['analysis-exit', 320, 568]]) { const c = await page({ state: st, w, h, defect: d }); const ctl = await c.eval('P3.controls()'); for (const x of ctl) if (!x.hidden && (x.w < 44 || x.h < 44)) bad.push(`${st}@${w}:${x.name}(${x.w}×${x.h})`); }
+    return { pass: bad.length === 0, detail: bad.slice(0, 6).join(', ') || '9 pages' };
   }],
   ['C-A11Y-4', 'Accessibility', 'keyboard focus is visible (E1R perimeter) on the entry, a filter, a switch and the strip', async (d) => {
     const out = []; for (const [st, sel, h] of [['conv', '#act-entry'], ['activity', '.fchip[data-filter=shared]'], ['notif', '[data-sw=shared]', 1960], ['conv-strip-shared', '.strip .x']]) { const c = await page({ state: st, h: h || 844, defect: d }); await kbdFocus(c, sel); out.push(await c.eval(`getComputedStyle(document.querySelector(${JSON.stringify(sel)})).boxShadow`)); }
@@ -267,6 +290,11 @@ const DOM_CHECKS = [
     const c = await page({ state: 'conv', defect: d }); const r = await c.eval(`(()=>{const s=document.querySelector('#act-entry svg');const as=(k)=>{const t=document.createElement('div');t.innerHTML=P3DATA.glyphs[k];return t.firstElementChild.outerHTML};return {ledger:s.outerHTML===as('act-ledger'),bell:s.outerHTML===as('act-bell')}})()`);
     return { pass: GL.ACTIVITY_ACCEPTED === 'ledger' && GL.ACTIVITY_VARIANTS.ledger.accepted === true && GL.ACTIVITY_VARIANTS.bell.accepted === false && r.ledger && !r.bell, detail: JSON.stringify(r) };
   }],
+  ['C-SEL-2', 'Selections', 'Open Link is the FINAL Introductions row mark and the one the shell draws by default; At the Door is comparison / history only; the two-opening drawing is only a withdrawn (rejected) drawing', async (d) => {
+    const c = await page({ state: 'activity', q: { filter: 'intro' }, defect: d }); const r = await c.eval(`(()=>{const s=document.querySelector('.row[data-cat="intro"] .gl svg');const as=(k)=>{const t=document.createElement('div');t.innerHTML=P3DATA.glyphs[k];return t.firstElementChild.outerHTML};return {accepted:P3DATA.introAccepted,link:s.outerHTML===as('introLink20'),door:s.outerHTML===as('introDoor20'),old:s.outerHTML===as('introTwoArcs20')}})()`);
+    const meta = GL.INTRO_ACCEPTED === 'link' && GL.INTRO_VARIANTS.link.accepted === true && GL.INTRO_VARIANTS.door.accepted === false && /comparison \/ history only/.test(GL.INTRO_VARIANTS.door.role) && !('introTwoArcs' in GL.P3G) && 'introTwoArcs' in GL.WITHDRAWN;
+    return { pass: meta && r.accepted === 'link' && r.link && !r.door && !r.old, detail: JSON.stringify({ meta, ...r }) };
+  }],
   ['C-ANL-1', 'Analysis', 'the Analysis never gains the Activity entry (G3 composition untouched); the non-Analysis shell keeps it', async (d) => {
     const out = [];
     for (const [st, lang, w, h] of [['analysis', 'ar', 390, 844], ['analysis', 'en', 390, 844], ['analysis-call', 'ar', 390, 844], ['analysis-call-security', 'ar', 320, 568], ['analysis-call-reminder', 'en', 430, 932]]) {
@@ -279,6 +307,29 @@ const DOM_CHECKS = [
     const c = await page({ state: 'analysis', defect: d }); await c.eval(`document.getElementById('g32').contentDocument.getElementById('back').click()`); await c.eval('P3.tick(400)');
     const r = await c.eval(`({place:P3.S.place,entry:!!document.getElementById('act-entry')})`); return { pass: r.place === 'conv' && r.entry, detail: JSON.stringify(r) };
   }],
+  // ---- final micro-refinement §5–§7: no ordinary strip inside the Analysis; re-evaluation on exit
+  ['C-ANL-3', 'Analysis', 'inside the Analysis (no call) a Shared reply, a Public reply, an Introduction and a Proactive note create NO strip, no transient region and no announcement; each waits, marked, for Activity — Arabic 390, English 320', async (d) => {
+    const out = [];
+    for (const [lang, w, h] of [['ar', 390, 844], ['en', 320, 568]]) {
+      const c = await page({ state: 'analysis-deferred', lang, w, h, defect: d }); await c.eval('P3.tick(2000)');
+      out.push(await c.eval(`({place:P3.S.place,strip:!!document.querySelector('.strip'),regions:document.querySelectorAll('#ui [role=region]').length,said:document.getElementById('a11y').textContent,shown:P3.S.shown.length,waiting:P3.S.deferred.map(e=>e.id).join(),feed:P3.S.feed.slice(0,4).map(i=>i.category+':'+i.attention).join(),g3:P3.g32()&&P3.g32().place})`));
+    }
+    return { pass: out.every((x) => x.place === 'analysis' && !x.strip && x.regions === 0 && x.said === '' && x.shown === 0 && x.waiting === 'E-reply,E-preply,E-intro,E-pro' && x.feed === 'qandeel:unseen,intro:unseen,public:unseen,shared:unseen' && x.g3 === 'analysis'), detail: JSON.stringify(out) };
+  }],
+  ['C-EXIT-3', 'Exit', 'leaving the Analysis by «المحادثة» (G3\'s own control) re-evaluates what waited: exactly ONE strip over the next 9 s — never a dump, never nothing — and the others stay in Activity with the mark', async (d) => {
+    const out = [];
+    for (const q of [{}, { arrive: 'reply' }]) {
+      const c = await page({ state: 'analysis-deferred', q, defect: d });
+      await c.eval(`document.getElementById('g32').contentDocument.getElementById('back').click()`); await c.eval('P3.tick(9000)');
+      out.push(await c.eval(`({place:P3.S.place,shown:P3.S.shown.join(),waiting:P3.S.deferred.length,unseen:P3.S.feed.filter(i=>i.attention==='unseen').length})`));
+    }
+    return { pass: out[0].place === 'conv' && out[0].shown === 'E-reply' && out[0].waiting === 0 && out[0].unseen === 4 && out[1].shown === 'E-reply' && out[1].unseen === 1, detail: JSON.stringify(out) };
+  }],
+  ['C-EXIT-4', 'Exit', 'nothing is shown merely because it once waited: a Shared reply deferred in the Analysis whose World is muted before the user leaves gives no strip on exit, and stays in Activity', async (d) => {
+    const c = await page({ state: 'analysis-exit', q: { arrive: 'reply', mute: 'w-summer' }, defect: d }); await c.eval('P3.tick(9000)');
+    const r = await c.eval(`({place:P3.S.place,shown:P3.S.shown.join(),inFeed:P3.S.feed.some(i=>i.id.startsWith('E-reply'))})`);
+    return { pass: r.place === 'conv' && r.shown === '' && r.inFeed, detail: JSON.stringify(r) };
+  }],
   // ---- §6: the L1 words
   ['C-COPY-1', 'Copy', 'L1 reads «إظهار النوع» / "Show type" everywhere it is shown; the withdrawn «تنبيه عام» / "General" is gone', async (d) => {
     const html = readFileSync(join(PKG, 'prototype', 'index.html'), 'utf8'); const out = [];
@@ -290,7 +341,7 @@ const DOM_CHECKS = [
     return { pass: out[0].t === COPY.ar.proactiveOptHelp.reduce.text && out[1].t === COPY.en.proactiveOptHelp.reduce.text && out.every((x) => x.on === 'true' && x.desc === 'pro-help' && !/[0-9٠-٩]|class|فئة/i.test(x.t)), detail: out.map((x) => x.t).join(' | ') };
   }],
   // ---- §8: the call-safe strip
-  ['C-CALL-3', 'Live Call', 'the call-safe strip covers nothing frozen — measured on G3\'s own elements: inside the chrome row (y ≤ 95, so never the world), clear of «المحادثة», the Timeline, Return Live, the band and the call line — at 320, 390 and 430', async (d) => {
+  ['C-CALL-3', 'Live Call', 'the one bounded exception, measured on G3\'s own elements at 320, 390 and 430: the call-safe strip temporarily and intentionally occludes the Replay slot and nothing else — it stays in the chrome row (y ≤ 95, so the world floor is untouched) and clear of «المحادثة», the Timeline, Return Live, the band and the call line', async (d) => {
     const hit = (a, b) => !!b && a.x < b.r && a.x + a.w > b.x && a.y < b.b && a.y + a.h > b.y; const bad = [], seen = [];
     for (const [st, lang, w, h] of [['analysis-call-security', 'ar', 320, 568], ['analysis-call-security', 'en', 320, 568], ['analysis-call-reminder', 'en', 320, 568], ['analysis-call-security', 'ar', 390, 844], ['analysis-call-reminder', 'en', 390, 844], ['analysis-call-security', 'en', 430, 932]]) {
       const c = await page({ state: st, lang, w, h, defect: d }); const g = await c.eval('P3.g32()'), s = (await c.eval(`P3.rects('.strip')`))[0];
@@ -298,6 +349,7 @@ const DOM_CHECKS = [
       seen.push(`${id}:${g.state}`);
       if (s.y < 47 || s.y + s.h > 95) bad.push(id + ':leaves chrome row'); if (s.x < 0 || s.x + s.w > w) bad.push(id + ':off phone');
       for (const k of ['back', 'tl', 'live', 'band', 'line']) if (hit(s, g[k])) bad.push(`${id}:covers ${k}`);
+      if (!hit(s, g.replay)) bad.push(id + ':does not sit on the Replay slot');
       if (g.place !== 'analysis' || g.call !== 'live') bad.push(id + ':call ' + g.call);
     }
     return { pass: bad.length === 0 && seen.length === 6, detail: bad.join(', ') || seen.join(' ') };
@@ -325,8 +377,16 @@ const DOM_CHECKS = [
     const sa = span(a), sb = span(b), travel = b.some((f) => f.strip && f.strip.t && /translateY\((?!0px)/.test(f.strip.t));
     return { pass: mono && a.every((f) => y(f) <= 0 && y(f) >= -6) && !travel && Math.abs(sa[0] - sb[0]) <= 1 && Math.abs(sa[1] - sb[1]) <= 3, detail: `standard frames ${sa}; reduced ${sb}` };
   }],
+  ['C-CALL-7', 'Live Call', 'focus is never hidden under the occluded Replay: when G3\'s Replay takes keyboard focus, the call-safe strip steps aside at once and the call continues', async (d) => {
+    const out = []; for (const [lang, w, h] of [['ar', 390, 844], ['en', 320, 568]]) {
+      const c = await page({ state: 'analysis-call-security', lang, w, h, defect: d }); const before = await c.eval(`!!document.querySelector('.strip')`);
+      await c.eval(`document.getElementById('g32').contentDocument.getElementById('replay').focus()`); await c.eval('P3.tick(400)');
+      out.push({ lang, before, after: await c.eval(`!!document.querySelector('.strip')`), focus: await c.eval(`document.getElementById('g32').contentDocument.activeElement.id`), call: await c.eval('P3.S.call') });
+    }
+    return { pass: out.every((x) => x.before && !x.after && x.focus === 'replay' && x.call === true), detail: JSON.stringify(out) };
+  }],
   // ---- §9: the Introductions row mark
-  ['C-GLY-1', 'Glyph', 'the Introductions mark obeys P2 N1 with no exception: no ring with more than one opening (both the recommended Open Link and the At the Door comparison)', async (d) => {
+  ['C-GLY-1', 'Glyph', 'the Introductions mark obeys P2 N1 with no exception: no ring with more than one opening (both the accepted Open Link and the At the Door comparison)', async (d) => {
     const out = []; for (const v of [null, 'door']) { const c = await page({ state: 'activity', q: { filter: 'intro', ...(v ? { introglyph: v } : {}) }, defect: d }); out.push({ v: v || 'link', ...(await c.eval(`(${GLYPH_JS})('.row[data-cat="intro"] .gl svg')`)) }); }
     return { pass: out.every((x) => !x.ring || x.gaps === 1) && !out[0].ring, detail: out.map((x) => `${x.v}: ring ${x.ring} (${x.coverage}°) openings ${x.gaps}`).join(' · ') };
   }],
@@ -368,6 +428,31 @@ const STATIC_CHECKS = [
   }],
 ];
 
+// ------------------------------------------------------------------------------------------ documentation truth
+// The package's words must say what the geometry shows (final micro-refinement §8): the call-safe strip DOES occlude the
+// Replay slot, intentionally and temporarily, so no document may claim it covers no frozen control; the rejected ordinary
+// Analysis strip may appear only labelled as rejected; the decision summary leaves no Product / craft question open.
+const ACCEPTED_REPLAY = 'Temporary intentional Replay occlusion is the one bounded exception';
+const FALSE_CLAIM = /covers?\s+(?:nothing\s+frozen|no\s+frozen\s+control)|no\s+frozen\s+control\s+is\s+covered|nothing\s+frozen\s+is\s+covered/i;
+function docCorpus() {
+  const files = [join(PKG, 'P3_READ_FIRST.md'), ...readdirSync(join(PKG, 'docs')).filter((n) => n.endsWith('.md')).map((n) => join(PKG, 'docs', n)), join(PKG, 'data', 'BOARDS.json')];
+  return Object.fromEntries(files.map((p) => [relative(PKG, p).replace(/\\/g, '/'), readFileSync(p, 'utf8')]));
+}
+const DOC_CHECKS = [
+  ['C-DOC-1', 'Documentation', 'the words match the geometry: nothing claims the call-safe strip covers no frozen control; the accepted wording (Replay is the one temporarily, intentionally occluded control) is stated; the rejected ordinary Analysis strip appears only labelled REJECTED; the decision summary leaves only copy and device / implementation items open', (corpus) => {
+    const bad = [];
+    for (const [f, t] of Object.entries(corpus)) if (FALSE_CLAIM.test(t.replace(/\s+/g, ' ')) && !t.split('\n').some((l) => FALSE_CLAIM.test(l))) bad.push(`${f}: false claim (wrapped across lines)`);
+    for (const [f, t] of Object.entries(corpus)) t.split('\n').forEach((l, i) => { if (FALSE_CLAIM.test(l)) bad.push(`${f}:${i + 1} false claim`); if (/analysis-strip-shared/.test(l) && !/REJECTED/.test(l)) bad.push(`${f}:${i + 1} unlabelled analysis-strip-shared`); });
+    for (const f of ['P3_READ_FIRST.md', 'docs/P3_ATTENTION_STRIP_SPEC.md', 'docs/P3_PRODUCT_PROOF_REPORT.md']) if (!(corpus[f] || '').replace(/\s+/g, ' ').includes(ACCEPTED_REPLAY)) bad.push(f + ': accepted Replay wording missing');
+    const open = (JSON.parse(corpus['data/BOARDS.json']).B18 || {}).open || [];
+    if (!open.length || open.some((o) => !/^(Copy only|Device \/ implementation):/.test(o) || /Open Link|At the Door|Replay|Direct Entry/.test(o.replace(/call-safe region name/g, '')))) bad.push('board 18 leaves a Product / craft question open');
+    return { pass: bad.length === 0, detail: bad.slice(0, 6).join(' · ') || `${Object.keys(corpus).length} documents; open items: ${open.length} (copy / device only)` };
+  }],
+];
+const DOCDEF = {
+  D29: ['the Attention Strip spec claims the call-safe strip covers no frozen control', (c) => ({ ...c, 'docs/P3_ATTENTION_STRIP_SPEC.md': c['docs/P3_ATTENTION_STRIP_SPEC.md'] + '\nIn the Analysis the call-safe strip covers no frozen control.\n' }), ['C-DOC-1']],
+};
+
 // ------------------------------------------------------------------------------------------ planted defects
 const MUT = {
   D3: ['a cross-World coalesced row', (s) => mutate(s, '`${e.category}|${e.context}|${e.kind}`', '`${e.category}|${e.kind}`'), 'crossworld', ['C-ACT-4m', 'C-ACT-4']],
@@ -383,6 +468,10 @@ const MUT = {
   D17: ['a universal Introductions cap (every Introduction ≤ L1)', (s) => mutate(s, "const level = minLevel(e.safeMax ?? 'L3', s.lock[subj] ?? DISCLOSURE_DEFAULTS[subj]);", "const level = minLevel(subj === 'intro' ? 'L1' : (e.safeMax ?? 'L3'), s.lock[subj] ?? DISCLOSURE_DEFAULTS[subj]);"), null, ['C-PRIV-6', 'C-FG-1']],
   D19: ['Reduce implemented as a hard "Class 2 only" rule', (s) => mutate(s, "s.proactive === 'reduce' && e.reduceEligible !== true)", "s.proactive === 'reduce' && e.cls >= 3)"), null, ['C-RED-1', 'C-RED-4']],
   D20: ['critical security deferred during a Live Call', (s) => mutate(s, "export const isCallSafe = (e) =>", "export const isCallSafe = (e) => false &&"), 'calldefer', ['C-CALL-2m', 'C-CALL-5']],
+  // ---- P3-A final micro-refinement
+  D24: ['REJECTED / PLANTED DEFECT — ORDINARY STRIP INSIDE ANALYSIS: a Shared reply becomes a normal strip in the Analysis', (s) => mutate(s, "if (ctx.view === 'analysis') { R.push('analysis-deferred'); return out('deferred'); }", ''), 'analysisstrip', ['C-ANL-3m', 'C-FG-1', 'C-ANL-3']],
+  D25: ['a deferred Analysis event is never re-evaluated on exit', (s) => mutate(s, 'const results = pending.map((e) => ({ id: e.id, e, ...decide(e, ctx) }));', "const results = pending.map((e) => ({ id: e.id, e, surface: 'deferred', reasons: ['never-re-evaluated'], mark: true }));"), 'noreeval', ['C-EXIT-1m', 'C-EXIT-3']],
+  D26: ['multiple deferred Analysis events dump multiple strips on exit', (s) => mutate(s, "for (const r of strips.slice(1)) { r.surface = 'activity'; r.reasons = [...r.reasons, 'one-strip-at-a-time']; }", ''), 'dump', ['C-EXIT-2m', 'C-EXIT-3']],
   D21: ['an ordinary Shared reply shown during a Live Call', (s) => mutate(s, "if (ctx.liveCall && !isCallSafe(e))", "if (ctx.liveCall && !isCallSafe(e) && e.category !== 'shared')"), 'callshared', ['C-CALL-1m', 'C-CALL-4', 'C-STRIP-2']],
 };
 const DOMDEF = {
@@ -395,7 +484,9 @@ const DOMDEF = {
   D16: ['a modal that leaves the page behind it reachable', 'noinert', ['C-A11Y-9']],
   D18: ['the withdrawn L1 label «تنبيه عام» / "General" restored', 'oldl1', ['C-COPY-1']],
   D22: ['the Activity entry added to the Analysis chrome', 'analysisentry', ['C-ANL-1']],
-  D23: ['the withdrawn two-opening Introductions ring restored', 'oldintro', ['C-GLY-1']],
+  D23: ['the withdrawn two-opening Introductions ring restored', 'oldintro', ['C-GLY-1', 'C-SEL-2']],
+  D27: ['the call-safe strip "covers no frozen control": moved off the Replay slot, below the chrome row, into the world floor', 'badslot', ['C-CALL-3']],
+  D28: ['the call-safe strip gets a Direct Entry', 'callentry', ['C-CALL-5']],
 };
 
 async function runModel(M, only = null, src = MODEL_SRC) {
@@ -407,7 +498,9 @@ async function runModel(M, only = null, src = MODEL_SRC) {
 async function runDom(defect = null, only = null) { const out = []; for (const [id, g, title, fn] of DOM_CHECKS) { if (only && !only.includes(id)) continue; let r; try { r = await fn(defect); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } out.push({ id, group: g, title, ...r }); } return out; }
 
 const M0 = await loadModel(MODEL_SRC, 'base');
-const results = [...STATIC_CHECKS.map(([id, g, title, fn]) => { let r; try { r = fn(); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } return { id, group: g, title, ...r }; }), ...await runModel(M0), ...await runDom()];
+const runDoc = (corpus, only = null) => DOC_CHECKS.filter(([id]) => !only || only.includes(id)).map(([id, g, title, fn]) => { let r; try { r = fn(corpus); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } return { id, group: g, title, ...r }; });
+const CORPUS = docCorpus();
+const results = [...STATIC_CHECKS.map(([id, g, title, fn]) => { let r; try { r = fn(); } catch (e) { r = { pass: false, detail: 'threw: ' + e.message }; } return { id, group: g, title, ...r }; }), ...runDoc(CORPUS), ...await runModel(M0), ...await runDom()];
 const planted = [];
 for (const [id, [desc, mut, domDefect, targets]] of Object.entries(MUT)) {
   const src = mut(MODEL_SRC), Mm = await loadModel(src, id);
@@ -418,6 +511,10 @@ for (const [id, [desc, mut, domDefect, targets]] of Object.entries(MUT)) {
 for (const [id, [desc, defect, targets]] of Object.entries(DOMDEF)) {
   const rr = await runDom(defect, targets); const caught = rr.filter((x) => !x.pass).map((x) => x.id);
   planted.push({ id, desc, via: `?defect=${defect}`, targets, caughtBy: caught, rejected: caught.length > 0 });
+}
+for (const [id, [desc, inject, targets]] of Object.entries(DOCDEF)) {
+  const caught = runDoc(inject(CORPUS), targets).filter((x) => !x.pass).map((x) => x.id);
+  planted.push({ id, desc, via: 'document mutation', targets, caughtBy: caught, rejected: caught.length > 0 });
 }
 await closeBrowser(); await closeServers();
 planted.sort((a, b) => +a.id.slice(1) - +b.id.slice(1));

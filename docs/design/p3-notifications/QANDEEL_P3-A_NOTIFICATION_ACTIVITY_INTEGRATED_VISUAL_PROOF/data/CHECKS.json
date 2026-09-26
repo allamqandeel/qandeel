@@ -1,20 +1,20 @@
 {
  "baseline": "b9e087ba366c9df6843b6b880ff5e790f1fde045",
- "prototypeSha256": "992df037344f7977249de22a1c756008ac0d068e870583136a69c2047decbf76",
+ "prototypeSha256": "7daecd28e495b5c38e7073793d13bfc190201935774871f056cfe23aade0f3db",
  "checks": [
   {
    "id": "C-SCOPE-1",
    "group": "Scope",
    "title": "only the P3 proof package changes against canonical main; no production source, dependency, locator, backlog or canonical authority",
    "pass": true,
-   "detail": "126 tracked changes + 11 new package files; outside: none"
+   "detail": "137 tracked changes + 4 new package files; outside: none"
   },
   {
    "id": "C-SCOPE-2",
    "group": "Scope",
    "title": "no dependency or production manifest inside the package",
    "pass": true,
-   "detail": "136 files; none"
+   "detail": "140 files; none"
   },
   {
    "id": "C-SCOPE-3",
@@ -35,7 +35,14 @@
    "group": "Lifecycle",
    "title": "the package never claims P3 CLOSED / FROZEN",
    "pass": true,
-   "detail": "77 files scanned; no claim"
+   "detail": "78 files scanned; no claim"
+  },
+  {
+   "id": "C-DOC-1",
+   "group": "Documentation",
+   "title": "the words match the geometry: nothing claims the call-safe strip covers no frozen control; the accepted wording (Replay is the one temporarily, intentionally occluded control) is stated; the rejected ordinary Analysis strip appears only labelled REJECTED; the decision summary leaves only copy and device / implementation items open",
+   "pass": true,
+   "detail": "13 documents; open items: 2 (copy / device only)"
   },
   {
    "id": "C-ACT-4m",
@@ -222,9 +229,9 @@
   {
    "id": "C-FG-1",
    "group": "Foreground",
-   "title": "all 31 scenarios resolve as independently stated — surface, and disclosure level where stated",
+   "title": "all 39 scenarios resolve as independently stated — surface, and disclosure level where stated",
    "pass": true,
-   "detail": "31 / 31"
+   "detail": "39 / 39"
   },
   {
    "id": "C-PRIV-6",
@@ -274,6 +281,34 @@
    "title": "only critical security and a requested exact-time reminder may show the call-safe strip (S17, S18); a reminder that was not requested, and a non-critical security notice, still wait",
    "pass": true,
    "detail": "S17 call-strip · S18 call-strip · unrequested deferred · non-critical deferred · background push L2"
+  },
+  {
+   "id": "C-ANL-3m",
+   "group": "Analysis",
+   "title": "inside the Analysis, with no call, ordinary Shared, Public, Introductions and Proactive attention — and critical security too (no new exception) — is deferred, never a strip; it stays in Activity with the mark (S32–S36)",
+   "pass": true,
+   "detail": "S32 deferred (analysis-deferred) · S33 deferred (analysis-deferred) · S34 deferred (analysis-deferred) · S35 deferred (analysis-deferred) · S36 deferred (analysis-deferred)"
+  },
+  {
+   "id": "C-ANL-4m",
+   "group": "Analysis",
+   "title": "inside the Analysis during an active Live Call only the two call-safe cases present — critical security and a requested exact-time reminder (S37, S38); an ordinary Shared reply waits (S39); isCallSafe admits exactly those two fixture events",
+   "pass": true,
+   "detail": "S37 call-strip · S38 call-strip · S39 deferred · call-safe set: reminder,security"
+  },
+  {
+   "id": "C-EXIT-1m",
+   "group": "Exit",
+   "title": "leaving the Analysis re-evaluates what waited there against the CURRENT context: one Shared reply → one strip (X1); if the call continues, it keeps waiting (X4)",
+   "pass": true,
+   "detail": "X1 strip E-reply · X4 deferred, pending E-reply"
+  },
+  {
+   "id": "C-EXIT-2m",
+   "group": "Exit",
+   "title": "never a dump: at most ONE strip after leaving (X2: four waited → one strip, the others in Activity or in place); stale, muted and same-context candidates are not forced (X3: no strip) — every case equals its independently stated outcome",
+   "pass": true,
+   "detail": "X1: 1 strip (E-reply:strip) | X2: 1 strip (E-reply:strip E-preply:activity E-intro:activity E-pro:in-place) | X3: 0 strips (E-reply:activity E-stale:stale E-pro:in-place) | X4: 0 strips (E-reply:deferred)"
   },
   {
    "id": "C-RED-4",
@@ -399,7 +434,7 @@
    "group": "Accessibility",
    "title": "every control is named (conversation, strip, Activity, settings, education, call)",
    "pass": true,
-   "detail": "9 pages"
+   "detail": "10 pages"
   },
   {
    "id": "C-A11Y-1b",
@@ -427,7 +462,7 @@
    "group": "Accessibility",
    "title": "every control target is at least 44 × 44 pt (320, 390 and 430)",
    "pass": true,
-   "detail": "8 pages"
+   "detail": "9 pages"
   },
   {
    "id": "C-A11Y-4",
@@ -479,6 +514,13 @@
    "detail": "{\"ledger\":true,\"bell\":false}"
   },
   {
+   "id": "C-SEL-2",
+   "group": "Selections",
+   "title": "Open Link is the FINAL Introductions row mark and the one the shell draws by default; At the Door is comparison / history only; the two-opening drawing is only a withdrawn (rejected) drawing",
+   "pass": true,
+   "detail": "{\"meta\":true,\"accepted\":\"link\",\"link\":true,\"door\":false,\"old\":false}"
+  },
+  {
    "id": "C-ANL-1",
    "group": "Analysis",
    "title": "the Analysis never gains the Activity entry (G3 composition untouched); the non-Analysis shell keeps it",
@@ -491,6 +533,27 @@
    "title": "Activity stays one step away: «المحادثة» leads from the Analysis back to the Conversation, where the entry is",
    "pass": true,
    "detail": "{\"place\":\"conv\",\"entry\":true}"
+  },
+  {
+   "id": "C-ANL-3",
+   "group": "Analysis",
+   "title": "inside the Analysis (no call) a Shared reply, a Public reply, an Introduction and a Proactive note create NO strip, no transient region and no announcement; each waits, marked, for Activity — Arabic 390, English 320",
+   "pass": true,
+   "detail": "[{\"place\":\"analysis\",\"strip\":false,\"regions\":0,\"said\":\"\",\"shown\":0,\"waiting\":\"E-reply,E-preply,E-intro,E-pro\",\"feed\":\"qandeel:unseen,intro:unseen,public:unseen,shared:unseen\",\"g3\":\"analysis\"},{\"place\":\"analysis\",\"strip\":false,\"regions\":0,\"said\":\"\",\"shown\":0,\"waiting\":\"E-reply,E-preply,E-intro,E-pro\",\"feed\":\"qandeel:unseen,intro:unseen,public:unseen,shared:unseen\",\"g3\":\"analysis\"}]"
+  },
+  {
+   "id": "C-EXIT-3",
+   "group": "Exit",
+   "title": "leaving the Analysis by «المحادثة» (G3's own control) re-evaluates what waited: exactly ONE strip over the next 9 s — never a dump, never nothing — and the others stay in Activity with the mark",
+   "pass": true,
+   "detail": "[{\"place\":\"conv\",\"shown\":\"E-reply\",\"waiting\":0,\"unseen\":4},{\"place\":\"conv\",\"shown\":\"E-reply\",\"waiting\":0,\"unseen\":1}]"
+  },
+  {
+   "id": "C-EXIT-4",
+   "group": "Exit",
+   "title": "nothing is shown merely because it once waited: a Shared reply deferred in the Analysis whose World is muted before the user leaves gives no strip on exit, and stays in Activity",
+   "pass": true,
+   "detail": "{\"place\":\"conv\",\"shown\":\"\",\"inFeed\":true}"
   },
   {
    "id": "C-COPY-1",
@@ -509,7 +572,7 @@
   {
    "id": "C-CALL-3",
    "group": "Live Call",
-   "title": "the call-safe strip covers nothing frozen — measured on G3's own elements: inside the chrome row (y ≤ 95, so never the world), clear of «المحادثة», the Timeline, Return Live, the band and the call line — at 320, 390 and 430",
+   "title": "the one bounded exception, measured on G3's own elements at 320, 390 and 430: the call-safe strip temporarily and intentionally occludes the Replay slot and nothing else — it stays in the chrome row (y ≤ 95, so the world floor is untouched) and clear of «المحادثة», the Timeline, Return Live, the band and the call line",
    "pass": true,
    "detail": "analysis-call-security/ar@320:CALL_PINNED analysis-call-security/en@320:CALL_PINNED analysis-call-reminder/en@320:CALL_PINNED analysis-call-security/ar@390:CALL_ANALYSIS analysis-call-reminder/en@390:CALL_ANALYSIS analysis-call-security/en@430:CALL_ANALYSIS"
   },
@@ -535,9 +598,16 @@
    "detail": "standard frames 15,200; reduced 15,199"
   },
   {
+   "id": "C-CALL-7",
+   "group": "Live Call",
+   "title": "focus is never hidden under the occluded Replay: when G3's Replay takes keyboard focus, the call-safe strip steps aside at once and the call continues",
+   "pass": true,
+   "detail": "[{\"lang\":\"ar\",\"before\":true,\"after\":false,\"focus\":\"replay\",\"call\":true},{\"lang\":\"en\",\"before\":true,\"after\":false,\"focus\":\"replay\",\"call\":true}]"
+  },
+  {
    "id": "C-GLY-1",
    "group": "Glyph",
-   "title": "the Introductions mark obeys P2 N1 with no exception: no ring with more than one opening (both the recommended Open Link and the At the Door comparison)",
+   "title": "the Introductions mark obeys P2 N1 with no exception: no ring with more than one opening (both the accepted Open Link and the At the Door comparison)",
    "pass": true,
    "detail": "link: ring false (2°) openings 0 · door: ring true (298°) openings 1"
   },
@@ -556,8 +626,8 @@
    "detail": "{\"strokes\":[1.75],\"caps\":[\"round\"],\"ext\":[3.41,20.59]}"
   }
  ],
- "pass": 79,
- "total": 79,
+ "pass": 89,
+ "total": 89,
  "planted": [
   {
    "id": "D1",
@@ -844,14 +914,96 @@
    "desc": "the withdrawn two-opening Introductions ring restored",
    "via": "?defect=oldintro",
    "targets": [
-    "C-GLY-1"
+    "C-GLY-1",
+    "C-SEL-2"
    ],
    "caughtBy": [
+    "C-SEL-2",
     "C-GLY-1"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D24",
+   "desc": "REJECTED / PLANTED DEFECT — ORDINARY STRIP INSIDE ANALYSIS: a Shared reply becomes a normal strip in the Analysis",
+   "via": "model mutation + ?defect=analysisstrip",
+   "targets": [
+    "C-ANL-3m",
+    "C-FG-1",
+    "C-ANL-3"
+   ],
+   "caughtBy": [
+    "C-FG-1",
+    "C-ANL-3m",
+    "C-ANL-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D25",
+   "desc": "a deferred Analysis event is never re-evaluated on exit",
+   "via": "model mutation + ?defect=noreeval",
+   "targets": [
+    "C-EXIT-1m",
+    "C-EXIT-3"
+   ],
+   "caughtBy": [
+    "C-EXIT-1m",
+    "C-EXIT-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D26",
+   "desc": "multiple deferred Analysis events dump multiple strips on exit",
+   "via": "model mutation + ?defect=dump",
+   "targets": [
+    "C-EXIT-2m",
+    "C-EXIT-3"
+   ],
+   "caughtBy": [
+    "C-EXIT-2m",
+    "C-EXIT-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D27",
+   "desc": "the call-safe strip \"covers no frozen control\": moved off the Replay slot, below the chrome row, into the world floor",
+   "via": "?defect=badslot",
+   "targets": [
+    "C-CALL-3"
+   ],
+   "caughtBy": [
+    "C-CALL-3"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D28",
+   "desc": "the call-safe strip gets a Direct Entry",
+   "via": "?defect=callentry",
+   "targets": [
+    "C-CALL-5"
+   ],
+   "caughtBy": [
+    "C-CALL-5"
+   ],
+   "rejected": true
+  },
+  {
+   "id": "D29",
+   "desc": "the Attention Strip spec claims the call-safe strip covers no frozen control",
+   "via": "document mutation",
+   "targets": [
+    "C-DOC-1"
+   ],
+   "caughtBy": [
+    "C-DOC-1"
    ],
    "rejected": true
   }
  ],
- "plantedRejected": 23,
- "plantedTotal": 23
+ "plantedRejected": 29,
+ "plantedTotal": 29
 }

@@ -2,6 +2,8 @@
  {
   "st": "conv-strip-shared",
   "lang": "ar",
+  "regions": 1,
+  "said": "تنبيه: رحلة الصيف — سارة ردّت عليك",
   "n": 10,
   "small": 0,
   "unnamed": 0,
@@ -20,6 +22,8 @@
  {
   "st": "activity",
   "lang": "ar",
+  "regions": 0,
+  "said": "",
   "n": 20,
   "small": 0,
   "unnamed": 0,
@@ -38,6 +42,8 @@
  {
   "st": "notif",
   "lang": "en",
+  "regions": 0,
+  "said": "",
   "n": 25,
   "small": 0,
   "unnamed": 0,
@@ -56,6 +62,8 @@
  {
   "st": "edu",
   "lang": "ar",
+  "regions": 0,
+  "said": "",
   "n": 2,
   "small": 0,
   "unnamed": 0,
@@ -69,6 +77,8 @@
  {
   "st": "analysis-call-security",
   "lang": "ar",
+  "regions": 1,
+  "said": "تنبيه أثناء المكالمة: الحساب — تسجيل دخول جديد من جهاز Pixel 8 (المكالمة مستمرة)",
   "n": 1,
   "small": 0,
   "unnamed": 0,
@@ -81,6 +91,8 @@
  {
   "st": "conv-call-reminder",
   "lang": "en",
+  "regions": 1,
+  "said": "Alert during your call: Qandeel — As you asked: call the clinic at 4:00 (your call continues)",
   "n": 10,
   "small": 0,
   "unnamed": 0,
@@ -93,6 +105,38 @@
    "Speaker",
    "Mute microphone",
    "End call",
+   "Dismiss"
+  ]
+ },
+ {
+  "st": "analysis-deferred",
+  "lang": "ar",
+  "regions": 0,
+  "said": "",
+  "n": 0,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 0,
+  "exposed": 0,
+  "sample": []
+ },
+ {
+  "st": "analysis-exit",
+  "lang": "en",
+  "regions": 1,
+  "said": "Alert: Summer trip — Sara replied to you",
+  "n": 10,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 12,
+  "exposed": 0,
+  "sample": [
+   "Activity, new items",
+   "Conversation analysis",
+   "Replay this conversation",
+   "Voice call",
+   "Voice message",
+   "Summer trip: Sara replied to you",
    "Dismiss"
   ]
  }

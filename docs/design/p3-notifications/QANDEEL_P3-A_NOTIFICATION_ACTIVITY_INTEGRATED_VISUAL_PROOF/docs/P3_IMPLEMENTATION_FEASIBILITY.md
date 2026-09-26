@@ -40,7 +40,10 @@ device Reduce Motion / Increase Contrast, and touch latency. The proof uses fixt
 ## 5. Carried to the P3 closure (not admitted here)
 
 The later canonical P3 closure will have to disposition, under BG-06: the production realization itself; the device
-gates above; the proof interpretation of the 08:00 rule; and the open craft items the report lists (the Introductions
-mark choice, the call-safe strip's place and its lack of Direct Entry, the PROOF copy). Reduce, critical security during
-a Live Call and the entry's absence from the Analysis chrome were answered by the Product Owner in the refinement. This
-proof admits no backlog item.
+gates above; the proof interpretations of the 08:00 rule and of the one-strip tie-break on re-evaluation (the
+longest-waiting of equal-class candidates); the proof-context field `view` (where the user is looking), which a
+production design will have to realize from real navigation state; and the copy still marked PROOF. Reduce, critical
+security during a Live Call and the entry's absence from the Analysis chrome were answered in the refinement; Open
+Link, the absence of any ordinary strip in the Analysis (deferral + re-evaluation on exit), the Replay-slot occlusion
+for the two call-safe cases only, and the call-safe strip's lack of Direct Entry were answered in the final
+micro-refinement. This proof admits no backlog item.

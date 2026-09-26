@@ -139,12 +139,43 @@ export const SCENARIOS = [
   { id: 'S29', name: 'Introductions — ceiling raised to «إظهار المعاينة» (proposal: its own projection stops at L2)', app: 'background', ev: 'introProposal', lock: { intro: 'L3' }, expect: 'push', expectLevel: 'L2' },
   { id: 'S30', name: 'Introductions — ceiling raised to «إظهار المعاينة» (acceptance: renders L3)', app: 'background', ev: 'introAccept', lock: { intro: 'L3' }, expect: 'push', expectLevel: 'L3' },
   { id: 'S31', name: 'Introductions — ceiling raised to «إظهار النوع»', app: 'background', ev: 'introAccept', lock: { intro: 'L1' }, expect: 'push', expectLevel: 'L1' },
+  // ---- final micro-refinement §5–§6: the Analysis is not an attention surface. The user is inside the Analysis of the
+  // Personal conversation (its originating context is 'personal'); `view` is proof context, not a production schema.
+  { id: 'S32', name: 'Analysis, no call — ordinary Shared reply', app: 'foreground', view: 'analysis', here: 'personal', ev: 'sharedReply', expect: 'deferred' },
+  { id: 'S33', name: 'Analysis, no call — ordinary Public reply', app: 'foreground', view: 'analysis', here: 'personal', ev: 'publicReply', expect: 'deferred' },
+  { id: 'S34', name: 'Analysis, no call — Introduction proposal', app: 'foreground', view: 'analysis', here: 'personal', ev: 'introProposal', expect: 'deferred' },
+  { id: 'S35', name: 'Analysis, no call — Proactive QANDEEL', app: 'foreground', view: 'analysis', here: 'personal', ev: 'proactive', expect: 'deferred' },
+  { id: 'S36', name: 'Analysis, no call — critical security (no new exception outside a call)', app: 'foreground', view: 'analysis', here: 'personal', ev: 'security', expect: 'deferred' },
+  { id: 'S37', name: 'Analysis, active Live Call — critical security', app: 'foreground', view: 'analysis', here: 'personal', liveCall: true, ev: 'security', expect: 'call-strip' },
+  { id: 'S38', name: 'Analysis, active Live Call — requested exact-time reminder', app: 'foreground', view: 'analysis', here: 'personal', liveCall: true, ev: 'reminder', expect: 'call-strip' },
+  { id: 'S39', name: 'Analysis, active Live Call — ordinary Shared reply', app: 'foreground', view: 'analysis', here: 'personal', liveCall: true, ev: 'sharedReply', expect: 'deferred' },
 ];
 export function scenarioCtx(sc, now = at(3, '14:00')) {
   const s = defaultSettings(); s.os = sc.os ?? 'granted'; s.intro.entered = sc.introEntered ?? true;
   if (sc.muted) s.shared.muted = sc.muted; if (sc.proactive) s.proactive = sc.proactive;
   if (sc.lock) Object.assign(s.lock, sc.lock);
-  return { settings: s, hist: sc.hist ? sc.hist.map((h) => ({ ...h })) : [], app: sc.app, here: sc.here ?? null, liveCall: !!sc.liveCall, now: sc.now ?? now };
+  return { settings: s, hist: sc.hist ? sc.hist.map((h) => ({ ...h })) : [], app: sc.app, here: sc.here ?? null, liveCall: !!sc.liveCall, view: sc.view ?? null, now: sc.now ?? now };
+}
+
+// ------------------------------------------------------------------ leaving the Analysis: re-evaluate, never replay
+// (final micro-refinement §7) What was deferred while the user was inside the Analysis, and where the user goes next.
+// Each case states its expected outcome independently of the model; `exitTo` is the context the user is in after leaving.
+const ax = (base, hm, extra = {}) => ({ ...EV[base], at: at(3, hm), ...extra });
+export const ANALYSIS_EXIT = [
+  { id: 'X1', name: 'one Shared reply deferred in the Analysis → exit to the Conversation: re-evaluated, one strip',
+    pending: [ax('sharedReply', '09:41')], exitTo: { view: 'conversation', here: 'personal' }, expect: { strip: 'E-reply', surfaces: { 'E-reply': 'strip' } } },
+  { id: 'X2', name: 'four deferred (Shared, Public, Introductions, Proactive) → exit: ONE strip (the longest-waiting of the equal-class candidates), never a dump; the rest stay in Activity, and the Proactive note lands in its own Conversation',
+    pending: [ax('sharedReply', '09:41'), ax('publicReply', '09:42'), ax('introProposal', '09:43'), ax('proactive', '09:44')], exitTo: { view: 'conversation', here: 'personal' },
+    expect: { strip: 'E-reply', surfaces: { 'E-reply': 'strip', 'E-preply': 'activity', 'E-intro': 'activity', 'E-pro': 'in-place' } } },
+  { id: 'X3', name: 'deferred, then the World is muted, the target disappears, and the Proactive note belongs to the Conversation the user returns to → exit: NO strip',
+    pending: [ax('sharedReply', '09:41'), ax('staleShared', '09:42'), ax('proactive', '09:43')], exitTo: { view: 'conversation', here: 'personal' }, muted: ['w-summer'],
+    expect: { strip: null, surfaces: { 'E-reply': 'activity', 'E-stale': 'stale', 'E-pro': 'in-place' } } },
+  { id: 'X4', name: 'the user leaves the Analysis for the Conversation while the Live Call continues → ordinary attention still waits (no strip)',
+    pending: [ax('sharedReply', '09:41')], exitTo: { view: 'conversation', here: 'personal', liveCall: true }, expect: { strip: null, surfaces: { 'E-reply': 'deferred' } } },
+];
+export function exitCtx(x, now = at(3, '09:50')) {
+  const s = defaultSettings(); s.os = 'granted'; s.intro.entered = true; if (x.muted) s.shared.muted = x.muted;
+  return { settings: s, hist: [], app: 'foreground', here: x.exitTo.here, view: x.exitTo.view, liveCall: !!x.exitTo.liveCall, now };
 }
 
 // ------------------------------------------------------------------------------ the Quiet Hours overnight cluster

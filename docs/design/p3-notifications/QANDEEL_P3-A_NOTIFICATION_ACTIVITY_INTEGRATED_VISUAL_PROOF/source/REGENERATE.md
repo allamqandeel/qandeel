@@ -6,7 +6,7 @@ H.264 encoder for the clips (this host: CapCut's bundled `ffmpeg.exe`, `h264_mf`
 
 ```text
 node source/tools/p3vendor.mjs      # only to re-copy the P2 material (merged P2-A) and G3.2's reviewed page (records PROVENANCE.json)
-node source/tools/p3pipeline.mjs    # build → 112 captures + 12 phone clips → 18 boards + M06 → COPY_TABLE.md → checks
+node source/tools/p3pipeline.mjs    # build → 117 captures + 13 phone clips → 18 boards + M06 → COPY_TABLE.md → checks
 node source/tools/p3package.mjs     # byte-identical rebuild, MANIFEST.json, the review ZIP outside the repository
 ```
 
