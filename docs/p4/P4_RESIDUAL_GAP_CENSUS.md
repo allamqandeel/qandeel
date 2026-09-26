@@ -6,6 +6,7 @@
 |---|---|
 | Track | P4 — Remaining Product / Visual Gaps Census & Closure, task P4-A |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
+| P4-B synchronization | on `576b010dcf78276c982f5052cfee7dd1bcbfcbcb`: `P4-GAP-057` reclassified `ALREADY CLOSED / SUPERSEDED` by the CW2-08A controlled amendment. No other row changes |
 | Role | the authoritative **evidence table** of the P4 census candidate. It records where each residual stands. It freezes nothing, and it chooses no option |
 | Decisions | genuinely open choices are handed to the [Product Owner Decision Queue](P4_PRODUCT_OWNER_DECISION_QUEUE.md) (`P4-DQ-nn`). Future work that is not a P4 decision is in the [Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) |
 
@@ -67,8 +68,8 @@ for supersession. Where nothing later answers the item, the column says **none**
 | `P4 — PRODUCT DECISION REQUIRED` | 6 |
 | `P4 — VISUAL DECISION REQUIRED` | 8 |
 | `P4 — COPY DECISION REQUIRED` | 7 |
-| `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | 2 |
-| `ALREADY CLOSED / SUPERSEDED` | 8 |
+| `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | 1 |
+| `ALREADY CLOSED / SUPERSEDED` | 9 |
 | `IMPLEMENTATION ONLY — NOT P4` | 12 |
 | `DEVICE / RELEASE VALIDATION — NOT P4` | 1 |
 | `END-TO-END AUDIT OWNED` | 4 |
@@ -81,14 +82,16 @@ for supersession. Where nothing later answers the item, the column says **none**
 That is 64 `P4-GAP` rows (`P4-GAP-001` … `P4-GAP-064`) plus `APP-OPS-01`. §5 lists every row by class, so the
 count can be checked.
 
-**Current residual gaps needing a P4 decision / authority reconciliation: 23 rows.** Those are the four `P4 — …`
-classes. They reduce to 17 Decision Queue rows:
+**Current residual gaps needing a P4 decision: 22 rows.** Those are the four `P4 — …` classes. They reduce to 16
+open Decision Queue rows:
 
 - `P4-DQ-01` … `P4-DQ-09` for the residual Product / visual / copy canon;
-- `P4-DQ-10` … `P4-DQ-17` for APP-OPS-01, with `P4-DQ-10` specifically requiring a controlled CW2-08 amendment.
+- `P4-DQ-11` … `P4-DQ-17` for APP-OPS-01.
 
-Several census rows share one queue row. `P4-GAP-057` is the actual authority conflict found during APP-OPS
-reconciliation; P4-A records it and does not amend CW2-08.
+Several census rows share one queue row. `P4-GAP-057`, the CW2-08 §8 / H7 human-review conflict P4-A found during the
+APP-OPS reconciliation, is `ALREADY CLOSED / SUPERSEDED`: P4-B's
+[CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md)
+binds in that narrow scope, effective on merge. `P4-DQ-10` stays visible as a resolved traceability record.
 
 ---
 
@@ -197,7 +200,7 @@ Product / visual canon.
 | ID | Canonical ID | Domain | Source | Exact unresolved state | Later authority | Current truth | Classification | P4 action | Decision owner | Proof needed | Downstream owner |
 |---|---|---|---|---|---|---|---|---|---|---|---|
 | **APP-OPS-01** | — | App ↔ Company Operations | Product Owner designation (P4-A Task Contract §0, §4, §7–§24) | no canonical record defines what the Company may receive from, and change in, the released App | consumes Telemetry v1, Outbox v1, Startup Recovery v1, Health v1, Model Router, FAST / DEEP v2, Safety Runtime, CW2-02 / 03 / 04 / 08 ([matrix](P4_AUTHORITY_COMPATIBILITY_MATRIX.md)) | contract **candidate** written: [APP_OPS_01 candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md). **NOT FROZEN** | `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | review; answer `P4-DQ-11` … `P4-DQ-17`; close in a later P4 change | Product Owner + independent review | none visual; authority reconciliation | End-to-End audit (two fields); Production Integration (implementation) |
-| P4-GAP-057 | CW2-08 §8, H7 | Safety / moderation | [CW2-08 §8](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08_SAFETY_MODERATION_ENTITLEMENTS_LAUNCH_v1.0_FROZEN.md): `CASE_SCOPED_MODERATION_ACCESS` bound to exact case, **evidence scope**, purpose, authorized role/service/**person**, validity and audit; "No blanket private-World browsing follows from the moderator role itself". §7 supplies protected `REPORT_CASE` evidence | frozen canon permits an authorized **person** to case-scoped evidence and limits only blanket private-World browsing. Where scoped evidence is private conversation content, that permits human review. `PO-OPS-02` forbids routine or exceptional human review through Company Operations or safety-monitoring flows | none | a real authority conflict: **`CONTROLLED AMENDMENT REQUIRED — CW2-08`**. P4-A does not amend CW2-08 or invent the replacement moderation mechanism | `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | record; controlled CW2-08 amendment required → `P4-DQ-10` | Product Owner + Architecture controlled change | no visual proof | controlled CW2-08 amendment task; preserve all non-conflicting CW2-08 authority |
+| P4-GAP-057 | CW2-08 §8, H7 | Safety / moderation | [CW2-08 §8](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08_SAFETY_MODERATION_ENTITLEMENTS_LAUNCH_v1.0_FROZEN.md): `CASE_SCOPED_MODERATION_ACCESS` bound to exact case, **evidence scope**, purpose, authorized role/service/**person**, validity and audit; "No blanket private-World browsing follows from the moderator role itself". §7 supplies protected `REPORT_CASE` evidence | historical: that wording let an authorized **person** reach case-scoped evidence and limited only blanket private-World browsing, so where scoped evidence was private conversation content it permitted human review, contrary to `PO-OPS-02` | [CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md) (P4-B), binding on merge in its named scope: §8 actor / access wording, H7, the §44 item 5 boundary | closed. No human role or person may receive, inspect or review private QANDEEL conversation content under Safety / Moderation authority; automated Safety processing stays allowed; Public moderation is not decided. The original CW2-08 stays frozen, historical and byte-identical. No replacement moderation mechanism chosen | `ALREADY CLOSED / SUPERSEDED` | none; `P4-DQ-10` is a resolved record | — | — | Connected Worlds `I-09` / CW2-08 for any future moderation / report work, which must obey CW2-08A |
 
 ---
 
@@ -205,7 +208,7 @@ Product / visual canon.
 
 The following look open in their source but are **not** P4 decisions.
 
-**Superseded (8):**
+**Superseded (9):**
 
 | Row | Superseded by |
 |---|---|
@@ -217,6 +220,7 @@ The following look open in their source but are **not** P4 decisions.
 | P4-GAP-061 I-08N-01 UI | P3 |
 | P4-GAP-062 the first-use Welcome | I-08A4 §12–§15 |
 | P4-GAP-063 T-14 sign-in requirement | P1 §3 |
+| P4-GAP-057 CW2-08 §8 / H7 human case-evidence access | CW2-08A controlled amendment (P4-B), in its named scope |
 
 **Implementation only (12):** production application, ports, craft constants and conformance checks against frozen
 runtime law. See §5 for the rows.
@@ -231,7 +235,8 @@ duplicate alias for them.
 **Owned by a named later task, so `NO ACTION` for P4:**
 
 - Connected Worlds `I-08`: P4-GAP-043;
-- Connected Worlds `I-09` / CW2-08: P4-GAP-044. P4-GAP-057 is **not** `NO ACTION`; it is the controlled-authority conflict in `P4-DQ-10`.
+- Connected Worlds `I-09` / CW2-08: P4-GAP-044. P4-GAP-057 is not here: it is `ALREADY CLOSED / SUPERSEDED` by
+  CW2-08A (above).
 
 ---
 
@@ -246,8 +251,8 @@ Counted row by row from §3. There are 65 rows: `APP-OPS-01` and `P4-GAP-001` �
 | `P4 — PRODUCT DECISION REQUIRED` | 001, 005, 012, 013, 018, 039 | 6 |
 | `P4 — VISUAL DECISION REQUIRED` | 002, 003, 004, 014, 015, 019, 021, 022 | 8 |
 | `P4 — COPY DECISION REQUIRED` | 028, 029, 030, 031, 032, 033, 034 | 7 |
-| `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | APP-OPS-01, 057 | 2 |
-| `ALREADY CLOSED / SUPERSEDED` | 006, 007, 037, 038, 060, 061, 062, 063 | 8 |
+| `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | APP-OPS-01 | 1 |
+| `ALREADY CLOSED / SUPERSEDED` | 006, 007, 037, 038, 057, 060, 061, 062, 063 | 9 |
 | `IMPLEMENTATION ONLY — NOT P4` | 008, 009, 011, 016, 017, 045, 047, 050, 051, 053, 054, 055 | 12 |
 | `DEVICE / RELEASE VALIDATION — NOT P4` | 052 | 1 |
 | `END-TO-END AUDIT OWNED` | 020, 040, 048, 049 | 4 |
@@ -257,7 +262,8 @@ Counted row by row from §3. There are 65 rows: `APP-OPS-01` and `P4-GAP-001` �
 | `NO ACTION` | 010, 036, 043, 044, 046, 064 | 6 |
 | **Total** | | **65** |
 
-**23 rows need a P4 decision / authority reconciliation.** They map onto 17 Decision Queue rows:
+**22 rows need a P4 decision.** They map onto 16 open Decision Queue rows. `P4-DQ-10` is kept as a resolved
+record:
 
 | Decision Queue row | Census rows |
 |---|---|
@@ -270,5 +276,5 @@ Counted row by row from §3. There are 65 rows: `APP-OPS-01` and `P4-GAP-001` �
 | `P4-DQ-07` | 039, and 040 by reference |
 | `P4-DQ-08` | 021, 022 |
 | `P4-DQ-09` | 028 … 034 |
-| `P4-DQ-10` | 057, APP-OPS-01 |
+| `P4-DQ-10` | resolved record: 057 (now `ALREADY CLOSED / SUPERSEDED` by CW2-08A); no open census row |
 | `P4-DQ-11` … `P4-DQ-17` | APP-OPS-01 |
