@@ -128,6 +128,13 @@ It does **not** ask for a photo, age, occupation, gender, marital status, countr
 questionnaire. This preserves I-08A4 §12: "No forced questionnaire before the real conversation", and "No unnecessary
 second name question".
 
+When the user later enables Introductions, the capability owns one specific self-authored field required by the
+already-frozen pre-Match ceiling: **Introduction First Name** — the first name the user explicitly chooses to show in
+Introductions. It is not inferred by splitting the account `Name`, and it is not part of basic sign-up. The Product
+may prefill a suggestion from the account Name for convenience, but it is not authoritative until the user confirms
+or replaces it. This field supplies CW2-06 §12's "first name" disclosure; the rest of the Introduction Profile field
+catalogue remains Product-configurable.
+
 ---
 
 ## 5. Shared ID and the reachability law
@@ -183,6 +190,10 @@ The law is a Product and application-boundary requirement. It changes no runtime
   - never accept a client-supplied `user_id` or a prior-episode identity as the target.
 
   The frozen cores are consumed unchanged.
+- Any not-yet-accepted add / rejoin invitation or equivalent reachability state that was established through an older
+  Shared-ID epoch becomes non-actionable when the target rotates the Shared ID. A future application boundary must bind
+  the current Shared-ID epoch and revalidate it before acceptance; rotation cannot leave an old reachability path alive.
+  Existing born Worlds, current memberships and historical membership episodes remain unaffected.
 - CW2-03 §16 (add-member governance), §17 (stale member invitations), §28 (rejoin) and §29 (rejoin history) stay in
   force. So do the unanimity requirements. P1 adds a precondition in front of them and relaxes none of them.
 - Introduction-born Worlds keep CW2-03's rule that ordinary add / remove / leave mechanics are not used during an
@@ -194,6 +205,8 @@ The law is a Product and application-boundary requirement. It changes no runtime
 
 - a separate, auto-generated Public ID / alias, conceptually like `@nightlamp27`. The exact generation grammar is an
   implementation detail;
+- the Public ID is unique across QANDEEL accounts in its normalized Public-ID namespace. Exact casing / normalization
+  rules remain implementation detail;
 - the alias is the default Public identity;
 - the user gets exactly **one lifetime manual change** of it;
 - before that one change is committed, the UI prominently warns that it is the only manual change and that it is
@@ -214,6 +227,10 @@ It is also consistent with the `I-05` runtime (`database/README.md`), where disp
 - the Public ID / alias is the `PSEUDONYM` choice;
 - the account Name is the `REAL_NAME` choice;
 - the internal `public_identity_ref` stays internal.
+
+The uniqueness rule applies to the Public ID namespace, **not** to every Public display label. Real account names may
+repeat, and the existing I-05 display-label relation remains unchanged until later Product integration adds the Public
+ID boundary.
 
 The one-change limit is a Product policy for a future application boundary. The `I-05` relation is unchanged.
 
@@ -321,16 +338,18 @@ These supporting detail concepts are preserved where relevant, with their I-08A4
 - Unresolved Points / «نقاط غير محسومة»
 - Analysis Evolution / «تطور التحليل»
 
-**Scope of the rename.** It follows the Product Owner's wording "for this surface".
+**Scope of the rename.** It follows the Product Owner's decision for this Personal Understanding surface.
 
-VI-01 and the G1.1 closure use «القراءات» / «قراءة» for something else: the **peer analytical readings inside a
+VI-01 and the G1.1 closure use «القراءات» / «قراءة» for a different concept: the **peer analytical readings inside a
 Conversation's Analysis depth**. Their records:
 - VI-01 Terminology Matrix O02, O06, S04 (contents), S06, A09 and T05–T07;
 - G1.1 §2, «القراءات» "remains the analytical-content vocabulary inside that depth".
 
 The implemented T-08 OrientationChrome copy uses it the same way.
 
-P1 does not amend any of those. §16 records this as the one naming question P1 leaves to the Product Owner.
+P1 **intentionally preserves** that in-Analysis peer-reading vocabulary. «فهم قنديل / QANDEEL Understanding» names
+the broader Personal Understanding surface; «قراءة / القراءات» continues to name equal, unranked analytical
+interpretations inside Conversation Analysis. They are not synonyms and this is not an open Product question.
 
 ---
 
@@ -500,7 +519,7 @@ is recorded as an open Product option rather than taken." P1 takes that option, 
 | internal `user_id` | hidden | hidden | hidden | hidden |
 | Login ID | private | never | never | never |
 | Email / phone | private | never | never | never; contact reaches a counterpart only as an owner-granted `CONTACT_METHOD` disclosure after Match (CW2-06 §44; `I-07D`) |
-| Account Name | account / private | after membership acceptance | only if the user chooses real-name display | pre-Match: first name only (CW2-06 §12). Later: only by the owner's progressive `FULL_NAME` disclosure |
+| Account Name | account / private | after membership acceptance | only if the user chooses real-name display | pre-Match: the separately confirmed Introduction First Name only (CW2-06 §12; §4). Later: only by the owner's progressive `FULL_NAME` disclosure |
 | Account photo | optional / private | after membership acceptance | not automatic | not reused. The capability-owned Introduction image is shown only after Mutual Match (§14) |
 | Shared ID | private credential the owner may share | new reachability only (§5) | never | never |
 | Public ID | account-held Public alias | not a Shared route | default Public identity | never transferred automatically |
@@ -542,6 +561,9 @@ But:
 > **request / suggestion is not authority**
 
 - No stage advances until the image owner explicitly approves it.
+- The guided disclosure is sequential: **Strong Blur → Medium Blur → Clear**. One disclosure act advances at most one
+  stage; there is no one-act skip from Strong Blur to Clear. If the owner wants to continue, the next stage requires a
+  new explicit owner approval.
 - Nothing reveals automatically on a hidden score or on elapsed time.
 - P1 creates no request object and no pending grant. A counterpart's request carries zero authority, exactly as
   `I-07D` §35 already states for a QANDEEL suggestion.
@@ -646,30 +668,24 @@ Each row names the older text, what it now reads as, and what stays in force. Th
 - Public avatar design;
 - the exact QANDEEL Understanding entry-control visual.
 
-### 16.2 Questions this reconciliation found that P1 does not decide
+### 16.2 Carry-forward implementation / runtime detail
 
-Each is recorded so it is not decided by silence. None blocks P1.
+P1 has **no remaining Product Owner decision question**. The reconciliation above resolves the Product semantics and
+leaves only implementation-owned detail:
 
-1. **In-Analysis «القراءات» vocabulary.** Whether the rename also reaches the peer-reading vocabulary inside a
-   Conversation's Analysis depth (VI-01; G1.1 §2; the T-08 chrome copy) is a question for the Product Owner. Until an
-   explicit amendment says so, those records stand (§10).
-2. **The pre-Match first name.**
-   - With one `Name` field and no First / Last split, P1 does not decide how the pre-Match first name (CW2-06 §12) is
-     sourced.
-   - The `I-07` seam `resolve_matching_canonical_first_name_v1` keeps answering `UNRESOLVED_NO_CANONICAL_SOURCE` and
-     fails closed. Account `Name` does not resolve it automatically.
-   - CW2-06 §57 leaves the Introduction Profile fields to Product configuration.
-3. **Public ID uniqueness.** P1 does not decide whether the Public ID / alias is unique across users. `I-05` display
-   labels are deliberately non-unique, because "uniqueness would invent a public namespace no frozen contract states".
-4. **Governed invitations already pending when the target rotates.** P1 requires the current Shared ID at the act of
-   targeting. It does not decide whether an add-member or rejoin proposal or invitation already in flight also binds
-   and revalidates the target's Shared-ID epoch, as `I-04A` direct invitations do. The frozen `I-04E` staleness law is
-   unaffected.
-5. **Multi-stage advancement.** P1 does not decide whether the Product offers one act that advances more than one image
-   stage. Either way every advancement is an explicit owner act.
-6. **Contested / Under Review detail.** Beyond §11.4, the states' lifecycle, their reversal and how QANDEEL re-evaluates
-   stay with `PG-01`.
+1. **Introduction First Name runtime seam.** The Product source is now the separately confirmed Introduction First Name
+   (§4). The existing `I-07` seam `resolve_matching_canonical_first_name_v1` remains fail-closed until a later
+   implementation task wires that Product field into the frozen boundary.
+2. **Public ID persistence / namespace implementation.** The Product ID is unique (§6), but P1 creates no schema,
+   index, normalization algorithm or migration.
+3. **Shared-ID epoch enforcement for governed add / rejoin.** §5.3 freezes the Product requirement, including
+   invalidation of not-yet-accepted reachability after rotation. The application/runtime enforcement is later work.
+4. **Contested / Under Review runtime.** §11.4 freezes the Product meaning. The detailed lifecycle, reversal and
+   downstream reliance behaviour remain with `PG-01`; `PG-02` and `PG-04` also remain unimplemented gaps.
+5. **Progressive-image rendering craft.** §14 freezes the three sequential stages and owner approvals. Exact blur
+   quantities, media derivatives, animation and device rendering remain later design / implementation craft.
 
+None is permission to pretend the capability is already implemented.
 ---
 
 ## 17. Implementation status
@@ -717,7 +733,7 @@ baseline. No item names P1, a Profile, Identity, Settings or Understanding task 
 |---|---|
 | the gap between the implemented Email-only T-14 gateway and the final sign-in requirement (§3) | a later implementation of a frozen decision. The roadmap already schedules the complete account / authentication lifecycle review in the End-to-End audit |
 | the Shared-ID precondition at a future add / rejoin application boundary (§5.3) | lands on a boundary that does not exist yet. No current runtime violates it, because no application role can reach the governed cores |
-| the §16.2 questions | Product questions recorded in this canonical record. The first-name seam is already a fail-closed seam owned by CW2-06 / `I-07`. `PG-01`, `PG-02` and `PG-04` are already named gaps in frozen I-08A4 §18 |
+| the §16.2 carry-forwards | implementation/runtime detail beneath Product decisions frozen here. The first-name seam is already fail-closed in CW2-06 / `I-07`; the Shared-ID boundary does not exist yet; `PG-01`, `PG-02` and `PG-04` are already named gaps in frozen I-08A4 §18 |
 
 None of these carries an existing `OPEN` identifier. No canonical document defers any of them **as an obligation** to a
 named future task; the roadmap phases are sequencing, not tasks. None is carried forward for validation, and
