@@ -1,0 +1,531 @@
+{
+ "generated": "tools/p4checks.mjs",
+ "baseline": "175df7b6f9254d83b82d2b7571c915959fb06a27",
+ "summary": {
+  "normal": "40 / 40",
+  "planted": "23 / 23 planted defects rejected"
+ },
+ "pages": [
+  "I-conv-ad",
+  "I-shared-ad",
+  "II-conv-ad",
+  "II-shared-ad",
+  "BBCground-conv-ad",
+  "BBCground-shared-ad",
+  "ABBplate-conv-el",
+  "ABBplate-shared-el",
+  "I-conv-a320",
+  "II-conv-e320",
+  "II-conv-a430",
+  "I-conv-hc-el",
+  "activity-ad",
+  "settings-el",
+  "understanding-ad",
+  "an-end-plate-ad",
+  "an-centre-ground-call-ad",
+  "an-end-seam-pinned-el",
+  "an-end-cp320-ad",
+  "an-centre-cp320-el",
+  "an-top-cp320-ad",
+  "an-top-p1-el",
+  "an-none-cue-ad"
+ ],
+ "checks": {
+  "C-NAV-1": {
+   "title": "exactly the three existing World destinations, with their current names (Shared World singular)",
+   "pass": true,
+   "fails": []
+  },
+  "C-NAV-2": {
+   "title": "no Settings / Activity / Understanding / Introductions / Replay in the switcher",
+   "pass": true,
+   "fails": []
+  },
+  "C-NAV-3": {
+   "title": "the P2 nav glyph stands ABOVE the destination word",
+   "pass": true,
+   "fails": []
+  },
+  "C-NAV-4": {
+   "title": "Living Brass identical on every destination at every state (never selected-only)",
+   "pass": true,
+   "fails": []
+  },
+  "C-NAV-5": {
+   "title": "SELECTED has a non-colour channel: the E1R marker (≥ 1 pt) and a heavier word; no other item carries either",
+   "pass": true,
+   "fails": []
+  },
+  "C-NAV-6": {
+   "title": "nav glyphs are decorative; the word alone names the item",
+   "pass": true,
+   "fails": []
+  },
+  "C-NAV-7": {
+   "title": "the nav glyph drawing is P2's own (sig.mjs, byte-exact vendored), unaltered",
+   "pass": true,
+   "fails": []
+  },
+  "C-TGT-1": {
+   "title": "every studied control keeps the 44 pt minimum target",
+   "pass": true,
+   "fails": []
+  },
+  "C-NAME-1": {
+   "title": "every control has an accessible name; icon-only controls carry an aria-label",
+   "pass": true,
+   "fails": []
+  },
+  "C-ACT-1": {
+   "title": "P3 Activity: one independent icon-only entry at the START edge of every non-Analysis shell surface, never replaced",
+   "pass": true,
+   "fails": []
+  },
+  "C-ACT-2": {
+   "title": "nothing global in the Analysis: no Activity, Settings or Understanding entry is laid over G3.2",
+   "pass": true,
+   "fails": []
+  },
+  "C-SET-1": {
+   "title": "exactly the policy's Settings entries per surface (S-A: every non-Analysis surface; S-B: Personal only) — visible, one per surface, never hidden",
+   "pass": true,
+   "fails": []
+  },
+  "C-SET-2": {
+   "title": "every Settings entry reaches the ONE General Settings destination, which is not a World (no switcher on it)",
+   "pass": true,
+   "fails": []
+  },
+  "C-UND-1": {
+   "title": "QANDEEL Understanding: one stable entry on Personal QANDEEL, none elsewhere, never a Settings row, never «القراءات», never the door",
+   "pass": true,
+   "fails": []
+  },
+  "C-Q-1": {
+   "title": "every Q is the canonical Q: the brand master's three paths and viewBox, verbatim",
+   "pass": true,
+   "fails": []
+  },
+  "C-Q-2": {
+   "title": "the Q carries no state: never a control, never in the switcher, decorative, never mirrored, qandeel.identity.mark",
+   "pass": true,
+   "fails": []
+  },
+  "C-Q-3": {
+   "title": "the chrome Q appears exactly where the policy under study puts it (Q-A none; Q-B every shell surface; Q-C Personal only)",
+   "pass": true,
+   "fails": []
+  },
+  "C-X-1": {
+   "title": "«سياق الكلام» appears at most once (and exactly once when a placement is under study)",
+   "pass": true,
+   "fails": []
+  },
+  "C-X-2": {
+   "title": "«سياق الكلام» overlaps no frozen Analysis control: «المحادثة», Replay, the temporal line, Timeline, Return Live, OrientationChrome, the call line, the switcher, the Matching cue",
+   "pass": true,
+   "fails": []
+  },
+  "C-X-3": {
+   "title": "X-A / X-B never enter the world; X-C's world cost is measured against the 160 pt floor (recorded, not hidden)",
+   "pass": true,
+   "fails": []
+  },
+  "C-DIR-1": {
+   "title": "Arabic shell = RTL with lang ar-EG; English = LTR with lang en",
+   "pass": true,
+   "fails": []
+  },
+  "C-DIR-2": {
+   "title": "logical START / END and direction by meaning: Activity START, the door group END, U-A START and S-B END of the Personal row, the depth chevron mirrored in RTL only, nav glyphs and the Q never mirrored",
+   "pass": true,
+   "fails": []
+  },
+  "C-FOCUS-1": {
+   "title": "focus order = visual order in the upper chrome, the Personal row and the switcher",
+   "pass": true,
+   "fails": []
+  },
+  "C-FOCUS-3": {
+   "title": "in the Analysis, G3.2's own (pre-P2) rail under the candidate switcher is inert: no second, invisible navigation stays focusable",
+   "pass": true,
+   "fails": []
+  },
+  "C-APP-1": {
+   "title": "the Analysis stays the one dark place under Light; non-Analysis surfaces follow the preference",
+   "pass": true,
+   "fails": []
+  },
+  "C-COPY-1": {
+   "title": "no frozen copy rewritten: the door, the World names and every studied entry render their canonical words",
+   "pass": true,
+   "fails": []
+  },
+  "C-DEF-0": {
+   "title": "the normal build activates no planted defect",
+   "pass": true,
+   "fails": []
+  },
+  "C-FOCUS-2": {
+   "title": "a real Tab walk from the page start reaches the upper chrome and the Personal row in visual reading order",
+   "pass": true,
+   "fails": [],
+   "note": "walk-I-conv-ad: act-entry → door → replay → u-entry → set-entry | walk-II-conv-ad: act-entry → set-entry → door → replay → u-entry | walk-II-conv-el: act-entry → set-entry → door → replay → u-entry"
+  },
+  "C-PROV-1": {
+   "title": "every vendored file is byte-identical to its canonical origin and to PROVENANCE.json",
+   "pass": true,
+   "fails": [],
+   "note": "67 files"
+  },
+  "C-G32-1": {
+   "title": "G3.2's reviewed prototype is loaded byte-exact and the canonical G3.2 source is unchanged",
+   "pass": true,
+   "fails": [],
+   "note": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
+  },
+  "C-Q-0": {
+   "title": "the Q geometry is read from the preserved brand master, byte-exact (brand master bytes unchanged)",
+   "pass": true,
+   "fails": [],
+   "note": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05"
+  },
+  "C-BUILD-1": {
+   "title": "source/ rebuilds prototype/index.html byte-identically",
+   "pass": true,
+   "fails": [],
+   "note": "e62aabfb10dcacb22995cb3174e8bdd4c67dc8f65a7b1941d7db49980bd474b5"
+  },
+  "C-SCOPE-1": {
+   "title": "changed paths: only the P4-C package and, optionally, docs/p4/P4_READ_FIRST.md (no apps / packages / database / .github / dependency / frozen record)",
+   "pass": true,
+   "fails": [],
+   "note": "139 paths vs 175df7b"
+  },
+  "C-SHOT-1": {
+   "title": "every declared capture exists with its declared state; kept captures are byte-identical to SHOTS.json",
+   "pass": true,
+   "fails": [],
+   "note": "124 captures, 28 kept"
+  },
+  "C-COV-1": {
+   "title": "coverage: AR RTL + EN LTR; 320 / 390 / 430; Dark + Light non-Analysis; the Analysis dark under Light; Increased Contrast; keyboard focus; large text",
+   "pass": true,
+   "fails": [],
+   "note": "{\"ar\":true,\"en\":true,\"w320\":true,\"w390\":true,\"w430\":true,\"darkShell\":true,\"lightShell\":true,\"analysisUnderLight\":true,\"contrast\":true,\"focus\":true,\"largeText\":true}"
+  },
+  "C-LABEL-1": {
+   "title": "no candidate is labelled APPROVED / SELECTED / FINAL / FROZEN in the package's documents, data or candidate sources (board pixels are checked by review, not by this scan)",
+   "pass": true,
+   "fails": [],
+   "note": "13 files scanned"
+  },
+  "C-OPEN-1": {
+   "title": "DQ-01 … DQ-04 stay OPEN; every candidate is CANDIDATE — NOT SELECTED or REJECTED BY AUTHORITY; integrated directions are NOT SELECTED",
+   "pass": true,
+   "fails": [],
+   "note": "5 decisions"
+  },
+  "C-LINK-1": {
+   "title": "every relative Markdown link in the package resolves",
+   "pass": true,
+   "fails": [],
+   "note": "45 links"
+  },
+  "C-X-4": {
+   "title": "the matrix classifies X-C from the measured world cost (below the 160 pt floor in the densest state ⇒ FAILS AUTHORITY)",
+   "pass": true,
+   "fails": [],
+   "note": "[{\"page\":\"an-top-cp320-ad\",\"placement\":\"top\",\"world\":162,\"overlayCost\":44,\"unobstructed\":118,\"floor\":160,\"belowFloor\":true},{\"page\":\"an-top-p1-el\",\"placement\":\"top\",\"world\":617,\"overlayCost\":44,\"unobstructed\":573,\"floor\":160,\"belowFloor\":false}]"
+  },
+  "C-CHROME-1": {
+   "title": "no upper-chrome overflow is hidden: every overflowing capture is recorded in the matrix, where its candidate is rated on it",
+   "pass": true,
+   "fails": [],
+   "note": "iII-conv-e320, s-A-conv-e320, u-B-a320, u-B-e320, u-B-el, u-B-sA-a320"
+  }
+ },
+ "worldCost": [
+  {
+   "page": "an-end-plate-ad",
+   "placement": "end",
+   "world": 617,
+   "overlayCost": 0,
+   "unobstructed": 617,
+   "floor": 160,
+   "belowFloor": false
+  },
+  {
+   "page": "an-centre-ground-call-ad",
+   "placement": "centre",
+   "world": 553,
+   "overlayCost": 0,
+   "unobstructed": 553,
+   "floor": 160,
+   "belowFloor": false
+  },
+  {
+   "page": "an-end-seam-pinned-el",
+   "placement": "end",
+   "world": 495,
+   "overlayCost": 0,
+   "unobstructed": 495,
+   "floor": 160,
+   "belowFloor": false
+  },
+  {
+   "page": "an-end-cp320-ad",
+   "placement": "end",
+   "world": 162,
+   "overlayCost": 0,
+   "unobstructed": 162,
+   "floor": 160,
+   "belowFloor": false
+  },
+  {
+   "page": "an-centre-cp320-el",
+   "placement": "centre",
+   "world": 162,
+   "overlayCost": 0,
+   "unobstructed": 162,
+   "floor": 160,
+   "belowFloor": false
+  },
+  {
+   "page": "an-top-cp320-ad",
+   "placement": "top",
+   "world": 162,
+   "overlayCost": 44,
+   "unobstructed": 118,
+   "floor": 160,
+   "belowFloor": true
+  },
+  {
+   "page": "an-top-p1-el",
+   "placement": "top",
+   "world": 617,
+   "overlayCost": 44,
+   "unobstructed": 573,
+   "floor": 160,
+   "belowFloor": false
+  }
+ ],
+ "planted": [
+  {
+   "defect": "fourthtab",
+   "what": "a fourth Global Switcher destination (Settings as a World tab)",
+   "check": "C-NAV-1",
+   "rejected": true,
+   "evidence": [
+    "fourthtab/d-conv rail: mine,shared,public,settings قنديل|العالم المشترك|العالم العام|الإعدادات"
+   ]
+  },
+  {
+   "defect": "brasssel",
+   "what": "selected-only Brass (the selected nav glyph Brass, the others neutral)",
+   "check": "C-NAV-4",
+   "rejected": true,
+   "evidence": [
+    "brasssel/d-conv: shared glyph rgb(139, 137, 130) label rgb(139, 137, 130) ≠ rgb(165, 142, 111)",
+    "brasssel/d-conv: public glyph rgb(139, 137, 130) label rgb(139, 137, 130) ≠ rgb(165, 142, 111)"
+   ]
+  },
+  {
+   "defect": "nosel",
+   "what": "SELECTED carried by colour alone (no marker, no weight)",
+   "check": "C-NAV-5",
+   "rejected": true,
+   "evidence": [
+    "nosel/d-conv: selected mine has no marker",
+    "nosel/d-conv: selected weight 500 not above 500,500"
+   ]
+  },
+  {
+   "defect": "glyphbelow",
+   "what": "the nav glyph drawn below the destination word",
+   "check": "C-NAV-3",
+   "rejected": true,
+   "evidence": [
+    "glyphbelow/d-conv: mine glyph b 805.5 label y 758.5",
+    "glyphbelow/d-conv: shared glyph b 805.5 label y 758.5",
+    "glyphbelow/d-conv: public glyph b 805.5 label y 758.5"
+   ]
+  },
+  {
+   "defect": "dupsettings",
+   "what": "two Settings entries on one surface",
+   "check": "C-SET-1",
+   "rejected": true,
+   "evidence": [
+    "dupsettings/d-conv: 2 visible Settings entries, policy B wants 1"
+   ]
+  },
+  {
+   "defect": "hiddensettings",
+   "what": "the Settings entry hidden behind an overflow",
+   "check": "C-SET-1",
+   "rejected": true,
+   "evidence": [
+    "hiddensettings/d-conv: 0 visible Settings entries, policy A wants 1",
+    "hiddensettings/d-shared: 0 visible Settings entries, policy A wants 1"
+   ]
+  },
+  {
+   "defect": "settingsname",
+   "what": "an icon-only Settings entry with no accessible name",
+   "check": "C-NAME-1",
+   "rejected": true,
+   "evidence": [
+    "settingsname/d-conv: set-entry unnamed"
+   ]
+  },
+  {
+   "defect": "smalltarget",
+   "what": "a Settings entry under the 44 pt target",
+   "check": "C-TGT-1",
+   "rejected": true,
+   "evidence": [
+    "smalltarget/d-conv: set-entry 32×32"
+   ]
+  },
+  {
+   "defect": "understandinginsettings",
+   "what": "QANDEEL Understanding only as a General Settings row",
+   "check": "C-UND-1",
+   "rejected": true,
+   "evidence": [
+    "understandinginsettings/d-conv: 0 Understanding entries on Personal",
+    "understandinginsettings/d-settings: Understanding listed inside General Settings"
+   ]
+  },
+  {
+   "defect": "activityinanalysis",
+   "what": "the Activity entry inside the Analysis chrome",
+   "check": "C-ACT-2",
+   "rejected": true,
+   "evidence": [
+    "activityinanalysis/d-an: activity"
+   ]
+  },
+  {
+   "defect": "wrongq",
+   "what": "a chrome Q drawn while the policy is identity-moments only",
+   "check": "C-Q-3",
+   "rejected": true,
+   "evidence": [
+    "wrongq/d-conv: 1 chrome Q, policy A wants 0"
+   ]
+  },
+  {
+   "defect": "qstatus",
+   "what": "the Q used as the selected-state marker",
+   "check": "C-Q-2",
+   "rejected": true,
+   "evidence": [
+    "qstatus/d-conv: rail Q inButton=true hidden=true mirrored=false color=rgb(165, 142, 111)"
+   ]
+  },
+  {
+   "defect": "redrawnq",
+   "what": "a Q redrawn by eye (not the canonical geometry)",
+   "check": "C-Q-1",
+   "rejected": true,
+   "evidence": [
+    "redrawnq/d-conv: chrome Q is not the canonical geometry",
+    "redrawnq/d-conv: opener Q is not the canonical geometry"
+   ]
+  },
+  {
+   "defect": "ctxdup",
+   "what": "«سياق الكلام» shown twice",
+   "check": "C-X-1",
+   "rejected": true,
+   "evidence": [
+    "ctxdup/d-an: shown 2×"
+   ]
+  },
+  {
+   "defect": "ctxoverlap",
+   "what": "«سياق الكلام» laid over Replay",
+   "check": "C-X-2",
+   "rejected": true,
+   "evidence": [
+    "ctxoverlap/d-an: overlap over replay"
+   ]
+  },
+  {
+   "defect": "activityend",
+   "what": "the Activity entry moved to the END edge",
+   "check": "C-ACT-1",
+   "rejected": true,
+   "evidence": [
+    "activityend/d-conv: Activity at 10..54 not at START"
+   ]
+  },
+  {
+   "defect": "focusorder",
+   "what": "Settings before Activity in reading order while the DOM says the opposite (focus order ≠ visual order)",
+   "check": "C-FOCUS-1",
+   "rejected": true,
+   "evidence": [
+    "focusorder/d-conv: act-entry → set-entry runs against reading order"
+   ]
+  },
+  {
+   "defect": "settingsroute",
+   "what": "a Settings entry that leads somewhere other than the one destination",
+   "check": "C-SET-2",
+   "rejected": true,
+   "evidence": [
+    "settingsroute/d-conv: a Settings entry leads to activity"
+   ]
+  },
+  {
+   "defect": "doorcopy",
+   "what": "the frozen «تحليل المحادثة» label rewritten",
+   "check": "C-COPY-1",
+   "rejected": true,
+   "evidence": [
+    "doorcopy/d-conv: door \"تحليل الكلام\""
+   ]
+  },
+  {
+   "defect": "mirrornav",
+   "what": "a World glyph mirrored in RTL",
+   "check": "C-DIR-2",
+   "rejected": true,
+   "evidence": [
+    "mirrornav/d-conv: a nav glyph is mirrored"
+   ]
+  },
+  {
+   "defect": "navname",
+   "what": "a nav glyph exposed to assistive technology beside its word",
+   "check": "C-NAV-6",
+   "rejected": true,
+   "evidence": [
+    "navname/d-conv: mine hidden=false name=\"قنديل\"",
+    "navname/d-conv: shared hidden=false name=\"العالم المشترك\"",
+    "navname/d-conv: public hidden=false name=\"العالم العام\""
+   ]
+  },
+  {
+   "defect": "lightanalysis",
+   "what": "the Analysis painted Light under a Light preference",
+   "check": "C-APP-1",
+   "rejected": true,
+   "evidence": [
+    "lightanalysis/d-an: analysis light shellDark 1"
+   ]
+  },
+  {
+   "defect": "wrongdir",
+   "what": "the Arabic shell laid out LTR",
+   "check": "C-DIR-1",
+   "rejected": true,
+   "evidence": [
+    "wrongdir/d-conv: dir ltr lang ar-EG"
+   ]
+  }
+ ]
+}

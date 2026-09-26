@@ -1,0 +1,161 @@
+{
+  "$description": "I-08B3.1-F2 — QANDEEL LIGHT AND THE AMBIENT FIELD, LIGHT APPEARANCE. I-08B3.1-D2R's resolver declares an `appearance` modifier whose `light` context is an empty array — 'light is owned by later work and resolving into it fails loudly rather than returning a colour nobody designed'. This is that work. The falloff law, the lifecycle, the easing vocabulary, the six hues, the harmonics, the ring counts, the parallax ladder and the settle are D2R's and are NOT retuned: F2 changes WHAT the intensity paints, never WHEN.",
+  "qandeel": {
+    "expression": {
+      "illumination": {
+        "$type": "color",
+        "$description": "THE THREE STOPS OF QANDEEL LIGHT, LIGHT APPEARANCE — three rungs of ONE warm ramp at one hue and one chroma, exactly as the dark ramp is one material at three intensities rather than three colours. Hue 89.1 / 88.4 / 87.6 against the dark ramp's 89.1 / 88.5 / 90.4: per-rung drifts of 0, 0.09 and 2.85 degrees, measured on the recovered hue of the hex that ships rather than on the authored triple, and each rung against ITS OWN dark counterpart rather than all three against the dark core — which is the quantity the cross-appearance contract checks and is the correction I-08B3.1-F2R made to the tie-break.\n\nTHE THIRD RUNG SPENDS 2.85 OF A 3 DEGREE TOLERANCE, AND WHAT STOPS IT DOING BETTER IS THE sRGB GAMUT. A tolerance is a ceiling and not a budget, so the derivation records what a smaller drift would have cost rather than leaving a near-limit figure to be taken on trust: of the 480 configurations at this magnitude that carry LESS total drift, not one is admissible, and every one of them fails R-EVENT or R-SOURCE. The reason is arithmetic. Putting the third rung on its dark counterpart's hue needs more chroma, and at a fixed hue more chroma lowers the lightness sRGB can still hold — so the flooded core comes down with it and stops rising above the ground by a just-noticeable step. The best available alternative sits at 0.36 degrees of total drift and its source rises 0.018 against a floor of 0.020. R-HUE and R-SOURCE pull against each other through the gamut boundary, and the gamut is not negotiable. See selectionAudit in data/F2_DERIVATION.json and check X-03, which asserts the shipped drift is the least available at the shipped magnitude.\n\nWHY THESE STOPS AND NOT BRIGHTER ONES. §8 of the brief predicted in words that 'make it brighter may fail completely' on a light ground, and the derivation turns that into a number: the dark appearance's own additive technique, composited over this World, reaches dEok 0.0395 at its peak against the dark appearance's 0.6925. Four expression families were built and measured — ADDITIVE, DARKENING, CHROMATIC and SIGNED BLOOM — over 104835 searched configurations, and three failed for three different reasons the brief also predicted: the additive family cannot produce a source on a ground this light, the darkening family has no source at all, and the chromatic family reaches dEok 0.0000 once the colour is removed, which is to say it disappears for anyone using the grayscale diagnostic or with a colour-vision difference.",
+        "core": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              1,
+              0.964706,
+              0.87451
+            ],
+            "hex": "#fff6df"
+          },
+          "$description": "THE FLOODED SOURCE. oklch(0.9741 0.0316 89.1) — the brightest colour sRGB can hold at the Light's hue and the Light's chroma. This is the place the light IS, and the requirement that it be lighter than its ground is what fixes the Light World's lightness: raise the World by 0.005 and no source in the search clears its floor."
+        },
+        "mid": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.866667,
+              0.831373,
+              0.745098
+            ],
+            "hex": "#ddd4be"
+          },
+          "$description": "The midpoint of the ramp. oklch(0.8713 0.0312 88.4)."
+        },
+        "technique": {
+          "$type": "string",
+          "$value": "signed-bloom",
+          "$description": "THE LIGHT APPEARANCE'S MEANING-LIGHT TECHNIQUE. The source floods toward the ceiling of what sRGB can hold at the Light's hue; the falloff annulus glazes DEEPER and warmer; both return to exactly the unilluminated ground at intensity zero.\n\nIT IS THE ONLY FAMILY IN THE SEARCH WITH A SIGNED LUMINANCE PROFILE, and that is not a stylistic preference — it is the only reason any family survives BOTH of two requirements that pull in opposite directions on a near-white ground. The flooded core is above every reading ink, so the event cannot be mistaken for writing. The glaze is where the magnitude is, so the event is perceptible at all. A family with only the core reaches dEok 0.0395; a family with only the glaze has no source and is a stain.\n\nThe renderer reads THIS TOKEN and dispatches on it. It does not test the appearance's name.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "implementation-strategy",
+              "serves": "qandeel.appearance.light-remains-meaning",
+              "why": "as the dark counterpart: the technique is HOW the contract is currently met, chosen by a measured search over four families and re-openable by a better one. The contract is that a meaning event is perceivable AS AN EVENT, settles to nothing, stays separable from matter and from ink, and survives grayscale. I-08B3.1-F2R re-opened it exactly this far — the family stands, its shape moved — which is what an implementation strategy is for."
+            }
+          }
+        },
+        "bloom": {
+          "$type": "number",
+          "$description": "THE SHAPE OF THE SIGNED BLOOM ALONG I-08B3.1-D2R's FALLOFF. Both values are searched, not typed — a family whose constants were chosen by hand and whose rivals' constants were also chosen by hand is a preference with arithmetic attached, not a comparison.",
+          "split": {
+            "$value": 0.65,
+            "$description": "Where flooding gives way to glazing, as a fraction of peak intensity. Above it the region floods toward the core; below it the glaze carries.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "serves": "qandeel.appearance.light-remains-meaning",
+                "why": "a searched shape parameter on one renderer."
+              }
+            }
+          },
+          "glaze-width": {
+            "$description": "HOW FAR THE GLAZE REACHES — the standard deviation of the bump centred on `split`, in normalised intensity, on a weight normalised to vanish at zero intensity.\n\nTHIS PARAMETER HAS NOW BEEN WRONG IN BOTH DIRECTIONS AND BOTH ARE WORTH KEEPING. It exists at all because the first version had no such parameter: the glaze was a triangular ramp falling to zero only at zero intensity, so it covered the whole falloff and on the five lobes of an INSIGHT laid a continuous wash over half the world. The correction was a narrow Gaussian — and I-08B3.1-F2 then set it to 0.14, the narrowest value in its grid, because the selection rule was minimising the glaze above a floor that a RIM could clear. The event's peak passed. Its average across the disc came to a quarter of the same floor, and independent review, looking at the rendered CONNECTION rather than at the number, called it near-static.\n\nSo a bloom boundary is a boundary, and a boundary of zero width is a line. The floor is now on the AREA MEAN, which a rim cannot satisfy, and the width that answers it is wide enough to be a bloom and bounded above by the requirement that the event not exceed the dark one's extent.\n\nAND THE GAIN IS GONE. There used to be a `glaze-gain` beside this. It made the glaze's depth and its strength two names for one quantity — the same composite was reachable from a shallow stop at high gain or a deep stop at low gain — so the search could not choose between them on anything, and the deep-stop answers put `low`'s authored value inside the reading ramp's own lightness range while the painted result was identical. The Meaning Light now has ONE gain in both appearances, I-08B3.1-D2R's WASH_OPACITY, exactly as the dark ramp does.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "serves": "qandeel.appearance.light-remains-meaning",
+                "why": "a searched shape parameter on one renderer."
+              }
+            },
+            "$value": 0.8
+          }
+        },
+        "low": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.737255,
+              0.701961,
+              0.619608
+            ],
+            "hex": "#bcb39e"
+          },
+          "$description": "THE GLAZE. oklch(0.7685 0.0308 87.6) — the warm deepening a bright light lays around itself on a light material, and the contrast boundary that makes the core read as a source rather than as a patch of bare ground.\n\nIT IS NOT A SHADOW, AND THE DIFFERENCE IS MEASURED RATHER THAN ASSERTED: a shadow REMOVES colour from a material and this ADDS it — the composite carries more chroma than the ground it replaces at every intensity, which is the R-NOT-SHADOW requirement. It also returns to exactly the unilluminated ground at intensity zero, so there is no permanent Meaning glow, which is D2R's rule kept.\n\nAND IT IS WHERE THE MAGNITUDE IS. At peak the event differs from its ground by dEok 0.1570, of which the source contributes 0.021 and this glaze 0.1539 — a ratio of 7.32 to 1. On a ground this light the source has almost nowhere to rise into, so the thing that makes the event perceptible is the boundary it lays around itself. That is stated here rather than in a document because it is the property most likely to be mistaken for a defect.\n\nAND THERE IS A BOUND ON HOW MUCH IT MAY BORROW, WHICH I-08B3.1-F2R HAD TO ADD. This stop is at L 0.7685 and the World under its own passage scrim composites to L 0.5423; R-SOURCE-DOMINANCE requires the first to stay above the second, so no pixel this event paints is ever darker than the veil QANDEEL draws over a region it is suppressing. The requirement exists because a ratio-preserving version of this ramp — deeper by exactly the amount that would have matched the dark appearance's magnitude relationship — passed every other requirement in the package and rendered as a brown-grey sphere. Every one of the 2379 configurations that reach that floor fails this one requirement and no other, and their deepest stop lands at L 0.5101."
+        }
+      },
+      "atmosphere": {
+        "$type": "number",
+        "$description": "THE AMBIENT FIELD, LIGHT APPEARANCE — AND IT IS THE SAME FIELD.\n\nNot one contour is dropped, no layer is removed, no topic loses its hue, the harmonics and ring counts and parallax ladder are untouched. What changes is the LAYER LIGHTNESS, and it changes by a rule rather than by an inversion: each layer's contour keeps the exact WCAG contrast ratio it holds against its own ground in dark — 5.263:1, 3.941:1, 2.921:1. The field therefore has precisely the presence in light that it has in dark.\n\nITS LIGHTNESS CROSSES THE GROUND, WHICH IS WHAT A FIELD DOES. In dark the contours are brighter than the World; in light they are deeper than it. The DEPTH CUE consequently reverses too — near is the brightest layer in dark and the deepest in light — and that costs nothing, because I-08B3.1-D2R's PRESENTATION_CONTRACT declares ring layer, contour count, contour shape, radius and hue all `encodes: null` and I-08B3.1-F1R2 moved the depth cue out of the required accessibility carriers for the same reason. A presentation property that means nothing may be expressed differently in a different environment; that is the definition of a presentation property.\n\nTHE CHROMA CEILING IS RE-DERIVED, NOT COPIED. D2R makes it 0.62 x the least chromatic stop of the Light precisely so the rule survives the Light being re-chosen. F2 re-chooses the Light, so the ceiling moves on its own: 0.0197 in dark, 0.0191 in light. Nobody had to remember the two were related, which is what D2R built it for.",
+        "luminance": {
+          "near": {
+            "$value": 0.4944,
+            "$description": "The near layer's OKLCh lightness. Preserves the dark layer's 5.263:1 contour contrast against its own ground."
+          },
+          "mid": {
+            "$value": 0.5618,
+            "$description": "Preserves 3.941:1."
+          },
+          "far": {
+            "$value": 0.6356,
+            "$description": "Preserves 2.921:1."
+          }
+        },
+        "chroma-ceiling": {
+          "$value": 0.0191,
+          "$description": "0.62 x the least chromatic Light stop, re-derived against the light ramp by I-08B3.1-D2R's own formula. THE ORDERING IT PROTECTS IS THE REASON THE LIGHT RAMP CARRIES THE CHROMA IT DOES: a quieter Light would drag this ceiling down THROUGH the reading ramp and invert two rungs of the cross-appearance ladder without touching either of them. The requirement 0.62 x min(Light chroma) > max(ink chroma) is checked on every searched configuration."
+        }
+      }
+    }
+  },
+  "$extensions": {
+    "com.qandeel.freeze": {
+      "class": "production-default",
+      "serves": "qandeel.appearance.light-remains-meaning",
+      "why": "EVERY VALUE IN THIS FILE IS A SEARCHED CALIBRATION, not Product law. The CONTRACTS are: LIGHT IS MEANING and a meaning event is perceivable AS AN EVENT; the Light stays separable from the identity material and from reading at every intensity; the event survives having its colour removed; the field is not simplified; the atmosphere stays below the Light and above the ink. The seven numbers are where those meet on this ground, on this renderer, at this quantisation — and I-08B3.1-F2R is the demonstration that they are calibrations: the review that rejected this file's magnitude moved three of them and did not touch a contract."
+    },
+    "com.qandeel.provenance": {
+      "derivedBy": "tools/f2-derive.mjs",
+      "familiesBuilt": [
+        "F-A ADDITIVE",
+        "F-B DARKENING",
+        "F-C CHROMATIC",
+        "F-D SIGNED BLOOM"
+      ],
+      "configurationsSearched": 104835,
+      "configurationsSearchedNote": "53,886 across 21 candidate grounds at the coarse pass, then 50,949 at the full pass on the chosen ground. Counted by tools/f2-derive.mjs and recorded in data/F2_DERIVATION.json under searchSize; see tools/f2-consistency.mjs, which re-reads every surface that quotes it. I-08B3.1-F2R grew the coarse pass by RANGE and not only by resolution: at the raised candidate floor the old grid topped out below it and reported every ground non-viable while the full grid had thousands of admissible configurations at those same grounds.",
+      "winner": "F-D SIGNED BLOOM",
+      "measuredOnTheAreaMean": {
+        "note": "THE QUANTITY THE REQUIREMENT IS ON CHANGED IN I-08B3.1-F2R, AND THAT IS WHY EVERY FIGURE HERE MOVED. F2 required the event's PEAK to exceed the appearance's smallest reading step; a peak is a property of one point on the falloff and an event is a region, so a glaze 0.14 wide cleared the floor on a thin annulus while the rendered event read as near-static. The floor is unchanged and the quantity is now the AREA MEAN across the source's disc, area-weighted along D2R's own falloff, required at EVERY peak level the three meaning categories reach rather than at an intensity no category ever attains. It is required at every one of them and not only at the lowest, because this expression's area mean FALLS as intensity rises — above the split the centre floods toward a core only dEok 0.021 from the ground — so the quietest category is where it scores best. Evaluating there passed a configuration that failed at the other two.",
+        "areaMeanDEok": 0.1022,
+        "areaMeanDEokGrayscale": 0.1014,
+        "floor": 0.1017,
+        "inReadingSteps": 1.005,
+        "byCategoryAtItsOwnPeakLevel": {
+          "connection": 0.1022,
+          "pattern": 0.1023,
+          "insight": 0.1027
+        },
+        "bindsOn": "connection",
+        "andTheThreeAreNearlyEqual": "WHICH IS ITSELF A RESULT. The expression I-08B3.1-F2R first returned scored 0.1026 / 0.1009 / 0.0995 across the three categories, so it cleared the floor for one of them and failed for two. Requiring the floor at EVERY level the Product reaches selected a shape whose area mean barely varies with level at all — so CONNECTION, PATTERN and INSIGHT now read at the same strength as each other, which is a better answer to 'the light event is too quiet, especially CONNECTION' than any single magnitude figure."
+      },
+      "measuredAtPeak": {
+        "eventDEok": 0.157,
+        "riseDEokGrayscale": 0.021,
+        "dipDEokGrayscale": 0.1539,
+        "dipOverRise": 7.32,
+        "deepestStopLightness": 0.7685,
+        "worldUnderItsOwnScrimLightness": 0.5423,
+        "separationFromLivingBrass": 0.2779,
+        "separationFromNearestReadingInkStop": 0.2805,
+        "separationFromError": 0.2907,
+        "perceivedExtentAsFractionOfSourceRadius": 0.98
+      },
+      "darkAppearanceComparison": {
+        "darkEventPeakDEok": 0.6925,
+        "darkEventAreaMeanDEok": 0.2846,
+        "darkEventInItsOwnReadingSteps": 2.483,
+        "lightEventInItsOwnReadingSteps": 1.005,
+        "note": "THE MAGNITUDES ARE NOT EQUAL AND F2 DOES NOT CLAIM THEY ARE. A dark appearance's meaning event borrows the whole empty luminance range above a near-black ground; a light appearance has already spent that range on the ground itself. In light almost all of the event's magnitude is carried by the glaze around the source rather than by the source, because the source has nowhere to rise into. That is a property of the two perceptual environments, not a defect in the expression, and it is reported rather than smoothed.",
+        "whyTheGapIsNotClosed": "I-08B3.1-F2R DERIVED THE VERSION THAT CLOSES IT, RENDERED IT, AND REJECTED IT. Applying this package's own transfer rule — preserve the RATIO, not the value — gives a light floor of 0.2525, which IS reachable. Every one of the 2379 configurations that reach it is darker than the World under its own passage scrim, and all of them fail R-SOURCE-DOMINANCE and nothing else. The gap is therefore reported as a contradiction with a reason, not as a limit of the search."
+      },
+      "admissibleConfigurationsAtTheChosenGround": 2930
+    }
+  }
+}

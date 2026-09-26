@@ -1,0 +1,82 @@
+{
+  "qandeel": {
+    "$type": "color",
+    "expression": {
+      "world": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.062745,
+            0.062745,
+            0.062745
+          ],
+          "hex": "#101010"
+        },
+        "$description": "The World. Frozen in I-08B3.1-A. Not a Surface: nothing is painted with it in order to be told apart from something else - it is the ground everything else sits on."
+      },
+      "surface": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0.094118,
+            0.094118,
+            0.094118
+          ],
+          "hex": "#181818"
+        },
+        "$description": "THE ONE FUNCTIONAL SURFACE VALUE. Lighter than the World, achromatic, opaque matte. This is the only place in the architecture where it exists; every Product Surface role reaches it through an alias chain."
+      },
+      "content": {
+        "primary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.847059,
+              0.835294,
+              0.792157
+            ],
+            "hex": "#d8d5ca"
+          },
+          "$description": "Primary reading. Frozen in I-08B3.1-A."
+        },
+        "secondary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.686275,
+              0.67451,
+              0.639216
+            ],
+            "hex": "#afaca3"
+          },
+          "$description": "Secondary reading. Frozen in I-08B3.1-A."
+        },
+        "tertiary": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.545098,
+              0.537255,
+              0.509804
+            ],
+            "hex": "#8b8982"
+          },
+          "$description": "Tertiary neutral. Frozen in I-08B3.1-A."
+        }
+      },
+      "scrim": {
+        "$value": {
+          "colorSpace": "srgb",
+          "components": [
+            0,
+            0,
+            0
+          ],
+          "alpha": 0.5,
+          "hex": "#000000"
+        },
+        "$description": "The PASSAGE scrim in the dark expression: neutral black at alpha 0.5. It expresses WORLD SUPPRESSION. Background legibility is not one of its duties, because the World behind a PASSAGE is suspended."
+      }
+    }
+  }
+}
