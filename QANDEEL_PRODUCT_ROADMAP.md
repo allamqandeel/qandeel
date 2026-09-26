@@ -59,7 +59,14 @@ It must cover the icon language needed across the frozen Product, including wher
 - RTL / LTR behavior;
 - accessibility and perceivability.
 ### P3 — Notification Final Realization
-**P3 — CURRENT / NEXT PRODUCT DECISION CLOSURE — NOT YET OPENED AS A TASK CONTRACT**
+**P3 — CLOSED / FROZEN** — closed by
+[`docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md`](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md),
+with the merged P3-A proof
+([`docs/design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/`](docs/design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/P3_READ_FIRST.md))
+as its evidence. That record is the Product / design authority for the notification and Activity realization; this
+section only records the lifecycle. The Product / design realization is frozen. Production implementation remains
+open. `I-08N-01` stays the foundational notification semantic authority (the closure's §19.1).
+The track's original scope, kept as written:
 Consume the already-frozen `I-08N-01` Product contract and close the Product realization it deliberately
 left open.
 This includes, where Product decisions are required:
@@ -75,6 +82,7 @@ This includes, where Product decisions are required:
 Do not reopen I-08N-01's frozen authority, privacy, interruption-class, Direct Entry or disclosure semantics.
 Platform/runtime implementation remains separate unless a later task explicitly owns it.
 ### P4 — Remaining Product / Visual Gaps Census & Closure
+**P4 — CURRENT / NEXT PRODUCT / VISUAL CLOSURE TRACK — NOT YET OPENED AS A TASK CONTRACT**
 Perform a bounded census of the **existing Product and visual canon** for items deliberately left:
 - `NOT FROZEN`;
 - `PROOF ONLY`;
@@ -172,7 +180,7 @@ The final roadmap layer is release readiness, including the scopes already owned
 Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
-P1 and P2 are `CLOSED / FROZEN` as Product / design contracts. The next Product discussion/work track is:
-> **P3 — Notification Final Realization**
+P1, P2 and P3 are `CLOSED / FROZEN` as Product / design contracts. The next Product discussion/work track is:
+> **P4 — Remaining Product / Visual Gaps Census & Closure**
 It is deliberately **not yet opened as a Task Contract**. Product discussion comes first.
-Continue in the order P3 → P4, then begin the End-to-End Product Experience Completeness Audit.
+After P4, begin the End-to-End Product Experience Completeness Audit.
