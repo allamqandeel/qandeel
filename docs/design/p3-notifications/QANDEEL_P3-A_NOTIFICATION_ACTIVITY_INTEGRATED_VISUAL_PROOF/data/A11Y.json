@@ -1,0 +1,69 @@
+[
+ {
+  "st": "conv-strip-shared",
+  "lang": "ar",
+  "n": 10,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 12,
+  "exposed": 0,
+  "sample": [
+   "النشاط، فيه جديد",
+   "تحليل المحادثة",
+   "إعادة عرض المحادثة",
+   "مكالمة صوتية",
+   "رسالة صوتية",
+   "رحلة الصيف: سارة ردّت عليك",
+   "إغلاق التنبيه"
+  ]
+ },
+ {
+  "st": "activity",
+  "lang": "ar",
+  "n": 20,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 15,
+  "exposed": 0,
+  "sample": [
+   "رجوع",
+   "إعدادات الإشعارات والنشاط",
+   "الكل",
+   "من قنديل، فيه جديد",
+   "العالم المشترك (1)",
+   "العالم العام، فيه جديد",
+   "التعارف، فيه جديد"
+  ]
+ },
+ {
+  "st": "notif",
+  "lang": "en",
+  "n": 25,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 14,
+  "exposed": 0,
+  "sample": [
+   "Back",
+   "Allow",
+   "Reduce",
+   "Off",
+   "Shared World alerts",
+   "Summer trip, On",
+   "Work team, Muted"
+  ]
+ },
+ {
+  "st": "edu",
+  "lang": "ar",
+  "n": 2,
+  "small": 0,
+  "unnamed": 0,
+  "svg": 8,
+  "exposed": 0,
+  "sample": [
+   "السماح بالإشعارات",
+   "مش دلوقتي"
+  ]
+ }
+]

@@ -1,0 +1,97 @@
+{
+  "qandeel": {
+    "$description": "I-08B3.1-F1 — THE INCREASED-CONTRAST OVERRIDE, DARK APPEARANCE. This file fills the context I-08B3.1-B4R declared and left empty: \"An increased-contrast expression is an OVERRIDE of the appearance it applies to, not a third appearance… Its values are owned by I-08B3.1-F.\" It applies WITHIN the dark appearance. The light appearance's increased-contrast override is I-08B3.1-F2's, and does not exist.\n\nTHE LAW THIS FILE OBEYS: A CLASS MOVES ALONG THE FROZEN RAMP; NO LITERAL IS INTRODUCED. Every colour below is a re-route to a rung of the I-08B3.0 reading ramp that already exists. Count the new hex values in this file: there are none.\n\nWHAT IS DELIBERATELY ABSENT, AND WHY EACH ABSENCE IS A DECISION:\n  · qandeel.world.fill and qandeel.surface.functional — darkening the World to pure black was measured at 1.1036× on tertiary reading ink and 1.0041× on a far contour. The World is frozen in I-08B3.1-A and a 0.4% gain is not a reason to unfreeze it.\n  · qandeel.identity.material — LIVING BRASS IS STATE-INVARIANT IN VALUE AND IN APPEARANCE (I-08B3.1-E1R). An accessibility setting is not an exception to that; it is exactly the kind of thing the invariant was written against.\n  · qandeel.illumination.* — QANDEEL LIGHT is MEANING. Brightening it under increased contrast would make every meaning event louder in proportion to a setting, which is meaning derived from a preference.\n  · qandeel.status.error.ink — #fe907e reaches 8.61:1 against the World and is Product-Owner approved. It is not replaced, and F1 does not add a second error colour for this mode.\n  · qandeel.state.disabled.ink — #696762 sits 3.37:1 against the World, below 4.5:1, and WCAG 1.4.3 exempts inactive components. Raising it would COMPRESS its distance from the rest ink, and that distance IS the availability signal. Under this context the rest ink rises and the disabled ink does not, so the gap widens from 1.61× to 2.49× and unavailability becomes MORE readable, not less.\n  · qandeel.content.primary / secondary / tertiary — the ramp itself does not move. Roles are re-pointed at different rungs OF it. Moving a rung would move everything that reaches it, including three E1 states and the focus indicator, none of which asked to move.",
+    "analysis": {
+      "$type": "color",
+      "relation": {
+        "$value": "{qandeel.content.secondary}",
+        "$description": "THE ANALYTICAL RELATION MOVES UP ONE RUNG: tertiary #8b8982 → secondary #afaca3, 5.44:1 → 8.38:1 against the World. This is the single most load-bearing line in the file and it exists because of a measurement, not a preference.\n\nThe measurement: raising only the atmosphere — which is the obvious reading of \"increase contrast\" — compresses the meaning hierarchy immediately. At full opacity the loudest ambient contour reaches 5.29:1 while the weakest analytical object sits at 5.44:1, so the ratio between atmosphere and analysis falls from 1.2914 to 1.028. The quiet thing arrives at the strength of the meaningful thing. I-08B3.0 froze MEANING EARNS EMPHASIS and QUIET BEFORE LUMINOUS, and an accessibility expression that flattens that has changed the product.\n\nSo analysis rises too, and rises further. After both moves the ratio is 1.524 — WIDER than the default's 1.2914. That is the mechanical content of HIGH CONTRAST IS NOT HIGH IMPORTANCE: importance is a ratio, so the guard is on the ratio.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "WHICH RUNG a class points at under increased contrast is a statement about the meaning hierarchy — raising the atmosphere alone compresses it — so the re-route is Product contract, not calibration."
+          }
+        }
+      }
+    },
+    "control": {
+      "$type": "color",
+      "functional": {
+        "$value": "{qandeel.content.secondary}",
+        "$description": "Functional control ink moves with the analytical relation, tertiary → secondary, 5.07:1 → 7.82:1 against the functional Surface. qandeel.state.rest.ink reaches this token, so the interaction plane's resting ink rises with it — which is the point: a class moves, not an object. REST → SELECTED stays separated (7.82 vs 12.08, and SELECTED additionally carries a marker and a 100-unit weight step that no contrast setting touches), and REST → UNAVAILABLE widens.",
+        "$extensions": {
+          "com.qandeel.freeze": {
+            "class": "product-contract",
+            "why": "as relation: a class moves along the frozen ramp, and which class moves is the decision."
+          }
+        }
+      }
+    },
+    "state": {
+      "$type": "dimension",
+      "focus": {
+        "thickness": {
+          "$value": {
+            "value": 3,
+            "unit": "px"
+          },
+          "$description": "E1's frozen 2 px perimeter, thickened to 3. A NON-COLOUR strengthening, chosen on purpose: thickening a perimeter cannot make an object look more important, and brightening one can. WCAG 2.2 SC 2.4.13 (AAA) asks for an indicator at least as large as a 2 CSS px perimeter — which the DEFAULT already meets — so this strengthens something that passes rather than repairing something that fails. The detached offset and the dark companion are unchanged.",
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "production-default",
+              "why": "serves the requirement that the focus perimeter is strengthened WITHOUT changing its colour. 3 px is the magnitude this proof was drawn with."
+            }
+          }
+        }
+      }
+    },
+    "expression": {
+      "accessibility": {
+        "atmosphere": {
+          "$type": "number",
+          "$description": "THE DERIVED ATMOSPHERE EXPRESSION. Produced by a search over two levers in order of how little they change, recorded in data/F1_DERIVATION.json and reproducible from tools/f1-derive.mjs.\n\nLEVER 1, ALPHA: every contour to full opacity. Alpha changes no colour at all, so nothing in the palette can acquire a new relationship to anything else. It carries 12 of the 15 (world, layer, ring) cases past 3:1 and leaves the three FAR-layer cases at 2.88–2.94.\n\nLEVER 2, LIGHTNESS: one delta for all three layers — a per-layer lift would compress or expand the depth ladder, which is a change in the spatial reading rather than in its visibility. +0.011 in OkLCh L closes the residue. The chroma ceiling 0.0197 does not move, so no hue becomes more insistent than another: the maximum contrast between any two of the six hues goes from 1.0228:1 to 1.0289:1, which is to say colour still distinguishes nothing.\n\nRESULT: worst contour 1.73:1 → 3.02:1 (1.75×). Loudest contour 4.21:1 → 5.50:1, which stays 2.88 below the raised analytical relation. Layer order preserved; layer spacing preserved EXACTLY at 0.07 / 0.07.",
+          "lightness-near": {
+            "$value": 0.631,
+            "$description": "0.62 + 0.011. Derived, not chosen.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "why": "DERIVED by the search in tools/f1-derive.mjs against today’s chroma ceiling and today’s ramp. If either moves, the search is re-run and this number changes — which is exactly why it may not be frozen."
+              }
+            }
+          },
+          "lightness-mid": {
+            "$value": 0.561,
+            "$description": "0.55 + 0.011. Derived, not chosen.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "why": "as lightness-near: derived, not chosen."
+              }
+            }
+          },
+          "lightness-far": {
+            "$value": 0.491,
+            "$description": "0.48 + 0.011. Derived, not chosen. This is the layer the whole search was for: its outermost contour in the Public world measured 1.73:1 in the default.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "why": "as lightness-near: derived, not chosen."
+              }
+            }
+          },
+          "stroke-alpha-multiplier": {
+            "$value": 0,
+            "$description": "ZERO MEANS 'IGNORE THE PER-WORLD ALPHAS AND DRAW AT FULL OPACITY'. A sentinel rather than a multiplier, because the three worlds have different alpha ladders and a multiplier would reach 1.0 for each of them at a different point — which would make the increased-contrast expression of the Personal world arrive before the Public one, i.e. would give the setting a per-world reading it must not have.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "product-contract",
+                "why": "the SENTINEL is a contract statement, not a magnitude: a multiplier would reach full opacity at a different point in each world and give the setting a per-world reading it must not have."
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
