@@ -22,8 +22,7 @@ Reading conventions:
 - **`PO-APPROVED`** marks a decision the Product Owner made. This candidate records it and does not reopen it.
 - **`FORCED BY`** marks a consequence that existing frozen authority already fixes. The authority is named.
 - **`CANDIDATE`** marks wording this document proposes for closure. It binds nothing until P4 closes it.
-- **`OPEN → P4-DQ-nn`** marks a question this candidate refuses to answer. It sits in the
-  [Product Owner Decision Queue](P4_PRODUCT_OWNER_DECISION_QUEUE.md).
+- **`OPEN → P4-DQ-nn`** is retained only as a historical notation from the pre-decision candidate. **No such Product Owner row remains open after P4-C2.** The [Product Owner Decision Queue](P4_PRODUCT_OWNER_DECISION_QUEUE.md) is now fully resolved.
 - **`IMPLEMENTED TODAY`** / **`NOT IMPLEMENTED`** describe code on `main` at the baseline. Neither is Product authority.
 
 ---
@@ -305,15 +304,13 @@ polling interval, threshold, SLO or SLA (§21).
 | **Explicit scope.** Every control names what it governs: capability, surface, cohort, version range or route | `PO-OPS-07`; `FORCED BY` CW2-08 §28 ("Every `LAUNCH_REQUIREMENT` binds an exact `CAPABILITY_SCOPE`") for Connected Worlds |
 | **Runtime-held effective state.** A control takes effect only as state the QANDEEL runtime holds canonically and reads locally. The runtime never asks Company Operations synchronously whether it may proceed | **CANDIDATE**, and the only reading consistent with two approved laws together: `PO-OPS-05` (no synchronous dependency) and CW2-08 §24 (`FEATURE_FLAG_STATE` is "Server-canonical") |
 | **Only a valid, authenticated, currently effective control acts.** A missing, failed, unreachable or unauthenticated Company Operations response is never a control, and never an implicit Kill Switch | `PO-OPS-05` and the task's approved outage-isolation law. The authentication mechanism → §20 |
-| **Cannot manufacture Product authority** | `FORCED BY` CW2-08 §1, §2, H1, H17 and CW2-02 §46, B31 in Connected Worlds scope. Outside that scope, **CANDIDATE** (§10.2) |
+| **Cannot manufacture Product authority** | `FORCED BY` CW2-08 §1, §2, H1, H17 and CW2-02 §46, B31 in Connected Worlds scope; **extended app-wide by `PO-OPS-17` / P4-C2** (§10.2) |
 | **No generic remote execution** | `PO-OPS-08` (§12) |
 | **Auditable / versioned** | `PO-OPS-15`: every approved control family is versioned and audited. Exact TTL / signing / last-known-good / retention mechanics remain Production Integration / Security design |
 
 ### 10.2 What controls may and may not do
 
-These limits are not a separate Product Owner decision. Each row names its actual source. A `FORCED BY` CW2-08 /
-CW2-02 row binds in the scope that authority governs, which is Connected Worlds. Its extension to the rest of the App
-is **CANDIDATE** until `P4-DQ-15` is answered.
+These limits are not a separate Product Owner decision. Each row names its actual source. CW2-08 / CW2-02 remain the original Connected Worlds authorities; **`PO-OPS-17` / P4-C2 extends the same governing limits app-wide** without replacing those source authorities.
 
 **Controls MAY** narrow, disable, hold, gate rollout, require upgrade or enter maintenance. These are the acts of the
 currently approved families (`PO-OPS-07`, §11).
@@ -593,8 +590,7 @@ CW2-08A is narrowly scoped to the human-access conflict and reopens none of thes
 ### 18.5 Effect on APP-OPS-01 / P4
 
 - `P4-DQ-10` is **RESOLVED BY CONTROLLED CW2-08A AMENDMENT** and no longer blocks APP-OPS-01 or P4 closure.
-- APP-OPS-01 itself remains **`CANDIDATE / NOT FROZEN`**: other decisions are still open (§22), and its closure
-  conditions (§23) still apply.
+- APP-OPS-01 itself remains **`CANDIDATE / NOT FROZEN`** only because independent review and the later P4 closure change are still pending (§23). **No Product Owner decision remains open.**
 
 ## 19. End-to-End Audit handoff
 
@@ -695,23 +691,16 @@ APP-OPS-01 does not decide, design or implement any of the following.
 
 ---
 
-## 22. Unresolved decisions
+## 22. Product Owner decision disposition
 
-These sit in the [Product Owner Decision Queue](P4_PRODUCT_OWNER_DECISION_QUEUE.md) and are not answered here.
-`P4-DQ-10` is no longer open: it is **RESOLVED BY CONTROLLED CW2-08A AMENDMENT** (§18) and kept in the queue as a
-resolved record.
+**All APP-OPS Product Owner decision rows are resolved.**
 
-| Row | Question | Blocks APP-OPS-01 closure? |
-|---|---|---|
-| `P4-DQ-11` | identity / retention / access model for user-specific operational diagnostics | the **access principle** part: yes. The mechanism: no |
-| `P4-DQ-12` | ratings / reviews exact boundary | no, if closure keeps §5.3's narrower default |
-| `P4-DQ-13` | control-state freshness, integrity and audit guarantees outside CW2-08 | no. The principle is set (§10.1, §15); the mechanism goes to Production Integration |
-| `P4-DQ-14` | Maintenance Mode / Minimum Supported Version user-facing behavior | no, if it is handed to the End-to-End audit |
-| `P4-DQ-15` | whether the CW2-08 flag / snapshot / fail-closed laws extend to non-Connected-Worlds capabilities | yes. It fixes the reach of families 1, 2 and 4 |
-| `P4-DQ-16` | the Approved Remote Configuration family register and its guarantees | no, for P4. Yes, before any Remote Configuration exists |
-| `P4-DQ-17` | classifying code delivery (store release or over-the-air) relative to "no generic remote execution" | no |
+- `P4-DQ-10` is resolved by the binding CW2-08A controlled amendment.
+- `P4-DQ-11` … `P4-DQ-17` are resolved by P4-C2 and recorded as `PO-OPS-13` … `PO-OPS-19`.
+- No Product Owner choice remains to block APP-OPS-01 closure.
 
----
+The remaining work is **independent review + closure reconciliation**, not another Product decision. Exact implementation mechanisms already assigned to Production Integration / Security remain deliberately unfrozen.
+
 
 ## 23. Closure conditions
 
@@ -722,8 +711,7 @@ the following hold:
 2. The CW2-08A controlled amendment that resolves `P4-DQ-10` is merged, so Safety / Moderation authority no longer
    authorizes human review of private conversation content contrary to `PO-OPS-02`. P4-B carries it; this condition
    is met once that change merges.
-3. `P4-DQ-11` (access principle) and `P4-DQ-15` are answered by the Product Owner. The other open APP-OPS rows are
-   either answered or explicitly carried forward, each with a named owner.
+3. All APP-OPS Product Owner decisions are resolved by P4-C2. The closing change verifies that each implementation carry-forward has a named downstream owner and does not silently reopen any Product decision.
 4. The closing change reconciles every APP-OPS carry-forward under BG-06 / BG-08 against the canonical backlog, and
    decides whether any concrete obligation deferred to a named future task needs a backlog entry
    ([Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) §3).
