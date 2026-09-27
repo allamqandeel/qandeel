@@ -66,7 +66,7 @@ for supersession. Where nothing later answers the item, the column says **none**
 
 | Classification | Rows |
 |---|---:|
-| `P4 — VISUAL DECISION REQUIRED` | 1 |
+| `FUTURE STANDALONE PRODUCT / MOTION TASK` | 1 |
 | `P4 — VISUAL EXECUTION / PROOF REQUIRED` | 3 |
 | `P4 — COPY EXECUTION / PROOF REQUIRED` | 4 |
 | `P4 — CLOSURE / INDEPENDENT REVIEW REQUIRED` | 1 |
@@ -82,7 +82,7 @@ for supersession. Where nothing later answers the item, the column says **none**
 
 There are 65 `P4-GAP` rows (`P4-GAP-001` … `P4-GAP-065`) plus `APP-OPS-01`.
 
-**Only one Product Owner decision remains open:** `P4-DQ-06`, narrowly asking whether the lantern gateway moment is in v1 (`P4-GAP-019`). Several P4-owned execution / proof items remain, but they are no longer undecided Product questions.
+**No Product Owner decision remains open.** Several P4-owned execution / proof / review items remain, and `P4-GAP-019` is deliberately carried as a future standalone lantern Product / Motion task rather than P4 work.
 
 ## 3. Census table
 
@@ -120,7 +120,7 @@ Column key:
 | P4-GAP-016 | L-4, §13 | brand application | asset report L-4: masters "carry no clear space… production use must add its own"; §13: colour tokens "not frozen here" | clear space in use; no global brand colour token | none | these are production-application rules, and the icon values are presentation values | `IMPLEMENTATION ONLY — NOT P4` | none | — | — | Production Integration |
 | P4-GAP-017 | — | app icon wiring | `apps/mobile/app.json` has no `icon`, `splash` or `adaptiveIcon` key | the assets are not applied | — | implementation gap | `IMPLEMENTATION ONLY — NOT P4` | none | — | build / device check | Production Integration |
 | P4-GAP-018 | — | launch / splash / gateway | roadmap names launch-brand application in P4 and audit | sequencing between P4 and audit | P4-C2 selects **P4 closes the static launch / gateway brand application before the audit** | Product sequencing resolved; visual design / proof still required | `P4 — VISUAL EXECUTION / PROOF REQUIRED` | produce integrated launch / gateway brand proof | Product Owner no longer needed for sequencing | visual proof | Production Integration |
-| P4-GAP-019 | — | gateway identity moment | C3 authorizes but does not design/freeze a lantern gateway moment | **whether the lantern gateway moment is in v1**; animation remains undesigned | P4-C2 deliberately makes no inference from the grouped approval | **one remaining Product Owner decision** | `P4 — VISUAL DECISION REQUIRED` | answer lantern-in-v1 yes/no → `P4-DQ-06`; then prove if adopted | Product Owner | motion / gateway proof if adopted | Production Integration |
+| P4-GAP-019 | — | gateway identity moment | C3 authorizes but does not design/freeze a lantern gateway moment | whether the lantern is in v1 and where its creative/motion work lives | P4-C2: **lantern is in v1**; all lantern visual/motion/interaction/technology work is separated into **QANDEEL — Lantern Gateway Identity Moment v1** | Product decision resolved; standalone future task deliberately not opened in P4 | `FUTURE STANDALONE PRODUCT / MOTION TASK` | carry forward the named task; no research/design in P4 | later Product / Motion owner | standalone creative + motion + accessibility + performance proof | before v1 launch / Production Integration sequencing |
 | P4-GAP-020 | QAN-BL-AUTH-01 (tombstone) | account entry | T-14 §11 anti-scope: sign-up, password reset, onboarding, brand assets; backlog §7 | lifecycle journeys not designed | P1 §3 and §4 close the sign-in requirement and the sign-up fields; roadmap §3 "Complete Account / Authentication Lifecycle" goes to the audit | the Product requirements are partly closed. The journeys go to the audit | `END-TO-END AUDIT OWNED` | none | — | — | End-to-End audit |
 
 ### 3.3 Voice visual language
@@ -238,7 +238,7 @@ Counted row by row from §3. There are 66 rows: `APP-OPS-01` and `P4-GAP-001` �
 
 | Classification | Rows | Count |
 |---|---|---:|
-| `P4 — VISUAL DECISION REQUIRED` | 019 | 1 |
+| `FUTURE STANDALONE PRODUCT / MOTION TASK` | 019 | 1 |
 | `P4 — VISUAL EXECUTION / PROOF REQUIRED` | 018, 021, 022 | 3 |
 | `P4 — COPY EXECUTION / PROOF REQUIRED` | 028, 030, 031, 034 | 4 |
 | `P4 — CLOSURE / INDEPENDENT REVIEW REQUIRED` | APP-OPS-01 | 1 |
@@ -252,4 +252,4 @@ Counted row by row from §3. There are 66 rows: `APP-OPS-01` and `P4-GAP-001` �
 | `NO ACTION` | 010, 015, 036, 043, 044, 046, 064 | 7 |
 | **Total** | | **66** |
 
-**One Product Owner decision remains open:** `P4-DQ-06` for `P4-GAP-019` (lantern-in-v1).
+**No Product Owner decision remains open.** `P4-GAP-019` is resolved as v1 inclusion and carried forward as the standalone **QANDEEL — Lantern Gateway Identity Moment v1** task.
