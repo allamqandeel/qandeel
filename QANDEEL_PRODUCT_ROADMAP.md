@@ -18,9 +18,9 @@ Every concrete work item still requires its own scoped Task Contract before exec
 6. **The End-to-End audit is user-journey completeness work, not a substitute for the pre-audit Product closures
    below.**
 ---
-## 2. Current roadmap phase — Final Product Decision Closure
-The project is currently in **Final Product Decision Closure**. With P4's closure, all four tracks below are
-`CLOSED / FROZEN` (P4 binding on the merge of PR #280); the phase completes on that merge.
+## 2. Completed roadmap phase — Final Product Decision Closure
+**Final Product Decision Closure is complete.** P1–P4 are `CLOSED / FROZEN`; P4 merged through PR #280 at
+`d6d0999dea26ba97b595e8a97e1a630eb659874f` after exact-head independent review and validation.
 Before the whole Product is audited from first launch to long-term use, close the known Product/visual decision
 tracks that would otherwise make the audit repeatedly stop on already-known unresolved areas.
 ### P1 — User Profile / Identity / Preferences / QANDEEL Understanding
@@ -85,7 +85,7 @@ Platform/runtime implementation remains separate unless a later task explicitly 
 ### P4 — Remaining Product / Visual Gaps Census & Closure
 **P4 — CLOSED / FROZEN** — closed by
 [`docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md),
-binding on the merge of PR #280 after independent review. That record is the Product / Architecture authority for this
+merged through PR #280 at `d6d0999dea26ba97b595e8a97e1a630eb659874f` after independent review and exact-head validation. That record is the Product / Architecture authority for this
 track; this section only records the lifecycle. Production implementation remains open.
 APP-OPS-01 (QANDEEL App ↔ QANDEEL Company Operations Contract), the one explicit Product-Owner-approved cross-cutting
 exception to the normal residual-canon boundary below, is `CLOSED / FROZEN` with it; P4's local evidence is in
@@ -191,8 +191,8 @@ The final roadmap layer is release readiness, including the scopes already owned
 Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
-P1, P2, P3 and P4 are `CLOSED / FROZEN` as Product / design contracts, P4 binding on the merge of PR #280 after
-independent review. After that merge, the next roadmap phase is:
+P1, P2, P3 and P4 are `CLOSED / FROZEN` as Product / design contracts. P4 is merged through PR #280 at
+`d6d0999dea26ba97b595e8a97e1a630eb659874f`. The next roadmap phase is:
 > **QANDEEL End-to-End Product Experience Completeness Audit**
 It has not started, and this roadmap does not open it: it still requires its own Task Contract. The sequencing in §3–§5
 is unchanged.

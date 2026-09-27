@@ -137,7 +137,7 @@ There is one primary record per closed track. Reach anything finer through that 
 | P1 User Identity / Preferences / QANDEEL Understanding | [P1 canonical closure](docs/qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) (`CLOSED / FROZEN`) | its §15 precedence matrix; [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) §2 |
 | P2 Final Iconography System | [P2 canonical closure](docs/qandeel-p2-final-iconography-canonical-closure.md) (`CLOSED / FROZEN`) | its §13 precedence matrix; evidence [P2-A package](docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/P2_READ_FIRST.md); [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) §2 |
 | P3 Notification & Activity Final Product Realization | [P3 canonical closure](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md) (`CLOSED / FROZEN`) | its §19 precedence matrix; evidence [P3-A package](docs/design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/P3_READ_FIRST.md); [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) §2 |
-| P4 Remaining Product / Visual Gaps Census & Closure, with APP-OPS-01 | [P4 final closure](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md) (`CLOSED / FROZEN`, binding on the merge of PR #280) | 1. that record; 2. the final local evidence and census, [`docs/p4/`](docs/p4/P4_READ_FIRST.md); 3. the closed [APP-OPS-01](docs/p4/APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md); 4. the [carry-forward matrix](docs/p4/P4_CARRY_FORWARD_MATRIX.md); backlog `### P4 — design-track BG-08 reconciliation` |
+| P4 Remaining Product / Visual Gaps Census & Closure, with APP-OPS-01 | [P4 final closure](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md) (`CLOSED / FROZEN`, merged through PR #280 at `d6d0999dea26ba97b595e8a97e1a630eb659874f`) | 1. that record; 2. the final local evidence and census, [`docs/p4/`](docs/p4/P4_READ_FIRST.md); 3. the closed [APP-OPS-01](docs/p4/APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md); 4. the [carry-forward matrix](docs/p4/P4_CARRY_FORWARD_MATRIX.md); backlog `### P4 — design-track BG-08 reconciliation` |
 | I-08N-01 Notification / Proactive Attention | [`I-08N-01 final closure package`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md) | [`CANONICAL_AUTHORITY_INDEX.md`](docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md); G3 §D for the compatible Matching-during-call rule; the P3 closure for the final Product realization |
 | I-08B1 Living Analysis World | [`docs/design/canonical-artifacts/living-analysis/README.md`](docs/design/canonical-artifacts/living-analysis/README.md) | the artifact index |
 | I-08B3.1-C Living Brass | [`C3_FINAL_CLOSURE_RECORD.md`](docs/design/canonical-artifacts/living-brass/i-08b3.1-c3/docs/C3_FINAL_CLOSURE_RECORD.md) | the artifact index |
@@ -153,6 +153,24 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
+### Post-P4 merge checkpoint — 2026-09-27
+
+This is a **handoff / locator note, not a new Product authority**.
+
+- PR #280 is **MERGED / CLOSED**. Exact independently reviewed head:
+  `b9f73c3b84bee49769858b1465a1c2e118b11f5f`; merge commit and canonical `main`:
+  `d6d0999dea26ba97b595e8a97e1a630eb659874f`.
+- The exact-head validation passed in a disposable LF-clean checkout after `npm ci`:
+  `test:forward-safety-contract` **35/35 PASS** and
+  `test:task-closure-governance-contract` **24/24 PASS**. No validation commit or repository change was made.
+- **P1, P2, P3 and P4 are all CLOSED / FROZEN.** Product/design closure does not mean production implementation is complete.
+- **APP-OPS-01 is CLOSED / FROZEN** as the App ↔ Company Operations Product / Architecture boundary; implementation remains future Production Integration work.
+- The exceptional lantern gateway identity moment remains **in v1** but its design / motion / interaction / technology work is deferred to the standalone
+  **QANDEEL — Lantern Gateway Identity Moment v1** task, registered as `QAN-BL-LANTERN-01`.
+- The final high-fidelity mobile Product surfaces for **Public World** are **not complete**. Public World product/runtime authority exists, while its final user-facing surfaces remain owned by the End-to-End completeness audit / later Product realization. The same audit owns the undrawn Shared / Public / Introductions journey surfaces identified by P4.
+- The next roadmap phase is **QANDEEL End-to-End Product Experience Completeness Audit** and it has **not started**.
+- **Working planning discussion — NOT FROZEN / NOT A ROADMAP CHANGE:** before opening the full End-to-End audit, the Product Owner and Project Lead discussed using a short real-LLM/runtime calibration and cost/evaluation instrumentation step so the audit exercises real AI behavior. Final Model / Provider selection and Plans / Credits should use measured QANDEEL workload economics rather than guesses. The exact sequencing must be decided explicitly before the next Task Contract; the existing roadmap remains authoritative until then.
+
 The roadmap is intentionally not duplicated here. Read
 [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md).
 
@@ -167,7 +185,7 @@ Current sequence:
    - P3 Notification Final Realization — **CLOSED / FROZEN**
      ([P3 closure](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md)); production
      implementation open;
-   - P4 Remaining Product / Visual Gaps Census & Closure — **CLOSED / FROZEN**, binding on the merge of PR #280
+   - P4 Remaining Product / Visual Gaps Census & Closure — **CLOSED / FROZEN**, merged through PR #280 at `d6d0999dea26ba97b595e8a97e1a630eb659874f`
      ([P4 closure](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md)), with
      APP-OPS-01 closed beside it; production implementation open.
 2. QANDEEL End-to-End Product Experience Completeness Audit — **the next phase; not started** — including evidence-led
