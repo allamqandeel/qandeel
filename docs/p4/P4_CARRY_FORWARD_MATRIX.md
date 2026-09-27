@@ -38,11 +38,11 @@ The audit designs no schema and chooses no vendor. It has **not** started, and P
 |---|---|---|---|---|---|
 | The two audit fields for every relevant User Moment | P4 closes Product decisions. It does not walk User Moments (Task Contract §23) | APP-OPS-01 §19; §5, §6, §11 | End-to-End Product Experience Completeness Audit | after P1–P4 close | **no.** The roadmap sequences the audit, and `PO-OPS-11` names the obligation |
 | Implementation of APP-OPS-01: collectors, schemas, new outbox domains, queues, dashboards, alerting, Sentry / OTel changes, Company DB / warehouse, the control-plane service, the flag / Remote Config / kill-switch / rollout / maintenance / minimum-version / route-hold runtimes, the Command Center, RBAC, the audit log | P4 implements nothing (Task Contract §24) | APP-OPS-01 §4–§15, §20; no synchronous dependency; no content; no generic remote execution; CW2-08 §24–§29 | Production Integration | after the audit | **no.** This is later implementation of a frozen contract, and the roadmap sequences Production Integration. It is the same disposition as P2 §15 and P3 §20 |
-| Control-plane authentication, control signing / integrity, freshness / TTL / last-known-good, audit retention | a security design choice that needs the audit's User Moments; `P4-DQ-13` recommends deferring it | APP-OPS-01 §10.1, §15: only a valid, authenticated, currently effective control acts; an outage is never a Kill Switch | Production Integration security design; Release Hardening validation | Production Integration | **no**, if `P4-DQ-13` is answered A. It is part of implementing the frozen contract, and not `QAN-BL-SEC-01`, which covers mobile credential storage only |
-| User-diagnostic identifier format, pseudonymization, storage, query mechanism, retention duration | security / privacy implementation (`P4-DQ-11` parts 2 and 3) | `P4-DQ-11` part 1 (the access principle), once answered; no content; Least Retention | Production Integration security / privacy | Production Integration | **no** |
+| Control-plane authentication, control signing / integrity, freshness / TTL / last-known-good, audit retention | `PO-OPS-15` freezes versioning + audit and leaves exact mechanisms to Production Integration / Security design | APP-OPS-01 §10.1, §15: only a valid, authenticated, currently effective control acts; an outage is never a Kill Switch | Production Integration security design; Release Hardening validation | Production Integration | **no.** It is later implementation of the Product boundary, not `QAN-BL-SEC-01` |
+| User-diagnostic identifier format, pseudonymization, storage, query mechanism, retention duration | security / privacy implementation after `PO-OPS-13` fixed the access principle | human access only after a user-initiated support request; no content; Least Access / Least Retention | Production Integration security / privacy | Production Integration | **no** |
 | Mobile crash / error reporting; mobile version adoption; call-status events; cost calculation; feature-usage events | these domains are approved but not implemented (APP-OPS-01 §5.1) | the approved domains only, content-free, non-semantic, fail-soft | Production Integration | Production Integration. Call status also needs `QAN-BL-VOICE-01` | **no** |
-| The Approved Remote Configuration family register | `P4-DQ-16` recommends approval through controlled change | APP-OPS-01 §11 family 6; Foundation Freeze ceiling | Product Owner + Architecture | before any Remote Configuration exists | **no** |
-| Code delivery (store / over-the-air) governance | a release-operations decision (`P4-DQ-17`) | APP-OPS-01 §12: code delivery is not a control | App Operations & Release Lead; Release Hardening | Release Hardening | **no** |
+| The Approved Remote Configuration family register | `PO-OPS-18` requires Product Owner + Architecture controlled approval; no initial family set is frozen in P4 | APP-OPS-01 §11 family 6; Foundation Freeze ceiling | Product Owner + Architecture | before any Remote Configuration exists | **no** |
+| Code delivery (store / over-the-air) governance | `PO-OPS-19`: code delivery is always a release outside the control plane; whether OTA is ever used remains a later release-operations decision | APP-OPS-01 §12: code delivery is not a control | App Operations & Release Lead; Release Hardening | Release Hardening | **no** |
 | Operational-readiness validation (observability, failure recovery) | validation, not decision | APP-OPS-01 §8, §15 | Release Hardening & Launch | Release Hardening | **no.** The roadmap §5 already names it |
 
 The controlled CW2-08 amendment that P4-A deferred is **no longer a carry-forward**: P4-B lands it as the
@@ -64,7 +64,7 @@ The controlled CW2-08 amendment that P4-A deferred is **no longer a carry-forwar
 | Account lifecycle and economy (P4-GAP-048, 049, 020) | the roadmap §3 | P1; CW2-08 §20–§23 | End-to-End audit | the audit phase | **no** |
 | Production ports and craft tuning (P4-GAP-008, 009, 011, 016, 017, 045, 047, 050, 051, 053, 054, 055) | implementation of frozen designs | their named closures | Production Integration | Production Integration | **no** |
 | Connected Worlds-owned surfaces and launch policies (P4-GAP-043, 044) | named owners exist | CW2-06, CW2-08, G3 §D | Connected Worlds `I-08`; Connected Worlds `I-09` / CW2-08 | their own tasks | **no.** Owned by frozen contracts (backlog I-05 … I-07 closure-record precedent) |
-| Orphaned owners: VI-01 "Phase VII" (voice strings), VI-01 "Brand Integration" (English casing), VI-02 "VI-10" (screen-reader validation) | the tracks do not exist | — | voice strings → the Voice runtime task (row above); English casing → `P4-DQ-09`; screen-reader validation → Release Hardening (device row) | P4 closure records the re-ownership | **no.** Each is re-owned to an existing owner above |
+| Orphaned owners: VI-01 "Phase VII" (voice strings), VI-01 "Brand Integration" (English casing), VI-02 "VI-10" (screen-reader validation) | the tracks do not exist | — | voice strings → the Voice runtime task; **English casing is resolved as QANDEEL by P4-C2**; screen-reader validation → Release Hardening | P4 closure records the re-ownership | **no.** Each is re-owned or resolved |
 
 ---
 
@@ -89,15 +89,12 @@ This follows the precedents of P2 §15, P3 §20 and the I-04 … I-07 closure re
 
 ## 4. What P4 still owes before it can close
 
-These are not carry-forwards. They are the remainder of P4 itself. They are listed so no successor task inherits
-them silently (AGENTS §10.6):
+These are not carry-forwards. They are the remainder of P4 itself:
 
-1. the remaining Product Owner answers to `P4-DQ-05` … `P4-DQ-09`, and the visual / copy proofs they require; `P4-DQ-01` … `04` are resolved by P4-C1;
-2. the Product Owner's answers to `P4-DQ-11` … `P4-DQ-17`, and the independent review of APP-OPS-01. (`P4-DQ-10` is
-   resolved by CW2-08A);
-3. the P4 closure change, which does all of the following:
-   - moves APP-OPS-01 and the P4 record to their final lifecycle (BG-09);
-   - performs the BG-08 reconciliation of §3;
-   - updates the Canonical Authority Index, the Canonical Artifact Index, the Current State, the Project Map and the
-     roadmap;
-   - runs `npm run test:task-closure-governance-contract`.
+1. **one Product Owner yes/no:** `P4-DQ-06` — whether the lantern gateway moment is in v1;
+2. visual proof for the P4-owned static launch / gateway application;
+3. integrated AR / EN proof for the non-signal Voice visual language selected by P4-C2;
+4. authoring + rendered proof for the copy clusters P4-C2 kept inside P4;
+5. independent review of APP-OPS-01, whose Product Owner decisions are now complete;
+6. the final P4 closure change, including BG-08 reconciliation, canonical indexes / Current State / Project Map / roadmap, and `npm run test:task-closure-governance-contract`.
+
