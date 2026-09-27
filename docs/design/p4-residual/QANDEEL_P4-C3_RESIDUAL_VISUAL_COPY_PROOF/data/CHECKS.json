@@ -1,0 +1,1354 @@
+{
+ "note": "P4-C3 acceptance checks (task §10). Browser evidence only; VoiceOver / TalkBack, Dynamic Type, device contrast and native launch behaviour are device gates.",
+ "summary": {
+  "normal": "44 / 44",
+  "planted": "19 / 19 planted defects rejected",
+  "seconds": 365,
+  "git": "checked"
+ },
+ "checks": [
+  {
+   "id": "C-SCOPE-1",
+   "family": "scope",
+   "claim": "Only this proof package changed against the PR head it started from: no apps/, database/, services/, workflow, dependency, schema or migration path.",
+   "pass": true,
+   "detail": {
+    "changed": 144,
+    "outside": []
+   }
+  },
+  {
+   "id": "C-SCOPE-2",
+   "family": "scope",
+   "claim": "No new dependency: every source module imports only node: built-ins or files inside source/.",
+   "pass": true,
+   "detail": {
+    "bad": []
+   }
+  },
+  {
+   "id": "C-SCOPE-3",
+   "family": "scope",
+   "claim": "No lantern asset, storyboard, timing or technology in the package: no lantern-named file, no lantern element outside the planted-defect code, no animation technology named.",
+   "pass": true,
+   "detail": {
+    "named": [],
+    "lanternEls": 1,
+    "techHits": []
+   }
+  },
+  {
+   "id": "C-SCOPE-4",
+   "family": "scope",
+   "claim": "PR #280 is still Draft, Open and Unmerged.",
+   "pass": true,
+   "detail": {
+    "isDraft": true,
+    "mergedAt": null,
+    "state": "OPEN"
+   }
+  },
+  {
+   "id": "C-PROV-1",
+   "family": "provenance",
+   "claim": "Every vendored file is byte-identical to its frozen origin (P2-A, P3-A, I-08B2.5 brand, P4-C).",
+   "pass": true,
+   "detail": {
+    "files": 73,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-PROV-2",
+   "family": "provenance",
+   "claim": "G3.2 runs byte-exact (sha 10611f35…, G3 §B).",
+   "pass": true,
+   "detail": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
+  },
+  {
+   "id": "C-PROV-3",
+   "family": "provenance",
+   "claim": "prototype/index.html is the byte-identical build of source/.",
+   "pass": true,
+   "detail": "rebuild compared"
+  },
+  {
+   "id": "C-V1",
+   "family": "voice",
+   "claim": "No waveform, amplitude or level: no signal-shaped element, canvas or running animation in the Voice / call surfaces; the Voice Note carries only its transport glyph; G3.2's superseded level trace is hidden in the call.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv",
+     "sig": [],
+     "canv": 0,
+     "vnSvg": 0,
+     "recSvg": 0,
+     "anim": 0,
+     "g32Level": false
+    },
+    {
+     "s": "conv",
+     "sig": [],
+     "canv": 0,
+     "vnSvg": 0,
+     "recSvg": 0,
+     "anim": 0,
+     "g32Level": false
+    },
+    {
+     "s": "record",
+     "sig": [],
+     "canv": 0,
+     "vnSvg": 0,
+     "recSvg": 1,
+     "anim": 0,
+     "g32Level": false
+    },
+    {
+     "s": "call-conv",
+     "sig": [],
+     "canv": 0,
+     "vnSvg": 0,
+     "recSvg": 0,
+     "anim": 0,
+     "g32Level": false
+    },
+    {
+     "s": "call-analysis",
+     "sig": [],
+     "canv": 0,
+     "vnSvg": 0,
+     "recSvg": 0,
+     "anim": 0,
+     "g32Level": false
+    },
+    {
+     "s": "sent",
+     "sig": [],
+     "canv": 0,
+     "vnSvg": 0,
+     "recSvg": 0,
+     "anim": 0,
+     "g32Level": false
+    }
+   ]
+  },
+  {
+   "id": "C-V3",
+   "family": "voice",
+   "claim": "The finished-call record is a history mark: not a control, no play glyph, no replayable audio, no transcript; its accessible summary states ended + length.",
+   "pass": true,
+   "detail": [
+    {
+     "buttons": 0,
+     "play": false,
+     "transcript": false,
+     "name": "مكالمة صوتية انتهت، مدتها 12 دقيقة و4 ثوانٍ",
+     "key": "cRecordName"
+    },
+    {
+     "buttons": 0,
+     "play": false,
+     "transcript": false,
+     "name": "Voice call ended, 12 minutes 4 seconds",
+     "key": "cRecordName"
+    },
+    {
+     "buttons": 0,
+     "play": false,
+     "transcript": false,
+     "name": "Voice call ended, 2 minutes 11 seconds",
+     "key": "cRecordName"
+    }
+   ]
+  },
+  {
+   "id": "C-V4",
+   "family": "voice",
+   "claim": "A Live Call is Analysis-first: starting one from the Conversation (real click) lands in the Analysis with the call live.",
+   "pass": true,
+   "detail": {
+    "place": "analysis",
+    "call": "live",
+    "id": "call-7c21-01"
+   }
+  },
+  {
+   "id": "C-V5",
+   "family": "voice",
+   "claim": "The same call survives Conversation ↔ Analysis (real input): one call id in the line and in G3.2, elapsed only increases; ending leaves one record of that length.",
+   "pass": true,
+   "detail": [
+    {
+     "label": "analysis",
+     "place": "analysis",
+     "id": "call-7c21-01",
+     "el": "0:16",
+     "g": "call-3f9bb7",
+     "recs": []
+    },
+    {
+     "label": "conversation",
+     "place": "conv",
+     "id": "call-7c21-01",
+     "el": "1:42",
+     "g": "call-3f9bb7",
+     "recs": [
+      "12:04"
+     ]
+    },
+    {
+     "label": "analysis again",
+     "place": "analysis",
+     "id": "call-7c21-01",
+     "el": "1:58",
+     "g": "call-3f9bb7",
+     "recs": []
+    },
+    {
+     "label": "ended",
+     "place": "conv",
+     "g": "call-3f9bb7",
+     "recs": [
+      "12:04",
+      "1:58"
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C-V6",
+   "family": "voice",
+   "claim": "Normal call state has no persistent explanatory prose: the call line shows only elapsed digits; \"microphone on / muted / QANDEEL speaking / call continues\" are assistive-only; one status channel.",
+   "pass": true,
+   "detail": [
+    {
+     "txt": [
+      "0:16"
+     ],
+     "prose": 0,
+     "status": 1,
+     "g32Channel": true
+    },
+    {
+     "txt": [
+      "1:42"
+     ],
+     "prose": 0,
+     "status": 1,
+     "g32Channel": true
+    },
+    {
+     "txt": [
+      "0:16"
+     ],
+     "prose": 0,
+     "status": 1,
+     "g32Channel": true
+    },
+    {
+     "txt": [
+      "1:42"
+     ],
+     "prose": 0,
+     "status": 1,
+     "g32Channel": true
+    }
+   ]
+  },
+  {
+   "id": "C-V7",
+   "family": "voice",
+   "claim": "Canonical P2 glyphs are used: the call line, the Voice Note transport, the composer entries and the call record carry P2-A's own drawings byte-for-byte.",
+   "pass": true,
+   "detail": {
+    "end": true,
+    "mute": true,
+    "route": true,
+    "art": true,
+    "rec": true,
+    "play": true,
+    "call": true,
+    "mic": true,
+    "endIsP2": true,
+    "endPx": 27
+   }
+  },
+  {
+   "id": "C-V8",
+   "family": "voice",
+   "claim": "The Voice Note is the reader's UTTERANCE: attached to the author's edge (Arabic right, English left), rounded only inward, on the one functional Surface tone — the same slab as a written turn.",
+   "pass": true,
+   "detail": [
+    {
+     "voice": false,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(24, 24, 24)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": true,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(24, 24, 24)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": false,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(24, 24, 24)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": false,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(231, 230, 227)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": true,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(231, 230, 227)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": false,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(231, 230, 227)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": false,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(24, 24, 24)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": true,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(24, 24, 24)",
+     "surfaceOk": true,
+     "notBrass": true
+    },
+    {
+     "voice": false,
+     "attached": true,
+     "start": [
+      "0px",
+      "0px"
+     ],
+     "inward": [
+      "18px",
+      "18px"
+     ],
+     "bg": "rgb(24, 24, 24)",
+     "surfaceOk": true,
+     "notBrass": true
+    }
+   ]
+  },
+  {
+   "id": "C-V9",
+   "family": "voice",
+   "claim": "No Brass as speaker colour: the Voice Note, its control and its ink use Surface / primary / secondary / tertiary only; Brass stays on the navigation family.",
+   "pass": true,
+   "detail": [
+    {
+     "ap": "dark",
+     "brass": "rgb(165, 142, 111)",
+     "hit": 0
+    },
+    {
+     "ap": "light",
+     "brass": "rgb(122, 100, 70)",
+     "hit": 0
+    }
+   ]
+  },
+  {
+   "id": "C-V10",
+   "family": "voice",
+   "claim": "Stored playback state is carried by FORM, not colour: at rest there is only the hairline; once played, the heard part is twice the weight and ends in a position mark; mute changes the drawing, not only its colour.",
+   "pass": true,
+   "detail": {
+    "vn": [
+     {
+      "play": "paused",
+      "doneVis": true,
+      "posVis": true,
+      "doneH": 2,
+      "restH": 1
+     },
+     {
+      "play": "rest",
+      "doneVis": false,
+      "posVis": false,
+      "doneH": 2,
+      "restH": 1
+     }
+    ],
+    "mute": {
+     "pressed": "true",
+     "micShown": false,
+     "mutedShown": true,
+     "routeOff": true
+    }
+   }
+  },
+  {
+   "id": "C-V11",
+   "family": "voice",
+   "claim": "The Analysis stays the dark place during a call, even under system Light (G3 §C.1); the Conversation follows the appearance.",
+   "pass": true,
+   "detail": {
+    "analysis": {
+     "ap": "dark",
+     "g": 1
+    },
+    "conversation": "light"
+   }
+  },
+  {
+   "id": "C-COPY-1",
+   "family": "copy",
+   "claim": "The frozen Arabic normal opener is exact — in the registry (against G1.1 §1) and on the rendered page.",
+   "pass": true,
+   "detail": {
+    "frozen": "اهلا يا {display_name} ... انا في انتظارك ... يلا نبدأ",
+    "registry": "اهلا يا {display_name} ... انا في انتظارك ... يلا نبدأ",
+    "shown": "اهلا يا نور ... انا في انتظارك ... يلا نبدأ"
+   }
+  },
+  {
+   "id": "C-COPY-2",
+   "family": "copy",
+   "claim": "English casing is QANDEEL everywhere: no \"Qandeel\" in any registry row, rendered word or accessible name.",
+   "pass": true,
+   "detail": {
+    "reg": [],
+    "hits": []
+   }
+  },
+  {
+   "id": "C-COPY-3",
+   "family": "copy",
+   "claim": "Frozen names are not rewritten: every CANON row appears verbatim in its named authority (G1.1, G1.2, I-08A4, P1, P3, T-08 product-copy.ts, P3-A COPY_TABLE APPROVED rows).",
+   "pass": true,
+   "detail": {
+    "canon": 23,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-COPY-4",
+   "family": "copy",
+   "claim": "Every registry row carries exactly one of the five statuses, and \"Needs PO approval\" is YES exactly for PROPOSED_FOR_PO_REVIEW.",
+   "pass": true,
+   "detail": {
+    "rows": 170,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-COPY-5",
+   "family": "copy",
+   "claim": "Every word the page shows is a registered string and matches its registry text exactly (no unregistered or drifted copy) — so every newly authored word is tagged with its status.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv/ar",
+     "n": 8,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "conv/en",
+     "n": 8,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "record/ar",
+     "n": 8,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "notif/ar",
+     "n": 51,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "notif/en",
+     "n": 51,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "settings/ar",
+     "n": 10,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "settings/en",
+     "n": 10,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "publicid/ar",
+     "n": 18,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "publicid/en",
+     "n": 18,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "understanding/ar",
+     "n": 9,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "understanding/en",
+     "n": 9,
+     "drift": [],
+     "loose": []
+    }
+   ]
+  },
+  {
+   "id": "C-COPY-6",
+   "family": "copy",
+   "claim": "The P3 permission-education sheet stays AUDIT_OWNED (P4-C2 §5); none of its strings is proposed.",
+   "pass": true,
+   "detail": [
+    [
+     "p3.eduTitle",
+     "AUDIT_OWNED"
+    ],
+    [
+     "p3.eduBody",
+     "AUDIT_OWNED"
+    ],
+    [
+     "p3.eduAllow",
+     "AUDIT_OWNED"
+    ],
+    [
+     "p3.eduNotNow",
+     "AUDIT_OWNED"
+    ],
+    [
+     "p3.osBoundary",
+     "AUDIT_OWNED"
+    ],
+    [
+     "p3.osBoundaryNote",
+     "AUDIT_OWNED"
+    ],
+    [
+     "p3.notNowNote",
+     "AUDIT_OWNED"
+    ]
+   ]
+  },
+  {
+   "id": "C-COPY-7",
+   "family": "copy",
+   "claim": "Voice / call strings stay RUNTIME_GATED (QAN-BL-VOICE-01; VI-01 V01–V07), including the two P3-A marked CANON; the only visible gated words are the capture word and the call record's word.",
+   "pass": true,
+   "detail": {
+    "gated": 22,
+    "visibleGated": [
+     "cRecord",
+     "vRecording"
+    ]
+   }
+  },
+  {
+   "id": "C-COPY-8",
+   "family": "copy",
+   "claim": "Fixture text stays FIXTURE_ONLY: all 63 P3-A event sentences, the conversation turns (rendered data-fixture) and the specimen / handle values.",
+   "pass": true,
+   "detail": {
+    "p3": 63,
+    "registry": 63,
+    "renderedFixtureTurns": 4
+   }
+  },
+  {
+   "id": "C-COPY-9",
+   "family": "copy",
+   "claim": "Arabic / English semantic parity: every row has both languages (or neither), with identical placeholders.",
+   "pass": true,
+   "detail": {
+    "rows": 170,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-COPY-10",
+   "family": "copy",
+   "claim": "English register: no PROPOSED English string ships \"context\" or \"live\" as a product word (VI-01 §4 / §7.2); the Live edge the page shows uses the proposed words.",
+   "pass": true,
+   "detail": {
+    "bad": [],
+    "edge": "Following the conversation as it continues"
+   }
+  },
+  {
+   "id": "C-COPY-11",
+   "family": "copy",
+   "claim": "P3 residual coverage: every one of P3-A's 125 interface keys is dispositioned (its own row, or the same Product string above).",
+   "pass": true,
+   "detail": {
+    "keys": 125,
+    "miss": [],
+    "dangling": []
+   }
+  },
+  {
+   "id": "C-COPY-12",
+   "family": "copy",
+   "claim": "Arabic T1 register and gender: no PROPOSED Arabic chrome string uses spoken-Egyptian markers or masculine singular imperatives (VI-01 §3.1, §3.6). The frozen opener is exempt.",
+   "pass": true,
+   "detail": {
+    "proposed": 107,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-A1",
+   "family": "accessibility",
+   "claim": "Every visible control, and every icon-only control in particular, has a non-empty accessible name — ours and the G3.2 controls that stay visible.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv",
+     "n": 11,
+     "unnamed": []
+    },
+    {
+     "s": "conv",
+     "n": 11,
+     "unnamed": []
+    },
+    {
+     "s": "record",
+     "n": 11,
+     "unnamed": []
+    },
+    {
+     "s": "call-conv",
+     "n": 12,
+     "unnamed": []
+    },
+    {
+     "s": "call-analysis",
+     "n": 10,
+     "unnamed": []
+    },
+    {
+     "s": "analysis-pinned",
+     "n": 8,
+     "unnamed": []
+    },
+    {
+     "s": "notif",
+     "n": 9,
+     "unnamed": []
+    },
+    {
+     "s": "publicid",
+     "n": 2,
+     "unnamed": []
+    },
+    {
+     "s": "settings",
+     "n": 10,
+     "unnamed": []
+    }
+   ]
+  },
+  {
+   "id": "C-A2",
+   "family": "accessibility",
+   "claim": "Every control of ours meets the 44 × 44 pt target (P2 §10 / P3 §16; Apple HIG 44 pt). Android's 48 dp is reported per control as an implementation note, not a failure (finding F-05).",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv",
+     "small": [],
+     "under48": 8,
+     "n": 11
+    },
+    {
+     "s": "conv",
+     "small": [],
+     "under48": 8,
+     "n": 11
+    },
+    {
+     "s": "record",
+     "small": [],
+     "under48": 8,
+     "n": 11
+    },
+    {
+     "s": "call-conv",
+     "small": [],
+     "under48": 9,
+     "n": 12
+    },
+    {
+     "s": "call-analysis",
+     "small": [],
+     "under48": 3,
+     "n": 6
+    },
+    {
+     "s": "analysis-pinned",
+     "small": [],
+     "under48": 0,
+     "n": 3
+    },
+    {
+     "s": "notif",
+     "small": [],
+     "under48": 5,
+     "n": 9
+    },
+    {
+     "s": "publicid",
+     "small": [],
+     "under48": 0,
+     "n": 2
+    },
+    {
+     "s": "settings",
+     "small": [],
+     "under48": 1,
+     "n": 10
+    }
+   ]
+  },
+  {
+   "id": "C-A3",
+   "family": "accessibility",
+   "claim": "Meaning is never colour-only: Voice Note state is form (C-V10), mute / route are form, confidence states are words, the call record has a glyph and a word, and the switcher selection has a marker + weight.",
+   "pass": true,
+   "detail": {
+    "words": [
+     "واضح",
+     "يتشكّل",
+     "فيه تعارض",
+     "يحتاج سياقًا أكثر"
+    ],
+    "sel": {
+     "marker": true,
+     "weight": "600"
+    },
+    "rec": {
+     "glyph": true,
+     "word": true
+    }
+   }
+  },
+  {
+   "id": "C-A4",
+   "family": "accessibility",
+   "claim": "At 320 × 568 nothing essential clips: every registered string fits its box, every Voice / call / warning box stays inside the phone, the chrome does not overflow, in Arabic and English.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "conv/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "opener/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "record/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "record/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "call-conv/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "call-analysis/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "notif/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "notif/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "publicid/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "publicid/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "settings/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "understanding/en",
+     "bad": [],
+     "sw": 320
+    }
+   ]
+  },
+  {
+   "id": "C-A5",
+   "family": "accessibility",
+   "claim": "Large text does not clip Arabic: every Arabic registered string keeps line-height ≥ 1.6 and fits its box; the Voice Note and call line keep their controls ≥ 44 pt.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "notif",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "publicid",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "understanding",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "record",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "call-conv",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "conv",
+     "bad": [],
+     "small": []
+    }
+   ]
+  },
+  {
+   "id": "C-A6",
+   "family": "accessibility",
+   "claim": "Increased Contrast stays legible: every visible text of ours meets 4.5:1 (3:1 for large text) against its actual ground, in Dark and Light, Conversation / call / Settings.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv/dark",
+     "n": 19,
+     "low": []
+    },
+    {
+     "s": "conv/light",
+     "n": 19,
+     "low": []
+    },
+    {
+     "s": "call-conv/dark",
+     "n": 19,
+     "low": []
+    },
+    {
+     "s": "notif/light",
+     "n": 55,
+     "low": []
+    },
+    {
+     "s": "publicid/dark",
+     "n": 21,
+     "low": []
+    }
+   ]
+  },
+  {
+   "id": "C-A6s",
+   "family": "accessibility",
+   "claim": "Standard contrast (informational baseline for C-A6): the same measurement without Increased Contrast. Values below 4.5:1 here belong to frozen tokens, not to P4-C3, and are reported, never \"fixed\" by a new colour.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv/dark",
+     "lowest": [
+      {
+       "k": "composer",
+       "r": 5.07
+      },
+      {
+       "k": "door",
+       "r": 5.44
+      },
+      {
+       "k": "أمس",
+       "r": 5.44
+      }
+     ]
+    },
+    {
+     "s": "conv/light",
+     "lowest": [
+      {
+       "k": "mine",
+       "r": 4.5
+      },
+      {
+       "k": "shared",
+       "r": 4.5
+      },
+      {
+       "k": "public",
+       "r": 4.5
+      }
+     ]
+    },
+    {
+     "s": "notif/light",
+     "lowest": [
+      {
+       "k": "p3.proactive",
+       "r": 5.42
+      },
+      {
+       "k": "p3.quiet",
+       "r": 5.42
+      },
+      {
+       "k": "p3.snooze",
+       "r": 5.42
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "C-A7",
+   "family": "accessibility",
+   "claim": "Reduced Motion removes movement, never meaning: the same words, names, controls and still pixels with and without it; every transition of ours is 0 ms under it.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv",
+     "sameMeaning": true,
+     "samePixels": true,
+     "nonzeroTransitions": 0
+    },
+    {
+     "s": "record",
+     "sameMeaning": true,
+     "samePixels": true,
+     "nonzeroTransitions": 0
+    },
+    {
+     "s": "call-conv",
+     "sameMeaning": true,
+     "samePixels": true,
+     "nonzeroTransitions": 0
+    }
+   ]
+  },
+  {
+   "id": "C-A8",
+   "family": "accessibility",
+   "claim": "Keyboard focus is visible (E1R perimeter) and never hidden: on the Voice Note control, the call controls and the warning's choices.",
+   "pass": true,
+   "detail": [
+    {
+     "sel": ".vn .vplay",
+     "ring": true,
+     "visible": true
+    },
+    {
+     "sel": "#c-mute",
+     "ring": true,
+     "visible": true
+    },
+    {
+     "sel": "#c-end",
+     "ring": true,
+     "visible": true
+    },
+    {
+     "sel": "#pid-keep",
+     "ring": true,
+     "visible": true
+    }
+   ]
+  },
+  {
+   "id": "C-L1",
+   "family": "launch",
+   "claim": "iOS launch screen follows Apple guidance: one solid World colour in the current appearance, no text, no logo, no branding, nothing runtime-dependent.",
+   "pass": true,
+   "detail": [
+    {
+     "kids": [
+      "status"
+     ],
+     "txt": 0,
+     "imgs": 0,
+     "solid": true,
+     "bg": "rgb(16, 16, 16)",
+     "world": "#101010"
+    },
+    {
+     "kids": [
+      "status"
+     ],
+     "txt": 0,
+     "imgs": 0,
+     "solid": true,
+     "bg": "rgb(239, 238, 235)",
+     "world": "#efeeeb"
+    }
+   ]
+  },
+  {
+   "id": "C-L2",
+   "family": "launch",
+   "claim": "The iOS launch screen is identical to the first app-owned frame (Apple: \"nearly identical to the first screen\"): the two captures are byte-identical in both appearances — no visual jump, no second splash.",
+   "pass": true,
+   "detail": [
+    {
+     "a": "l-ios-d",
+     "b": "h-ios-d",
+     "same": true
+    },
+    {
+     "a": "l-ios-l",
+     "b": "h-ios-l",
+     "same": true
+    }
+   ]
+  },
+  {
+   "id": "C-L3",
+   "family": "launch",
+   "claim": "Android 12+ SplashScreen: the approved I-08B2.5 adaptive icon (vendored bytes) in the 160 dp mask of the 240 dp icon box, centred, over a single opaque World colour; no animated icon, no branding image.",
+   "pass": true,
+   "detail": {
+    "out": [
+     {
+      "mask": [
+       160,
+       160
+      ],
+      "box": [
+       240,
+       240
+      ],
+      "round": "50%",
+      "centred": true,
+      "src": true,
+      "bg": "rgb(16, 16, 16)",
+      "imgs": 1,
+      "txt": 0
+     },
+     {
+      "mask": [
+       160,
+       160
+      ],
+      "box": [
+       240,
+       240
+      ],
+      "round": "50%",
+      "centred": true,
+      "src": true,
+      "bg": "rgb(239, 238, 235)",
+      "imgs": 1,
+      "txt": 0
+     },
+     {
+      "mask": [
+       160,
+       160
+      ],
+      "box": [
+       240,
+       240
+      ],
+      "round": "50%",
+      "centred": true,
+      "src": true,
+      "bg": "rgb(16, 16, 16)",
+      "imgs": 1,
+      "txt": 0
+     }
+    ],
+    "iconSha": "630dec33e0ec"
+   }
+  },
+  {
+   "id": "C-L4",
+   "family": "launch",
+   "claim": "Android handoff is truthful: the first app-owned frame keeps the splash's exact background colour and removes the system icon — no second custom splash.",
+   "pass": true,
+   "detail": [
+    {
+     "ap": "dark",
+     "splash": "rgb(16, 16, 16)",
+     "app": {
+      "bg": "rgb(16, 16, 16)",
+      "kids": "status",
+      "owner": "app"
+     }
+    },
+    {
+     "ap": "light",
+     "splash": "rgb(239, 238, 235)",
+     "app": {
+      "bg": "rgb(239, 238, 235)",
+      "kids": "status",
+      "owner": "app"
+     }
+    }
+   ]
+  },
+  {
+   "id": "C-L5",
+   "family": "launch",
+   "claim": "No fake delay: no minimum-duration or keep-on-screen hold is declared anywhere; the launch code path contains no timer.",
+   "pass": true,
+   "detail": {
+    "attr": null,
+    "launchTimer": false
+   }
+  },
+  {
+   "id": "C-L6",
+   "family": "launch",
+   "claim": "The standalone lantern task owns everything after the boundary: the first app-owned frame is deliberately empty — ground and system status only, no lantern, no Q, no substitute composition.",
+   "pass": true,
+   "detail": [
+    {
+     "kids": "status",
+     "lantern": 0,
+     "marks": 0
+    },
+    {
+     "kids": "status",
+     "lantern": 0,
+     "marks": 0
+    }
+   ]
+  }
+ ],
+ "planted": [
+  {
+   "defect": "waveform",
+   "check": "C-V1",
+   "rejected": true
+  },
+  {
+   "defect": "fakelevel",
+   "check": "C-V1",
+   "rejected": true
+  },
+  {
+   "defect": "callplay",
+   "check": "C-V3",
+   "rejected": true
+  },
+  {
+   "defect": "calltranscript",
+   "check": "C-V3",
+   "rejected": true
+  },
+  {
+   "defect": "callchange",
+   "check": "C-V5",
+   "rejected": true
+  },
+  {
+   "defect": "speakingprose",
+   "check": "C-V6",
+   "rejected": true
+  },
+  {
+   "defect": "wrongdir",
+   "check": "C-V8",
+   "rejected": true
+  },
+  {
+   "defect": "colouronly",
+   "check": "C-V10",
+   "rejected": true
+  },
+  {
+   "defect": "lightanalysis",
+   "check": "C-V11",
+   "rejected": true
+  },
+  {
+   "defect": "openerdrift",
+   "check": "C-COPY-1",
+   "rejected": true
+  },
+  {
+   "defect": "casing",
+   "check": "C-COPY-2",
+   "rejected": true
+  },
+  {
+   "defect": "ungated",
+   "check": "C-COPY-5",
+   "rejected": true
+  },
+  {
+   "defect": "contextword",
+   "check": "C-COPY-5",
+   "rejected": true
+  },
+  {
+   "defect": "livecopy",
+   "check": "C-COPY-10",
+   "rejected": true
+  },
+  {
+   "defect": "noname",
+   "check": "C-A1",
+   "rejected": true
+  },
+  {
+   "defect": "smalltarget",
+   "check": "C-A2",
+   "rejected": true
+  },
+  {
+   "defect": "splashtext",
+   "check": "C-L1",
+   "rejected": true
+  },
+  {
+   "defect": "fakedelay",
+   "check": "C-L5",
+   "rejected": true
+  },
+  {
+   "defect": "lanterncontent",
+   "check": "C-L6",
+   "rejected": true
+  }
+ ]
+}

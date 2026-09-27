@@ -1,0 +1,69 @@
+{
+  "$description": "I-08B3.1-F2 — LIVING BRASS, LIGHT APPEARANCE. This file fills the context I-08B3.1-C3 declared and left empty under invariant I-13: 'a light expression that returned the dark body would be a value nobody designed, shipping under a name someone trusted.' It does not return the dark body and it does not darken it arbitrarily. Every identity and navigation-machinery name in the semantic layer still reaches THIS token through the alias chain C3 built; not one of those aliases is touched.",
+  "qandeel": {
+    "$type": "color",
+    "expression": {
+      "material": {
+        "living-brass": {
+          "body": {
+            "$value": {
+              "colorSpace": "srgb",
+              "components": [
+                0.478431,
+                0.392157,
+                0.27451
+              ],
+              "hex": "#7a6446"
+            },
+            "$description": "LIVING BRASS — THE BODY, LIGHT APPEARANCE. oklch(0.5171 0.0521 74.8).\n\nTHE HUE IS HELD TO 0.2 OF A DEGREE. The dark body is authored at hue 75.0 and this recovers at 74.8. Hue is what a per-channel inversion destroys — an inverted Living Brass lands at 256°, which is blue — so holding it is not a nicety, it is the whole content of 'the same material under different lighting'. The chroma is held too, 0.0516 to 0.0521, which keeps the material in exactly the same rung of the cross-appearance ladder: still the second most chromatic thing in the system, still above QANDEEL Light, still above the atmosphere, still below Error.\n\nONLY THE LIGHTNESS MOVED, AND THE RULE THAT MOVED IT IS ITS INK DUTY. On a light ground the material's two jobs pull apart for the first time: in dark, one value was both the metal and the ink of the identity mark and the navigation labels, because a warm mid-tone on near-black is legible by construction. On a near-white ground it is not. The identity mark and the navigation items are TEXT at sizes below the WCAG large-text threshold, so 4.5:1 binds, and the alias chain that makes them one token is frozen — splitting it in light only would give the semantic layer an appearance-dependent shape and is not F2's to do.\n\nSO: MEET 4.5:1 AGAINST BOTH GROUNDS, THEN MOVE THE SMALLEST DISTANCE THAT ALLOWS. This is I-08B3.1-D2R's own selection discipline. It lands at 4.84:1 against the World and 4.50:1 against the functional Surface, dEok 0.1424 from the frozen dark body.\n\nTHE ROAD NOT TAKEN IS IN THE RECORD. Reproducing dark Brass's 6.07:1 contrast ratio instead — the rule the reading ramp uses — was available and gives #6b5538, at dEok 0.1950 from the frozen body: 37% further from the material. The ratio rule is right for READING, where the ratio IS the hierarchy, and wrong for a MATERIAL, whose identity is its hue and its chroma and whose contrast requirement is a floor rather than a target.",
+            "$extensions": {
+              "com.qandeel.freeze": {
+                "class": "production-default",
+                "serves": "qandeel.appearance.role-identity-survives-appearance",
+                "why": "THE CONTRACT IS HUE AND CHROMA CONSTANCY PLUS THE 4.5:1 INK FLOOR. This hex is where those meet on this ground and on this renderer. The material's rendering at large identity moments — the brushed/handled character C3 permits — is production craft and is NOT re-derived here; C3's character derivation is dark-appearance work and its light counterpart is recorded as open."
+              },
+              "com.qandeel.provenance": {
+                "derivedBy": "tools/f2-derive.mjs",
+                "rule": "hold hue and chroma; meet 4.5:1 against both light grounds; then minimise dEok from the frozen dark body",
+                "frozenDarkBody": "#a58e6f",
+                "hueDarkToLight": [
+                  75,
+                  74.8
+                ],
+                "chromaDarkToLight": [
+                  0.0516,
+                  0.0521
+                ],
+                "dEokFromDarkBody": 0.1424,
+                "rejectedCandidate": {
+                  "hex": "#6b5538",
+                  "rule": "reproduce the dark contrast ratio 6.07:1",
+                  "dEokFromDarkBody": 0.195,
+                  "why": "37% further from the frozen material, for a ratio the material never needed to hold"
+                }
+              },
+              "com.qandeel.doesNotEncode": [
+                "selection",
+                "pressed",
+                "focus",
+                "hover",
+                "disabled",
+                "unread",
+                "status",
+                "success",
+                "warning",
+                "confidence",
+                "evidence",
+                "recency",
+                "analytical importance",
+                "FAR / MID / NEAR",
+                "premium entitlement",
+                "appearance"
+              ]
+            }
+          }
+        }
+      }
+    }
+  }
+}

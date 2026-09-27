@@ -1,0 +1,198 @@
+{
+ "note": "Every board, its bytes and the captures it shows.",
+ "boards": [
+  {
+   "board": "01-launch-handoff-ios.png",
+   "bytes": 205305,
+   "sha256": "2df183a96ecfeeeb520407439b6b3dcbc446c6bc60e2363faba8a4dd032f769a",
+   "shots": [
+    "l-ios-d",
+    "h-ios-d",
+    "l-ios-d320",
+    "l-ios-l",
+    "h-ios-l"
+   ]
+  },
+  {
+   "board": "02-launch-handoff-android.png",
+   "bytes": 216700,
+   "sha256": "e82e15826d20046dfea9edbe25e018cfbb064d1e4f567aca588376b6041cd176",
+   "shots": [
+    "l-and-d",
+    "h-and-d",
+    "l-and-d430",
+    "l-and-l",
+    "h-and-l"
+   ]
+  },
+  {
+   "board": "03-voice-note-history-ar.png",
+   "bytes": 262555,
+   "sha256": "080105fc15ab6f487165614d72736662898a48598d6d1af7367935e16ac01719",
+   "shots": [
+    "vn-ar-rest",
+    "vn-ar-paused",
+    "vn-ar-playing",
+    "vn-ar-light",
+    "vn-ar-430"
+   ]
+  },
+  {
+   "board": "04-voice-note-history-en.png",
+   "bytes": 236750,
+   "sha256": "c57e7f91aeea1c2f8b1cae22c3debd2cc4a5cc88c28d04874b8114f2c47f3041",
+   "shots": [
+    "vn-en-rest",
+    "vn-en-paused",
+    "vn-en-dark",
+    "vn-en-430",
+    "sent-en"
+   ]
+  },
+  {
+   "board": "05-finished-call-history-ar-en.png",
+   "bytes": 241171,
+   "sha256": "ac4b29394ce1662b5875b8ca7a613c8aecf88380d692f3eb5ad4172e6b045fd8",
+   "shots": [
+    "ended-ar",
+    "ended-en",
+    "vn-ar-paused"
+   ]
+  },
+  {
+   "board": "06-voice-note-recording-non-signal.png",
+   "bytes": 271366,
+   "sha256": "b168a556740327fd33a6eaae6441e7c7c82c138a7174a59411c4ebcdce14054e",
+   "shots": [
+    "rec-ar",
+    "rec-en",
+    "rec-ar-light",
+    "rec-en-dark",
+    "sent-ar",
+    "rec-ar-320",
+    "rec-en-320"
+   ]
+  },
+  {
+   "board": "07-live-call-analysis-non-signal.png",
+   "bytes": 658761,
+   "sha256": "c6451d3b96d61581b6046b40034e1635d95b569ad7f4f6c63c79ab304daeadb5",
+   "shots": [
+    "j-ar-0",
+    "j-ar-1",
+    "j-ar-2",
+    "j-ar-3",
+    "j-ar-4",
+    "ca-en",
+    "cc-en",
+    "cm-ar",
+    "cm-en",
+    "ca-en-430",
+    "ca-ar"
+   ]
+  },
+  {
+   "board": "08-core-copy-conversation-analysis-replay-timeline.png",
+   "bytes": 755030,
+   "sha256": "1a2583269d87a65fae12b808474a223d57400de91eb2cf269aca4000996c07e9",
+   "shots": [
+    "vn-en-rest",
+    "vn-ar-rest",
+    "rep-ar",
+    "rep-en",
+    "pin-en",
+    "an-en"
+   ]
+  },
+  {
+   "board": "09-understanding-confidence-and-settings-copy.png",
+   "bytes": 385667,
+   "sha256": "9f4185bcd6238199998b307c68eccb946bca8e9a288ce4646d49d1ca1db3e0b6",
+   "shots": [
+    "und-ar",
+    "und-en",
+    "set-ar",
+    "set-en"
+   ]
+  },
+  {
+   "board": "10-public-id-warning.png",
+   "bytes": 345843,
+   "sha256": "f0d07d96c0db6c1f82b9a498e41ad42191c04882091a7f3c81795c4803a8e7a0",
+   "shots": [
+    "pid-ar",
+    "pid-en",
+    "s320-pid-ar",
+    "s320-pid-en",
+    "lg-pid-ar",
+    "f-pid-en"
+   ]
+  },
+  {
+   "board": "11-p3-residual-copy.png",
+   "bytes": 533468,
+   "sha256": "64d4a38f887ed70c23d55a3b5faf0527fc6ab9e94f3a19f4876a194aa210be13",
+   "shots": [
+    "nt-ar-pro",
+    "nt-ar-quiet",
+    "nt-ar-lock",
+    "nt-en-pro",
+    "nt-en-quiet",
+    "nt-en-lock"
+   ]
+  },
+  {
+   "board": "12-opener-ar-en.png",
+   "bytes": 269646,
+   "sha256": "0001495072e25770508a244512d52eba273d05033451431fc9ce28a91296b18e",
+   "shots": [
+    "op-ar",
+    "op-en",
+    "op-ar-light",
+    "op-en-dark",
+    "s320-op-ar",
+    "s320-op-en"
+   ]
+  },
+  {
+   "board": "13-stress-320-large-text.png",
+   "bytes": 518548,
+   "sha256": "abf8def52b4b0061d3676a966a0035ede4fcc7652a4afed771c1125e6fc0bddf",
+   "shots": [
+    "s320-vn-ar",
+    "s320-vn-en",
+    "s320-nt-ar",
+    "s320-nt-en",
+    "s320-set-ar",
+    "s320-und-ar",
+    "ca-ar-320",
+    "cc-en-320",
+    "lg-vn-ar",
+    "lg-vn-en",
+    "lg-nt-ar",
+    "lg-und-ar",
+    "lg-rec-ar",
+    "lg320-vn-ar",
+    "lg320-cc-ar"
+   ]
+  },
+  {
+   "board": "14-accessibility-contrast-reduced-motion.png",
+   "bytes": 659678,
+   "sha256": "eb4cb41b9ddea1e23b756aed45b0dde609e28ce61cc356863232fd24dc7c3077",
+   "shots": [
+    "hc-vn-ar",
+    "hc-vn-en",
+    "hc-ca-ar",
+    "hc-nt-en",
+    "rm-vn-ar",
+    "vn-ar-paused",
+    "rm-rec-en",
+    "rm-ca-ar",
+    "f-vplay-ar",
+    "f-mute-ar",
+    "f-end-en"
+   ]
+  }
+ ]
+}
