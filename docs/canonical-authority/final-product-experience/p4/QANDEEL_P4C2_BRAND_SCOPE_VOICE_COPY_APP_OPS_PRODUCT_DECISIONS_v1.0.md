@@ -3,7 +3,7 @@
 **Status:** `CANONICAL PRODUCT DECISION RECORD / CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE`
 **Date:** 2026-09-27
 **Track:** P4 — Remaining Product / Visual Gaps Census & Closure
-**Scope:** `P4-DQ-05`, partial `P4-DQ-06`, `P4-DQ-07` … `P4-DQ-09`, and `P4-DQ-11` … `P4-DQ-17`
+**Scope:** `P4-DQ-05` … `P4-DQ-09` and `P4-DQ-11` … `P4-DQ-17`
 **P4 lifecycle:** **P4 remains ACTIVE, NOT CLOSED / NOT FROZEN.**
 
 ## 1. P4-DQ-05 — Brand — RESOLVED
@@ -14,17 +14,21 @@
 - Dedicated iOS dark / tinted app-icon variants are **not in v1** and require a later Product direction if reopened.
 - No master geometry or inherited colour authority is changed.
 
-## 2. P4-DQ-06 — Launch / splash / gateway — PARTIALLY RESOLVED
+## 2. P4-DQ-06 — Launch / splash / gateway — RESOLVED
 
 The Product Owner selects the sequencing direction:
 
 > **P4 closes the static launch / splash / gateway brand application before the End-to-End audit.**
 
-One yes/no remains deliberately open:
+The Product Owner now explicitly confirms:
 
-> **Is the lantern gateway moment in v1?**
+> **The exceptional lantern gateway identity moment is in v1.**
 
-The grouped approval did not separately answer that question. No answer is inferred, and no lantern animation is frozen.
+P4 freezes only **presence and journey placement**. The lantern's visual design, motion design, interaction choreography, implementation technology and production proof are **not part of P4**. They are intentionally separated into a later standalone task:
+
+> **QANDEEL — Lantern Gateway Identity Moment v1**
+
+That future task must begin with its own research / skills / creative exploration and independent review. P4 performs none of that work and chooses no animation technology here.
 
 ## 3. P4-DQ-07 — Undrawn screens — RESOLVED
 
@@ -92,12 +96,12 @@ A Remote Configuration family requires **Product Owner + Architecture controlled
 ### PO-OPS-19 — code delivery
 Any new App code, whether store-delivered or through a future OTA bundle mechanism, is a **release** governed by release operations. It is not a Company → App control and cannot be generic remote execution. Whether QANDEEL ever adopts OTA code delivery remains a later release-operations decision.
 
-## 7. Remaining Product Owner decision
+## 7. Product Owner decision state
 
-Only one Product Owner row remains open after this record:
+**No Product Owner decision row remains open after this record.**
 
-> **P4-DQ-06 — Is the lantern gateway moment in v1?**
+P4 still has closure work — static launch / gateway proof excluding the standalone lantern animation task, non-signal Voice proof, P4-owned copy authoring/proof, APP-OPS independent review and final P4 reconciliation — but those are not additional Product Owner choices.
 
-Other P4 work remains — launch visual proof, non-signal Voice proof, P4-owned copy authoring/proof, APP-OPS independent review and final P4 reconciliation — but those are not additional Product Owner choices.
+The standalone **QANDEEL — Lantern Gateway Identity Moment v1** task is carried forward deliberately and is not opened by this record.
 
 This record implements no production code, schema, migration, dependency, provider choice or runtime.
