@@ -68,7 +68,7 @@ HR, admin tooling, generic analytics and internal automation.
    content) is superseded in that narrow scope by the CW2-08A controlled amendment.
 5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — **all Product Owner decision rows are resolved**.
 6. [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) — DQ-01 … DQ-04 + contextual-relevance re-ownership.
-7. [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) — DQ-05, partial DQ-06, DQ-07 … 09 and DQ-11 … 17.
+7. [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) — DQ-05 … 09 and DQ-11 … 17, including v1 inclusion of the lantern with its design/motion separated to the standalone later task.
 8. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — future work that is not a Product decision.
 
 ---
