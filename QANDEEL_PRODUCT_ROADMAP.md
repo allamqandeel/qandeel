@@ -19,7 +19,8 @@ Every concrete work item still requires its own scoped Task Contract before exec
    below.**
 ---
 ## 2. Current roadmap phase — Final Product Decision Closure
-The project is currently in **Final Product Decision Closure**.
+The project is currently in **Final Product Decision Closure**. With P4's closure, all four tracks below are
+`CLOSED / FROZEN` (P4 binding on the merge of PR #280); the phase completes on that merge.
 Before the whole Product is audited from first launch to long-term use, close the known Product/visual decision
 tracks that would otherwise make the audit repeatedly stop on already-known unresolved areas.
 ### P1 — User Profile / Identity / Preferences / QANDEEL Understanding
@@ -82,9 +83,15 @@ This includes, where Product decisions are required:
 Do not reopen I-08N-01's frozen authority, privacy, interruption-class, Direct Entry or disclosure semantics.
 Platform/runtime implementation remains separate unless a later task explicitly owns it.
 ### P4 — Remaining Product / Visual Gaps Census & Closure
-**P4 — ACTIVE — CENSUS / CLOSURE TRACK OPENED; NOT CLOSED**
-APP-OPS-01 (QANDEEL App ↔ QANDEEL Company Operations Contract) is one explicit Product-Owner-approved cross-cutting
-exception to the normal residual-canon boundary below; its P4-A material is in [`docs/p4/`](docs/p4/P4_READ_FIRST.md).
+**P4 — CLOSED / FROZEN** — closed by
+[`docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md),
+binding on the merge of PR #280 after independent review. That record is the Product / Architecture authority for this
+track; this section only records the lifecycle. Production implementation remains open.
+APP-OPS-01 (QANDEEL App ↔ QANDEEL Company Operations Contract), the one explicit Product-Owner-approved cross-cutting
+exception to the normal residual-canon boundary below, is `CLOSED / FROZEN` with it; P4's local evidence is in
+[`docs/p4/`](docs/p4/P4_READ_FIRST.md). The standalone task **QANDEEL — Lantern Gateway Identity Moment v1** is carried
+by the canonical backlog (`QAN-BL-LANTERN-01`); this roadmap does not sequence it.
+The track's original scope, kept as written:
 Perform a bounded census of the **existing Product and visual canon** for items deliberately left:
 - `NOT FROZEN`;
 - `PROOF ONLY`;
@@ -130,6 +137,8 @@ The audit output must classify each user moment as one of:
 - `DEFERRED / PRE-LAUNCH`.
 The audit must produce a traceable gap matrix:
 `User moment → User goal → Surface → Entry trigger → Existing Product decision → Existing implementation → Visual status → Missing decisions → Missing implementation → Owner`.
+The closed APP-OPS-01 (§19, `PO-OPS-11`) extends that matrix, and does not replace it, with `Operational Events Required`
+and `Company Controls Required` for every relevant User Moment, placed before `Owner`.
 ### Work intentionally coupled to this phase
 The following are not to be silently decided before evidence exists:
 #### QANDEEL-specific Model / Provider Benchmark & Selection
@@ -182,7 +191,8 @@ The final roadmap layer is release readiness, including the scopes already owned
 Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
-P1, P2 and P3 are `CLOSED / FROZEN` as Product / design contracts. The current Product work track is:
-> **P4 — Remaining Product / Visual Gaps Census & Closure**
-P4-A has opened P4. P4 is **ACTIVE** and remains **NOT CLOSED / NOT FROZEN** while its Product decisions and required proofs are resolved before closure.
-The End-to-End Product Experience Completeness Audit starts only after P4 closes.
+P1, P2, P3 and P4 are `CLOSED / FROZEN` as Product / design contracts, P4 binding on the merge of PR #280 after
+independent review. After that merge, the next roadmap phase is:
+> **QANDEEL End-to-End Product Experience Completeness Audit**
+It has not started, and this roadmap does not open it: it still requires its own Task Contract. The sequencing in §3–§5
+is unchanged.

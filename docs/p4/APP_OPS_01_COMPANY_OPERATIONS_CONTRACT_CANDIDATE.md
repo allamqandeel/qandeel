@@ -1,7 +1,13 @@
 # QANDEEL — APP-OPS-01
-## QANDEEL App ↔ QANDEEL Company Operations Contract — Candidate
+## QANDEEL App ↔ QANDEEL Company Operations Contract
 
-**Status:** `APP-OPS-01 — PRODUCT / ARCHITECTURE CONTRACT CANDIDATE — PRODUCT OWNER DECISIONS COMPLETE — INDEPENDENT REVIEW / P4 CLOSURE PENDING`
+**Status:** `APP-OPS-01 — CLOSED / FROZEN — QANDEEL APP ↔ QANDEEL COMPANY OPERATIONS PRODUCT / ARCHITECTURE CONTRACT`
+
+> Closed by the [P4 final closure](../canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md)
+> §8, binding on the merge of the pull request that carries it, after independent review. Every §23 condition is met
+> (§23.1). The file keeps its `…_CANDIDATE.md` path only because existing links use it; the path is not a
+> lifecycle statement. Implementation remains unauthorized by this contract alone and belongs to Production Integration
+> (§20).
 
 ---
 
@@ -13,7 +19,7 @@
 | Classification | `KNOWN CROSS-CUTTING PRODUCT GAP — PRODUCT / ARCHITECTURE CLOSURE ONLY` |
 | Track | P4 — Remaining Product / Visual Gaps Census & Closure, task P4-A. It is the one cross-cutting exception the Product Owner admitted into P4 by direct decision ([P4_READ_FIRST.md](P4_READ_FIRST.md) §3) |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` (GitHub `main`, PR #277) |
-| Lifecycle | **candidate, not frozen.** P4-C2 resolves every Product Owner decision row for APP-OPS-01. Independent review and a later P4 closure change are still required (§23) |
+| Lifecycle | **`CLOSED / FROZEN`** by the P4 final closure, binding on merge. Historically a candidate: P4-C2 resolved every Product Owner decision row, and independent review and the P4 closure change completed §23 |
 | Inputs | the Product Owner decisions recorded in §3, which are authoritative input to this candidate and are not reopened here; plus consequences that existing frozen authority forces, each cited |
 | Implementation | **none.** This document creates, changes and authorizes no code, schema, migration, dependency, event, API, service, dashboard, vendor or configuration (§20, §21) |
 
@@ -21,7 +27,10 @@ Reading conventions:
 
 - **`PO-APPROVED`** marks a decision the Product Owner made. This candidate records it and does not reopen it.
 - **`FORCED BY`** marks a consequence that existing frozen authority already fixes. The authority is named.
-- **`CANDIDATE`** marks wording this document proposes for closure. It binds nothing until P4 closes it.
+- **`CANDIDATE`** marks wording this document proposed for closure while it was a candidate. **P4 has now closed it: every
+  `CANDIDATE` clause is frozen as written and binds as part of this contract.** The marker is kept as provenance — it
+  says the clause came from this contract rather than from a Product Owner decision or a forcing authority — and no
+  longer means "not yet binding". Where the text below still calls this document "this candidate", read "this contract".
 - **`OPEN → P4-DQ-nn`** is retained only as a historical notation from the pre-decision candidate. **No such Product Owner row remains open after P4-C2.** The [Product Owner Decision Queue](P4_PRODUCT_OWNER_DECISION_QUEUE.md) is now fully resolved.
 - **`IMPLEMENTED TODAY`** / **`NOT IMPLEMENTED`** describe code on `main` at the baseline. Neither is Product authority.
 
@@ -478,7 +487,7 @@ Product-level responsibilities:
 - approved operational diagnostics (§7);
 - provider / model operational route holds (§14);
 - operational incident coordination;
-- maintaining the App ↔ Company Operations contract (this document, once closed).
+- maintaining the App ↔ Company Operations contract (this document, now closed).
 
 The role's access is bounded by this contract, and later by security implementation (§20). The role never grants
 access to private content (§6). This candidate defines no employee identity, hiring, HR, RBAC implementation,
@@ -590,7 +599,8 @@ CW2-08A is narrowly scoped to the human-access conflict and reopens none of thes
 ### 18.5 Effect on APP-OPS-01 / P4
 
 - `P4-DQ-10` is **RESOLVED BY CONTROLLED CW2-08A AMENDMENT** and no longer blocks APP-OPS-01 or P4 closure.
-- APP-OPS-01 itself remains **`CANDIDATE / NOT FROZEN`** only because independent review and the later P4 closure change are still pending (§23). **No Product Owner decision remains open.**
+- APP-OPS-01 remained **`CANDIDATE / NOT FROZEN`** only until independent review and the P4 closure change completed
+  §23. It is now **`CLOSED / FROZEN`** (§23.1). **No Product Owner decision remains open.**
 
 ## 19. End-to-End Audit handoff
 
@@ -699,7 +709,7 @@ APP-OPS-01 does not decide, design or implement any of the following.
 - `P4-DQ-11` … `P4-DQ-17` are resolved by P4-C2 and recorded as `PO-OPS-13` … `PO-OPS-19`.
 - No Product Owner choice remains to block APP-OPS-01 closure.
 
-The remaining work is **independent review + closure reconciliation**, not another Product decision. Exact implementation mechanisms already assigned to Production Integration / Security remain deliberately unfrozen.
+The independent review and closure reconciliation that remained are complete (§23.1); neither was another Product decision. Exact implementation mechanisms already assigned to Production Integration / Security remain deliberately unfrozen.
 
 
 ## 23. Closure conditions
@@ -720,3 +730,22 @@ the following hold:
 6. `npm run test:task-closure-governance-contract` passes on the closing head.
 
 Until then, APP-OPS-01 is **NOT FROZEN**. It binds no implementation, and nothing may be built from it (§20).
+
+The conditions above are kept as written. They record what closure required.
+
+### 23.1 Closure record
+
+All six conditions are met in the P4 final closure change
+([`QANDEEL_P4_FINAL_CLOSURE_v1.0.md`](../canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md) §8):
+
+| # | Condition | How it is met |
+|---|---|---|
+| 1 | Product Owner + independent review | the Product Owner decisions are complete (§3, §22) and the independent review is complete |
+| 2 | CW2-08A merged | merged through PR #278 at `576b010dcf78276c982f5052cfee7dd1bcbfcbcb` (§18) |
+| 3 | every APP-OPS Product Owner decision resolved; every implementation carry-forward owned | `PO-OPS-01` … `PO-OPS-19`; `P4-DQ-10` by CW2-08A and `P4-DQ-11` … `17` by P4-C2. Each carry-forward names its owner in the [Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) §2.1. No Product decision is reopened |
+| 4 | every carry-forward reconciled under BG-06 / BG-08 | the P4 final closure §9: no APP-OPS carry-forward qualifies for backlog admission. The audit fields go to the End-to-End audit (`PO-OPS-11`); implementation, security mechanics and diagnostic identity to Production Integration; operational readiness and release / OTA governance to Release Hardening; any Remote Configuration family to Product Owner + Architecture controlled approval; call-status events also depend on `QAN-BL-VOICE-01` |
+| 5 | final lifecycle banner in the closing change (BG-09) | this document's Status line, in the same change |
+| 6 | `npm run test:task-closure-governance-contract` passes on the closing head | run on the closing change and reported with it |
+
+> **APP-OPS-01 — CLOSED / FROZEN.** It freezes the Product / Architecture boundary only. It still authorizes no
+> implementation by itself; Production Integration builds it after the End-to-End audit (§20), within §21.

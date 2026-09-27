@@ -1,10 +1,11 @@
 # QANDEEL — P4 Product Owner Decision Queue
 
-**Status:** `P4-C2 SYNCHRONIZED — ALL PRODUCT OWNER DECISIONS RESOLVED — P4 STILL ACTIVE`
+**Status:** `P4 DECISION QUEUE — COMPLETE / CLOSED EVIDENCE — ZERO OPEN PRODUCT OWNER DECISIONS — CLOSED / FROZEN WITH P4`
 
 | | |
 |---|---|
-| Track | P4, task P4-A |
+| Track | P4, task P4-A; closed with P4 by the [P4 final closure](../canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md) |
+| Lifecycle | **closed evidence.** Every row is resolved; no row can be reopened here. A future Product question needs its own controlled change. The "Blocks" and "Proof" columns record what was true before closure; the proof and copy work `P4-DQ-06`, `08` and `09` still needed is complete (P4-C3, P4-C3R, P4-C4) |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
 | Rule | every open row is a choice existing authority does **not** settle. P4-A answers none of them. Where the evidence supports one, a **recommended option** is given. A recommendation is not a decision |
 | Open decisions | **0** — all Product Owner decision rows are resolved |
@@ -28,10 +29,10 @@ The last two fields of each row mean:
 | `P4-DQ-03` | **RESOLVED — Q-A:** Q only at named identity moments; no persistent shell Q | no (resolved) | — | completed |
 | `P4-DQ-04` | **RESOLVED:** SW-3 Keyed Seam; dedicated «سياق الكلام» / Live Context surface retired | no (resolved) | — | completed |
 | `P4-DQ-05` | **RESOLVED:** ratify I-08B2.5; keep bytes/hash; confirm Android 48 dp; defer iOS dark/tinted beyond v1 | no (resolved) | — | completed / future variants deferred |
-| `P4-DQ-06` | **RESOLVED:** static launch/gateway closes in P4; lantern identity moment is in v1 but its motion/design work is a standalone later task | no (resolved) | — | static gateway proof in P4; lantern task later |
+| `P4-DQ-06` | **RESOLVED:** static launch/gateway closes in P4; lantern identity moment is in v1 but its motion/design work is a standalone later task | no (resolved) | — | static gateway proof **completed** (P4-C3 / P4-C3R); lantern task later (`QAN-BL-LANTERN-01`) |
 | `P4-DQ-07` | **RESOLVED:** P4 designs none of the never-drawn full screens; End-to-End audit owns them | no (resolved) | — | no |
-| `P4-DQ-08` | **RESOLVED DIRECTION:** split non-signal Voice visuals from runtime-gated signal morphology | no Product decision remains | — | P4 proof still required |
-| `P4-DQ-09` | **RESOLVED DISPOSITION:** core copy closes in P4; journey residue to audit; Voice state strings remain runtime-gated | no Product decision remains | — | P4-owned copy still needs proof |
+| `P4-DQ-08` | **RESOLVED DIRECTION:** split non-signal Voice visuals from runtime-gated signal morphology | no Product decision remains | — | P4 proof **completed** (P4-C3) |
+| `P4-DQ-09` | **RESOLVED DISPOSITION:** core copy closes in P4; journey residue to audit; Voice state strings remain runtime-gated | no Product decision remains | — | P4-owned copy **proved and ratified** (P4-C3, P4-C3R, P4-C4) |
 | `P4-DQ-10` | **RESOLVED BY CONTROLLED CW2-08A AMENDMENT** — the CW2-08 §8 / H7 human case-evidence access conflict with the No Human Review law | no (resolved) | no (resolved) | no |
 | `P4-DQ-11` | **RESOLVED — C:** automated per-user reliability may operate; human access only after a user-initiated support request | — | no (resolved) | no |
 | `P4-DQ-12` | **RESOLVED — A:** aggregate ratings + public store review text; no QANDEEL-account linkage | — | no (resolved) | no |
@@ -105,7 +106,7 @@ The last two fields of each row mean:
 |---|---|
 | State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
 | Decision | P4 closes the static launch / splash / gateway brand application before the End-to-End audit. The exceptional **lantern gateway identity moment is in v1** |
-| Separation | the lantern's visual design, motion, interaction choreography, implementation technology and production proof are **not P4 work**; they belong to the later standalone task **QANDEEL — Lantern Gateway Identity Moment v1** |
+| Separation | the lantern's visual design, motion, interaction choreography, implementation technology and production proof are **not P4 work**; they belong to the later standalone task **QANDEEL — Lantern Gateway Identity Moment v1**, carried in the canonical backlog as `QAN-BL-LANTERN-01` since P4 closure |
 | Boundary | P4 performs no lantern research, creative exploration or technology selection |
 | Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §2 |
 
@@ -121,7 +122,7 @@ The last two fields of each row mean:
 
 | Field | |
 |---|---|
-| State | **PRODUCT DIRECTION RESOLVED — P4 PROOF STILL REQUIRED** |
+| State | **PRODUCT DIRECTION RESOLVED — P4 PROOF COMPLETED** (P4-C3 boards 03–07; frozen by the P4 final closure §6) |
 | Decision | Freeze only non-signal Voice visuals in P4; live waveform / speaking / listening / activity morphology waits for `QAN-BL-VOICE-01` |
 | Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §4 |
 
@@ -129,7 +130,7 @@ The last two fields of each row mean:
 
 | Field | |
 |---|---|
-| State | **PRODUCT DISPOSITION RESOLVED — P4 COPY WORK STILL REQUIRED** |
+| State | **PRODUCT DISPOSITION RESOLVED — P4 COPY WORK COMPLETED** (proved by P4-C3; ratified by P4-C3R and P4-C4) |
 | Close in P4 | core Conversation / Analysis / Replay / Timeline / Live-edge copy; selected P3 + P1 copy; English casing **QANDEEL**; opener distinction and missing English normal opener |
 | Hand to audit | auth copy; remaining VI-01 residue; Matching proof lines / English Matching copy; P3 permission-education sheet / lower-priority journey copy |
 | Runtime-gated | Voice / call state strings |

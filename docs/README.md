@@ -25,6 +25,16 @@ authority, and the I-08B design closures. The lifecycle / closure map in [`../QA
 them. Some sections below record lifecycle and navigation state as it stood when they were written, and
 are marked where later canonical work superseded them.
 
+## Final Product Decision Closure (P1 – P4)
+
+All four roadmap tracks are `CLOSED / FROZEN` as Product / design contracts; production implementation of each remains
+open, and the End-to-End Product Experience Completeness Audit, the next roadmap phase, has not started.
+
+- [P1 — User Identity / Preferences / QANDEEL Understanding](qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) — **CLOSED / FROZEN**
+- [P2 — Final Iconography System](qandeel-p2-final-iconography-canonical-closure.md) — **CLOSED / FROZEN**
+- [P3 — Notification & Activity Final Product Realization](qandeel-p3-notification-activity-final-realization-canonical-closure.md) — **CLOSED / FROZEN**
+- [P4 — Remaining Product / Visual Gaps Census & Closure](canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md) — **CLOSED / FROZEN**, binding on the merge of PR #280, with the closed [APP-OPS-01](p4/APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) App ↔ Company Operations contract; local evidence and census in [`p4/`](p4/P4_READ_FIRST.md)
+
 ## Index
 
 - [Hypothesis Reasoning Consumption Integration v1](hypothesis-reasoning-consumption-integration-v1.md)
