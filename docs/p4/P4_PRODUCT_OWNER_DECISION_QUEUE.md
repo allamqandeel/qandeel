@@ -1,14 +1,14 @@
 # QANDEEL — P4 Product Owner Decision Queue
 
-**Status:** `P4-C1 SYNCHRONIZED — DQ-01 … DQ-04 RESOLVED BY PRODUCT OWNER — P4 STILL ACTIVE`
+**Status:** `P4-C2 SYNCHRONIZED — ONLY DQ-06 REMAINS OPEN — P4 STILL ACTIVE`
 
 | | |
 |---|---|
 | Track | P4, task P4-A |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
 | Rule | every open row is a choice existing authority does **not** settle. P4-A answers none of them. Where the evidence supports one, a **recommended option** is given. A recommendation is not a decision |
-| Open decisions | **12**: `P4-DQ-05` … `09` and `P4-DQ-11` … `17` |
-| Resolved records | **5**: `P4-DQ-01` … `04` by the [P4-C1 Product decision / controlled amendment](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md), plus `P4-DQ-10` by CW2-08A. They remain for traceability and block nothing. IDs are not renumbered |
+| Open decisions | **1**: `P4-DQ-06` — only the lantern-in-v1 yes/no remains open; its sequencing is already resolved to P4 |
+| Resolved records | **16**: `P4-DQ-01` … `05`, `07` … `17`. P4-C1 resolves `01` … `04`; [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) resolves `05`, `07` … `09`, `11` … `17`; `10` is resolved by CW2-08A. IDs are not renumbered |
 | Excluded on purpose | an unknown implementation detail is not a Product decision. Such items are in the [Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) instead |
 | Traceability | each row cites its [census](P4_RESIDUAL_GAP_CENSUS.md) rows and, for APP-OPS, its [contract candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) section |
 
@@ -27,19 +27,19 @@ The last two fields of each row mean:
 | `P4-DQ-02` | **RESOLVED — U-A:** QANDEEL Understanding persistent Personal row | no (resolved) | — | completed |
 | `P4-DQ-03` | **RESOLVED — Q-A:** Q only at named identity moments; no persistent shell Q | no (resolved) | — | completed |
 | `P4-DQ-04` | **RESOLVED:** SW-3 Keyed Seam; dedicated «سياق الكلام» / Live Context surface retired | no (resolved) | — | completed |
-| `P4-DQ-05` | Ratify the I-08B2.5 brand package, and settle its open items | yes | — | partly |
-| `P4-DQ-06` | Launch / splash / gateway brand application, including the lantern: P4 or audit? | yes (the sequencing answer) | — | if P4 takes it |
-| `P4-DQ-07` | Boundary: which undrawn screens P4 designs, and which the audit carries | yes | — | no (it is a boundary) |
-| `P4-DQ-08` | Voice visual language: what closes now, and what waits for runtime truth | yes | — | yes |
-| `P4-DQ-09` | Residual copy: which clusters freeze before the audit | yes | — | copy in context |
+| `P4-DQ-05` | **RESOLVED:** ratify I-08B2.5; keep bytes/hash; confirm Android 48 dp; defer iOS dark/tinted beyond v1 | no (resolved) | — | completed / future variants deferred |
+| `P4-DQ-06` | **PARTIAL:** P4 owns launch/gateway closure; **OPEN:** is the lantern gateway moment in v1? | yes | — | yes after the lantern choice |
+| `P4-DQ-07` | **RESOLVED:** P4 designs none of the never-drawn full screens; End-to-End audit owns them | no (resolved) | — | no |
+| `P4-DQ-08` | **RESOLVED DIRECTION:** split non-signal Voice visuals from runtime-gated signal morphology | no Product decision remains | — | P4 proof still required |
+| `P4-DQ-09` | **RESOLVED DISPOSITION:** core copy closes in P4; journey residue to audit; Voice state strings remain runtime-gated | no Product decision remains | — | P4-owned copy still needs proof |
 | `P4-DQ-10` | **RESOLVED BY CONTROLLED CW2-08A AMENDMENT** — the CW2-08 §8 / H7 human case-evidence access conflict with the No Human Review law | no (resolved) | no (resolved) | no |
-| `P4-DQ-11` | `IDENTITY / RETENTION / ACCESS MODEL FOR USER-SPECIFIC OPERATIONAL DIAGNOSTICS` | — | the access principle: yes | no |
-| `P4-DQ-12` | Ratings / reviews: the exact boundary | — | no, if the narrower default is kept | no |
-| `P4-DQ-13` | Control-state freshness, integrity and audit, outside CW2-08 | — | no | no |
-| `P4-DQ-14` | Maintenance Mode / Minimum Supported Version: user-facing behavior | — | no, if it is handed to the audit | later |
-| `P4-DQ-15` | Do CW2-08's flag, snapshot and fail-closed laws reach capabilities outside Connected Worlds? | — | yes | no |
-| `P4-DQ-16` | The Approved Remote Configuration family register and its guarantees | — | no (yes, before any Remote Configuration exists) | no |
-| `P4-DQ-17` | Code delivery (store release or over-the-air) against "no generic remote execution" | — | no | no |
+| `P4-DQ-11` | **RESOLVED — C:** automated per-user reliability may operate; human access only after a user-initiated support request | — | no (resolved) | no |
+| `P4-DQ-12` | **RESOLVED — A:** aggregate ratings + public store review text; no QANDEEL-account linkage | — | no (resolved) | no |
+| `P4-DQ-13` | **RESOLVED — A + version/audit:** every control family versioned and audited; mechanism later | — | no (resolved) | no |
+| `P4-DQ-14` | **RESOLVED — A:** user-facing Maintenance / Minimum Version moments go to the audit | — | no (resolved) | later |
+| `P4-DQ-15` | **RESOLVED — A:** CW2-08 flag / fail-safe laws extend app-wide | — | no (resolved) | no |
+| `P4-DQ-16` | **RESOLVED — A:** Remote Config families require Product Owner + Architecture controlled approval; initial set later | — | no (resolved) | no |
+| `P4-DQ-17` | **RESOLVED — A:** any code delivery is a release, never a Company → App control | — | no (resolved) | no |
 
 ---
 
@@ -91,90 +91,48 @@ The last two fields of each row mean:
 | Canonical record | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) §1, §3–§7 |
 | Census | P4-GAP-004 resolved; P4-GAP-005 resolved / superseded |
 
-### `P4-DQ-05` — Brand package ratification and its open items
+### `P4-DQ-05` — RESOLVED — Brand package ratification
 
 | Field | |
 |---|---|
-| Question | (a) Is the I-08B2.5 package ratified as the final brand authority? (b) L-1: keep the stale "NOT approved, NOT frozen" header comment inside the frozen icon SVG, or correct it? (c) confirm or redirect the Android 48 dp adaptive-icon framing; (d) do iOS 18 dark / tinted variants ship in v1? |
-| Why it matters | downstream closures already consume the package as authority, yet it has no lifecycle record. That makes brand the one Product domain whose lifecycle is "NOT ESTABLISHED" |
-| Existing authority | brand SOURCE-PROVENANCE; the review manifest L-1 … L-5; the asset report §13; the artifact index. Variant B was frozen at I-08B2.4 |
-| Viable options | (a) ratify, or ratify with named exceptions. (b) **keep**: the hash stays equal to the frozen I-08B2.4 artefact, and the comment is recorded as superseded by the ratification. **Correct**: the hash changes, and new provenance is recorded. (c) confirm, or redirect with a render. (d) include, or defer to release |
-| Architecture consequences | (b) "correct" changes a canonical byte-identity. The provenance chain must record it |
-| Recommended | (a) **ratify**, because the package is already consumed as canon. (b) **keep** the bytes and record the supersession, which preserves the byte-identity chain G1.1, C3 and P2 rely on. (c) and (d): **no recommendation**; they are Product judgements |
-| Blocks | P4 closure: **yes** for (a). (b)–(d) could be carried forward with owners if the Product Owner prefers |
-| Proof | (c) adaptive-icon renders; (d) variant proof if adopted |
-| Census | P4-GAP-012 … 015 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | Ratify **I-08B2.5** as the final Brand Authority; keep the app-icon SVG bytes/hash unchanged; confirm Android **48 dp**; defer dedicated iOS dark/tinted variants beyond v1 |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §1 |
 
-### `P4-DQ-06` — Launch / splash / gateway brand application
+### `P4-DQ-06` — PARTIALLY RESOLVED — Launch / splash / gateway
 
 | Field | |
 |---|---|
-| Question | Does P4 close the launch / splash / gateway brand application, including whether the lantern gateway moment exists in v1? Or does the End-to-End audit carry it as an undecided moment? |
-| Why it matters | the roadmap lists "app icon / launch-brand application" as a P4 example **and** "app launch / splash / brand entry" as audit coverage. The P4 purpose is to stop the audit halting on a known-undecided area |
-| Existing authority | roadmap §2, §3; C3 headroom §4 (the lantern is authorized, "C3 does not design it"); T-14 §7, §11 (excluded); no canonical splash record |
-| Viable options | **A.** P4 closes the static launch brand application now: which mark, which surface, whether the lantern appears. The audit walks it as decided. **B.** The audit carries the whole moment as `UNDECIDED`, and a later Product task closes it |
-| Architecture consequences | none at runtime. Native splash constraints are implementation |
-| Recommended | **A** for the static brand application, which fits P4's stated purpose. Whether the lantern **animation** is v1 is a Product call; no recommendation on that |
-| Blocks | P4 closure: **yes**, for the sequencing answer |
-| Proof | yes, if A |
-| Census | P4-GAP-018, 019 |
+| State | **PARTIAL — P4-C2 resolves sequencing; one yes/no remains** |
+| Resolved | P4 closes the static launch / splash / gateway brand application before the End-to-End audit |
+| Still open | **Is the lantern gateway moment in v1?** No answer is inferred from the grouped approval |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §2 |
 
-### `P4-DQ-07` — Boundary for undrawn screens
+### `P4-DQ-07` — RESOLVED — Undrawn-screen boundary
 
 | Field | |
 |---|---|
-| Question | Which never-drawn screens, if any, must P4 design before the audit? Candidates: General Settings (order, hierarchy), the Understanding surface, sign-up, the first-use welcome screen, and Shared / Public conversation surfaces (including multi-human attribution) |
-| Why it matters | without a line, P4 could grow into full screen design, or the audit could halt on screens nobody owns |
-| Existing authority | P1 §8.1, §16.1; I-08A4 §21; G1.1 §5; the roadmap §3 audit, which is designed to classify moments as `PARTIALLY DEFINED` / `UNDECIDED` |
-| Viable options | **A.** P4 designs none; the audit classifies them and produces scoped closures. **B.** P4 designs a named subset, for example General Settings and Understanding, because P4 is already placing their entries (`P4-DQ-01` / `P4-DQ-02`) |
-| Architecture consequences | none |
-| Recommended | **A.** The roadmap limits P4 to "residual decisions in the Product/design canon already created". These screens were never opened as design tracks. The entries (`P4-DQ-01`, `P4-DQ-02`) are enough for the audit to walk |
-| Blocks | P4 closure: **yes**, as a boundary statement |
-| Proof | no |
-| Census | P4-GAP-039, 040 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | P4 designs none of the never-drawn full screens; the End-to-End audit owns their later classification / closure |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §3 |
 
-### `P4-DQ-08` — Voice visual language: close now vs wait for runtime
+### `P4-DQ-08` — RESOLVED DIRECTION — Voice visual split
 
 | Field | |
 |---|---|
-| Question | Which parts of the Voice visual language does P4 freeze now, and which wait for Voice runtime truth? |
-| Why it matters | G1.2 §6 and P2 §13.1 leave the audio strip, waveform, activity morphology and broader Voice visual language unfrozen. P2 §15 hands them to the P4 census |
-| Existing authority | G1.2 §1–§5 and §7 (frozen interaction); P2 (call controls, Call Rail A); P2 §11.1 and F-P2-05: **no fake speaking or activity signal**; `QAN-BL-VOICE-01` requires "truthful microphone and route state" |
-| Viable options | **A. Split.** Freeze now the parts that carry no live signal: the Voice Note history representation, the finished-call history record, the recording / idle / sent states and non-signal call-surface composition. Every signal-bearing morphology (waveform, activity, speaking) waits for `QAN-BL-VOICE-01`. **B.** Defer everything to the Voice runtime track |
-| Architecture consequences | A creates no runtime dependency. The signal-bearing half stays gated by an existing backlog item, and no new alias is needed |
-| Recommended | **A.** It is the only option consistent with both P2's truthfulness law and P2 §15's handoff to P4 |
-| Blocks | P4 closure: **yes**, for the non-signal half |
-| Proof | **yes.** Integrated Voice / Live Call proof, AR / EN |
-| Census | P4-GAP-021, 022. The gated rows are P4-GAP-023 … 026 and 035 |
+| State | **PRODUCT DIRECTION RESOLVED — P4 PROOF STILL REQUIRED** |
+| Decision | Freeze only non-signal Voice visuals in P4; live waveform / speaking / listening / activity morphology waits for `QAN-BL-VOICE-01` |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §4 |
 
-### `P4-DQ-09` — Residual copy disposition
+### `P4-DQ-09` — RESOLVED DISPOSITION — Residual copy
 
 | Field | |
 |---|---|
-| Question | For each open-copy cluster: freeze in P4 before the audit, hand to the audit, or leave gated? **P4-A writes no copy** |
-| Why it matters | P3 §17 hands its residual copy to P4 "if P4 determines that they must close before the End-to-End audit". G3 §G leaves core surface labels as `OPEN COPY` |
-| Existing authority | G3 §G; G2 §G 1–6; P3 §17; P1 §2.1, §6, §11.3, §15.3, §19; VI-01 (the carried table, `PROVISIONAL / PHASE VII`); G1.1 §1–§2; I-08A4 §13–§15 |
-| Viable options | per cluster, below |
-| Architecture consequences | none |
-| Blocks | P4 closure: **yes**, for the clusters marked "freeze in P4" |
-| Proof | copy in rendered context, AR / EN |
-| Census | P4-GAP-028 … 034. Gated: P4-GAP-035 |
-
-Per cluster:
-
-| Cluster | Census | Recommended disposition | Reason |
-|---|---|---|---|
-| Core Conversation / Analysis labels: the Arabic Replay noun and entry names, the English Conversation → Analysis label, the Timeline accessible name and preview routes, the Live-edge wording | 028 | **freeze in P4** | they name the core surfaces every audit moment passes through |
-| Matching proof lines and English Matching copy | 029 | **freeze in P4, or hand to the audit** — Product Owner's call | the owner is "Product copy owner" (G3 §G), not Connected Worlds `I-08` |
-| P3 `PROOF` / `DIRECTION` / `OPEN` lines; the Arabic Snooze words | 030 | **freeze in P4** the lines on surfaces P3 froze: Settings help lines, the call-safe phrase, the section heading, Snooze words. Leave the education sheet to the audit's permission-education moment | P3 froze the surfaces, so the words are the remaining gap |
-| P1 open copy: confidence states, Settings group names, the Public ID warning | 031 | **freeze in P4** | the surfaces' Product rules are frozen by P1 |
-| P1 open copy: sign-in failure wording, Login ID help | 031 | **hand to the audit**, under the account / auth lifecycle review (roadmap §3) | it belongs to the account journey the audit owns |
-| VI-01 `PROPOSED` / `OPEN` residue | 032 | **hand to the audit**, as a rendered-language pass | the owner is orphaned, and most rows sit on surfaces the audit will walk |
-| QANDEEL English casing | 033 | **confirm "QANDEEL"** | every frozen English canon string already uses it: I-08A4 §13–§15, P1 §10, P3 §12 |
-| G1.1 normal opener vs I-08A4 §15 First Conversation Opening; the missing English normal opener | 034 | **confirm** that they are separate moments, and write the English normal opener in P4 | a compatible reading exists but is unstated |
-| Voice / call state strings | 035 | **stay gated** on `QAN-BL-VOICE-01` | VI-01: "A state string must name what the architecture actually does" |
-
----
+| State | **PRODUCT DISPOSITION RESOLVED — P4 COPY WORK STILL REQUIRED** |
+| Close in P4 | core Conversation / Analysis / Replay / Timeline / Live-edge copy; selected P3 + P1 copy; English casing **QANDEEL**; opener distinction and missing English normal opener |
+| Hand to audit | auth copy; remaining VI-01 residue; Matching proof lines / English Matching copy; P3 permission-education sheet / lower-priority journey copy |
+| Runtime-gated | Voice / call state strings |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §5 |
 
 ## B. APP-OPS-01
 
@@ -195,106 +153,61 @@ This is a resolved traceability record, not an open decision.
 | Proof | none |
 | Census / candidate | P4-GAP-057 (`ALREADY CLOSED / SUPERSEDED`); APP-OPS-01 candidate §6.4, §18 |
 
-### `P4-DQ-11` — `IDENTITY / RETENTION / ACCESS MODEL FOR USER-SPECIFIC OPERATIONAL DIAGNOSTICS`
+### `P4-DQ-11` — RESOLVED
 
 | Field | |
 |---|---|
-| Question | How are user-specific operational diagnostics identified, retained and accessed? |
-| Why it matters | `PO-OPS-04` admits user-specific diagnostics. Existing telemetry deliberately minimizes user linkage |
-| Existing authority, and what it already fixes | **fixed:** no content, no semantic profiling, no Company Operations human review, purpose limited to troubleshooting / support / reliability (`PO-OPS-02` … `04`). **Fixed:** correlation IDs never become metric labels (Telemetry v1). **Fixed:** the internal `user_id` is never user-facing (P1 §13). **Fixed:** Safety Runtime "Least Data, Least Access, Least Retention, Purpose Limitation". **Existing fact:** outbox envelopes already carry opaque user / session / turn IDs, classed `SENSITIVE`, with `OPERATIONAL_EVENT_V1` retention (Outbox v1). **Not fixed:** see the classification below |
-| Classification of the parts | (1) **Access principle.** Who may view one user's operational state, and on what trigger. For example: only on a user-initiated support request, or for reliability triage by the App Operations role. **P4 must decide; it is a Product / privacy boundary.** (2) **Identifier format, hashing / pseudonymization, storage location, query mechanism.** **Security / privacy implementation after the audit**, within (1). (3) **Retention duration.** **Security / privacy implementation**, bounded by Least Retention. (4) **Whether aggregate domains (feature usage, cost) may carry per-user linkage at all.** Part of (1) |
-| Viable options, for (1) | **A.** User-linked operational state is viewable only after a user-initiated support request, scoped to that user. **B.** It is viewable by the App Operations role for reliability triage without a user request, audited. **C.** A combination: automated per-user reliability rules without human viewing; human viewing only on a user request |
-| Architecture consequences | A and C need a support-request trigger that is not designed today. B needs audited role access (Production Integration: RBAC, audit log) |
-| Recommended | **C.** It follows Least Access and fits `PO-OPS-06` (deterministic rules first). The Product Owner confirms |
-| Blocks | APP-OPS-01 closure: **yes** for (1). No for (2) and (3) |
-| Proof | no |
-| Candidate | §7 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | **Option C.** Automated per-user reliability may operate without human viewing. Human access to one user's operational diagnostics requires a user-initiated support request, scoped to that user and purpose. |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §6 |
 
-### `P4-DQ-12` — Ratings / reviews boundary
+### `P4-DQ-12` — RESOLVED
 
 | Field | |
 |---|---|
-| Question | Within "ratings / reviews": is store-review **text** ingested? May a store review be **linked** to a QANDEEL account? How are public store signals kept apart from private in-product content? |
-| Why it matters | "Reviews" could otherwise be read as permission to collect content |
-| Existing authority | `PO-OPS-04` (the domain); `PO-OPS-03` (no private content); candidate §5.3 (store / marketplace signals only) |
-| Viable options | **A.** Aggregate ratings plus public review text as the store publishes it. No account linkage. **B.** Option A, plus linkage only where the reviewer identifies themselves through support. **C.** Aggregate ratings only |
-| Architecture consequences | B needs an identity-linkage path governed by `P4-DQ-11` |
-| Recommended | **A.** Public store text is already public. Declining linkage avoids joining a public review to a private account |
-| Blocks | APP-OPS-01 closure: **no**, if the closure keeps §5.3's narrower default |
-| Proof | no |
-| Candidate | §5.3 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | **Option A.** Aggregate ratings + public store / marketplace review text may be ingested; APP-OPS-01 creates no QANDEEL-account linkage. |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §6 |
 
-### `P4-DQ-13` — Control-state freshness, integrity and audit (outside CW2-08)
+### `P4-DQ-13` — RESOLVED
 
 | Field | |
 |---|---|
-| Question | For the control families CW2-08 does not already govern (Maintenance, Minimum Version, Remote Configuration, Route Hold, and the non-Connected-Worlds reach of Kill Switch): what is required for versioning, expiry / TTL, last-known-good vs revert-to-default, signing / authentication, and audit retention? |
-| Why it matters | the approved law "outage ≠ Kill Switch" needs a defined answer for stale or conflicting control state |
-| Existing authority, and what it already forces | **forced:** a control acts only when valid, authenticated and currently effective (approved outage-isolation law). **Forced:** the effective state is runtime-held (candidate §10.1). **Forced:** CW2-08 §5 / §36 give versioning and audit to Safety / launch restrictions. **Forced:** CW2-08 §38 makes old / unknown client state fail safely |
-| Viable options | **A.** Freeze only the principles now. Production Integration's security design chooses TTL, signing, last-known-good and retention. **B.** Freeze specific guarantees now, for example every control versioned and audited, and every Remote Config value expiring to its default |
-| Architecture consequences | B commits the control plane before the audit has named its User Moments |
-| Recommended | **A**, with one addition the Product Owner may wish to freeze now: **every control family is versioned and audited**, extending CW2-08 §5 / §36 to every currently approved family. That is low-risk and matches existing law |
-| Blocks | APP-OPS-01 closure: **no** |
-| Proof | no |
-| Candidate | §10.1, §15 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | **Option A + guarantee.** Every approved control family is versioned and audited; TTL/signing/last-known-good/retention mechanisms remain later Production Integration / Security design. |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §6 |
 
-### `P4-DQ-14` — Maintenance Mode / Minimum Supported Version: user-facing behavior
+### `P4-DQ-14` — RESOLVED
 
 | Field | |
 |---|---|
-| Question | What does a user experience under Maintenance Mode or a Minimum Supported Version gate? For example: is own history readable during maintenance, and how is the upgrade asked for? |
-| Why it matters | these are the two controls users see directly |
-| Existing authority | candidate §11 (both are intentional, scoped restrictions that never delete history); CW2-08 §26 (disable may retain safe history / read-only state); CW2-08 §38 (old clients fail safely); CW2-02 §47 (minimum-necessary error disclosure). The task excludes exact screens from P4-A |
-| Viable options | **A.** Hand the user moments to the audit ("version / maintenance gates" is already one of its illustrative moments), and freeze only the laws above. **B.** P4 decides the behavior now, with a visual proof |
-| Architecture consequences | none until Production Integration |
-| Recommended | **A** |
-| Blocks | APP-OPS-01 closure: **no**, if A |
-| Proof | later, in the audit's closure |
-| Candidate | §11 (families 3, 5) |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | **Option A.** Maintenance Mode / Minimum Supported Version user-facing moments go to the End-to-End audit. |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §6 |
 
-### `P4-DQ-15` — The reach of CW2-08's flag and launch laws beyond Connected Worlds
+### `P4-DQ-15` — RESOLVED
 
 | Field | |
 |---|---|
-| Question | Do CW2-08 §24–§28, §38 and §40 also bind Personal conversation, Voice, Analysis and the rest of the App? Those laws are: server-canonical flags; client flags as hints; the Launch Gate Snapshot and emergency-disable invalidation; history-preserving disable; multi-user consistency; capability-scoped requirements; fail-safe old clients; fail-closed unknown state |
-| Why it matters | Feature Flags, Kill Switch and Rollout Control are approved app-wide (`PO-OPS-07`). CW2-08 is written for Connected Worlds. Without an answer, a non-Connected-Worlds kill switch has no stated semantics |
-| Existing authority | CW2-08 (Connected Worlds scope); `PO-OPS-07` / `PO-OPS-08` (the approved families; no generic remote execution); the candidate §10 / §13. The may-not limits of candidate §10.2 are `FORCED BY` CW2-08 / CW2-02 in Connected Worlds scope and only **CANDIDATE** outside it |
-| Viable options | **A.** Yes: the same laws apply app-wide, with CW2-08 unchanged as their source for Connected Worlds. **B.** Only the candidate §10.2 may-not limits apply outside Connected Worlds; the flag and snapshot mechanics are chosen per capability later |
-| Architecture consequences | A gives one control model across the App and no second flag authority. B risks two models |
-| Recommended | **A** |
-| Blocks | APP-OPS-01 closure: **yes** |
-| Proof | no |
-| Candidate | §11 (families 1, 2, 4), §13 |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | **Option A.** CW2-08 server-canonical / fail-safe flag and launch-control laws extend app-wide. |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §6 |
 
-### `P4-DQ-16` — The Approved Remote Configuration family register
+### `P4-DQ-16` — RESOLVED
 
 | Field | |
 |---|---|
-| Question | Who approves a Remote Configuration family, where is the register kept, and which families (if any) are approved initially? |
-| Why it matters | "approved Remote Configuration" is empty until a family is approved |
-| Existing authority | candidate §11 (the rules and the ceiling); Foundation Freeze "Configurable Without Breaking Freeze"; AGENTS §9 (material contract changes need controlled change) |
-| Viable options | **A.** Families are approved by Product Owner + Architecture through controlled change, recorded in APP-OPS-01's closure or a successor. The initial set is chosen during Production Integration. **B.** Name an initial set in P4 |
-| Architecture consequences | none until built |
-| Recommended | **A** |
-| Blocks | APP-OPS-01 closure: **no**. **Yes before any Remote Configuration exists** |
-| Proof | no |
-| Candidate | §11 (family 6) |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | **Option A.** Remote Configuration families require Product Owner + Architecture controlled approval; no initial set is frozen in P4. |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §6 |
 
-### `P4-DQ-17` — Code delivery against "no generic remote execution"
+### `P4-DQ-17` — RESOLVED
 
 | Field | |
 |---|---|
-| Question | Is delivering new App code (store release, or any over-the-air bundle mechanism) a **release** governed by release process, entirely outside the control plane? |
-| Why it matters | an over-the-air bundle update is remote delivery of executable code. `PO-OPS-08` forbids generic remote execution through the control plane, but releases are how code legitimately changes |
-| Existing authority | `PO-OPS-08`; the candidate §12. No over-the-air mechanism exists in `apps/mobile/` (no `expo-updates` dependency). Release Hardening is a later roadmap layer |
-| Viable options | **A.** Code delivery of any kind is a release, owned by the App Operations & Release Lead under release governance. It is never a Company → App control. Whether over-the-air updates are used at all is a release-operations decision. **B.** Forbid over-the-air code delivery entirely now |
-| Architecture consequences | B constrains Release Hardening before evidence exists |
-| Recommended | **A** |
-| Blocks | APP-OPS-01 closure: **no** |
-| Proof | no |
-| Candidate | §12 |
-
----
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | **Option A.** Any code delivery is a release governed by release operations, never a Company → App control. |
+| Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §6 |
 
 ## C. Candidates tested and **not** queued
 
