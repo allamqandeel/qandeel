@@ -73,12 +73,12 @@ only a pointer to the later record, which already binds.
 |---|---|---|
 | G2 "Q-LIGHT-SHELL remains open" | G3 §C.1; P1 §12 | closed |
 | G1.2 §6 icon / glyph shapes, final iconography | P2 §13.1 | closed |
-| G1.2 §6 audio strip / Voice visual language | P2 §13.1 "still not frozen"; P2 §15 → P4 | open; `P4-DQ-08` |
-| C3 §8 canonical Q on every screen | P2 §13.2 "not answered"; P3 §19.6 → P4 | open; `P4-DQ-03` |
+| G1.2 §6 audio strip / Voice visual language | P2 §13.1 "still not frozen"; P2 §15 → P4 | **P4-C2 resolves the split:** non-signal visuals close in P4 proof; signal-bearing morphology remains runtime-gated |
+| C3 §8 canonical Q on every screen | P2 §13.2 "not answered"; P3 §19.6 → P4 | **resolved by P4-C1 / DQ-03:** no persistent shell Q; Q appears only at named identity moments |
 | I-08N-01 §21 UI / visual deferrals | P3 | closed |
 | VI-01 / VI-02 "Numeral policy — OPEN" | T-12 §9 (`latn` v1) | closed for v1 |
 | VI-01 "never fall back to masculine" vs the G2.3 opener | G2.3 §1 "No gender-neutral rewrite is authorized by G2.3" | the later explicit freeze binds for those strings |
-| G1.1 "post-registration Welcome remains a separate copy moment" | I-08A4 §14 | closed. The opener relation stays open under `P4-DQ-09` |
-| T-14 Email-only sign-in | P1 §3 | closed; wording under `P4-DQ-09` |
-| Brand package "Not closed, not frozen, not canonical" | none; consumed downstream, never ratified | open; `P4-DQ-05` |
+| G1.1 "post-registration Welcome remains a separate copy moment" | I-08A4 §14 | **relation resolved by P4-C2 / DQ-09**; exact P4-owned copy still requires rendered proof |
+| T-14 Email-only sign-in | P1 §3 | closed; auth wording is handed to the End-to-End audit by P4-C2 |
+| Brand package "Not closed, not frozen, not canonical" | P4-C2 ratification | **resolved:** I-08B2.5 is the final Brand Authority; preserved package self-status is historical metadata |
 | VI-01 owners "Phase VII", "Brand Integration"; VI-02 owner "VI-10" | no live track exists | orphaned owners; re-owned in the Carry-Forward Matrix |
