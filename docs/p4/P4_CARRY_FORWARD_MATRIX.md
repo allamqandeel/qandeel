@@ -59,6 +59,7 @@ The controlled CW2-08 amendment that P4-A deferred is **no longer a carry-forwar
 | Runtime-backed Conversational Relevance (`P4-GAP-065`) | P4-C1 retires the old dedicated Live Context surface and freezes only the Product boundary; the relevance runtime/architecture does not exist yet and P4 implements nothing | P4-C1 §5–§6; V10 A15/A22/A23: relevance is runtime-backed, non-ordinal, not importance/truth/confidence/rank, and any spatial expression needs accessible non-spatial parity; explicit Context Activation stays explicit | `QAN-CTX-01 — Conversational Relevance Runtime` | automatic when `QAN-CTX-01` opens; must precede any production claim that contextual relevance drives Living Analysis recomposition / item-level relevance behavior | **yes — `QAN-BL-CTX-01` admitted by P4-C1** |
 | Device / release validation: VoiceOver / TalkBack, CallKit / Telecom, status bar, 320 pt large text, on-device icons and adaptive-icon framing, real Push (P4-GAP-052, 014) | not provable in proofs | G1.2 §7; G3 §F; P2 §14.6; P3 §16, §18 | Release Hardening & Launch | pre-release | **no.** It is the same disposition G1.2, G3, P2 and P3 already took |
 | App-store / release operations: store listings, ratings ingestion, version-adoption tracking, icon wiring (`app.json`), splash implementation | implementation and operations | APP-OPS-01 §5.3 (store signals only); `P4-DQ-05`, `P4-DQ-06` outcomes | App Operations & Release Lead; Production Integration; Release Hardening | Production Integration → Release | **no** |
+| **QANDEEL — Lantern Gateway Identity Moment v1** (`P4-GAP-019`) | Product Owner confirms the exceptional lantern identity moment is in v1, but explicitly separates its animation / creative direction from P4 | C3 §4: exceptional gateway identity object; P4-C2 §2: presence in v1 is frozen, while design, motion, interaction choreography, technology choice and proof remain unfrozen | dedicated future Product / Motion task | open only when its turn arrives; before v1 launch / Production Integration completion | **no new research or implementation in P4.** The named task is the durable carry-forward owner |
 | Residual copy the Product Owner leaves to the audit under `P4-DQ-09`: sign-in failure and Login ID help; the VI-01 `PROPOSED` / `OPEN` residue; P3's education sheet; any Matching lines not frozen in P4 | the audit's copy pass owns journey copy | P1 §3 (generic failure wording); VI-01 principles; P3 §11 | End-to-End audit, then its scoped closures | the audit phase | **no.** It is the same disposition as P3 §17 / §20 |
 | Undrawn screens left to the audit under `P4-DQ-07`: Settings screen, Understanding surface, sign-up, first-use screen, Shared / Public surfaces, multi-human attribution | outside the residual-canon boundary | P1 §8, §11; I-08A4 §12–§16; G1.1 §5 | End-to-End audit; Connected Worlds `I-08` for navigation surfaces | the audit phase | **no** |
 | Account lifecycle and economy (P4-GAP-048, 049, 020) | the roadmap §3 | P1; CW2-08 §20–§23 | End-to-End audit | the audit phase | **no** |
@@ -91,10 +92,9 @@ This follows the precedents of P2 §15, P3 §20 and the I-04 … I-07 closure re
 
 These are not carry-forwards. They are the remainder of P4 itself:
 
-1. **one Product Owner yes/no:** `P4-DQ-06` — whether the lantern gateway moment is in v1;
-2. visual proof for the P4-owned static launch / gateway application;
-3. integrated AR / EN proof for the non-signal Voice visual language selected by P4-C2;
-4. authoring + rendered proof for the copy clusters P4-C2 kept inside P4;
-5. independent review of APP-OPS-01, whose Product Owner decisions are now complete;
-6. the final P4 closure change, including BG-08 reconciliation, canonical indexes / Current State / Project Map / roadmap, and `npm run test:task-closure-governance-contract`.
+1. visual proof for the P4-owned **static** launch / gateway application, excluding the standalone lantern animation task;
+2. integrated AR / EN proof for the non-signal Voice visual language selected by P4-C2;
+3. authoring + rendered proof for the copy clusters P4-C2 kept inside P4;
+4. independent review of APP-OPS-01, whose Product Owner decisions are complete;
+5. the final P4 closure change, including BG-08 reconciliation, canonical indexes / Current State / Project Map / roadmap, and `npm run test:task-closure-governance-contract`.
 
