@@ -3,7 +3,11 @@
 // prototype renders only from it (build.mjs → app.js), and the checks read both (tools/c3checks.mjs, C-COPY-*).
 //
 // Statuses (task §6.1), never mixed:
-//   CANON                   already frozen elsewhere; copied exactly (source named)
+//   CANON                   already frozen elsewhere before P4-C3; copied exactly (source named)
+//   APPROVED_BY_PO_P4C3     authored by P4-C3 and explicitly approved by the Product Owner in the P4-C3R correction pass
+//                           (docs/canonical-authority/final-product-experience/p4/
+//                           QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md). Added by P4-C3R; NOT CANON:
+//                           it was not frozen elsewhere before P4-C3. Exactly three rows carry it: replayNoun, confMixed, pidBody.
 //   PROPOSED_FOR_PO_REVIEW  authored by P4-C3 for review; binds nothing until a later P4 closure freezes it
 //   RUNTIME_GATED           cannot close here (QAN-BL-VOICE-01 / VI-01 V01–V07 "PROVISIONAL / PHASE VII")
 //   AUDIT_OWNED             handed to the End-to-End audit by P4-C2 §5
@@ -16,12 +20,20 @@
 // QANDEEL (P4-C2 §5; I-08A4 §9).
 // Numerals: Western digits in both languages, through one formatter (T-08; T-12 §9, v1 `latn`).
 
-export const C = 'CANON', P = 'PROPOSED_FOR_PO_REVIEW', R = 'RUNTIME_GATED', A = 'AUDIT_OWNED', F = 'FIXTURE_ONLY';
-export const STATUSES = [C, P, R, A, F];
+export const C = 'CANON', AP = 'APPROVED_BY_PO_P4C3', P = 'PROPOSED_FOR_PO_REVIEW', R = 'RUNTIME_GATED', A = 'AUDIT_OWNED', F = 'FIXTURE_ONLY';
+export const STATUSES = [C, AP, P, R, A, F];
+/** The P4-C3R Product Owner approval record (the authority every AP row names). */
+export const PO_RECORD = 'docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md';
+/** Wording the Product Owner replaced in P4-C3R. It must never return as active copy (check C-COPY-13). */
+export const RETIRED = {
+  confMixedAr: 'فيه تعارض',
+  pidBodyEn: 'This is the only manual change your Public ID will ever get. After you confirm, the new ID is permanent and can\'t be changed again.',
+  replayAr: 'عرض الجلسة', replayEn: 'Session Replay',
+};
 
 const rows = [];
 /** k key · fam family · surf surface / moment · src authority · st status · ar · en · frozen · prop newly proposed · why */
-const row = (k, fam, surf, src, st, ar, en, frozen, prop, why) => rows.push({ k, fam, surf, src, st, ar, en, frozen, prop, why, po: st === P ? 'YES' : 'NO' });
+const row = (k, fam, surf, src, st, ar, en, frozen, prop, why) => rows.push({ k, fam, surf, src, st, ar, en, frozen, prop, why, po: st === P ? 'YES' : st === AP ? 'APPROVED (P4-C3R)' : 'NO' });
 
 // ============================================================================================ A. FROZEN NAMES (copied)
 const F1 = 'frozen names';
@@ -44,9 +56,9 @@ row('doorName', F2, 'Conversation → Analysis (accessible name)', 'G1.1 §2; WC
   'Arabic visible label', 'English name starting with the visible label', 'The name begins with the visible word, so voice control ("tap Analysis") works. Arabic needs no expansion: the visible label is already complete.');
 row('backName', F2, 'Analysis → Conversation (accessible name)', 'G1.1 §1–§2; T-08 RETURN_LIVE_HEAD', P, 'المحادثة', 'Conversation',
   'the visible label', 'no extra words in the name', 'The G3.2 proof name «المحادثة — رجوع» / "Conversation — back" is dropped: the button role already says it acts. A longer «العودة إلى المحادثة» was rejected because it collides with T-08\'s frozen «العودة إلى المحادثة الجارية» (Rejoin) for screen-reader users.');
-row('replayNoun', F2, 'Replay — the noun (menu title)', 'G1.1 §5; G3 §G; I-08A4 §8 / §9 ("Session Replay" / «عرض الجلسة»)', P, 'إعادة العرض', 'Replay',
-  'placement (G1.1); I-08A4\'s concept row «عرض الجلسة» / Session Replay', 'Arabic noun «إعادة العرض»; English noun "Replay"',
-  'G1.1 §5 and G3 §G leave the Arabic noun open after I-08A4. «إعادة العرض» is the established Arabic word for a replay, and never meets the reader\'s word "session", which no other Product surface uses (T-08 speaks of the conversation and its moments). If approved, the P4 closure must amend I-08A4 §8 / §9\'s "Session Replay" row in its narrow scope — flagged, not done here (finding F-02).');
+row('replayNoun', F2, 'Replay — the noun (menu title)', 'P4-C3R PO approval record §4 (supersedes I-08A4 §8 / §9\'s user-facing name row only); G1.1 §5; G3 §G', AP, 'إعادة العرض', 'Replay',
+  'placement (G1.1); the Product-facing name, approved by the Product Owner in P4-C3R', 'nothing further — approved',
+  'Approved by the Product Owner (P4-C3R, finding F-02 resolved by controlled amendment). «إعادة العرض» is the established Arabic word for a replay, and never meets the reader\'s word "session", which no other Product surface uses (T-08 speaks of the conversation and its moments). The older I-08A4 name row is superseded for this Product-facing name only; its bytes stay preserved as history, and no Replay runtime, media, storage, transport or export semantics change.');
 row('replayEntry', F2, 'Replay — icon-only entry (accessible name)', 'G1.1 §1; P2 §10 (icon-only names)', P, 'إعادة عرض المحادثة', 'Replay this conversation',
   'the entry\'s place and glyph (G1.1; P2)', 'both names', 'Names the object, so it is not confused with a media "replay" of a voice note. Kept from the proof: it reads natively in both languages.');
 row('replayFull', F2, 'Replay — whole conversation', 'G1.1 R3 proof entry; G3 §G', P, 'المحادثة كاملة', 'The whole conversation', '—', 'both', 'Kept from the proof: natural, gender-neutral, parallel with the next row.');
@@ -84,8 +96,8 @@ row('confClear', F4, 'Confidence state — clear', 'P1 §11.3', P, 'واضح', '
   'The plainest word for the state. Describes the understanding (masculine «فهم»), never the reader, so it needs no gendered form.');
 row('confForming', F4, 'Confidence state — forming', 'P1 §11.3', P, 'يتشكّل', 'Taking shape', 'the concept', 'both words',
   'Says the understanding is still being formed — not that it is weak. "Taking shape" is warmer and more natural than "Forming" as a status word.');
-row('confMixed', F4, 'Confidence state — mixed / contested', 'P1 §11.3, §11.4', P, 'فيه تعارض', 'Mixed', 'the concept', 'both words',
-  'One label must cover mixed evidence and an explicit disagreement (P1 §11.4). «فيه تعارض» ("there is a conflict") states the fact without blaming the reader; «متناقض» was rejected as accusatory and «غير محسوم» collides with the frozen detail name «نقاط غير محسومة». English "Mixed" is the gentlest accurate word; "Contested" reads adversarial.');
+row('confMixed', F4, 'Confidence state — mixed / contested', 'P4-C3R PO approval record §2; P1 §11.3, §11.4', AP, 'يوجد تعارض', 'Mixed', 'the concept (P1); both words, approved by the Product Owner in P4-C3R', 'nothing further — approved',
+  'Approved by the Product Owner (P4-C3R). One label must cover mixed evidence and an explicit disagreement (P1 §11.4). «يوجد تعارض» ("there is a conflict") stays neutral and factual, without blaming the reader, in the more formal, stable QANDEEL T1 register: the reviewed candidate «فيه تعارض» used the colloquial «فيه». «متناقض» was rejected as accusatory and «غير محسوم» collides with the frozen detail name «نقاط غير محسومة». English "Mixed" is unchanged: the gentlest accurate word; "Contested" reads adversarial.');
 row('confMore', F4, 'Confidence state — needs more context', 'P1 §11.3; VI-01 §4 / §7.2', P, 'يحتاج سياقًا أكثر', 'Needs more to go on', 'the concept', 'both words',
   'Arabic «سياق» is ordinary and approved. English may not ship "context" as a noun (VI-01), so the meaning is carried idiomatically: there is not yet enough to go on. Neither word asks the reader to do anything.');
 row('confName', F4, 'Confidence (accessible prefix)', 'P1 §11.3; T-08 family CONFIDENCE', P, 'الثقة: {state}', 'Confidence: {state}', 'the concept', 'both',
@@ -115,9 +127,10 @@ row('pidAvailable', F6, 'Settings row state — change still available', 'P1 §6
 row('pidUsed', F6, 'Settings row state — change used', 'P1 §6, §8.1', P, 'استُخدم التغيير اليدوي الوحيد', 'Your one manual change has been used', '—', 'both', 'Impersonal passive in Arabic: gender-neutral and blameless.');
 row('pidTitle', F6, 'Warning — title', 'P1 §6 ("prominently warns … only manual change … permanent")', P, 'يمكن تغيير المعرّف العام مرة واحدة فقط', 'You can change your Public ID only once',
   'the obligation to warn before commitment', 'both', 'The title alone carries the rule. Arabic uses the impersonal «يمكن» rather than a gendered imperfect.');
-row('pidBody', F6, 'Warning — body', 'P1 §6', P, 'هذا هو التغيير اليدوي الوحيد المتاح لمعرّفك العام طوال عمر الحساب. بعد التأكيد يصبح المعرّف الجديد دائمًا، ولا يمكن تغييره مرة أخرى.',
-  'This is the only manual change your Public ID will ever get. After you confirm, the new ID is permanent and can\'t be changed again.',
-  '—', 'both', 'States exactly three facts: one change, for the life of the account, permanent after confirmation. No fear words, no urgency, no hidden cost.');
+row('pidBody', F6, 'Warning — body', 'P4-C3R PO approval record §3; P1 §6', AP, 'هذا هو التغيير اليدوي الوحيد المتاح لمعرّفك العام طوال عمر الحساب. بعد التأكيد يصبح المعرّف الجديد دائمًا، ولا يمكن تغييره مرة أخرى.',
+  'This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again.',
+  'both, approved by the Product Owner in P4-C3R (English replaced; Arabic unchanged)', 'nothing further — approved',
+  'Approved by the Product Owner (P4-C3R). States exactly three facts: one change, for the life of the account, permanent after confirmation. The English now keeps the reader as the one who acts ("you can manually change") instead of the awkward "the only manual change your Public ID will ever get". No fear words, no urgency, no extra confirmation step, no new behaviour.');
 row('pidCurrent', F6, 'Warning — current value label', 'P1 §6', P, 'الحالي', 'Current', '—', 'both', 'Short labels; the values are shown as isolated left-to-right handles.');
 row('pidNew', F6, 'Warning — new value label', 'P1 §6', P, 'الجديد', 'New', '—', 'both', '');
 row('pidConfirm', F6, 'Warning — commit action', 'P1 §6', P, 'تأكيد التغيير', 'Confirm change', '—', 'both', 'Names the act. Not styled as a danger colour: this is permanent, not destructive.');

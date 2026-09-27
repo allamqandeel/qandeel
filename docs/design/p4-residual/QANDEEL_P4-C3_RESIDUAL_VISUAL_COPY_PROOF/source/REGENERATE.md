@@ -17,6 +17,12 @@ node source/tools/c3pipeline.mjs [--no-git] # build → copy table → captures 
 | boards | `tools/c3boards.mjs` | `boards/*.png`, `data/BOARDS.json` |
 | package | `tools/c3package.mjs` | proves the byte-identical rebuild, writes `data/PROVENANCE.json` and writes + verifies `MANIFEST.json` |
 
+**Targeted regeneration (P4-C3R).** A small correction does not need the whole pipeline. It uses
+`c3capture.mjs --only id,id` (merges into `SHOTS.json` and refreshes only the retaken KEEP captures),
+`c3boards.mjs --only "08,09"` (renders only those boards and keeps every other board and its `BOARDS.json` entry) and
+`c3checks.mjs --only C-X,C-Y --out data/CHECKS_P4C3R.json`, then `c3package.mjs`. Quote the board list in PowerShell,
+because an unquoted `01,02` becomes numbers.
+
 `WORK` is scratch outside the repository: env `P4C3_WORK`, else `%TEMP%\qandeel-p4c3-work`.
 
 Serve `prototype/` over `http://` to open the live page (the Analysis states load `prototype/g3.2/index.html` in a

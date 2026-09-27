@@ -61,13 +61,19 @@ Apple's HIG pages render client-side, so they were read through Apple's own JSON
 | No fake delay | nothing declares a minimum duration or a hold; the launch path has no timer | C-L5 |
 | Reduced Motion parity | the launch proof is static in both modes; no motion exists to remove | C-A7 (app surfaces) |
 
-## 4. What the research exposes (not decided here)
+## 4. What the research exposes
 
-1. **Appearance preference vs a static launch surface (Product Owner question Q-1).** P1 §12 gives the reader a
-   Dark / Light / System preference inside QANDEEL, with Dark as the default. The iOS launch screen follows the **system**
-   appearance only (S1). A reader who chose Dark on a phone in Light mode therefore meets a Light launch surface and then a
-   Dark app. Android can close this gap on API 31+ (S6). iOS cannot. The handoff frame is where the lantern task begins, so
-   the answer also shapes that task's first frame. This proof renders the system-following behaviour and does not choose.
+1. **Appearance preference vs a static launch surface — RESOLVED BY PRODUCT OWNER (P4-C3R; formerly question Q-1).**
+   P1 §12 gives the reader a Dark / Light / System preference inside QANDEEL, with Dark as the default. The iOS launch
+   screen can follow only the **system** appearance (S1); Android can follow the app's own choice on API 31+ (S6). The
+   Product Owner approved the platform split
+   ([P4-C3R approval record](../../../../canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md) §1):
+   - **iOS:** the system launch screen follows the device / system appearance and does not reproduce the in-app
+     preference. A reader with QANDEEL Dark on a Light phone sees the system-Light launch, then the app's Dark once
+     app-owned UI takes over; that transition is accepted.
+   - **Android:** where supported, the system splash follows the effective QANDEEL app appearance through the platform's
+     application night-mode mechanism.
+   - Dark is not forced universally, and there is no duplicate custom splash. The lantern task's work is untouched.
 2. **Android touch targets.** Android recommends 48 dp. P2 and P3 freeze 44 pt for the icon controls. The proof keeps
    44 pt and reports it (finding F-05); it changes no frozen value.
 3. **Implementation carry-forward (not P4):** wiring `app.json` `icon` / `splash` / `adaptiveIcon`, the iOS launch

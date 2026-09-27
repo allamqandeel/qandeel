@@ -5,7 +5,7 @@
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { PKG, REPO } from './lib/session.mjs';
-import { ROWS, STATUSES, P3_SAME, THREAD } from '../src/content.mjs';
+import { ROWS, STATUSES, P3_SAME, THREAD, PO_RECORD } from '../src/content.mjs';
 
 export const P3_TABLE = 'docs/design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/data/COPY_TABLE.md';
 export function p3Table() {
@@ -28,9 +28,9 @@ if (process.argv[1] && process.argv[1].endsWith('c3copytable.mjs')) {
   const fams = [...new Set(all.map((r) => r.fam))];
   let md = `# P4-C3 — Copy Decision Table\n\n` +
     `**Generated** from \`source/src/content.mjs\` by \`source/tools/c3copytable.mjs\`; P3-A's synthetic event sentences are read from \`${P3_TABLE}\`. Do not edit by hand.\n\n` +
-    `**Status: \`P4-C3 COPY PROOF — PROPOSED FOR PRODUCT OWNER REVIEW — NOTHING HERE IS FROZEN BY THIS TABLE\`.** A \`PROPOSED_FOR_PO_REVIEW\` row binds nothing until a later P4 closure freezes it. \`CANON\` rows are copied from the named authority.\n\n` +
+    `**Status: \`P4-C3 COPY PROOF — CORRECTIONS COMPLETE (P4-C3R) — READY FOR FINAL INDEPENDENT REVIEW\`.** This table freezes nothing by itself. A \`PROPOSED_FOR_PO_REVIEW\` row binds nothing until a later P4 closure freezes it. \`CANON\` rows are copied from the named authority. \`APPROVED_BY_PO_P4C3\` rows record exactly the Product Owner approvals of the P4-C3R correction pass, whose authority is \`${PO_RECORD}\` (effective / frozen on merge); they are not \`CANON\`, because nothing froze them before P4-C3.\n\n` +
     `| Status | Rows | Meaning |\n|---|---|---|\n` +
-    `| \`CANON\` | ${count.CANON} | already frozen elsewhere; copied exactly |\n| \`PROPOSED_FOR_PO_REVIEW\` | ${count.PROPOSED_FOR_PO_REVIEW} | authored or adopted by P4-C3 for review |\n` +
+    `| \`CANON\` | ${count.CANON} | already frozen elsewhere before P4-C3; copied exactly |\n| \`APPROVED_BY_PO_P4C3\` | ${count.APPROVED_BY_PO_P4C3} | authored by P4-C3, then explicitly approved by the Product Owner in P4-C3R (Replay noun, the mixed confidence word, the Public ID warning body) |\n| \`PROPOSED_FOR_PO_REVIEW\` | ${count.PROPOSED_FOR_PO_REVIEW} | authored or adopted by P4-C3 for review |\n` +
     `| \`RUNTIME_GATED\` | ${count.RUNTIME_GATED} | Voice / call words — cannot close here (\`QAN-BL-VOICE-01\`; VI-01 V01–V07); rendered as PROOF ONLY / NOT COPY FREEZE |\n` +
     `| \`AUDIT_OWNED\` | ${count.AUDIT_OWNED} | handed to the End-to-End audit by P4-C2 §5 |\n| \`FIXTURE_ONLY\` | ${count.FIXTURE_ONLY} | evidence text, never Product copy (plus the conversation fixture: ${convFixtures[0]} Arabic and ${convFixtures[1]} English written turns, in \`content.mjs\` \`THREAD\`) |\n| **total** | **${all.length}** | |\n\n` +
     `Register: T1 chrome is neutral contemporary Arabic, gender-neutral (VI-01 §3.1, §3.6). English never ships "context" or "live" as a product noun (VI-01 §4 / §7.2), except where P3 already APPROVED it ("Show context"). QANDEEL is cased QANDEEL (P4-C2 §5). Numerals are Western in both languages (T-12 §9).\n\n`;

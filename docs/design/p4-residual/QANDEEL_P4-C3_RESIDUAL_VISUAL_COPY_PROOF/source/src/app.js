@@ -217,7 +217,7 @@
     const d = G32.contentDocument, $ = (id) => d.getElementById(id);
     const mark = (e, k) => { if (e) e.setAttribute('data-ka', k); };
     if ($('replay')) { $('replay').setAttribute('aria-label', t('replayEntry')); mark($('replay'), 'replayEntry'); }
-    if ($('rmenu')) { $('rmenu').setAttribute('aria-label', t('replayNoun')); mark($('rmenu'), 'replayNoun'); }
+    if ($('rmenu')) { $('rmenu').setAttribute('aria-label', P.defect === 'sessionreplay' ? (lang === 'en' ? 'Session Replay' : 'عرض الجلسة') : t('replayNoun')); mark($('rmenu'), 'replayNoun'); }
     d.querySelectorAll('#rmenu .mi').forEach((m) => { const k = m.dataset.scope === 'full' ? 'replayFull' : 'replayPart'; m.querySelector('.lb').textContent = t(k); m.querySelector('.lb').setAttribute('data-k', k); });
     if ($('rmenu-note')) { $('rmenu-note').textContent = t('replayCallNote'); $('rmenu-note').setAttribute('data-k', 'replayCallNote'); }
     if ($('tl-track')) { $('tl-track').setAttribute('aria-label', t('timelineName')); mark($('tl-track'), 'timelineName'); }
@@ -383,6 +383,9 @@
     if (d === 'ungated') { const e = $('[data-k="vRecording"]'); if (e) e.setAttribute('data-k', 'confClear'); }
     if (d === 'contextword') { const e = $('[data-k="confMore"]'); if (e) e.textContent = 'Needs more context'; }
     if (d === 'callchange') { const c = $('.callline'); if (c) c.setAttribute('data-call-id', 'call-other-02'); }
+    // P4-C3R: the wording the Product Owner replaced must be rejected if it ever returns (C-COPY-13)
+    if (d === 'oldmixed') { const e = $('[data-k="confMixed"]'); if (e) e.textContent = 'فيه تعارض'; }
+    if (d === 'oldpid') { const e = $('[data-k="pidBody"]'); if (e) e.textContent = 'This is the only manual change your Public ID will ever get. After you confirm, the new ID is permanent and can\'t be changed again.'; }
   }
 
   // ------------------------------------------------------------------------------------------------ measurement API

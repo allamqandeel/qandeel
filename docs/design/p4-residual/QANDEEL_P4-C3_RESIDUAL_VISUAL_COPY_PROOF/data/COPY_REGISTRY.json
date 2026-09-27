@@ -2,7 +2,8 @@
  "note": "Machine-readable copy registry (src/content.mjs + P3-A fixtures). The Markdown table is generated from the same rows.",
  "count": {
   "CANON": 23,
-  "PROPOSED_FOR_PO_REVIEW": 107,
+  "APPROVED_BY_PO_P4C3": 3,
+  "PROPOSED_FOR_PO_REVIEW": 104,
   "RUNTIME_GATED": 22,
   "AUDIT_OWNED": 12,
   "FIXTURE_ONLY": 69
@@ -169,14 +170,14 @@
    "k": "replayNoun",
    "fam": "core Conversation / Analysis / Replay / Timeline",
    "surf": "Replay — the noun (menu title)",
-   "src": "G1.1 §5; G3 §G; I-08A4 §8 / §9 (\"Session Replay\" / «عرض الجلسة»)",
-   "st": "PROPOSED_FOR_PO_REVIEW",
+   "src": "P4-C3R PO approval record §4 (supersedes I-08A4 §8 / §9's user-facing name row only); G1.1 §5; G3 §G",
+   "st": "APPROVED_BY_PO_P4C3",
    "ar": "إعادة العرض",
    "en": "Replay",
-   "frozen": "placement (G1.1); I-08A4's concept row «عرض الجلسة» / Session Replay",
-   "prop": "Arabic noun «إعادة العرض»; English noun \"Replay\"",
-   "why": "G1.1 §5 and G3 §G leave the Arabic noun open after I-08A4. «إعادة العرض» is the established Arabic word for a replay, and never meets the reader's word \"session\", which no other Product surface uses (T-08 speaks of the conversation and its moments). If approved, the P4 closure must amend I-08A4 §8 / §9's \"Session Replay\" row in its narrow scope — flagged, not done here (finding F-02).",
-   "po": "YES"
+   "frozen": "placement (G1.1); the Product-facing name, approved by the Product Owner in P4-C3R",
+   "prop": "nothing further — approved",
+   "why": "Approved by the Product Owner (P4-C3R, finding F-02 resolved by controlled amendment). «إعادة العرض» is the established Arabic word for a replay, and never meets the reader's word \"session\", which no other Product surface uses (T-08 speaks of the conversation and its moments). The older I-08A4 name row is superseded for this Product-facing name only; its bytes stay preserved as history, and no Replay runtime, media, storage, transport or export semantics change.",
+   "po": "NO"
   },
   {
    "k": "replayEntry",
@@ -377,14 +378,14 @@
    "k": "confMixed",
    "fam": "QANDEEL Understanding confidence",
    "surf": "Confidence state — mixed / contested",
-   "src": "P1 §11.3, §11.4",
-   "st": "PROPOSED_FOR_PO_REVIEW",
-   "ar": "فيه تعارض",
+   "src": "P4-C3R PO approval record §2; P1 §11.3, §11.4",
+   "st": "APPROVED_BY_PO_P4C3",
+   "ar": "يوجد تعارض",
    "en": "Mixed",
-   "frozen": "the concept",
-   "prop": "both words",
-   "why": "One label must cover mixed evidence and an explicit disagreement (P1 §11.4). «فيه تعارض» (\"there is a conflict\") states the fact without blaming the reader; «متناقض» was rejected as accusatory and «غير محسوم» collides with the frozen detail name «نقاط غير محسومة». English \"Mixed\" is the gentlest accurate word; \"Contested\" reads adversarial.",
-   "po": "YES"
+   "frozen": "the concept (P1); both words, approved by the Product Owner in P4-C3R",
+   "prop": "nothing further — approved",
+   "why": "Approved by the Product Owner (P4-C3R). One label must cover mixed evidence and an explicit disagreement (P1 §11.4). «يوجد تعارض» (\"there is a conflict\") stays neutral and factual, without blaming the reader, in the more formal, stable QANDEEL T1 register: the reviewed candidate «فيه تعارض» used the colloquial «فيه». «متناقض» was rejected as accusatory and «غير محسوم» collides with the frozen detail name «نقاط غير محسومة». English \"Mixed\" is unchanged: the gentlest accurate word; \"Contested\" reads adversarial.",
+   "po": "NO"
   },
   {
    "k": "confMore",
@@ -585,14 +586,14 @@
    "k": "pidBody",
    "fam": "Public ID one-time change",
    "surf": "Warning — body",
-   "src": "P1 §6",
-   "st": "PROPOSED_FOR_PO_REVIEW",
+   "src": "P4-C3R PO approval record §3; P1 §6",
+   "st": "APPROVED_BY_PO_P4C3",
    "ar": "هذا هو التغيير اليدوي الوحيد المتاح لمعرّفك العام طوال عمر الحساب. بعد التأكيد يصبح المعرّف الجديد دائمًا، ولا يمكن تغييره مرة أخرى.",
-   "en": "This is the only manual change your Public ID will ever get. After you confirm, the new ID is permanent and can't be changed again.",
-   "frozen": "—",
-   "prop": "both",
-   "why": "States exactly three facts: one change, for the life of the account, permanent after confirmation. No fear words, no urgency, no hidden cost.",
-   "po": "YES"
+   "en": "This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again.",
+   "frozen": "both, approved by the Product Owner in P4-C3R (English replaced; Arabic unchanged)",
+   "prop": "nothing further — approved",
+   "why": "Approved by the Product Owner (P4-C3R). States exactly three facts: one change, for the life of the account, permanent after confirmation. The English now keeps the reader as the one who acts (\"you can manually change\") instead of the awkward \"the only manual change your Public ID will ever get\". No fear words, no urgency, no extra confirmation step, no new behaviour.",
+   "po": "NO"
   },
   {
    "k": "pidCurrent",

@@ -1,6 +1,7 @@
 # P4-C3 — Copy proof report
 
-**Status:** `PROPOSED FOR PRODUCT OWNER REVIEW — NOTHING IS FROZEN BY THIS REPORT`. The complete, row-by-row record is
+**Status:** `P4-C3 — CORRECTIONS COMPLETE / READY FOR FINAL INDEPENDENT REVIEW — THIS REPORT FREEZES NOTHING`. Three rows
+are Product Owner approved (P4-C3R, below); every other new row stays proposed. The complete, row-by-row record is
 [`../data/COPY_DECISION_TABLE.md`](../data/COPY_DECISION_TABLE.md), generated from `source/src/content.mjs`. Every
 string the prototype renders comes from that registry and carries its key, and C-COPY-5 proves the page shows nothing
 unregistered or drifted.
@@ -10,13 +11,20 @@ unregistered or drifted.
 | Status | Rows |
 |---|---|
 | `CANON` | 23 |
-| `PROPOSED_FOR_PO_REVIEW` | 107 |
+| `APPROVED_BY_PO_P4C3` | 3 (`replayNoun`, `confMixed`, `pidBody` — P4-C3R) |
+| `PROPOSED_FOR_PO_REVIEW` | 104 |
 | `RUNTIME_GATED` | 22 |
 | `AUDIT_OWNED` | 12 |
 | `FIXTURE_ONLY` | 69 (63 P3-A event sentences + 6 specimen / handle values), plus the conversation fixture turns |
 | **total** | **233** |
 
-Of the 107 proposed rows, most **adopt** an existing proof line unchanged (marked "adopted"). The rest are **authored or
+`APPROVED_BY_PO_P4C3` is a proof-only status added by P4-C3R. It records exactly the Product Owner's approvals in
+[the P4-C3R approval record](../../../../canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md).
+It is deliberately **not** `CANON`: nothing froze these words before P4-C3. C-COPY-4 fails if any other row carries it,
+and C-COPY-13 fails if a replaced wording («فيه تعارض», the earlier Public ID English sentence, «عرض الجلسة» /
+Session Replay) becomes active again.
+
+Of the 104 proposed rows, most **adopt** an existing proof line unchanged (marked "adopted"). The rest are **authored or
 revised** here, and each names its reason. Every P3-A interface key (125) is dispositioned (C-COPY-11).
 
 ## 2. The rules the words follow
@@ -42,7 +50,7 @@ revised** here, and each names its reason. Every P3-A interface key (125) is dis
 | `door` | «تحليل المحادثة» (frozen) | **Analysis** | pairs with the frozen "Conversation" on the way back; fits beside Replay at 320 pt |
 | `doorName` | «تحليل المحادثة» | **Analysis of this conversation** | begins with the visible word (label-in-name) |
 | `backName` | «المحادثة» | **Conversation** | «العودة إلى المحادثة» rejected: it collides with T-08's frozen «العودة إلى المحادثة الجارية» for screen readers |
-| `replayNoun` | **«إعادة العرض»** | **Replay** | see finding F-02: I-08A4 §8 / §9 still carry «عرض الجلسة» / Session Replay |
+| `replayNoun` | **«إعادة العرض»** | **Replay** | **APPROVED BY THE PRODUCT OWNER (P4-C3R).** F-02 is resolved by controlled amendment: the older I-08A4 §8 / §9 row «عرض الجلسة» / Session Replay is superseded for this Product-facing name only; I-08A4's bytes stay preserved |
 | `replayEntry` | «إعادة عرض المحادثة» | Replay this conversation | names the object; never confused with replaying a voice note |
 | `timelineName` | **«الخط الزمني للمحادثة»** | Conversation timeline | the proof «خط المحادثة» did not name a timeline |
 | `timelineHint` | **«للنظر مؤقتًا إلى لحظة: السحب أو مفاتيح الأسهم. وللانتقال إليها: الإفلات أو مفتاح Enter.»** | Drag, or use the arrow keys, for a temporary look at a moment. Release or press Enter to go there. | gender-neutral masdar clauses |
@@ -66,8 +74,11 @@ revised** here, and each names its reason. Every P3-A interface key (125) is dis
 |---|---|---|
 | clear | «واضح» | Clear |
 | forming | «يتشكّل» | Taking shape |
-| mixed / contested | «فيه تعارض» | Mixed |
+| mixed / contested | **«يوجد تعارض»** (approved by the Product Owner, P4-C3R) | Mixed |
 | needs more context | «يحتاج سياقًا أكثر» | Needs more to go on |
+
+«يوجد تعارض» replaces the reviewed candidate «فيه تعارض». It stays neutral and factual, and moves from the colloquial
+«فيه» to the more formal, stable QANDEEL T1 register. English "Mixed" is unchanged.
 
 The words describe the understanding, not the reader, so they need no gendered form. There are no scores and no
 percentages, and colour carries nothing. «غير محسوم» was rejected because it collides with the frozen detail name «نقاط غير
@@ -90,6 +101,11 @@ facts: this is the one manual change, it lasts for the life of the account, and 
 two choices are equal and named: «الإبقاء على المعرّف الحالي» / "Keep current ID" and «تأكيد التغيير» / "Confirm change".
 There is no danger colour, no countdown and no fear word, and no Login ID, Email, Shared ID or internal id is shown.
 «المعرّف العام» is proposed as the Arabic term, because none is frozen.
+
+**Body — approved by the Product Owner (P4-C3R).** English: "This is the only time you can manually change your Public ID.
+After you confirm, the new ID is permanent and can’t be changed again." It replaces the awkward "This is the only manual
+change your Public ID will ever get": the reader is again the one who acts. The Arabic body is unchanged. The title, the
+choices and the term stay proposed.
 
 ## 8. P3 residual (frozen P3 surfaces)
 

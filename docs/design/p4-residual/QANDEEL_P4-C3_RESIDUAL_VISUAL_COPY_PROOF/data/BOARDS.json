@@ -3,8 +3,8 @@
  "boards": [
   {
    "board": "01-launch-handoff-ios.png",
-   "bytes": 205305,
-   "sha256": "2df183a96ecfeeeb520407439b6b3dcbc446c6bc60e2363faba8a4dd032f769a",
+   "bytes": 206896,
+   "sha256": "fbf8ca6d0236cd55d5e29597bab21deae80a840c2924329ceaf6e2b7d5448341",
    "shots": [
     "l-ios-d",
     "h-ios-d",
@@ -15,8 +15,8 @@
   },
   {
    "board": "02-launch-handoff-android.png",
-   "bytes": 216700,
-   "sha256": "e82e15826d20046dfea9edbe25e018cfbb064d1e4f567aca588376b6041cd176",
+   "bytes": 232874,
+   "sha256": "29a6ea09684bdcb72f5d5bf7671a2c276f5565d5773090e0b5cc375c93af0d17",
    "shots": [
     "l-and-d",
     "h-and-d",
@@ -93,8 +93,8 @@
   },
   {
    "board": "08-core-copy-conversation-analysis-replay-timeline.png",
-   "bytes": 755030,
-   "sha256": "1a2583269d87a65fae12b808474a223d57400de91eb2cf269aca4000996c07e9",
+   "bytes": 759494,
+   "sha256": "1083820bd79985a8006ede52bb8762aff11fecd3cb2e0b7c3c127966531f2164",
    "shots": [
     "vn-en-rest",
     "vn-ar-rest",
@@ -106,8 +106,8 @@
   },
   {
    "board": "09-understanding-confidence-and-settings-copy.png",
-   "bytes": 385667,
-   "sha256": "9f4185bcd6238199998b307c68eccb946bca8e9a288ce4646d49d1ca1db3e0b6",
+   "bytes": 398941,
+   "sha256": "d10187b98bc72e3d030026107be558a33368101769898d03ef3a1ed4b5a1041b",
    "shots": [
     "und-ar",
     "und-en",
@@ -117,8 +117,8 @@
   },
   {
    "board": "10-public-id-warning.png",
-   "bytes": 345843,
-   "sha256": "f0d07d96c0db6c1f82b9a498e41ad42191c04882091a7f3c81795c4803a8e7a0",
+   "bytes": 358899,
+   "sha256": "d105472a8fa6faeab8c703138288d69e4dc784aa7348a86d741eecd428257aef",
    "shots": [
     "pid-ar",
     "pid-en",
@@ -156,8 +156,8 @@
   },
   {
    "board": "13-stress-320-large-text.png",
-   "bytes": 518548,
-   "sha256": "abf8def52b4b0061d3676a966a0035ede4fcc7652a4afed771c1125e6fc0bddf",
+   "bytes": 519699,
+   "sha256": "a068a0c199ce6eb752e7e52db5f58896e9a75d4d5685cc361e10cd5a5c212ed0",
    "shots": [
     "s320-vn-ar",
     "s320-vn-en",

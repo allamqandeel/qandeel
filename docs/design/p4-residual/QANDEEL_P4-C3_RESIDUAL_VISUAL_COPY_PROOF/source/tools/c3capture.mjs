@@ -68,6 +68,6 @@ if (process.argv[1] && process.argv[1].endsWith('c3capture.mjs')) {
   const cap = join(PKG, 'captures');
   mkdirSync(cap, { recursive: true });
   if (!only) for (const f of readdirSync(cap)) rmSync(join(cap, f));
-  if (!only) for (const id of KEEP) copyFileSync(join(SHOTDIR, id + '.png'), join(cap, id + '.png'));
+  for (const id of KEEP) if (!only || only.includes(id)) copyFileSync(join(SHOTDIR, id + '.png'), join(cap, id + '.png'));   // --only refreshes just the KEEP captures it retook (P4-C3R)
   console.log(`\ncaptured ${out.length}`);
 }

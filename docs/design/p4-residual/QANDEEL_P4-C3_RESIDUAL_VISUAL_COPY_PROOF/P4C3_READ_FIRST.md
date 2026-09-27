@@ -1,9 +1,13 @@
 # QANDEEL — P4-C3 Residual Visual + Copy Proof
 
-> **Status: `P4-C3 — RESIDUAL VISUAL + COPY PROOF — READY FOR PRODUCT OWNER + INDEPENDENT REVIEW`.**
-> **P4 remains ACTIVE — NOT CLOSED / NOT FROZEN.** Nothing in this package freezes copy or visuals: every new string is
-> `PROPOSED_FOR_PO_REVIEW`, and every Voice / call word is `RUNTIME_GATED` (PROOF ONLY / NOT COPY FREEZE). No production
-> runtime was implemented. **No lantern research, design or technology selection was performed.** PR #280 was not merged.
+> **Status: `P4-C3 — CORRECTIONS COMPLETE / READY FOR FINAL INDEPENDENT REVIEW`.** The independent review found P4-C3
+> **APPROVED WITH MINOR CORRECTIONS**. The P4-C3R pass applied exactly the four Product Owner approvals recorded in
+> [`QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md`](../../../canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md):
+> the launch appearance policy, «يوجد تعارض» / Mixed, the Public ID English warning, and the Replay name «إعادة العرض» /
+> Replay. Those three copy rows are `APPROVED_BY_PO_P4C3`. Every other new string is still `PROPOSED_FOR_PO_REVIEW`, and
+> every Voice / call word is `RUNTIME_GATED` (PROOF ONLY / NOT COPY FREEZE).
+> **P4 remains ACTIVE — NOT CLOSED / NOT FROZEN.** P4-C3 is not closed. No production runtime was implemented.
+> **No lantern research, design or technology selection was performed.** PR #280 was not merged.
 
 **Baseline:** PR #280 head `0b2703ef35cbad724078926b645d2d216c860749`. **Branch:**
 `design/p4-c-shell-chrome-integrated-decision-proof`.
@@ -19,8 +23,8 @@ The package closes the three evidence gaps P4-C2 left before P4's final reconcil
 
 ## What to look at, in this order
 
-1. [`docs/P4C3_PRODUCT_PROOF_REPORT.md`](docs/P4C3_PRODUCT_PROOF_REPORT.md) — the report: findings, limitations and the
-   one Product Owner question.
+1. [`docs/P4C3_PRODUCT_PROOF_REPORT.md`](docs/P4C3_PRODUCT_PROOF_REPORT.md) — the report: findings (F-01 and F-02 now
+   resolved by the Product Owner), limitations and the P4-C3R correction record.
 2. Voice: [`03`](boards/03-voice-note-history-ar.png) · [`04`](boards/04-voice-note-history-en.png) ·
    [`05`](boards/05-finished-call-history-ar-en.png) · [`06`](boards/06-voice-note-recording-non-signal.png) ·
    [`07`](boards/07-live-call-analysis-non-signal.png), then
@@ -58,8 +62,8 @@ In the live page, the call, recording and End controls work with real input. The
 | [`docs/P4C3_PLATFORM_LAUNCH_RESEARCH.md`](docs/P4C3_PLATFORM_LAUNCH_RESEARCH.md) | Apple / Android first-party guidance, checked 2026-09-27 — evidence, never authority |
 | [`docs/P4C3_VOICE_VISUAL_SPEC.md`](docs/P4C3_VOICE_VISUAL_SPEC.md) | the non-signal Voice specification proposed for review |
 | [`docs/P4C3_COPY_PROOF_REPORT.md`](docs/P4C3_COPY_PROOF_REPORT.md) | the copy rules and the owned words |
-| [`docs/P4C3_PRODUCT_PROOF_REPORT.md`](docs/P4C3_PRODUCT_PROOF_REPORT.md) | the report: skills, checks, findings, limitations, the PO question |
-| `data/` | `COPY_DECISION_TABLE.md` · `COPY_REGISTRY.json` · `CHECKS.json` · `A11Y.json` · `PROVENANCE.json` · `SHOTS.json` · `BOARDS.json` |
+| [`docs/P4C3_PRODUCT_PROOF_REPORT.md`](docs/P4C3_PRODUCT_PROOF_REPORT.md) | the report: skills, checks, findings, limitations, the P4-C3R corrections |
+| `data/` | `COPY_DECISION_TABLE.md` · `COPY_REGISTRY.json` · `CHECKS.json` (the full P4-C3 run) · `CHECKS_P4C3R.json` (the targeted P4-C3R run) · `A11Y.json` · `PROVENANCE.json` · `SHOTS.json` · `BOARDS.json` |
 | `boards/` · `captures/` | 14 boards · the kept representative captures |
 | `prototype/` · `source/` | the proof, and everything that builds it ([`source/REGENERATE.md`](source/REGENERATE.md)) |
 | [`MANIFEST.json`](MANIFEST.json) | every file with bytes and SHA-256 |

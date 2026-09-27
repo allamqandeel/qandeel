@@ -24,7 +24,7 @@
 | P1 closure | §6, §8.1, §10, §11.3–§11.4, §12 | Public ID one-change law and warning obligation; Settings groups (placement only); «فهم قنديل»; the four confidence concepts; the appearance preference |
 | P2 closure | §4–§11 | the signature family, Call Rail A, End Call at 27 px, the utility sourcing, Calm State Morphing, direction by meaning, 44 pt, no fake speaking signal |
 | P3 closure | §9, §10, §11, §12, §13, §16, §17 | the frozen P3 surfaces, the copy boundary, the call-safe strip law, permission education (audit), Quiet Hours re-evaluation |
-| I-08A4 | §8, §9, §10 | frozen Arabic / English Product names, including «العالم العام» / Public World and the earlier «عرض الجلسة» / Session Replay row |
+| I-08A4 | §8, §9, §10 | frozen Arabic / English Product names, including «العالم العام» / Public World and the earlier «عرض الجلسة» / Session Replay row (since P4-C3R superseded, for that Product-facing name only, by «إعادة العرض» / Replay; the bytes stay preserved) |
 | VI-01 | Terminology Matrix V01–V07; Foundation §3, §4, §7, §14 | register tiers, gender-neutral technique, the English "context" / "live" rule, voice strings `PROVISIONAL / PHASE VII` |
 | T-08 `product-copy.ts` | header, packs | frozen Return / temporal wording, numerals, register |
 | T-14 `product-sign-in-copy.ts`; `mobile-product-sign-in-gateway-v1.md` §7 | — | "Sign in" / «تسجيل الدخول»; the gateway's deliberately brand-free boundary |

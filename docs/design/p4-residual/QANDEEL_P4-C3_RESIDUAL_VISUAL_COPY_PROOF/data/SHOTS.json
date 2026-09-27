@@ -21040,8 +21040,8 @@
    "rm": false,
    "q": {},
    "png": "und-ar.png",
-   "bytes": 66129,
-   "sha256": "92c628ad189b03ea5a7ca6cb88a28cc29219a056dabdb33ee02aced92825f811",
+   "bytes": 66427,
+   "sha256": "b2ff69c2e2817ebd4e8c3fa89c728b0d2864420625becd182347d23e7e77f20b",
    "measured": {
     "phone": {
      "dir": "rtl",
@@ -21146,15 +21146,15 @@
      },
      {
       "k": "confMixed",
-      "text": "فيه تعارض",
-      "x": 314.63,
+      "text": "يوجد تعارض",
+      "x": 305.42,
       "y": 370,
-      "w": 51.38,
+      "w": 60.58,
       "h": 20,
       "r": 366,
       "b": 390,
-      "scrollW": 51,
-      "clientW": 51,
+      "scrollW": 61,
+      "clientW": 61,
       "scrollH": 20,
       "clientH": 20
      },
@@ -21202,7 +21202,7 @@
      },
      {
       "k": "confName confMixed",
-      "name": "الثقة: فيه تعارض"
+      "name": "الثقة: يوجد تعارض"
      },
      {
       "k": "confName confMore",
@@ -21757,8 +21757,8 @@
    "rm": false,
    "q": {},
    "png": "pid-en.png",
-   "bytes": 108170,
-   "sha256": "0f9165ae103e4e34304008ead0d237d3a939d3c3e98411c3d4ffe2970ae75591",
+   "bytes": 109346,
+   "sha256": "d75db63920a51c874c610019a531f2aab6cb3c3111e9301a302afd03c87ba43d",
    "measured": {
     "phone": {
      "dir": "ltr",
@@ -21933,7 +21933,7 @@
      },
      {
       "k": "pidBody",
-      "text": "This is the only manual change your Public ID will ever get. After you confirm, the new ID is permanent and can't be changed again.",
+      "text": "This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again.",
       "x": 24,
       "y": 523,
       "w": 342,
@@ -25717,8 +25717,8 @@
    "rm": false,
    "q": {},
    "png": "s320-pid-en.png",
-   "bytes": 72793,
-   "sha256": "0784ed7c1359c5cf8c355a9967e8bc0d988ac5f5c054be72fb130a5c8ca80252",
+   "bytes": 73065,
+   "sha256": "dc08d6c94e46e62c8b6b434b465d8569a8ff84268bf0bfd1c41cefca2145abf2",
    "measured": {
     "phone": {
      "dir": "ltr",
@@ -25893,7 +25893,7 @@
      },
      {
       "k": "pidBody",
-      "text": "This is the only manual change your Public ID will ever get. After you confirm, the new ID is permanent and can't be changed again.",
+      "text": "This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again.",
       "x": 24,
       "y": 222,
       "w": 272,
@@ -26351,8 +26351,8 @@
    "rm": false,
    "q": {},
    "png": "s320-und-ar.png",
-   "bytes": 61343,
-   "sha256": "8731bc18d5d9df32b8c6e8ca7a85224992075f739272413c520d91c6c77bae7a",
+   "bytes": 61643,
+   "sha256": "a15b3ce19977875f63a78c65982a09fcb45f73e3ad8e220d998bf34e99bf5cdc",
    "measured": {
     "phone": {
      "dir": "rtl",
@@ -26457,15 +26457,15 @@
      },
      {
       "k": "confMixed",
-      "text": "فيه تعارض",
-      "x": 244.63,
+      "text": "يوجد تعارض",
+      "x": 235.42,
       "y": 370,
-      "w": 51.38,
+      "w": 60.58,
       "h": 20,
       "r": 296,
       "b": 390,
-      "scrollW": 51,
-      "clientW": 51,
+      "scrollW": 61,
+      "clientW": 61,
       "scrollH": 20,
       "clientH": 20
      },
@@ -26513,7 +26513,7 @@
      },
      {
       "k": "confName confMixed",
-      "name": "الثقة: فيه تعارض"
+      "name": "الثقة: يوجد تعارض"
      },
      {
       "k": "confName confMore",
@@ -28539,8 +28539,8 @@
     "ts": "large"
    },
    "png": "lg-und-ar.png",
-   "bytes": 75092,
-   "sha256": "a4afcc0505812b180e252240bb7b9cb52b39c46b5e4fd90d3e143bcdcf2bdc6c",
+   "bytes": 75294,
+   "sha256": "593ebc3f3b8d3fda9d233235da8443accf74f8bead7124ae504567cc764918ef",
    "measured": {
     "phone": {
      "dir": "rtl",
@@ -28645,15 +28645,15 @@
      },
      {
       "k": "confMixed",
-      "text": "فيه تعارض",
-      "x": 301.78,
+      "text": "يوجد تعارض",
+      "x": 290.28,
       "y": 395,
-      "w": 64.22,
+      "w": 75.72,
       "h": 25,
       "r": 366,
       "b": 420,
-      "scrollW": 64,
-      "clientW": 64,
+      "scrollW": 76,
+      "clientW": 76,
       "scrollH": 25,
       "clientH": 25
      },
@@ -28701,7 +28701,7 @@
      },
      {
       "k": "confName confMixed",
-      "name": "الثقة: فيه تعارض"
+      "name": "الثقة: يوجد تعارض"
      },
      {
       "k": "confName confMore",
@@ -34142,8 +34142,8 @@
    "q": {},
    "focus": "#pid-keep",
    "png": "f-pid-en.png",
-   "bytes": 108757,
-   "sha256": "9f44fd17f4e50759d058ae4146486837f9b12fc38c27d0910256c13c3fdb5258",
+   "bytes": 109933,
+   "sha256": "61b0e3a38463cf47a8aca482a949e2b811425a69e48a3a3dae83793a7fb0dba5",
    "measured": {
     "phone": {
      "dir": "ltr",
@@ -34318,7 +34318,7 @@
      },
      {
       "k": "pidBody",
-      "text": "This is the only manual change your Public ID will ever get. After you confirm, the new ID is permanent and can't be changed again.",
+      "text": "This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again.",
       "x": 24,
       "y": 523,
       "w": 342,

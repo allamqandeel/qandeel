@@ -1,6 +1,8 @@
 # P4-C3 — Product proof report
 
-**Status:** `P4-C3 — RESIDUAL VISUAL + COPY PROOF — READY FOR PRODUCT OWNER + INDEPENDENT REVIEW`.
+**Status:** `P4-C3 — CORRECTIONS COMPLETE / READY FOR FINAL INDEPENDENT REVIEW`.
+The independent review found P4-C3 **APPROVED WITH MINOR CORRECTIONS**. The P4-C3R pass (§6) applied exactly the four
+Product Owner approvals. P4-C3 is **not** closed.
 **P4 remains ACTIVE — NOT CLOSED / NOT FROZEN.** APP-OPS-01 is untouched and not frozen. The End-to-End audit has not
 started. PR #280 was not merged.
 
@@ -59,8 +61,8 @@ here, the lantern is a hard stop, and the visual system is frozen.
 
 | ID | Finding | Disposition |
 |---|---|---|
-| F-01 | **Appearance preference vs a static launch surface.** P1 §12 gives an in-app Dark / Light / System preference (default Dark); an iOS launch screen can follow only the system appearance. Android 12+ can follow the app's choice (`setApplicationNightMode`). | the one Product Owner question (Q-1, §6) |
-| F-02 | I-08A4 §8 / §9 still carry the concept row «عرض الجلسة» / "Session Replay"; G1.1 §5 and G3 §G later hold the Arabic Replay noun open. P4-C3 proposes «إعادة العرض» / "Replay". | if approved, the P4 closure must amend the I-08A4 row in its narrow scope. Not done here |
+| F-01 | **Appearance preference vs a static launch surface.** P1 §12 gives an in-app Dark / Light / System preference (default Dark); an iOS launch screen can follow only the system appearance. Android 12+ can follow the app's choice (`setApplicationNightMode`). | **RESOLVED BY PRODUCT OWNER** (P4-C3R; the former question Q-1 is resolved): iOS system launch follows the device / system appearance; Android system splash follows the effective QANDEEL app appearance where supported; no forced Dark, no duplicate custom splash. Approval record §1 |
+| F-02 | I-08A4 §8 / §9 carry the concept row «عرض الجلسة» / "Session Replay"; G1.1 §5 and G3 §G later hold the Arabic Replay noun open. P4-C3 proposed «إعادة العرض» / "Replay". | **RESOLVED BY PRODUCT OWNER / CONTROLLED AMENDMENT** (P4-C3R): «إعادة العرض» / Replay is the user-facing name; the I-08A4 row is superseded for that Product-facing name only, its bytes preserved; no Replay runtime change. Approval record §4 |
 | F-03 | P3-A's COPY_TABLE marks «كتم الميكروفون» / «إنهاء المكالمة» (mute / end call) `CANON` ("G1.2 R1"), but G1.2 §6 and P4-C2 §5 keep call strings gated. | recorded as `RUNTIME_GATED`. P3-A's bytes are not edited |
 | F-04 | G1.1 §3's `UTTERANCE` wording lets a voice turn carry "its committed textual representation", while G1.2 §6 leaves Voice Note transcripts open (P4-GAP-024). The proof draws the voice turn **with no text**. | compatible if the textual representation is optional; the P4 closure should say so explicitly |
 | F-05 | Android recommends 48 dp targets; P2 §10 / P3 §16 freeze 44 pt and P2 freezes the Call Rail geometry (44 pt targets). | reported per control (C-A2, A11Y.json). No frozen value changed. An implementation / device gate |
@@ -83,18 +85,42 @@ here, the lantern is a hard stop, and the visual system is frozen.
 - Large text is a browser stand-in (118 % plus the ramp), not iOS Dynamic Type or Android font scale (nonlinear on
   Android 14+).
 
-## 6. Question for the Product Owner
+## 6. P4-C3R — the minor correction pass
 
-**Q-1 — Launch appearance when the reader's QANDEEL appearance differs from the phone's.** (F-01)
+The Product Owner approved four corrections; P4-C3R applied exactly those, recorded in
+[`QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md`](../../../../canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md)
+(`EFFECTIVE / FROZEN ON MERGE`). No Product Owner question remains open in this package.
 
-The platform research surfaced this. P4-C1 / P4-C2 do not resolve it, and it decides the first app-owned frame the lantern
-task inherits.
-
-| Option | What happens | Trade-off |
+| # | Correction | Where it shows |
 |---|---|---|
-| **A. System-following launch on both platforms; Android also reports the in-app choice** *(proof default; recommended)* | iOS and Android launch surfaces follow the system appearance; Android API 31+ uses `setApplicationNightMode` so its splash already matches the reader's choice. On iOS a mismatched reader meets one appearance change after launch, handled with F2's own switch semantics (cut under Reduce Motion) before the lantern task's content | follows Apple S1 exactly; one visible change on iOS only for readers whose choice differs from the phone |
-| B. Always-Dark launch (P1's default) | the launch surface is World Dark whatever the system says | matches the default reader; breaks Apple's "match the current appearance" for Light-system readers, who see Dark → Light |
-| C. The lantern task decides | P4 freezes nothing about the boundary's appearance | defers a platform-truth question into a creative task |
+| A | Launch appearance (F-01): iOS follows the device / system appearance; Android follows the effective QANDEEL appearance where supported; no forced Dark; no duplicate custom splash | boards 01 / 02 annotations (their phones are unchanged captures); `P4C3_PLATFORM_LAUNCH_RESEARCH.md` §4 |
+| B | Confidence «يوجد تعارض» / Mixed (was «فيه تعارض») | `confMixed`; boards 09, 13 |
+| C | Public ID English body: "This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again." | `pidBody`; board 10 |
+| D | Replay name «إعادة العرض» / Replay; the I-08A4 «عرض الجلسة» / Session Replay row is superseded for that name only (F-02) | `replayNoun`; board 08 |
+
+The three copy rows carry the new proof-only status `APPROVED_BY_PO_P4C3`. It is not `CANON`, and no other
+`PROPOSED_FOR_PO_REVIEW` row changed. The pass was **targeted**:
+
+- **Recaptured (6):** `und-ar`, `s320-und-ar`, `lg-und-ar` (the Arabic confidence word) and `pid-en`, `s320-pid-en`,
+  `f-pid-en` (the English warning). The other 89 capture entries in `SHOTS.json` are unchanged.
+- **Rerendered boards (6):** 01 and 02 (their "open question Q-1" annotation was stale — now resolved), 08, 09, 10, and 13
+  (two of its phones show the confidence word). **Byte-identical (8):** 03, 04, 05, 06, 07, 11, 12, 14. Their footers still
+  quote the full P4-C3 check summary, which is still their true record.
+- **Checks:** `data/CHECKS_P4C3R.json` holds the targeted run. New: **C-COPY-13** (approved wording active; «فيه تعارض»,
+  the earlier Public ID English and «عرض الجلسة» / Session Replay rejected in the registry, the generated table and on the
+  page; planted `oldmixed`, `oldpid`, `sessionreplay`) and **C-GOV-1** (F-01 / F-02 resolved, no open Q-1, the approval
+  record present and exact, I-08A4 bytes unchanged, no lantern technology; planted `openq`). Also changed: C-SCOPE-1
+  (now allows exactly the approval record and three locators, and rejects any apps / database / services / dependency /
+  schema / migration path) and C-COPY-4 (six statuses; `APPROVED_BY_PO_P4C3` is carried by exactly the three approved rows).
+  `data/CHECKS.json` stays the record of the full P4-C3 run at `eb7f554`.
+
+**Skills Used (P4-C3R).**
+- `sibawayh:writing-eloquent-arabic` — confirmed that «يوجد تعارض» removes the colloquial «فيه» (register) while staying a
+  neutral statement of fact about the understanding, never about the reader, and that it needs no gendered form.
+- `sibawayh:designing-arabic-frontends` — Arabic line-height and fit of the longer word at 320 pt and large text (C-A4,
+  C-A5 rerun), and the `<bdi>` isolation of quoted Arabic in the regenerated boards and table.
+- `ui-ux-pro-max` (references only; Python is absent) — the warning keeps its two named choices and no fear, urgency or
+  extra confirmation step; the English now keeps the reader as the one who acts.
 
 ## 7. Explicit statements
 

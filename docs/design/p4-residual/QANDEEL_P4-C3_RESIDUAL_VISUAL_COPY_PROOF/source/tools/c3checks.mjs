@@ -8,7 +8,7 @@ import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 import { openState, realClick, closeBrowser, closeServers, PKG, REPO, SOURCE, sleep } from './lib/session.mjs';
 import { runJourney } from './c3capture.mjs';
-import { ROWS, ROW, STATUSES, P3_SAME, C, P, R, A, F } from '../src/content.mjs';
+import { ROWS, ROW, STATUSES, P3_SAME, C, AP, P, R, A, F, PO_RECORD, RETIRED } from '../src/content.mjs';
 import { p3Table } from './c3copytable.mjs';
 import { page } from '../src/build.mjs';
 import { palette } from '../src/tokens.mjs';
@@ -38,11 +38,15 @@ const CHECKS = [];
 const def = (id, fam, claim, run, defects = []) => CHECKS.push({ id, fam, claim, run, defects });
 
 // ---------------------------------------------------------------------------------------------------- SCOPE
-def('C-SCOPE-1', 'scope', 'Only this proof package changed against the PR head it started from: no apps/, database/, services/, workflow, dependency, schema or migration path.', async () => {
+// P4-C3R: besides the package, exactly the narrow Product Owner approval record and the locators that make it discoverable.
+const GOV_ALLOWED = [PO_RECORD, 'docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md', 'docs/p4/P4_READ_FIRST.md', 'QANDEEL_CURRENT_STATE.md'];
+const FORBIDDEN = /^(apps|database|services|packages|\.github)\/|(^|\/)(package(-lock)?\.json|pnpm-lock\.yaml|yarn\.lock)$|migration|schema/i;
+def('C-SCOPE-1', 'scope', 'Only this proof package (plus, since P4-C3R, the named approval record and its locators) changed against the PR head P4-C3 started from: no apps/, database/, services/, workflow, dependency, schema or migration path.', async () => {
   if (NOGIT) return ok(true, 'skipped (--no-git)');
   const changed = new Set([...git('diff', '--name-only', BASE).split('\n'), ...git('ls-files', '--others', '--exclude-standard').split('\n')].map((s) => s.trim()).filter(Boolean));
-  const outside = [...changed].filter((p) => !p.startsWith(PKG_REL + '/'));
-  return ok(outside.length === 0, { changed: changed.size, outside });
+  const outside = [...changed].filter((p) => !p.startsWith(PKG_REL + '/') && !GOV_ALLOWED.includes(p));
+  const forbidden = [...changed].filter((p) => !p.startsWith(PKG_REL + '/') && FORBIDDEN.test(p));
+  return ok(!outside.length && !forbidden.length, { changed: changed.size, governance: [...changed].filter((p) => GOV_ALLOWED.includes(p)), outside, forbidden });
 });
 def('C-SCOPE-2', 'scope', 'No new dependency: every source module imports only node: built-ins or files inside source/.', async () => {
   const bad = [];
@@ -219,9 +223,12 @@ def('C-COPY-3', 'copy', 'Frozen names are not rewritten: every CANON row appears
   }
   return ok(!bad.length, { canon: ROWS.filter((x) => x.st === C).length, bad });
 });
-def('C-COPY-4', 'copy', 'Every registry row carries exactly one of the five statuses, and "Needs PO approval" is YES exactly for PROPOSED_FOR_PO_REVIEW.', async () => {
+const APPROVED_KEYS = ['replayNoun', 'confMixed', 'pidBody'];   // exactly the P4-C3R Product Owner approvals — no more
+def('C-COPY-4', 'copy', 'Every registry row carries exactly one of the six statuses; "Needs PO approval" is YES exactly for PROPOSED_FOR_PO_REVIEW; APPROVED_BY_PO_P4C3 is carried by exactly the three rows the Product Owner approved in P4-C3R, each naming the approval record — never by relabelling as CANON.', async () => {
   const bad = ROWS.filter((r) => !STATUSES.includes(r.st) || (r.po === 'YES') !== (r.st === P)).map((r) => r.k);
-  return ok(!bad.length, { rows: ROWS.length, bad });
+  const ap = ROWS.filter((r) => r.st === AP).map((r) => r.k);
+  const apOk = ap.length === APPROVED_KEYS.length && APPROVED_KEYS.every((k) => ap.includes(k)) && APPROVED_KEYS.every((k) => /P4-C3R PO approval record/.test(ROW[k].src));
+  return ok(!bad.length && apOk, { rows: ROWS.length, bad, approved: ap });
 });
 const RENDERED = `(()=>{const out=[];for(const e of document.querySelectorAll('#phone [data-k]')){if(!C3.visible(e))continue;out.push({k:e.dataset.k,t:e.textContent.trim()})}
   const loose=[...document.querySelectorAll('#ui *')].filter(e=>C3.visible(e)&&!e.children.length&&e.textContent.trim()&&!e.closest('[data-k],[data-fixture],.fprobe,.status,.handoff,.day,.vtime,.cd,.num,.celapsed,.sr,bdi')).map(e=>e.textContent.trim());return {out,loose}})()`;
@@ -257,7 +264,7 @@ def('C-COPY-9', 'copy', 'Arabic / English semantic parity: every row has both la
   return ok(!bad.length, { rows: ROWS.length, bad });
 });
 def('C-COPY-10', 'copy', 'English register: no PROPOSED English string ships "context" or "live" as a product word (VI-01 §4 / §7.2); the Live edge the page shows uses the proposed words.', async (o) => {
-  const bad = ROWS.filter((r) => r.st === P && /\b(context|live)\b/i.test(r.en)).map((r) => r.k);
+  const bad = ROWS.filter((r) => (r.st === P || r.st === AP) && /\b(context|live)\b/i.test(r.en)).map((r) => r.k);
   const c = await open(o || { state: 'analysis', lang: 'en' });
   const edge = await E(c, `(()=>{const d=C3.frameDoc();const e=d.getElementById('tl-live');return e?e.getAttribute('aria-label'):null})()`);
   return ok(!bad.length && edge === ROW.liveFollowing.en, { bad, edge });
@@ -269,9 +276,64 @@ def('C-COPY-11', 'copy', 'P3 residual coverage: every one of P3-A\'s 125 interfa
 });
 def('C-COPY-12', 'copy', 'Arabic T1 register and gender: no PROPOSED Arabic chrome string uses spoken-Egyptian markers or masculine singular imperatives (VI-01 §3.1, §3.6). The frozen opener is exempt.', async () => {
   const marks = /(معاك|معايا|ليك|بتاعك|تقدر|هتقدر|دلوقتي|مفيش|عايز|بيتحكم|هيفضل|يستاهل|(^|\s)(اضغط|اسحب|اختر|ادخل|اترك|استخدم)(\s|$))/;
-  const bad = ROWS.filter((r) => r.st === P && r.k !== 'opener' && marks.test(r.ar)).map((r) => `${r.k}: ${r.ar}`);
-  return ok(!bad.length, { proposed: ROWS.filter((r) => r.st === P).length, bad });
+  const bad = ROWS.filter((r) => (r.st === P || r.st === AP) && r.k !== 'opener' && marks.test(r.ar)).map((r) => `${r.k}: ${r.ar}`);
+  return ok(!bad.length, { proposed: ROWS.filter((r) => r.st === P || r.st === AP).length, bad });
 });
+
+// ---------------------------------------------------------------------------------------------------- P4-C3R corrections
+const LIVE_COPY = `(()=>{const d=C3.frameDoc();const t=[...document.querySelectorAll('#phone [data-k]')].filter(e=>C3.visible(e)).map(e=>({k:e.dataset.k,t:e.textContent.trim()}));
+  const n=[...document.querySelectorAll('#phone [aria-label]')].map(e=>e.getAttribute('aria-label'));const f=d?[...d.querySelectorAll('[aria-label]')].map(e=>e.getAttribute('aria-label')):[];
+  const rm=d&&d.getElementById('rmenu');return {t,names:[...n,...f],rmenu:rm?rm.getAttribute('aria-label'):null}})()`;
+def('C-COPY-13', 'copy', 'The Product Owner\'s P4-C3R wording is active and the replaced wording cannot return: confidence «يوجد تعارض» / Mixed (never «فيه تعارض»); the approved Public ID English sentence (never the older one); the Replay noun «إعادة العرض» / Replay (never «عرض الجلسة» / Session Replay) — in the registry, the generated table and on the rendered page.', async (o) => {
+  const reg = [], page = [];
+  if (!o) {
+    if (ROW.confMixed.ar !== 'يوجد تعارض' || ROW.confMixed.en !== 'Mixed') reg.push('confMixed');
+    if (ROW.pidBody.en !== 'This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again.') reg.push('pidBody.en');
+    if (ROW.replayNoun.ar !== 'إعادة العرض' || ROW.replayNoun.en !== 'Replay') reg.push('replayNoun');
+    const active = ROWS.flatMap((r) => [r.ar, r.en]);
+    for (const s of Object.values(RETIRED)) if (active.some((a) => a.includes(s))) reg.push('retired active: ' + s);
+    const table = JSON.parse(readFileSync(join(PKG, 'data', 'COPY_REGISTRY.json'), 'utf8')).rows.flatMap((r) => [r.ar, r.en]);
+    for (const s of Object.values(RETIRED)) if (table.some((a) => a.includes(s))) reg.push('retired in COPY_REGISTRY.json: ' + s);
+    const byK = Object.fromEntries(JSON.parse(readFileSync(join(PKG, 'data', 'COPY_REGISTRY.json'), 'utf8')).rows.map((r) => [r.k, r]));
+    for (const k of APPROVED_KEYS) if (byK[k].ar !== ROW[k].ar || byK[k].en !== ROW[k].en || byK[k].st !== AP) reg.push('generated table stale: ' + k);
+  }
+  const states = o ? [o] : [{ state: 'understanding' }, { state: 'understanding', lang: 'en' }, { state: 'publicid' }, { state: 'publicid', lang: 'en' }, { state: 'analysis-replay' }, { state: 'analysis-replay', lang: 'en' }];
+  for (const s of states) {
+    const c = await open(s); const m = await E(c, LIVE_COPY); const lang = s.lang || 'ar'; const bad = [];
+    const all = [...m.t.map((x) => x.t), ...m.names];
+    for (const x of Object.values(RETIRED)) if (all.some((a) => a.includes(x))) bad.push('retired: ' + x);
+    const want = (k) => (lang === 'ar' ? ROW[k].ar : ROW[k].en);
+    if (s.state === 'understanding' && !m.t.some((x) => x.k === 'confMixed' && x.t === want('confMixed'))) bad.push('confMixed missing');
+    if (s.state === 'publicid' && !m.t.some((x) => x.k === 'pidBody' && x.t === want('pidBody'))) bad.push('pidBody missing');
+    if (s.state === 'analysis-replay' && m.rmenu !== want('replayNoun')) bad.push('replayNoun: ' + m.rmenu);
+    page.push({ s: s.state + '/' + lang, bad });
+  }
+  return ok(!reg.length && page.every((p) => !p.bad.length), { reg, page });
+}, [{ defect: 'oldmixed', o: { state: 'understanding' } }, { defect: 'oldpid', o: { state: 'publicid', lang: 'en' } }, { defect: 'sessionreplay', o: { state: 'analysis-replay', lang: 'en' } }]);
+
+// ---------------------------------------------------------------------------------------------------- GOVERNANCE (P4-C3R)
+const I08A4 = 'docs/canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md';
+const REPORTS = ['P4C3_READ_FIRST.md', 'docs/P4C3_PRODUCT_PROOF_REPORT.md', 'docs/P4C3_COPY_PROOF_REPORT.md', 'docs/P4C3_PLATFORM_LAUNCH_RESEARCH.md', 'docs/P4C3_AUTHORITY_AND_SCOPE.md'];
+const TECH = /\b(rive|lottie|skia|reanimated|animatedvectordrawable|windowSplashScreenAnimatedIcon)\b/i;
+def('C-GOV-1', 'governance', 'The Product Owner decisions are recorded, not left open: F-01 (launch appearance) and F-02 (Replay name) read RESOLVED and no open question Q-1 remains in any report or in the regenerated launch boards\' source; the controlled amendment exists with its frozen-on-merge status, records the platform split and the narrow supersession, keeps P4 ACTIVE, names no lantern technology; I-08A4\'s historical bytes are untouched.', async (o) => {
+  const bad = [];
+  const docs = Object.fromEntries(REPORTS.map((p) => [p, readFileSync(join(PKG, ...p.split('/')), 'utf8')]));
+  docs['source/tools/c3boards.mjs'] = readFileSync(join(SOURCE, 'tools', 'c3boards.mjs'), 'utf8');
+  if (o && o.defect === 'openq') docs['docs/P4C3_PRODUCT_PROOF_REPORT.md'] += '\n## 6. Question for the Product Owner\n\n**Q-1 — Launch appearance.** Open.\n';
+  for (const [p, s] of Object.entries(docs)) for (const line of s.split('\n')) if (/\bQ-1\b/.test(line) && !/RESOLVED|resolved|approved|Approved/.test(line)) bad.push(`${p}: open Q-1 — ${line.trim().slice(0, 80)}`);
+  const rep = docs['docs/P4C3_PRODUCT_PROOF_REPORT.md'];
+  const f01 = rep.split('\n').find((l) => l.startsWith('| F-01')), f02 = rep.split('\n').find((l) => l.startsWith('| F-02'));
+  if (!f01 || !/RESOLVED BY PRODUCT OWNER/.test(f01)) bad.push('F-01 not resolved');
+  if (!f02 || !/RESOLVED BY PRODUCT OWNER \/ CONTROLLED AMENDMENT/.test(f02)) bad.push('F-02 not resolved');
+  if (/Question for the Product Owner/.test(rep)) bad.push('open-question section remains');
+  if (!/CORRECTIONS COMPLETE \/ READY FOR FINAL INDEPENDENT REVIEW/.test(rep)) bad.push('status line');
+  let rec = ''; try { rec = rd(PO_RECORD); } catch { bad.push('approval record missing'); }
+  for (const must of ['CANONICAL PRODUCT DECISION RECORD / CONTROLLED AMENDMENT — EFFECTIVE / FROZEN ON MERGE', 'P4 remains ACTIVE', 'يوجد تعارض', 'إعادة العرض', 'عرض الجلسة', 'Session Replay', 'device / system appearance', 'effective QANDEEL app appearance', 'This is the only time you can manually change your Public ID. After you confirm, the new ID is permanent and can’t be changed again.', 'QAN-BL-NAV-02'])
+    if (!rec.includes(must)) bad.push('record lacks: ' + must.slice(0, 40));
+  if (TECH.test(rec)) bad.push('record names an animation technology');
+  if (!NOGIT) { const before = git('show', `${BASE}:${I08A4}`); if (before !== rd(I08A4)) bad.push('I-08A4 bytes changed'); }
+  return ok(!bad.length, { bad });
+}, [{ defect: 'openq', o: { defect: 'openq' } }]);
 
 // ---------------------------------------------------------------------------------------------------- ACCESSIBILITY
 const CTRL = `(()=>{const ours=C3.controls();const d=C3.frameDoc();const fr=d&&document.getElementById('phone').dataset.place==='analysis'?[...d.querySelectorAll('button,[role=slider]')].filter(e=>{if(!e.getClientRects().length||e.closest('[inert]'))return false;const s=getComputedStyle(e);return s.visibility!=='hidden'&&s.display!=='none'&&+s.opacity>0.5}).map(e=>({id:e.id,name:(e.getAttribute('aria-label')||e.textContent||'').trim(),frame:1})):[];return [...ours,...fr]})()`;

@@ -56,7 +56,7 @@ th{text-align:start;font-size:11px;letter-spacing:.05em;color:#8b8982;font-weigh
 td{padding:7px 8px;border-bottom:1px solid #1e1e1e;vertical-align:top;color:#d8d5ca}
 td.ar{direction:rtl;text-align:right;font-size:15px;line-height:1.75}
 td .st{font:700 10px/1 system-ui,sans-serif;letter-spacing:.04em;border-radius:4px;padding:3px 5px;white-space:nowrap}
-.st.P{background:#2a2720;color:#e0cfa8}.st.C{background:#1b1b1b;color:#c8c5bc}.st.R{background:#3a1f1c;color:#f0a597}.st.A{background:#20242c;color:#a9bbd8}.st.F{background:#1e2a22;color:#a6d4b3}
+.st.P{background:#2a2720;color:#e0cfa8}.st.AP{background:#2c2410;color:#f0d38a;box-shadow:inset 0 0 0 1px #8a6d2a}.st.C{background:#1b1b1b;color:#c8c5bc}.st.R{background:#3a1f1c;color:#f0a597}.st.A{background:#20242c;color:#a9bbd8}.st.F{background:#1e2a22;color:#a6d4b3}
 .why{color:#9e9b92;font-size:12px}
 `;
 const CHIP = { sys: 'SYSTEM LAUNCH', app: 'APP OWNED', pro: 'PROPOSED FOR PO REVIEW', gate: 'RUNTIME-GATED WORDS — PROOF ONLY / NOT COPY FREEZE', fz: 'FROZEN UPSTREAM — CONSUMED', lan: 'STANDALONE LANTERN TASK BEGINS AFTER THIS BOUNDARY' };
@@ -78,9 +78,9 @@ const frame = (fz, va, ju, nt) => `<div class="frame"><div><b>FROZEN — CONSUME
 const row = (label, sub, items) => `<div class="row"><div class="rlab">${label}${sub ? `<span class="sub">${sub}</span>` : ''}</div>${items.join('')}</div>`;
 const page = (n, title, q, body) => `<!doctype html><html lang="en"><head><meta charset="utf-8"><style>${css}</style></head><body><div class="board">` +
   `<h1><span class="n">Board ${n} — </span>${title}</h1><p class="q">${q}</p>${body}` +
-  `<p class="foot">QANDEEL · P4-C3 residual visual + copy proof · P4 ACTIVE — NOT CLOSED · nothing here freezes copy: new strings are PROPOSED FOR PO REVIEW; Voice / call words are RUNTIME-GATED · phones are Product captures at 2× (no harness); every annotation is outside them · checks ${CH.summary.normal} · ${CH.summary.planted}</p></div></body></html>`;
-const ST = { CANON: 'C', PROPOSED_FOR_PO_REVIEW: 'P', RUNTIME_GATED: 'R', AUDIT_OWNED: 'A', FIXTURE_ONLY: 'F' };
-const LABEL = { CANON: 'CANON', PROPOSED_FOR_PO_REVIEW: 'PROPOSED', RUNTIME_GATED: 'RUNTIME-GATED', AUDIT_OWNED: 'AUDIT-OWNED', FIXTURE_ONLY: 'FIXTURE' };
+  `<p class="foot">QANDEEL · P4-C3 residual visual + copy proof · P4 ACTIVE — NOT CLOSED · nothing here freezes copy: new strings are PROPOSED FOR PO REVIEW unless marked PO-APPROVED (P4-C3R); Voice / call words are RUNTIME-GATED · phones are Product captures at 2× (no harness); every annotation is outside them · checks ${CH.summary.normal} · ${CH.summary.planted}</p></div></body></html>`;
+const ST = { CANON: 'C', APPROVED_BY_PO_P4C3: 'AP', PROPOSED_FOR_PO_REVIEW: 'P', RUNTIME_GATED: 'R', AUDIT_OWNED: 'A', FIXTURE_ONLY: 'F' };
+const LABEL = { CANON: 'CANON', APPROVED_BY_PO_P4C3: 'PO-APPROVED (P4-C3)', PROPOSED_FOR_PO_REVIEW: 'PROPOSED', RUNTIME_GATED: 'RUNTIME-GATED', AUDIT_OWNED: 'AUDIT-OWNED', FIXTURE_ONLY: 'FIXTURE' };
 const copyTable = (keys, { why = true } = {}) => `<table><tr><th>Key</th><th>Surface</th><th>Status</th><th style="text-align:right">Arabic</th><th>English</th>${why ? '<th>Why</th>' : ''}</tr>` +
   keys.map((k) => { const r = ROW[k]; return `<tr><td class="mono">${esc(k)}</td><td>${esc(r.surf)}</td><td><span class="st ${ST[r.st]}">${LABEL[r.st]}</span></td><td class="ar">${esc(r.ar)}</td><td>${esc(r.en)}</td>${why ? `<td class="why">${esc(r.why).replace(/«[^»]*»/g, (m) => `<bdi dir="rtl">${m}</bdi>`)}</td>` : ''}</tr>`; }).join('') + '</table>';
 const M = (label, v, cls = '') => `<span class="m ${cls}">${label}: ${v}</span>`;
@@ -95,7 +95,7 @@ B['01-launch-handoff-ios'] = page('01', 'Launch → app handoff, iOS — a truth
     phone('l-ios-d320', 'the same launch surface at 320 × 568', { tag: 'sys' })]) +
   row('Light', 'system Light', [phone('l-ios-l', 'iOS launch screen, Light: the Light World colour', { tag: 'sys' }), '<span class="arrow">→</span>', phone('h-ios-l', 'first app-owned frame, Light', { tag: 'app' }),
     `<div class="panel" style="width:640px"><h3>Measured</h3>${M('Dark launch = app-owned frame', SH['l-ios-d'].sha256 === SH['h-ios-d'].sha256 ? 'byte-identical' : 'DIFFERENT', SH['l-ios-d'].sha256 === SH['h-ios-d'].sha256 ? 'ok' : 'bad')}${M('Light launch = app-owned frame', SH['l-ios-l'].sha256 === SH['h-ios-l'].sha256 ? 'byte-identical' : 'DIFFERENT', SH['l-ios-l'].sha256 === SH['h-ios-l'].sha256 ? 'ok' : 'bad')}${M('text on launch', SH['l-ios-d'].measured.launch.text)}${M('declared minimum duration', SH['l-ios-d'].measured.launch.minDuration || 'none', 'ok')}` +
-    `<h3 style="margin-top:14px">One real tension — Product Owner question Q-1</h3><p>P1 §12 lets a reader choose Dark / Light / System in QANDEEL (default Dark). A static iOS launch screen can only follow the <b>system</b> appearance. A reader who chose Dark on a Light phone therefore sees a Light launch, then a Dark app. Android 12+ can report the app\'s own choice to the system splash (<span class="mono">UiModeManager.setApplicationNightMode</span>, API 31+); iOS cannot. The proof shows the system-following launch and does not decide the iOS cut: see <span class="mono">P4C3_PRODUCT_PROOF_REPORT.md</span> §Questions.</p></div>`]));
+    `<h3 style="margin-top:14px">Launch appearance — approved by the Product Owner (P4-C3R)</h3><p><b>iOS: the system launch screen follows the device / system appearance.</b> It does not try to reproduce the in-app QANDEEL Dark / Light / System preference (P1 §12). A reader who chose QANDEEL Dark on a Light phone sees the system-Light launch, then the app\'s Dark once app-owned UI takes over; that transition is accepted. Android follows the effective QANDEEL appearance instead (board 02). Record: <span class="mono">QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md</span> §1.</p></div>`]));
 
 // ---------------------------------------------------------------------------------------------------------- 02 Android
 {
@@ -103,13 +103,13 @@ B['01-launch-handoff-ios'] = page('01', 'Launch → app handoff, iOS — a truth
   B['02-launch-handoff-android'] = page('02', 'Launch → app handoff, Android 12+ — the platform SplashScreen with the approved icon, then the app',
     'Android 12+ always shows the system SplashScreen: the app\'s adaptive icon, masked, over one opaque background colour. QANDEEL supplies the I-08B2.5 icon bytes unchanged (48 dp framing, P4-C2 §1) and the World colour as the background, and then hands over to the same ground. No custom splash activity, no animated icon, no exit animation, no hold.',
     frame('the I-08B2.5 adaptive foreground layer (vendored bytes, sha ' + readFileSync(join(SOURCE, 'PROVENANCE.json'), 'utf8').match(/ic_launcher_foreground[^}]*"sha256": "([0-9a-f]{12})/)[1] + '…) and its flat ground; the World fill', 'icon in the 160 dp mask of the 240 dp icon box (Android\'s "with icon background" geometry), centred; background a single opaque colour; the app-owned frame keeps that colour and drops the icon (C-L3, C-L4)', 'whether the icon sits calmly on the World ground in both appearances; whether the cut to the app ground is clean', 'AnimatedVectorDrawable, exit animations, keep-on-screen conditions, a second Activity splash — and the lantern') +
-    row('Dark', 'system Dark', [phone('l-and-d', 'system SplashScreen: I-08B2.5 icon, World background', { tag: 'sys' }), '<span class="arrow">→</span>', phone('h-and-d', 'first app-owned frame: same colour, no icon', { tag: 'app' }), '<span class="arrow">→</span>',
+    row('Dark', 'effective QANDEEL Dark', [phone('l-and-d', 'system SplashScreen: I-08B2.5 icon, World background', { tag: 'sys' }), '<span class="arrow">→</span>', phone('h-and-d', 'first app-owned frame: same colour, no icon', { tag: 'app' }), '<span class="arrow">→</span>',
       `<div><span class="chip lan">${CHIP.lan}</span><div class="boundary"><b>QANDEEL — Lantern Gateway Identity Moment v1</b>Begins after this frame. Nothing about it is designed, timed or chosen in P4-C3.</div></div>`,
       phone('l-and-d430', 'the same splash at 430 pt', { tag: 'sys' })]) +
-    row('Light', 'system Light', [phone('l-and-l', 'system SplashScreen, Light', { tag: 'sys' }), '<span class="arrow">→</span>', phone('h-and-l', 'first app-owned frame, Light', { tag: 'app' }),
+    row('Light', 'effective QANDEEL Light', [phone('l-and-l', 'system SplashScreen, Light', { tag: 'sys' }), '<span class="arrow">→</span>', phone('h-and-l', 'first app-owned frame, Light', { tag: 'app' }),
       crop('l-and-d', { x: 75, y: 302, w: 240, h: 240, z: 1.5, cap: 'the 240 dp icon box; the adaptive layer is masked to its 160 dp circle' }),
       `<div class="panel" style="width:430px"><h3>Measured</h3>${M('mask', L.icon.rect.w + ' × ' + L.icon.rect.h + ' dp', 'ok')}${M('icon box', L.icon.box.w + ' × ' + L.icon.box.h + ' dp', 'ok')}${M('background', L.bg, 'ok')}${M('text', L.text, 'ok')}` +
-      `<p style="margin-top:10px">Implementation note (not decided here): the platform theme maps this to <span class="mono">windowSplashScreenBackground</span> = World and the existing adaptive icon; <span class="mono">setApplicationNightMode</span> can make the splash follow the reader\'s in-app appearance (Q-1).</p></div>`]));
+      `<p style="margin-top:10px"><b>Approved by the Product Owner (P4-C3R):</b> where the platform supports it (API 31+, <span class="mono">UiModeManager.setApplicationNightMode</span>), the system splash follows the <b>effective QANDEEL appearance</b> — so the rows here are the effective QANDEEL Dark / Light. Not forced Dark; no duplicate custom splash. The theme maps <span class="mono">windowSplashScreenBackground</span> = World and the existing adaptive icon.</p></div>`]));
 }
 
 // ---------------------------------------------------------------------------------------------------------- 03 / 04 Voice Note
@@ -218,14 +218,20 @@ B['13-stress-320-large-text'] = page('13', 'Stress — 320 × 568 and large text
 }
 
 // ================================================================================================= render
+// --only 08,09 renders just the boards whose number is listed and keeps every other board's bytes and BOARDS.json entry
+// untouched (P4-C3R targeted correction; the pipeline never passes it).
+const ONLY = (() => { const i = process.argv.indexOf('--only'); return i > 0 ? process.argv[i + 1].split(',') : null; })();
 mkdirSync(join(PKG, 'boards'), { recursive: true });
 const meta = [];
 for (const [name, html] of Object.entries(B)) {
+  if (ONLY && !ONLY.includes(name.slice(0, 2))) continue;
   const png = await renderSheet(name, html, { width: 1900 });
   writeFileSync(join(PKG, 'boards', name + '.png'), png);
   meta.push({ board: name + '.png', bytes: png.length, sha256: sha(png), shots: [...html.matchAll(/shots\/([\w-]+)\.png/g)].map((m) => m[1]).filter((v, i, a) => a.indexOf(v) === i) });
   process.stdout.write(`${name} `);
 }
 await closeSheetBrowser();
-writeFileSync(join(PKG, 'data', 'BOARDS.json'), JSON.stringify({ note: 'Every board, its bytes and the captures it shows.', boards: meta }, null, 1) + '\n');
+let boards = meta;
+if (ONLY) { const prev = JSON.parse(readFileSync(join(PKG, 'data', 'BOARDS.json'), 'utf8')).boards; const by = Object.fromEntries(meta.map((m) => [m.board, m])); boards = prev.map((m) => by[m.board] || m); }
+writeFileSync(join(PKG, 'data', 'BOARDS.json'), JSON.stringify({ note: 'Every board, its bytes and the captures it shows.', boards }, null, 1) + '\n');
 console.log(`\nboards ${meta.length}`);
