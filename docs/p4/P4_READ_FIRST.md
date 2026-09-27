@@ -1,6 +1,6 @@
 # QANDEEL — P4 Read First
 
-**Status:** `P4-C2 SYNCHRONIZED — ALL PRODUCT OWNER DECISIONS RESOLVED — P4 ACTIVE, NOT CLOSED`
+**Status:** `P4-C4 COPY RATIFIED — ALL PRODUCT OWNER DECISIONS RESOLVED — P4 ACTIVE, NOT CLOSED`
 
 ---
 
@@ -20,6 +20,7 @@
 | **P4-C1 Product decisions / amendment** | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) selects **S-B + U-A + Q-A + SW-3**, retires the dedicated «سياق الكلام» / Live Context Product surface, preserves Context Activation + Live Focus, and records `P4-GAP-065` / `QAN-BL-CTX-01` |
 | **P4-C2 Product decisions / amendment** | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) resolves **DQ-05 … DQ-09 and DQ-11 … DQ-17**. The lantern identity moment is confirmed for v1 but moved to the standalone future task **QANDEEL — Lantern Gateway Identity Moment v1**. **No Product Owner decision remains open.** APP-OPS independent review / P4 proof / closure work remain |
 | **P4-C3R Product Owner approvals** | [P4-C3R approvals](../canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md) record the four approvals made on review of the [P4-C3 proof](../design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/P4C3_READ_FIRST.md): launch appearance (iOS follows the device, Android follows the effective QANDEEL appearance), «يوجد تعارض» / Mixed, the Public ID English warning, and the Replay name «إعادة العرض» / Replay (narrowly superseding I-08A4's «عرض الجلسة» / Session Replay row). P4-C3 is **corrections complete / ready for final independent review**, not closed |
+| **P4-C4 final copy approvals** | [P4-C4](../canonical-authority/final-product-experience/p4/QANDEEL_P4C4_FINAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md) ratifies **all 104** remaining P4-owned `PROPOSED_FOR_PO_REVIEW` copy rows at reviewed head `ab9ec3f92eb6059cffe41a8c4d561c9053667f9e` without changing their text. No P4-owned Product copy remains awaiting Product Owner approval. P4 itself is still **ACTIVE / NOT CLOSED** |
 | Implementation | **none authorized.** P4-C1 changes Product authority/documentation only. It adds one owned backlog obligation (`QAN-BL-CTX-01`) but creates no runtime, schema, migration, dependency or production UI |
 | End-to-End Product Experience Completeness Audit | **not started** |
 
@@ -71,6 +72,7 @@ HR, admin tooling, generic analytics and internal automation.
 6. [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) — DQ-01 … DQ-04 + contextual-relevance re-ownership.
 7. [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) — DQ-05 … 09 and DQ-11 … 17, including v1 inclusion of the lantern with its design/motion separated to the standalone later task.
    - later, [P4-C3R approvals](../canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md) — launch appearance policy, «يوجد تعارض», the Public ID English warning, and the Replay name «إعادة العرض» / Replay.
+   - then, [P4-C4 final copy approvals](../canonical-authority/final-product-experience/p4/QANDEEL_P4C4_FINAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md) — Product Owner ratification of all 104 remaining P4-owned copy rows.
 8. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — future work that is not a Product decision.
 
 ---
