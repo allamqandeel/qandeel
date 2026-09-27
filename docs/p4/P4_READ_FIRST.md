@@ -1,6 +1,6 @@
 # QANDEEL — P4 Read First
 
-**Status:** `P4-A MERGED — P4-B EFFECTIVE — P4-C PROOF COMPLETE — P4-C1 DQ-01…04 PRODUCT OWNER DECISIONS RECORDED — P4 ACTIVE, NOT CLOSED`
+**Status:** `P4-C2 SYNCHRONIZED — ONLY DQ-06 LANTERN-IN-V1 REMAINS OPEN — P4 ACTIVE, NOT CLOSED`
 
 ---
 
@@ -17,7 +17,8 @@
 | Correction pass | applies the Product Owner's three-rule boundary: operational telemetry is **always content-free**; APP-OPS-01 creates **no Company Operations private-content receipt path**; and No Human Review is **not narrowed** to Company Operations. Re-reading CW2-08 §8 confirmed one authority conflict (`P4-DQ-10`) |
 | P4-B controlled amendment | on `576b010dcf78276c982f5052cfee7dd1bcbfcbcb`, P4-B adds the [CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md), effective on merge. `P4-DQ-10` is resolved |
 | P4-C comparative proof | the [P4-C shell / placement / small-chrome decision proof](../design/p4-shell/QANDEEL_P4-C_SHELL_CHROME_INTEGRATED_DECISION_PROOF/P4C_READ_FIRST.md) remains the evidence package. P4-C itself still decides nothing |
-| **P4-C1 Product decisions / amendment** | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) selects **S-B + U-A + Q-A + SW-3**, retires the dedicated «سياق الكلام» / Live Context Product surface, preserves Context Activation + Live Focus, and records the missing runtime-backed contextual-relevance capability as `P4-GAP-065` / `QAN-BL-CTX-01`. **12** Product Owner decisions remain open; **17** census rows still need a P4 decision |
+| **P4-C1 Product decisions / amendment** | [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) selects **S-B + U-A + Q-A + SW-3**, retires the dedicated «سياق الكلام» / Live Context Product surface, preserves Context Activation + Live Focus, and records `P4-GAP-065` / `QAN-BL-CTX-01` |
+| **P4-C2 Product decisions / amendment** | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) resolves DQ-05, DQ-07…09 and DQ-11…17; partially resolves DQ-06 sequencing. **Only one Product Owner decision remains open: whether the lantern gateway moment is in v1.** APP-OPS Product Owner decisions are complete; independent review / P4 closure remain |
 | Implementation | **none authorized.** P4-C1 changes Product authority/documentation only. It adds one owned backlog obligation (`QAN-BL-CTX-01`) but creates no runtime, schema, migration, dependency or production UI |
 | End-to-End Product Experience Completeness Audit | **not started** |
 
@@ -65,10 +66,10 @@ HR, admin tooling, generic analytics and internal automation.
    authority it touches, plus the residual-canon precedence notes. It records **no open authority conflict**: the one
    conflict P4-A found (historical CW2-08 §8 / H7 let an authorized person reach case-scoped private conversation
    content) is superseded in that narrow scope by the CW2-08A controlled amendment.
-5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — the **12 open** rows:
-   `P4-DQ-05` … `P4-DQ-09` for the residual canon and `P4-DQ-11` … `P4-DQ-17` for APP-OPS-01. `P4-DQ-01` … `04` and `P4-DQ-10` stay as resolved records.
-6. [P4-C1 Product decision / controlled amendment](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) — the binding owner decisions for DQ-01 … DQ-04 and the contextual-relevance re-ownership.
-7. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — future work that is not a P4 decision, including the new `QAN-BL-CTX-01` carry-forward.
+5. [`P4_PRODUCT_OWNER_DECISION_QUEUE.md`](P4_PRODUCT_OWNER_DECISION_QUEUE.md) — **one open Product Owner row**: `P4-DQ-06`, narrowed to lantern-in-v1.
+6. [P4-C1](../canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md) — DQ-01 … DQ-04 + contextual-relevance re-ownership.
+7. [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) — DQ-05, partial DQ-06, DQ-07 … 09 and DQ-11 … 17.
+8. [`P4_CARRY_FORWARD_MATRIX.md`](P4_CARRY_FORWARD_MATRIX.md) — future work that is not a Product decision.
 
 ---
 
