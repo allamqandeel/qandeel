@@ -66,37 +66,23 @@ for supersession. Where nothing later answers the item, the column says **none**
 
 | Classification | Rows |
 |---|---:|
-| `P4 — PRODUCT DECISION REQUIRED` | 4 |
-| `P4 — VISUAL DECISION REQUIRED` | 5 |
-| `P4 — COPY DECISION REQUIRED` | 7 |
-| `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | 1 |
-| `ALREADY CLOSED / SUPERSEDED` | 14 |
+| `P4 — VISUAL DECISION REQUIRED` | 1 |
+| `P4 — VISUAL EXECUTION / PROOF REQUIRED` | 3 |
+| `P4 — COPY EXECUTION / PROOF REQUIRED` | 4 |
+| `P4 — CLOSURE / INDEPENDENT REVIEW REQUIRED` | 1 |
+| `ALREADY CLOSED / SUPERSEDED` | 18 |
 | `IMPLEMENTATION ONLY — NOT P4` | 13 |
 | `DEVICE / RELEASE VALIDATION — NOT P4` | 1 |
-| `END-TO-END AUDIT OWNED` | 4 |
+| `END-TO-END AUDIT OWNED` | 7 |
 | `BACKLOG OWNED` | 3 |
 | `DEPENDENCY-GATED — CANNOT CLOSE YET` | 6 |
 | `HISTORICAL / EVIDENCE ONLY` | 2 |
-| `NO ACTION` | 6 |
+| `NO ACTION` | 7 |
 | **Total** | **66** |
 
-That is 65 `P4-GAP` rows (`P4-GAP-001` … `P4-GAP-065`) plus `APP-OPS-01`. §5 lists every row by class, so the
-count can be checked.
+There are 65 `P4-GAP` rows (`P4-GAP-001` … `P4-GAP-065`) plus `APP-OPS-01`.
 
-**Current residual gaps needing a P4 decision: 17 rows.** Those are the four `P4 — …` classes. They reduce to 12
-open Decision Queue rows:
-
-- `P4-DQ-05` … `P4-DQ-09` for the remaining residual Product / visual / copy canon;
-- `P4-DQ-11` … `P4-DQ-17` for APP-OPS-01.
-
-`P4-DQ-01` … `04` are resolved by P4-C1. `P4-DQ-10` remains the earlier resolved CW2-08A traceability record.
-
-Several census rows share one queue row. `P4-GAP-057`, the CW2-08 §8 / H7 human-review conflict P4-A found during the
-APP-OPS reconciliation, is `ALREADY CLOSED / SUPERSEDED`: P4-B's
-[CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md)
-binds in that narrow scope, effective on merge. `P4-DQ-10` stays visible as a resolved traceability record.
-
----
+**Only one Product Owner decision remains open:** `P4-DQ-06`, narrowly asking whether the lantern gateway moment is in v1 (`P4-GAP-019`). Several P4-owned execution / proof items remain, but they are no longer undecided Product questions.
 
 ## 3. Census table
 
@@ -127,22 +113,22 @@ Column key:
 
 | ID | Canonical ID | Domain | Source | Exact unresolved state | Later authority | Current truth | Classification | P4 action | Decision owner | Proof needed | Downstream owner |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| P4-GAP-012 | I-08B2.5 | brand lifecycle | [brand SOURCE-PROVENANCE](../design/canonical-artifacts/brand/SOURCE-PROVENANCE.md): "**No standalone brand closure / freeze record exists on this host.**"; [review manifest](../design/canonical-artifacts/brand/i-08b2.5/docs/I-08B2.5_REVIEW_MANIFEST.md): "Not closed, not frozen, not canonical" | the brand package has no lifecycle record | artifact index: "Final production package. No standalone brand closure record". Consumed as authority by closed G1.1, C3, D2R, E1R, F1R2 and P2 §13.7. App icon Variant B was frozen at I-08B2.4 | used as canon downstream, never ratified. The lifecycle is not established | `P4 — PRODUCT DECISION REQUIRED` | decide ratification → `P4-DQ-05` | Product Owner | none beyond the existing package and its geometry verification | P4 closure (index update) |
-| P4-GAP-013 | L-1 | app icon | review manifest L-1: the icon SVG header "still reads 'NOT approved, NOT frozen, NOT canonical'… Correcting it is a Product decision and will change the hash" | a stale self-label inside a frozen asset | none | open. It is a byte-identity trade-off | `P4 — PRODUCT DECISION REQUIRED` | decide → `P4-DQ-05` | Product Owner | hash record if the bytes change | P4 closure / Production Integration |
-| P4-GAP-014 | — | app icon | [asset report](../design/canonical-artifacts/brand/i-08b2.5/docs/I-08B2.5_FINAL_ASSET_REPORT.md) §13: "The Android 48 dp framing choice… is reported… so Product can confirm or redirect it" | Android adaptive-icon framing | none | awaits Product confirmation | `P4 — VISUAL DECISION REQUIRED` | confirm or redirect → `P4-DQ-05` | Product Owner | adaptive-icon renders; on-device check later | Release |
-| P4-GAP-015 | L-5 | app icon | asset report L-5: iOS 18 dark and tinted variants "would need their own Product direction" | whether v1 ships dark and tinted variants, and their direction | none | open | `P4 — VISUAL DECISION REQUIRED` | decide → `P4-DQ-05` | Product Owner | variant visual proof if adopted | Production Integration / Release |
+| P4-GAP-012 | I-08B2.5 | brand lifecycle | [brand SOURCE-PROVENANCE](../design/canonical-artifacts/brand/SOURCE-PROVENANCE.md) | the brand package lacked a standalone lifecycle record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) ratifies I-08B2.5 | **resolved:** I-08B2.5 is the final Brand Authority | `ALREADY CLOSED / SUPERSEDED` | none — `P4-DQ-05` resolved | Product Owner | existing package / verification sufficient | Production Integration |
+| P4-GAP-013 | L-1 | app icon | review manifest L-1: stale pre-freeze header comment inside the frozen icon SVG | whether to change bytes and break the frozen hash | P4-C2 chooses **keep bytes / keep hash** | **resolved:** stale comment remains historical metadata; P4-C2 is current lifecycle authority | `ALREADY CLOSED / SUPERSEDED` | none — `P4-DQ-05` resolved | Product Owner | no asset rewrite | Production Integration |
+| P4-GAP-014 | — | app icon | asset report §13: Android 48 dp framing awaited Product confirmation | Android adaptive-icon framing | P4-C2 confirms **48 dp** | **resolved** | `ALREADY CLOSED / SUPERSEDED` | none — `P4-DQ-05` resolved | Product Owner | existing adaptive-icon evidence accepted; on-device release check remains | Release |
+| P4-GAP-015 | L-5 | app icon | iOS dark / tinted variants were out of B2.5 scope | whether v1 ships dedicated variants | P4-C2: **not in v1; defer beyond v1** | v1 disposition resolved; any future variant needs a later Product direction | `NO ACTION` | none for v1 | — | — | future Product / Release if reopened |
 | P4-GAP-016 | L-4, §13 | brand application | asset report L-4: masters "carry no clear space… production use must add its own"; §13: colour tokens "not frozen here" | clear space in use; no global brand colour token | none | these are production-application rules, and the icon values are presentation values | `IMPLEMENTATION ONLY — NOT P4` | none | — | — | Production Integration |
 | P4-GAP-017 | — | app icon wiring | `apps/mobile/app.json` has no `icon`, `splash` or `adaptiveIcon` key | the assets are not applied | — | implementation gap | `IMPLEMENTATION ONLY — NOT P4` | none | — | build / device check | Production Integration |
-| P4-GAP-018 | — | launch / splash / gateway | no canonical record defines the launch, splash or brand-entry moment. The roadmap §2 P4 examples name "app icon / launch-brand application"; roadmap §3 lists "app launch / splash / brand entry" for the audit | undecided, and the roadmap names it in both places | none | open. The sequencing is ambiguous between P4 and the audit | `P4 — PRODUCT DECISION REQUIRED` | decide sequencing and scope → `P4-DQ-06` | Product Owner | a visual proof of the launch brand application, if P4 closes it | End-to-End audit / Production Integration |
-| P4-GAP-019 | — | gateway identity moment | [C3 headroom contract §4](../design/canonical-artifacts/living-brass/i-08b3.1-c3/docs/C3_EXPRESSIVE_HEADROOM_CONTRACT.md): a lantern "can appear at the gateway… **C3 does not design it, does not freeze its animation**"; C3 freeze record: "Lantern animation — later"; "Q-thread expression — later". [T-14 §7](../mobile-product-sign-in-gateway-v1.md): "No logo, no lantern…" | the gateway lantern moment and the Q-thread expression are authorized but undesigned | roadmap §3: T-14 "deliberately excludes logo/lantern/brand treatment" | open. The owner is "later", with no named task | `P4 — VISUAL DECISION REQUIRED` | decide whether it is in or out of v1, and its sequencing → `P4-DQ-06` | Product Owner | motion proof if adopted | End-to-End audit / Production Integration |
+| P4-GAP-018 | — | launch / splash / gateway | roadmap names launch-brand application in P4 and audit | sequencing between P4 and audit | P4-C2 selects **P4 closes the static launch / gateway brand application before the audit** | Product sequencing resolved; visual design / proof still required | `P4 — VISUAL EXECUTION / PROOF REQUIRED` | produce integrated launch / gateway brand proof | Product Owner no longer needed for sequencing | visual proof | Production Integration |
+| P4-GAP-019 | — | gateway identity moment | C3 authorizes but does not design/freeze a lantern gateway moment | **whether the lantern gateway moment is in v1**; animation remains undesigned | P4-C2 deliberately makes no inference from the grouped approval | **one remaining Product Owner decision** | `P4 — VISUAL DECISION REQUIRED` | answer lantern-in-v1 yes/no → `P4-DQ-06`; then prove if adopted | Product Owner | motion / gateway proof if adopted | Production Integration |
 | P4-GAP-020 | QAN-BL-AUTH-01 (tombstone) | account entry | T-14 §11 anti-scope: sign-up, password reset, onboarding, brand assets; backlog §7 | lifecycle journeys not designed | P1 §3 and §4 close the sign-in requirement and the sign-up fields; roadmap §3 "Complete Account / Authentication Lifecycle" goes to the audit | the Product requirements are partly closed. The journeys go to the audit | `END-TO-END AUDIT OWNED` | none | — | — | End-to-End audit |
 
 ### 3.3 Voice visual language
 
 | ID | Canonical ID | Domain | Source | Exact unresolved state | Later authority | Current truth | Classification | P4 action | Decision owner | Proof needed | Downstream owner |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| P4-GAP-021 | — | Voice visual | [G1.2 §6](../design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md): "current audio strip / waveform / activity morphology; final Voice visual language… **PROOF ONLY — NOT A VISUAL FREEZE**" | the Voice visual language beyond the call controls | P2 §13.1 "**still not frozen**"; P2 §15 "stay governed by G1.2 §6 and the roadmap's P4 census"; P2 F-P2-05: no simulated level | open, under the binding "no fake speaking or activity signal" law (P2 §11.1) | `P4 — VISUAL DECISION REQUIRED` | decide the split → `P4-DQ-08` | Product Owner | integrated Voice / Live Call visual proof, AR / EN | Production Integration; `QAN-BL-VOICE-01` |
-| P4-GAP-022 | — | Voice history visual | G1.2 §6 "final call-history material representation"; P2 §11 "call-history media representation" not frozen | how a Voice Note and a finished call appear in history | none | open. The static representation can be decided now; nothing here needs live audio | `P4 — VISUAL DECISION REQUIRED` *(folded into P4-GAP-021's decision)* | decide within `P4-DQ-08` | Product Owner | history visual proof | Production Integration |
+| P4-GAP-021 | — | Voice visual | G1.2 / P2 leave final Voice visual language open and forbid fake signal | what closes now vs runtime | P4-C2 selects **Split** | Product direction resolved. Non-signal visuals require P4 proof; signal-bearing morphology waits for `QAN-BL-VOICE-01` | `P4 — VISUAL EXECUTION / PROOF REQUIRED` | prove non-signal Voice / Live Call language in AR / EN | — | integrated visual proof | Production Integration; `QAN-BL-VOICE-01` |
+| P4-GAP-022 | — | Voice history visual | G1.2 / P2 leave Voice Note and finished-call history representation unfrozen | static representation | P4-C2 assigns it to P4 non-signal visual closure | Product decision resolved; proof still required | `P4 — VISUAL EXECUTION / PROOF REQUIRED` | prove Voice Note + finished-call history representation | — | history visual proof | Production Integration |
 | P4-GAP-023 | — | speaking indicator | [P2 §11.1](../qandeel-p2-final-iconography-canonical-closure.md): "A truthful future speaking indicator requires real call / audio runtime truth"; P2 creates "no duplicate backlog alias" | no indicator is frozen, and none may be faked | `QAN-BL-VOICE-01` requires "truthful microphone and route state" | gated on the Voice runtime | `DEPENDENCY-GATED — CANNOT CLOSE YET` | record only | — | real runtime signal | `QAN-BL-VOICE-01` |
 | P4-GAP-024 | — | Voice Note transcript | G1.2 §6: "whether committed Voice Notes later gain a machine transcript" | whether a transcript exists | none | depends on STT runtime and provider evidence (roadmap §3 benchmark). If it exists, APP-OPS-01 §6 bars it from Company Operations | `DEPENDENCY-GATED — CANNOT CLOSE YET` | record only | — | provider / runtime evidence | Voice runtime track (`QAN-BL-VOICE-01`); End-to-End audit |
 | P4-GAP-025 | — | native call behavior | G1.2 §6: speaker route, other-system-call hold / interruption UI, barge-in, Voice Note backgrounding, Recents privacy | native / runtime behavior and its presentation | none | needs the native call stack | `DEPENDENCY-GATED — CANNOT CLOSE YET` | record only | — | device + runtime | `QAN-BL-VOICE-01` |
@@ -153,13 +139,13 @@ Column key:
 
 | ID | Canonical ID | Domain | Source | Exact unresolved state | Later authority | Current truth | Classification | P4 action | Decision owner | Proof needed | Downstream owner |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| P4-GAP-028 | — | core surface copy | G3 §G: "Arabic Replay noun and entry names; the English Conversation → Analysis label; Timeline accessible name and preview routes; Live-edge wording while following Live — `OPEN COPY`, unchanged"; origins G1.1 §2, §5 | core labels of the Conversation / Analysis surfaces | [P3-A copy table](../design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/data/COPY_TABLE.md) still carries `door` (EN) and `replay` (AR) as `OPEN` | open. These are the "two `OPEN` strings" of P3 §17 | `P4 — COPY DECISION REQUIRED` | disposition → `P4-DQ-09` | Product Owner (copy) | AR / EN in context | End-to-End audit / Production Integration |
-| P4-GAP-029 | — | Matching copy | G3 §G: Matching proof lines («ليه؟», acknowledgement, unavailable, second-accepter, later arrival, welcome) "`OPEN COPY`, unchanged. Product copy owner"; "English Matching copy — `OPEN COPY`. Nothing invented" | the Matching lines beyond G2.3's frozen opener and privacy line | none | open. The owner is "Product copy owner", not Connected Worlds `I-08` | `P4 — COPY DECISION REQUIRED` | disposition → `P4-DQ-09` | Product Owner (copy) | copy in context | Connected Worlds `I-08` (surfaces) |
-| P4-GAP-030 | — | notification copy | [P3 §17](../qandeel-p3-notification-activity-final-realization-canonical-closure.md): `PROOF` help lines; «تنبيه أثناء المكالمة» / "Alert during your call"; «قنديل يبادر معايا»; the `DIRECTION` education sheet; the Arabic Snooze words (`PROOF`) — "belong to the roadmap's P4 … census, if P4 determines that they must close before the End-to-End audit" | not canonical | none | open, handed to P4 conditionally | `P4 — COPY DECISION REQUIRED` | decide whether each closes before the audit → `P4-DQ-09` | Product Owner (copy) | copy in context | End-to-End audit / Production Integration |
-| P4-GAP-031 | — | account / Understanding copy | P1 §11.3: confidence-state wording "is open copy, in both languages"; P1 §19: Settings group names "explicitly labelled open copy"; P1 §6: the Public ID warning is required but not written; P1 §15.3 "the final failure wording is open copy"; P1 §2.1 Login ID help "microcopy is open" | P1's open copy | P3 §17 approves only «الإشعارات والنشاط» | open | `P4 — COPY DECISION REQUIRED` | disposition → `P4-DQ-09` | Product Owner (copy) | copy in context | End-to-End audit (account lifecycle) |
-| P4-GAP-032 | VI-01 `PROPOSED` / `OPEN` rows | legacy copy | [VI-01 README](../design/phase-vi/vi-01-bilingual-product-language/README.md) carried table: "The 8 `PROPOSED` Arabic strings — native rendered-surface judgement"; `OPEN` rows (for example S03 EN "Live Context") | a "later rendered-language pass" with no named task | G1.1 §2 amends VI-01 naming narrowly; other rows untouched | open, with an orphaned owner | `P4 — COPY DECISION REQUIRED` | disposition → `P4-DQ-09` | Product Owner (copy) | rendered-surface review | End-to-End audit |
-| P4-GAP-033 | — | brand casing | VI-01 README: "QANDEEL English casing — Brand Integration" (no such task exists) | the English casing of the name | frozen English canon uses "QANDEEL": I-08A4 §13–§15, P1 §10 ("QANDEEL Understanding"), P3 §12. Proofs mix in "Qandeel" | the evidence points one way, but no record states the rule | `P4 — COPY DECISION REQUIRED` | confirm → `P4-DQ-09` | Product Owner | — | Production Integration |
-| P4-GAP-034 | — | opener / welcome | G1.1 §1: normal Arabic new-conversation opener «اهلا يا {display_name} ... انا في انتظارك ... يلا نبدأ», and "The exact post-registration Welcome remains a separate copy moment"; I-08A4 §14 First-Use Welcome and §15 First Conversation Opening «أنا معك يا {display_name}.» | how G1.1's normal opener relates to I-08A4 §15; G1.1 gives no English normal opener | none reconciles them | a compatible reading exists (first conversation vs later new conversations), but it is not stated | `P4 — COPY DECISION REQUIRED` | confirm → `P4-DQ-09` | Product Owner (copy) | — | End-to-End audit (first use) |
+| P4-GAP-028 | — | core surface copy | G3 §G core Conversation / Analysis / Replay / Timeline / Live-edge copy remains open | exact AR / EN copy | P4-C2 assigns the cluster to **P4** | disposition resolved; actual copy and rendered proof still required | `P4 — COPY EXECUTION / PROOF REQUIRED` | author + prove in context | Product Owner (copy proof) | AR / EN in context | Production Integration |
+| P4-GAP-029 | — | Matching copy | G3 §G Matching proof lines / English Matching copy are open | exact lines | P4-C2 hands the cluster to the End-to-End audit | sequencing resolved | `END-TO-END AUDIT OWNED` | audit language pass / later scoped closure | — | rendered context later | End-to-End audit; Connected Worlds `I-08` |
+| P4-GAP-030 | — | notification copy | P3 §17 residual copy | exact copy / sequencing | P4-C2: copy on already-frozen P3 surfaces closes in P4; permission-education sheet goes to audit | disposition resolved; P4-owned copy still requires proof | `P4 — COPY EXECUTION / PROOF REQUIRED` | author P4-owned lines; carry education sheet to audit | Product Owner (copy proof) | copy in context | End-to-End audit / Production Integration |
+| P4-GAP-031 | — | account / Understanding copy | P1 open copy: confidence states, Settings group names, Public ID warning, auth failure/help | exact copy / sequencing | P4-C2: confidence / Settings groups / Public ID warning close in P4; sign-in failure and Login ID help go to audit | disposition resolved; P4-owned copy still requires proof | `P4 — COPY EXECUTION / PROOF REQUIRED` | author P4-owned lines; audit owns auth copy | Product Owner (copy proof) | copy in context | End-to-End audit / Production Integration |
+| P4-GAP-032 | VI-01 `PROPOSED` / `OPEN` rows | legacy copy | VI-01 carried residue | later rendered-language pass | P4-C2 hands the remaining residue to the End-to-End audit | sequencing resolved | `END-TO-END AUDIT OWNED` | audit rendered-language pass | — | rendered-surface review | End-to-End audit |
+| P4-GAP-033 | — | brand casing | VI-01 orphaned Brand Integration owner; frozen English canon consistently uses QANDEEL | English casing | P4-C2 confirms **QANDEEL** | **resolved** | `ALREADY CLOSED / SUPERSEDED` | none — casing frozen | Product Owner | — | Production Integration |
+| P4-GAP-034 | — | opener / welcome | G1.1 normal opener vs I-08A4 First Conversation Opening; English normal opener missing | relation + missing English copy | P4-C2 confirms they are separate moments and assigns the missing English normal opener to P4 | relation resolved; English copy / proof still required | `P4 — COPY EXECUTION / PROOF REQUIRED` | write + prove English normal opener | Product Owner (copy proof) | copy in context | End-to-End audit (first use) |
 | P4-GAP-035 | VI-01 V01–V07 | Voice / call strings | G1.2 §6 "final Voice / call strings that VI-01 leaves provisional"; VI-01 "`PRINCIPLES = KEEP. EXACT STRINGS = PROVISIONAL / PHASE VII.`" | exact voice / realtime state strings. "A state string must name what the architecture actually does" | none. "Phase VII" is not a live track | gated on Voice runtime truth. The named owner is orphaned | `DEPENDENCY-GATED — CANNOT CLOSE YET` | record, and name the re-ownership need (Carry-Forward Matrix) | — | runtime truth | `QAN-BL-VOICE-01` / Production Integration |
 | P4-GAP-036 | — | fixtures | P3 §17: "every `FIXTURE` event sentence. They are synthetic event text, never Product copy" | — | — | not a copy candidate | `NO ACTION` | none | — | — | — |
 | P4-GAP-037 | QAN-BL-T12-02 (tombstone) | numerals | VI-01 / VI-02 §6 "Numeral policy — OPEN" | — | T-12 §9: v1 `latn` in both languages | closed for v1 | `ALREADY CLOSED / SUPERSEDED` | none | — | — | — |
@@ -203,7 +189,7 @@ Product / visual canon.
 
 | ID | Canonical ID | Domain | Source | Exact unresolved state | Later authority | Current truth | Classification | P4 action | Decision owner | Proof needed | Downstream owner |
 |---|---|---|---|---|---|---|---|---|---|---|---|
-| **APP-OPS-01** | — | App ↔ Company Operations | Product Owner designation (P4-A Task Contract §0, §4, §7–§24) | no canonical record defines what the Company may receive from, and change in, the released App | consumes Telemetry v1, Outbox v1, Startup Recovery v1, Health v1, Model Router, FAST / DEEP v2, Safety Runtime, CW2-02 / 03 / 04 / 08 ([matrix](P4_AUTHORITY_COMPATIBILITY_MATRIX.md)) | contract **candidate** written: [APP_OPS_01 candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md). **NOT FROZEN** | `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | review; answer `P4-DQ-11` … `P4-DQ-17`; close in a later P4 change | Product Owner + independent review | none visual; authority reconciliation | End-to-End audit (two fields); Production Integration (implementation) |
+| **APP-OPS-01** | — | App ↔ Company Operations | Product Owner designation + P4-C2 | no canonical closure yet defines the released App ↔ Company Operations contract | P4-C2 resolves `P4-DQ-11` … `17`; CW2-08A resolves DQ-10 | Product Owner decisions are complete. Candidate still requires independent review and later P4 closure; no implementation is authorized | `P4 — CLOSURE / INDEPENDENT REVIEW REQUIRED` | independent review → closure reconciliation | Product Owner decisions complete + independent review | authority reconciliation | End-to-End audit (two fields); Production Integration |
 | P4-GAP-057 | CW2-08 §8, H7 | Safety / moderation | [CW2-08 §8](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08_SAFETY_MODERATION_ENTITLEMENTS_LAUNCH_v1.0_FROZEN.md): `CASE_SCOPED_MODERATION_ACCESS` bound to exact case, **evidence scope**, purpose, authorized role/service/**person**, validity and audit; "No blanket private-World browsing follows from the moderator role itself". §7 supplies protected `REPORT_CASE` evidence | historical: that wording let an authorized **person** reach case-scoped evidence and limited only blanket private-World browsing, so where scoped evidence was private conversation content it permitted human review, contrary to `PO-OPS-02` | [CW2-08A controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-08A_NO_HUMAN_REVIEW_CONTROLLED_AMENDMENT_v1.0.md) (P4-B), binding on merge in its named scope: §8 actor / access wording, H7, the §44 item 5 boundary | closed. No human role or person may receive, inspect or review private QANDEEL conversation content under Safety / Moderation authority; automated Safety processing stays allowed; Public moderation is not decided. The original CW2-08 stays frozen, historical and byte-identical. No replacement moderation mechanism chosen | `ALREADY CLOSED / SUPERSEDED` | none; `P4-DQ-10` is a resolved record | — | — | Connected Worlds `I-09` / CW2-08 for any future moderation / report work, which must obey CW2-08A |
 
 ---
@@ -252,33 +238,18 @@ Counted row by row from §3. There are 66 rows: `APP-OPS-01` and `P4-GAP-001` �
 
 | Classification | Rows | Count |
 |---|---|---:|
-| `P4 — PRODUCT DECISION REQUIRED` | 001, 005, 012, 013, 018, 039 | 6 |
-| `P4 — VISUAL DECISION REQUIRED` | 002, 003, 004, 014, 015, 019, 021, 022 | 8 |
-| `P4 — COPY DECISION REQUIRED` | 028, 029, 030, 031, 032, 033, 034 | 7 |
-| `P4 — PRODUCT/ARCHITECTURE DECISION REQUIRED` | APP-OPS-01 | 1 |
-| `ALREADY CLOSED / SUPERSEDED` | 006, 007, 037, 038, 057, 060, 061, 062, 063 | 9 |
-| `IMPLEMENTATION ONLY — NOT P4` | 008, 009, 011, 016, 017, 045, 047, 050, 051, 053, 054, 055 | 12 |
+| `P4 — VISUAL DECISION REQUIRED` | 019 | 1 |
+| `P4 — VISUAL EXECUTION / PROOF REQUIRED` | 018, 021, 022 | 3 |
+| `P4 — COPY EXECUTION / PROOF REQUIRED` | 028, 030, 031, 034 | 4 |
+| `P4 — CLOSURE / INDEPENDENT REVIEW REQUIRED` | APP-OPS-01 | 1 |
+| `ALREADY CLOSED / SUPERSEDED` | 001, 002, 003, 004, 005, 006, 007, 012, 013, 014, 033, 037, 038, 057, 060, 061, 062, 063 | 18 |
+| `IMPLEMENTATION ONLY — NOT P4` | 008, 009, 011, 016, 017, 045, 047, 050, 051, 053, 054, 055, 065 | 13 |
 | `DEVICE / RELEASE VALIDATION — NOT P4` | 052 | 1 |
-| `END-TO-END AUDIT OWNED` | 020, 040, 048, 049 | 4 |
+| `END-TO-END AUDIT OWNED` | 020, 029, 032, 039, 040, 048, 049 | 7 |
 | `BACKLOG OWNED` | 027, 041, 042 | 3 |
 | `DEPENDENCY-GATED — CANNOT CLOSE YET` | 023, 024, 025, 026, 035, 056 | 6 |
 | `HISTORICAL / EVIDENCE ONLY` | 058, 059 | 2 |
-| `NO ACTION` | 010, 036, 043, 044, 046, 064 | 6 |
-| **Total** | | **65** |
+| `NO ACTION` | 010, 015, 036, 043, 044, 046, 064 | 7 |
+| **Total** | | **66** |
 
-**22 rows need a P4 decision.** They map onto 16 open Decision Queue rows. `P4-DQ-10` is kept as a resolved
-record:
-
-| Decision Queue row | Census rows |
-|---|---|
-| `P4-DQ-01` | 001 |
-| `P4-DQ-02` | 002 |
-| `P4-DQ-03` | 003 |
-| `P4-DQ-04` | 004, 005 |
-| `P4-DQ-05` | 012, 013, 014, 015 |
-| `P4-DQ-06` | 018, 019 |
-| `P4-DQ-07` | 039, and 040 by reference |
-| `P4-DQ-08` | 021, 022 |
-| `P4-DQ-09` | 028 … 034 |
-| `P4-DQ-10` | resolved record: 057 (now `ALREADY CLOSED / SUPERSEDED` by CW2-08A); no open census row |
-| `P4-DQ-11` … `P4-DQ-17` | APP-OPS-01 |
+**One Product Owner decision remains open:** `P4-DQ-06` for `P4-GAP-019` (lantern-in-v1).
