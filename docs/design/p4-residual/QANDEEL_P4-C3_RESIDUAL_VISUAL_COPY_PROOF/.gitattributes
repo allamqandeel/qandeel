@@ -1,0 +1,7 @@
+# The P4-C3 package is verified byte-for-byte by its MANIFEST.json (SHA-256 per file). Never let git normalise line
+# endings here, on any checkout, or the recorded hashes stop matching.
+* -text
+# Vendored frozen material (byte-exact copies of P2-A, P3-A, P4-C, the I-08B2.5 brand files and G3.2's reviewed
+# prototype) is evidence and is never normalised, so git's whitespace checks do not apply to it.
+source/vendor/** -whitespace
+prototype/g3.2/** -whitespace

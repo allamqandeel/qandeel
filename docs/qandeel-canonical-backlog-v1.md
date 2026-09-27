@@ -155,7 +155,9 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -367,6 +369,21 @@ happens to reversible history — are defined here.
 This item does not reopen G1.2 Product proof. It records the implementation/runtime residue that G1.2
 was explicitly forbidden to invent.
 
+**Current truth (BG-08 reconciliation at P4 closure).** P4 adds no alias for this item and changes none of its fields.
+It records the P4 residues that wait on this item's future runtime truth, so they stay discoverable here:
+
+- signal-bearing Voice morphology — live waveform, speaking / listening / activity morphology, live audio levels — which
+  [P4-C2 §4](canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md)
+  keeps gated here and forbids faking. The non-signal Voice visuals are frozen by the P4 closure;
+- Voice / call state strings (P4-C2 §5; VI-01 V01–V07, whose "Phase VII" owner does not exist), including the call words
+  P3-A's copy table had marked `CANON` (P4-C3 finding F-03);
+- the P4 census rows that depend on it: the truthful speaking indicator (`P4-GAP-023`), whether a Voice Note gains a
+  machine transcript (`P4-GAP-024`), native call behaviour (`P4-GAP-025`) and a spoken-reply control (`P4-GAP-026`);
+  the transcript and spoken-reply rows also need provider evidence from the End-to-End audit;
+- APP-OPS-01's approved call-status operational domain, which cannot be emitted before a call authority exists.
+
+None of these is decided here, and none authorizes implementation (BG-07).
+
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
 
 > **Historical pre-closure schema retained for the frozen T-12 / T-12P residue only.** This block
@@ -407,6 +424,19 @@ misread as a decision:
   account creation, account linking, or credential UX semantics are defined by this entry.
 
 The backlog records the obligation only (BG-07).
+
+### `QAN-BL-CTX-01` — Runtime-backed Conversational Relevance
+
+- **Title / Finding:** QANDEEL has current conversational attention (Live Focus), explicit user-owned cross-context bindings, Memory/HIM/Hypothesis/Question foreground lanes and a Living Analysis World, but no single runtime/client authority that says which eligible analytical items are more or less related to **what the current conversation is about right now**.
+- **Source:** [P4-C1 §5–§6](canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md), preserving and re-owning Phase V V10 A22/A23 after retiring the dedicated Live Context Product surface.
+- **Why deferred:** P4 closes Product / visual decisions and implements no runtime. P4-C1 deliberately removes the obsolete dedicated Live Context drawer/panel rather than shipping a UI that pretends the missing relevance signal exists. The runtime authority, integration contract and proof need one dedicated Architecture/Runtime task.
+- **Owner task:** `QAN-CTX-01 — Conversational Relevance Runtime`
+- **Severity:** `HIGH`
+- **Reopen condition:** automatic when `QAN-CTX-01` starts; and it MUST be opened before any production feature claims that item-level contextual relevance drives Living Analysis spatial recomposition, motion, presence, or a general cross-domain relevance selection.
+- **Required future properties:** one explicit runtime-backed relevance contract; fail-closed absence (no fabricated default/neutral score); preserve A15 non-equivalence (relevance is not importance, truth, confidence, evidence strength, priority, rank, certainty or correctness); preserve explicit user Context Activation as explicit and never silently auto-bind Goal / Situation / Decision / Relationship targets from inferred relevance; expose a client-consumable signal before visual spatialization; provide a non-spatial accessible equivalent and reduced-motion parity for any visual expression; do not let response-context selection and visual-world behavior silently invent incompatible independent meanings of "relevant".
+- **Status:** `DEFERRED — OWNED`
+
+This entry freezes **no algorithm**. It does not choose embeddings, scores, thresholds, provider/model, storage, refresh cadence, ranking shape or UI. Those require the future Task Contract. The dedicated «سياق الكلام» / Live Context surface remains retired by P4-C1.
 
 ### `QAN-BL-VIS-01` — Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof
 
@@ -471,6 +501,37 @@ This entry defines no density, no level-of-detail rule, no token and no world ch
 Admitted by the recovered canonical authority preservation, at the explicit direction of Architecture / the
 Product Owner (BG-06). This entry chooses no remedy. The register's "remediation direction" is evidence, not a
 decision, and nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
+
+- **Title / Finding:** the exceptional lantern gateway identity moment is frozen as **present in v1**, but it has no
+  design, motion, interaction choreography, implementation technology or proof. P4 froze only its presence and journey
+  placement: the gateway identity moment of the launch journey, beyond the static launch → system handoff that P4-C3
+  proved and the P4 closure froze.
+- **Source:** [P4-C2 §2](canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md)
+  ("The exceptional lantern gateway identity moment is in v1"; its visual design, motion design, interaction
+  choreography, implementation technology and production proof "are intentionally separated into a later standalone
+  task"), which rests on C3's authorization of an exceptional gateway identity object (C3 expressive headroom §4).
+  Carried as census row `P4-GAP-019` and admitted by the
+  [P4 final closure §9](canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md).
+- **Why deferred:** the Product Owner took the work out of P4 by decision (P4-C2 §2). The future task "must begin with
+  its own research / skills / creative exploration and independent review"; P4 performed none of that, and P4-C3 drew
+  nothing past the lantern boundary. P4 closes and can no longer hold it.
+- **Owner task:** `QANDEEL — Lantern Gateway Identity Moment v1`
+- **Severity:** `HIGH`, because if reopened the work lands on a capability already frozen as present in v1, at the
+  launch / gateway moment every user passes through, next to the frozen static launch → system handoff.
+- **Reopen condition:** automatic when `QANDEEL — Lantern Gateway Identity Moment v1` is opened by its own Task Contract;
+  and it must be opened before any v1 release, because P4-C2 §2 freezes the moment as present in v1.
+- **Required future properties:** the ones existing authority already states, and no others — presence in v1 at the
+  gateway identity moment of the launch journey (P4-C2 §2); the static launch → system handoff and the P4-C3R launch
+  appearance policy stay as frozen unless that task opens a controlled change; the task begins with its own research,
+  creative exploration and independent review (P4-C2 §2); any motion it proposes stays subject to the existing frozen
+  motion and accessibility authority (T-10, `QAN-GOV-02`, F1R2), which this entry does not restate or extend.
+- **Status:** `DEFERRED — OWNED`
+
+This entry defines **no** animation technology, motion choreography, timing, Q reveal behaviour, interaction mechanics,
+visual composition or implementation. Those belong to the named task and its own Task Contract. The entry records the
+obligation only (BG-07).
 
 ---
 
@@ -617,15 +678,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 1 |
+| `DEFERRED — OWNED` | 3 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **22** |
+| **Total** | **24** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 13 |
+| `HIGH` | 15 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
@@ -638,8 +699,8 @@ explicitly named in the T-12 document but missed this register, and it was admit
 remains `CLOSED / FROZEN`.
 
 T-14 tombstoned two: its own `QAN-BL-AUTH-01`, and `QAN-BL-T13-01`, which T-13 delivered but did not
-reconcile here before closing. `QAN-BL-SEC-01` is now the only `DEFERRED — OWNED` item in the
-register, and it is unchanged. **T-14 admitted no new item.** Its anti-scope — sign-up, email
+reconcile here before closing. At T-14 closure, `QAN-BL-SEC-01` was the only `DEFERRED — OWNED` item in the
+register, and it was unchanged. **T-14 admitted no new item.** Its anti-scope — sign-up, email
 verification, password reset, magic link, OTP, social auth, biometrics, passkeys, profile,
 onboarding, account deletion, account linking, "remember me", a password visibility toggle and
 sign-out chrome — is anti-scope, and BG-06 admits none of it: none has an existing `OPEN` identifier,
@@ -658,8 +719,15 @@ stale. At the PR #268 baseline (`84f507d0`) the §4 index held 21 rows, not 20:
 The sentence above is left as it was written. It undercounted by one: the §4 index already held eight open
 items once `QAN-BL-VIS-01` was admitted.
 
-The preservation then admitted `QAN-BL-CW-01` (`ASSURE-F05`, `HIGH`, `OPEN — UNASSIGNED`). The register now
-holds 22 items: 9 `OPEN — UNASSIGNED`, 13 `HIGH`. The correction reopens nothing and changes no other item.
+The preservation then admitted `QAN-BL-CW-01` (`ASSURE-F05`, `HIGH`, `OPEN — UNASSIGNED`). That brought the register to 22 items.
+
+**P4-C1 admission (2026-09-27).** P4-C1 retires the dedicated Live Context Product surface while preserving the runtime-gated contextual-relevance capability and admits `QAN-BL-CTX-01` (`HIGH`, `DEFERRED — OWNED`) with owner `QAN-CTX-01 — Conversational Relevance Runtime`. The register now holds **23** items: 2 `DEFERRED — OWNED`, 9 `OPEN — UNASSIGNED`, 12 `CLOSED — TOMBSTONE`, and 14 `HIGH`. This admission authorizes no implementation (BG-07).
+
+**P4 closure admission (2026-09-27).** The P4 final closure admits `QAN-BL-LANTERN-01` (`HIGH`, `DEFERRED — OWNED`) with
+owner `QANDEEL — Lantern Gateway Identity Moment v1`, and adds a current-truth note to `QAN-BL-VOICE-01` without changing
+its fields. The register now holds **24** items: 3 `DEFERRED — OWNED`, 9 `OPEN — UNASSIGNED`, 12 `CLOSED — TOMBSTONE`,
+and 15 `HIGH`. The sentences above are left as they were written at their own baselines. This admission authorizes no
+implementation (BG-07).
 
 ---
 
@@ -699,6 +767,8 @@ Inherited after T-12 closure reconciliation:
 | --- | --- |
 | `T-11` | none |
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01` |
+| `QAN-CTX-01 — Conversational Relevance Runtime` | `QAN-BL-CTX-01` |
+| `QANDEEL — Lantern Gateway Identity Moment v1` | `QAN-BL-LANTERN-01` |
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` — delivered; tombstoned under BG-08 by T-14 |
 | `T-12 — Final Integration` | none — reconciled and tombstoned under BG-08 / PR #220 |
 | `T-14 — Mobile Product Sign-In Gateway v1` | `QAN-BL-AUTH-01` — explicitly claimed by the T-14 contract |
@@ -1047,3 +1117,34 @@ they are:
 **A disposition that needs no backlog entry.** The F1 / F2 North Star spectacle requirement, which the F records gave to
 G, is dispositioned by the Product Owner's decision recorded in the closure record §E: met by the accepted canonical
 I-08B1 world. That leaves no obligation to register.
+
+### P4 — design-track BG-08 reconciliation
+
+This is a Product-track record. P4 is neither a `T-` task nor a Connected Worlds `I-0N` phase, so it has no index
+tombstone and no phase closure heading. Its primary record is
+[`canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md`](canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md),
+and it carries P4's and `APP-OPS-01`'s lifecycle state itself (BG-09).
+
+**Inherited: none.** No item names P4, a P4 slice or `APP-OPS-01` as its Owner task. `QAN-BL-CTX-01` is P4's own
+admission, made by P4-C1, and stays `DEFERRED — OWNED` by `QAN-CTX-01` because that runtime task has not opened.
+
+**Existing items reused, not aliased.** `QAN-BL-VOICE-01` gains a current-truth note naming the P4 residues that wait on
+its runtime truth; its owner, severity, status and reopen condition are unchanged. `QAN-BL-NAV-02` (the Replay surface,
+now named «إعادة العرض» / Replay by P4-C3R — a name, not the surface), `QAN-BL-VIS-01`, `QAN-BL-CW-01` and
+`QAN-BL-SEC-01` are unchanged. Control-plane authentication is not `QAN-BL-SEC-01`, which owns mobile credential storage.
+
+**Admitted: one, `QAN-BL-LANTERN-01`.**
+- **Why it qualifies:** P4-C2 §2 defers a real v1 obligation to the named future task `QANDEEL — Lantern Gateway Identity
+  Moment v1` — BG-06's second route.
+- **Why now:** P4 closes and can no longer hold it; it may not live only in the P4 carry-forward matrix.
+- **Why it is not a laundered blocker (BG-01):** the Product Owner took the work out of P4 by decision.
+
+**Not admitted.** The APP-OPS carry-forwards (the two audit fields, implementation, control-plane security mechanics,
+diagnostic identity, the Remote Configuration family register, release / OTA governance, operational readiness), the
+undrawn screens, journey copy, account lifecycle, economy, provider selection, device gates, production ports and craft,
+and the Connected Worlds-owned surfaces. Each is already owned by the End-to-End audit, Production Integration, Release
+Hardening, Product Owner + Architecture controlled approval, or Connected Worlds `I-08` / `I-09`, and none qualifies under
+BG-06. The P4 final closure §9 gives the reason row by row.
+
+**BG-01.** No P4 finding was moved here in order to close. The P4-C3 findings were resolved inside P4-C3 / P4-C3R or are
+dispositioned in the P4 final closure §6.

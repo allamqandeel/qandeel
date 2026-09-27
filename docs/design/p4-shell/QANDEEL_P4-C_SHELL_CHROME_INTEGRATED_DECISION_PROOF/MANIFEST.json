@@ -1,0 +1,699 @@
+{
+ "package": "QANDEEL_P4-C_SHELL_CHROME_INTEGRATED_DECISION_PROOF",
+ "status": "P4-C COMPARATIVE VISUAL DECISION PROOF — READY FOR PRODUCT OWNER + INDEPENDENT REVIEW — P4-DQ-01 … P4-DQ-04 OPEN",
+ "baseline": "175df7b6f9254d83b82d2b7571c915959fb06a27",
+ "prototype": {
+  "path": "prototype/index.html",
+  "sha256": "e62aabfb10dcacb22995cb3174e8bdd4c67dc8f65a7b1941d7db49980bd474b5",
+  "rebuild": "byte-identical"
+ },
+ "count": 137,
+ "bytes": 21677654,
+ "files": [
+  {
+   "path": ".gitattributes",
+   "bytes": 448,
+   "sha256": "dc38c7f428d9f6cbd21f1a5d6b5dfa48d23bb55c65f3c830cb578f5857322f65"
+  },
+  {
+   "path": "P4C_READ_FIRST.md",
+   "bytes": 4924,
+   "sha256": "a978dc11d5f4c9e7644a94829e1a122687878c05dd19dc8f1b6db99b18fc23e5"
+  },
+  {
+   "path": "boards/01-authority-baseline.png",
+   "bytes": 606099,
+   "sha256": "d61b8e4167c2946cde57e067d9a57f15a912915ea2093fc159d4d53e69d13e68"
+  },
+  {
+   "path": "boards/02-dq01-settings-placement.png",
+   "bytes": 785820,
+   "sha256": "e1432db88f1ad7f8cc7fb1e955fbef9b9c32f6eb952f3fe1d8c8edbab3c6acac"
+  },
+  {
+   "path": "boards/03-dq02-understanding-placement.png",
+   "bytes": 672469,
+   "sha256": "b1386b1f49031ec800eda0eb7e5c66c627c5257d22b7fae0c67cb6434a4ec2f8"
+  },
+  {
+   "path": "boards/04-dq03-q-placement.png",
+   "bytes": 828947,
+   "sha256": "39a1d512476fb83a99f7f24d05f9e29175de7049a6044eeaa0c412b95700b98b"
+  },
+  {
+   "path": "boards/05-dq04-switcher-form.png",
+   "bytes": 1255031,
+   "sha256": "ce04416c6cb3379ed0c4756b284ba4be9e7e2ba982f12fcc41ff931cefff950c"
+  },
+  {
+   "path": "boards/06-dq04-context-placement.png",
+   "bytes": 1714291,
+   "sha256": "80465f05c1abdcfbbad4af9bccf3bfa9cb35253405d5c2135efa773b19523bfd"
+  },
+  {
+   "path": "boards/07-integrated-ar-dark.png",
+   "bytes": 567894,
+   "sha256": "f4a4758a7b21bb0170e35454de2216b890747f617d1e452a665de154ddb35ad9"
+  },
+  {
+   "path": "boards/08-integrated-en-light.png",
+   "bytes": 617127,
+   "sha256": "35f8719e782681deaa0967caa68007ff3faf7d9255579208f8d52ebf78bcca2c"
+  },
+  {
+   "path": "boards/09-compact-320-stress.png",
+   "bytes": 560355,
+   "sha256": "f882a103a3debb65b57564aee641709ad53872a0d26429777c1b457af56e1133"
+  },
+  {
+   "path": "boards/10-accessibility-rtl-focus.png",
+   "bytes": 427229,
+   "sha256": "5f75618bc6ddfc5ad632f452333cdb9885fe12164ac24c037fcad39473bd2912"
+  },
+  {
+   "path": "boards/11-decision-summary.png",
+   "bytes": 844645,
+   "sha256": "5a61589c90497e6f0b7531b5474c567a419b0514883dcda08942722437052a18"
+  },
+  {
+   "path": "captures/b-analysis-ad.png",
+   "bytes": 1170410,
+   "sha256": "b32d431bc161280551177e9f155184e32dac849587548b988694d4c0dd028bac"
+  },
+  {
+   "path": "captures/b-conv-ad.png",
+   "bytes": 138006,
+   "sha256": "6558052ba9817335c48c75fea9c5b04437bb12400ce799fa215c189ab4f35906"
+  },
+  {
+   "path": "captures/iI-conv-ad.png",
+   "bytes": 140598,
+   "sha256": "c4ff520e2df505b65a3fca4d8c48b1d67dfc8324f45008f9d1a3a97d4ae0ca03"
+  },
+  {
+   "path": "captures/iI-conv-el.png",
+   "bytes": 146448,
+   "sha256": "61b839112e1f3e7a7e5f2c5344eaaf73fad34be4b1f9926eedd3461538efcc6b"
+  },
+  {
+   "path": "captures/iI-cp320-ad.png",
+   "bytes": 549017,
+   "sha256": "fecd8abeff73aad6117c86207f7fb2ceb42e4f07d9a445ee36b1b34d671a838d"
+  },
+  {
+   "path": "captures/iI-hc-ad.png",
+   "bytes": 141075,
+   "sha256": "16af69deabe659a2deb1819c58688176b4953f7cf6b3cbe1ae2d48675e687ab1"
+  },
+  {
+   "path": "captures/iII-conv-a320.png",
+   "bytes": 74052,
+   "sha256": "d7ff9b6d814290ca90b958c6bb24953d35cbf400ce72e56bf02a0837c2122fd8"
+  },
+  {
+   "path": "captures/iII-conv-ad.png",
+   "bytes": 140601,
+   "sha256": "a8b668bdd462e82bd7a2e08c5d81d3f733687402d789427acb25047c6a57ae6c"
+  },
+  {
+   "path": "captures/iII-conv-el.png",
+   "bytes": 146550,
+   "sha256": "a92b1fb3754b8bc249bd06e8a61556ed075f56e9b8f14813b77b8530cf8d44f4"
+  },
+  {
+   "path": "captures/iII-focus2-ad.png",
+   "bytes": 143327,
+   "sha256": "9dcc46476e55efcf542cf345ce2fa50b8c613e838b771862cd15cd6fa229b201"
+  },
+  {
+   "path": "captures/q-A-conv-ad.png",
+   "bytes": 125675,
+   "sha256": "2ebd2a27780903f4836e3df7e17adc92b7723e45a9c7b36480c4b3c8ace64dfd"
+  },
+  {
+   "path": "captures/q-B-conv-ad.png",
+   "bytes": 127290,
+   "sha256": "bfa3fef72152e4360ce3db8d6ab4f0079ebae6493c20123e9a4be6e16a21ebbd"
+  },
+  {
+   "path": "captures/q-C-shared-ad.png",
+   "bytes": 53844,
+   "sha256": "19de6086db54945c56812bdeee65541c9f891f891be3008027010b9c3b641fb6"
+  },
+  {
+   "path": "captures/q-moment-cue-ad.png",
+   "bytes": 1000450,
+   "sha256": "43ab655a0afd5815bb372844afbadcdbbd25f90b49fcf2e87a18b8a026c3a788"
+  },
+  {
+   "path": "captures/s-A-conv-a320.png",
+   "bytes": 74050,
+   "sha256": "5dc85edfed4decedf4121d9b4f244788a2ac9346c567371a42b5d65e88b9166e"
+  },
+  {
+   "path": "captures/s-A-conv-ad.png",
+   "bytes": 140600,
+   "sha256": "f892085a3605082ed042904163c5231419b32be8b29f69f8432166347eb15828"
+  },
+  {
+   "path": "captures/s-B-conv-ad.png",
+   "bytes": 140598,
+   "sha256": "c4ff520e2df505b65a3fca4d8c48b1d67dfc8324f45008f9d1a3a97d4ae0ca03"
+  },
+  {
+   "path": "captures/s-B-shared-ad.png",
+   "bytes": 53865,
+   "sha256": "1bfbb19dcc40f013a81e8e2575529d71217871381c0c112d753b3ab8d543a336"
+  },
+  {
+   "path": "captures/u-A-ad.png",
+   "bytes": 140598,
+   "sha256": "c4ff520e2df505b65a3fca4d8c48b1d67dfc8324f45008f9d1a3a97d4ae0ca03"
+  },
+  {
+   "path": "captures/u-B-ad.png",
+   "bytes": 139707,
+   "sha256": "4379cbb365f17c53e88ce25668e91e09e95cdde40d080e42c28860d5d16dfb7d"
+  },
+  {
+   "path": "captures/u-B-sA-a320.png",
+   "bytes": 83401,
+   "sha256": "b7b7c3ff9ac52bc8fa228ebea3f1c854bdc53a778c7a68204f1e881ddaaec457"
+  },
+  {
+   "path": "captures/w-ground-conv-ad.png",
+   "bytes": 140686,
+   "sha256": "560c159b4b0a2cd55358f6a8844c828f73295d1939d49ce60c04e765f50bd2ec"
+  },
+  {
+   "path": "captures/w-plate-conv-ad.png",
+   "bytes": 140598,
+   "sha256": "c4ff520e2df505b65a3fca4d8c48b1d67dfc8324f45008f9d1a3a97d4ae0ca03"
+  },
+  {
+   "path": "captures/w-seam-analysis-ad.png",
+   "bytes": 1173114,
+   "sha256": "8d778d47bf9c733947e821a2441687bcf302df1f92eecff4bbd8995542cfca3b"
+  },
+  {
+   "path": "captures/w-seam-conv-ad.png",
+   "bytes": 140599,
+   "sha256": "6c5beac03f5138da997227a4c18e0874e8b80b80bff1ebff17f8fa6320c188cd"
+  },
+  {
+   "path": "captures/x-centre-call-ad.png",
+   "bytes": 1096597,
+   "sha256": "6486f631356266a31ec8f895104473f168cd003be47e118dc27357c769458dc6"
+  },
+  {
+   "path": "captures/x-end-call-ad.png",
+   "bytes": 1096706,
+   "sha256": "7b8587b681b2c05315769f229036efcc24331342f39f9d763dece6bbc859da14"
+  },
+  {
+   "path": "captures/x-top-cp320-ad.png",
+   "bytes": 548380,
+   "sha256": "898e8e6aba4e2f0de6290fa8e2b312c2982849c486a144685f812d4aaaf7e699"
+  },
+  {
+   "path": "data/BOARDS.json",
+   "bytes": 5645,
+   "sha256": "4218f197ad56901e283125db73e5ab3b3eff3c13e6c1131492f99632bbd8eba7"
+  },
+  {
+   "path": "data/CHECKS.json",
+   "bytes": 15929,
+   "sha256": "825e50303b2d8b5a82fd2c5f50bf6a43aad8e94c557208cfa0d8fdc0ff69f892"
+  },
+  {
+   "path": "data/DECISION_MATRIX.json",
+   "bytes": 32147,
+   "sha256": "441087b5633fc70dc1dfbdd66ea6b9a8b63f00fdf926e7c0f572ecb0f5c6716d"
+  },
+  {
+   "path": "data/SHOTS.json",
+   "bytes": 692886,
+   "sha256": "945dc2c8d15e899ae51147ca481262c6a6d46d728e59bd5fc8f7cb02e655270b"
+  },
+  {
+   "path": "docs/P4C_ACCESSIBILITY_RTL.md",
+   "bytes": 6967,
+   "sha256": "b984c8864d3c739fcaf3033663969dfab9712685dea8c1ae270badb82ccf44dc"
+  },
+  {
+   "path": "docs/P4C_AUTHORITY_AND_SCOPE.md",
+   "bytes": 6734,
+   "sha256": "e9c1c39f08fa243d01cc7a721ade6d8d99f9dc15120503166c1acddea1b7c358"
+  },
+  {
+   "path": "docs/P4C_DECISION_STUDY.md",
+   "bytes": 21988,
+   "sha256": "b41912e1b906cd95900b722b3e834406d8c55f8e7780856602439546c185b161"
+  },
+  {
+   "path": "docs/P4C_PLATFORM_REFERENCE_GATE.md",
+   "bytes": 4698,
+   "sha256": "3d72cea6d8a56359148d77fad8ffc1e1eee077a0a280d16bfe2e1f71e9047aed"
+  },
+  {
+   "path": "docs/P4C_PRODUCT_PROOF_REPORT.md",
+   "bytes": 15921,
+   "sha256": "559b881610d8e05203e50321f80248730a0cfccce945f5b040628cceea66a4df"
+  },
+  {
+   "path": "docs/P4C_PROVENANCE.md",
+   "bytes": 4117,
+   "sha256": "5de6d3ec495a5c83af79c5522b06705bd1323a90f971ad8d650ac5a1d7efda6d"
+  },
+  {
+   "path": "prototype/g3.2/index.html",
+   "bytes": 1354593,
+   "sha256": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
+  },
+  {
+   "path": "prototype/index.html",
+   "bytes": 249607,
+   "sha256": "e62aabfb10dcacb22995cb3174e8bdd4c67dc8f65a7b1941d7db49980bd474b5"
+  },
+  {
+   "path": "source/PROVENANCE.json",
+   "bytes": 21699,
+   "sha256": "e42761867b96e6d2628bfb1146b0d04beb285f2b3963e56d5060fd0a45350945"
+  },
+  {
+   "path": "source/REGENERATE.md",
+   "bytes": 1394,
+   "sha256": "1e999ab0f8c582e1d378d842e808f202ed10b67409560ed9ad408238438d0a05"
+  },
+  {
+   "path": "source/src/app.js",
+   "bytes": 32634,
+   "sha256": "6a9e59c906e41908662339fff2e47bc1adf281abe6d5d1973faff9950a6dd7a4"
+  },
+  {
+   "path": "source/src/build.mjs",
+   "bytes": 19413,
+   "sha256": "9139fb56a657ef4d0d29df96e2b0ca529ce37593eef269870861754c6ab67367"
+  },
+  {
+   "path": "source/src/candidates.mjs",
+   "bytes": 7769,
+   "sha256": "5eec45f6677ef63e2b4e3a37c1b3ca763c4bfde1859b5518774806b4b9c0de8e"
+  },
+  {
+   "path": "source/src/content.mjs",
+   "bytes": 10130,
+   "sha256": "b18e5682a8182435d2217bdc78dfb873f4df17c45869dfe7ceb30f1f5dffc1e0"
+  },
+  {
+   "path": "source/src/machines.mjs",
+   "bytes": 5294,
+   "sha256": "6360e8c0959f049c7186487a26473466fb07573b7cff1d111276526ab44c807c"
+  },
+  {
+   "path": "source/src/p3glyphs.mjs",
+   "bytes": 6793,
+   "sha256": "f636ddd5c3de049d3203f8d9ae640bbf7e91918b4e3381b923aa0c263c920d1e"
+  },
+  {
+   "path": "source/src/qmark.mjs",
+   "bytes": 1940,
+   "sha256": "562d583adf01f73a4430f13ab3d760cdb295115029148a6f364a50fb3a220ced"
+  },
+  {
+   "path": "source/src/sig.mjs",
+   "bytes": 11160,
+   "sha256": "960ecd84edd75da91ee6a7c391504bb0ee4f15b92c8bea120847289caca4dde2"
+  },
+  {
+   "path": "source/src/tokens.mjs",
+   "bytes": 6737,
+   "sha256": "435f4dafa44be9045b07669bdb485385b7d51b07ea08713031b2b94a6de21911"
+  },
+  {
+   "path": "source/src/utility.mjs",
+   "bytes": 3228,
+   "sha256": "5ab7bad45019e33d85f455b9c3f19e403aaf1d591a8ebee344182ab3017c5df9"
+  },
+  {
+   "path": "source/tools/lib/cdp.mjs",
+   "bytes": 7530,
+   "sha256": "ab4d7523f98bcdfe0e68be1596bf889f005706f552a78b6e281d0d9641851959"
+  },
+  {
+   "path": "source/tools/lib/server.mjs",
+   "bytes": 1167,
+   "sha256": "0e6793889665ecc9481192795c2092d28402a60f5ae2afecd6199419abc6c4b2"
+  },
+  {
+   "path": "source/tools/lib/session.mjs",
+   "bytes": 4191,
+   "sha256": "0ca254d70de9c8d3cc7167ddb162f41ac464e93f58508fa05a12a53805e67e6a"
+  },
+  {
+   "path": "source/tools/lib/sheet.mjs",
+   "bytes": 1987,
+   "sha256": "cc43c4aaefd15bbcbede70b1a85278d2265d61b60010ec4d9f82c3136c08b8d2"
+  },
+  {
+   "path": "source/tools/p4boards.mjs",
+   "bytes": 36065,
+   "sha256": "ef3fd3c9af4e3693d288e77f5e0e15d923bb71f5b88ccb2748b153e3a036a51d"
+  },
+  {
+   "path": "source/tools/p4capture.mjs",
+   "bytes": 3637,
+   "sha256": "580f4fc2662203283da3bc31acdd4b7e99375b5ee308c9d3283a0509d47917bb"
+  },
+  {
+   "path": "source/tools/p4checks.mjs",
+   "bytes": 35433,
+   "sha256": "99f1d5269b51d8cc1e8ed557f5fc2def434e2826931bef3cf36333464e02674c"
+  },
+  {
+   "path": "source/tools/p4matrix.mjs",
+   "bytes": 26338,
+   "sha256": "18e33f18292c558b5c3bc4b1f7c1a2fe16bbb39817f91ace33d4929e0b8e997f"
+  },
+  {
+   "path": "source/tools/p4package.mjs",
+   "bytes": 2391,
+   "sha256": "a2588ab5f1c7fbb97dd965fdc140015fbf1068fd112a6e1bcb25a8391a353df9"
+  },
+  {
+   "path": "source/tools/p4pipeline.mjs",
+   "bytes": 1266,
+   "sha256": "c722cfd97e1dff7aa26d37908b9abfe20a473d8f205423658bffab2dea2bd67d"
+  },
+  {
+   "path": "source/tools/p4vendor.mjs",
+   "bytes": 3835,
+   "sha256": "a7a95ce20fd16e0c4f212a0ac03351e0c563003f51a36570c9d1906bf5171d8c"
+  },
+  {
+   "path": "source/tools/shots.mjs",
+   "bytes": 6607,
+   "sha256": "9cdde5996024c9eae2edaf84ae2016ec1ac92e06fe0e4b770cb151d337af659b"
+  },
+  {
+   "path": "source/vendor/brand/QANDEEL_Q_BASE_MASTER.svg",
+   "bytes": 3183,
+   "sha256": "6c483aadc1492af2606539f870b878686b6c9f672c975b5e11c599d91bceaf05"
+  },
+  {
+   "path": "source/vendor/fonts/Estedad-OFL.txt",
+   "bytes": 4388,
+   "sha256": "0417da48fc44780476e074f02f8400028ee704b3e222be5855fa6d960b9200ca"
+  },
+  {
+   "path": "source/vendor/fonts/Estedad-wght-v8.5.woff2",
+   "bytes": 120924,
+   "sha256": "b40ce2504e442a79e8adddf1d7b27bc4bd171bb94c9e7c93e0732d095bc051b0"
+  },
+  {
+   "path": "source/vendor/fonts/google/01d285447409c8a5.woff2",
+   "bytes": 14888,
+   "sha256": "01d285447409c8a588692162439a038b8cbd7871309ee20267b0d2d91c6e8e22"
+  },
+  {
+   "path": "source/vendor/fonts/google/04c730b4292731cc.woff2",
+   "bytes": 44280,
+   "sha256": "04c730b4292731ccedadd5bd80756124364ae4923895145d9cd7b1f28e443de1"
+  },
+  {
+   "path": "source/vendor/fonts/google/08949f728dc52d52.woff2",
+   "bytes": 14708,
+   "sha256": "08949f728dc52d528e69b1667d15c89a5686a4ee9a296ff90983985f99c380f7"
+  },
+  {
+   "path": "source/vendor/fonts/google/0c4e072fcf4f07a3.woff2",
+   "bytes": 1476,
+   "sha256": "0c4e072fcf4f07a388448ae321d51fd3915797371a7378270e5630c6d023ea6b"
+  },
+  {
+   "path": "source/vendor/fonts/google/0f7c03bb523b8084.woff2",
+   "bytes": 6680,
+   "sha256": "0f7c03bb523b8084a84c4b7d95a5c7b294b7318f88b2e51829d5fe7aaef0d0bb"
+  },
+  {
+   "path": "source/vendor/fonts/google/1144843a05a0eaef.woff2",
+   "bytes": 1448,
+   "sha256": "1144843a05a0eaef92032c0406ee3f001804f2caddba9522e8a265e0a79d46ea"
+  },
+  {
+   "path": "source/vendor/fonts/google/16734a5adb27b0f3.woff2",
+   "bytes": 45688,
+   "sha256": "16734a5adb27b0f363e566cbbeacec480da0dc0baa19c8f0053251c2e2bc0eac"
+  },
+  {
+   "path": "source/vendor/fonts/google/1935fa1a3326fcd4.woff2",
+   "bytes": 6656,
+   "sha256": "1935fa1a3326fcd48e20abe864bb30ace43fe58bd572f354c24271ea66208e04"
+  },
+  {
+   "path": "source/vendor/fonts/google/1d89462e86cb8e87.woff2",
+   "bytes": 8460,
+   "sha256": "1d89462e86cb8e87e7e9d6f6635605bd7c3081baca6caaecee84916bf7b60edc"
+  },
+  {
+   "path": "source/vendor/fonts/google/2fff61c7ed83ed8a.woff2",
+   "bytes": 1444,
+   "sha256": "2fff61c7ed83ed8a3ac19e3e7079f8f293e8485a1994b01e88b69056fecdf295"
+  },
+  {
+   "path": "source/vendor/fonts/google/3febe5c7f22e4b07.woff2",
+   "bytes": 6972,
+   "sha256": "3febe5c7f22e4b07b4552738673c3dbe8bced2dc5f48b866edf7ccd9552d109a"
+  },
+  {
+   "path": "source/vendor/fonts/google/441410df8013ca6c.woff2",
+   "bytes": 45048,
+   "sha256": "441410df8013ca6c9a732c0497bb65aa6c9fc4abeb917b907a38fabe44263e2c"
+  },
+  {
+   "path": "source/vendor/fonts/google/6010e7fd0dce5d52.woff2",
+   "bytes": 42848,
+   "sha256": "6010e7fd0dce5d527583951750728cbe3c895efbd16aa0f809ab8c824878c9d8"
+  },
+  {
+   "path": "source/vendor/fonts/google/62632b6375305e70.woff2",
+   "bytes": 5868,
+   "sha256": "62632b6375305e70ddcafdd895218e6ae41a184fcd280a69c739460604ca00a9"
+  },
+  {
+   "path": "source/vendor/fonts/google/63f4757271e403f7.woff2",
+   "bytes": 20500,
+   "sha256": "63f4757271e403f7baec0862f284ffaa4560ea6096ba9fe8bc6e585ca656e724"
+  },
+  {
+   "path": "source/vendor/fonts/google/6bb06407c97584b0.woff2",
+   "bytes": 13432,
+   "sha256": "6bb06407c97584b0867a959e05e8874693bfeb8c317de190811c51598f2d99ea"
+  },
+  {
+   "path": "source/vendor/fonts/google/6bc0f226a5b7884a.woff2",
+   "bytes": 13348,
+   "sha256": "6bc0f226a5b7884a8170e3f62c63d7675609d4631bdc5931b5cdab81821f00eb"
+  },
+  {
+   "path": "source/vendor/fonts/google/7635422bd10ddbbc.woff2",
+   "bytes": 8356,
+   "sha256": "7635422bd10ddbbcb0e0caa1154b928298f5c8319b8c00b30978d4395f4783ce"
+  },
+  {
+   "path": "source/vendor/fonts/google/781633d95de88040.woff2",
+   "bytes": 6040,
+   "sha256": "781633d95de88040fb77141d1e65d928c87c0144691fbc74da5a64d137a7e910"
+  },
+  {
+   "path": "source/vendor/fonts/google/90aef64fea9794f2.woff2",
+   "bytes": 45296,
+   "sha256": "90aef64fea9794f232332e907d45810ab268d1a11721340025eba2a2cdb36d5c"
+  },
+  {
+   "path": "source/vendor/fonts/google/93ae908392a01f9a.woff2",
+   "bytes": 1456,
+   "sha256": "93ae908392a01f9af1f73e86e99f1665f899a5b58fe9e56517abd199e47dcd01"
+  },
+  {
+   "path": "source/vendor/fonts/google/95875e4fa8928fa6.woff2",
+   "bytes": 1476,
+   "sha256": "95875e4fa8928fa68e01e53e0b2cdb0f6dbec1ac61d9af493bb05d2ed230f350"
+  },
+  {
+   "path": "source/vendor/fonts/google/9ed8dcb02e6c7246.woff2",
+   "bytes": 19164,
+   "sha256": "9ed8dcb02e6c7246de4c120295fafa39a7bb73085f4951a4524a07dc911069f2"
+  },
+  {
+   "path": "source/vendor/fonts/google/FONT_MANIFEST.json",
+   "bytes": 22495,
+   "sha256": "1150286bf46e52ef70a82f3244658b1a5c1c38c846e351b0389cce2d50455dce"
+  },
+  {
+   "path": "source/vendor/fonts/google/a989ab031ad08b81.css",
+   "bytes": 14853,
+   "sha256": "a989ab031ad08b81448d8088686429619d0637c48ca3a98518d45ac4f8119d7e"
+  },
+  {
+   "path": "source/vendor/fonts/google/ab0b9584271f4923.woff2",
+   "bytes": 6564,
+   "sha256": "ab0b9584271f492336d9eadcef96f99b0da07e8e7046220aea5084f1644a9c9d"
+  },
+  {
+   "path": "source/vendor/fonts/google/ae2d59f91ecf9f7e.woff2",
+   "bytes": 19504,
+   "sha256": "ae2d59f91ecf9f7ed279e4a1fc1a9da8170fb0ce5b9152917a8f759033f5777c"
+  },
+  {
+   "path": "source/vendor/fonts/google/ae5c1a58c18d253e.woff2",
+   "bytes": 6540,
+   "sha256": "ae5c1a58c18d253e20691f00e401319f01fc568d24d0e50165f276d1a99035b5"
+  },
+  {
+   "path": "source/vendor/fonts/google/be6a3b2e37f3ad67.woff2",
+   "bytes": 20088,
+   "sha256": "be6a3b2e37f3ad67aa822a55ce356d28c416331c97530a1ec076c2118240ca2d"
+  },
+  {
+   "path": "source/vendor/fonts/google/dd27720fab7b4f3a.woff2",
+   "bytes": 6828,
+   "sha256": "dd27720fab7b4f3af3beb39ee8e2061f0aefa3f7824ae7214e6947b86a1f8dd0"
+  },
+  {
+   "path": "source/vendor/fonts/google/dde6d3b23792b89c.woff2",
+   "bytes": 20284,
+   "sha256": "dde6d3b23792b89c365f557d8af5fac776118517e1aa20921a3e0ed67b1d7ef8"
+  },
+  {
+   "path": "source/vendor/fonts/google/f8c22ec1804bd696.woff2",
+   "bytes": 6912,
+   "sha256": "f8c22ec1804bd6966b70f43ac7c327025645b4c09597117fca2a5a6c750106fe"
+  },
+  {
+   "path": "source/vendor/tokens/base/b4r.semantic.tokens.json",
+   "bytes": 4373,
+   "sha256": "2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441"
+  },
+  {
+   "path": "source/vendor/tokens/base/c3.material.tokens.json",
+   "bytes": 14376,
+   "sha256": "bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928"
+  },
+  {
+   "path": "source/vendor/tokens/base/d2r.illumination.tokens.json",
+   "bytes": 30299,
+   "sha256": "2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4"
+  },
+  {
+   "path": "source/vendor/tokens/base/e1.interaction.tokens.json",
+   "bytes": 54134,
+   "sha256": "6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce"
+  },
+  {
+   "path": "source/vendor/tokens/base/f1.accessibility.tokens.json",
+   "bytes": 38216,
+   "sha256": "dd47c43cb72eb306f2b701a883ce7c48e280f4d8bcfbf00664d0abca681e35cc"
+  },
+  {
+   "path": "source/vendor/tokens/base/f2.appearance.tokens.json",
+   "bytes": 30947,
+   "sha256": "513f5dfa419e1a5b7c5729e7b062ea282c32df0a3284e73596bc10b9e652cadc"
+  },
+  {
+   "path": "source/vendor/tokens/base/g11.utterance.alias.tokens.json",
+   "bytes": 528,
+   "sha256": "bdc05957547f28786ff0d3388b5e4c4f0ce8bfafbd548e8d763b525d01fd033b"
+  },
+  {
+   "path": "source/vendor/tokens/contrast/f1.dark.increased.tokens.json",
+   "bytes": 9120,
+   "sha256": "5b27d13790e0ce051822c226aa8f3c11cac04467156210f9469c229f391c8f2a"
+  },
+  {
+   "path": "source/vendor/tokens/contrast/f2.light.increased.tokens.json",
+   "bytes": 5601,
+   "sha256": "a382d1a486be780f9c6419347e3f24fcf832bdb3d68607bbf0975a1ee9b2224b"
+  },
+  {
+   "path": "source/vendor/tokens/dark/b4r.dark.tokens.json",
+   "bytes": 2348,
+   "sha256": "4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112"
+  },
+  {
+   "path": "source/vendor/tokens/dark/c3.dark.material.tokens.json",
+   "bytes": 3441,
+   "sha256": "55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367"
+  },
+  {
+   "path": "source/vendor/tokens/dark/d2r.dark.illumination.tokens.json",
+   "bytes": 3794,
+   "sha256": "688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157"
+  },
+  {
+   "path": "source/vendor/tokens/dark/e1.dark.interaction.tokens.json",
+   "bytes": 6162,
+   "sha256": "397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252"
+  },
+  {
+   "path": "source/vendor/tokens/dark/f1.dark.accessibility.tokens.json",
+   "bytes": 3245,
+   "sha256": "3d2fbcca824255c5da8ee234f572f35bad68f143c47424ccc0057ad7e7407176"
+  },
+  {
+   "path": "source/vendor/tokens/light/b4r.light.tokens.json",
+   "bytes": 9736,
+   "sha256": "8176490548ca7105f4b3a20f5c72c298d6de0c14289743887f411e3c4ab0ab0e"
+  },
+  {
+   "path": "source/vendor/tokens/light/c3.light.material.tokens.json",
+   "bytes": 4917,
+   "sha256": "f8066672414cefe95d46105620ca1b6e48d6f42fc44c715e69d60e99d280572d"
+  },
+  {
+   "path": "source/vendor/tokens/light/d2r.light.illumination.tokens.json",
+   "bytes": 18654,
+   "sha256": "6d74182584c420182ec004db3ba3097923aff6f16cb42138214c580c52a47260"
+  },
+  {
+   "path": "source/vendor/tokens/light/e1.light.interaction.tokens.json",
+   "bytes": 5021,
+   "sha256": "1c408ba0ac42a9241e8b6a0697a692606a7461f2fa864ef526146cf231fd0393"
+  },
+  {
+   "path": "source/vendor/tokens/light/f1.light.accessibility.tokens.json",
+   "bytes": 3693,
+   "sha256": "2b3861432472683aa2bd9f9199463da52502a7ba746d620cbfaa827122975952"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-hugeicons.txt",
+   "bytes": 1066,
+   "sha256": "1658d8213209df7b9b86dfc05d724ede48d00dbc27abc15976ec7adec9601cde"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-iconoir.txt",
+   "bytes": 1068,
+   "sha256": "869b60da1ada5b896d1f285c3c24ca193d612e308d1710a77a58f2f572eb4fa2"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-lucide.txt",
+   "bytes": 3208,
+   "sha256": "b495047bd93a9b06913511076f504daba17d5bbeb3e0650f3bb53a4220329c57"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-phosphor.txt",
+   "bytes": 1092,
+   "sha256": "ddbe6082ec3cf979db47e5af549d2849c5d6182b3e005ef91ce1dbb9eb122f11"
+  },
+  {
+   "path": "source/vendor/utility/LICENSE-tabler.txt",
+   "bytes": 1073,
+   "sha256": "b740a1d46122672da62833e97f7e7c8a13fa85cbc7445b584b297cc00dde93db"
+  },
+  {
+   "path": "source/vendor/utility/utility-glyphs.json",
+   "bytes": 31456,
+   "sha256": "54d059f63b92988ae06e7e37a44eee24e71775e76206b4d0f0f1b9c1ffbfea23"
+  }
+ ]
+}

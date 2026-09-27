@@ -10,11 +10,7 @@
 | Package self-status | `docs/I-08B2.5_REVIEW_MANIFEST.md`: "READY FOR FINAL PRODUCT / PRODUCTION REVIEW. Not closed, not frozen, not canonical." |
 | Verification inside the package | 39/39 geometry-identity checks (`review/GEOMETRY_VERIFICATION.json`); small-size validation (`review/small-size-validation.json`) |
 
-**Lifecycle, stated exactly.** This is the final production asset package, and closed downstream
-work consumes it. **No standalone brand closure / freeze record exists on this host.** The Variant B
-app icon was frozen at I-08B2.4. The package's own open items remain open, including L-1 (the icon
-SVG keeps its pre-freeze header comment so that its hash still matches the frozen artefact) and the
-Android 48 dp framing, which was flagged for Product confirmation.
+**Lifecycle, current.** The package's own self-status remains historical in its preserved bytes. [P4-C2](../../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) **ratifies I-08B2.5 as the final QANDEEL Brand Authority**. The frozen I-08B2.4 Variant B remains byte-identical; L-1 is resolved by keeping the stale header-comment bytes unchanged while superseding its lifecycle meaning; Android 48 dp framing is confirmed; dedicated iOS dark/tinted variants are deferred beyond v1.
 
 ## Source archive (local, not in Git)
 
@@ -39,5 +35,6 @@ evidence, so they are preserved.
 
 ## Later amendments
 
-None in this repository. Colour tokens are not frozen by this package, and every value in it is
-inherited.
+- **P4-C2 (2026-09-27):** ratifies I-08B2.5 as final Brand Authority; keeps the app-icon SVG bytes/hash unchanged; confirms Android 48 dp adaptive framing; defers dedicated iOS dark/tinted variants beyond v1.
+
+Colour tokens are not newly frozen by this package or P4-C2; inherited colour authority remains unchanged.

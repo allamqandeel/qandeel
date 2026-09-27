@@ -1,0 +1,93 @@
+{
+  "qandeel": {
+    "$type": "color",
+    "expression": {
+      "status": {
+        "$description": "SYSTEM STATUS expression, dark appearance. I-08B3.1-E1 — FREEZE CANDIDATE.",
+        "error": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.996078,
+              0.564706,
+              0.494118
+            ],
+            "hex": "#fe907e"
+          },
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            },
+            "com.qandeel.provenance": {
+              "authoredAs": {
+                "colorSpace": "oklch",
+                "L": 0.7675,
+                "C": 0.137,
+                "H": 29.9839
+              },
+              "declaredDecision": "THE RED FAMILY. This is FAMILIARITY, named as a Product decision and not disguised as a measurement — the single convention E1 keeps from ordinary UI. Every other coordinate is derived.",
+              "hueAnchor": "the OkLCh hue of the sRGB RED PRIMARY, 29.2339 — the one red the display is built to make",
+              "hueDeviation": "0.75 degrees toward orange, which is the MINIMUM distance at which a value exists that keeps every floor under plus or minus one least-significant bit per channel. No hue arc was declared and no width was typed.",
+              "chromaObjective": "the QUIETEST point that satisfies every floor — minimum chroma, tie-broken on the largest worst-case distance. Lightness was not pinned; it fell out.",
+              "floors": [
+                "chroma at least Living Brass's (0.05159), without which the floors below are satisfiable by a light GREY at an unused lightness, and a grey cannot be the colour that reports a failure",
+                "contrast at least 4.5:1 on the World AND on the functional Surface",
+                "full OkLab distance at least 0.05129 from every ink QANDEEL can paint — DERIVED as the closest distance Living Brass itself keeps from the frozen reading ramp, because the system already relies on THAT being a distinction a reader can use and nothing E1 adds may be a weaker one",
+                "both of the above again under simulated protanopia and deuteranopia",
+                "and all of it again for each of the 27 one-bit perturbations of the quantised triple"
+              ],
+              "bindingConstraints": [
+                "protan: dEok from SECONDARY = 0.05303 against a floor of 0.051294338032078474"
+              ],
+              "howMuchRoomRemains": "3 sampled points are feasible at this hue, spanning L 0.7675-0.7675 and C 0.137-0.138; the sRGB gamut edge is 0.001 of chroma away. THE ACCESSIBILITY FLOORS CONSUME ALMOST THE WHOLE OF THE RED sRGB GAMUT AT THIS LIGHTNESS, and that is the result, not a coincidence.",
+              "dichromacyModel": "Vienot, Brettel & Mollon (1999), single plane, applied to LINEAR-LIGHT sRGB. Transcribed rather than taken from a dependency, and exercised by property tests that do not depend on remembering the constants. USED AS A DESIGN INSTRUMENT TO SET A FLOOR, never as a claim about what a person sees. TRITANOPIA IS EXCLUDED: the single-plane simplification is not validated for it and leaves pure blue unmoved, which tools/e1-cvd.mjs asserts rather than hides.",
+              "status": "FREEZE CANDIDATE — proposed by I-08B3.1-E1, frozen by nobody."
+            }
+          },
+          "$description": "THE ONE COLOUR I-08B3.1-E1 ADDS TO QANDEEL."
+        }
+      },
+      "state": {
+        "$description": "INTERACTION STATE expression, dark appearance. Exactly one member, and it is not a status colour.",
+        "disabled": {
+          "$value": {
+            "colorSpace": "srgb",
+            "components": [
+              0.411765,
+              0.403922,
+              0.384314
+            ],
+            "hex": "#696762"
+          },
+          "$extensions": {
+            "com.qandeel.freeze": {
+              "class": "product-contract",
+              "meaning": "Changing this changes what the product MEANS. Freezeable — subject to independent review."
+            },
+            "com.qandeel.provenance": {
+              "authoredAs": {
+                "colorSpace": "oklch",
+                "L": 0.5151,
+                "C": 0.008,
+                "H": 93.1372
+              },
+              "derivation": "L = TERTIARY (#8b8982) minus the ramp's own smallest rung (0.1146); C continues the ramp's last chroma step (0.0026); H is the ramp's mean hue (93.14).",
+              "whyNotAnOpacity": "An opacity applied to the whole control reduces every ink by the same factor, which pushes the dimmest ink toward illegibility while barely touching the brightest, and leaves a disabled PRIMARY label at the same contrast as an enabled TERTIARY one. One derived ink separates every disabled control from every enabled one by a full rung, whatever ink it started from. Apple expresses the same thing the same way: disabledControlTextColor is a TEXT COLOUR, not an alpha.",
+              "quantisationNote": "The authored chroma is 0.008; the quantised hex recovers C 0.0081 at H 88.7 rather than the authored 93.1372. At this chroma one 8-bit step is a large fraction of the whole chromatic signal, so the hue drift is expected and is recorded rather than smoothed over. The value is achromatic for every practical purpose and nothing in E1 depends on its hue.",
+              "measured": {
+                "belowTertiaryByL": 0.1157,
+                "belowTertiaryBydEok": 0.1157,
+                "contrastOnWorld": 3.37,
+                "contrastOnSurface": 3.14
+              },
+              "retires": "the I-08B3.1-C1/C2 diagnostic disabled literal #5a5a58, which was proof-only and was assigned to E1 by C3_PROOF_TO_PRODUCTION_MAP.md section 3.",
+              "status": "FREEZE CANDIDATE — proposed by I-08B3.1-E1, frozen by nobody."
+            }
+          },
+          "$description": "THE UNAVAILABLE INK — the frozen reading ramp extended by one rung."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,245 @@
+{
+ "note": "Each board and the Product captures it shows (ids in data/SHOTS.json).",
+ "boards": [
+  {
+   "board": "01-authority-baseline",
+   "png": "boards/01-authority-baseline.png",
+   "bytes": 606099,
+   "sha256": "d61b8e4167c2946cde57e067d9a57f15a912915ea2093fc159d4d53e69d13e68",
+   "captures": [
+    "b-conv-ad",
+    "b-shared-ad",
+    "b-analysis-ad",
+    "b-analysis-el"
+   ]
+  },
+  {
+   "board": "02-dq01-settings-placement",
+   "png": "boards/02-dq01-settings-placement.png",
+   "bytes": 785820,
+   "sha256": "e1432db88f1ad7f8cc7fb1e955fbef9b9c32f6eb952f3fe1d8c8edbab3c6acac",
+   "captures": [
+    "s-A-conv-ad",
+    "s-A-shared-ad",
+    "s-A-conv-el",
+    "s-A-conv-a320",
+    "s-A-conv-e320",
+    "s-A-shared-e320",
+    "s-B-conv-ad",
+    "s-B-shared-ad",
+    "s-B-conv-el",
+    "s-B-conv-a320",
+    "s-B-conv-e320",
+    "s-B-shared-e320",
+    "s-activity-ad",
+    "s-settings-ad",
+    "s-settings-notif-el"
+   ]
+  },
+  {
+   "board": "03-dq02-understanding-placement",
+   "png": "boards/03-dq02-understanding-placement.png",
+   "bytes": 672469,
+   "sha256": "b1386b1f49031ec800eda0eb7e5c66c627c5257d22b7fae0c67cb6434a4ec2f8",
+   "captures": [
+    "u-A-ad",
+    "u-A-press-ad",
+    "u-A-focus-ad",
+    "u-A-el",
+    "u-A-a320",
+    "u-A-e320",
+    "u-B-ad",
+    "u-B-press-ad",
+    "u-B-focus-ad",
+    "u-B-el",
+    "u-B-a320",
+    "u-B-e320",
+    "u-B-sA-a320",
+    "u-S-rejected-ad",
+    "u-page-ad"
+   ]
+  },
+  {
+   "board": "04-dq03-q-placement",
+   "png": "boards/04-dq03-q-placement.png",
+   "bytes": 828947,
+   "sha256": "39a1d512476fb83a99f7f24d05f9e29175de7049a6044eeaa0c412b95700b98b",
+   "captures": [
+    "q-A-conv-ad",
+    "q-A-shared-ad",
+    "q-A-conv-el",
+    "q-A-conv-a320",
+    "q-B-conv-ad",
+    "q-B-shared-ad",
+    "q-B-conv-el",
+    "q-B-conv-a320",
+    "q-C-conv-ad",
+    "q-C-shared-ad",
+    "q-C-conv-el",
+    "q-C-conv-a320",
+    "q-B-sA-conv-ad",
+    "q-B-sA-conv-a320",
+    "q-moment-cue-ad"
+   ]
+  },
+  {
+   "board": "05-dq04-switcher-form",
+   "png": "boards/05-dq04-switcher-form.png",
+   "bytes": 1255031,
+   "sha256": "ce04416c6cb3379ed0c4756b284ba4be9e7e2ba982f12fcc41ff931cefff950c",
+   "captures": [
+    "w-plate-conv-ad",
+    "w-plate-conv-el",
+    "w-plate-shared-ad",
+    "w-plate-analysis-ad",
+    "w-plate-conv-a320",
+    "w-plate-press-ad",
+    "w-plate-focus-el",
+    "w-plate-hc-ad",
+    "w-ground-conv-ad",
+    "w-ground-conv-el",
+    "w-ground-shared-ad",
+    "w-ground-analysis-ad",
+    "w-ground-conv-a320",
+    "w-ground-press-ad",
+    "w-ground-focus-el",
+    "w-ground-hc-ad",
+    "w-seam-conv-ad",
+    "w-seam-conv-el",
+    "w-seam-shared-ad",
+    "w-seam-analysis-ad",
+    "w-seam-conv-a320",
+    "w-seam-press-ad",
+    "w-seam-focus-el",
+    "w-seam-hc-ad"
+   ]
+  },
+  {
+   "board": "06-dq04-context-placement",
+   "png": "boards/06-dq04-context-placement.png",
+   "bytes": 1714291,
+   "sha256": "80465f05c1abdcfbbad4af9bccf3bfa9cb35253405d5c2135efa773b19523bfd",
+   "captures": [
+    "x-end-p1-ad",
+    "x-end-pinned-el",
+    "x-end-call-ad",
+    "x-end-cp320-ad",
+    "x-end-cp320-el",
+    "x-centre-p1-ad",
+    "x-centre-pinned-el",
+    "x-centre-call-ad",
+    "x-centre-cp320-ad",
+    "x-centre-cp320-el",
+    "x-top-p1-ad",
+    "x-top-pinned-el",
+    "x-top-call-ad",
+    "x-top-cp320-ad",
+    "x-top-cp320-el"
+   ]
+  },
+  {
+   "board": "07-integrated-ar-dark",
+   "png": "boards/07-integrated-ar-dark.png",
+   "bytes": 567894,
+   "sha256": "f4a4758a7b21bb0170e35454de2216b890747f617d1e452a665de154ddb35ad9",
+   "captures": [
+    "iI-conv-ad",
+    "iI-shared-ad",
+    "iI-analysis-ad",
+    "iI-call-ad",
+    "iII-conv-ad",
+    "iII-shared-ad",
+    "iII-analysis-ad",
+    "iII-call-ad"
+   ]
+  },
+  {
+   "board": "08-integrated-en-light",
+   "png": "boards/08-integrated-en-light.png",
+   "bytes": 617127,
+   "sha256": "35f8719e782681deaa0967caa68007ff3faf7d9255579208f8d52ebf78bcca2c",
+   "captures": [
+    "iI-conv-el",
+    "iI-shared-el",
+    "iI-pinned-el",
+    "iI-settings-el",
+    "iII-conv-el",
+    "iII-shared-el",
+    "iII-pinned-el",
+    "iII-settings-el"
+   ]
+  },
+  {
+   "board": "09-compact-320-stress",
+   "png": "boards/09-compact-320-stress.png",
+   "bytes": 560355,
+   "sha256": "f882a103a3debb65b57564aee641709ad53872a0d26429777c1b457af56e1133",
+   "captures": [
+    "iI-conv-a320",
+    "iI-conv-e320",
+    "iI-cp320-ad",
+    "iI-large-ad",
+    "iI-conv-a430",
+    "iII-conv-a320",
+    "iII-conv-e320",
+    "iII-cp320-ad",
+    "iII-large-ad",
+    "iII-conv-a430"
+   ]
+  },
+  {
+   "board": "10-accessibility-rtl-focus",
+   "png": "boards/10-accessibility-rtl-focus.png",
+   "bytes": 427229,
+   "sha256": "5f75618bc6ddfc5ad632f452333cdb9885fe12164ac24c037fcad39473bd2912",
+   "captures": [
+    "iI-hc-ad",
+    "iI-hc-el",
+    "iI-focus1-ad",
+    "iI-focus2-ad",
+    "iI-focus3-ad",
+    "iII-hc-ad",
+    "iII-hc-el",
+    "iII-focus1-ad",
+    "iII-focus2-ad",
+    "iII-focus3-ad",
+    "iI-conv-ad",
+    "iII-conv-el"
+   ]
+  },
+  {
+   "board": "11-decision-summary",
+   "png": "boards/11-decision-summary.png",
+   "bytes": 844645,
+   "sha256": "5a61589c90497e6f0b7531b5474c567a419b0514883dcda08942722437052a18",
+   "captures": [
+    "s-A-conv-ad",
+    "s-B-conv-ad",
+    "s-A-shared-ad",
+    "s-B-shared-ad",
+    "u-A-ad",
+    "u-B-ad",
+    "u-B-e320",
+    "u-S-rejected-ad",
+    "q-A-conv-ad",
+    "q-B-conv-ad",
+    "q-C-conv-ad",
+    "q-moment-cue-ad",
+    "w-plate-conv-el",
+    "w-ground-conv-el",
+    "w-seam-conv-el",
+    "x-end-call-ad",
+    "x-centre-call-ad",
+    "x-top-cp320-ad",
+    "iI-conv-ad",
+    "iI-shared-el",
+    "iI-call-ad",
+    "iI-conv-a320",
+    "iII-conv-ad",
+    "iII-shared-el",
+    "iII-call-ad",
+    "iII-conv-a320"
+   ]
+  }
+ ]
+}

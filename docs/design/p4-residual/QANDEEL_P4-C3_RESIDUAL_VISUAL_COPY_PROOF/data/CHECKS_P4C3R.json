@@ -1,0 +1,409 @@
+{
+ "note": "P4-C3 acceptance checks (task §10). Browser evidence only; VoiceOver / TalkBack, Dynamic Type, device contrast and native launch behaviour are device gates.",
+ "summary": {
+  "normal": "17 / 17",
+  "planted": "7 / 7 planted defects rejected",
+  "seconds": 94,
+  "git": "checked"
+ },
+ "checks": [
+  {
+   "id": "C-SCOPE-1",
+   "family": "scope",
+   "claim": "Only this proof package (plus, since P4-C3R, the named approval record and its locators) changed against the PR head P4-C3 started from: no apps/, database/, services/, workflow, dependency, schema or migration path.",
+   "pass": true,
+   "detail": {
+    "changed": 148,
+    "governance": [
+     "QANDEEL_CURRENT_STATE.md",
+     "docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md",
+     "docs/p4/P4_READ_FIRST.md",
+     "docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C3_RESIDUAL_VISUAL_COPY_PRODUCT_OWNER_APPROVALS_v1.0.md"
+    ],
+    "outside": [],
+    "forbidden": []
+   }
+  },
+  {
+   "id": "C-SCOPE-2",
+   "family": "scope",
+   "claim": "No new dependency: every source module imports only node: built-ins or files inside source/.",
+   "pass": true,
+   "detail": {
+    "bad": []
+   }
+  },
+  {
+   "id": "C-SCOPE-3",
+   "family": "scope",
+   "claim": "No lantern asset, storyboard, timing or technology in the package: no lantern-named file, no lantern element outside the planted-defect code, no animation technology named.",
+   "pass": true,
+   "detail": {
+    "named": [],
+    "lanternEls": 1,
+    "techHits": []
+   }
+  },
+  {
+   "id": "C-SCOPE-4",
+   "family": "scope",
+   "claim": "PR #280 is still Draft, Open and Unmerged.",
+   "pass": true,
+   "detail": {
+    "isDraft": true,
+    "mergedAt": null,
+    "state": "OPEN"
+   }
+  },
+  {
+   "id": "C-PROV-1",
+   "family": "provenance",
+   "claim": "Every vendored file is byte-identical to its frozen origin (P2-A, P3-A, I-08B2.5 brand, P4-C).",
+   "pass": true,
+   "detail": {
+    "files": 73,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-PROV-2",
+   "family": "provenance",
+   "claim": "G3.2 runs byte-exact (sha 10611f35…, G3 §B).",
+   "pass": true,
+   "detail": "10611f35cdcfd031d74ad0b065634a19f530e2b1e28acfd2c944d4f2d4983d71"
+  },
+  {
+   "id": "C-PROV-3",
+   "family": "provenance",
+   "claim": "prototype/index.html is the byte-identical build of source/.",
+   "pass": true,
+   "detail": "rebuild compared"
+  },
+  {
+   "id": "C-COPY-3",
+   "family": "copy",
+   "claim": "Frozen names are not rewritten: every CANON row appears verbatim in its named authority (G1.1, G1.2, I-08A4, P1, P3, T-08 product-copy.ts, P3-A COPY_TABLE APPROVED rows).",
+   "pass": true,
+   "detail": {
+    "canon": 23,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-COPY-4",
+   "family": "copy",
+   "claim": "Every registry row carries exactly one of the six statuses; \"Needs PO approval\" is YES exactly for PROPOSED_FOR_PO_REVIEW; APPROVED_BY_PO_P4C3 is carried by exactly the three rows the Product Owner approved in P4-C3R, each naming the approval record — never by relabelling as CANON.",
+   "pass": true,
+   "detail": {
+    "rows": 170,
+    "bad": [],
+    "approved": [
+     "replayNoun",
+     "confMixed",
+     "pidBody"
+    ]
+   }
+  },
+  {
+   "id": "C-COPY-5",
+   "family": "copy",
+   "claim": "Every word the page shows is a registered string and matches its registry text exactly (no unregistered or drifted copy) — so every newly authored word is tagged with its status.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv/ar",
+     "n": 8,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "conv/en",
+     "n": 8,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "record/ar",
+     "n": 8,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "notif/ar",
+     "n": 51,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "notif/en",
+     "n": 51,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "settings/ar",
+     "n": 10,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "settings/en",
+     "n": 10,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "publicid/ar",
+     "n": 18,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "publicid/en",
+     "n": 18,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "understanding/ar",
+     "n": 9,
+     "drift": [],
+     "loose": []
+    },
+    {
+     "s": "understanding/en",
+     "n": 9,
+     "drift": [],
+     "loose": []
+    }
+   ]
+  },
+  {
+   "id": "C-COPY-9",
+   "family": "copy",
+   "claim": "Arabic / English semantic parity: every row has both languages (or neither), with identical placeholders.",
+   "pass": true,
+   "detail": {
+    "rows": 170,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-COPY-10",
+   "family": "copy",
+   "claim": "English register: no PROPOSED English string ships \"context\" or \"live\" as a product word (VI-01 §4 / §7.2); the Live edge the page shows uses the proposed words.",
+   "pass": true,
+   "detail": {
+    "bad": [],
+    "edge": "Following the conversation as it continues"
+   }
+  },
+  {
+   "id": "C-COPY-12",
+   "family": "copy",
+   "claim": "Arabic T1 register and gender: no PROPOSED Arabic chrome string uses spoken-Egyptian markers or masculine singular imperatives (VI-01 §3.1, §3.6). The frozen opener is exempt.",
+   "pass": true,
+   "detail": {
+    "proposed": 107,
+    "bad": []
+   }
+  },
+  {
+   "id": "C-COPY-13",
+   "family": "copy",
+   "claim": "The Product Owner's P4-C3R wording is active and the replaced wording cannot return: confidence «يوجد تعارض» / Mixed (never «فيه تعارض»); the approved Public ID English sentence (never the older one); the Replay noun «إعادة العرض» / Replay (never «عرض الجلسة» / Session Replay) — in the registry, the generated table and on the rendered page.",
+   "pass": true,
+   "detail": {
+    "reg": [],
+    "page": [
+     {
+      "s": "understanding/ar",
+      "bad": []
+     },
+     {
+      "s": "understanding/en",
+      "bad": []
+     },
+     {
+      "s": "publicid/ar",
+      "bad": []
+     },
+     {
+      "s": "publicid/en",
+      "bad": []
+     },
+     {
+      "s": "analysis-replay/ar",
+      "bad": []
+     },
+     {
+      "s": "analysis-replay/en",
+      "bad": []
+     }
+    ]
+   }
+  },
+  {
+   "id": "C-GOV-1",
+   "family": "governance",
+   "claim": "The Product Owner decisions are recorded, not left open: F-01 (launch appearance) and F-02 (Replay name) read RESOLVED and no open question Q-1 remains in any report or in the regenerated launch boards' source; the controlled amendment exists with its frozen-on-merge status, records the platform split and the narrow supersession, keeps P4 ACTIVE, names no lantern technology; I-08A4's historical bytes are untouched.",
+   "pass": true,
+   "detail": {
+    "bad": []
+   }
+  },
+  {
+   "id": "C-A4",
+   "family": "accessibility",
+   "claim": "At 320 × 568 nothing essential clips: every registered string fits its box, every Voice / call / warning box stays inside the phone, the chrome does not overflow, in Arabic and English.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "conv/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "opener/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "record/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "record/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "call-conv/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "call-analysis/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "notif/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "notif/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "publicid/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "publicid/en",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "settings/ar",
+     "bad": [],
+     "sw": 320
+    },
+    {
+     "s": "understanding/en",
+     "bad": [],
+     "sw": 320
+    }
+   ]
+  },
+  {
+   "id": "C-A5",
+   "family": "accessibility",
+   "claim": "Large text does not clip Arabic: every Arabic registered string keeps line-height ≥ 1.6 and fits its box; the Voice Note and call line keep their controls ≥ 44 pt.",
+   "pass": true,
+   "detail": [
+    {
+     "s": "conv",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "notif",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "publicid",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "understanding",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "record",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "call-conv",
+     "bad": [],
+     "small": []
+    },
+    {
+     "s": "conv",
+     "bad": [],
+     "small": []
+    }
+   ]
+  }
+ ],
+ "planted": [
+  {
+   "defect": "ungated",
+   "check": "C-COPY-5",
+   "rejected": true
+  },
+  {
+   "defect": "contextword",
+   "check": "C-COPY-5",
+   "rejected": true
+  },
+  {
+   "defect": "livecopy",
+   "check": "C-COPY-10",
+   "rejected": true
+  },
+  {
+   "defect": "oldmixed",
+   "check": "C-COPY-13",
+   "rejected": true
+  },
+  {
+   "defect": "oldpid",
+   "check": "C-COPY-13",
+   "rejected": true
+  },
+  {
+   "defect": "sessionreplay",
+   "check": "C-COPY-13",
+   "rejected": true
+  },
+  {
+   "defect": "openq",
+   "check": "C-GOV-1",
+   "rejected": true
+  }
+ ]
+}
