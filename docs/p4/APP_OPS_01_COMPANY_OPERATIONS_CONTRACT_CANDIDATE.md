@@ -344,7 +344,7 @@ Each family was tested against the ten dimensions the task names. The result, pe
 | Direct Entry / user state | a disable, maintenance or version gate may stop an action. It cannot delete or rewrite the user's history, Memory or World state, and restoring the capability resurrects nothing owner-deleted | CW2-08 §16, §26, H12, H19 |
 | multi-user consistency | a cohort-scoped control cannot impose an unsupported shared-state transition on a participant in another cohort | CW2-08 §27, H20 |
 | provider neutrality | only the Route Hold touches providers, and only negatively (§14) | Model Router |
-| offline / stale state | old or unknown client state fails safely, and the server revalidates at commit. The effective state is runtime-held (§10.1). Freshness, expiry and last-known-good → `OPEN → P4-DQ-13` | CW2-08 §38, H26 |
+| offline / stale state | old or unknown client state fails safely, and the server revalidates at commit. The effective state is runtime-held (§10.1). `PO-OPS-15` requires every family to be versioned and audited; freshness / expiry / last-known-good mechanics remain later Production Integration / Security design | CW2-08 §38, H26; P4-C2 |
 | failure isolation | a Company Operations outage changes no effective control (§15) | `PO-OPS-05` |
 
 P4-C2 resolves the three former Decision Queue rows:
