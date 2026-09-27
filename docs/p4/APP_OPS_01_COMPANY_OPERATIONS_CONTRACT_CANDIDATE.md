@@ -1,7 +1,7 @@
 # QANDEEL — APP-OPS-01
 ## QANDEEL App ↔ QANDEEL Company Operations Contract — Candidate
 
-**Status:** `APP-OPS-01 — PRODUCT / ARCHITECTURE CONTRACT CANDIDATE — NOT FROZEN`
+**Status:** `APP-OPS-01 — PRODUCT / ARCHITECTURE CONTRACT CANDIDATE — PRODUCT OWNER DECISIONS COMPLETE — INDEPENDENT REVIEW / P4 CLOSURE PENDING`
 
 ---
 
@@ -13,7 +13,7 @@
 | Classification | `KNOWN CROSS-CUTTING PRODUCT GAP — PRODUCT / ARCHITECTURE CLOSURE ONLY` |
 | Track | P4 — Remaining Product / Visual Gaps Census & Closure, task P4-A. It is the one cross-cutting exception the Product Owner admitted into P4 by direct decision ([P4_READ_FIRST.md](P4_READ_FIRST.md) §3) |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` (GitHub `main`, PR #277) |
-| Lifecycle | **candidate, not frozen.** It is closed only by a later P4 closure change after Product Owner and independent review (§23) |
+| Lifecycle | **candidate, not frozen.** P4-C2 resolves every Product Owner decision row for APP-OPS-01. Independent review and a later P4 closure change are still required (§23) |
 | Inputs | the Product Owner decisions recorded in §3, which are authoritative input to this candidate and are not reopened here; plus consequences that existing frozen authority forces, each cited |
 | Implementation | **none.** This document creates, changes and authorizes no code, schema, migration, dependency, event, API, service, dashboard, vendor or configuration (§20, §21) |
 
@@ -64,6 +64,13 @@ Each row is `PO-APPROVED` input to this candidate.
 | `PO-OPS-10` | **Founder interaction.** The Founder interacts conversationally and exception-first through the Company Command Center (§17) |
 | `PO-OPS-11` | **End-to-End Audit handoff.** For every relevant User Moment, the audit adds `Operational Events Required` and `Company Controls Required` (§19) |
 | `PO-OPS-12` | **Production Integration ownership.** Production Integration owns implementation, after the End-to-End audit (§20) |
+| `PO-OPS-13` | **User-specific diagnostics access.** Automated per-user reliability rules may operate without human viewing. Human access to one user's operational diagnostics requires a user-initiated support request, scoped to that user and purpose. No private conversation content is authorized (§7) |
+| `PO-OPS-14` | **Ratings / reviews boundary.** Aggregate ratings and public app-store / marketplace review text may be ingested. APP-OPS-01 creates no QANDEEL-account linkage for a public review (§5.3) |
+| `PO-OPS-15` | **Control-state integrity.** Every approved control family is versioned and audited. Exact TTL / signing / last-known-good / retention mechanisms are later Production Integration / Security design (§10.1, §15) |
+| `PO-OPS-16` | **Maintenance / Minimum Version user moments.** Governing restriction laws freeze here; the user-facing moments are owned by the End-to-End audit (§11) |
+| `PO-OPS-17` | **App-wide control law.** CW2-08's server-canonical / fail-safe flag and launch-control laws extend app-wide, without changing CW2-08's Connected Worlds authority (§13) |
+| `PO-OPS-18` | **Approved Remote Configuration register.** A Remote Configuration family requires Product Owner + Architecture controlled approval. No initial set is frozen in P4 (§11) |
+| `PO-OPS-19` | **Code delivery is release.** Store or future OTA delivery of new App code is release-governed, outside the Company → App control plane (§12) |
 
 The control-plane limits in §10.2 are **not** a separate Product Owner decision. Each one is either `FORCED BY` an
 existing authority in the scope that authority governs, supported by `PO-OPS-07` / `PO-OPS-08`, or `CANDIDATE`.
@@ -145,13 +152,7 @@ keeps the two apart, from the records named in the
 permission to read private in-product content, and it opens no path by which private QANDEEL content becomes a
 "review".
 
-Three questions stay open, and this candidate answers none of them:
-
-- whether the text of store reviews is ingested at all;
-- whether a store review may be linked to a QANDEEL account;
-- how the two kinds of source are held apart.
-
-→ **`OPEN → P4-DQ-12`**.
+**P4-C2 / PO-OPS-14 resolves this boundary:** aggregate ratings and public store / marketplace review text may be ingested. APP-OPS-01 creates **no linkage** from a public review to a QANDEEL account. Public store signals remain operational/store-source data and never become permission to ingest private in-product content.
 
 ---
 
@@ -240,16 +241,9 @@ incident exception that routes private user content into Company Operations.
 - **no human review** of private conversation content (§6.1);
 - **purpose:** troubleshooting, operational support and reliability. Nothing else.
 
-This candidate chooses none of the following:
+**P4-C2 / PO-OPS-13 resolves the access principle:** automated per-user reliability rules may operate without human viewing; human access to one user's operational diagnostics requires a **user-initiated support request**, scoped to that user and purpose.
 
-- identifier format, hashing or pseudonymization;
-- retention;
-- query mechanism or storage location;
-- which operator may see user-linked state, and on what trigger;
-- the support lookup flow.
-
-→ **`OPEN → P4-DQ-11` — `IDENTITY / RETENTION / ACCESS MODEL FOR USER-SPECIFIC OPERATIONAL DIAGNOSTICS`**, which
-classifies each part.
+Still implementation-owned and not frozen here: identifier format / hashing / pseudonymization, retention duration, query mechanism, storage location and the support lookup flow. All remain bounded by Least Access / Least Retention and the content-free law.
 
 Existing facts that row must respect:
 
@@ -313,7 +307,7 @@ polling interval, threshold, SLO or SLA (§21).
 | **Only a valid, authenticated, currently effective control acts.** A missing, failed, unreachable or unauthenticated Company Operations response is never a control, and never an implicit Kill Switch | `PO-OPS-05` and the task's approved outage-isolation law. The authentication mechanism → §20 |
 | **Cannot manufacture Product authority** | `FORCED BY` CW2-08 §1, §2, H1, H17 and CW2-02 §46, B31 in Connected Worlds scope. Outside that scope, **CANDIDATE** (§10.2) |
 | **No generic remote execution** | `PO-OPS-08` (§12) |
-| **Auditable** | `FORCED BY` CW2-08 §5 and §36 for Safety / launch restrictions. For the other families, the audit and versioning guarantee → `OPEN → P4-DQ-13` |
+| **Auditable / versioned** | `PO-OPS-15`: every approved control family is versioned and audited. Exact TTL / signing / last-known-good / retention mechanics remain Production Integration / Security design |
 
 ### 10.2 What controls may and may not do
 
@@ -353,11 +347,11 @@ Each family was tested against the ten dimensions the task names. The result, pe
 | offline / stale state | old or unknown client state fails safely, and the server revalidates at commit. The effective state is runtime-held (§10.1). Freshness, expiry and last-known-good → `OPEN → P4-DQ-13` | CW2-08 §38, H26 |
 | failure isolation | a Company Operations outage changes no effective control (§15) | `PO-OPS-05` |
 
-No family needed a semantic that is not approved, **except** the three rows the Decision Queue carries:
+P4-C2 resolves the three former Decision Queue rows:
 
-- **`P4-DQ-13`** — freshness, integrity and audit guarantees for control state outside CW2-08;
-- **`P4-DQ-14`** — the user-facing behavior of Maintenance Mode and Minimum Supported Version;
-- **`P4-DQ-15`** — whether CW2-08's feature-flag and Launch Gate laws extend to capabilities outside Connected Worlds.
+- **`P4-DQ-13` / `PO-OPS-15`** — every family is versioned and audited; detailed freshness / integrity mechanics remain later implementation design;
+- **`P4-DQ-14` / `PO-OPS-16`** — user-facing Maintenance / Minimum Version moments go to the End-to-End audit;
+- **`P4-DQ-15` / `PO-OPS-17`** — the server-canonical / fail-safe laws extend app-wide.
 
 ---
 
@@ -370,11 +364,11 @@ definitions are **CANDIDATE** unless marked otherwise.
 | # | Family | Definition | Boundary |
 |---|---|---|---|
 | 1 | **Feature Flags** | the CW2-08 `FEATURE_FLAG_STATE` (`DISABLED`, `INTERNAL`, `LIMITED_ROLLOUT`, `ENABLED`, `EMERGENCY_DISABLED`), issued by Company Operations | **CW2-08 §24 stays the one feature-flag authority** (§13). Client flags are presentation hints only |
-| 2 | **Kill Switch** | the emergency act of taking an exact capability scope out of service at once. For a Connected Worlds capability it is the move to `EMERGENCY_DISABLED` (CW2-08 §24–§25), which invalidates stale in-flight eligibility | stops new actions and, where required, serving. It never deletes or rewrites history (CW2-08 §26). Its reach over non-Connected-Worlds capabilities → `P4-DQ-15` |
-| 3 | **Maintenance Mode** | a declared, scoped period in which named capabilities, or the whole App, are held unavailable for operational reasons | an intentional restriction, distinct from an outage (§15). What the user sees, and what stays readable → `P4-DQ-14` |
+| 2 | **Kill Switch** | the emergency act of taking an exact capability scope out of service at once. For a Connected Worlds capability it is the move to `EMERGENCY_DISABLED` (CW2-08 §24–§25), which invalidates stale in-flight eligibility | stops new actions and, where required, serving. It never deletes or rewrites history (CW2-08 §26). `PO-OPS-17` extends the same governing laws app-wide |
+| 3 | **Maintenance Mode** | a declared, scoped period in which named capabilities, or the whole App, are held unavailable for operational reasons | an intentional restriction, distinct from an outage (§15). `PO-OPS-16` assigns the exact user-facing moment to the End-to-End audit |
 | 4 | **Rollout Control** | cohort-scoped exposure: `INTERNAL` and `LIMITED_ROLLOUT` through to `ENABLED` | CW2-08 §27, H20: one participant's cohort cannot impose unsupported transitions on another |
-| 5 | **Minimum Supported Version** | a declared lowest App version allowed to perform a scoped set of actions | `FORCED BY` CW2-08 §38: "Old/unknown client states fail safely. Server checks current authority, entitlement, feature and launch gates at commit." The upgrade experience → `P4-DQ-14` |
-| 6 | **Approved Remote Configuration** | runtime values in a configuration family that has been explicitly approved | see the rules below this table. The family register and its guarantees → `P4-DQ-16` |
+| 5 | **Minimum Supported Version** | a declared lowest App version allowed to perform a scoped set of actions | `FORCED BY` CW2-08 §38: "Old/unknown client states fail safely. Server checks current authority, entitlement, feature and launch gates at commit." `PO-OPS-16` assigns the upgrade experience to the End-to-End audit |
+| 6 | **Approved Remote Configuration** | runtime values in a configuration family that has been explicitly approved | see the rules below this table. `PO-OPS-18`: a family requires Product Owner + Architecture controlled approval; no initial set is frozen in P4 |
 | 7 | **Model / Provider Route Hold** | a negative operational constraint: an otherwise eligible provider or route is held out of eligibility for operational reasons | §14 |
 
 Rules for family 6, Approved Remote Configuration:
@@ -403,9 +397,7 @@ The seven families of §11 are the currently approved control-family set. A futu
 explicit controlled Product / Architecture approval before it can enter this contract. No family can be added
 through Remote Configuration or any other control.
 
-**Out of scope for this contract:** delivering new App code, whether by store release or by any over-the-air
-mechanism. That is a release, not a control. No such mechanism exists in `apps/mobile/` at the baseline. How it is
-classified → `OPEN → P4-DQ-17`.
+**`PO-OPS-19` resolves the classification:** delivering new App code, whether by store release or by any future over-the-air mechanism, is a **release**, not a Company → App control. It is governed by release operations and can never serve as generic remote execution. No OTA mechanism exists in `apps/mobile/` at the baseline, and whether one is ever adopted remains a later release-operations decision.
 
 ---
 
@@ -430,9 +422,7 @@ These rules hold beside it:
 - **An outage is not `UNKNOWN`.** A Company Operations outage leaves the runtime-held canonical state as it was
   (§10.1). An unconfigured required state still fails closed under CW2-08 §40. That comes from CW2-08 and has
   nothing to do with the outage.
-- **Personal capabilities.** CW2-08 is written for Connected Worlds. Whether its flag, snapshot and fail-closed laws
-  also bind Personal conversation, Voice, Analysis and the rest of the App is not answered by any record →
-  `OPEN → P4-DQ-15`.
+- **App-wide reach.** `PO-OPS-17` extends the same server-canonical / fail-safe flag and launch-control laws to Personal conversation, Voice, Analysis and the rest of QANDEEL. CW2-08 remains the original authority for Connected Worlds; APP-OPS-01 does not replace it.
 
 ---
 
@@ -472,7 +462,7 @@ No route-hold state, schema or data model is defined here (§21).
 | a control is absent, cannot be fetched, or fails authentication | not a control. **Never an implicit Kill Switch** | approved outage-isolation law; §10.1 |
 | a valid, authenticated, currently effective Kill Switch / Maintenance / Minimum Version / rollout restriction / Route Hold | intentionally restricts **only** the scope it names | `PO-OPS-07`; CW2-08 §28 |
 | required CW2-08 launch / feature state is unknown or unconfigured **in the runtime's own canonical state** | the scoped capability fails closed. That is CW2-08, not an outage effect | CW2-08 §40, H4 |
-| a control is stale, or conflicts with a newer one | `OPEN → P4-DQ-13` | — |
+| a control is stale, or conflicts with a newer one | only the currently valid authenticated version may act. Every control family is versioned and audited; exact TTL / last-known-good / revert mechanics are later Production Integration / Security design | `PO-OPS-15` |
 | a Route Hold leaves no eligible route | the existing safe failure / degradation law. No downgrade | Model Router; Safety Runtime "Failure Behavior" |
 
 ---
