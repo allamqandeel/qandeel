@@ -1,14 +1,14 @@
 # QANDEEL — P4 Product Owner Decision Queue
 
-**Status:** `P4-C2 SYNCHRONIZED — ONLY DQ-06 REMAINS OPEN — P4 STILL ACTIVE`
+**Status:** `P4-C2 SYNCHRONIZED — ALL PRODUCT OWNER DECISIONS RESOLVED — P4 STILL ACTIVE`
 
 | | |
 |---|---|
 | Track | P4, task P4-A |
 | Canonical baseline | `94aa015deaef1079e2dbbe59b97ed7e5b37c1250` |
 | Rule | every open row is a choice existing authority does **not** settle. P4-A answers none of them. Where the evidence supports one, a **recommended option** is given. A recommendation is not a decision |
-| Open decisions | **1**: `P4-DQ-06` — only the lantern-in-v1 yes/no remains open; its sequencing is already resolved to P4 |
-| Resolved records | **16**: `P4-DQ-01` … `05`, `07` … `17`. P4-C1 resolves `01` … `04`; [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) resolves `05`, `07` … `09`, `11` … `17`; `10` is resolved by CW2-08A. IDs are not renumbered |
+| Open decisions | **0** — all Product Owner decision rows are resolved |
+| Resolved records | **17**: `P4-DQ-01` … `17`. P4-C1 resolves `01` … `04`; [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) resolves `05` … `09`, `11` … `17`; `10` is resolved by CW2-08A. IDs are not renumbered |
 | Excluded on purpose | an unknown implementation detail is not a Product decision. Such items are in the [Carry-Forward Matrix](P4_CARRY_FORWARD_MATRIX.md) instead |
 | Traceability | each row cites its [census](P4_RESIDUAL_GAP_CENSUS.md) rows and, for APP-OPS, its [contract candidate](APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) section |
 
@@ -28,7 +28,7 @@ The last two fields of each row mean:
 | `P4-DQ-03` | **RESOLVED — Q-A:** Q only at named identity moments; no persistent shell Q | no (resolved) | — | completed |
 | `P4-DQ-04` | **RESOLVED:** SW-3 Keyed Seam; dedicated «سياق الكلام» / Live Context surface retired | no (resolved) | — | completed |
 | `P4-DQ-05` | **RESOLVED:** ratify I-08B2.5; keep bytes/hash; confirm Android 48 dp; defer iOS dark/tinted beyond v1 | no (resolved) | — | completed / future variants deferred |
-| `P4-DQ-06` | **PARTIAL:** P4 owns launch/gateway closure; **OPEN:** is the lantern gateway moment in v1? | yes | — | yes after the lantern choice |
+| `P4-DQ-06` | **RESOLVED:** static launch/gateway closes in P4; lantern identity moment is in v1 but its motion/design work is a standalone later task | no (resolved) | — | static gateway proof in P4; lantern task later |
 | `P4-DQ-07` | **RESOLVED:** P4 designs none of the never-drawn full screens; End-to-End audit owns them | no (resolved) | — | no |
 | `P4-DQ-08` | **RESOLVED DIRECTION:** split non-signal Voice visuals from runtime-gated signal morphology | no Product decision remains | — | P4 proof still required |
 | `P4-DQ-09` | **RESOLVED DISPOSITION:** core copy closes in P4; journey residue to audit; Voice state strings remain runtime-gated | no Product decision remains | — | P4-owned copy still needs proof |
@@ -99,13 +99,14 @@ The last two fields of each row mean:
 | Decision | Ratify **I-08B2.5** as the final Brand Authority; keep the app-icon SVG bytes/hash unchanged; confirm Android **48 dp**; defer dedicated iOS dark/tinted variants beyond v1 |
 | Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §1 |
 
-### `P4-DQ-06` — PARTIALLY RESOLVED — Launch / splash / gateway
+### `P4-DQ-06` — RESOLVED — Launch / splash / gateway
 
 | Field | |
 |---|---|
-| State | **PARTIAL — P4-C2 resolves sequencing; one yes/no remains** |
-| Resolved | P4 closes the static launch / splash / gateway brand application before the End-to-End audit |
-| Still open | **Is the lantern gateway moment in v1?** No answer is inferred from the grouped approval |
+| State | **RESOLVED BY PRODUCT OWNER — P4-C2** |
+| Decision | P4 closes the static launch / splash / gateway brand application before the End-to-End audit. The exceptional **lantern gateway identity moment is in v1** |
+| Separation | the lantern's visual design, motion, interaction choreography, implementation technology and production proof are **not P4 work**; they belong to the later standalone task **QANDEEL — Lantern Gateway Identity Moment v1** |
+| Boundary | P4 performs no lantern research, creative exploration or technology selection |
 | Canonical record | [P4-C2](../canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) §2 |
 
 ### `P4-DQ-07` — RESOLVED — Undrawn-screen boundary
