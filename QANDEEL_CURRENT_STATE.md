@@ -119,7 +119,7 @@ was added later.
 | Phase VI: VI-01, VI-02 | each `CLOSED / FROZEN` as its archive states. VI-01 naming was amended by G1.1 | [`docs/design/phase-vi/`](docs/design/phase-vi/) |
 | Phase VI: VI-03 and the Phase VI parent | `HISTORICAL TRACK STATE — SUPERSEDED BY LATER CANONICAL WORK`. VI-03-01 is a brief "NOT A FREEZE". The artifact audit classifies the later VI-03 explorations as "exploration, superseded by I-08B1". Phase VI has no closure record | [`docs/design/canonical-artifacts/LOCAL_ONLY_CANONICAL_ARTIFACT_AUDIT.md`](docs/design/canonical-artifacts/LOCAL_ONLY_CANONICAL_ARTIFACT_AUDIT.md) |
 | I-08B1 Living Analysis World (FAR / MID / NEAR) | `CLOSED / FROZEN` (2026-09-20). PRODUCT / DESIGN FROZEN — PRODUCTION IMPLEMENTATION OPEN | [`docs/design/canonical-artifacts/living-analysis/README.md`](docs/design/canonical-artifacts/living-analysis/README.md) |
-| I-08B2.5 brand, I-08B3.0-E3 typography, I-08B3.1 A–F material and appearance system | as stated per domain in the artifact index: C and F are `CLOSED / FROZEN`; D2R and E1R are `CLOSED / FROZEN` per the downstream ledger; typography, A3R2 and B4R are frozen per the downstream ledger; brand is a final production package with no standalone closure record | [`docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md) |
+| I-08B2.5 brand, I-08B3.0-E3 typography, I-08B3.1 A–F material and appearance system | as stated per domain in the artifact index: **I-08B2.5 Brand is RATIFIED / FINAL BRAND AUTHORITY by P4-C2**; C and F are `CLOSED / FROZEN`; D2R and E1R are `CLOSED / FROZEN`; typography, A3R2 and B4R are frozen per the downstream ledger | [`docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md`](docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md); [P4-C2](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md) |
 | I-08B3.1-G: G1.1, G1.2, G2, G2.3, G3, and parent G | `CLOSED / FROZEN` | [`docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md`](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) §J |
 | The I-08B3.1 parent and the I-08B parent | NOT ESTABLISHED BY CURRENT REPOSITORY AUTHORITY. No closure record for either parent exists on `main` | — |
 
@@ -241,7 +241,7 @@ Ordered Product tracks:
 3. **P3 — Notification Final Realization** — `CLOSED / FROZEN` by
    [`docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md`](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md).
    Production implementation remains open.
-4. **P4 — Remaining Product / Visual Gaps Census & Closure** — **ACTIVE, NOT CLOSED.** P4-A opened the census / queue; P4-B resolved DQ-10 through CW2-08A; P4-C supplied comparative visual evidence; **P4-C1 resolves DQ-01 … DQ-04** as S-B + U-A + Q-A + SW-3, retires the dedicated Live Context surface, and admits `QAN-BL-CTX-01`. The remaining P4 decisions stay open in [`docs/p4/`](docs/p4/P4_READ_FIRST.md).
+4. **P4 — Remaining Product / Visual Gaps Census & Closure** — **ACTIVE, NOT CLOSED.** P4-C1 resolves DQ-01 … 04. **P4-C2 resolves DQ-05, DQ-07 … 09 and DQ-11 … 17, and resolves DQ-06 sequencing. Only one Product Owner yes/no remains open: whether the lantern gateway moment is in v1.** P4 still owes visual/copy proof, APP-OPS independent review and final closure reconciliation. See [`docs/p4/`](docs/p4/P4_READ_FIRST.md).
 
 After P1–P4 close:
 
