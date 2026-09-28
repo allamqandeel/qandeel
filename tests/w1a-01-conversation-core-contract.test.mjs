@@ -191,6 +191,14 @@ test('§5 — the faces are the official Estedad v8.5 STATIC instances, exactly 
   for (const file of record.files) assert.ok(fonts.includes(`estedad/${file.file}`), `${file.file} is loaded`);
 });
 
+test('§5 — the composer stays above the keyboard on both platforms (Android 15+ is edge-to-edge)', () => {
+  // Found on the API 36 proof emulator: with no Android keyboard behaviour, the enforced edge-to-edge
+  // window did not resize, and the composer and its Send stayed under the keyboard.
+  const surface = code(read(`${LAYER}/ConversationSurface.tsx`));
+  assert.match(surface, /<KeyboardAvoidingView[\s\S]*?behavior="padding"/u);
+  assert.doesNotMatch(surface, /behavior=\{Platform\.OS === 'ios' \? 'padding' : undefined\}/u);
+});
+
 // ---------------------------------------------------------------------------------------------
 // §6 — Conversation ↔ Analysis: one runtime generation, one Session, no persistence, no route
 // ---------------------------------------------------------------------------------------------

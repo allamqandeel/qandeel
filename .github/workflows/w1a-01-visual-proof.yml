@@ -85,3 +85,5 @@ jobs:
           name: w1a-01-visual-proof-${{ github.sha }}
           path: ${{ runner.temp }}/w1a-proof
           if-no-files-found: warn
+          # Maestro's debug output lives under a hidden .maestro folder.
+          include-hidden-files: true

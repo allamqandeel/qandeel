@@ -24,7 +24,6 @@ import {
   AccessibilityInfo,
   FlatList,
   KeyboardAvoidingView,
-  Platform,
   Text,
   TextInput,
   View,
@@ -302,9 +301,12 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
   return (
     <KeyboardAvoidingView
       testID={CONVERSATION_SURFACE_TEST_ID}
-      // The keyboard is the one place the platforms genuinely differ: iOS overlays it and needs the
-      // inset; Android resizes the window already and would double-compensate (as the sign-in entry).
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // The composer must stay above the keyboard on both platforms. iOS overlays the keyboard, and
+      // Android 15+ enforces edge-to-edge, where the window no longer resizes for it either — measured
+      // on the API 36 proof emulator, the composer and its Send stayed under the keyboard without
+      // this. `padding` is computed from the real overlap between this view and the keyboard, so on
+      // a platform that still resizes the window the overlap is zero and nothing is added twice.
+      behavior="padding"
       // An explicit LEFT-TO-RIGHT frame: every side below is physical, computed from the language.
       style={{ flex: 1, backgroundColor: palette.world, direction: 'ltr' }}
     >
