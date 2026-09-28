@@ -257,7 +257,13 @@ test('§6 — the depth pair lands in the Conversation, persists nothing, dispat
   assert.match(depth, /if \(depth !== 'ANALYSIS'\) return undefined;\n\s*const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\n\s*cross\('CONVERSATION'\);\n\s*return true;/u);
   // The frozen boundary: F2's cross-fade, and no cross-fade under Reduced Motion.
   assert.match(depth, /const duration = reduceMotion \? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;/u);
-  assert.match(depth, /withTiming\(1, \{ duration, easing: Easing\.linear \}/u);
+  // F2's linear fade, paced by RENDERED frames: at most one nominal 60 Hz frame per drawn frame, so a
+  // stalled UI thread stretches the fade and can never skip it (found on the proof emulator: the
+  // Analysis mount stalled ~265 ms and a time-based fade was drawn as a cut).
+  assert.match(depth, /export const NOMINAL_FRAME_MS = 1000 \/ 60;/u);
+  assert.match(depth, /const advance = Math\.min\(sinceLastFrameMs \?\? NOMINAL_FRAME_MS, NOMINAL_FRAME_MS\);/u);
+  assert.match(depth, /const next = fadeStep\(incoming\.get\(\), frame\.timeSincePreviousFrame, duration\);/u);
+  assert.doesNotMatch(depth, /withTiming|withDelay/u, 'no clock-driven fade remains');
   const root = code(read('apps/mobile/src/integration/composition/ProductRoot.tsx'));
   assert.equal((root.match(/<DepthComposition\b/gu) ?? []).length, 1, 'the root composes the world in exactly one place');
 });

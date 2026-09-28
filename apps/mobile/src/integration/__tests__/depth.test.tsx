@@ -12,8 +12,10 @@ import * as Reanimated from 'react-native-reanimated';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { MAP_SURFACE_TEST_ID } from '../../map';
+import { DEPTH_CROSSFADE_MS } from '../../conversation';
 import { exchange, historyBody, submitBody } from '../../conversation/__fixtures__/conversation';
 import { resize } from '../../responsive/__fixtures__/composition';
+import { NOMINAL_FRAME_MS, fadeStep } from '../composition/DepthComposition';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { SESSION_A, harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
 
@@ -104,8 +106,30 @@ function systemBack() {
 const layersMounted = (view: RenderResult) =>
   view.queryAllByTestId(/^qandeel-depth-(conversation|analysis)$/u, { includeHiddenElements: true }).length;
 
-const fadesIn = (timing: jest.SpyInstance) =>
-  timing.mock.calls.filter(([to, config]) => to === 1 && (config as { duration?: number } | undefined)?.duration === 200);
+/**
+ * Every cross-fade the boundary started, observed where the fade is driven: each start activates the
+ * depth owner's frame callback. (The frame-by-frame pace itself is `fadeStep`'s, asserted directly.)
+ */
+function watchFades(): { readonly started: number[] } {
+  const started: number[] = [];
+  const real = Reanimated.useFrameCallback;
+  jest.spyOn(Reanimated, 'useFrameCallback').mockImplementation(((callback: Parameters<typeof real>[0], autostart?: boolean) => {
+    const handle = real(callback, autostart) as ReturnType<typeof real> & { __watched?: ReturnType<typeof real> };
+    if (handle.__watched === undefined) {
+      handle.__watched = {
+        ...handle,
+        setActive: (on: boolean) => {
+          if (on && !handle.isActive) started.push(started.length + 1);
+          handle.setActive(on);
+        },
+      };
+    }
+    return handle.__watched;
+  }) as typeof real);
+  return { started };
+}
+
+const fadesIn = (watch: { readonly started: number[] }) => watch.started;
 
 const setReducedMotion = (on: boolean) => {
   (globalThis as { __QANDEEL_TEST_REDUCED_MOTION__?: boolean }).__QANDEEL_TEST_REDUCED_MOTION__ = on;
@@ -234,22 +258,47 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     h.dispose();
   });
 
-  it('standard motion: the F2 symmetric cross-fade, 200 ms, linear — in both directions', async () => {
-    const timing = jest.spyOn(Reanimated, 'withTiming');
+  it('standard motion: the F2 symmetric cross-fade runs in both directions and settles each time', async () => {
+    const timing = watchFades();
     const h = await signedIn();
     const view = await onRoute(h);
     await openAnalysis(view);
+    expect(layersMounted(view)).toBe(1);
     await cross(view, 'qandeel-depth-to-conversation', 'conversation');
-    const fades = fadesIn(timing);
-    expect(fades).toHaveLength(2);
-    for (const [, config] of fades) expect((config as { easing?: unknown }).easing).toBe(Reanimated.Easing.linear);
+    expect(layersMounted(view)).toBe(1);
+    expect(fadesIn(timing)).toHaveLength(2);
     view.unmount();
     h.dispose();
   });
 
+  it('the fade is F2’s 200 ms linear fade at a steady frame rate, and a stalled frame stretches it instead of skipping it', () => {
+    expect(DEPTH_CROSSFADE_MS).toBe(200);
+    // 60 Hz: twelve equal steps, the last one landing exactly on 1.
+    const at60: number[] = [];
+    for (let value = 0, frame = 0; value < 1; frame += 1) {
+      value = fadeStep(value, frame === 0 ? null : NOMINAL_FRAME_MS, DEPTH_CROSSFADE_MS);
+      at60.push(value);
+    }
+    expect(at60).toHaveLength(12);
+    expect(at60[at60.length - 1]).toBe(1);
+    const steps = at60.map((value, index) => value - (index === 0 ? 0 : at60[index - 1]));
+    for (const step of steps) expect(step).toBeCloseTo(1 / 12, 9);
+    // 120 Hz: the same 200 ms, in twice as many frames.
+    let value = 0;
+    let frames = 0;
+    while (value < 1) {
+      value = fadeStep(value, 1000 / 120, DEPTH_CROSSFADE_MS);
+      frames += 1;
+    }
+    expect(frames).toBe(24);
+    // The proof emulator's stall: ~265 ms between two rendered frames. One nominal frame, never a cut.
+    expect(fadeStep(0, 265, DEPTH_CROSSFADE_MS)).toBeCloseTo(1 / 12, 9);
+    expect(fadeStep(0, 5000, DEPTH_CROSSFADE_MS)).toBeLessThan(0.1);
+  });
+
   it('Reduced Motion: no cross-fade at all — the same switch, the same truth, no movement', async () => {
     setReducedMotion(true);
-    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const timing = watchFades();
     const h = await signedIn();
     const view = await onRoute(h);
     await openAnalysis(view);
@@ -257,13 +306,13 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     expect(view.queryAllByTestId(/^qandeel-depth-(conversation|analysis)$/u)).toHaveLength(1);
     await press(view, 'qandeel-depth-to-conversation');
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
-    expect(timing.mock.calls.filter(([to, config]) => to === 1 && (config as { duration?: number } | undefined)?.duration === 200)).toHaveLength(0);
+    expect(fadesIn(timing)).toHaveLength(0);
     view.unmount();
     h.dispose();
   });
 
   it('the fade into Analysis waits for the Analysis WORLD to compose — not its empty first layout — so it cannot become a cut; turning back mid-wait still resolves', async () => {
-    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const timing = watchFades();
     const h = await signedIn();
     const view = await onRoute(h);
     await press(view, 'qandeel-depth-to-analysis');
@@ -297,7 +346,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
   });
 
   it('no timer can start the fade into an undrawn Analysis: the Conversation stays visible beneath until it is drawn', async () => {
-    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const timing = watchFades();
     const timers = jest.spyOn(globalThis, 'setTimeout');
     const h = await signedIn();
     const view = await onRoute(h);
@@ -317,7 +366,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
   });
 
   it('turning back to an Analysis that has not been drawn yet waits for it again — it never fades into it early', async () => {
-    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const timing = watchFades();
     const h = await signedIn();
     const view = await onRoute(h);
     await press(view, 'qandeel-depth-to-analysis');
@@ -340,7 +389,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
 
 
   it('Android system Back at Analysis returns to the SAME Conversation through the same boundary — no route, no new Session, no canonical write', async () => {
-    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const timing = watchFades();
     const back = systemBack();
     const h = await signedIn();
     const view = await onRoute(h);

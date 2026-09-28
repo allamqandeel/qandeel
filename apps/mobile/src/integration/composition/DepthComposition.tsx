@@ -23,7 +23,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useFrameCallback, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import {
@@ -42,6 +42,27 @@ export type WorldDepth = 'CONVERSATION' | 'ANALYSIS';
 
 /** Where the reader lands in W1A-01, after sign-in and after every restart. Never persisted. */
 export const LANDING_DEPTH: WorldDepth = 'CONVERSATION';
+
+/** One frame at 60 Hz: the most a single rendered frame may advance the cross-fade. */
+export const NOMINAL_FRAME_MS = 1000 / 60;
+
+/**
+ * One rendered frame's advance of the cross-fade: linear, and never more than one nominal frame.
+ *
+ * At a steady frame rate this IS F2's 200 ms linear fade (60 Hz: 12 frames; 120 Hz: 24). But a
+ * time-based fade is only a claim about the clock, and the W1A-01 proof emulator showed the clock
+ * winning: mounting the Analysis world (Skia map, Timeline, chrome) stalls the UI thread for ~265 ms,
+ * the whole 200 ms elapsed inside the stall, and the first frame drawn was already at full opacity — a
+ * cut. Pacing by rendered frames makes the fade stretch across a stall instead of being skipped by it,
+ * so the reader always sees its intermediate frames.
+ */
+export function fadeStep(current: number, sinceLastFrameMs: number | null, durationMs: number): number {
+  'worklet';
+  const advance = Math.min(sinceLastFrameMs ?? NOMINAL_FRAME_MS, NOMINAL_FRAME_MS);
+  const next = current + advance / durationMs;
+  // Twelve sixtieths of a second are 200 ms; floating point must not turn them into thirteen frames.
+  return next >= 1 - 1e-9 ? 1 : next;
+}
 
 export interface DepthCompositionProps {
   readonly runtime: IntegrationSessionRuntime;
@@ -77,22 +98,40 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
   // (found on the W1A-01 proof emulator too). There is no timeout that could start the fade earlier:
   // until the Analysis is drawn, the Conversation stays visible beneath it, and Back still returns.
   const pendingFade = useRef<number | null>(null);
+  // The running fade's duration; zero when no fade is running. Read on the UI runtime per frame.
+  const fading = useSharedValue(0);
+  // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
+  // Paced by rendered frames (see `fadeStep`), so a stalled UI thread stretches it and never skips it.
+  const fadeFrames = useFrameCallback((frame) => {
+    'worklet';
+    const duration = fading.get();
+    if (duration <= 0) return;
+    const next = fadeStep(incoming.get(), frame.timeSincePreviousFrame, duration);
+    incoming.set(next);
+    if (next >= 1) {
+      fading.set(0);
+      scheduleOnRN(settle);
+    }
+  }, false);
+  // Frames are only watched while a fade runs.
+  useEffect(() => {
+    if (leaving === null) fadeFrames.setActive(false);
+  }, [fadeFrames, leaving]);
   const beginFade = useCallback(() => {
     const duration = pendingFade.current;
     if (duration === null) return;
     pendingFade.current = null;
-    // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
-    incoming.set(withTiming(1, { duration, easing: Easing.linear }, (finished) => {
-      'worklet';
-      if (finished) scheduleOnRN(settle);
-    }));
-  }, [incoming, settle]);
+    fading.set(duration);
+    fadeFrames.setActive(true);
+  }, [fadeFrames, fading]);
 
   const cross = useCallback(
     (to: WorldDepth) => {
       if (to === depth) return;
       setCrossed(true);
       const duration = reduceMotion ? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;
+      // A fade still running toward the other depth stops here; its frames are not reused.
+      fading.set(0);
       if (duration <= 0) {
         // Reduced Motion: a cut. The new depth is simply there.
         pendingFade.current = null;
@@ -111,7 +150,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
       pendingFade.current = duration;
       if (conversationStillMounted) beginFade();
     },
-    [beginFade, depth, incoming, leaving, reduceMotion],
+    [beginFade, depth, fading, incoming, leaving, reduceMotion],
   );
 
   // Android system Back at the Analysis depth is the return to the Conversation. Registered only
