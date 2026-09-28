@@ -40,6 +40,7 @@ import { I18nManager, Pressable, StyleSheet, Text, View } from 'react-native';
 import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 
+import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
 import type { CanonicalStore } from '../../state';
 import { TIMELINE_STEP, TimelinePresentation, type PresentationController } from '../../timeline';
 import { TemporalNavigator } from '../accessibility';
@@ -73,15 +74,19 @@ export interface LiveEdgeTargetProps {
   readonly following: boolean;
   readonly available: boolean;
   readonly onOutcome?: (outcome: TemporalOutcome) => void;
+  readonly language?: AnalysisLanguage;
 }
 
 /**
  * The outboard Live target. It is NOT a Moment and it is never appended to the disclosed Track:
  * `Moment(LH)` and the Live Edge are different Product facts, and only this control produces
  * `FOLLOW_LIVE`. Its label states the mode, so `PINNED(LH)` and `FOLLOW_LIVE` remain distinguishable
- * with motion off, with reduced motion on and to a screen reader.
+ * with motion off, with reduced motion on and to a screen reader. Its words are the Product Owner's
+ * current-edge wording («تتابع المحادثة الآن» / «العودة لمتابعة المحادثة»); "Live" is never said.
  */
-export function LiveEdgeTarget({ store, preview, following, available, onOutcome }: LiveEdgeTargetProps) {
+export function LiveEdgeTarget({ store, preview, following, available, onOutcome, language = 'en' }: LiveEdgeTargetProps) {
+  const copy = analysisCopy(language);
+  const words = following ? copy.followingConversation : copy.rejoinConversation;
   const onPress = useCallback(() => {
     const outcome = commitLiveEdgeIntent(store, preview);
     onOutcome?.(outcome);
@@ -92,12 +97,13 @@ export function LiveEdgeTarget({ store, preview, following, available, onOutcome
       testID={TEMPORAL_LIVE_EDGE_TEST_ID}
       style={styles.liveEdge}
       accessibilityRole="button"
-      accessibilityLabel={following ? 'Live edge, currently following' : 'Live edge, not currently following'}
+      accessibilityLabel={words}
+      accessibilityLanguage={language}
       accessibilityState={{ disabled: !available, selected: following }}
       disabled={!available}
       onPress={onPress}
     >
-      <Text>{following ? 'Live' : 'Go live'}</Text>
+      <Text>{words}</Text>
     </Pressable>
   );
 }
@@ -109,9 +115,11 @@ export interface TemporalTargetLayerProps {
   readonly presentation: PresentationController;
   readonly enabled?: boolean;
   readonly onOutcome?: (outcome: TemporalOutcome) => void;
+  /** The reader's Product language for every word of this layer and its Timeline (W1A-01). */
+  readonly language?: AnalysisLanguage;
 }
 
-export function TemporalTargetLayer({ store, preview, presentation, enabled = true, onOutcome }: TemporalTargetLayerProps) {
+export function TemporalTargetLayer({ store, preview, presentation, enabled = true, onOutcome, language = 'en' }: TemporalTargetLayerProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
   const window = useSyncExternalStore(presentation.subscribe, presentation.getSnapshot);
@@ -170,12 +178,13 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
       following={motion.plan.temporalStance === 'FOLLOWING_LIVE'}
       available={bounds.liveHead !== null}
       onOutcome={onOutcome}
+      language={language}
     />
   );
 
   return (
     <View testID={TEMPORAL_TARGET_LAYER_TEST_ID} style={styles.layer}>
-      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} />
+      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} language={language} />
 
       <GestureDetector gesture={gesture}>
         <View
@@ -207,6 +216,7 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
         onOutcome={onOutcome}
         onCommitted={motion.acknowledgeCommit}
         onCancelled={motion.acknowledgeCancel}
+        language={language}
       />
     </View>
   );

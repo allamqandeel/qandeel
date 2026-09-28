@@ -47,6 +47,11 @@ const expectedDependencies = {
   expo: '~57.0.21',
   'expo-constants': '~57.0.17',
   'expo-dev-client': '~57.0.18',
+  // W1A-01: the Product Owner authorized Estedad v8.5 for the Conversation surface, loaded through
+  // expo-font. It was already in the tree at exactly this version as a dependency of `expo` itself
+  // (Expo SDK 57's bundled module), so declaring it direct changes no installed version, adds no
+  // native module and needs no config plugin: the app config's plugin list is unchanged.
+  'expo-font': '~57.0.3',
   'expo-linking': '~57.0.9',
   'expo-router': '~57.0.20',
   // T-12P §2.4: the Supabase auth-session store, pinned to the Expo SDK 57 bundled version. It is

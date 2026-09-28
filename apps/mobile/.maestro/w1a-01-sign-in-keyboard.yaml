@@ -1,0 +1,42 @@
+# W1A-01 correction proof — the production Sign-in gateway with the keyboard open. VALIDATION ONLY.
+#
+# The proof build starts signed out when it is opened through its sign-in link (W1AProofRoot), so the
+# gateway rendered here is the production one. The identity is in memory only and the form is NEVER
+# submitted: the email is a fixture address on the reserved `.invalid` domain and no password is typed.
+# The flow leaves the keyboard open on the password field with the submit scrolled into reach, and
+# scripts/w1a/run-w1a-correction-proof.sh then records the keyboard's window frame and the element
+# bounds, so reachability is measured rather than eyeballed. PREFIX comes from that script.
+appId: com.qandeel.mobile
+---
+- stopApp
+- openLink: qandeel://w1a-proof/sign-in
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-sign-in-email"
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-01-sign-in
+- tapOn:
+    id: "qandeel-sign-in-email"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: "reader@w1a-proof.invalid"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-02-email-focused-keyboard-open
+- tapOn:
+    id: "qandeel-sign-in-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-03-password-focused-keyboard-open
+# Scrolling works while the keyboard is open, and brings the submit into the space above it.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-sign-in-submit"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-04-submit-reachable-keyboard-open

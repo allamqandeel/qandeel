@@ -1,0 +1,25 @@
+# W1A-01 correction proof — the Arabic Analysis depth's language. VALIDATION ONLY.
+#
+# Opens the production Analysis depth in Arabic and leaves it on screen, so that
+# scripts/w1a/run-w1a-correction-proof.sh can dump the on-device accessibility tree and measure every
+# visible text and accessible description in it: no Latin-script Product word, no internal id, and the
+# Product Owner's current-edge wording in use. PREFIX comes from that script.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-depth-to-conversation"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-01-analysis-arabic
+# The current-edge wording approved by the Product Owner, visibly in use.
+- assertVisible:
+    text: ".*(تتابع المحادثة الآن|العودة لمتابعة المحادثة).*"

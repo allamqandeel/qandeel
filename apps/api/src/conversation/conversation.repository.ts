@@ -109,6 +109,54 @@ export class ConversationRepository {
     });
   }
 
+  /**
+   * W1A-01 (E2E-B-04): one page of the Session's committed USER turns, newest first, read with the
+   * CALLER's token so row-level security (`conversation_turns_select_own`) and the explicit owner
+   * filter both apply. `before` is the exclusive `(created_at, id)` cursor of the oldest turn the
+   * caller already holds; the order matches the existing `(session_id, created_at, id)` index.
+   * CANCELLED and the unused lifecycle states are not part of the conversation-so-far.
+   */
+  async findUserTurnsPage(
+    accessToken: string,
+    sessionId: string,
+    userId: string,
+    limit: number,
+    before?: { createdAt: string; id: string },
+  ): Promise<ConversationTurn[]> {
+    const query = new URLSearchParams({
+      select: TURN_FIELDS,
+      session_id: `eq.${sessionId}`,
+      user_id: `eq.${userId}`,
+      role: 'eq.USER',
+      status: 'in.(RECEIVED,GENERATING,COMPLETED,FAILED)',
+      order: 'created_at.desc,id.desc',
+      limit: String(limit),
+    });
+    if (before) {
+      query.set('or', `(created_at.lt."${before.createdAt}",and(created_at.eq."${before.createdAt}",id.lt.${before.id}))`);
+    }
+    return this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`);
+  }
+
+  /** W1A-01: the COMPLETED QANDEEL replies of the given source USER turns, under the same scope. */
+  async findCompletedAssistantsForSources(
+    accessToken: string,
+    sessionId: string,
+    userId: string,
+    sourceTurnIds: readonly string[],
+  ): Promise<ConversationTurn[]> {
+    if (sourceTurnIds.length === 0) return [];
+    const query = new URLSearchParams({
+      select: TURN_FIELDS,
+      session_id: `eq.${sessionId}`,
+      user_id: `eq.${userId}`,
+      role: 'eq.ASSISTANT',
+      status: 'eq.COMPLETED',
+      source_turn_id: `in.(${sourceTurnIds.join(',')})`,
+    });
+    return this.dataApi.request<ConversationTurn[]>(accessToken, `conversation_turns?${query}`);
+  }
+
   // Claim / finalize / fail are server authority. They run through the explicit
   // service-role channel — never a caller-supplied user token — and each definer
   // command still validates session/source ownership, role, and state.

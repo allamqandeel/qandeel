@@ -1,0 +1,88 @@
+# W1A-01 — visual proof of the production Conversation route. VALIDATION ONLY.
+#
+# Runs against the W1A-01 proof build: the PRODUCTION `RuntimePhaseSurface`, depth composition,
+# Conversation and Living Analysis Map, over the proof world's in-memory identity and scripted network
+# (apps/mobile/src/integration/__validation__/w1a-proof-world.ts). The conversation text is fixture
+# text; no model generated it. Driven by scripts/w1a/run-w1a-visual-proof.sh, which sets the language,
+# text size and motion setting of each run and passes PREFIX / TYPED_ONE / TYPED_TWO; screenshots and recordings land in the run's --test-output-dir.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-01-conversation
+
+# The approved send-ready state: words in the FIELD, Send present at the end edge.
+- tapOn:
+    id: "qandeel-conversation-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${TYPED_ONE}
+- runFlow:
+    file: w1a-01-retype.yaml
+    env:
+      TYPED: ${TYPED_ONE}
+- takeScreenshot: ${PREFIX}-02-send-ready
+
+# The approved in-flight state: words kept in the locked composer, the waiting line on QANDEEL's side.
+# The proof world holds this first answer for six seconds so the state can be captured.
+- tapOn:
+    id: "qandeel-conversation-send"
+- takeScreenshot: ${PREFIX}-03-waiting
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-conversation-awaiting"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-reply
+
+# The unconfirmed state: the scripted 503 commits nothing, reading finds no turn under the key, and the
+# approved line with «إعادة المحاولة» / Try again appears. Try again re-issues the same key.
+- tapOn:
+    id: "qandeel-conversation-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${TYPED_TWO}
+- runFlow:
+    file: w1a-01-retype.yaml
+    env:
+      TYPED: ${TYPED_TWO}
+- tapOn:
+    id: "qandeel-conversation-send"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-send-retry"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-05-unconfirmed
+- tapOn:
+    id: "qandeel-conversation-send-retry"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-conversation-awaiting"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-06-retried
+
+# Conversation → Analysis → Conversation, recorded so the cross-fade (or its Reduced Motion cut) is seen.
+- startRecording: ${PREFIX}-07-depth-switch
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-depth-to-conversation"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-08-analysis
+- tapOn:
+    id: "qandeel-depth-to-conversation"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- stopRecording
+- takeScreenshot: ${PREFIX}-09-back-in-conversation

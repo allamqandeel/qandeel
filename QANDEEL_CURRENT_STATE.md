@@ -264,7 +264,18 @@ Production Integration follows the audit and its resulting closures; Release Har
 integration.
 
 **Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1 – P4 are
-closed as Product / design contracts and implement nothing. Production Integration has not started.
+closed as Product / design contracts and implement nothing. Production Integration has started through **one bounded,
+explicitly Product-Owner-authorized slice only** — `W1A-01 Authenticated Personal Conversation Core` (below); no other
+wave or Product area is opened by it, and the audit phase is not closed.
+
+**W1A-01 — Authenticated Personal Conversation Core (Draft PR, not merged).** Implements `E2E-B-03` (write / send),
+`E2E-B-04` (read QANDEEL's reply and the authoritative conversation-so-far, through the new owner-scoped read route
+`GET /conversation/sessions/:sessionId/turns`) and `E2E-B-07` (Conversation ↔ Analysis) on the production mobile route,
+in the frozen visual language (Dark, UTTERANCE / FIELD, G1.1 speaker sides, Estedad v8.5 static faces, P2 geometry
+through Skia). A committed turn whose reply failed stays in history with its failure and has **no retry** (Option C: the
+frozen turn-state machine makes FAILED terminal). Record:
+[`docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md). W1B / W1C /
+W3 / W4, cancel (B-05), reply retry (B-06), Voice and provider selection remain open.
 
 **End-to-End audit — current truth.** The audit started with `E2E-01`. Its census,
 [`docs/e2e/E2E01_READ_FIRST.md`](docs/e2e/E2E01_READ_FIRST.md), is the current audit artifact: it classifies 154 user

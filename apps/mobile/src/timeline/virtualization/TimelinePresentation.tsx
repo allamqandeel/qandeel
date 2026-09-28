@@ -1,16 +1,16 @@
-import { memo, type ReactNode, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
+import { memo, type ReactNode, useCallback, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
 import { FlatList, I18nManager, Text, View } from 'react-native';
+import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
 import { PresentationNavigator } from '../accessibility/PresentationNavigator';
 import { type DisclosedMomentTarget, itemLayout, targetKey, TIMELINE_STEP } from '../model/disclosedTrack';
 import type { PresentationController } from '../window/controller';
 
-const MomentStep = memo(function MomentStep({ target }: { target: DisclosedMomentTarget }) {
+const MomentStep = memo(function MomentStep({ target, language }: { target: DisclosedMomentTarget; language: AnalysisLanguage }) {
   return <View testID={`timeline-sp-${target.sessionPosition}`} style={{ width: TIMELINE_STEP, height: TIMELINE_STEP }}
-    accessible accessibilityLabel={`Disclosed Moment SP ${target.sessionPosition}`}>
+    accessible accessibilityLabel={analysisCopy(language).timelinePoint(target.sessionPosition)} accessibilityLanguage={language}>
     <Text numberOfLines={1}>{target.sessionPosition}</Text>
   </View>;
 });
-const renderItem = ({ item }: { item: DisclosedMomentTarget }) => <MomentStep target={item} />;
 
 /**
  * Presentation dimensions only; neither participates in ordinal list layout.
@@ -37,11 +37,14 @@ const DISCONTINUITY_EXTENT = 16;
 /** Composition seam only: a parent supplies disclosed input via the controller.
  * The optional outboard slot is supplied by the later temporal composition. T-05
  * never manufactures a Live target, its activation, or a committed-mode indicator. */
-export function TimelinePresentation({ controller, outboardLivePresentation }: {
+export function TimelinePresentation({ controller, outboardLivePresentation, language = 'en' }: {
   controller: PresentationController;
   outboardLivePresentation?: ReactNode;
+  /** The reader's Product language for every word here (W1A-01). */
+  language?: AnalysisLanguage;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
+  const renderItem = useCallback(({ item }: { item: DisclosedMomentTarget }) => <MomentStep target={item} language={language} />, [language]);
   const list = useRef<FlatList<DisclosedMomentTarget>>(null);
   const railWidth = useRef(0);
   const nativeOffset = useRef(0);
@@ -87,7 +90,7 @@ export function TimelinePresentation({ controller, outboardLivePresentation }: {
     {outboardLivePresentation != null && <>
       <View style={{ width: DISCONTINUITY_EXTENT }}>
         {state.offset < state.maximum && <Text testID="timeline-discontinuity"
-          accessibilityLabel="Disclosed Track continues">…</Text>}
+          accessibilityLabel={analysisCopy(language).trackContinues} accessibilityLanguage={language}>…</Text>}
       </View>
       {/* Sizes to its content, never below the floor, and never clipped. `flexShrink: 0` is what
           keeps the Track from squeezing the wording back out at a narrow width — the list beside it
@@ -104,6 +107,6 @@ export function TimelinePresentation({ controller, outboardLivePresentation }: {
       onResponderMove={({ nativeEvent }) => railMove(nativeEvent.locationX)}>
       <View pointerEvents="none" style={{ position: 'absolute', left: `${(I18nManager.isRTL ? 1 - state.position : state.position) * 100}%`, height: 44, borderLeftWidth: 2 }} />
     </View>
-    <PresentationNavigator key={`navigator:${state.track.sessionId}`} controller={controller} />
+    <PresentationNavigator key={`navigator:${state.track.sessionId}`} controller={controller} language={language} />
   </View>;
 }

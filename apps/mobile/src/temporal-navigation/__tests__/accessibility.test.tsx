@@ -39,11 +39,11 @@ describe('the accessible temporal model', () => {
     preview.preview(bounds, 6, 'EXACT_ENTRY');
 
     const model = temporalAccessibilityModel(bounds, preview.getSnapshot());
-    expect(model.stanceLabel).toBe('Pinned to Moment 2');
-    expect(model.previewLabel).toBe('Previewing Moment 6. Not committed.');
-    expect(temporalAnnouncement(model)).toContain('Not committed');
+    expect(model.stanceLabel).toBe('Reading at moment 2.');
+    expect(model.previewLabel).toBe('A temporary look at moment 6. Your position has not changed.');
+    expect(temporalAnnouncement(model)).toContain('Your position has not changed');
     // Committed truth keeps its own sentence and is never overwritten by the preview.
-    expect(temporalAnnouncement(model)).toContain('Pinned to Moment 2');
+    expect(temporalAnnouncement(model)).toContain('Reading at moment 2.');
   });
 
   it('keeps PINNED(LH) and FOLLOW_LIVE distinguishable at the same Session Position', () => {
@@ -106,6 +106,9 @@ describe('the accessible temporal model', () => {
 
   it('accepts an exact Moment number and refuses presentation commands', () => {
     expect(parseExactMomentEntry(' 42 ')).toBe(42);
+    // An Arabic keyboard's digits are the same number.
+    expect(parseExactMomentEntry('٤٢')).toBe(42);
+    expect(parseExactMomentEntry('۴۲')).toBe(42);
     for (const rejected of ['50%', 'first', 'last', 'next', '+', '', '3.5', '-2', 'abc']) {
       expect(parseExactMomentEntry(rejected)).toBeNull();
     }
@@ -188,7 +191,7 @@ describe('TN06-20 — accessibility parity', () => {
 
     expect(preview.getSnapshot()).toEqual({ status: 'IDLE' });
     expect(store.getState()).toBe(before);
-    expect(view.getByText('That Moment is not addressable.')).toBeTruthy();
+    expect(view.getByText("This moment isn't available in the current timeline.")).toBeTruthy();
 
     await act(async () => {
       view.unmount();
@@ -200,7 +203,7 @@ describe('TN06-20 — accessibility parity', () => {
     const preview = createTemporalPreviewController();
     const view = await render(<TemporalNavigator store={store} preview={preview} track={trackOf('session-1', store.getState().live.LH ?? 0)} />);
 
-    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`).props.children).toBe('Pinned to Moment 2');
+    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`).props.children).toBe('Reading at moment 2.');
     expect(view.queryByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`)).toBeNull();
 
     await act(async () => {
@@ -210,9 +213,74 @@ describe('TN06-20 — accessibility parity', () => {
       fireEvent(view.getByTestId(TEMPORAL_EXACT_ENTRY_TEST_ID), 'submitEditing');
     });
 
-    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`).props.children).toBe('Pinned to Moment 2');
-    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`).props.children).toBe('Previewing Moment 6. Not committed.');
+    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`).props.children).toBe('Reading at moment 2.');
+    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`).props.children).toBe('A temporary look at moment 6. Your position has not changed.');
 
+    await act(async () => {
+      view.unmount();
+    });
+  });
+});
+
+describe('W1A-01 — the temporal surface in Arabic', () => {
+  /** Every visible and assistive string under a rendered subtree. */
+  const spoken = (root: unknown): string[] => {
+    const out: string[] = [];
+    const visit = (node: unknown) => {
+      if (typeof node === 'string') return void out.push(node);
+      if (node === null || typeof node !== 'object') return;
+      if (Array.isArray(node)) return node.forEach(visit);
+      const n = node as { props: Record<string, unknown>; children: unknown[] | null };
+      for (const key of ['accessibilityLabel', 'accessibilityHint']) if (typeof n.props[key] === 'string') out.push(n.props[key] as string);
+      const value = n.props.accessibilityValue as { text?: string } | undefined;
+      if (value?.text !== undefined) out.push(value.text);
+      for (const action of (n.props.accessibilityActions as { label?: string }[] | undefined) ?? []) if (action.label !== undefined) out.push(action.label);
+      (n.children ?? []).forEach(visit);
+    };
+    visit(root);
+    return out;
+  };
+
+  it('speaks only the approved Arabic, with the new current-edge wording and no "Live"', async () => {
+    const store = temporalTestStore({ liveHead: 8, temporal: { kind: 'PINNED', at: sessionPosition(2) } });
+    const preview = createTemporalPreviewController();
+    const view = await render(<TemporalNavigator store={store} preview={preview} track={trackOf('session-1', 8)} language="ar" />);
+    expect(view.getByTestId(TEMPORAL_SUMMARY_TEST_ID).props.accessibilityLabel).toBe('التنقل الزمني');
+    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`).props.children).toBe('أنت عند اللحظة 2.');
+    const entry = view.getByTestId(TEMPORAL_EXACT_ENTRY_TEST_ID);
+    expect(entry.props.accessibilityLabel).toBe('رقم اللحظة');
+    expect(entry.props.accessibilityHint).toBe('أدخل رقمًا من 1 إلى 8. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.');
+    expect(view.getByRole('button', { name: 'نظرة مؤقتة على اللحظة التالية' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'العودة لمتابعة المحادثة' })).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.changeText(entry, '٥');
+    });
+    await act(async () => {
+      fireEvent(entry, 'submitEditing');
+    });
+    expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`).props.children).toBe('نظرة مؤقتة على اللحظة 5، ولم يتغير موضعك.');
+    expect(view.getByRole('button', { name: 'الانتقال إلى اللحظة 5' })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'إلغاء النظرة المؤقتة' })).toBeTruthy();
+    for (const text of spoken(view.toJSON())) expect(text).not.toMatch(/[A-Za-z]/u);
+
+    await act(async () => {
+      fireEvent.changeText(entry, '99');
+    });
+    await act(async () => {
+      fireEvent(entry, 'submitEditing');
+    });
+    expect(view.getByText('هذه اللحظة غير متاحة ضمن الخط الزمني الحالي.')).toBeTruthy();
+    await act(async () => {
+      view.unmount();
+    });
+  });
+
+  it('following the conversation reads «تتابع المحادثة الآن», distinct from being at the same moment', async () => {
+    const following = temporalTestStore({ liveHead: 4 });
+    const view = await render(<TemporalNavigator store={following} preview={createTemporalPreviewController()} track={trackOf('session-1', 4)} language="ar" />);
+    expect(view.getByTestId(TEMPORAL_SUMMARY_TEST_ID).props.accessibilityValue.text).toBe('تتابع المحادثة الآن');
+    for (const old of ['أنت عند آخر المحادثة', 'العودة إلى المحادثة الجارية']) expect(JSON.stringify(view.toJSON())).not.toContain(old);
     await act(async () => {
       view.unmount();
     });
@@ -236,10 +304,11 @@ describe('FCR-02 — native accessibility structure', () => {
     for (const forbidden of ['accessibilityActions', 'onAccessibilityAction', 'accessibilityLabel', 'accessibilityRole', 'accessibilityValue', 'accessibilityState']) {
       expect(container.props[forbidden]).toBeUndefined();
     }
-    // It does own them: the exact-entry input and the four controls are its descendants.
+    // It does own them: the exact-entry input and the controls are its descendants. With no temporary
+    // look there are two (forward and rejoin); commit and cancel exist only while a look does.
     const interactive = container.queryAll(isInteractive);
     expect(interactive.filter((node) => node.type === 'TextInput')).toHaveLength(1);
-    expect(interactive.filter((node) => node.props.accessibilityRole === 'button')).toHaveLength(4);
+    expect(interactive.filter((node) => node.props.accessibilityRole === 'button')).toHaveLength(2);
     // And nothing on the path from the container down to any of them is an accessibility element,
     // so no ancestor can group or suppress them for VoiceOver or TalkBack.
     for (const control of interactive) {
@@ -269,7 +338,7 @@ describe('FCR-02 — native accessibility structure', () => {
     expect(summary.props.accessible).toBe(true);
     expect(summary.props.accessibilityLabel).toBe('Temporal navigation');
     // Preview vs commit wording, and the committed sentence unchanged beside it.
-    expect((summary.props.accessibilityValue as { text: string }).text).toBe('Previewing Moment 6. Not committed. Pinned to Moment 2.');
+    expect((summary.props.accessibilityValue as { text: string }).text).toBe('A temporary look at moment 6. Your position has not changed. Reading at moment 2.');
     expect((summary.props.accessibilityActions as { name: string }[]).map((action) => action.name)).toEqual([
       'preview-later-moment',
       'commit-previewed-moment',
@@ -299,8 +368,8 @@ describe('FCR-02 — native accessibility structure', () => {
     const b = await render(<TemporalNavigator store={pinned} preview={createTemporalPreviewController()} track={trackOf('session-1', 4)} />);
     const spokenA = a.getByTestId(TEMPORAL_SUMMARY_TEST_ID).props.accessibilityValue.text;
     const spokenB = b.getByTestId(TEMPORAL_SUMMARY_TEST_ID).props.accessibilityValue.text;
-    expect(spokenA).toBe('Following the live edge, currently Moment 4');
-    expect(spokenB).toBe('Pinned to Moment 4');
+    expect(spokenA).toBe('Following the conversation');
+    expect(spokenB).toBe('Reading at moment 4.');
     expect(spokenA).not.toBe(spokenB);
     await act(async () => {
       a.unmount();
@@ -314,17 +383,18 @@ describe('FCR-02 — native accessibility structure', () => {
     const view = await render(<TemporalNavigator store={store} preview={preview} track={trackOf('session-1', 8)} />);
 
     // The exact-entry input is reachable by its own label, and editable.
-    const entry = view.getByLabelText('Exact Moment number');
+    const entry = view.getByLabelText('Moment number');
     expect(entry).toBe(view.getByTestId(TEMPORAL_EXACT_ENTRY_TEST_ID));
     expect(entry.props.accessible).not.toBe(false);
     expect(entry.props.editable).not.toBe(false);
-    expect(entry.props.accessibilityHint).toBe('Enter a Moment number from 1 to 8. This previews the Moment; it does not go to it.');
+    expect(entry.props.accessibilityHint).toBe('Enter a number from 1 to 8. This gives you a temporary look without moving there.');
 
     // Each control is a button of its own, with a state that tells the truth about availability.
-    expect(view.getByRole('button', { name: 'Preview the next later Moment', disabled: false })).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Go to the live edge', disabled: false })).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Go to the previewed Moment', disabled: true })).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Cancel the preview', disabled: true })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Preview the next moment', disabled: false })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Rejoin the conversation', disabled: false })).toBeTruthy();
+    // Commit and cancel name a temporary look; with none, they are not offered at all.
+    expect(view.queryByTestId(TEMPORAL_COMMIT_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:cancel`)).toBeNull();
 
     // Pointer and non-pointer convergence: the exact entry previews, the sibling control commits.
     await act(async () => {
@@ -333,10 +403,10 @@ describe('FCR-02 — native accessibility structure', () => {
     await act(async () => {
       fireEvent(entry, 'submitEditing');
     });
-    expect(view.getByRole('button', { name: 'Go to the previewed Moment', disabled: false })).toBeTruthy();
-    expect(view.getByRole('button', { name: 'Cancel the preview', disabled: false })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Go to moment 5', disabled: false })).toBeTruthy();
+    expect(view.getByRole('button', { name: 'Cancel the temporary look', disabled: false })).toBeTruthy();
     await act(async () => {
-      fireEvent.press(view.getByRole('button', { name: 'Go to the previewed Moment' }));
+      fireEvent.press(view.getByRole('button', { name: 'Go to moment 5' }));
     });
     expect(store.getState().temporal).toEqual({ kind: 'PINNED', at: 5 });
     expect(store.getState().history).toHaveLength(1);

@@ -5,7 +5,6 @@
 export type { TemporalAccessibilityAction, TemporalAccessibilityActionName, TemporalAccessibilityModel, TemporalStance } from './temporal-accessibility';
 export {
   TEMPORAL_ACCESSIBILITY_ACTIONS,
-  TEMPORAL_SURFACE_LABEL,
   parseExactMomentEntry,
   temporalAccessibilityModel,
   temporalAnnouncement,

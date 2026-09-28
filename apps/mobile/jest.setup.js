@@ -102,6 +102,37 @@ jest.mock('react-native-reanimated', () => {
     setGestureState: () => undefined,
     makeMutable: (initial) => box(initial),
     useReducedMotion: () => globalThis.__QANDEEL_TEST_REDUCED_MOTION__ === true,
+    // W1A-01 — a frame callback is a stable handle. Activating it runs frames synchronously at a nominal
+    // 60 Hz (the first with no previous frame, as on device) until the handle is deactivated or the
+    // callback has had 600 frames, so a frame-paced animation settles inside the test's own act().
+    useFrameCallback: (callback, autostart = true) => {
+      const latest = React.useRef(callback);
+      latest.current = callback;
+      const handle = React.useRef(null);
+      if (handle.current === null) {
+        const state = { active: false };
+        const run = () => {
+          let t = 0;
+          for (let frame = 0; state.active && frame < 600; frame += 1) {
+            t += 1000 / 60;
+            latest.current({ timestamp: t, timeSincePreviousFrame: frame === 0 ? null : 1000 / 60, timeSinceFirstFrame: t });
+          }
+        };
+        handle.current = {
+          callbackId: 0,
+          get isActive() {
+            return state.active;
+          },
+          setActive: (on) => {
+            const starting = on && !state.active;
+            state.active = on;
+            if (starting) run();
+          },
+        };
+        if (autostart) handle.current.setActive(true);
+      }
+      return handle.current;
+    },
     withTiming: withAnimation,
     withSpring: withAnimation,
     withDelay: (_ms, next) => next,

@@ -1,0 +1,22 @@
+# W1A-01 proof — typing guard. VALIDATION ONLY.
+#
+# On a loaded emulator the keyboard can accept characters before its new input session is bound; Android
+# then discards every character ("Session id mismatch ... commitText" in logcat) and the field stays
+# empty (seen once: run 36407416252, ar-large-text, second message). Send exists only while the field
+# holds words, so its absence means nothing arrived: refocus, let the keyboard settle, and type once more.
+appId: com.qandeel.mobile
+---
+- runFlow:
+    when:
+      notVisible:
+        id: "qandeel-conversation-send"
+    commands:
+      - tapOn:
+          id: "qandeel-conversation-input"
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - inputText: ${TYPED}
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-send"
+    timeout: 10000

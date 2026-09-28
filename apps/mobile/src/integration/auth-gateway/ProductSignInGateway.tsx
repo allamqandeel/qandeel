@@ -58,7 +58,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import type { MobileAuthAuthority } from '../../runtime-entry';
@@ -157,10 +157,13 @@ export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      // The keyboard is the one place the two platforms genuinely differ: iOS overlays it and needs
-      // the content inset, Android resizes the window already and would double-compensate. This is a
-      // keyboard behaviour, not a device class, and nothing about the Product depends on it.
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      // The form must stay above the keyboard on both platforms. iOS overlays the keyboard, and
+      // Android 15+ enforces edge-to-edge, where the window no longer resizes for it either (measured
+      // on the W1A-01 API 36 proof emulator): without this the lower form and its submit sit under the
+      // keyboard, and the scroll cannot lift them out because the scroll view itself extends beneath
+      // it. `padding` is computed from the real overlap between this view and the keyboard, so on a
+      // platform that still resizes the window the overlap is zero and nothing is added twice.
+      behavior="padding"
     >
       <ScrollView
         style={styles.root}

@@ -1,43 +1,52 @@
 import { useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
+import { analysisCopy, presentationCommandHelper, type AnalysisLanguage } from '../../analysis-language';
 import type { PresentationController } from '../window/controller';
 import { runPresentationCommand } from './commands';
 
-export function PresentationNavigator({ controller }: { controller: PresentationController }) {
+/**
+ * The non-drag route to T-05's presentation window. Every word is the reader's language, from the
+ * W1A-01 Analysis copy; the command field accepts the approved commands of BOTH languages.
+ */
+export function PresentationNavigator({ controller, language = 'en' }: { controller: PresentationController; language?: AnalysisLanguage }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
   const [command, setCommand] = useState('');
   const [invalid, setInvalid] = useState(false);
+  const copy = analysisCopy(language);
+  const helper = presentationCommandHelper(language);
   const available = state.maximum > 0;
+  const percent = Math.round(state.position * 100);
   const submit = () => setInvalid(!runPresentationCommand(controller, command));
   return <View>
     <View accessible accessibilityRole="adjustable" testID="timeline-position"
-      accessibilityLabel="Position within already-disclosed Timeline"
+      accessibilityLabel={copy.timelineViewPosition}
+      accessibilityLanguage={language}
       accessibilityState={{ disabled: !available }}
       accessibilityValue={{ min: 0, max: 100, now: state.position * 100,
-        text: state.track.targets.length === 0 ? 'No disclosed Moments' : available
-          ? `${Math.round(state.position * 100)}% of already-disclosed presentation range`
-          : 'All disclosed positions fit; no presentation movement' }}
+        text: state.track.targets.length === 0 ? copy.noMomentYet : available
+          ? copy.viewPercentage(percent)
+          : copy.allVisible }}
       accessibilityActions={[
-        { name: 'increment', label: 'Later disclosed presentation region' },
-        { name: 'decrement', label: 'Earlier disclosed presentation region' },
-        { name: 'first', label: 'First disclosed presentation window' },
-        { name: 'last', label: 'Last disclosed presentation window' },
-        { name: 'refine', label: 'Refine presentation adjustment' },
-        { name: 'widen', label: 'Widen presentation adjustment' },
+        { name: 'increment', label: copy.commands.next },
+        { name: 'decrement', label: copy.commands.previous },
+        { name: 'first', label: copy.commands.first },
+        { name: 'last', label: copy.commands.last },
+        { name: 'refine', label: copy.narrowView },
+        { name: 'widen', label: copy.widenView },
       ]}
       onAccessibilityAction={({ nativeEvent: { actionName } }) => {
         if (!available) return;
         if (actionName === 'increment' || actionName === 'decrement') controller.adjust(actionName === 'increment' ? 1 : -1);
         else runPresentationCommand(controller, actionName);
-      }}><Text>{Math.round(state.position * 100)}% within disclosed presentation</Text></View>
-    <Text>Presentation only: enter 0–100%, first, last, next, previous, +, -, refine or widen.</Text>
-    <TextInput testID="timeline-command" accessibilityLabel="Disclosed presentation command" style={{ minHeight: 44 }}
-      accessibilityHint="Enter 0 to 100 percent, first, last, next, previous, plus, minus, refine or widen. Moves visibility only."
+      }}><Text>{copy.viewPercentage(percent)}</Text></View>
+    <Text>{helper}</Text>
+    <TextInput testID="timeline-command" accessibilityLabel={copy.moveView} accessibilityLanguage={language} style={{ minHeight: 44 }}
+      accessibilityHint={helper}
       value={command} onChangeText={setCommand} onSubmitEditing={submit} returnKeyType="go"
       autoCapitalize="none" autoCorrect={false} maxLength={16} />
-    <Pressable accessibilityRole="button" accessibilityLabel="Move disclosed presentation" onPress={submit} style={{ minHeight: 44, justifyContent: 'center' }}>
-      <Text>Move presentation</Text>
+    <Pressable accessibilityRole="button" accessibilityLabel={copy.moveView} onPress={submit} style={{ minHeight: 44, justifyContent: 'center' }}>
+      <Text>{copy.moveView}</Text>
     </Pressable>
-    {invalid && <Text accessibilityRole="alert">Use 0–100%, first, last, next, previous, +, -, refine or widen.</Text>}
+    {invalid && <Text accessibilityRole="alert">{helper}</Text>}
   </View>;
 }

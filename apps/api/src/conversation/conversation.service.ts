@@ -1,7 +1,13 @@
 import { randomUUID } from 'node:crypto';
 import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationRepository } from './conversation.repository';
-import type { ConversationSession, ConversationTurn, OrchestratedTurnResult } from './conversation.types';
+import type {
+  ConversationHistoryExchange,
+  ConversationHistoryPage,
+  ConversationSession,
+  ConversationTurn,
+  OrchestratedTurnResult,
+} from './conversation.types';
 import { DataApiError } from './supabase-data-api.service';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
@@ -29,6 +35,11 @@ import { CorrelationService } from '../observability/correlation.service';
 // surfaces as a retryable service-unavailable response while the durable
 // completed turns stay completed, and an idempotent replay re-enters
 // establishment.
+
+/** W1A-01: one history page by default, and a hard ceiling a caller cannot raise. */
+const HISTORY_DEFAULT_LIMIT = 50;
+const HISTORY_MAX_LIMIT = 100;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 @Injectable()
 export class ConversationService {
@@ -106,6 +117,66 @@ export class ConversationService {
     if (!turn) throw new ConflictException('Turn is missing or already terminal.');
     this.correlation.bindCanonical(turn.session_id,turn.id);
     return turn;
+  }
+
+  /**
+   * W1A-01 (E2E-B-04) — the authoritative conversation-so-far of one owned Session.
+   *
+   * A pure read: it admits nothing, claims nothing, recovers nothing and never reaches the
+   * orchestrator, so reading history can never create, regenerate or terminalize a turn. Ownership
+   * is the same `resumeSession` check every Session route uses (404 when not the caller's), and
+   * every row is read with the caller's token under row-level security.
+   *
+   * Pagination walks backwards over committed USER turns with an exclusive `before` cursor (a user
+   * turn id the caller already holds), so the newest page loads first and older pages load on
+   * demand. The page itself is returned oldest to newest.
+   */
+  async listTurns(userId: string, accessToken: string, sessionId: string, query: unknown): Promise<ConversationHistoryPage> {
+    const { limit, before } = this.validateHistoryQuery(query);
+    await this.resumeSession(userId, accessToken, sessionId);
+    let cursor: { createdAt: string; id: string } | undefined;
+    if (before !== undefined) {
+      const anchor = await this.repository.findTurn(accessToken, sessionId, userId, before);
+      if (!anchor || anchor.role !== 'USER') throw new BadRequestException('before must name a user turn of this session.');
+      cursor = { createdAt: anchor.created_at, id: anchor.id };
+    }
+    const newestFirst = await this.repository.findUserTurnsPage(accessToken, sessionId, userId, limit + 1, cursor);
+    const hasOlder = newestFirst.length > limit;
+    const users = newestFirst.slice(0, limit).reverse();
+    const assistants = await this.repository.findCompletedAssistantsForSources(
+      accessToken, sessionId, userId, users.map((turn) => turn.id),
+    );
+    const replyBySource = new Map(assistants.map((turn) => [turn.source_turn_id, turn]));
+    const exchanges = users.map((userTurn): ConversationHistoryExchange => {
+      const reply = replyBySource.get(userTurn.id);
+      return {
+        userTurn: { id: userTurn.id, content: userTurn.content, idempotencyKey: userTurn.idempotency_key, createdAt: userTurn.created_at },
+        // A reply exists only as a COMPLETED assistant turn, and FAILED is the committed turn's own
+        // terminal state. Anything else is still outstanding — never reported as failed or answered.
+        replyState: reply ? 'COMPLETED' : userTurn.status === 'FAILED' ? 'FAILED' : 'PENDING',
+        assistantTurn: reply ? { id: reply.id, content: reply.content, createdAt: reply.created_at } : null,
+      };
+    });
+    return { exchanges, hasOlder };
+  }
+
+  private validateHistoryQuery(query: unknown): { limit: number; before?: string } {
+    const value = (query && typeof query === 'object' ? query : {}) as Record<string, unknown>;
+    const allowed = new Set(['limit', 'before']);
+    if (Object.keys(value).some((key) => !allowed.has(key))) {
+      throw new BadRequestException('Request contains unsupported query parameters.');
+    }
+    let limit = HISTORY_DEFAULT_LIMIT;
+    if (value.limit !== undefined) {
+      if (typeof value.limit !== 'string' || !/^[1-9][0-9]{0,2}$/u.test(value.limit) || Number(value.limit) > HISTORY_MAX_LIMIT) {
+        throw new BadRequestException(`limit must be an integer between 1 and ${HISTORY_MAX_LIMIT}.`);
+      }
+      limit = Number(value.limit);
+    }
+    if (value.before !== undefined && (typeof value.before !== 'string' || !UUID_PATTERN.test(value.before))) {
+      throw new BadRequestException('before must be a turn id.');
+    }
+    return { limit, ...(typeof value.before === 'string' ? { before: value.before } : {}) };
   }
 
   private validateTurnInput(body: unknown): { content: string; idempotencyKey?: string } {

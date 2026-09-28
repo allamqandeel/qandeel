@@ -126,12 +126,24 @@ describe('T14-B3…T14-B7 — every other non-READY phase is still technical', (
   }
 });
 
-describe('T14-B8 — READY still composes the unchanged Living Analysis Map', () => {
+// W1A-01 RE-ANCHOR. T14-B8 asserted that READY renders the Living Analysis Map directly. That was a
+// delivery fact about a world that had only one depth, and it expired exactly when the Product Owner
+// approved the W1A-01 landing: after sign-in the reader lands in the Conversation of the same Session,
+// and the Living Analysis Map — unchanged — is its Analysis depth, one act away. The permanent claim is
+// kept and asserted more strongly: READY composes the WORLD (never the gateway, never a technical
+// state), and the unchanged Map is reached inside that same composition over the same runtime.
+describe('T14-B8 — READY composes the world, and the unchanged Living Analysis Map is its Analysis depth', () => {
   it('an authenticated, bootstrapped runtime renders the world and not the gateway', async () => {
     const h = await harness();
     expect(h.phase().kind).toBe('READY');
     const view = await mountPhaseSurface(h.runtime);
     await act(async () => {
+      await settle();
+    });
+    expect(view.getByTestId('qandeel-world-depth')).toBeTruthy();
+    expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
+    await act(async () => {
+      await fireEvent.press(view.getByTestId('qandeel-depth-to-analysis'));
       await settle();
     });
     expect(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID)).toBeTruthy();
@@ -167,7 +179,9 @@ describe('T14-B9 — a successful sign-in hands control to the existing runtime,
     // The runtime owns everything after the credential was accepted: recovery, the Session, the store.
     expect(h.phase().kind).toBe('READY');
     expect(view.queryByTestId(PRODUCT_SIGN_IN_GATEWAY_TEST_ID)).toBeNull();
-    expect(view.getByTestId(RESPONSIVE_SURFACE_TEST_ID)).toBeTruthy();
+    // W1A-01: the composed world lands in the Conversation of the Session the bootstrap acquired.
+    expect(view.getByTestId('qandeel-world-depth')).toBeTruthy();
+    expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
 
     // And the Session was acquired by the existing bootstrap, exactly once — not by the gateway.
     expect(h.http.creates()).toHaveLength(1);

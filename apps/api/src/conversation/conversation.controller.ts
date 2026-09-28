@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, Req, UseGuards } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { ConversationService } from './conversation.service';
@@ -18,6 +18,13 @@ export class ConversationController {
   resumeSession(@Req() request: AuthenticatedRequest, @Param('sessionId') sessionId: string) {
     const { userId, accessToken } = request.authenticatedUser;
     return this.conversations.resumeSession(userId, accessToken, sessionId);
+  }
+
+  // W1A-01 (E2E-B-04): the authoritative conversation-so-far of one owned Session. Read-only.
+  @Get('sessions/:sessionId/turns')
+  listTurns(@Req() request: AuthenticatedRequest, @Param('sessionId') sessionId: string, @Query() query: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.conversations.listTurns(userId, accessToken, sessionId, query);
   }
 
   @Post('sessions/:sessionId/turns')

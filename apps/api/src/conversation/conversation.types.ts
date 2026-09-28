@@ -49,3 +49,31 @@ export interface ConversationExchange {
   userTurn: ConversationTurn;
   assistantTurn: ConversationTurn;
 }
+
+/**
+ * W1A-01 (E2E-B-04) — the authoritative conversation-so-far of one owned Session, as the mobile
+ * Conversation surface reads it. It is raw Conversation history, never the Analysis projection.
+ *
+ * One exchange per COMMITTED user turn, oldest to newest. A user turn whose QANDEEL reply failed is
+ * kept with `replyState: 'FAILED'` — the committed words are never silently dropped — and a turn
+ * still awaiting its reply is `PENDING`. A CANCELLED turn is not part of the conversation-so-far.
+ */
+export type ConversationReplyState = 'COMPLETED' | 'FAILED' | 'PENDING';
+
+export interface ConversationHistoryExchange {
+  userTurn: {
+    id: string;
+    content: string;
+    /** The caller's own submission identity, so an ambiguous send can be reconciled by reading. */
+    idempotencyKey: string | null;
+    createdAt: string;
+  };
+  replyState: ConversationReplyState;
+  assistantTurn: { id: string; content: string; createdAt: string } | null;
+}
+
+export interface ConversationHistoryPage {
+  exchanges: ConversationHistoryExchange[];
+  /** True when older committed user turns exist before the first exchange of this page. */
+  hasOlder: boolean;
+}

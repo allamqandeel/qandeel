@@ -58,7 +58,7 @@ import { ProductSignInGateway } from '../auth-gateway';
 import { deviceProductLocale } from '../locale/device-locale';
 import { usePresentationFacts } from '../presentation/presentation-facts';
 import { createIntegrationRuntime, type IntegrationPhase, type IntegrationRuntime } from '../runtime/integration-runtime';
-import { LivingAnalysisMap } from './LivingAnalysisMap';
+import { DepthComposition } from './DepthComposition';
 
 /** The one stable identifier the release boot smoke asserts. Present in every phase. */
 export const PRODUCT_ROOT_TEST_ID = 'qandeel-product-root';
@@ -198,13 +198,19 @@ function SignedOutEntry({ auth }: { readonly auth: MobileAuthAuthority }) {
   return <ProductSignInGateway auth={auth} locale={locale} />;
 }
 
-/** The world, with the two app-root presentation facts bound. Below the provider, by necessity. */
+/**
+ * The world, with the two app-root presentation facts bound. Below the provider, by necessity.
+ *
+ * W1A-01: the reader's world is one depth pair — the writing depth and the Living Analysis Map —
+ * over the SAME runtime generation. Which depth shows is the composition's local choice, never a
+ * phase, a route or canonical state; this root still composes exactly one world, only at READY.
+ */
 function ComposedWorld({ runtime }: { readonly runtime: Extract<IntegrationPhase, { kind: 'READY' }>['runtime'] }) {
   const { insets, fontScale, envelope } = usePresentationFacts();
   // Resolved once per mount: it is a presentation configuration, and re-reading it every render
   // would rebuild the value T-11 memoizes its whole plan on.
   const locale = useMemo(() => deviceProductLocale(), []);
-  return <LivingAnalysisMap runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} />;
+  return <DepthComposition runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} />;
 }
 
 const styles = StyleSheet.create({

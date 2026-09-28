@@ -25,9 +25,12 @@
  * same Session Position, and they still read differently — which is the point, because when the
  * Live Head next advances they describe different ones.
  *
- * The labels are structural placeholders. Final Product copy, tone and localization belong to the
- * later chrome and responsive tasks; nothing here states an analytical fact about anything.
+ * The words are the reader's language, from the W1A-01 Analysis copy (`analysis-language`): the
+ * Product Owner's current-edge wording («تتابع المحادثة الآن» / "Following the conversation",
+ * «العودة لمتابعة المحادثة» / "Rejoin the conversation") and T-08 / P4-C4's moment wording. "Live"
+ * stays a runtime term; it is never said. Nothing here states an analytical fact about anything.
  */
+import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
 import type { SessionPosition } from '../../state';
 import type { TemporalBounds } from '../targeting/addressability';
 import { nextDisclosedTarget, type TemporalTargeting } from '../targeting/disclosed-availability';
@@ -69,22 +72,26 @@ export interface TemporalAccessibilityModel {
   readonly exactTargetMaximum: SessionPosition | null;
 }
 
-export const TEMPORAL_SURFACE_LABEL = 'Temporal navigation';
-
-function stanceLabelFor(bounds: TemporalBounds): { readonly stance: TemporalStance; readonly label: string } {
+function stanceLabelFor(bounds: TemporalBounds, language: AnalysisLanguage): { readonly stance: TemporalStance; readonly label: string } {
+  const copy = analysisCopy(language);
   if (bounds.committedTc === null) {
-    return { stance: 'NO_COMMITTED_POSITION', label: 'No committed conversational position yet' };
+    return { stance: 'NO_COMMITTED_POSITION', label: copy.noMomentYet };
   }
   // Derived from the MODE, never from the position: at the Live Head these two are the same Session
   // Position and must still read differently.
   return bounds.mode === 'FOLLOW_LIVE'
-    ? { stance: 'FOLLOWING_LIVE', label: `Following the live edge, currently Moment ${bounds.committedTc}` }
-    : { stance: 'PINNED_TO_MOMENT', label: `Pinned to Moment ${bounds.committedTc}` };
+    ? { stance: 'FOLLOWING_LIVE', label: copy.followingConversation }
+    : { stance: 'PINNED_TO_MOMENT', label: copy.atMoment(bounds.committedTc) };
 }
 
-export function temporalAccessibilityModel(targeting: TemporalTargeting, preview: TemporalPreview): TemporalAccessibilityModel {
+export function temporalAccessibilityModel(
+  targeting: TemporalTargeting,
+  preview: TemporalPreview,
+  language: AnalysisLanguage = 'en',
+): TemporalAccessibilityModel {
+  const copy = analysisCopy(language);
   const bounds: TemporalBounds = targeting.bounds;
-  const { stance, label } = stanceLabelFor(bounds);
+  const { stance, label } = stanceLabelFor(bounds, language);
   const previewing = preview.status === 'PREVIEWING';
   const cursor = previewing ? preview.ptc : bounds.committedTc;
   // Forward availability is asked of the DISCLOSED sequence, so the accessible route offers a step
@@ -93,21 +100,21 @@ export function temporalAccessibilityModel(targeting: TemporalTargeting, preview
   const liveAvailable = bounds.liveHead !== null;
 
   const actions: TemporalAccessibilityAction[] = [];
-  if (forwardAvailable) actions.push({ name: 'preview-later-moment', label: 'Preview the next later Moment' });
+  if (forwardAvailable) actions.push({ name: 'preview-later-moment', label: copy.previewNextMoment });
   if (previewing) {
-    actions.push({ name: 'commit-previewed-moment', label: `Go to Moment ${preview.ptc}` });
-    actions.push({ name: 'cancel-preview', label: 'Cancel the preview' });
+    actions.push({ name: 'commit-previewed-moment', label: copy.goToMoment(preview.ptc) });
+    actions.push({ name: 'cancel-preview', label: copy.cancelTemporaryLook });
   }
   // Offered whenever a live edge exists, including while already following it: committing it then is
   // a true no-op that writes nothing and records nothing, which is a better answer than hiding the
   // control and leaving a reader unable to confirm where they are.
-  if (liveAvailable) actions.push({ name: 'commit-live-edge', label: 'Go to the live edge' });
+  if (liveAvailable) actions.push({ name: 'commit-live-edge', label: copy.rejoinConversation });
 
   return Object.freeze({
     stance,
     stanceLabel: label,
-    previewLabel: previewing ? `Previewing Moment ${preview.ptc}. Not committed.` : null,
-    surfaceLabel: TEMPORAL_SURFACE_LABEL,
+    previewLabel: previewing ? copy.temporaryLookAt(preview.ptc) : null,
+    surfaceLabel: copy.temporalNavigation,
     actions: Object.freeze(actions),
     commitAvailable: previewing,
     cancelAvailable: previewing,
@@ -122,12 +129,19 @@ export function temporalAccessibilityModel(targeting: TemporalTargeting, preview
  * always; the preview, when there is one, in its own clause and explicitly as a preview.
  */
 export function temporalAnnouncement(model: TemporalAccessibilityModel): string {
-  return model.previewLabel === null ? model.stanceLabel : `${model.previewLabel} ${model.stanceLabel}.`;
+  return model.previewLabel === null ? model.stanceLabel : `${model.previewLabel} ${model.stanceLabel}`;
 }
 
-/** Parses an exact Moment entry. Presentation percentages and window commands are not accepted. */
+/**
+ * Parses an exact Moment entry. Presentation percentages and window commands are not accepted.
+ * Arabic-Indic and Extended Arabic-Indic digits are read as their Western forms, so an Arabic keyboard
+ * can enter a moment number as it is.
+ */
 export function parseExactMomentEntry(input: string): number | null {
-  const text = String(input ?? '').trim();
+  const text = String(input ?? '')
+    .trim()
+    .replace(/[٠-٩]/gu, (d) => String(d.charCodeAt(0) - 0x0660))
+    .replace(/[۰-۹]/gu, (d) => String(d.charCodeAt(0) - 0x06f0));
   if (!/^\d{1,9}$/u.test(text)) return null;
   const value = Number(text);
   return Number.isSafeInteger(value) ? value : null;

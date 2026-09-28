@@ -7,6 +7,7 @@
  * a network it cannot have.
  */
 import { act, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
+import { KeyboardAvoidingView } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { isPressTarget, nodes } from '../../responsive/__fixtures__/composition';
@@ -418,6 +419,29 @@ describe('T14-A17, T14-A18 — input semantics and platform intent', () => {
     expect(auth.calls).toHaveLength(0);
     await fireEvent(view.getByTestId(SIGN_IN_PASSWORD_TEST_ID), 'submitEditing');
     expect(auth.calls).toHaveLength(1);
+    await view.unmount();
+  });
+
+  it('the form avoids the keyboard itself on EVERY platform, and scrolls while it is open (Android 15+ edge-to-edge)', async () => {
+    // Android 15+ no longer resizes the window for the keyboard, so relying on that resize left the
+    // lower form under the keyboard. The avoidance is now the view's own, on Android as on iOS.
+    const behaviours: unknown[] = [];
+    const render = KeyboardAvoidingView.prototype.render;
+    const spy = jest.spyOn(KeyboardAvoidingView.prototype, 'render').mockImplementation(function (this: KeyboardAvoidingView) {
+      behaviours.push(this.props.behavior);
+      return render.call(this);
+    });
+    const { view } = await mount({ language: 'ar' });
+    expect(behaviours.length).toBeGreaterThan(0);
+    expect(new Set(behaviours)).toEqual(new Set(['padding']));
+    spy.mockRestore();
+    // Every field and the submit live inside the ONE scroll, which keeps taps while the keyboard is up,
+    // so none of them can be stranded below the keyboard.
+    const scrolls = nodes(view.toJSON()).filter((node) => node.type === 'RCTScrollView');
+    expect(scrolls).toHaveLength(1);
+    expect(propsOf(scrolls[0]).keyboardShouldPersistTaps).toBe('handled');
+    const inside = new Set(nodes(scrolls[0]).map((node) => propsOf(node).testID));
+    for (const id of [SIGN_IN_EMAIL_TEST_ID, SIGN_IN_PASSWORD_TEST_ID, SIGN_IN_SUBMIT_TEST_ID]) expect(inside.has(id)).toBe(true);
     await view.unmount();
   });
 

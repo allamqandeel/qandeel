@@ -1,0 +1,37 @@
+# W1A-01 correction proof — the depth boundary in standard motion, BOTH directions. VALIDATION ONLY.
+#
+# One recording: Conversation → Analysis through the door, then Analysis → Conversation through Android's
+# SYSTEM Back (the correction's other depth fix), so the same recording proves the forward fade, the
+# return fade and Back. Driven by scripts/w1a/run-w1a-correction-proof.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-01-conversation
+- startRecording: ${PREFIX}-02-depth-both-directions
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-depth-to-conversation"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-03-analysis
+- pressKey: back
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- stopRecording
+- takeScreenshot: ${PREFIX}-04-back-in-conversation
+# Back at the Conversation is the platform's again: the app is not held open by the depth owner.
+- assertNotVisible:
+    id: "qandeel-depth-to-conversation"

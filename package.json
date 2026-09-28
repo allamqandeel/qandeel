@@ -199,6 +199,7 @@
     "test:t12p-mobile-runtime-entry-contract": "node --test tests/t12p-mobile-runtime-entry-contract.test.mjs",
     "test:t13-recovery-persistence-contract": "node --test tests/t13-recovery-persistence-contract.test.mjs",
     "test:t14-mobile-product-sign-in-gateway-contract": "node --test tests/t14-mobile-product-sign-in-gateway-contract.test.mjs",
+    "test:w1a-01-conversation-core-contract": "node --test tests/w1a-01-conversation-core-contract.test.mjs",
     "test:task-closure-governance-contract": "node --test tests/task-closure-governance-contract.test.mjs",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:qan-inf-02-windows-temp-harness-cleanup-contract": "node --test tests/qan-inf-02-windows-temp-harness-cleanup-contract.test.mjs",

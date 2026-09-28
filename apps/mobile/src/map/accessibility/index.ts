@@ -16,6 +16,7 @@ export {
   MAP_VIEWPORT_ACTIONS,
   buildMapAccessibilityTree,
   mapAccessibilityWithoutProjection,
+  mapContainerNeutralLabel,
 } from './map-accessibility';
 
 export type { MapAccessibilityLayerProps } from './MapAccessibilityLayer';
