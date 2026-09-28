@@ -3,6 +3,8 @@
 **Status:** `CENSUS COMPLETE / READY FOR PRODUCT OWNER REVIEW`
 **Phase:** QANDEEL End-to-End Product Experience Completeness Audit — first task. **The phase is not closed.**
 **Baseline:** canonical `main` `d4b20344239654fea737afb3c03036d1bb4ef0d9`
+**Revision:** E2E-01R targeted correction after independent review — Shared World naming (§6), Connected Worlds
+reachability wording (§1, §4) and the first-wave split (§1). No row's classification or bucket changed.
 **Authority:** audit evidence only. It creates no Product decision, no runtime semantics and no implementation
 authorization, and it amends no frozen record. Where it names a gap, the gap's owner decides.
 
@@ -33,17 +35,20 @@ Everything else is decided, proved or backend-only:
 - **Frozen Product / design canon is far ahead of production.** P1–P4, I-08A4, I-08N-01, I-08B1 and G1.1–G3 decide the
   shell, Conversation, Analysis, Settings, Understanding, Activity, notifications, iconography, launch and the
   non-signal Voice visuals. Almost none of it is implemented.
-- **Connected Worlds backends are complete and unreachable.** Shared (I-04), Public (I-05), Replay (I-06) and Matching
-  (I-07) are `CLOSED / FROZEN` in the database. No HTTP route exposes any of them, no Nest module wires the server
-  services, no mobile code references them, and only fifteen functions are callable by an ordinary signed-in user
-  (four Shared, eleven Matching setup).
+- **Connected Worlds runtimes exist, but no Product journey reaches them.** Shared (I-04), Public (I-05), Replay (I-06)
+  and Matching (I-07) exist in their closed / frozen backend and database scopes. None is exposed as a current mobile
+  Product surface or wired as an end-to-end Product journey: no Nest Product HTTP route or module exposes the families,
+  and no mobile code references them. Fifteen database RPCs are directly executable by `authenticated` (four Shared,
+  eleven Matching setup); the rest stay role-gated and fail closed as their contracts require.
 - **The account lifecycle stops at sign-in.** There is no sign-up, verification, password recovery, sign-out control,
   Login ID, export or deletion.
 
-**The largest provider-independent gap is the Personal core loop**: the authenticated shell, first use, the Conversation
-surface and the Conversation ↔ Analysis switch. All of it is frozen Product authority, the backend it needs exists, and
-none of it waits on a provider choice. [Closure waves](QANDEEL_E2E01_NEXT_CLOSURE_WAVES_v1.md) §2 proposes it as the
-first wave, **for Product Owner review**.
+**The largest provider-independent gap is the Personal Conversation core** for an already-authenticated user: the
+shell, the Conversation surface (write, read the reply) and the Conversation ↔ Analysis switch. It is frozen Product
+authority, the backend it needs exists, and none of it waits on a provider choice. First use, the First Conversation
+Opening and the normal opener are adjacent but not dependency-free: their frozen text uses `{display_name}`, and sign-up
+with Name / Login ID persistence does not exist (A-09). [Closure waves](QANDEEL_E2E01_NEXT_CLOSURE_WAVES_v1.md) §2 proposes the core as the
+first slice (W1A) and the identity / first-use work as its adjacent track (W1B), **for Product Owner review**.
 
 ---
 
@@ -254,7 +259,7 @@ permission-education sheet copy remains a Product decision (E-10).
 
 **Plans and Credits (F-01 … F-06).** Placement and the CW2-08 law only. Every row waits on provider-cost evidence.
 
-**Shared World (G-01 … G-18).** A finished, fail-closed backend with no door. Four user-callable functions (standing
+**Shared World (G-01 … G-18).** A closed / frozen, fail-closed backend with no Product surface. Four user-callable functions (standing
 context grant / revoke; invite-credential rotate; invitation submit) exist, but accepting an invitation, the world's
 birth, sending a message, leaving and governance are executable by no application role, and no route exists. The
 multi-human conversation presentation is undrawn and handed to this audit by P4 (G-05). The closed world's name is
@@ -295,33 +300,38 @@ visual system are unported (K-12, K-13).
 
 Reported, not resolved. None is corrected here beyond the factual Current State update this task makes.
 
-1. **Shared area label.** I-08A4 §3 names the Global Switcher area with the plural collection «العوالم المشتركة / Shared
-   Worlds». G1.2 §3 later makes the Shared area name singular, «العالم المشترك / Shared World», "regardless of count", and
-   names G1.1, not I-08A4, as what it amends. Which label the switcher shows needs a reading by the records' owners before
-   the shell is built (matrix B-01, G-01).
-2. **Current State baseline.** `QANDEEL_CURRENT_STATE.md` §1 still names `916792d` (PR #269) as its baseline although it
+1. **Current State baseline.** `QANDEEL_CURRENT_STATE.md` §1 still names `916792d` (PR #269) as its baseline although it
    records P4 at `d6d0999` and `main` is `d4b2034`. This task updates only the lines it must (§9); the snapshot-identity
    table is left for its owner.
-3. **Current State omits the missing Conversation surface.** Its §4 row "Living Analysis Map (Personal World)" lists what
+2. **Current State omits the missing Conversation surface.** Its §4 row "Living Analysis Map (Personal World)" lists what
    the mobile client implements but not that the client has no way to send a turn. This task records that fact in the
    Current State (§9) because it is repository truth the next task needs.
-4. **`apps/mobile/README.md` drift after T-14.** It still calls the app a "minimal technical shell … FoundationShell"
+3. **`apps/mobile/README.md` drift after T-14.** It still calls the app a "minimal technical shell … FoundationShell"
    (opening), says the boot smoke asserts "the technical shell", and says "Not here: any Product sign-in gateway
    (`QAN-BL-AUTH-01`)". T-14 shipped the gateway and `FoundationShell` is no longer on the Product route. The Project Map
    §6 already warns about the opening; the other two sentences are not listed there.
-5. **Maestro comment.** [`product-short-landscape-recomposition.yaml`](../../apps/mobile/.maestro/product-short-landscape-recomposition.yaml)
+4. **Maestro comment.** [`product-short-landscape-recomposition.yaml`](../../apps/mobile/.maestro/product-short-landscape-recomposition.yaml)
    calls `SIGNED_OUT` a "technical" state; since T-14 it renders the Product gateway.
-6. **Implicit provider defaults in code.** Provider choice is deferred (QIR-001; roadmap §3), yet each secondary adapter's
+5. **Implicit provider defaults in code.** Provider choice is deferred (QIR-001; roadmap §3), yet each secondary adapter's
    config defaults to a named vendor when its environment variable is unset (for example
    [`hypothesis-candidate-generator-provider.config.ts`](../../apps/api/src/hypothesis/hypothesis-candidate-generator-provider.config.ts)).
    This is not a Product selection and this census makes none; it is recorded so the benchmark task sees it.
-7. **Public reply entitlement.** CW2-04 §20 / D22 records Premium-only replies as "current Product direction", while
+6. **Public reply entitlement.** CW2-04 §20 / D22 records Premium-only replies as "current Product direction", while
    `post_public_discussion_v1` carries no entitlement check. It is executable by no application role, so nothing is
    exposed; the Public surface task and the economy work must reconcile the two.
 
 Traps the Project Map §6 already lists (the Connected Worlds architecture closure's I-00 … I-10 numbering; I-08A4's
 «عرض الجلسة» row, superseded by P4-C3R «إعادة العرض»; the API README's "Current scope") were re-observed and are not
 repeated.
+
+**Checked and not a contradiction: the Shared World Product-area name.** I-08A4 §3's plural collection wording and
+G1.1's count-dependent proof wording are superseded as Product-area naming by
+[G1.2 closure](../design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md) §3, "Shared World Product name — final G1.2
+supersession": «العالم المشترك» / Shared World, stable singular Product-area names regardless of count. Current State
+already records that the later G1.1 / G1.2 amendments bind where they supersede I-08A4 naming and shell statements. The
+Global Switcher label therefore needs no Product Owner reading. A user's individual Shared World and any list of that
+user's worlds remain distinct concepts; current authority sets no separate label for such a list, and this census
+invents none.
 
 ---
 
