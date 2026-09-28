@@ -30,7 +30,7 @@ run() {
   local name="$1"; shift
   echo "::group::$name"
   adb logcat -c || true
-  if maestro test --debug-output "$OUT/debug-$name" -e OUT_DIR="$OUT" -e PREFIX="$name" "$@" "$FLOW"; then
+  if maestro test --debug-output "$OUT/debug-$name" --test-output-dir "$OUT/shots-$name" -e PREFIX="$name" "$@" "$FLOW"; then
     echo "PASS $name" | tee -a "$OUT/results.txt"
   else
     echo "FAIL $name" | tee -a "$OUT/results.txt"
