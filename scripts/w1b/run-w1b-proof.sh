@@ -8,9 +8,10 @@
 #   ar-journey         the same in Arabic, default text size (the complete Arabic journey);
 #   ar-large-journey   the same in Arabic at the largest system text size;
 #   ar-large-keyboard  Create account at the largest text size, left with the keyboard open on the password:
-#                      the keyboard's inset frame and the element bounds are measured (the focused field and
-#                      the create act must end above the keyboard), and the form's on-device accessibility
-#                      tree is censused for technical, auth or provider strings.
+#                      the keyboard's inset frame and element bounds are measured so the focused field must
+#                      remain clear of the keyboard. The create act's reachability is proved separately by
+#                      the preceding scroll-until-visible step, which intentionally dismisses the keyboard.
+#                      The form's on-device accessibility tree is also censused for technical/auth/provider strings.
 #
 # Every run is attempted even when an earlier one fails; the script exits non-zero if ANY failed. No
 # password and no code is written anywhere: the flows type random values into an in-memory proof world.
@@ -68,14 +69,22 @@ for node in ET.parse(hierarchy).iter('node'):
     if rid in ids:
         m = re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]', node.get('bounds', ''))
         if m: bounds[rid] = tuple(int(v) for v in m.groups())
-# The focused password and the create act must be clear of the keyboard. The upper fields may have
-# scrolled away at a large text size (screenshots 02-03 show them), so they are reported, not required.
-required = ('qandeel-create-account-password', 'qandeel-create-account-submit')
+# This final state intentionally re-focuses the password after the drag so the keyboard is genuinely
+# open for measurement. Only that focused field is required to be clear of the keyboard here.
+# The create act was already proved reachable by Maestro's preceding scrollUntilVisible step; that drag
+# intentionally dismisses the keyboard. A clipped/off-screen node can appear in uiautomator with inverted
+# or zero-area bounds, so invalid rectangles must never be misreported as "above the keyboard".
+required = ('qandeel-create-account-password',)
 ok = True
 for rid in ids:
     if rid not in bounds:
         print(f'{rid}: not on screen'); ok = ok and rid not in required; continue
     x1, y1, x2, y2 = bounds[rid]
+    valid = x2 > x1 and y2 > y1
+    if not valid:
+        print(f'{rid}: not on screen (invalid/clipped bounds [{x1},{y1}][{x2},{y2}])')
+        ok = ok and rid not in required
+        continue
     clear = y2 <= ime_top
     print(f'{rid}: bounds [{x1},{y1}][{x2},{y2}] bottom={y2} -> {"above the keyboard" if clear else "UNDER THE KEYBOARD"}')
     ok = ok and (clear or rid not in required)
