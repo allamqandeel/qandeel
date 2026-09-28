@@ -43,11 +43,32 @@ async function press(view: RenderResult, testID: string): Promise<void> {
   });
 }
 
+/** The incoming depth's first layout — the moment its cross-fade may begin. */
+async function laidOut(view: RenderResult, which: 'conversation' | 'analysis'): Promise<void> {
+  await fireEvent(view.getByTestId(`qandeel-depth-${which}`), 'layout', { nativeEvent: { layout: { x: 0, y: 0, width: 390, height: 844 } } });
+  await act(async () => {
+    await settle();
+  });
+}
+
+/** Across the boundary: the door, then the incoming depth's first layout. */
+async function cross(view: RenderResult, door: string, to: 'conversation' | 'analysis'): Promise<void> {
+  await press(view, door);
+  await laidOut(view, to);
+}
+
 /** Into the Analysis depth, laid out in a real room so the world actually composes. */
 async function openAnalysis(view: RenderResult): Promise<void> {
-  await press(view, 'qandeel-depth-to-analysis');
+  await cross(view, 'qandeel-depth-to-analysis', 'analysis');
   await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
 }
+
+/** Every mounted depth, including the outgoing one hidden from assistive technology beneath the fade. */
+const layersMounted = (view: RenderResult) =>
+  view.queryAllByTestId(/^qandeel-depth-(conversation|analysis)$/u, { includeHiddenElements: true }).length;
+
+const fadesIn = (timing: jest.SpyInstance) =>
+  timing.mock.calls.filter(([to, config]) => to === 1 && (config as { duration?: number } | undefined)?.duration === 200);
 
 const setReducedMotion = (on: boolean) => {
   (globalThis as { __QANDEEL_TEST_REDUCED_MOTION__?: boolean }).__QANDEEL_TEST_REDUCED_MOTION__ = on;
@@ -165,7 +186,7 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     expect(runtime.store.getState()).toBe(stateBefore);
     expect(h.http.creates()).toHaveLength(1);
 
-    await press(view, 'qandeel-depth-to-conversation');
+    await cross(view, 'qandeel-depth-to-conversation', 'conversation');
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
     expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
     expect(view.getByLabelText('You: fixture: earlier words')).toBeTruthy();
@@ -181,8 +202,8 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     const h = await signedIn();
     const view = await onRoute(h);
     await openAnalysis(view);
-    await press(view, 'qandeel-depth-to-conversation');
-    const fades = timing.mock.calls.filter(([to, config]) => to === 1 && (config as { duration?: number } | undefined)?.duration === 200);
+    await cross(view, 'qandeel-depth-to-conversation', 'conversation');
+    const fades = fadesIn(timing);
     expect(fades).toHaveLength(2);
     for (const [, config] of fades) expect((config as { easing?: unknown }).easing).toBe(Reanimated.Easing.linear);
     view.unmount();
@@ -200,6 +221,31 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     await press(view, 'qandeel-depth-to-conversation');
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
     expect(timing.mock.calls.filter(([to, config]) => to === 1 && (config as { duration?: number } | undefined)?.duration === 200)).toHaveLength(0);
+    view.unmount();
+    h.dispose();
+  });
+
+  it('the fade waits for the incoming depth to lay out, so a slow mount cannot turn it into a cut; turning back mid-fade still resolves', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const h = await signedIn();
+    const view = await onRoute(h);
+    await press(view, 'qandeel-depth-to-analysis');
+    // Mounted, beneath nothing yet: no clock is running until the Analysis has laid out.
+    expect(fadesIn(timing)).toHaveLength(0);
+    expect(layersMounted(view)).toBe(2);
+    // The reader turns back before the Analysis ever laid out: the Conversation is still mounted, lays
+    // out no more, and fades back at once — nothing is left waiting.
+    await press(view, 'qandeel-depth-to-conversation');
+    expect(fadesIn(timing)).toHaveLength(1);
+    expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
+    expect(layersMounted(view)).toBe(1);
+    // And forward again: one fade, on layout.
+    await press(view, 'qandeel-depth-to-analysis');
+    expect(fadesIn(timing)).toHaveLength(1);
+    await laidOut(view, 'analysis');
+    expect(fadesIn(timing)).toHaveLength(2);
+    expect(layersMounted(view)).toBe(1);
+    expect(view.queryByTestId('qandeel-conversation')).toBeNull();
     view.unmount();
     h.dispose();
   });

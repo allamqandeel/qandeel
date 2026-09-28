@@ -15,7 +15,7 @@
  * depth stays opaque beneath while the incoming one resolves over it, so no third colour ever shows
  * through the fade. Only the incoming depth is interactive or exposed to assistive technology.
  */
-import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
@@ -63,6 +63,22 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
 
   const settle = useCallback(() => setLeaving(null), []);
 
+  // The incoming depth is mounted by the switch itself, and mounting it (the whole Analysis world, or
+  // the Conversation's history) can take longer than the fade. Started at the press, the fade's clock
+  // would run out before the incoming depth's first frame, and the reader would see a cut (found on the
+  // W1A-01 proof emulator). So the fade starts only once the incoming depth has laid out.
+  const pendingFade = useRef<number | null>(null);
+  const beginFade = useCallback(() => {
+    const duration = pendingFade.current;
+    if (duration === null) return;
+    pendingFade.current = null;
+    // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
+    incoming.set(withTiming(1, { duration, easing: Easing.linear }, (finished) => {
+      'worklet';
+      if (finished) scheduleOnRN(settle);
+    }));
+  }, [incoming, settle]);
+
   const cross = useCallback(
     (to: WorldDepth) => {
       if (to === depth) return;
@@ -70,21 +86,22 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
       const duration = reduceMotion ? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;
       if (duration <= 0) {
         // Reduced Motion: a cut. The new depth is simply there.
+        pendingFade.current = null;
         incoming.set(1);
         setLeaving(null);
         setDepth(to);
         return;
       }
+      // A depth that is still mounted (the reader turned back mid-fade) will not lay out again, so its
+      // fade starts now; a newly mounted one starts on its first layout (see `beginFade`).
+      const alreadyMounted = leaving === to;
       incoming.set(0);
       setLeaving(depth);
       setDepth(to);
-      // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
-      incoming.set(withTiming(1, { duration, easing: Easing.linear }, (finished) => {
-        'worklet';
-        if (finished) scheduleOnRN(settle);
-      }));
+      pendingFade.current = duration;
+      if (alreadyMounted) beginFade();
     },
-    [depth, incoming, reduceMotion, settle],
+    [beginFade, depth, incoming, leaving, reduceMotion],
   );
 
   const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
@@ -134,6 +151,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
             key={which}
             testID={`qandeel-depth-${which.toLowerCase()}`}
             style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
+            onLayout={current && leaving !== null ? beginFade : undefined}
             pointerEvents={current ? 'auto' : 'none'}
             importantForAccessibility={current ? 'auto' : 'no-hide-descendants'}
             accessibilityElementsHidden={!current}
