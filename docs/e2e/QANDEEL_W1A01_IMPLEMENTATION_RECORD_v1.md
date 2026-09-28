@@ -83,7 +83,8 @@ markers; and every server message, status value, test id or engineering term.
 | History | completed exchanges, committed turns whose reply FAILED (with that state), and committed turns still awaiting a reply (with the waiting line), oldest to newest; rebuilt from the server after every restart | API `listTurns`, `conversation-controller.ts` |
 | Scrolling | opens at the newest turn; follows a new reply only when the reader is near the newest turn; never pulls a reader off older turns; no "new message" pill; older pages load as the top approaches | `ConversationSurface.tsx` |
 | Landing | after sign-in and after restart: the Conversation. Depth is never persisted (the T-13 recovery record is unchanged) | `DepthComposition.tsx` |
-| Depth transition | F2's symmetric appearance cross-fade (`qandeel.appearance.switch.crossfade`, 200 ms, linear) in standard motion; a cut under Reduced Motion (`crossfade-reduced-motion`, 0 ms). The outgoing depth stays opaque beneath the incoming one | `DepthComposition.tsx` |
+| Depth transition | F2's symmetric appearance cross-fade (`qandeel.appearance.switch.crossfade`, 200 ms, linear) in standard motion; a cut under Reduced Motion (`crossfade-reduced-motion`, 0 ms). The outgoing depth stays opaque beneath the incoming one. The fade starts on the incoming depth's first layout, so a slow mount cannot use up its 200 ms before the first frame (§7) | `DepthComposition.tsx` |
+| Keyboard | the composer and Send stay above the keyboard on both platforms, including Android 15+'s enforced edge-to-edge window, which no longer resizes for the keyboard (§7) | `ConversationSurface.tsx` |
 | Upper chrome | Conversation shows only the Conversation → Analysis control; Analysis gains only the Analysis → Conversation control | both surfaces |
 
 ## 4. Technical implementation
@@ -153,7 +154,36 @@ replacement turn, no retry-link migration. Reply retry may be revisited by a lat
 
 ## 7. Verification
 
-See the Draft PR description for the exact-head results. Suites added:
+Exact-head results are in the Draft PR description.
+
+### 7.1 Visual proof on the production route (VALIDATION ONLY)
+
+`.github/workflows/w1a-01-visual-proof.yml` builds a Release APK whose root component is
+`integration/__validation__/W1AProofRoot.tsx`: the PRODUCTION `RuntimePhaseSurface`, `createIntegrationRuntime`,
+`DepthComposition`, Conversation and Living Analysis Map, given an in-memory identity and a scripted network in place of
+Supabase and the API (no credential exists in the job). The conversation text is fixture text; no model generated it.
+Maestro 2.10 (`apps/mobile/.maestro/w1a-01-proof.yaml`) drives it on an Android 16 (API 36) emulator four times:
+English; Arabic; Arabic at the largest system text size (200 %); Arabic under Reduced Motion (every animation scale 0).
+Each run captures: the Conversation with history (including a FAILED turn), send-ready, waiting (words locked in the
+composer), the reply, the unconfirmed send with «إعادة المحاولة» / Try again, the retried send committed once, the
+Analysis depth, the return, and a recording of the depth switch.
+
+Defects the proof found, and fixed on this branch:
+
+1. **Composer under the keyboard (Android 15+).** Edge-to-edge is enforced, the window no longer resizes for the
+   keyboard, and Send was covered. `KeyboardAvoidingView` now uses `padding` on both platforms (contract-guarded).
+2. **The cross-fade could render as a cut.** The switch mounts the incoming depth; on the emulator that mount outlasted
+   the 200 ms fade, and the recording went from the Conversation to the Analysis between two frames 70 ms apart. The
+   fade now starts on the incoming depth's first layout (`depth.test.tsx` pins it, including turning back mid-fade).
+
+A harness-only fault: at 200 % text the emulator's keyboard once committed a whole message before its input session
+was bound, and Android discarded every character (logcat: `Session id mismatch … commitText`). The flow now waits for
+the keyboard to settle, and types once more only when Send is absent (`w1a-01-retype.yaml`).
+
+Seen in the proof, outside W1A-01 and unchanged: the Analysis depth is the existing Living Analysis Map, not yet under
+the visual foundation, and its T-06 timeline navigator still shows two English sentences in Arabic.
+
+### 7.2 Suites added
 
 - API: `apps/api/src/conversation/conversation-history.spec.ts` — owner scope, pure read, ordering, paging, refused
   queries, exposed fields, the FAILED / PENDING turns, and the route's guard and method.
@@ -172,6 +202,11 @@ Sign-up, Name / Login ID, the openers and first use (W1B); the Global Shell, Sha
 Memory through Conversation (W3); Voice Note and Live Call; Replay; cancel (B-05); reply retry after a confirmed
 failure (B-06, §6); Activity, the Understanding row and Settings; provider selection; the full I-08B1 world port (W4);
 an appearance preference; persisting the depth; mapping Android's system back to the depth switch.
+
+Known limitations, reported rather than solved here: a turn the server left PENDING (for example after a crash that
+recovery has not yet failed) is shown from history with the waiting line until the server resolves it, because the
+client may not decide a reply's fate; the definitive-refusal copy gap of §2; and the T-14 sign-in gateway, which W1A-01
+does not touch, has not been checked against Android 15+'s edge-to-edge keyboard behaviour that §7.1 found here.
 
 ## 9. Backlog (BG-05 / BG-08)
 
