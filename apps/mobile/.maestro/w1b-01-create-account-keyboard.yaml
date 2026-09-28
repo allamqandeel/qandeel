@@ -10,3 +10,10 @@ appId: com.qandeel.mobile
 - launchApp
 - runFlow:
     file: w1b-01-fill-account.yaml
+# The drag to the create act closed the keyboard, so measuring now would find none. Return to the
+# password as a reader would and leave the keyboard open: the measurement is taken with it up.
+- tapOn:
+    id: "qandeel-create-account-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-05-keyboard-open-measured

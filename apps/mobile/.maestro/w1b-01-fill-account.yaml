@@ -2,7 +2,8 @@
 #
 # The Name, Login ID and Email are fixture values on the reserved `.invalid` domain. The password is
 # RANDOM text typed by Maestro, so no password literal exists in this flow or its evidence; the proof
-# world's identity provider drops it at once. Ends with the keyboard open on the password field.
+# world's identity provider drops it at once. Ends with the create act in view; the drag that brings
+# it there has closed the keyboard.
 appId: com.qandeel.mobile
 ---
 - extendedWaitUntil:
@@ -69,7 +70,8 @@ appId: com.qandeel.mobile
 - waitForAnimationToEnd:
     timeout: 5000
 - takeScreenshot: ${PREFIX}-03-keyboard-open-password
-# Scrolling works while the keyboard is open, and brings the create act into the space above it.
+# Dragging the form brings the create act into view. The drag also closes the keyboard: the entry
+# frame's scroll view dismisses it on drag (EntryParts, keyboardDismissMode "on-drag").
 - scrollUntilVisible:
     element:
       id: "qandeel-create-account-submit"
@@ -78,4 +80,4 @@ appId: com.qandeel.mobile
     centerElement: false
 - waitForAnimationToEnd:
     timeout: 5000
-- takeScreenshot: ${PREFIX}-04-create-reachable-keyboard-open
+- takeScreenshot: ${PREFIX}-04-create-reachable-after-drag
