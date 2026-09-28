@@ -1,0 +1,81 @@
+# W1B-01 proof — open Create account from the Sign-in form and fill the four fields. VALIDATION ONLY.
+#
+# The Name, Login ID and Email are fixture values on the reserved `.invalid` domain. The password is
+# RANDOM text typed by Maestro, so no password literal exists in this flow or its evidence; the proof
+# world's identity provider drops it at once. Ends with the keyboard open on the password field.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-sign-in-email"
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-01-sign-in
+- scrollUntilVisible:
+    element:
+      id: "qandeel-sign-in-create-account"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-sign-in-create-account"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-create-account-name"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-02-create-account
+- runFlow:
+    file: w1b-01-type.yaml
+    env:
+      FIELD: "qandeel-create-account-name"
+      TEXT: ${NAME}
+- scrollUntilVisible:
+    element:
+      id: "qandeel-create-account-login-id"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- runFlow:
+    file: w1b-01-type.yaml
+    env:
+      FIELD: "qandeel-create-account-login-id"
+      TEXT: ${LOGIN_ID}
+- scrollUntilVisible:
+    element:
+      id: "qandeel-create-account-email"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- runFlow:
+    file: w1b-01-type.yaml
+    env:
+      FIELD: "qandeel-create-account-email"
+      TEXT: ${EMAIL}
+- scrollUntilVisible:
+    element:
+      id: "qandeel-create-account-password"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-create-account-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputRandomText:
+    length: 14
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-03-keyboard-open-password
+# Scrolling works while the keyboard is open, and brings the create act into the space above it.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-create-account-submit"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-04-create-reachable-keyboard-open

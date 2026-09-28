@@ -1,0 +1,80 @@
+# W1B-01 — the production Auth Gateway onward: Sign in → Create account → Verify Email → Welcome →
+# First Conversation Opening → composer. VALIDATION ONLY.
+#
+# Runs against the W1B-01 proof build: the PRODUCTION `RuntimePhaseSurface` and every Product surface on
+# this path, over the proof world's in-memory identity provider and scripted network
+# (apps/mobile/src/integration/__validation__/w1b-proof-world.ts). No Email is sent: the proof world
+# accepts any six-digit code, and the code typed here is RANDOM, like the password. This is not the
+# cold-start journey: the static launch and the Lantern moment (QAN-BL-LANTERN-01) precede it and are not
+# part of W1B-01.
+appId: com.qandeel.mobile
+---
+- stopApp
+# The proof world is in memory: every launch starts signed out, with a fresh account to create.
+- launchApp
+- runFlow:
+    file: w1b-01-fill-account.yaml
+- tapOn:
+    id: "qandeel-create-account-submit"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-verify-email-code"
+    timeout: 30000
+# Dismiss the keyboard through the screen's own title (never the hideKeyboard heuristic).
+- tapOn:
+    id: "qandeel-verify-email-title"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-05-verify-email
+- tapOn:
+    id: "qandeel-verify-email-code"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputRandomNumber:
+    length: 6
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-06-verify-code-entered
+# Dismiss the keyboard through the screen's own title (never the hideKeyboard heuristic).
+- tapOn:
+    id: "qandeel-verify-email-title"
+- tapOn:
+    id: "qandeel-verify-email-submit"
+- waitForAnimationToEnd:
+    timeout: 5000
+# The emulator keyboard can drop a commit; an incomplete code is refused locally, so type it once more.
+- runFlow:
+    when:
+      visible:
+        id: "qandeel-verify-email-code"
+    commands:
+      - tapOn:
+          id: "qandeel-verify-email-code"
+      - eraseText: 12
+      - inputRandomNumber:
+          length: 6
+      - tapOn:
+          id: "qandeel-verify-email-title"
+      - tapOn:
+          id: "qandeel-verify-email-submit"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-first-use-start"
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-07-welcome
+- tapOn:
+    id: "qandeel-first-use-start"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-first-conversation-opening"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-08-first-conversation-opening
+- tapOn:
+    id: "qandeel-conversation-input"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-09-composer-ready
