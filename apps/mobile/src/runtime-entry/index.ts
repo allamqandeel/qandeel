@@ -38,8 +38,20 @@ export {
   readMobilePublicConfig,
 } from './config/mobile-public-config';
 
-export type { AuthPortFailure, AuthPortResult, AuthSessionSnapshot, SupabaseAuthPort } from './auth/supabase-auth-port';
-export { SUPABASE_AUTH_OPTIONS } from './auth/supabase-auth-port';
+export type {
+  AuthPortFailure,
+  AuthPortResult,
+  AuthSessionSnapshot,
+  EmailCodeFailure,
+  EmailCodeResult,
+  ResendFailure,
+  ResendResult,
+  SignUpFailure,
+  SignUpIdentity,
+  SignUpResult,
+  SupabaseAuthPort,
+} from './auth/supabase-auth-port';
+export { SIGN_UP_METADATA_KEYS, SUPABASE_AUTH_OPTIONS } from './auth/supabase-auth-port';
 export type { AuthSessionStorage } from './auth/auth-session-storage';
 export { createEphemeralAuthSessionStorage } from './auth/auth-session-storage';
 export type { MobileAuthAuthority, MobileAuthAuthorityOptions, MobileAuthState } from './auth/mobile-auth-authority';
@@ -68,6 +80,13 @@ export type {
   ConversationUserTurnView,
 } from './conversation/conversation-turn-api';
 export { CONVERSATION_HISTORY_PAGE_LIMIT, ConversationTurnApiClient } from './conversation/conversation-turn-api';
+export type {
+  AccountApiConfig,
+  AccountFirstUseOutcome,
+  AccountFirstUseView,
+  LoginIdAvailabilityOutcome,
+} from './account/account-api';
+export { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 
 export type {
   BootstrapFailure,

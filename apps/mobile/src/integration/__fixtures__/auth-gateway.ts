@@ -68,6 +68,15 @@ export function authAuthorityDouble(): AuthAuthorityDouble {
         waiting = resolve;
       });
     },
+    async signUp() {
+      return { ok: false, failure: { kind: 'REFUSED', detail: 'the T-14 gateway double creates no account' } };
+    },
+    async verifyEmailCode() {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'the T-14 gateway double verifies nothing' } };
+    },
+    async resendEmailCode() {
+      return { ok: false, failure: { kind: 'REFUSED', detail: 'the T-14 gateway double sends nothing' } };
+    },
     async signOut() {
       return { ok: true, value: null };
     },
@@ -78,6 +87,6 @@ export function authAuthorityDouble(): AuthAuthorityDouble {
 }
 
 /** A typed failure of one kind. The detail is deliberately recognisable: no Product surface may show it. */
-export function authFailure(kind: 'INVALID_CREDENTIALS' | 'NETWORK' | 'UNEXPECTED'): AuthPortResult<AuthSessionSnapshot> {
+export function authFailure(kind: 'INVALID_CREDENTIALS' | 'EMAIL_NOT_CONFIRMED' | 'NETWORK' | 'UNEXPECTED'): AuthPortResult<AuthSessionSnapshot> {
   return { ok: false, failure: { kind, detail: 'PROVIDER-DETAIL-MUST-NOT-BE-RENDERED' } };
 }

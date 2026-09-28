@@ -22,7 +22,12 @@ export interface AuthSessionSnapshot {
 }
 
 export type AuthPortFailure = {
-  readonly kind: 'INVALID_CREDENTIALS' | 'NETWORK' | 'UNEXPECTED';
+  /**
+   * W1B-01 adds `EMAIL_NOT_CONFIRMED`: the identity provider validated the password FIRST and only
+   * then reported that the Email is not yet verified, so it reveals nothing to someone who does not
+   * already hold the credential. The Product entry takes the reader to Email verification.
+   */
+  readonly kind: 'INVALID_CREDENTIALS' | 'EMAIL_NOT_CONFIRMED' | 'NETWORK' | 'UNEXPECTED';
   /** A technical description. Never contains a token or a password. */
   readonly detail: string;
 };
@@ -30,6 +35,40 @@ export type AuthPortFailure = {
 export type AuthPortResult<T> =
   | { readonly ok: true; readonly value: T }
   | { readonly ok: false; readonly failure: AuthPortFailure };
+
+/**
+ * W1B-01 — the two account-identity values sign-up carries (P1 §4). They travel as bounded, namespaced
+ * sign-up metadata and become canonical only in the database, which validates them (migration 0123).
+ */
+export interface SignUpIdentity {
+  readonly name: string;
+  readonly loginId: string;
+}
+
+/** Why an account could not be created. The provider's own words are only ever a `detail`. */
+export type SignUpFailure = {
+  readonly kind: 'INVALID_EMAIL' | 'WEAK_PASSWORD' | 'REFUSED' | 'NETWORK';
+  readonly detail: string;
+};
+
+/**
+ * Why a 6-digit Email code did not verify. `CODE_REJECTED` is the provider's single answer for BOTH a
+ * wrong and an expired code (Supabase Auth returns `otp_expired` for either); telling them apart is the
+ * Product entry's job, from when the code was sent.
+ */
+export type EmailCodeFailure = {
+  readonly kind: 'CODE_REJECTED' | 'NETWORK' | 'UNEXPECTED';
+  readonly detail: string;
+};
+
+export type ResendFailure = {
+  readonly kind: 'NETWORK' | 'REFUSED';
+  readonly detail: string;
+};
+
+export type SignUpResult = { readonly ok: true } | { readonly ok: false; readonly failure: SignUpFailure };
+export type EmailCodeResult = { readonly ok: true; readonly value: AuthSessionSnapshot } | { readonly ok: false; readonly failure: EmailCodeFailure };
+export type ResendResult = { readonly ok: true } | { readonly ok: false; readonly failure: ResendFailure };
 
 /**
  * R1-01, corrected by R2-01 — the KIND of a session change, preserved across this boundary.
@@ -71,6 +110,16 @@ export interface SupabaseAuthPort {
    * a Product login experience — no screen, no copy and no provider buttons belong to T-12P.
    */
   signInWithPassword(email: string, password: string): Promise<AuthPortResult<AuthSessionSnapshot>>;
+  /**
+   * W1B-01 — create an account whose Email must be verified before it can be used. It NEVER yields an
+   * authenticated session: a project that would hand one back (Email confirmation switched off) is
+   * refused and the session is discarded locally, because verification is mandatory before QANDEEL.
+   */
+  signUp(email: string, password: string, identity: SignUpIdentity): Promise<SignUpResult>;
+  /** W1B-01 — verify the account's Email with the 6-digit code sent to it. The session it yields is the first. */
+  verifyEmailCode(email: string, code: string): Promise<EmailCodeResult>;
+  /** W1B-01 — send a new sign-up verification code, replacing the previous one. */
+  resendEmailCode(email: string): Promise<ResendResult>;
   signOut(): Promise<AuthPortResult<null>>;
   /**
    * Every subsequent session change, WITH its provenance: a token refresh, a sign-in, a sign-out,
@@ -104,12 +153,53 @@ function snapshotOf(session: { user?: { id?: unknown } | null; access_token?: un
   return { userId, accessToken };
 }
 
-function failureOf(error: { message?: unknown; status?: unknown } | null, fallback: string): AuthPortFailure {
-  const detail = typeof error?.message === 'string' && error.message !== '' ? error.message : fallback;
+type ProviderError = { message?: unknown; status?: unknown; code?: unknown } | null;
+
+const detailOf = (error: ProviderError, fallback: string): string =>
+  typeof error?.message === 'string' && error.message !== '' ? error.message : fallback;
+const codeOf = (error: ProviderError): string | null => (typeof error?.code === 'string' ? error.code : null);
+
+/**
+ * A genuine transport failure: the request never produced an HTTP answer. The installed auth client
+ * reports that as status 0 (`AuthRetryableFetchError`); an older shape carried no status at all. A 5xx
+ * is NOT a transport failure — it is the server answering, and it is never described as "connection".
+ */
+function isTransportFailure(error: ProviderError): boolean {
   const status = typeof error?.status === 'number' ? error.status : null;
+  if (status === 0) return true;
+  return status === null && /network|fetch|timeout/iu.test(detailOf(error, ''));
+}
+
+function failureOf(error: ProviderError, fallback: string): AuthPortFailure {
+  const detail = detailOf(error, fallback);
+  const status = typeof error?.status === 'number' ? error.status : null;
+  // Supabase Auth checks the password BEFORE it reports an unconfirmed Email, so this code can only
+  // reach a reader who already holds the credential.
+  if (codeOf(error) === 'email_not_confirmed') return { kind: 'EMAIL_NOT_CONFIRMED', detail };
   if (status === 400 || status === 401 || status === 422) return { kind: 'INVALID_CREDENTIALS', detail };
-  // supabase-js surfaces a transport failure as an error with no HTTP status.
-  if (status === null && /network|fetch|timeout/iu.test(detail)) return { kind: 'NETWORK', detail };
+  if (isTransportFailure(error)) return { kind: 'NETWORK', detail };
+  return { kind: 'UNEXPECTED', detail };
+}
+
+/** The metadata keys migration 0123's provisioning trigger reads — and the only ones sign-up sends. */
+export const SIGN_UP_METADATA_KEYS = Object.freeze({ name: 'qandeel_name', loginId: 'qandeel_login_id' } as const);
+
+function signUpFailureOf(error: ProviderError): SignUpFailure {
+  const detail = detailOf(error, 'sign-up failed');
+  if (isTransportFailure(error)) return { kind: 'NETWORK', detail };
+  const code = codeOf(error);
+  if (code === 'weak_password') return { kind: 'WEAK_PASSWORD', detail };
+  if (code === 'email_address_invalid' || (code === 'validation_failed' && /email/iu.test(detail))) return { kind: 'INVALID_EMAIL', detail };
+  // Everything else — an existing account where the provider says so, a Login ID the database refused,
+  // a rate limit, a disabled sign-up — is ONE refusal, so nothing here can answer "does this Email exist".
+  return { kind: 'REFUSED', detail };
+}
+
+function emailCodeFailureOf(error: ProviderError): EmailCodeFailure {
+  const detail = detailOf(error, 'verification failed');
+  if (isTransportFailure(error)) return { kind: 'NETWORK', detail };
+  const code = codeOf(error);
+  if (code === 'otp_expired' || code === 'validation_failed') return { kind: 'CODE_REJECTED', detail };
   return { kind: 'UNEXPECTED', detail };
 }
 
@@ -152,6 +242,46 @@ export function createSupabaseAuthPort({ config, storage }: SupabaseAuthPortOpti
         return { ok: true, value: session };
       } catch (cause) {
         return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'sign-in threw') } };
+      }
+    },
+    async signUp(email, password, identity) {
+      try {
+        const { data, error } = await client.auth.signUp({
+          email,
+          password,
+          options: { data: { [SIGN_UP_METADATA_KEYS.name]: identity.name, [SIGN_UP_METADATA_KEYS.loginId]: identity.loginId } },
+        });
+        if (error) return { ok: false, failure: signUpFailureOf(error) };
+        if (data.session !== null && data.session !== undefined) {
+          // The project handed back a session, so Email confirmation is not being enforced. QANDEEL
+          // requires verification before entry: the session is discarded locally and never reaches the
+          // authority as an explicit completion (its SIGNED_IN event already met the retired barrier).
+          await client.auth.signOut({ scope: 'local' });
+          return { ok: false, failure: { kind: 'REFUSED', detail: 'sign-up returned a session: Email confirmation is not enforced' } };
+        }
+        return { ok: true };
+      } catch (cause) {
+        return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'sign-up threw') } };
+      }
+    },
+    async verifyEmailCode(email, code) {
+      try {
+        const { data, error } = await client.auth.verifyOtp({ email, token: code, type: 'email' });
+        if (error) return { ok: false, failure: emailCodeFailureOf(error) };
+        const session = snapshotOf(data.session);
+        if (session === null) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'verification returned no usable session' } };
+        return { ok: true, value: session };
+      } catch (cause) {
+        return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'verification threw') } };
+      }
+    },
+    async resendEmailCode(email) {
+      try {
+        const { error } = await client.auth.resend({ type: 'signup', email });
+        if (error) return { ok: false, failure: { kind: isTransportFailure(error) ? 'NETWORK' : 'REFUSED', detail: detailOf(error, 'resend failed') } };
+        return { ok: true };
+      } catch (cause) {
+        return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'resend threw') } };
       }
     },
     async signOut() {

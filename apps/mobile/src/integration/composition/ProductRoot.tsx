@@ -53,6 +53,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
+import { AccountEntry, type LoginIdAvailability } from '../../account';
 import type { MobileAuthAuthority } from '../../runtime-entry';
 import { ProductSignInGateway } from '../auth-gateway';
 import { deviceProductLocale } from '../locale/device-locale';
@@ -180,7 +181,7 @@ export function RuntimePhaseSurface({ runtime }: { readonly runtime: Integration
   if (phase.kind === 'SIGNED_OUT') {
     return (
       <SafeAreaProvider initialMetrics={initialWindowMetrics} style={styles.root}>
-        <SignedOutEntry auth={runtime.auth} />
+        <SignedOutEntry auth={runtime.auth} loginIds={runtime.loginIds} />
       </SafeAreaProvider>
     );
   }
@@ -192,10 +193,24 @@ export function RuntimePhaseSurface({ runtime }: { readonly runtime: Integration
  *
  * Resolved once per mount, exactly as the composed world resolves it: it is a presentation
  * configuration, and there is one authority for it in the app rather than one per surface.
+ *
+ * W1B-01: the entry is the Auth Gateway DESTINATION — T-14's Sign in, with Create account and Verify
+ * Email beside it as local entry state (`../../account`). It is not the cold-start identity experience:
+ * P4's static launch hands off into it, and the Lantern Gateway Identity Moment (`QAN-BL-LANTERN-01`,
+ * its own task) will stand here BEFORE the destination and hand off into it, without rebuilding it.
  */
-function SignedOutEntry({ auth }: { readonly auth: MobileAuthAuthority }) {
+function SignedOutEntry({ auth, loginIds }: { readonly auth: MobileAuthAuthority; readonly loginIds: LoginIdAvailability }) {
   const locale = useMemo(() => deviceProductLocale(), []);
-  return <ProductSignInGateway auth={auth} locale={locale} />;
+  return (
+    <AccountEntry
+      auth={auth}
+      loginIds={loginIds}
+      locale={locale}
+      renderSignIn={({ footer, onEmailNotConfirmed }) => (
+        <ProductSignInGateway auth={auth} locale={locale} footer={footer} onEmailNotConfirmed={onEmailNotConfirmed} />
+      )}
+    />
+  );
 }
 
 /**

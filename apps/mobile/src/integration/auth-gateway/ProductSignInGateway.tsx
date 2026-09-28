@@ -53,14 +53,21 @@
  * Every line height is ~1.5x its font size so Arabic ascenders and descenders are not clipped, no
  * font scaling is disabled anywhere, and the FONT FAMILY is deliberately not set: which families the
  * app loads is an asset decision, and this surface states the assumption rather than relying on it.
- * There is no colour, no icon, no illustration and no motion here at all — the final Graphic Language
- * is VI-03's, and a restrained form is what an entry surface owes a reader in the meantime.
+ * W1B-01 paints it in the frozen visual language the rest of the entry stands in: the Dark World, the
+ * FIELD role for its fields, Estedad v8.5 faces in E3's roles, all resolved from the same generated
+ * constants the Conversation uses (`../../conversation`) — so no colour value is ever written here. It
+ * adds no icon, no illustration and no motion. W1B-01 also gives it exactly two seams, both optional
+ * and neither a second auth command: a `footer` the Auth Gateway destination draws below the form (its
+ * entry into Create account), and `onEmailNotConfirmed`, the approved route to Email verification when
+ * the provider validated the password and reports the Email unverified. Account creation itself lives
+ * in `../../account`, never in this directory.
  */
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
 import { KeyboardAvoidingView, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { typeStyle, usePalette } from '../../conversation';
 import type { MobileAuthAuthority } from '../../runtime-entry';
 import type { ProductLocale } from '../locale/product-locale';
 import { clearsPasswordAfter, productSignInCopy, signInFailureMessage } from './product-sign-in-copy';
@@ -84,10 +91,18 @@ export interface ProductSignInGatewayProps {
   readonly auth: MobileAuthAuthority;
   /** The one app-level locale. Language and direction are independent, always. */
   readonly locale: ProductLocale;
+  /** W1B-01 — drawn below the form by the Auth Gateway destination. It carries no auth command. */
+  readonly footer?: ReactNode;
+  /**
+   * W1B-01 — the provider checked the password FIRST and then reported the Email unverified, so this
+   * reveals nothing to someone without the credential. Absent, that kind shows the unexpected sentence.
+   */
+  readonly onEmailNotConfirmed?: (email: string) => void;
 }
 
-export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps) {
+export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed }: ProductSignInGatewayProps) {
   const copy = productSignInCopy(locale.language);
+  const palette = usePalette();
   const insets = useSafeAreaInsets();
 
   const [email, setEmail] = useState('');
@@ -138,10 +153,15 @@ export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps
     }
     inFlight.current = false;
     setSubmitting(false);
+    if (outcome.failure.kind === 'EMAIL_NOT_CONFIRMED' && onEmailNotConfirmed !== undefined) {
+      // The password was right and the Email is not yet verified: verification is where the reader goes.
+      onEmailNotConfirmed(address);
+      return;
+    }
     // The KIND only. The port's technical detail is never a Product sentence.
     setFailure(signInFailureMessage(copy, outcome.failure.kind));
     if (clearsPasswordAfter(outcome.failure.kind)) setPassword('');
-  }, [auth, copy, email, password]);
+  }, [auth, copy, email, onEmailNotConfirmed, password]);
 
   const onSubmitPress = useCallback(() => {
     void submit();
@@ -154,9 +174,20 @@ export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps
   // One region, one message: what is happening now, or what went wrong last.
   const notice = submitting ? copy.submitting : failure;
 
+  // W1B-01: the frozen visual language, from the generated constants. No colour value is written here.
+  const paint = {
+    ground: { backgroundColor: palette.world },
+    title: { ...typeStyle('statement'), color: palette.primary },
+    label: { ...typeStyle('action'), color: palette.secondary },
+    input: { ...typeStyle('body'), color: palette.primary, backgroundColor: palette.field },
+    submit: { backgroundColor: palette.field },
+    submitLabel: { ...typeStyle('action'), color: palette.primary },
+    notice: { ...typeStyle('supporting'), color: submitting ? palette.secondary : palette.error },
+  };
+
   return (
     <KeyboardAvoidingView
-      style={styles.root}
+      style={[styles.root, paint.ground]}
       // The form must stay above the keyboard on both platforms. iOS overlays the keyboard, and
       // Android 15+ enforces edge-to-edge, where the window no longer resizes for it either (measured
       // on the W1A-01 API 36 proof emulator): without this the lower form and its submit sit under the
@@ -186,18 +217,20 @@ export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps
           style={{ ...styles.form, direction: locale.direction === 'RTL' ? 'rtl' : 'ltr' }}
           accessibilityLanguage={locale.language}
         >
-          <Text testID={SIGN_IN_TITLE_TEST_ID} accessibilityRole="header" style={styles.title}>
+          <Text testID={SIGN_IN_TITLE_TEST_ID} accessibilityRole="header" style={[styles.title, paint.title]}>
             {copy.title}
           </Text>
 
           <View style={styles.field}>
-            <Text style={styles.label}>{copy.emailLabel}</Text>
+            <Text style={[styles.label, paint.label]}>{copy.emailLabel}</Text>
             <TextInput
               testID={SIGN_IN_EMAIL_TEST_ID}
               value={email}
               onChangeText={setEmail}
               // Left-to-right inside the field only; see the module comment.
-              style={styles.input}
+              style={[styles.input, paint.input]}
+              selectionColor={palette.primary}
+              cursorColor={palette.primary}
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
@@ -211,13 +244,15 @@ export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps
           </View>
 
           <View style={styles.field}>
-            <Text style={styles.label}>{copy.passwordLabel}</Text>
+            <Text style={[styles.label, paint.label]}>{copy.passwordLabel}</Text>
             <TextInput
               testID={SIGN_IN_PASSWORD_TEST_ID}
               ref={passwordField}
               value={password}
               onChangeText={setPassword}
-              style={styles.input}
+              style={[styles.input, paint.input]}
+              selectionColor={palette.primary}
+              cursorColor={palette.primary}
               secureTextEntry
               autoCapitalize="none"
               autoCorrect={false}
@@ -235,12 +270,12 @@ export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps
             // race is; a control removed from the responder tree would make the guard untestable and
             // would leave a reader wondering whether their press registered at all.
             onPress={onSubmitPress}
-            style={({ pressed }) => [styles.submit, pressed ? styles.pressed : null, submitting ? styles.busy : null]}
+            style={({ pressed }) => [styles.submit, paint.submit, pressed ? styles.pressed : null, submitting ? styles.busy : null]}
             accessibilityRole="button"
             accessibilityLabel={copy.submit}
             accessibilityState={{ disabled: submitting, busy: submitting }}
           >
-            <Text style={styles.submitLabel}>{copy.submit}</Text>
+            <Text style={[styles.submitLabel, paint.submitLabel]}>{copy.submit}</Text>
           </Pressable>
 
           <View
@@ -251,8 +286,10 @@ export function ProductSignInGateway({ auth, locale }: ProductSignInGatewayProps
             accessibilityLiveRegion="polite"
             accessibilityRole="summary"
           >
-            {notice === null ? null : <Text style={styles.noticeText}>{notice}</Text>}
+            {notice === null ? null : <Text style={[styles.noticeText, paint.notice]}>{notice}</Text>}
           </View>
+
+          {footer ?? null}
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -270,29 +307,27 @@ const styles = StyleSheet.create({
   // A bounded measure, centred. No fixed height and no absolute positioning anywhere: every control
   // is laid out in flow, so nothing can be pushed off-window by a keyboard or a text size.
   form: { width: '100%', maxWidth: 420, alignSelf: 'center', rowGap: 20 },
-  title: { fontSize: 24, lineHeight: 36, fontWeight: '600' },
+  // The type roles (E3) and the colours arrive from paint; these are the layout facts only.
+  title: {},
   field: { rowGap: 6 },
-  label: { fontSize: 14, lineHeight: 21 },
+  label: {},
   // `minHeight` rather than `height`, so the field still contains its text at the largest system
   // size. `textAlign`/`writingDirection` keep the credential physically left-to-right.
   input: {
-    minHeight: 44,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 10,
-    fontSize: 16,
-    lineHeight: 24,
+    minHeight: 48,
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
     textAlign: 'left',
     writingDirection: 'ltr',
   },
   // 44 is the platform minimum for a comfortable target, as a floor rather than a fixed height.
-  submit: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderWidth: StyleSheet.hairlineWidth, borderRadius: 6, paddingVertical: 12, paddingHorizontal: 16 },
+  submit: { minHeight: 48, alignItems: 'center', justifyContent: 'center', borderRadius: 12, paddingVertical: 12, paddingHorizontal: 16 },
   // A static opacity swap, not an animation: no duration, no easing, no driver. Motion is T-10's.
   pressed: { opacity: 0.6 },
   busy: { opacity: 0.6 },
-  submitLabel: { fontSize: 16, lineHeight: 24, fontWeight: '600' },
+  submitLabel: {},
   // No height of its own: an empty region takes no room, and a message that runs to several lines at
   // the largest text size grows the region rather than being clipped by it.
-  noticeText: { fontSize: 14, lineHeight: 21 },
+  noticeText: {},
 });

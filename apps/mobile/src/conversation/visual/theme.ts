@@ -17,7 +17,7 @@ export type ConversationPalette = (typeof CANONICAL_VISUAL.palette)['standard'] 
 /** The two static Estedad v8.5 instances the surface ships, by PostScript name (= file name). */
 export const TYPEFACE = Object.freeze({ regular: 'Estedad-Regular', medium: 'Estedad-Medium' });
 
-export type TypeRole = keyof typeof CANONICAL_VISUAL.type;
+export type TypeRole = keyof typeof CANONICAL_VISUAL.type | keyof typeof CANONICAL_VISUAL.display;
 
 /**
  * One E3 role as a React Native text style.
@@ -27,7 +27,8 @@ export type TypeRole = keyof typeof CANONICAL_VISUAL.type;
  * bold. `letterSpacing` is never set, so Arabic stays connected, and the leading is E3's own.
  */
 export function typeStyle(role: TypeRole): { fontFamily: string; fontSize: number; lineHeight: number; includeFontPadding: false } {
-  const spec = CANONICAL_VISUAL.type[role];
+  // W1B-01: the E3 display role (`statement`) sits beside the running-text roles.
+  const spec = role === 'statement' ? CANONICAL_VISUAL.display.statement : CANONICAL_VISUAL.type[role];
   return {
     fontFamily: spec.weight === 500 ? TYPEFACE.medium : TYPEFACE.regular,
     fontSize: spec.size,

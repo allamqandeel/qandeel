@@ -30,7 +30,7 @@ export type { ConversationCopy } from './copy';
 export { conversationCopy } from './copy';
 
 export type { DirectedParagraph, ParagraphDirection, PhysicalSide } from './bidi';
-export { directedParagraphs, paragraphDirection, readerDirection, readerSide, withDirectionMark } from './bidi';
+export { directedParagraphs, oppositeSide, paragraphDirection, readerDirection, readerSide, withDirectionMark } from './bidi';
 
 export type { ConversationSurfaceProps, SurfaceInsets } from './ConversationSurface';
 export { CONVERSATION_SURFACE_TEST_ID, ConversationSurface } from './ConversationSurface';
@@ -38,3 +38,13 @@ export type { AnalysisReturnBarProps } from './AnalysisReturnBar';
 export { ANALYSIS_RETURN_BAR_MIN_HEIGHT, AnalysisReturnBar } from './AnalysisReturnBar';
 
 export { DEPTH_CROSSFADE_MS, DEPTH_CROSSFADE_REDUCED_MOTION_MS } from './visual/motion';
+
+// W1B-01 — the frozen visual foundation this layer resolved, published so the account entry and the
+// first-use surfaces are painted from the SAME generated constants rather than a second copy.
+export type { ConversationPalette, TypeRole } from './visual/theme';
+export { typeStyle, usePalette, withAlpha } from './visual/theme';
+export type { ControlProps } from './visual/Control';
+export { Control, MIN_TARGET } from './visual/Control';
+export type { GlyphName, GlyphProps } from './visual/Glyph';
+export { Glyph } from './visual/Glyph';
+export { useConversationTypeface } from './visual/fonts';

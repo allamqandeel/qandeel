@@ -24,6 +24,7 @@ import {
 import { productLocale, type LayoutDirection } from '../locale/product-locale';
 import { authAuthorityDouble, authFailure, type AuthAuthorityDouble } from '../__fixtures__/auth-gateway';
 import type { ChromeLanguage } from '../../orientation-chrome';
+import { CANONICAL_VISUAL } from '../../conversation/visual/canonical-visual.generated';
 
 const AR = productSignInCopy('ar');
 const EN = productSignInCopy('en');
@@ -482,16 +483,21 @@ describe('T14-A19 — the accessible surface', () => {
     await view.unmount();
   });
 
-  it('the error is visible text, not a colour, and the surface names no colour at all', async () => {
+  it('the error is visible text, not a colour, and every colour is one of the canonical palette’s', async () => {
+    // W1B-01 re-anchor: T-14 painted nothing because no final visual language was yet frozen for it;
+    // W1B-01 paints the entry in the frozen one. The expired fact is "no colour at all"; what stays, and
+    // is asserted more strongly, is that meaning is carried by words and that the surface invents no
+    // colour — every colour it paints is a value the generated canonical palette resolves.
     const { view, auth } = await mount();
     auth.answerWith(authFailure('INVALID_CREDENTIALS'));
     await fill(view);
     await fireEvent.press(view.getByTestId(SIGN_IN_SUBMIT_TEST_ID));
     expect(view.getByText(FROZEN.en.invalidCredentials)).toBeTruthy();
+    const canonical = new Set<unknown>([...Object.values(CANONICAL_VISUAL.palette.standard), ...Object.values(CANONICAL_VISUAL.palette.increased)]);
     for (const node of nodes(view.toJSON())) {
       const flat = styleOf(node);
-      expect(flat.color).toBeUndefined();
-      expect(flat.backgroundColor).toBeUndefined();
+      if (flat.color !== undefined) expect(canonical.has(flat.color)).toBe(true);
+      if (flat.backgroundColor !== undefined) expect(canonical.has(flat.backgroundColor)).toBe(true);
     }
     await view.unmount();
   });

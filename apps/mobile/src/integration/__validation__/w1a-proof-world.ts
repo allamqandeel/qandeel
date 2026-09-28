@@ -125,6 +125,9 @@ export function createW1AProofWorld(
   const auth: SupabaseAuthPort = {
     restoreSession: async () => ({ ok: true, value: signedIn ? reader : null }),
     signInWithPassword: async () => ({ ok: true, value: reader }),
+    signUp: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W1A proof creates no account' } }),
+    verifyEmailCode: async () => ({ ok: false, failure: { kind: 'UNEXPECTED', detail: 'the W1A proof verifies nothing' } }),
+    resendEmailCode: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W1A proof sends nothing' } }),
     signOut: async () => ({ ok: true, value: null }),
     onSessionChange: () => () => undefined,
     startAutoRefresh: () => undefined,
