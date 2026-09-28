@@ -19,11 +19,6 @@ export const LOGIN_ID_MAX_LENGTH = 30;
 export const NAME_MAX_LENGTH = 80;
 /** The approved Email verification code is exactly six digits. */
 export const EMAIL_CODE_LENGTH = 6;
-/**
- * How long a sent code lives. Supabase Auth's documented default ("they expire after 1 hour"); the
- * project's Email OTP expiry must stay at this value (W1B-01 record §4, external configuration).
- */
-export const EMAIL_CODE_LIFETIME_MS = 60 * 60 * 1000;
 
 export type LoginIdVerdict =
   | { readonly kind: 'EMPTY' }
@@ -65,16 +60,4 @@ export function normalizeEmailCode(raw: string): string {
     if (digits.length === EMAIL_CODE_LENGTH) break;
   }
   return digits;
-}
-
-/**
- * Supabase Auth answers a wrong code and an expired one with the SAME error (`otp_expired`), so the
- * provider alone cannot tell the reader which happened. The entry can: it knows when the current code
- * was sent. Past the code's lifetime it has certainly expired; within it, the typed code is not the
- * current one. When the send time is unknown — the reader arrived from sign-in, so the code was sent
- * at sign-up, at an unknown time — the answer is EXPIRED, the one that always leads to a working code.
- */
-export function judgeRejectedCode(sentAt: number | null, now: number): 'EXPIRED' | 'INCORRECT' {
-  if (sentAt === null) return 'EXPIRED';
-  return now - sentAt >= EMAIL_CODE_LIFETIME_MS ? 'EXPIRED' : 'INCORRECT';
 }

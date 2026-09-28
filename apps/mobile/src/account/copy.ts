@@ -48,6 +48,10 @@ export interface AccountEntryCopy {
   readonly resendAction: string;
   readonly resendSucceeded: string;
   readonly codeIncorrect: string;
+  /**
+   * Approved, and deliberately NOT displayed: the provider answers a wrong and an expired code alike, so
+   * nothing can yet prove expiry. Kept for a future provider state that can.
+   */
   readonly codeExpired: string;
   readonly resendFailed: string;
   readonly verifyFailed: string;

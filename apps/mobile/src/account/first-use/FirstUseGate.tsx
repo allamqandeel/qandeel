@@ -1,9 +1,10 @@
 /**
  * W1B-01 (E2E-A-13) — what stands before the reader's world on arrival.
  *
- *   LOADING                      the Dark World and nothing else, for at most `ACCOUNT_READ_WAIT_MS`,
- *                                so a brand-new account never glimpses the Conversation before its
- *                                Welcome;
+ *   LOADING                      the Dark World and nothing else, for as long as the account is
+ *                                unknown, so a brand-new account never reaches the Conversation — and
+ *                                never commits the turn that retires its first use — before its
+ *                                Welcome (`account-controller.ts`);
  *   READY and the Welcome owed   the concise first-use Welcome; its start act completes it and the
  *                                reader's world takes its place — a cut, since no transition for this
  *                                moment is frozen and none is invented;

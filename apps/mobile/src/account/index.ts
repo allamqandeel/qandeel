@@ -18,12 +18,11 @@ export type {
   AccountStatus,
   AccountTransport,
 } from './account-controller';
-export { ACCOUNT_READ_WAIT_MS, createAccountController } from './account-controller';
+export { ACCOUNT_READ_ATTEMPT_MS, ACCOUNT_READ_RETRY_DELAYS_MS, createAccountController } from './account-controller';
 
 export type { LoginIdVerdict } from './entry-rules';
 export {
   EMAIL_CODE_LENGTH,
-  EMAIL_CODE_LIFETIME_MS,
   LOGIN_ID_MAX_LENGTH,
   LOGIN_ID_MIN_LENGTH,
   LOGIN_ID_PATTERN,
@@ -31,7 +30,6 @@ export {
   canonicalName,
   isPlausibleEmail,
   judgeLoginId,
-  judgeRejectedCode,
   normalizeEmailCode,
 } from './entry-rules';
 

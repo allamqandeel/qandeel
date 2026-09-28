@@ -40,16 +40,14 @@ export interface AccountEntryProps {
   readonly loginIds: LoginIdAvailability;
   readonly locale: EntryLocale;
   readonly renderSignIn: (slot: SignInEntrySlot) => ReactNode;
-  /** The clock the code's lifetime is judged against. Production passes none. */
-  readonly now?: () => number;
 }
 
 export type EntryScreen =
   | { readonly kind: 'SIGN_IN' }
   | { readonly kind: 'CREATE_ACCOUNT' }
-  | { readonly kind: 'VERIFY_EMAIL'; readonly email: string; readonly codeSentAt: number | null };
+  | { readonly kind: 'VERIFY_EMAIL'; readonly email: string };
 
-export function AccountEntry({ auth, loginIds, locale, renderSignIn, now = Date.now }: AccountEntryProps) {
+export function AccountEntry({ auth, loginIds, locale, renderSignIn }: AccountEntryProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = accountEntryCopy(locale.language);
@@ -57,8 +55,7 @@ export function AccountEntry({ auth, loginIds, locale, renderSignIn, now = Date.
 
   const toSignIn = useCallback(() => setScreen({ kind: 'SIGN_IN' }), []);
   const toCreateAccount = useCallback(() => setScreen({ kind: 'CREATE_ACCOUNT' }), []);
-  const onEmailNotConfirmed = useCallback((email: string) => setScreen({ kind: 'VERIFY_EMAIL', email, codeSentAt: null }), []);
-  const onCreated = useCallback((email: string) => setScreen({ kind: 'VERIFY_EMAIL', email, codeSentAt: now() }), [now]);
+  const toVerifyEmail = useCallback((email: string) => setScreen({ kind: 'VERIFY_EMAIL', email }), []);
 
   let content: ReactNode;
   if (!ready) {
@@ -66,13 +63,13 @@ export function AccountEntry({ auth, loginIds, locale, renderSignIn, now = Date.
     // there is no first frame in a fallback face.
     content = null;
   } else if (screen.kind === 'CREATE_ACCOUNT') {
-    content = <CreateAccountForm auth={auth} loginIds={loginIds} locale={locale} onCreated={onCreated} onReturn={toSignIn} />;
+    content = <CreateAccountForm auth={auth} loginIds={loginIds} locale={locale} onCreated={toVerifyEmail} onReturn={toSignIn} />;
   } else if (screen.kind === 'VERIFY_EMAIL') {
-    content = <VerifyEmailForm auth={auth} locale={locale} email={screen.email} codeSentAt={screen.codeSentAt} now={now} onReturn={toSignIn} />;
+    content = <VerifyEmailForm auth={auth} locale={locale} email={screen.email} onReturn={toSignIn} />;
   } else {
     content = renderSignIn({
       footer: <EntryLink label={copy.createAccountTitle} onPress={toCreateAccount} language={locale.language} testID="qandeel-sign-in-create-account" />,
-      onEmailNotConfirmed,
+      onEmailNotConfirmed: toVerifyEmail,
     });
   }
 

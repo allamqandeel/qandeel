@@ -95,7 +95,7 @@ unavailable" for a genuinely taken identifier only.
 
 - The opening's assistive attribution is W1A-01's approved QANDEEL-turn attribution («قنديل: {text}» / "QANDEEL: {text}").
 - Silent, with no invented word: every in-flight state (a busy control says so through its accessibility state);
-  the bounded wait before the reader's world; an account with no Name (no Welcome, no opener, no fallback); any
+  the wait for the account before the reader's world; an account with no Name (no Welcome, no opener, no fallback); any
   provider, server or database message; any test id or engineering term.
 
 ## 3. Interaction behaviour — as implemented
@@ -111,11 +111,11 @@ unavailable" for a genuinely taken identifier only.
 | Sign-up outcome | success → Verify Email for that address, still signed out. `INVALID_EMAIL` / `WEAK_PASSWORD` → their field sentences; `NETWORK` → network; every other refusal — including an existing account where the provider says so, a Login ID taken meanwhile, a rate limit — → the ONE generic refusal, so nothing reveals whether an Email exists | `CreateAccountForm.tsx`, `supabase-auth-port.ts` |
 | One request | a second press while a submission is in flight is ignored by a synchronous ref; the action says busy; the return control and Android Back are refused meanwhile | `CreateAccountForm.tsx`, `VerifyEmailForm.tsx` |
 | Verify — code | digits only, at most six; Arabic-Indic and Extended Arabic-Indic digits are read as digits; numeric keyboard and one-time-code autofill; nothing auto-submits — the reader presses Verify | `VerifyEmailForm.tsx`, `entry-rules.ts` |
-| Verify — outcomes | fewer than six digits → incorrect (nothing sent). Provider rejection → incorrect within the code's lifetime, expired after it (§4.3); network → network; anything else → the approved fallback. Success is the explicit completion that authenticates, and the runtime replaces the entry | `VerifyEmailForm.tsx` |
-| Resend | its own bounded in-flight state; never clears the typed code; success → «تم إرسال رمز جديد.» and the code's lifetime restarts; network → network; any refusal (including the provider's 60-second resend limit) → the approved resend failure | `VerifyEmailForm.tsx` |
+| Verify — outcomes | fewer than six digits → incorrect (nothing sent) — the one rejection the entry can prove. A provider rejection is ambiguous (wrong and expired are one answer, §4.3), so it is the approved generic verification fallback, never a guessed "incorrect" or "expired"; network → network; anything else → the same fallback. The approved expired-code sentence stays in §2.2 and the copy module, displayed by nothing until a provider state can truthfully prove expiry. Success is the explicit completion that authenticates, and the runtime replaces the entry | `VerifyEmailForm.tsx` |
+| Resend | its own bounded in-flight state; never clears the typed code; success → «تم إرسال رمز جديد.»; network → network; any refusal (including the provider's 60-second resend limit) → the approved resend failure | `VerifyEmailForm.tsx` |
 | Leaving verification | the approved return control and Android Back go to Sign in (refused while a request is in flight). Nothing is lost: the account stays unverified and cannot enter QANDEEL | `VerifyEmailForm.tsx` |
 | Sign in with an unverified Email | Supabase Auth checks the password FIRST and only then reports `email_not_confirmed` (verified in the official source, §4.3). Only then does the gateway go straight to Verify Email for that address, with Resend; a wrong password is still T-14's one generic sentence | `supabase-auth-port.ts`, `ProductSignInGateway.tsx` |
-| Arrival | after verification, the reader's world waits (the Dark World only) for the account read, bounded at 6 s; then the Welcome if owed, else the Conversation | `FirstUseGate.tsx`, `account-controller.ts` |
+| Arrival | after verification, the reader's world waits (the Dark World only) until the account read answers; then the Welcome if owed, else the Conversation. A failed read, or one unanswered after 6 s, is asked again (1, 2, 4, 8, then every 15 s) and never opens the Conversation in its place — unknown account state delays first use and never erases it (§5) | `FirstUseGate.tsx`, `account-controller.ts` |
 | Welcome | shown to a NAMED account that has not completed it and has never conversed; three lines; the last line is the start act; pressing it moves the reader into the Conversation at once (a cut — no transition is frozen for this moment) and writes the completion once | `WelcomeSurface.tsx`, `account-controller.ts` |
 | First Conversation Opening | in a Conversation whose authoritative history is READ and EMPTY, while the account has never committed a turn; on QANDEEL's side, open on the World, composer below | `ConversationOpening.tsx`, `ConversationSurface.tsx` |
 | Normal opener | the same place, once the account has committed a turn: every later genuinely empty Conversation Session the runtime supplies. No Session browser or "new conversation" control is added | `ConversationOpening.tsx` |
@@ -151,8 +151,9 @@ idempotently completes the caller's own Welcome. No client gains a table write o
 | `POST /account/first-use/welcome` | `SupabaseAuthGuard` | caller's token | `204` |
 | `POST /account/login-id-availability` | none — chosen before an account exists | server channel (`login_id_is_available_v1` only) | `{ available }`; malformed → `false` without a database call; the Login ID is in the body, never a URL |
 
-`AccountModule` is reached through `ConversationModule.imports`, so `app.module.ts` (byte-pinned by three contracts)
-and the frozen Conversation controllers list are unchanged.
+`AccountModule` is composed by the application root, `app.module.ts`: account identity is not a Conversation
+capability, and `ConversationModule` is byte-identical to the baseline. The three contracts that byte-pinned
+`app.module.ts` are re-anchored (§7): every byte except the one import and the one list entry stays pinned.
 
 ### 4.3 Auth runtime
 
@@ -164,10 +165,9 @@ mapping the provider's answer to a typed KIND — never a Product sentence. Veri
 - `signUp` with Email confirmation on returns no session; an existing CONFIRMED Email gets an obfuscated user and no
   Email; an existing UNCONFIRMED Email gets its confirmation re-sent and NO metadata or password change. A project
   that returns a session (confirmation off) is refused: the session is discarded locally and never authenticates.
-- `verifyOtp` answers a wrong code and an expired code with the SAME `otp_expired` (403). The entry therefore tells
-  them apart only by what it truly knows — when the current code was sent — against the documented one-hour code
-  lifetime; when it does not know (the reader arrived from sign-in), a rejected code is shown as expired, the answer
-  that always leads to a working code.
+- `verifyOtp` answers a wrong code and an expired code with the SAME `otp_expired` (403), and the project's OTP expiry
+  is external configuration. The entry therefore claims neither: a provider rejection is the approved generic
+  verification fallback, and no device clock or assumed lifetime is used to manufacture the distinction.
 - A transport failure is status 0 (`AuthRetryableFetchError`); every 5xx, including a trigger refusal ("Database
   error saving new user"), arrives with no code and is never described as a connection failure.
 - The password grant verifies the password before `email_not_confirmed` (400), so that answer reveals nothing to
@@ -219,13 +219,26 @@ ID, no profile-completion journey. Giving such an account a Name is W3 identity 
 
 No "exactly once rendering" is claimed. The opening is presentation and is never stored as a turn or sent to a model.
 
+**Unknown account state delays first use; it never erases it.** Both first-use moments are retired by the first
+committed turn, so the Conversation — the only place a turn can be committed — is never opened while the account's
+first-use state is unknown. A read that fails, or has not answered, is asked again; a timeout or a transport failure
+consumes, completes and bypasses nothing, and any later successful answer resolves normally.
+
 ## 6. Residue and external gates
 
 - **Reserved-but-unverified Login ID (§7.3 of the task).** A Login ID is written at sign-up, before verification, so an
   abandoned unverified sign-up keeps holding it, and a reader who retries sign-up with the same Email gets the code
-  re-sent while their FIRST Name and Login ID stay (Supabase changes no metadata for an unconfirmed user). The
-  availability question is unauthenticated and unthrottled by QANDEEL; Supabase's own sign-up and Email rate limits
-  apply. No expiry or cleanup policy is invented here — it is a Product/security decision for a later task.
+  re-sent while their FIRST Name and Login ID stay (Supabase changes no metadata for an unconfirmed user). No expiry
+  or cleanup policy is invented here — it is a Product/security decision for a later task.
+- **Login ID availability hardening — deferred to deployment / security hardening.** `POST
+  /account/login-id-availability` is unauthenticated by design (it is asked before an account exists) and is NOT
+  rate-limited by QANDEEL: its boolean answer can be asked repeatedly to probe which Login IDs are taken. W1B-01
+  keeps the endpoint and its Product behaviour as they are and adds no rate-limit subsystem, gateway rule or
+  dependency; per-client throttling belongs to the later deployment/security hardening of the API edge. Supabase's
+  own sign-up and Email rate limits still apply to sign-up itself.
+- **A silent wait while the account cannot be read.** If the first-use read keeps failing (the API or the database is
+  unreachable), a signed-in reader sees the Dark World until a retry answers (§5). No approved words exist for that
+  moment, so none are shown; a visible treatment for it needs Product Owner copy in a later task.
 - **The sign-up metadata stays in the auth record.** Supabase keeps `qandeel_name` / `qandeel_login_id` as the auth
   user's metadata, which also rides in that user's own access token. It never leaves the auth context (the token
   goes only to the QANDEEL API, which never logs it), QANDEEL never reads it after the insert, and a later change
@@ -235,7 +248,8 @@ No "exactly once rendering" is claimed. The opening is presentation and is never
   1. Authentication → Email → **Confirm email: ON** (the app refuses a sign-up that returns a session, so with it OFF
      sign-up fails closed with the generic refusal rather than bypassing verification);
   2. the **Confirm signup** Email template must emit the code — `{{ .Token }}` — rather than only `{{ .ConfirmationURL }}`;
-  3. **Email OTP length: 6** and **Email OTP expiration: 3600 s** (the lifetime the entry judges expiry against);
+  3. **Email OTP length: 6** and **Email OTP expiration: 3600 s** (Supabase's default; the entry does not judge
+     expiry itself);
   4. a production SMTP provider: Supabase's default sender only delivers to project team addresses and is heavily
      rate-limited.
   Live Email delivery is therefore **not proved** by W1B-01.
@@ -260,6 +274,9 @@ Exact-head results are in the Draft PR description.
 **Re-anchored, with the expired delivery fact stated in place:** T-14 "the surface names no colour at all" (now: every
 colour is one the canonical palette resolves), T-14's `SignedOutEntry` pin (now also carries `loginIds`), the T-12P
 public-barrel census (three deliberate additions) and AC-01.1's wire list (the account read carries the refreshed token).
+The W1B-01 correction re-anchors the `app.module.ts` blob pin in the T-03C historical-projection, T-03B3 thread-lifecycle
+and T-03D live-focus contracts: the AccountModule composition is subtracted and the remainder must still be the
+baseline blob `fc3ce9c`.
 
 ## 8. What W1B-01 deliberately does not do
 

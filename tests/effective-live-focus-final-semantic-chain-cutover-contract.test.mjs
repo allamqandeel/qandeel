@@ -147,12 +147,18 @@ test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the deli
     ['apps/api/src/runtime-identity/uuid-v5.ts', '90d8f820a13f2b75f416448f881ebdbc8de12590'],
     ['apps/api/src/conversation-unit/conversation-unit.repository.ts', 'ceb86c3047067055c5a7b1b8699097f9e045a271'],
     ['apps/api/src/conversation-unit/conversation-temporal-establishment.service.ts', '6ddcaf4fcfdaa0c1c437cdad374a134e198b922e'],
-    ['apps/api/src/app.module.ts', 'fc3ce9c12b67552fb54214d0b6b4931b89601da6'],
     // The T-03B3 walk is exported for reuse (its body is unchanged); pinned as the T-03D baseline.
     ['apps/api/src/thread-lifecycle/conversation-thread-lifecycle-establishment.service.ts', '4d9c55a59841bd007fa9825040bc2e99bc3d510a'],
   ]) {
     assert.equal(gitBlobId(read(file)), blob, `${file} is byte-identical to the T-03D baseline`);
   }
+  // W1B-01 re-anchor: the application root now composes AccountModule (account identity is not a
+  // Conversation capability). Every other byte stays frozen: without exactly that import and that
+  // list entry, AppModule is the T-03D baseline blob.
+  const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    .replace("import { AccountModule } from './account/account.module';\n", '')
+    .replace(', HimModule, AccountModule],', ', HimModule],');
+  assert.equal(gitBlobId(appModuleBeforeW1b01), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical to the T-03D baseline apart from the W1B-01 AccountModule composition');
   assert.match(b3Service, /export class ThreadLayerWalk \{/u, 'the frozen T-03B3 Thread-layer walk is reused, never re-implemented');
   assert.doesNotMatch(productionCode, /class ThreadLayerWalk|continuityScreen|loadDossiers\(\) \{/u, 'no second Thread-layer walk');
 });

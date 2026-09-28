@@ -9,7 +9,7 @@ import { act, fireEvent, render, type RenderResult } from '@testing-library/reac
 import { StyleSheet } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
-import { AccountEntry, EMAIL_CODE_LIFETIME_MS, accountEntryCopy, type LoginIdAvailability } from '..';
+import { AccountEntry, accountEntryCopy, type LoginIdAvailability } from '..';
 import { ProductSignInGateway, productLocale } from '../../integration';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { createMobileAuthAuthority, createManualForegroundSignal, type LoginIdAvailabilityOutcome, type MobileAuthAuthority } from '../../runtime-entry';
@@ -26,7 +26,6 @@ interface Mounted {
   readonly auth: MobileAuthAuthority;
   readonly checks: string[];
   answerAvailability(outcome: LoginIdAvailabilityOutcome): void;
-  advance(ms: number): void;
 }
 
 const settle = async () => {
@@ -47,7 +46,6 @@ async function mount(language: ChromeLanguage = 'en', direction: 'LTR' | 'RTL' =
       return availability;
     },
   };
-  let clock = 1_000_000;
   const locale = productLocale(language, direction);
   const view = await render(
     <SafeAreaProvider initialMetrics={METRICS}>
@@ -55,7 +53,6 @@ async function mount(language: ChromeLanguage = 'en', direction: 'LTR' | 'RTL' =
         auth={auth}
         loginIds={loginIds}
         locale={locale}
-        now={() => clock}
         renderSignIn={({ footer, onEmailNotConfirmed }) => (
           <ProductSignInGateway auth={auth} locale={locale} footer={footer} onEmailNotConfirmed={onEmailNotConfirmed} />
         )}
@@ -70,9 +67,6 @@ async function mount(language: ChromeLanguage = 'en', direction: 'LTR' | 'RTL' =
     checks,
     answerAvailability: (outcome) => {
       availability = outcome;
-    },
-    advance: (ms) => {
-      clock += ms;
     },
   };
 }
@@ -265,21 +259,28 @@ describe('Verify Email', () => {
     await m.view.unmount();
   });
 
-  it('a rejected code is incorrect within its lifetime and expired after it; neither says the provider’s words', async () => {
-    const m = await mount('en');
+  it.each(['en', 'ar'] as const)('%s: a provider-rejected code is never guessed incorrect or expired — it is the approved generic sentence', async (language) => {
+    const copy = accountEntryCopy(language);
+    const m = await mount(language);
     await toVerify(m);
     m.port.verifyWith({ ok: false, failure: { kind: 'CODE_REJECTED', detail: DETAIL } });
     await type(m.view, 'qandeel-verify-email-code', '000000');
     await press(m.view, 'qandeel-verify-email-submit');
-    expect(tree(m.view)).toContain(EN.codeIncorrect);
-    m.advance(EMAIL_CODE_LIFETIME_MS);
+    expect(tree(m.view)).toContain(copy.verifyFailed);
+    expect(tree(m.view)).not.toContain(copy.codeIncorrect);
+    // Pressed again much later: no clock turns the same provider answer into a claim.
+    const later = jest.spyOn(Date, 'now').mockReturnValue(Date.now() + 24 * 60 * 60 * 1000);
     await press(m.view, 'qandeel-verify-email-submit');
-    expect(tree(m.view)).toContain(EN.codeExpired);
-    expect(tree(m.view)).not.toContain(DETAIL);
+    later.mockRestore();
+    const text = tree(m.view);
+    expect(text).toContain(copy.verifyFailed);
+    for (const claim of [copy.codeIncorrect, copy.codeExpired, DETAIL]) expect(text).not.toContain(claim);
+    expect(m.auth.getState()).toEqual({ kind: 'SIGNED_OUT' });
     await m.view.unmount();
   });
 
   it.each([
+    ['CODE_REJECTED', 'verifyFailed'],
     ['UNEXPECTED', 'verifyFailed'],
     ['NETWORK', 'network'],
   ] as const)('a %s verification failure is the approved %s sentence', async (kind, key) => {
@@ -293,17 +294,17 @@ describe('Verify Email', () => {
     await m.view.unmount();
   });
 
-  it('resend keeps the typed code, says a new code was sent, and restarts the code’s lifetime', async () => {
+  it('resend keeps the typed code and says a new code was sent', async () => {
     const m = await mount('en');
     await toVerify(m);
     await type(m.view, 'qandeel-verify-email-code', '123456');
-    m.advance(EMAIL_CODE_LIFETIME_MS + 1);
     await press(m.view, 'qandeel-verify-email-resend');
     expect(tree(m.view)).toContain(EN.resendSucceeded);
     expect(m.view.getByTestId('qandeel-verify-email-code').props.value).toBe('123456');
     m.port.verifyWith({ ok: false, failure: { kind: 'CODE_REJECTED', detail: DETAIL } });
     await press(m.view, 'qandeel-verify-email-submit');
-    expect(tree(m.view)).toContain(EN.codeIncorrect);
+    expect(tree(m.view)).toContain(EN.verifyFailed);
+    expect(tree(m.view)).not.toContain(EN.codeIncorrect);
     await m.view.unmount();
   });
 
@@ -342,7 +343,7 @@ describe('Verify Email', () => {
 });
 
 describe('Sign in with an unverified Email', () => {
-  it('a correct password on an unverified Email goes straight to Verify Email, whose rejected code reads as expired', async () => {
+  it('a correct password on an unverified Email goes straight to Verify Email, whose rejected code is never guessed expired', async () => {
     const m = await mount('en');
     m.port.signInWith({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: DETAIL } });
     await type(m.view, 'qandeel-sign-in-email', ' mona@example.test ');
@@ -353,7 +354,8 @@ describe('Sign in with an unverified Email', () => {
     m.port.verifyWith({ ok: false, failure: { kind: 'CODE_REJECTED', detail: DETAIL } });
     await type(m.view, 'qandeel-verify-email-code', '123456');
     await press(m.view, 'qandeel-verify-email-submit');
-    expect(tree(m.view)).toContain(EN.codeExpired);
+    expect(tree(m.view)).toContain(EN.verifyFailed);
+    expect(tree(m.view)).not.toContain(EN.codeExpired);
     await m.view.unmount();
   });
 

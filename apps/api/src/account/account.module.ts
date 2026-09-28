@@ -8,8 +8,9 @@ import { AccountRepository } from './account.repository';
 import { AccountService } from './account.service';
 
 /**
- * W1B-01 — the account owner. Reached through `ConversationModule.imports`, so the application root
- * is unchanged; it provides its own guard and transports exactly as the Conversation module does.
+ * W1B-01 — the account owner, composed by the application root: account identity is not a
+ * Conversation capability. It provides its own guard and transports exactly as the Conversation
+ * module does.
  */
 @Module({
   controllers: [AccountController],

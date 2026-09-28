@@ -53,8 +53,8 @@ export type SignUpFailure = {
 
 /**
  * Why a 6-digit Email code did not verify. `CODE_REJECTED` is the provider's single answer for BOTH a
- * wrong and an expired code (Supabase Auth returns `otp_expired` for either); telling them apart is the
- * Product entry's job, from when the code was sent.
+ * wrong and an expired code (Supabase Auth returns `otp_expired` for either), so nothing downstream may
+ * claim which of the two it was.
  */
 export type EmailCodeFailure = {
   readonly kind: 'CODE_REJECTED' | 'NETWORK' | 'UNEXPECTED';

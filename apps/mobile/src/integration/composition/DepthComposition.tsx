@@ -205,7 +205,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
     );
 
   const stack: WorldDepth[] = leaving === null ? [depth] : [leaving, depth];
-  // W1B-01: the account's first use stands before the world — the bounded wait, then the one-time
+  // W1B-01: the account's first use stands before the world — the wait for the account, then the one-time
   // Welcome when it is owed. The depth pair itself is unchanged.
   return (
     <FirstUseGate account={runtime.account} language={locale.language} insets={edges}>

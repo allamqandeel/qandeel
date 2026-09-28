@@ -38,7 +38,6 @@ import { openAiThreadContinuityBinding, type ThreadContinuityBindingFactory } fr
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
 import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
-import { AccountModule } from '../account/account.module';
 import { HistoricalProjectionRepository } from '../historical-projection/historical-projection.repository';
 
 /**
@@ -74,8 +73,7 @@ export const THREAD_ESTABLISHMENT_BINDING_FACTORY = Symbol('THREAD_ESTABLISHMENT
 export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDING_FACTORY');
 
 @Module({
-  // W1B-01: the account owner's routes are reached here, so the application root stays unchanged.
-  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule, AccountModule],
+  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
   // QHIA-011A: the explicit session context activation entry is its own
   // authenticated controller. It is a separate product command surface, never
   // part of create-turn input and never reached from a normal turn.

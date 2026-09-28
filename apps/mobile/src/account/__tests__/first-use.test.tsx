@@ -1,7 +1,7 @@
 /**
  * W1B-01 — first use and the Conversation openings, on the production surfaces.
  *
- *   the bounded wait → the concise Welcome (owed once) → the real Conversation;
+ *   the wait for the account → the concise Welcome (owed once) → the real Conversation;
  *   the First Conversation Opening in a genuinely empty Conversation, the normal opener afterwards,
  *   never both, never above a committed turn, never with an invented name.
  */
@@ -18,9 +18,9 @@ const INSETS = { top: 44, right: 0, bottom: 34, left: 0 };
 const FSI = String.fromCodePoint(0x2068);
 const PDI = String.fromCodePoint(0x2069);
 
-async function accountWith(view: { displayName: string | null; welcomePending: boolean; firstConversationOpening: boolean } | 'UNAVAILABLE') {
+async function accountWith(view: { displayName: string | null; welcomePending: boolean; firstConversationOpening: boolean }) {
   let completions = 0;
-  const outcome: AccountFirstUseOutcome = view === 'UNAVAILABLE' ? { kind: 'UNAVAILABLE' } : { kind: 'READ', view };
+  const outcome: AccountFirstUseOutcome = { kind: 'READ', view };
   const account = createAccountController({
     transport: { readFirstUse: async () => outcome, completeWelcome: async () => { completions += 1; return true; } },
     isCurrent: () => true,
@@ -89,12 +89,30 @@ describe('first use — the gate before the reader’s world', () => {
     }
   });
 
-  it('an unreadable account opens the world with no Welcome', async () => {
-    const { account } = await accountWith('UNAVAILABLE');
-    account.start();
-    await flush();
+  it('an unreadable account keeps the world closed — never opened as though first use were not owed — until a read answers', async () => {
+    let answer: AccountFirstUseOutcome = { kind: 'UNAVAILABLE' };
+    const ticks: (() => void)[] = [];
+    const account = createAccountController({
+      transport: { readFirstUse: async () => answer, completeWelcome: async () => true },
+      isCurrent: () => true,
+      setTimer: (tick) => ticks.push(tick),
+      clearTimer: () => undefined,
+    });
     const view = await render(<FirstUseGate account={account} language="ar" insets={INSETS}><Text testID="world">world</Text></FirstUseGate>);
-    expect(view.getByTestId('world')).toBeTruthy();
+    await act(async () => {
+      account.start();
+      await flush();
+    });
+    expect(view.getByTestId(FIRST_USE_WAITING_TEST_ID)).toBeTruthy();
+    expect(view.queryByTestId('world')).toBeNull();
+    // The server recovers; the next read shows the Welcome the account is still owed.
+    answer = { kind: 'READ', view: { displayName: 'منى', welcomePending: true, firstConversationOpening: true } };
+    await act(async () => {
+      ticks[ticks.length - 1]();
+      await flush();
+    });
+    expect(view.getByTestId('qandeel-first-use-greeting').props.children).toBe(firstUseCopy('ar').welcome('منى')[0]);
+    expect(view.queryByTestId('world')).toBeNull();
     await view.unmount();
   });
 });
@@ -106,7 +124,6 @@ describe('the openings', () => {
     expect(openingFor({ ...ready, displayName: 'Mona', firstConversationOpening: false })).toEqual({ kind: 'NORMAL', displayName: 'Mona' });
     expect(openingFor({ ...ready, displayName: null, firstConversationOpening: true })).toBeNull();
     expect(openingFor({ status: 'LOADING', displayName: null, welcomePending: false, firstConversationOpening: false })).toBeNull();
-    expect(openingFor({ status: 'UNAVAILABLE', displayName: null, welcomePending: false, firstConversationOpening: false })).toBeNull();
   });
 
   async function conversationWith(account: AccountController, language: ChromeLanguage, history: ReturnType<typeof exchange>[]) {

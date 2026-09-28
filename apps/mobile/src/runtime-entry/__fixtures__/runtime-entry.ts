@@ -218,6 +218,10 @@ export function serveHappyPath(
     status: 200,
     body: worldDisclosure(sessionId, snap.liveHead ?? 1, snap.liveHead ?? 1),
   }));
+  // W1B-01: the account read. The reader's world stays closed until it answers, so the happy path
+  // answers it as an account from before W1B-01 — unnamed, owed no Welcome, and silent in the
+  // Conversation — which is exactly the world these proofs were written against.
+  http.on('/account/first-use', () => ({ status: 200, body: { displayName: null, welcomePending: false, firstConversationOpening: true } }));
 }
 
 // ---------------------------------------------------------------------------------------------

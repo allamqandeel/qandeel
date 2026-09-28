@@ -18,16 +18,19 @@
  *                      durable in its own right — is what consumes it.
  *   Normal opener      every later genuinely empty Conversation.
  *
- * ## A bounded wait
+ * ## Unknown delays first use; it never erases it
  *
- * The reader's world waits for this answer so a brand-new account never glimpses the Conversation
- * before its Welcome. The wait is bounded: after `ACCOUNT_READ_WAIT_MS`, or on any failure, the state
- * is `UNAVAILABLE`, which shows the Conversation with no Welcome and no opener — silent, as W1A-01 was,
- * and never with an invented name.
+ * The reader's world waits for this answer. Opening the Conversation without it would let a brand-new
+ * account's first committed turn — durable, and the very thing that retires the Welcome and the First
+ * Conversation Opening — land while neither was shown, erasing both for good. So there is no state in
+ * which the account is unknown and the world is open: the state stays `LOADING` until the server
+ * answers, and a failed read, or one that has not answered within `ACCOUNT_READ_ATTEMPT_MS`, asks
+ * again after `ACCOUNT_READ_RETRY_DELAYS_MS`. Any attempt's successful answer, however late, resolves
+ * normally. A timeout or a transport failure never consumes, completes or bypasses anything.
  */
 import type { AccountFirstUseOutcome } from '../runtime-entry';
 
-export type AccountStatus = 'LOADING' | 'READY' | 'UNAVAILABLE';
+export type AccountStatus = 'LOADING' | 'READY';
 
 export interface AccountPresentationState {
   readonly status: AccountStatus;
@@ -60,11 +63,12 @@ export interface AccountControllerOptions {
   readonly clearTimer?: (handle: unknown) => void;
 }
 
-/** How long the reader's world waits for the account before it opens without a Welcome or opener. */
-export const ACCOUNT_READ_WAIT_MS = 6_000;
+/** How long one account read is waited for before another is asked. The earlier one may still answer. */
+export const ACCOUNT_READ_ATTEMPT_MS = 6_000;
+/** The pause before the next read after a failed or unanswered one; the last value repeats. */
+export const ACCOUNT_READ_RETRY_DELAYS_MS: readonly number[] = Object.freeze([1_000, 2_000, 4_000, 8_000, 15_000]);
 
 const LOADING: AccountPresentationState = Object.freeze({ status: 'LOADING', displayName: null, welcomePending: false, firstConversationOpening: false });
-const UNAVAILABLE: AccountPresentationState = Object.freeze({ status: 'UNAVAILABLE', displayName: null, welcomePending: false, firstConversationOpening: false });
 
 export function createAccountController({
   transport,
@@ -76,6 +80,7 @@ export function createAccountController({
   let started = false;
   let retired = false;
   let welcomeWritten = false;
+  let attempts = 0;
   let timer: unknown = null;
   const listeners = new Set<() => void>();
   const live = () => !retired && isCurrent();
@@ -90,6 +95,42 @@ export function createAccountController({
     timer = null;
   };
 
+  const waitThen = (next: () => void, ms: number) => {
+    stopWaiting();
+    timer = setTimer(() => {
+      timer = null;
+      next();
+    }, ms);
+  };
+
+  /** One read. Only a READ answer changes the state; anything else leads to another read, later. */
+  const read = () => {
+    if (!live() || state.status !== 'LOADING') return;
+    attempts += 1;
+    const delay = ACCOUNT_READ_RETRY_DELAYS_MS[Math.min(attempts, ACCOUNT_READ_RETRY_DELAYS_MS.length) - 1];
+    let given = false;
+    // This attempt gives way once: on its failure or its time running out, whichever comes first.
+    const giveWay = () => {
+      if (given || !live() || state.status !== 'LOADING') return;
+      given = true;
+      waitThen(read, delay);
+    };
+    waitThen(giveWay, ACCOUNT_READ_ATTEMPT_MS);
+    void transport.readFirstUse().then(
+      (outcome) => {
+        if (!live() || state.status !== 'LOADING') return;
+        if (outcome.kind !== 'READ') {
+          giveWay();
+          return;
+        }
+        stopWaiting();
+        const { displayName, welcomePending, firstConversationOpening } = outcome.view;
+        publish({ status: 'READY', displayName, welcomePending: displayName !== null && welcomePending, firstConversationOpening });
+      },
+      giveWay,
+    );
+  };
+
   return {
     getState: () => state,
     subscribe(listener) {
@@ -101,27 +142,7 @@ export function createAccountController({
     start() {
       if (started || !live()) return;
       started = true;
-      timer = setTimer(() => {
-        timer = null;
-        if (live() && state.status === 'LOADING') publish(UNAVAILABLE);
-      }, ACCOUNT_READ_WAIT_MS);
-      void transport.readFirstUse().then(
-        (outcome) => {
-          if (!live() || state.status !== 'LOADING') return;
-          stopWaiting();
-          if (outcome.kind !== 'READ') {
-            publish(UNAVAILABLE);
-            return;
-          }
-          const { displayName, welcomePending, firstConversationOpening } = outcome.view;
-          publish({ status: 'READY', displayName, welcomePending: displayName !== null && welcomePending, firstConversationOpening });
-        },
-        () => {
-          if (!live() || state.status !== 'LOADING') return;
-          stopWaiting();
-          publish(UNAVAILABLE);
-        },
-      );
+      read();
     },
     completeWelcome() {
       if (!live() || state.status !== 'READY' || !state.welcomePending) return;

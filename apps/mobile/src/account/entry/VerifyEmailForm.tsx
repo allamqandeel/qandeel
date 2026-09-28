@@ -8,8 +8,10 @@
  *   - the code field keeps digits only (Arabic-Indic digits are read as the same digits), and nothing is
  *     submitted automatically: the reader presses Verify, exactly one request at a time;
  *   - resend has its own bounded in-flight state, never clears the typed code, and replaces the code;
- *   - wrong and expired are told apart only by what the entry truly knows — when the code was sent —
- *     because the provider answers both with one error (see `judgeRejectedCode`);
+ *   - fewer than six digits is the one rejection the entry can PROVE, and only it is called incorrect.
+ *     The provider answers a wrong code and an expired one with the same error, so a provider rejection
+ *     is the approved generic verification sentence: the entry never guesses which it was, and no
+ *     device clock manufactures the distinction;
  *   - leaving (the return control, or Android Back) is refused while a request is in flight, so a
  *     verification the reader walked away from can never land behind them.
  */
@@ -18,7 +20,7 @@ import { AccessibilityInfo, BackHandler } from 'react-native';
 
 import type { MobileAuthAuthority } from '../../runtime-entry';
 import { accountEntryCopy } from '../copy';
-import { EMAIL_CODE_LENGTH, judgeRejectedCode, normalizeEmailCode } from '../entry-rules';
+import { EMAIL_CODE_LENGTH, normalizeEmailCode } from '../entry-rules';
 import { EntryAction, EntryField, EntryFrame, EntryLink, EntryMessage, EntryText, EntryTitle, type EntryLocale } from './EntryParts';
 
 export const VERIFY_EMAIL_TEST_ID = 'qandeel-verify-email';
@@ -27,22 +29,18 @@ export interface VerifyEmailFormProps {
   readonly auth: MobileAuthAuthority;
   readonly locale: EntryLocale;
   readonly email: string;
-  /** When the current code was sent, if this entry knows; null when the reader arrived from sign-in. */
-  readonly codeSentAt: number | null;
-  readonly now: () => number;
   readonly onReturn: () => void;
 }
 
 type Notice = { readonly text: string; readonly tone: 'error' | 'status' } | null;
 
-export function VerifyEmailForm({ auth, locale, email, codeSentAt, now, onReturn }: VerifyEmailFormProps) {
+export function VerifyEmailForm({ auth, locale, email, onReturn }: VerifyEmailFormProps) {
   const copy = accountEntryCopy(locale.language);
   const [code, setCode] = useState('');
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState<'VERIFYING' | 'RESENDING' | null>(null);
   const inFlight = useRef(false);
   const live = useRef(true);
-  const sentAt = useRef<number | null>(codeSentAt);
 
   useEffect(() => {
     live.current = true;
@@ -86,18 +84,18 @@ export function VerifyEmailForm({ auth, locale, email, codeSentAt, now, onReturn
     inFlight.current = false;
     setBusy(null);
     switch (outcome.failure.kind) {
+      // Wrong or expired — the provider does not say which, so neither is claimed.
       case 'CODE_REJECTED':
-        return say({ text: judgeRejectedCode(sentAt.current, now()) === 'EXPIRED' ? copy.codeExpired : copy.codeIncorrect, tone: 'error' });
-      case 'NETWORK':
-        return say({ text: copy.network, tone: 'error' });
       case 'UNEXPECTED':
         return say({ text: copy.verifyFailed, tone: 'error' });
+      case 'NETWORK':
+        return say({ text: copy.network, tone: 'error' });
       default: {
         const exhaustive: never = outcome.failure.kind;
         return exhaustive;
       }
     }
-  }, [auth, code, copy, email, now, say]);
+  }, [auth, code, copy, email, say]);
 
   const resend = useCallback(async () => {
     if (inFlight.current) return;
@@ -108,12 +106,9 @@ export function VerifyEmailForm({ auth, locale, email, codeSentAt, now, onReturn
     if (!live.current) return;
     inFlight.current = false;
     setBusy(null);
-    if (outcome.ok) {
-      sentAt.current = now();
-      return say({ text: copy.resendSucceeded, tone: 'status' });
-    }
+    if (outcome.ok) return say({ text: copy.resendSucceeded, tone: 'status' });
     say({ text: outcome.failure.kind === 'NETWORK' ? copy.network : copy.resendFailed, tone: 'error' });
-  }, [auth, copy, email, now, say]);
+  }, [auth, copy, email, say]);
 
   const onVerifyPress = useCallback(() => {
     void verify();

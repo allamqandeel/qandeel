@@ -1,12 +1,7 @@
 /** W1B-01 — the account entry's local rules. */
-import {
-  EMAIL_CODE_LIFETIME_MS,
-  canonicalName,
-  isPlausibleEmail,
-  judgeLoginId,
-  judgeRejectedCode,
-  normalizeEmailCode,
-} from '..';
+import * as account from '..';
+
+const { canonicalName, isPlausibleEmail, judgeLoginId, normalizeEmailCode } = account;
 
 describe('the Login ID grammar is migration 0123’s and the API’s', () => {
   it('accepts the legal shapes and returns the canonical lowercase form', () => {
@@ -54,11 +49,8 @@ describe('the 6-digit code', () => {
     expect(normalizeEmailCode(`0${extended}`)).toBe('0789');
   });
 
-  it('a rejected code is EXPIRED past its lifetime, INCORRECT within it, and EXPIRED when the send time is unknown', () => {
-    const sent = 1_000_000;
-    expect(judgeRejectedCode(sent, sent + 1_000)).toBe('INCORRECT');
-    expect(judgeRejectedCode(sent, sent + EMAIL_CODE_LIFETIME_MS - 1)).toBe('INCORRECT');
-    expect(judgeRejectedCode(sent, sent + EMAIL_CODE_LIFETIME_MS)).toBe('EXPIRED');
-    expect(judgeRejectedCode(null, sent)).toBe('EXPIRED');
+  it('no local rule judges a provider-rejected code expired: there is no lifetime clock to judge it by', () => {
+    expect(Object.keys(account)).not.toContain('judgeRejectedCode');
+    expect(Object.keys(account)).not.toContain('EMAIL_CODE_LIFETIME_MS');
   });
 });

@@ -412,5 +412,9 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   assert.equal(JSON.parse(read('package-lock.json')).packages['node_modules/@shopify/react-native-skia'].version, '2.6.2', 'the authorized T-04 renderer version is locked exactly');
   assert.doesNotMatch(read('package-lock.json'), /historical-projection/u, 'the lockfile knows nothing of T-03C');
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
-  assert.equal(gitBlobId(read('apps/api/src/app.module.ts')), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical');
+  // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
+  const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    .replace("import { AccountModule } from './account/account.module';\n", '')
+    .replace(', HimModule, AccountModule],', ', HimModule],');
+  assert.equal(gitBlobId(appModuleBeforeW1b01), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical apart from the W1B-01 AccountModule composition');
 });

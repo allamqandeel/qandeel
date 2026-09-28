@@ -117,6 +117,11 @@ export function createW1AProofWorld(
     if (method === 'POST' && path.endsWith('/conversation/sessions')) {
       return respond(201, { id: SESSION, status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now', last_activity_at: 'now', closed_at: null });
     }
+    // W1B-01: the world stays closed until the account read answers. The W1A proof's reader is an
+    // account from before W1B-01 — unnamed, owed no Welcome — so the Conversation is exactly W1A's.
+    if (path.endsWith('/account/first-use')) {
+      return respond(200, { displayName: null, welcomePending: false, firstConversationOpening: false });
+    }
     return respond(404, {});
   };
 

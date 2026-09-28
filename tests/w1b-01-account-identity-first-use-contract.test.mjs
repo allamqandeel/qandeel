@@ -223,8 +223,8 @@ test('§6 — the account routes: two guarded on the caller’s token, one pre-a
   assert.match(repository, /this\.serviceApi\.rpc<boolean>\('login_id_is_available_v1'/u);
   assert.match(repository, /this\.dataApi\.request<AccountFirstUseRow\[\]>\(accessToken, 'rpc\/read_account_first_use_v1'/u);
   assert.match(repository, /this\.dataApi\.request<void>\(accessToken, 'rpc\/complete_first_use_welcome_v1'/u);
-  assert.match(read('apps/api/src/conversation/conversation.module.ts'), /imports: \[[^\]]*AccountModule\]/u, 'reached through ConversationModule');
-  assert.doesNotMatch(read('apps/api/src/app.module.ts'), /Account/u, 'the application root is unchanged');
+  assert.match(read('apps/api/src/app.module.ts'), /imports: \[[^\]]*, AccountModule\]/u, 'composed by the application root');
+  assert.doesNotMatch(read('apps/api/src/conversation/conversation.module.ts'), /Account/u, 'account identity is not a Conversation capability');
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -259,6 +259,23 @@ test('§7 — first use stands before the world, and the opening is presentation
   assert.match(opening, /if \(state\.status !== 'READY' \|\| state\.displayName === null\) return null;/u, 'no fallback name, ever');
   // An opening is never sent: the account layer holds no Conversation transport.
   for (const file of LAYER_PRODUCTION) assert.equal(code(read(file)).includes('submitTurn'), false, `${file} sends a turn`);
+  // Unknown account state delays first use and never erases it: no state opens the world without an answer.
+  const controller = code(read(`${LAYER}/account-controller.ts`));
+  assert.match(controller, /export type AccountStatus = 'LOADING' \| 'READY';/u, 'no UNAVAILABLE state that opens the world');
+  assert.equal((controller.match(/publish\(\{/gu) ?? []).length, 2,'the state changes only on a READ answer and on the Welcome’s start act');
+  const gate = code(read(`${LAYER}/first-use/FirstUseGate.tsx`));
+  assert.match(gate, /if \(state\.status === 'LOADING'\) \{/u);
+});
+
+test('§4.3 — a provider-rejected code is never guessed incorrect or expired, and no clock is consulted', () => {
+  const verify = code(read(`${LAYER}/entry/VerifyEmailForm.tsx`));
+  assert.match(verify, /case 'CODE_REJECTED':\n\s*case 'UNEXPECTED':\n\s*return say\(\{ text: copy\.verifyFailed, tone: 'error' \}\);/u);
+  assert.equal((verify.match(/copy\.codeIncorrect/gu) ?? []).length, 1, 'incorrect is said only for fewer than six digits');
+  for (const file of LAYER_PRODUCTION) {
+    const text = code(read(file));
+    assert.equal(text.includes('copy.codeExpired'), false, `${file} displays the expired sentence from guesswork`);
+    assert.doesNotMatch(text, /judgeRejectedCode|EMAIL_CODE_LIFETIME|codeSentAt/u, `${file} judges a code by a local clock`);
+  }
 });
 
 // ---------------------------------------------------------------------------------------------
