@@ -5,8 +5,8 @@
 `E2E-B-07` (Conversation ↔ Analysis)
 **Baseline:** `fc4d812e4f16f52087c24cbf8296e0c0dde7e2e8`
 **Branch:** `feat/w1a-01-authenticated-personal-conversation-core`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. Production Integration has started through this one bounded,
-Product-Owner-authorized slice only; no other wave or Product area is opened by it.
+**Status:** IMPLEMENTED — MERGED through PR #283 at `7c9ee5e5bcb5f567dc7ef1944bcde92e8cdf99de`. Production Integration started through
+this bounded, Product-Owner-authorized slice; no other wave or Product area is opened by it.
 
 ---
 

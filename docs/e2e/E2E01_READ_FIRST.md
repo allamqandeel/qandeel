@@ -69,3 +69,23 @@ moments (`QAN-BL-VOICE-01`, `QAN-BL-NAV-02`, `QAN-BL-NAV-01`, `QAN-BL-VIS-01`, `
 left exactly as recorded. E2E-01 admits no backlog item: the census closes no phase, and every gap it names is
 already owned by the End-to-End audit, Production Integration, Release Hardening, Connected Worlds `I-08` /
 `I-09`, or an existing backlog item (BG-06).
+
+## 6. Implementation status since the census
+
+The census, matrix and waves above are the audit as of their baseline and are not rewritten. Rows that a later
+Production Integration slice has implemented or advanced are listed here, each with its implementation record. A
+row listed here is not thereby `COMPLETE / PRODUCTION-READY`: that classification still needs the audit's own
+Product, visual, device and operational evidence.
+
+| Row | Status | Slice / record |
+|---|---|---|
+| `E2E-B-03`, `E2E-B-04`, `E2E-B-07` | implemented — merged through PR #283 at `7c9ee5e5bcb5f567dc7ef1944bcde92e8cdf99de` | W1A-01, [`QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md`](QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md) |
+| `E2E-A-09` Create account | implemented on a Draft PR (not merged): exactly Name, Login ID, Email, Password, with the canonical Name and the private case-insensitive Login ID stored server-side | W1B-01, [`QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md`](QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md) |
+| `E2E-A-10` Verify my email | Product Owner decision taken (mandatory in-app 6-digit code before QANDEEL, resend, expiry) and implemented on the same Draft PR. Live delivery depends on Supabase project configuration the repository does not hold, and is not proved (record §6) | W1B-01 |
+| `E2E-A-13` First use / Welcome | implemented on the Draft PR, with the Product Owner's concise Welcome (controlled amendment to I-08A4 §14) | W1B-01 |
+| `E2E-A-14` First Conversation Opening | implemented on the Draft PR, with the Product Owner's amended opening (controlled amendment to I-08A4 §15) | W1B-01 |
+| `E2E-B-02` Normal opener | implemented on the Draft PR, unchanged copy; shown in a genuinely empty Conversation once the account has committed a turn. It is reachable whenever the runtime supplies a new empty Session; no "new conversation" navigation exists yet | W1B-01 |
+| `E2E-K-02` Empty Personal world / first start | advanced on the Draft PR: a new account arrives at the Welcome and then at the First Conversation Opening in its Conversation. The Analysis depth's own empty state is unchanged | W1B-01 |
+
+Still open from these families: `E2E-A-07` Login-ID sign-in and `E2E-A-08` (W2), `E2E-A-11` password recovery,
+`E2E-A-12` session-expired treatment, `E2E-A-03` / `QAN-BL-LANTERN-01` (the Lantern moment, not implemented).
