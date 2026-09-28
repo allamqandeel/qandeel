@@ -22,6 +22,10 @@ import type {
   AuthPortResult,
   AuthSessionChange,
   AuthSessionSnapshot,
+  EmailCodeResult,
+  ResendResult,
+  SignUpIdentity,
+  SignUpResult,
   SupabaseAuthPort,
 } from './supabase-auth-port';
 
@@ -47,6 +51,18 @@ export interface MobileAuthAuthority {
   /** Restore the persisted session and begin observing. Safe to call once; later calls are no-ops. */
   start(): Promise<MobileAuthState>;
   signInWithPassword(email: string, password: string): Promise<AuthPortResult<AuthSessionSnapshot>>;
+  /**
+   * W1B-01 — create an account. It never authenticates anyone: the Email must be verified first. It
+   * is an explicit command, so any sign-in or verification still in flight is superseded by it.
+   */
+  signUp(email: string, password: string, identity: SignUpIdentity): Promise<SignUpResult>;
+  /**
+   * W1B-01 — verify an Email with its 6-digit code. Exactly like a sign-in, only a CURRENT completion
+   * may establish authentication: a later explicit command abandons this one's result.
+   */
+  verifyEmailCode(email: string, code: string): Promise<EmailCodeResult>;
+  /** W1B-01 — send a new verification code. It establishes nothing and supersedes nothing. */
+  resendEmailCode(email: string): Promise<ResendResult>;
   signOut(): Promise<AuthPortResult<null>>;
   /** Retire the authority. After this nothing can change its state, including a late callback. */
   dispose(): void;
@@ -200,6 +216,40 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
       }
       acceptExplicitSignInCompletion(result.value, epoch);
       return result;
+    },
+    async signUp(email, password, identity) {
+      if (disposed) return { ok: false, failure: { kind: 'REFUSED', detail: 'auth authority is disposed' } };
+      if (state.kind === 'AUTHENTICATED') return { ok: false, failure: { kind: 'REFUSED', detail: 'an identity is already authenticated' } };
+      // An explicit command: whatever sign-in or verification was still in flight is no longer the
+      // reader's latest instruction. Sign-up itself authenticates nobody, so nothing is accepted here —
+      // the port refuses and discards any session a misconfigured project hands back.
+      operationEpoch += 1;
+      return port.signUp(email, password, identity);
+    },
+    async verifyEmailCode(email, code) {
+      if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
+      if (state.kind === 'AUTHENTICATED') return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'an identity is already authenticated' } };
+      operationEpoch += 1;
+      const epoch = operationEpoch;
+      // As with sign-in, the SDK notifies SIGNED_IN before this promise resolves; the observed path has
+      // already refused it across the retired barrier, so only the explicit completion below may count.
+      const result = await port.verifyEmailCode(email, code);
+      if (disposed) return result;
+      // A later explicit command superseded this verification while it was in flight: abandoned. The
+      // SDK has already persisted the session it yielded, so while nobody is authenticated that
+      // session is discarded too — otherwise the next launch would restore an identity the reader
+      // abandoned, which is the same resurrection in slow motion.
+      if (epoch !== operationEpoch) {
+        // Re-read: the await above may have moved the state, which the compiler's narrowing cannot see.
+        if (result.ok && (state as MobileAuthState).kind !== 'AUTHENTICATED') void port.signOut();
+        return result;
+      }
+      if (result.ok) acceptExplicitSignInCompletion(result.value, epoch);
+      return result;
+    },
+    async resendEmailCode(email) {
+      if (disposed) return { ok: false, failure: { kind: 'REFUSED', detail: 'auth authority is disposed' } };
+      return port.resendEmailCode(email);
     },
     async signOut() {
       if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };

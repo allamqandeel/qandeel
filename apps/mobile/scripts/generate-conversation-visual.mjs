@@ -102,6 +102,11 @@ for (const [name, r] of Object.entries(type)) {
   if (r.leading / r.size < 1.6) throw new Error(`E3 ${name} leading falls under the Arabic 1.6 floor`);
   if (r.weight !== 400 && r.weight !== 500) throw new Error(`E3 ${name} needs weight ${r.weight}, which W1A does not ship`);
 }
+// W1B-01: E3's display role, for the account entry's titles and the first-use statements. E3 froze
+// its leading with the role; the 1.6 floor above governs running text, and this role sets short
+// statements only. It is set in the Medium face W1A already ships.
+const display = { statement: role('statement') };
+if (display.statement.weight !== 500) throw new Error(`E3 statement needs weight ${display.statement.weight}, which the app does not ship`);
 
 // ----------------------------------------------------------------------------------------- motion
 const f2 = JSON.parse(readFileSync(F2_TOKENS, 'utf8')).qandeel.appearance.switch;
@@ -128,6 +133,7 @@ const data = {
   palette: { standard: colours('standard'), increased: colours('increased') },
   glyphs,
   type,
+  display,
   crossfadeMs: crossfade.value,
   crossfadeReducedMotionMs: crossfadeReduced.value,
 };

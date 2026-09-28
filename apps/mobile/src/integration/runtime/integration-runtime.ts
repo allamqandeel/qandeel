@@ -70,6 +70,7 @@ import {
   type BootstrapFailure,
   type CanonicalRuntimeBundle,
   type ForegroundLiveDriver,
+  type LoginIdAvailabilityClient,
   type MobileAuthAuthority,
   type MobileAuthState,
   type MobilePublicConfig,
@@ -88,6 +89,7 @@ import {
   type RecoveryWriter,
 } from '../../recovery';
 import { createConversationController, type ConversationController } from '../../conversation';
+import { createAccountController, type AccountController } from '../../account';
 import { createInspectionJourneyCoordinator, type InspectionJourneyCoordinator } from '../journey/inspection-journey';
 import { createCanonicalTransitionWitness, type CanonicalTransitionWitness } from '../motion/canonical-transition-witness';
 import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/spatial-cause';
@@ -153,6 +155,12 @@ export interface IntegrationSessionRuntime {
    * driver's existing immediate catch-up. Retired with the generation like everything else here.
    */
   readonly conversation: ConversationController;
+  /**
+   * W1B-01: the account's first use for THIS identity — the Name QANDEEL addresses the reader by, the
+   * one-time Welcome and which Conversation opening is owed — on the T-12P account transport bound to
+   * this identity. It holds no identity of its own and is retired with the generation.
+   */
+  readonly account: AccountController;
 }
 
 /**
@@ -183,6 +191,11 @@ export interface IntegrationRuntime {
    * validation-only auth harness `QAN-BL-T12-04` requires. `bootstrap` is deliberately NOT exposed.
    */
   readonly auth: MobileAuthAuthority;
+  /**
+   * W1B-01: the one signed-out account question — may a Login ID still be chosen. A boolean from the
+   * QANDEEL API, carrying no credential; it is how Create account can say a Login ID is unavailable.
+   */
+  readonly loginIds: LoginIdAvailabilityClient;
   getPhase(): IntegrationPhase;
   subscribe(listener: () => void): () => void;
   /** Restore any persisted AUTH session and begin observing. Idempotent. */
@@ -230,6 +243,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     if (session === null) return;
     session.recovery.writer.retire();
     session.conversation.retire();
+    session.account.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -300,6 +314,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         isCurrent,
         onReplyCommitted: () => built.liveDriver.requestImmediateCatchUp(),
       }),
+      // W1B-01: the account's first use, on the T-12P account transport bound to this identity.
+      account: createAccountController({ transport: entry.accountFor(bundle), isCurrent }),
     };
     return built;
   }
@@ -336,6 +352,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     retireSession();
     session = buildSession(result.bundle, decision);
     session.liveDriver.start();
+    session.account.start();
     publish({ kind: 'READY', runtime: session });
   }
 
@@ -358,6 +375,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     runtime: {
       config: entry.config,
       auth: entry.auth,
+      loginIds: entry.loginIds,
       getPhase: () => phase,
       subscribe(listener) {
         listeners.add(listener);

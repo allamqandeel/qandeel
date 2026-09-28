@@ -19,6 +19,10 @@ import type {
   AuthPortResult,
   AuthSessionChange,
   AuthSessionSnapshot,
+  EmailCodeResult,
+  ResendResult,
+  SignUpIdentity,
+  SignUpResult,
   SupabaseAuthPort,
 } from '../auth/supabase-auth-port';
 import type { MobilePublicConfig } from '../config/mobile-public-config';
@@ -214,6 +218,10 @@ export function serveHappyPath(
     status: 200,
     body: worldDisclosure(sessionId, snap.liveHead ?? 1, snap.liveHead ?? 1),
   }));
+  // W1B-01: the account read. The reader's world stays closed until it answers, so the happy path
+  // answers it as an account from before W1B-01 — unnamed, owed no Welcome, and silent in the
+  // Conversation — which is exactly the world these proofs were written against.
+  http.on('/account/first-use', () => ({ status: 200, body: { displayName: null, welcomePending: false, firstConversationOpening: true } }));
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -242,6 +250,16 @@ export interface AuthPortDouble extends SupabaseAuthPort {
    * emitting first is not production-faithful and cannot discriminate the R2-01 race at all.
    */
   blockSignIn(session: AuthSessionSnapshot): Gate;
+  /** W1B-01 — every sign-up the port received, in order. */
+  readonly signUps: { readonly email: string; readonly password: string; readonly identity: SignUpIdentity }[];
+  signUpWith(result: SignUpResult): void;
+  verifyWith(result: EmailCodeResult): void;
+  resendWith(result: ResendResult): void;
+  /**
+   * Make `verifyEmailCode` block until the gate opens and then — exactly as `GoTrueClient.verifyOtp`
+   * does — emit `SIGNED_IN` to the subscriber BEFORE resolving with the session.
+   */
+  blockVerify(session: AuthSessionSnapshot): Gate;
 }
 
 export function authPortDouble(initial: AuthSessionSnapshot | null = null): AuthPortDouble {
@@ -250,12 +268,53 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
   let restore: AuthPortResult<AuthSessionSnapshot | null> = { ok: true, value: initial };
   let signIn: AuthPortResult<AuthSessionSnapshot> | null = null;
   let blocked: { gate: Gate; session: AuthSessionSnapshot } | null = null;
+  let signUpResult: SignUpResult = { ok: true };
+  let verifyResult: EmailCodeResult | null = null;
+  let resendResult: ResendResult = { ok: true };
+  let blockedVerify: { gate: Gate; session: AuthSessionSnapshot } | null = null;
+  const signUps: { email: string; password: string; identity: SignUpIdentity }[] = [];
 
   const notify = (change: AuthSessionChange) => {
     for (const listener of Array.from(listeners)) listener(change);
   };
 
   return {
+    signUps,
+    signUpWith: (result) => {
+      signUpResult = result;
+    },
+    verifyWith: (result) => {
+      verifyResult = result;
+    },
+    resendWith: (result) => {
+      resendResult = result;
+    },
+    blockVerify(session) {
+      const opened = gate();
+      blockedVerify = { gate: opened, session };
+      return opened;
+    },
+    signUp: async (email, password, identity) => {
+      signUps.push({ email, password, identity });
+      return signUpResult;
+    },
+    verifyEmailCode: async (email) => {
+      if (blockedVerify !== null) {
+        const pending = blockedVerify;
+        blockedVerify = null;
+        await pending.gate.wait();
+        notify({ kind: 'SIGNED_IN', session: pending.session });
+        return { ok: true, value: pending.session };
+      }
+      if (verifyResult !== null) {
+        if (verifyResult.ok) notify({ kind: 'SIGNED_IN', session: verifyResult.value });
+        return verifyResult;
+      }
+      const session = { userId: `user-for-${email}`, accessToken: `token-for-${email}` };
+      notify({ kind: 'SIGNED_IN', session });
+      return { ok: true, value: session };
+    },
+    resendEmailCode: async () => resendResult,
     blockSignIn(session) {
       const opened = gate();
       blocked = { gate: opened, session };

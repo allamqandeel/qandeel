@@ -941,6 +941,61 @@ test('14d — the two Mobile CI chains are independent: one platform retry canno
     (workflow.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate is native-impact gated');
 });
 
+/**
+ * W1B-01 — the smoke step's own bound, per consumer. Measured: in Mobile CI run 36467186428 (head
+ * 9bb292f) the iOS consumer's Maestro step was still running more than 53 minutes after it started,
+ * because only the JOB (60 minutes) was bounded. The emulator boot allowance is the floor the Android
+ * bound may not undercut, since that step also boots the device.
+ */
+const SMOKE_STEP_BOUNDS = Object.freeze({
+  android: { minutes: 20, floorSeconds: 900 },
+  ios: { minutes: 15, floorSeconds: 0 },
+});
+
+/** The step-level bound: a `timeout-minutes` key at step indentation, never one nested in `with:`. */
+const stepTimeoutMinutes = (step) => {
+  const match = /^ {8}timeout-minutes: (\d+)$/mu.exec(step);
+  return match === null ? null : Number(match[1]);
+};
+
+test('14e — each native smoke step is bounded, its timeout stays red, and nothing retries it', () => {
+  const jobs = jobBlocks(read(MOBILE_CI));
+  for (const [platform, chain] of Object.entries(MOBILE_CI_CHAINS)) {
+    const job = stripYamlComments(jobs.get(chain.consumer));
+    const smoke = stepBlockAt(job, 'apps/mobile/.maestro/boot-smoke.yaml');
+    const bound = SMOKE_STEP_BOUNDS[platform];
+
+    // The smoke is bounded at the STEP, at the intended value, and tighter than the job around it — a
+    // step bound at or above the job's would never be the one that fires.
+    assert.equal(stepTimeoutMinutes(smoke), bound.minutes, `${chain.consumer}'s smoke step is bounded at ${bound.minutes} minutes`);
+    const jobMinutes = Number(/^ {4}timeout-minutes: (\d+)$/mu.exec(jobs.get(chain.consumer))?.[1]);
+    assert.ok(bound.minutes < jobMinutes, `${chain.consumer}'s smoke bound (${bound.minutes}) is tighter than its job (${jobMinutes})`);
+
+    // It never undercuts the device boot it contains.
+    const boot = /emulator-boot-timeout: (\d+)/u.exec(smoke);
+    assert.equal(boot === null ? 0 : Number(boot[1]), bound.floorSeconds, `${chain.consumer}'s boot allowance is the recorded floor`);
+    assert.ok(bound.minutes * 60 > bound.floorSeconds, `${chain.consumer}'s smoke bound leaves the whole boot allowance intact`);
+
+    // A timeout is a FAILURE, and it stays one: nothing in the consumer may turn it amber or green. The
+    // retry remains the human "re-run failed jobs" of 14b, against the artifact 14a published; 13 still
+    // forbids every automatic form.
+    assert.equal(/continue-on-error/u.test(job), false, `${chain.consumer} may not swallow a failed or timed-out smoke`);
+    for (const construct of AUTOMATIC_RETRY_CONSTRUCTS) {
+      assert.equal(job.includes(construct), false, `${chain.consumer} must not ${construct}`);
+    }
+  }
+
+  // Non-vacuity, planted into the REAL Android smoke step. Each mutation must be rejected.
+  const real = stepBlockAt(stripYamlComments(jobs.get('verify-android')), 'apps/mobile/.maestro/boot-smoke.yaml');
+  assert.equal(stepTimeoutMinutes(real.replace(/^ {8}timeout-minutes: \d+\n/mu, '')), null, 'an unbounded smoke step is rejected');
+  assert.equal(stepTimeoutMinutes(real.replace(/^ {8}timeout-minutes: (\d+)\n/mu, '').replace(/^( {8}with:\n)/mu, '$1          timeout-minutes: 20\n')),
+    null, 'a bound nested under `with:` is an action input, not a step bound, and is rejected');
+  assert.notEqual(stepTimeoutMinutes(real.replace(/^( {8}timeout-minutes: )\d+$/mu, '$160')), SMOKE_STEP_BOUNDS.android.minutes,
+    'a loosened bound is rejected');
+  assert.equal(/continue-on-error/u.test(real.replace(/^( {8}timeout-minutes: \d+)$/mu, '$1\n        continue-on-error: true')), true,
+    'a swallowed smoke is seen');
+});
+
 // ---------------------------------------------------------------------------------------------
 // The demonstration workflow — it proves the pipeline, and it may claim nothing else
 // ---------------------------------------------------------------------------------------------

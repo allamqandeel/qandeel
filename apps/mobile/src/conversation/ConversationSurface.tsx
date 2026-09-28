@@ -19,7 +19,7 @@
  *
  * Every word comes from `copy.ts`, exactly as approved. A state with no approved word says nothing.
  */
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore, type ReactElement } from 'react';
 import {
   AccessibilityInfo,
   FlatList,
@@ -62,6 +62,12 @@ export interface ConversationSurfaceProps {
   readonly onOpenAnalysis: () => void;
   /** Move screen-reader focus to the depth control once, when arriving from Analysis. */
   readonly focusDepthControl?: boolean;
+  /**
+   * W1B-01: QANDEEL's opening line, supplied by the account owner. Presentation only — never a turn —
+   * and drawn only while the authoritative history is READ and EMPTY, so it can never sit above a
+   * committed turn. This layer writes none of its words.
+   */
+  readonly opening?: ReactElement | null;
 }
 
 /** G1.1 / G3.2 proof geometry, in points. Craft values of the frozen composition, not tokens. */
@@ -186,7 +192,7 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth }: {
   );
 }
 
-export function ConversationSurface({ controller, language, insets, onOpenAnalysis, focusDepthControl = false }: ConversationSurfaceProps) {
+export function ConversationSurface({ controller, language, insets, onOpenAnalysis, focusDepthControl = false, opening }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const palette = usePalette();
@@ -350,7 +356,9 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
         keyExtractor={(exchange) => exchange.userTurn.id}
         renderItem={({ item }) => <ExchangeRow exchange={item} copy={copy} palette={palette} language={language} contentWidth={contentWidth} />}
         ListHeaderComponent={state.exchanges.length > 0 ? historyFailure : null}
-        ListEmptyComponent={historyFailure}
+        // An empty list is either a history that could not be read, or — once READ — a genuinely empty
+        // Conversation, which is where the W1B-01 opening belongs.
+        ListEmptyComponent={state.history === 'READY' ? (opening ?? null) : historyFailure}
         ListFooterComponent={footer}
         onScroll={onScroll}
         scrollEventThrottle={64}

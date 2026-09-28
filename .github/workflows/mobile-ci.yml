@@ -38,7 +38,7 @@ name: Mobile CI
 # skip on failure costs nothing.
 on:
   pull_request:
-    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12-integration-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/t13-recovery-persistence-contract.test.mjs', 'tests/t14-mobile-product-sign-in-gateway-contract.test.mjs', 'tests/w1a-01-conversation-core-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs', 'tests/qan-inf-04-native-ci-artifact-reuse-contract.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'scripts/phase-m/native-build-fingerprint.mjs', 'scripts/phase-m/native-artifact-manifest.mjs', 'scripts/phase-m/verify-native-artifact-manifest.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml', '.github/workflows/t12-phase-m-cloud-validation.yml', '.github/workflows/mobile-expo-dependency-drift-advisory.yml']
+    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12-integration-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/t13-recovery-persistence-contract.test.mjs', 'tests/t14-mobile-product-sign-in-gateway-contract.test.mjs', 'tests/w1a-01-conversation-core-contract.test.mjs', 'tests/w1b-01-account-identity-first-use-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs', 'tests/qan-inf-04-native-ci-artifact-reuse-contract.test.mjs', 'scripts/classify-mobile-native-impact.mjs', 'scripts/phase-m/native-build-fingerprint.mjs', 'scripts/phase-m/native-artifact-manifest.mjs', 'scripts/phase-m/verify-native-artifact-manifest.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml', '.github/workflows/t12-phase-m-cloud-validation.yml', '.github/workflows/mobile-expo-dependency-drift-advisory.yml']
   push:
     branches: [main]
 concurrency:
@@ -113,6 +113,7 @@ jobs:
       - {name: Verify Recovery / Persistence contract (T-13), run: npm run test:t13-recovery-persistence-contract}
       - {name: Verify Mobile Product Sign-In Gateway contract (T-14), run: npm run test:t14-mobile-product-sign-in-gateway-contract}
       - {name: Verify Authenticated Personal Conversation Core contract (W1A-01), run: npm run test:w1a-01-conversation-core-contract}
+      - {name: Verify Account Identity + Verified Sign-up + First Use contract (W1B-01), run: npm run test:w1b-01-account-identity-first-use-contract}
       - {name: Verify Session Semantic Clock / SP / LH delivery contract (T-03A2), run: npm run test:session-semantic-clock-sp-lh-delivery-contract}
       - {name: Verify the native-impact classifier, run: npm run test:mobile-native-impact-classifier}
       - {name: Verify deterministic Expo SDK 57 dependency validation contract (QAN-INF-03), run: npm run test:qan-inf-03-deterministic-expo-dependency-validation-contract}
@@ -316,7 +317,12 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # Bounded at the STEP, not only by the job's hour: a hung Maestro launch must fail fast instead of
+      # holding the runner. The bound covers emulator boot + install + smoke, so it sits above the 900 s
+      # boot allowance rather than undercutting it. A timeout is a failure like any other — it stays red,
+      # and a retry is still the human "re-run failed jobs" decision above, against the published artifact.
       - name: Boot smoke on the Android emulator (API 36, x86_64, google_apis)
+        timeout-minutes: 20
         env:
           APK: ${{ runner.temp }}/native-build/app-release.apk
         uses: reactivecircus/android-emulator-runner@v2.38.0
@@ -515,5 +521,8 @@ jobs:
         run: |
           maestro --version
           maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      # Bounded at the STEP for the same reason. The simulator is already booted and the verified app
+      # already installed, so this bounds the Maestro smoke alone; a timeout stays red, like any failure.
       - name: Boot smoke on the iOS simulator
+        timeout-minutes: 15
         run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml

@@ -1,0 +1,27 @@
+# W1B-01 proof — typing guard for one visible field. VALIDATION ONLY.
+#
+# The same emulator keyboard fault W1A-01 found (Android discards a commit made before the new input
+# session is bound) can leave a field empty. When the typed words are not on screen, refocus, let the
+# keyboard settle and type once more. FIELD and TEXT come from the caller.
+appId: com.qandeel.mobile
+---
+- tapOn:
+    id: ${FIELD}
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${TEXT}
+- runFlow:
+    when:
+      notVisible:
+        text: ${TEXT}
+    commands:
+      - tapOn:
+          id: ${FIELD}
+      - waitForAnimationToEnd:
+          timeout: 5000
+      - eraseText: 60
+      - inputText: ${TEXT}
+- extendedWaitUntil:
+    visible:
+      text: ${TEXT}
+    timeout: 10000

@@ -276,7 +276,10 @@ test('§3.1 / §15 — ProductRoot maps only SIGNED_OUT to the gateway, and ever
 });
 
 test('§3.3 / §15 — the gateway is handed the runtime’s own authority, and creates no second runtime', () => {
-  assert.match(productRoot, /<SignedOutEntry auth=\{runtime\.auth\} \/>/u, 'the ONE authority the runtime exposes');
+  // W1B-01 re-anchor: the signed-out entry is now the Auth Gateway destination, which also receives the
+  // runtime's one signed-out Login ID question. The expired fact is "the entry receives only `auth`"; the
+  // claim that matters — it is handed the runtime's OWN authority, not a second one — is kept exactly.
+  assert.match(productRoot, /<SignedOutEntry auth=\{runtime\.auth\} loginIds=\{runtime\.loginIds\} \/>/u, 'the ONE authority the runtime exposes');
   // One runtime per mount, exactly as before: the root still builds it once and T-14 adds no second.
   assert.equal((productRoot.match(/createIntegrationRuntime\(/gu) ?? []).length, 1, 'one runtime per mount');
   assert.equal(gatewayCode.includes('createIntegrationRuntime'), false, 'the gateway builds no runtime');
@@ -459,17 +462,26 @@ test('§12 — the accessible surface: a header, two labelled fields, a button, 
   assert.match(component, /keyboardType="email-address"/u);
   assert.equal((component.match(/autoCapitalize="none"/gu) ?? []).length, 2);
   assert.equal((component.match(/autoCorrect=\{false\}/gu) ?? []).length, 2);
-  // Errors are words, not a colour — and the layer names no colour at all, because the final Graphic
-  // Language is VI-03's and T-14 freezes none of it.
-  assert.doesNotMatch(gatewayCode, /#[0-9a-fA-F]{3,8}\b|rgba?\(|\bcolor:/u, 'T-14 defines no colour');
-  for (const visual of ['palette', 'gradient', 'shadowColor', 'fontFamily', 'letterSpacing', 'react-native-reanimated', 'withTiming', 'Animated']) {
-    assert.equal(gatewayCode.includes(visual), false, `T-14 is not a visual or motion task: ${visual}`);
+  // Errors are words, not a colour.
+  //
+  // W1B-01 re-anchor. T-14 named no colour at all because no final visual language was yet frozen for the
+  // entry; W1B-01 paints it in the frozen one. The delivery fact that expired is "no colour at all". What
+  // is asserted instead is strictly stronger for the future: the layer still WRITES no colour value — no
+  // hex, no rgb() — and every colour it paints is read from the one generated canonical palette
+  // (`palette.<role>`), so it can never invent one. It still adds no motion and no letter-spacing.
+  assert.doesNotMatch(gatewayCode, /#[0-9a-fA-F]{3,8}\b|rgba?\(/u, 'the gateway writes no colour value');
+  for (const match of gatewayCode.matchAll(/\b(color|backgroundColor|selectionColor|cursorColor)(?:=\{|:\s*)([^,}\n]+)/gu)) {
+    assert.match(match[2], /^(?:palette\.\w+|submitting \? palette\.\w+ : palette\.\w+)\s*$/u, `a ${match[1]} not read from the canonical palette: ${match[2]}`);
+  }
+  assert.match(component, /import \{ typeStyle, usePalette \} from '\.\.\/\.\.\/conversation';/u, 'the one generated visual foundation');
+  for (const visual of ['gradient', 'shadowColor', 'fontFamily', 'letterSpacing', 'react-native-reanimated', 'withTiming', 'Animated']) {
+    assert.equal(gatewayCode.includes(visual), false, `the gateway adds no ${visual}`);
   }
 
   guards(
-    'no colour-only error',
+    'no invented colour',
     gatewayCode,
-    (text) => !/\bcolor:/u.test(text),
+    (text) => !/#[0-9a-fA-F]{3,8}\b|rgba?\(/u.test(text),
     "const styles = { noticeText: { color: '#b00020' } };",
   );
 });

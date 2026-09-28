@@ -180,7 +180,11 @@ test('AC-B3-01 resolved by T-03D: the B3-ONLY runtime is still never registered 
   assert.doesNotMatch(conversationModule, /ConversationTemporalEstablishmentService,|provide: ConversationTemporalEstablishmentService/u, 'no temporal-only fallback service is registered');
   assert.doesNotMatch(stripComments(establishment), /with_focus|with_thread|thread-lifecycle|thread-establishment|Lifecycle|Thread/u);
   assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator; it is no longer registered');
-  assert.equal(gitBlobId(read('apps/api/src/app.module.ts')), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical to the baseline');
+  // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
+  const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    .replace("import { AccountModule } from './account/account.module';\n", '')
+    .replace(', HimModule, AccountModule],', ', HimModule],');
+  assert.equal(gitBlobId(appModuleBeforeW1b01), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical to the baseline apart from the W1B-01 AccountModule composition');
   assert.equal(gitBlobId(establishment), '6ddcaf4fcfdaa0c1c437cdad374a134e198b922e', 'the retired T-03A2 establishment service is byte-identical to the baseline');
   // No file outside the production-inert semantic directories reaches the B3-only
   // runtime; the FINAL chain (live-focus) and the module's lazy binding FACTORY

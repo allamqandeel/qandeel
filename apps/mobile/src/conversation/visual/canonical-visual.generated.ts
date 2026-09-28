@@ -140,6 +140,13 @@ export const CANONICAL_VISUAL = {
       "weight": 400
     }
   },
+  "display": {
+    "statement": {
+      "size": 32,
+      "leading": 50,
+      "weight": 500
+    }
+  },
   "crossfadeMs": 200,
   "crossfadeReducedMotionMs": 0
 } as const;

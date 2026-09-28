@@ -9,7 +9,7 @@
  *   - the accessible name is the control's own; its glyph is decorative.
  */
 import { useState, type ReactNode } from 'react';
-import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
+import { Pressable, View, type AccessibilityState, type StyleProp, type ViewStyle } from 'react-native';
 
 import { withAlpha, type ConversationPalette } from './theme';
 
@@ -25,9 +25,11 @@ export interface ControlProps {
   readonly testID?: string;
   readonly language: 'ar' | 'en';
   readonly controlRef?: (node: View | null) => void;
+  /** W1B-01: a control whose one request is in flight says so (busy), and still refuses in its handler. */
+  readonly accessibilityState?: AccessibilityState;
 }
 
-export function Control({ palette, accessibilityLabel, onPress, children, style, testID, language, controlRef }: ControlProps) {
+export function Control({ palette, accessibilityLabel, onPress, children, style, testID, language, controlRef, accessibilityState }: ControlProps) {
   const [focused, setFocused] = useState(false);
   const outer = palette.focusOffset + palette.focusThickness;
   return (
@@ -36,6 +38,7 @@ export function Control({ palette, accessibilityLabel, onPress, children, style,
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityLanguage={language}
+      accessibilityState={accessibilityState}
       onPress={onPress}
       onFocus={() => setFocused(true)}
       onBlur={() => setFocused(false)}

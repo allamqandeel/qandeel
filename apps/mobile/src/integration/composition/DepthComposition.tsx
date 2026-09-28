@@ -33,6 +33,7 @@ import {
   DEPTH_CROSSFADE_MS,
   DEPTH_CROSSFADE_REDUCED_MOTION_MS,
 } from '../../conversation';
+import { ConversationOpening, FirstUseGate } from '../../account';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
@@ -174,6 +175,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
         insets={edges}
         onOpenAnalysis={() => cross('ANALYSIS')}
         focusDepthControl={crossed && current}
+        opening={<ConversationOpening account={runtime.account} language={locale.language} />}
       />
     ) : (
       <View style={styles.fill}>
@@ -203,32 +205,36 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
     );
 
   const stack: WorldDepth[] = leaving === null ? [depth] : [leaving, depth];
+  // W1B-01: the account's first use stands before the world — the wait for the account, then the one-time
+  // Welcome when it is owed. The depth pair itself is unchanged.
   return (
-    <View style={styles.fill} testID="qandeel-world-depth">
-      {/*
-        G3 K18 — status-region legibility against the ground actually painted behind it. Both depths
-        stand on the Dark World (P1's default for the Conversation; the Analysis shell is dark), so the
-        platform status content is light while this world is composed, whatever the system appearance.
-      */}
-      <StatusBar style="light" />
-      {stack.map((which) => {
-        const current = which === depth;
-        return (
-          <Animated.View
-            key={which}
-            testID={`qandeel-depth-${which.toLowerCase()}`}
-            style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
-            // The Analysis world reports its own composition instead (see `beginFade`).
-            onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
-            pointerEvents={current ? 'auto' : 'none'}
-            importantForAccessibility={current ? 'auto' : 'no-hide-descendants'}
-            accessibilityElementsHidden={!current}
-          >
-            {layer(which, current)}
-          </Animated.View>
-        );
-      })}
-    </View>
+    <FirstUseGate account={runtime.account} language={locale.language} insets={edges}>
+      <View style={styles.fill} testID="qandeel-world-depth">
+        {/*
+          G3 K18 — status-region legibility against the ground actually painted behind it. Both depths
+          stand on the Dark World (P1's default for the Conversation; the Analysis shell is dark), so the
+          platform status content is light while this world is composed, whatever the system appearance.
+        */}
+        <StatusBar style="light" />
+        {stack.map((which) => {
+          const current = which === depth;
+          return (
+            <Animated.View
+              key={which}
+              testID={`qandeel-depth-${which.toLowerCase()}`}
+              style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
+              // The Analysis world reports its own composition instead (see `beginFade`).
+              onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
+              pointerEvents={current ? 'auto' : 'none'}
+              importantForAccessibility={current ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={!current}
+            >
+              {layer(which, current)}
+            </Animated.View>
+          );
+        })}
+      </View>
+    </FirstUseGate>
   );
 }
 

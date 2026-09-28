@@ -98,7 +98,9 @@ test('the layer exists, is structured as authorized, and has exactly one public 
   // Every module lives at the root of the layer or in one of the authorized areas. This is a claim
   // about STRUCTURE, not a frozen file list: a new file inside an authorized area stays legal, and a
   // new area does not — which is what keeps the layer from growing a responsibility nobody named.
-  const AUTHORIZED_AREAS = ['auth', 'bootstrap', 'config', 'conversation', 'lifecycle', 'live'];
+  // W1B-01 names one more responsibility: `account`, the account transports (the caller's own first-use
+  // state on the AC-01 seam, and the one signed-out Login ID availability question).
+  const AUTHORIZED_AREAS = ['account', 'auth', 'bootstrap', 'config', 'conversation', 'lifecycle', 'live'];
   for (const file of entryFiles) {
     if (!file.includes('/')) continue;
     const area = file.split('/')[0];

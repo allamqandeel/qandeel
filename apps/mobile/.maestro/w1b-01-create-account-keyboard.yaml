@@ -1,0 +1,19 @@
+# W1B-01 proof — Create account with the keyboard open, left open for measurement. VALIDATION ONLY.
+#
+# scripts/w1b/run-w1b-proof.sh then records the keyboard's window frame and the element bounds, so the
+# reachability of the focused field and the create act is measured rather than eyeballed, and censuses
+# the on-device accessibility tree of the form. PREFIX / NAME / LOGIN_ID / EMAIL come from that script.
+appId: com.qandeel.mobile
+---
+- stopApp
+# The proof world is in memory: every launch starts signed out, with a fresh account to create.
+- launchApp
+- runFlow:
+    file: w1b-01-fill-account.yaml
+# The drag to the create act closed the keyboard, so measuring now would find none. Return to the
+# password as a reader would and leave the keyboard open: the measurement is taken with it up.
+- tapOn:
+    id: "qandeel-create-account-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-05-keyboard-open-measured

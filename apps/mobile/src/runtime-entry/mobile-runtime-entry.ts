@@ -34,6 +34,7 @@ import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstr
 import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from './bootstrap/bootstrap-types';
 import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversation/conversation-session-api';
 import { ConversationTurnApiClient } from './conversation/conversation-turn-api';
+import { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -108,6 +109,16 @@ export interface MobileRuntimeEntry {
    * bundle's Session id with every request.
    */
   conversationTurnsFor(bundle: CanonicalRuntimeBundle): ConversationTurnApiClient;
+  /**
+   * W1B-01 — the account client for a bundle this coordinator produced, on the same AC-01 seam bound
+   * to the bundle's own auth generation: a replaced identity's request is refused before it is issued.
+   */
+  accountFor(bundle: CanonicalRuntimeBundle): AccountApiClient;
+  /**
+   * W1B-01 — the one signed-out account question: may a Login ID still be chosen. It carries no
+   * credential, because there is no account yet.
+   */
+  readonly loginIds: LoginIdAvailabilityClient;
   /** The runtime generation currently in force. */
   currentRuntimeGeneration(): number;
   dispose(): void;
@@ -256,6 +267,10 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     conversationTurnsFor(bundle) {
       return new ConversationTurnApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
+    accountFor(bundle) {
+      return new AccountApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    loginIds: new LoginIdAvailabilityClient({ baseUrl: config.apiBaseUrl, fetch: httpFetch }),
     currentRuntimeGeneration: () => runtimeGeneration,
     dispose() {
       if (disposed) return;

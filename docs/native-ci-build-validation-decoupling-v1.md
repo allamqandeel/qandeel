@@ -75,6 +75,19 @@ decision to re-run; an automatic retry turns an intermittent Product defect into
 looked at. The contract forbids the known retry actions and a hand-rolled shell loop around a Maestro
 invocation.
 
+**Native smoke is bounded at the step, not only at the job** (W1B-01). A hung Maestro run used to hold
+its runner for up to the consumer job's 60 minutes: in Mobile CI run `36467186428` the iOS smoke step was
+still running more than 53 minutes after it started. Mobile CI now bounds each smoke step:
+
+- **Android: 20 minutes.** The step covers emulator boot, install and the smoke, so the bound sits above
+  the 900 s boot allowance instead of undercutting it.
+- **iOS: 15 minutes.** The simulator is already booted and the verified app installed by the step
+  before, so the bound covers the smoke alone.
+
+A timeout is a failure like any other, and it stays red: no `continue-on-error`, no retry. Retrying it
+is the same human "re-run failed jobs" decision. That re-runs the consumer alone against the producer's
+already-published artifact, which is not rebuilt just because the consumer flaked.
+
 ## 4. Prior-run reuse
 
 `reuse_artifacts_from_run_id` (workflow_dispatch, default empty) skips the producers and takes the
@@ -356,6 +369,12 @@ defect in the real workflow:
 - **14c** a cache miss builds, a cache hit is still proven (the gate carries no condition), and a lost
   reuse signal falls back to the **stricter** mode — proven against the verifier, not asserted about it;
 - **14d** the two chains are independent, so one platform's retry cannot rerun the other.
+
+W1B-01 adds **14e**, with the same planted-defect discipline:
+- each consumer's smoke step carries its own step-level `timeout-minutes`, at the value in §3;
+- that bound is tighter than the job's, and the Android bound never undercuts the emulator boot allowance;
+- a bound nested under `with:` does not count;
+- the consumer carries no `continue-on-error` and no automatic retry construct.
 
 Counts are deliberately avoided in these rules: `14d` states the classifier gating as a **ratio** of
 conditions to jobs rather than as a total, so a later additive native job inherits the invariant

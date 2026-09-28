@@ -403,10 +403,21 @@ test('§28.21 — T-12 adds no blanket ban on visual richness', () => {
 
 test('§28.22–23 — no final palette, material or Graphic Language token is frozen by T-12', () => {
   const contract = read('tests/t12-integration-contract.test.mjs');
-  // The integration layer paints nothing and names no colour at all.
+  // The integration layer names no colour at all.
   assert.doesNotMatch(layerCode, /#[0-9a-fA-F]{6}\b|rgba?\(/u, 'T-12 defines no colour');
-  for (const visual of ['palette', 'gradient', 'shadowColor', 'fontFamily', 'letterSpacing']) {
+  for (const visual of ['gradient', 'shadowColor', 'fontFamily', 'letterSpacing']) {
     assert.equal(layerCode.includes(visual), false, `final Graphic Language is VI-03's: ${visual}`);
+  }
+  // W1B-01 re-anchor. T-12 froze no palette, and still freezes none: the one palette the layer may read
+  // is the frozen visual language W1A-01 generated from the canonical token tree, published by the
+  // Conversation owner, which the T-14 Sign-in form now stands in. The expired fact is "the word does
+  // not appear"; what is asserted instead is that the layer DEFINES no palette — every mention is the
+  // Conversation owner's `usePalette()` or a read of one of its roles.
+  for (const match of layerCode.matchAll(/\w*palette\w*(?:\.\w+)?/giu)) {
+    assert.match(match[0], /^(?:usePalette|palette\.\w+|palette)$/u, `the integration layer defines a palette: ${match[0]}`);
+  }
+  for (const match of layerCode.matchAll(/(?:const|let|var)\s+palette\b[^=]*=\s*([^;\n]+)/gu)) {
+    assert.equal(match[1].trim(), 'usePalette()', `no palette is built in the integration layer: ${match[1]}`);
   }
   // And no guard anywhere pins the Map's placeholder colours, which would freeze the placeholder as
   // the final design and block the task that must replace it. Asserted as `no colour literal at all`:

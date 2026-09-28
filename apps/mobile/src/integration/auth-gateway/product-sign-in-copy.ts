@@ -114,6 +114,10 @@ export function signInFailureMessage(copy: ProductSignInCopy, kind: SignInFailur
       return copy.network;
     case 'UNEXPECTED':
       return copy.unexpected;
+    // W1B-01: the Auth Gateway routes this kind to Email verification before any sentence is chosen.
+    // Only a gateway given no route reaches here, and then it has not signed the reader in — true.
+    case 'EMAIL_NOT_CONFIRMED':
+      return copy.unexpected;
     default: {
       const exhaustive: never = kind;
       return exhaustive;
@@ -137,6 +141,9 @@ export function clearsPasswordAfter(kind: SignInFailureKind): boolean {
       return false;
     case 'UNEXPECTED':
       return true;
+    // W1B-01: the provider accepted the password before reporting the Email unverified.
+    case 'EMAIL_NOT_CONFIRMED':
+      return false;
     default: {
       const exhaustive: never = kind;
       return exhaustive;

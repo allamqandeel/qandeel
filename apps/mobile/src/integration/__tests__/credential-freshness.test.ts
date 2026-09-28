@@ -143,10 +143,14 @@ describe('AC-01 — a token refresh reaches the wire without disturbing anything
     // Token A was used for the create — which WAS issued before the refresh — and never again.
     const afterCreate = http.calls.slice(1);
     expect(afterCreate.filter((call) => call.authorization === BEARER_A)).toEqual([]);
+    // W1B-01 re-anchor: READY now also reads the account's first-use state once. The delivery fact that
+    // expired is "READY issues no further request"; what is asserted instead is strictly stronger — the
+    // new request, too, is issued on the AC-01 seam and carries the refreshed token, never token A.
     expect(wire(http)).toEqual([
       `POST /v1/conversation/sessions :: ${BEARER_A}`,
       `GET /v1/conversation/sessions/${SESSION_A}/temporal :: ${BEARER_B}`,
       `GET /v1/conversation/sessions/${SESSION_A}/historical-projection :: ${BEARER_B}`,
+      `GET /v1/account/first-use :: ${BEARER_B}`,
     ]);
 
     runtime.dispose();

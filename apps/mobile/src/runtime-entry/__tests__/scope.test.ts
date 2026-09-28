@@ -15,13 +15,19 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // consume exactly this and nothing deeper.
   // W1A-01 added exactly two, deliberately: the Conversation turn transport (a plain class, like the
   // Session client) and the history page bound it asks for.
+  // W1B-01 added exactly three, deliberately: the account transport and the signed-out Login ID
+  // availability transport (plain classes, like the Session client), and the two sign-up metadata key
+  // names migration 0123 reads — a pair of identifiers, not reader-facing copy.
   expect(Object.keys(runtimeEntry).sort()).toEqual([
+    'AccountApiClient',
     'CONVERSATION_HISTORY_PAGE_LIMIT',
     'ConversationSessionApiClient',
     'ConversationTurnApiClient',
     'FOREGROUND_CATCH_UP_INTERVAL_MS',
+    'LoginIdAvailabilityClient',
     'MAX_CATCH_UP_BACKOFF_MS',
     'MOBILE_PUBLIC_CONFIG_KEYS',
+    'SIGN_UP_METADATA_KEYS',
     'SUPABASE_AUTH_OPTIONS',
     'bootstrapCanonicalRuntime',
     'createAppStateForegroundSignal',
@@ -55,7 +61,8 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     if (typeof value !== 'function') continue;
     // A React component is conventionally PascalCase. Every function here is a factory, a reader or
     // a class, and `ConversationSessionApiClient` is a plain class with no render.
-    if (name === 'ConversationSessionApiClient' || name === 'ConversationTurnApiClient') continue;
+    // W1B-01's two account transports are plain classes too.
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a
