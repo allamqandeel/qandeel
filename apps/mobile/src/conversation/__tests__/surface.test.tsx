@@ -3,7 +3,7 @@
  * direction, accessible names, the approved send / waiting / failure states, and nothing invented.
  */
 import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { AccessibilityInfo, StyleSheet } from 'react-native';
 
 import { ConversationSurface, conversationCopy, createConversationController, type ConversationController } from '..';
 import type { ChromeLanguage } from '../../orientation-chrome';
@@ -161,14 +161,14 @@ describe('W1A-01 — accessible names are the approved ones', () => {
   it('the exact approved strings, both languages', () => {
     expect(conversationCopy('ar')).toMatchObject({
       composerPlaceholder: 'كلامك هنا', composerName: 'رسالتك لقنديل', sendName: 'إرسال', waitingForReply: 'في انتظار رد قنديل',
-      sendUnconfirmed: 'تعذّر التأكد من إرسال الرسالة.', replyFailed: 'تعذّر إكمال رد قنديل.', historyUnavailable: 'تعذّر تحميل المحادثة.',
+      sendUnconfirmed: 'تعذّر التأكد من إرسال الرسالة.', sendRefused: 'تعذّر إرسال الرسالة.', replyFailed: 'تعذّر إكمال رد قنديل.', historyUnavailable: 'تعذّر تحميل المحادثة.',
       tryAgain: 'إعادة المحاولة', doorLabel: 'تحليل المحادثة', doorName: 'تحليل المحادثة', backLabel: 'المحادثة', backName: 'المحادثة',
     });
     expect(conversationCopy('ar').userTurnName('x')).toBe('كلامك: x');
     expect(conversationCopy('ar').replyTurnName('x')).toBe('قنديل: x');
     expect(conversationCopy('en')).toMatchObject({
       composerPlaceholder: 'Write here', composerName: 'Your message to QANDEEL', sendName: 'Send', waitingForReply: "Waiting for QANDEEL's reply",
-      sendUnconfirmed: "It couldn't be confirmed that the message was sent.", replyFailed: "QANDEEL's reply couldn't be completed.",
+      sendUnconfirmed: "It couldn't be confirmed that the message was sent.", sendRefused: "The message wasn't sent.", replyFailed: "QANDEEL's reply couldn't be completed.",
       historyUnavailable: "The conversation didn't load.", tryAgain: 'Try again', doorLabel: 'Analysis', doorName: 'Analysis of this conversation',
       backLabel: 'Conversation', backName: 'Conversation',
     });
@@ -239,6 +239,34 @@ describe('W1A-01 — the send flow as the Product Owner approved it', () => {
       { content: 'fixture: hello', idempotencyKey: 'key-1' },
       { content: 'fixture: hello', idempotencyKey: 'key-1' },
     ]);
+  });
+
+  it.each([
+    ['ar', 'تعذّر إرسال الرسالة.'],
+    ['en', "The message wasn't sent."],
+  ] as const)('%s: a definitive refusal shows the approved "not sent" line, announces it, leaves the words editable, and offers NO retry', async (language, line) => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility').mockImplementation(() => undefined);
+    const { view, transport } = await mounted(language, []);
+    await type(view, 'fixture: words');
+    await fireEvent.press(view.getByTestId('qandeel-conversation-send'));
+    await act(async () => {
+      transport.answerSubmit({ kind: 'REFUSED', status: 422 });
+      await flush();
+    });
+    const refused = view.getByTestId('qandeel-conversation-refused');
+    const [{ node, text }] = texts(byTestId(view, 'qandeel-conversation-refused'));
+    expect(text).toBe(line);
+    expect(style(node).color).toBe(PALETTE.error);
+    expect(refused).toBeTruthy();
+    expect(announce).toHaveBeenCalledWith(line);
+    // No server word, no ambiguous-outcome wording, no retry control.
+    expect(view.queryByText(conversationCopy(language).sendUnconfirmed)).toBeNull();
+    expect(view.queryByTestId('qandeel-conversation-send-retry')).toBeNull();
+    const input = view.getByTestId('qandeel-conversation-input');
+    expect(input.props.value).toBe('fixture: words');
+    expect(input.props.editable).toBe(true);
+    expect(view.getByTestId('qandeel-conversation-send')).toBeTruthy();
+    announce.mockRestore();
   });
 
   it('a committed turn whose reply failed shows the approved failure on QANDEEL’s side and NO retry', async () => {

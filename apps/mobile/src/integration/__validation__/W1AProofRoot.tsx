@@ -9,7 +9,7 @@
  * Conversation, the Living Analysis Map, the controller and the transport — is the shipped one.
  */
 import { useEffect, useState } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { Linking, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
@@ -20,8 +20,11 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createW1AProofWorld } from './w1a-proof-world';
 
-function buildProofRuntime(): IntegrationRuntime {
-  const world = createW1AProofWorld(deviceProductLanguage());
+/** Opening the proof through this link starts it signed out, on the Sign-in gateway (keyboard proof). */
+export const W1A_PROOF_SIGN_IN_LINK = 'qandeel://w1a-proof/sign-in';
+
+function buildProofRuntime(signedIn: boolean): IntegrationRuntime {
+  const world = createW1AProofWorld(deviceProductLanguage(), undefined, signedIn);
   const built = createIntegrationRuntime({
     config: world.config,
     authPort: world.auth,
@@ -35,16 +38,28 @@ function buildProofRuntime(): IntegrationRuntime {
 }
 
 export function W1AProofRoot() {
-  const [runtime] = useState(buildProofRuntime);
+  const [runtime, setRuntime] = useState<IntegrationRuntime | null>(null);
   useEffect(() => {
-    void runtime.start();
-    return () => runtime.dispose();
-  }, [runtime]);
+    let built: IntegrationRuntime | null = null;
+    let cancelled = false;
+    void Linking.getInitialURL()
+      .catch(() => null)
+      .then((url) => {
+        if (cancelled) return;
+        built = buildProofRuntime(url !== W1A_PROOF_SIGN_IN_LINK);
+        setRuntime(built);
+        void built.start();
+      });
+    return () => {
+      cancelled = true;
+      built?.dispose();
+    };
+  }, []);
   return (
     <GestureHandlerRootView style={styles.root}>
       <View style={styles.root} testID={PRODUCT_ROOT_TEST_ID}>
         <StatusBar style="auto" />
-        <RuntimePhaseSurface runtime={runtime} />
+        {runtime === null ? null : <RuntimePhaseSurface runtime={runtime} />}
       </View>
     </GestureHandlerRootView>
   );

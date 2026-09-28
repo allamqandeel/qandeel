@@ -5,6 +5,8 @@
  * so ordering, late answers and retirement are proven rather than raced.
  */
 import {
+  ABANDONED_REPLY_RECHECKS,
+  ABANDONED_REPLY_RECHECK_MS,
   MAX_SUBMISSION_LENGTH,
   SUBMISSION_CONFIRMATION_WINDOW_MS,
   createConversationController,
@@ -141,7 +143,7 @@ describe('W1A-01 — sending one logical submission', () => {
     expect(r.transport.submissions).toHaveLength(1);
   });
 
-  it('a definitive refusal commits nothing and gives the words back, editable', async () => {
+  it('a definitive refusal commits nothing, gives the words back editable, and says they were not sent', async () => {
     for (const outcome of [{ kind: 'REFUSED', status: 409 } as const, { kind: 'NOT_ISSUED' } as const]) {
       const r = rig();
       await loaded(r, []);
@@ -151,11 +153,32 @@ describe('W1A-01 — sending one logical submission', () => {
       await flush();
       const state = r.controller.getState();
       expect(state.submission).toBeNull();
+      expect(state.refused).toBe(true);
       expect(state.draft).toBe('fixture: words');
       expect(state.exchanges).toEqual([]);
+      // Editable, and no retry is implied: retrySubmission has nothing to act on.
       r.controller.setDraft('fixture: edited');
       expect(r.controller.getState().draft).toBe('fixture: edited');
+      r.controller.retrySubmission();
+      expect(r.transport.submissions).toHaveLength(1);
+      // Sending again is a NEW submission under a NEW key, and it clears the line.
+      r.controller.send();
+      expect(r.transport.submissions[1].submission).toEqual({ content: 'fixture: edited', idempotencyKey: 'key-2' });
+      expect(r.controller.getState().refused).toBe(false);
     }
+  });
+
+  it('emptying the composer after a refusal clears the "not sent" line', async () => {
+    const r = rig();
+    await loaded(r, []);
+    r.controller.setDraft('fixture: words');
+    r.controller.send();
+    r.transport.answerSubmit({ kind: 'REFUSED', status: 422 });
+    await flush();
+    r.controller.setDraft('fixture: word');
+    expect(r.controller.getState().refused).toBe(true);
+    r.controller.setDraft('');
+    expect(r.controller.getState().refused).toBe(false);
   });
 });
 
@@ -318,6 +341,133 @@ describe('W1A-01 — the authoritative conversation-so-far', () => {
     r.transport.answerRead(page([answered]));
     await flush();
     expect(r.controller.getState().exchanges).toEqual([answered]);
+  });
+});
+
+describe('W1A-01 — a committed turn restored as PENDING (e.g. after a crash)', () => {
+  const restoredKey = 'restored-key';
+  const restored = () => exchange('fixture: words before the crash', { key: restoredKey, replyState: 'PENDING' });
+  const fired = new WeakSet<object>();
+  const armed = (r: Rig) => r.timers.filter((timer) => timer.ms === ABANDONED_REPLY_RECHECK_MS && !timer.cleared && !fired.has(timer));
+  const fire = (timer: Rig['timers'][number]) => {
+    fired.add(timer);
+    timer.callback();
+  };
+
+  async function restoredRig(): Promise<{ r: Rig; pending: ReturnType<typeof restored> }> {
+    const r = rig();
+    const pending = restored();
+    await loaded(r, [pending]);
+    return { r, pending };
+  }
+
+  /** Fire the one armed re-check, answer its same-key replay, then answer the history read that follows. */
+  async function recheck(r: Rig, replay: Parameters<ScriptedTransport['answerSubmit']>[0], reread: Parameters<ScriptedTransport['answerRead']>[0]) {
+    const [timer] = armed(r);
+    fire(timer);
+    await flush();
+    r.transport.answerSubmit(replay);
+    await flush();
+    r.transport.answerRead(reread);
+    await flush();
+  }
+
+  it('before its lease can have expired nothing is sent: the turn stays PENDING and only one re-check is armed', async () => {
+    const { r, pending } = await restoredRig();
+    expect(r.controller.getState().exchanges).toEqual([pending]);
+    expect(r.transport.submissions).toHaveLength(0);
+    expect(armed(r)).toHaveLength(1);
+    expect(ABANDONED_REPLY_RECHECK_MS).toBeGreaterThan(SUBMISSION_CONFIRMATION_WINDOW_MS);
+    // A second read of the same PENDING turn arms nothing more.
+    r.controller.ensureHistory();
+    r.transport.answerRead(page([pending]));
+    await flush();
+    expect(armed(r)).toHaveLength(1);
+    expect(r.transport.submissions).toHaveLength(0);
+  });
+
+  it('a live lease stays PENDING: the re-check is the SAME key and words, the server leaves it, and it is re-checked once more at most', async () => {
+    const { r, pending } = await restoredRig();
+    await recheck(r, { kind: 'ANSWERED', exchange: pending }, page([pending]));
+    expect(r.transport.submissions.map((s) => s.submission)).toEqual([{ content: pending.userTurn.content, idempotencyKey: restoredKey }]);
+    expect(r.controller.getState().exchanges).toEqual([pending]);
+    expect(armed(r)).toHaveLength(1);
+    await recheck(r, { kind: 'ANSWERED', exchange: pending }, page([pending]));
+    // Still truthfully PENDING, and never polled again.
+    expect(r.controller.getState().exchanges).toEqual([pending]);
+    expect(armed(r)).toHaveLength(0);
+    expect(r.transport.submissions).toHaveLength(ABANDONED_REPLY_RECHECKS);
+    expect(r.transport.pending()).toEqual({ submits: 0, reads: 0 });
+  });
+
+  it('an expired, abandoned GENERATING turn converges to FAILED through the server recovery, and FAILED is never re-entered', async () => {
+    const { r, pending } = await restoredRig();
+    const failed = { ...pending, replyState: 'FAILED' as const };
+    await recheck(r, { kind: 'ANSWERED', exchange: failed }, page([failed]));
+    expect(r.controller.getState().exchanges).toEqual([failed]);
+    expect(armed(r)).toHaveLength(0);
+    expect(r.transport.submissions).toHaveLength(1);
+    expect(r.catchUps.count).toBe(0);
+    // A later read of the same FAILED turn arms nothing: no reopening, no replacement turn.
+    r.controller.ensureHistory();
+    r.transport.answerRead(page([failed]));
+    await flush();
+    expect(armed(r)).toHaveLength(0);
+    expect(r.transport.submissions).toHaveLength(1);
+  });
+
+  it('a late COMPLETED converges from the reread, and the Analysis owners are asked to catch up', async () => {
+    const { r, pending } = await restoredRig();
+    const completed = { ...pending, replyState: 'COMPLETED' as const, reply: { id: 'reply-late', content: 'fixture: late reply', createdAt: pending.userTurn.createdAt } };
+    // The replay itself still sees GENERATING; the history read that follows has the reply.
+    await recheck(r, { kind: 'ANSWERED', exchange: pending }, page([completed]));
+    expect(r.controller.getState().exchanges).toEqual([completed]);
+    expect(r.catchUps.count).toBe(1);
+    expect(armed(r)).toHaveLength(0);
+    expect(r.transport.submissions).toHaveLength(1);
+  });
+
+  it('an unanswerable re-check still rereads the history, and the bound holds', async () => {
+    const { r, pending } = await restoredRig();
+    await recheck(r, { kind: 'OUTCOME_UNKNOWN', reason: 'NETWORK' }, { kind: 'UNAVAILABLE', reason: 'NETWORK' });
+    expect(r.controller.getState().exchanges).toEqual([pending]);
+    await recheck(r, { kind: 'OUTCOME_UNKNOWN', reason: 'NETWORK' }, { kind: 'UNAVAILABLE', reason: 'NETWORK' });
+    expect(armed(r)).toHaveLength(0);
+    expect(r.transport.submissions).toHaveLength(ABANDONED_REPLY_RECHECKS);
+  });
+
+  it('no duplicate admission: every re-check reuses the turn\'s own key, a turn without a key or already resolved is never re-sent, and nothing survives retirement', async () => {
+    const r = rig();
+    const pending = restored();
+    const keyless = exchange('fixture: keyless words', { key: null, replyState: 'PENDING' });
+    const completed = exchange('fixture: answered');
+    const failed = exchange('fixture: failed', { replyState: 'FAILED' });
+    await loaded(r, [completed, failed, keyless, pending]);
+    expect(armed(r)).toHaveLength(1);
+    await recheck(r, { kind: 'ANSWERED', exchange: pending }, page([completed, failed, keyless, pending]));
+    await recheck(r, { kind: 'ANSWERED', exchange: pending }, page([completed, failed, keyless, pending]));
+    expect(new Set(r.transport.submissions.map((s) => s.submission.idempotencyKey))).toEqual(new Set([restoredKey]));
+    expect(r.controller.getState().exchanges).toHaveLength(4);
+
+    const retiring = await restoredRig();
+    retiring.r.controller.retire();
+    expect(armed(retiring.r)).toHaveLength(0);
+  });
+
+  it('the reader\'s own outstanding request for the same turn is the one that answers: the re-check waits for it', async () => {
+    const r = rig();
+    await loaded(r, []);
+    r.controller.setDraft('fixture: words');
+    r.controller.send();
+    // A history read during the request already shows the admitted turn, PENDING.
+    const admitted = exchange('fixture: words', { key: 'key-1', replyState: 'PENDING' });
+    r.controller.ensureHistory();
+    r.transport.answerRead(page([admitted]));
+    await flush();
+    fire(armed(r)[0]);
+    await flush();
+    expect(r.transport.submissions).toHaveLength(1);
+    expect(armed(r)).toHaveLength(1);
   });
 });
 

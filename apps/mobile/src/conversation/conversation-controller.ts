@@ -20,11 +20,26 @@
  *   - A committed turn whose reply FAILED stays in the conversation with its failure and has NO
  *     retry here: the frozen turn-state machine makes FAILED terminal and forbids a replacement
  *     turn, so reply retry is outside W1A-01.
+ *   - A definitive refusal before admission (a 4xx, or a request that could not be issued at all)
+ *     commits nothing: the words go back to the reader, editable, with the approved "not sent" line.
+ *     It implies no retry: a later Send is a NEW submission under a NEW key.
  *   - No automatic repetition of a submission. An ambiguous outcome is first RESOLVED BY READING
  *     the history (which admits nothing): a turn found under this submission's key is the answer.
- *     The single automatic request this owner ever sends on its own is the same-key replay of a
- *     turn that reading has ALREADY shown COMPLETED — the server's explicitly supported, idempotent
- *     re-entry into post-finalization establishment, which cannot generate or admit anything.
+ *
+ * ## The only requests this owner sends on its own
+ *
+ * Both are same-key replays of a turn the server ALREADY admitted, so neither can admit a turn:
+ *
+ *   - a turn reading has shown COMPLETED re-enters post-finalization establishment (the server's
+ *     explicitly supported, idempotent recovery), which cannot generate anything;
+ *   - a committed turn still PENDING — typically one restored after a crash — is re-checked through
+ *     the SAME canonical path, but only once its generation lease can have expired. For a GENERATING
+ *     turn that path is the server's bounded liveness check: a live lease is left alone (still
+ *     PENDING), an expired one becomes canonical FAILED, and neither reaches a provider. A turn that
+ *     never got as far as its claim is claimed there once, atomically, so it is generated at most
+ *     once however many requests race for it. After each re-check the history is read again, and a
+ *     turn is re-checked at most `ABANDONED_REPLY_RECHECKS` times, so a turn the server still reports
+ *     as PENDING afterwards stays truthfully PENDING instead of being polled.
  */
 import type {
   ConversationExchangeView,
@@ -67,6 +82,11 @@ export interface ConversationPresentationState {
   /** The composer's text. While a submission is unresolved it is that submission's words. */
   readonly draft: string;
   readonly submission: PendingSubmission | null;
+  /**
+   * The last submission was definitively refused before admission and its words are back in the
+   * composer. Cleared by the next Send, or when the reader empties the composer.
+   */
+  readonly refused: boolean;
 }
 
 export interface ConversationController {
@@ -114,6 +134,19 @@ export const MAX_SUBMISSION_LENGTH = 20000;
 export const SUBMISSION_CONFIRMATION_WINDOW_MS = 120_000;
 
 /**
+ * How long a committed PENDING turn is left alone before it is re-checked: the same frozen 120 s
+ * generation lease (migration 0039, fixed from the claim and never renewed), plus a margin for
+ * clock and transit. A lease that was live when the turn was seen has expired by then.
+ */
+export const ABANDONED_REPLY_RECHECK_MS = SUBMISSION_CONFIRMATION_WINDOW_MS + 5_000;
+
+/**
+ * How many times one PENDING turn is re-checked. The first re-check runs the server's recovery
+ * over a lease that has expired; the second covers a first re-check whose own answer was lost.
+ */
+export const ABANDONED_REPLY_RECHECKS = 2;
+
+/**
  * A submission key: unique per logical submission within the Session, never a credential and never
  * a Session identity. It carries no reader data, so it is safe in presentation state.
  */
@@ -149,18 +182,74 @@ export function createConversationController(options: ConversationControllerOpti
     loadingOlder: false,
     draft: '',
     submission: null,
+    refused: false,
   });
   const listeners = new Set<() => void>();
   let retired = false;
   let historyRequested = false;
-  let historyInFlight = false;
+  let newestRead: Promise<void> | null = null;
   let confirmationTimer: unknown = null;
+  /** Committed PENDING turns under re-check, by user-turn id. An entry is never removed, so its count holds. */
+  const rechecks = new Map<string, { count: number; timer: unknown; inFlight: boolean }>();
 
   const live = () => !retired && isCurrent();
 
   function update(patch: Partial<ConversationPresentationState>): void {
     state = Object.freeze({ ...state, ...patch });
+    if (patch.exchanges !== undefined) watchPending();
     for (const listener of Array.from(listeners)) listener();
+  }
+
+  /**
+   * Arm a re-check for every committed turn the server reports PENDING, and disarm it for every turn
+   * that has since resolved. Nothing is sent here: a re-check fires only after the lease window.
+   */
+  function watchPending(): void {
+    if (!live()) return;
+    for (const exchange of state.exchanges) {
+      const entry = rechecks.get(exchange.userTurn.id);
+      if (exchange.replyState !== 'PENDING') {
+        if (entry !== undefined && entry.timer !== null) {
+          clearTimer(entry.timer);
+          entry.timer = null;
+        }
+        continue;
+      }
+      // Without its key a turn has no same-key path to the server's recovery, so it is left as reported.
+      if (exchange.userTurn.idempotencyKey === null) continue;
+      if (entry !== undefined && (entry.timer !== null || entry.inFlight || entry.count >= ABANDONED_REPLY_RECHECKS)) continue;
+      const armed = entry ?? { count: 0, timer: null, inFlight: false };
+      rechecks.set(exchange.userTurn.id, armed);
+      armed.timer = setTimer(() => recheck(exchange.userTurn.id), ABANDONED_REPLY_RECHECK_MS);
+    }
+  }
+
+  /** Re-check one PENDING turn through the canonical same-key path, then read the history again. */
+  function recheck(turnId: string): void {
+    const entry = rechecks.get(turnId);
+    if (entry === undefined) return;
+    entry.timer = null;
+    const exchange = state.exchanges.find((candidate) => candidate.userTurn.id === turnId);
+    const key = exchange?.userTurn.idempotencyKey ?? null;
+    if (!live() || exchange === undefined || exchange.replyState !== 'PENDING' || key === null) return;
+    if (state.submission !== null && state.submission.key === key) {
+      // The reader's own request for this turn is still outstanding: it is the one that answers.
+      entry.timer = setTimer(() => recheck(turnId), ABANDONED_REPLY_RECHECK_MS);
+      return;
+    }
+    entry.count += 1;
+    entry.inFlight = true;
+    void transport.submitTurn(sessionId, { content: exchange.userTurn.content, idempotencyKey: key }).then(async (outcome) => {
+      if (!live()) return;
+      if (outcome.kind === 'ANSWERED') update({ exchanges: mergeExchanges(state.exchanges, [outcome.exchange]) });
+      // Whatever this answer was, the authoritative history decides what is shown.
+      await readNewest();
+      entry.inFlight = false;
+      if (!live()) return;
+      const now = state.exchanges.find((candidate) => candidate.userTurn.id === turnId);
+      if (now?.replyState === 'COMPLETED') onReplyCommitted();
+      watchPending();
+    });
   }
 
   function stopConfirmationWindow(): void {
@@ -218,11 +307,10 @@ export function createConversationController(options: ConversationControllerOpti
         return;
       case 'REFUSED':
       case 'NOT_ISSUED':
-        // Refused before admission: nothing was committed. The words go back to the reader,
-        // editable, and the submission is over. (No approved wording exists for this state, so it
-        // speaks none — see the implementation record.)
+        // Refused before admission: nothing was committed. The words go back to the reader, editable,
+        // with the approved "not sent" line, and the submission is over. Its key dies with it.
         stopConfirmationWindow();
-        update({ submission: null, draft: content });
+        update({ submission: null, draft: content, refused: true });
         return;
       case 'OUTCOME_UNKNOWN':
         void reconcile(content, key);
@@ -231,7 +319,7 @@ export function createConversationController(options: ConversationControllerOpti
   }
 
   function issue(content: string, key: string): void {
-    update({ submission: { content, key, phase: 'AWAITING' }, draft: content });
+    update({ submission: { content, key, phase: 'AWAITING' }, draft: content, refused: false });
     stopConfirmationWindow();
     confirmationTimer = setTimer(() => {
       confirmationTimer = null;
@@ -241,11 +329,11 @@ export function createConversationController(options: ConversationControllerOpti
     void transport.submitTurn(sessionId, { content, idempotencyKey: key }).then((outcome) => apply(content, key, outcome));
   }
 
-  function readNewest(): void {
-    if (historyInFlight) return;
-    historyInFlight = true;
-    void transport.readHistory(sessionId).then((read) => {
-      historyInFlight = false;
+  /** Read the newest page. A read already in flight is shared, never doubled. */
+  function readNewest(): Promise<void> {
+    if (newestRead !== null) return newestRead;
+    newestRead = transport.readHistory(sessionId).then((read) => {
+      newestRead = null;
       if (!live()) return;
       if (read.kind === 'PAGE') {
         const first = state.history !== 'READY';
@@ -259,6 +347,7 @@ export function createConversationController(options: ConversationControllerOpti
         update({ history: 'UNAVAILABLE' });
       }
     });
+    return newestRead;
   }
 
   return {
@@ -272,12 +361,12 @@ export function createConversationController(options: ConversationControllerOpti
     ensureHistory() {
       if (!live()) return;
       historyRequested = true;
-      readNewest();
+      void readNewest();
     },
     retryHistory() {
       if (!live() || !historyRequested || state.history !== 'UNAVAILABLE') return;
       update({ history: 'LOADING' });
-      readNewest();
+      void readNewest();
     },
     loadOlder() {
       if (!live() || !state.hasOlder || state.loadingOlder || state.exchanges.length === 0) return;
@@ -295,7 +384,9 @@ export function createConversationController(options: ConversationControllerOpti
     },
     setDraft(text) {
       if (!live() || state.submission !== null) return;
-      update({ draft: text.length > MAX_SUBMISSION_LENGTH ? text.slice(0, MAX_SUBMISSION_LENGTH) : text });
+      const draft = text.length > MAX_SUBMISSION_LENGTH ? text.slice(0, MAX_SUBMISSION_LENGTH) : text;
+      // An emptied composer holds no refused words any more, so the "not sent" line goes with them.
+      update(draft.length === 0 ? { draft, refused: false } : { draft });
     },
     send() {
       if (!live() || state.submission !== null) return;
@@ -312,6 +403,10 @@ export function createConversationController(options: ConversationControllerOpti
       if (retired) return;
       retired = true;
       stopConfirmationWindow();
+      for (const entry of rechecks.values()) {
+        if (entry.timer !== null) clearTimer(entry.timer);
+        entry.timer = null;
+      }
       listeners.clear();
     },
   };

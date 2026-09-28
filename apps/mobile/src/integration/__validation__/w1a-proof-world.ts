@@ -77,6 +77,11 @@ export interface W1AProofWorld {
 export function createW1AProofWorld(
   language: ChromeLanguage,
   holds: { readonly firstSendMs: number; readonly retryMs: number } = { firstSendMs: FIRST_SEND_HOLD_MS, retryMs: RETRY_HOLD_MS },
+  /**
+   * `false` starts the proof signed out, so the production Sign-in gateway is what renders (the
+   * keyboard proof). Its identity still exists only in memory, and the proof never submits the form.
+   */
+  signedIn = true,
 ): W1AProofWorld {
   const history = fixtureHistory(language);
   let posts = 0;
@@ -118,7 +123,7 @@ export function createW1AProofWorld(
   // Already authenticated, in memory only. It never signs in, never stores and never refreshes.
   const reader = { userId: 'w1a-proof-reader', accessToken: 'w1a-proof-bearer' };
   const auth: SupabaseAuthPort = {
-    restoreSession: async () => ({ ok: true, value: reader }),
+    restoreSession: async () => ({ ok: true, value: signedIn ? reader : null }),
     signInWithPassword: async () => ({ ok: true, value: reader }),
     signOut: async () => ({ ok: true, value: null }),
     onSessionChange: () => () => undefined,

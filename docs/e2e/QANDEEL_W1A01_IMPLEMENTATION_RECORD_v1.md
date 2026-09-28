@@ -52,6 +52,7 @@ added there.
 | Send outcome unknown (replacement wording, final decision) | تعذّر التأكد من إرسال الرسالة. | It couldn't be confirmed that the message was sent. |
 | Reply failed | تعذّر إكمال رد قنديل. | QANDEEL's reply couldn't be completed. |
 | Conversation history failed to load | تعذّر تحميل المحادثة. | The conversation didn't load. |
+| Send definitively refused before admission (approved in the W1A-01 correction pass) | تعذّر إرسال الرسالة. | The message wasn't sent. |
 
 The first approved ambiguous-send wording («لم نتأكد من إرسال الرسالة.» / "We couldn't confirm the message was sent.")
 is **superseded** by the replacement above, which follows VI-01's process-framed failure pattern.
@@ -63,9 +64,8 @@ markers; and every server message, status value, test id or engineering term.
 
 ### Copy needs found during implementation, NOT invented (reported to the Product Owner)
 
-| State | What happens now | Why no words |
-|---|---|---|
-| The server definitively REFUSES a send before admission (`4xx`, e.g. the Session no longer accepts turns) | the words return to the editable composer; nothing is shown | no approved wording exists for "not sent"; the unconfirmed line would be false, because the client KNOWS nothing was committed |
+The definitive-refusal need reported here in Phase B was answered by the Product Owner in the correction pass with the
+wording above (§10). No copy need of the Conversation layer remains open.
 
 ## 3. Interaction behaviour — as implemented
 
@@ -77,14 +77,17 @@ markers; and every server message, status value, test id or engineering term.
 | One in flight | one unresolved logical submission at a time; nothing else can be sent or typed | `conversation-controller.ts` |
 | Cancel (B-05) | not implemented | — |
 | Send outcome unknown | first resolved BY READING the history (which admits nothing) for a turn under this submission's key; if none, the words stay locked with «تعذّر التأكد من إرسال الرسالة.» and «إعادة المحاولة», which re-issues the SAME words under the SAME key | `conversation-controller.ts` |
+| Send definitively refused (`4xx` before admission, or a request that could not be issued) | nothing was committed: the words return to the EDITABLE composer with «تعذّر إرسال الرسالة.» / "The message wasn't sent.", shown and announced; no retry is offered or implied, and the next Send is a NEW submission under a NEW key; no server word is shown | `conversation-controller.ts`, `ConversationSurface.tsx` |
 | Confirmed reply failure | the committed user turn stays in the conversation with «تعذّر إكمال رد قنديل.» on QANDEEL's side; **no retry**; no FAILED turn is reopened or replaced (Option C) | `conversation-controller.ts`, `ConversationSurface.tsx` |
-| Reply exists but post-finalization establishment failed | reading finds the COMPLETED turn; the exchange is shown, and the server's explicitly supported same-key replay re-enters establishment — the ONE automatic request, which cannot generate or admit anything | `conversation-controller.ts` |
+| Reply exists but post-finalization establishment failed | reading finds the COMPLETED turn; the exchange is shown, and the server's explicitly supported same-key replay re-enters establishment, which cannot generate or admit anything | `conversation-controller.ts` |
+| A committed turn still PENDING (e.g. restored from history after a crash) | shown with the waiting line and left alone for `ABANDONED_REPLY_RECHECK_MS` (the frozen 120 s generation lease + 5 s). Then it is re-checked through the EXISTING same-key path — for GENERATING that is the orchestrator's bounded liveness check (`recover_expired_generating_conversation_turn_v1`): a live lease stays PENDING, an expired one becomes canonical FAILED, neither reaches a provider; a turn that never reached its claim is claimed there once, atomically — and the authoritative history is read again. At most `ABANDONED_REPLY_RECHECKS` (2) re-checks per turn; a turn still PENDING after them stays truthfully PENDING. FAILED and COMPLETED turns, and turns without a key, are never re-sent; no key is minted; the turn-state machine is unchanged (§10) | `conversation-controller.ts` |
 | No answer at all | after the frozen 120-second generation lease with no answer, the submission is reconciled by reading exactly as an unknown outcome; a late answer is still applied | `SUBMISSION_CONFIRMATION_WINDOW_MS` |
 | History | completed exchanges, committed turns whose reply FAILED (with that state), and committed turns still awaiting a reply (with the waiting line), oldest to newest; rebuilt from the server after every restart | API `listTurns`, `conversation-controller.ts` |
 | Scrolling | opens at the newest turn; follows a new reply only when the reader is near the newest turn; never pulls a reader off older turns; no "new message" pill; older pages load as the top approaches | `ConversationSurface.tsx` |
 | Landing | after sign-in and after restart: the Conversation. Depth is never persisted (the T-13 recovery record is unchanged) | `DepthComposition.tsx` |
-| Depth transition | F2's symmetric appearance cross-fade (`qandeel.appearance.switch.crossfade`, 200 ms, linear) in standard motion; a cut under Reduced Motion (`crossfade-reduced-motion`, 0 ms). The outgoing depth stays opaque beneath the incoming one. The fade starts on the incoming depth's first layout, so a slow mount cannot use up its 200 ms before the first frame (§7) | `DepthComposition.tsx` |
-| Keyboard | the composer and Send stay above the keyboard on both platforms, including Android 15+'s enforced edge-to-edge window, which no longer resizes for the keyboard (§7) | `ConversationSurface.tsx` |
+| Depth transition | F2's symmetric appearance cross-fade (`qandeel.appearance.switch.crossfade`, 200 ms, linear) in standard motion; a cut under Reduced Motion (`crossfade-reduced-motion`, 0 ms). The outgoing depth stays opaque beneath the incoming one. The fade starts only once the incoming depth is DRAWN — the Conversation on its first layout, the Analysis when the Map itself has composed (bounded by `ANALYSIS_COMPOSE_WAIT_CEILING_MS`, 1 s) — so a slow mount cannot use up its 200 ms before the first frame (§7, §10) | `DepthComposition.tsx`, `LivingAnalysisMap.tsx` |
+| Android system Back | at the Analysis depth, Back is the same act as «المحادثة» / Conversation: the same boundary, fade and Session, no route pushed or popped. At the Conversation depth nothing is registered, so the platform's own root behaviour is untouched (§10) | `DepthComposition.tsx` |
+| Keyboard | the composer and Send — and the T-14 Sign-in form (§10) — stay above the keyboard on both platforms, including Android 15+'s enforced edge-to-edge window, which no longer resizes for the keyboard (§7) | `ConversationSurface.tsx`, `ProductSignInGateway.tsx` |
 | Upper chrome | Conversation shows only the Conversation → Analysis control; Analysis gains only the Analysis → Conversation control | both surfaces |
 
 ## 4. Technical implementation
@@ -201,12 +204,10 @@ unchanged Map is its Analysis depth) and the T-12P public-barrel census (two del
 Sign-up, Name / Login ID, the openers and first use (W1B); the Global Shell, Shared and Public worlds (W1C and later);
 Memory through Conversation (W3); Voice Note and Live Call; Replay; cancel (B-05); reply retry after a confirmed
 failure (B-06, §6); Activity, the Understanding row and Settings; provider selection; the full I-08B1 world port (W4);
-an appearance preference; persisting the depth; mapping Android's system back to the depth switch.
+an appearance preference; persisting the depth.
 
-Known limitations, reported rather than solved here: a turn the server left PENDING (for example after a crash that
-recovery has not yet failed) is shown from history with the waiting line until the server resolves it, because the
-client may not decide a reply's fate; the definitive-refusal copy gap of §2; and the T-14 sign-in gateway, which W1A-01
-does not touch, has not been checked against Android 15+'s edge-to-edge keyboard behaviour that §7.1 found here.
+The Phase B known limitations (a PENDING turn left waiting indefinitely, the definitive-refusal copy gap, the unchecked
+Sign-in keyboard, Android system Back, and the forward fade) are resolved by the correction pass (§10).
 
 ## 9. Backlog (BG-05 / BG-08)
 
@@ -214,3 +215,33 @@ W1A-01 inherits no canonical backlog item (BG-05). `QAN-BL-SEC-01`'s constraint 
 id and every Product truth stay out of auth storage — nothing new is persisted at all. W1A-01 is a Draft
 implementation slice and closes no phase, so it records no closure and admits no backlog item; its open residue is
 already tracked by the E2E-01 gap matrix rows it names (B-05, B-06) and by §2's reported copy need.
+
+## 10. Correction pass (bounded; before merge-readiness)
+
+The Product Owner reviewed Phase B at `06a866c` and ordered one bounded correction pass for every defect the proof and
+the report surfaced. It adds no feature and changes no frozen contract.
+
+| # | Defect | Correction |
+|---|---|---|
+| 1 | A definitive pre-admission refusal returned the words silently | PO-approved «تعذّر إرسال الرسالة.» / "The message wasn't sent." (§2), visible and announced, words editable, no retry implied (§3) |
+| 2 | A committed turn restored as PENDING could wait forever, because the history read is a pure read | bounded same-key re-check after the lease, through the existing canonical recovery path, then an authoritative re-read (§3). No API, migration or state-machine change |
+| 3 | Android system Back was not mapped to the depth pair | Back at Analysis returns to the Conversation through the same boundary; at the Conversation it is not taken (§3) |
+| 4 | English Product / assistive language inside the Arabic Analysis surface | see §10.1 |
+| 5 | The T-14 Sign-in gateway relied on Android resizing the window for the keyboard, which Android 15+'s enforced edge-to-edge no longer does (measured on this branch's proof emulator for the Conversation) | `KeyboardAvoidingView` `padding` on both platforms, like the composer; verified by the focused keyboard proof (§10.2) |
+| 6 | Conversation → Analysis still reached the Analysis in one emulator frame: the Analysis depth's first layout is T-11's empty measuring pass, and the Map composes only after it | the fade into Analysis starts when the Map itself has composed (`LivingAnalysisMap` `onComposed`), bounded by a 1 s ceiling; Analysis → Conversation and the Reduced Motion cut are unchanged |
+| 7 | The Analysis world is still the pre-W4 map | not redesigned here; the full I-08B1 production port remains W4 |
+
+### 10.1 Arabic Analysis language leakage
+
+The audit covered the whole production subtree the Analysis depth renders (`LivingAnalysisMap` → `MapSurface` /
+`MapAccessibilityLayer`, `TemporalTargetLayer` / `LiveEdgeTarget` / `TimelinePresentation` / `PresentationNavigator` /
+`TemporalNavigator`, `OrientationChrome`). `OrientationChrome` and the Analysis band are already localized; the
+temporal, timeline and map-accessibility owners receive no language and speak hard-coded English. Status: awaiting the
+Product Owner's copy decision (see the Draft PR), because most of those strings have no authorized Arabic.
+
+### 10.2 Focused verification
+
+The four-way matrix of §7.1 is not repeated. `scripts/w1a/run-w1a-correction-proof.sh` runs one standard-motion
+recording of the depth boundary in both directions (the door forward, Android system Back returning), and the
+production Sign-in gateway with the keyboard open at the default and the largest text size, where the keyboard's
+inset frame and the element bounds are measured.

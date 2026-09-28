@@ -7,12 +7,14 @@
  * in for, through T-12P's own injection points.
  */
 import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { BackHandler } from 'react-native';
 import * as Reanimated from 'react-native-reanimated';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { MAP_SURFACE_TEST_ID } from '../../map';
 import { exchange, historyBody, submitBody } from '../../conversation/__fixtures__/conversation';
 import { resize } from '../../responsive/__fixtures__/composition';
+import { ANALYSIS_COMPOSE_WAIT_CEILING_MS } from '../composition/DepthComposition';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { SESSION_A, harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
 
@@ -57,10 +59,46 @@ async function cross(view: RenderResult, door: string, to: 'conversation' | 'ana
   await laidOut(view, to);
 }
 
-/** Into the Analysis depth, laid out in a real room so the world actually composes. */
+/**
+ * Into the Analysis depth, laid out in a real room so the world actually composes — which is the
+ * moment its cross-fade may begin (its own first layout is only an empty measuring pass).
+ */
 async function openAnalysis(view: RenderResult): Promise<void> {
-  await cross(view, 'qandeel-depth-to-analysis', 'analysis');
+  await press(view, 'qandeel-depth-to-analysis');
+  await laidOut(view, 'analysis');
   await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
+  await act(async () => {
+    await settle();
+  });
+}
+
+/** Android system Back, as the platform delivers it to whoever registered for it (last first). */
+function systemBack() {
+  type Handler = Parameters<typeof BackHandler.addEventListener>[1];
+  const handlers: { handler: Handler; removed: boolean }[] = [];
+  const spy = jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
+    const entry = { handler, removed: false };
+    handlers.push(entry);
+    return { remove: () => { entry.removed = true; } };
+  });
+  return {
+    spy,
+    live: () => handlers.filter((entry) => !entry.removed),
+    /** Press Back: true when this app consumed it, false when it reaches the platform. */
+    async press(): Promise<boolean> {
+      let consumed = false;
+      await act(async () => {
+        for (const entry of [...handlers].reverse()) {
+          if (!entry.removed && entry.handler({} as Parameters<Handler>[0]) === true) {
+            consumed = true;
+            break;
+          }
+        }
+        await settle();
+      });
+      return consumed;
+    },
+  };
 }
 
 /** Every mounted depth, including the outgoing one hidden from assistive technology beneath the fade. */
@@ -225,27 +263,118 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     h.dispose();
   });
 
-  it('the fade waits for the incoming depth to lay out, so a slow mount cannot turn it into a cut; turning back mid-fade still resolves', async () => {
+  it('the fade into Analysis waits for the Analysis WORLD to compose — not its empty first layout — so it cannot become a cut; turning back mid-wait still resolves', async () => {
     const timing = jest.spyOn(Reanimated, 'withTiming');
     const h = await signedIn();
     const view = await onRoute(h);
     await press(view, 'qandeel-depth-to-analysis');
-    // Mounted, beneath nothing yet: no clock is running until the Analysis has laid out.
+    // Mounted, beneath nothing yet: no clock is running.
     expect(fadesIn(timing)).toHaveLength(0);
     expect(layersMounted(view)).toBe(2);
-    // The reader turns back before the Analysis ever laid out: the Conversation is still mounted, lays
-    // out no more, and fades back at once — nothing is left waiting.
+    // The depth's own first layout is a measuring pass with nothing drawn: still no clock.
+    await laidOut(view, 'analysis');
+    expect(fadesIn(timing)).toHaveLength(0);
+    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    // The reader turns back before the world composed: the Conversation is still mounted, lays out no
+    // more, and fades back at once — nothing is left waiting.
     await press(view, 'qandeel-depth-to-conversation');
     expect(fadesIn(timing)).toHaveLength(1);
     expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
     expect(layersMounted(view)).toBe(1);
-    // And forward again: one fade, on layout.
+    // And forward again: one fade, when the Map itself is composed.
     await press(view, 'qandeel-depth-to-analysis');
-    expect(fadesIn(timing)).toHaveLength(1);
     await laidOut(view, 'analysis');
+    expect(fadesIn(timing)).toHaveLength(1);
+    await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
+    await act(async () => {
+      await settle();
+    });
+    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
     expect(fadesIn(timing)).toHaveLength(2);
     expect(layersMounted(view)).toBe(1);
     expect(view.queryByTestId('qandeel-conversation')).toBeNull();
+    view.unmount();
+    h.dispose();
+  });
+
+  it('a world that does not compose in time is faded in anyway at the ceiling: the boundary never waits on the network', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const timers = jest.spyOn(globalThis, 'setTimeout');
+    const h = await signedIn();
+    const view = await onRoute(h);
+    await press(view, 'qandeel-depth-to-analysis');
+    await laidOut(view, 'analysis');
+    expect(fadesIn(timing)).toHaveLength(0);
+    const ceiling = timers.mock.calls.filter(([, ms]) => ms === ANALYSIS_COMPOSE_WAIT_CEILING_MS);
+    expect(ceiling).toHaveLength(1);
+    await act(async () => {
+      (ceiling[0][0] as () => void)();
+      await settle();
+    });
+    expect(fadesIn(timing)).toHaveLength(1);
+    expect(layersMounted(view)).toBe(1);
+    // The world composing later does not fade it a second time.
+    await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
+    await act(async () => {
+      await settle();
+    });
+    expect(fadesIn(timing)).toHaveLength(1);
+    view.unmount();
+    h.dispose();
+  });
+
+  it('Android system Back at Analysis returns to the SAME Conversation through the same boundary — no route, no new Session, no canonical write', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const back = systemBack();
+    const h = await signedIn();
+    const view = await onRoute(h);
+    const runtime = h.ready();
+    const stateBefore = runtime.store.getState();
+    await openAnalysis(view);
+    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(back.live()).toHaveLength(1);
+
+    expect(await back.press()).toBe(true);
+    await laidOut(view, 'conversation');
+    expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
+    expect(view.queryByTestId(MAP_SURFACE_TEST_ID)).toBeNull();
+    expect(view.getByLabelText('You: fixture: earlier words')).toBeTruthy();
+    // The same F2 fade as the band's control, in both directions.
+    expect(fadesIn(timing)).toHaveLength(2);
+    expect(h.ready()).toBe(runtime);
+    expect(h.ready().generation).toBe(runtime.generation);
+    expect(runtime.store.getState()).toBe(stateBefore);
+    expect(h.http.creates()).toHaveLength(1);
+    view.unmount();
+    h.dispose();
+  });
+
+  it('at the Conversation, Back is not taken: nothing is registered, so the platform root behaviour is untouched', async () => {
+    const back = systemBack();
+    const h = await signedIn();
+    const view = await onRoute(h);
+    expect(back.live()).toHaveLength(0);
+    expect(await back.press()).toBe(false);
+    // Out to Analysis and back again: the registration is released with the Analysis depth.
+    await openAnalysis(view);
+    expect(back.live()).toHaveLength(1);
+    await back.press();
+    expect(back.live()).toHaveLength(0);
+    expect(await back.press()).toBe(false);
+    expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
+    view.unmount();
+    h.dispose();
+  });
+
+  it('Reduced Motion: Back at Analysis is the same cut back to the Conversation', async () => {
+    setReducedMotion(true);
+    const back = systemBack();
+    const h = await signedIn();
+    const view = await onRoute(h);
+    await openAnalysis(view);
+    expect(await back.press()).toBe(true);
+    expect(view.getByTestId('qandeel-conversation')).toBeTruthy();
+    expect(view.queryAllByTestId(/^qandeel-depth-(conversation|analysis)$/u)).toHaveLength(1);
     view.unmount();
     h.dispose();
   });

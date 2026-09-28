@@ -206,7 +206,7 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
   // ---------------------------------------------------------------- assistive announcements
   // One announcement per state CHANGE, in the approved words only. The status lines also carry a
   // polite live region for Android; iOS has none, so the announcement is what reaches VoiceOver.
-  const announced = useRef<{ submission: string | null; failed: Set<string>; replies: Set<string>; history: string | null } | null>(null);
+  const announced = useRef<{ submission: string | null; refused: boolean; failed: Set<string>; replies: Set<string>; history: string | null } | null>(null);
   useEffect(() => {
     const seen = announced.current;
     const phase = state.submission === null ? null : `${state.submission.key}:${state.submission.phase}`;
@@ -214,12 +214,13 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
     const replies = new Set(state.exchanges.filter((e) => e.reply !== null).map((e) => e.reply!.id));
     if (seen === null) {
       // The first read is the conversation-so-far, not news: nothing is announced for it.
-      announced.current = { submission: phase, failed, replies, history: state.history };
+      announced.current = { submission: phase, refused: state.refused, failed, replies, history: state.history };
       return;
     }
     if (phase !== seen.submission && state.submission !== null) {
       AccessibilityInfo.announceForAccessibility(state.submission.phase === 'AWAITING' ? copy.waitingForReply : copy.sendUnconfirmed);
     }
+    if (state.refused && !seen.refused) AccessibilityInfo.announceForAccessibility(copy.sendRefused);
     for (const exchange of state.exchanges) {
       if (exchange.reply !== null && !seen.replies.has(exchange.reply.id) && seen.history === 'READY') {
         AccessibilityInfo.announceForAccessibility(copy.replyTurnName(exchange.reply.content));
@@ -231,7 +232,7 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
     if (state.history === 'UNAVAILABLE' && seen.history !== 'UNAVAILABLE') {
       AccessibilityInfo.announceForAccessibility(copy.historyUnavailable);
     }
-    announced.current = { submission: phase, failed, replies, history: state.history };
+    announced.current = { submission: phase, refused: state.refused, failed, replies, history: state.history };
   }, [state, copy]);
 
   // -------------------------------------------------------------------------------- scrolling
@@ -387,6 +388,27 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
           <Control palette={palette} language={language} accessibilityLabel={copy.tryAgain} onPress={controller.retrySubmission} testID="qandeel-conversation-send-retry" style={{ paddingHorizontal: 12 }}>
             <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.tryAgain}</Text>
           </Control>
+        </View>
+      ) : null}
+
+      {/* A definitive refusal: the words are back in the composer, editable. No retry is offered. */}
+      {submission === null && state.refused ? (
+        <View
+          testID="qandeel-conversation-refused"
+          style={{
+            paddingLeft: insets.left + 20,
+            paddingRight: insets.right + 20,
+            paddingBottom: 4,
+            alignItems: mine === 'right' ? 'flex-end' : 'flex-start',
+          }}
+        >
+          <Text
+            accessibilityLiveRegion="polite"
+            accessibilityLanguage={language}
+            style={{ ...typeStyle('supporting'), color: palette.error, textAlign: textAlignFor(mine), writingDirection: fallback }}
+          >
+            {copy.sendRefused}
+          </Text>
         </View>
       ) : null}
 

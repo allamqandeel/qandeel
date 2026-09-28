@@ -42,6 +42,8 @@ export interface ConversationCopy {
   readonly waitingForReply: string;
   /** The client cannot confirm whether the submission was admitted. PO-approved (replacement wording). */
   readonly sendUnconfirmed: string;
+  /** The server definitively refused the submission before admitting it. PO-approved (W1A-01 correction). */
+  readonly sendRefused: string;
   /** A committed turn whose reply terminated without one. PO-approved in the W1A-01 gate. */
   readonly replyFailed: string;
   /** The conversation-so-far could not be read. PO-approved in the W1A-01 gate. */
@@ -63,6 +65,7 @@ const AR: ConversationCopy = Object.freeze({
   replyTurnName: (text: string) => `قنديل: ${text}`,
   waitingForReply: 'في انتظار رد قنديل',
   sendUnconfirmed: 'تعذّر التأكد من إرسال الرسالة.',
+  sendRefused: 'تعذّر إرسال الرسالة.',
   replyFailed: 'تعذّر إكمال رد قنديل.',
   historyUnavailable: 'تعذّر تحميل المحادثة.',
 });
@@ -82,6 +85,7 @@ const EN: ConversationCopy = Object.freeze({
   replyTurnName: (text: string) => `QANDEEL: ${text}`,
   waitingForReply: "Waiting for QANDEEL's reply",
   sendUnconfirmed: "It couldn't be confirmed that the message was sent.",
+  sendRefused: "The message wasn't sent.",
   replyFailed: "QANDEEL's reply couldn't be completed.",
   historyUnavailable: "The conversation didn't load.",
 });

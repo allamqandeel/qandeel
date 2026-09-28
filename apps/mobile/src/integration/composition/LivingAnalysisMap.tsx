@@ -55,9 +55,23 @@ export interface LivingAnalysisMapProps {
   readonly fontScale: number;
   /** The envelope this composition is presented inside; T-11 uses it to retire a stale measurement. */
   readonly envelope: { readonly width: number; readonly height: number };
+  /**
+   * W1A-01: called once, after the first commit in which the Map itself is composed. The world is
+   * drawn only after T-11 has measured its room and T-04 has a projection to draw, which is later
+   * than this composition's own first layout; the depth boundary waits for THIS to fade the world in.
+   */
+  readonly onComposed?: () => void;
 }
 
-export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope }: LivingAnalysisMapProps) {
+/** Reports its own first commit. It renders nothing; it only marks where the Map was composed. */
+function ComposedMark({ onComposed }: { readonly onComposed: () => void }) {
+  useEffect(() => {
+    onComposed();
+  }, [onComposed]);
+  return null;
+}
+
+export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed }: LivingAnalysisMapProps) {
   const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle } = runtime;
 
   // The two subscriptions this composition reads from, and there are only two: the canonical store,
@@ -183,13 +197,16 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
               // the same rects T-04's validator refuses, so this is null only when there is no rect.
               if (envelope === null || mapContext === null || !mapContext.ok) return null;
               return (
-                <MapSurface
-                  store={store}
-                  context={mapContext.context}
-                  envelope={envelope}
-                  spatialCause={takeSpatialCause}
-                  onOutcome={observeMapOutcome}
-                />
+                <>
+                  <MapSurface
+                    store={store}
+                    context={mapContext.context}
+                    envelope={envelope}
+                    spatialCause={takeSpatialCause}
+                    onOutcome={observeMapOutcome}
+                  />
+                  {onComposed === undefined ? null : <ComposedMark onComposed={onComposed} />}
+                </>
               );
             }}
           </ResponsiveMapFrame>

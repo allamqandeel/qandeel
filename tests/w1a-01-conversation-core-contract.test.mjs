@@ -41,9 +41,9 @@ const LAYER_PRODUCTION = listFiles(LAYER).filter((file) => /\.tsx?$/u.test(file)
 
 const APPROVED = {
   ar: ['المحادثة', 'تحليل المحادثة', 'إعادة المحاولة', 'قنديل', 'كلامك هنا', 'رسالتك لقنديل', 'إرسال', 'كلامك: ${text}', 'قنديل: ${text}',
-    'في انتظار رد قنديل', 'تعذّر التأكد من إرسال الرسالة.', 'تعذّر إكمال رد قنديل.', 'تعذّر تحميل المحادثة.'],
+    'في انتظار رد قنديل', 'تعذّر التأكد من إرسال الرسالة.', 'تعذّر إرسال الرسالة.', 'تعذّر إكمال رد قنديل.', 'تعذّر تحميل المحادثة.'],
   en: ['Conversation', 'Analysis', 'Analysis of this conversation', 'Try again', 'QANDEEL', 'Write here', 'Your message to QANDEEL', 'Send',
-    'You: ${text}', 'QANDEEL: ${text}', "Waiting for QANDEEL's reply", "It couldn't be confirmed that the message was sent.",
+    'You: ${text}', 'QANDEEL: ${text}', "Waiting for QANDEEL's reply", "It couldn't be confirmed that the message was sent.", "The message wasn't sent.",
     "QANDEEL's reply couldn't be completed.", "The conversation didn't load."],
 };
 
@@ -95,9 +95,35 @@ test('§3 — a confirmed reply failure has no retry, and no FAILED turn is re-s
   for (const forbidden of [/retryReply/iu, /regenerat/iu, /replyRetry/iu]) {
     assert.doesNotMatch(controller, forbidden, `no reply-retry path exists in W1A-01: ${forbidden}`);
   }
-  // The only automatic request is the same-key re-entry of work reading has shown COMPLETED.
+  // The automatic requests are same-key replays of turns the server already admitted: the re-entry of
+  // work reading has shown COMPLETED, and the bounded re-check of a committed PENDING turn.
   assert.match(controller, /if \(found\.replyState === 'COMPLETED'\) reenterEstablishment\(content, key\);/u);
-  assert.equal((controller.match(/transport\.submitTurn\(/gu) ?? []).length, 2, 'exactly two submit sites: issue, and the COMPLETED re-entry');
+  assert.equal((controller.match(/transport\.submitTurn\(/gu) ?? []).length, 3, 'exactly three submit sites: issue, the COMPLETED re-entry, and the PENDING re-check');
+});
+
+test('§3 — a committed PENDING turn is re-checked only through its own key, only after the lease, and a bounded number of times', () => {
+  const controller = code(read(`${LAYER}/conversation-controller.ts`));
+  assert.match(controller, /export const ABANDONED_REPLY_RECHECK_MS = SUBMISSION_CONFIRMATION_WINDOW_MS \+ 5_000;/u, 'the re-check waits past the frozen 120 s lease');
+  assert.match(controller, /export const ABANDONED_REPLY_RECHECKS = 2;/u);
+  const recheck = controller.slice(controller.indexOf('function recheck('), controller.indexOf('function stopConfirmationWindow('));
+  assert.ok(recheck.length > 200, 'the re-check body was located');
+  // Only a turn still reported PENDING, and only under its own admitted key and words.
+  assert.match(recheck, /if \(!live\(\) \|\| exchange === undefined \|\| exchange\.replyState !== 'PENDING' \|\| key === null\) return;/u);
+  assert.match(recheck, /transport\.submitTurn\(sessionId, \{ content: exchange\.userTurn\.content, idempotencyKey: key \}\)/u);
+  assert.match(recheck, /await readNewest\(\);/u, 'every re-check is followed by the authoritative read');
+  assert.equal(recheck.includes('newKey'), false, 'a re-check never mints a key');
+  const watch = controller.slice(controller.indexOf('function watchPending('), controller.indexOf('function recheck('));
+  assert.match(watch, /entry\.count >= ABANDONED_REPLY_RECHECKS/u, 'the number of re-checks is bounded');
+  assert.match(watch, /setTimer\(\(\) => recheck\(exchange\.userTurn\.id\), ABANDONED_REPLY_RECHECK_MS\)/u);
+});
+
+test('§3 — a definitive refusal gives the words back with the approved line and implies no retry', () => {
+  const controller = code(read(`${LAYER}/conversation-controller.ts`));
+  assert.match(controller, /case 'REFUSED':\n\s*case 'NOT_ISSUED':[\s\S]*?update\(\{ submission: null, draft: content, refused: true \}\);/u);
+  const surface = code(read(`${LAYER}/ConversationSurface.tsx`));
+  const refusal = surface.slice(surface.indexOf('testID="qandeel-conversation-refused"'), surface.indexOf('testID="qandeel-conversation-composer"'));
+  assert.match(refusal, /\{copy\.sendRefused\}/u);
+  assert.equal(refusal.includes('retrySubmission'), false, 'the refusal offers no retry');
 });
 
 test('§3 — the words become an utterance only on the server’s confirmation', () => {
@@ -197,6 +223,10 @@ test('§5 — the composer stays above the keyboard on both platforms (Android 1
   const surface = code(read(`${LAYER}/ConversationSurface.tsx`));
   assert.match(surface, /<KeyboardAvoidingView[\s\S]*?behavior="padding"/u);
   assert.doesNotMatch(surface, /behavior=\{Platform\.OS === 'ios' \? 'padding' : undefined\}/u);
+  // The same platform fact holds for the Sign-in gateway, the other keyboard surface on this route.
+  const gateway = code(read('apps/mobile/src/integration/auth-gateway/ProductSignInGateway.tsx'));
+  assert.match(gateway, /<KeyboardAvoidingView[\s\S]*?behavior="padding"/u);
+  assert.doesNotMatch(gateway, /behavior=\{Platform\.OS === 'ios' \? 'padding' : undefined\}/u);
 });
 
 // ---------------------------------------------------------------------------------------------
@@ -212,9 +242,15 @@ test('§6 — the Conversation belongs to the runtime generation and is retired 
 test('§6 — the depth pair lands in the Conversation, persists nothing, dispatches nothing and routes nowhere', () => {
   const depth = code(read('apps/mobile/src/integration/composition/DepthComposition.tsx'));
   assert.match(depth, /export const LANDING_DEPTH: WorldDepth = 'CONVERSATION';/u);
-  for (const forbidden of [/recovery/iu, /dispatch/u, /expo-router/u, /navigate/u, /AsyncStorage|SecureStore|expo-sqlite/u, /setTimeout/u]) {
+  for (const forbidden of [/recovery/iu, /dispatch/u, /expo-router/u, /navigate/u, /AsyncStorage|SecureStore|expo-sqlite/u]) {
     assert.doesNotMatch(depth, forbidden, `the depth switch must not reach ${forbidden}`);
   }
+  // No timer drives the switch. The single timer is the ceiling on waiting for the Analysis world to
+  // compose, and all it can do is start the same fade a press already started.
+  assert.equal((depth.match(/setTimeout\(/gu) ?? []).length, 1, 'exactly one timer in the depth owner');
+  assert.match(depth, /composeCeiling\.current = setTimeout\(beginFade, ANALYSIS_COMPOSE_WAIT_CEILING_MS\);/u);
+  // Android system Back: the return act, registered ONLY while Analysis is the depth.
+  assert.match(depth, /if \(depth !== 'ANALYSIS'\) return undefined;\n\s*const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\n\s*cross\('CONVERSATION'\);\n\s*return true;/u);
   // The frozen boundary: F2's cross-fade, and no cross-fade under Reduced Motion.
   assert.match(depth, /const duration = reduceMotion \? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;/u);
   assert.match(depth, /withTiming\(1, \{ duration, easing: Easing\.linear \}/u);

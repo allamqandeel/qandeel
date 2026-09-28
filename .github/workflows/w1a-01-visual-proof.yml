@@ -5,10 +5,15 @@ name: W1A-01 visual proof
 # mobile manifest's `main`, made by `apps/mobile/scripts/select-w1a-proof-entry.mjs` in this ephemeral
 # checkout only). The proof root mounts the PRODUCTION `RuntimePhaseSurface` over the production
 # `createIntegrationRuntime`, given an in-memory identity and a scripted network instead of Supabase
-# and the API: no credential exists in this job and none is needed. It then drives the Conversation,
-# the send / waiting / unconfirmed / retry states and the Conversation <-> Analysis switch in English,
-# Arabic, Arabic at the largest text size and Arabic under Reduced Motion, and uploads every
-# screenshot, recording, hierarchy dump and log.
+# and the API: no credential exists in this job and none is needed.
+#
+# The full four-way matrix (English, Arabic, Arabic at the largest text size, Arabic under Reduced
+# Motion) over the send / waiting / unconfirmed / retry states and the depth switch was proved in run
+# 36410326972 (scripts/w1a/run-w1a-visual-proof.sh, kept for a re-run). The correction pass runs only its
+# FOCUSED proof (scripts/w1a/run-w1a-correction-proof.sh): one standard-motion recording of the depth
+# boundary in both directions with Android system Back, and the Sign-in gateway with the keyboard open at
+# the default and the largest text size, measured. It uploads every screenshot, recording, hierarchy
+# dump, measurement and log.
 #
 # Scoped to the W1A-01 branch: it proves that branch's heads and is inert everywhere else.
 on:
@@ -77,7 +82,7 @@ jobs:
           profile: pixel_7
           disable-animations: false
           emulator-boot-timeout: 900
-          script: bash scripts/w1a/run-w1a-visual-proof.sh "$APK" "$RUNNER_TEMP/w1a-proof"
+          script: bash scripts/w1a/run-w1a-correction-proof.sh "$APK" "$RUNNER_TEMP/w1a-proof"
       - name: Upload the proof evidence
         if: always()
         uses: actions/upload-artifact@v4

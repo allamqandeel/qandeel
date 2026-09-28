@@ -18,6 +18,8 @@ export type {
   SubmissionPhase,
 } from './conversation-controller';
 export {
+  ABANDONED_REPLY_RECHECKS,
+  ABANDONED_REPLY_RECHECK_MS,
   MAX_SUBMISSION_LENGTH,
   SUBMISSION_CONFIRMATION_WINDOW_MS,
   createConversationController,
