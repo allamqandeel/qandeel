@@ -19,7 +19,13 @@ appId: com.qandeel.mobile
 # The approved send-ready state: words in the FIELD, Send present at the end edge.
 - tapOn:
     id: "qandeel-conversation-input"
+- waitForAnimationToEnd:
+    timeout: 5000
 - inputText: ${TYPED_ONE}
+- runFlow:
+    file: w1a-01-retype.yaml
+    env:
+      TYPED: ${TYPED_ONE}
 - takeScreenshot: ${PREFIX}-02-send-ready
 
 # The approved in-flight state: words kept in the locked composer, the waiting line on QANDEEL's side.
@@ -37,7 +43,13 @@ appId: com.qandeel.mobile
 # approved line with «إعادة المحاولة» / Try again appears. Try again re-issues the same key.
 - tapOn:
     id: "qandeel-conversation-input"
+- waitForAnimationToEnd:
+    timeout: 5000
 - inputText: ${TYPED_TWO}
+- runFlow:
+    file: w1a-01-retype.yaml
+    env:
+      TYPED: ${TYPED_TWO}
 - tapOn:
     id: "qandeel-conversation-send"
 - extendedWaitUntil:
