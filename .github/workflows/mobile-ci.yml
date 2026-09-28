@@ -317,7 +317,12 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      # Bounded at the STEP, not only by the job's hour: a hung Maestro launch must fail fast instead of
+      # holding the runner. The bound covers emulator boot + install + smoke, so it sits above the 900 s
+      # boot allowance rather than undercutting it. A timeout is a failure like any other — it stays red,
+      # and a retry is still the human "re-run failed jobs" decision above, against the published artifact.
       - name: Boot smoke on the Android emulator (API 36, x86_64, google_apis)
+        timeout-minutes: 20
         env:
           APK: ${{ runner.temp }}/native-build/app-release.apk
         uses: reactivecircus/android-emulator-runner@v2.38.0
@@ -516,5 +521,8 @@ jobs:
         run: |
           maestro --version
           maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      # Bounded at the STEP for the same reason. The simulator is already booted and the verified app
+      # already installed, so this bounds the Maestro smoke alone; a timeout stays red, like any failure.
       - name: Boot smoke on the iOS simulator
+        timeout-minutes: 15
         run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
