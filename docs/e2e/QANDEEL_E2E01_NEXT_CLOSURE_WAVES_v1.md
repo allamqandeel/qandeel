@@ -4,7 +4,8 @@
 **Baseline:** `d4b20344239654fea737afb3c03036d1bb4ef0d9`
 **Revision:** E2E-01R targeted correction — the former nine-row W1 is split into W1A (authenticated Conversation core)
 and W1B (account identity and first use); the Product Owner's visual-foundation sequencing instruction is recorded (§2).
-No row's classification or bucket changed.
+E2E-01R2 — W1A reduced to its minimal core (B-03, B-04, B-07); B-01 moved to the adjacent shell track W1C; D-13 moved to
+W3. No row's classification or bucket changed.
 
 This file groups the [gap matrix](QANDEEL_E2E01_GAP_MATRIX_v1.md)'s 154 rows into small closure waves. It does **not**
 decide the Product Owner's sequence, does **not** amend [`QANDEEL_PRODUCT_ROADMAP.md`](../../QANDEEL_PRODUCT_ROADMAP.md),
@@ -33,44 +34,46 @@ Every one of the 74 `READY — PROVIDER-INDEPENDENT` rows is placed in exactly o
 
 ## 2. Provider-independent waves
 
-The first candidate is split in two. W1A is the provider-independent Conversation core for a user who **already has an
-account and is already signed in**. W1B is the adjacent account-identity and first-use track that a **new** user needs.
-They are separate because their dependencies differ: W1A needs only what exists today (Supabase sign-in, the
-conversation API), while W1B needs a Name / Login ID store and sign-up that do not exist, and one of its rows waits on
-an open Product Owner decision (A-10 email verification). W1A is not a new user's journey, and W1B cannot close before
-its identity foundation and that decision exist.
+The first candidate is split into a minimal core and three adjacent pieces. W1A is the provider-independent Conversation
+core for a user who **already has an account and is already signed in**. W1B is the account-identity and first-use track
+that a **new** user needs. W1C is the Global Shell, which waits on an open sequencing question. Memory through
+Conversation (D-13) sits in W3, after the Conversation surface exists. They are separate because their dependencies
+differ: W1A needs only what exists today (Supabase sign-in, the conversation API) and carries no open Product or
+sequencing dependency; W1B needs a Name / Login ID store and sign-up that do not exist, and one of its rows waits on an
+open Product Owner decision (A-10 email verification); W1C waits on what the Shared / Public destinations show before
+their surfaces exist; D-13 waits on the Conversation surface and on end-to-end runtime verification.
 
 ### W1A — Authenticated Personal Conversation core — *candidate first implementation slice*
 
-| Rows | 5 — E2E-B-01, B-03, B-04, B-07, D-13 |
+| Rows | 3 — E2E-B-03, B-04, B-07 |
 |---|---|
 | Who | an existing, already-authenticated user (T-14 Email sign-in exists today) |
-| Journey | signed in → shell → open Conversation → write → read QANDEEL's reply and the history → switch to Analysis and back; ask what QANDEEL remembers in conversation |
-| Frozen authority consumed | I-08A4 §3–§5 as amended by G1.1 / G1.2 (area name «العالم المشترك» / Shared World, G1.2 §3); G1.1 §1, §3; P4-C1 SW-3 / Q-A; P4-C4 `door`, `doorName`, `backName`; P1 §9 |
+| Journey | signed in → open Conversation from the Analysis it pairs with → write and send → read QANDEEL's reply and the conversation so far → switch to Analysis and back |
+| Frozen authority consumed | G1.1 §1, §3 (Writing is Conversation-first; `UTTERANCE` role; speaker side independent of bidi); P4-C4 `door`, `doorName`, `backName` |
 | Backend | exists: sessions, `POST …/turns`, temporal catch-up, historical projection ([`conversation.controller.ts`](../../apps/api/src/conversation/conversation.controller.ts)) |
-| Proof | G1.1-R3 (Conversation, openers, bidi); P4-C (shell) |
+| Proof | G1.1-R3 (Conversation, bidi); G3 (the Conversation ↔ Analysis pair) |
 | Visual foundation | consumed from the first production implementation (see below); the relevant K-12 / K-13 primitives and the D-10 Dark default land before or with each W1A surface |
-| Remaining dependency — B-01 | the Global Shell's Shared and Public destinations have no Product surface (W6, W7). What those destinations show before their surfaces exist is an open sequencing question (master audit §7.7); this document invents no placeholder behaviour for them. W1A can build the Personal side of the shell, but B-01 does not close end to end until that question is answered |
 | Decisions to take with it (§6) | B-05 turn cancel; B-06 reply failure wording; K-01 loading state; K-05 / K-06 failure; K-14 returning-user landing |
-| Out of it | the named openers — the normal opener and the First Conversation Opening — and the first-registration Welcome (W1B); Voice (the composer is Writing only); relevance (`QAN-CTX-01`); the full I-08B1 world port (W4) |
+| Not in it | first use and the named openers (W1B); Global Shell completion — the three-area Global Switcher (W1C); Memory-through-Conversation behaviour (D-13, W3); Voice (the composer is Writing only); Shared / Public implementation (W6, W7); relevance (`QAN-CTX-01`); the full I-08B1 world port (W4) |
 
 **Why it is the strongest candidate, on repository truth alone:**
 
 - **It is the one gap that makes QANDEEL unusable.** Today a signed-in user cannot say anything to QANDEEL. Every other
   Personal moment — the Living Analysis World, Understanding, Memory, proactive Activity, Replay — shows the result of a
   conversation the app cannot have. Without it the map stays empty ([master audit](QANDEEL_E2E01_COMPLETE_PRODUCT_JOURNEY_SURFACE_CENSUS_v1.md) §1).
-- **It is frozen.** All 5 rows are `DECIDED — NOT IMPLEMENTED`. No row needs a new Product rule; the adjacent decisions are
+- **It is frozen.** All 3 rows are `DECIDED — NOT IMPLEMENTED`. No row needs a new Product rule; the adjacent decisions are
   small and named.
-- **Its backend already exists** and has since the Engineering Foundation; W1A adds a client, not a runtime.
-- **It needs no identity work.** An existing account signs in through T-14 today, and none of its 5 rows uses
+- **It uses the existing backend path.** The Conversation API has existed since the Engineering Foundation; W1A adds a
+  client, not a runtime.
+- **It carries no unresolved dependency.** An existing account signs in through T-14 today, and none of its 3 rows uses
   `{display_name}`. Both frozen openers do — the normal opener (G1.1 §1, B-02) and the First Conversation Opening (A-14) —
   so both sit in W1B. Accounts created through T-14 today have no stored Name, so the named opener arrives with W1B;
-  W1A invents no fallback greeting.
+  W1A invents no fallback greeting. It does not need the three-area switcher (W1C), and it claims no Memory behaviour
+  that has not been verified (D-13).
 - **It is provider-independent.** The turn path runs through the existing Model Router; the provider choice (QIR-001,
   coupled to the audit's benchmark) changes quality and cost, not the surface. W1A selects no provider.
 - **It makes later evidence real.** The roadmap asks the benchmark to "reflect real QANDEEL use" (§3). A Conversation
   surface is the first place real QANDEEL use can happen. This is an observation about evidence, not a benchmark proposal.
-
 ### W1B — Account identity and first use — *adjacent prerequisite track*
 
 | Rows | 5 — E2E-A-09, A-13, A-14, B-02, K-02 |
@@ -84,6 +87,15 @@ its identity foundation and that decision exist.
 | Visual foundation | as W1A: consumed from the first production implementation |
 | Note | A-07 (sign in with Login ID) stays in W2 but also depends on the Login ID store this track creates |
 
+### W1C — Global Shell — *adjacent provider-independent shell track*
+
+| Rows | 1 — E2E-B-01 |
+|---|---|
+| Journey | move between QANDEEL, «العالم المشترك» / Shared World and Public World through the Global Switcher |
+| Frozen authority | I-08A4 §3–§4 as amended by G1.1 / G1.2 (Personal-centered shell, exactly three areas, switching ≠ pushing, local-only Back; area name «العالم المشترك» / Shared World, singular regardless of count, G1.2 §3); P4-C1 SW-3 Keyed Seam, Q-A; P2 navigation glyphs |
+| Proof | P4-C (shell); P2 glyphs frozen |
+| Open dependency | the Shared and Public destinations have no Product surface (W6, W7). What they show before those surfaces exist is an open sequencing question (master audit §7.7). This document invents no placeholder behaviour; B-01 is not dependency-free until that question is answered |
+| Visual foundation | as W1A |
 **Visual foundation — sequencing instruction from the Product Owner.** Any new production QANDEEL surface consumes the
 already-frozen visual foundation from its **first** production implementation. No temporary generic UI is accepted as
 the production realization of a surface, and nothing is built generic to be "skinned later". In practice:
@@ -92,7 +104,7 @@ the production realization of a surface, and nothing is built generic to be "ski
   semantic and interaction colour, accessibility transformations, iconography (I-08B3.0-E3, I-08B3.1 A–F, P2, the G1 / G3
   shell and Conversation proofs) — land **before or with** that surface;
 - production Conversation is built in QANDEEL's final visual language from day one;
-- K-12, K-13 and D-10 keep their single placement below (W4, W3) for accounting; W1A / W1B realize the parts they need
+- K-12, K-13 and D-10 keep their single placement below (W4, W3) for accounting; W1A / W1B / W1C realize the parts they need
   and do not wait for those waves to close;
 - W4 still owns the **full** Living Analysis World (I-08B1) port and its stress proof, as its own bounded work. W1A does
   not have to absorb W4 before it can start.
@@ -112,14 +124,15 @@ This is an execution instruction. It changes no frozen visual value or contract.
 
 ### W3 — General Settings, identity, appearance and Understanding
 
-| Rows | 8 — E2E-D-01, D-02, D-03, D-05, D-09, D-10, D-14, D-15 |
+| Rows | 9 — E2E-D-01, D-02, D-03, D-05, D-09, D-10, D-13, D-14, D-15 |
 |---|---|
-| Journey | open General Settings from Personal → see and edit my identity → choose Dark / Light / System → open «فهم قنديل» and disagree with an item |
-| Frozen authority | P1 §2, §6, §8, §10–§12; P4-C1 S-B, U-A; P4-C4 group names, Public ID and confidence rows |
+| Journey | open General Settings from Personal → see and edit my identity → choose Dark / Light / System → open «فهم قنديل» and disagree with an item → ask QANDEEL in conversation what it remembers, correct it, ask it to forget |
+| Frozen authority | P1 §2, §6, §8, §9, §10–§12; P4-C1 S-B, U-A; P4-C4 group names, Public ID and confidence rows |
 | Backend | Public ID tables (no application role); Memory / HIM runtime internal only; **no Understanding projection endpoint**; contested runtime (PG-01) absent |
 | Proof | P4-C placement boards only. **Undrawn:** Settings screens, the Understanding surface (`P4-GAP-039`) |
 | Decisions to take with it (§6) | D-04 email change; D-06 security controls; D-08 Shared ID format; D-11 language; D-12 accessibility preferences; D-16 export; D-17 account deletion |
-| Depends on | W1A for the "talk to QANDEEL about this" path in D-15 |
+| Depends on | W1A for the "talk to QANDEEL about this" path in D-15 and for D-13 |
+| Memory through Conversation — D-13 | P1 §9 keeps Memory control in conversation; there is no Memory editor page in v1 and none is proposed. D-13 needs the W1A Conversation surface first, and whether the conversation runtime honours "what do you remember / correct / forget" end to end is an explicit unknown (master audit §7.2). It must be verified end to end before the capability is called complete |
 
 ### W4 — QANDEEL's own visual system on the implemented surfaces
 
@@ -253,7 +266,7 @@ authority. The census does not propose answers.
 | E2E-K-14 | what a returning user lands on after absence | W1A |
 
 Two sequencing matters are not Product rules and are not counted above. One is open: what the Shared / Public
-destinations show if the shell ships before their surfaces (master audit §7.7; §2 W1A, B-01). One is resolved by the
+destinations show if the shell ships before their surfaces (master audit §7.7; §2 W1C, B-01). One is resolved by the
 Product Owner: the frozen visual foundation is consumed from each surface's first production implementation (§2).
 
 ---
@@ -262,10 +275,11 @@ Product Owner: the frozen visual foundation is consumed from each surface's firs
 
 | Group | Rows |
 |---|---:|
-| W1A Authenticated Personal Conversation core | 5 |
+| W1A Authenticated Personal Conversation core | 3 |
 | W1B Account identity and first use | 5 |
+| W1C Global Shell | 1 |
 | W2 Get in and out | 5 |
-| W3 Settings, identity, Understanding | 8 |
+| W3 Settings, identity, Understanding, Memory through Conversation | 9 |
 | W4 Visual system on implemented surfaces | 15 |
 | W5 Activity, notifications, Direct Entry | 14 |
 | W6 Shared World | 11 |

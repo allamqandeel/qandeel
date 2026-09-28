@@ -4,7 +4,8 @@
 **Phase:** QANDEEL End-to-End Product Experience Completeness Audit — first task. **The phase is not closed.**
 **Baseline:** canonical `main` `d4b20344239654fea737afb3c03036d1bb4ef0d9`
 **Revision:** E2E-01R targeted correction after independent review — Shared World naming (§6), Connected Worlds
-reachability wording (§1, §4) and the first-wave split (§1). No row's classification or bucket changed.
+reachability wording (§1, §4) and the first-wave split (§1). E2E-01R2 narrowed the first slice to B-03, B-04, B-07 (§1).
+No row's classification or bucket changed.
 **Authority:** audit evidence only. It creates no Product decision, no runtime semantics and no implementation
 authorization, and it amends no frozen record. Where it names a gap, the gap's owner decides.
 
@@ -43,12 +44,15 @@ Everything else is decided, proved or backend-only:
 - **The account lifecycle stops at sign-in.** There is no sign-up, verification, password recovery, sign-out control,
   Login ID, export or deletion.
 
-**The largest provider-independent gap is the Personal Conversation core** for an already-authenticated user: the
-shell, the Conversation surface (write, read the reply) and the Conversation ↔ Analysis switch. It is frozen Product
-authority, the backend it needs exists, and none of it waits on a provider choice. First use, the First Conversation
-Opening and the normal opener are adjacent but not dependency-free: their frozen text uses `{display_name}`, and sign-up
-with Name / Login ID persistence does not exist (A-09). [Closure waves](QANDEEL_E2E01_NEXT_CLOSURE_WAVES_v1.md) §2 proposes the core as the
-first slice (W1A) and the identity / first-use work as its adjacent track (W1B), **for Product Owner review**.
+**The largest provider-independent gap is the Personal Conversation core** for an already-authenticated user: write and
+send (B-03), read QANDEEL's reply and the conversation so far (B-04), and the Conversation ↔ Analysis switch (B-07). It
+is frozen Product authority, the backend it needs exists, and none of it waits on a provider choice or an open decision.
+Three adjacent pieces are not dependency-free. First use, the First Conversation Opening and the normal opener use
+`{display_name}`, and sign-up with Name / Login ID persistence does not exist (A-09). The Global Shell (B-01) waits on
+what the Shared / Public destinations show before their surfaces exist (§7.7). Memory through Conversation (D-13) needs
+the Conversation surface and an end-to-end runtime verification (§7.2). [Closure waves](QANDEEL_E2E01_NEXT_CLOSURE_WAVES_v1.md)
+§2 proposes the core as the first slice (W1A: B-03, B-04, B-07), with identity / first use (W1B), the Global Shell (W1C)
+and Memory through Conversation (in W3) as adjacent work, **for Product Owner review**.
 
 ---
 
