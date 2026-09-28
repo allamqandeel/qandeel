@@ -148,7 +148,7 @@ production implementation. The table keeps three things apart:
 |---|---|---|---|
 | Conversation and intelligence | Foundation, QHIA and QIR contracts | the NestJS API in `apps/api/src/`. Its HTTP controllers exist only under `conversation/` and `health/` | Provider / LLM selection is deferred (QIR-001); the Product roadmap places QANDEEL-specific benchmark/selection alongside the End-to-End Product Experience Completeness Audit |
 | Product shell / Global navigation / first use | I-08A4 freezes the Personal-centered App Shell, three-area Global Switcher, local-only Back, Direct Entry, bilingual Product language and first-use foundation; later G1.1 / G1.2 naming amendments bind, and so do P4-C1's shell / small-chrome decisions and P4's static launch → system handoff | no complete production Global Shell implementing the I-08A contract is established on `main`; current mobile composition is the T-series / T-12 shell | production realization of the frozen I-08A shell while preserving later amendments |
-| Living Analysis Map (Personal World) | Stages 0–6 and the T-series contracts | the mobile client in `apps/mobile/src/`: world projection, camera, Timeline, temporal navigation, Return, chrome, motion, responsive composition, recovery and sign-in. **The Map's paint is still the neutral grey structural placeholder** (T-12 §12) | the I-08B1 world is not ported: G3 §F records "no Skia / Reanimated port of the world". `QAN-BL-VIS-01` |
+| Living Analysis Map (Personal World) | Stages 0–6 and the T-series contracts | the mobile client in `apps/mobile/src/`: world projection, camera, Timeline, temporal navigation, Return, chrome, motion, responsive composition, recovery and sign-in. **The Map's paint is still the neutral grey structural placeholder** (T-12 §12). **The mobile client has no Conversation surface**: it creates a Session and reads temporal state and projections, but never calls `POST /conversation/sessions/:id/turns`, so a user cannot converse from the app ([E2E-01 census](docs/e2e/QANDEEL_E2E01_COMPLETE_PRODUCT_JOURNEY_SURFACE_CENSUS_v1.md) §1) | the I-08B1 world is not ported: G3 §F records "no Skia / Reanimated port of the world". `QAN-BL-VIS-01`. The Conversation surface (G1.1) is unimplemented |
 | Visual system (Living Brass, Light, typography, surfaces, colour, accessibility, appearance, brand) | the frozen I-08B design canon (§3.5) | none. No commit after T-14's merge (`615e586f`) changes `apps/mobile/` | the whole production port |
 | Conversation / Analysis shell | G1.1; G3 Decisions A and B; the G2.3 and G3 controlled amendments to T-11 / T-12; P1 §12, under which non-Analysis surfaces follow the user's Dark / Light / System preference (default Dark) while the Analysis stays one dark place | the T-12 app-root composition | G3 §F lists these as unimplemented: the Analysis shell, the appearance cross-fade, the temporal-line placement and yield rule, compact `ReturnControls`, and device certification. The P1 appearance preference is unimplemented too |
 | Shared World, Public World | CW2-01 … CW2-04; I-04, I-05 | the database runtime (migrations 0075–0099) and server modules in `apps/api/src/connected-worlds/` | no authenticated Product routes and no mobile surfaces. Launch prerequisites fail closed |
@@ -232,7 +232,8 @@ The Product Owner has now frozen the **forward sequencing**, recorded in
 The current roadmap phase is:
 
 > **Final Product Decision Closure is complete.** P1–P4 are `CLOSED / FROZEN`; P4 merged through PR #280 at
-> `d6d0999dea26ba97b595e8a97e1a630eb659874f`. The next phase is the End-to-End audit below, which has **not** started.
+> `d6d0999dea26ba97b595e8a97e1a630eb659874f`. The End-to-End audit below **has started** through its first task,
+> `E2E-01 — Complete Product Journey & Surface Census v1`. The phase is not closed.
 
 Ordered Product tracks:
 
@@ -263,8 +264,16 @@ Production Integration follows the audit and its resulting closures; Release Har
 integration.
 
 **Important:** the roadmap schedules Product work; it does **not** itself open an implementation task. P1 – P4 are
-closed as Product / design contracts and implement nothing. Neither the End-to-End audit nor Production Integration has
-started.
+closed as Product / design contracts and implement nothing. Production Integration has not started.
+
+**End-to-End audit — current truth.** The audit started with `E2E-01`. Its census,
+[`docs/e2e/E2E01_READ_FIRST.md`](docs/e2e/E2E01_READ_FIRST.md), is the current audit artifact: it classifies 154 user
+moments against the roadmap's eight classifications, records APP-OPS-01's two fields for each, and groups the gaps into
+closure waves labelled `PROPOSED FOR PRODUCT OWNER REVIEW`. It creates no Product decision and no Production Integration
+authorization, and the wave ordering is not a roadmap change. Model / provider selection remains unresolved: no provider
+has been benchmarked or selected. The Personal Voice / Live Call runtime remains `OPEN — UNASSIGNED`
+(`QAN-BL-VOICE-01`), and Plans / Credits remain coupled to provider-cost evidence. The census found that no user moment
+is `COMPLETE / PRODUCTION-READY`, and that the mobile client has no Conversation surface (§4).
 
 The canonical backlog remains separate: backlog entries are not self-executing, and severity does not order them.
 
@@ -295,6 +304,7 @@ identifier against the closed record that uses it.
 3. [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) — Product Owner sequencing; it opens no task by itself.
 4. [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) — read it in full at every
    task kickoff (BG-05).
+   For End-to-End audit work, then read [`docs/e2e/E2E01_READ_FIRST.md`](docs/e2e/E2E01_READ_FIRST.md).
 5. The current canonical record(s) for the task: the primary records cited in §3, and the
    [artifact index](docs/design/canonical-artifacts/QANDEEL_CANONICAL_ARTIFACT_INDEX.md) for Product / design work.
 6. Historical / upstream authority in [`docs/canonical-authority/`](docs/canonical-authority/README.md), only

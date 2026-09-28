@@ -79,6 +79,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | [`docs/design/`](docs/design/) | design-track records: `phase-v/`, `phase-vi/`, the I-08B3.1-G closures in `i-08b3.1-g1.1/`, `i-08b3.1-g1.2/`, `i-08b3.1-g2/`, `i-08b3.1-g2.3/` and `i-08b3.1-g3/`, the P2-A iconography proof package in `p2-iconography/` (evidence for the P2 closure), the P3-A notification & Activity proof package in `p3-notifications/` (evidence for the P3 closure), and the P4-C comparative proof in `p4-shell/` and the P4-C3 residual visual + copy proof in `p4-residual/` (evidence for the P4 closure) |
 | [`docs/p4/`](docs/p4/P4_READ_FIRST.md) | P4's local evidence and reconciliation package, **final**: the 66-row residual census, the **closed** `APP-OPS-01` App ↔ Company Operations contract (`CLOSED / FROZEN`; the file keeps its `_CANDIDATE` path), the final carry-forward matrix, the resolved decision queue and the final authority compatibility matrix. P4's primary closure record is [`QANDEEL_P4_FINAL_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md); read it first |
 | [`docs/design/canonical-artifacts/`](docs/design/canonical-artifacts/README.md) | byte-exact final Product / design artifacts: I-08B1, brand, typography, I-08B3.1 A–G proofs. Located by its index |
+| [`docs/e2e/`](docs/e2e/E2E01_READ_FIRST.md) | End-to-End Product Experience Completeness Audit evidence: the E2E-01 journey / surface census, its gap matrix and its proposed closure waves. **Audit evidence, not Product authority**; start at `E2E01_READ_FIRST.md` |
 | [`docs/assurance/connected-worlds/`](docs/assurance/connected-worlds/README.md) | the `QAN-CW-ASSURE-01` findings register. **Evidence only** |
 
 ---
@@ -114,6 +115,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | closure governance | [`AGENTS.md`](AGENTS.md) §10; backlog BG-08, BG-09 and §9 | `npm run test:task-closure-governance-contract` |
 | P4 residual decisions: shell / small chrome, brand ratification, static launch / gateway, the lantern boundary, non-signal Voice visuals, residual copy | [P4 final closure](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md) | then, in order: the [P4 census](docs/p4/P4_RESIDUAL_GAP_CENSUS.md) and [carry-forward matrix](docs/p4/P4_CARRY_FORWARD_MATRIX.md); the P4-C1 / P4-C2 / P4-C3R / P4-C4 records in [`docs/canonical-authority/final-product-experience/p4/`](docs/canonical-authority/final-product-experience/p4/); evidence [P4-C3](docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/P4C3_READ_FIRST.md) |
 | App ↔ Company Operations: operational telemetry, the private-content boundary, Company → App controls | the closed [APP-OPS-01](docs/p4/APP_OPS_01_COMPANY_OPERATIONS_CONTRACT_CANDIDATE.md) | the [P4 compatibility matrix](docs/p4/P4_AUTHORITY_COMPATIBILITY_MATRIX.md); CW2-08 / CW2-08A; the telemetry, outbox and health records |
+| what a user can actually do today, per user moment; the End-to-End gap matrix | [`docs/e2e/E2E01_READ_FIRST.md`](docs/e2e/E2E01_READ_FIRST.md) | the census, gap matrix and proposed closure waves it links. Evidence only: each row cites the record that decides it |
 
 ---
 
@@ -188,7 +190,8 @@ Current sequence:
    - P4 Remaining Product / Visual Gaps Census & Closure — **CLOSED / FROZEN**, merged through PR #280 at `d6d0999dea26ba97b595e8a97e1a630eb659874f`
      ([P4 closure](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md)), with
      APP-OPS-01 closed beside it; production implementation open.
-2. QANDEEL End-to-End Product Experience Completeness Audit — **the next phase; not started** — including evidence-led
+2. QANDEEL End-to-End Product Experience Completeness Audit — **started through E2E-01; not closed**
+   ([`docs/e2e/`](docs/e2e/E2E01_READ_FIRST.md)) — including evidence-led
    Model / Provider selection, Plans / Credits / Usage Economy, complete account/auth lifecycle review, and APP-OPS-01's
    `Operational Events Required` / `Company Controls Required` fields.
 3. Production Integration & Implementation.
