@@ -87,6 +87,7 @@ import {
   type RecoveryRefusal,
   type RecoveryWriter,
 } from '../../recovery';
+import { createConversationController, type ConversationController } from '../../conversation';
 import { createInspectionJourneyCoordinator, type InspectionJourneyCoordinator } from '../journey/inspection-journey';
 import { createCanonicalTransitionWitness, type CanonicalTransitionWitness } from '../motion/canonical-transition-witness';
 import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/spatial-cause';
@@ -146,6 +147,12 @@ export interface IntegrationSessionRuntime {
   readonly liveDriver: ForegroundLiveDriver;
   /** T-13: where this Session came from, and the writer advancing its durable snapshot. */
   readonly recovery: { readonly origin: SessionOrigin; readonly writer: RecoveryWriter };
+  /**
+   * W1A-01: the Conversation's presentation for THIS Session, over the T-12P turn transport. It
+   * holds no canonical state; a committed reply reaches the Analysis world only through the live
+   * driver's existing immediate catch-up. Retired with the generation like everything else here.
+   */
+  readonly conversation: ConversationController;
 }
 
 /**
@@ -222,6 +229,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   function retireSession(): void {
     if (session === null) return;
     session.recovery.writer.retire();
+    session.conversation.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -270,7 +278,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       startSequence: decision.kind === 'RESUME' ? decision.record.sequence : 0,
     });
 
-    return {
+    const built: IntegrationSessionRuntime = {
       generation,
       bundle,
       store: bundle.store,
@@ -283,7 +291,17 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       returnSurface: { store: bundle.store, preview },
       liveDriver: entry.liveDriverFor(bundle),
       recovery: { origin: decision.kind === 'RESUME' ? 'RESUMED' : 'FRESH', writer },
+      // W1A-01: the Conversation of THIS Session, on the T-12P transport bound to this identity. The
+      // Session id is the bundle's own — never a literal, a fixture or a synthesised one — and a
+      // committed reply asks THIS generation's one driver to catch up, which is how Analysis learns.
+      conversation: createConversationController({
+        sessionId: bundle.sessionId,
+        transport: entry.conversationTurnsFor(bundle),
+        isCurrent,
+        onReplyCommitted: () => built.liveDriver.requestImmediateCatchUp(),
+      }),
     };
+    return built;
   }
 
   async function bootstrapFor(authGeneration: number, userId: string): Promise<void> {

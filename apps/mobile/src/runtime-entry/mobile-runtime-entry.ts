@@ -33,6 +33,7 @@ import { createSupabaseAuthPort, type SupabaseAuthPort } from './auth/supabase-a
 import { bootstrapCanonicalRuntime } from './bootstrap/canonical-runtime-bootstrap';
 import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from './bootstrap/bootstrap-types';
 import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversation/conversation-session-api';
+import { ConversationTurnApiClient } from './conversation/conversation-turn-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -98,6 +99,15 @@ export interface MobileRuntimeEntry {
    * overlap the contract forbids, so it is prevented here rather than left to a caller's discipline.
    */
   liveDriverFor(bundle: CanonicalRuntimeBundle): ForegroundLiveDriver;
+  /**
+   * W1A-01 — the Conversation turn transport for a bundle this coordinator produced.
+   *
+   * Built on the AC-01 request-time seam bound to the bundle's OWN auth generation, so a token
+   * refresh is carried on the next request and a replaced identity's request is refused before it
+   * is issued. The client holds no credential and no Session of its own: the caller passes the
+   * bundle's Session id with every request.
+   */
+  conversationTurnsFor(bundle: CanonicalRuntimeBundle): ConversationTurnApiClient;
   /** The runtime generation currently in force. */
   currentRuntimeGeneration(): number;
   dispose(): void;
@@ -242,6 +252,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
       });
       liveDriver = { generation: bundle.runtimeGeneration, driver };
       return driver;
+    },
+    conversationTurnsFor(bundle) {
+      return new ConversationTurnApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     currentRuntimeGeneration: () => runtimeGeneration,
     dispose() {

@@ -55,6 +55,19 @@ export type {
   RuntimeHttpFetch,
 } from './conversation/conversation-session-api';
 export { ConversationSessionApiClient } from './conversation/conversation-session-api';
+export type {
+  ConversationExchangeView,
+  ConversationHistoryOutcome,
+  ConversationHistoryPageView,
+  ConversationReplyState,
+  ConversationReplyView,
+  ConversationSubmitOutcome,
+  ConversationTurnApiConfig,
+  ConversationTurnSubmission,
+  ConversationUnknownReason,
+  ConversationUserTurnView,
+} from './conversation/conversation-turn-api';
+export { CONVERSATION_HISTORY_PAGE_LIMIT, ConversationTurnApiClient } from './conversation/conversation-turn-api';
 
 export type {
   BootstrapFailure,

@@ -1,0 +1,45 @@
+{
+  "_": "W1A-01 font provenance. The two files below are the OFFICIAL static instances shipped inside the Estedad v8.5 release archive, extracted byte-for-byte. Nothing was instantiated, subset, renamed internally or re-encoded; no static instance was synthesized from the variable font (Product Owner, W1A-01 Phase B authorization §5.2).",
+  "family": "Estedad",
+  "version": "Version 8.5",
+  "sourceOfRecord": "https://github.com/aminabedi68/Estedad",
+  "release": "https://github.com/aminabedi68/Estedad/releases/tag/8.5",
+  "archive": {
+    "name": "Estedad-v8.5.zip",
+    "url": "https://github.com/aminabedi68/Estedad/releases/download/8.5/Estedad-v8.5.zip",
+    "bytes": 1512537,
+    "sha256": "e780f2c9527e9d9f673b61f1e093c17d6e217c1e4be15a957bb287e13344728e",
+    "sha256MatchesGitHubReleaseDigest": true
+  },
+  "sameReleaseAsE3Lock": "docs/design/canonical-artifacts/typography/i-08b3.0-e3/fonts-info/SOURCES.lock.json names the same archive and tag; its variable file Estedad-v8.5/Estedad[wght].ttf (284180 bytes) is in this archive unchanged.",
+  "files": [
+    {
+      "file": "Estedad-Regular.ttf",
+      "archivePath": "Estedad-v8.5/Statics/ttf/Estedad-Regular.ttf",
+      "bytes": 159468,
+      "sha256": "6fa532c2f732eda9d93508f27d6449e54d84caa2dd8e971ad0e5a6379580ed36",
+      "postScriptName": "Estedad-Regular",
+      "usWeightClass": 400,
+      "variable": false,
+      "usedFor": "E3 roles body 17/30, supporting 15/25, metadata 12/20 (weight 400)"
+    },
+    {
+      "file": "Estedad-Medium.ttf",
+      "archivePath": "Estedad-v8.5/Statics/ttf/Estedad-Medium.ttf",
+      "bytes": 159768,
+      "sha256": "eefaca1209c25cbb9555bd7d2ff67f2a05451cdfd10396ade0bd8b7065138822",
+      "postScriptName": "Estedad-Medium",
+      "usWeightClass": 500,
+      "variable": false,
+      "usedFor": "E3 role action / label 14/23 (weight 500)"
+    }
+  ],
+  "licence": {
+    "name": "SIL Open Font License, Version 1.1",
+    "readFrom": "each binary's own name table, ID 13, and the project's OFL.txt at tag 8.5",
+    "file": "OFL.txt",
+    "fileSource": "https://github.com/aminabedi68/Estedad/blob/8.5/OFL.txt",
+    "reservedFontName": "none declared in OFL.txt"
+  },
+  "loading": "Loaded at runtime through expo-font (a direct dependency of the mobile app, the version Expo SDK 57 already bundles). No Expo config plugin and no native project change: the font module is already linked through `expo`."
+}

@@ -13,8 +13,12 @@ import { TEST_CONFIG, authPortDouble, httpDouble, serveHappyPath } from '../__fi
 test('§12 — the public barrel is exactly this surface, and the three private implementations are not on it', () => {
   // A census rather than a spot check: a new export has to be a deliberate act, because T-12 will
   // consume exactly this and nothing deeper.
+  // W1A-01 added exactly two, deliberately: the Conversation turn transport (a plain class, like the
+  // Session client) and the history page bound it asks for.
   expect(Object.keys(runtimeEntry).sort()).toEqual([
+    'CONVERSATION_HISTORY_PAGE_LIMIT',
     'ConversationSessionApiClient',
+    'ConversationTurnApiClient',
     'FOREGROUND_CATCH_UP_INTERVAL_MS',
     'MAX_CATCH_UP_BACKOFF_MS',
     'MOBILE_PUBLIC_CONFIG_KEYS',
@@ -51,7 +55,7 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     if (typeof value !== 'function') continue;
     // A React component is conventionally PascalCase. Every function here is a factory, a reader or
     // a class, and `ConversationSessionApiClient` is a plain class with no render.
-    if (name === 'ConversationSessionApiClient') continue;
+    if (name === 'ConversationSessionApiClient' || name === 'ConversationTurnApiClient') continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

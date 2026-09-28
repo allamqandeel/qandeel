@@ -1,0 +1,152 @@
+/**
+ * W1A-01 (E2E-B-07) — the ONE depth pair of the reader's own world: Conversation ↔ Analysis.
+ *
+ * > **Integration connects owners. Integration does not replace owners.**
+ *
+ * Both depths are the SAME Session and the SAME runtime generation: the Conversation is the W1A-01
+ * owner's surface over `runtime.conversation`, and the Analysis is the existing Living Analysis Map
+ * composition, unchanged, over the same store, projection cache and live driver. Switching depth is
+ * a local presentation choice — it dispatches nothing, writes no canonical state, pushes no route,
+ * creates no Session and persists nothing (the T-13 recovery record is untouched, so after sign-in
+ * or restart the reader lands in the Conversation, as the Product Owner approved for W1A-01).
+ *
+ * The boundary behaves as the G3 closure froze it: F2's symmetric appearance cross-fade in standard
+ * motion, and under Reduced Motion no cross-fade — the same truth with no movement. The outgoing
+ * depth stays opaque beneath while the incoming one resolves over it, so no third colour ever shows
+ * through the fade. Only the incoming depth is interactive or exposed to assistive technology.
+ */
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
+import { StyleSheet, View } from 'react-native';
+import { StatusBar } from 'expo-status-bar';
+import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, withTiming } from 'react-native-reanimated';
+import { scheduleOnRN } from 'react-native-worklets';
+
+import {
+  ANALYSIS_RETURN_BAR_MIN_HEIGHT,
+  AnalysisReturnBar,
+  ConversationSurface,
+  DEPTH_CROSSFADE_MS,
+  DEPTH_CROSSFADE_REDUCED_MOTION_MS,
+} from '../../conversation';
+import type { ResponsiveInsets } from '../../responsive';
+import type { ProductLocale } from '../locale/product-locale';
+import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
+import { LivingAnalysisMap } from './LivingAnalysisMap';
+
+export type WorldDepth = 'CONVERSATION' | 'ANALYSIS';
+
+/** Where the reader lands in W1A-01, after sign-in and after every restart. Never persisted. */
+export const LANDING_DEPTH: WorldDepth = 'CONVERSATION';
+
+export interface DepthCompositionProps {
+  readonly runtime: IntegrationSessionRuntime;
+  readonly locale: ProductLocale;
+  readonly insets: ResponsiveInsets;
+  readonly fontScale: number;
+  readonly envelope: { readonly width: number; readonly height: number };
+}
+
+export function DepthComposition({ runtime, locale, insets, fontScale, envelope }: DepthCompositionProps) {
+  // The safe-area edges as numbers: T-11's inset type allows an absent edge, which is zero.
+  const edges = useMemo(
+    () => ({ top: insets.top ?? 0, right: insets.right ?? 0, bottom: insets.bottom ?? 0, left: insets.left ?? 0 }),
+    [insets.top, insets.right, insets.bottom, insets.left],
+  );
+  const [depth, setDepth] = useState<WorldDepth>(LANDING_DEPTH);
+  const [leaving, setLeaving] = useState<WorldDepth | null>(null);
+  // Focus follows the reader across the boundary only when THEY crossed it, never on first arrival.
+  const [crossed, setCrossed] = useState(false);
+  const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
+  const reduceMotion = useReducedMotion();
+  const incoming = useSharedValue(1);
+  const incomingStyle = useAnimatedStyle(() => ({ opacity: incoming.get() }));
+
+  const settle = useCallback(() => setLeaving(null), []);
+
+  const cross = useCallback(
+    (to: WorldDepth) => {
+      if (to === depth) return;
+      setCrossed(true);
+      const duration = reduceMotion ? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;
+      if (duration <= 0) {
+        // Reduced Motion: a cut. The new depth is simply there.
+        incoming.set(1);
+        setLeaving(null);
+        setDepth(to);
+        return;
+      }
+      incoming.set(0);
+      setLeaving(depth);
+      setDepth(to);
+      // Symmetric and linear: an appearance change is not a meaning event, so it has no rise and no settle.
+      incoming.set(withTiming(1, { duration, easing: Easing.linear }, (finished) => {
+        'worklet';
+        if (finished) scheduleOnRN(settle);
+      }));
+    },
+    [depth, incoming, reduceMotion, settle],
+  );
+
+  const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
+
+  const layer = (which: WorldDepth, current: boolean): ReactNode =>
+    which === 'CONVERSATION' ? (
+      <ConversationSurface
+        controller={runtime.conversation}
+        language={locale.language}
+        insets={edges}
+        onOpenAnalysis={() => cross('ANALYSIS')}
+        focusDepthControl={crossed && current}
+      />
+    ) : (
+      <View style={styles.fill}>
+        {/*
+          The band comes FIRST, so it is read first, and it is drawn above the world. The world treats
+          it exactly as it treats the status bar: the band's measured height is the world's top inset,
+          so T-11 keeps everything the reader must see out from under it.
+        */}
+        <View style={styles.band}>
+          <AnalysisReturnBar
+            language={locale.language}
+            insets={edges}
+            onReturnToConversation={() => cross('CONVERSATION')}
+            onHeight={setBandHeight}
+            focusControl={crossed && current}
+          />
+        </View>
+        <LivingAnalysisMap runtime={runtime} locale={locale} insets={analysisInsets} fontScale={fontScale} envelope={envelope} />
+      </View>
+    );
+
+  const stack: WorldDepth[] = leaving === null ? [depth] : [leaving, depth];
+  return (
+    <View style={styles.fill} testID="qandeel-world-depth">
+      {/*
+        G3 K18 — status-region legibility against the ground actually painted behind it. Both depths
+        stand on the Dark World (P1's default for the Conversation; the Analysis shell is dark), so the
+        platform status content is light while this world is composed, whatever the system appearance.
+      */}
+      <StatusBar style="light" />
+      {stack.map((which) => {
+        const current = which === depth;
+        return (
+          <Animated.View
+            key={which}
+            testID={`qandeel-depth-${which.toLowerCase()}`}
+            style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
+            pointerEvents={current ? 'auto' : 'none'}
+            importantForAccessibility={current ? 'auto' : 'no-hide-descendants'}
+            accessibilityElementsHidden={!current}
+          >
+            {layer(which, current)}
+          </Animated.View>
+        );
+      })}
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  fill: { flex: 1 },
+  band: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
+});
