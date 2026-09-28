@@ -299,9 +299,10 @@ describe('R2-FIX-01 — a Map with no current projection publishes no disclosure
     );
     const view = await render(<MapSurface store={store} context={context} envelope={envelope()} />);
     const container = view.getByTestId(MAP_ACCESSIBILITY_TEST_ID);
-    // The accepted fresh behaviour is preserved exactly: the role and the label are unchanged.
+    // The accepted fresh behaviour is preserved: the collection role is unchanged. The label is the
+    // Map's approved name (W1A-01); the raw depth token it used to speak is not Product language.
     expect(container.props.accessibilityRole).toBe('list');
-    expect(container.props.accessibilityLabel).toBe('Living Analysis Map, disclosed at SOURCE_PROVENANCE');
+    expect(container.props.accessibilityLabel).toBe('Conversation analysis map');
     expect(view.getByTestId(`${MAP_ACCESSIBILITY_TEST_ID}:THREAD:thread-a`)).toBeTruthy();
     await act(async () => {
       view.unmount();

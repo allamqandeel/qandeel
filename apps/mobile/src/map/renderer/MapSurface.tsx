@@ -62,6 +62,7 @@ import {
   type PresentationMotionCause,
   type PresentationResidualEnvelope,
 } from '../../motion';
+import type { AnalysisLanguage } from '../../analysis-language';
 import type { CameraIntent, CanonicalStore } from '../../state';
 import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture, useMapSemanticZoomGesture, type MapCamera, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
@@ -91,6 +92,8 @@ export interface MapSurfaceProps {
    * one, which is exactly the behaviour before this prop existed.
    */
   readonly spatialCause?: (destination: CameraIntent) => PresentationMotionCause | null;
+  /** The reader's Product language, for the accessible Map's words only (W1A-01). */
+  readonly language?: AnalysisLanguage;
 }
 
 /** Which authority and which canonical camera the last accepted commit was drawn under. */
@@ -99,7 +102,7 @@ interface CameraHistory {
   readonly camera: MapCamera;
 }
 
-export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome, spatialCause }: MapSurfaceProps) {
+export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome, spatialCause, language = 'en' }: MapSurfaceProps) {
   // Canonical state is READ, never held beside the store: the whole state, because the projection
   // tuple is Session + effective TC + `MC.depth`, and the camera alone cannot tell us whether the
   // supplied projection is still this Map.
@@ -360,7 +363,7 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     return (
       <View testID={MAP_SURFACE_TEST_ID} style={styles.surface}>
         {camera === null ? null : (
-          <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} />
+          <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} language={language} />
         )}
       </View>
     );
@@ -387,7 +390,7 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
           />
         </View>
       </GestureDetector>
-      <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} />
+      <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} language={language} />
     </View>
   );
 }

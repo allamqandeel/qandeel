@@ -250,7 +250,8 @@ test('FCR-02 — no accessibility element in the layer groups an interactive des
   // Exact entry stays an ordinary, editable, individually labelled input.
   assert.match(navigator, /<TextInput\s*\n\s*testID=\{TEMPORAL_EXACT_ENTRY_TEST_ID\}/u);
   assert.equal(/editable=\{false\}/u.test(navigator), false);
-  assert.match(navigator, /accessibilityLabel="Exact Moment number"/u);
+  // W1A-01: labelled in the reader's language, from the approved Analysis copy.
+  assert.match(navigator, /accessibilityLabel=\{copy\.momentNumber\}/u);
 });
 
 // FCR-03 — one logical↔physical presentation geometry, defined once, consulted by the pointer side
@@ -944,19 +945,28 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
   // pins, so the claim that T-06 gains T-05 nothing is unweakened everywhere it was ever about T-06;
   // the two that moved are re-pinned to their corrected bytes AND carry the permanent claims below,
   // which are what the pin was standing in for.
+  //
+  // W1A-01 RE-ANCHOR (Product Owner-approved Analysis-language package). T-05's reader-facing words
+  // were hard-coded English inside the Arabic Analysis. `commands.ts`, `PresentationNavigator.tsx`,
+  // `TimelinePresentation.tsx` and their firewall test moved for that, and only for that: the words
+  // now come from `analysis-language` in the reader's language, and the command field accepts the
+  // approved commands of both languages. Nothing about presentation state, geometry or authority moved,
+  // and the permanent claims below assert exactly that.
   for (const [file, blob] of [
     ['apps/mobile/src/timeline/index.ts', '99ce579be9d3543658d226c6634db6e9b01499eb'],
     ['apps/mobile/src/timeline/model/disclosedTrack.ts', '1348a13e8fe20aebffc3ebf44b3b64db747d67ac'],
     ['apps/mobile/src/timeline/position/scale.ts', '57da822559485677e319c928b4123a6cf160ea98'],
     ['apps/mobile/src/timeline/window/controller.ts', '83b9bc86de9240f85bac209e862c3b80576d059b'],
-    ['apps/mobile/src/timeline/accessibility/commands.ts', '8debbb68131e6f34739ea8abf7ff067089e26276'],
-    ['apps/mobile/src/timeline/accessibility/PresentationNavigator.tsx', '35efaa9286b98c8670f767e04b7aa3e2c00639a0'],
-    // T-12 §17: the outboard slot's fixed width and clip became a floor. Nothing else in it changed.
-    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '03212dbb122d00934832e8dd0dba12825cb2b30f'],
+    // W1A-01: the bilingual command words.
+    ['apps/mobile/src/timeline/accessibility/commands.ts', '81214572561c3b95e31fa8377a21192509cf2ad9'],
+    // W1A-01: the reader's language.
+    ['apps/mobile/src/timeline/accessibility/PresentationNavigator.tsx', '1c12fe2330fbf0db28725d819eec35505936602f'],
+    // T-12 §17: the outboard slot's fixed width and clip became a floor. W1A-01: the reader's language.
+    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', 'cca6112a7e55973dd7168675fceec102a43b5dd0'],
     ['apps/mobile/src/timeline/testing/fixtures.ts', 'f59c962d13e6af81088e69168c0c00f307acbf8e'],
     ['apps/mobile/src/timeline/__tests__/controller.test.ts', '8453bae72e867c13788384a81f3eaca17cde2ada'],
-    // T-12 §17: the same correction's own assertions, re-anchored beside it.
-    ['apps/mobile/src/timeline/__tests__/firewall.test.tsx', '67c429a698aecbbb073284c7fe6df33420fa76a0'],
+    // T-12 §17 and W1A-01: the same corrections' own assertions, re-anchored beside them.
+    ['apps/mobile/src/timeline/__tests__/firewall.test.tsx', '14d08d5a5afe4705e6f5138cc96e892bb47c367b'],
     ['apps/mobile/src/timeline/__tests__/large-history.test.tsx', '88bf84b0df0cca20dc68335768c62a5245d22197'],
   ]) {
     assert.equal(gitBlobId(await read(file)), blob, `${file} is byte-identical: T-05 gains nothing from the temporal layer`);
@@ -969,6 +979,18 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
   // T-05 still writes no canonical state and holds no store authority of any kind.
   for (const forbidden of ['CanonicalStore', 'dispatch', 'store.', 'commitPreviewedTarget', 'temporalTargeting', 'inspection']) {
     assert.equal(presentation.includes(forbidden), false, `T-05 presentation must not reach ${forbidden}`);
+  }
+  // W1A-01: the words moved, the authority did not. The navigator and its commands still reach only
+  // T-05's own presentation controller, and the only thing they import beyond T-05 is the leaf copy.
+  for (const file of ['apps/mobile/src/timeline/accessibility/commands.ts', 'apps/mobile/src/timeline/accessibility/PresentationNavigator.tsx']) {
+    const text = stripComments(await read(file));
+    for (const forbidden of ['CanonicalStore', 'dispatch', 'store.', 'temporalTargeting', 'COMMIT_']) {
+      assert.equal(text.includes(forbidden), false, `${file} must not reach ${forbidden}`);
+    }
+    for (const match of text.matchAll(/from '([^']+)'/gu)) {
+      assert.ok(match[1] === 'react' || match[1] === 'react-native' || match[1].startsWith('./') || match[1].startsWith('../window/') || match[1] === '../../analysis-language',
+        `${file} imports only T-05, React and the leaf Analysis copy: ${match[1]}`);
+    }
   }
   // The Track's invariant step is untouched: the correction changed the slot BESIDE the strip, and
   // the row around it, and nothing about ordinal geometry, the window offset or the position scale.

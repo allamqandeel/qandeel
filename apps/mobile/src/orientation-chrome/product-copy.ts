@@ -266,7 +266,8 @@ const EN: LanguagePack = Object.freeze<LanguagePack>({
   },
   temporal: (temporal) => {
     if (temporal.mode === 'FOLLOW_LIVE') {
-      return temporal.liveHeadEstablished ? 'Following the conversation as it continues.' : 'The conversation has not started yet.';
+      // W1A-01 Product Owner supersession: "Following the conversation" (with this slot's full stop).
+      return temporal.liveHeadEstablished ? 'Following the conversation.' : 'The conversation has not started yet.';
     }
     return `Reading at moment ${digits(temporal.at ?? 0)}.`;
   },
@@ -341,7 +342,8 @@ const AR: LanguagePack = Object.freeze<LanguagePack>({
       hint: 'يستعيد بالضبط الموضع الذي بدأت منه هذه المعاينة.',
     }),
     RETURN_LIVE_HEAD: Object.freeze({
-      label: 'العودة إلى المحادثة الجارية',
+      // W1A-01 Product Owner supersession: replaces «العودة إلى المحادثة الجارية».
+      label: 'العودة لمتابعة المحادثة',
       hint: 'يتابع المحادثة وهي تستمر. لا يتحرك العرض.',
     }),
     RETURN_LIVE_FOCUS: Object.freeze({
@@ -404,9 +406,9 @@ const AR: LanguagePack = Object.freeze<LanguagePack>({
   },
   temporal: (temporal) => {
     if (temporal.mode === 'FOLLOW_LIVE') {
-      // Parallel to the pinned line below — «عند آخر المحادثة» against «عند اللحظة N» — so the two
-      // committed stances read as two positions rather than as two different kinds of sentence.
-      return temporal.liveHeadEstablished ? 'أنت عند آخر المحادثة.' : 'لم تبدأ المحادثة بعد.';
+      // W1A-01 Product Owner supersession: «تتابع المحادثة الآن» replaces «أنت عند آخر المحادثة», with
+      // this slot's sentence full stop, like every other stance sentence here.
+      return temporal.liveHeadEstablished ? 'تتابع المحادثة الآن.' : 'لم تبدأ المحادثة بعد.';
     }
     return `أنت عند اللحظة ${digits(temporal.at ?? 0)}.`;
   },

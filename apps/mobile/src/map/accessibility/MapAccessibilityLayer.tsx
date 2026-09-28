@@ -21,6 +21,7 @@
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 
+import type { AnalysisLanguage } from '../../analysis-language';
 import { type CanonicalStore } from '../../state';
 import { exploreViewport, zoomSemanticStep, type MapCamera, type ViewportEnvelope } from '../camera';
 import { mapContextFreshness, type MapObjectFamily } from '../projection';
@@ -50,12 +51,14 @@ export interface MapAccessibilityLayerProps {
   readonly camera: MapCamera;
   readonly envelope: ViewportEnvelope;
   readonly onOutcome?: (outcome: MapActionOutcome | DirectJumpOutcome) => void;
+  /** The reader's Product language for every word of the accessible Map (W1A-01). */
+  readonly language?: AnalysisLanguage;
 }
 
 /** The Map families are exactly the disclosure families of the same name. */
 const historicalFamilyOf = (family: MapObjectFamily): 'THREAD' | 'READING' | 'EMERGING_FOCUS' => family;
 
-export function MapAccessibilityLayer({ store, context, camera, envelope, onOutcome }: MapAccessibilityLayerProps) {
+export function MapAccessibilityLayer({ store, context, camera, envelope, onOutcome, language = 'en' }: MapAccessibilityLayerProps) {
   // Subscribed, not sampled: the offered actions depend on the current `IF_ref` and the whole
   // projection tuple, so a tree built from a snapshot taken once at mount would keep offering — or
   // keep withholding — a context switch after the inspection moved, and would keep naming objects
@@ -81,8 +84,8 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
   // nodes removed. The container role and label are disclosure semantics too, so they are built
   // from the scene only while that scene is this Map (R2-FIX-01).
   const tree = useMemo(
-    () => (freshness.fresh ? buildMapAccessibilityTree(context.scene, camera, envelope, focus) : mapAccessibilityWithoutProjection()),
-    [freshness, context.scene, camera, envelope, focus],
+    () => (freshness.fresh ? buildMapAccessibilityTree(context.scene, camera, envelope, focus, language) : mapAccessibilityWithoutProjection(language)),
+    [freshness, context.scene, camera, envelope, focus, language],
   );
 
   // The act runs first and the observer is notified afterwards. An optional call would not
@@ -152,6 +155,7 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
       pointerEvents="box-none"
       accessibilityRole={tree.containerRole === 'list' ? 'list' : 'none'}
       accessibilityLabel={tree.containerLabel}
+      accessibilityLanguage={language}
       accessibilityActions={[...tree.viewportActions]}
       onAccessibilityAction={(event: AccessibilityActionEvent) => runViewportAction(event.nativeEvent.actionName)}
     >
@@ -162,6 +166,7 @@ export function MapAccessibilityLayer({ store, context, camera, envelope, onOutc
           accessible
           accessibilityRole={node.role}
           accessibilityLabel={node.label}
+          accessibilityLanguage={language}
           accessibilityActions={[...node.actions]}
           onAccessibilityAction={(event: AccessibilityActionEvent) => runNodeAction(node, event.nativeEvent.actionName)}
         />

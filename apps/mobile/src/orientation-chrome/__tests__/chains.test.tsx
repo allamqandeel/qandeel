@@ -152,7 +152,7 @@ describe('OC08-M — Live chains', () => {
     // M114 — the camera and the inspection did not magically move.
     expect(store.getState().camera).toBe(before.camera);
     expect(store.getState().inspection).toBe(before.inspection);
-    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:temporal`).props.children).toBe('Following the conversation as it continues.');
+    expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:temporal`).props.children).toBe('Following the conversation.');
     expect(view.getByTestId(`${ORIENTATION_CHROME_TEST_ID}:spatial`).props.children).toBe(spatialLine);
 
     await act(async () => {

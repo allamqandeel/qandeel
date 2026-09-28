@@ -318,7 +318,7 @@ test('R2-01 — one shared freshness rule guards every render, hit, accessibilit
   // and label cannot leak disclosure semantics either. `buildMapAccessibilityTree` is the only
   // scene-reading builder, and it is reachable only on the fresh branch.
   const layer = mapCode['accessibility/MapAccessibilityLayer.tsx'];
-  assert.match(layer, /freshness\.fresh \? buildMapAccessibilityTree\(context\.scene, camera, envelope, focus\) : mapAccessibilityWithoutProjection\(\)/u);
+  assert.match(layer, /freshness\.fresh \? buildMapAccessibilityTree\(context\.scene, camera, envelope, focus, language\) : mapAccessibilityWithoutProjection\(language\)/u);
   assert.equal((layer.match(/buildMapAccessibilityTree\(/gu) ?? []).length, 1, 'the scene-reading builder is called in exactly one place');
   assert.doesNotMatch(layer, /context\.scene\./u, 'the layer never reads the scene outside the fresh branch');
   const neutral = mapCode['accessibility/map-accessibility.ts'].slice(
@@ -327,12 +327,13 @@ test('R2-01 — one shared freshness rule guards every render, hit, accessibilit
   );
   assert.ok(neutral.length > 0, 'the no-projection tree exists');
   assert.match(neutral, /containerRole: 'none'/u);
-  assert.match(neutral, /containerLabel: MAP_CONTAINER_NEUTRAL_LABEL/u);
+  assert.match(neutral, /containerLabel: mapContainerNeutralLabel\(language\)/u);
   assert.match(neutral, /nodes: Object\.freeze\(\[\]\)/u);
   for (const forbidden of ['scene', 'depth', 'MapScene', 'disclosed']) {
     assert.equal(neutral.includes(forbidden), false, `the no-projection tree must not derive ${forbidden}`);
   }
-  assert.match(mapCode['accessibility/map-accessibility.ts'], /MAP_CONTAINER_NEUTRAL_LABEL = 'Living Analysis Map';/u);
+  // W1A-01: the neutral name is the Map's approved Product name, in the reader's language.
+  assert.match(mapCode['accessibility/map-accessibility.ts'], /export const mapContainerNeutralLabel = \(language: AnalysisLanguage\): string => analysisCopy\(language\)\.map;/u);
   // No stale fallback of any kind.
   for (const forbidden of ['opacity: 0', 'fallbackScene', 'previousScene', 'lastScene', 'cachedScene']) {
     assert.equal(mapText.includes(forbidden), false, `a stale projection must not survive as ${forbidden}`);

@@ -85,7 +85,7 @@ wording above (§10). No copy need of the Conversation layer remains open.
 | History | completed exchanges, committed turns whose reply FAILED (with that state), and committed turns still awaiting a reply (with the waiting line), oldest to newest; rebuilt from the server after every restart | API `listTurns`, `conversation-controller.ts` |
 | Scrolling | opens at the newest turn; follows a new reply only when the reader is near the newest turn; never pulls a reader off older turns; no "new message" pill; older pages load as the top approaches | `ConversationSurface.tsx` |
 | Landing | after sign-in and after restart: the Conversation. Depth is never persisted (the T-13 recovery record is unchanged) | `DepthComposition.tsx` |
-| Depth transition | F2's symmetric appearance cross-fade (`qandeel.appearance.switch.crossfade`, 200 ms, linear) in standard motion; a cut under Reduced Motion (`crossfade-reduced-motion`, 0 ms). The outgoing depth stays opaque beneath the incoming one. The fade starts only once the incoming depth is DRAWN — the Conversation on its first layout, the Analysis when the Map itself has composed (bounded by `ANALYSIS_COMPOSE_WAIT_CEILING_MS`, 1 s) — so a slow mount cannot use up its 200 ms before the first frame (§7, §10) | `DepthComposition.tsx`, `LivingAnalysisMap.tsx` |
+| Depth transition | F2's symmetric appearance cross-fade (`qandeel.appearance.switch.crossfade`, 200 ms, linear) in standard motion; a cut under Reduced Motion (`crossfade-reduced-motion`, 0 ms). The outgoing depth stays opaque beneath the incoming one. The fade starts only once the incoming depth is DRAWN — the Conversation on its first layout, the Analysis when `LivingAnalysisMap` reports its real first state (the Map composed, or a settled projection that cannot be drawn, whose chrome says so) — so a slow mount cannot use up its 200 ms before the first frame. No timer can start the fade earlier: until the Analysis is drawn the Conversation stays visible beneath it, and Back still returns (§7, §10) | `DepthComposition.tsx`, `LivingAnalysisMap.tsx` |
 | Android system Back | at the Analysis depth, Back is the same act as «المحادثة» / Conversation: the same boundary, fade and Session, no route pushed or popped. At the Conversation depth nothing is registered, so the platform's own root behaviour is untouched (§10) | `DepthComposition.tsx` |
 | Keyboard | the composer and Send — and the T-14 Sign-in form (§10) — stay above the keyboard on both platforms, including Android 15+'s enforced edge-to-edge window, which no longer resizes for the keyboard (§7) | `ConversationSurface.tsx`, `ProductSignInGateway.tsx` |
 | Upper chrome | Conversation shows only the Conversation → Analysis control; Analysis gains only the Analysis → Conversation control | both surfaces |
@@ -228,7 +228,7 @@ the report surfaced. It adds no feature and changes no frozen contract.
 | 3 | Android system Back was not mapped to the depth pair | Back at Analysis returns to the Conversation through the same boundary; at the Conversation it is not taken (§3) |
 | 4 | English Product / assistive language inside the Arabic Analysis surface | see §10.1 |
 | 5 | The T-14 Sign-in gateway relied on Android resizing the window for the keyboard, which Android 15+'s enforced edge-to-edge no longer does (measured on this branch's proof emulator for the Conversation) | `KeyboardAvoidingView` `padding` on both platforms, like the composer; verified by the focused keyboard proof (§10.2) |
-| 6 | Conversation → Analysis still reached the Analysis in one emulator frame: the Analysis depth's first layout is T-11's empty measuring pass, and the Map composes only after it | the fade into Analysis starts when the Map itself has composed (`LivingAnalysisMap` `onComposed`), bounded by a 1 s ceiling; Analysis → Conversation and the Reduced Motion cut are unchanged |
+| 6 | Conversation → Analysis still reached the Analysis in one emulator frame: the Analysis depth's first layout is T-11's empty measuring pass, and the Map composes only after it | the fade into Analysis starts only when the Analysis has produced a real renderable state (`LivingAnalysisMap` `onComposed`: the Map composed, or a settled undrawable projection with its chrome). A 1 s fallback that would have started the fade anyway was proposed and REJECTED by the Product Owner, because it could fade into an unrendered surface; there is no timer. Turning back to an Analysis that is not yet drawn waits for it again. Analysis → Conversation and the Reduced Motion cut are unchanged |
 | 7 | The Analysis world is still the pre-W4 map | not redesigned here; the full I-08B1 production port remains W4 |
 
 ### 10.1 Arabic Analysis language leakage
@@ -236,12 +236,77 @@ the report surfaced. It adds no feature and changes no frozen contract.
 The audit covered the whole production subtree the Analysis depth renders (`LivingAnalysisMap` → `MapSurface` /
 `MapAccessibilityLayer`, `TemporalTargetLayer` / `LiveEdgeTarget` / `TimelinePresentation` / `PresentationNavigator` /
 `TemporalNavigator`, `OrientationChrome`). `OrientationChrome` and the Analysis band are already localized; the
-temporal, timeline and map-accessibility owners receive no language and speak hard-coded English. Status: awaiting the
-Product Owner's copy decision (see the Draft PR), because most of those strings have no authorized Arabic.
+temporal, timeline and map-accessibility owners received no language and spoke hard-coded English, including "Live" /
+"Go live" (rejected by VI-01 even in English), raw object ids (`Thread w1a-proof-thread-1`) and a raw depth enum
+(`disclosed at SOURCE_PROVENANCE`). The Product Owner then approved the complete package below.
+
+**Implementation.** One leaf copy module, `apps/mobile/src/analysis-language/analysis-copy.ts` (no imports), holds every
+word; `LivingAnalysisMap` passes the reader's language to `TemporalTargetLayer` (→ `TimelinePresentation`,
+`PresentationNavigator`, `TemporalNavigator`, the outboard current-edge control) and to `MapSurface` (→
+`MapAccessibilityLayer`). No runtime semantics changed: the same acts, gates, stores and action identities; "live"
+remains a runtime term only. Commit / cancel are offered only while a temporary look exists, because their approved
+words name its moment. Map objects are described by Product type and placement only — no id of any kind.
+
+**Product Owner supersession (explicit).** For the current-edge state and act, on every surface of this path (visible
+text, accessible name, accessible action, the T-08 chrome sentence and the T-07 return control):
+
+| | Superseded | Now |
+|---|---|---|
+| State | «أنت عند آخر المحادثة» / "Following the conversation as it continues" | «تتابع المحادثة الآن» / "Following the conversation" |
+| Act | «العودة إلى المحادثة الجارية» / "Rejoin the conversation" | «العودة لمتابعة المحادثة» / "Rejoin the conversation" |
+
+In T-08's sentence slot the state keeps that slot's full stop («تتابع المحادثة الآن.» / "Following the conversation."),
+exactly as the superseded sentence had one; everywhere else it is used as approved, without one.
+
+**Approved package, verbatim.**
+
+| Key | Arabic | English |
+|---|---|---|
+| Temporal navigation | التنقل الزمني | Temporal navigation |
+| Moment number | رقم اللحظة | Moment number |
+| No moment available | لا توجد لحظة متاحة بعد. | No moment is available yet. |
+| Moment-number hint | أدخل رقمًا من 1 إلى {n}. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها. | Enter a number from 1 to {n}. This gives you a temporary look without moving there. |
+| Unavailable moment | هذه اللحظة غير متاحة ضمن الخط الزمني الحالي. | This moment isn't available in the current timeline. |
+| Preview next moment | نظرة مؤقتة على اللحظة التالية | Preview the next moment |
+| Timeline point | اللحظة {n} | Moment {n} |
+| Track continues | يوجد المزيد على الخط الزمني. | More is available on the timeline. |
+| Timeline view position | موضع العرض على الخط الزمني | Timeline view position |
+| View percentage | {n}% من نطاق العرض | {n}% of the view range |
+| Everything visible | كل اللحظات المتاحة ظاهرة الآن. | All available moments are visible. |
+| Move view | تغيير موضع العرض | Move the timeline view |
+| Narrow view | تضييق نطاق العرض | Narrow the view |
+| Widen view | توسيع نطاق العرض | Widen the view |
+| Map | خريطة تحليل المحادثة | Conversation analysis map |
+| Thread / Reading / Emerging focus | خيط / قراءة / تركيز ناشئ | Thread / Reading / Emerging focus |
+| Permanent place | في موضعه الثابت | At its permanent place |
+| Contexts | عدد السياقات: {n} | Contexts: {n} |
+| No map placement | بلا موضع على الخريطة | No place on the map |
+| Inspect | معاينة | Inspect |
+| Switch context | تغيير السياق | Switch context |
+| Go to place | الانتقال إلى هذا الموضع | Go to this place |
+| More / less detail | إظهار تفاصيل أكثر / إظهار تفاصيل أقل | Show more detail / Show less detail |
+| Explore | استكشاف أعلى / أسفل / يمين / يسار الخريطة | Explore up / down / right / left on the map |
+| Command words (accepted in BOTH languages) | البداية، النهاية، التالي، السابق، تضييق، توسيع | first, last, next, previous, refine, widen |
+
+Also used, already approved: P4-C4 «الانتقال إلى اللحظة {n}» / "Go to moment {n}" and «إلغاء النظرة المؤقتة» / "Cancel
+the temporary look"; T-08 «أنت عند اللحظة {n}.» / "Reading at moment {n}." and «نظرة مؤقتة على اللحظة {n}، ولم يتغير
+موضعك.» / "A temporary look at moment {n}. Your position has not changed."
+
+**Derived, not invented.** The command helper and its error are the approved command words of the reader's language
+with `+`, `-` and `0–100%`, joined («البداية، النهاية، التالي، السابق، تضييق، توسيع، +، -، 0–100%»). The adjustable
+Timeline's step actions use the approved words «التالي» / «السابق» / «البداية» / «النهاية» and the approved narrow / widen
+names. A map object is spoken as its type and placement joined by «،» / "." . The command field and the moment-number
+field also read Arabic-Indic digits and «٪».
 
 ### 10.2 Focused verification
 
 The four-way matrix of §7.1 is not repeated. `scripts/w1a/run-w1a-correction-proof.sh` runs one standard-motion
 recording of the depth boundary in both directions (the door forward, Android system Back returning), and the
 production Sign-in gateway with the keyboard open at the default and the largest text size, where the keyboard's
-inset frame and the element bounds are measured.
+inset frame and the element bounds are measured; and the Arabic Analysis depth, whose on-device accessibility tree is
+measured for Latin-script words, internal ids and the approved current-edge wording.
+
+Locally, `integration/__tests__/analysis-language.test.tsx` censuses every visible and assistive string of the
+production Analysis depth in both languages; `timeline/__tests__/language.test.tsx` covers the bilingual commands; the
+T-06 and T-04 suites carry the Arabic surface. The T-06 contract's T-05 byte pins are re-anchored for the four T-05
+files whose words moved, with their store-free authority asserted directly.

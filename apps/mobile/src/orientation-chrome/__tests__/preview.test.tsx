@@ -199,7 +199,7 @@ describe('R3-02 — the committed position and the transient one are two differe
       source.emit(source.previewing(2));
     });
     // 33 — still following Live. Looking at an earlier Moment is not pinning to it.
-    expect(temporalLine(view)).toBe('Following the conversation as it continues.');
+    expect(temporalLine(view)).toBe('Following the conversation.');
     expect(previewLine(view)).toContain('moment 2');
     await act(async () => {
       view.unmount();

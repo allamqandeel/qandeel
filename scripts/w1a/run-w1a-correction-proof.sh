@@ -8,6 +8,8 @@
 #
 #   depth-ar-standard    ONE standard-motion recording of the depth boundary in BOTH directions,
 #                        Conversation → Analysis through the door and back through Android system Back;
+#   analysis-ar-language the Arabic Analysis depth, its on-device accessibility tree measured for
+#                        Latin-script words, internal ids and the approved current-edge wording;
 #   sign-in-ar-normal    the production Sign-in gateway with the keyboard open, default text size;
 #   sign-in-ar-large     the same at the largest system text size, where clipping would show first.
 #
@@ -93,6 +95,43 @@ PY
   cat "$OUT/$name-keyboard-measure.txt"
 }
 
+# Every visible text and accessible description of the on-screen Analysis depth, from the device's own
+# accessibility tree: no Latin-script word, no internal id, and the approved current-edge wording.
+measure_analysis_language() {
+  local name="$1"
+  if python3 - "$OUT/$name-final-hierarchy.xml" > "$OUT/$name-language-census.txt" 2>&1 <<'PY'
+import re, sys, xml.etree.ElementTree as ET
+strings = []
+for node in ET.parse(sys.argv[1]).iter('node'):
+    if not node.get('package', '').startswith('com.qandeel'):
+        continue
+    for attr in ('text', 'content-desc', 'hint'):
+        value = (node.get(attr) or '').strip()
+        if value:
+            strings.append((node.get('resource-id', ''), attr, value))
+internal = re.compile(r'SOURCE_PROVENANCE|ANALYTICAL_OBJECT|THREAD_READING|FOLLOW_LIVE|PINNED|thread-|reading-|binding|w1a-proof|fixture|\bSP\b|[0-9a-f]{8}-[0-9a-f]{4}-', re.I)
+ok = len(strings) > 5
+for rid, attr, value in strings:
+    flags = []
+    if re.search(r'[A-Za-z]', value): flags.append('LATIN')
+    if internal.search(value): flags.append('INTERNAL-ID')
+    print(f"{'FLAG ' + '+'.join(flags) if flags else 'ok  '} [{rid}] {attr}: {value}")
+    ok = ok and not flags
+joined = '\n'.join(v for _, _, v in strings)
+current_edge = ('تتابع المحادثة الآن' in joined) or ('العودة لمتابعة المحادثة' in joined)
+superseded = ('أنت عند آخر المحادثة' in joined) or ('العودة إلى المحادثة الجارية' in joined)
+print(f'strings: {len(strings)}; current-edge wording present: {current_edge}; superseded wording present: {superseded}')
+sys.exit(0 if ok and current_edge and not superseded else 1)
+PY
+  then
+    echo "PASS $name-language-census" | tee -a "$OUT/results.txt"
+  else
+    echo "FAIL $name-language-census" | tee -a "$OUT/results.txt"
+    status=1
+  fi
+  cat "$OUT/$name-language-census.txt"
+}
+
 {
   echo "device: $(adb shell getprop ro.product.model) / Android $(adb shell getprop ro.build.version.release) / API $(adb shell getprop ro.build.version.sdk)"
   echo "density: $(adb shell wm density | tr -d '\r')  size: $(adb shell wm size | tr -d '\r')"
@@ -104,6 +143,11 @@ adb shell settings put system font_scale 1.0
 # Standard motion: the depth boundary, both directions, one recording.
 set_motion 1
 run depth-ar-standard w1a-01-depth-proof.yaml
+adb shell am force-stop "$PKG"
+
+# The Arabic Analysis depth's language, measured on the device's own accessibility tree.
+run analysis-ar-language w1a-01-analysis-language.yaml
+measure_analysis_language analysis-ar-language
 adb shell am force-stop "$PKG"
 
 # The Sign-in gateway with the keyboard open, default text size, then the largest.

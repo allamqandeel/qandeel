@@ -23,7 +23,7 @@ test('TL05-14 / Stage 6.2 sections 8–9: outboard Live seam consumes no ordinal
   expect(c.getSnapshot().maximum).toBe(20 * 48 - 240);
   expect(c.getSnapshot().track.targets.at(-1)?.sessionPosition).toBe(20);
   expect(screen.queryByTestId('timeline-sp-21')).toBeNull();
-  expect(screen.getByTestId('timeline-discontinuity').props.accessibilityLabel).toBe('Disclosed Track continues');
+  expect(screen.getByTestId('timeline-discontinuity').props.accessibilityLabel).toBe('More is available on the timeline.');
   await act(async () => c.move({ type: 'PRESENTATION_POSITION_MOVE', position: 1 }));
   expect(screen.queryByTestId('timeline-discontinuity')).toBeNull();
   expect(screen.getByTestId('timeline-outboard-live').props.style).toMatchObject({ minWidth: OUTBOARD_LIVE_EXTENT });
@@ -39,9 +39,9 @@ test('TL05-06/14 disclosed-only component data/a11y; no future or Live-as-Moment
   expect(screen.getAllByTestId(/^timeline-sp-/)).toHaveLength(5);
   expect(screen.queryByTestId('timeline-sp-6')).toBeNull();
   expect(screen.getByTestId('timeline-position').props.accessibilityState.disabled).toBe(true);
-  expect(screen.getByTestId('timeline-position').props.accessibilityValue.text).toContain('All disclosed positions fit');
+  expect(screen.getByTestId('timeline-position').props.accessibilityValue.text).toBe('All available moments are visible.');
   for (const view of screen.getAllByTestId(/^timeline-sp-/)) {
-    expect(view.props.accessibilityLabel).toMatch(/^Disclosed Moment SP [1-5]$/);
+    expect(view.props.accessibilityLabel).toMatch(/^Moment [1-5]$/);
     expect(view.props.accessibilityValue).toBeUndefined();
     expect(view.props.onPress).toBeUndefined();
   }

@@ -245,10 +245,14 @@ test('§6 — the depth pair lands in the Conversation, persists nothing, dispat
   for (const forbidden of [/recovery/iu, /dispatch/u, /expo-router/u, /navigate/u, /AsyncStorage|SecureStore|expo-sqlite/u]) {
     assert.doesNotMatch(depth, forbidden, `the depth switch must not reach ${forbidden}`);
   }
-  // No timer drives the switch. The single timer is the ceiling on waiting for the Analysis world to
-  // compose, and all it can do is start the same fade a press already started.
-  assert.equal((depth.match(/setTimeout\(/gu) ?? []).length, 1, 'exactly one timer in the depth owner');
-  assert.match(depth, /composeCeiling\.current = setTimeout\(beginFade, ANALYSIS_COMPOSE_WAIT_CEILING_MS\);/u);
+  // No timer drives the switch, and none can start a fade into an Analysis that has not been drawn:
+  // the fade into Analysis starts only from the world's own composition report.
+  assert.doesNotMatch(depth, /setTimeout|setInterval/u, 'the depth owner has no timer');
+  assert.match(depth, /onComposed=\{current \? beginFade : undefined\}/u);
+  assert.match(depth, /const conversationStillMounted = to === 'CONVERSATION' && leaving === to;/u);
+  const map = code(read('apps/mobile/src/integration/composition/LivingAnalysisMap.tsx'));
+  assert.doesNotMatch(map, /setTimeout|setInterval/u);
+  assert.match(map, /entry\.status !== 'NOT_FETCHED'/u, 'a projection still being fetched is never treated as drawn');
   // Android system Back: the return act, registered ONLY while Analysis is the depth.
   assert.match(depth, /if \(depth !== 'ANALYSIS'\) return undefined;\n\s*const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\n\s*cross\('CONVERSATION'\);\n\s*return true;/u);
   // The frozen boundary: F2's cross-fade, and no cross-fade under Reduced Motion.

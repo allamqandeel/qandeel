@@ -43,13 +43,6 @@ export type WorldDepth = 'CONVERSATION' | 'ANALYSIS';
 /** Where the reader lands in W1A-01, after sign-in and after every restart. Never persisted. */
 export const LANDING_DEPTH: WorldDepth = 'CONVERSATION';
 
-/**
- * The longest the fade into Analysis waits for the Analysis world to compose. The world draws only
- * once its room is measured and its projection is held; if that takes longer than this (a slow first
- * projection, or one refused), the fade runs anyway so the boundary never waits on the network.
- */
-export const ANALYSIS_COMPOSE_WAIT_CEILING_MS = 1000;
-
 export interface DepthCompositionProps {
   readonly runtime: IntegrationSessionRuntime;
   readonly locale: ProductLocale;
@@ -79,18 +72,12 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
   // the Conversation's history) can take longer than the fade. Started at the press, the fade's clock
   // would run out before the incoming depth's first frame, and the reader would see a cut (found on the
   // W1A-01 proof emulator). So the fade starts only once the incoming depth is actually drawn: the
-  // Conversation on its first layout, and the Analysis world when the Map itself has composed — its
-  // own first layout is an empty measuring pass, and fading that in was still a cut (found on the
-  // W1A-01 proof emulator too), bounded by `ANALYSIS_COMPOSE_WAIT_CEILING_MS`.
+  // Conversation on its first layout, and the Analysis world when `LivingAnalysisMap` reports its real
+  // first state — its own first layout is an empty measuring pass, and fading that in was still a cut
+  // (found on the W1A-01 proof emulator too). There is no timeout that could start the fade earlier:
+  // until the Analysis is drawn, the Conversation stays visible beneath it, and Back still returns.
   const pendingFade = useRef<number | null>(null);
-  const composeCeiling = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const clearCeiling = useCallback(() => {
-    if (composeCeiling.current !== null) clearTimeout(composeCeiling.current);
-    composeCeiling.current = null;
-  }, []);
-  useEffect(() => clearCeiling, [clearCeiling]);
   const beginFade = useCallback(() => {
-    clearCeiling();
     const duration = pendingFade.current;
     if (duration === null) return;
     pendingFade.current = null;
@@ -99,13 +86,12 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
       'worklet';
       if (finished) scheduleOnRN(settle);
     }));
-  }, [clearCeiling, incoming, settle]);
+  }, [incoming, settle]);
 
   const cross = useCallback(
     (to: WorldDepth) => {
       if (to === depth) return;
       setCrossed(true);
-      clearCeiling();
       const duration = reduceMotion ? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;
       if (duration <= 0) {
         // Reduced Motion: a cut. The new depth is simply there.
@@ -115,17 +101,17 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
         setDepth(to);
         return;
       }
-      // A depth that is still mounted (the reader turned back mid-fade) will not lay out again, so its
-      // fade starts now; a newly mounted one starts on its first layout (see `beginFade`).
-      const alreadyMounted = leaving === to;
+      // A Conversation that is still mounted (the reader turned back mid-fade) is drawn and will not lay
+      // out again, so its fade starts now. The Analysis never starts here: turning back to it re-arms
+      // its composition report, which fires only once it is actually drawn (see `beginFade`).
+      const conversationStillMounted = to === 'CONVERSATION' && leaving === to;
       incoming.set(0);
       setLeaving(depth);
       setDepth(to);
       pendingFade.current = duration;
-      if (alreadyMounted) beginFade();
-      else if (to === 'ANALYSIS') composeCeiling.current = setTimeout(beginFade, ANALYSIS_COMPOSE_WAIT_CEILING_MS);
+      if (conversationStillMounted) beginFade();
     },
-    [beginFade, clearCeiling, depth, incoming, leaving, reduceMotion],
+    [beginFade, depth, incoming, leaving, reduceMotion],
   );
 
   // Android system Back at the Analysis depth is the return to the Conversation. Registered only

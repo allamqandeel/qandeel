@@ -56,9 +56,11 @@ export interface LivingAnalysisMapProps {
   /** The envelope this composition is presented inside; T-11 uses it to retire a stale measurement. */
   readonly envelope: { readonly width: number; readonly height: number };
   /**
-   * W1A-01: called once, after the first commit in which the Map itself is composed. The world is
-   * drawn only after T-11 has measured its room and T-04 has a projection to draw, which is later
-   * than this composition's own first layout; the depth boundary waits for THIS to fade the world in.
+   * W1A-01: called after the first commit in which this composition shows its REAL first state: the
+   * Map itself composed, or — when the projection is settled and cannot be drawn (refused, or no
+   * scene) — the measured composition whose chrome says so. Never while the room is unmeasured or the
+   * projection is still being fetched: the depth boundary waits for THIS to fade the world in, and a
+   * fade into an unrendered surface is exactly the cut it exists to prevent.
    */
   readonly onComposed?: () => void;
 }
@@ -178,6 +180,14 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
     [spatialCause, store],
   );
 
+  /**
+   * The projection is SETTLED and still cannot be drawn: there is no viewpoint, it was refused, or it
+   * holds no scene. The measured composition — whose chrome states exactly that — is then this
+   * surface's real first state. A projection still being fetched is not settled.
+   */
+  const settledWithoutMap =
+    request === null || (entry !== null && entry.status !== 'NOT_FETCHED' && (mapContext === null || !mapContext.ok));
+
   return (
     // T-11's own surface identity is kept: the responsive container belongs to that owner, and
     // overriding its test id would make the composition unrecognizable to the owner's own tooling.
@@ -204,6 +214,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
                     envelope={envelope}
                     spatialCause={takeSpatialCause}
                     onOutcome={observeMapOutcome}
+                    language={locale.language}
                   />
                   {onComposed === undefined ? null : <ComposedMark onComposed={onComposed} />}
                 </>
@@ -223,7 +234,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
               paddingHorizontal={plan.chrome.paddingHorizontal}
               support={plan.support}
             >
-              <TemporalTargetLayer store={store} preview={preview} presentation={presentation} />
+              <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} />
             </ResponsiveTimelineRow>
 
             <ResponsiveChromeBand chrome={plan.chrome} support={plan.support}>
@@ -243,6 +254,7 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
               )}
             </ResponsiveChromeBand>
           </ResponsiveSupportBand>
+          {onComposed !== undefined && settledWithoutMap ? <ComposedMark onComposed={onComposed} /> : null}
         </>
       )}
     </ResponsiveSurface>

@@ -43,6 +43,7 @@
 import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent } from 'react-native';
 
+import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
 import type { CanonicalStore } from '../../state';
 import type { DisclosedTrack } from '../../timeline';
 import type { TemporalOutcome } from '../outcome';
@@ -76,16 +77,19 @@ export interface TemporalNavigatorProps {
   readonly onCommitted?: () => void;
   readonly onCancelled?: () => void;
   readonly onOutcome?: (outcome: TemporalOutcome) => void;
+  /** The reader's Product language for every word here (W1A-01). */
+  readonly language?: AnalysisLanguage;
 }
 
-export function TemporalNavigator({ store, preview, track, onCommitted, onCancelled, onOutcome }: TemporalNavigatorProps) {
+export function TemporalNavigator({ store, preview, track, onCommitted, onCancelled, onOutcome, language = 'en' }: TemporalNavigatorProps) {
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
   const [entry, setEntry] = useState('');
   const [entryRefused, setEntryRefused] = useState(false);
+  const copy = analysisCopy(language);
 
   const targeting = useMemo(() => temporalTargeting(state, track), [state, track]);
-  const model = useMemo(() => temporalAccessibilityModel(targeting, previewState), [targeting, previewState]);
+  const model = useMemo(() => temporalAccessibilityModel(targeting, previewState, language), [targeting, previewState, language]);
 
   // The act runs first and the observers are notified afterwards: an optional call would not
   // evaluate its argument when no observer is attached, which would silently disable the route.
@@ -144,6 +148,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         accessible
         accessibilityRole="text"
         accessibilityLabel={model.surfaceLabel}
+        accessibilityLanguage={language}
         accessibilityValue={{ text: temporalAnnouncement(model) }}
         accessibilityActions={model.actions.map((action) => ({ name: action.name, label: action.label }))}
         onAccessibilityAction={(event: AccessibilityActionEvent) => runAction(event.nativeEvent.actionName)}
@@ -155,12 +160,9 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
       <TextInput
         testID={TEMPORAL_EXACT_ENTRY_TEST_ID}
         style={styles.entry}
-        accessibilityLabel="Exact Moment number"
-        accessibilityHint={
-          model.exactTargetMaximum === null
-            ? 'No conversational position is available yet.'
-            : `Enter a Moment number from 1 to ${model.exactTargetMaximum}. This previews the Moment; it does not go to it.`
-        }
+        accessibilityLabel={copy.momentNumber}
+        accessibilityLanguage={language}
+        accessibilityHint={model.exactTargetMaximum === null ? copy.noMomentYet : copy.momentNumberHint(model.exactTargetMaximum)}
         value={entry}
         onChangeText={setEntry}
         onSubmitEditing={submitExact}
@@ -170,56 +172,67 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         autoCorrect={false}
         maxLength={9}
       />
-      {entryRefused && <Text accessibilityRole="alert">That Moment is not addressable.</Text>}
+      {entryRefused && <Text accessibilityRole="alert" accessibilityLanguage={language}>{copy.momentUnavailable}</Text>}
 
-      <Pressable
-        testID={TEMPORAL_COMMIT_TEST_ID}
-        style={styles.control}
-        accessibilityRole="button"
-        accessibilityLabel="Go to the previewed Moment"
-        accessibilityState={{ disabled: !model.commitAvailable }}
-        disabled={!model.commitAvailable}
-        onPress={() => runAction('commit-previewed-moment')}
-      >
-        <Text>Go to previewed Moment</Text>
-      </Pressable>
+      {/* Commit and cancel act on a temporary look, and their approved words name it («الانتقال إلى
+          اللحظة {n}»). With no temporary look there is nothing to name and nothing they could do, so
+          they are present only while one exists — no invented wording for an empty act. */}
+      {previewState.status === 'PREVIEWING' && (
+        <>
+          <Pressable
+            testID={TEMPORAL_COMMIT_TEST_ID}
+            style={styles.control}
+            accessibilityRole="button"
+            accessibilityLabel={copy.goToMoment(previewState.ptc)}
+            accessibilityLanguage={language}
+            accessibilityState={{ disabled: !model.commitAvailable }}
+            disabled={!model.commitAvailable}
+            onPress={() => runAction('commit-previewed-moment')}
+          >
+            <Text>{copy.goToMoment(previewState.ptc)}</Text>
+          </Pressable>
 
-      <Pressable
-        testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:cancel`}
-        style={styles.control}
-        accessibilityRole="button"
-        accessibilityLabel="Cancel the preview"
-        accessibilityState={{ disabled: !model.cancelAvailable }}
-        disabled={!model.cancelAvailable}
-        onPress={() => runAction('cancel-preview')}
-      >
-        <Text>Cancel preview</Text>
-      </Pressable>
+          <Pressable
+            testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:cancel`}
+            style={styles.control}
+            accessibilityRole="button"
+            accessibilityLabel={copy.cancelTemporaryLook}
+            accessibilityLanguage={language}
+            accessibilityState={{ disabled: !model.cancelAvailable }}
+            disabled={!model.cancelAvailable}
+            onPress={() => runAction('cancel-preview')}
+          >
+            <Text>{copy.cancelTemporaryLook}</Text>
+          </Pressable>
+        </>
+      )}
 
       <Pressable
         testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:forward`}
         style={styles.control}
         accessibilityRole="button"
-        accessibilityLabel="Preview the next later Moment"
+        accessibilityLabel={copy.previewNextMoment}
+        accessibilityLanguage={language}
         accessibilityState={{ disabled: !model.forwardAvailable }}
         disabled={!model.forwardAvailable}
         onPress={() => runAction('preview-later-moment')}
       >
-        <Text>Preview next Moment</Text>
+        <Text>{copy.previewNextMoment}</Text>
       </Pressable>
 
-      {/* The Live target is its own control, never the last Moment of the Track: they are different
-          Product facts and only this one produces FOLLOW_LIVE. */}
+      {/* The current-edge target is its own control, never the last Moment of the Track: they are
+          different Product facts and only this one produces FOLLOW_LIVE. */}
       <Pressable
         testID={TEMPORAL_LIVE_TEST_ID}
         style={styles.control}
         accessibilityRole="button"
-        accessibilityLabel="Go to the live edge"
+        accessibilityLabel={copy.rejoinConversation}
+        accessibilityLanguage={language}
         accessibilityState={{ disabled: !model.liveAvailable }}
         disabled={!model.liveAvailable}
         onPress={() => runAction('commit-live-edge')}
       >
-        <Text>Go live</Text>
+        <Text>{copy.rejoinConversation}</Text>
       </Pressable>
     </View>
   );

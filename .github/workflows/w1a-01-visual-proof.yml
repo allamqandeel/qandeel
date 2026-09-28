@@ -11,9 +11,10 @@ name: W1A-01 visual proof
 # Motion) over the send / waiting / unconfirmed / retry states and the depth switch was proved in run
 # 36410326972 (scripts/w1a/run-w1a-visual-proof.sh, kept for a re-run). The correction pass runs only its
 # FOCUSED proof (scripts/w1a/run-w1a-correction-proof.sh): one standard-motion recording of the depth
-# boundary in both directions with Android system Back, and the Sign-in gateway with the keyboard open at
-# the default and the largest text size, measured. It uploads every screenshot, recording, hierarchy
-# dump, measurement and log.
+# boundary in both directions with Android system Back, the Arabic Analysis depth with its on-device
+# accessibility tree censused for language, and the Sign-in gateway with the keyboard open at the
+# default and the largest text size, measured. It uploads every screenshot, recording, hierarchy dump,
+# measurement and log.
 #
 # Scoped to the W1A-01 branch: it proves that branch's heads and is inert everywhere else.
 on:

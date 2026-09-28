@@ -14,7 +14,6 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import { MAP_SURFACE_TEST_ID } from '../../map';
 import { exchange, historyBody, submitBody } from '../../conversation/__fixtures__/conversation';
 import { resize } from '../../responsive/__fixtures__/composition';
-import { ANALYSIS_COMPOSE_WAIT_CEILING_MS } from '../composition/DepthComposition';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { SESSION_A, harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
 
@@ -297,31 +296,48 @@ describe('W1A-01 — Conversation ↔ Analysis is one Session, one generation, o
     h.dispose();
   });
 
-  it('a world that does not compose in time is faded in anyway at the ceiling: the boundary never waits on the network', async () => {
+  it('no timer can start the fade into an undrawn Analysis: the Conversation stays visible beneath until it is drawn', async () => {
     const timing = jest.spyOn(Reanimated, 'withTiming');
     const timers = jest.spyOn(globalThis, 'setTimeout');
     const h = await signedIn();
     const view = await onRoute(h);
+    timers.mockClear();
     await press(view, 'qandeel-depth-to-analysis');
     await laidOut(view, 'analysis');
-    expect(fadesIn(timing)).toHaveLength(0);
-    const ceiling = timers.mock.calls.filter(([, ms]) => ms === ANALYSIS_COMPOSE_WAIT_CEILING_MS);
-    expect(ceiling).toHaveLength(1);
+    // However long it takes, every timer the switch left behind changes nothing about the fade.
     await act(async () => {
-      (ceiling[0][0] as () => void)();
+      for (const [callback] of timers.mock.calls) if (typeof callback === 'function') (callback as () => void)();
       await settle();
     });
+    expect(fadesIn(timing)).toHaveLength(0);
+    expect(layersMounted(view)).toBe(2);
+    expect(view.getByTestId('qandeel-conversation', { includeHiddenElements: true })).toBeTruthy();
+    view.unmount();
+    h.dispose();
+  });
+
+  it('turning back to an Analysis that has not been drawn yet waits for it again — it never fades into it early', async () => {
+    const timing = jest.spyOn(Reanimated, 'withTiming');
+    const h = await signedIn();
+    const view = await onRoute(h);
+    await press(view, 'qandeel-depth-to-analysis');
+    await laidOut(view, 'analysis');
+    // Back to the Conversation mid-wait (it is drawn, so it fades at once), then forward again at once.
+    await press(view, 'qandeel-depth-to-conversation');
     expect(fadesIn(timing)).toHaveLength(1);
-    expect(layersMounted(view)).toBe(1);
-    // The world composing later does not fade it a second time.
+    await press(view, 'qandeel-depth-to-analysis');
+    expect(fadesIn(timing)).toHaveLength(1);
+    // Only the drawn world starts the fade.
     await resize(view, 390, 844, { insetTop: 104, insetBottom: 34 });
     await act(async () => {
       await settle();
     });
-    expect(fadesIn(timing)).toHaveLength(1);
+    expect(view.getByTestId(MAP_SURFACE_TEST_ID)).toBeTruthy();
+    expect(fadesIn(timing)).toHaveLength(2);
     view.unmount();
     h.dispose();
   });
+
 
   it('Android system Back at Analysis returns to the SAME Conversation through the same boundary — no route, no new Session, no canonical write', async () => {
     const timing = jest.spyOn(Reanimated, 'withTiming');
