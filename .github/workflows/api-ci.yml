@@ -715,6 +715,13 @@ jobs:
       # closed without comparing, reconstructing or recreating anything.
       - name: Verify the QAN-CW-REM-03 Introduction disclosure privacy erasure against real PostgreSQL
         run: npm run verify:introduction-disclosure-privacy-erasure:integration
+      # W1B-01 gives the account its canonical Name and private, case-insensitive Login ID and
+      # the one-time first-use Welcome its durable state. This verifier proves that provisioning
+      # still creates exactly one account row, that malformed or duplicate sign-up values refuse the
+      # whole auth insert, that the availability check answers a boolean to the server channel only,
+      # and that the first-use read and Welcome completion are the caller's own.
+      - name: Verify the W1B-01 account identity and first use against real PostgreSQL
+        run: npm run verify:account-identity-first-use:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

@@ -3487,3 +3487,39 @@ audit identity is unchanged column by column, that the resource version and the 
 payload, that a legacy already-deleted row is erasable through the guard while a contradictory one is
 refused, that the counterpart's view carries no tombstone and no placeholder, and that the erasure
 admits no way back.
+
+## W1B-01 - Account identity and first use (migration 0123)
+
+`0123_account_identity_first_use_v1.sql` gives the account row, `public.users`, the identity P1 §2
+froze and the durable state the one-time first-use Welcome needs. It is additive and forward-only:
+three nullable columns (`name`, `login_id`, `first_use_completed_at`), their shape checks, a pair rule
+(an account has a Name and a Login ID together, or neither), and one unique index on the canonical
+lowercase `login_id`, which is what makes the Login ID unique case-insensitively. Every existing row
+keeps NULL: no fallback name and no generated Login ID is invented for it.
+
+Migrations 0001 and 0002 are untouched. The 0002 trigger still creates exactly one bare row per
+`auth.users` insert; a SECOND trigger, `provision_qandeel_user_identity`, fires after it (same event,
+name order) and copies the two bounded sign-up values - `qandeel_name`, `qandeel_login_id` from the
+sign-up metadata - into that row, trimmed and lowercased. It reads them once, at insert: nothing in
+QANDEEL reads `auth.users` metadata afterwards. Malformed or duplicate values refuse the whole
+`auth.users` insert, so a modified client meets the database's rules, not the app's. An account created
+without either value keeps the bare row.
+
+Three functions serve the Product: `login_id_is_available_v1(text)` answers a boolean only, and only
+to `service_role` (the QANDEEL API's server channel); `read_account_first_use_v1()` is the caller's own
+Name, Welcome state and whether they have ever committed a turn, under their own row-level security
+(`SECURITY INVOKER`); `complete_first_use_welcome_v1()` idempotently completes the caller's own Welcome.
+No client gains a table write on `public.users`.
+
+```sh
+npm run verify:account-identity-first-use:integration
+```
+
+`verify-migration-0123.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. Inside one
+rolled-back transaction it gives `auth.users` the `raw_user_meta_data` column real Supabase has, signs
+accounts up through `auth.users`, and proves exactly one account row per sign-up, the trimmed Name and
+canonical Login ID, the NULL identity of an account created without them, case-insensitive duplicate
+refusal, seventeen malformed shapes refused with no auth account left behind, the grammar's legal edges,
+the availability boolean and its grants, the caller-only first-use read and idempotent Welcome
+completion, and that a new account still owns Sessions and turns through the existing foreign keys and
+row-level security.
