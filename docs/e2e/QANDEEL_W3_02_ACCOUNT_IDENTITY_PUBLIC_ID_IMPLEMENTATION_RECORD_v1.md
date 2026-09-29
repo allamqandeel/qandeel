@@ -5,8 +5,11 @@
 **advanced only, NOT CLOSED**
 **Baseline:** `023cb9874376ac69db5848db099d06034d5deb54` (merge of PR #287, W3-01)
 **Branch:** `feat/w3-02-account-identity-public-id`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. One bounded, Product-Owner-authorized Production Integration
-slice; it opens no other wave or Product area, closes no phase, and does not close W3 or Account & Identity.
+**Status:** MERGED / CLOSED — merged through PR #288 at `92444c3ab8c35f7d819888be76aa6395c93d94b8` (head
+`f4cf2015428c7bdbe7d55788f0bfbed577560efd`, 2026-09-29T22:54:21Z). One bounded, Product-Owner-authorized Production
+Integration slice; it opens no other wave or Product area, closes no phase, and does not close W3 or Account & Identity.
+(Reconciled by W3-MEGA-U U0; the implementation record below is otherwise unchanged. §12's pre-merge wording is kept
+as written at hand-off.)
 
 ---
 
@@ -271,7 +274,10 @@ residues 1–7 are owned by the End-to-End audit / Production Integration (`E2E-
 
 ## 12. Lifecycle truth (see also §13)
 
-W3-02 is implemented on a **Draft PR and is NOT MERGED**. `E2E-D-09` is implemented and proven server + mobile end to end
+**Post-merge (W3-MEGA-U U0):** PR #288 MERGED at `92444c3ab8c35f7d819888be76aa6395c93d94b8`, so `E2E-D-09` is CLOSED
+in production. The paragraph that follows is the hand-off wording.
+
+W3-02 was implemented on a **Draft PR and was not merged at hand-off**. `E2E-D-09` is implemented and proven server + mobile end to end
 as above, and closes only once this PR merges green. `E2E-D-02` is advanced (three real groups), NOT CLOSED. W3 remains
 ACTIVE; `E2E-D-03`, `D-05`, `D-13`, `D-14` and `D-15` remain open. This record does not claim Account & Identity
 complete: Name, photo, Login ID, Email, Shared ID and Security are not implemented.

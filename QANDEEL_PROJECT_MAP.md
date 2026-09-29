@@ -203,9 +203,11 @@ Current sequence:
    [record](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), then W2-02 Production Launch Identity (merged through PR #286 at `b650b56f7436ce63d33c0af34036a963a03f5eee`;
    [record](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)), then W3-01 General Settings
    Foundation + Appearance + Sign Out (MERGED / CLOSED through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54`;
-   [record](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)). **W2 is CLOSED;
-   W3 is ACTIVE**, and its next slice is W3-02 Account & Identity Foundation + Public ID v1 (Draft PR, not merged;
-   [record](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)).
+   [record](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)). then W3-02 Account &
+   Identity Foundation + Public ID v1 (MERGED / CLOSED through PR #288 at `92444c3ab8c35f7d819888be76aa6395c93d94b8`;
+   [record](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)). **W2 is CLOSED; W3 is
+   ACTIVE**: `E2E-D-09` is closed; `E2E-D-03`, `D-05`, `D-13`, `D-14` and `D-15` remain open, and `E2E-D-02` is
+   advanced only.
 4. Release Hardening & Launch.
 
 This sequencing creates no runtime semantics and opens no implementation task by itself.
