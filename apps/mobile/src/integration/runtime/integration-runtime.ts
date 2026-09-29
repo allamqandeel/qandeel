@@ -90,6 +90,7 @@ import {
 } from '../../recovery';
 import { createConversationController, type ConversationController } from '../../conversation';
 import { createAccountController, type AccountController } from '../../account';
+import { createPublicIdController, type PublicIdController } from '../../settings';
 import {
   createAppearanceAuthority,
   createAppearancePreferenceStore,
@@ -171,6 +172,11 @@ export interface IntegrationSessionRuntime {
    * this identity. It holds no identity of its own and is retired with the generation.
    */
   readonly account: AccountController;
+  /**
+   * W3-02: the reader's Public ID and its one lifetime manual change, for THIS identity, on the same
+   * account transport. General Settings reads it when shown; it is retired with the generation.
+   */
+  readonly publicId: PublicIdController;
 }
 
 /**
@@ -274,6 +280,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.recovery.writer.retire();
     session.conversation.retire();
     session.account.retire();
+    session.publicId.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -346,6 +353,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       }),
       // W1B-01: the account's first use, on the T-12P account transport bound to this identity.
       account: createAccountController({ transport: entry.accountFor(bundle), isCurrent }),
+      // W3-02: the Public ID, on the same account transport bound to this identity.
+      publicId: createPublicIdController({ transport: entry.accountFor(bundle), isCurrent }),
     };
     return built;
   }

@@ -3549,3 +3549,51 @@ rolled-back transaction it gives `auth.users` the `email` and `raw_user_meta_dat
 has, signs accounts up through `auth.users`, and proves the catalog shape, that only `service_role` may
 execute the function, case-insensitive resolution, NULL for unknown, malformed and Login-ID-less
 accounts, a single text answer, and that `anon` and `authenticated` are refused.
+
+## W3-02 - Account Public ID and its one lifetime manual change (migration 0125)
+
+`0125_account_public_id_v1.sql` gives every account its Public ID (P1 §6) on the account row,
+`public.users`, beside the Name and Login ID. It is additive and forward-only: three columns
+(`public_id`, `public_id_changed_at`, `public_id_change_command_id`), a shape rule, a pair rule, one
+unique index on the canonical lowercase `public_id` (so uniqueness is case-insensitive), a backfill, two
+triggers and two Product functions. The Public ID is its own value: it is not `user_id`, the Login ID,
+the Email, the Name, a Shared credential or the I-05 internal `public_identity_ref`, and nothing of the
+I-05 Public runtime is read, written or granted.
+
+Grammar (implementation detail): stored without the displayed `@`; 3-24 lowercase English letters and
+digits, starting with a letter, with `.` or `_` only between letters and digits. A caller's value is
+trimmed, one leading `@` is dropped, Arabic-Indic digits become 0-9, and it is lowercased. The Public-ID
+namespace is never compared with Login IDs.
+
+Generation: `generate_public_id_v1()` takes no argument and reads nothing but which Public IDs are held;
+it draws two words from fixed neutral lists and a number (e.g. `quietlamp27`), drawing again on a
+collision. Every existing account was backfilled one row at a time, and the `assign_public_id` BEFORE
+INSERT trigger gives every new account its Public ID from the server, ignoring any supplied value.
+
+The one lifetime change is a database rule, not an app rule: the `guard_public_id_lifetime_change`
+trigger admits exactly one kind of write to the Public ID - from a never-changed Public ID to a
+different one, consuming the change with its command identity - whoever writes it, the table owner
+included. `change_own_public_id_v1(uuid, text)` (`SECURITY DEFINER`, the caller is `auth.uid()`, no
+account parameter) answers `CHANGED` (also for the same command replayed after it committed),
+`UNCHANGED` (the current Public ID; nothing consumed), `INVALID`, `ALREADY_USED` or `UNAVAILABLE`
+(another account holds it; nothing about that account is returned), with the caller's own resulting
+state; a command identity reused for a different value is refused (23505). The caller's row lock
+serializes one account's attempts; the unique index decides a race between accounts.
+`read_own_public_id_v1()` (`SECURITY INVOKER`) is the caller's own Public ID and whether the change is
+still available. Only these two are executable, and only by `authenticated`; the helpers by no client
+role, and none by `service_role`. The generator and the change share one transaction-scoped advisory lock on
+the Public-ID namespace, so a sign-up never draws a value a concurrent commit is taking. No client gains a
+table write on `public.users`.
+
+```sh
+npm run verify:account-public-id:integration
+```
+
+`verify-migration-0125.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. Inside one
+rolled-back transaction it proves the catalog and grants, the backfill, generation that is not derived
+from private identity (including a seeded real collision), every change outcome, idempotent replay, the
+command-identity conflict, that a private Login ID is not in the Public namespace, that the database
+refuses a second change or an un-consumed change even from the owner, and the client-role refusals. It
+then proves on committed rows, across two connections whose second attempt is shown to block, that two
+commands of one account cannot both win, that the same command twice is one change, and that two
+accounts racing for one Public ID leave exactly one holder; those fixtures are removed and checked gone.

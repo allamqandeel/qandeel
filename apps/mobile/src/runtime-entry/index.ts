@@ -89,7 +89,11 @@ export type {
   AccountApiConfig,
   AccountFirstUseOutcome,
   AccountFirstUseView,
+  AccountPublicIdOutcome,
+  AccountPublicIdView,
   LoginIdAvailabilityOutcome,
+  PublicIdChangeAnswer,
+  PublicIdChangeOutcome,
 } from './account/account-api';
 export { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 

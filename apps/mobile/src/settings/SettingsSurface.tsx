@@ -14,18 +14,28 @@
  *     sign-out it is handed, once: while it runs the control is busy and refuses a second press, and when
  *     it completes the runtime retires the world and the ordinary Sign in replaces this surface.
  *
+ * W3-02 (E2E-D-09) adds, first, the third real group:
+ *
+ *   - «الحساب والهوية» / Account & Identity — the reader's Public ID and its ONE lifetime manual change
+ *     (P1 §6). It is drawn once the Public ID has been read, and it holds that one function and nothing
+ *     else: no Name, photo, Login ID, Email, Shared ID or Security row, disabled or otherwise. The change
+ *     is a state of THIS destination — not a route, a dialog or a world — and Back leaves the change, not
+ *     Settings.
+ *
  * The final nine-group Settings hierarchy is NOT this surface (D-02 advances only).
  *
  * The frame is laid out logically (`direction`), so the start and end edges are the reader's in Arabic and
  * English alike. Every colour is the canonical palette's, in the reader's effective appearance.
  */
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ScrollView, Text, View, findNodeHandle } from 'react-native';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { AccessibilityInfo, BackHandler, ScrollView, Text, View, findNodeHandle } from 'react-native';
 
 import { APPEARANCE_PREFERENCES, AppearanceStatusBar, useAppearance, useAppearanceChoice, type AppearancePreference } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { settingsCopy } from './copy';
+import type { PublicIdController, PublicIdState } from './public-id-controller';
+import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
 
 export const SETTINGS_SURFACE_TEST_ID = 'qandeel-settings';
 
@@ -36,6 +46,19 @@ export interface SettingsSurfaceProps {
   readonly onBack: () => void;
   /** The ONE sign-out: the frozen auth authority's own. */
   readonly onSignOut: () => Promise<unknown>;
+  /** W3-02: the reader's Public ID for this runtime generation. Without it, Account & Identity is not drawn. */
+  readonly publicId?: PublicIdController;
+}
+
+const NO_PUBLIC_ID: PublicIdState = Object.freeze({ status: 'LOADING', publicId: null, changeAvailable: false });
+const noSubscription = () => () => undefined;
+
+/** The Public ID state of the generation's controller, or LOADING when there is none. */
+function usePublicIdState(controller: PublicIdController | undefined): PublicIdState {
+  return useSyncExternalStore(
+    controller === undefined ? noSubscription : controller.subscribe,
+    controller === undefined ? () => NO_PUBLIC_ID : controller.getState,
+  );
 }
 
 /** Craft values of the P4-C3 page composition (proof evidence), not tokens. */
@@ -111,13 +134,51 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, publicId }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
   const appearance = useAppearance();
   const choose = useAppearanceChoice();
   const writing = language === 'ar' ? 'rtl' : 'ltr';
+
+  // W3-02 — the Public ID: read when Settings is shown, and changed only inside this destination.
+  const publicIdState = usePublicIdState(publicId);
+  useEffect(() => {
+    publicId?.start();
+  }, [publicId]);
+  const [changingPublicId, setChangingPublicId] = useState(false);
+  const committingRef = useRef(false);
+  const [returnToRow, setReturnToRow] = useState(false);
+  const rowNode = useRef<View | null>(null);
+  const openChange = useCallback(() => {
+    setReturnToRow(false);
+    setChangingPublicId(true);
+  }, []);
+  const leaveChange = useCallback(() => {
+    // A commit in flight is never abandoned half-way: its answer decides what the reader sees next.
+    if (committingRef.current) return;
+    setChangingPublicId(false);
+    setReturnToRow(true);
+  }, []);
+  const onCommitBusy = useCallback((busy: boolean) => {
+    committingRef.current = busy;
+  }, []);
+  // Android system Back while the change is shown leaves the change, and nothing else.
+  useEffect(() => {
+    if (!changingPublicId) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      leaveChange();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [changingPublicId, leaveChange]);
+  // Back from the change, the screen reader returns to the Public ID row.
+  useEffect(() => {
+    if (!returnToRow || changingPublicId || rowNode.current === null) return;
+    const node = findNodeHandle(rowNode.current);
+    if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
+  }, [changingPublicId, returnToRow, publicIdState]);
 
   // The screen reader arrives on the destination's name, once, when the surface is drawn.
   const titleRef = useRef<Text | null>(null);
@@ -167,7 +228,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut }: Setting
           palette={palette}
           language={language}
           accessibilityLabel={copy.backName}
-          onPress={onBack}
+          onPress={changingPublicId ? leaveChange : onBack}
           testID="qandeel-settings-back"
           style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}
         >
@@ -187,39 +248,70 @@ export function SettingsSurface({ language, insets, onBack, onSignOut }: Setting
       <ScrollView
         testID="qandeel-settings-body"
         style={{ flex: 1 }}
+        keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingLeft: insets.left, paddingRight: insets.right }}
       >
-        <View testID="qandeel-settings-group-appearance">
-          <GroupHeading text={copy.appearanceGroup} language={language} palette={palette} testID="qandeel-settings-group-appearance-name" />
-          <View accessibilityRole="radiogroup" accessibilityLabel={copy.appearanceGroup} accessibilityLanguage={language}>
-            {APPEARANCE_PREFERENCES.map((preference) => (
-              <AppearanceChoice
-                key={preference}
-                preference={preference}
-                label={copy.appearance[preference]}
-                selected={appearance.preference === preference}
-                onChoose={onChoose}
-                language={language}
-                palette={palette}
-              />
-            ))}
-          </View>
-        </View>
-
-        <View testID="qandeel-settings-group-support">
-          <GroupHeading text={copy.supportGroup} language={language} palette={palette} testID="qandeel-settings-group-support-name" />
-          <Control
-            palette={palette}
+        {changingPublicId && publicId !== undefined && publicIdState.publicId !== null ? (
+          <PublicIdChangeSurface
+            controller={publicId}
+            currentPublicId={publicIdState.publicId}
+            copy={copy.publicId}
             language={language}
-            accessibilityLabel={copy.signOut}
-            accessibilityState={{ busy: signingOut, disabled: signingOut }}
-            onPress={signOut}
-            testID="qandeel-settings-sign-out"
-            style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, opacity: signingOut ? BUSY_OPACITY : 1 }}
-          >
-            <Text style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{copy.signOut}</Text>
-          </Control>
-        </View>
+            palette={palette}
+            onFinished={leaveChange}
+            busyChanged={onCommitBusy}
+          />
+        ) : (
+          <>
+            {publicIdState.status === 'READY' && publicIdState.publicId !== null ? (
+              <View testID="qandeel-settings-group-account">
+                <GroupHeading text={copy.accountGroup} language={language} palette={palette} testID="qandeel-settings-group-account-name" />
+                <PublicIdRow
+                  state={{ ...publicIdState, publicId: publicIdState.publicId }}
+                  copy={copy.publicId}
+                  language={language}
+                  palette={palette}
+                  onOpen={openChange}
+                  rowRef={(node) => {
+                    rowNode.current = node;
+                  }}
+                />
+              </View>
+            ) : null}
+
+            <View testID="qandeel-settings-group-appearance">
+              <GroupHeading text={copy.appearanceGroup} language={language} palette={palette} testID="qandeel-settings-group-appearance-name" />
+              <View accessibilityRole="radiogroup" accessibilityLabel={copy.appearanceGroup} accessibilityLanguage={language}>
+                {APPEARANCE_PREFERENCES.map((preference) => (
+                  <AppearanceChoice
+                    key={preference}
+                    preference={preference}
+                    label={copy.appearance[preference]}
+                    selected={appearance.preference === preference}
+                    onChoose={onChoose}
+                    language={language}
+                    palette={palette}
+                  />
+                ))}
+              </View>
+            </View>
+
+            <View testID="qandeel-settings-group-support">
+              <GroupHeading text={copy.supportGroup} language={language} palette={palette} testID="qandeel-settings-group-support-name" />
+              <Control
+                palette={palette}
+                language={language}
+                accessibilityLabel={copy.signOut}
+                accessibilityState={{ busy: signingOut, disabled: signingOut }}
+                onPress={signOut}
+                testID="qandeel-settings-sign-out"
+                style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, opacity: signingOut ? BUSY_OPACITY : 1 }}
+              >
+                <Text style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{copy.signOut}</Text>
+              </Control>
+            </View>
+          </>
+        )}
       </ScrollView>
     </View>
   );
