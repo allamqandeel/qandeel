@@ -530,7 +530,7 @@ test('the app shell is untouched and mounts nothing from this layer', () => {
   // Product root, and it no longer names the technical shell. T-12P's own boundary — that IT mounted
   // nothing — is unaffected and is asserted above.
   const smoke = read('apps/mobile/.maestro/boot-smoke.yaml');
-  assert.match(smoke, /qandeel-product-root/u, 'the boot smoke targets the integrated Product root');
+  assert.match(smoke, /text:\s*"QANDEEL"/u, 'the boot smoke proves the integrated Product root rendered its visible technical header');
   assert.doesNotMatch(smoke, /qandeel-foundation-shell/u, 'and no longer asserts the technical shell it replaced');
 });
 

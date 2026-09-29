@@ -1,9 +1,10 @@
 # T-12 boot smoke only: the Release build launches and the integrated Product root mounts.
 #
-# It asserts ONE stable integration identifier and nothing else. The root renders in every runtime
-# phase, so this proves exactly what a boot smoke can prove — the app launches and the Product root
-# is on screen — and deliberately proves nothing about Product semantics: this build carries no
-# configuration and no credentials, so there is no Session, no viewpoint and no world to assert on.
+# It asserts ONE visible technical header rendered by the integrated Product root and nothing else.
+# This is more reliable on iOS than asserting a container testID through XCTest's accessibility tree,
+# while proving the same boot fact for this deliberately unconfigured Release build: React mounted,
+# ProductRoot rendered, and the technical pre-Product surface is on screen. It claims no Session,
+# viewpoint, world, or Product semantics.
 # Those belong to focused tests, not here.
 #
 # The T-01 technical shell is no longer asserted, and it is no longer rendered: the Product root
@@ -18,4 +19,4 @@ appId: com.qandeel.mobile
 - launchApp:
     clearState: true
 - assertVisible:
-    id: "qandeel-product-root"
+    text: "QANDEEL"

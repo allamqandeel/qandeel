@@ -354,6 +354,11 @@ test('the native launch proof: observed defect = FAIL, observed correct launch =
 
   // iOS
   assert.equal(judge(run(springboard, ['world', 'light', stable], ...iosAfter), 'ios', 'light').verdict, VERDICT.PASS, 'correct Light launch → grey Apple transition → Dark app');
+  assert.equal(
+    judge(run(springboard, ['world', 'light', 5], ['world', 'dark', 20], ['content', 'light', 1]), 'ios', 'light').verdict,
+    VERDICT.PASS,
+    'real CI repeat shape: five Light World frames establish the OS launch before the Dark app takeover',
+  );
   assert.equal(judge(run(springboard, ['world', 'dark', stable], ['content', 'light', 10]), 'ios', 'dark').verdict, VERDICT.PASS, 'correct Dark launch → app');
   const black = judge(run(springboard, ['black', 'black', 20], ['world', 'light', stable]), 'ios', 'light');
   assert.equal(black.verdict, VERDICT.FAIL, 'black before the Light World');

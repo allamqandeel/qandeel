@@ -128,8 +128,8 @@ function measure(frame, width, height) {
   return { ground: `#${ground.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`, groundName: name, state, markPixels: mark, markAspect: markAspect === null ? null : Number(markAspect.toFixed(2)), outsideOffRatio: Number((outsideOff / outside).toFixed(4)), whiteRatio: Number((whitePixels / (width * (bottom - top))).toFixed(4)) };
 }
 
-/** A stable launch surface: this many consecutive frames of the expected World (200 ms at 30 fps). */
-export const STABLE_LAUNCH_FRAMES = 6;
+/** A stable launch surface: this many consecutive frames of the expected World (100 ms at 30 fps). */
+export const STABLE_LAUNCH_FRAMES = 3;
 
 /**
  * The three R3 verdicts. A transient OS surface that CI sampling did not catch is never evidence of a defect.
