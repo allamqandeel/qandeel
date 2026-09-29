@@ -206,6 +206,7 @@
     "test:w1b-01-account-identity-first-use-contract": "node --test tests/w1b-01-account-identity-first-use-contract.test.mjs",
     "test:w2-01-final-account-access-contract": "node --test tests/w2-01-final-account-access-contract.test.mjs",
     "test:w2-02-production-launch-identity-contract": "node --test tests/w2-02-production-launch-identity-contract.test.mjs",
+    "test:w3-01-general-settings-appearance-signout-contract": "node --test tests/w3-01-general-settings-appearance-signout-contract.test.mjs",
     "test:task-closure-governance-contract": "node --test tests/task-closure-governance-contract.test.mjs",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:qan-inf-02-windows-temp-harness-cleanup-contract": "node --test tests/qan-inf-02-windows-temp-harness-cleanup-contract.test.mjs",

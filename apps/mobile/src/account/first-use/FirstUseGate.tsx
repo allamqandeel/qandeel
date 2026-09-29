@@ -12,7 +12,7 @@
  */
 import { useSyncExternalStore, type ReactNode } from 'react';
 import { View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { AppearanceStatusBar } from '../../appearance';
 
 import { usePalette } from '../../conversation';
 import type { ChromeLanguage } from '../../orientation-chrome';
@@ -34,7 +34,7 @@ export function FirstUseGate({ account, language, insets, children }: FirstUseGa
   if (state.status === 'LOADING') {
     return (
       <View testID={FIRST_USE_WAITING_TEST_ID} style={{ flex: 1, backgroundColor: palette.world }}>
-        <StatusBar style="light" />
+        <AppearanceStatusBar />
       </View>
     );
   }

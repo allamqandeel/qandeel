@@ -508,7 +508,7 @@ describe('T14-A19 — the accessible surface', () => {
     await fill(view);
     await fireEvent.press(view.getByTestId(SIGN_IN_SUBMIT_TEST_ID));
     expect(view.getByText(FROZEN.en.invalidCredentials)).toBeTruthy();
-    const canonical = new Set<unknown>([...Object.values(CANONICAL_VISUAL.palette.standard), ...Object.values(CANONICAL_VISUAL.palette.increased)]);
+    const canonical = new Set<unknown>([...Object.values(CANONICAL_VISUAL.palettes.DARK.standard), ...Object.values(CANONICAL_VISUAL.palettes.DARK.increased)]);
     for (const node of nodes(view.toJSON())) {
       const flat = styleOf(node);
       if (flat.color !== undefined) expect(canonical.has(flat.color)).toBe(true);

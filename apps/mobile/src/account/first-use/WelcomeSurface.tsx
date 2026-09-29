@@ -9,7 +9,7 @@
  * complete (see `account-controller.ts` for why that is durable and what happens if it does not land).
  */
 import { ScrollView, Text, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { AppearanceStatusBar } from '../../appearance';
 
 import { Control, typeStyle, useConversationTypeface, usePalette } from '../../conversation';
 import type { ChromeLanguage } from '../../orientation-chrome';
@@ -35,7 +35,7 @@ export function WelcomeSurface({ displayName, language, insets, onStart }: Welco
 
   return (
     <View testID={WELCOME_SURFACE_TEST_ID} style={{ flex: 1, backgroundColor: palette.world }} accessibilityLanguage={language}>
-      <StatusBar style="light" />
+      <AppearanceStatusBar />
       {ready ? (
         <ScrollView
           style={{ flex: 1 }}

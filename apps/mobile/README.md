@@ -610,6 +610,13 @@ beyond the W2-02 resources needs its own Engineering Architecture review. No oth
 mod; the mobile foundation contract enforces that, and `npm run prebuild:launch-identity:mobile` proves the generated result with planted defects
 ([record](../../docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)).
 
+**W3-01 — one Level-3 local Expo module.** `modules/qandeel-app-appearance/` (Android only, autolinked from the
+default `./modules` directory) exposes one function, `setApplicationNightMode`, so the reader's Dark / Light / System
+preference (P1 §12) becomes the platform's persisted application night mode (`UiModeManager.setApplicationNightMode`,
+API 31+) and the next cold launch's system splash does not contradict it. It is the "small native bridge" the W2-02
+record's §12 carry-forward named; it uses no dangerous mod and writes no generated file, and the W2-02 plugin no longer
+declares a night mode at launch ([record](../../docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)).
+
 `npm run prebuild:verify` proves two properties and then discards the generated directories
 and requires an unchanged repository state: (1) re-running `expo prebuild --no-clean` over
 the generated project leaves every file byte-identical (idempotent re-application, the

@@ -30,6 +30,12 @@ import {
 import { createManualForegroundSignal, type ForegroundState, type ManualForegroundSignal } from '../../runtime-entry';
 import { createEphemeralProductRecoveryStorage, type ProductRecoveryStorage } from '../../recovery';
 import {
+  createEphemeralAppearancePreferenceStore,
+  type AppearancePreferenceStore,
+  type NativeAppearanceSink,
+  type SystemAppearanceSource,
+} from '../../appearance';
+import {
   createIntegrationRuntime,
   type IntegrationPhase,
   type IntegrationRuntime,
@@ -73,6 +79,10 @@ export interface HarnessOptions {
   readonly liveHead?: number | null;
   /** T-13: a storage carried across two harnesses stands in for a storage that survived a process death. */
   readonly recoveryStorage?: ProductRecoveryStorage;
+  /** W3-01: the appearance edges. The store defaults to a fresh in-memory one; a shared one survives a "restart". */
+  readonly appearanceStore?: AppearancePreferenceStore;
+  readonly systemAppearance?: SystemAppearanceSource;
+  readonly nativeAppearance?: NativeAppearanceSink;
 }
 
 /**
@@ -94,7 +104,16 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
   const foreground = createManualForegroundSignal(options.foreground ?? 'INACTIVE');
   const recoveryStorage = options.recoveryStorage ?? createEphemeralProductRecoveryStorage();
 
-  const built = createIntegrationRuntime({ config: TEST_CONFIG, authPort: auth, foreground, httpFetch: http.fetch, recoveryStorage });
+  const built = createIntegrationRuntime({
+    config: TEST_CONFIG,
+    authPort: auth,
+    foreground,
+    httpFetch: http.fetch,
+    recoveryStorage,
+    appearanceStore: options.appearanceStore ?? createEphemeralAppearancePreferenceStore(),
+    systemAppearance: options.systemAppearance,
+    nativeAppearance: options.nativeAppearance ?? { apply: () => undefined },
+  });
   if (!built.ok) throw new Error(`the harness could not build a runtime: ${built.phase.detail}`);
   const runtime = built.runtime;
 

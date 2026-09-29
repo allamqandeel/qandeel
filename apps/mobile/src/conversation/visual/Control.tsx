@@ -27,15 +27,17 @@ export interface ControlProps {
   readonly controlRef?: (node: View | null) => void;
   /** W1B-01: a control whose one request is in flight says so (busy), and still refuses in its handler. */
   readonly accessibilityState?: AccessibilityState;
+  /** W3-01: one choice of a set (`radio`) carries the same frozen states as a button. Default `button`. */
+  readonly accessibilityRole?: 'button' | 'radio';
 }
 
-export function Control({ palette, accessibilityLabel, onPress, children, style, testID, language, controlRef, accessibilityState }: ControlProps) {
+export function Control({ palette, accessibilityLabel, onPress, children, style, testID, language, controlRef, accessibilityState, accessibilityRole = 'button' }: ControlProps) {
   const [focused, setFocused] = useState(false);
   const outer = palette.focusOffset + palette.focusThickness;
   return (
     <Pressable
       ref={controlRef}
-      accessibilityRole="button"
+      accessibilityRole={accessibilityRole}
       accessibilityLabel={accessibilityLabel}
       accessibilityLanguage={language}
       accessibilityState={accessibilityState}

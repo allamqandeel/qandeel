@@ -222,6 +222,19 @@ export const SUPABASE_AUTH_OPTIONS = Object.freeze({
   detectSessionInUrl: false,
 } as const);
 
+/**
+ * W3-01 — the key the SDK persists the session under: exactly its own default for this project URL
+ * (`sb-<first host label>-auth-token`, supabase-js `SupabaseClient`), passed explicitly so it is known here.
+ */
+export function supabaseSessionStorageKey(supabaseUrl: string): string {
+  return `sb-${new URL(supabaseUrl).hostname.split('.')[0]}-auth-token`;
+}
+
+/** The session entry and the two companion entries the SDK's own session removal clears beside it. */
+export function supabaseSessionStorageKeys(sessionKey: string): readonly string[] {
+  return [sessionKey, `${sessionKey}-user`, `${sessionKey}-code-verifier`];
+}
+
 function snapshotOf(session: { user?: { id?: unknown } | null; access_token?: unknown } | null): AuthSessionSnapshot | null {
   if (session === null || session === undefined) return null;
   const userId = session.user?.id;
@@ -328,8 +341,12 @@ export interface SupabaseAuthPortOptions {
  * through the one shared foreground signal.
  */
 export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: SupabaseAuthPortOptions): SupabaseAuthPort {
+  // W3-01: the session's storage key, named rather than left implicit, so this port can retire its own
+  // session material (see `signOut`). It is exactly the SDK's own default, so every session already
+  // persisted under it is read as before.
+  const sessionKey = supabaseSessionStorageKey(config.supabaseUrl);
   const client: SupabaseClient = createClient(config.supabaseUrl, config.supabasePublishableKey, {
-    auth: { storage, ...SUPABASE_AUTH_OPTIONS },
+    auth: { storage, storageKey: sessionKey, ...SUPABASE_AUTH_OPTIONS },
   });
 
   /**
@@ -389,6 +406,21 @@ export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: Su
   const retireGrant = async (grant: RecoveryGrant): Promise<void> => {
     await authRest('/logout?scope=local', 'POST', grant.accessToken);
   };
+
+  /**
+   * W3-01 — remove THIS device's persisted session material from the auth store: the session itself and
+   * the two companion entries the SDK keeps beside it. A storage that refuses one removal still has the
+   * others attempted; nothing is logged.
+   */
+  async function retireLocalSession(): Promise<void> {
+    for (const key of supabaseSessionStorageKeys(sessionKey)) {
+      try {
+        await storage.removeItem(key);
+      } catch {
+        // Nothing further can be done from here; the runtime is retired regardless.
+      }
+    }
+  }
 
   /**
    * The provider's session, relayed by the QANDEEL API for a Login ID (a sign-in, or W2-01 R1's
@@ -559,13 +591,21 @@ export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: Su
       await retireGrant(grant);
     },
     async signOut() {
+      let result: AuthPortResult<null>;
       try {
         const { error } = await signOutOwn();
-        if (error) return { ok: false, failure: failureOf(error, 'sign-out failed') };
-        return { ok: true, value: null };
+        result = error ? { ok: false, failure: failureOf(error, 'sign-out failed') } : { ok: true, value: null };
       } catch (cause) {
-        return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'sign-out threw') } };
+        result = { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'sign-out threw') } };
       }
+      // W3-01 (E2E-D-07) — "leave this device signed out" holds whatever the provider answered. The SDK
+      // removes its session on most failures, but not all: when loading the session fails first (an expired
+      // access token whose refresh cannot reach the network), or when the call throws, it returns WITHOUT
+      // removing anything, and the next launch would restore the identity the reader asked to leave. So this
+      // device's session material is retired here, unconditionally and locally. This is not a sign-out of
+      // other devices, and it revokes nothing remotely; the provider's own answer is still returned.
+      await retireLocalSession();
+      return result;
     },
     onSessionChange(listener) {
       const { data } = client.auth.onAuthStateChange((event, session) => {

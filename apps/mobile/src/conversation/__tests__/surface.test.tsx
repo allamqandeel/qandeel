@@ -11,7 +11,7 @@ import { CANONICAL_VISUAL } from '../visual/canonical-visual.generated';
 import { exchange, flush, page, scriptedTransport, type ScriptedTransport } from '../__fixtures__/conversation';
 
 const SESSION = '11111111-1111-4111-8111-111111111111';
-const PALETTE = CANONICAL_VISUAL.palette.standard;
+const PALETTE = CANONICAL_VISUAL.palettes.DARK.standard;
 const INSETS = { top: 44, right: 0, bottom: 34, left: 0 };
 
 async function mounted(language: ChromeLanguage, history = [exchange('fixture: السلام عليكم', { reply: 'fixture: وعليكم السلام' })]) {

@@ -244,25 +244,26 @@ test('Android: one system splash with the launcher icon on the World, and the Wo
   assert.equal(noSplashLibrary({ dependencies: { 'expo-splash-screen': '~57.0.8' } }), false);
 });
 
-test('the Android splash follows the effective QANDEEL appearance through the application night mode — a constant, not a preference', () => {
-  const template = 'class MainApplication : Application() {\n  override fun onCreate() {\n    super.onCreate()\n    loadReactNative(this)\n  }\n}\n';
-  const once = plugin.internals.applyApplicationNightMode(template);
-  assert.equal(plugin.internals.applyApplicationNightMode(once), once, 're-application is byte-identical');
-  assert.equal((once.match(/setApplicationNightMode\(android\.app\.UiModeManager\.MODE_NIGHT_YES\)/gu) ?? []).length, 1);
-  assert.ok(once.indexOf('setApplicationNightMode') > once.indexOf('super.onCreate()'), 'set after the Application is created');
-  assert.match(once, /Build\.VERSION_CODES\.S\)/u, 'API 31+ only, where the platform supports it');
-  assert.throws(() => plugin.internals.applyApplicationNightMode('class MainApplication {}'), /anchor/u, 'a moved template must fail the build');
-  // No preference subsystem: nothing reads, stores or exposes an appearance choice (that is W3).
+test('the Android splash follows the application night mode, which W3-01 made the reader’s preference — this plugin no longer declares it', () => {
+  // W2-02 declared the constant MODE_NIGHT_YES in MainApplication.onCreate; its named carry-forward owner, W3-01,
+  // replaced it with the reader's Dark / Light / System choice, applied at runtime by the local Expo module and
+  // persisted by the platform. A launch-time constant would now contradict a saved choice, so the plugin writes none.
+  const noLaunchNightMode = (text) => !/setApplicationNightMode|MODE_NIGHT_|withMainApplication|applyApplicationNightMode/u.test(code(text));
+  guards('no-launch-night-mode', pluginText, noLaunchNightMode, 'config = withMainApplication(config, applyApplicationNightMode);');
+  assert.equal('applyApplicationNightMode' in plugin.internals, false);
+  // Still no preference subsystem IN THIS PLUGIN: the preference lives with its W3-01 owner, not here.
   const noPreference = (text) => !/AsyncStorage|SharedPreferences|UserDefaults|MODE_NIGHT_(NO|AUTO|FOLLOW)|setDefaultNightMode|appearancePreference/u.test(code(text));
   guards('no-appearance-preference', pluginText, noPreference, 'const stored = getSharedPreferences("appearance", 0)');
-  assert.equal(existsSync(new URL('apps/mobile/src/appearance', root)), false);
+  assert.equal(existsSync(new URL('apps/mobile/src/appearance/appearance-authority.ts', root)), true, 'the W3-01 owner exists');
+  assert.equal(existsSync(new URL('apps/mobile/modules/qandeel-app-appearance/expo-module.config.json', root)), true);
 });
 
 test('iOS: the first app-owned pixels are the World, not React Native\'s systemBackgroundColor', () => {
   const template = 'class ReactNativeDelegate: ExpoReactNativeFactoryDelegate {\n  // Extension point for config-plugins\n\n  override func bundleURL() -> URL? { nil }\n}\n';
   const once = plugin.internals.applyRootViewWorld(template);
   assert.equal(plugin.internals.applyRootViewWorld(once), once, 're-application is byte-identical');
-  assert.match(once, /override func customize\(_ rootView: UIView\) \{\n    super\.customize\(rootView\)\n    rootView\.backgroundColor = UIColor\(red: 16\.0 \/ 255\.0, green: 16\.0 \/ 255\.0, blue: 16\.0 \/ 255\.0, alpha: 1\.0\)/u);
+  // W3-01 (carry-forward item 2): the World colour asset for the view's own appearance, the Dark World its fallback.
+  assert.match(once, /override func customize\(_ rootView: UIView\) \{\n    super\.customize\(rootView\)\n    rootView\.backgroundColor = UIColor\(named: "QandeelWorld"\) \?\? UIColor\(red: 16\.0 \/ 255\.0, green: 16\.0 \/ 255\.0, blue: 16\.0 \/ 255\.0, alpha: 1\.0\)/u);
   assert.throws(() => plugin.internals.applyRootViewWorld('class AppDelegate {}'), /anchor/u);
 });
 
@@ -392,7 +393,7 @@ test('the native launch proof: observed defect = FAIL, observed correct launch =
 
 test('the implementation record tells the lifecycle truth and carries the W3 boundary', () => {
   const record = read('docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md');
-  assert.match(record, /\*\*Status:\*\* IMPLEMENTED ON A DRAFT PR — NOT MERGED/u, 'lifecycle truth: not merged until merged');
+  assert.match(record, /\*\*Status:\*\* MERGED through PR #286 at `b650b56f7436ce63d33c0af34036a963a03f5eee`/u, 'lifecycle truth: merged, as it is');
   assert.match(record, /\*\*Baseline:\*\* `df194edf6d70a2a300a0251ed114e7ad8715485e`/u);
   assert.match(record, /\*\*No applicable Skill was used\.\*\*/u, 'Skills / G1');
   assert.match(record, /\*\*W3 integration carry-forward\*\*/u);

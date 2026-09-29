@@ -90,6 +90,16 @@ import {
 } from '../../recovery';
 import { createConversationController, type ConversationController } from '../../conversation';
 import { createAccountController, type AccountController } from '../../account';
+import {
+  createAppearanceAuthority,
+  createAppearancePreferenceStore,
+  createNativeAppearanceSink,
+  createSystemAppearanceSource,
+  type AppearanceAuthority,
+  type AppearancePreferenceStore,
+  type NativeAppearanceSink,
+  type SystemAppearanceSource,
+} from '../../appearance';
 import { createInspectionJourneyCoordinator, type InspectionJourneyCoordinator } from '../journey/inspection-journey';
 import { createCanonicalTransitionWitness, type CanonicalTransitionWitness } from '../motion/canonical-transition-witness';
 import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/spatial-cause';
@@ -196,6 +206,13 @@ export interface IntegrationRuntime {
    * QANDEEL API, carrying no credential; it is how Create account can say a Login ID is unavailable.
    */
   readonly loginIds: LoginIdAvailabilityClient;
+  /**
+   * W3-01: the ONE appearance authority (P1 §12). Built once for the life of this runtime, like the
+   * recovery store, and bound here to whichever identity is authenticated — none when signed out, which
+   * is Dark. It lives beside the generations rather than inside one: a preference belongs to the reader
+   * on this device, not to a Session, so a runtime generation never rebuilds it.
+   */
+  readonly appearance: AppearanceAuthority;
   getPhase(): IntegrationPhase;
   subscribe(listener: () => void): () => void;
   /** Restore any persisted AUTH session and begin observing. Idempotent. */
@@ -215,6 +232,13 @@ export interface IntegrationRuntimeOptions extends MobileRuntimeEntryOptions {
    * owner builds its own SQLite-backed one, separate from the auth store.
    */
   readonly recoveryStorage?: ProductRecoveryStorage;
+  /**
+   * W3-01: the appearance authority's three edges. Injected by the tests; production passes none and gets
+   * the device-local per-identity store, the operating system's appearance and the platform declaration.
+   */
+  readonly appearanceStore?: AppearancePreferenceStore;
+  readonly systemAppearance?: SystemAppearanceSource;
+  readonly nativeAppearance?: NativeAppearanceSink;
 }
 
 export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}): IntegrationRuntimeResult {
@@ -226,6 +250,12 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   // The ONE Product recovery store, from the T-13 owner. Built once for the life of this runtime; it is
   // namespaced per identity inside, so identity replacement needs no second store.
   const recovery: ProductRecoveryStore = createProductRecoveryStore(options.recoveryStorage);
+  // W3-01 — the ONE appearance authority, from the appearance owner. It starts unbound: Dark.
+  const appearance: AppearanceAuthority = createAppearanceAuthority({
+    store: options.appearanceStore ?? createAppearancePreferenceStore(),
+    system: options.systemAppearance ?? createSystemAppearanceSource(),
+    native: options.nativeAppearance ?? createNativeAppearanceSink(),
+  });
 
   const listeners = new Set<() => void>();
   let phase: IntegrationPhase = { kind: 'RESTORING' };
@@ -358,6 +388,10 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
 
   const unsubscribeAuth = entry.auth.subscribe((state: MobileAuthState) => {
     if (disposed) return;
+    // W3-01: the reader's appearance follows the identity, synchronously and before any world is composed —
+    // theirs when authenticated, the Dark default otherwise. A token refresh re-binds the same identity,
+    // which changes nothing.
+    appearance.bindAccount(state.kind === 'AUTHENTICATED' ? state.userId : null);
     if (state.kind === 'AUTHENTICATED') {
       // A token refresh keeps the auth generation, so it must change nothing here either.
       if (attemptedAuthGeneration === state.authGeneration) return;
@@ -376,6 +410,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       config: entry.config,
       auth: entry.auth,
       loginIds: entry.loginIds,
+      appearance,
       getPhase: () => phase,
       subscribe(listener) {
         listeners.add(listener);
@@ -401,6 +436,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         disposed = true;
         unsubscribeAuth();
         retireSession();
+        appearance.dispose();
         entry.dispose();
         listeners.clear();
       },

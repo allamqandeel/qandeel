@@ -6,9 +6,12 @@
 //   - the Android 12+ system splash and the first app-owned Android window are the World (Light #efeeeb,
 //     Dark #101010 under `values-night`), the splash keeps the launcher icon, and there is one activity and
 //     no splash library, animated icon or hold;
-//   - the Android application night mode is set to the effective QANDEEL appearance (Dark);
+//   - W3-01: nothing re-declares the Android application night mode at launch — the reader's Dark / Light /
+//     System preference, which the app's local module persists through the platform, governs the next cold
+//     launch — and MainActivity takes a night-mode change in place (`uiMode` in its configChanges);
 //   - the iOS Launch Screen is the World colour asset and nothing else, follows the device appearance
-//     (`UIUserInterfaceStyle` Automatic), and the first app-owned iOS pixels are the World;
+//     (`UIUserInterfaceStyle` Automatic), and the first app-owned iOS pixels are the World (W3-01: the World
+//     colour asset, resolved for the view's own appearance);
 //   - the launcher / home-screen label is QANDEEL.
 //
 // It then PLANTS a defect for every check family into the generated tree and requires each one to be
@@ -121,9 +124,15 @@ export function checkAndroid(androidRoot) {
   const mainApplication = javaFiles.find((file) => file.endsWith('MainApplication.kt'));
   const mainActivity = javaFiles.find((file) => file.endsWith('MainActivity.kt'));
   const application_kt = mainApplication ? read(mainApplication) : '';
-  const nightModeCalls = application_kt.match(/setApplicationNightMode\(android\.app\.UiModeManager\.MODE_NIGHT_YES\)/gu) ?? [];
-  if (nightModeCalls.length !== 1 || !application_kt.includes(internals.NIGHT_MODE_BEGIN)) {
-    failures.push('A-NIGHT-MODE: MainApplication must set the application night mode to the effective (Dark) appearance exactly once');
+  const activity_kt = mainActivity ? read(mainActivity) : '';
+  // W3-01: the platform persists the reader's application night mode; a launch-time declaration would override it.
+  for (const [name, text] of [['MainApplication', application_kt], ['MainActivity', activity_kt]]) {
+    if (/setApplicationNightMode|setDefaultNightMode|MODE_NIGHT_/u.test(text)) {
+      failures.push(`A-NIGHT-MODE: ${name} must not declare a night mode at launch; the reader's persisted preference governs`);
+    }
+  }
+  if (!/android:configChanges="[^"]*\buiMode\b[^"]*"/u.test(activities[0] ?? '')) {
+    failures.push('A-NIGHT-MODE: MainActivity must take a night-mode change in place (uiMode in configChanges)');
   }
   for (const [name, text] of [['MainApplication', application_kt], ['MainActivity', mainActivity ? read(mainActivity) : '']]) {
     for (const forbidden of ['setKeepOnScreenCondition', 'Thread.sleep', 'postDelayed', 'installSplashScreen']) {
@@ -193,7 +202,9 @@ export function checkIos(iosRoot) {
   if ((appDelegate.match(/override func customize\(_ rootView: UIView\)/gu) ?? []).length !== 1 || !appDelegate.includes(internals.ROOT_VIEW_BEGIN)) {
     failures.push('I-ROOT-VIEW: AppDelegate must paint the root view with the World exactly once');
   }
-  if (!appDelegate.includes('UIColor(red: 16.0 / 255.0, green: 16.0 / 255.0, blue: 16.0 / 255.0, alpha: 1.0)')) failures.push('I-ROOT-VIEW: the root view must be the Dark World #101010');
+  if (!appDelegate.includes(`rootView.backgroundColor = UIColor(named: "${internals.IOS_WORLD_COLOR}") ?? UIColor(red: 16.0 / 255.0, green: 16.0 / 255.0, blue: 16.0 / 255.0, alpha: 1.0)`)) {
+    failures.push(`I-ROOT-VIEW: the root view must be the World colour asset ${internals.IOS_WORLD_COLOR}, with the Dark World only as its fallback`);
+  }
   for (const forbidden of ['asyncAfter', 'usleep', 'Thread.sleep', 'sleep(']) {
     if (appDelegate.includes(forbidden)) failures.push(`I-NO-HOLD: AppDelegate must not contain ${forbidden}`);
   }
@@ -211,6 +222,7 @@ const replaceIn = (file, from, to) => writeFileSync(file, read(file).replace(fro
 export function plantedDefects(androidRoot, iosRoot) {
   const res = join(androidRoot, 'app', 'src', 'main', 'res');
   const main = join(androidRoot, 'app', 'src', 'main');
+  const mainApplication = listFiles(join(main, 'java')).map((name) => join(main, 'java', name)).find((name) => name.endsWith('MainApplication.kt'));
   const defects = [
     ['android', 'A-ICON-BYTES', 'one byte of the xxxhdpi adaptive foreground changes', join(res, 'mipmap-xxxhdpi', 'ic_launcher_foreground.png'), (file) => flipLastByte(file)],
     ['android', 'A-NO-TEMPLATE-ICON', 'an Expo template icon comes back', join(res, 'mipmap-mdpi', 'ic_launcher.webp'), (file) => writeFileSync(file, 'webp')],
@@ -219,11 +231,12 @@ export function plantedDefects(androidRoot, iosRoot) {
     ['android', 'A-THEME', 'a custom splash icon replaces the launcher icon', join(res, 'values', 'styles.xml'), (file) => replaceIn(file, '</style>\n</resources>', '  <item name="android:windowSplashScreenAnimatedIcon">@drawable/rn_edit_text_material</item>\n  </style>\n</resources>')],
     ['android', 'A-MANIFEST', 'a second splash activity is declared', join(main, 'AndroidManifest.xml'), (file) => replaceIn(file, '</application>', '<activity android:name=".SplashActivity" android:exported="false"/></application>')],
     ['android', 'A-LABEL', 'the launcher label reverts to Qandeel', join(res, 'values', 'strings.xml'), (file) => replaceIn(file, '>QANDEEL<', '>Qandeel<')],
-    ['android', 'A-NIGHT-MODE', 'the application night mode is not set', null, () => {
-      const file = listFiles(join(main, 'java')).map((name) => join(main, 'java', name)).find((name) => name.endsWith('MainApplication.kt'));
-      replaceIn(file, 'MODE_NIGHT_YES', 'MODE_NIGHT_AUTO');
-      return file;
-    }],
+    ['android', 'A-NIGHT-MODE', 'a launch-time constant overrides the reader\'s persisted night mode (the superseded W2-02 declaration)', mainApplication, (file) => replaceIn(
+      file,
+      'super.onCreate()',
+      'super.onCreate()\n    getSystemService(android.app.UiModeManager::class.java)?.setApplicationNightMode(android.app.UiModeManager.MODE_NIGHT_YES)',
+    )],
+    ['android', 'A-NIGHT-MODE', 'MainActivity is recreated by a night-mode change', join(main, 'AndroidManifest.xml'), (file) => replaceIn(file, /\|uiMode\b|\buiMode\|/u, '')],
   ];
   if (iosRoot) {
     const projectName = readdirSync(iosRoot).find((name) => name.endsWith('.xcodeproj')).replace(/\.xcodeproj$/u, '');
@@ -237,7 +250,8 @@ export function plantedDefects(androidRoot, iosRoot) {
       ['ios', 'I-LAUNCH', 'the storyboard launch path comes back', join(app, 'Info.plist'), (file) => replaceIn(file, '<key>UILaunchScreen</key>', '<key>UILaunchStoryboardName</key>\n    <string>SplashScreen</string>\n    <key>UILaunchScreen</key>')],
       ['ios', 'I-LAUNCH', 'the Launch Screen colour is not the World asset', join(app, 'Info.plist'), (file) => replaceIn(file, `<string>${internals.IOS_WORLD_COLOR}</string>`, '<string>AccentColor</string>')],
       ['ios', 'I-PLIST', 'the Launch Screen is forced Light', join(app, 'Info.plist'), (file) => replaceIn(file, '<string>Automatic</string>', '<string>Light</string>')],
-      ['ios', 'I-ROOT-VIEW', 'the root view goes back to the system background', join(app, 'AppDelegate.swift'), (file) => replaceIn(file, 'rootView.backgroundColor = UIColor(red: 16.0 / 255.0, green: 16.0 / 255.0, blue: 16.0 / 255.0, alpha: 1.0)', 'rootView.backgroundColor = UIColor.systemBackground')],
+      ['ios', 'I-ROOT-VIEW', 'the root view goes back to the system background', join(app, 'AppDelegate.swift'), (file) => replaceIn(file, /rootView\.backgroundColor = [^\n]+/u, 'rootView.backgroundColor = UIColor.systemBackground')],
+      ['ios', 'I-ROOT-VIEW', 'the root view is pinned to the Dark World whatever the appearance', join(app, 'AppDelegate.swift'), (file) => replaceIn(file, /rootView\.backgroundColor = [^\n]+/u, 'rootView.backgroundColor = UIColor(red: 16.0 / 255.0, green: 16.0 / 255.0, blue: 16.0 / 255.0, alpha: 1.0)')],
     );
   }
   return defects;
@@ -249,16 +263,13 @@ function runPlantedDefects(androidRoot, iosRoot) {
     const snapshotFile = target;
     const existed = snapshotFile ? existsSync(snapshotFile) : false;
     const before = existed ? readFileSync(snapshotFile) : null;
-    const plantedFile = plant(snapshotFile) ?? snapshotFile;
-    const restoreBytes = plantedFile === snapshotFile ? before : null;
+    plant(snapshotFile);
     const failures = platform === 'android' ? checkAndroid(androidRoot) : checkIos(iosRoot);
     const caught = failures.some((failure) => failure.startsWith(`${family}:`));
     console.log(`${caught ? 'CAUGHT' : 'MISSED'}  planted ${family}: ${description}`);
     if (!caught) missed += 1;
-    if (plantedFile !== snapshotFile) {
-      replaceIn(plantedFile, 'MODE_NIGHT_AUTO', 'MODE_NIGHT_YES');
-    } else if (restoreBytes) {
-      writeFileSync(snapshotFile, restoreBytes);
+    if (before) {
+      writeFileSync(snapshotFile, before);
     } else {
       rmSync(snapshotFile, { force: true });
     }
