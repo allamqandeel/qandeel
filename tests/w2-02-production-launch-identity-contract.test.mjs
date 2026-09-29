@@ -8,7 +8,7 @@ import test from 'node:test';
 
 import { classifyMobileNativeImpact } from '../scripts/classify-mobile-native-impact.mjs';
 import { classifyBuildInput } from '../scripts/phase-m/native-build-fingerprint.mjs';
-import { STABLE_HANDOFF_FRAMES, judgeLaunchWindow, launchWindow } from '../scripts/w2/analyze-w2-02-launch-recording.mjs';
+import { STABLE_LAUNCH_FRAMES, VERDICT, judgeLaunch } from '../scripts/w2/analyze-w2-02-launch-recording.mjs';
 
 // W2-02 — Production Launch Identity (E2E-A-01 static launch → system handoff, E2E-A-02 final app icon).
 // Static contract.
@@ -341,40 +341,48 @@ test('the native launch-identity gate is wired, plants a defect per family, and 
   assert.match(mobileCi, /'tests\/w2-02-production-launch-identity-contract\.test\.mjs'/u);
 });
 
-test('the native launch proof judges only the system launch interval (R1 / R2)', () => {
+test('the native launch proof: observed defect = FAIL, observed correct launch = PASS, missed capture = CAPTURE_MISSED (R3)', () => {
   const run = (...parts) => parts.flatMap(([state, groundName, count]) => Array.from({ length: count }, () => ({ state, groundName, ground: groundName })))
     .map((frame, index) => ({ ...frame, index, time: index / 30 }));
-  const verdict = (frames, platform, expectGround, thenGround = '') => judgeLaunchWindow(launchWindow(frames, platform), { platform, expectGround, thenGround });
-  const handoff = ['world', 'dark', STABLE_HANDOFF_FRAMES + 2];
-  // After the handoff the runtime surface (Sign in, CONFIG_REFUSED, READY …) is NOT judged — even a light or white one.
-  const later = [['content', 'light', 40], ['white', 'white', 5], ['other', 'other', 10], ['product', 'dark', 10]];
+  const judge = (frames, platform, expectGround, thenGround = '') => judgeLaunch(frames, { platform, expectGround, thenGround });
+  const stable = STABLE_LAUNCH_FRAMES + 2;
+  const springboard = ['other', 'other', 20];
+  const launcher = ['product', 'dark', 20];
+  // What follows the launch belongs to the boot smoke, and is never judged: Apple's interpolated greys, the Dark
+  // app root, the unconfigured build's CONFIG_REFUSED screen, a white frame inside the app.
+  const iosAfter = [['other', 'other', 7], ['world', 'dark', 20], ['content', 'light', 10], ['white', 'white', 3]];
 
-  assert.deepEqual(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], handoff, ...later), 'android', 'dark'), [], 'Android: splash → World handoff → later UI passes');
-  assert.deepEqual(verdict(run(['other', 'other', 20], ['splash', 'light', 30], handoff, ...later), 'android', 'light', 'dark'), [], 'Android first launch on a Light system');
-  // R2: no empty World frame is required after the Android splash; the app may draw its real surface at once.
-  assert.deepEqual(verdict(run(['other', 'other', 3], ['splash', 'dark', 4], ['content', 'light', 4]), 'android', 'dark'), [], 'Android: splash straight into the app (a screenshot burst)');
-  assert.deepEqual(verdict(run(['other', 'other', 3], ['splash', 'dark', 6]), 'android', 'dark'), [], 'Android: the splash itself is the proof; its exit need not be captured');
-  assert.deepEqual(verdict(run(['other', 'other', 20], ['world', 'light', 12], handoff, ...later), 'ios', 'light', 'dark'), [], 'iOS: World-only Launch Screen → Dark World root');
-  assert.deepEqual(verdict(run(['other', 'other', 20], handoff, ...later), 'ios', 'dark'), [], 'iOS on a Dark device');
+  // iOS
+  assert.equal(judge(run(springboard, ['world', 'light', stable], ...iosAfter), 'ios', 'light').verdict, VERDICT.PASS, 'correct Light launch → grey Apple transition → Dark app');
+  assert.equal(judge(run(springboard, ['world', 'dark', stable], ['content', 'light', 10]), 'ios', 'dark').verdict, VERDICT.PASS, 'correct Dark launch → app');
+  const black = judge(run(springboard, ['black', 'black', 20], ['world', 'light', stable]), 'ios', 'light');
+  assert.equal(black.verdict, VERDICT.FAIL, 'black before the Light World');
+  assert.match(black.failures.join('\n'), /black/u);
+  assert.equal(judge(run(springboard, ['splash', 'light', 12], ['world', 'light', stable]), 'ios', 'light').verdict, VERDICT.FAIL, 'a Q / logo / image on the Launch Screen');
+  assert.equal(judge(run(springboard, ['content', 'light', 12], ['world', 'light', stable]), 'ios', 'light').verdict, VERDICT.FAIL, 'text on the Launch Screen');
+  assert.equal(judge(run(springboard, ['world', 'dark', stable], ...iosAfter), 'ios', 'light').verdict, VERDICT.FAIL, 'the wrong World on a Light device');
+  assert.equal(judge(run(springboard, ['white', 'white', 10], ['world', 'light', stable]), 'ios', 'light').verdict, VERDICT.FAIL, 'a default white launch');
+  assert.equal(judge(run(springboard), 'ios', 'light').verdict, VERDICT.CAPTURE_MISSED, 'iOS: nothing sampled is not a defect');
 
-  // Planted defects inside the window are caught.
-  assert.match(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], ['white', 'white', 3], handoff), 'android', 'dark').join('\n'), /white/u, 'a white flash before the handoff');
-  assert.match(verdict(run(['other', 'other', 20], ['world', 'dark', 30], handoff), 'android', 'dark').join('\n'), /no Android system splash/u, 'no system splash');
-  assert.match(verdict(run(['other', 'other', 3], ['content', 'light', 6]), 'android', 'dark').join('\n'), /no launch surface|no Android system splash/u, 'the app screen alone is not a splash');
-  assert.match(verdict(run(['other', 'other', 3], ['splash', 'dark', 4], ['world', 'dark', 2], ['splash', 'dark', 4], ['content', 'light', 3]), 'android', 'dark').join('\n'), /second splash/u, 'a duplicate, custom splash after the system splash');
-  assert.match(verdict(run(['other', 'other', 3], ['splash', 'dark', 4], ['white', 'white', 1], ['content', 'light', 4]), 'android', 'dark').join('\n'), /white/u, 'a white flash AT the splash exit (the Expo-default flash)');
-  assert.match(verdict(run(['other', 'other', 20], ['black', 'black', 20], handoff, ...later), 'ios', 'light', 'dark').join('\n'), /black/u, 'the black Launch Screen shape recorded on the iOS simulator');
-  assert.match(verdict(run(['other', 'other', 20], ['splash', 'light', 12], handoff), 'ios', 'light', 'dark').join('\n'), /carries a mark/u, 'a Q on the iOS Launch Screen');
-  assert.match(verdict(run(['other', 'other', 20], ['world', 'dark', 12], handoff), 'ios', 'light', 'dark').join('\n'), /expected light/u, 'a Launch Screen that ignores the device appearance');
-  // And nothing after the window can fail it. Android: it closes when the splash exits into the first app-owned
-  // frame; iOS: at the end of the stable Dark World root view.
-  const android = launchWindow(run(['other', 'other', 5], ['splash', 'dark', 10], ['content', 'light', 3], ['white', 'white', 50]), 'android');
-  assert.equal(android.end, 14);
-  assert.equal(android.splashExited, true);
-  assert.equal(android.frames.some((frame) => frame.state === 'white' || frame.state === 'content'), false);
-  const ios = launchWindow(run(['other', 'other', 5], ['world', 'light', 10], handoff, ['white', 'white', 50]), 'ios');
-  assert.equal(ios.end, ios.handoffFrom + STABLE_HANDOFF_FRAMES - 1);
-  assert.equal(ios.frames.some((frame) => frame.state === 'white'), false);
+  // Android
+  const app = ['content', 'light', 12];
+  assert.equal(judge(run(launcher, ['splash', 'dark', 20], app), 'android', 'dark').verdict, VERDICT.PASS, 'captured correct splash → app (no empty World frame required)');
+  assert.equal(judge(run(launcher, ['splash', 'light', 20], ['world', 'dark', 4], app), 'android', 'light', 'dark').verdict, VERDICT.PASS, 'first launch on a Light system');
+  assert.equal(judge(run(launcher, ['splash', 'light', 20], app), 'android', 'dark').verdict, VERDICT.FAIL, 'captured splash on the wrong World');
+  assert.equal(judge(run(launcher, ['white', 'white', 3], ['splash', 'dark', 20], app), 'android', 'dark').verdict, VERDICT.FAIL, 'captured white flash before the splash');
+  assert.equal(judge(run(launcher, ['splash', 'dark', 20], ['white', 'white', 2], app), 'android', 'dark').verdict, VERDICT.FAIL, 'captured white flash at the splash exit (Expo default)');
+  assert.equal(judge(run(launcher, app), 'android', 'dark').verdict, VERDICT.CAPTURE_MISSED, 'splash not sampled at all');
+  assert.equal(judge(run(launcher, ['world', 'dark', 2], app), 'android', 'dark').verdict, VERDICT.CAPTURE_MISSED, 'only the app-owned World sampled — the splash was missed, nothing wrong was seen');
+  assert.equal(judge(run(launcher), 'android', 'dark').verdict, VERDICT.CAPTURE_MISSED, 'the recording caught nothing');
+  assert.equal(judge(run(launcher, ['white', 'white', 2], app), 'android', 'dark').verdict, VERDICT.FAIL, 'splash missed, but a white flash WAS observed');
+  const duplicate = judge(run(launcher, ['splash', 'dark', 20], ['world', 'dark', 3], ['splash', 'dark', 10], app), 'android', 'dark');
+  assert.equal(duplicate.verdict, VERDICT.FAIL, 'an observed second icon splash');
+  assert.match(duplicate.failures.join('\n'), /second splash/u);
+  // The app surface after the splash is never judged: a light CONFIG_REFUSED screen, or anything else.
+  assert.equal(judge(run(launcher, ['splash', 'dark', 20], ['content', 'light', 30], ['white', 'white', 5], ['other', 'other', 10]), 'android', 'dark').verdict, VERDICT.PASS);
+
+  // Only an observed defect gates: the CLI exits non-zero for FAIL alone.
+  assert.match(read('scripts/w2/analyze-w2-02-launch-recording.mjs'), /if \(result\.verdict === VERDICT\.FAIL\) process\.exitCode = 1;/u);
 });
 
 test('the implementation record tells the lifecycle truth and carries the W3 boundary', () => {

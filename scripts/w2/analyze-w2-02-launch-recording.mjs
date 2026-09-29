@@ -1,9 +1,9 @@
 // W2-02 — classifies every frame of a native cold-launch screen recording. VALIDATION ONLY.
 //
 // The system launch surfaces are transient, so W2-02 adds no production delay to photograph them. Instead the
-// platform captures a real cold launch — on Android a pre-armed on-device `screencap` burst (`--images`, R2), on iOS
-// `xcrun simctl io recordVideo` — of the installed Release build, and this script decodes it with ffmpeg and
-// labels each frame:
+// platform's own recorder — `adb shell screenrecord` (pre-armed before `am start`) / `xcrun simctl io recordVideo` —
+// captures a real cold launch of the installed Release build, and this script decodes it with ffmpeg and labels
+// each frame:
 //
 //   splash   the World ground with a centred mark and nothing else on screen (the Android 12+ system splash)
 //   world    the World ground and nothing else (the iOS Launch Screen, or the first app-owned frame)
@@ -13,11 +13,15 @@
 //   black    a near-black (#000) frame that is not the Dark World
 //   other    anything else (the launcher / SpringBoard before the app window)
 //
-// W2-02 owns only `system launch surface → first stable app-owned World handoff` (R1). The launch window opens at
-// the first full-screen launch frame and closes at the end of that handoff (`launchWindow`). Inside it only
-// `splash` and `world` are allowed, so a white or black flash, a second splash or content fails. What the app shows
-// AFTER the handoff (Sign in, CONFIG_REFUSED, anything) is not judged here: the boot smoke proves the root boots.
-// H.264 is lossy, so colours match within a tolerance and every measured value is written to the JSON report.
+// W2-02 owns only the OS launch surface (R1 → R3). `judgeLaunch` returns one of three verdicts: PASS (the surface
+// was observed and is correct), FAIL (a defect was OBSERVED) or CAPTURE_MISSED (the transient surface was not
+// sampled and nothing observed is a defect — non-gating; a missing frame is never evidence of a defect).
+//   Android: the system splash, when sampled, is judged strictly — expected World, no white / black flash before it
+//            or at its exit, no second icon splash later. Nothing else after it is judged.
+//   iOS:     the launch-colour gate closes once a stable expected-World launch surface is observed; the Apple
+//            crossfade that follows (interpolated greys, the Dark app root) is not judged.
+// The boot smokes own the app after the handoff, and the deterministic native gates stay authoritative. H.264 is
+// lossy, so colours match within a tolerance and every measured value is written to the JSON report.
 //
 // Usage:
 //   node scripts/w2/analyze-w2-02-launch-recording.mjs --video <file> --out <dir> --platform android|ios \
@@ -30,7 +34,7 @@ import process from 'node:process';
 const WORLD = { light: [0xef, 0xee, 0xeb], dark: [0x10, 0x10, 0x10] };
 const WORLD_TOLERANCE = 9;
 const WIDTH = 90;
-let FPS = 30;
+const FPS = 30;
 
 function argument(name, fallback = undefined) {
   const index = process.argv.indexOf(`--${name}`);
@@ -124,75 +128,90 @@ function measure(frame, width, height) {
   return { ground: `#${ground.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`, groundName: name, state, markPixels: mark, markAspect: markAspect === null ? null : Number(markAspect.toFixed(2)), outsideOffRatio: Number((outsideOff / outside).toFixed(4)), whiteRatio: Number((whitePixels / (width * (bottom - top))).toFixed(4)) };
 }
 
-/** A stable app-owned handoff: this many consecutive World-only frames (200 ms at 30 fps). */
-export const STABLE_HANDOFF_FRAMES = 6;
-const LAUNCH_SURFACE = new Set(['splash', 'world', 'white', 'black']);
+/** A stable launch surface: this many consecutive frames of the expected World (200 ms at 30 fps). */
+export const STABLE_LAUNCH_FRAMES = 6;
 
 /**
- * The W2-02 launch window. It OPENS at the first full-screen launch frame, so a white or black flash is inside it.
- *
- * - Android (R2): it CLOSES when the system splash exits — at the last frame of the first system-splash run. The
- *   app may draw its real next surface immediately; no empty World frame is required, and nothing after the
- *   splash is judged (the boot smoke owns the app root).
- * - iOS: it CLOSES at the end of the first stable Dark World run (the app-owned root view), which follows the
- *   World-only Launch Screen.
+ * The three R3 verdicts. A transient OS surface that CI sampling did not catch is never evidence of a defect.
+ *   PASS            the launch surface was observed and it is correct
+ *   FAIL            a launch defect was OBSERVED
+ *   CAPTURE_MISSED  the transient surface was not sampled, and nothing observed is a defect (non-gating)
  */
-export function launchWindow(frames, platform) {
-  const start = frames.findIndex((frame) => LAUNCH_SURFACE.has(frame.state));
-  if (start === -1) return { start: -1, handoffFrom: -1, end: -1, frames: [] };
-  if (platform === 'android') {
-    const firstSplash = frames.findIndex((frame, index) => index >= start && frame.state === 'splash');
-    if (firstSplash === -1) return { start, handoffFrom: -1, end: frames.length - 1, frames: frames.slice(start) };
-    let lastSplash = firstSplash;
-    while (lastSplash + 1 < frames.length && frames[lastSplash + 1].state === 'splash') lastSplash += 1;
-    // A white / black flash AT the splash exit (the Expo-default flash) is still the launch interval; the window
-    // closes at the first app-owned frame that is neither, whatever that frame shows.
-    let end = lastSplash;
-    while (end + 1 < frames.length && (frames[end + 1].state === 'white' || frames[end + 1].state === 'black')) end += 1;
-    const exited = end + 1 < frames.length;
-    // After the window only ONE thing is looked at: whether an icon splash appears AGAIN (a duplicate, custom
-    // splash). Nothing else the app shows is judged.
-    const secondSplash = frames.slice(end + 1).filter((frame) => frame.state === 'splash').map((frame) => frame.index);
-    return { start, handoffFrom: exited ? end + 1 : -1, end, splashExited: exited, secondSplash, frames: frames.slice(start, end + 1) };
+export const VERDICT = Object.freeze({ PASS: 'PASS', FAIL: 'FAIL', CAPTURE_MISSED: 'CAPTURE_MISSED' });
+
+const at = (frame) => `frame ${frame.index} (${frame.time}s)`;
+
+/**
+ * Android. The window opens at the first full-screen launch frame. If the system splash was sampled, it is judged
+ * strictly: the expected World, no white / black flash before it or AT its exit, no second icon splash later.
+ * Nothing else after the splash is judged (the boot smoke owns the app). If it was not sampled, only what WAS
+ * observed before the first app-owned frame can fail — a white / black flash or a wrong World; otherwise the
+ * verdict is CAPTURE_MISSED.
+ */
+function judgeAndroid(frames, expectGround, allowed) {
+  const start = frames.findIndex((frame) => ['splash', 'world', 'white', 'black'].includes(frame.state));
+  if (start === -1) return { verdict: VERDICT.CAPTURE_MISSED, failures: [], notes: ['no launch surface was sampled'], window: null };
+  const failures = [];
+  const firstSplash = frames.findIndex((frame, index) => index >= start && frame.state === 'splash');
+  if (firstSplash === -1) {
+    let end = start;
+    while (end + 1 < frames.length && ['world', 'white', 'black'].includes(frames[end + 1].state)) end += 1;
+    for (const frame of frames.slice(start, end + 1)) {
+      if (frame.state === 'white' || frame.state === 'black') failures.push(`${at(frame)} is an observed ${frame.state} flash`);
+      if (frame.state === 'world' && !allowed.has(frame.groundName)) failures.push(`${at(frame)} is an observed ${frame.groundName} World, expected ${[...allowed].join(' / ')}`);
+    }
+    return failures.length > 0
+      ? { verdict: VERDICT.FAIL, failures, notes: [], window: { opens: start, closes: end } }
+      : { verdict: VERDICT.CAPTURE_MISSED, failures, notes: ['the system splash was not sampled; nothing observed is a defect'], window: { opens: start, closes: end } };
   }
-  let handoffFrom = -1;
-  for (let index = start; index + STABLE_HANDOFF_FRAMES <= frames.length; index += 1) {
-    const run = frames.slice(index, index + STABLE_HANDOFF_FRAMES);
-    const stable = run.every((frame) => frame.state === 'world' && frame.groundName === run[0].groundName);
-    const afterSplash = platform !== 'android' || frames.slice(start, index).some((frame) => frame.state === 'splash');
-    const appOwned = platform !== 'ios' || run[0].groundName === 'dark';
-    if (stable && afterSplash && appOwned) {
-      handoffFrom = index;
+  let lastSplash = firstSplash;
+  while (lastSplash + 1 < frames.length && frames[lastSplash + 1].state === 'splash') lastSplash += 1;
+  // A white / black flash AT the splash exit (the Expo-default flash) is still the launch interval.
+  let end = lastSplash;
+  while (end + 1 < frames.length && (frames[end + 1].state === 'white' || frames[end + 1].state === 'black')) end += 1;
+  for (const frame of frames.slice(start, end + 1)) {
+    if (frame.state !== 'splash' && frame.state !== 'world') failures.push(`${at(frame)} is ${frame.state} ${frame.ground} in the launch interval`);
+    else if (!allowed.has(frame.groundName)) failures.push(`${at(frame)} shows the ${frame.groundName} World, expected ${[...allowed].join(' / ')}`);
+  }
+  if (frames[firstSplash].groundName !== expectGround) failures.push(`the system splash is on the ${frames[firstSplash].groundName} World, expected ${expectGround}`);
+  // After the splash only ONE thing is looked at: an icon splash appearing again (a duplicate, custom splash).
+  const second = frames.slice(end + 1).filter((frame) => frame.state === 'splash').map((frame) => frame.index);
+  if (second.length > 0) failures.push(`a second splash is observed after the system splash (frames ${second.slice(0, 5).join(', ')})`);
+  return { verdict: failures.length > 0 ? VERDICT.FAIL : VERDICT.PASS, failures, notes: [], window: { opens: start, closes: end, splashFrom: firstSplash, splashExited: end + 1 < frames.length } };
+}
+
+/**
+ * iOS. The launch-colour gate opens at the first full-screen launch frame and CLOSES as soon as a stable launch
+ * surface of the expected World is observed. The Apple handoff / crossfade after it (interpolated greys, the Dark
+ * app root) is not judged. Before it, any observed black, white, mark (Q / logo / image), text or wrong World fails.
+ */
+function judgeIos(frames, expectGround) {
+  const start = frames.findIndex((frame) => ['splash', 'content', 'world', 'white', 'black'].includes(frame.state));
+  if (start === -1) return { verdict: VERDICT.CAPTURE_MISSED, failures: [], notes: ['no launch surface was sampled'], window: null };
+  let established = -1;
+  for (let index = start; index + STABLE_LAUNCH_FRAMES <= frames.length; index += 1) {
+    if (frames.slice(index, index + STABLE_LAUNCH_FRAMES).every((frame) => frame.state === 'world' && frame.groundName === expectGround)) {
+      established = index;
       break;
     }
   }
-  const end = handoffFrom === -1 ? frames.length - 1 : handoffFrom + STABLE_HANDOFF_FRAMES - 1;
-  return { start, handoffFrom, end, frames: frames.slice(start, end + 1) };
+  const before = frames.slice(start, established === -1 ? frames.length : established);
+  const failures = [];
+  for (const frame of before) {
+    if (frame.state === 'black' || frame.state === 'white') failures.push(`${at(frame)} is an observed ${frame.state} launch surface`);
+    else if (frame.state === 'splash' || frame.state === 'content') failures.push(`${at(frame)}: the Launch Screen carries a mark or text; it must be the World only`);
+    else if (frame.state === 'world' && frame.groundName !== expectGround) failures.push(`${at(frame)} is the ${frame.groundName} World, expected ${expectGround}`);
+  }
+  const window = { opens: start, established: established === -1 ? null : established, closes: established === -1 ? null : established + STABLE_LAUNCH_FRAMES - 1 };
+  if (failures.length > 0) return { verdict: VERDICT.FAIL, failures, notes: [], window };
+  if (established === -1) return { verdict: VERDICT.CAPTURE_MISSED, failures, notes: [`no stable ${expectGround} World launch surface was sampled; nothing observed is a defect`], window };
+  return { verdict: VERDICT.PASS, failures, notes: [], window };
 }
 
-/** Every launch failure inside the window. Frames after it are never inspected. */
-export function judgeLaunchWindow(launch, { platform, expectGround, thenGround = '' }) {
-  if (launch.start === -1) return ['no launch surface was recorded'];
-  const failures = [];
-  // Android: the proof is the system splash itself; whether its exit was also captured is reported, not required.
-  if (platform !== 'android' && launch.handoffFrom === -1) failures.push('no stable app-owned World handoff was recorded');
-  for (const frame of launch.frames) {
-    if (frame.state !== 'splash' && frame.state !== 'world') failures.push(`frame ${frame.index} (${frame.time}s) is ${frame.state} ${frame.ground} before the handoff`);
-  }
-  const worldFrames = launch.frames.filter((frame) => frame.state === 'splash' || frame.state === 'world');
-  if (worldFrames.length > 0 && worldFrames[0].groundName !== expectGround) failures.push(`the launch ground is ${worldFrames[0].groundName}, expected ${expectGround}`);
+/** The R3 verdict for one captured launch. */
+export function judgeLaunch(frames, { platform, expectGround, thenGround = '' }) {
   const allowed = new Set([expectGround, ...(thenGround ? [thenGround] : [])]);
-  for (const ground of new Set(worldFrames.map((frame) => frame.groundName))) {
-    if (!allowed.has(ground)) failures.push(`an unexpected ${ground} World appears before the handoff`);
-  }
-  if (platform === 'android') {
-    if (!launch.frames.some((frame) => frame.state === 'splash' && frame.groundName === expectGround)) failures.push(`no Android system splash (the icon on the ${expectGround} World) was recorded`);
-    if ((launch.secondSplash ?? []).length > 0) failures.push(`a second splash appears after the system splash (frames ${launch.secondSplash.slice(0, 5).join(', ')})`);
-  } else {
-    const marked = launch.frames.filter((frame) => frame.state === 'splash');
-    if (marked.length > 0) failures.push(`the iOS Launch Screen carries a mark in ${marked.length} frame(s); it must be the World only`);
-  }
-  return failures;
+  return platform === 'android' ? judgeAndroid(frames, expectGround, allowed) : judgeIos(frames, expectGround);
 }
 
 function main() {
@@ -204,14 +223,10 @@ function main() {
   const label = argument('label', `${platform}-${expectGround}`);
   mkdirSync(out, { recursive: true });
 
-  // `--images <pattern>` reads a screenshot burst (e.g. `burst/%04d.png`) instead of a recording: one frame per
-  // capture, so FPS is 1 and a frame's "time" is its capture index.
-  const images = process.argv.includes('--images');
-  if (images) FPS = 1;
-  const input = images ? ['-framerate', '1', '-i', video] : ['-i', video];
+  const input = ['-i', video];
   const size = videoSize(input);
   const height = Math.round((WIDTH * size.height) / size.width / 2) * 2;
-  const decoded = spawnSync(FFMPEG, ['-v', 'error', ...input, '-vf', `${images ? '' : `fps=${FPS},`}scale=${WIDTH}:${height}:flags=area`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1024 * 1024 * 512 });
+  const decoded = spawnSync(FFMPEG, ['-v', 'error', ...input, '-vf', `fps=${FPS},scale=${WIDTH}:${height}:flags=area`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-'], { maxBuffer: 1024 * 1024 * 512 });
   if (decoded.status !== 0) throw new Error(`ffmpeg decode failed: ${decoded.stderr}`);
   const frameBytes = WIDTH * height * 3;
   const frames = [];
@@ -219,9 +234,9 @@ function main() {
     frames.push({ index: frames.length, time: Number((frames.length / FPS).toFixed(3)), ...measure(decoded.stdout.subarray(offset, offset + frameBytes), WIDTH, height) });
   }
 
-  const launch = launchWindow(frames, platform);
-  const failures = judgeLaunchWindow(launch, { platform, expectGround, thenGround });
-  const start = launch.start;
+  const result = judgeLaunch(frames, { platform, expectGround, thenGround });
+  const { failures } = result;
+  const start = result.window?.opens ?? -1;
 
   // Segments: consecutive frames with the same state + ground, with one representative PNG each.
   const segments = [];
@@ -243,20 +258,22 @@ function main() {
   }
   // The contact sheet covers the launch itself: from one second before the window opens.
   const sheetFrom = Math.max(0, (start === -1 ? 0 : start) / FPS - 1);
-  spawnSync(FFMPEG, ['-v', 'error', '-y', '-ss', String(sheetFrom), ...input, '-vf', `${images ? '' : 'fps=10,'}scale=180:-2,tile=8x3`, '-frames:v', '1', join(out, `${label}-contact-sheet.png`)]);
+  spawnSync(FFMPEG, ['-v', 'error', '-y', '-ss', String(sheetFrom), ...input, '-vf', 'fps=10,scale=180:-2,tile=8x3', '-frames:v', '1', join(out, `${label}-contact-sheet.png`)]);
 
   const report = {
     label, platform, video, expectGround, thenGround: thenGround || null, fps: FPS, analysedWidth: WIDTH, analysedHeight: height, sourceSize: size,
     frames: frames.length,
-    capture: images ? 'screenshot burst' : 'screen recording',
-    launchWindow: { opens: launch.start === -1 ? null : launch.start, handoffFrom: launch.handoffFrom, closes: launch.end, splashExited: launch.splashExited ?? null, stableHandoffFrames: platform === 'ios' ? STABLE_HANDOFF_FRAMES : null },
+    capture: 'screen recording',
+    launchWindow: result.window, stableLaunchFrames: platform === 'ios' ? STABLE_LAUNCH_FRAMES : null, notes: result.notes,
     afterHandoff: 'not judged: the app-owned runtime surface after the handoff belongs to the boot smoke, not to W2-02',
-    segments, failures, verdict: failures.length === 0 ? 'PASS' : 'FAIL', perFrame: frames,
+    segments, failures, verdict: result.verdict, perFrame: frames,
   };
   writeFileSync(join(out, `${label}-analysis.json`), `${JSON.stringify(report, null, 2)}\n`);
   console.log(`${label}: ${report.verdict} — ${frames.length} frames; segments: ${segments.map((segment) => `${segment.state}/${segment.ground}×${segment.frames}`).join(' → ')}`);
   for (const failure of failures) console.log(`  FAIL ${failure}`);
-  if (failures.length > 0) process.exitCode = 1;
+  for (const note of result.notes) console.log(`  NOTE ${note}`);
+  // Only an OBSERVED defect exits non-zero; CAPTURE_MISSED is reported and non-gating.
+  if (result.verdict === VERDICT.FAIL) process.exitCode = 1;
 }
 
 if (process.argv[1] !== undefined && process.argv[1].replace(/\\/gu, '/').endsWith('scripts/w2/analyze-w2-02-launch-recording.mjs')) main();

@@ -7,8 +7,9 @@
 #      the AppIcon set and the QandeelWorld colour (with a dark appearance) and no splash logo;
 #   2. the SpringBoard icon (home-screen screenshots, Light and Dark device appearance);
 #   3. recorded cold launches with the device in Light and in Dark: the Launch Screen is the World of the
-#      device appearance with no Q / logo / text, then a stable Dark World app-owned handoff, with no white or
-#      black flash. The window closes at that handoff; what the app shows after it is the boot smoke's to prove.
+#      device appearance (#efeeeb / #101010) with no Q / logo / text, and no black / white surface before it
+#      (R3: the launch-colour gate closes once that stable World is observed; the Apple crossfade and the app
+#      after it are the boot smoke's; a launch the recording did not catch is CAPTURE_MISSED, non-gating).
 #
 # Usage: run-w2-02-ios-proof.sh <path/to/App.app> <evidence-dir> <simulator-udid>
 set -uo pipefail
@@ -92,5 +93,7 @@ record_launch E1-device-dark-first dark dark "" diagnostic
 record_launch E2-device-dark-repeat dark dark "" gating
 xcrun simctl ui "$UDID" appearance light
 
+missed="$(grep -c ': CAPTURE_MISSED' "$OUT/summary.txt" || true)"
+note "transient captures missed (non-gating): ${missed:-0} / 4"
 note "overall: $([ "$status" -eq 0 ] && echo PASS || echo FAIL)"
 exit "$status"

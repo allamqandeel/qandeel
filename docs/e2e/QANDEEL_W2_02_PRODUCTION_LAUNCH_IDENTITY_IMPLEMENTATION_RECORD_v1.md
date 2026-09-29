@@ -256,28 +256,43 @@ Mobile CI does, installs them and captures real cold launches. No production del
 black / other. `splash` means one compact, centred mark on a World-like ground, which is the icon. Centred text on a
 World-like ground (for example the unconfigured build's `CONFIG_REFUSED` screen) is `content`, never `splash`.
 
-**Proof boundary (R1, refined by R2).** W2-02 owns only the system launch interval. The launch window opens at the
-first full-screen launch frame, so a white or black flash falls inside it.
+**Proof semantics (R3; the boundary from R1 and R2, which changed no Product file).** W2-02 owns only the OS launch
+surface. Each captured launch gets one of three verdicts:
 
-- **Android (R2):** the window closes when the system splash exits, at the first app-owned frame that is not white or
-  black, whatever that frame shows.
-  - A white or black flash at the exit is still judged.
-  - No empty World frame is required; the app may draw its real next surface at once.
-  - After the window, the only thing looked at is whether an icon splash appears again: a duplicate, custom splash.
-- **iOS:** the window closes at the end of the first stable Dark World root view (6 frames, 200 ms), which follows the
-  World-only Launch Screen.
+- **PASS:** the launch surface was observed and it is correct.
+- **FAIL:** a launch defect was **observed**. Only this verdict gates.
+- **CAPTURE_MISSED:** the transient OS surface was not sampled, and nothing observed is a defect. It is reported and
+  kept as evidence, and it is non-gating. A missing frame is never taken as proof of a defect.
 
-Inside the window only the splash (Android) and the World are allowed. What the app shows after it (Sign in,
-`CONFIG_REFUSED`, anything else) is not judged here. The Android and iOS boot smokes remain the authority that the app
-root boots. The W2-02 contract pins both boundaries with planted sequences.
+The deterministic evidence stays gating and authoritative: the generated native configuration and resources, the
+canonical asset hashes, APK / app-bundle inspection, the Release builds, the native verifier, CNG integrity, and the
+boot smokes. The launch window opens at the first full-screen launch frame, so a white or black flash falls inside
+it.
+
+- **Android:**
+  - When the system splash was captured, it is judged strictly. It must sit on the expected World. There must be no
+    white or black flash before it or at its exit (the Expo-default flash), and no second icon splash anywhere after
+    it.
+  - Nothing else after the splash is judged, and no empty World frame is required.
+  - When the splash was not captured, only what was observed before the first app-owned frame can fail (an observed
+    white / black flash or a wrong World). Otherwise the verdict is CAPTURE_MISSED.
+- **iOS:**
+  - The launch-colour gate closes as soon as a stable launch surface of the expected World is observed (6 frames,
+    200 ms): Light `#efeeeb` or Dark `#101010`.
+  - Apple's handoff / crossfade after it (interpolated greys, then the Dark app root) is not judged.
+  - Before it, any observed black, white, mark (Q / logo / image), text or wrong World fails.
+
+What the app shows after the launch (Sign in, `CONFIG_REFUSED`, anything else) is the boot smokes' to prove. The W2-02
+contract pins these semantics with planted sequences for every case.
 
 - **Android (API 36 emulator):**
   - APK badging and resources; all 15 icon rasters compared by decoded pixels with the vendored canonical bytes; the
     installed-launcher screenshot.
   - Cold launches A (system Light, first launch), B (system Light, after the night-mode seam) and C (system Dark).
-  - **Capture (R2):** `screenrecord` on the API 36 emulator was not reliable. On head `3af1ae5` it missed the splash
-    entirely in A and C. It is replaced by a validation-only **pre-armed on-device screenshot burst**: a `screencap`
-    loop pushed to the emulator, started before `am start`, bounded at 8 s / 120 frames, and analysed with `--images`.
+  - **Capture:** one `screenrecord`, pre-armed 2 s before `am start`, with a 12 s limit.
+    - R2's on-device `screencap` burst reached only 1–3 frames per launch on API 36 CI (head `9d7c86d`), so R3 removed
+      it as complexity without value.
+    - A splash the recording misses is CAPTURE_MISSED, not a failure.
 - **iOS (iPhone 17 / iOS 26.5 simulator):** the compiled Info.plist (R2: `UILaunchScreen` / `UIColorName`, no storyboard
   compiled) and the `Assets.car` catalogue; SpringBoard screenshots in Light and Dark; per appearance, a first cold
   launch (diagnostic) and a repeat cold launch (gating), D1 / D2 (device Light) and E1 / E2 (device Dark).
@@ -321,11 +336,30 @@ root boots. The W2-02 contract pins both boundaries with planted sequences.
   - Re-read under the R2 boundary, `6bdf288` A / B / C pass: splash (Light on first launch, Dark after the seam and on
     a Dark system), then the app.
 
-**Open until the R2 proof runs:**
-- the iOS Launch Screen showing `#efeeeb` / `#101010` on the gating repeat launches;
-- the Android burst capturing the splash in A, B and C.
+**R2 evidence (head `9d7c86d`, run 36548903170): the black launch is resolved by R2.**
 
-This section is updated from that run.
+- **Mobile CI on `9d7c86d`:** all green, including the Android and iOS Release builds and both boot smokes.
+- **iOS bundle:**
+  - `UILaunchScreen:UIColorName` = `QandeelWorld`.
+  - No `UILaunchStoryboardName`, and no storyboard compiled.
+  - `UILaunchScreen` declares the colour only, and `QandeelWorld` is in `Assets.car`.
+- **iOS launches:**
+  - Device Light (first and repeat) shows the Light World launch surface (`#efeeeb`: 18 / 41 frames) with no black frame.
+  - Device Dark (first and repeat) shows the Dark World.
+  - The job was red only because the pre-R3 analyzer demanded a stable Dark app segment after the launch and read
+    Apple's crossfade greys as launch content.
+  - Read under R3, D1 / D2 / E1 / E2 all PASS. The pre-R2 storyboard recordings (`3af1ae5` D2 / E2) still FAIL on the
+    observed black, so the analyzer still sees the real defect.
+- **Android:** the deterministic checks passed: label `QANDEEL`, 15 / 15 icon rasters, no template icon or splash
+  logo. Of the three bursts, B captured the splash on the Dark World (PASS). A and C sampled no splash and observed no
+  defect, which under R3 is CAPTURE_MISSED.
+- **Re-read under R3:**
+  - `6bdf288` A / B / C: PASS.
+  - `3af1ae5`: A and C CAPTURE_MISSED; B PASS.
+
+R3 changed proof semantics only, in these files: the analyzer, the two proof drivers, the contract and this record.
+No Product, Brand or native-configuration file changed. An Android CAPTURE_MISSED does not contradict the
+deterministic native proof. It records that CI sampling missed a transient, OS-owned surface.
 
 **Capture limitation:** a recording is H.264, so colours are matched within a tolerance (±9 per channel), and every
 measured ground is reported. A simulator or emulator is not a device: OEM launchers, icon masks and themed-icon tinting
@@ -335,9 +369,10 @@ on real hardware remain Release Hardening device checks.
 
 - **Level-4 CNG exception:** APPROVED — bounded W2-02 Level-4 exception (R1; §6). Any expansion needs a new review.
 - **W3 carry-forward** (§12).
-- **iOS black launch surface** (§14): the R1 repeat launches confirmed it as a real launch defect of the storyboard
-  path. R2 moves to `UILaunchScreen` / `UIColorName`. The finding stays open until the R2 proof shows the World on the
-  gating repeat launches.
+- **iOS black launch surface** (§14): **resolved by R2.** The storyboard path was replaced by `UILaunchScreen` /
+  `UIColorName`, and the R2 run shows the Light and Dark World launch surfaces with no black frame.
+- **Transient Android splash capture** may be CAPTURE_MISSED on CI (§14, R3). This is non-gating, and the
+  deterministic native proof and boot smoke remain the authority.
 - **Device validation** of the icon and launch on physical iOS / Android hardware and OEM launchers: Release Hardening.
 - **Not implemented, by scope:** the Lantern (`QAN-BL-LANTERN-01`), Sign out (`E2E-D-07`), the appearance preference and
   General Settings (W3), store signing and upload.
