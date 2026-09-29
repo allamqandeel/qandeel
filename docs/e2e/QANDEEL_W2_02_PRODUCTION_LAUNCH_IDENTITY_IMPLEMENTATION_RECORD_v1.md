@@ -125,10 +125,15 @@ therefore uses Option B: one config plugin, `apps/mobile/plugins/with-qandeel-la
 
 **CNG hierarchy (apps/mobile/README.md).** The T-01 policy makes dangerous mods Level 4: not pre-authorized, needing a
 separate Engineering Architecture review. The Product Owner's task contract authorizes Option B, and Expo's own guide
-puts file installs in dangerous mods, but that is not the Architecture review the policy asks for. W2-02 therefore:
-confines the two dangerous mods to copying vendored bytes, deleting named template files and writing two fixed text
-files; records the exception in the README policy as **submitted for review, not granted**; and narrows the
-mobile-foundation contract so this one file, and no other, may use a dangerous mod. The Kotlin / Swift insertions are
+puts file installs in dangerous mods. W2-02 therefore confines the two dangerous mods to copying vendored bytes,
+deleting named template files and writing two fixed text files, and narrows the mobile-foundation contract so this one
+file, and no other, may use a dangerous mod.
+
+**Architecture disposition (W2-02 R1): APPROVED — bounded W2-02 Level-4 exception.** The independent Engineering
+Architecture review approved it for exactly: `apps/mobile/plugins/with-qandeel-launch-identity.js`; its two current
+`withDangerousMod` file-install steps; and the canonical icon / launch resource installation W2-02 requires. It does not
+authorize any future expansion; another dangerous mod or a wider use needs a new review. The README policy records the
+same bounded approval, and the general CNG hierarchy is unchanged. The Kotlin / Swift insertions are
 typed mods with begin / end markers that replace themselves on re-application and fail the build if their anchor
 moves.
 
@@ -240,15 +245,42 @@ GitHub CI on the Draft PR: see §14 and the PR.
 `.github/workflows/w2-02-native-launch-proof.yml` (branch-scoped) builds the **Product** Release binaries exactly as
 Mobile CI does, installs them and records real cold launches with the platforms' own screen recorders. No production
 delay was added for it. `scripts/w2/analyze-w2-02-launch-recording.mjs` classifies every frame as splash / world /
-product / white / black / other, and fails on any non-World frame once the launch has begun.
+product / white / black / other.
+
+**Proof boundary (R1).** W2-02 owns only `system launch surface → first stable app-owned World handoff`. The launch
+window opens at the first full-screen launch frame, so a white or black flash falls inside it. It closes at the end of
+the first stable World-only app-owned handoff (6 frames, 200 ms): on Android after the system splash, on iOS the Dark
+World root view. Inside the window only the splash and the World are allowed. What the app shows after the handoff
+(Sign in, `CONFIG_REFUSED` in an unconfigured build, anything else) is not judged here. The Android and iOS boot
+smokes remain the authority that the app root boots. The first run (head `6bdf288`) judged that later runtime screen as
+launch and failed for that reason. R1 corrected the boundary; the W2-02 contract pins it with planted sequences.
 
 - **Android (API 36 emulator):** APK badging and resources; all 15 icon rasters compared by decoded pixels with the
   vendored canonical bytes; the installed-launcher screenshot; cold launches A (system Light, first launch), B (system
   Light, after the night-mode seam) and C (system Dark).
 - **iOS (iPhone 17 / iOS 26.5 simulator):** the compiled Info.plist, launch storyboard and `Assets.car` catalogue;
-  SpringBoard screenshots in Light and Dark; cold launches D (device Light) and E (device Dark).
+  SpringBoard screenshots in Light and Dark; per appearance, a first cold launch (diagnostic) and a repeat cold launch
+  (gating), D1 / D2 (device Light) and E1 / E2 (device Dark).
 
-Results are recorded on the PR from the run on the pushed head: `EVIDENCE PENDING THE FIRST CI RUN`.
+**First-run evidence (head `6bdf288`, run 36538191115), read under the R1 boundary:**
+
+- **Android:**
+  - The APK label is `QANDEEL`, and 15 / 15 icon rasters are pixel-identical to I-08B2.5.
+  - No template icon or splash logo is in the APK, and the installed icon is on the home screen.
+  - Launch A (first launch, system Light) is the system splash on the Light World, then a stable Dark World handoff.
+    This is the documented first-launch limitation, with the seam taking effect.
+  - Launches B (system Light, relaunch) and C (system Dark) are the system splash with the canonical icon on the
+    Dark World, then a stable Dark World handoff. B proves the application night mode persists across launches.
+- **iOS:**
+  - The bundle checks pass: `CFBundleDisplayName` QANDEEL, `UIUserInterfaceStyle` Automatic, the launch storyboard,
+    `QandeelWorld` in `Assets.car`, and no template splash asset. The installed QANDEEL icon appears on SpringBoard.
+  - **Open finding:** in both appearances the launch surface recorded **black** (`#000000`), ~0.7 s on the device-Light
+    run and ~1 s on the device-Dark run, then a stable Dark World root view. The Light World never appeared.
+  - Either the World-only storyboard's named colour did not resolve (an implementation defect), or the simulator had
+    no Launch Screen snapshot yet for that first launch (infrastructure). The run cannot tell the two apart.
+  - R1 does not authorize a change to the iOS launch design. The R1 proof therefore adds a repeat launch per
+    appearance, which gates. If the repeat is still black, it is a W2-02 iOS Launch Screen defect for the Product
+    Owner, not a proof artifact.
 
 **Capture limitation:** a recording is H.264, so colours are matched within a tolerance (±9 per channel), and every
 measured ground is reported. A simulator or emulator is not a device: OEM launchers, icon masks and themed-icon tinting
@@ -256,9 +288,10 @@ on real hardware remain Release Hardening device checks.
 
 ## 15. Residue
 
-- **Level-4 CNG exception:** needs the Engineering Architecture review that apps/mobile/README.md requires. Recorded,
-  not granted.
+- **Level-4 CNG exception:** APPROVED — bounded W2-02 Level-4 exception (R1; §6). Any expansion needs a new review.
 - **W3 carry-forward** (§12).
+- **iOS black launch surface on the simulator** (§14): open until the gating repeat launch classifies it as either
+  infrastructure or a Launch Screen defect.
 - **Device validation** of the icon and launch on physical iOS / Android hardware and OEM launchers: Release Hardening.
 - **Not implemented, by scope:** the Lantern (`QAN-BL-LANTERN-01`), Sign out (`E2E-D-07`), the appearance preference and
   General Settings (W3), store signing and upload.

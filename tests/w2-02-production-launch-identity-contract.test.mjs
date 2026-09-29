@@ -1,5 +1,4 @@
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -9,6 +8,7 @@ import test from 'node:test';
 
 import { classifyMobileNativeImpact } from '../scripts/classify-mobile-native-impact.mjs';
 import { classifyBuildInput } from '../scripts/phase-m/native-build-fingerprint.mjs';
+import { STABLE_HANDOFF_FRAMES, judgeLaunchWindow, launchWindow } from '../scripts/w2/analyze-w2-02-launch-recording.mjs';
 
 // W2-02 — Production Launch Identity (E2E-A-01 static launch → system handoff, E2E-A-02 final app icon).
 // Static contract.
@@ -30,7 +30,6 @@ const bytes = (path) => readFileSync(new URL(path, root));
 const sha256 = (buffer) => createHash('sha256').update(buffer).digest('hex');
 /** Code only: a comment may name a forbidden thing in order to forbid it. */
 const code = (text) => text.replace(/\/\*[\s\S]*?\*\//gu, '').replace(/(^|[^:'"`])\/\/[^\n]*/gu, '$1');
-const git = (args) => execFileSync('git', args, { cwd: rootPath, encoding: 'utf8' });
 const require = createRequire(import.meta.url);
 
 function listFiles(dir) {
@@ -63,6 +62,18 @@ const PLUGIN_PATH = 'apps/mobile/plugins/with-qandeel-launch-identity.js';
 const VERIFIER_PATH = 'apps/mobile/scripts/verify-launch-identity-native.mjs';
 const FROZEN_APP_ICON_SVG_SHA256 = '859665d86a7bbf4248ff479034031a8df1f08833c7db36336b3d29832bcddd09';
 const DENSITY_SCALE = { mdpi: 1, hdpi: 1.5, xhdpi: 2, xxhdpi: 3, xxxhdpi: 4 };
+/** The files W2-02 created or owns. Every scan in this contract is scoped to them, never to the whole repository. */
+const W2_02_OWNED_FILES = Object.freeze([
+  PLUGIN_PATH,
+  VERIFIER_PATH,
+  MANIFEST_PATH,
+  'apps/mobile/app.json',
+  'scripts/w2/analyze-w2-02-launch-recording.mjs',
+  'scripts/w2/run-w2-02-android-proof.sh',
+  'scripts/w2/run-w2-02-ios-proof.sh',
+  'scripts/w2/w2-02-ios-home-screen.yaml',
+  '.github/workflows/w2-02-native-launch-proof.yml',
+]);
 
 const manifest = readJson(MANIFEST_PATH);
 const appJson = readJson('apps/mobile/app.json').expo;
@@ -244,19 +255,16 @@ test('no timer, hold or minimum launch duration exists anywhere W2-02 touches', 
   }
 });
 
-test('the Lantern is untouched: no Lantern asset, component, route, animation or placeholder', () => {
-  const tracked = git(['ls-files', '--', 'apps/mobile']).split('\n').filter(Boolean);
-  assert.deepEqual(tracked.filter((file) => /lantern/iu.test(file)), [], 'no Lantern-named file exists');
-  const mentions = git(['grep', '-l', '-i', 'lantern', '--', 'apps/mobile']).split('\n').filter(Boolean).sort();
-  assert.deepEqual(mentions, [
-    'apps/mobile/.maestro/w1b-01-journey.yaml',
-    PLUGIN_PATH,
-    'apps/mobile/src/account/entry/AccountEntry.tsx',
-    'apps/mobile/src/integration/__validation__/w1b-proof-world.ts',
-    'apps/mobile/src/integration/composition/ProductRoot.tsx',
-  ]);
+test('the Lantern is untouched: W2-02 adds no Lantern asset, component, route, animation or placeholder', () => {
+  // Scoped to what W2-02 owns — no repository-wide scan, so the claim holds in a mirror without `.git` and sets no
+  // ceiling on the future Lantern task.
+  const owned = [...W2_02_OWNED_FILES, ...listFiles('apps/mobile/plugins'), ...listFiles('apps/mobile/assets/brand')];
+  assert.deepEqual(owned.filter((file) => /lantern/iu.test(file)), [], 'no Lantern-named file is part of W2-02');
+  const noLanternCode = (text) => !/lantern/iu.test(code(text));
+  for (const file of W2_02_OWNED_FILES.filter((path) => /\.(?:js|mjs|json|sh|ya?ml)$/u.test(path))) {
+    guards(`no-lantern-code:${file}`, read(file), noLanternCode, 'const lanternReveal = startLantern();');
+  }
   // W2-02's own mention is its non-scope statement, and only in a comment.
-  assert.doesNotMatch(code(pluginText), /lantern/iu);
   assert.match(pluginText, /QAN-BL-LANTERN-01 and the W3 appearance setting are untouched/u);
   assert.deepEqual(readdirSync(new URL('apps/mobile/src/app', root)).sort(), ['_layout.tsx', 'index.tsx'], 'no launch or Lantern route');
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
@@ -273,16 +281,31 @@ test('the Product root stays the first Product destination after launch', () => 
 // CNG
 // ---------------------------------------------------------------------------------------------------------
 
-test('generated native projects stay untracked, and the Level-4 install step is confined to this one plugin', () => {
-  assert.equal(git(['ls-files', '--', 'apps/mobile/ios', 'apps/mobile/android']).trim(), '');
+test('generated native projects are never W2-02 source, and the Level-4 install step is confined to this one plugin', () => {
+  // Generated output is ignored by the workspace, and the plugin writes only inside the generated project it is
+  // handed. (That no generated file is TRACKED is a working-tree fact, owned by the mobile foundation contract.)
+  const ignoresNative = (gitignore) => /^\/ios$/mu.test(gitignore) && /^\/android$/mu.test(gitignore);
+  assert.equal(ignoresNative(read('apps/mobile/.gitignore')), true);
+  assert.equal(ignoresNative(read('apps/mobile/.gitignore').replace(/^\/android$/mu, '')), false, 'a dropped ignore rule is detected');
+  const writesOnlyIntoGeneratedProject = (text) =>
+    (code(text).match(/install(?:Android|Ios)Resources\(modConfig\.modRequest\.platformProjectRoot/gu) ?? []).length === 2 &&
+    !/projectRoot,\s*['"](?:src|assets|plugins)|__dirname,\s*['"]\.\.['"],\s*['"](?:src|app)/u.test(code(text));
+  guards('writes-only-into-generated-project', pluginText, writesOnlyIntoGeneratedProject, "fs.writeFileSync(path.join(modConfig.modRequest.projectRoot, 'src', 'x.ts'), '');");
   assert.deepEqual(appJson.plugins, ['expo-router', './plugins/with-qandeel-launch-identity']);
   // Exactly two dangerous mods: one Android install, one iOS install. Everything else is a typed mod.
   const dangerousCount = (text) => (code(text).match(/withDangerousMod\(config,/gu) ?? []).length;
   assert.equal(dangerousCount(pluginText), 2);
   assert.equal(dangerousCount(`${pluginText}\nconfig = withDangerousMod(config, ['android', patchGradle]);`), 3, 'a planted third dangerous mod is counted');
-  const dangerousFiles = git(['grep', '-l', 'withDangerousMod', '--', 'apps/mobile']).split('\n').filter(Boolean);
-  assert.deepEqual(dangerousFiles, [PLUGIN_PATH], 'no other mobile file may use a dangerous mod');
-  assert.match(read('apps/mobile/README.md'), /W2-02 Level-4 exception/u, 'the exception is recorded in the CNG policy');
+  // No other W2-02 file uses a dangerous mod, the W2-02 plugins directory holds only this plugin, and the
+  // repository-wide guard (the mobile foundation working-tree contract) excepts exactly this one file.
+  for (const file of W2_02_OWNED_FILES.filter((path) => path !== PLUGIN_PATH)) {
+    assert.doesNotMatch(read(file), /withDangerousMod/u, `${file} must not use a dangerous mod`);
+  }
+  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN_PATH]);
+  assert.match(read('tests/mobile-foundation-toolchain-contract.test.mjs'), /const level4Exceptions = new Set\(\['apps\/mobile\/plugins\/with-qandeel-launch-identity\.js'\]\);/u);
+  const readme = read('apps/mobile/README.md');
+  assert.match(readme, /\*\*W2-02 Level-4 exception — APPROVED \(bounded\)\.\*\*/u, 'the approved, bounded exception is recorded in the CNG policy');
+  assert.match(readme, /does not authorize any future expansion/u);
 });
 
 test('the native launch-identity gate is wired, plants a defect per family, and runs in the fast gate', () => {
@@ -299,13 +322,40 @@ test('the native launch-identity gate is wired, plants a defect per family, and 
   assert.match(mobileCi, /'tests\/w2-02-production-launch-identity-contract\.test\.mjs'/u);
 });
 
+test('the native launch proof judges only system launch → first stable app-owned World handoff (R1)', () => {
+  const run = (...parts) => parts.flatMap(([state, groundName, count]) => Array.from({ length: count }, () => ({ state, groundName, ground: groundName })))
+    .map((frame, index) => ({ ...frame, index, time: index / 30 }));
+  const verdict = (frames, platform, expectGround, thenGround = '') => judgeLaunchWindow(launchWindow(frames, platform), { platform, expectGround, thenGround });
+  const handoff = ['world', 'dark', STABLE_HANDOFF_FRAMES + 2];
+  // After the handoff the runtime surface (Sign in, CONFIG_REFUSED, READY …) is NOT judged — even a light or white one.
+  const later = [['splash', 'light', 40], ['white', 'white', 5], ['other', 'other', 10]];
+
+  assert.deepEqual(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], handoff, ...later), 'android', 'dark'), [], 'Android: splash → stable World handoff → later UI passes');
+  assert.deepEqual(verdict(run(['other', 'other', 20], ['splash', 'light', 30], handoff, ...later), 'android', 'light', 'dark'), [], 'Android first launch on a Light system');
+  assert.deepEqual(verdict(run(['other', 'other', 20], ['world', 'light', 12], handoff, ...later), 'ios', 'light', 'dark'), [], 'iOS: World-only Launch Screen → Dark World root');
+  assert.deepEqual(verdict(run(['other', 'other', 20], handoff, ...later), 'ios', 'dark'), [], 'iOS on a Dark device');
+
+  // Planted defects inside the window are caught.
+  assert.match(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], ['white', 'white', 3], handoff), 'android', 'dark').join('\n'), /white/u, 'a white flash before the handoff');
+  assert.match(verdict(run(['other', 'other', 20], ['world', 'dark', 30], handoff), 'android', 'dark').join('\n'), /no Android system splash|no stable app-owned World handoff/u, 'no system splash');
+  assert.match(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], ['splash', 'dark', 20]), 'android', 'dark').join('\n'), /no stable app-owned World handoff/u, 'no handoff ever');
+  assert.match(verdict(run(['other', 'other', 20], ['black', 'black', 20], handoff, ...later), 'ios', 'light', 'dark').join('\n'), /black/u, 'the black Launch Screen shape recorded on the iOS simulator');
+  assert.match(verdict(run(['other', 'other', 20], ['splash', 'light', 12], handoff), 'ios', 'light', 'dark').join('\n'), /carries a mark/u, 'a Q on the iOS Launch Screen');
+  assert.match(verdict(run(['other', 'other', 20], ['world', 'dark', 12], handoff), 'ios', 'light', 'dark').join('\n'), /expected light/u, 'a Launch Screen that ignores the device appearance');
+  // And nothing after the window can fail it: the window closes at the end of the stable handoff.
+  const closed = launchWindow(run(['other', 'other', 5], ['splash', 'dark', 10], handoff, ['white', 'white', 50]), 'android');
+  assert.equal(closed.end, closed.handoffFrom + STABLE_HANDOFF_FRAMES - 1);
+  assert.equal(closed.frames.some((frame) => frame.state === 'white'), false);
+});
+
 test('the implementation record tells the lifecycle truth and carries the W3 boundary', () => {
   const record = read('docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md');
   assert.match(record, /\*\*Status:\*\* IMPLEMENTED ON A DRAFT PR — NOT MERGED/u, 'lifecycle truth: not merged until merged');
   assert.match(record, /\*\*Baseline:\*\* `df194edf6d70a2a300a0251ed114e7ad8715485e`/u);
   assert.match(record, /\*\*No applicable Skill was used\.\*\*/u, 'Skills / G1');
   assert.match(record, /\*\*W3 integration carry-forward\*\*/u);
-  assert.match(record, /submitted for review, not granted/u, 'the Level-4 exception is not claimed as reviewed');
+  assert.match(record, /APPROVED — bounded W2-02 Level-4 exception/u, 'the Architecture disposition is recorded');
+  assert.doesNotMatch(record, /submitted for review, not granted/u, 'the superseded pending wording is gone');
   const claimsMore = (text) => /Lantern (?:is )?implemented|Sign out (?:is )?implemented|W2 is (?:fully )?closed|appearance preference (?:is )?implemented/u.test(text.replace(/\bnot implemented\b|is not implemented/gu, ''));
   assert.equal(claimsMore(record), false);
   assert.equal(claimsMore(`${record}\nThe Lantern is implemented.`), true, 'a planted over-claim is detected');

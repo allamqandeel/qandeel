@@ -11,9 +11,11 @@
 //   black    a near-black (#000) frame that is not the Dark World
 //   other    anything else (the launcher / SpringBoard before the app window)
 //
-// The strict window opens at the first World frame. From there to the end only `splash`, `world` and `product`
-// are allowed; any `white`, `black` or `other` frame fails. H.264 is lossy, so colours match within a tolerance
-// and every measured value is written to the JSON report for review.
+// W2-02 owns only `system launch surface → first stable app-owned World handoff` (R1). The launch window opens at
+// the first full-screen launch frame and closes at the end of that handoff (`launchWindow`). Inside it only
+// `splash` and `world` are allowed, so a white or black flash, a second splash or content fails. What the app shows
+// AFTER the handoff (Sign in, CONFIG_REFUSED, anything) is not judged here: the boot smoke proves the root boots.
+// H.264 is lossy, so colours match within a tolerance and every measured value is written to the JSON report.
 //
 // Usage:
 //   node scripts/w2/analyze-w2-02-launch-recording.mjs --video <file> --out <dir> --platform android|ios \
@@ -105,6 +107,57 @@ function measure(frame, width, height) {
   return { ground: `#${ground.map((channel) => channel.toString(16).padStart(2, '0')).join('')}`, groundName: name, state, markPixels: mark, outsideOffRatio: Number((outsideOff / outside).toFixed(4)), whiteRatio: Number((whitePixels / (width * (bottom - top))).toFixed(4)) };
 }
 
+/** A stable app-owned handoff: this many consecutive World-only frames (200 ms at 30 fps). */
+export const STABLE_HANDOFF_FRAMES = 6;
+const LAUNCH_SURFACE = new Set(['splash', 'world', 'white', 'black']);
+
+/**
+ * The W2-02 launch window: it OPENS at the first full-screen launch frame (so a white or black flash is inside it),
+ * and CLOSES at the end of the first stable app-owned World handoff. Android's handoff is a stable World-only run
+ * after the system splash; iOS's is a stable Dark World run (the app-owned root view), which follows the World-only
+ * Launch Screen. Nothing after the window is W2-02's to judge.
+ */
+export function launchWindow(frames, platform) {
+  const start = frames.findIndex((frame) => LAUNCH_SURFACE.has(frame.state));
+  if (start === -1) return { start: -1, handoffFrom: -1, end: -1, frames: [] };
+  let handoffFrom = -1;
+  for (let index = start; index + STABLE_HANDOFF_FRAMES <= frames.length; index += 1) {
+    const run = frames.slice(index, index + STABLE_HANDOFF_FRAMES);
+    const stable = run.every((frame) => frame.state === 'world' && frame.groundName === run[0].groundName);
+    const afterSplash = platform !== 'android' || frames.slice(start, index).some((frame) => frame.state === 'splash');
+    const appOwned = platform !== 'ios' || run[0].groundName === 'dark';
+    if (stable && afterSplash && appOwned) {
+      handoffFrom = index;
+      break;
+    }
+  }
+  const end = handoffFrom === -1 ? frames.length - 1 : handoffFrom + STABLE_HANDOFF_FRAMES - 1;
+  return { start, handoffFrom, end, frames: frames.slice(start, end + 1) };
+}
+
+/** Every launch failure inside the window. Frames after it are never inspected. */
+export function judgeLaunchWindow(launch, { platform, expectGround, thenGround = '' }) {
+  if (launch.start === -1) return ['no launch surface was recorded'];
+  const failures = [];
+  if (launch.handoffFrom === -1) failures.push('no stable app-owned World handoff was recorded');
+  for (const frame of launch.frames) {
+    if (frame.state !== 'splash' && frame.state !== 'world') failures.push(`frame ${frame.index} (${frame.time}s) is ${frame.state} ${frame.ground} before the handoff`);
+  }
+  const worldFrames = launch.frames.filter((frame) => frame.state === 'splash' || frame.state === 'world');
+  if (worldFrames.length > 0 && worldFrames[0].groundName !== expectGround) failures.push(`the launch ground is ${worldFrames[0].groundName}, expected ${expectGround}`);
+  const allowed = new Set([expectGround, ...(thenGround ? [thenGround] : [])]);
+  for (const ground of new Set(worldFrames.map((frame) => frame.groundName))) {
+    if (!allowed.has(ground)) failures.push(`an unexpected ${ground} World appears before the handoff`);
+  }
+  if (platform === 'android') {
+    if (!launch.frames.some((frame) => frame.state === 'splash' && frame.groundName === expectGround)) failures.push(`no Android system splash (the icon on the ${expectGround} World) was recorded`);
+  } else {
+    const marked = launch.frames.filter((frame) => frame.state === 'splash');
+    if (marked.length > 0) failures.push(`the iOS Launch Screen carries a mark in ${marked.length} frame(s); it must be the World only`);
+  }
+  return failures;
+}
+
 function main() {
   const video = argument('video');
   const out = argument('out');
@@ -124,28 +177,9 @@ function main() {
     frames.push({ index: frames.length, time: Number((frames.length / FPS).toFixed(3)), ...measure(decoded.stdout.subarray(offset, offset + frameBytes), WIDTH, height) });
   }
 
-  const failures = [];
-  const start = frames.findIndex((frame) => frame.state === 'splash' || frame.state === 'world');
-  if (start === -1) failures.push('no World launch frame was recorded');
-  const strict = start === -1 ? [] : frames.slice(start);
-  for (const frame of strict) {
-    if (!['splash', 'world', 'product'].includes(frame.state)) failures.push(`frame ${frame.index} (${frame.time}s) is ${frame.state} ${frame.ground} after the launch began`);
-  }
-  const launchFrames = strict.filter((frame) => frame.state !== 'product');
-  const firstGround = launchFrames[0]?.groundName;
-  if (firstGround && firstGround !== expectGround) failures.push(`the launch ground is ${firstGround}, expected ${expectGround}`);
-  const grounds = [...new Set(launchFrames.map((frame) => frame.groundName))];
-  const allowedGrounds = new Set([expectGround, ...(thenGround ? [thenGround] : [])]);
-  for (const ground of grounds) if (!allowedGrounds.has(ground)) failures.push(`an unexpected ${ground} World frame appears during the launch`);
-  const firstProduct = strict.findIndex((frame) => frame.state === 'product');
-  const beforeProduct = firstProduct === -1 ? strict : strict.slice(0, firstProduct);
-  if (platform === 'android') {
-    if (!beforeProduct.some((frame) => frame.state === 'splash' && frame.groundName === expectGround)) failures.push(`no Android system splash (icon on the ${expectGround} World) was recorded before the Product`);
-  } else {
-    const marked = beforeProduct.filter((frame) => frame.state === 'splash');
-    if (marked.length > 0) failures.push(`the iOS Launch Screen carries a mark in ${marked.length} frame(s) — it must be the World only`);
-  }
-  if (firstProduct === -1) failures.push('the Product root never appeared');
+  const launch = launchWindow(frames, platform);
+  const failures = judgeLaunchWindow(launch, { platform, expectGround, thenGround });
+  const start = launch.start;
 
   // Segments: consecutive frames with the same state + ground, with one representative PNG each.
   const segments = [];
@@ -165,13 +199,21 @@ function main() {
     spawnSync(FFMPEG, ['-v', 'error', '-y', '-ss', String(middle), '-i', video, '-frames:v', '1', join(out, file)]);
     segment.keyframe = file;
   }
-  spawnSync(FFMPEG, ['-v', 'error', '-y', '-i', video, '-vf', `fps=6,scale=180:-2,tile=8x4`, '-frames:v', '1', join(out, `${label}-contact-sheet.png`)]);
+  // The contact sheet covers the launch itself: from one second before the window opens.
+  const sheetFrom = Math.max(0, (start === -1 ? 0 : start) / FPS - 1);
+  spawnSync(FFMPEG, ['-v', 'error', '-y', '-ss', String(sheetFrom), '-i', video, '-vf', `fps=10,scale=180:-2,tile=8x3`, '-frames:v', '1', join(out, `${label}-contact-sheet.png`)]);
 
-  const report = { label, platform, video, expectGround, thenGround: thenGround || null, fps: FPS, analysedWidth: WIDTH, analysedHeight: height, sourceSize: size, frames: frames.length, strictFrom: start, firstProduct: firstProduct === -1 ? null : start + firstProduct, segments, failures, verdict: failures.length === 0 ? 'PASS' : 'FAIL', perFrame: frames };
+  const report = {
+    label, platform, video, expectGround, thenGround: thenGround || null, fps: FPS, analysedWidth: WIDTH, analysedHeight: height, sourceSize: size,
+    frames: frames.length,
+    launchWindow: { opens: launch.start === -1 ? null : launch.start, handoffFrom: launch.handoffFrom, closes: launch.end, stableHandoffFrames: STABLE_HANDOFF_FRAMES },
+    afterHandoff: 'not judged: the app-owned runtime surface after the handoff belongs to the boot smoke, not to W2-02',
+    segments, failures, verdict: failures.length === 0 ? 'PASS' : 'FAIL', perFrame: frames,
+  };
   writeFileSync(join(out, `${label}-analysis.json`), `${JSON.stringify(report, null, 2)}\n`);
   console.log(`${label}: ${report.verdict} — ${frames.length} frames; segments: ${segments.map((segment) => `${segment.state}/${segment.ground}×${segment.frames}`).join(' → ')}`);
   for (const failure of failures) console.log(`  FAIL ${failure}`);
   if (failures.length > 0) process.exitCode = 1;
 }
 
-main();
+if (process.argv[1] !== undefined && process.argv[1].replace(/\\/gu, '/').endsWith('scripts/w2/analyze-w2-02-launch-recording.mjs')) main();

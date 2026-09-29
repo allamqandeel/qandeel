@@ -10,7 +10,8 @@
 #           is the Light World; the app then sets the effective (Dark) application night mode;
 #        B  system Light, next cold launch — the splash now follows the effective QANDEEL appearance: Dark;
 #        C  system Dark — Dark;
-#      each with the canonical icon on the World, no second splash, no white / black flash, into the Product root.
+#      each with the canonical icon on the World, no second splash, no white / black flash, up to a stable
+#      World-only app-owned handoff. The window closes there; the boot smoke owns what the app shows after it.
 #
 # Usage: run-w2-02-android-proof.sh <app-release.apk> <evidence-dir>
 set -uo pipefail

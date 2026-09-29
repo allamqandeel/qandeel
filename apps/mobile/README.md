@@ -17,9 +17,10 @@ Do not implement product screens before the core text runtime path and its contr
   screen and no navigation UI. QANDEEL navigation is not a route stack: the canonical
   state / action foundation lives in `src/state/` (T-02, below) and is not mounted in the
   shell.
-- Not a Product identity. `Qandeel`, `qandeel`, `com.qandeel.mobile` and the `qandeel`
-  URL scheme are provisional technical identifiers needed to generate and boot the shell.
-  No store registration and no production build credentials exist for them.
+- The display label is the frozen Product casing `QANDEEL` (`expo.name`, the launcher / home-screen
+  label; P4-C2 §5, set by W2-02). The slug `qandeel`, the `qandeel` URL scheme, the iOS bundle id and the
+  Android package `com.qandeel.mobile` remain technical identifiers, unchanged. No store registration and no
+  production build credentials exist for them.
 
 ## Canonical state kernel (T-02)
 
@@ -596,13 +597,16 @@ the frozen hierarchy:
 4. direct manipulation of generated native files or dangerous mods: **not pre-authorized**;
    it requires a separate Engineering Architecture review.
 
-**W2-02 Level-4 exception — submitted for that review, not yet granted by it.** The Product Owner's W2-02
-task contract (§6 Option B) authorizes one narrow plugin, `plugins/with-qandeel-launch-identity.js`, because
-Expo's `icon` / `adaptiveIcon` config would re-encode, re-frame and rasterize the I-08B2.5 icon exports. Its two
-dangerous mods only copy the vendored canonical bytes (`assets/brand/i-08b2.5/`), delete the named Expo template
-icon / splash-logo files, and write the World colour asset and the World-only iOS Launch Screen. Every other
-W2-02 change is a typed mod. No other file may use a dangerous mod; the mobile foundation contract enforces
-that, and `npm run prebuild:launch-identity:mobile` proves the generated result with planted defects
+**W2-02 Level-4 exception — APPROVED (bounded).** The independent Engineering Architecture review of W2-02
+(R1) recorded: *APPROVED — bounded W2-02 Level-4 exception*. The approval covers only
+`plugins/with-qandeel-launch-identity.js`, only its two current dangerous-mod file-install steps, and only
+the canonical icon / launch resource installation W2-02 requires. Those steps copy the vendored canonical
+bytes (`assets/brand/i-08b2.5/`), delete the named Expo template icon / splash-logo files, and write the World
+colour asset and the World-only iOS Launch Screen. It was needed because Expo's `icon` / `adaptiveIcon` config
+would re-encode, re-frame and rasterize the I-08B2.5 exports. Every other W2-02 change is a typed mod. The
+approval does not authorize any future expansion: another dangerous mod, a new file it writes, or a use
+beyond the W2-02 resources needs its own Engineering Architecture review. No other file may use a dangerous
+mod; the mobile foundation contract enforces that, and `npm run prebuild:launch-identity:mobile` proves the generated result with planted defects
 ([record](../../docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)).
 
 `npm run prebuild:verify` proves two properties and then discards the generated directories
