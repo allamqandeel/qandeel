@@ -8,7 +8,9 @@
  *   - the identity provider: an in-memory `SupabaseAuthPort`. Its restore answers per SCENARIO — no
  *     session (a first launch), a session the provider ended, or an unverifiable session whose first
  *     retry restores it. Every sign-in credential is refused, so the approved generic failure can be
- *     seen; recovery accepts ANY six-digit code and ANY new password, and holds and keeps nothing. No
+ *     seen — except the ONE fixture Login ID `W2_PROOF_UNVERIFIED_LOGIN_ID`, whose password is "proved"
+ *     and whose Email is unverified (W2-01 R1): its Verify Email step never learns an Email, its resend
+ *     answers, and every code is refused, so the step's own messages can be seen; recovery accepts ANY six-digit code and ANY new password, and holds and keeps nothing. No
  *     Email is sent and no credential leaves the device;
  *   - the network: the W1B-01 proof world's scripted HTTP, so a restored session reaches a real world.
  *
@@ -20,6 +22,9 @@ import { createW1BProofWorld } from './w1b-proof-world';
 
 /** Which launch the proof shows. */
 export type W2ProofScenario = 'SIGNED_OUT' | 'SESSION_ENDED' | 'UNKNOWN';
+
+/** W2-01 R1 — the fixture Login ID whose account's Email is unverified. It has no Email anywhere on the device. */
+export const W2_PROOF_UNVERIFIED_LOGIN_ID = 'unverified.reader';
 
 export interface W2ProofWorld {
   readonly config: MobilePublicConfig;
@@ -53,13 +58,23 @@ export function createW2ProofWorld(language: ChromeLanguage, scenario: W2ProofSc
       await hold(REQUEST_HOLD_MS);
       return refused;
     },
-    signInWithLoginId: async () => {
+    signInWithLoginId: async (loginId) => {
       await hold(REQUEST_HOLD_MS);
+      // Exactly the API's answer: the outcome, and no Email.
+      if (loginId.toLowerCase() === W2_PROOF_UNVERIFIED_LOGIN_ID) return { ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'fixture: email not confirmed' } };
       return refused;
     },
     signUp: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W2 proof creates no account' } }),
     verifyEmailCode: async () => ({ ok: false, failure: { kind: 'UNEXPECTED', detail: 'the W2 proof verifies no Email' } }),
     resendEmailCode: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W2 proof sends nothing' } }),
+    verifyLoginIdEmailCode: async () => {
+      await hold(REQUEST_HOLD_MS);
+      return { ok: false, failure: { kind: 'CODE_REJECTED', detail: 'fixture: every code is refused' } };
+    },
+    resendLoginIdEmailCode: async () => {
+      await hold(REQUEST_HOLD_MS);
+      return { ok: true };
+    },
     requestPasswordRecovery: async () => {
       await hold(REQUEST_HOLD_MS);
       return { ok: true };

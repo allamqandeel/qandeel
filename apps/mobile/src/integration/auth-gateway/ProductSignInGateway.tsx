@@ -114,8 +114,11 @@ export interface ProductSignInGatewayProps {
   /**
    * W1B-01 — the provider checked the password FIRST and then reported the Email unverified, so this
    * reveals nothing to someone without the credential. Absent, that kind shows the unexpected sentence.
+   * W2-01 R1 — it is handed the identifier the reader TYPED, and only that: an Email, or a Login ID whose
+   * Email the device never learns (P1 §3). Which of the two it is, the account layer decides by the auth
+   * authority's own rule; this surface never picks a route.
    */
-  readonly onEmailNotConfirmed?: (email: string) => void;
+  readonly onEmailNotConfirmed?: (identifier: string) => void;
   /** W2-01 — drawn below the password field by the destination: its password recovery entry. No auth command. */
   readonly passwordAssist?: ReactNode;
   /** W2-01 — the auth owner has evidence the reader's session ended. Shown until the next attempt. */
@@ -180,8 +183,8 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
     setSubmitting(false);
     if (outcome.failure.kind === 'EMAIL_NOT_CONFIRMED' && onEmailNotConfirmed !== undefined) {
       // The password was right and the Email is not yet verified: verification is where the reader goes.
-      // By Email it is the address they typed; by Login ID it is the one their proved password unlocked.
-      onEmailNotConfirmed(outcome.failure.confirmationEmail ?? typed);
+      // What they typed — an Email, or a Login ID. Never an Email the device was told.
+      onEmailNotConfirmed(typed);
       return;
     }
     // The KIND only. The port's technical detail is never a Product sentence.

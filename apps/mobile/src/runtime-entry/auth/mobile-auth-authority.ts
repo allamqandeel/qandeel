@@ -33,6 +33,22 @@ import type {
   SupabaseAuthPort,
 } from './supabase-auth-port';
 
+/**
+ * W2-01 — the ONE classification rule for the final sign-in's identifier: an Email always contains `@`,
+ * and the Login ID grammar never does. Exported so the entry routes an unconfirmed reader by the same rule
+ * the credential was routed by, rather than by a second copy of it.
+ */
+export function isEmailIdentifier(identifier: string): boolean {
+  return identifier.includes('@');
+}
+
+/**
+ * W2-01 R1 — whose Email a Verify Email step verifies. `EMAIL`: an address the reader typed (Create
+ * account, or an Email sign-in), which the step may show. `LOGIN_ID`: the Login ID the reader typed, whose
+ * Email stays on the server — the device never learns it (P1 §3), so the step names no address at all.
+ */
+export type EmailVerificationTarget = { readonly via: 'EMAIL'; readonly email: string } | { readonly via: 'LOGIN_ID'; readonly loginId: string };
+
 export type MobileAuthState =
   /** The persisted session is being restored. The first state, and never returned to. */
   | { readonly kind: 'RESTORING' }
@@ -80,6 +96,13 @@ export interface MobileAuthAuthority {
   verifyEmailCode(email: string, code: string): Promise<EmailCodeResult>;
   /** W1B-01 — send a new verification code. It establishes nothing and supersedes nothing. */
   resendEmailCode(email: string): Promise<ResendResult>;
+  /**
+   * W2-01 R1 — verify the Email of the account a Login ID names, without the device ever learning that
+   * Email. The same explicit command as `verifyEmailCode`, under the same epoch rules.
+   */
+  verifyLoginIdEmailCode(loginId: string, code: string): Promise<EmailCodeResult>;
+  /** W2-01 R1 — a new code for that Email. It establishes nothing and supersedes nothing. */
+  resendLoginIdEmailCode(loginId: string): Promise<ResendResult>;
   /**
    * W2-01 — the final sign-in: ONE identifier that is a Login ID or an Email, plus the password. An
    * identifier containing `@` is an Email and goes to the provider exactly as `signInWithPassword`;
@@ -321,7 +344,7 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     async signInWithIdentifier(identifier, password) {
       if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
       // The ONE classification rule: an Email always contains `@`, and the Login ID grammar never does.
-      if (identifier.includes('@')) return authority.signInWithPassword(identifier, password);
+      if (isEmailIdentifier(identifier)) return authority.signInWithPassword(identifier, password);
       return signInWithLoginId(identifier, password);
     },
     async requestPasswordRecovery(email) {
@@ -419,6 +442,27 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     async resendEmailCode(email) {
       if (disposed) return { ok: false, failure: { kind: 'REFUSED', detail: 'auth authority is disposed' } };
       return port.resendEmailCode(email);
+    },
+    async verifyLoginIdEmailCode(loginId, code) {
+      if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
+      if (state.kind === 'AUTHENTICATED') return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'an identity is already authenticated' } };
+      // Exactly `verifyEmailCode`'s rules: an explicit command with its own epoch, whose session is adopted
+      // into the ONE client (the observed SIGNED_IN meets the retired barrier), and only a CURRENT
+      // completion establishes. A superseded one's adopted session is discarded while nobody is signed in.
+      operationEpoch += 1;
+      const epoch = operationEpoch;
+      const result = await port.verifyLoginIdEmailCode(loginId, code);
+      if (disposed) return result;
+      if (epoch !== operationEpoch) {
+        if (result.ok && (state as MobileAuthState).kind !== 'AUTHENTICATED') void port.signOut();
+        return result;
+      }
+      if (result.ok) acceptExplicitSignInCompletion(result.value, epoch);
+      return result;
+    },
+    async resendLoginIdEmailCode(loginId) {
+      if (disposed) return { ok: false, failure: { kind: 'REFUSED', detail: 'auth authority is disposed' } };
+      return port.resendLoginIdEmailCode(loginId);
     },
     abandonPasswordRecovery() {
       discardRecoveryHold();

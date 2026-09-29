@@ -40,13 +40,11 @@ export type AuthPortFailure = {
    * Signed Out.
    */
   readonly kind: 'INVALID_CREDENTIALS' | 'EMAIL_NOT_CONFIRMED' | 'NETWORK' | 'UNEXPECTED' | 'SESSION_ENDED';
-  /** A technical description. Never contains a token or a password. */
-  readonly detail: string;
   /**
-   * W2-01 — with `EMAIL_NOT_CONFIRMED` from a Login ID sign-in only: the Email of the account whose
-   * password the reader just PROVED, so the entry can verify it. Never present on any other answer.
+   * A technical description. Never contains a token or a password — and never an Email: W2-01 R1, a
+   * Login ID's Email never reaches the device, not even after the password was proved (P1 §3).
    */
-  readonly confirmationEmail?: string;
+  readonly detail: string;
 };
 
 export type AuthPortResult<T> =
@@ -174,6 +172,14 @@ export interface SupabaseAuthPort {
   verifyEmailCode(email: string, code: string): Promise<EmailCodeResult>;
   /** W1B-01 — send a new sign-up verification code, replacing the previous one. */
   resendEmailCode(email: string): Promise<ResendResult>;
+  /**
+   * W2-01 R1 — verify the Email of the account a Login ID names, WITHOUT the device learning that Email:
+   * the QANDEEL API resolves the Login ID and asks the provider to verify the code. The session it yields
+   * is adopted into the ONE client (`setSession`), exactly as a Login ID sign-in's is.
+   */
+  verifyLoginIdEmailCode(loginId: string, code: string): Promise<EmailCodeResult>;
+  /** W2-01 R1 — ask, through the QANDEEL API, for a new code for that Email. One result for every Login ID. */
+  resendLoginIdEmailCode(loginId: string): Promise<ResendResult>;
   /**
    * W2-01 — sign in with a Login ID. The QANDEEL API resolves it on the server and spends the
    * provider's own password grant; the device never learns which Email it belongs to. The session it
@@ -384,6 +390,29 @@ export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: Su
     await authRest('/logout?scope=local', 'POST', grant.accessToken);
   };
 
+  /**
+   * The provider's session, relayed by the QANDEEL API for a Login ID (a sign-in, or W2-01 R1's
+   * verification), adopted into the ONE client — which persists it and notifies its subscribers of
+   * SIGNED_IN before resolving, exactly as a password sign-in does, so the authority's barrier treats it
+   * the same. A 200 without both tokens is not a session.
+   */
+  async function adoptApiSession(answer: RestAnswer, what: string): Promise<AuthPortResult<AuthSessionSnapshot>> {
+    const accessToken = answer.body?.accessToken;
+    const refreshToken = answer.body?.refreshToken;
+    if (typeof accessToken !== 'string' || accessToken === '' || typeof refreshToken !== 'string' || refreshToken === '') {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: `${what} answered no usable tokens` } };
+    }
+    try {
+      const { data, error } = await client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (error) return { ok: false, failure: { kind: isTransportFailure(error) ? 'NETWORK' : 'UNEXPECTED', detail: detailOf(error, 'session adoption failed') } };
+      const session = snapshotOf(data.session);
+      if (session === null) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'session adoption returned no usable session' } };
+      return { ok: true, value: session };
+    } catch (cause) {
+      return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'session adoption threw') } };
+    }
+  }
+
   return {
     async restoreSession() {
       try {
@@ -464,27 +493,27 @@ export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: Su
       const answer = await rest(`${config.apiBaseUrl}/account/login-id-sign-in`, 'POST', { Accept: 'application/json' }, { loginId, password });
       if (answer.status === 0) return { ok: false, failure: { kind: 'NETWORK', detail: 'login-id sign-in transport failed' } };
       if (answer.status === 401) return { ok: false, failure: { kind: 'INVALID_CREDENTIALS', detail: 'login-id sign-in refused' } };
-      if (answer.status === 409 && answer.body?.outcome === 'EMAIL_NOT_CONFIRMED' && typeof answer.body.email === 'string' && answer.body.email !== '') {
-        // The provider checked the password first: this reader holds the credential of the account whose
-        // Email this is, and needs it to verify that Email.
-        return { ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'email not confirmed', confirmationEmail: answer.body.email } };
-      }
-      const accessToken = answer.body?.accessToken;
-      const refreshToken = answer.body?.refreshToken;
-      if (answer.status !== 200 || typeof accessToken !== 'string' || accessToken === '' || typeof refreshToken !== 'string' || refreshToken === '') {
-        return { ok: false, failure: { kind: 'UNEXPECTED', detail: `login-id sign-in answered ${answer.status}` } };
-      }
-      try {
-        // Adopted into the ONE client, which persists it and notifies its subscribers of SIGNED_IN before
-        // resolving — exactly as a password sign-in does, so the authority's barrier treats it the same.
-        const { data, error } = await client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-        if (error) return { ok: false, failure: { kind: isTransportFailure(error) ? 'NETWORK' : 'UNEXPECTED', detail: detailOf(error, 'session adoption failed') } };
-        const session = snapshotOf(data.session);
-        if (session === null) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'session adoption returned no usable session' } };
-        return { ok: true, value: session };
-      } catch (cause) {
-        return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'session adoption threw') } };
-      }
+      // The provider checked the password first, and the account's Email is unverified. W2-01 R1: that is
+      // ALL the reader learns — the answer carries no Email, and nothing in it is read as one.
+      if (answer.status === 409 && answer.body?.outcome === 'EMAIL_NOT_CONFIRMED') return { ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'email not confirmed' } };
+      if (answer.status !== 200) return { ok: false, failure: { kind: 'UNEXPECTED', detail: `login-id sign-in answered ${answer.status}` } };
+      return adoptApiSession(answer, 'login-id sign-in');
+    },
+    async verifyLoginIdEmailCode(loginId, code) {
+      // The Login ID the reader typed and the code travel in a body; the API answers tokens or a bare outcome.
+      const answer = await rest(`${config.apiBaseUrl}/account/login-id-verify-email`, 'POST', { Accept: 'application/json' }, { loginId, code });
+      if (answer.status === 0) return { ok: false, failure: { kind: 'NETWORK', detail: 'login-id verification transport failed' } };
+      // Wrong, expired, or no such Login ID — one bounded rejection, exactly as the provider's own.
+      if (answer.status === 401) return { ok: false, failure: { kind: 'CODE_REJECTED', detail: 'login-id verification refused' } };
+      if (answer.status !== 200) return { ok: false, failure: { kind: 'UNEXPECTED', detail: `login-id verification answered ${answer.status}` } };
+      const adopted = await adoptApiSession(answer, 'login-id verification');
+      return adopted.ok ? adopted : { ok: false, failure: { kind: adopted.failure.kind === 'NETWORK' ? 'NETWORK' : 'UNEXPECTED', detail: adopted.failure.detail } };
+    },
+    async resendLoginIdEmailCode(loginId) {
+      const answer = await rest(`${config.apiBaseUrl}/account/login-id-resend-verification`, 'POST', { Accept: 'application/json' }, { loginId });
+      if (answer.status === 0) return { ok: false, failure: { kind: 'NETWORK', detail: 'login-id resend transport failed' } };
+      if (answer.status === 200 && answer.body?.outcome === 'ACCEPTED') return { ok: true };
+      return { ok: false, failure: { kind: 'REFUSED', detail: `login-id resend answered ${answer.status}` } };
     },
     async requestPasswordRecovery(email) {
       try {

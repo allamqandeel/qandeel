@@ -80,20 +80,24 @@ describe('Login ID sign-in — resolved on the server, adopted into the ONE clie
     [503, { outcome: 'UNAVAILABLE' }, 'UNEXPECTED'],
     [400, { outcome: 'INVALID_REQUEST' }, 'UNEXPECTED'],
     [200, { accessToken: 'only-one' }, 'UNEXPECTED'],
-    [409, { outcome: 'EMAIL_NOT_CONFIRMED' }, 'UNEXPECTED'],
+    [409, { outcome: 'CONFLICT' }, 'UNEXPECTED'],
   ])('status %i %j is the %s kind, and nothing is adopted', async (status, body, kind) => {
     const { net, port: p } = port();
     net.answer(status, body);
     const result = await p.signInWithLoginId('nobody.here', 'pw');
     expect(!result.ok && result.failure.kind).toBe(kind);
-    expect(!result.ok && result.failure.confirmationEmail).toBeUndefined();
     expect(mockAuth.setSession).not.toHaveBeenCalled();
   });
 
-  it('a password-proved unconfirmed account carries its Email to the verification step, and only then', async () => {
-    const { net, port: p } = port();
-    net.answer(409, { outcome: 'EMAIL_NOT_CONFIRMED', email: 'mona@example.test' });
-    expect(await p.signInWithLoginId('mona.ali', 'correct')).toEqual({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: expect.any(String), confirmationEmail: 'mona@example.test' } });
+  it('W2-01 R1 — a password-proved unconfirmed account is EMAIL_NOT_CONFIRMED and nothing more: no Email is carried, even one sent', async () => {
+    for (const body of [{ outcome: 'EMAIL_NOT_CONFIRMED' }, { outcome: 'EMAIL_NOT_CONFIRMED', email: 'mona@example.test' }]) {
+      const { net, port: p } = port();
+      net.answer(409, body);
+      const result = await p.signInWithLoginId('mona.ali', 'correct');
+      expect(result).toStrictEqual({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'email not confirmed' } });
+      expect(JSON.stringify(result)).not.toContain('@');
+    }
+    expect(mockAuth.setSession).not.toHaveBeenCalled();
   });
 
   it('no answer at all is NETWORK; a refused adoption is never a session', async () => {
@@ -107,6 +111,51 @@ describe('Login ID sign-in — resolved on the server, adopted into the ONE clie
   });
 });
 
+describe('W2-01 R1 — Login-ID-origin Email verification, resolved on the server', () => {
+  it('verify sends the Login ID and the code in a body, adopts the relayed session into the ONE client, and names no Email', async () => {
+    const { net, port: p } = port();
+    net.answer(200, { accessToken: 'access-2', refreshToken: 'refresh-2' });
+    mockAuth.setSession.mockResolvedValue({ data: { user: SESSION.user, session: { ...SESSION, access_token: 'access-2' } }, error: null });
+    expect(await p.verifyLoginIdEmailCode('Mona.Ali', '123456')).toEqual({ ok: true, value: { userId: 'u-1', accessToken: 'access-2' } });
+    expect(net.sent).toEqual([
+      { url: `${TEST_CONFIG.apiBaseUrl}/account/login-id-verify-email`, method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: { loginId: 'Mona.Ali', code: '123456' } },
+    ]);
+    expect(mockAuth.setSession).toHaveBeenCalledWith({ access_token: 'access-2', refresh_token: 'refresh-2' });
+    expect(JSON.stringify(net.sent)).not.toContain('@');
+    // Never the SDK's own verifyOtp: it would need the Email the device must not know.
+    expect(mockAuth.verifyOtp).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [401, { outcome: 'CODE_REJECTED' }, 'CODE_REJECTED'],
+    [503, { outcome: 'UNAVAILABLE' }, 'UNEXPECTED'],
+    [400, { outcome: 'INVALID_REQUEST' }, 'UNEXPECTED'],
+    [200, { accessToken: 'only-one' }, 'UNEXPECTED'],
+  ])('verify: status %i %j is the %s kind, and nothing is adopted', async (status, body, kind) => {
+    const { net, port: p } = port();
+    net.answer(status, body);
+    const result = await p.verifyLoginIdEmailCode('mona.ali', '123456');
+    expect(!result.ok && result.failure.kind).toBe(kind);
+    expect(mockAuth.setSession).not.toHaveBeenCalled();
+  });
+
+  it('verify: no answer at all is NETWORK', async () => {
+    const { net, port: p } = port();
+    net.fail();
+    expect(await p.verifyLoginIdEmailCode('mona.ali', '123456')).toEqual({ ok: false, failure: expect.objectContaining({ kind: 'NETWORK' }) });
+  });
+
+  it('resend sends only the Login ID; ACCEPTED is sent, no answer is NETWORK, anything else is REFUSED', async () => {
+    const { net, port: p } = port();
+    net.answer(200, { outcome: 'ACCEPTED' });
+    expect(await p.resendLoginIdEmailCode('mona.ali')).toEqual({ ok: true });
+    expect(net.sent[0]).toEqual({ url: `${TEST_CONFIG.apiBaseUrl}/account/login-id-resend-verification`, method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json' }, body: { loginId: 'mona.ali' } });
+    net.answer(503, { outcome: 'UNAVAILABLE' });
+    expect(await p.resendLoginIdEmailCode('mona.ali')).toEqual({ ok: false, failure: expect.objectContaining({ kind: 'REFUSED' }) });
+    net.fail();
+    expect(await p.resendLoginIdEmailCode('mona.ali')).toEqual({ ok: false, failure: expect.objectContaining({ kind: 'NETWORK' }) });
+  });
+});
 describe('password recovery — recovery semantics, kept entirely out of the SDK session', () => {
   it('asks for a code with the SDK recovery request; every answered request is the same result', async () => {
     const { port: p } = port();

@@ -99,6 +99,12 @@ export function authAuthorityDouble(initial: MobileAuthState = { kind: 'SIGNED_O
     async resendEmailCode() {
       return { ok: false, failure: { kind: 'REFUSED', detail: 'the T-14 gateway double sends nothing' } };
     },
+    async verifyLoginIdEmailCode() {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'the T-14 gateway double verifies nothing' } };
+    },
+    async resendLoginIdEmailCode() {
+      return { ok: false, failure: { kind: 'REFUSED', detail: 'the T-14 gateway double sends nothing' } };
+    },
     async signOut() {
       return { ok: true, value: null };
     },
@@ -109,9 +115,6 @@ export function authAuthorityDouble(initial: MobileAuthState = { kind: 'SIGNED_O
 }
 
 /** A typed failure of one kind. The detail is deliberately recognisable: no Product surface may show it. */
-export function authFailure(
-  kind: 'INVALID_CREDENTIALS' | 'EMAIL_NOT_CONFIRMED' | 'NETWORK' | 'UNEXPECTED',
-  confirmationEmail?: string,
-): AuthPortResult<AuthSessionSnapshot> {
-  return { ok: false, failure: { kind, detail: 'PROVIDER-DETAIL-MUST-NOT-BE-RENDERED', ...(confirmationEmail === undefined ? {} : { confirmationEmail }) } };
+export function authFailure(kind: 'INVALID_CREDENTIALS' | 'EMAIL_NOT_CONFIRMED' | 'NETWORK' | 'UNEXPECTED'): AuthPortResult<AuthSessionSnapshot> {
+  return { ok: false, failure: { kind, detail: 'PROVIDER-DETAIL-MUST-NOT-BE-RENDERED' } };
 }

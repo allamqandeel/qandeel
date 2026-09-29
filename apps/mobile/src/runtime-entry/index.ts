@@ -59,8 +59,8 @@ export type {
 export { SIGN_UP_METADATA_KEYS, SUPABASE_AUTH_OPTIONS } from './auth/supabase-auth-port';
 export type { AuthSessionStorage } from './auth/auth-session-storage';
 export { createEphemeralAuthSessionStorage } from './auth/auth-session-storage';
-export type { MobileAuthAuthority, MobileAuthAuthorityOptions, MobileAuthState } from './auth/mobile-auth-authority';
-export { createMobileAuthAuthority } from './auth/mobile-auth-authority';
+export type { EmailVerificationTarget, MobileAuthAuthority, MobileAuthAuthorityOptions, MobileAuthState } from './auth/mobile-auth-authority';
+export { createMobileAuthAuthority, isEmailIdentifier } from './auth/mobile-auth-authority';
 
 export type { ForegroundSignal, ForegroundState, ManualForegroundSignal } from './lifecycle/foreground-signal';
 export { createAppStateForegroundSignal, createManualForegroundSignal } from './lifecycle/foreground-signal';

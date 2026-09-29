@@ -8,6 +8,8 @@ Login ID help), `E2E-A-11` (password recovery), `E2E-A-12` (confirmed-ended sess
 **Branch:** `feat/w2-01-final-account-access`
 **Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. One bounded, Product-Owner-authorized Production Integration
 slice; it opens no other wave or Product area and closes no phase.
+**Correction:** W2-01 R1 (focused privacy correction, on the same Draft PR) — a Login ID's Email never reaches the
+device, not even after the password was proved (§4.3). Password recovery is unchanged by it.
 
 ---
 
@@ -81,6 +83,17 @@ explicitly.
 | W1B-01 §2.1 | Resend the recovery code | لم يصلك الرمز؟ إعادة الإرسال | Didn't get the code? Send again |
 | W1B-01 §2.2 | Back to Sign in (every recovery step and success) | العودة لتسجيل الدخول | Back to sign in |
 
+### 2.4 Approved in W2-01 R1
+
+| Surface / state | Arabic | English |
+|---|---|---|
+| Verify Email instruction after a Login ID sign-in (no address is named) | أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك. | Enter the verification code sent to the email linked to your account. |
+
+Every other word of that step — title, code label, verify and resend actions, "A new code was sent.", the code and
+verification failures, the return — is W1B-01's own, unchanged. The Email-known instruction («أرسلنا رمزًا إلى {email}.
+أدخل الرمز لتأكيد بريدك.» / "We sent a code to {email}. Enter it to verify your email.") stays for Create account and an
+Email sign-in, where the reader typed the address themselves.
+
 **Superseded as Product copy (P1 §15.3):** T-14's «البريد الإلكتروني» field label for the identifier, «أدخل البريد الإلكتروني.» /
 "Enter your email." and «البريد الإلكتروني أو كلمة المرور غير صحيحة.» / "Email or password is incorrect.". T-14 itself stays the
 historical, `CLOSED / FROZEN` gateway; its runtime is extended in place under re-anchored contracts (§9).
@@ -92,7 +105,7 @@ historical, `CLOSED / FROZEN` gateway; its runtime is extended in place under re
 | One identifier | exactly one identifier field plus Password; no modes, tabs, toggles or second form. The field is LTR inside an Arabic layout, Email keyboard, autofill intent `username`, persistent help visible and spoken as its hint | `ProductSignInGateway.tsx` |
 | Routing | the auth authority decides: an identifier containing `@` is an Email and goes device → Supabase (`signInWithPassword`), anything else is a Login ID and goes through the server exchange (§4). Trimmed once at submit; never lowercased on the device (the server and database canonicalise) | `mobile-auth-authority.ts` `signInWithIdentifier` |
 | Failures | rejected by Login ID or by Email → the ONE generic sentence; transport → T-14's network sentence; anything else → T-14's unexpected sentence. No provider word reaches a surface | `product-sign-in-copy.ts` |
-| Unconfirmed Email | a PROVED password with an unverified Email continues into W1B's Verify Email: by Email for the typed address, by Login ID for the Email the proved password unlocked (`confirmationEmail`, §4.3) | gateway, `supabase-auth-port.ts` |
+| Unconfirmed Email | a PROVED password with an unverified Email continues into W1B's Verify Email. By Email: the address the reader typed, named, verified and resent device → Supabase as in W1B. By Login ID (R1): the step names NO address — the approved generic instruction (§2.4) — and its verify and resend go through the server with the Login ID the reader typed (§4.3); the device never holds the Email | gateway (hands over what was typed), `AccountEntry.tsx`, `VerifyEmailForm.tsx`, `supabase-auth-port.ts` |
 | One request | a synchronous ref refuses a second press; the control says busy; a completion after unmount changes nothing | gateway |
 | Recovery entry | «نسيت كلمة المرور؟» below the password, drawn by the Auth Gateway destination through the gateway's `passwordAssist` seam | `AccountEntry.tsx` |
 | Recovery request | Email only (a Login ID is refused locally as an invalid Email); every provider answer is the same result; only a request with no HTTP answer shows the network sentence and stays | `PasswordRecovery.tsx` |
@@ -129,20 +142,40 @@ password check (bypasses the provider — forbidden); an Edge Function (a second
    unknown Login ID and a known one with a wrong password take the same path and upstream round trip, count against the
    same rate limit, and meet the same answer. An unresolved Login ID can never be answered with anything but a refusal.
 4. **Answer.** `200 { accessToken, refreshToken }` for a proved password; `401 { outcome: 'INVALID_CREDENTIALS' }` for
-   every refusal; `409 { outcome: 'EMAIL_NOT_CONFIRMED', email }` (§4.3); `503 { outcome: 'UNAVAILABLE' }`; `400` for a
-   malformed body. No provider word, no account id.
+   every refusal; `409 { outcome: 'EMAIL_NOT_CONFIRMED' }` — the bare outcome, no Email (§4.3); `503 { outcome:
+   'UNAVAILABLE' }`; `400` for a malformed body. No provider word, no Email, no account id.
 5. **Adoption into the one client.** The device calls `client.auth.setSession` on the ONE Supabase client, which persists
    the session and notifies `SIGNED_IN` exactly as a password sign-in does; the authority's explicit-completion barrier
    is unchanged, and a superseded Login ID sign-in is discarded exactly like a superseded Email verification.
 
-### 4.3 What leaves the server, and why it preserves P1
+### 4.3 What leaves the server — no Email, ever (W2-01 R1)
 
-The only Email that ever leaves is the account's own, to a reader who PROVED ITS PASSWORD: in the `409` for an
-unconfirmed Email — Supabase checks the password before it reports `email_not_confirmed` (verified in W1B-01, record
-§4.3), and the W2-01 task allows exactly this ("do not reveal an unconfirmed Email to someone who has not proved the
-password") — and inside the owner's own session after a successful sign-in, where every Supabase access token and user
-record carries it, as it will in General Settings (P1 §8.1, Account & Identity). Nothing answers "which Email belongs to
-this Login ID" to anyone who has not proved the credential: that is the directory P1 forbids, and none exists.
+**Product Owner clarification (W2-01 R1), binding:** A client never learns which Email belongs to a Login ID — including after password proof.
+
+The first W2-01 implementation read P1 §3 as forbidding the mapping only BEFORE the credential was proved, and returned
+the account's Email in the `409` for an unconfirmed account (`confirmationEmail` on the device). That reading is
+withdrawn, and review point #2 is resolved by removing the path: no Login ID answer carries an Email, a masked Email, an
+account id or a user id, and `confirmationEmail` no longer exists anywhere in the app or the API.
+
+A reader who proved the password of an account whose Email is unverified is told `EMAIL_NOT_CONFIRMED` and nothing more.
+The Verify Email step (§2.4) then keeps only what the reader typed — the Login ID — and two more exchanges of the same
+server boundary verify that Email without the device ever holding it:
+
+- `POST /account/login-id-verify-email` — `{ loginId, code }` (six digits). The server resolves the Login ID again
+  (migration `0124`) and asks the provider's own `POST /auth/v1/verify` (`type: 'email'`, exactly as the device's
+  `verifyOtp` would) with the reader's address forwarded and the secret key. `200 { accessToken, refreshToken }` — the
+  provider's session, adopted into the ONE client by `setSession` and established by the authority's explicit-completion
+  barrier exactly like an Email verification; `401 { outcome: 'CODE_REJECTED' }` for a wrong or expired code AND for an
+  unknown or malformed Login ID (spent against the reserved address, never answered early); `503`; `400`.
+- `POST /account/login-id-resend-verification` — `{ loginId }`. Resolved on the server; the provider's own
+  `POST /auth/v1/resend` (`type: 'signup'`). `200 { outcome: 'ACCEPTED' }` for EVERY answered request — sent, no such
+  account, already verified, rate-limited, a mail failure — because any of those could differ between a Login ID that
+  resolves and one that does not; `503` only when no answer came back or the route is not configured.
+
+Both fail closed without the secret key or the reader's address, log nothing, and return no provider word. Nothing is
+persisted to make them work: no password is kept, no continuation token exists, and there is no second client, no second
+authority and no QANDEEL-minted credential. After a successful sign-in the owner's own session carries its Email as every
+Supabase session does; that is the provider's session for the account the reader proved, not an answer of this route.
 
 ### 4.4 Abuse and rate limits — kept, not replaced
 
@@ -160,7 +193,9 @@ T-12P's contract forbade any API file from naming the token endpoint. W2-01 re-a
 one file (`account/supabase-password-grant.service.ts`) may relay the PASSWORD grant, once. Supabase remains the only
 identity provider — it validates the password and issues the tokens. The API mints nothing, refreshes nothing (a refresh
 grant is forbidden everywhere), stores no credential and verifies no password; every other API file is held to the
-original prohibition. This is the one architectural boundary change in W2-01 and the first point for review.
+original prohibition. This is the one architectural boundary change in W2-01 and the first point for review. W2-01 R1
+adds nothing to it but two more asks from the same file, for the same reason: the provider's own `/verify` and `/resend`
+for the Login-ID-origin Email verification (§4.3). They name no token endpoint; the relayed session is the provider's.
 
 ## 5. Password recovery — containment of the recovery authority
 
@@ -242,6 +277,10 @@ configured and tested against real inboxes. W2-01 does not mark this gate closed
   `.github/workflows/w2-01-visual-proof.yml`. `scripts/w1b/run-w1b-proof.sh` is not changed or used (the W2 flows reuse
   W1B's `w1b-01-type.yaml` typing guard read-only).
 - **Re-anchored contracts and suites** (§9) and the narrow lifecycle reconciliation (§11).
+- **W2-01 R1:** the same API, auth, gateway and access files; `account/entry/AccountEntry.tsx` and
+  `account/entry/VerifyEmailForm.tsx` (a verification TARGET — an Email, or a Login ID — instead of an Email); the port and
+  gateway doubles and the proof worlds; `apps/mobile/.maestro/w2-01-login-id-unverified.yaml`. `account/copy.ts` stays
+  byte-identical; the one new sentence lives in `account/access/copy.ts`.
 
 ## 9. Re-anchored contracts — every expired fact stated in place
 
@@ -274,6 +313,11 @@ Exact-head CI results are in the Draft PR description.
 - **Device proof:** the W2-01 visual-proof workflow — English and Arabic at default text size, Arabic at the largest text
   size, the nine required states, two keyboard measurements and on-device accessibility censuses. Its result is recorded
   in the PR, not here.
+- **W2-01 R1:** the API spec proves no answer carries an Email and that verify / resend resolve on the server with one
+  bounded answer for every Login ID; the port, authority and Product suites prove no Email in any answer, state or
+  rendering, the approved instruction verbatim, and the Email-known paths unchanged; the W2 contract guards each of these
+  against a planted defect; the device proof adds the Login-ID-unverified state in English, Arabic and Arabic at the
+  largest text size, censused for the absence of any address.
 
 ## 11. Residue, external gates and narrow reconciliation
 
@@ -285,6 +329,10 @@ Exact-head CI results are in the Draft PR description.
   only. On a hosted project whose default privileges grant new public functions to `anon` / `authenticated`, that boolean
   could be reachable from PostgREST directly. It returns a boolean only (the availability endpoint is already an
   acknowledged, unthrottled oracle — W1B-01 record §6) and W2-01 does not widen into it; `0124` names both roles explicitly.
+- **Login-ID resend is pre-authentication (R1):** anyone who knows a Login ID can ask for a new sign-up code to be sent to
+  that account's unverified Email, as anyone who knows an Email already can device → Supabase. It reveals nothing (one
+  answer for every Login ID) and is bounded only by the provider's own per-IP and per-address limits, kept per reader by
+  forwarding; no QANDEEL throttle is added (`QAN-SEC-01` stays outside this slice).
 - **Reduced motion:** W2-01 adds no motion (static opacity swaps through the existing `Control`), so there is no motion to
   reduce.
 - **Lifecycle reconciliation (narrow):** W1B-01 is recorded as merged through PR #284 at `6b333df` in
@@ -303,3 +351,4 @@ phase, so it records no closure; its residue (§11) is tracked by this record an
 - `sibawayh:writing-eloquent-arabic` — used to draft the Arabic candidates of the copy gate (§2.2) before the Product
   Owner approved them with edits. No other Skill materially fit this auth-lifecycle slice: it reuses the frozen visual
   primitives W1B already integrated, adds no motion, no new component system and no native module.
+- W2-01 R1: No applicable Skill was used. Its one new sentence was approved verbatim by the Product Owner, not drafted.

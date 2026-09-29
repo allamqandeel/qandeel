@@ -11,9 +11,13 @@
 #                          "Password changed." (7) → back to Sign in, still signed out (7b)
 #   <lang>-sessions        the session-ended notice on Sign in (8) → the unable-to-verify-session state
 #                          (9) → its Retry restores the session and the world opens (9b)
+#   <lang>-login-id-unverified
+#                          W2-01 R1: a Login ID sign-in whose Email is unverified → Verify Email with the
+#                          approved generic instruction and NO address, plain or masked (10) → Resend (11)
+#                          → Verify, refused by the proof world (12)
 #
-# and, in Arabic at the largest system text size, the recovery and session runs again plus two keyboard
-# runs: the final Sign in and the new-password step, each left with the keyboard OPEN so the focused
+# and, in Arabic at the largest system text size, the recovery, session and Login-ID-unverified runs again,
+# plus two keyboard runs: the final Sign in and the new-password step, each left with the keyboard OPEN so the focused
 # field's bounds are measured against the keyboard's inset frame (the primary act is proved reachable by
 # the flow's preceding scroll-to-it step). Every final screen's on-device accessibility tree is censused
 # for technical, auth or provider strings and for the approved words that must be present.
@@ -35,7 +39,7 @@ adb install -r "$APK" || exit 1
 status=0
 
 NEW_PASSWORD="$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 16)"
-FIXTURE=(-e LOGIN_ID="mona.ali" -e EMAIL="mona@w2-proof.invalid" -e NEW_PASSWORD="$NEW_PASSWORD")
+FIXTURE=(-e LOGIN_ID="mona.ali" -e EMAIL="mona@w2-proof.invalid" -e NEW_PASSWORD="$NEW_PASSWORD" -e UNVERIFIED_LOGIN_ID="unverified.reader")
 
 run() {
   local name="$1" flow="$2"
@@ -99,10 +103,11 @@ PY
 }
 
 # Every visible text and accessible description on the final screen: no technical, auth or provider
-# string, no test id, no raw wire value — and the approved words that must be there, are.
+# string, no test id, no raw wire value — and the approved words that must be there, are. An optional
+# third argument is a pattern NO string on the screen may match (W2-01 R1: an address, plain or masked).
 census() {
-  local name="$1" required="$2"
-  if python3 - "$OUT/$name-final-hierarchy.xml" "$required" > "$OUT/$name-accessibility-census.txt" 2>&1 <<'PY'
+  local name="$1" required="$2" forbidden="${3:-}"
+  if python3 - "$OUT/$name-final-hierarchy.xml" "$required" "$forbidden" > "$OUT/$name-accessibility-census.txt" 2>&1 <<'PY'
 import re, sys, xml.etree.ElementTree as ET
 strings = []
 for node in ET.parse(sys.argv[1]).iter('node'):
@@ -113,9 +118,10 @@ for node in ET.parse(sys.argv[1]).iter('node'):
         if value:
             strings.append((node.get('resource-id', ''), attr, value))
 technical = re.compile(r'supabase|\botp\b|token|bearer|error|exception|undefined|\bnull\b|NaN|qandeel-|https?://|w2-proof|proof scenario|SESSION_ENDED|INVALID_CREDENTIALS|login_id|runtime:|[0-9a-f]{8}-[0-9a-f]{4}-', re.I)
+forbidden = re.compile(sys.argv[3]) if len(sys.argv) > 3 and sys.argv[3] else None
 ok = len(strings) > 1
 for rid, attr, value in strings:
-    flagged = technical.search(value) and not value.endswith('@w2-proof.invalid')
+    flagged = (technical.search(value) and not value.endswith('@w2-proof.invalid')) or (forbidden is not None and forbidden.search(value))
     print(f"{'FLAG' if flagged else 'ok  '} [{rid}] {attr}: {value}")
     ok = ok and not flagged
 joined = '\n'.join(v for _, _, v in strings)
@@ -151,6 +157,9 @@ census en-recovery "Login ID or email|Forgot your Login ID? You can use your ema
 adb shell am force-stop "$PKG"
 run en-sessions w2-01-session-states.yaml
 adb shell am force-stop "$PKG"
+run en-login-id-unverified w2-01-login-id-unverified.yaml
+census en-login-id-unverified "Enter the verification code sent to the email linked to your account.|Didn't get the code? Send again|Verify email" "@|\*\*|••"
+adb shell am force-stop "$PKG"
 
 # Arabic, default text size.
 adb shell cmd locale set-app-locales "$PKG" --locales ar-EG
@@ -159,12 +168,20 @@ census ar-recovery "معرّف الدخول أو البريد الإلكترون
 adb shell am force-stop "$PKG"
 run ar-sessions w2-01-session-states.yaml
 adb shell am force-stop "$PKG"
+run ar-login-id-unverified w2-01-login-id-unverified.yaml
+census ar-login-id-unverified "أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.|لم يصلك الرمز؟ إعادة الإرسال|تأكيد البريد" "@|\*\*|••"
+adb shell am force-stop "$PKG"
 
 # Arabic at the largest system text size this Android offers.
 adb shell settings put system font_scale 2.0
 run ar-large-recovery w2-01-sign-in-recovery.yaml
 adb shell am force-stop "$PKG"
 run ar-large-sessions w2-01-session-states.yaml
+adb shell am force-stop "$PKG"
+# At the largest text size the instruction is asserted on screen by the flow itself; the final screen
+# (scrolled to Verify) is censused for the absence of any address.
+run ar-large-login-id-unverified w2-01-login-id-unverified.yaml
+census ar-large-login-id-unverified "" "@|\*\*|••"
 adb shell am force-stop "$PKG"
 run ar-large-sign-in-keyboard w2-01-sign-in-keyboard.yaml
 measure_keyboard ar-large-sign-in-keyboard qandeel-sign-in-password qandeel-sign-in-submit

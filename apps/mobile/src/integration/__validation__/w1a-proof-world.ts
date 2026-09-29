@@ -133,6 +133,8 @@ export function createW1AProofWorld(
     signUp: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W1A proof creates no account' } }),
     verifyEmailCode: async () => ({ ok: false, failure: { kind: 'UNEXPECTED', detail: 'the W1A proof verifies nothing' } }),
     resendEmailCode: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W1A proof sends nothing' } }),
+    verifyLoginIdEmailCode: async () => ({ ok: false, failure: { kind: 'UNEXPECTED', detail: 'the W1A proof has no Login ID' } }),
+    resendLoginIdEmailCode: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W1A proof has no Login ID' } }),
     // W2-01 port members, inert here: the W1A proof signs in by Email only and recovers nothing.
     signInWithLoginId: async () => ({ ok: false, failure: { kind: 'INVALID_CREDENTIALS', detail: 'the W1A proof has no Login ID' } }),
     requestPasswordRecovery: async () => ({ ok: true }),

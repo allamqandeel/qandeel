@@ -51,14 +51,13 @@ describe('the final sign-in — one identifier, two routes, one set of answers',
     expect(byEmail.authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
   });
 
-  it('an unconfirmed Email reached by Login ID carries the Email the proved password unlocked — and nothing else does', async () => {
-    const { authority } = build(null, (port) =>
-      port.loginIdSignInWith({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'x', confirmationEmail: 'mona@example.test' } }),
-    );
+  it('W2-01 R1 — an unconfirmed Email reached by Login ID is the bare kind: no Email in the answer or in any state', async () => {
+    const { authority, seen } = build(null, (port) => port.loginIdSignInWith({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'email not confirmed' } }));
     await authority.start();
     const answer = await authority.signInWithIdentifier('mona.ali', 'correct');
-    expect(answer).toEqual({ ok: false, failure: expect.objectContaining({ kind: 'EMAIL_NOT_CONFIRMED', confirmationEmail: 'mona@example.test' }) });
+    expect(answer).toStrictEqual({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'email not confirmed' } });
     expect(authority.getState().kind).toBe('SIGNED_OUT');
+    expect(JSON.stringify([answer, authority.getState(), ...seen])).not.toContain('@');
   });
 
   it('a Login ID sign-in superseded while in flight never establishes the identity, and its adopted session is discarded', async () => {
@@ -78,6 +77,62 @@ describe('the final sign-in — one identifier, two routes, one set of answers',
   });
 });
 
+describe('W2-01 R1 — Login-ID-origin Email verification, under the same epoch rules as Email verification', () => {
+  it('a verified code establishes the identity through the ONE authority: one generation, the Login ID sent, never an Email', async () => {
+    const { port, authority, seen } = build();
+    await authority.start();
+    expect(await authority.verifyLoginIdEmailCode('Mona.Ali', '123456')).toEqual({ ok: true, value: { userId: 'user-for-mona.ali', accessToken: 'token-for-mona.ali' } });
+    expect(port.loginIdVerifications).toEqual([{ loginId: 'Mona.Ali', code: '123456' }]);
+    expect(authority.getState()).toEqual({ kind: 'AUTHENTICATED', userId: 'user-for-mona.ali', accessToken: 'token-for-mona.ali', authGeneration: 1 });
+    expect(seen.filter((state) => state.kind === 'AUTHENTICATED')).toHaveLength(1);
+    // The observed SIGNED_IN met the retired barrier; only the explicit completion established.
+    expect(JSON.stringify(seen)).not.toContain('@');
+  });
+
+  it('a rejected code leaves the reader signed out, and nothing is published', async () => {
+    const { port, authority, seen } = build();
+    await authority.start();
+    const before = seen.length;
+    port.verifyWith({ ok: false, failure: { kind: 'CODE_REJECTED', detail: 'refused' } });
+    expect(await authority.verifyLoginIdEmailCode('mona.ali', '000000')).toEqual({ ok: false, failure: { kind: 'CODE_REJECTED', detail: 'refused' } });
+    expect(seen.length).toBe(before);
+    expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
+  });
+
+  it('a verification superseded while in flight never establishes, and its adopted session is discarded', async () => {
+    const { port, authority } = build();
+    await authority.start();
+    const opened = port.blockVerify({ userId: 'mona', accessToken: 'token-mona' });
+    const inFlight = authority.verifyLoginIdEmailCode('mona.ali', '123456');
+    // The reader's later explicit instruction: a refused sign-in by Email.
+    port.signInWith({ ok: false, failure: { kind: 'INVALID_CREDENTIALS', detail: 'x' } });
+    await authority.signInWithIdentifier('someone@example.test', 'wrong');
+    opened.open();
+    await inFlight;
+    await settle();
+    expect(authority.getState().kind).toBe('SIGNED_OUT');
+    expect(port.signOutCount()).toBe(1);
+  });
+
+  it('refused beside an identity and after disposal; resend asks with the Login ID only and establishes nothing', async () => {
+    const signedIn = build(ALICE);
+    await signedIn.authority.start();
+    expect(await signedIn.authority.verifyLoginIdEmailCode('mona.ali', '123456')).toEqual({ ok: false, failure: expect.objectContaining({ kind: 'UNEXPECTED' }) });
+    expect(signedIn.port.loginIdVerifications).toEqual([]);
+
+    const { port, authority, seen } = build();
+    await authority.start();
+    const before = seen.length;
+    expect(await authority.resendLoginIdEmailCode('mona.ali')).toEqual({ ok: true });
+    expect(port.loginIdResends).toEqual(['mona.ali']);
+    expect(seen.length).toBe(before);
+    authority.dispose();
+    expect((await authority.verifyLoginIdEmailCode('mona.ali', '123456')).ok).toBe(false);
+    expect((await authority.resendLoginIdEmailCode('mona.ali')).ok).toBe(false);
+    expect(port.loginIdVerifications).toEqual([]);
+    expect(port.loginIdResends).toEqual(['mona.ali']);
+  });
+});
 describe('password recovery — a temporary authority that never becomes an identity', () => {
   it('request → code → new password ends signed out: nothing is ever published, and the grant is retired', async () => {
     const { port, authority, seen } = build();

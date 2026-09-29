@@ -270,6 +270,12 @@ export interface AuthPortDouble extends SupabaseAuthPort {
   loginIdSignInWith(result: AuthPortResult<AuthSessionSnapshot>): void;
   /** W2-01 — hold `signInWithLoginId` open, emitting SIGNED_IN before resolving (the SDK's `setSession` ordering). */
   blockLoginIdSignIn(session: AuthSessionSnapshot): Gate;
+  /**
+   * W2-01 R1 — every Login-ID-origin verification and resend the port received: the Login ID and the code,
+   * never an Email. They answer with `verifyWith` / `blockVerify` and `resendWith`, exactly as the Email ones.
+   */
+  readonly loginIdVerifications: { readonly loginId: string; readonly code: string }[];
+  readonly loginIdResends: string[];
   recoveryRequestWith(result: RecoveryRequestResult): void;
   recoveryCodeWith(result: RecoveryCodePortResult): void;
   /** Hold `verifyRecoveryCode` open until the gate opens. */
@@ -299,6 +305,8 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
   let blockedVerify: { gate: Gate; session: AuthSessionSnapshot } | null = null;
   const signUps: { email: string; password: string; identity: SignUpIdentity }[] = [];
   const loginIdSignIns: { loginId: string; password: string }[] = [];
+  const loginIdVerifications: { loginId: string; code: string }[] = [];
+  const loginIdResends: string[] = [];
   let loginIdResult: AuthPortResult<AuthSessionSnapshot> | null = null;
   let blockedLoginId: { gate: Gate; session: AuthSessionSnapshot } | null = null;
   let recoveryRequestResult: RecoveryRequestResult = { ok: true };
@@ -316,6 +324,23 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
 
   const notify = (change: AuthSessionChange) => {
     for (const listener of Array.from(listeners)) listener(change);
+  };
+  /** The provider's answer to a code, Email- or Login-ID-origin: SIGNED_IN is emitted BEFORE resolving. */
+  const answerCode = async (subject: string): Promise<EmailCodeResult> => {
+    if (blockedVerify !== null) {
+      const pending = blockedVerify;
+      blockedVerify = null;
+      await pending.gate.wait();
+      notify({ kind: 'SIGNED_IN', session: pending.session });
+      return { ok: true, value: pending.session };
+    }
+    if (verifyResult !== null) {
+      if (verifyResult.ok) notify({ kind: 'SIGNED_IN', session: verifyResult.value });
+      return verifyResult;
+    }
+    const session = { userId: `user-for-${subject}`, accessToken: `token-for-${subject}` };
+    notify({ kind: 'SIGNED_IN', session });
+    return { ok: true, value: session };
   };
 
   return {
@@ -399,23 +424,19 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
       signUps.push({ email, password, identity });
       return signUpResult;
     },
-    verifyEmailCode: async (email) => {
-      if (blockedVerify !== null) {
-        const pending = blockedVerify;
-        blockedVerify = null;
-        await pending.gate.wait();
-        notify({ kind: 'SIGNED_IN', session: pending.session });
-        return { ok: true, value: pending.session };
-      }
-      if (verifyResult !== null) {
-        if (verifyResult.ok) notify({ kind: 'SIGNED_IN', session: verifyResult.value });
-        return verifyResult;
-      }
-      const session = { userId: `user-for-${email}`, accessToken: `token-for-${email}` };
-      notify({ kind: 'SIGNED_IN', session });
-      return { ok: true, value: session };
-    },
+    verifyEmailCode: async (email) => answerCode(email),
     resendEmailCode: async () => resendResult,
+    loginIdVerifications,
+    loginIdResends,
+    // The API's session is adopted by `setSession`, which saves it and notifies SIGNED_IN before resolving.
+    verifyLoginIdEmailCode: async (loginId, code) => {
+      loginIdVerifications.push({ loginId, code });
+      return answerCode(loginId.toLowerCase());
+    },
+    resendLoginIdEmailCode: async (loginId) => {
+      loginIdResends.push(loginId);
+      return resendResult;
+    },
     blockSignIn(session) {
       const opened = gate();
       blocked = { gate: opened, session };

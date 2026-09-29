@@ -12,6 +12,10 @@
  *   - already approved elsewhere and REUSED verbatim (T-14's network sentence; W1B-01's Email label,
  *     invalid-Email sentence, password-policy sentence, resend action and "Back to sign in").
  *
+ * W2-01 R1 adds ONE Product-Owner-approved sentence: the Verify Email instruction for a reader who signed
+ * in by Login ID, which names no address because the device never learns that Email (P1 §3). Every
+ * other Verify Email word stays W1B-01's own, in `../copy`.
+ *
  * No sentence here says whether an account exists. After a resend the entry repeats the generic result,
  * never "a new code was sent". No other module of the account layer writes a Product word.
  */
@@ -49,6 +53,9 @@ export interface AccountAccessCopy {
   // ----------------------------------------------------------------------- unable to verify session
   readonly sessionUnverified: string;
   readonly tryAgain: string;
+  // ------------------------------------------------------------ W2-01 R1 — Login-ID-origin Verify Email
+  /** The Verify Email instruction when the reader signed in by Login ID. It names no Email, masked or not. */
+  readonly verifyLinkedEmailInstruction: string;
 }
 
 const ACCESS_AR: AccountAccessCopy = Object.freeze({
@@ -74,6 +81,7 @@ const ACCESS_AR: AccountAccessCopy = Object.freeze({
   network: 'تعذّر الاتصال. حاول مرة أخرى.',
   sessionUnverified: 'تعذّر التحقق من جلستك الآن. تحقق من اتصالك وحاول مرة أخرى.',
   tryAgain: 'إعادة المحاولة',
+  verifyLinkedEmailInstruction: 'أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.',
 });
 
 const ACCESS_EN: AccountAccessCopy = Object.freeze({
@@ -99,6 +107,7 @@ const ACCESS_EN: AccountAccessCopy = Object.freeze({
   network: 'Couldn’t connect. Try again.',
   sessionUnverified: 'We couldn’t verify your session right now. Check your connection and try again.',
   tryAgain: 'Try again',
+  verifyLinkedEmailInstruction: 'Enter the verification code sent to the email linked to your account.',
 });
 
 /** There is no default language, exactly as W1B-01 refuses one. */

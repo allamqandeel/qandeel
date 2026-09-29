@@ -24,7 +24,7 @@ import { View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
 import { useConversationTypeface, usePalette } from '../../conversation';
-import type { MobileAuthAuthority } from '../../runtime-entry';
+import { isEmailIdentifier, type EmailVerificationTarget, type MobileAuthAuthority } from '../../runtime-entry';
 import { accountAccessCopy } from '../access/copy';
 import { NewPasswordForm, RecoveryCodeForm, RecoveryCompleted, RecoveryRequestForm } from '../access/PasswordRecovery';
 import { accountEntryCopy } from '../copy';
@@ -38,8 +38,11 @@ export const ACCOUNT_ENTRY_TEST_ID = 'qandeel-account-entry';
 export interface SignInEntrySlot {
   /** The approved entry into Create account, drawn below the Sign-in form. */
   readonly footer: ReactNode;
-  /** The provider validated the password and reported the Email unverified: verify it now. */
-  readonly onEmailNotConfirmed: (email: string) => void;
+  /**
+   * The provider validated the password and reported the Email unverified: verify it now. Handed the
+   * identifier the reader typed. W2-01 R1: a Login ID stays a Login ID — its Email never reaches the device.
+   */
+  readonly onEmailNotConfirmed: (identifier: string) => void;
   /** W2-01 — the approved entry into password recovery, drawn below the password field. */
   readonly passwordAssist: ReactNode;
   /** W2-01 — the reader's session ended (auth-owner evidence) and they have not yet moved on from Sign in. */
@@ -58,7 +61,8 @@ export interface AccountEntryProps {
 export type EntryScreen =
   | { readonly kind: 'SIGN_IN' }
   | { readonly kind: 'CREATE_ACCOUNT' }
-  | { readonly kind: 'VERIFY_EMAIL'; readonly email: string }
+  // W2-01 R1 — an Email the reader typed, or a Login ID whose Email stays on the server.
+  | { readonly kind: 'VERIFY_EMAIL'; readonly target: EmailVerificationTarget }
   // W2-01 — password recovery. The temporary recovery authority is the auth owner's, never in this state.
   | { readonly kind: 'RECOVERY_REQUEST' }
   | { readonly kind: 'RECOVERY_CODE'; readonly email: string }
@@ -80,7 +84,12 @@ export function AccountEntry({ auth, loginIds, locale, renderSignIn, sessionEnde
   }, []);
   const toSignIn = useCallback(() => go({ kind: 'SIGN_IN' }), [go]);
   const toCreateAccount = useCallback(() => go({ kind: 'CREATE_ACCOUNT' }), [go]);
-  const toVerifyEmail = useCallback((email: string) => go({ kind: 'VERIFY_EMAIL', email }), [go]);
+  const toVerifyEmail = useCallback((email: string) => go({ kind: 'VERIFY_EMAIL', target: { via: 'EMAIL', email } }), [go]);
+  /** Classified by the auth authority's own rule — the same one that routed the credential. */
+  const toVerifyAfterSignIn = useCallback(
+    (identifier: string) => go({ kind: 'VERIFY_EMAIL', target: isEmailIdentifier(identifier) ? { via: 'EMAIL', email: identifier } : { via: 'LOGIN_ID', loginId: identifier } }),
+    [go],
+  );
   const toRecovery = useCallback(() => go({ kind: 'RECOVERY_REQUEST' }), [go]);
   const toRecoveryCode = useCallback((email: string) => go({ kind: 'RECOVERY_CODE', email }), [go]);
   const toNewPassword = useCallback(() => go({ kind: 'RECOVERY_NEW_PASSWORD' }), [go]);
@@ -99,7 +108,7 @@ export function AccountEntry({ auth, loginIds, locale, renderSignIn, sessionEnde
   } else if (screen.kind === 'CREATE_ACCOUNT') {
     content = <CreateAccountForm auth={auth} loginIds={loginIds} locale={locale} onCreated={toVerifyEmail} onReturn={toSignIn} />;
   } else if (screen.kind === 'VERIFY_EMAIL') {
-    content = <VerifyEmailForm auth={auth} locale={locale} email={screen.email} onReturn={toSignIn} />;
+    content = <VerifyEmailForm auth={auth} locale={locale} target={screen.target} onReturn={toSignIn} />;
   } else if (screen.kind === 'RECOVERY_REQUEST') {
     content = <RecoveryRequestForm auth={auth} locale={locale} onRequested={toRecoveryCode} onReturn={leaveRecovery} />;
   } else if (screen.kind === 'RECOVERY_CODE') {
@@ -111,7 +120,7 @@ export function AccountEntry({ auth, loginIds, locale, renderSignIn, sessionEnde
   } else {
     content = renderSignIn({
       footer: <EntryLink label={copy.createAccountTitle} onPress={toCreateAccount} language={locale.language} testID="qandeel-sign-in-create-account" />,
-      onEmailNotConfirmed: toVerifyEmail,
+      onEmailNotConfirmed: toVerifyAfterSignIn,
       passwordAssist: <EntryLink label={access.forgotPassword} onPress={toRecovery} language={locale.language} testID="qandeel-sign-in-forgot-password" />,
       sessionEnded: sessionEnded && !movedOn,
     });

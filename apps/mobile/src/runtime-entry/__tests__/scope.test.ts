@@ -18,6 +18,9 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // W1B-01 added exactly three, deliberately: the account transport and the signed-out Login ID
   // availability transport (plain classes, like the Session client), and the two sign-up metadata key
   // names migration 0123 reads — a pair of identifiers, not reader-facing copy.
+  // W2-01 R1 added exactly one, deliberately: `isEmailIdentifier`, the auth authority's own rule for
+  // whether a typed identifier is an Email or a Login ID, so the account layer routes an unconfirmed
+  // reader's Verify Email by the same rule the credential was routed by — never by a second copy of it.
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'CONVERSATION_HISTORY_PAGE_LIMIT',
@@ -37,6 +40,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'createMobileAuthAuthority',
     'createMobileRuntimeEntry',
     'describeConfigFailure',
+    'isEmailIdentifier',
     'readMobilePublicConfig',
   ]);
 

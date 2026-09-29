@@ -8,7 +8,7 @@
 import { act, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
-import { AccountEntry, SessionVerificationRecovery, accountAccessCopy, type LoginIdAvailability } from '..';
+import { AccountEntry, SessionVerificationRecovery, accountAccessCopy, accountEntryCopy, type LoginIdAvailability } from '..';
 import { ProductSignInGateway, productLocale, productSignInCopy } from '../../integration';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { createManualForegroundSignal, createMobileAuthAuthority, type MobileAuthAuthority } from '../../runtime-entry';
@@ -19,6 +19,7 @@ const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, inset
 const DETAIL = 'PROVIDER-DETAIL-MUST-NOT-BE-RENDERED';
 const ACCESS = { en: accountAccessCopy('en'), ar: accountAccessCopy('ar') };
 const SIGN_IN = { en: productSignInCopy('en'), ar: productSignInCopy('ar') };
+const ENTRY = { en: accountEntryCopy('en'), ar: accountEntryCopy('ar') };
 const LOGIN_IDS: LoginIdAvailability = { check: async () => ({ kind: 'AVAILABLE' }) };
 
 interface Mounted {
@@ -154,16 +155,6 @@ describe('final sign-in — one identifier field, Login ID OR Email', () => {
     await m.view.unmount();
   });
 
-  it('a proved password on an unconfirmed Email by Login ID goes to Verify Email for the Email it unlocked', async () => {
-    const m = await mount({
-      configure: (port) => port.loginIdSignInWith({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: DETAIL, confirmationEmail: 'mona@example.test' } }),
-    });
-    await signIn(m.view, 'mona.ali', 'correct');
-    expect(m.view.getByTestId('qandeel-verify-email')).toBeTruthy();
-    expect(tree(m.view)).toContain('mona@example.test');
-    expect(m.auth.getState().kind).toBe('SIGNED_OUT');
-    await m.view.unmount();
-  });
 
   it('a second press while the first is in flight is refused: one request', async () => {
     const m = await mount();
@@ -189,6 +180,78 @@ describe('final sign-in — one identifier field, Login ID OR Email', () => {
   });
 });
 
+describe('W2-01 R1 — Verify Email after a Login ID sign-in never learns the Email', () => {
+  const UNCONFIRMED = { ok: false as const, failure: { kind: 'EMAIL_NOT_CONFIRMED' as const, detail: DETAIL } };
+  /** No address and no masked address: nothing with an @, and no run of mask characters. */
+  const namesNoAddress = (view: RenderResult) => {
+    expect(tree(view)).not.toContain('@');
+    expect(tree(view)).not.toMatch(/[*•●]{2,}|\*\*\*|…@/u);
+  };
+
+  for (const language of ['en', 'ar'] as const) {
+    it(`${language}: the approved generic instruction, exactly, and no Email or masked Email anywhere`, async () => {
+      const m = await mount({ language, configure: (port) => port.loginIdSignInWith(UNCONFIRMED) });
+      await signIn(m.view, 'mona.ali', 'correct');
+      expect(m.view.getByTestId('qandeel-verify-email')).toBeTruthy();
+      expect(textOf(m.view, 'qandeel-verify-email-instruction')).toBe(ACCESS[language].verifyLinkedEmailInstruction);
+      // The rest of the step is W1B-01's own, unchanged.
+      expect(textOf(m.view, 'qandeel-verify-email-title')).toBe(ENTRY[language].verifyTitle);
+      namesNoAddress(m.view);
+      expect(tree(m.view)).not.toContain(DETAIL);
+      expect(m.auth.getState().kind).toBe('SIGNED_OUT');
+      await m.view.unmount();
+    });
+  }
+
+  it('the approved sentences, verbatim', () => {
+    expect(ACCESS.ar.verifyLinkedEmailInstruction).toBe('أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.');
+    expect(ACCESS.en.verifyLinkedEmailInstruction).toBe('Enter the verification code sent to the email linked to your account.');
+  });
+
+  it('resend asks with the Login ID the reader typed and says W1B’s own "A new code was sent."', async () => {
+    const m = await mount({ configure: (port) => port.loginIdSignInWith(UNCONFIRMED) });
+    await signIn(m.view, ' Mona.Ali ', 'correct');
+    await press(m.view, 'qandeel-verify-email-resend');
+    expect(m.port.loginIdResends).toEqual(['Mona.Ali']);
+    expect(noticeSays(m.view, 'qandeel-verify-email-notice', ENTRY.en.resendSucceeded)).toBe(true);
+    namesNoAddress(m.view);
+    await m.view.unmount();
+  });
+
+  it('a rejected code is W1B’s generic verification sentence, and the reader stays signed out', async () => {
+    const m = await mount({ configure: (port) => {
+      port.loginIdSignInWith(UNCONFIRMED);
+      port.verifyWith({ ok: false, failure: { kind: 'CODE_REJECTED', detail: DETAIL } });
+    } });
+    await signIn(m.view, 'mona.ali', 'correct');
+    await type(m.view, 'qandeel-verify-email-code', '000000');
+    await press(m.view, 'qandeel-verify-email-submit');
+    expect(noticeSays(m.view, 'qandeel-verify-email-notice', ENTRY.en.verifyFailed)).toBe(true);
+    expect(m.auth.getState().kind).toBe('SIGNED_OUT');
+    await m.view.unmount();
+  });
+
+  it('a verified code enters the ordinary authenticated path: one identity, through the one authority', async () => {
+    const m = await mount({ configure: (port) => port.loginIdSignInWith(UNCONFIRMED) });
+    await signIn(m.view, 'mona.ali', 'correct');
+    await type(m.view, 'qandeel-verify-email-code', '123456');
+    await press(m.view, 'qandeel-verify-email-submit');
+    expect(m.port.loginIdVerifications).toEqual([{ loginId: 'mona.ali', code: '123456' }]);
+    expect(m.auth.getState()).toMatchObject({ kind: 'AUTHENTICATED', userId: 'user-for-mona.ali', authGeneration: 1 });
+    await m.view.unmount();
+  });
+
+  it('by Email, the unconfirmed step is unchanged: it names the address the reader typed and verifies by Email', async () => {
+    const m = await mount({ configure: (port) => port.signInWith(UNCONFIRMED) });
+    await signIn(m.view, ' reader@example.test ', 'correct');
+    expect(textOf(m.view, 'qandeel-verify-email-instruction')).toBe(ENTRY.en.verifyInstruction('reader@example.test'));
+    await type(m.view, 'qandeel-verify-email-code', '123456');
+    await press(m.view, 'qandeel-verify-email-submit');
+    expect(m.port.loginIdVerifications).toEqual([]);
+    expect(m.auth.getState()).toMatchObject({ kind: 'AUTHENTICATED', userId: 'user-for-reader@example.test' });
+    await m.view.unmount();
+  });
+});
 describe('the ended-session notice — only with the auth owner’s evidence', () => {
   it('shows the approved notice on Sign in, which stays usable', async () => {
     for (const language of ['en', 'ar'] as const) {

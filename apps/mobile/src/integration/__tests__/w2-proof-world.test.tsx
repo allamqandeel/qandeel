@@ -5,7 +5,7 @@
 import { createEphemeralProductRecoveryStorage } from '../../recovery';
 import { createManualForegroundSignal } from '../../runtime-entry';
 import { createIntegrationRuntime } from '../runtime/integration-runtime';
-import { createW2ProofWorld, type W2ProofScenario } from '../__validation__/w2-proof-world';
+import { W2_PROOF_UNVERIFIED_LOGIN_ID, createW2ProofWorld, type W2ProofScenario } from '../__validation__/w2-proof-world';
 
 jest.setTimeout(20000);
 
@@ -41,6 +41,16 @@ it('SIGNED_OUT: a first launch, and every sign-in credential is refused with the
   runtime.dispose();
 });
 
+it('W2-01 R1 — the fixture Login ID reaches the unconfirmed kind with no Email; resend answers; every code is refused', async () => {
+  const runtime = await start('SIGNED_OUT');
+  const answer = await runtime.auth.signInWithIdentifier(W2_PROOF_UNVERIFIED_LOGIN_ID, 'x');
+  expect(answer).toStrictEqual({ ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'fixture: email not confirmed' } });
+  expect(await runtime.auth.resendLoginIdEmailCode(W2_PROOF_UNVERIFIED_LOGIN_ID)).toEqual({ ok: true });
+  const verified = await runtime.auth.verifyLoginIdEmailCode(W2_PROOF_UNVERIFIED_LOGIN_ID, '123456');
+  expect(!verified.ok && verified.failure.kind).toBe('CODE_REJECTED');
+  expect(runtime.getPhase().kind).toBe('SIGNED_OUT');
+  runtime.dispose();
+});
 it('SESSION_ENDED: Sign in, with the ended-session evidence', async () => {
   const runtime = await start('SESSION_ENDED');
   expect(runtime.auth.getState()).toEqual({ kind: 'SIGNED_OUT', sessionEnded: true });
