@@ -5,7 +5,7 @@ second bounded implementation slice)
 **Rows:** `E2E-A-01` (static launch → system handoff), `E2E-A-02` (final QANDEEL app icon on the device)
 **Baseline:** `df194edf6d70a2a300a0251ed114e7ad8715485e` (merge of PR #285, W2-01; final W2-01 head `7f7d492`)
 **Branch:** `feat/w2-02-production-launch-identity`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. One bounded, Product-Owner-authorized Production Integration
+**Status:** MERGED through PR #286 at `b650b56f7436ce63d33c0af34036a963a03f5eee` (lifecycle reconciled by W3-01). One bounded, Product-Owner-authorized Production Integration
 slice; it opens no other wave or Product area and closes no phase.
 
 ---
@@ -386,3 +386,9 @@ W2-02 is implemented on a **Draft PR and is not merged**. W2 is not fully closed
 out is not implemented, and no W3 appearance preference exists. This record changes no P4 or I-08B2.5 byte. It also
 reconciles W2-01's stale Draft lifecycle to its merge through PR #285: the W2-01 record's status line, the Current
 State and Project Map locators, and the E2E-01 read-first §6 rows.
+
+**Later lifecycle reconciliation (W3-01).** W2-02 merged through PR #286 at `b650b56f7436ce63d33c0af34036a963a03f5eee`;
+the text above is the record as written before that merge and is not rewritten. Its §12 W3 carry-forward items 1 (the
+Android application night mode) and 2 (the iOS root view) are consumed by W3-01 on its own Draft PR
+([record](QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)); item 3 (the iOS Launch Screen
+follows the device) is unchanged.

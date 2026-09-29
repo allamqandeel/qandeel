@@ -199,8 +199,10 @@ Current sequence:
    [record](docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md)), then W1B-01 Account Identity + Verified Sign-up + First Use
    (merged through PR #284 at `6b333df7774d33b034575243b3592d21f2603683`; [record](docs/e2e/QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md)),
    then W2-01 Final Account Access Lifecycle (merged through PR #285 at `df194edf6d70a2a300a0251ed114e7ad8715485e`;
-   [record](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), then W2-02 Production Launch Identity (Draft PR, not merged;
-   [record](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)).
+   [record](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), then W2-02 Production Launch Identity (merged through PR #286 at `b650b56f7436ce63d33c0af34036a963a03f5eee`;
+   [record](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)), then W3-01 General Settings
+   Foundation + Appearance + Sign Out (Draft PR, not merged;
+   [record](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)).
 4. Release Hardening & Launch.
 
 This sequencing creates no runtime semantics and opens no implementation task by itself.

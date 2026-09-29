@@ -53,13 +53,14 @@
  * shell because the old technical shell is not rendered here at all, visibly or otherwise.
  */
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
 import { AccountEntry, SessionVerificationRecovery, type LoginIdAvailability } from '../../account';
+import { AppearanceProvider } from '../../appearance';
 import type { MobileAuthAuthority } from '../../runtime-entry';
 import { ProductSignInGateway } from '../auth-gateway';
 import { deviceProductLocale } from '../locale/device-locale';
@@ -177,13 +178,19 @@ export function ProductRoot() {
  */
 export function RuntimePhaseSurface({ runtime }: { readonly runtime: IntegrationRuntime }) {
   const phase = useSyncExternalStore(runtime.subscribe, runtime.getPhase);
+  // W3-01: every reader-facing phase paints in the ONE appearance authority's effective appearance. Only an
+  // authenticated identity can have chosen one; signed out and unverifiable are the Dark default.
+  return <AppearanceProvider authority={runtime.appearance}>{phaseSurface(runtime, phase)}</AppearanceProvider>;
+}
+
+function phaseSurface(runtime: IntegrationRuntime, phase: IntegrationPhase) {
   // `initialMetrics` is the documented way to render on the first frame instead of waiting for the
   // native module to report. Without it the reader sees one blank frame before the surface, which
   // would read as the app stalling at exactly the moment it finished starting.
   if (phase.kind === 'READY') {
     return (
       <SafeAreaProvider initialMetrics={initialWindowMetrics} style={styles.root}>
-        <ComposedWorld runtime={phase.runtime} />
+        <ComposedWorld runtime={phase.runtime} auth={runtime.auth} />
       </SafeAreaProvider>
     );
   }
@@ -258,12 +265,18 @@ function SessionUnverifiedEntry({ auth }: { readonly auth: MobileAuthAuthority }
  * over the SAME runtime generation. Which depth shows is the composition's local choice, never a
  * phase, a route or canonical state; this root still composes exactly one world, only at READY.
  */
-function ComposedWorld({ runtime }: { readonly runtime: Extract<IntegrationPhase, { kind: 'READY' }>['runtime'] }) {
+function ComposedWorld({ runtime, auth }: {
+  readonly runtime: Extract<IntegrationPhase, { kind: 'READY' }>['runtime'];
+  readonly auth: MobileAuthAuthority;
+}) {
   const { insets, fontScale, envelope } = usePresentationFacts();
   // Resolved once per mount: it is a presentation configuration, and re-reading it every render
   // would rebuild the value T-11 memoizes its whole plan on.
   const locale = useMemo(() => deviceProductLocale(), []);
-  return <DepthComposition runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} />;
+  // W3-01 (E2E-D-07): the ONE sign-out, the frozen auth authority's own. Nothing here signs out any other
+  // way, and nothing retires the world by hand: the phase machinery does that when the authority publishes.
+  const signOut = useCallback(() => auth.signOut(), [auth]);
+  return <DepthComposition runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} onSignOut={signOut} />;
 }
 
 const styles = StyleSheet.create({

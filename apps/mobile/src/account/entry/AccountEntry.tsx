@@ -21,7 +21,7 @@
  */
 import { useCallback, useState, type ReactNode } from 'react';
 import { View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { AppearanceStatusBar } from '../../appearance';
 
 import { useConversationTypeface, usePalette } from '../../conversation';
 import { isEmailIdentifier, type EmailVerificationTarget, type MobileAuthAuthority } from '../../runtime-entry';
@@ -129,7 +129,7 @@ export function AccountEntry({ auth, loginIds, locale, renderSignIn, sessionEnde
   return (
     <View testID={ACCOUNT_ENTRY_TEST_ID} style={{ flex: 1, backgroundColor: palette.world }}>
       {/* G3 K18: the platform status content is light over the Dark World the entry stands on. */}
-      <StatusBar style="light" />
+      <AppearanceStatusBar />
       {content}
     </View>
   );

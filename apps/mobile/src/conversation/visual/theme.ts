@@ -3,16 +3,19 @@
  *
  * Every value comes from `canonical-visual.generated.ts`, which is resolved from the frozen token
  * tree, P2 geometry, E3 type roles and F2 motion. Nothing here is a literal colour, size or weight
- * of its own. Appearance: Dark only in W1A — P1 makes Dark the default for non-Analysis surfaces and
- * no appearance preference exists yet. Contrast: the platform's increased-contrast setting selects
- * the F1 increased resolution, which changes the rest ink and the focus thickness only.
+ * of its own. Appearance (W3-01): the canonical family of the appearance THIS surface paints in — the
+ * reader's effective Dark / Light from the ONE appearance authority, or Dark inside the Analysis scope
+ * (P1 §12). Contrast: the platform's increased-contrast setting selects the F1 increased resolution of
+ * that family, which changes the rest ink and the focus thickness only.
  */
 import { useEffect, useState } from 'react';
 import { AccessibilityInfo, Platform } from 'react-native';
 
+import { useSurfaceAppearance } from '../../appearance';
 import { CANONICAL_VISUAL } from './canonical-visual.generated';
 
-export type ConversationPalette = (typeof CANONICAL_VISUAL.palette)['standard'] | (typeof CANONICAL_VISUAL.palette)['increased'];
+type Palettes = typeof CANONICAL_VISUAL.palettes;
+export type ConversationPalette = Palettes[keyof Palettes]['standard'] | Palettes[keyof Palettes]['increased'];
 
 /** The two static Estedad v8.5 instances the surface ships, by PostScript name (= file name). */
 export const TYPEFACE = Object.freeze({ regular: 'Estedad-Regular', medium: 'Estedad-Medium' });
@@ -66,5 +69,6 @@ export function useIncreasedContrast(): boolean {
 }
 
 export function usePalette(): ConversationPalette {
-  return useIncreasedContrast() ? CANONICAL_VISUAL.palette.increased : CANONICAL_VISUAL.palette.standard;
+  const family = CANONICAL_VISUAL.palettes[useSurfaceAppearance()];
+  return useIncreasedContrast() ? family.increased : family.standard;
 }

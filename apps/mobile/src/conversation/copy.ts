@@ -48,6 +48,11 @@ export interface ConversationCopy {
   readonly replyFailed: string;
   /** The conversation-so-far could not be read. PO-approved in the W1A-01 gate. */
   readonly historyUnavailable: string;
+  /**
+   * W3-01 — the Personal-QANDEEL Settings entry's accessible name (the control is icon-only, P4-C1 S-B).
+   * Frozen: «الإعدادات» / Settings (P4-C3 registry `settings`, CANON; I-08A4 §8 / §9).
+   */
+  readonly settingsName: string;
 }
 
 const AR: ConversationCopy = Object.freeze({
@@ -68,6 +73,7 @@ const AR: ConversationCopy = Object.freeze({
   sendRefused: 'تعذّر إرسال الرسالة.',
   replyFailed: 'تعذّر إكمال رد قنديل.',
   historyUnavailable: 'تعذّر تحميل المحادثة.',
+  settingsName: 'الإعدادات',
 });
 
 const EN: ConversationCopy = Object.freeze({
@@ -88,6 +94,7 @@ const EN: ConversationCopy = Object.freeze({
   sendRefused: "The message wasn't sent.",
   replyFailed: "QANDEEL's reply couldn't be completed.",
   historyUnavailable: "The conversation didn't load.",
+  settingsName: 'Settings',
 });
 
 /** The copy for one Product language. There is no default language, exactly as T-08 refuses one. */

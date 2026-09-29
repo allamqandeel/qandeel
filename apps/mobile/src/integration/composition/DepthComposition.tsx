@@ -18,11 +18,21 @@
  * Android's system Back is the same act as the Analysis band's «المحادثة» / Conversation control: at
  * the Analysis depth it returns to the Conversation through the same boundary, and it pushes and pops
  * nothing. At the Conversation depth this owner does not listen for Back at all, so the platform's own
- * root behaviour is untouched.
+ * root behaviour is untouched — except while General Settings is shown (below).
+ *
+ * W3-01 — appearance and General Settings:
+ *
+ *   - the Conversation paints in the reader's effective appearance; the Analysis depth stands inside
+ *     `AnalysisAppearanceScope`, so it is the same dark place under Dark, Light and System (P1 §12.2), and
+ *     the boundary between them is F2's existing cross-fade, unchanged;
+ *   - General Settings (P4-C1 S-B) opens from the Conversation's Personal row and is shown OVER the
+ *     Conversation, which stays mounted — hidden from assistive technology and touch — so Back (the
+ *     control or Android's system Back) returns to exactly the same Personal state. Opening it dispatches
+ *     nothing, writes no canonical state, pushes no route, builds no Session and persists nothing. It is
+ *     reachable only from the Conversation depth: never from the Analysis.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
 import Animated, { useAnimatedStyle, useFrameCallback, useReducedMotion, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
@@ -34,6 +44,8 @@ import {
   DEPTH_CROSSFADE_REDUCED_MOTION_MS,
 } from '../../conversation';
 import { ConversationOpening, FirstUseGate } from '../../account';
+import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
+import { SettingsSurface } from '../../settings';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
@@ -71,9 +83,14 @@ export interface DepthCompositionProps {
   readonly insets: ResponsiveInsets;
   readonly fontScale: number;
   readonly envelope: { readonly width: number; readonly height: number };
+  /**
+   * W3-01 (E2E-D-07): this device's Sign out — the frozen auth authority's own, handed down unchanged.
+   * Without it (a composition rendered on its own) the Personal row offers no Settings entry.
+   */
+  readonly onSignOut?: () => Promise<unknown>;
 }
 
-export function DepthComposition({ runtime, locale, insets, fontScale, envelope }: DepthCompositionProps) {
+export function DepthComposition({ runtime, locale, insets, fontScale, envelope, onSignOut }: DepthCompositionProps) {
   // The safe-area edges as numbers: T-11's inset type allows an absent edge, which is zero.
   const edges = useMemo(
     () => ({ top: insets.top ?? 0, right: insets.right ?? 0, bottom: insets.bottom ?? 0, left: insets.left ?? 0 }),
@@ -83,6 +100,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
   const [leaving, setLeaving] = useState<WorldDepth | null>(null);
   // Focus follows the reader across the boundary only when THEY crossed it, never on first arrival.
   const [crossed, setCrossed] = useState(false);
+  // W3-01 — General Settings, a local presentation choice over the Personal Conversation. `returned` moves
+  // the screen reader back to the entry only when the reader came back from Settings.
+  const [settingsShown, setSettingsShown] = useState(false);
+  const [returnedFromSettings, setReturnedFromSettings] = useState(false);
   const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
   const reduceMotion = useReducedMotion();
   const incoming = useSharedValue(1);
@@ -130,6 +151,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
     (to: WorldDepth) => {
       if (to === depth) return;
       setCrossed(true);
+      setReturnedFromSettings(false);
       const duration = reduceMotion ? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;
       // A fade still running toward the other depth stops here; its frames are not reused.
       fading.set(0);
@@ -165,6 +187,24 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
     return () => subscription.remove();
   }, [cross, depth]);
 
+  const openSettings = useCallback(() => {
+    setReturnedFromSettings(false);
+    setSettingsShown(true);
+  }, []);
+  const closeSettings = useCallback(() => {
+    setSettingsShown(false);
+    setReturnedFromSettings(true);
+  }, []);
+  // Android system Back while Settings is shown is Settings' own Back, and nothing else.
+  useEffect(() => {
+    if (!settingsShown) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeSettings();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [closeSettings, settingsShown]);
+
   const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
 
   const layer = (which: WorldDepth, current: boolean): ReactNode =>
@@ -176,32 +216,36 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
         onOpenAnalysis={() => cross('ANALYSIS')}
         focusDepthControl={crossed && current}
         opening={<ConversationOpening account={runtime.account} language={locale.language} />}
+        onOpenSettings={onSignOut === undefined ? undefined : openSettings}
+        focusSettingsEntry={returnedFromSettings && !settingsShown}
       />
     ) : (
-      <View style={styles.fill}>
-        {/*
-          The band comes FIRST, so it is read first, and it is drawn above the world. The world treats
-          it exactly as it treats the status bar: the band's measured height is the world's top inset,
-          so T-11 keeps everything the reader must see out from under it.
-        */}
-        <View style={styles.band}>
-          <AnalysisReturnBar
-            language={locale.language}
-            insets={edges}
-            onReturnToConversation={() => cross('CONVERSATION')}
-            onHeight={setBandHeight}
-            focusControl={crossed && current}
+      <AnalysisAppearanceScope>
+        <View style={styles.fill}>
+          {/*
+            The band comes FIRST, so it is read first, and it is drawn above the world. The world treats
+            it exactly as it treats the status bar: the band's measured height is the world's top inset,
+            so T-11 keeps everything the reader must see out from under it.
+          */}
+          <View style={styles.band}>
+            <AnalysisReturnBar
+              language={locale.language}
+              insets={edges}
+              onReturnToConversation={() => cross('CONVERSATION')}
+              onHeight={setBandHeight}
+              focusControl={crossed && current}
+            />
+          </View>
+          <LivingAnalysisMap
+            runtime={runtime}
+            locale={locale}
+            insets={analysisInsets}
+            fontScale={fontScale}
+            envelope={envelope}
+            onComposed={current ? beginFade : undefined}
           />
         </View>
-        <LivingAnalysisMap
-          runtime={runtime}
-          locale={locale}
-          insets={analysisInsets}
-          fontScale={fontScale}
-          envelope={envelope}
-          onComposed={current ? beginFade : undefined}
-        />
-      </View>
+      </AnalysisAppearanceScope>
     );
 
   const stack: WorldDepth[] = leaving === null ? [depth] : [leaving, depth];
@@ -211,13 +255,21 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
     <FirstUseGate account={runtime.account} language={locale.language} insets={edges}>
       <View style={styles.fill} testID="qandeel-world-depth">
         {/*
-          G3 K18 — status-region legibility against the ground actually painted behind it. Both depths
-          stand on the Dark World (P1's default for the Conversation; the Analysis shell is dark), so the
-          platform status content is light while this world is composed, whatever the system appearance.
+          G3 K18 — status-region legibility against the ground actually painted behind it. W3-01: the
+          Conversation's ground is the reader's effective appearance, and the Analysis is the dark place
+          under every preference, so the ONE status-bar decision is made for the depth on screen.
         */}
-        <StatusBar style="light" />
+        {depth === 'ANALYSIS' ? (
+          <AnalysisAppearanceScope>
+            <AppearanceStatusBar />
+          </AnalysisAppearanceScope>
+        ) : (
+          <AppearanceStatusBar />
+        )}
         {stack.map((which) => {
           const current = which === depth;
+          // Beneath General Settings the Personal world stays mounted, untouched, and out of reach.
+          const reachable = current && !settingsShown;
           return (
             <Animated.View
               key={which}
@@ -225,14 +277,19 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope 
               style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
               // The Analysis world reports its own composition instead (see `beginFade`).
               onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
-              pointerEvents={current ? 'auto' : 'none'}
-              importantForAccessibility={current ? 'auto' : 'no-hide-descendants'}
-              accessibilityElementsHidden={!current}
+              pointerEvents={reachable ? 'auto' : 'none'}
+              importantForAccessibility={reachable ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={!reachable}
             >
               {layer(which, current)}
             </Animated.View>
           );
         })}
+        {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <View style={StyleSheet.absoluteFill}>
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} />
+          </View>
+        ) : null}
       </View>
     </FirstUseGate>
   );

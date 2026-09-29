@@ -56,7 +56,9 @@ test('§2 — every approved string is in the one copy module, verbatim', () => 
 
 test('§2 — the copy module contains no string the Product Owner did not approve', () => {
   const copy = code(read(`${LAYER}/copy.ts`));
-  const approved = new Set([...APPROVED.ar, ...APPROVED.en]);
+  // W3-01 RE-ANCHOR: the Personal Settings entry's accessible name joins this table — «الإعدادات» / Settings,
+  // FROZEN (P4-C3 registry `settings`, CANON). No other string is added; W3-01's own contract pins it.
+  const approved = new Set([...APPROVED.ar, ...APPROVED.en, 'الإعدادات', 'Settings']);
   for (const match of copy.matchAll(/(['"`])((?:(?!\1)[^\\]|\\.)*)\1/gu)) {
     const literal = match[2];
     if (literal === 'ar' || literal.startsWith('../')) continue;
@@ -273,13 +275,19 @@ test('§6 — the depth pair lands in the Conversation, persists nothing, dispat
 // ---------------------------------------------------------------------------------------------
 
 test('§7 — no Voice, Replay, Activity, Settings, Understanding, Global Shell, Shared or Public, and no cancel', () => {
-  const layer = LAYER_PRODUCTION.map((file) => code(read(file))).join('\n').toLowerCase();
+  // W3-01 RE-ANCHOR. The permanent claim is that W1A-01 implements none of these. W3-01 (P4-C1 S-B) later put the
+  // ONE General Settings ENTRY on the Conversation's Personal row, and nothing else of Settings in this layer: the
+  // destination is its own layer. Only those named W3-01 identifiers are removed before the scan, so any other
+  // Settings code in this layer is still caught.
+  const W3_01_ENTRY = /settingsName|onOpenSettings|focusSettingsEntry|settingsRef|qandeel-settings-entry|name="settings"|'Settings'|"settings": \{/gu;
+  const layer = LAYER_PRODUCTION.map((file) => code(read(file)).replace(W3_01_ENTRY, '')).join('\n').toLowerCase();
   for (const outside of ['replay', 'voice', 'microphone', 'activity', 'settings', 'understanding', 'switcher', 'shared', 'public', 'cancelturn', '/cancel']) {
     assert.equal(layer.includes(outside), false, `W1A-01 does not implement ${outside}`);
   }
   const generated = read(`${LAYER}/visual/canonical-visual.generated.ts`);
   const glyphs = generated.slice(generated.indexOf('"glyphs"'), generated.indexOf('"type"'));
-  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back'], 'only the three W1A glyphs are ported');
+  // The three W1A glyphs, plus W3-01's P2 `settings` utility glyph for the S-B entry.
+  assert.deepEqual([...glyphs.matchAll(/\n {4}"(\w+)": \{/gu)].map((m) => m[1]), ['send', 'depth', 'back', 'settings'], 'only the W1A glyphs and W3-01’s settings glyph are ported');
 });
 
 // ---------------------------------------------------------------------------------------------

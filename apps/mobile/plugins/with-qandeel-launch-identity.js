@@ -8,9 +8,14 @@
 //   2. makes the launch ground the QANDEEL World — Light #efeeeb, Dark #101010 (F2 FINAL / A3R2) — on the
 //      Android 12+ system splash and the first app-owned Android window, and as the only content of the iOS
 //      Launch Screen (Info.plist `UILaunchScreen` / `UIColorName`, R2);
-//   3. keeps the first app-owned iOS pixels the World instead of React Native's default systemBackgroundColor;
-//   4. sets the Android application night mode to the effective QANDEEL appearance, so the system splash
-//      follows it (P4-C3R §1).
+//   3. keeps the first app-owned iOS pixels the World instead of React Native's default systemBackgroundColor.
+//
+// The Android application night mode — which the system splash follows (P4-C3R §1) — is no longer set here.
+// W2-02 declared it as the constant MODE_NIGHT_YES in MainApplication.onCreate because no preference existed;
+// W3-01 (its named carry-forward owner) replaced that constant with the reader's Dark / Light / System
+// preference, applied at runtime by the local Expo module `modules/qandeel-app-appearance` whenever the
+// effective choice is bound or changes. The platform persists it, so re-declaring a constant on every launch
+// would now CONTRADICT a saved Light or System choice; this plugin therefore writes no night-mode code at all.
 //
 // Why a plugin and not Expo's `icon` / `android.adaptiveIcon` config (W2-02 §6 Option A): Expo 57 re-encodes
 // every Android layer to WebP from one source image, accepts only a RASTER monochrome layer (I-08B2.5's is a
@@ -25,7 +30,8 @@
 // World colour asset. Every other change is a typed mod.
 //
 // It adds no timer, no minimum duration, no second splash, no Q / logo / text on the iOS Launch Screen, no
-// Lantern content, and no appearance preference. QAN-BL-LANTERN-01 and the W3 appearance setting are untouched.
+// Lantern content, and no appearance preference. QAN-BL-LANTERN-01 and the W3 appearance setting are untouched
+// by this plugin (the W3 setting lives in the app and its local module, not here).
 /* global __dirname -- a config plugin runs in Node during `expo prebuild`, never in the app bundle */
 const fs = require('node:fs');
 const path = require('node:path');
@@ -37,7 +43,6 @@ const {
   withAppDelegate,
   withDangerousMod,
   withInfoPlist,
-  withMainApplication,
   withXcodeProject,
 } = require('expo/config-plugins');
 
@@ -65,32 +70,19 @@ const ANDROID_TEMPLATE_RESOURCES_REMOVED = Object.freeze([
 ]);
 const ANDROID_TEMPLATE_COLORS_REMOVED = Object.freeze(['splashscreen_background']);
 
-const NIGHT_MODE_BEGIN = '// @qandeel-w2-02 application-night-mode begin';
-const NIGHT_MODE_END = '// @qandeel-w2-02 application-night-mode end';
 const ROOT_VIEW_BEGIN = '// @qandeel-w2-02 root-view-world begin';
 const ROOT_VIEW_END = '// @qandeel-w2-02 root-view-world end';
-
-const NIGHT_MODE_BLOCK = [
-  `    ${NIGHT_MODE_BEGIN}`,
-  '    // P4-C3R §1: the Android 12+ system splash follows the EFFECTIVE QANDEEL appearance through the platform',
-  '    // application night mode, which the platform itself persists. Production has no appearance preference yet',
-  '    // (P1 §12 is W3\'s), and both P1\'s new-user default and the only appearance production renders are Dark,',
-  '    // so the effective mode is DARK. W3 replaces this constant with the user\'s Dark / Light / System choice.',
-  '    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {',
-  '      getSystemService(android.app.UiModeManager::class.java)',
-  '        ?.setApplicationNightMode(android.app.UiModeManager.MODE_NIGHT_YES)',
-  '    }',
-  `    ${NIGHT_MODE_END}`,
-].join('\n');
 
 const ROOT_VIEW_BLOCK = [
   `  ${ROOT_VIEW_BEGIN}`,
   '  // The first app-owned pixels are the QANDEEL World, never React Native\'s default systemBackgroundColor',
-  '  // (white on a Light device). Dark #101010 is the only appearance production renders (P1 §12 default); W3',
-  '  // makes it follow the user\'s appearance. The system Launch Screen before it follows the device (P4-C3R §1).',
+  '  // (white on a Light device). W3-01 (the W2-02 carry-forward): non-Analysis surfaces can now be Light, so',
+  '  // the ground is the World colour asset, resolved for the view\'s own appearance — the device\'s before the',
+  '  // app declares the reader\'s choice, the reader\'s after. The Launch Screen before it follows the device',
+  '  // (P4-C3R §1). The Dark World stands in only if the asset could not be found.',
   '  override func customize(_ rootView: UIView) {',
   '    super.customize(rootView)',
-  '    rootView.backgroundColor = UIColor(red: 16.0 / 255.0, green: 16.0 / 255.0, blue: 16.0 / 255.0, alpha: 1.0)',
+  `    rootView.backgroundColor = UIColor(named: "${IOS_WORLD_COLOR}") ?? UIColor(red: 16.0 / 255.0, green: 16.0 / 255.0, blue: 16.0 / 255.0, alpha: 1.0)`,
   '  }',
   `  ${ROOT_VIEW_END}`,
 ].join('\n');
@@ -114,16 +106,6 @@ function upsertGeneratedBlock(source, { anchor, begin, end, block, label }) {
   const lineEnd = source.indexOf('\n', at);
   if (lineEnd === -1) return `${source}\n${block}\n`;
   return `${source.slice(0, lineEnd + 1)}${block}\n${source.slice(lineEnd + 1)}`;
-}
-
-function applyApplicationNightMode(source) {
-  return upsertGeneratedBlock(source, {
-    anchor: 'super.onCreate()',
-    begin: NIGHT_MODE_BEGIN,
-    end: NIGHT_MODE_END,
-    block: NIGHT_MODE_BLOCK,
-    label: 'the application night mode',
-  });
 }
 
 function applyRootViewWorld(source) {
@@ -287,11 +269,6 @@ const withQandeelLaunchIdentity = (config) => {
     modConfig.modResults = setWorldStyles(modConfig.modResults);
     return modConfig;
   });
-  config = withMainApplication(config, (modConfig) => {
-    if (modConfig.modResults.language !== 'kt') throw new Error('W2-02: MainApplication is expected to be Kotlin');
-    modConfig.modResults.contents = applyApplicationNightMode(modConfig.modResults.contents);
-    return modConfig;
-  });
   config = withDangerousMod(config, [
     'ios',
     (modConfig) => {
@@ -324,9 +301,7 @@ module.exports.internals = Object.freeze({
   ANDROID_TEMPLATE_COLORS_REMOVED,
   VENDORED_ANDROID_RES,
   VENDORED_IOS_APP_ICON_SET,
-  NIGHT_MODE_BEGIN,
   ROOT_VIEW_BEGIN,
-  applyApplicationNightMode,
   applyRootViewWorld,
   applyLaunchScreen,
   removeTemplateLaunchStoryboard,

@@ -124,8 +124,15 @@ test('§2 — the T-13 owner is exactly its authorized production surface, with 
 test('§2 — Product recovery and auth persistence are two stores, two files, and two vocabularies', () => {
   // Exactly two production modules in the whole app may name the storage mechanism: the auth store
   // (T-12P) and the Product recovery store (T-13). A third would be a third persistence boundary.
+  // W3-01 RE-ANCHOR: W3-01 added that third boundary deliberately — the device-local, per-identity appearance
+  // preference, in its OWN database file — and names it here; any fourth is still refused. It holds neither auth
+  // material nor Product recovery truth (W3-01's contract pins its database name and vocabulary).
+  const APPEARANCE_STORAGE = 'apps/mobile/src/appearance/appearance-storage.ts';
   const storageUsers = mobileProduction.filter((file) => /expo-sqlite|SQLiteStorage/u.test(stripComments(read(file))));
-  assert.deepEqual(storageUsers, [`${INTEGRATION_DIR}`.replace(INTEGRATION_DIR, RECOVERY_STORAGE), AUTH_STORAGE].sort(), 'exactly the two storage modules');
+  assert.deepEqual(storageUsers, [`${INTEGRATION_DIR}`.replace(INTEGRATION_DIR, RECOVERY_STORAGE), AUTH_STORAGE, APPEARANCE_STORAGE].sort(), 'exactly the three storage modules');
+  const appearanceStorage = stripComments(read(APPEARANCE_STORAGE));
+  assert.doesNotMatch(appearanceStorage, /accessToken|refresh_token|supabase|sessionId|viewpoint|checkpoint/iu, 'the appearance store holds a preference only');
+  assert.match(appearanceStorage, /APPEARANCE_DATABASE_NAME = 'qandeel-appearance\.db'/u, 'in its own database file');
 
   // Two database files, pinned, and different.
   assert.match(authStorage, /export const AUTH_SESSION_DATABASE_NAME = 'qandeel-auth-session\.db';/u);

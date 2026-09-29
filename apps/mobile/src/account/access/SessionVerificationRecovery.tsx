@@ -16,7 +16,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, View } from 'react-native';
-import { StatusBar } from 'expo-status-bar';
+import { AppearanceStatusBar } from '../../appearance';
 
 import { useConversationTypeface, usePalette } from '../../conversation';
 import type { MobileAuthAuthority } from '../../runtime-entry';
@@ -63,7 +63,7 @@ export function SessionVerificationRecovery({ auth, locale }: SessionVerificatio
 
   return (
     <View testID={SESSION_UNVERIFIED_TEST_ID} style={{ flex: 1, backgroundColor: palette.world }}>
-      <StatusBar style="light" />
+      <AppearanceStatusBar />
       {ready ? (
         <EntryFrame locale={locale} testID="qandeel-session-unverified-frame">
           <View accessibilityLiveRegion="polite">

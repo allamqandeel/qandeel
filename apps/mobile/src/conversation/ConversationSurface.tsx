@@ -11,7 +11,11 @@
  *     there are words to send;
  *   - every paragraph takes its OWN direction from its words, independently of its speaker's side;
  *   - the only upper chrome is the Conversation → Analysis depth control (B-07). No Activity,
- *     Replay, Understanding, Settings, Global Shell, Voice or Shared/Public entry is here.
+ *     Replay, Understanding, Settings, Global Shell, Voice or Shared/Public entry is here;
+ *   - W3-01 (P4-C1 S-B): beneath the upper chrome, Personal QANDEEL's own row carries the ONE General
+ *     Settings entry — icon-only, 44 × 44, at the reader's END edge, drawn only when the Personal world
+ *     supplies it. It is never in the upper chrome and never in the Analysis. The row is where the later
+ *     QANDEEL Understanding entry (U-A) will also stand; nothing else is in it now.
  *
  * The surface lays itself out in an explicit left-to-right frame and places every element on a
  * PHYSICAL side computed from the reader's language. That is what makes the frozen side rule
@@ -68,10 +72,19 @@ export interface ConversationSurfaceProps {
    * committed turn. This layer writes none of its words.
    */
   readonly opening?: ReactElement | null;
+  /**
+   * W3-01 (E2E-D-01): open the one General Settings destination. Supplied only by the Personal QANDEEL
+   * world; without it the Personal row is not drawn at all.
+   */
+  readonly onOpenSettings?: () => void;
+  /** Move screen-reader focus to the Settings entry once, when returning from Settings. */
+  readonly focusSettingsEntry?: boolean;
 }
 
 /** G1.1 / G3.2 proof geometry, in points. Craft values of the frozen composition, not tokens. */
 const HEADER_MIN_HEIGHT = 48;
+/** P4-C1 S-B proof geometry: the Personal row beneath the upper chrome, one 44 pt target high. */
+const PERSONAL_ROW_HEIGHT = 44;
 const THREAD_GUTTER = 24;
 const SLAB_END_INSET = 40;
 const REPLY_END_INSET = 48;
@@ -192,7 +205,16 @@ function ExchangeRow({ exchange, copy, palette, language, contentWidth }: {
   );
 }
 
-export function ConversationSurface({ controller, language, insets, onOpenAnalysis, focusDepthControl = false, opening }: ConversationSurfaceProps) {
+export function ConversationSurface({
+  controller,
+  language,
+  insets,
+  onOpenAnalysis,
+  focusDepthControl = false,
+  opening,
+  onOpenSettings,
+  focusSettingsEntry = false,
+}: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const palette = usePalette();
@@ -274,6 +296,14 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
     if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
   }, [focusDepthControl, ready]);
 
+  // W3-01: returning from Settings puts the reader back on the entry they left from.
+  const settingsRef = useRef<View | null>(null);
+  useEffect(() => {
+    if (!focusSettingsEntry || !ready) return;
+    const node = settingsRef.current === null ? null : findNodeHandle(settingsRef.current);
+    if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
+  }, [focusSettingsEntry, ready]);
+
   if (!ready) {
     // The faces are bundled and register in a moment; until then the World shows and nothing else.
     return <View style={{ flex: 1, backgroundColor: palette.world }} testID={CONVERSATION_SURFACE_TEST_ID} />;
@@ -348,6 +378,39 @@ export function ConversationSurface({ controller, language, insets, onOpenAnalys
           </View>
         </Control>
       </View>
+
+      {/*
+        W3-01 — Personal QANDEEL's own row (P4-C1 S-B), directly beneath the upper chrome and on the World:
+        no card and no surface of its own. The General Settings entry stands at the reader's END edge,
+        icon-only in the rest ink, and carries its approved name.
+      */}
+      {onOpenSettings === undefined ? null : (
+        <View
+          testID="qandeel-personal-row"
+          style={{
+            paddingLeft: insets.left + 10,
+            paddingRight: insets.right + 10,
+            height: PERSONAL_ROW_HEIGHT,
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: endSide === 'right' ? 'flex-end' : 'flex-start',
+          }}
+        >
+          <Control
+            palette={palette}
+            language={language}
+            accessibilityLabel={copy.settingsName}
+            onPress={onOpenSettings}
+            testID="qandeel-settings-entry"
+            controlRef={(node) => {
+              settingsRef.current = node;
+            }}
+            style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}
+          >
+            <Glyph name="settings" color={palette.restInk} direction={fallback} />
+          </Control>
+        </View>
+      )}
 
       <FlatList
         ref={list}

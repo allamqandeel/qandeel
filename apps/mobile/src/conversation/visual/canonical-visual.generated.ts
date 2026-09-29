@@ -3,6 +3,7 @@
  *
  * W1A-01: the Conversation surface's visual constants, resolved from the frozen canonical sources and
  * never copied from prose. Regenerate after any source changes; the W1A-01 contract fails on drift.
+ * W3-01: the Light family beside the Dark one, from the same resolver and the frozen Light token files.
  *
  * Sources (sha256):
  *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/src/tokens.mjs  435f4dafa44be9045b07669bdb485385b7d51b07ea08713031b2b94a6de21911
@@ -18,7 +19,36 @@
  *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/dark/d2r.dark.illumination.tokens.json  688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157
  *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/dark/e1.dark.interaction.tokens.json  397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252
  *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/dark/f1.dark.accessibility.tokens.json  3d2fbcca824255c5da8ee234f572f35bad68f143c47424ccc0057ad7e7407176
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/light/b4r.light.tokens.json  8176490548ca7105f4b3a20f5c72c298d6de0c14289743887f411e3c4ab0ab0e
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/light/c3.light.material.tokens.json  f8066672414cefe95d46105620ca1b6e48d6f42fc44c715e69d60e99d280572d
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/light/d2r.light.illumination.tokens.json  6d74182584c420182ec004db3ba3097923aff6f16cb42138214c580c52a47260
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/light/e1.light.interaction.tokens.json  1c408ba0ac42a9241e8b6a0697a692606a7461f2fa864ef526146cf231fd0393
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/light/f1.light.accessibility.tokens.json  2b3861432472683aa2bd9f9199463da52502a7ba746d620cbfaa827122975952
  *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/contrast/f1.dark.increased.tokens.json  5b27d13790e0ce051822c226aa8f3c11cac04467156210f9469c229f391c8f2a
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/contrast/f2.light.increased.tokens.json  a382d1a486be780f9c6419347e3f24fcf832bdb3d68607bbf0975a1ee9b2224b
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tools/f2-resolve.mjs  def095f5b5da30d97f770df71d8cbd5b04f691843f465062d0b756a91777f806
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/c3/b4r/semantic.tokens.json  2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/c3/tokens/base/material.tokens.json  bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/d2r/tokens/base/illumination.tokens.json  2d32bf8987016d7d21b226b4c9111b5e38f8786397badc37dd4cd9655cf230b4
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/e1/tokens/base/interaction.tokens.json  6be98e6d270db5d8b2313165de51ec75b49a923faf4b16a833ad9db84106cbce
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/tokens/base/accessibility.tokens.json  dd47c43cb72eb306f2b701a883ce7c48e280f4d8bcfbf00664d0abca681e35cc
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/base/appearance.tokens.json  513f5dfa419e1a5b7c5729e7b062ea282c32df0a3284e73596bc10b9e652cadc
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/c3/b4r/dark.tokens.json  4641f1bcbf1c12473d74ddaa77a39e5bea4314d47753d40bfded0b2e347e1112
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/c3/tokens/appearance/dark.material.tokens.json  55c56ab78358d8a3353a8794887e31a9194578ab2731f4659d7c6de42df9a367
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/d2r/tokens/appearance/dark.illumination.tokens.json  688bad2f79ac7b22fdefe4b94f4c07a08b5c249bdcb84327e9df2ff82a565157
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/e1/tokens/appearance/dark.interaction.tokens.json  397c5e89d534baffd5863136656ded7d8c3b31ef5ec2c0ba0899bc40b5947252
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/tokens/appearance/dark.accessibility.tokens.json  3d2fbcca824255c5da8ee234f572f35bad68f143c47424ccc0057ad7e7407176
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/appearance/dark/f2.dark.illumination-technique.tokens.json  93b5fa8138c6ce9dea047f2ab34ba7c1a8c4de8aa9b89b2ac6da22c8ca4441c9
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/c3/b4r/standard.tokens.json  0916a7a5520e0f3696fd0c7420665bb86298171c79aef3634e0475627da6116a
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/tokens/transparency/full.accessibility.tokens.json  4551473f1fee8f6451e28d1c00bc4b5de66f2a5bfec6f6199c83ce7ec6bd90c5
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/tokens/contrast/increased.accessibility.tokens.json  5b27d13790e0ce051822c226aa8f3c11cac04467156210f9469c229f391c8f2a
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/appearance/light/b4r.light.tokens.json  8176490548ca7105f4b3a20f5c72c298d6de0c14289743887f411e3c4ab0ab0e
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/appearance/light/c3.light.material.tokens.json  f8066672414cefe95d46105620ca1b6e48d6f42fc44c715e69d60e99d280572d
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/appearance/light/d2r.light.illumination.tokens.json  6d74182584c420182ec004db3ba3097923aff6f16cb42138214c580c52a47260
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/appearance/light/e1.light.interaction.tokens.json  1c408ba0ac42a9241e8b6a0697a692606a7461f2fa864ef526146cf231fd0393
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/appearance/light/f1.light.accessibility.tokens.json  2b3861432472683aa2bd9f9199463da52502a7ba746d620cbfaa827122975952
+ *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tokens/contrast/light.increased.tokens.json  a382d1a486be780f9c6419347e3f24fcf832bdb3d68607bbf0975a1ee9b2224b
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/vendor/tokens/base/g11.utterance.alias.tokens.json  bdc05957547f28786ff0d3388b5e4c4f0ce8bfafbd548e8d763b525d01fd033b
  *   docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/source/src/sig.mjs  960ecd84edd75da91ee6a7c391504bb0ee4f15b92c8bea120847289caca4dde2
  *   docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/source/src/utility.mjs  5ab7bad45019e33d85f455b9c3f19e403aaf1d591a8ebee344182ab3017c5df9
  *   docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/source/vendor/utility/utility-glyphs.json  54d059f63b92988ae06e7e37a44eee24e71775e76206b4d0f0f1b9c1ffbfea23
@@ -26,53 +56,121 @@
  */
 
 export const CANONICAL_VISUAL = {
-  "palette": {
-    "standard": {
-      "world": "#101010",
-      "field": "#181818",
-      "utterance": "#181818",
-      "primary": "#d8d5ca",
-      "secondary": "#afaca3",
-      "tertiary": "#8b8982",
-      "restInk": "#8b8982",
-      "pressedInk": "#d8d5ca",
-      "pressedPresence": 0.1,
-      "focusIndicator": "#d8d5ca",
-      "focusCompanion": "#101010",
-      "focusThickness": 2,
-      "focusCompanionThickness": 1,
-      "focusOffset": 2,
-      "error": "#fe907e",
-      "routes": {
-        "world": "qandeel.world.fill → qandeel.expression.world",
-        "field": "qandeel.role.field.fill → qandeel.surface.functional → qandeel.expression.surface",
-        "utterance": "qandeel.role.utterance.fill → qandeel.surface.functional → qandeel.expression.surface",
-        "restInk": "qandeel.state.rest.ink → qandeel.control.functional → qandeel.content.tertiary → qandeel.expression.content.tertiary",
-        "error": "qandeel.status.error.ink → qandeel.expression.status.error"
+  "palettes": {
+    "DARK": {
+      "standard": {
+        "world": "#101010",
+        "field": "#181818",
+        "utterance": "#181818",
+        "primary": "#d8d5ca",
+        "secondary": "#afaca3",
+        "tertiary": "#8b8982",
+        "restInk": "#8b8982",
+        "pressedInk": "#d8d5ca",
+        "pressedPresence": 0.1,
+        "focusIndicator": "#d8d5ca",
+        "focusCompanion": "#101010",
+        "focusThickness": 2,
+        "focusCompanionThickness": 1,
+        "focusOffset": 2,
+        "error": "#fe907e",
+        "selectedInk": "#d8d5ca",
+        "selectedMarker": "#d8d5ca",
+        "markerThickness": 2,
+        "routes": {
+          "world": "qandeel.world.fill → qandeel.expression.world",
+          "field": "qandeel.role.field.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "utterance": "qandeel.role.utterance.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "restInk": "qandeel.state.rest.ink → qandeel.control.functional → qandeel.content.tertiary → qandeel.expression.content.tertiary",
+          "error": "qandeel.status.error.ink → qandeel.expression.status.error",
+          "selectedMarker": "qandeel.state.selected.marker → qandeel.content.primary → qandeel.expression.content.primary"
+        }
+      },
+      "increased": {
+        "world": "#101010",
+        "field": "#181818",
+        "utterance": "#181818",
+        "primary": "#d8d5ca",
+        "secondary": "#afaca3",
+        "tertiary": "#8b8982",
+        "restInk": "#afaca3",
+        "pressedInk": "#d8d5ca",
+        "pressedPresence": 0.1,
+        "focusIndicator": "#d8d5ca",
+        "focusCompanion": "#101010",
+        "focusThickness": 3,
+        "focusCompanionThickness": 1,
+        "focusOffset": 2,
+        "error": "#fe907e",
+        "selectedInk": "#d8d5ca",
+        "selectedMarker": "#d8d5ca",
+        "markerThickness": 2,
+        "routes": {
+          "world": "qandeel.world.fill → qandeel.expression.world",
+          "field": "qandeel.role.field.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "utterance": "qandeel.role.utterance.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "restInk": "qandeel.state.rest.ink → qandeel.control.functional → qandeel.content.secondary → qandeel.expression.content.secondary",
+          "error": "qandeel.status.error.ink → qandeel.expression.status.error",
+          "selectedMarker": "qandeel.state.selected.marker → qandeel.content.primary → qandeel.expression.content.primary"
+        }
       }
     },
-    "increased": {
-      "world": "#101010",
-      "field": "#181818",
-      "utterance": "#181818",
-      "primary": "#d8d5ca",
-      "secondary": "#afaca3",
-      "tertiary": "#8b8982",
-      "restInk": "#afaca3",
-      "pressedInk": "#d8d5ca",
-      "pressedPresence": 0.1,
-      "focusIndicator": "#d8d5ca",
-      "focusCompanion": "#101010",
-      "focusThickness": 3,
-      "focusCompanionThickness": 1,
-      "focusOffset": 2,
-      "error": "#fe907e",
-      "routes": {
-        "world": "qandeel.world.fill → qandeel.expression.world",
-        "field": "qandeel.role.field.fill → qandeel.surface.functional → qandeel.expression.surface",
-        "utterance": "qandeel.role.utterance.fill → qandeel.surface.functional → qandeel.expression.surface",
-        "restInk": "qandeel.state.rest.ink → qandeel.control.functional → qandeel.content.secondary → qandeel.expression.content.secondary",
-        "error": "qandeel.status.error.ink → qandeel.expression.status.error"
+    "LIGHT": {
+      "standard": {
+        "world": "#efeeeb",
+        "field": "#e7e6e3",
+        "utterance": "#e7e6e3",
+        "primary": "#29271f",
+        "secondary": "#47443c",
+        "tertiary": "#626059",
+        "restInk": "#626059",
+        "pressedInk": "#29271f",
+        "pressedPresence": 0.1,
+        "focusIndicator": "#29271f",
+        "focusCompanion": "#efeeeb",
+        "focusThickness": 2,
+        "focusCompanionThickness": 1,
+        "focusOffset": 2,
+        "error": "#ad4739",
+        "selectedInk": "#29271f",
+        "selectedMarker": "#29271f",
+        "markerThickness": 2,
+        "routes": {
+          "world": "qandeel.world.fill → qandeel.expression.world",
+          "field": "qandeel.role.field.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "utterance": "qandeel.role.utterance.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "restInk": "qandeel.state.rest.ink → qandeel.control.functional → qandeel.content.tertiary → qandeel.expression.content.tertiary",
+          "error": "qandeel.status.error.ink → qandeel.expression.status.error",
+          "selectedMarker": "qandeel.state.selected.marker → qandeel.content.primary → qandeel.expression.content.primary"
+        }
+      },
+      "increased": {
+        "world": "#efeeeb",
+        "field": "#e7e6e3",
+        "utterance": "#e7e6e3",
+        "primary": "#29271f",
+        "secondary": "#47443c",
+        "tertiary": "#626059",
+        "restInk": "#47443c",
+        "pressedInk": "#29271f",
+        "pressedPresence": 0.1,
+        "focusIndicator": "#29271f",
+        "focusCompanion": "#efeeeb",
+        "focusThickness": 3,
+        "focusCompanionThickness": 1,
+        "focusOffset": 2,
+        "error": "#ad4739",
+        "selectedInk": "#29271f",
+        "selectedMarker": "#29271f",
+        "markerThickness": 2,
+        "routes": {
+          "world": "qandeel.world.fill → qandeel.expression.world",
+          "field": "qandeel.role.field.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "utterance": "qandeel.role.utterance.fill → qandeel.surface.functional → qandeel.expression.surface",
+          "restInk": "qandeel.state.rest.ink → qandeel.control.functional → qandeel.content.secondary → qandeel.expression.content.secondary",
+          "error": "qandeel.status.error.ink → qandeel.expression.status.error",
+          "selectedMarker": "qandeel.state.selected.marker → qandeel.content.primary → qandeel.expression.content.primary"
+        }
       }
     }
   },
@@ -112,6 +210,21 @@ export const CANONICAL_VISUAL = {
       "strokes": [
         {
           "d": "M9.00005 6C9.00005 6 15 10.4189 15 12C15 13.5812 9 18 9 18",
+          "strokeWidth": 1.66
+        }
+      ],
+      "dots": []
+    },
+    "settings": {
+      "size": 22,
+      "mirrorsInRtl": false,
+      "strokes": [
+        {
+          "d": "M21.3175 7.14139L20.8239 6.28479C20.4506 5.63696 20.264 5.31305 19.9464 5.18388C19.6288 5.05472 19.2696 5.15664 18.5513 5.36048L17.3311 5.70418C16.8725 5.80994 16.3913 5.74994 15.9726 5.53479L15.6357 5.34042C15.2766 5.11043 15.0004 4.77133 14.8475 4.37274L14.5136 3.37536C14.294 2.71534 14.1842 2.38533 13.9228 2.19657C13.6615 2.00781 13.3143 2.00781 12.6199 2.00781H11.5051C10.8108 2.00781 10.4636 2.00781 10.2022 2.19657C9.94085 2.38533 9.83106 2.71534 9.61149 3.37536L9.27753 4.37274C9.12465 4.77133 8.84845 5.11043 8.48937 5.34042L8.15249 5.53479C7.73374 5.74994 7.25259 5.80994 6.79398 5.70418L5.57375 5.36048C4.85541 5.15664 4.49625 5.05472 4.17867 5.18388C3.86109 5.31305 3.67445 5.63696 3.30115 6.28479L2.80757 7.14139C2.45766 7.74864 2.2827 8.05227 2.31666 8.37549C2.35061 8.69871 2.58483 8.95918 3.05326 9.48012L4.0843 10.6328C4.3363 10.9518 4.51521 11.5078 4.51521 12.0077C4.51521 12.5078 4.33636 13.0636 4.08433 13.3827L3.05326 14.5354C2.58483 15.0564 2.35062 15.3168 2.31666 15.6401C2.2827 15.9633 2.45766 16.2669 2.80757 16.8741L3.30114 17.7307C3.67443 18.3785 3.86109 18.7025 4.17867 18.8316C4.49625 18.9608 4.85542 18.8589 5.57377 18.655L6.79394 18.3113C7.25263 18.2055 7.73387 18.2656 8.15267 18.4808L8.4895 18.6752C8.84851 18.9052 9.12464 19.2442 9.2775 19.6428L9.61149 20.6403C9.83106 21.3003 9.94085 21.6303 10.2022 21.8191C10.4636 22.0078 10.8108 22.0078 11.5051 22.0078H12.6199C13.3143 22.0078 13.6615 22.0078 13.9228 21.8191C14.1842 21.6303 14.294 21.3003 14.5136 20.6403L14.8476 19.6428C15.0004 19.2442 15.2765 18.9052 15.6356 18.6752L15.9724 18.4808C16.3912 18.2656 16.8724 18.2055 17.3311 18.3113L18.5513 18.655C19.2696 18.8589 19.6288 18.9608 19.9464 18.8316C20.264 18.7025 20.4506 18.3785 20.8239 17.7307L21.3175 16.8741C21.6674 16.2669 21.8423 15.9633 21.8084 15.6401C21.7744 15.3168 21.5402 15.0564 21.0718 14.5354L20.0407 13.3827C19.7887 13.0636 19.6098 12.5078 19.6098 12.0077C19.6098 11.5078 19.7888 10.9518 20.0407 10.6328L21.0718 9.48012C21.5402 8.95918 21.7744 8.69871 21.8084 8.37549C21.8423 8.05227 21.6674 7.74864 21.3175 7.14139Z",
+          "strokeWidth": 1.66
+        },
+        {
+          "d": "M15.5195 12C15.5195 13.933 13.9525 15.5 12.0195 15.5C10.0865 15.5 8.51953 13.933 8.51953 12C8.51953 10.067 10.0865 8.5 12.0195 8.5C13.9525 8.5 15.5195 10.067 15.5195 12Z",
           "strokeWidth": 1.66
         }
       ],
