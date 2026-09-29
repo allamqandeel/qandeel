@@ -1,0 +1,2 @@
+# W2-02: vendored I-08B2.5 bytes must stay byte-identical to the canonical package on every checkout.
+* -text

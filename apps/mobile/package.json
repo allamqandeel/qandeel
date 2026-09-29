@@ -13,7 +13,8 @@
     "prebuild": "expo prebuild --platform all --no-install",
     "prebuild:android": "expo prebuild --platform android --no-install",
     "prebuild:ios": "expo prebuild --platform ios --no-install",
-    "prebuild:verify": "node scripts/verify-prebuild-idempotency.mjs"
+    "prebuild:verify": "node scripts/verify-prebuild-idempotency.mjs",
+    "prebuild:verify-launch-identity": "node scripts/verify-launch-identity-native.mjs"
   },
   "dependencies": {
     "@shopify/react-native-skia": "2.6.2",

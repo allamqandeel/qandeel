@@ -1,0 +1,13 @@
+# W2-02 — photographs the installed QANDEEL icon on SpringBoard. VALIDATION ONLY.
+# Maestro drives the simulator's home screen from outside the app; the app is never launched here.
+appId: com.qandeel.mobile
+---
+- pressKey: Home
+- takeScreenshot: ${OUT}/springboard-${APPEARANCE}-page-1
+- swipe:
+    direction: LEFT
+- takeScreenshot: ${OUT}/springboard-${APPEARANCE}-page-2
+- assertVisible:
+    text: "QANDEEL"
+    optional: true
+- pressKey: Home

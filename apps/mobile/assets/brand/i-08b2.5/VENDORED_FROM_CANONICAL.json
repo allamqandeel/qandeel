@@ -1,0 +1,214 @@
+{
+  "task": "W2-02 — Production Launch Identity",
+  "authority": "I-08B2.5, ratified as the final QANDEEL Brand Authority by P4-C2 §1 (Android adaptive framing 48 dp; no iOS dark / tinted variant in v1)",
+  "rule": "Every file below is a byte-for-byte copy of its canonical I-08B2.5 export. Nothing is re-rendered, resized, re-encoded or re-framed. The canonical package is never edited.",
+  "canonicalSource": {
+    "path": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/APP_ICON_B_DARK_LUMINOUS.svg",
+    "sha256": "859665d86a7bbf4248ff479034031a8df1f08833c7db36336b3d29832bcddd09"
+  },
+  "notConsumed": [
+    "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/APP_ICON_B_DARK_LUMINOUS.svg",
+    "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/PLAY_STORE_ICON_512.png",
+    "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/source/ANDROID_FOREGROUND.svg"
+  ],
+  "files": [
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/drawable/ic_launcher_monochrome.xml",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/drawable/ic_launcher_monochrome.xml",
+      "bytes": 3438,
+      "sha256": "cd29f0067a69002f0c676c71d85a35d3d274db08097ba563b09a04600087a80a"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-anydpi-v26/ic_launcher_round.xml",
+      "bytes": 336,
+      "sha256": "26c363f4d372724304369fe887ab0d5534ba26e5afa4d6774fb2887dcee1ce56"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-anydpi-v26/ic_launcher.xml",
+      "bytes": 336,
+      "sha256": "26c363f4d372724304369fe887ab0d5534ba26e5afa4d6774fb2887dcee1ce56"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-hdpi/ic_launcher_foreground.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-hdpi/ic_launcher_foreground.png",
+      "bytes": 2603,
+      "sha256": "42de2eed9b1c0e22eaa3d5eba53421af000cf07844a73f02140f5144be395607"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-hdpi/ic_launcher_round.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-hdpi/ic_launcher_round.png",
+      "bytes": 1811,
+      "sha256": "617c4df7642ec4bb2b5a940b04ceb18f9884ed1a688823d629e38d06bf7cf6ef"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-hdpi/ic_launcher.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-hdpi/ic_launcher.png",
+      "bytes": 1383,
+      "sha256": "e6516b213d2232b892d439bdcf01fcd50fb207c4e1f2cfb84128ef4390ebe677"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-mdpi/ic_launcher_foreground.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-mdpi/ic_launcher_foreground.png",
+      "bytes": 1617,
+      "sha256": "bfec6259f475b8424588c857491be3c86e7ee1610a0d6075eba59145b7d48410"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-mdpi/ic_launcher_round.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-mdpi/ic_launcher_round.png",
+      "bytes": 1108,
+      "sha256": "1a29d91170459ac905d327d22a5550ee3bedf0d3b86f568d32268835ce9f3944"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-mdpi/ic_launcher.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-mdpi/ic_launcher.png",
+      "bytes": 806,
+      "sha256": "53cc67c6416233d6559afa18a9a72163f278a66c20468926e584724c1231b20e"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xhdpi/ic_launcher_foreground.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xhdpi/ic_launcher_foreground.png",
+      "bytes": 3932,
+      "sha256": "ed5d6f22954880d16dac743910929a573c8b8b83c1ead10a5d86fba39bd90cdb"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xhdpi/ic_launcher_round.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xhdpi/ic_launcher_round.png",
+      "bytes": 2562,
+      "sha256": "fadabc8e8418648ad12907792ff04e59fc48fa020fae5e8a6d042784ec20e6f5"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xhdpi/ic_launcher.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xhdpi/ic_launcher.png",
+      "bytes": 1902,
+      "sha256": "d415ec12edc01a6305c498f49839366542328712a0cfda32a2fac34f9d4a6d7a"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xxhdpi/ic_launcher_foreground.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xxhdpi/ic_launcher_foreground.png",
+      "bytes": 6796,
+      "sha256": "0a600e14bbdcaee658f1c9e7d34109c4a63641efb2991d4b5d0442310c6c4a03"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xxhdpi/ic_launcher_round.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xxhdpi/ic_launcher_round.png",
+      "bytes": 4224,
+      "sha256": "2b09683386d172bea96304cd81e0b72a9e50c190afb1273a816ee876a7340556"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xxhdpi/ic_launcher.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xxhdpi/ic_launcher.png",
+      "bytes": 3243,
+      "sha256": "0cc457e7b649a76f81b313ee8264e4e52ac64af0c746d801a2056ce44f59c5b3"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xxxhdpi/ic_launcher_foreground.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xxxhdpi/ic_launcher_foreground.png",
+      "bytes": 12548,
+      "sha256": "630dec33e0ec4777cdbcdde69cd1f9d880d40f632f3a653c2ca3aea172ef71ac"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xxxhdpi/ic_launcher_round.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xxxhdpi/ic_launcher_round.png",
+      "bytes": 6109,
+      "sha256": "6a1335a6833f4de2205d77f9210c9527a08834f81049290a3fd77aef9df232bc"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/mipmap-xxxhdpi/ic_launcher.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/mipmap-xxxhdpi/ic_launcher.png",
+      "bytes": 4736,
+      "sha256": "3ff1ee1c5dc013fdeb612036893ab23808d21d0f2d3fba4ce5e0f0b165067f7e"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/android/res/values/ic_launcher_background.xml",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/android/res/values/ic_launcher_background.xml",
+      "bytes": 407,
+      "sha256": "cd2d2593e9b779089a2e7733c8024003cdabfaaabccce122cf9f394d162a032b"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-1024.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-1024.png",
+      "bytes": 69151,
+      "sha256": "a2dcb7cd85912f343e26e27d87cb8eea12ddb731a0de090795f1cb4b8b1a3335"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-120.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-120.png",
+      "bytes": 2523,
+      "sha256": "5b5f5f5fa7bbcba5e31b6ebea7db55864cb0520e9339536e922d352d7bfa1f9d"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-152.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-152.png",
+      "bytes": 3456,
+      "sha256": "29b25cfbf1528bee976311f7a0b11eeb54116c9c86add96771c27c22511d0bae"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-167.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-167.png",
+      "bytes": 3889,
+      "sha256": "06e0a708c1eef5072eb11f70994e81a25943025dc17b3293df9ff4af1d8a73cd"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-180.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-180.png",
+      "bytes": 4299,
+      "sha256": "4aaf86f9265276c67ecd9be6e8b8de399ec8711246576afb1ef615a4119c3294"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-20.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-20.png",
+      "bytes": 267,
+      "sha256": "e536d124ae057c47570df4fa3f44acca5196e9bbf6eb31ae87291b504ad69926"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-29.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-29.png",
+      "bytes": 392,
+      "sha256": "414e739d25cd711cf3430d1da251ed9df1b1d877b4d10c1b2f8c2709f08e5caa"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-40.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-40.png",
+      "bytes": 632,
+      "sha256": "e4d1ffbcca5c04d7e2c6df4058316a17d39d19357a353a13a437ccb943443b8e"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-58.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-58.png",
+      "bytes": 1052,
+      "sha256": "283e28bf5ee563ddc75a32b9be42bfd7d117858ae1efc0e4bd6d161d681471a8"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-60.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-60.png",
+      "bytes": 1096,
+      "sha256": "96fe08dba7b6e354bc858245a370f582bd725f3a6b3d60c13f6d28e592f79447"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-76.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-76.png",
+      "bytes": 1495,
+      "sha256": "1f246ceb4e6658d1d3de3bcb38d6275b839f45aefdf62e96a39810bd53cbc504"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-80.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-80.png",
+      "bytes": 1550,
+      "sha256": "41c9ff2f08e7997b091a0f3f2baedc9785ba11e86b2a835eaeda7e541aaf5f3f"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-87.png",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/AppIcon-87.png",
+      "bytes": 1707,
+      "sha256": "d2bd8247aec73a9c8ce7c391ff8aa114322ebb4a08aac8a53c5163b941651481"
+    },
+    {
+      "vendored": "apps/mobile/assets/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/Contents.json",
+      "canonical": "docs/design/canonical-artifacts/brand/i-08b2.5/app-icon/ios/AppIcon.appiconset/Contents.json",
+      "bytes": 2073,
+      "sha256": "a26c1cb08b673ef0a6032bfa0efc91f221e7e7d39ea5447ddaecde1ff796a948"
+    }
+  ]
+}

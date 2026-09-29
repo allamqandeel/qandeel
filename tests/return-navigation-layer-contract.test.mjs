@@ -699,7 +699,8 @@ test('the T-07 gate is registered at the root and in Mobile CI without a new nat
     assert.doesNotMatch(await read(file), /return-navigation|returnLiveHead|backOneStep/u, `${file} must not mount the return layer in T-07`);
   }
   const appConfig = await readJson('apps/mobile/app.json');
-  assert.deepEqual(appConfig.expo.plugins, ['expo-router']);
+  // T-07 adds no plugin; the only later plugin is W2-02's launch identity.
+  assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity']);
   assert.equal(existsSync(new URL('apps/mobile/ios', root)), false);
   assert.equal(existsSync(new URL('apps/mobile/android', root)), false);
 });

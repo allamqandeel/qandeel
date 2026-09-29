@@ -6,8 +6,9 @@ Treatment (E2E-01 wave W2, first bounded implementation slice)
 Login ID help), `E2E-A-11` (password recovery), `E2E-A-12` (confirmed-ended session versus unknown auth state)
 **Baseline:** `6b333df7774d33b034575243b3592d21f2603683` (merge of PR #284, W1B-01; final W1B head `69ec0ba`)
 **Branch:** `feat/w2-01-final-account-access`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. One bounded, Product-Owner-authorized Production Integration
-slice; it opens no other wave or Product area and closes no phase.
+**Status:** IMPLEMENTED — MERGED through PR #285 at `df194edf6d70a2a300a0251ed114e7ad8715485e` (final W2-01 head
+`7f7d492152ecc0e2ce9e69149b512e2514a581ac`; lifecycle line reconciled by W2-02, nothing else in this record changed).
+One bounded, Product-Owner-authorized Production Integration slice; it opens no other wave or Product area and closes no phase.
 **Correction:** W2-01 R1 (focused privacy correction, on the same Draft PR) — a Login ID's Email never reaches the
 device, not even after the password was proved (§4.3). Password recovery is unchanged by it.
 

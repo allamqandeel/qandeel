@@ -596,6 +596,15 @@ the frozen hierarchy:
 4. direct manipulation of generated native files or dangerous mods: **not pre-authorized**;
    it requires a separate Engineering Architecture review.
 
+**W2-02 Level-4 exception — submitted for that review, not yet granted by it.** The Product Owner's W2-02
+task contract (§6 Option B) authorizes one narrow plugin, `plugins/with-qandeel-launch-identity.js`, because
+Expo's `icon` / `adaptiveIcon` config would re-encode, re-frame and rasterize the I-08B2.5 icon exports. Its two
+dangerous mods only copy the vendored canonical bytes (`assets/brand/i-08b2.5/`), delete the named Expo template
+icon / splash-logo files, and write the World colour asset and the World-only iOS Launch Screen. Every other
+W2-02 change is a typed mod. No other file may use a dangerous mod; the mobile foundation contract enforces
+that, and `npm run prebuild:launch-identity:mobile` proves the generated result with planted defects
+([record](../../docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)).
+
 `npm run prebuild:verify` proves two properties and then discards the generated directories
 and requires an unchanged repository state: (1) re-running `expo prebuild --no-clean` over
 the generated project leaves every file byte-identical (idempotent re-application, the

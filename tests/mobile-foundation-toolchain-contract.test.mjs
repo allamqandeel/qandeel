@@ -148,13 +148,14 @@ test('one React, one React Native and one TypeScript (5.9 line) exist in the loc
 
 test('app config carries provisional technical identifiers only and no architecture toggle', () => {
   const { expo } = appConfig;
-  assert.equal(expo.name, 'Qandeel');
+  // W2-02: the display name is no longer provisional; it is the frozen Product casing (P4-C2 §5).
+  assert.equal(expo.name, 'QANDEEL');
   assert.equal(expo.slug, 'qandeel');
   assert.equal(expo.scheme, 'qandeel');
   assert.equal(expo.ios.bundleIdentifier, 'com.qandeel.mobile');
   assert.equal(expo.android.package, 'com.qandeel.mobile');
   assert.deepEqual(expo.platforms, ['ios', 'android']);
-  assert.deepEqual(expo.plugins, ['expo-router']);
+  assert.deepEqual(expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity']);
   assert.equal('newArchEnabled' in expo, false, 'New Architecture is structural on this SDK line; no toggle may be reintroduced');
   assert.equal('extra' in expo, false);
   assert.match(bootSmoke, /^appId: com\.qandeel\.mobile$/mu);
@@ -180,9 +181,12 @@ test('generated native output is never tracked, no Level-4 native mutation, no s
   }
   const tracked = git(['ls-files', '--', 'apps/mobile']).split(/\r?\n/u).filter(Boolean);
   assert.ok(tracked.length > 0, 'the mobile workspace must be tracked');
+  // The one recorded Level-4 exception (apps/mobile/README.md, "W2-02 Level-4 exception"): the plugin that
+  // installs the I-08B2.5 icon bytes and the launch resources. No other mobile file may use a dangerous mod.
+  const level4Exceptions = new Set(['apps/mobile/plugins/with-qandeel-launch-identity.js']);
   for (const file of tracked) {
     const text = await read(file);
-    assert.doesNotMatch(text, /withDangerousMod/u, `${file} uses a Level-4 dangerous mod`);
+    if (!level4Exceptions.has(file)) assert.doesNotMatch(text, /withDangerousMod/u, `${file} uses a Level-4 dangerous mod`);
     assert.doesNotMatch(
       text,
       /(?:ANTHROPIC|OPENAI|GOOGLE_AI|SUPABASE_SERVICE_ROLE)_(?:API_)?KEY|SUPABASE_PUBLISHABLE_KEY|EXPO_PUBLIC_|sk-ant-/u,
