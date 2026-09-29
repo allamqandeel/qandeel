@@ -225,7 +225,7 @@ test('§6 — the account routes: two guarded on the caller’s token, one pre-a
   assert.match(repository, /this\.serviceApi\.rpc<boolean>\('login_id_is_available_v1'/u);
   assert.match(repository, /this\.dataApi\.request<AccountFirstUseRow\[\]>\(accessToken, 'rpc\/read_account_first_use_v1'/u);
   assert.match(repository, /this\.dataApi\.request<void>\(accessToken, 'rpc\/complete_first_use_welcome_v1'/u);
-  assert.match(read('apps/api/src/app.module.ts'), /imports: \[[^\]]*, AccountModule\]/u, 'composed by the application root');
+  assert.match(read('apps/api/src/app.module.ts'), /imports: \[[^\]]*, AccountModule(?:, UnderstandingModule)?\]/u, 'composed by the application root');
   assert.doesNotMatch(read('apps/api/src/conversation/conversation.module.ts'), /Account/u, 'account identity is not a Conversation capability');
 });
 

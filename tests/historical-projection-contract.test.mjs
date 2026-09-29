@@ -414,6 +414,10 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // W3-MEGA-U re-anchor: the application root also composes UnderstandingModule (a Personal depth, not a Conversation
+    // capability). It is stripped the same way, so every other byte stays frozen.
+    .replace("import { UnderstandingModule } from './understanding/understanding.module';\n", '')
+    .replace(', AccountModule, UnderstandingModule],', ', AccountModule],')
     .replace("import { AccountModule } from './account/account.module';\n", '')
     .replace(', HimModule, AccountModule],', ', HimModule],');
   assert.equal(gitBlobId(appModuleBeforeW1b01), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical apart from the W1B-01 AccountModule composition');

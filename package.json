@@ -209,6 +209,7 @@
     "test:w2-02-production-launch-identity-contract": "node --test tests/w2-02-production-launch-identity-contract.test.mjs",
     "test:w3-01-general-settings-appearance-signout-contract": "node --test tests/w3-01-general-settings-appearance-signout-contract.test.mjs",
     "test:w3-02-account-identity-public-id-contract": "node --test tests/w3-02-account-identity-public-id-contract.test.mjs",
+    "test:w3-mega-u1-understanding-projection-contract": "node --test tests/w3-mega-u1-understanding-projection-contract.test.mjs",
     "test:task-closure-governance-contract": "node --test tests/task-closure-governance-contract.test.mjs",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:qan-inf-02-windows-temp-harness-cleanup-contract": "node --test tests/qan-inf-02-windows-temp-harness-cleanup-contract.test.mjs",
