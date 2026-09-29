@@ -91,10 +91,34 @@ describe('T14-B1, T14-B2 — SIGNED_OUT is the Product entry, and no longer an e
   });
 });
 
+// W2-01 RE-ANCHOR. T-14 kept `AUTH_ERROR` technical because no Product decision for it existed. W2-01 is
+// that decision ("Unknown ≠ Signed Out", E2E-A-12): the phase now renders the approved
+// unable-to-verify-session state. The expired fact is "AUTH_ERROR is technical"; the permanent claim —
+// no technical failure is dressed as a SIGN-IN or a WORLD — is kept, and asserted for it below.
+describe('W2-01 — AUTH_ERROR is the approved unable-to-verify-session state: neither a sign-in nor a world', () => {
+  it('renders the Product recovery state with its one retry, and no technical line, no gateway and no world', async () => {
+    const h = await harness({ initialSession: null });
+    const view = await render(
+      <SafeAreaProvider initialMetrics={METRICS}>
+        <PhaseUnderTest phase={{ kind: 'AUTH_ERROR' }} runtime={h.runtime} />
+      </SafeAreaProvider>,
+    );
+    await act(async () => {
+      await settle();
+    });
+    expect(view.getByTestId('qandeel-session-unverified')).toBeTruthy();
+    expect(view.getByTestId('qandeel-session-unverified-retry')).toBeTruthy();
+    expect(view.queryByTestId(RUNTIME_STATE_TEST_ID)).toBeNull();
+    expect(view.queryByTestId(PRODUCT_SIGN_IN_GATEWAY_TEST_ID)).toBeNull();
+    expect(view.queryByTestId('qandeel-world-depth')).toBeNull();
+    await view.unmount();
+    h.dispose();
+  });
+});
+
 describe('T14-B3…T14-B7 — every other non-READY phase is still technical', () => {
   const TECHNICAL: readonly IntegrationPhase[] = [
     { kind: 'RESTORING' },
-    { kind: 'AUTH_ERROR' },
     { kind: 'RECOVERING' },
     { kind: 'BOOTSTRAPPING' },
     // Typed in full rather than cast: a payload-bearing phase that the surface reads only the KIND of

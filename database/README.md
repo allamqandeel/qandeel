@@ -3523,3 +3523,29 @@ refusal, seventeen malformed shapes refused with no auth account left behind, th
 the availability boolean and its grants, the caller-only first-use read and idempotent Welcome
 completion, and that a new account still owns Sessions and turns through the existing foreign keys and
 row-level security.
+
+## W2-01 - Login ID sign-in resolution (migration 0124)
+
+`0124_login_id_sign_in_resolution_v1.sql` adds one function and changes no table, row, trigger or
+grant. P1 §3 lets a reader sign in with `Login ID OR Email`, while Supabase Auth validates a password
+only against an Email, and no client may learn which Email belongs to a Login ID. So the resolution
+lives here and is reached ONLY by the QANDEEL API's server channel, inside its Login ID sign-in exchange:
+the API spends the answer at once on the provider's own password grant and returns only the provider's
+verdict - never the Email - to the caller.
+
+`resolve_login_id_sign_in_email_v1(text)` is `SECURITY DEFINER` with an empty `search_path`. It answers
+the Email of the account holding the Login ID, compared in its canonical lowercase form (so
+case-insensitively, exactly like `users_login_id_key`), and NULL for an unknown or malformed Login ID.
+EXECUTE is revoked from PUBLIC, `anon` and `authenticated` by name and granted to `service_role` only.
+`auth.users` is read through `to_jsonb(...) ->> 'email'`, so the function is total over the disposable CI
+bootstrap's minimal `auth.users`.
+
+```sh
+npm run verify:login-id-sign-in-resolution:integration
+```
+
+`verify-migration-0124.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. Inside one
+rolled-back transaction it gives `auth.users` the `email` and `raw_user_meta_data` columns real Supabase
+has, signs accounts up through `auth.users`, and proves the catalog shape, that only `service_role` may
+execute the function, case-insensitive resolution, NULL for unknown, malformed and Login-ID-less
+accounts, a single text answer, and that `anon` and `authenticated` are refused.

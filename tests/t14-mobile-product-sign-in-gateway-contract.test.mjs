@@ -104,13 +104,21 @@ test('§3.3 — the gateway consumes MobileAuthAuthority through its barrel and 
   assert.doesNotMatch(gatewayCode, /from\s+'[^']*runtime-entry\/[^']+'/u, 'and never through a deep internal');
 
   // ONE call expression. Not "one import", not "one mention": one place where a credential is spent.
-  const calls = [...gatewayCode.matchAll(/signInWithPassword\(/gu)];
+  //
+  // W2-01 RE-ANCHOR. P1 §3's final sign-in takes ONE identifier (Login ID OR Email), and the auth
+  // authority — not this surface — decides which route an identifier takes (`signInWithIdentifier`). The
+  // expired fact is the name `signInWithPassword` and its `address` argument; the claim is kept exactly:
+  // the credential is spent in ONE call, trimmed identifier and untouched password, to the one authority.
+  const calls = [...gatewayCode.matchAll(/signInWith(?:Password|Identifier)\(/gu)];
   assert.equal(calls.length, 1, `the credential is spent in exactly one place, found ${calls.length}`);
-  assert.match(component, /await auth\.signInWithPassword\(address, password\)/u,
-    'the trimmed address and the untouched password, to the existing capability');
+  assert.match(component, /await auth\.signInWithIdentifier\(typed, password\)/u,
+    'the trimmed identifier and the untouched password, to the one capability');
+  assert.equal(gatewayCode.includes('signInWithPassword('), false, 'and the gateway never picks the route itself');
 
-  // And no other auth command is reachable from here at all.
-  for (const other of ['signOut(', 'signUp', 'signInWithOAuth', 'signInWithOtp', 'resetPasswordForEmail', 'verifyOtp', 'setSession', 'refreshSession', 'getSession', 'onAuthStateChange', 'startAutoRefresh']) {
+  // And no other auth command is reachable from here at all. (W2-01 adds its own commands to the list:
+  // recovery and session re-verification belong to the account layer, never to this directory.)
+  for (const other of ['signOut(', 'signUp', 'signInWithOAuth', 'signInWithOtp', 'resetPasswordForEmail', 'verifyOtp', 'setSession', 'refreshSession', 'getSession', 'onAuthStateChange', 'startAutoRefresh',
+    'requestPasswordRecovery', 'verifyRecoveryCode', 'completePasswordRecovery', 'abandonPasswordRecovery', 'retrySessionVerification', 'signInWithLoginId']) {
     assert.equal(gatewayCode.includes(other), false, `the gateway owns no second auth command: ${other}`);
   }
 });
@@ -243,8 +251,17 @@ test('§3.1 / §15 — ProductRoot maps only SIGNED_OUT to the gateway, and ever
   // The two reader-facing phases are the only two the root compares against at all. A technical
   // failure or a loading phase cannot be dressed as a Product state here, because there is no branch
   // in which it could be — and that is the thing T-14 most needed to be unable to do.
+  //
+  // W2-01 RE-ANCHOR. The Product Owner decided `AUTH_ERROR` ("Unknown ≠ Signed Out", E2E-A-12): it now
+  // renders the approved unable-to-verify-session state. The expired fact is "exactly two"; the claim
+  // that matters is kept and sharpened — every reader-facing phase is ENUMERATED here, `AUTH_ERROR`
+  // renders neither the sign-in entry nor a world, and every other phase stays technical.
   const compared = [...productRoot.matchAll(/phase\.kind === '([A-Z_]+)'/gu)].map((match) => match[1]).sort();
-  assert.deepEqual(compared, ['READY', 'SIGNED_OUT'], 'exactly two reader-facing phases, and they are these two');
+  assert.deepEqual(compared, ['AUTH_ERROR', 'READY', 'SIGNED_OUT'], 'exactly three reader-facing phases, and they are these three');
+  const unknownAt = productRoot.indexOf("if (phase.kind === 'AUTH_ERROR')");
+  const unknownBranch = productRoot.slice(unknownAt, productRoot.indexOf('return <RuntimeState', unknownAt));
+  assert.match(unknownBranch, /<SessionUnverifiedEntry auth=\{runtime\.auth\} \/>/u, 'AUTH_ERROR is the unable-to-verify state');
+  assert.doesNotMatch(unknownBranch, /SignedOutEntry|ProductSignInGateway|ComposedWorld/u, 'and never a sign-in or a world');
 
   assert.equal((productRoot.match(/<SignedOutEntry\b/gu) ?? []).length, 1, 'one signed-out entry');
   assert.equal((productRoot.match(/<ProductSignInGateway\b/gu) ?? []).length, 1, 'rendered in one place');
@@ -270,7 +287,7 @@ test('§3.1 / §15 — ProductRoot maps only SIGNED_OUT to the gateway, and ever
   guards(
     'no invented Product state over a technical phase',
     productRoot,
-    (text) => [...text.matchAll(/phase\.kind === '([A-Z_]+)'/gu)].every((match) => match[1] === 'READY' || match[1] === 'SIGNED_OUT'),
+    (text) => [...text.matchAll(/phase\.kind === '([A-Z_]+)'/gu)].every((match) => ['READY', 'SIGNED_OUT', 'AUTH_ERROR'].includes(match[1])),
     "if (phase.kind === 'RECOVERING') return <SignedOutEntry auth={runtime.auth} />;",
   );
 });
@@ -372,8 +389,9 @@ test('§14 — no credential is logged, echoed, persisted or copied anywhere', (
   assert.doesNotMatch(gatewayCode, /(?:email|password)\s*[:=]\s*'[^']+'/u, 'no credential default');
   assert.doesNotMatch(gatewayCode, /(?:email|password)\s*[:=]\s*"[^"]+"/u, 'no credential default');
   assert.equal(gatewayCode.includes('placeholder='), false, 'no credential placeholder');
-  // The password is never trimmed or transformed; only the email is, and only at submit.
-  assert.match(component, /const address = email\.trim\(\);/u, 'the email is trimmed once, at submit');
+  // The password is never trimmed or transformed; only the identifier is, and only at submit.
+  // (W2-01 re-anchor: the field is the ONE identifier; the expired fact is the name `email` / `address`.)
+  assert.match(component, /const typed = identifier\.trim\(\);/u, 'the identifier is trimmed once, at submit');
   assert.equal(component.includes('password.trim('), false, 'the password is never trimmed');
   assert.equal(component.includes('toLowerCase('), false, 'and nothing is normalized');
 
@@ -444,8 +462,12 @@ test('§11 — the surface scrolls rather than clips, and nothing is positioned 
 
 test('§12 — the accessible surface: a header, two labelled fields, a button, and one polite live region', () => {
   assert.match(component, /accessibilityRole="header"/u, 'the title is a header');
-  assert.equal((component.match(/accessibilityLabel=\{copy\.(emailLabel|passwordLabel|submit)\}/gu) ?? []).length, 3,
+  // W2-01 re-anchor: the first field is the ONE identifier (Login ID or Email), carrying its approved
+  // persistent help as its spoken hint; its autofill intent is `username`. The expired facts are the
+  // `emailLabel` name and the `email` autofill intent.
+  assert.equal((component.match(/accessibilityLabel=\{copy\.(identifierLabel|passwordLabel|submit)\}/gu) ?? []).length, 3,
     'both fields and the control carry an explicit accessible name');
+  assert.match(component, /accessibilityHint=\{copy\.identifierHelp\}/u, 'the persistent help is also the spoken hint');
   assert.match(component, /accessibilityRole="button"/u);
   assert.match(component, /accessibilityState=\{\{ disabled: submitting, busy: submitting \}\}/u,
     'disabled and busy are stated while the one request is in flight');
@@ -457,7 +479,7 @@ test('§12 — the accessible surface: a header, two labelled fields, a button, 
   assert.match(component, /onSubmitEditing=\{focusPassword\}/u);
   assert.match(component, /onSubmitEditing=\{onSubmitPress\}/u);
   // The platform autofill and keyboard intent §7 requires.
-  assert.match(component, /autoComplete="email"/u);
+  assert.match(component, /autoComplete="username"/u);
   assert.match(component, /autoComplete="current-password"/u);
   assert.match(component, /keyboardType="email-address"/u);
   assert.equal((component.match(/autoCapitalize="none"/gu) ?? []).length, 2);
@@ -471,7 +493,9 @@ test('§12 — the accessible surface: a header, two labelled fields, a button, 
   // (`palette.<role>`), so it can never invent one. It still adds no motion and no letter-spacing.
   assert.doesNotMatch(gatewayCode, /#[0-9a-fA-F]{3,8}\b|rgba?\(/u, 'the gateway writes no colour value');
   for (const match of gatewayCode.matchAll(/\b(color|backgroundColor|selectionColor|cursorColor)(?:=\{|:\s*)([^,}\n]+)/gu)) {
-    assert.match(match[2], /^(?:palette\.\w+|submitting \? palette\.\w+ : palette\.\w+)\s*$/u, `a ${match[1]} not read from the canonical palette: ${match[2]}`);
+    // W2-01 re-anchor: the notice is also calm (not an error) while it carries the ended-session notice,
+    // so its condition reads `submitting || ended`. Both branches are still canonical palette roles.
+    assert.match(match[2], /^(?:palette\.\w+|submitting(?: \|\| ended)? \? palette\.\w+ : palette\.\w+)\s*$/u, `a ${match[1]} not read from the canonical palette: ${match[2]}`);
   }
   assert.match(component, /import \{ typeStyle, usePalette \} from '\.\.\/\.\.\/conversation';/u, 'the one generated visual foundation');
   for (const visual of ['gradient', 'shadowColor', 'fontFamily', 'letterSpacing', 'react-native-reanimated', 'withTiming', 'Animated']) {

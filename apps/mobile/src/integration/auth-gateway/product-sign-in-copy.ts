@@ -51,45 +51,63 @@ import type { ChromeLanguage } from '../../orientation-chrome';
  */
 export type SignInFailureKind = AuthPortFailure['kind'];
 
-/** Every phrase this surface can produce, in one language. Both packs implement it. */
+/**
+ * Every phrase this surface can produce, in one language. Both packs implement it.
+ *
+ * W2-01 — the FINAL sign-in (P1 §3, E2E-A-06 / A-07 / A-08 / A-12). The Product Owner approved the
+ * identifier label, its persistent help, the generic credential failure and the session-ended notice in
+ * the W2-01 task, and the empty-identifier sentence in its copy gate
+ * (`docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md` §2). They replace T-14's Email-only label,
+ * empty-Email sentence and "Email or password is incorrect." — P1 §15.3 made that wording historical.
+ * Everything else here is T-14's frozen copy, unchanged, including the network sentence.
+ */
 export interface ProductSignInCopy {
   readonly title: string;
-  readonly emailLabel: string;
+  readonly identifierLabel: string;
+  /** Persistent help under the identifier (P1 §2.1 style: never a placeholder). Not a journey. */
+  readonly identifierHelp: string;
   readonly passwordLabel: string;
   readonly submit: string;
   /** What the live region says while the one request is in flight. */
   readonly submitting: string;
-  readonly missingEmail: string;
+  readonly missingIdentifier: string;
   readonly missingPassword: string;
+  /** ONE sentence for a Login ID and an Email alike: it names neither, and neither's existence. */
   readonly invalidCredentials: string;
   readonly network: string;
   readonly unexpected: string;
+  /** Shown only with reliable evidence that an existing authenticated session ended (W2-01 §9.1). */
+  readonly sessionEnded: string;
 }
 
 const ARABIC: ProductSignInCopy = Object.freeze({
   title: 'تسجيل الدخول',
-  emailLabel: 'البريد الإلكتروني',
+  identifierLabel: 'معرّف الدخول أو البريد الإلكتروني',
+  identifierHelp: 'نسيت معرّف الدخول؟ يمكنك استخدام بريدك الإلكتروني بدلًا منه.',
   passwordLabel: 'كلمة المرور',
   submit: 'دخول',
   submitting: 'جارٍ تسجيل الدخول',
-  missingEmail: 'أدخل البريد الإلكتروني.',
+  missingIdentifier: 'أدخل معرّف الدخول أو البريد الإلكتروني.',
   missingPassword: 'أدخل كلمة المرور.',
-  invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+  invalidCredentials: 'تعذّر تسجيل الدخول بهذه البيانات. تأكد منها وحاول مرة أخرى.',
   network: 'تعذّر الاتصال. حاول مرة أخرى.',
   unexpected: 'تعذّر تسجيل الدخول الآن. حاول مرة أخرى.',
+  sessionEnded: 'انتهت جلستك. سجّل الدخول للمتابعة.',
 });
 
 const ENGLISH: ProductSignInCopy = Object.freeze({
   title: 'Sign in',
-  emailLabel: 'Email',
+  identifierLabel: 'Login ID or email',
+  identifierHelp: 'Forgot your Login ID? You can use your email instead.',
   passwordLabel: 'Password',
   submit: 'Sign in',
   submitting: 'Signing in',
-  missingEmail: 'Enter your email.',
+  missingIdentifier: 'Enter your Login ID or email.',
   missingPassword: 'Enter your password.',
-  invalidCredentials: 'Email or password is incorrect.',
+  invalidCredentials: 'We couldn’t sign you in with these details. Check them and try again.',
   network: 'Couldn’t connect. Try again.',
   unexpected: 'Couldn’t sign in right now. Try again.',
+  sessionEnded: 'Your session has ended. Sign in to continue.',
 });
 
 const PACKS: Readonly<Record<ChromeLanguage, ProductSignInCopy>> = Object.freeze({ ar: ARABIC, en: ENGLISH });
@@ -118,6 +136,10 @@ export function signInFailureMessage(copy: ProductSignInCopy, kind: SignInFailur
     // Only a gateway given no route reaches here, and then it has not signed the reader in — true.
     case 'EMAIL_NOT_CONFIRMED':
       return copy.unexpected;
+    // W2-01: produced only by a restore, never by a sign-in. Were it ever to reach here, the reader has
+    // not been signed in — true — and nothing more is claimed.
+    case 'SESSION_ENDED':
+      return copy.unexpected;
     default: {
       const exhaustive: never = kind;
       return exhaustive;
@@ -144,6 +166,8 @@ export function clearsPasswordAfter(kind: SignInFailureKind): boolean {
     // W1B-01: the provider accepted the password before reporting the Email unverified.
     case 'EMAIL_NOT_CONFIRMED':
       return false;
+    case 'SESSION_ENDED':
+      return true;
     default: {
       const exhaustive: never = kind;
       return exhaustive;

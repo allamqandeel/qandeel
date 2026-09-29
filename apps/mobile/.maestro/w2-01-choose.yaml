@@ -1,0 +1,16 @@
+# W2-01 proof — launch the proof build and choose one scenario on its validation-only chooser. VALIDATION ONLY.
+#
+# The proof root (apps/mobile/src/integration/__validation__/W2ProofRoot.tsx) opens on a bare engineering
+# chooser, then mounts the PRODUCTION phase surface over the W2 proof world for the chosen launch.
+# SCENARIO_ID comes from the caller.
+appId: com.qandeel.mobile
+---
+- stopApp
+# The proof world is in memory: every launch starts from its chosen scenario, with nothing kept.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: ${SCENARIO_ID}
+    timeout: 120000
+- tapOn:
+    id: ${SCENARIO_ID}

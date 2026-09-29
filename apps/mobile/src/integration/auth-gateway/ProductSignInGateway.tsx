@@ -61,6 +61,18 @@
  * entry into Create account), and `onEmailNotConfirmed`, the approved route to Email verification when
  * the provider validated the password and reports the Email unverified. Account creation itself lives
  * in `../../account`, never in this directory.
+ *
+ * ## W2-01 — the final sign-in (P1 §3)
+ *
+ * ONE identifier field that accepts a Login ID or an Email, plus the password: no modes, no tabs, no
+ * second form. The field carries the approved persistent help, and the credential is still spent in
+ * exactly one call — now `signInWithIdentifier`, where the auth authority decides which route an
+ * identifier takes. Every rejected credential, by Login ID or by Email, is the ONE approved generic
+ * sentence. The destination may draw one more thing beside the form (`passwordAssist`, below the
+ * password — its recovery entry), and may say that the reader's session ended (`sessionEnded`), a notice
+ * that stands until the reader's next attempt. Neither is an auth command, and recovery itself lives in
+ * `../../account`, never in this directory. The identifier is trimmed once at submit and never
+ * lowercased here; the password is still untouched.
  */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
@@ -75,7 +87,13 @@ import { clearsPasswordAfter, productSignInCopy, signInFailureMessage } from './
 /** The one stable identifier for the Product entry surface. */
 export const PRODUCT_SIGN_IN_GATEWAY_TEST_ID = 'qandeel-sign-in-gateway';
 export const SIGN_IN_TITLE_TEST_ID = 'qandeel-sign-in-title';
+/**
+ * The identifier field (Login ID or Email). W2-01 keeps T-14's constant and value unchanged, so the
+ * existing proof flows that address this field keep addressing it.
+ */
 export const SIGN_IN_EMAIL_TEST_ID = 'qandeel-sign-in-email';
+/** W2-01 — the identifier's persistent help. */
+export const SIGN_IN_IDENTIFIER_HELP_TEST_ID = 'qandeel-sign-in-identifier-help';
 export const SIGN_IN_PASSWORD_TEST_ID = 'qandeel-sign-in-password';
 export const SIGN_IN_SUBMIT_TEST_ID = 'qandeel-sign-in-submit';
 /** The single status/error region. Present in every state so it can announce a change into it. */
@@ -98,17 +116,23 @@ export interface ProductSignInGatewayProps {
    * reveals nothing to someone without the credential. Absent, that kind shows the unexpected sentence.
    */
   readonly onEmailNotConfirmed?: (email: string) => void;
+  /** W2-01 — drawn below the password field by the destination: its password recovery entry. No auth command. */
+  readonly passwordAssist?: ReactNode;
+  /** W2-01 — the auth owner has evidence the reader's session ended. Shown until the next attempt. */
+  readonly sessionEnded?: boolean;
 }
 
-export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed }: ProductSignInGatewayProps) {
+export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed, passwordAssist, sessionEnded = false }: ProductSignInGatewayProps) {
   const copy = productSignInCopy(locale.language);
   const palette = usePalette();
   const insets = useSafeAreaInsets();
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [failure, setFailure] = useState<string | null>(null);
+  /** The ended-session notice belongs to the moment the reader arrived; their next attempt replaces it. */
+  const [attempted, setAttempted] = useState(false);
 
   const passwordField = useRef<TextInput | null>(null);
   /** Read and written synchronously: this, not the rendered state, is what makes a second press inert. */
@@ -127,11 +151,12 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
     if (inFlight.current) return;
 
     // The only two local rejections there are. Neither is an authority over what a valid credential
-    // looks like: no email pattern is applied here, because the identity provider decides that and a
-    // client-side rule would refuse addresses that are perfectly real.
-    const address = email.trim();
-    if (address === '') {
-      setFailure(copy.missingEmail);
+    // looks like: no Email or Login ID pattern is applied here, because the identity provider and the
+    // server decide that, and one generic answer is all a rejected credential may get.
+    const typed = identifier.trim();
+    setAttempted(true);
+    if (typed === '') {
+      setFailure(copy.missingIdentifier);
       return;
     }
     if (password === '') {
@@ -143,7 +168,7 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
     setFailure(null);
     setSubmitting(true);
 
-    const outcome = await auth.signInWithPassword(address, password);
+    const outcome = await auth.signInWithIdentifier(typed, password);
     if (!live.current) return;
     if (outcome.ok) {
       // FINISHED. The authority has published authentication and the integration runtime is already
@@ -155,13 +180,14 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
     setSubmitting(false);
     if (outcome.failure.kind === 'EMAIL_NOT_CONFIRMED' && onEmailNotConfirmed !== undefined) {
       // The password was right and the Email is not yet verified: verification is where the reader goes.
-      onEmailNotConfirmed(address);
+      // By Email it is the address they typed; by Login ID it is the one their proved password unlocked.
+      onEmailNotConfirmed(outcome.failure.confirmationEmail ?? typed);
       return;
     }
     // The KIND only. The port's technical detail is never a Product sentence.
     setFailure(signInFailureMessage(copy, outcome.failure.kind));
     if (clearsPasswordAfter(outcome.failure.kind)) setPassword('');
-  }, [auth, copy, email, onEmailNotConfirmed, password]);
+  }, [auth, copy, identifier, onEmailNotConfirmed, password]);
 
   const onSubmitPress = useCallback(() => {
     void submit();
@@ -171,8 +197,10 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
     passwordField.current?.focus();
   }, []);
 
-  // One region, one message: what is happening now, or what went wrong last.
-  const notice = submitting ? copy.submitting : failure;
+  // One region, one message: what is happening now, what went wrong last, or — until the reader's first
+  // attempt here — that their session ended.
+  const ended = sessionEnded && !attempted && failure === null;
+  const notice = submitting ? copy.submitting : failure ?? (ended ? copy.sessionEnded : null);
 
   // W1B-01: the frozen visual language, from the generated constants. No colour value is written here.
   const paint = {
@@ -182,7 +210,8 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
     input: { ...typeStyle('body'), color: palette.primary, backgroundColor: palette.field },
     submit: { backgroundColor: palette.field },
     submitLabel: { ...typeStyle('action'), color: palette.primary },
-    notice: { ...typeStyle('supporting'), color: submitting ? palette.secondary : palette.error },
+    notice: { ...typeStyle('supporting'), color: submitting || ended ? palette.secondary : palette.error },
+    help: { ...typeStyle('supporting'), color: palette.tertiary },
   };
 
   return (
@@ -222,24 +251,31 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
           </Text>
 
           <View style={styles.field}>
-            <Text style={[styles.label, paint.label]}>{copy.emailLabel}</Text>
+            <Text style={[styles.label, paint.label]}>{copy.identifierLabel}</Text>
+            <Text testID={SIGN_IN_IDENTIFIER_HELP_TEST_ID} style={[styles.help, paint.help]}>
+              {copy.identifierHelp}
+            </Text>
             <TextInput
               testID={SIGN_IN_EMAIL_TEST_ID}
-              value={email}
-              onChangeText={setEmail}
-              // Left-to-right inside the field only; see the module comment.
+              value={identifier}
+              onChangeText={setIdentifier}
+              // Left-to-right inside the field only; see the module comment. A Login ID and an Email are
+              // both Latin byte sequences.
               style={[styles.input, paint.input]}
               selectionColor={palette.primary}
               cursorColor={palette.primary}
+              // The Email keyboard serves both: it carries `@` and `.`, and letters and digits for a Login ID.
               keyboardType="email-address"
               autoCapitalize="none"
               autoCorrect={false}
-              autoComplete="email"
-              textContentType="emailAddress"
+              // `username` is the platform's name for "the account identifier", whichever form it takes.
+              autoComplete="username"
+              textContentType="username"
               returnKeyType="next"
               onSubmitEditing={focusPassword}
               submitBehavior="submit"
-              accessibilityLabel={copy.emailLabel}
+              accessibilityLabel={copy.identifierLabel}
+              accessibilityHint={copy.identifierHelp}
             />
           </View>
 
@@ -263,6 +299,8 @@ export function ProductSignInGateway({ auth, locale, footer, onEmailNotConfirmed
               accessibilityLabel={copy.passwordLabel}
             />
           </View>
+
+          {passwordAssist ?? null}
 
           <Pressable
             testID={SIGN_IN_SUBMIT_TEST_ID}
@@ -311,6 +349,7 @@ const styles = StyleSheet.create({
   title: {},
   field: { rowGap: 6 },
   label: {},
+  help: {},
   // `minHeight` rather than `height`, so the field still contains its text at the largest system
   // size. `textAlign`/`writingDirection` keep the credential physically left-to-right.
   input: {

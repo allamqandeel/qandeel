@@ -20,6 +20,10 @@ import type {
   AuthSessionChange,
   AuthSessionSnapshot,
   EmailCodeResult,
+  PasswordUpdateResult,
+  RecoveryCodePortResult,
+  RecoveryGrant,
+  RecoveryRequestResult,
   ResendResult,
   SignUpIdentity,
   SignUpResult,
@@ -260,6 +264,27 @@ export interface AuthPortDouble extends SupabaseAuthPort {
    * does — emit `SIGNED_IN` to the subscriber BEFORE resolving with the session.
    */
   blockVerify(session: AuthSessionSnapshot): Gate;
+  /** W2-01 — every Login ID sign-in the port received, in order. */
+  readonly loginIdSignIns: { readonly loginId: string; readonly password: string }[];
+  /** W2-01 — the answer to the next Login ID sign-ins. Default: a session for that Login ID, emitted as SIGNED_IN first. */
+  loginIdSignInWith(result: AuthPortResult<AuthSessionSnapshot>): void;
+  /** W2-01 — hold `signInWithLoginId` open, emitting SIGNED_IN before resolving (the SDK's `setSession` ordering). */
+  blockLoginIdSignIn(session: AuthSessionSnapshot): Gate;
+  recoveryRequestWith(result: RecoveryRequestResult): void;
+  recoveryCodeWith(result: RecoveryCodePortResult): void;
+  /** Hold `verifyRecoveryCode` open until the gate opens. */
+  blockRecoveryCode(): Gate;
+  passwordUpdateWith(result: PasswordUpdateResult): void;
+  /** Every recovery request, verification, password update and retirement the port saw. */
+  readonly recovery: {
+    readonly requests: string[];
+    readonly verifications: { readonly email: string; readonly code: string }[];
+    readonly updates: { readonly grant: RecoveryGrant; readonly password: string }[];
+    readonly retired: RecoveryGrant[];
+  };
+  /** How many times the port was asked to restore. */
+  readonly restoreCount: () => number;
+  readonly signOutCount: () => number;
 }
 
 export function authPortDouble(initial: AuthSessionSnapshot | null = null): AuthPortDouble {
@@ -273,12 +298,88 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
   let resendResult: ResendResult = { ok: true };
   let blockedVerify: { gate: Gate; session: AuthSessionSnapshot } | null = null;
   const signUps: { email: string; password: string; identity: SignUpIdentity }[] = [];
+  const loginIdSignIns: { loginId: string; password: string }[] = [];
+  let loginIdResult: AuthPortResult<AuthSessionSnapshot> | null = null;
+  let blockedLoginId: { gate: Gate; session: AuthSessionSnapshot } | null = null;
+  let recoveryRequestResult: RecoveryRequestResult = { ok: true };
+  let recoveryCodeResult: RecoveryCodePortResult = { ok: true, value: { accessToken: 'recovery-access', refreshToken: 'recovery-refresh' } };
+  let blockedRecoveryCode: Gate | null = null;
+  let passwordUpdateResult: PasswordUpdateResult = { ok: true };
+  const recovery = {
+    requests: [] as string[],
+    verifications: [] as { email: string; code: string }[],
+    updates: [] as { grant: RecoveryGrant; password: string }[],
+    retired: [] as RecoveryGrant[],
+  };
+  let restores = 0;
+  let signOuts = 0;
 
   const notify = (change: AuthSessionChange) => {
     for (const listener of Array.from(listeners)) listener(change);
   };
 
   return {
+    loginIdSignIns,
+    loginIdSignInWith: (result) => {
+      loginIdResult = result;
+    },
+    blockLoginIdSignIn(session) {
+      const opened = gate();
+      blockedLoginId = { gate: opened, session };
+      return opened;
+    },
+    signInWithLoginId: async (loginId, password) => {
+      loginIdSignIns.push({ loginId, password });
+      if (blockedLoginId !== null) {
+        const pending = blockedLoginId;
+        blockedLoginId = null;
+        await pending.gate.wait();
+        notify({ kind: 'SIGNED_IN', session: pending.session });
+        return { ok: true, value: pending.session };
+      }
+      const result = loginIdResult ?? { ok: true, value: { userId: `user-for-${loginId.toLowerCase()}`, accessToken: `token-for-${loginId.toLowerCase()}` } };
+      // `setSession` saves the session and notifies SIGNED_IN before it resolves, exactly as a sign-in.
+      if (result.ok) notify({ kind: 'SIGNED_IN', session: result.value });
+      return result;
+    },
+    recovery,
+    recoveryRequestWith: (result) => {
+      recoveryRequestResult = result;
+    },
+    recoveryCodeWith: (result) => {
+      recoveryCodeResult = result;
+    },
+    blockRecoveryCode() {
+      blockedRecoveryCode = gate();
+      return blockedRecoveryCode;
+    },
+    passwordUpdateWith: (result) => {
+      passwordUpdateResult = result;
+    },
+    requestPasswordRecovery: async (email) => {
+      recovery.requests.push(email);
+      return recoveryRequestResult;
+    },
+    // Deliberately emits NOTHING: the production port keeps recovery authority out of the SDK session.
+    verifyRecoveryCode: async (email, code) => {
+      recovery.verifications.push({ email, code });
+      if (blockedRecoveryCode !== null) {
+        const pending = blockedRecoveryCode;
+        blockedRecoveryCode = null;
+        await pending.wait();
+      }
+      return recoveryCodeResult;
+    },
+    updateRecoveredPassword: async (grant, password) => {
+      recovery.updates.push({ grant, password });
+      if (passwordUpdateResult.ok) recovery.retired.push(grant);
+      return passwordUpdateResult;
+    },
+    retireRecoveryGrant: async (grant) => {
+      recovery.retired.push(grant);
+    },
+    restoreCount: () => restores,
+    signOutCount: () => signOuts,
     signUps,
     signUpWith: (result) => {
       signUpResult = result;
@@ -331,7 +432,10 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
     emit: (session, kind = 'TOKEN_REFRESHED') => {
       notify({ kind, session });
     },
-    restoreSession: async () => restore,
+    restoreSession: async () => {
+      restores += 1;
+      return restore;
+    },
     signInWithPassword: async (email) => {
       if (blocked !== null) {
         const pending = blocked;
@@ -344,7 +448,10 @@ export function authPortDouble(initial: AuthSessionSnapshot | null = null): Auth
       }
       return signIn ?? { ok: true, value: { userId: `user-for-${email}`, accessToken: `token-for-${email}` } };
     },
-    signOut: async () => ({ ok: true, value: null }),
+    signOut: async () => {
+      signOuts += 1;
+      return { ok: true, value: null };
+    },
     onSessionChange: (listener) => {
       listeners.add(listener);
       return () => listeners.delete(listener);

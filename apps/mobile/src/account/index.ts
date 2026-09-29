@@ -40,6 +40,19 @@ export { CREATE_ACCOUNT_TEST_ID } from './entry/CreateAccountForm';
 export { VERIFY_EMAIL_TEST_ID } from './entry/VerifyEmailForm';
 export type { EntryLocale } from './entry/EntryParts';
 
+export type { AccountAccessCopy } from './access/copy';
+export { accountAccessCopy } from './access/copy';
+export type { NewPasswordFormProps, RecoveryCodeFormProps, RecoveryCompletedProps, RecoveryRequestFormProps } from './access/PasswordRecovery';
+export {
+  RECOVERY_CODE_LENGTH,
+  RECOVERY_CODE_TEST_ID,
+  RECOVERY_COMPLETED_TEST_ID,
+  RECOVERY_NEW_PASSWORD_TEST_ID,
+  RECOVERY_REQUEST_TEST_ID,
+} from './access/PasswordRecovery';
+export type { SessionVerificationRecoveryProps } from './access/SessionVerificationRecovery';
+export { SESSION_UNVERIFIED_TEST_ID, SessionVerificationRecovery } from './access/SessionVerificationRecovery';
+
 export type { WelcomeSurfaceProps } from './first-use/WelcomeSurface';
 export { WELCOME_SURFACE_TEST_ID, WelcomeSurface } from './first-use/WelcomeSurface';
 export type { FirstUseGateProps } from './first-use/FirstUseGate';
