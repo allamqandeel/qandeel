@@ -330,12 +330,15 @@ test('the focused suites exist, and this contract runs in the mobile fast gate',
   assert.match(mobileCi, /'tests\/w3-01-general-settings-appearance-signout-contract\.test\.mjs'/u);
 });
 
+// Re-anchored by W3-02's post-W3-01 reconciliation: W3-01 MERGED through PR #287, which closed D-01 / D-10 / D-07 and,
+// with D-07, W2. The permanent claims stay: the baseline is W3-01's own, D-02 is advanced only, and W3 is NOT closed.
 test('the implementation record tells the lifecycle truth', () => {
   const record = read(RECORD);
-  assert.match(record, /\*\*Status:\*\* IMPLEMENTED ON A DRAFT PR — NOT MERGED/u);
+  assert.match(record, /\*\*Status:\*\* MERGED \/ CLOSED — merged through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54`/u);
   assert.match(record, /\*\*Baseline:\*\* `b650b56f7436ce63d33c0af34036a963a03f5eee`/u);
   for (const moment of ['E2E-D-01', 'E2E-D-10', 'E2E-D-07', 'E2E-D-02']) assert.match(record, new RegExp(moment, 'u'));
-  const claimsMore = (text) => /W3 is (?:fully )?closed|W2 is (?:fully )?closed|merged to main/iu.test(text.replace(/not (?:yet )?merged to main|is not closed|NOT MERGED/giu, ''));
+  assert.match(record, /W2 is fully CLOSED\. W3 remains ACTIVE/u);
+  const claimsMore = (text) => /W3 is (?:fully )?closed|W3 (?:is )?(?:CLOSED|COMPLETE)\b/iu.test(text.replace(/W3 is not closed|it is not closed|does not close W3/giu, ''));
   assert.equal(claimsMore(record), false);
   assert.equal(claimsMore(`${record}\nW3 is closed.`), true, 'a planted over-claim is detected');
 });
