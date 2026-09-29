@@ -198,7 +198,9 @@ Current sequence:
    W1A-01 Authenticated Personal Conversation Core (merged through PR #283 at `7c9ee5e5bcb5f567dc7ef1944bcde92e8cdf99de`;
    [record](docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md)), then W1B-01 Account Identity + Verified Sign-up + First Use
    (merged through PR #284 at `6b333df7774d33b034575243b3592d21f2603683`; [record](docs/e2e/QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md)),
-   then W2-01 Final Account Access Lifecycle (Draft PR, not merged; [record](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)).
+   then W2-01 Final Account Access Lifecycle (merged through PR #285 at `df194edf6d70a2a300a0251ed114e7ad8715485e`;
+   [record](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), then W2-02 Production Launch Identity (Draft PR, not merged;
+   [record](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)).
 4. Release Hardening & Launch.
 
 This sequencing creates no runtime semantics and opens no implementation task by itself.

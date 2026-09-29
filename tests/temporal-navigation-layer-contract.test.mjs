@@ -1119,7 +1119,8 @@ test('no generated native project or dangerous mod entered the tree', async () =
     assert.doesNotMatch(text, /withDangerousMod/u, `${name} uses a Level-4 dangerous mod`);
   }
   const appConfig = await readJson('apps/mobile/app.json');
-  assert.deepEqual(appConfig.expo.plugins, ['expo-router']);
+  // T-06 adds no plugin; the only later plugin is W2-02's launch identity.
+  assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity']);
   assert.equal(existsSync(new URL('apps/mobile/ios', root)), false);
   assert.equal(existsSync(new URL('apps/mobile/android', root)), false);
 });

@@ -356,7 +356,8 @@ test('§8 / §14 — the record carries every approval verbatim, the external Em
   }
   assert.match(record, /Live branded transactional Email delivery = EXTERNAL \/ NOT PROVED/u, 'the external Email-delivery gate is recorded, open');
   assert.doesNotMatch(record, /Live branded transactional Email delivery = (?:PROVED|CLOSED)/u, 'and never marked closed');
-  assert.match(record, /\*\*Status:\*\* IMPLEMENTED ON A DRAFT PR — NOT MERGED/u, 'lifecycle truth: not merged until merged');
+  // W2-02 re-anchor: W2-01 merged through PR #285, so "not merged until merged" now reads merged — never earlier.
+  assert.match(record, /\*\*Status:\*\* IMPLEMENTED — MERGED through PR #285 at `df194edf6d70a2a300a0251ed114e7ad8715485e`/u, 'lifecycle truth: merged, with its merge commit');
   assert.ok(record.includes('A client never learns which Email belongs to a Login ID — including after password proof.'), 'W2-01 R1: the Product Owner clarification, verbatim');
   const manifest = readJson('package.json');
   assert.equal(manifest.scripts['test:w2-01-final-account-access-contract'], 'node --test tests/w2-01-final-account-access-contract.test.mjs');
