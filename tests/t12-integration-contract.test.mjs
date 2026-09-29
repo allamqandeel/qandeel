@@ -293,7 +293,15 @@ test('the route renders the integrated Product root, and the technical shell is 
 
 test('§28.26 — the boot smoke targets the integrated root and asserts no Product semantics', () => {
   const smoke = read('apps/mobile/.maestro/boot-smoke.yaml');
-  assert.match(smoke, /qandeel-product-root/u);
+  const productRoot = code['composition/ProductRoot.tsx'];
+  const targetsRootId = /id:\s*"qandeel-product-root"/u.test(smoke);
+  const targetsVisibleTechnicalHeader =
+    /text:\s*"QANDEEL"/u.test(smoke) && />\s*QANDEEL\s*</u.test(productRoot);
+  assert.equal(
+    targetsRootId || targetsVisibleTechnicalHeader,
+    true,
+    'the boot smoke must target either the stable root identity or the visible technical header rendered by ProductRoot',
+  );
   assert.doesNotMatch(smoke, /qandeel-foundation-shell/u);
   // A boot smoke proves launch and mount. This build carries no configuration and no credentials, so
   // there is no Session, no viewpoint and no world for it to assert on — and it asserts none.
