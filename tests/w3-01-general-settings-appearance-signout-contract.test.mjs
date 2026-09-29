@@ -101,21 +101,23 @@ test('Settings is not in the Analysis, and it is ONE destination with no extra r
   assert.match(depth, /if \(!settingsShown\) return undefined;\s*const subscription = BackHandler\.addEventListener\('hardwareBackPress', \(\) => \{\s*closeSettings\(\);\s*return true;/u);
 });
 
-test('exactly the two functional groups W3-01 owns — no placeholder, no other group name — so D-02 is advanced, not closed', () => {
+// Re-anchored by W3-02 (E2E-D-09): Account & Identity (`gAccount`) is now a REAL group with one function, the Public
+// ID. Every OTHER P4-C4 group name is still refused, and so is any placeholder; D-02 is still advanced, not closed.
+test('exactly the functional groups that exist (W3-01’s two, W3-02’s Account & Identity) — no placeholder, no other group name — so D-02 is advanced, not closed', () => {
   const settings = code(read(SETTINGS));
   const copy = code(read(SETTINGS_COPY));
   // P4-C4 §4's other group names, exactly as the pinned registry carries them.
   const registry = readJson('docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/data/COPY_REGISTRY.json');
   const rows = Array.isArray(registry) ? registry : registry.rows ?? Object.values(registry).find(Array.isArray);
   const byKey = new Map(rows.map((row) => [row.k, row]));
-  for (const key of ['gAppearance', 'gSupport']) {
+  for (const key of ['gAccount', 'gAppearance', 'gSupport']) {
     assert.ok(copy.includes(`'${byKey.get(key).ar}'`) && copy.includes(`'${byKey.get(key).en}'`), `${key} is the approved text`);
   }
-  const others = ['gAccount', 'gSecurity', 'gQandeel', 'gPrivacy', 'gPlan'].flatMap((key) => [byKey.get(key).ar, byKey.get(key).en]);
-  assert.equal(others.length, 10);
+  const others = ['gSecurity', 'gQandeel', 'gPrivacy', 'gPlan'].flatMap((key) => [byKey.get(key).ar, byKey.get(key).en]);
+  assert.equal(others.length, 8);
   const noOtherGroup = (text) => others.every((name) => !text.includes(name)) && !/coming soon|قريبًا|placeholder|disabled: true/iu.test(text);
-  guards('no-other-group-or-placeholder', settings + copy, noOtherGroup, `const later = '${byKey.get('gAccount').ar}';`);
-  assert.equal((settings.match(/<GroupHeading\b/gu) ?? []).length, 2, 'two group headings');
+  guards('no-other-group-or-placeholder', settings + copy, noOtherGroup, `const later = '${byKey.get('gSecurity').ar}';`);
+  assert.equal((settings.match(/<GroupHeading\b/gu) ?? []).length, 3, 'three group headings: Account & Identity, Appearance & Accessibility, Support & About');
   // The record must not claim the nine-group hierarchy closed.
   const record = read(RECORD);
   const overClaimsD02 = (text) => /E2E-D-02[^\n]*\b(CLOSED|COMPLETE)\b(?! — NOT)/u.test(text.replace(/NOT (?:CLOSED|COMPLETE)/gu, ''));
@@ -330,12 +332,15 @@ test('the focused suites exist, and this contract runs in the mobile fast gate',
   assert.match(mobileCi, /'tests\/w3-01-general-settings-appearance-signout-contract\.test\.mjs'/u);
 });
 
+// Re-anchored by W3-02's post-W3-01 reconciliation: W3-01 MERGED through PR #287, which closed D-01 / D-10 / D-07 and,
+// with D-07, W2. The permanent claims stay: the baseline is W3-01's own, D-02 is advanced only, and W3 is NOT closed.
 test('the implementation record tells the lifecycle truth', () => {
   const record = read(RECORD);
-  assert.match(record, /\*\*Status:\*\* IMPLEMENTED ON A DRAFT PR — NOT MERGED/u);
+  assert.match(record, /\*\*Status:\*\* MERGED \/ CLOSED — merged through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54`/u);
   assert.match(record, /\*\*Baseline:\*\* `b650b56f7436ce63d33c0af34036a963a03f5eee`/u);
   for (const moment of ['E2E-D-01', 'E2E-D-10', 'E2E-D-07', 'E2E-D-02']) assert.match(record, new RegExp(moment, 'u'));
-  const claimsMore = (text) => /W3 is (?:fully )?closed|W2 is (?:fully )?closed|merged to main/iu.test(text.replace(/not (?:yet )?merged to main|is not closed|NOT MERGED/giu, ''));
+  assert.match(record, /W2 is fully CLOSED\. W3 remains ACTIVE/u);
+  const claimsMore = (text) => /W3 is (?:fully )?closed|W3 (?:is )?(?:CLOSED|COMPLETE)\b/iu.test(text.replace(/W3 is not closed|it is not closed|does not close W3/giu, ''));
   assert.equal(claimsMore(record), false);
   assert.equal(claimsMore(`${record}\nW3 is closed.`), true, 'a planted over-claim is detected');
 });

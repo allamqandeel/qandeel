@@ -6,8 +6,10 @@ last W2 moment, `E2E-D-07`, only once merged)
 `E2E-D-02` (find a setting in its group) **advanced only, NOT CLOSED**
 **Baseline:** `b650b56f7436ce63d33c0af34036a963a03f5eee` (merge of PR #286, W2-02)
 **Branch:** `feat/w3-01-settings-appearance-signout`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. One bounded, Product-Owner-authorized Production Integration
-slice; it opens no other wave or Product area, closes no phase, and does not close W3.
+**Status:** MERGED / CLOSED — merged through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54` (independently
+reviewed head `c15cfac`, R1 fix `46aa8ef`). One bounded, Product-Owner-authorized Production Integration slice; it
+opened no other wave or Product area, closed no phase, and does not close W3. (Sections 1–12 are the record as
+implemented; §13 states the lifecycle after the merge.)
 
 ---
 
@@ -247,9 +249,10 @@ W3-01's own until then.
 
 ## 13. Lifecycle truth
 
-W3-01 is implemented on a **Draft PR and is NOT MERGED**. `E2E-D-01`, `E2E-D-10` and `E2E-D-07` are implemented and
-proven as above and are ready to close only once this PR merges green; `E2E-D-02` is advanced, NOT CLOSED. W2 is
-complete only when W3-01 merges with D-07 proven; W3 is not closed. This change narrowly reconciles W2-02's stale
+W3-01 **merged through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54`** (reconciled by W3-02, whose own
+change states it). `E2E-D-01`, `E2E-D-10` and `E2E-D-07` are **CLOSED in production**; `E2E-D-02` is advanced, NOT
+CLOSED. With D-07 closed, **W2 is fully CLOSED. W3 remains ACTIVE** — it is not closed. W3-01's own change narrowly
+reconciled W2-02's stale
 lifecycle text to its merge through PR #286 at `b650b56f7436ce63d33c0af34036a963a03f5eee` (the W2-02 record's status
 line, the Current State and Project Map locators, and the E2E-01 read-first rows) and does not rewrite the historical
 census or wave baselines.

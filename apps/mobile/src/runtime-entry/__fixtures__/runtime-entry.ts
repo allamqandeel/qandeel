@@ -226,6 +226,9 @@ export function serveHappyPath(
   // answers it as an account from before W1B-01 — unnamed, owed no Welcome, and silent in the
   // Conversation — which is exactly the world these proofs were written against.
   http.on('/account/first-use', () => ({ status: 200, body: { displayName: null, welcomePending: false, firstConversationOpening: true } }));
+  // W3-02: the reader's Public ID, read when General Settings is shown — a fixture handle whose one
+  // lifetime change is still available.
+  http.on('/account/public-id', () => ({ status: 200, body: { publicId: 'nightlamp27', changeAvailable: true } }));
 }
 
 // ---------------------------------------------------------------------------------------------

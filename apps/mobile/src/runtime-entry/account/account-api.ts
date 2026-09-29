@@ -34,6 +34,31 @@ export type LoginIdAvailabilityOutcome =
   /** The server answered, but not with a usable verdict. */
   | { readonly kind: 'FAILED' };
 
+/** W3-02 — the reader's own Public ID, canonical and without the `@` the Product shows, and its allowance. */
+export interface AccountPublicIdView {
+  readonly publicId: string;
+  /** The ONE lifetime manual change is still available. */
+  readonly changeAvailable: boolean;
+}
+
+export type AccountPublicIdOutcome =
+  | { readonly kind: 'READ'; readonly view: AccountPublicIdView }
+  | { readonly kind: 'UNAVAILABLE' };
+
+/** The server's bounded answers to the one lifetime change (migration 0125 decides each). */
+export type PublicIdChangeAnswer = 'CHANGED' | 'UNCHANGED' | 'INVALID' | 'UNAVAILABLE' | 'ALREADY_USED';
+
+export type PublicIdChangeOutcome =
+  | { readonly kind: 'ANSWERED'; readonly answer: PublicIdChangeAnswer; readonly view: AccountPublicIdView }
+  /** This command identity was already spent on another value. Nothing is known about this request. */
+  | { readonly kind: 'CONFLICT' }
+  /** The server answered, but not with a usable verdict. The change may or may not have committed. */
+  | { readonly kind: 'FAILED' }
+  /** No HTTP answer at all. The change may or may not have committed. */
+  | { readonly kind: 'NETWORK' };
+
+const PUBLIC_ID_ANSWERS: readonly string[] = Object.freeze(['CHANGED', 'UNCHANGED', 'INVALID', 'UNAVAILABLE', 'ALREADY_USED']);
+
 export interface AccountApiConfig {
   /** Origin plus any base path, without a trailing slash. */
   readonly baseUrl: string;
@@ -49,6 +74,13 @@ export function decodeFirstUse(body: unknown): AccountFirstUseView | null {
   if (displayName !== null && (typeof displayName !== 'string' || displayName === '')) return null;
   if (typeof welcomePending !== 'boolean' || typeof firstConversationOpening !== 'boolean') return null;
   return { displayName, welcomePending, firstConversationOpening };
+}
+
+export function decodePublicId(body: unknown): AccountPublicIdView | null {
+  if (!isRecord(body)) return null;
+  const { publicId, changeAvailable } = body;
+  if (typeof publicId !== 'string' || publicId === '' || typeof changeAvailable !== 'boolean') return null;
+  return { publicId, changeAvailable };
 }
 
 /** The signed-in account client. Built on the AC-01 seam bound to one identity. */
@@ -82,6 +114,54 @@ export class AccountApiClient {
       // A refused credential seam or a dropped connection: either way the completion did not land.
       return false;
     }
+  }
+
+  /** W3-02 — the reader's own Public ID. Read once; never repeated here. */
+  async readPublicId(): Promise<AccountPublicIdOutcome> {
+    let response: Awaited<ReturnType<RuntimeHttpFetch>>;
+    try {
+      response = await this.config.fetch(`${this.config.baseUrl}/account/public-id`, { method: 'GET', headers: { Accept: 'application/json' } });
+    } catch {
+      return { kind: 'UNAVAILABLE' };
+    }
+    if (!response.ok) return { kind: 'UNAVAILABLE' };
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return { kind: 'UNAVAILABLE' };
+    }
+    const view = decodePublicId(body);
+    return view === null ? { kind: 'UNAVAILABLE' } : { kind: 'READ', view };
+  }
+
+  /**
+   * W3-02 — the reader's one lifetime Public ID change, issued once. The caller is the credential's; the
+   * body is the command identity and the requested value, nothing else. Whether a failed request
+   * committed is NOT decided here: the caller reconciles by reading.
+   */
+  async changePublicId(commandId: string, publicId: string): Promise<PublicIdChangeOutcome> {
+    let response: Awaited<ReturnType<RuntimeHttpFetch>>;
+    try {
+      response = await this.config.fetch(`${this.config.baseUrl}/account/public-id/change`, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ commandId, publicId }),
+      });
+    } catch {
+      return { kind: 'NETWORK' };
+    }
+    if (response.status === 409) return { kind: 'CONFLICT' };
+    if (!response.ok) return { kind: 'FAILED' };
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return { kind: 'FAILED' };
+    }
+    const view = decodePublicId(body);
+    if (view === null || !isRecord(body) || typeof body.outcome !== 'string' || !PUBLIC_ID_ANSWERS.includes(body.outcome)) return { kind: 'FAILED' };
+    return { kind: 'ANSWERED', answer: body.outcome as PublicIdChangeAnswer, view };
   }
 }
 

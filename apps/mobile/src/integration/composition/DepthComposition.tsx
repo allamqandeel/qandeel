@@ -287,7 +287,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         })}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} publicId={runtime.publicId} />
           </View>
         ) : null}
       </View>

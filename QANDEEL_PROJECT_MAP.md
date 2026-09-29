@@ -68,7 +68,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | [`apps/api/`](apps/api/README.md) | NestJS backend. `src/` holds the conversation, intelligence, memory, hypothesis, question, human-model (HIM), thread / focus / live-focus, historical-projection, post-response, runtime-events and health modules, plus `connected-worlds/` (the server-side kernel and authority services) |
 | [`apps/mobile/`](apps/mobile/README.md) | React Native + Expo client for the Living Analysis Map: `src/state`, `map`, `timeline`, `temporal-navigation`, `return-navigation`, `orientation-chrome`, `motion`, `responsive`, `integration`, `recovery`, `runtime-entry` and others |
 | [`packages/runtime/`](packages/runtime/README.md) | `@qandeel/runtime`, the type-only wire contracts shared by API and mobile |
-| [`database/`](database/README.md) | PostgreSQL / Supabase: `migrations/` (0001–0122), `tests/`, the `verify-migration-NNNN.mjs` verifiers and the focused-verification runner. Its README is also the canonical record of Connected Worlds `I-05` |
+| [`database/`](database/README.md) | PostgreSQL / Supabase: `migrations/` (0001–0125), `tests/`, the `verify-migration-NNNN.mjs` verifiers and the focused-verification runner. Its README is also the canonical record of Connected Worlds `I-05` |
 | [`tests/`](tests/) | root static contract gates (`*-contract.test.mjs`), including `task-closure-governance-contract.test.mjs` and `forward-safety-contract.test.mjs` |
 | [`scripts/`](scripts/) | `preflight.mjs`, integration diagnostics, and the T-12 / T-13 Phase-M device-validation helpers |
 | [`infra/`](infra/README.md) | placeholder for deployment configuration |
@@ -79,7 +79,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | [`docs/design/`](docs/design/) | design-track records: `phase-v/`, `phase-vi/`, the I-08B3.1-G closures in `i-08b3.1-g1.1/`, `i-08b3.1-g1.2/`, `i-08b3.1-g2/`, `i-08b3.1-g2.3/` and `i-08b3.1-g3/`, the P2-A iconography proof package in `p2-iconography/` (evidence for the P2 closure), the P3-A notification & Activity proof package in `p3-notifications/` (evidence for the P3 closure), and the P4-C comparative proof in `p4-shell/` and the P4-C3 residual visual + copy proof in `p4-residual/` (evidence for the P4 closure) |
 | [`docs/p4/`](docs/p4/P4_READ_FIRST.md) | P4's local evidence and reconciliation package, **final**: the 66-row residual census, the **closed** `APP-OPS-01` App ↔ Company Operations contract (`CLOSED / FROZEN`; the file keeps its `_CANDIDATE` path), the final carry-forward matrix, the resolved decision queue and the final authority compatibility matrix. P4's primary closure record is [`QANDEEL_P4_FINAL_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md); read it first |
 | [`docs/design/canonical-artifacts/`](docs/design/canonical-artifacts/README.md) | byte-exact final Product / design artifacts: I-08B1, brand, typography, I-08B3.1 A–G proofs. Located by its index |
-| [`docs/e2e/`](docs/e2e/E2E01_READ_FIRST.md) | End-to-End Product Experience Completeness Audit evidence: the E2E-01 journey / surface census, its gap matrix and its proposed closure waves. **Audit evidence, not Product authority**; start at `E2E01_READ_FIRST.md`. Also holds the W1A-01 implementation record ([`QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md)) the W1B-01 implementation record ([`QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md)) and the W2-01 implementation record ([`QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), each of which carries its Product Owner-approved copy and interaction contract verbatim |
+| [`docs/e2e/`](docs/e2e/E2E01_READ_FIRST.md) | End-to-End Product Experience Completeness Audit evidence: the E2E-01 journey / surface census, its gap matrix and its proposed closure waves. **Audit evidence, not Product authority**; start at `E2E01_READ_FIRST.md`. Also holds the W1A-01 implementation record ([`QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md)) the W1B-01 implementation record ([`QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md)), the W2-01 implementation record ([`QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), the W2-02 implementation record ([`QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)), the W3-01 implementation record ([`QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)) and the W3-02 implementation record ([`QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)), each of which carries its Product Owner-approved copy and interaction contract verbatim |
 | [`docs/assurance/connected-worlds/`](docs/assurance/connected-worlds/README.md) | the `QAN-CW-ASSURE-01` findings register. **Evidence only** |
 
 ---
@@ -170,7 +170,8 @@ This is a **handoff / locator note, not a new Product authority**.
 - The exceptional lantern gateway identity moment remains **in v1** but its design / motion / interaction / technology work is deferred to the standalone
   **QANDEEL — Lantern Gateway Identity Moment v1** task, registered as `QAN-BL-LANTERN-01`.
 - The final high-fidelity mobile Product surfaces for **Public World** are **not complete**. Public World product/runtime authority exists, while its final user-facing surfaces remain owned by the End-to-End completeness audit / later Product realization. The same audit owns the undrawn Shared / Public / Introductions journey surfaces identified by P4.
-- The next roadmap phase is **QANDEEL End-to-End Product Experience Completeness Audit** and it has **not started**.
+- The next roadmap phase is **QANDEEL End-to-End Product Experience Completeness Audit**. At this checkpoint it had not
+  started; it has since **started through E2E-01 and is ACTIVE** (item 2 of the sequence below).
 - **Working planning discussion — NOT FROZEN / NOT A ROADMAP CHANGE:** before opening the full End-to-End audit, the Product Owner and Project Lead discussed using a short real-LLM/runtime calibration and cost/evaluation instrumentation step so the audit exercises real AI behavior. Final Model / Provider selection and Plans / Credits should use measured QANDEEL workload economics rather than guesses. The exact sequencing must be decided explicitly before the next Task Contract; the existing roadmap remains authoritative until then.
 
 The roadmap is intentionally not duplicated here. Read
@@ -201,8 +202,10 @@ Current sequence:
    then W2-01 Final Account Access Lifecycle (merged through PR #285 at `df194edf6d70a2a300a0251ed114e7ad8715485e`;
    [record](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), then W2-02 Production Launch Identity (merged through PR #286 at `b650b56f7436ce63d33c0af34036a963a03f5eee`;
    [record](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)), then W3-01 General Settings
-   Foundation + Appearance + Sign Out (Draft PR, not merged;
-   [record](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)).
+   Foundation + Appearance + Sign Out (MERGED / CLOSED through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54`;
+   [record](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)). **W2 is CLOSED;
+   W3 is ACTIVE**, and its next slice is W3-02 Account & Identity Foundation + Public ID v1 (Draft PR, not merged;
+   [record](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)).
 4. Release Hardening & Launch.
 
 This sequencing creates no runtime semantics and opens no implementation task by itself.

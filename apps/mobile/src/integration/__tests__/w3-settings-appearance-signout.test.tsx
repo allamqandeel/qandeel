@@ -190,14 +190,17 @@ describe('E2E-D-01 — the ONE General Settings destination, entered from Person
     h.dispose();
   });
 
-  it('exposes exactly the two functional groups W3-01 owns — no placeholder, no other group — and exactly these controls', async () => {
+  // Re-anchored by W3-02 (E2E-D-09): the root now holds THREE real groups — Account & Identity, with its one
+  // function (the Public ID row), before the two W3-01 owns. Still no placeholder and no other group.
+  it('exposes exactly the functional groups that exist — W3-02’s Account & Identity and W3-01’s two — no placeholder, no other group — and exactly these controls', async () => {
     const { h, view } = await world();
     await press(view, 'qandeel-settings-entry');
     const settings = within(view.getByTestId('qandeel-settings'));
     const headers = settings.getAllByRole('header').map((node) => (node.props.children as string));
-    expect(headers).toEqual([COPY.title, COPY.appearanceGroup, COPY.supportGroup]);
+    expect(headers).toEqual([COPY.title, COPY.accountGroup, COPY.appearanceGroup, COPY.supportGroup]);
     const controls = [...settings.getAllByRole('button'), ...settings.getAllByRole('radio')].map((node) => node.props.accessibilityLabel as string).sort();
-    expect(controls).toEqual([COPY.backName, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
+    const publicIdRow = [COPY.publicId.term, '@nightlamp27', COPY.publicId.available].join(', ');
+    expect(controls).toEqual([COPY.backName, publicIdRow, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
     for (const node of settings.getAllByRole('radio')) expect(style(node).minHeight).toBeGreaterThanOrEqual(44);
     expect(style(settings.getByTestId('qandeel-settings-back'))).toMatchObject({ width: 44, height: 44 });
     h.dispose();
