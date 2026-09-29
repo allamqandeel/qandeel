@@ -11,8 +11,8 @@
 -- (`public.public_identities`), which stays the opaque internal Public runtime ref. Nothing here reads,
 -- writes or grants anything of the I-05 Public runtime.
 --
--- Additive and forward-only. Three columns, two shape rules, one unique index, a backfill, two
--- triggers and two Product functions. Migrations 0001–0124 are untouched.
+-- Additive and forward-only. Three columns, three row rules, one unique index, a backfill, two
+-- triggers, one non-exposed internal schema and two Product functions. Migrations 0001–0124 are untouched.
 --
 -- ## The grammar (implementation detail, not Product authority)
 --
@@ -23,8 +23,23 @@
 --              Arabic-Indic digits become 0–9, and it is lowercased. Stored canonical and lowercase, so
 --              the unique index IS case-insensitive uniqueness.
 --
--- The Public-ID namespace is separate from the Login-ID namespace, deliberately: a Public ID is never
--- compared with any Login ID, so the change command cannot be used to learn anything private.
+-- ## Public ID and the SAME account's Login ID are never equal (Product Owner decision, W3-02 R1)
+--
+-- The Login ID is a private sign-in identifier; the Public ID is intentionally public. A row whose
+-- Public ID equals its OWN Login ID is refused by the database (`users_public_id_not_own_login_id_check`),
+-- the generator never hands an account its own Login ID, and a manual change to it is INVALID. Both are
+-- stored canonical lowercase, so this equality is the case-insensitive one. It is a same-row rule ONLY:
+-- nothing here ever compares a Public ID with ANOTHER account's Login ID, so the Public-ID namespace stays
+-- separate from the Login-ID namespace and nothing can be used to learn a private Login ID.
+--
+-- ## The privilege boundary
+--
+-- Supabase exposes `public` over the Data API; this project exposes `public` only (database/README.md).
+-- Following Supabase's rule that a SECURITY DEFINER function must never live in an exposed schema, every
+-- privileged part of W3-02 lives in `account_private`, a schema created here and exposed nowhere. The two
+-- Product functions in `public` are SECURITY INVOKER. The one privileged write is reached through the
+-- INVOKER Product wrapper, which is why `authenticated` gets USAGE on the schema and EXECUTE on that ONE
+-- function — nothing else in the schema.
 --
 -- ## The one lifetime manual change
 --
@@ -34,6 +49,12 @@
 -- the server channel and the table owner included. A second change, un-consuming the change, or
 -- changing the Public ID without consuming it are impossible by construction.
 BEGIN;
+
+-- The non-exposed home of W3-02's internal helpers. Nobody but its owner may use it, until the grants at
+-- the end name exactly one function. Every function in it revokes PUBLIC by name (a per-schema default
+-- privilege cannot withdraw PostgreSQL's global PUBLIC EXECUTE), and the verifier checks the whole schema.
+CREATE SCHEMA account_private;
+REVOKE ALL ON SCHEMA account_private FROM PUBLIC;
 
 ALTER TABLE public.users
     ADD COLUMN public_id text,
@@ -52,11 +73,12 @@ ALTER TABLE public.users
 
 CREATE UNIQUE INDEX users_public_id_key ON public.users (public_id);
 
--- The one normalization. Pure; reached only from the functions below.
-CREATE FUNCTION public.normalize_public_id_v1(p_value text)
+-- The one normalization. Pure and unprivileged; reached only from the functions below.
+CREATE FUNCTION account_private.normalize_public_id_v1(p_value text)
 RETURNS text
 LANGUAGE sql
 IMMUTABLE
+SECURITY INVOKER
 SET search_path = ''
 AS $$
     SELECT lower(translate(regexp_replace(btrim(p_value), '^@', ''),
@@ -64,11 +86,12 @@ AS $$
                            '01234567890123456789'));
 $$;
 
--- Whether a normalized value is a well-formed Public ID. The same rule as the shape check.
-CREATE FUNCTION public.is_well_formed_public_id_v1(p_value text)
+-- Whether a normalized value is a well-formed Public ID. The same rule as the shape check. Pure and unprivileged.
+CREATE FUNCTION account_private.is_well_formed_public_id_v1(p_value text)
 RETURNS boolean
 LANGUAGE sql
 IMMUTABLE
+SECURITY INVOKER
 SET search_path = ''
 AS $$
     SELECT p_value IS NOT NULL
@@ -76,16 +99,19 @@ AS $$
        AND p_value ~ '^[a-z][a-z0-9]*([._][a-z0-9]+)*$';
 $$;
 
--- A fresh, unused Public ID. It takes NO argument and reads nothing of any account except which Public
--- IDs are already held, so it cannot be derived from a Name, Login ID, Email, phone, Shared ID or
--- `user_id`: it is two words from fixed neutral lists and a number, e.g. `quietlamp27`. A candidate that
--- is already held is drawn again, with a wider number as the attempts grow; the bound is a failure, never
--- a fallback.
-CREATE FUNCTION public.generate_public_id_v1()
+-- A fresh, unused Public ID. It reads nothing of any account except which Public IDs are already held, so
+-- it cannot be derived from a Name, Login ID, Email, phone, Shared ID or `user_id`: it is two words from
+-- fixed neutral lists and a number, e.g. `quietlamp27`. A candidate that is already held — or that equals
+-- `p_excluded`, the ONE value the caller forbids (the same account's own Login ID) — is drawn again, with
+-- a wider number as the attempts grow; the bound is a failure, never a fallback. `p_excluded` only rejects
+-- a candidate: no candidate is ever built from it, and no other account's Login ID is ever read.
+--
+-- INVOKER: it is only ever run by its privileged callers below (and by the migration), as their owner.
+CREATE FUNCTION account_private.generate_public_id_v1(p_excluded text)
 RETURNS text
 LANGUAGE plpgsql
 VOLATILE
-SECURITY DEFINER
+SECURITY INVOKER
 SET search_path = ''
 AS $$
 DECLARE
@@ -113,7 +139,8 @@ BEGIN
         v_candidate := v_first[1 + floor(random() * array_length(v_first, 1))::integer]
                     || v_second[1 + floor(random() * array_length(v_second, 1))::integer]
                     || (power(10, v_digits - 1)::integer + floor(random() * 9 * power(10, v_digits - 1))::integer)::text;
-        IF NOT EXISTS (SELECT 1 FROM public.users u WHERE u.public_id = v_candidate) THEN
+        IF v_candidate IS DISTINCT FROM p_excluded
+           AND NOT EXISTS (SELECT 1 FROM public.users u WHERE u.public_id = v_candidate) THEN
             RETURN v_candidate;
         END IF;
         IF v_attempt >= 64 THEN
@@ -124,29 +151,35 @@ END;
 $$;
 
 -- Backfill: every existing account receives exactly one Public ID, one row at a time, so each draw
--- sees the ones already given (a single UPDATE's subquery would not).
+-- sees the ones already given (a single UPDATE's subquery would not), and never its own Login ID.
 DO $$
 DECLARE
-    v_account uuid;
+    v_account record;
 BEGIN
-    FOR v_account IN SELECT u.id FROM public.users u WHERE u.public_id IS NULL ORDER BY u.id LOOP
-        UPDATE public.users SET public_id = public.generate_public_id_v1() WHERE id = v_account;
+    FOR v_account IN SELECT u.id, u.login_id FROM public.users u WHERE u.public_id IS NULL ORDER BY u.id LOOP
+        UPDATE public.users SET public_id = account_private.generate_public_id_v1(v_account.login_id) WHERE id = v_account.id;
     END LOOP;
 END;
 $$;
 
 ALTER TABLE public.users ALTER COLUMN public_id SET NOT NULL;
 
+-- The same account's Public ID and Login ID are never equal. A row, not a UI rule: every path meets it.
+ALTER TABLE public.users
+    ADD CONSTRAINT users_public_id_not_own_login_id_check
+    CHECK (login_id IS NULL OR public_id <> login_id);
+
 -- Every future account receives its Public ID from the server, at the moment its row is created,
 -- without asking anyone. A supplied value is never trusted: generation is the only source.
-CREATE FUNCTION public.assign_public_id_v1()
+-- DEFINER, and therefore non-exposed: the draw must see every held Public ID whoever inserts the row.
+CREATE FUNCTION account_private.assign_public_id_v1()
 RETURNS trigger
 LANGUAGE plpgsql
 SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
-    NEW.public_id := public.generate_public_id_v1();
+    NEW.public_id := account_private.generate_public_id_v1(NEW.login_id);
     NEW.public_id_changed_at := NULL;
     NEW.public_id_change_command_id := NULL;
     RETURN NEW;
@@ -156,16 +189,32 @@ $$;
 CREATE TRIGGER assign_public_id
     BEFORE INSERT ON public.users
     FOR EACH ROW
-    EXECUTE FUNCTION public.assign_public_id_v1();
+    EXECUTE FUNCTION account_private.assign_public_id_v1();
 
--- The one lifetime manual change, as a structural rule. The only admitted write to the Public ID is:
--- a never-changed Public ID, to a different one, consuming the change with its command identity.
-CREATE FUNCTION public.guard_public_id_lifetime_change_v1()
+-- The one lifetime manual change, as a structural rule. The only admitted writes to the Public ID are:
+--
+--   a never-changed Public ID, to a different one, consuming the change with its command identity; and
+--   the SERVER's redraw of a never-changed, generated Public ID at the one moment the account's Login ID is
+--   first assigned (sign-up, 0123) and equals it — the value is drawn here, never taken from the writer,
+--   so the redraw is not a change anyone can steer, and it consumes nothing.
+--
+-- DEFINER, and therefore non-exposed: the redraw must see every held Public ID whoever updates the row.
+CREATE FUNCTION account_private.guard_public_id_lifetime_change_v1()
 RETURNS trigger
 LANGUAGE plpgsql
+SECURITY DEFINER
 SET search_path = ''
 AS $$
 BEGIN
+    IF OLD.login_id IS NULL AND NEW.login_id IS NOT NULL
+       AND NEW.login_id = OLD.public_id
+       AND NEW.public_id IS NOT DISTINCT FROM OLD.public_id
+       AND OLD.public_id_changed_at IS NULL
+       AND NEW.public_id_changed_at IS NULL
+       AND NEW.public_id_change_command_id IS NULL THEN
+        NEW.public_id := account_private.generate_public_id_v1(NEW.login_id);
+        RETURN NEW;
+    END IF;
     IF NEW.public_id IS NOT DISTINCT FROM OLD.public_id
        AND NEW.public_id_changed_at IS NOT DISTINCT FROM OLD.public_id_changed_at
        AND NEW.public_id_change_command_id IS NOT DISTINCT FROM OLD.public_id_change_command_id THEN
@@ -184,37 +233,30 @@ $$;
 CREATE TRIGGER guard_public_id_lifetime_change
     BEFORE UPDATE ON public.users
     FOR EACH ROW
-    EXECUTE FUNCTION public.guard_public_id_lifetime_change_v1();
+    EXECUTE FUNCTION account_private.guard_public_id_lifetime_change_v1();
 
--- The caller's own Public ID and whether the one manual change is still available, under the caller's
--- own row-level security (INVOKER). Nothing else: no id, no Name, no Login ID, no Email, no Public ref.
-CREATE FUNCTION public.read_own_public_id_v1()
-RETURNS TABLE (current_public_id text, change_available boolean)
-LANGUAGE sql
-STABLE
-SECURITY INVOKER
-SET search_path = ''
-AS $$
-    SELECT u.public_id, u.public_id_changed_at IS NULL
-      FROM public.users u
-     WHERE u.id = (SELECT auth.uid());
-$$;
-
--- The caller's own one lifetime manual change. The caller is `auth.uid()` and nothing else: there is no
--- account parameter. It answers a bounded outcome and the caller's own resulting state:
+-- The caller's own one lifetime manual change: the privileged implementation. The caller is `auth.uid()`
+-- and nothing else: there is no account parameter. It answers a bounded outcome and the caller's own
+-- resulting state:
 --
 --   CHANGED       committed now — or the SAME command replayed after it committed (a lost response is
 --                 answered with the committed truth, never turned into a failure);
 --   UNCHANGED     the requested value normalizes to the current Public ID: nothing is written, and the
 --                 one change is NOT consumed;
---   INVALID       not a well-formed Public ID: nothing is written;
+--   INVALID       not a well-formed Public ID, or the caller's OWN Login ID: nothing is written, and the
+--                 one change is NOT consumed;
 --   ALREADY_USED  the one lifetime change was made by another command: nothing is written;
---   UNAVAILABLE   another account holds it: nothing is written. Nothing about that account is returned.
+--   UNAVAILABLE   another account holds it as its Public ID: nothing is written. Nothing about that account
+--                 is returned, and no other account's Login ID is ever consulted.
+--
+-- The order is: replay, malformed, current value, own Login ID, allowance, namespace. The current Public ID
+-- can never equal the own Login ID (the row rule above), so UNCHANGED and the own-Login-ID INVALID never meet;
+-- INVALID precedes ALREADY_USED, so a value that is never admissible is named as such, and it consumes nothing.
 --
 -- A command identity reused for a DIFFERENT value is refused outright (23505), never re-interpreted.
 -- The caller's own row is the serialization point, so two concurrent attempts cannot both win; two
 -- accounts racing for the same value meet the unique index, and the loser is UNAVAILABLE.
-CREATE FUNCTION public.change_own_public_id_v1(p_command_id uuid, p_public_id text)
+CREATE FUNCTION account_private.change_own_public_id_v1(p_command_id uuid, p_public_id text)
 RETURNS TABLE (outcome text, current_public_id text, change_available boolean)
 LANGUAGE plpgsql
 VOLATILE
@@ -223,7 +265,7 @@ SET search_path = ''
 AS $$
 DECLARE
     v_user uuid := (SELECT auth.uid());
-    v_requested text := public.normalize_public_id_v1(p_public_id);
+    v_requested text := account_private.normalize_public_id_v1(p_public_id);
     v_account public.users;
     v_conflict text;
 BEGIN
@@ -248,13 +290,19 @@ BEGIN
         RAISE EXCEPTION 'PUBLIC_ID_COMMAND_CONFLICT' USING ERRCODE = '23505';
     END IF;
 
-    IF NOT public.is_well_formed_public_id_v1(v_requested) THEN
+    IF NOT account_private.is_well_formed_public_id_v1(v_requested) THEN
         RETURN QUERY SELECT 'INVALID'::text, v_account.public_id, v_account.public_id_changed_at IS NULL;
         RETURN;
     END IF;
 
     IF v_requested = v_account.public_id THEN
         RETURN QUERY SELECT 'UNCHANGED'::text, v_account.public_id, v_account.public_id_changed_at IS NULL;
+        RETURN;
+    END IF;
+
+    -- The caller's OWN Login ID, from the caller's own locked row — never any other account's.
+    IF v_requested = v_account.login_id THEN
+        RETURN QUERY SELECT 'INVALID'::text, v_account.public_id, v_account.public_id_changed_at IS NULL;
         RETURN;
     END IF;
 
@@ -285,22 +333,54 @@ BEGIN
 END;
 $$;
 
+-- The caller's own Public ID and whether the one manual change is still available, under the caller's
+-- own row-level security (INVOKER). Nothing else: no id, no Name, no Login ID, no Email, no Public ref.
+CREATE FUNCTION public.read_own_public_id_v1()
+RETURNS TABLE (current_public_id text, change_available boolean)
+LANGUAGE sql
+STABLE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+    SELECT u.public_id, u.public_id_changed_at IS NULL
+      FROM public.users u
+     WHERE u.id = (SELECT auth.uid());
+$$;
+
+-- The Product change boundary on the Data API: INVOKER, unprivileged, and nothing but a pass-through to the
+-- non-exposed implementation above. The caller is still only `auth.uid()`; the answer is the same bounded one.
+CREATE FUNCTION public.change_own_public_id_v1(p_command_id uuid, p_public_id text)
+RETURNS TABLE (outcome text, current_public_id text, change_available boolean)
+LANGUAGE sql
+VOLATILE
+SECURITY INVOKER
+SET search_path = ''
+AS $$
+    SELECT c.outcome, c.current_public_id, c.change_available
+      FROM account_private.change_own_public_id_v1(p_command_id, p_public_id) c;
+$$;
+
 -- Default-deny, by name: a hosted project's default privileges can grant EXECUTE on a new public
--- function to `anon` and `authenticated`. The internal helpers are reachable by no client role; the two
--- Product functions by `authenticated` only. No table grant changes: `authenticated` still has no
--- UPDATE, INSERT or DELETE on `public.users`.
-REVOKE ALL ON FUNCTION public.normalize_public_id_v1(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.is_well_formed_public_id_v1(text) FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.generate_public_id_v1() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.assign_public_id_v1() FROM PUBLIC, anon, authenticated;
-REVOKE ALL ON FUNCTION public.guard_public_id_lifetime_change_v1() FROM PUBLIC, anon, authenticated;
+-- function to `anon` and `authenticated`, and a new function is executable by PUBLIC. The internal
+-- helpers are reachable by no client role; the two Product functions by `authenticated` only, and the
+-- privileged implementation by `authenticated` only because the INVOKER Product wrapper runs as it. No
+-- table grant changes: `authenticated` still has no UPDATE, INSERT or DELETE on `public.users`.
+REVOKE ALL ON FUNCTION account_private.normalize_public_id_v1(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION account_private.is_well_formed_public_id_v1(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION account_private.generate_public_id_v1(text) FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION account_private.assign_public_id_v1() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION account_private.guard_public_id_lifetime_change_v1() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION account_private.change_own_public_id_v1(uuid, text) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.read_own_public_id_v1() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.change_own_public_id_v1(uuid, text) FROM PUBLIC, anon, authenticated;
 -- The server channel needs none of them (the API calls the change on the CALLER's token), so it is refused too,
 -- where that role exists.
 DO $$BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
-  EXECUTE 'REVOKE ALL ON FUNCTION public.normalize_public_id_v1(text), public.is_well_formed_public_id_v1(text), public.generate_public_id_v1(), public.assign_public_id_v1(), public.guard_public_id_lifetime_change_v1(), public.read_own_public_id_v1(), public.change_own_public_id_v1(uuid, text) FROM service_role';
+  EXECUTE 'REVOKE ALL ON SCHEMA account_private FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION account_private.normalize_public_id_v1(text), account_private.is_well_formed_public_id_v1(text), account_private.generate_public_id_v1(text), account_private.assign_public_id_v1(), account_private.guard_public_id_lifetime_change_v1(), account_private.change_own_public_id_v1(uuid, text), public.read_own_public_id_v1(), public.change_own_public_id_v1(uuid, text) FROM service_role';
 END IF; END$$;
+GRANT USAGE ON SCHEMA account_private TO authenticated;
+GRANT EXECUTE ON FUNCTION account_private.change_own_public_id_v1(uuid, text) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.read_own_public_id_v1() TO authenticated;
 GRANT EXECUTE ON FUNCTION public.change_own_public_id_v1(uuid, text) TO authenticated;
 

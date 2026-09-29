@@ -2,19 +2,26 @@
 // lifetime manual change, E2E-D-09).
 //
 // It proves, against a fully migrated database:
-//   1. the catalog: the three columns, the NOT NULL Public ID, the unique index, the shape rules, the two
-//      triggers, the function shapes (no account parameter), EXECUTE for `authenticated` on exactly the two
-//      Product functions and for no client role on the helpers, and still no client table write;
-//   2. every existing account was backfilled with exactly one well-formed, unique Public ID;
+//   1. the catalog: the three columns, the NOT NULL Public ID, the unique index, the three row rules (shape,
+//      change pair, never the own Login ID), the two triggers, the function shapes (no account parameter);
+//      the privilege boundary: exactly two W3-02 functions in the exposed `public` schema, both INVOKER,
+//      every privileged one in the non-exposed `account_private`; in that schema exactly ONE function is
+//      executable by any client role (`authenticated`, for the INVOKER wrapper), USAGE for `authenticated`
+//      only; nothing for `anon` or `service_role`; and still no client table write;
+//   2. every existing account was backfilled with exactly one well-formed, unique Public ID, never its own
+//      Login ID;
 //   3. every new account receives one from the server, drawn from the neutral generator and never from its
-//      Name, Login ID or id; a colliding draw is drawn again (seeded, so the collision is real);
+//      Name, Login ID or id; a colliding draw is drawn again, and so is a draw equal to the excluded value;
+//      a sign-up whose Login ID equals its freshly drawn Public ID is redrawn (all seeded, so each collision
+//      is real);
 //   4. the one lifetime change: normalized, committed once; a second distinct change is ALREADY_USED; the
 //      same command replayed is CHANGED with the same committed truth; the same command with another value
 //      is refused; confirming the current ID is UNCHANGED and consumes nothing; malformed values are INVALID;
-//      a value another account holds is UNAVAILABLE and consumes nothing; a private Login ID is NOT in the
-//      Public namespace (no oracle); no other account is touched;
-//   5. the database itself refuses a second change, un-consuming the change, or a change that does not
-//      consume it — even from the table owner;
+//      a value another account holds is UNAVAILABLE and consumes nothing; the caller's OWN Login ID is INVALID
+//      and consumes nothing; ANOTHER account's private Login ID is NOT in the Public namespace (no oracle); no
+//      other account is touched;
+//   5. the database itself refuses a second change, un-consuming the change, a change that does not
+//      consume it, or a Public ID equal to the row's own Login ID — even from the table owner;
 //   6. `anon` can neither read nor change; `authenticated` cannot UPDATE the table and reads only its own row;
 //   7. the internal I-05 `public_identity_ref` is untouched and distinct;
 //   8. concurrency, on committed state across two connections, each race proven to have really blocked:
@@ -51,6 +58,7 @@ async function rejected(operation, codes) {
   }
   assert.ok(refusal, 'the operation was expected to be refused, and it succeeded');
   assert.ok(codes.includes(refusal.code), `expected one of ${codes.join(', ')}, got ${refusal.code}`);
+  return refusal;
 }
 
 async function actAs(role, userId = null, on = client) {
@@ -88,20 +96,44 @@ async function verifyCatalog() {
   ]);
   const [index] = await rows("SELECT indexdef FROM pg_indexes WHERE schemaname = 'public' AND indexname = 'users_public_id_key'");
   assert.match(index.indexdef, /CREATE UNIQUE INDEX users_public_id_key ON public\.users USING btree \(public_id\)/u);
-  const constraints = (await rows("SELECT conname FROM pg_constraint WHERE conrelid = 'public.users'::regclass AND conname LIKE 'users_public_id%' ORDER BY conname")).map((r) => r.conname);
-  assert.deepEqual(constraints, ['users_public_id_change_pair_check', 'users_public_id_shape_check']);
-  const triggers = (await rows("SELECT tgname FROM pg_trigger WHERE tgrelid = 'public.users'::regclass AND NOT tgisinternal ORDER BY tgname")).map((r) => r.tgname);
-  for (const name of ['assign_public_id', 'guard_public_id_lifetime_change']) assert.ok(triggers.includes(name), `trigger ${name}`);
+  const constraints = (await rows("SELECT conname, convalidated FROM pg_constraint WHERE conrelid = 'public.users'::regclass AND conname LIKE 'users_public_id%' ORDER BY conname"));
+  assert.deepEqual(constraints, [
+    { conname: 'users_public_id_change_pair_check', convalidated: true },
+    { conname: 'users_public_id_not_own_login_id_check', convalidated: true },
+    { conname: 'users_public_id_shape_check', convalidated: true },
+  ]);
+  const triggers = (await rows(`SELECT t.tgname, n.nspname || '.' || p.proname AS fn FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid
+    JOIN pg_namespace n ON n.oid = p.pronamespace WHERE t.tgrelid = 'public.users'::regclass AND NOT t.tgisinternal`));
+  const triggerFn = Object.fromEntries(triggers.map((r) => [r.tgname, r.fn]));
+  assert.equal(triggerFn.assign_public_id, 'account_private.assign_public_id_v1');
+  assert.equal(triggerFn.guard_public_id_lifetime_change, 'account_private.guard_public_id_lifetime_change_v1');
 
-  stage = 'catalog: functions';
-  const fns = Object.fromEntries((await rows(
-    `SELECT p.proname, p.prosecdef, p.proconfig, pg_get_function_identity_arguments(p.oid) AS args FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname = 'public' AND p.proname IN ('read_own_public_id_v1', 'change_own_public_id_v1', 'generate_public_id_v1', 'normalize_public_id_v1', 'is_well_formed_public_id_v1')`,
-  )).map((r) => [r.proname, r]));
-  assert.deepEqual([fns.read_own_public_id_v1.prosecdef, fns.read_own_public_id_v1.args], [false, ''], 'the read is INVOKER and takes nothing');
-  assert.deepEqual([fns.change_own_public_id_v1.prosecdef, fns.change_own_public_id_v1.args], [true, 'p_command_id uuid, p_public_id text'], 'the change takes no account parameter');
-  assert.equal(fns.generate_public_id_v1.args, '', 'the generator takes nothing it could derive from');
-  for (const fn of Object.values(fns)) assert.deepEqual(fn.proconfig, ['search_path=""'], `${fn.proname} has an empty search_path`);
+  stage = 'catalog: the privileged boundary lives in a non-exposed schema';
+  // Every W3-02 function, wherever it lives. Exactly two in the exposed `public` schema, both INVOKER; every
+  // privileged one in `account_private`, which no Data API configuration in this database names.
+  const fns = await rows(
+    `SELECT n.nspname AS schema, p.proname, p.prosecdef, p.proconfig, pg_get_function_identity_arguments(p.oid) AS args
+       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+      WHERE n.nspname = 'account_private' OR (n.nspname = 'public' AND p.proname ~ 'public_id(_|$)') ORDER BY 1, 2`,
+  );
+  const signature = fns.map((f) => `${f.schema}.${f.proname}(${f.args}) ${f.prosecdef ? 'DEFINER' : 'INVOKER'}`);
+  assert.deepEqual(signature, [
+    'account_private.assign_public_id_v1() DEFINER',
+    'account_private.change_own_public_id_v1(p_command_id uuid, p_public_id text) DEFINER',
+    'account_private.generate_public_id_v1(p_excluded text) INVOKER',
+    'account_private.guard_public_id_lifetime_change_v1() DEFINER',
+    'account_private.is_well_formed_public_id_v1(p_value text) INVOKER',
+    'account_private.normalize_public_id_v1(p_value text) INVOKER',
+    'public.change_own_public_id_v1(p_command_id uuid, p_public_id text) INVOKER',
+    'public.read_own_public_id_v1() INVOKER',
+  ], 'the exposed Product RPCs are INVOKER; no W3-02 DEFINER is in `public`; no account parameter anywhere');
+  for (const fn of fns) assert.deepEqual(fn.proconfig, ['search_path=""'], `${fn.proname} has an empty search_path`);
+  const [{ exposedDefiners }] = await rows(`SELECT count(*)::int AS "exposedDefiners" FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname IN ('public', 'graphql_public') AND p.prosecdef AND p.proname ~ 'public_id(_|$)'`);
+  assert.equal(exposedDefiners, 0, 'no W3-02 SECURITY DEFINER function in an exposed schema');
+  const [{ namedExposed }] = await rows(`SELECT count(*)::int AS "namedExposed" FROM pg_db_role_setting s, unnest(s.setconfig) c
+    WHERE c ~ '^pgrst\\.db_schemas=' AND c ~ 'account_private'`);
+  assert.equal(namedExposed, 0, 'no Data API configuration exposes account_private');
 
   stage = 'catalog: privileges';
   const can = async (role, fn) => (await rows("SELECT has_function_privilege($1, $2, 'EXECUTE') AS allowed", [role, fn]))[0].allowed;
@@ -109,9 +141,20 @@ async function verifyCatalog() {
     assert.equal(await can('authenticated', fn), true, `authenticated EXECUTE ${fn}`);
     for (const role of ['anon', 'public', 'service_role']) assert.equal(await can(role, fn), false, `${role} EXECUTE ${fn}`);
   }
-  for (const fn of ['public.generate_public_id_v1()', 'public.normalize_public_id_v1(text)', 'public.is_well_formed_public_id_v1(text)']) {
-    for (const role of ['anon', 'authenticated', 'public', 'service_role']) assert.equal(await can(role, fn), false, `${role} EXECUTE ${fn}`);
-  }
+  // The whole private schema, not a list: exactly ONE function is executable by any client role, by
+  // `authenticated` only, because the INVOKER Product wrapper runs as it.
+  const executable = await rows(`SELECT r.rolname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    CROSS JOIN (SELECT 'anon' AS rolname UNION ALL SELECT 'authenticated' UNION ALL SELECT 'service_role' UNION ALL SELECT 'public') r
+    WHERE n.nspname = 'account_private' AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2`);
+  assert.deepEqual(executable, [{ rolname: 'authenticated', proname: 'change_own_public_id_v1' }], 'no broad grant on the private schema');
+  const schemaAccess = await rows(`SELECT r AS role, has_schema_privilege(r, 'account_private', 'USAGE') AS usage, has_schema_privilege(r, 'account_private', 'CREATE') AS "create"
+    FROM unnest(ARRAY['anon', 'authenticated', 'service_role', 'public']) r ORDER BY r`);
+  assert.deepEqual(schemaAccess, [
+    { role: 'anon', usage: false, create: false },
+    { role: 'authenticated', usage: true, create: false },
+    { role: 'public', usage: false, create: false },
+    { role: 'service_role', usage: false, create: false },
+  ], 'USAGE for `authenticated` only, CREATE for no client role');
   for (const privilege of ['UPDATE', 'INSERT', 'DELETE']) {
     const [{ allowed }] = await rows("SELECT has_table_privilege('authenticated', 'public.users', $1) AS allowed", [privilege]);
     assert.equal(allowed, false, `authenticated has no ${privilege} on public.users`);
@@ -119,17 +162,21 @@ async function verifyCatalog() {
   const [{ anonRead }] = await rows("SELECT has_table_privilege('anon', 'public.users', 'SELECT') AS \"anonRead\"");
   assert.equal(anonRead, false, 'anon cannot read the account table');
   // No Public-ID lookup, search or availability function exists beside the two Product functions.
-  const oracles = await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname ~ 'public_id(_|$)' AND p.proname !~ '^(read_own_public_id_v1|change_own_public_id_v1|generate_public_id_v1|normalize_public_id_v1|is_well_formed_public_id_v1|assign_public_id_v1|guard_public_id_lifetime_change_v1)$'`);
-  assert.deepEqual(oracles, [], 'no other Public-ID function (no lookup, no availability oracle)');
+  // (The exact signature list above is also the proof: nothing else carries a Public-ID name in either schema.)
+  const oracles = await rows(`SELECT n.nspname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'account_private') AND p.proname ~ '(public_id|login_id)(_|$)'
+      AND p.proname !~ '^(read_own_public_id_v1|change_own_public_id_v1|login_id_is_available_v1|resolve_login_id_sign_in_email_v1)$'`);
+  assert.deepEqual(oracles, [], 'no other Public-ID or Login-ID function (no lookup, no availability oracle)');
 }
 
 async function verifyBackfillAndGeneration() {
   stage = 'backfill: every existing account holds exactly one well-formed, unique Public ID';
   const [census] = await rows(`SELECT count(*)::int AS total,
-      count(*) FILTER (WHERE public_id IS NULL OR NOT public.is_well_formed_public_id_v1(public_id))::int AS bad,
+      count(*) FILTER (WHERE public_id IS NULL OR NOT account_private.is_well_formed_public_id_v1(public_id))::int AS bad,
+      count(*) FILTER (WHERE public_id = login_id)::int AS own_login,
       count(DISTINCT public_id)::int AS distinct_ids FROM public.users`);
   assert.equal(census.bad, 0);
+  assert.equal(census.own_login, 0, 'no account holds its own Login ID as its Public ID');
   assert.equal(census.distinct_ids, census.total);
 
   stage = 'generation: new accounts, from the server, not from private identity';
@@ -153,7 +200,7 @@ async function verifyBackfillAndGeneration() {
 
   stage = 'generation: a colliding draw is drawn again';
   await client.query('SELECT setseed(0.4242)');
-  const [{ first }] = await rows('SELECT public.generate_public_id_v1() AS first');
+  const [{ first }] = await rows('SELECT account_private.generate_public_id_v1(NULL) AS first');
   // Occupy exactly that value through the real change path, then replay the same random sequence.
   const holder = randomUUID();
   await signUp(holder);
@@ -161,9 +208,34 @@ async function verifyBackfillAndGeneration() {
   assert.equal((await change(randomUUID(), first)).outcome, 'CHANGED');
   await asOwner();
   await client.query('SELECT setseed(0.4242)');
-  const [{ second }] = await rows('SELECT public.generate_public_id_v1() AS second');
+  const [{ second }] = await rows('SELECT account_private.generate_public_id_v1(NULL) AS second');
   assert.notEqual(second, first, 'the held candidate was not handed out again');
   assert.match(second, GENERATED);
+
+  stage = 'generation: the excluded value (the same account’s Login ID) is drawn again, deterministically';
+  await client.query('SELECT setseed(0.2718)');
+  const [{ natural }] = await rows('SELECT account_private.generate_public_id_v1(NULL) AS natural');
+  await client.query('SELECT setseed(0.2718)');
+  const [{ excluded }] = await rows('SELECT account_private.generate_public_id_v1($1) AS excluded', [natural]);
+  assert.notEqual(excluded, natural, 'the same random draw, refused because it equals the excluded value');
+  assert.match(excluded, GENERATED);
+
+  stage = 'generation: a sign-up whose Login ID equals its freshly drawn Public ID gets a redraw';
+  // First prove the seed makes the sign-up draw a KNOWN value, so the redraw below is a real collision.
+  await client.query('SELECT setseed(0.3141)');
+  const probe = randomUUID();
+  await signUp(probe);
+  const drawn = (await publicIdOf(probe)).public_id;
+  await client.query('DELETE FROM public.users WHERE id = $1', [probe]);
+  await client.query('DELETE FROM auth.users WHERE id = $1', [probe]);
+  await client.query('SELECT setseed(0.3141)');
+  const twin = randomUUID();
+  await signUp(twin, { qandeel_name: 'Twin', qandeel_login_id: drawn });
+  const [twinRow] = await rows('SELECT public_id, login_id, public_id_changed_at FROM public.users WHERE id = $1', [twin]);
+  assert.equal(twinRow.login_id, drawn, 'the sign-up really chose the value the server first drew');
+  assert.notEqual(twinRow.public_id, twinRow.login_id, 'the Public ID was redrawn, never left equal to the own Login ID');
+  assert.match(twinRow.public_id, GENERATED);
+  assert.equal(twinRow.public_id_changed_at, null, 'the redraw consumed nothing');
 
   stage = 'generation: a supplied value is never trusted';
   const direct = randomUUID();
@@ -218,7 +290,17 @@ async function verifyOneLifetimeChange(accounts) {
   assert.deepEqual([after.public_id, after.public_id_change_command_id, after.public_id_changed_at.getTime()],
     [committed.public_id, committed.public_id_change_command_id, committed.public_id_changed_at.getTime()], 'nothing moved');
 
-  stage = 'change: a private Login ID is not in the Public namespace (no oracle)';
+  stage = 'change: the caller’s OWN Login ID is INVALID, in any case and form, and consumes nothing';
+  await actAs('authenticated', c.id);
+  for (const value of [c.loginId, `  @${c.loginId.toUpperCase()} `, c.loginId.replace('2', '٢')]) {
+    const own = await change(randomUUID(), value);
+    assert.deepEqual([own.outcome, own.current_public_id, own.change_available], ['INVALID', c.publicId, true], `own Login ID: ${value}`);
+  }
+  await asOwner();
+  assert.equal((await publicIdOf(c.id)).public_id_changed_at, null, 'nothing was consumed');
+
+  stage = 'change: another account’s private Login ID is not in the Public namespace (no oracle)';
+  // Another account's Login ID is neither INVALID nor UNAVAILABLE: it is never consulted.
   await actAs('authenticated', c.id);
   const loginIdAsPublic = await change(randomUUID(), b.loginId);
   assert.equal(loginIdAsPublic.outcome, 'CHANGED', 'another account’s Login ID is not "unavailable": the namespaces are separate');
@@ -238,6 +320,12 @@ async function verifyDatabaseAuthority(accounts) {
   stage = 'authority: the database refuses what the app must never be trusted with';
   // Changing without consuming.
   await rejected(() => client.query("UPDATE public.users SET public_id = 'sneaky.change' WHERE id = $1", [b.id]), ['23514']);
+  // The own-Login-ID rule binds the owner too, from either side: a consuming change to it, …
+  const ownChange = await rejected(() => client.query('UPDATE public.users SET public_id = login_id, public_id_changed_at = clock_timestamp(), public_id_change_command_id = gen_random_uuid() WHERE id = $1', [b.id]), ['23514']);
+  assert.equal(ownChange.constraint, 'users_public_id_not_own_login_id_check');
+  // … and moving an assigned Login ID onto the Public ID (only the FIRST assignment at sign-up is redrawn).
+  const ownMove = await rejected(() => client.query('UPDATE public.users SET login_id = public_id WHERE id = $1', [b.id]), ['23514']);
+  assert.equal(ownMove.constraint, 'users_public_id_not_own_login_id_check');
   // Consuming it properly once (as the owner, to prove the rule binds the owner too) …
   await client.query("UPDATE public.users SET public_id = 'owner.path', public_id_changed_at = clock_timestamp(), public_id_change_command_id = gen_random_uuid() WHERE id = $1", [b.id]);
   // … then a second change, and un-consuming it, are refused.
@@ -253,14 +341,18 @@ async function verifyDatabaseAuthority(accounts) {
   await rejected(() => change(randomUUID(), 'anon.try'), ['42501']);
   await actAs('authenticated', b.id);
   await rejected(() => client.query("UPDATE public.users SET public_id = 'direct.write' WHERE id = $1", [b.id]), ['42501']);
-  await rejected(() => rows('SELECT public.generate_public_id_v1()'), ['42501']);
+  for (const internal of ['account_private.generate_public_id_v1(NULL)', "account_private.normalize_public_id_v1('x')", "account_private.is_well_formed_public_id_v1('abc')"]) {
+    await rejected(() => rows(`SELECT ${internal}`), ['42501']);
+  }
+  await actAs('anon');
+  await rejected(() => rows(`SELECT * FROM account_private.change_own_public_id_v1('${randomUUID()}', 'anon.try')`), ['42501']);
   await asOwner();
 
   stage = 'authority: the internal Public ref is untouched and distinct';
   const refColumns = (await rows("SELECT column_name FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'public_identities' ORDER BY ordinal_position")).map((r) => r.column_name);
   assert.deepEqual(refColumns, ['public_identity_ref', 'user_id', 'created_at'], 'the I-05 relation is unchanged');
   const [{ refUsesPublicId }] = await rows(`SELECT count(*)::int AS "refUsesPublicId" FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname IN ('change_own_public_id_v1', 'read_own_public_id_v1', 'generate_public_id_v1') AND p.prosrc ~ 'public_identit'`);
+    WHERE (n.nspname = 'account_private' OR (n.nspname = 'public' AND p.proname ~ 'public_id(_|$)')) AND p.prosrc ~ 'public_identit'`);
   assert.equal(refUsesPublicId, 0, 'the Public ID functions never read or write the internal Public ref');
 }
 

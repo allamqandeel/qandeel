@@ -40,14 +40,20 @@ function guards(name, corpus, predicate, defect) {
   assert.equal(predicate(`${corpus}\n${defect}\n`), false, `${name}: the guard does not reject its own planted defect`);
 }
 
-/** The body of one SQL function, `AS $$ … $$`, the LAST definition by that name. */
-function functionBody(text, name) {
-  const at = text.lastIndexOf(`CREATE FUNCTION public.${name}(`);
-  assert.ok(at >= 0, `${name} is defined`);
+/** The body of one SQL function, `AS $$ … $$`, the LAST definition by that schema-qualified name. */
+function functionBody(text, qualified) {
+  const at = text.lastIndexOf(`CREATE FUNCTION ${qualified}(`);
+  assert.ok(at >= 0, `${qualified} is defined`);
   const open = text.indexOf('$$', at);
   const close = text.indexOf('$$;', open + 2);
   return text.slice(open + 2, close);
 }
+
+/** Every function definition: its schema, name and header (everything before `AS $$`). */
+const definitions = (text) => [...text.matchAll(/CREATE FUNCTION (\w+)\.(\w+)\(([\s\S]*?)AS \$\$/gu)]
+  .map((m) => ({ schema: m[1], name: m[2], header: m[3] }));
+
+const PRIVATE = 'account_private';
 
 const MIGRATION = 'database/migrations/0125_account_public_id_v1.sql';
 const VERIFIER = 'database/verify-migration-0125.mjs';
@@ -80,21 +86,108 @@ test('0125 is the next migration, additive and forward-only, on the canonical ac
 });
 
 test('the Public ID is its OWN value: never user_id, Login ID, Name, Email or the internal Public ref', () => {
-  const generator = functionBody(migrationSql, 'generate_public_id_v1');
-  const assign = functionBody(migrationSql, 'assign_public_id_v1');
+  const generator = functionBody(migrationSql, `${PRIVATE}.generate_public_id_v1`);
+  const assign = functionBody(migrationSql, `${PRIVATE}.assign_public_id_v1`);
   const independent = (text) => {
-    const gen = functionBody(text, 'generate_public_id_v1');
-    const asg = functionBody(text, 'assign_public_id_v1');
-    return /CREATE FUNCTION public\.generate_public_id_v1\(\)\n/u.test(text) &&
+    const gen = functionBody(text, `${PRIVATE}.generate_public_id_v1`);
+    const asg = functionBody(text, `${PRIVATE}.assign_public_id_v1`);
+    const grd = functionBody(text, `${PRIVATE}.guard_public_id_lifetime_change_v1`);
+    // The ONE excluded value only ever REJECTS a candidate; nothing is built from it.
+    const excludedUses = gen.match(/p_excluded/gu) ?? [];
+    return /CREATE FUNCTION account_private\.generate_public_id_v1\(p_excluded text\)\n/u.test(text) &&
+      excludedUses.length === 1 && /IF v_candidate IS DISTINCT FROM p_excluded\n/u.test(gen) &&
       !/\b(?:login_id|name|email|auth_subject|raw_user_meta_data|phone)\b|u\.id\b|NEW\.id|public_identit/u.test(gen) &&
-      /NEW\.public_id := public\.generate_public_id_v1\(\);/u.test(asg) &&
-      !/NEW\.public_id := (?!public\.generate_public_id_v1\(\))/u.test(asg) &&
+      /NEW\.public_id := account_private\.generate_public_id_v1\(NEW\.login_id\);/u.test(asg) &&
+      !/NEW\.public_id := (?!account_private\.generate_public_id_v1\(NEW\.login_id\))/u.test(asg + grd) &&
       !/public_identit/u.test(sql(text));
   };
   assert.ok(generator.length > 200 && assign.length > 20);
-  guards('public-id-is-not-user-id', migrationSql, independent, 'CREATE FUNCTION public.assign_public_id_v1() RETURNS trigger AS $$ BEGIN NEW.public_id := NEW.id::text; RETURN NEW; END; $$;');
-  guards('public-id-is-not-login-id', migrationSql, independent, 'CREATE FUNCTION public.generate_public_id_v1()\nRETURNS text AS $$ SELECT u.login_id FROM public.users u; $$;');
+  guards('public-id-is-not-user-id', migrationSql, independent, 'CREATE FUNCTION account_private.assign_public_id_v1() RETURNS trigger AS $$ BEGIN NEW.public_id := NEW.id::text; RETURN NEW; END; $$;');
+  guards('public-id-is-not-login-id', migrationSql, independent, 'CREATE FUNCTION account_private.generate_public_id_v1(p_excluded text)\nRETURNS text AS $$ SELECT u.login_id FROM public.users u; $$;');
+  guards('public-id-built-from-the-excluded-login-id', migrationSql, independent,
+    "CREATE FUNCTION account_private.generate_public_id_v1(p_excluded text)\nRETURNS text AS $$ BEGIN IF v_candidate IS DISTINCT FROM p_excluded\n THEN RETURN p_excluded || '1'; END IF; END; $$;");
   guards('public-id-is-not-the-internal-public-ref', migrationSql, independent, 'UPDATE public.users u SET public_id = i.public_identity_ref::text FROM public.public_identities i WHERE i.user_id = u.id;');
+});
+
+test('Public ID and the SAME account’s Login ID are never equal — a database rule, same-row only, never an oracle', () => {
+  // 1. The row rule itself, validated, never withdrawn.
+  const rowRule = (text) => /ADD CONSTRAINT users_public_id_not_own_login_id_check\n\s*CHECK \(login_id IS NULL OR public_id <> login_id\);/u.test(text) &&
+    !/DROP CONSTRAINT[^;]*users_public_id_not_own_login_id_check|NOT VALID/u.test(text);
+  guards('missing-own-login-id-inequality-invariant', migrationSql, rowRule, 'ALTER TABLE public.users DROP CONSTRAINT users_public_id_not_own_login_id_check;');
+  guards('own-login-id-invariant-not-validated', migrationSql, rowRule, 'ALTER TABLE public.users ADD CONSTRAINT x CHECK (true) NOT VALID;');
+
+  // 2. The manual change answers INVALID for the caller's own Login ID, before anything is consumed or written.
+  const manual = (text) => {
+    const body = functionBody(text, `${PRIVATE}.change_own_public_id_v1`);
+    const own = body.indexOf("IF v_requested = v_account.login_id THEN\n        RETURN QUERY SELECT 'INVALID'::text, v_account.public_id, v_account.public_id_changed_at IS NULL;");
+    return own > 0 && own > body.indexOf("'UNCHANGED'") && own < body.indexOf("'ALREADY_USED'") && own < body.indexOf('UPDATE public.users');
+  };
+  guards('manual-change-allows-own-login-id', migrationSql, manual,
+    "CREATE FUNCTION account_private.change_own_public_id_v1(p_command_id uuid, p_public_id text)\nRETURNS TABLE (outcome text) AS $$ BEGIN IF v_requested = v_account.public_id THEN RETURN QUERY SELECT 'UNCHANGED'; END IF; UPDATE public.users SET public_id = v_requested; END; $$;");
+
+  // 3. Every draw — backfill, new account, sign-up redraw — excludes the SAME row's Login ID.
+  const everyDrawExcludesOwn = (text) => {
+    // (The definition and the REVOKEs name the signature, not a draw.)
+    const calls = [...text.matchAll(/generate_public_id_v1\(([^)]*)\)/gu)].map((m) => m[1]).filter((arg) => arg !== 'p_excluded text' && arg !== 'text');
+    return calls.length === 3 && calls.every((arg) => /^(?:NEW|v_account)\.login_id$/u.test(arg)) &&
+      /IF OLD\.login_id IS NULL AND NEW\.login_id IS NOT NULL\n\s*AND NEW\.login_id = OLD\.public_id\n/u.test(functionBody(text, `${PRIVATE}.guard_public_id_lifetime_change_v1`));
+  };
+  guards('initial-assignment-can-equal-own-login-id', migrationSql, everyDrawExcludesOwn,
+    'CREATE FUNCTION account_private.assign_public_id_v1() RETURNS trigger AS $$ BEGIN NEW.public_id := account_private.generate_public_id_v1(NULL); RETURN NEW; END; $$;');
+  guards('backfill-can-equal-own-login-id', migrationSql, everyDrawExcludesOwn,
+    'UPDATE public.users SET public_id = account_private.generate_public_id_v1(NULL) WHERE id = v_account.id;');
+
+  // 4 + 5. Login IDs are read ONLY from the row being written or the caller's own locked row — never searched,
+  // never compared across accounts, never used to decide availability.
+  const sameRowOnly = (text) => {
+    const rest = text
+      .replace('CHECK (login_id IS NULL OR public_id <> login_id);', '')
+      .replace('SELECT u.id, u.login_id FROM public.users u WHERE u.public_id IS NULL ORDER BY u.id LOOP', '');
+    return [...rest.matchAll(/(\w+\.)?login_id\b/gu)].every((m) => ['NEW.', 'OLD.', 'v_account.'].includes(m[1]));
+  };
+  guards('cross-account-login-id-lookup', migrationSql, sameRowOnly,
+    'IF EXISTS (SELECT 1 FROM public.users o WHERE o.login_id = v_requested) THEN RETURN QUERY SELECT \'INVALID\'; END IF;');
+  guards('another-users-login-id-decides-availability', migrationSql, sameRowOnly,
+    "IF EXISTS (SELECT 1 FROM public.users u WHERE u.login_id = v_requested AND u.id <> v_user) THEN RETURN QUERY SELECT 'UNAVAILABLE'; END IF;");
+  guards('login-id-namespace-scan', migrationSql, sameRowOnly, 'SELECT login_id FROM public.users;');
+});
+
+test('no W3-02 SECURITY DEFINER in an exposed schema; the Product RPCs are INVOKER; no broad private grant', () => {
+  // 6. Exposed = `public` (and Supabase's `graphql_public`). Every W3-02 function there says INVOKER explicitly;
+  // every DEFINER lives in the non-exposed schema this migration creates.
+  const boundary = (text) => {
+    const defs = definitions(text);
+    return /CREATE SCHEMA account_private;\nREVOKE ALL ON SCHEMA account_private FROM PUBLIC;/u.test(text) &&
+      defs.filter((d) => d.schema !== PRIVATE).every((d) => d.schema === 'public' && /SECURITY INVOKER/u.test(d.header) && !/SECURITY DEFINER/u.test(d.header)) &&
+      defs.filter((d) => /SECURITY DEFINER/u.test(d.header)).every((d) => d.schema === PRIVATE) &&
+      defs.filter((d) => d.schema === 'public').map((d) => d.name).sort().join(',') === 'change_own_public_id_v1,read_own_public_id_v1';
+  };
+  guards('definer-in-exposed-schema', migrationSql, boundary,
+    "CREATE FUNCTION public.change_own_public_id_v1(p_command_id uuid, p_public_id text)\nRETURNS TABLE (outcome text)\nLANGUAGE plpgsql\nSECURITY DEFINER\nSET search_path = ''\nAS $$ BEGIN END; $$;");
+  guards('definer-helper-in-exposed-schema', migrationSql, boundary,
+    "CREATE FUNCTION public.generate_public_id_v1(p_excluded text)\nRETURNS text\nLANGUAGE plpgsql\nSECURITY DEFINER\nSET search_path = ''\nAS $$ BEGIN END; $$;");
+  // Every definition, private included, pins an empty search_path.
+  for (const d of definitions(migrationSql)) assert.match(d.header, /SET search_path = ''\n$/u, `${d.schema}.${d.name} pins search_path`);
+  // The INVOKER Product change is ONLY a pass-through to the private implementation.
+  assert.match(functionBody(migrationSql, 'public.change_own_public_id_v1'),
+    /^\n\s*SELECT c\.outcome, c\.current_public_id, c\.change_available\n\s*FROM account_private\.change_own_public_id_v1\(p_command_id, p_public_id\) c;\n$/u);
+
+  // 7. The grant set is EXACT: one schema USAGE, one private function, two Product functions — all to `authenticated`.
+  const exactGrants = (text) => [...text.matchAll(/GRANT ([^;]+);/gu)].map((m) => m[1]).join(' | ') ===
+    'USAGE ON SCHEMA account_private TO authenticated | EXECUTE ON FUNCTION account_private.change_own_public_id_v1(uuid, text) TO authenticated' +
+    ' | EXECUTE ON FUNCTION public.read_own_public_id_v1() TO authenticated | EXECUTE ON FUNCTION public.change_own_public_id_v1(uuid, text) TO authenticated';
+  guards('broad-private-function-grant', migrationSql, exactGrants, 'GRANT EXECUTE ON ALL FUNCTIONS IN SCHEMA account_private TO authenticated;');
+  guards('private-schema-usage-for-anon', migrationSql, exactGrants, 'GRANT USAGE ON SCHEMA account_private TO anon;');
+  guards('private-helper-granted-to-a-client', migrationSql, exactGrants, 'GRANT EXECUTE ON FUNCTION account_private.generate_public_id_v1(text) TO authenticated;');
+  // Every private function is default-deny by name, and the server channel is refused the schema too.
+  for (const d of definitions(migrationSql)) {
+    assert.match(migrationSql, new RegExp(`REVOKE ALL ON FUNCTION ${d.schema}\\.${d.name}\\([^)]*\\) FROM PUBLIC, anon, authenticated;`, 'u'), `${d.schema}.${d.name} revokes by name`);
+  }
+  assert.match(migrationSql, /EXECUTE 'REVOKE ALL ON SCHEMA account_private FROM service_role';/u);
+  // Nothing in the repository configures the private schema as exposed, and the database record says so.
+  const readme = read('database/README.md');
+  assert.doesNotMatch(readme, /db_schemas[^\n]*account_private|Exposed schemas[^\n]*account_private/u);
+  assert.match(readme, /That schema is created here and exposed nowhere\./u);
 });
 
 test('uniqueness and normalization are database rules', () => {
@@ -102,7 +195,7 @@ test('uniqueness and normalization are database rules', () => {
   guards('missing-uniqueness', migrationSql, unique, 'DROP INDEX public.users_public_id_key;');
   assert.match(migrationSql, /ALTER TABLE public\.users ALTER COLUMN public_id SET NOT NULL;/u, 'every account has one');
   assert.match(migrationSql, /public_id ~ '\^\[a-z\]\[a-z0-9\]\*\(\[\._\]\[a-z0-9\]\+\)\*\$'/u, 'the canonical lowercase shape is a CHECK');
-  assert.match(functionBody(migrationSql, 'normalize_public_id_v1'), /lower\(translate\(regexp_replace\(btrim\(p_value\), '\^@', ''\),/u);
+  assert.match(functionBody(migrationSql, `${PRIVATE}.normalize_public_id_v1`), /lower\(translate\(regexp_replace\(btrim\(p_value\), '\^@', ''\),/u);
   // The mobile mirror says exactly what the database says.
   const grammar = code(read(GRAMMAR));
   assert.match(grammar, /PUBLIC_ID_PATTERN = \/\^\[a-z\]\[a-z0-9\]\*\(\?:\[\._\]\[a-z0-9\]\+\)\*\$\/u;/u);
@@ -112,9 +205,9 @@ test('uniqueness and normalization are database rules', () => {
 });
 
 test('exactly ONE lifetime manual change, enforced by the database itself — not by the UI', () => {
-  const guard = functionBody(migrationSql, 'guard_public_id_lifetime_change_v1');
+  const guard = functionBody(migrationSql, `${PRIVATE}.guard_public_id_lifetime_change_v1`);
   const oneChange = (text) => {
-    const body = functionBody(text, 'guard_public_id_lifetime_change_v1');
+    const body = functionBody(text, `${PRIVATE}.guard_public_id_lifetime_change_v1`);
     return /IF OLD\.public_id_changed_at IS NULL\n\s*AND NEW\.public_id_changed_at IS NOT NULL\n\s*AND NEW\.public_id_change_command_id IS NOT NULL\n\s*AND NEW\.public_id IS DISTINCT FROM OLD\.public_id THEN/u.test(body) &&
       /RAISE EXCEPTION 'PUBLIC_ID_LIFETIME_CHANGE_VIOLATION'/u.test(body) &&
       /CREATE TRIGGER guard_public_id_lifetime_change\n\s*BEFORE UPDATE ON public\.users/u.test(text) &&
@@ -122,10 +215,10 @@ test('exactly ONE lifetime manual change, enforced by the database itself — no
   };
   assert.ok(guard.length > 100);
   guards('more-than-one-manual-change', migrationSql, oneChange,
-    'CREATE FUNCTION public.guard_public_id_lifetime_change_v1()\nRETURNS trigger AS $$ BEGIN RETURN NEW; END; $$;');
+    'CREATE FUNCTION account_private.guard_public_id_lifetime_change_v1()\nRETURNS trigger AS $$ BEGIN RETURN NEW; END; $$;');
   guards('ui-only-one-change-enforcement', migrationSql, oneChange, 'ALTER TABLE public.users DISABLE TRIGGER guard_public_id_lifetime_change;');
   // The command answers the used state from the row, before it would write.
-  const change = functionBody(migrationSql, 'change_own_public_id_v1');
+  const change = functionBody(migrationSql, `${PRIVATE}.change_own_public_id_v1`);
   const used = change.indexOf("IF v_account.public_id_changed_at IS NOT NULL THEN\n        RETURN QUERY SELECT 'ALREADY_USED'");
   assert.ok(used > 0 && used < change.indexOf('UPDATE public.users'), 'ALREADY_USED is decided before any write');
   assert.ok(change.indexOf("'UNCHANGED'") < used, 'confirming the current ID is answered before the used check, and consumes nothing');
@@ -145,18 +238,16 @@ test('the application boundary: owner-only by token, no account parameter, no cl
   const noClientUser = (text) => {
     const body = sql(text);
     return /CREATE FUNCTION public\.change_own_public_id_v1\(p_command_id uuid, p_public_id text\)/u.test(body) &&
+      /CREATE FUNCTION account_private\.change_own_public_id_v1\(p_command_id uuid, p_public_id text\)/u.test(body) &&
       /v_user uuid := \(SELECT auth\.uid\(\)\);/u.test(body) &&
-      !/CREATE FUNCTION public\.\w+\([^)]*\bp_(?:user|account|actor|owner)(?:_id)?\b/u.test(body);
+      !/CREATE FUNCTION \w+\.\w+\([^)]*\bp_(?:user|account|actor|owner)(?:_id)?\b/u.test(body);
   };
   guards('client-supplied-user-id', migration, noClientUser, 'CREATE FUNCTION public.change_public_id_for_v1(p_user_id uuid, p_public_id text)');
+  guards('client-supplied-user-id-in-the-private-implementation', migration, noClientUser, 'CREATE FUNCTION account_private.change_public_id_for_v1(p_account_id uuid, p_public_id text)');
   const noTableWrite = (text) => !/GRANT[^;]*(?:UPDATE|INSERT|DELETE|ALL)[^;]*ON (?:TABLE )?public\.users[^;]*TO[^;]*(?:authenticated|anon)/iu.test(sql(text));
   guards('direct-authenticated-table-update', migration, noTableWrite, 'GRANT UPDATE (public_id) ON TABLE public.users TO authenticated;');
-  const grants = [...migrationSql.matchAll(/GRANT EXECUTE ON FUNCTION (.+?) TO ([^;]+);/gu)].map((m) => `${m[1]} → ${m[2]}`);
-  assert.deepEqual(grants, ['public.read_own_public_id_v1() → authenticated', 'public.change_own_public_id_v1(uuid, text) → authenticated']);
-  for (const fn of ['normalize_public_id_v1(text)', 'is_well_formed_public_id_v1(text)', 'generate_public_id_v1()', 'read_own_public_id_v1()', 'change_own_public_id_v1(uuid, text)']) {
-    assert.match(migrationSql, new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn.replace(/[()]/gu, '\\$&')} FROM PUBLIC, anon, authenticated;`, 'u'), `${fn} is default-deny by name`);
-  }
-  assert.match(functionBody(migrationSql, 'read_own_public_id_v1'), /WHERE u\.id = \(SELECT auth\.uid\(\)\);/u);
+  // (The exact grant set and the by-name revokes are guarded in the privilege-boundary test.)
+  assert.match(functionBody(migrationSql, 'public.read_own_public_id_v1'), /WHERE u\.id = \(SELECT auth\.uid\(\)\);/u);
   assert.match(migrationSql, /FUNCTION public\.read_own_public_id_v1\(\)\nRETURNS TABLE \(current_public_id text, change_available boolean\)\nLANGUAGE sql\nSTABLE\nSECURITY INVOKER/u);
   // The I-05 internal Public functions are not widened to the application role.
   assert.doesNotMatch(migrationSql, /ensure_public_identity_v1|update_public_display_label_v1/u);
@@ -176,12 +267,14 @@ test('no Public-ID availability oracle and no enumeration endpoint', () => {
   const noOracle = (text) => (text.match(/@(?:Get|Post|Put|Patch|Delete)\('public-id[^']*'\)/gu) ?? []).sort().join(',') === "@Get('public-id'),@Post('public-id/change')";
   guards('api-public-id-availability-oracle', read(`${API}/account.controller.ts`), noOracle, "@Get('public-id/availability')");
   const noSqlOracle = (text) => {
-    const fns = [...sql(text).matchAll(/CREATE FUNCTION public\.(\w+)\(/gu)].map((m) => m[1]).sort();
-    return fns.join(',') === 'assign_public_id_v1,change_own_public_id_v1,generate_public_id_v1,guard_public_id_lifetime_change_v1,is_well_formed_public_id_v1,normalize_public_id_v1,read_own_public_id_v1';
+    const fns = [...sql(text).matchAll(/CREATE FUNCTION (\w+\.\w+)\(/gu)].map((m) => m[1]).sort();
+    return fns.join(',') === 'account_private.assign_public_id_v1,account_private.change_own_public_id_v1,account_private.generate_public_id_v1,' +
+      'account_private.guard_public_id_lifetime_change_v1,account_private.is_well_formed_public_id_v1,account_private.normalize_public_id_v1,' +
+      'public.change_own_public_id_v1,public.read_own_public_id_v1';
   };
   guards('sql-public-id-lookup', migration, noSqlOracle, 'CREATE FUNCTION public.public_id_is_available_v1(p text) RETURNS boolean AS $$ SELECT true $$;');
-  // The Public namespace is never compared with Login IDs (that would be an oracle on private Login IDs).
-  assert.doesNotMatch(functionBody(migrationSql, 'change_own_public_id_v1'), /login_id/u);
+  guards('private-public-id-lookup', migration, noSqlOracle, 'CREATE FUNCTION account_private.public_id_holder_v1(p text) RETURNS uuid AS $$ SELECT NULL::uuid $$;');
+  // The Public namespace is never compared with ANOTHER account's Login ID: guarded in the same-row test above.
   // The mobile client asks nothing before the reader confirms.
   const api = code(read(ACCOUNT_API));
   assert.equal((api.match(/\/account\/public-id/gu) ?? []).length, 2, 'one read and one change, no lookup');
@@ -190,7 +283,9 @@ test('no Public-ID availability oracle and no enumeration endpoint', () => {
 test('the database verifier exists, is registered and runs in API CI', () => {
   assert.ok(existsSync(new URL(VERIFIER, root)));
   const verifier = read(VERIFIER);
-  for (const proof of ['ALREADY_USED', 'UNCHANGED', 'UNAVAILABLE', "'23505'", 'waitUntilBlocked', 'setseed', 'is not in the Public namespace', 'the committed fixtures are gone']) {
+  for (const proof of ['ALREADY_USED', 'UNCHANGED', 'UNAVAILABLE', "'23505'", 'waitUntilBlocked', 'setseed', 'is not in the Public namespace', 'the committed fixtures are gone',
+    'the caller’s OWN Login ID is INVALID', 'users_public_id_not_own_login_id_check', 'gets a redraw', 'no W3-02 SECURITY DEFINER function in an exposed schema',
+    'no broad grant on the private schema', 'no Data API configuration exposes account_private']) {
     assert.ok(verifier.includes(proof), `the verifier proves ${proof}`);
   }
   assert.equal(readJson('package.json').scripts['verify:account-public-id:integration'], 'node --env-file-if-exists=.env database/verify-migration-0125.mjs');

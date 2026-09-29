@@ -3554,34 +3554,52 @@ accounts, a single text answer, and that `anon` and `authenticated` are refused.
 
 `0125_account_public_id_v1.sql` gives every account its Public ID (P1 §6) on the account row,
 `public.users`, beside the Name and Login ID. It is additive and forward-only: three columns
-(`public_id`, `public_id_changed_at`, `public_id_change_command_id`), a shape rule, a pair rule, one
-unique index on the canonical lowercase `public_id` (so uniqueness is case-insensitive), a backfill, two
-triggers and two Product functions. The Public ID is its own value: it is not `user_id`, the Login ID,
+(`public_id`, `public_id_changed_at`, `public_id_change_command_id`), a shape rule, a pair rule, a
+never-the-own-Login-ID rule, one unique index on the canonical lowercase `public_id` (so uniqueness is
+case-insensitive), a backfill, two triggers, the non-exposed internal schema `account_private` and two
+Product functions. The Public ID is its own value: it is not `user_id`, the Login ID,
 the Email, the Name, a Shared credential or the I-05 internal `public_identity_ref`, and nothing of the
 I-05 Public runtime is read, written or granted.
 
 Grammar (implementation detail): stored without the displayed `@`; 3-24 lowercase English letters and
 digits, starting with a letter, with `.` or `_` only between letters and digits. A caller's value is
-trimmed, one leading `@` is dropped, Arabic-Indic digits become 0-9, and it is lowercased. The Public-ID
-namespace is never compared with Login IDs.
+trimmed, one leading `@` is dropped, Arabic-Indic digits become 0-9, and it is lowercased.
 
-Generation: `generate_public_id_v1()` takes no argument and reads nothing but which Public IDs are held;
-it draws two words from fixed neutral lists and a number (e.g. `quietlamp27`), drawing again on a
-collision. Every existing account was backfilled one row at a time, and the `assign_public_id` BEFORE
-INSERT trigger gives every new account its Public ID from the server, ignoring any supplied value.
+Public ID and Login ID of the SAME account are never equal (Product Owner decision, W3-02 R1): the row
+rule `users_public_id_not_own_login_id_check` refuses it on every path, the owner's included. It is a
+same-row rule only. The Public-ID namespace is never compared with ANY OTHER account's Login ID, so there
+is no Login-ID lookup and nothing can reveal a private Login ID.
+
+Generation: `account_private.generate_public_id_v1(p_excluded)` reads nothing but which Public IDs are
+held; it draws two words from fixed neutral lists and a number (e.g. `quietlamp27`), drawing again on a
+collision or on the one excluded value, the same row's own Login ID. No candidate is built from it.
+Every existing account was backfilled one row at a time, excluding its own Login ID. The
+`assign_public_id` BEFORE INSERT trigger gives every new account its Public ID from the server, ignoring
+any supplied value. Sign-up assigns the Login ID one statement later (0123). If it then equals the
+freshly drawn Public ID, the guard trigger redraws it. The server draws it, nothing is consumed, and the
+writer cannot steer it.
+
+Privilege boundary: Supabase exposes `public` over the Data API, and a `SECURITY DEFINER` function must
+never live in an exposed schema. So the exposed Product functions are `SECURITY INVOKER`. Every privileged
+part lives in `account_private`: the change implementation and the two trigger functions (DEFINER), plus
+the generator and the pure helpers (INVOKER). That schema is created here and exposed nowhere.
+`authenticated` gets USAGE on the schema and EXECUTE on ONE function in it, the change implementation,
+because the INVOKER wrapper runs as `authenticated`. Nothing else in the schema is executable by a client
+role, and `anon` and `service_role` get nothing.
 
 The one lifetime change is a database rule, not an app rule: the `guard_public_id_lifetime_change`
 trigger admits exactly one kind of write to the Public ID - from a never-changed Public ID to a
 different one, consuming the change with its command identity - whoever writes it, the table owner
-included. `change_own_public_id_v1(uuid, text)` (`SECURITY DEFINER`, the caller is `auth.uid()`, no
-account parameter) answers `CHANGED` (also for the same command replayed after it committed),
-`UNCHANGED` (the current Public ID; nothing consumed), `INVALID`, `ALREADY_USED` or `UNAVAILABLE`
+included. `public.change_own_public_id_v1(uuid, text)` (`SECURITY INVOKER`, a pass-through to
+`account_private.change_own_public_id_v1`; the caller is `auth.uid()`, no account parameter) answers
+`CHANGED` (also for the same command replayed after it committed), `UNCHANGED` (the current Public ID;
+nothing consumed), `INVALID` (malformed, or the caller's own Login ID; nothing consumed), `ALREADY_USED` or `UNAVAILABLE`
 (another account holds it; nothing about that account is returned), with the caller's own resulting
 state; a command identity reused for a different value is refused (23505). The caller's row lock
 serializes one account's attempts; the unique index decides a race between accounts.
 `read_own_public_id_v1()` (`SECURITY INVOKER`) is the caller's own Public ID and whether the change is
-still available. Only these two are executable, and only by `authenticated`; the helpers by no client
-role, and none by `service_role`. The generator and the change share one transaction-scoped advisory lock on
+still available. Only these two Product functions and the one private implementation are executable,
+and only by `authenticated`. No client role can execute the other helpers, and `service_role` can execute none of them. The generator and the change share one transaction-scoped advisory lock on
 the Public-ID namespace, so a sign-up never draws a value a concurrent commit is taking. No client gains a
 table write on `public.users`.
 
@@ -3590,10 +3608,15 @@ npm run verify:account-public-id:integration
 ```
 
 `verify-migration-0125.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. Inside one
-rolled-back transaction it proves the catalog and grants, the backfill, generation that is not derived
-from private identity (including a seeded real collision), every change outcome, idempotent replay, the
-command-identity conflict, that a private Login ID is not in the Public namespace, that the database
-refuses a second change or an un-consumed change even from the owner, and the client-role refusals. It
+rolled-back transaction it proves several things:
+- the catalog and grants, including that no W3-02 DEFINER is in an exposed schema and that there is no broad private grant;
+- the backfill;
+- generation that is not derived from private identity, with seeded real collisions, a seeded exclusion and the seeded sign-up redraw;
+- every change outcome, including the caller's own Login ID coming back as INVALID;
+- idempotent replay and the command-identity conflict;
+- that another account's private Login ID is not in the Public namespace;
+- that the database refuses a second change, an un-consumed change or an own-Login-ID Public ID, even from the owner;
+- the client-role refusals. It
 then proves on committed rows, across two connections whose second attempt is shown to block, that two
 commands of one account cannot both win, that the same command twice is one change, and that two
 accounts racing for one Public ID leave exactly one holder; those fixtures are removed and checked gone.

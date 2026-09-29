@@ -157,7 +157,10 @@ describe.each(['ar', 'en'] as const)('%s — Account & Identity: the Public ID',
   });
 
   it('Back and Android Back leave the change and return to the same Settings — never out of Settings', async () => {
-    const handlers: (() => boolean | null | undefined)[] = [];
+    // The exact current React Native handler type, derived from the API rather than hand-written.
+    type Handler = Parameters<typeof BackHandler.addEventListener>[1];
+    const backPress: Parameters<Handler>[0] = { type: 'hardwareBackPress', timeStamp: 0 };
+    const handlers: Handler[] = [];
     jest.spyOn(BackHandler, 'addEventListener').mockImplementation((_event, handler) => {
       handlers.push(handler);
       return { remove: () => handlers.splice(handlers.indexOf(handler), 1) };
@@ -166,7 +169,7 @@ describe.each(['ar', 'en'] as const)('%s — Account & Identity: the Public ID',
     await press(view, 'qandeel-public-id-row');
     expect(handlers).toHaveLength(1);
     await act(async () => {
-      expect(handlers[handlers.length - 1]()).toBe(true);
+      expect(handlers[handlers.length - 1](backPress)).toBe(true);
     });
     expect(view.queryByTestId('qandeel-public-id-change')).toBeNull();
     await press(view, 'qandeel-public-id-row');

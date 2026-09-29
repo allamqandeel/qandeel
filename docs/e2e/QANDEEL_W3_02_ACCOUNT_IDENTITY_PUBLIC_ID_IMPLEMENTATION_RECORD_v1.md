@@ -55,13 +55,27 @@ DEFINER function in an exposed schema is callable over the Data API with the own
 `auth.uid() IS NOT NULL`; wrap it as `(select auth.uid())`; a missing grant raises 42501 before any policy), and
 *Managing User Data* (application user data in a `public` table keyed to `auth.users`, with RLS).
 
-Implication, reconciled with repository truth: the read is SECURITY INVOKER under the existing own-row policy. The one
-write must be SECURITY DEFINER because `authenticated` has, and keeps, no UPDATE on `public.users`. It stays in `public`
-exactly as W1B-01's `complete_first_use_welcome_v1` does, because it IS the intended authenticated boundary: the API
-calls it with the caller's token, and a client calling it directly over the Data API meets the identical rules — the
-function and a guard trigger are the final authority, not the API. `search_path = ''`, schema-qualified relations, an
-explicit `auth.uid()` null check, and EXECUTE revoked from `PUBLIC, anon, authenticated` by name (the 0124 lesson on
-hosted default privileges) before granting only the two Product functions to `authenticated`.
+Implication, reconciled with repository truth, **as corrected by R1 (§13)**. The read is SECURITY INVOKER under the
+existing own-row policy. The one write needs owner privilege, because `authenticated` has, and keeps, no UPDATE on
+`public.users`.
+
+That privilege lives ONLY in the non-exposed schema `account_private`, created by 0125 and exposed nowhere. The
+project exposes `public` only (`database/README.md`), and a new schema is exposed only when someone adds it by
+hand.
+
+The Product RPC `public.change_own_public_id_v1` is SECURITY INVOKER: a pass-through to
+`account_private.change_own_public_id_v1`, which is SECURITY DEFINER. A client calling the Product RPC directly
+over the Data API meets the identical rules: the private implementation and the guard trigger are the final
+authority, not the API.
+
+The protections: `search_path = ''` on every function; schema-qualified relations; an explicit `auth.uid()` null
+check; EXECUTE revoked from `PUBLIC, anon, authenticated` (and `service_role`) by name on every function. Only
+then are the grants made, all to `authenticated`: the two Product functions, plus USAGE on `account_private` and
+EXECUTE on its one change implementation.
+
+(The first head, `860d555`, kept the DEFINER write in `public` on the W1B-01 `complete_first_use_welcome_v1`
+precedent. Independent review rejected that: `search_path` and restrictive grants do not replace the non-exposed
+boundary.)
 
 ## 4. Product Copy Gate
 
@@ -96,7 +110,11 @@ P1 §6 / §16.1 leave the generation grammar and normalization to implementation
   on a collision, never derived from any account data.
 
 It differs deliberately from the Login ID grammar (0123): a Public ID must start with a letter and admits no `-`,
-so a generated or chosen handle reads as a handle. The Public-ID namespace is never compared with Login IDs.
+so a generated or chosen handle reads as a handle.
+
+**Product Owner decision (W3-02 R1, APPROVED):** a Public ID never equals the SAME account's private Login ID. This
+is a rule within one row only. The Public-ID namespace is never compared with ANY OTHER account's Login ID, so there
+is no Login-ID lookup or oracle (§6, §10).
 
 ## 6. Database authority — migration `0125_account_public_id_v1.sql`
 
@@ -104,18 +122,37 @@ On the canonical account row `public.users` (P1 §6 "account-held"; beside W1B-0
 
 - `public_id text NOT NULL` (shape CHECK, unique index `users_public_id_key`), `public_id_changed_at timestamptz`,
   `public_id_change_command_id uuid` (pair CHECK: both or neither);
-- **backfill** of every existing account, one row at a time (each draw sees the previous ones);
-- **`assign_public_id`** BEFORE INSERT trigger: every new account gets its Public ID from the server generator; a
-  supplied value is ignored;
-- **`guard_public_id_lifetime_change`** BEFORE UPDATE trigger: the only admitted write to the Public ID is "from a
-  never-changed Public ID to a different one, consuming the change with its command identity" — whoever writes it,
-  the table owner and the server channel included. A second change, un-consuming, or a change without consuming are
-  impossible by construction;
-- **`read_own_public_id_v1()`** — SECURITY INVOKER, own row by RLS: `(current_public_id, change_available)`;
-- **`change_own_public_id_v1(p_command_id uuid, p_public_id text)`** — SECURITY DEFINER, caller = `auth.uid()`, no
-  account parameter; locks the caller's row; answers `CHANGED` (also the SAME command replayed after it committed),
-  `UNCHANGED` (the current ID — nothing consumed), `INVALID`, `ALREADY_USED`, `UNAVAILABLE` (unique index; nothing about
-  the holder is returned), each with the caller's own resulting state; a command identity reused for a different value
+- **`users_public_id_not_own_login_id_check`** — `CHECK (login_id IS NULL OR public_id <> login_id)`, validated. Both
+  values are stored canonical lowercase, so this is the case-insensitive rule. Every path meets it: a modified client,
+  the server channel, the table owner, a retry, a race.
+- **the schema `account_private`**, not exposed, holds every privileged part:
+  - the change implementation and the two trigger functions (SECURITY DEFINER);
+  - `generate_public_id_v1(p_excluded)` and the pure helpers `normalize_public_id_v1` / `is_well_formed_public_id_v1`
+    (SECURITY INVOKER; they only ever run inside the privileged callers or the migration).
+- **backfill** of every existing account, one row at a time (each draw sees the previous ones), excluding each row's
+  own Login ID;
+- **`assign_public_id`** BEFORE INSERT trigger: every new account gets its Public ID from the server generator,
+  excluding the row's own Login ID; a supplied value is ignored;
+- **`guard_public_id_lifetime_change`** BEFORE UPDATE trigger admits two writes to the Public ID:
+  1. "from a never-changed Public ID to a different one, consuming the change with its command identity";
+  2. the server's own redraw when sign-up first assigns a Login ID equal to the freshly drawn Public ID. 0123 sets
+     the Login ID one statement after the insert. The redraw value is drawn in the trigger and never taken from the
+     writer, and it consumes nothing.
+
+  Both bind whoever writes, including the table owner and the server channel. A second change, un-consuming, or a
+  change without consuming are impossible by construction.
+- **`public.read_own_public_id_v1()`** — SECURITY INVOKER, own row by RLS: `(current_public_id, change_available)`;
+- **`public.change_own_public_id_v1(p_command_id uuid, p_public_id text)`** — SECURITY INVOKER Product RPC, a
+  pass-through to **`account_private.change_own_public_id_v1`** (SECURITY DEFINER, caller = `auth.uid()`, no account
+  parameter). It locks the caller's row and answers one of these, each with the caller's own resulting state:
+  - `CHANGED` (also the SAME command replayed after it committed);
+  - `UNCHANGED` (the current ID; nothing consumed);
+  - `INVALID` (malformed, or the caller's OWN Login ID read from the caller's own locked row; nothing consumed);
+  - `ALREADY_USED`;
+  - `UNAVAILABLE` (unique index; nothing about the holder is returned).
+
+  The order is: replay, malformed, current value, own Login ID, allowance, namespace. The current value can never
+  equal the own Login ID, so UNCHANGED and the own-Login-ID INVALID never meet. A command identity reused for a different value
   is refused (`23505 PUBLIC_ID_COMMAND_CONFLICT`). The command identity is recorded only by a commit, so that
   refusal covers a command that COMMITTED; a non-committing outcome (INVALID / UNCHANGED / UNAVAILABLE) records nothing,
   and the client never reuses an identity for another value (one identity per requested value);
@@ -124,7 +161,8 @@ On the canonical account row `public.users` (P1 §6 "account-held"; beside W1B-0
   concurrent sign-up or change is committing (which would otherwise fail that sign-up on the unique index). One key,
   not one per value, so the backfill holds a single lock; Public ID commits are therefore serialized globally
   (brief, and rare);
-- EXECUTE on all seven functions is also revoked from `service_role` where it exists: the API needs none of them.
+- EXECUTE on all eight functions and USAGE on `account_private` are also revoked from `service_role` where it exists:
+  the API needs none of them.
 
 The I-05 Public runtime is untouched: `public_identities.public_identity_ref` stays the opaque internal ref, the
 `public_identity_display_state` relation and `ensure_public_identity_v1` / `update_public_display_label_v1` are not
@@ -178,7 +216,7 @@ Public ID today, and binding the `PSEUDONYM` label to it is `E2E-H-08` (§11).
 | `settings/__tests__/public-id-settings.test.tsx` (AR + EN) | 31 / 31 |
 | `integration/__tests__/w3-02-public-id.test.tsx` + re-anchored W3-01 production suite | 18 / 18 |
 | Full mobile Jest (`jest --ci`) | 150 suites, 1774 / 1774 |
-| `npm run typecheck:mobile` | pass |
+| `npm run typecheck:mobile` | reported "pass" at `860d555`, but that was WRONG: `public-id-settings.test.tsx` failed TS2345, locally and in Mobile CI. It was repaired in R1 (§13); the local typecheck was re-run and passes |
 | W3-02 root contract `npm run test:w3-02-account-identity-public-id-contract` | 14 / 14; every critical predicate rejects its planted defect (Public ID = `user_id`, = Login ID, = internal Public ref; client-supplied user id in SQL and API; direct authenticated table UPDATE; missing uniqueness; a second manual change; UI-only enforcement; optimistic client consumption; an API and a SQL availability oracle; a second Public Settings destination; a placeholder Account row; words written outside `copy.ts`; guessing after a lost answer) |
 | W3-01, W1A, W1B, W2-01, W2-02, T-12, T-12P, T-13, T-14 root contracts | 167 / 167 |
 | `npm run test:task-closure-governance-contract` | 24 / 24 |
@@ -199,7 +237,9 @@ holder.
   same fact the Public World shows by design.
 - Before the one change is used, a reader can try several handles (UNAVAILABLE consumes nothing). No rate limit is
   added in W3-02 (residue 2), exactly as W1B-01 recorded for Login-ID availability.
-- The Login-ID namespace is never consulted, so the change cannot reveal a private Login ID.
+- No OTHER account's Login ID is ever consulted: the only Login ID read is the caller's own, from the caller's own
+  locked row, and a value equal to another account's Login ID is simply a free Public ID. So the change cannot
+  reveal a private Login ID (proven in the verifier and guarded by planted defects in the root contract).
 - Nothing is logged: no Public ID, request, command identity or outcome in the API or the app.
 
 ## 11. Residues
@@ -211,21 +251,52 @@ holder.
    not cover; a rate limit (API and RPC) is a later hardening item, like W1B-01's Login-ID availability.
 3. **Released handles are reusable.** After a reader changes from a generated handle, the old one returns to the
    namespace. Holding released handles would be new Product policy; none exists (P1 §6 is silent), so none is invented.
-4. **A reader may choose a Public ID equal to their own private Login ID string.** The namespaces are separate by
-   design (refusing it would need an own-Login-ID comparison P1 does not ask for). Flagged for Product review, not
-   decided here.
-5. **Whitespace:** the database trims spaces; the client trims all whitespace and sends the normalized value, so the
+4. **Whitespace:** the database trims spaces; the client trims all whitespace and sends the normalized value, so the
    server always sees the canonical form from this app.
-6. **Real-PostgreSQL proof is CI-only** on this host; the verifier was written defensively and is validated by the
-   pushed head's API CI.
-7. W3-01's own §12 residues are unchanged and remain recorded there; W3-02 inherits none of them.
+5. **Real-PostgreSQL proof is CI-only** on this host; the verifier is validated by the pushed head's API CI (§13).
+6. W3-01's own §12 residues are unchanged and remain recorded there; W3-02 inherits none of them.
+7. **`authenticated` holds USAGE on `account_private`.** The INVOKER Product wrapper requires it. PostgreSQL cannot
+   withdraw its global PUBLIC EXECUTE per schema, so a FUTURE function added to that schema must revoke itself by
+   name, as every 0125 function does. The verifier checks the whole schema, and exactly one function is executable
+   by any client role.
+
+(The first head's residue "a reader may choose a Public ID equal to their own Login ID" is removed: the Product
+Owner decided it in R1, and the database now refuses it, §5 / §6.)
 
 No cross-task backlog item is admitted: W3-02 closes no phase or `CLOSED / FROZEN` task (BG-08 runs at a closure), and
 residues 1–7 are owned by the End-to-End audit / Production Integration (`E2E-H-08` is its own row).
 
-## 12. Lifecycle truth
+## 12. Lifecycle truth (see also §13)
 
 W3-02 is implemented on a **Draft PR and is NOT MERGED**. `E2E-D-09` is implemented and proven server + mobile end to end
 as above, and closes only once this PR merges green. `E2E-D-02` is advanced (three real groups), NOT CLOSED. W3 remains
 ACTIVE; `E2E-D-03`, `D-05`, `D-13`, `D-14` and `D-15` remain open. This record does not claim Account & Identity
 complete: Name, photo, Login ID, Email, Shared ID and Security are not implemented.
+
+## 13. R1 — Security boundary, identity separation and CI correction
+
+A narrow correction on the same Draft PR, following independent review of head `860d555`. It did not reopen the
+Product slice. Migration 0125 was edited in place because it is not merged; there is no 0126.
+
+- **Security boundary.** No W3-02 SECURITY DEFINER function remains in the exposed `public` schema. The two Product
+  RPCs there are SECURITY INVOKER. Every privileged part — the change implementation and the two trigger functions —
+  lives in the non-exposed `account_private` schema. The generator and the pure helpers are INVOKER and live there too.
+  - Grants are exact: USAGE on the schema and EXECUTE on its one change implementation, both to `authenticated`
+    (because the INVOKER wrapper runs as it), plus the two Product functions to `authenticated`.
+  - Nothing is granted to `anon` or `service_role`.
+  - No private helper is a Data API RPC.
+- **Public ID ≠ the same account's Login ID (Product Owner decision).**
+  - A validated CHECK on `public.users` enforces it.
+  - The manual change answers `INVALID` for the caller's own Login ID and consumes nothing. It uses the approved
+    invalid copy; no new copy was added.
+  - The generator refuses the row's own Login ID as a candidate (backfill and new accounts).
+  - The guard trigger redraws a sign-up whose Login ID equals its freshly drawn Public ID.
+  - No other account's Login ID is ever read.
+- **API CI.** The T-03B1b2 contract's exact reader allowlist of `readDataApiUpstreamIdentity()` names
+  `apps/api/src/account/account.service.ts` as its fourth reader. The list stays exact: a fifth reader still fails it.
+  The contract now also pins that this reader reads the identity once, matches only
+  `23505 / PUBLIC_ID_COMMAND_CONFLICT`, and never logs, interpolates or returns it.
+- **Mobile CI.** The BackHandler test handler type is derived from the React Native API (`HardwareBackPressEvent`)
+  and is invoked with a typed event. Production navigation is unchanged.
+- **Real PostgreSQL.** R1 is the first head on which API CI reaches the 0125 verifier: at `860d555` API CI stopped at
+  T-03B1b2 before any migration ran. Its result on the R1 head is recorded in PR #288.
