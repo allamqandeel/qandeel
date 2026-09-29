@@ -3577,7 +3577,9 @@ Every existing account was backfilled one row at a time, excluding its own Login
 `assign_public_id` BEFORE INSERT trigger gives every new account its Public ID from the server, ignoring
 any supplied value. Sign-up assigns the Login ID one statement later (0123). If it then equals the
 freshly drawn Public ID, the guard trigger redraws it. The server draws it, nothing is consumed, and the
-writer cannot steer it.
+writer cannot steer it. The redraw is bound to sign-up itself: the row must have been created in the same
+transaction, and the write must come from inside a trigger. So no direct statement, however privileged, can
+clear and re-assign a Login ID to re-roll a Public ID.
 
 Privilege boundary: Supabase exposes `public` over the Data API, and a `SECURITY DEFINER` function must
 never live in an exposed schema. So the exposed Product functions are `SECURITY INVOKER`. Every privileged

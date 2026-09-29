@@ -237,6 +237,14 @@ async function verifyBackfillAndGeneration() {
   assert.match(twinRow.public_id, GENERATED);
   assert.equal(twinRow.public_id_changed_at, null, 'the redraw consumed nothing');
 
+  stage = 'generation: the redraw is sign-up only — a direct write cannot re-roll a Public ID';
+  // `bare` was created in THIS transaction, so only the sign-up-trigger condition stands between a privileged
+  // direct statement and a free re-roll: it must meet the own-Login-ID rule instead, and nothing moves.
+  const bareBefore = (await publicIdOf(bare)).public_id;
+  const reroll = await rejected(() => client.query("UPDATE public.users SET name = 'Re Roll', login_id = public_id WHERE id = $1", [bare]), ['23514']);
+  assert.equal(reroll.constraint, 'users_public_id_not_own_login_id_check');
+  assert.equal((await publicIdOf(bare)).public_id, bareBefore, 'no re-roll');
+
   stage = 'generation: a supplied value is never trusted';
   const direct = randomUUID();
   await client.query('INSERT INTO public.users (id, auth_subject, public_id) VALUES ($1::uuid, $1::text, $2)', [direct, 'chosen.by.caller']);

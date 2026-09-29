@@ -196,7 +196,10 @@ CREATE TRIGGER assign_public_id
 --   a never-changed Public ID, to a different one, consuming the change with its command identity; and
 --   the SERVER's redraw of a never-changed, generated Public ID at the one moment the account's Login ID is
 --   first assigned (sign-up, 0123) and equals it — the value is drawn here, never taken from the writer,
---   so the redraw is not a change anyone can steer, and it consumes nothing.
+--   so the redraw is not a change anyone can steer, and it consumes nothing. It is bound to sign-up itself:
+--   the row was created in THIS transaction, and the write comes from inside a trigger (0123's provisioning
+--   trigger on `auth.users`), never a direct statement — so no writer, however privileged, can clear and
+--   re-assign a Login ID later to re-roll a Public ID without consuming the change.
 --
 -- DEFINER, and therefore non-exposed: the redraw must see every held Public ID whoever updates the row.
 CREATE FUNCTION account_private.guard_public_id_lifetime_change_v1()
@@ -211,7 +214,9 @@ BEGIN
        AND NEW.public_id IS NOT DISTINCT FROM OLD.public_id
        AND OLD.public_id_changed_at IS NULL
        AND NEW.public_id_changed_at IS NULL
-       AND NEW.public_id_change_command_id IS NULL THEN
+       AND NEW.public_id_change_command_id IS NULL
+       AND OLD.created_at = CURRENT_TIMESTAMP
+       AND pg_trigger_depth() > 1 THEN
         NEW.public_id := account_private.generate_public_id_v1(NEW.login_id);
         RETURN NEW;
     END IF;

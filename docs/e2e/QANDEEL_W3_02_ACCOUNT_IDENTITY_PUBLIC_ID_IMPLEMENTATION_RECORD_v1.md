@@ -137,7 +137,10 @@ On the canonical account row `public.users` (P1 §6 "account-held"; beside W1B-0
   1. "from a never-changed Public ID to a different one, consuming the change with its command identity";
   2. the server's own redraw when sign-up first assigns a Login ID equal to the freshly drawn Public ID. 0123 sets
      the Login ID one statement after the insert. The redraw value is drawn in the trigger and never taken from the
-     writer, and it consumes nothing.
+     writer, and it consumes nothing. It fires only for a row created in the same transaction, and only for a
+     write made from inside a trigger (`pg_trigger_depth() > 1`). A direct statement, however privileged, cannot
+     clear and re-assign a Login ID to re-roll a Public ID; the R1 review raised this as a LOW finding, and it is
+     now fixed and proven in the verifier.
 
   Both bind whoever writes, including the table owner and the server channel. A second change, un-consuming, or a
   change without consuming are impossible by construction.

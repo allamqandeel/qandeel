@@ -132,6 +132,11 @@ test('Public ID and the SAME account’s Login ID are never equal — a database
     return calls.length === 3 && calls.every((arg) => /^(?:NEW|v_account)\.login_id$/u.test(arg)) &&
       /IF OLD\.login_id IS NULL AND NEW\.login_id IS NOT NULL\n\s*AND NEW\.login_id = OLD\.public_id\n/u.test(functionBody(text, `${PRIVATE}.guard_public_id_lifetime_change_v1`));
   };
+  // The redraw is sign-up only: the row born in this transaction AND the write from inside a trigger.
+  const redrawIsSignUpOnly = (text) => /AND OLD\.created_at = CURRENT_TIMESTAMP\n\s*AND pg_trigger_depth\(\) > 1 THEN\n\s*NEW\.public_id := account_private\.generate_public_id_v1\(NEW\.login_id\);/u
+    .test(functionBody(text, `${PRIVATE}.guard_public_id_lifetime_change_v1`));
+  guards('redraw-reachable-by-a-direct-write', migrationSql, redrawIsSignUpOnly,
+    'CREATE FUNCTION account_private.guard_public_id_lifetime_change_v1()\nRETURNS trigger AS $$ BEGIN IF OLD.login_id IS NULL AND NEW.login_id = OLD.public_id THEN\n NEW.public_id := account_private.generate_public_id_v1(NEW.login_id); END IF; RETURN NEW; END; $$;');
   guards('initial-assignment-can-equal-own-login-id', migrationSql, everyDrawExcludesOwn,
     'CREATE FUNCTION account_private.assign_public_id_v1() RETURNS trigger AS $$ BEGIN NEW.public_id := account_private.generate_public_id_v1(NULL); RETURN NEW; END; $$;');
   guards('backfill-can-equal-own-login-id', migrationSql, everyDrawExcludesOwn,
@@ -285,7 +290,7 @@ test('the database verifier exists, is registered and runs in API CI', () => {
   const verifier = read(VERIFIER);
   for (const proof of ['ALREADY_USED', 'UNCHANGED', 'UNAVAILABLE', "'23505'", 'waitUntilBlocked', 'setseed', 'is not in the Public namespace', 'the committed fixtures are gone',
     'the caller’s OWN Login ID is INVALID', 'users_public_id_not_own_login_id_check', 'gets a redraw', 'no W3-02 SECURITY DEFINER function in an exposed schema',
-    'no broad grant on the private schema', 'no Data API configuration exposes account_private']) {
+    'no broad grant on the private schema', 'no Data API configuration exposes account_private', 'a direct write cannot re-roll a Public ID']) {
     assert.ok(verifier.includes(proof), `the verifier proves ${proof}`);
   }
   assert.equal(readJson('package.json').scripts['verify:account-public-id:integration'], 'node --env-file-if-exists=.env database/verify-migration-0125.mjs');
