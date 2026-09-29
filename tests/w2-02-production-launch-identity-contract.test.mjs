@@ -194,14 +194,33 @@ test('the launch ground is the QANDEEL World, never the app-icon ground', () => 
   guards('launch-world-not-icon-ground', pluginText, worldIsNotIconGround, "const WORLD_DARK = '#0A0B0D';");
 });
 
-test('iOS: the Launch Screen is the World colour asset only, and it follows the device appearance', () => {
-  const storyboard = plugin.internals.renderLaunchStoryboard();
-  const worldOnly = (xml) =>
-    /launchScreen="YES"/u.test(xml) &&
-    xml.includes('<color key="backgroundColor" name="QandeelWorld"/>') &&
-    !/<imageView|<image |<label|<textView|<button|SplashScreenLogo|systemBackgroundColor/u.test(xml);
-  guards('launch-screen-world-only', storyboard, worldOnly, '<imageView image="AppIcon"/>');
-  guards('launch-screen-no-text', storyboard, worldOnly, '<label text="QANDEEL"/>');
+test('iOS: the Launch Screen is the World colour asset only (UILaunchScreen, R2), and it follows the device appearance', () => {
+  // R2: Apple's Info.plist launch screen replaces the storyboard, which compiled correctly yet rendered black.
+  const template = { CFBundleName: 'QANDEEL', UILaunchStoryboardName: 'SplashScreen', UIUserInterfaceStyle: 'Automatic' };
+  const launched = plugin.internals.applyLaunchScreen(template);
+  const worldOnly = (plist) =>
+    plist.UILaunchStoryboardName === undefined &&
+    plist.UILaunchImages === undefined &&
+    JSON.stringify(plist.UILaunchScreen) === JSON.stringify({ UIColorName: 'QandeelWorld' });
+  assert.equal(worldOnly(launched), true);
+  assert.deepEqual(plugin.internals.applyLaunchScreen(launched), launched, 're-application is identical');
+  assert.equal(launched.CFBundleName, 'QANDEEL', 'every other key is kept');
+  assert.equal(worldOnly({ ...launched, UILaunchScreen: { ...launched.UILaunchScreen, UIImageName: 'AppIcon' } }), false, 'a planted image is rejected');
+  assert.equal(worldOnly({ ...launched, UILaunchStoryboardName: 'SplashScreen' }), false, 'a planted storyboard path is rejected');
+  const noStoryboardWrite = (text) => !/\.storyboard['"`]\s*\)\s*,\s*render|writeFileSync\([^)]*SplashScreen/u.test(code(text)) && /fs\.rmSync\(path\.join\(appDirectory, IOS_TEMPLATE_LAUNCH_STORYBOARD\)/u.test(code(text));
+  guards('no-launch-storyboard-written', pluginText, noStoryboardWrite, "fs.writeFileSync(path.join(appDirectory, 'SplashScreen.storyboard'), xml);");
+  // The template storyboard leaves the Xcode project entirely (file reference, build file, group, resources phase).
+  const objects = {
+    PBXFileReference: { REF: { path: 'QANDEEL/SplashScreen.storyboard' }, REF_comment: 'SplashScreen.storyboard', ASSETS: { path: 'QANDEEL/Images.xcassets' } },
+    PBXBuildFile: { BUILD: { fileRef: 'REF' }, BUILD_comment: 'SplashScreen.storyboard in Resources', BUILDA: { fileRef: 'ASSETS' } },
+    PBXResourcesBuildPhase: { PHASE: { files: [{ value: 'BUILDA' }, { value: 'BUILD' }] } },
+    PBXGroup: { GROUP: { children: [{ value: 'ASSETS' }, { value: 'REF' }] } },
+  };
+  plugin.internals.removeTemplateLaunchStoryboard({ hash: { project: { objects } } });
+  assert.deepEqual(Object.keys(objects.PBXFileReference), ['ASSETS']);
+  assert.deepEqual(Object.keys(objects.PBXBuildFile), ['BUILDA']);
+  assert.deepEqual(objects.PBXResourcesBuildPhase.PHASE.files, [{ value: 'BUILDA' }]);
+  assert.deepEqual(objects.PBXGroup.GROUP.children, [{ value: 'ASSETS' }]);
   const colors = JSON.parse(plugin.internals.renderWorldColorSet()).colors;
   assert.deepEqual(colors.map((entry) => [entry.appearances?.[0]?.value ?? 'any', entry.color.components.red, entry.color.components.green, entry.color.components.blue]), [
     ['any', '0xEF', '0xEE', '0xEB'],
@@ -322,30 +341,40 @@ test('the native launch-identity gate is wired, plants a defect per family, and 
   assert.match(mobileCi, /'tests\/w2-02-production-launch-identity-contract\.test\.mjs'/u);
 });
 
-test('the native launch proof judges only system launch → first stable app-owned World handoff (R1)', () => {
+test('the native launch proof judges only the system launch interval (R1 / R2)', () => {
   const run = (...parts) => parts.flatMap(([state, groundName, count]) => Array.from({ length: count }, () => ({ state, groundName, ground: groundName })))
     .map((frame, index) => ({ ...frame, index, time: index / 30 }));
   const verdict = (frames, platform, expectGround, thenGround = '') => judgeLaunchWindow(launchWindow(frames, platform), { platform, expectGround, thenGround });
   const handoff = ['world', 'dark', STABLE_HANDOFF_FRAMES + 2];
   // After the handoff the runtime surface (Sign in, CONFIG_REFUSED, READY …) is NOT judged — even a light or white one.
-  const later = [['splash', 'light', 40], ['white', 'white', 5], ['other', 'other', 10]];
+  const later = [['content', 'light', 40], ['white', 'white', 5], ['other', 'other', 10], ['product', 'dark', 10]];
 
-  assert.deepEqual(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], handoff, ...later), 'android', 'dark'), [], 'Android: splash → stable World handoff → later UI passes');
+  assert.deepEqual(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], handoff, ...later), 'android', 'dark'), [], 'Android: splash → World handoff → later UI passes');
   assert.deepEqual(verdict(run(['other', 'other', 20], ['splash', 'light', 30], handoff, ...later), 'android', 'light', 'dark'), [], 'Android first launch on a Light system');
+  // R2: no empty World frame is required after the Android splash; the app may draw its real surface at once.
+  assert.deepEqual(verdict(run(['other', 'other', 3], ['splash', 'dark', 4], ['content', 'light', 4]), 'android', 'dark'), [], 'Android: splash straight into the app (a screenshot burst)');
+  assert.deepEqual(verdict(run(['other', 'other', 3], ['splash', 'dark', 6]), 'android', 'dark'), [], 'Android: the splash itself is the proof; its exit need not be captured');
   assert.deepEqual(verdict(run(['other', 'other', 20], ['world', 'light', 12], handoff, ...later), 'ios', 'light', 'dark'), [], 'iOS: World-only Launch Screen → Dark World root');
   assert.deepEqual(verdict(run(['other', 'other', 20], handoff, ...later), 'ios', 'dark'), [], 'iOS on a Dark device');
 
   // Planted defects inside the window are caught.
   assert.match(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], ['white', 'white', 3], handoff), 'android', 'dark').join('\n'), /white/u, 'a white flash before the handoff');
-  assert.match(verdict(run(['other', 'other', 20], ['world', 'dark', 30], handoff), 'android', 'dark').join('\n'), /no Android system splash|no stable app-owned World handoff/u, 'no system splash');
-  assert.match(verdict(run(['other', 'other', 20], ['splash', 'dark', 30], ['splash', 'dark', 20]), 'android', 'dark').join('\n'), /no stable app-owned World handoff/u, 'no handoff ever');
+  assert.match(verdict(run(['other', 'other', 20], ['world', 'dark', 30], handoff), 'android', 'dark').join('\n'), /no Android system splash/u, 'no system splash');
+  assert.match(verdict(run(['other', 'other', 3], ['content', 'light', 6]), 'android', 'dark').join('\n'), /no launch surface|no Android system splash/u, 'the app screen alone is not a splash');
+  assert.match(verdict(run(['other', 'other', 3], ['splash', 'dark', 4], ['world', 'dark', 2], ['splash', 'dark', 4], ['content', 'light', 3]), 'android', 'dark').join('\n'), /second splash/u, 'a duplicate, custom splash after the system splash');
+  assert.match(verdict(run(['other', 'other', 3], ['splash', 'dark', 4], ['white', 'white', 1], ['content', 'light', 4]), 'android', 'dark').join('\n'), /white/u, 'a white flash AT the splash exit (the Expo-default flash)');
   assert.match(verdict(run(['other', 'other', 20], ['black', 'black', 20], handoff, ...later), 'ios', 'light', 'dark').join('\n'), /black/u, 'the black Launch Screen shape recorded on the iOS simulator');
   assert.match(verdict(run(['other', 'other', 20], ['splash', 'light', 12], handoff), 'ios', 'light', 'dark').join('\n'), /carries a mark/u, 'a Q on the iOS Launch Screen');
   assert.match(verdict(run(['other', 'other', 20], ['world', 'dark', 12], handoff), 'ios', 'light', 'dark').join('\n'), /expected light/u, 'a Launch Screen that ignores the device appearance');
-  // And nothing after the window can fail it: the window closes at the end of the stable handoff.
-  const closed = launchWindow(run(['other', 'other', 5], ['splash', 'dark', 10], handoff, ['white', 'white', 50]), 'android');
-  assert.equal(closed.end, closed.handoffFrom + STABLE_HANDOFF_FRAMES - 1);
-  assert.equal(closed.frames.some((frame) => frame.state === 'white'), false);
+  // And nothing after the window can fail it. Android: it closes when the splash exits into the first app-owned
+  // frame; iOS: at the end of the stable Dark World root view.
+  const android = launchWindow(run(['other', 'other', 5], ['splash', 'dark', 10], ['content', 'light', 3], ['white', 'white', 50]), 'android');
+  assert.equal(android.end, 14);
+  assert.equal(android.splashExited, true);
+  assert.equal(android.frames.some((frame) => frame.state === 'white' || frame.state === 'content'), false);
+  const ios = launchWindow(run(['other', 'other', 5], ['world', 'light', 10], handoff, ['white', 'white', 50]), 'ios');
+  assert.equal(ios.end, ios.handoffFrom + STABLE_HANDOFF_FRAMES - 1);
+  assert.equal(ios.frames.some((frame) => frame.state === 'white'), false);
 });
 
 test('the implementation record tells the lifecycle truth and carries the W3 boundary', () => {

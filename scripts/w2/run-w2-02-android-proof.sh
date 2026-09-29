@@ -5,13 +5,13 @@
 #   1. the APK's launcher resources are the I-08B2.5 exports, pixel-identical to the vendored canonical bytes
 #      (aapt2 may re-compress a PNG losslessly, so decoded RGBA is compared, not file bytes);
 #   2. the launcher label is QANDEEL and the installed launcher shows the canonical icon;
-#   3. three recorded cold launches:
+#   3. three cold launches, each captured by a pre-armed on-device screenshot burst (below):
 #        A  system Light, first launch after install — the platform has no app night mode yet, so the splash
 #           is the Light World; the app then sets the effective (Dark) application night mode;
 #        B  system Light, next cold launch — the splash now follows the effective QANDEEL appearance: Dark;
 #        C  system Dark — Dark;
-#      each with the canonical icon on the World, no second splash, no white / black flash, up to a stable
-#      World-only app-owned handoff. The window closes there; the boot smoke owns what the app shows after it.
+#      each the real system splash with the canonical icon on the expected World and no white / black flash.
+#      The window closes when the system splash exits; the boot smoke owns what the app shows after it.
 #
 # Usage: run-w2-02-android-proof.sh <app-release.apk> <evidence-dir>
 set -uo pipefail
@@ -81,23 +81,38 @@ sleep 3
 adb exec-out screencap -p > "$OUT/launcher/all-apps-light.png"
 adb shell input keyevent KEYCODE_HOME
 
-# ---- 3. recorded cold launches ----------------------------------------------------------------------------
+# ---- 3. captured cold launches ----------------------------------------------------------------------------
+# R2: `screenrecord` on the API 36 emulator started late or stopped early and missed the transient system splash.
+# The capture is now a PRE-ARMED ON-DEVICE SCREENSHOT BURST: a loop pushed to the emulator runs `screencap` back to
+# back, starts BEFORE `am start`, and runs for a bounded time — no host round trip per frame, no production delay.
+BURST_SCRIPT="$OUT/launch/burst.sh"
+cat > "$BURST_SCRIPT" <<'BURST'
+dir="$1"; seconds="$2"; max="$3"
+rm -rf "$dir"; mkdir -p "$dir"
+end=$(( $(date +%s) + seconds )); i=0
+while [ "$(date +%s)" -lt "$end" ] && [ "$i" -lt "$max" ]; do
+  screencap -p "$dir/$(printf %04d "$i").png"
+  i=$((i + 1))
+done
+BURST
+adb push "$BURST_SCRIPT" /data/local/tmp/w2-02-burst.sh >/dev/null
+
 record_launch() {
   local label="$1" expect="$2" then="$3"
   adb shell am force-stop "$PACKAGE"
   sleep 2
   adb shell input keyevent KEYCODE_HOME
   sleep 2
-  adb shell rm -f "/sdcard/$label.mp4"
-  adb shell screenrecord --bit-rate 12000000 --time-limit 9 "/sdcard/$label.mp4" &
-  local recorder=$!
-  sleep 1.5
-  adb shell am start -W -n "$ACTIVITY" | tee "$OUT/launch/$label-am-start.txt"
-  wait "$recorder"
+  adb shell sh /data/local/tmp/w2-02-burst.sh "/sdcard/w2-02-burst/$label" 8 120 &
+  local burst=$!
   sleep 1
-  adb pull "/sdcard/$label.mp4" "$OUT/launch/$label.mp4" >/dev/null
-  adb exec-out screencap -p > "$OUT/launch/$label-final.png"
-  local args=(--video "$OUT/launch/$label.mp4" --out "$OUT/launch" --platform android --expect-ground "$expect" --label "$label")
+  adb shell am start -W -n "$ACTIVITY" | tee "$OUT/launch/$label-am-start.txt"
+  wait "$burst"
+  mkdir -p "$OUT/launch/$label"
+  adb pull "/sdcard/w2-02-burst/$label/." "$OUT/launch/$label" >/dev/null
+  adb shell rm -rf "/sdcard/w2-02-burst/$label"
+  note "$label: $(ls "$OUT/launch/$label" | wc -l | tr -d ' ') burst frames"
+  local args=(--video "$OUT/launch/$label/%04d.png" --images --out "$OUT/launch" --platform android --expect-ground "$expect" --label "$label")
   [ -n "$then" ] && args+=(--then-ground "$then")
   if ! node scripts/w2/analyze-w2-02-launch-recording.mjs "${args[@]}" | tee -a "$OUT/summary.txt"; then status=1; fi
 }

@@ -170,18 +170,24 @@ export function checkIos(iosRoot) {
   if (colors.length !== 2 || any.length !== 1 || hexOf(any[0]) !== WORLD.light) failures.push(`I-WORLD-COLOR: the any-appearance World must be ${WORLD.light}`);
   if (dark.length !== 1 || hexOf(dark[0]) !== WORLD.dark) failures.push(`I-WORLD-COLOR: the dark-appearance World must be ${WORLD.dark}`);
 
-  const storyboard = read(join(app, 'SplashScreen.storyboard'));
-  if (!/launchScreen="YES"/u.test(storyboard)) failures.push('I-LAUNCH: SplashScreen.storyboard must be a launch screen');
-  if (!storyboard.includes(`<color key="backgroundColor" name="${internals.IOS_WORLD_COLOR}"/>`)) failures.push('I-LAUNCH: the launch view must be filled with the World colour asset');
-  for (const forbidden of ['<imageView', '<image ', '<label', '<textView', '<button', 'SplashScreenLogo', 'systemBackgroundColor']) {
-    if (storyboard.includes(forbidden)) failures.push(`I-LAUNCH: the Launch Screen must carry the World only; found ${forbidden}`);
-  }
-
+  // R2: the Launch Screen is Apple's Info.plist launch screen — UILaunchScreen with only UIColorName = the World
+  // colour asset. No storyboard exists or is referenced, and nothing but the colour is declared.
   const plist = read(join(app, 'Info.plist'));
-  if (plistString(plist, 'UILaunchStoryboardName') !== 'SplashScreen') failures.push('I-PLIST: UILaunchStoryboardName must be SplashScreen');
+  const launchScreen = plist.match(/<key>UILaunchScreen<\/key>\s*<dict>([\s\S]*?)<\/dict>/u)?.[1] ?? null;
+  if (launchScreen === null) failures.push('I-LAUNCH: Info.plist must declare UILaunchScreen');
+  else {
+    const keys = [...launchScreen.matchAll(/<key>([^<]+)<\/key>/gu)].map((match) => match[1]);
+    if (JSON.stringify(keys) !== JSON.stringify(['UIColorName']) || plistString(launchScreen, 'UIColorName') !== internals.IOS_WORLD_COLOR) {
+      failures.push(`I-LAUNCH: UILaunchScreen must hold only UIColorName = ${internals.IOS_WORLD_COLOR}; found ${keys.join(', ') || 'nothing'}`);
+    }
+  }
+  if (/<key>UILaunchStoryboardName<\/key>|<key>UILaunchImages<\/key>/u.test(plist)) failures.push('I-LAUNCH: no second launch definition (storyboard / launch images) is allowed');
+  if (existsSync(join(app, 'SplashScreen.storyboard'))) failures.push('I-LAUNCH: the template launch storyboard must be gone');
+  const pbxproj = read(join(iosRoot, `${projectName}.xcodeproj`, 'project.pbxproj'));
+  if (/\.storyboard\b/u.test(pbxproj)) failures.push('I-LAUNCH: the Xcode project must reference no storyboard');
+
   if (plistString(plist, 'UIUserInterfaceStyle') !== 'Automatic') failures.push('I-PLIST: UIUserInterfaceStyle must be Automatic so the Launch Screen follows the device');
   if (plistString(plist, 'CFBundleDisplayName') !== 'QANDEEL') failures.push('I-PLIST: the home-screen label (CFBundleDisplayName) must be QANDEEL');
-  if (/<key>UILaunchScreen<\/key>|<key>UILaunchImages<\/key>/u.test(plist)) failures.push('I-PLIST: no second launch definition is allowed');
 
   const appDelegate = read(join(app, 'AppDelegate.swift'));
   if ((appDelegate.match(/override func customize\(_ rootView: UIView\)/gu) ?? []).length !== 1 || !appDelegate.includes(internals.ROOT_VIEW_BEGIN)) {
@@ -227,7 +233,9 @@ export function plantedDefects(androidRoot, iosRoot) {
       ['ios', 'I-ICON-SET', 'one byte of the 1024 marketing icon changes', join(catalog, 'AppIcon.appiconset', 'AppIcon-1024.png'), (file) => flipLastByte(file)],
       ['ios', 'I-ICON-SET', 'a dark icon variant is introduced', join(catalog, 'AppIcon.appiconset', 'Contents.json'), (file) => replaceIn(file, '"idiom": "ios-marketing",', '"idiom": "ios-marketing", "appearances": [{"appearance": "luminosity", "value": "dark"}],')],
       ['ios', 'I-WORLD-COLOR', 'the Dark launch ground becomes the icon ground #0A0B0D', join(catalog, `${internals.IOS_WORLD_COLOR}.colorset`, 'Contents.json'), (file) => replaceIn(file, /"blue": "0x10",\s*"green": "0x10",\s*"red": "0x10"/u, '"blue": "0x0D", "green": "0x0B", "red": "0x0A"')],
-      ['ios', 'I-LAUNCH', 'the Q is placed on the Launch Screen', join(app, 'SplashScreen.storyboard'), (file) => replaceIn(file, '</view>', '<imageView image="AppIcon" id="QANDEEL-Q"/></view>')],
+      ['ios', 'I-LAUNCH', 'the Q is placed on the Launch Screen', join(app, 'Info.plist'), (file) => replaceIn(file, `<string>${internals.IOS_WORLD_COLOR}</string>`, `<string>${internals.IOS_WORLD_COLOR}</string>\n      <key>UIImageName</key>\n      <string>AppIcon</string>`)],
+      ['ios', 'I-LAUNCH', 'the storyboard launch path comes back', join(app, 'Info.plist'), (file) => replaceIn(file, '<key>UILaunchScreen</key>', '<key>UILaunchStoryboardName</key>\n    <string>SplashScreen</string>\n    <key>UILaunchScreen</key>')],
+      ['ios', 'I-LAUNCH', 'the Launch Screen colour is not the World asset', join(app, 'Info.plist'), (file) => replaceIn(file, `<string>${internals.IOS_WORLD_COLOR}</string>`, '<string>AccentColor</string>')],
       ['ios', 'I-PLIST', 'the Launch Screen is forced Light', join(app, 'Info.plist'), (file) => replaceIn(file, '<string>Automatic</string>', '<string>Light</string>')],
       ['ios', 'I-ROOT-VIEW', 'the root view goes back to the system background', join(app, 'AppDelegate.swift'), (file) => replaceIn(file, 'rootView.backgroundColor = UIColor(red: 16.0 / 255.0, green: 16.0 / 255.0, blue: 16.0 / 255.0, alpha: 1.0)', 'rootView.backgroundColor = UIColor.systemBackground')],
     );

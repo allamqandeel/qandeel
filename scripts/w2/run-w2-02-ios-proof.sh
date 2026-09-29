@@ -2,9 +2,9 @@
 # W2-02 — native launch identity proof on an iOS simulator. VALIDATION ONLY; nothing here ships.
 #
 # Proves, on the INSTALLED Product Release simulator app (the same Product entry Mobile CI builds):
-#   1. the compiled bundle: CFBundleDisplayName QANDEEL, UIUserInterfaceStyle Automatic, the SplashScreen launch
-#      storyboard, and an asset catalogue holding the AppIcon set and the QandeelWorld colour (with a dark
-#      appearance) and no splash logo;
+#   1. the compiled bundle: CFBundleDisplayName QANDEEL, UIUserInterfaceStyle Automatic, the Info.plist launch
+#      screen UILaunchScreen = { UIColorName: QandeelWorld } and no storyboard (R2), and an asset catalogue holding
+#      the AppIcon set and the QandeelWorld colour (with a dark appearance) and no splash logo;
 #   2. the SpringBoard icon (home-screen screenshots, Light and Dark device appearance);
 #   3. recorded cold launches with the device in Light and in Dark: the Launch Screen is the World of the
 #      device appearance with no Q / logo / text, then a stable Dark World app-owned handoff, with no white or
@@ -25,12 +25,15 @@ plist() { /usr/libexec/PlistBuddy -c "Print :$1" "$APP/Info.plist" 2>/dev/null; 
 
 # ---- 1. compiled bundle evidence --------------------------------------------------------------------------
 plutil -p "$APP/Info.plist" > "$OUT/bundle/Info.plist.txt"
-for pair in "CFBundleDisplayName=QANDEEL" "UIUserInterfaceStyle=Automatic" "UILaunchStoryboardName=SplashScreen"; do
+for pair in "CFBundleDisplayName=QANDEEL" "UIUserInterfaceStyle=Automatic" "UILaunchScreen:UIColorName=QandeelWorld"; do
   key="${pair%%=*}"; want="${pair#*=}"; got="$(plist "$key")"
   if [ "$got" = "$want" ]; then note "PASS $key = $got"; else note "FAIL $key = '${got}', expected '$want'"; status=1; fi
 done
+# R2: the Info.plist launch screen is the only launch definition; no storyboard is compiled or referenced.
+if [ -n "$(plist UILaunchStoryboardName)" ]; then note "FAIL UILaunchStoryboardName is still declared"; status=1; else note "PASS no UILaunchStoryboardName"; fi
+if /usr/libexec/PlistBuddy -c "Print :UILaunchScreen" "$APP/Info.plist" | grep -q -E 'UIImageName|UINavigationBar|UITabBar|UIToolbar'; then note "FAIL UILaunchScreen declares more than the World colour"; status=1; else note "PASS UILaunchScreen declares the World colour only"; fi
 ls -la "$APP" > "$OUT/bundle/app-contents.txt"
-if [ -d "$APP/SplashScreen.storyboardc" ]; then note "PASS the compiled launch storyboard is in the bundle"; else note "FAIL SplashScreen.storyboardc is missing"; status=1; fi
+if ls -d "$APP"/*.storyboardc >/dev/null 2>&1; then note "FAIL a compiled storyboard is in the bundle"; status=1; else note "PASS no storyboard is compiled into the bundle"; fi
 xcrun --sdk iphonesimulator assetutil --info "$APP/Assets.car" > "$OUT/bundle/Assets.car.json" 2>&1 || true
 if grep -q '"Name" : "QandeelWorld"' "$OUT/bundle/Assets.car.json"; then note "PASS Assets.car holds the QandeelWorld colour"; else note "FAIL Assets.car has no QandeelWorld colour"; status=1; fi
 grep -A12 '"Name" : "QandeelWorld"' "$OUT/bundle/Assets.car.json" > "$OUT/bundle/QandeelWorld-renditions.txt" || true

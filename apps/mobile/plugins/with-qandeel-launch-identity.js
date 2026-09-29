@@ -7,7 +7,7 @@
 //      the generated projects, replacing the Expo template's default icon and splash-logo resources;
 //   2. makes the launch ground the QANDEEL World — Light #efeeeb, Dark #101010 (F2 FINAL / A3R2) — on the
 //      Android 12+ system splash and the first app-owned Android window, and as the only content of the iOS
-//      Launch Screen;
+//      Launch Screen (Info.plist `UILaunchScreen` / `UIColorName`, R2);
 //   3. keeps the first app-owned iOS pixels the World instead of React Native's default systemBackgroundColor;
 //   4. sets the Android application night mode to the effective QANDEEL appearance, so the system splash
 //      follows it (P4-C3R §1).
@@ -20,9 +20,9 @@
 //
 // Why files are installed with `withDangerousMod`: Expo's plugin guide reserves generating, moving and deleting
 // files for dangerous mods. Under the T-01 CNG hierarchy (apps/mobile/README.md) that is Level 4 and needs its
-// own Engineering Architecture review; W2-02 confines it to the two `install…` functions below, which only copy
-// vendored bytes, delete named template resources and write two fixed text files. Every other change is a
-// typed mod.
+// own Engineering Architecture review (APPROVED — bounded W2-02 Level-4 exception); W2-02 confines it to the two
+// `install…` functions below, which only copy vendored bytes, delete named template resources and write the
+// World colour asset. Every other change is a typed mod.
 //
 // It adds no timer, no minimum duration, no second splash, no Q / logo / text on the iOS Launch Screen, no
 // Lantern content, and no appearance preference. QAN-BL-LANTERN-01 and the W3 appearance setting are untouched.
@@ -36,7 +36,9 @@ const {
   withAndroidStyles,
   withAppDelegate,
   withDangerousMod,
+  withInfoPlist,
   withMainApplication,
+  withXcodeProject,
 } = require('expo/config-plugins');
 
 /** The QANDEEL World fill (`qandeel.world.fill`). NOT the app-icon ground #0A0B0D. */
@@ -158,44 +160,44 @@ function renderWorldColorSet() {
   )}\n`;
 }
 
+/** The Expo template's launch storyboard, replaced by the Info.plist launch screen (R2). */
+const IOS_TEMPLATE_LAUNCH_STORYBOARD = 'SplashScreen.storyboard';
+
 /**
- * The iOS Launch Screen: one view filled with the World colour, which the system resolves for the device
- * appearance. No image, no label, no Q, no wordmark (Apple HIG Launching; P4-C3R §1).
+ * The iOS Launch Screen, R2: Apple's Info.plist launch screen (`UILaunchScreen`, iOS 14+; this app's minimum is
+ * 16.4) with `UIColorName` naming the World colour asset, which the system resolves for the device appearance.
+ * Nothing else — no `UIImageName`, no bars, no storyboard. The storyboard path compiled correctly and still
+ * rendered black on the iOS 26.5 simulator (W2-02 R2), so W2-02 no longer depends on it.
  */
-function renderLaunchStoryboard() {
-  const [red, green, blue] = hexComponents(WORLD.light).map((component) => (Number.parseInt(component, 16) / 255).toFixed(6));
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<document type="com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB" version="3.0" toolsVersion="24093.7" targetRuntime="iOS.CocoaTouch" propertyAccessControl="none" useAutolayout="YES" launchScreen="YES" useTraitCollections="YES" useSafeAreas="YES" colorMatched="YES" initialViewController="QANDEEL-LAUNCH-VIEWCONTROLLER">
-    <device id="retina6_12" orientation="portrait" appearance="light"/>
-    <dependencies>
-        <deployment identifier="iOS"/>
-        <plugIn identifier="com.apple.InterfaceBuilder.IBCocoaTouchPlugin" version="24053.1"/>
-        <capability name="Named colors" minToolsVersion="9.0"/>
-        <capability name="documents saved in the Xcode 8 format" minToolsVersion="8.0"/>
-    </dependencies>
-    <scenes>
-        <!--QANDEEL Launch Screen: the World, and nothing else-->
-        <scene sceneID="QANDEEL-LAUNCH-SCENE">
-            <objects>
-                <viewController id="QANDEEL-LAUNCH-VIEWCONTROLLER" sceneMemberID="viewController">
-                    <view key="view" userInteractionEnabled="NO" contentMode="scaleToFill" insetsLayoutMarginsFromSafeArea="NO" id="QANDEEL-LAUNCH-WORLD" userLabel="World">
-                        <rect key="frame" x="0.0" y="0.0" width="393" height="852"/>
-                        <autoresizingMask key="autoresizingMask" widthSizable="YES" heightSizable="YES"/>
-                        <color key="backgroundColor" name="${IOS_WORLD_COLOR}"/>
-                    </view>
-                </viewController>
-                <placeholder placeholderIdentifier="IBFirstResponder" id="QANDEEL-LAUNCH-FIRST-RESPONDER" userLabel="First Responder" sceneMemberID="firstResponder"/>
-            </objects>
-            <point key="canvasLocation" x="0.0" y="0.0"/>
-        </scene>
-    </scenes>
-    <resources>
-        <namedColor name="${IOS_WORLD_COLOR}">
-            <color red="${red}" green="${green}" blue="${blue}" alpha="1" colorSpace="custom" customColorSpace="sRGB"/>
-        </namedColor>
-    </resources>
-</document>
-`;
+function applyLaunchScreen(infoPlist) {
+  const { UILaunchStoryboardName, UILaunchScreen, ...rest } = infoPlist;
+  return { ...rest, UILaunchScreen: { UIColorName: IOS_WORLD_COLOR } };
+}
+
+/** Removes the template launch storyboard from the Xcode project: its file reference, build file and group entry. */
+function removeTemplateLaunchStoryboard(project) {
+  const objects = project.hash.project.objects;
+  const isEntry = (key) => !key.endsWith('_comment');
+  const fileReferences = objects.PBXFileReference ?? {};
+  const references = Object.keys(fileReferences).filter(
+    (key) => isEntry(key) && String(fileReferences[key].path ?? '').replace(/"/gu, '').endsWith(IOS_TEMPLATE_LAUNCH_STORYBOARD),
+  );
+  if (references.length === 0) return project;
+  const buildFiles = objects.PBXBuildFile ?? {};
+  const builds = Object.keys(buildFiles).filter((key) => isEntry(key) && references.includes(buildFiles[key].fileRef));
+  for (const key of [...builds, ...references]) {
+    delete buildFiles[key];
+    delete buildFiles[`${key}_comment`];
+    delete fileReferences[key];
+    delete fileReferences[`${key}_comment`];
+  }
+  for (const phase of Object.values(objects.PBXResourcesBuildPhase ?? {})) {
+    if (phase && Array.isArray(phase.files)) phase.files = phase.files.filter((file) => !builds.includes(file.value));
+  }
+  for (const group of Object.values(objects.PBXGroup ?? {})) {
+    if (group && Array.isArray(group.children)) group.children = group.children.filter((child) => !references.includes(child.value));
+  }
+  return project;
 }
 
 function listFiles(directory, base = directory) {
@@ -225,7 +227,7 @@ function installAndroidResources(platformProjectRoot) {
   copyVendored(VENDORED_ANDROID_RES, resDirectory);
 }
 
-/** Level-4 (see header): the canonical app-icon set, the World colour and the World-only Launch Screen. */
+/** Level-4 (see header): the canonical app-icon set and the World colour; the template launch storyboard goes. */
 function installIosResources(platformProjectRoot, projectName) {
   const appDirectory = path.join(platformProjectRoot, projectName);
   const assetCatalog = path.join(appDirectory, 'Images.xcassets');
@@ -235,7 +237,7 @@ function installIosResources(platformProjectRoot, projectName) {
   const colorSet = path.join(assetCatalog, `${IOS_WORLD_COLOR}.colorset`);
   fs.mkdirSync(colorSet, { recursive: true });
   fs.writeFileSync(path.join(colorSet, 'Contents.json'), renderWorldColorSet());
-  fs.writeFileSync(path.join(appDirectory, 'SplashScreen.storyboard'), renderLaunchStoryboard());
+  fs.rmSync(path.join(appDirectory, IOS_TEMPLATE_LAUNCH_STORYBOARD), { force: true });
 }
 
 function setWorldColor(colors, value) {
@@ -297,6 +299,14 @@ const withQandeelLaunchIdentity = (config) => {
       return modConfig;
     },
   ]);
+  config = withInfoPlist(config, (modConfig) => {
+    modConfig.modResults = applyLaunchScreen(modConfig.modResults);
+    return modConfig;
+  });
+  config = withXcodeProject(config, (modConfig) => {
+    modConfig.modResults = removeTemplateLaunchStoryboard(modConfig.modResults);
+    return modConfig;
+  });
   config = withAppDelegate(config, (modConfig) => {
     if (modConfig.modResults.language !== 'swift') throw new Error('W2-02: AppDelegate is expected to be Swift');
     modConfig.modResults.contents = applyRootViewWorld(modConfig.modResults.contents);
@@ -318,6 +328,7 @@ module.exports.internals = Object.freeze({
   ROOT_VIEW_BEGIN,
   applyApplicationNightMode,
   applyRootViewWorld,
-  renderLaunchStoryboard,
+  applyLaunchScreen,
+  removeTemplateLaunchStoryboard,
   renderWorldColorSet,
 });

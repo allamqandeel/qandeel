@@ -602,7 +602,8 @@ the frozen hierarchy:
 `plugins/with-qandeel-launch-identity.js`, only its two current dangerous-mod file-install steps, and only
 the canonical icon / launch resource installation W2-02 requires. Those steps copy the vendored canonical
 bytes (`assets/brand/i-08b2.5/`), delete the named Expo template icon / splash-logo files, and write the World
-colour asset and the World-only iOS Launch Screen. It was needed because Expo's `icon` / `adaptiveIcon` config
+colour asset; since R2 the iOS step also deletes the template launch storyboard, because the Launch Screen is the
+Info.plist `UILaunchScreen` colour (a typed mod). It was needed because Expo's `icon` / `adaptiveIcon` config
 would re-encode, re-frame and rasterize the I-08B2.5 exports. Every other W2-02 change is a typed mod. The
 approval does not authorize any future expansion: another dangerous mod, a new file it writes, or a use
 beyond the W2-02 resources needs its own Engineering Architecture review. No other file may use a dangerous

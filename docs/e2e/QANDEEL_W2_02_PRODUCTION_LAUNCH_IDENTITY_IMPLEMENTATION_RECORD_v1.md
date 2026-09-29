@@ -117,7 +117,9 @@ therefore uses Option B: one config plugin, `apps/mobile/plugins/with-qandeel-la
 | `withAndroidColors` / `withAndroidColorsNight` | typed | `qandeel_world` = `#efeeeb` / `#101010` (`values-night`); removes the template `splashscreen_background` |
 | `withAndroidStyles` | typed | `AppTheme` and `Theme.App.SplashScreen` `android:windowBackground` = `@color/qandeel_world`; `android:windowSplashScreenBackground` = `@color/qandeel_world` (`tools:targetApi="31"`) |
 | `withMainApplication` | typed | after `super.onCreate()`, API 31+: `setApplicationNightMode(MODE_NIGHT_YES)` (§8) |
-| iOS install | `withDangerousMod` | replaces `AppIcon.appiconset` with the 14 vendored files; writes `QandeelWorld.colorset` (any `#efeeeb`, dark `#101010`) and a World-only `SplashScreen.storyboard` |
+| iOS install | `withDangerousMod` | replaces `AppIcon.appiconset` with the 14 vendored files; writes `QandeelWorld.colorset` (any `#efeeeb`, dark `#101010`); deletes the template `SplashScreen.storyboard` (R2) |
+| `withInfoPlist` | typed | R2: `UILaunchScreen` = `{ UIColorName: QandeelWorld }`; removes `UILaunchStoryboardName` (§7) |
+| `withXcodeProject` | typed | R2: removes the template storyboard's file reference, build file, group entry and Resources-phase entry |
 | `withAppDelegate` | typed | overrides `customize(_ rootView:)` to paint the root view `#101010` (§7) |
 
 `app.json` also sets `name: "QANDEEL"` (§10) and `ios.userInterfaceStyle: "automatic"` (§4.2). No `icon`, `splash`,
@@ -126,7 +128,7 @@ therefore uses Option B: one config plugin, `apps/mobile/plugins/with-qandeel-la
 **CNG hierarchy (apps/mobile/README.md).** The T-01 policy makes dangerous mods Level 4: not pre-authorized, needing a
 separate Engineering Architecture review. The Product Owner's task contract authorizes Option B, and Expo's own guide
 puts file installs in dangerous mods. W2-02 therefore confines the two dangerous mods to copying vendored bytes,
-deleting named template files and writing two fixed text files, and narrows the mobile-foundation contract so this one
+deleting named template files and writing the World colour asset (R2 removed the storyboard write), and narrows the mobile-foundation contract so this one
 file, and no other, may use a dangerous mod.
 
 **Architecture disposition (W2-02 R1): APPROVED — bounded W2-02 Level-4 exception.** The independent Engineering
@@ -142,9 +144,15 @@ re-application and reproducible across clean generations; the canonical package 
 
 ## 7. iOS launch behaviour
 
-- **Launch Screen:** one view filled with the `QandeelWorld` asset colour. The system resolves it for the device
-  appearance (`UIUserInterfaceStyle` = `Automatic`): Light `#efeeeb`, Dark `#101010`. No image view, label, Q, wordmark,
-  text or Lantern. It does not reproduce the in-app preference (P4-C3R §1).
+- **Launch Screen (final mechanism, R2):** Apple's Info.plist launch screen, `UILaunchScreen` = `{ UIColorName:
+  QandeelWorld }`, and nothing else: no `UIImageName`, no bars, no storyboard, and no `UILaunchStoryboardName`.
+  `UILaunchScreen` needs iOS 14; this app's minimum is iOS 16.4. `UIColorName` names an asset-catalog colour, resolved
+  as `UIColor(named:)` resolves it, so the system shows the `QandeelWorld` colorset for the device appearance
+  (`UIUserInterfaceStyle` = `Automatic`): Light `#efeeeb`, Dark `#101010`. There is no image, label, Q, wordmark, text
+  or Lantern, and it does not reproduce the in-app preference (P4-C3R §1).
+  - Why R2 moved off the storyboard: the storyboard route compiled correctly, yet rendered black on the iOS 26.5
+    simulator (see §14). Apple states no precedence between `UILaunchScreen` and `UILaunchStoryboardName`, so the
+    storyboard key is removed rather than left beside it. The template storyboard also leaves the project.
 - **First app-owned pixels:** React Native's root view is painted `#101010` in `customize(rootView)`, before the first
   frame. It never shows `systemBackgroundColor` (white on a Light device, `#000` on Dark). `#101010` is the only
   appearance production renders. On a Light device the reader therefore sees the Light launch, then the Dark app, once,
@@ -227,7 +235,7 @@ Local (Windows host). Every check below ran and passed unless it says otherwise:
 | `npm run prebuild:launch-identity:mobile` (Android; iOS generation is refused on Windows) | PASS; 8 / 8 Android planted defects caught; repository state unchanged |
 | iOS checks on a synthetic tree (the real SDK 57 template, the plugin's own iOS install and AppDelegate mods, Info.plist keys as Expo writes them) | `checkIos` PASS; 6 / 6 iOS planted defects caught (scratch harness, not committed) |
 | `npm run prebuild:mobile` (CNG Level 2) | PASS; 40 files; re-application byte-identical; clean generations identical |
-| `expo config --type introspect` | `name` QANDEEL; iOS `UIUserInterfaceStyle` Automatic, `CFBundleDisplayName` QANDEEL, `UILaunchStoryboardName` SplashScreen; no `icon` / `splash` |
+| `expo config --type introspect` | `name` QANDEEL; iOS `UIUserInterfaceStyle` Automatic, `CFBundleDisplayName` QANDEEL, `UILaunchScreen` `{ UIColorName: QandeelWorld }` and no `UILaunchStoryboardName` (R2); no `icon` / `splash` |
 | `npm run doctor:mobile` (`EXPO_OFFLINE=1`, directory check off, as in CI) | 20 / 20 checks passed |
 | `npm run typecheck:mobile` | pass |
 | ESLint on the changed JS | pass with every non-resolver rule on; `npm run lint:mobile` cannot run here because Smart App Control blocks the resolver's native binding, so the full lint is CI-authoritative |
@@ -243,24 +251,36 @@ GitHub CI on the Draft PR: see §14 and the PR.
 ## 14. Visual / native evidence
 
 `.github/workflows/w2-02-native-launch-proof.yml` (branch-scoped) builds the **Product** Release binaries exactly as
-Mobile CI does, installs them and records real cold launches with the platforms' own screen recorders. No production
-delay was added for it. `scripts/w2/analyze-w2-02-launch-recording.mjs` classifies every frame as splash / world /
-product / white / black / other.
+Mobile CI does, installs them and captures real cold launches. No production delay was added for it.
+`scripts/w2/analyze-w2-02-launch-recording.mjs` classifies every frame as splash / world / content / product / white /
+black / other. `splash` means one compact, centred mark on a World-like ground, which is the icon. Centred text on a
+World-like ground (for example the unconfigured build's `CONFIG_REFUSED` screen) is `content`, never `splash`.
 
-**Proof boundary (R1).** W2-02 owns only `system launch surface → first stable app-owned World handoff`. The launch
-window opens at the first full-screen launch frame, so a white or black flash falls inside it. It closes at the end of
-the first stable World-only app-owned handoff (6 frames, 200 ms): on Android after the system splash, on iOS the Dark
-World root view. Inside the window only the splash and the World are allowed. What the app shows after the handoff
-(Sign in, `CONFIG_REFUSED` in an unconfigured build, anything else) is not judged here. The Android and iOS boot
-smokes remain the authority that the app root boots. The first run (head `6bdf288`) judged that later runtime screen as
-launch and failed for that reason. R1 corrected the boundary; the W2-02 contract pins it with planted sequences.
+**Proof boundary (R1, refined by R2).** W2-02 owns only the system launch interval. The launch window opens at the
+first full-screen launch frame, so a white or black flash falls inside it.
 
-- **Android (API 36 emulator):** APK badging and resources; all 15 icon rasters compared by decoded pixels with the
-  vendored canonical bytes; the installed-launcher screenshot; cold launches A (system Light, first launch), B (system
-  Light, after the night-mode seam) and C (system Dark).
-- **iOS (iPhone 17 / iOS 26.5 simulator):** the compiled Info.plist, launch storyboard and `Assets.car` catalogue;
-  SpringBoard screenshots in Light and Dark; per appearance, a first cold launch (diagnostic) and a repeat cold launch
-  (gating), D1 / D2 (device Light) and E1 / E2 (device Dark).
+- **Android (R2):** the window closes when the system splash exits, at the first app-owned frame that is not white or
+  black, whatever that frame shows.
+  - A white or black flash at the exit is still judged.
+  - No empty World frame is required; the app may draw its real next surface at once.
+  - After the window, the only thing looked at is whether an icon splash appears again: a duplicate, custom splash.
+- **iOS:** the window closes at the end of the first stable Dark World root view (6 frames, 200 ms), which follows the
+  World-only Launch Screen.
+
+Inside the window only the splash (Android) and the World are allowed. What the app shows after it (Sign in,
+`CONFIG_REFUSED`, anything else) is not judged here. The Android and iOS boot smokes remain the authority that the app
+root boots. The W2-02 contract pins both boundaries with planted sequences.
+
+- **Android (API 36 emulator):**
+  - APK badging and resources; all 15 icon rasters compared by decoded pixels with the vendored canonical bytes; the
+    installed-launcher screenshot.
+  - Cold launches A (system Light, first launch), B (system Light, after the night-mode seam) and C (system Dark).
+  - **Capture (R2):** `screenrecord` on the API 36 emulator was not reliable. On head `3af1ae5` it missed the splash
+    entirely in A and C. It is replaced by a validation-only **pre-armed on-device screenshot burst**: a `screencap`
+    loop pushed to the emulator, started before `am start`, bounded at 8 s / 120 frames, and analysed with `--images`.
+- **iOS (iPhone 17 / iOS 26.5 simulator):** the compiled Info.plist (R2: `UILaunchScreen` / `UIColorName`, no storyboard
+  compiled) and the `Assets.car` catalogue; SpringBoard screenshots in Light and Dark; per appearance, a first cold
+  launch (diagnostic) and a repeat cold launch (gating), D1 / D2 (device Light) and E1 / E2 (device Dark).
 
 **First-run evidence (head `6bdf288`, run 36538191115), read under the R1 boundary:**
 
@@ -282,6 +302,31 @@ launch and failed for that reason. R1 corrected the boundary; the W2-02 contract
     appearance, which gates. If the repeat is still black, it is a W2-02 iOS Launch Screen defect for the Product
     Owner, not a proof artifact.
 
+**R1 evidence (head `3af1ae5`, run 36542496920) and the R2 diagnosis:**
+
+- **iOS:** both **repeat** launches, D2 (Light) and E2 (Dark), were still black before the Dark World root view.
+  First-run snapshot timing is therefore excluded: the Launch Screen itself rendered black.
+- **Inspection of the CI-built app** (`qandeel-ios-simulator.app` from Mobile CI run 36542499592):
+  - Info.plist declared `UILaunchStoryboardName` = `SplashScreen` and `UIUserInterfaceStyle` = `Automatic`.
+  - `Assets.car` holds `QandeelWorld` with `UIAppearanceAny` and `UIAppearanceDark` renditions.
+  - The compiled `SplashScreen.storyboardc` nib references the dynamic catalog colour `QandeelWorld`, with the Light
+    fallback `0.937 / 0.933 / 0.922` embedded.
+- **Conclusion:** every input compiled correctly. A failed colour lookup would have produced the Light fallback, not
+  black, so the defect lies in how the iOS 26.5 simulator renders the storyboard-based launch snapshot.
+  - The artifacts cannot narrow it further.
+  - R2 therefore removes that path: `UILaunchScreen` / `UIColorName`, Apple's colour-only launch definition (§7).
+- **Android (R1 run):**
+  - `screenrecord` captured no splash in A and C; B captured the splash but ended before its exit. That is a capture
+    defect, not a Product one: the same app's splash was captured correctly on `6bdf288`.
+  - Re-read under the R2 boundary, `6bdf288` A / B / C pass: splash (Light on first launch, Dark after the seam and on
+    a Dark system), then the app.
+
+**Open until the R2 proof runs:**
+- the iOS Launch Screen showing `#efeeeb` / `#101010` on the gating repeat launches;
+- the Android burst capturing the splash in A, B and C.
+
+This section is updated from that run.
+
 **Capture limitation:** a recording is H.264, so colours are matched within a tolerance (±9 per channel), and every
 measured ground is reported. A simulator or emulator is not a device: OEM launchers, icon masks and themed-icon tinting
 on real hardware remain Release Hardening device checks.
@@ -290,8 +335,9 @@ on real hardware remain Release Hardening device checks.
 
 - **Level-4 CNG exception:** APPROVED — bounded W2-02 Level-4 exception (R1; §6). Any expansion needs a new review.
 - **W3 carry-forward** (§12).
-- **iOS black launch surface on the simulator** (§14): open until the gating repeat launch classifies it as either
-  infrastructure or a Launch Screen defect.
+- **iOS black launch surface** (§14): the R1 repeat launches confirmed it as a real launch defect of the storyboard
+  path. R2 moves to `UILaunchScreen` / `UIColorName`. The finding stays open until the R2 proof shows the World on the
+  gating repeat launches.
 - **Device validation** of the icon and launch on physical iOS / Android hardware and OEM launchers: Release Hardening.
 - **Not implemented, by scope:** the Lantern (`QAN-BL-LANTERN-01`), Sign out (`E2E-D-07`), the appearance preference and
   General Settings (W3), store signing and upload.
