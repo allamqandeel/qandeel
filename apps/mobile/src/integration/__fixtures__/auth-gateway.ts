@@ -14,9 +14,12 @@
 
 import type { AuthPortResult, AuthSessionSnapshot, MobileAuthAuthority, MobileAuthState } from '../../runtime-entry';
 
-/** Exactly what the gateway handed the frozen capability, in order. */
+/**
+ * Exactly what the gateway handed the capability, in order. W2-01: the capability is the final sign-in,
+ * `signInWithIdentifier`, and what it is handed is ONE identifier — a Login ID or an Email.
+ */
 export interface RecordedSignIn {
-  readonly email: string;
+  readonly identifier: string;
   readonly password: string;
 }
 
@@ -30,9 +33,9 @@ export interface AuthAuthorityDouble extends MobileAuthAuthority {
   pending(): boolean;
 }
 
-export function authAuthorityDouble(): AuthAuthorityDouble {
+export function authAuthorityDouble(initial: MobileAuthState = { kind: 'SIGNED_OUT' }): AuthAuthorityDouble {
   const calls: RecordedSignIn[] = [];
-  const state: MobileAuthState = { kind: 'SIGNED_OUT' };
+  const state: MobileAuthState = initial;
   const listeners = new Set<(next: MobileAuthState) => void>();
   let waiting: ((result: AuthPortResult<AuthSessionSnapshot>) => void) | null = null;
   let immediate: AuthPortResult<AuthSessionSnapshot> | null = null;
@@ -61,12 +64,31 @@ export function authAuthorityDouble(): AuthAuthorityDouble {
     async start() {
       return state;
     },
-    signInWithPassword(email, password) {
-      calls.push({ email, password });
+    signInWithIdentifier(identifier, password) {
+      calls.push({ identifier, password });
       if (immediate !== null) return Promise.resolve(immediate);
       return new Promise<AuthPortResult<AuthSessionSnapshot>>((resolve) => {
         waiting = resolve;
       });
+    },
+    // The Email-only T-14 capability is the auth owner's internal route now; the gateway never calls it.
+    async signInWithPassword() {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'the gateway must call signInWithIdentifier' } };
+    },
+    async retrySessionVerification() {
+      return state;
+    },
+    async requestPasswordRecovery() {
+      return { ok: true };
+    },
+    async verifyRecoveryCode() {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'the T-14 gateway double recovers nothing' } };
+    },
+    async completePasswordRecovery() {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'the T-14 gateway double recovers nothing' } };
+    },
+    abandonPasswordRecovery() {
+      return undefined;
     },
     async signUp() {
       return { ok: false, failure: { kind: 'REFUSED', detail: 'the T-14 gateway double creates no account' } };
@@ -75,6 +97,12 @@ export function authAuthorityDouble(): AuthAuthorityDouble {
       return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'the T-14 gateway double verifies nothing' } };
     },
     async resendEmailCode() {
+      return { ok: false, failure: { kind: 'REFUSED', detail: 'the T-14 gateway double sends nothing' } };
+    },
+    async verifyLoginIdEmailCode() {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'the T-14 gateway double verifies nothing' } };
+    },
+    async resendLoginIdEmailCode() {
       return { ok: false, failure: { kind: 'REFUSED', detail: 'the T-14 gateway double sends nothing' } };
     },
     async signOut() {

@@ -158,7 +158,9 @@ test('§3 — the T-14 gateway directory still creates no account and holds no s
   for (const absent of ['signUp', 'verifyOtp', 'verifyEmailCode', 'resendEmailCode', 'createAccount', 'Onboarding']) {
     assert.equal(gateway.includes(absent), false, `the gateway directory holds no ${absent}`);
   }
-  assert.equal((gateway.match(/signInWithPassword\(/gu) ?? []).length, 1, 'still one place a credential is spent there');
+  // W2-01 re-anchor: the final sign-in spends the credential through `signInWithIdentifier` (Login ID OR
+  // Email, P1 §3). The expired fact is the name; the claim — ONE place a credential is spent — stands.
+  assert.equal((gateway.match(/signInWith(?:Password|Identifier)\(/gu) ?? []).length, 1, 'still one place a credential is spent there');
 });
 
 // ---------------------------------------------------------------------------------------------

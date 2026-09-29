@@ -30,9 +30,15 @@
  *                   snapshot and one canonical store, so there is a world: the Living Analysis Map,
  *                   composed after the authenticated bootstrap reconciled against server authority.
  *
+ *   `AUTH_ERROR`  — W2-01, by Product Owner decision ("Unknown ≠ Signed Out"): the persisted session
+ *                   could not be verified and nothing proved it ended. The reader is told exactly that,
+ *                   in approved words, and may ask again; it is neither a sign-in nor a world, and it
+ *                   bootstraps nothing. T-14 kept this phase technical because no Product decision for
+ *                   it existed yet; W2-01 is that decision.
+ *
  * ## Every remaining phase is technical, and says so
  *
- * `CONFIG_REFUSED`, `RESTORING`, `AUTH_ERROR`, `RECOVERING`, `BOOTSTRAPPING`, `BOOTSTRAP_FAILED` and
+ * `CONFIG_REFUSED`, `RESTORING`, `RECOVERING`, `BOOTSTRAPPING`, `BOOTSTRAP_FAILED` and
  * `RECOVERY_FAILED` are a failure or transient work the reader did not ask about. For each of them
  * there is no Product to show, and inventing one would be a lie of exactly the kind this file exists
  * to prevent. So they render a technical state view carrying no Product copy, no Product language and
@@ -53,7 +59,7 @@ import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { SafeAreaProvider, initialWindowMetrics } from 'react-native-safe-area-context';
 
-import { AccountEntry, type LoginIdAvailability } from '../../account';
+import { AccountEntry, SessionVerificationRecovery, type LoginIdAvailability } from '../../account';
 import type { MobileAuthAuthority } from '../../runtime-entry';
 import { ProductSignInGateway } from '../auth-gateway';
 import { deviceProductLocale } from '../locale/device-locale';
@@ -148,11 +154,14 @@ export function ProductRoot() {
  *   `SIGNED_OUT`  — nobody is authenticated, which is a correct resting state rather than a failure,
  *                   and the one thing a reader in it actually needs is a way in.
  *
+ * W2-01 adds a THIRD, `AUTH_ERROR`: the unable-to-verify-session state the Product Owner decided, which
+ * promises nothing it cannot back — only that the session could not be verified, and a way to ask again.
+ *
  * Every OTHER phase stays exactly what it was: a technical state, in engineering vocabulary, with no
  * Product copy and no Product claim. `RESTORING`, `RECOVERING` and `BOOTSTRAPPING` are transient work
- * the reader did not ask about, and `AUTH_ERROR`, `BOOTSTRAP_FAILED`, `RECOVERY_FAILED` and
- * `CONFIG_REFUSED` are failures. Dressing any of them as a Product state would be inventing
- * reassurance the runtime cannot back — the same lie the technical state view exists to refuse.
+ * the reader did not ask about, and `BOOTSTRAP_FAILED`, `RECOVERY_FAILED` and `CONFIG_REFUSED` are
+ * failures. Dressing any of them as a Product state would be inventing reassurance the runtime cannot
+ * back — the same lie the technical state view exists to refuse.
  *
  * The signed-out surface calls one already-frozen capability and owns nothing else. It does not
  * bootstrap, does not navigate, and does not create a Session: when it succeeds the auth authority
@@ -185,6 +194,17 @@ export function RuntimePhaseSurface({ runtime }: { readonly runtime: Integration
       </SafeAreaProvider>
     );
   }
+  // W2-01 (E2E-A-12): the THIRD reader-facing phase, by Product Owner decision — "Unknown ≠ Signed Out".
+  // The auth owner could not verify the session and nothing proved it ended, so the reader is told so and
+  // may ask again. It is not a sign-in, it bootstraps nothing, and it claims no world; every other
+  // non-READY phase stays the technical state below.
+  if (phase.kind === 'AUTH_ERROR') {
+    return (
+      <SafeAreaProvider initialMetrics={initialWindowMetrics} style={styles.root}>
+        <SessionUnverifiedEntry auth={runtime.auth} />
+      </SafeAreaProvider>
+    );
+  }
   return <RuntimeState phase={phase.kind} />;
 }
 
@@ -201,16 +221,34 @@ export function RuntimePhaseSurface({ runtime }: { readonly runtime: Integration
  */
 function SignedOutEntry({ auth, loginIds }: { readonly auth: MobileAuthAuthority; readonly loginIds: LoginIdAvailability }) {
   const locale = useMemo(() => deviceProductLocale(), []);
+  // W2-01: whether the reader's session ENDED is the auth owner's evidence, read from its own state —
+  // never inferred here, and never present on a first launch or after an explicit sign-out.
+  const authState = useSyncExternalStore(auth.subscribe, auth.getState);
+  const sessionEnded = authState.kind === 'SIGNED_OUT' && authState.sessionEnded === true;
   return (
     <AccountEntry
       auth={auth}
       loginIds={loginIds}
       locale={locale}
-      renderSignIn={({ footer, onEmailNotConfirmed }) => (
-        <ProductSignInGateway auth={auth} locale={locale} footer={footer} onEmailNotConfirmed={onEmailNotConfirmed} />
+      sessionEnded={sessionEnded}
+      renderSignIn={({ footer, onEmailNotConfirmed, passwordAssist, sessionEnded: ended }) => (
+        <ProductSignInGateway
+          auth={auth}
+          locale={locale}
+          footer={footer}
+          onEmailNotConfirmed={onEmailNotConfirmed}
+          passwordAssist={passwordAssist}
+          sessionEnded={ended}
+        />
       )}
     />
   );
+}
+
+/** W2-01 — the unable-to-verify-session state, with the one app-level locale bound. */
+function SessionUnverifiedEntry({ auth }: { readonly auth: MobileAuthAuthority }) {
+  const locale = useMemo(() => deviceProductLocale(), []);
+  return <SessionVerificationRecovery auth={auth} locale={locale} />;
 }
 
 /**

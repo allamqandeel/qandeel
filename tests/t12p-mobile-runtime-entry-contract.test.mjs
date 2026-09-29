@@ -321,9 +321,22 @@ test('AC-02 — the layer holds no clock, so elapsed time can never retire an id
   // FOUR sign-out sites, and only four: a restore that found nothing, a null session observed from
   // the SDK, a rejected sign-in while nobody is authenticated, and an explicit sign-out command. A
   // fifth would be a new way for a reader to lose a session and must be reviewed, not absorbed.
-  assert.equal((authority.match(/publish\(\{ kind: 'SIGNED_OUT' \}\)/gu) ?? []).length, 4, 'exactly four sign-out sites');
+  //
+  // W2-01 RE-ANCHOR — reviewed, not absorbed. Three sites are added, each named here, and none of them
+  // is a new way to LOSE a session:
+  //   - a rejected Login ID sign-in while nobody is authenticated — the same site as the Email one, for
+  //     the second route into the SAME final sign-in (P1 §3); it signs out nobody who was signed in;
+  //   - two `SIGNED_OUT` sites carrying `sessionEnded: true` — the observed null session of a live
+  //     identity whose epoch was NOT retired, and a restore the provider PROVED ended. Both are evidence
+  //     the session was ALREADY over; they only say so (W2-01 §9.1). Neither is reached by a clock.
+  // The expired fact is the number four; the claim that every site is enumerated and reviewed stands.
+  assert.equal((authority.match(/publish\(\{ kind: 'SIGNED_OUT' \}\)/gu) ?? []).length, 5, 'exactly five plain sign-out sites');
+  assert.equal((authority.match(/publish\(\{ kind: 'SIGNED_OUT', sessionEnded: true \}\)/gu) ?? []).length, 2, 'exactly two ended-session sites');
   // The observed one is reached ONLY by a null session — never by a kind, a token or a timeout.
-  assert.match(authority, /if \(session === null\) \{\n\s*epochRetired = true;/u, 'the observed sign-out is a null session');
+  //
+  // W2-01 re-anchor: one line now computes whether that null session ENDED a live identity before the
+  // epoch is retired; the claim — the observed sign-out is a null session — is unchanged.
+  assert.match(authority, /if \(session === null\) \{\n(?:\s*\/\/[^\n]*\n)*\s*const ended = state\.kind === 'AUTHENTICATED' && !epochRetired;\n\s*epochRetired = true;/u, 'the observed sign-out is a null session');
 
   // Refresh runs exactly while an authenticated identity is foregrounded: the documented React
   // Native pattern, and the thing whose absence would make expiry a Product defect.
@@ -458,16 +471,42 @@ test('the conversation Session is never persisted and never synthesised on the c
 test('the backend gains no mobile token-issuance endpoint', () => {
   // The API stays a VERIFIER. If a future change made it an identity provider, the direct-Supabase
   // decision this layer rests on would silently become something else.
+  //
+  // W2-01 RE-ANCHOR — explicit, bounded, and not silent. P1 §3 requires sign-in by Login ID while no
+  // client may learn which Email a Login ID belongs to, and Supabase validates a password only against an
+  // Email. So exactly ONE file may relay the reader's credential to the provider's own PASSWORD grant for
+  // a Login ID (`account/supabase-password-grant.service.ts`, W2-01 record §4). Supabase stays the only
+  // identity provider: it validates the password and issues the tokens. The API mints nothing, refreshes
+  // nothing, stores no credential and verifies no password, and the Email sign-in stays device → Supabase.
+  // The expired fact is "no API file names the token endpoint"; everything else below is kept, and is
+  // asserted over every OTHER file exactly as before.
+  const RELAY = 'account/supabase-password-grant.service.ts';
   assert.match(read('apps/api/src/auth/supabase-auth.service.ts'), /auth\/v1\/user/u, 'the API verifies a token');
+  const otherApiText = apiFiles.filter((file) => file !== RELAY).map((file) => stripComments(read(`apps/api/src/${file}`))).join('\n');
   for (const forbidden of [/auth\/v1\/token/u, /grant_type/u, /signInWithPassword/u, /issueToken/u, /mintToken/u]) {
-    assert.doesNotMatch(apiText, forbidden, `the API must not issue tokens (${forbidden})`);
+    assert.doesNotMatch(otherApiText, forbidden, `the API must not issue tokens (${forbidden})`);
   }
+  for (const forbidden of [/signInWithPassword/u, /issueToken/u, /mintToken/u, /refresh_token['"]?\s*:/u, /grant_type=refresh_token/u]) {
+    assert.doesNotMatch(apiText, forbidden, `no API file issues, refreshes or mints a token (${forbidden})`);
+  }
+  // The relay asks for the PASSWORD grant, once, with a secret key and the reader's forwarded address.
+  const relay = stripComments(read(`apps/api/src/${RELAY}`));
+  assert.equal((relay.match(/grant_type=/gu) ?? []).length, 1, 'one grant, once');
+  assert.match(relay, /\/auth\/v1\/token\?grant_type=password/u, 'and it is the password grant');
+  assert.match(relay, /'Sb-Forwarded-For': clientIp/u, 'the provider rate-limits the reader, not the server');
+  assert.match(relay, /apikey: secretKey/u, 'with the secret key the forwarding requires');
 
   guards(
-    'no backend token issuance',
-    apiText,
+    'no backend token issuance outside the one relay',
+    otherApiText,
     (text) => !/grant_type/u.test(text),
     "const issued = await fetch(`${base}/auth/v1/token?grant_type=password`);",
+  );
+  guards(
+    'the relay never refreshes a token',
+    relay,
+    (text) => !/grant_type=refresh_token/u.test(text),
+    "await fetch(`${base}/auth/v1/token?grant_type=refresh_token`);",
   );
 });
 

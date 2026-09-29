@@ -23,17 +23,44 @@ import type {
   AuthSessionChange,
   AuthSessionSnapshot,
   EmailCodeResult,
+  PasswordUpdateResult,
+  RecoveryCodeResult,
+  RecoveryGrant,
+  RecoveryRequestResult,
   ResendResult,
   SignUpIdentity,
   SignUpResult,
   SupabaseAuthPort,
 } from './supabase-auth-port';
 
+/**
+ * W2-01 — the ONE classification rule for the final sign-in's identifier: an Email always contains `@`,
+ * and the Login ID grammar never does. Exported so the entry routes an unconfirmed reader by the same rule
+ * the credential was routed by, rather than by a second copy of it.
+ */
+export function isEmailIdentifier(identifier: string): boolean {
+  return identifier.includes('@');
+}
+
+/**
+ * W2-01 R1 — whose Email a Verify Email step verifies. `EMAIL`: an address the reader typed (Create
+ * account, or an Email sign-in), which the step may show. `LOGIN_ID`: the Login ID the reader typed, whose
+ * Email stays on the server — the device never learns it (P1 §3), so the step names no address at all.
+ */
+export type EmailVerificationTarget = { readonly via: 'EMAIL'; readonly email: string } | { readonly via: 'LOGIN_ID'; readonly loginId: string };
+
 export type MobileAuthState =
   /** The persisted session is being restored. The first state, and never returned to. */
   | { readonly kind: 'RESTORING' }
-  /** Nobody is authenticated. This is a correct resting state, not a failure. */
-  | { readonly kind: 'SIGNED_OUT' }
+  /**
+   * Nobody is authenticated. This is a correct resting state, not a failure.
+   *
+   * W2-01: `sessionEnded` is present ONLY when reliable evidence shows an existing authenticated session
+   * ended without the reader asking — the provider refused the persisted session at restore, or removed
+   * a live identity's session. Never on a first launch with no session, and never after an explicit
+   * sign-out, which the reader asked for.
+   */
+  | { readonly kind: 'SIGNED_OUT'; readonly sessionEnded?: true }
   | {
       readonly kind: 'AUTHENTICATED';
       readonly userId: string;
@@ -41,7 +68,13 @@ export type MobileAuthState =
       /** Stable across a token refresh for the same user; new for a different identity. */
       readonly authGeneration: number;
     }
-  /** A technical failure that is not "signed out": restore failed, the port misbehaved. */
+  /**
+   * A technical failure that is not "signed out": restore failed, the port misbehaved.
+   *
+   * W2-01: this is the UNKNOWN state — the session could not be verified and nothing proved it ended.
+   * The persisted session is left exactly where it is, nothing bootstraps, and only an explicit
+   * `retrySessionVerification` asks again.
+   */
   | { readonly kind: 'ERROR'; readonly failure: AuthPortFailure };
 
 export interface MobileAuthAuthority {
@@ -63,6 +96,41 @@ export interface MobileAuthAuthority {
   verifyEmailCode(email: string, code: string): Promise<EmailCodeResult>;
   /** W1B-01 — send a new verification code. It establishes nothing and supersedes nothing. */
   resendEmailCode(email: string): Promise<ResendResult>;
+  /**
+   * W2-01 R1 — verify the Email of the account a Login ID names, without the device ever learning that
+   * Email. The same explicit command as `verifyEmailCode`, under the same epoch rules.
+   */
+  verifyLoginIdEmailCode(loginId: string, code: string): Promise<EmailCodeResult>;
+  /** W2-01 R1 — a new code for that Email. It establishes nothing and supersedes nothing. */
+  resendLoginIdEmailCode(loginId: string): Promise<ResendResult>;
+  /**
+   * W2-01 — the final sign-in: ONE identifier that is a Login ID or an Email, plus the password. An
+   * identifier containing `@` is an Email and goes to the provider exactly as `signInWithPassword`;
+   * anything else is a Login ID, resolved on the server. Both are the same explicit command: only a
+   * CURRENT completion may establish the identity, and both converge on the same failure kinds.
+   */
+  signInWithIdentifier(identifier: string, password: string): Promise<AuthPortResult<AuthSessionSnapshot>>;
+  /**
+   * W2-01 — ask the authoritative restore again, from the unknown state (`ERROR`) only. A restored
+   * session authenticates exactly as the first restore would have; a proved ended session is
+   * `SIGNED_OUT` with `sessionEnded`; another technical failure stays unknown. Never `RESTORING`.
+   */
+  retrySessionVerification(): Promise<MobileAuthState>;
+  /** W2-01 — ask for a recovery code for an Email. Non-enumerating; establishes and supersedes nothing. */
+  requestPasswordRecovery(email: string): Promise<RecoveryRequestResult>;
+  /**
+   * W2-01 — verify a recovery code. An explicit command: it supersedes whatever was in flight. Its
+   * temporary recovery authority is held HERE, in memory, bound to this command's epoch, and is never
+   * an identity: nothing is published, nothing authenticates, nothing bootstraps.
+   */
+  verifyRecoveryCode(email: string, code: string): Promise<RecoveryCodeResult>;
+  /**
+   * W2-01 — set the new password with the held recovery authority, which is then retired. The reader
+   * stays signed out and signs in explicitly. Refused if a later explicit command superseded the code.
+   */
+  completePasswordRecovery(newPassword: string): Promise<PasswordUpdateResult>;
+  /** W2-01 — the reader left recovery: retire any held recovery authority now. Establishes nothing. */
+  abandonPasswordRecovery(): void;
   signOut(): Promise<AuthPortResult<null>>;
   /** Retire the authority. After this nothing can change its state, including a late callback. */
   dispose(): void;
@@ -100,6 +168,22 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
   let unsubscribePort: (() => void) | null = null;
   let unsubscribeForeground: (() => void) | null = null;
   const listeners = new Set<(next: MobileAuthState) => void>();
+  /**
+   * W2-01 — the ONE place a recovery grant lives: memory, bound to the explicit command that verified
+   * it. Usable only while that command is still the reader's latest (`epoch === operationEpoch`), and
+   * dropped — and retired at the provider — the moment it is used, superseded, or an identity is
+   * established. It is never passed to `authenticate`, so it can never become the signed-in state.
+   */
+  let recoveryHold: { readonly epoch: number; readonly grant: RecoveryGrant } | null = null;
+  /** W2-01 — one authoritative re-verification at a time. */
+  let retrying: Promise<MobileAuthState> | null = null;
+
+  function discardRecoveryHold(): void {
+    if (recoveryHold === null) return;
+    const { grant } = recoveryHold;
+    recoveryHold = null;
+    void port.retireRecoveryGrant(grant);
+  }
 
   function publish(next: MobileAuthState): void {
     state = next;
@@ -120,6 +204,8 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
 
   /** Establish or update the authenticated identity. The one place `state` becomes AUTHENTICATED. */
   function authenticate(session: AuthSessionSnapshot): void {
+    // W2-01: a recovery authority never coexists with an established identity.
+    discardRecoveryHold();
     epochRetired = false;
     if (state.kind === 'AUTHENTICATED' && state.userId === session.userId) {
       // A token refresh: same identity, same generation, new credential. Keeping the generation is
@@ -145,8 +231,13 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     if (disposed) return;
     const { session } = change;
     if (session === null) {
+      // W2-01: a live identity whose session vanished while its epoch was NOT retired — no sign-out was
+      // asked for — was ended by the provider (its refresh token refused). An explicit sign-out retires
+      // the epoch before it awaits, so its own SIGNED_OUT can never be read as an ending.
+      const ended = state.kind === 'AUTHENTICATED' && !epochRetired;
       epochRetired = true;
-      if (state.kind !== 'SIGNED_OUT') publish({ kind: 'SIGNED_OUT' });
+      if (ended) publish({ kind: 'SIGNED_OUT', sessionEnded: true });
+      else if (state.kind !== 'SIGNED_OUT') publish({ kind: 'SIGNED_OUT' });
       return;
     }
     // The barrier. Deliberately does NOT consult `change.kind`: a subscriber `SIGNED_IN` is the
@@ -168,7 +259,52 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     authenticate(session);
   }
 
-  return {
+  /**
+   * The answer of an authoritative restore — the first one, or a W2-01 retry from the unknown state.
+   *
+   *   restored or empty  -> the observed path, exactly as before (an empty restore leaves RESTORING)
+   *   SESSION_ENDED      -> proved over: signed out, WITH the ended-session evidence
+   *   anything else      -> unknown: ERROR, and the persisted session is left untouched
+   */
+  function settleRestore(restored: AuthPortResult<AuthSessionSnapshot | null>): void {
+    if (!restored.ok) {
+      if (restored.failure.kind === 'SESSION_ENDED') {
+        epochRetired = true;
+        publish({ kind: 'SIGNED_OUT', sessionEnded: true });
+        return;
+      }
+      publish({ kind: 'ERROR', failure: restored.failure });
+      return;
+    }
+    acceptObservedAuthChange({ kind: 'INITIAL', session: restored.value });
+    // A restore that legitimately found nothing still has to leave RESTORING (or ERROR, on a retry).
+    if (state.kind === 'RESTORING' || state.kind === 'ERROR') publish({ kind: 'SIGNED_OUT' });
+  }
+
+  /**
+   * W2-01 — a Login ID sign-in, the same explicit command as a password sign-in. A superseded one that
+   * nonetheless yielded a session has already been adopted by the SDK, so — exactly as a superseded
+   * Email verification — that session is discarded while nobody is authenticated, and no later launch
+   * restores what the reader abandoned.
+   */
+  async function signInWithLoginId(loginId: string, password: string): Promise<AuthPortResult<AuthSessionSnapshot>> {
+    operationEpoch += 1;
+    const epoch = operationEpoch;
+    const result = await port.signInWithLoginId(loginId, password);
+    if (disposed) return result;
+    if (epoch !== operationEpoch) {
+      if (result.ok && (state as MobileAuthState).kind !== 'AUTHENTICATED') void port.signOut();
+      return result;
+    }
+    if (!result.ok) {
+      if (result.failure.kind === 'INVALID_CREDENTIALS' && state.kind !== 'AUTHENTICATED') publish({ kind: 'SIGNED_OUT' });
+      return result;
+    }
+    acceptExplicitSignInCompletion(result.value, epoch);
+    return result;
+  }
+
+  const authority: MobileAuthAuthority = {
     getState: () => state,
     subscribe(listener) {
       listeners.add(listener);
@@ -186,14 +322,70 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
       unsubscribeForeground = foreground.subscribe(() => syncAutoRefresh());
       const restored = await port.restoreSession();
       if (disposed) return state;
-      if (!restored.ok) {
-        publish({ kind: 'ERROR', failure: restored.failure });
-        return state;
-      }
-      acceptObservedAuthChange({ kind: 'INITIAL', session: restored.value });
-      // A restore that legitimately found nothing still has to leave RESTORING.
-      if (state.kind === 'RESTORING') publish({ kind: 'SIGNED_OUT' });
+      settleRestore(restored);
       return state;
+    },
+    retrySessionVerification() {
+      if (disposed || state.kind !== 'ERROR') return Promise.resolve(state);
+      // One re-verification at a time: a second press while one is in flight joins it.
+      if (retrying !== null) return retrying;
+      const attempt = (async () => {
+        const restored = await port.restoreSession();
+        // Only an authority still in the unknown state it retried from applies the answer.
+        if (!disposed && state.kind === 'ERROR') settleRestore(restored);
+        return state;
+      })();
+      retrying = attempt;
+      void attempt.finally(() => {
+        if (retrying === attempt) retrying = null;
+      });
+      return attempt;
+    },
+    async signInWithIdentifier(identifier, password) {
+      if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
+      // The ONE classification rule: an Email always contains `@`, and the Login ID grammar never does.
+      if (isEmailIdentifier(identifier)) return authority.signInWithPassword(identifier, password);
+      return signInWithLoginId(identifier, password);
+    },
+    async requestPasswordRecovery(email) {
+      if (disposed) return { ok: false, failure: { kind: 'NETWORK', detail: 'auth authority is disposed' } };
+      return port.requestPasswordRecovery(email);
+    },
+    async verifyRecoveryCode(email, code) {
+      if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
+      // Recovery belongs to a signed-out reader only; it can never run beside an identity.
+      if (state.kind !== 'SIGNED_OUT') return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'recovery requires the signed-out state' } };
+      operationEpoch += 1;
+      const epoch = operationEpoch;
+      discardRecoveryHold();
+      const result = await port.verifyRecoveryCode(email, code);
+      if (!result.ok) return result;
+      // Superseded while in flight (or retired): the grant is retired at once and never held.
+      if (disposed || epoch !== operationEpoch || (state as MobileAuthState).kind !== 'SIGNED_OUT') {
+        void port.retireRecoveryGrant(result.value);
+        return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'recovery verification was superseded' } };
+      }
+      recoveryHold = { epoch, grant: result.value };
+      // The grant stays here. The entry learns only that the code verified.
+      return { ok: true };
+    },
+    async completePasswordRecovery(newPassword) {
+      if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
+      const hold = recoveryHold;
+      if (hold === null || hold.epoch !== operationEpoch || state.kind !== 'SIGNED_OUT') {
+        // No current recovery authority: nothing to update with, and a stale one is retired.
+        discardRecoveryHold();
+        return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'no current recovery authority' } };
+      }
+      const result = await port.updateRecoveredPassword(hold.grant, newPassword);
+      // The port retired the grant on success. On a failure the same authority may try again, unless a
+      // later explicit command superseded it meanwhile.
+      if (result.ok) {
+        if (recoveryHold === hold) recoveryHold = null;
+      } else if (recoveryHold === hold && hold.epoch !== operationEpoch) {
+        discardRecoveryHold();
+      }
+      return result;
     },
     async signInWithPassword(email, password) {
       if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
@@ -251,6 +443,30 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
       if (disposed) return { ok: false, failure: { kind: 'REFUSED', detail: 'auth authority is disposed' } };
       return port.resendEmailCode(email);
     },
+    async verifyLoginIdEmailCode(loginId, code) {
+      if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
+      if (state.kind === 'AUTHENTICATED') return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'an identity is already authenticated' } };
+      // Exactly `verifyEmailCode`'s rules: an explicit command with its own epoch, whose session is adopted
+      // into the ONE client (the observed SIGNED_IN meets the retired barrier), and only a CURRENT
+      // completion establishes. A superseded one's adopted session is discarded while nobody is signed in.
+      operationEpoch += 1;
+      const epoch = operationEpoch;
+      const result = await port.verifyLoginIdEmailCode(loginId, code);
+      if (disposed) return result;
+      if (epoch !== operationEpoch) {
+        if (result.ok && (state as MobileAuthState).kind !== 'AUTHENTICATED') void port.signOut();
+        return result;
+      }
+      if (result.ok) acceptExplicitSignInCompletion(result.value, epoch);
+      return result;
+    },
+    async resendLoginIdEmailCode(loginId) {
+      if (disposed) return { ok: false, failure: { kind: 'REFUSED', detail: 'auth authority is disposed' } };
+      return port.resendLoginIdEmailCode(loginId);
+    },
+    abandonPasswordRecovery() {
+      discardRecoveryHold();
+    },
     async signOut() {
       if (disposed) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'auth authority is disposed' } };
       // Retire the epoch BEFORE awaiting: a refresh callback that lands while the sign-out is in
@@ -268,6 +484,7 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
     dispose() {
       if (disposed) return;
       disposed = true;
+      discardRecoveryHold();
       port.stopAutoRefresh();
       unsubscribePort?.();
       unsubscribeForeground?.();
@@ -276,4 +493,5 @@ export function createMobileAuthAuthority({ port, foreground }: MobileAuthAuthor
       listeners.clear();
     },
   };
+  return authority;
 }

@@ -80,12 +80,17 @@ Product, visual, device and operational evidence.
 | Row | Status | Slice / record |
 |---|---|---|
 | `E2E-B-03`, `E2E-B-04`, `E2E-B-07` | implemented — merged through PR #283 at `7c9ee5e5bcb5f567dc7ef1944bcde92e8cdf99de` | W1A-01, [`QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md`](QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md) |
-| `E2E-A-09` Create account | implemented on a Draft PR (not merged): exactly Name, Login ID, Email, Password, with the canonical Name and the private case-insensitive Login ID stored server-side | W1B-01, [`QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md`](QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md) |
-| `E2E-A-10` Verify my email | Product Owner decision taken (mandatory in-app 6-digit code before QANDEEL, resend, expiry) and implemented on the same Draft PR. Live delivery depends on Supabase project configuration the repository does not hold, and is not proved (record §6) | W1B-01 |
-| `E2E-A-13` First use / Welcome | implemented on the Draft PR, with the Product Owner's concise Welcome (controlled amendment to I-08A4 §14) | W1B-01 |
-| `E2E-A-14` First Conversation Opening | implemented on the Draft PR, with the Product Owner's amended opening (controlled amendment to I-08A4 §15) | W1B-01 |
-| `E2E-B-02` Normal opener | implemented on the Draft PR, unchanged copy; shown in a genuinely empty Conversation once the account has committed a turn. It is reachable whenever the runtime supplies a new empty Session; no "new conversation" navigation exists yet | W1B-01 |
-| `E2E-K-02` Empty Personal world / first start | advanced on the Draft PR: a new account arrives at the Welcome and then at the First Conversation Opening in its Conversation. The Analysis depth's own empty state is unchanged | W1B-01 |
+| `E2E-A-09` Create account | implemented — merged through PR #284 at `6b333df7774d33b034575243b3592d21f2603683`: exactly Name, Login ID, Email, Password, with the canonical Name and the private case-insensitive Login ID stored server-side | W1B-01, [`QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md`](QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md) |
+| `E2E-A-10` Verify my email | Product Owner decision taken (mandatory in-app 6-digit code before QANDEEL, resend, expiry) and implemented in the same merge. Live delivery depends on Supabase project configuration the repository does not hold, and is not proved (record §6) | W1B-01 |
+| `E2E-A-13` First use / Welcome | implemented — merged through PR #284, with the Product Owner's concise Welcome (controlled amendment to I-08A4 §14) | W1B-01 |
+| `E2E-A-14` First Conversation Opening | implemented — merged through PR #284, with the Product Owner's amended opening (controlled amendment to I-08A4 §15) | W1B-01 |
+| `E2E-B-02` Normal opener | implemented — merged through PR #284, unchanged copy; shown in a genuinely empty Conversation once the account has committed a turn. It is reachable whenever the runtime supplies a new empty Session; no "new conversation" navigation exists yet | W1B-01 |
+| `E2E-K-02` Empty Personal world / first start | advanced — merged through PR #284: a new account arrives at the Welcome and then at the First Conversation Opening in its Conversation. The Analysis depth's own empty state is unchanged | W1B-01 |
+| `E2E-A-06` Sign in (final surface) | implemented on a Draft PR (not merged): the final Sign in — ONE identifier field (Login ID or Email) plus Password, with the approved label and persistent Login ID help | W2-01, [`QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md`](QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md) |
+| `E2E-A-07` Sign in with Login ID | implemented on the same Draft PR: the Login ID is resolved on the server only (migration `0124`) and spent on the provider's own password grant; no client learns which Email a Login ID belongs to | W2-01 |
+| `E2E-A-08` Sign-in failure + Login ID help | implemented on the same Draft PR: ONE approved generic failure for a Login ID and an Email alike; the approved persistent help | W2-01 |
+| `E2E-A-11` Password recovery | implemented on the same Draft PR: Email only, non-enumerating, in-app 6-digit code, new password + confirmation, ends signed out. Live branded transactional Email delivery = EXTERNAL / NOT PROVED (record §8) | W2-01 |
+| `E2E-A-12` Session ended / unknown | implemented on the same Draft PR: a proved ended session reaches Sign in with the approved notice; an unverifiable session is the approved recovery state with a working Retry — never signed out | W2-01 |
 
-Still open from these families: `E2E-A-07` Login-ID sign-in and `E2E-A-08` (W2), `E2E-A-11` password recovery,
-`E2E-A-12` session-expired treatment, `E2E-A-03` / `QAN-BL-LANTERN-01` (the Lantern moment, not implemented).
+Still open from these families: `E2E-A-03` / `QAN-BL-LANTERN-01` (the Lantern moment, not implemented), `E2E-A-01`,
+`E2E-A-02` and `E2E-D-07` (the final static launch, app icon and Product sign-out control, outside W2-01).

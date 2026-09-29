@@ -14,11 +14,18 @@
  *     device clock manufactures the distinction;
  *   - leaving (the return control, or Android Back) is refused while a request is in flight, so a
  *     verification the reader walked away from can never land behind them.
+ *
+ * W2-01 R1 — a reader who signed in by LOGIN ID verifies the Email linked to it without ever learning it
+ * (P1 §3: a client never learns which Email belongs to a Login ID, including after password proof). That
+ * branch shows the Product Owner's approved generic instruction instead of an address, and its verify and
+ * resend go through the auth authority's Login-ID commands, which the QANDEEL API resolves on the server.
+ * Everything else — title, label, actions, messages, the rules above — is the same step, unchanged.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, BackHandler } from 'react-native';
 
-import type { MobileAuthAuthority } from '../../runtime-entry';
+import type { EmailVerificationTarget, MobileAuthAuthority } from '../../runtime-entry';
+import { accountAccessCopy } from '../access/copy';
 import { accountEntryCopy } from '../copy';
 import { EMAIL_CODE_LENGTH, normalizeEmailCode } from '../entry-rules';
 import { EntryAction, EntryField, EntryFrame, EntryLink, EntryMessage, EntryText, EntryTitle, type EntryLocale } from './EntryParts';
@@ -28,14 +35,16 @@ export const VERIFY_EMAIL_TEST_ID = 'qandeel-verify-email';
 export interface VerifyEmailFormProps {
   readonly auth: MobileAuthAuthority;
   readonly locale: EntryLocale;
-  readonly email: string;
+  /** An Email the reader typed, or the Login ID they typed — whose Email stays on the server. */
+  readonly target: EmailVerificationTarget;
   readonly onReturn: () => void;
 }
 
 type Notice = { readonly text: string; readonly tone: 'error' | 'status' } | null;
 
-export function VerifyEmailForm({ auth, locale, email, onReturn }: VerifyEmailFormProps) {
+export function VerifyEmailForm({ auth, locale, target, onReturn }: VerifyEmailFormProps) {
   const copy = accountEntryCopy(locale.language);
+  const instruction = target.via === 'EMAIL' ? copy.verifyInstruction(target.email) : accountAccessCopy(locale.language).verifyLinkedEmailInstruction;
   const [code, setCode] = useState('');
   const [notice, setNotice] = useState<Notice>(null);
   const [busy, setBusy] = useState<'VERIFYING' | 'RESENDING' | null>(null);
@@ -77,7 +86,7 @@ export function VerifyEmailForm({ auth, locale, email, onReturn }: VerifyEmailFo
     inFlight.current = true;
     setBusy('VERIFYING');
     setNotice(null);
-    const outcome = await auth.verifyEmailCode(email, code);
+    const outcome = target.via === 'EMAIL' ? await auth.verifyEmailCode(target.email, code) : await auth.verifyLoginIdEmailCode(target.loginId, code);
     if (!live.current) return;
     // FINISHED on success: the authority published the identity and this surface is being replaced.
     if (outcome.ok) return;
@@ -95,20 +104,20 @@ export function VerifyEmailForm({ auth, locale, email, onReturn }: VerifyEmailFo
         return exhaustive;
       }
     }
-  }, [auth, code, copy, email, say]);
+  }, [auth, code, copy, target, say]);
 
   const resend = useCallback(async () => {
     if (inFlight.current) return;
     inFlight.current = true;
     setBusy('RESENDING');
     setNotice(null);
-    const outcome = await auth.resendEmailCode(email);
+    const outcome = target.via === 'EMAIL' ? await auth.resendEmailCode(target.email) : await auth.resendLoginIdEmailCode(target.loginId);
     if (!live.current) return;
     inFlight.current = false;
     setBusy(null);
     if (outcome.ok) return say({ text: copy.resendSucceeded, tone: 'status' });
     say({ text: outcome.failure.kind === 'NETWORK' ? copy.network : copy.resendFailed, tone: 'error' });
-  }, [auth, copy, email, say]);
+  }, [auth, copy, target, say]);
 
   const onVerifyPress = useCallback(() => {
     void verify();
@@ -120,7 +129,7 @@ export function VerifyEmailForm({ auth, locale, email, onReturn }: VerifyEmailFo
   return (
     <EntryFrame locale={locale} testID={VERIFY_EMAIL_TEST_ID}>
       <EntryTitle text={copy.verifyTitle} language={locale.language} testID="qandeel-verify-email-title" />
-      <EntryText text={copy.verifyInstruction(email)} language={locale.language} testID="qandeel-verify-email-instruction" />
+      <EntryText text={instruction} language={locale.language} testID="qandeel-verify-email-instruction" />
       <EntryField
         testID="qandeel-verify-email-code"
         label={copy.codeLabel}

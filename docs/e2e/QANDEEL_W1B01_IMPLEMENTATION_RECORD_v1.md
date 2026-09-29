@@ -6,8 +6,9 @@
 **Consumed Product decision:** `E2E-A-10` — mandatory Email verification by an in-app 6-digit code before QANDEEL
 **Baseline:** `7c9ee5e5bcb5f567dc7ef1944bcde92e8cdf99de` (merge of PR #283, W1A-01)
 **Branch:** `feat/w1b-01-account-identity-first-use`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. One bounded, Product-Owner-authorized Production Integration
-slice; it opens no other wave or Product area.
+**Status:** IMPLEMENTED — MERGED through PR #284 at `6b333df7774d33b034575243b3592d21f2603683` (final W1B head
+`69ec0ba92a9763f1193b357e8493c83d8d14187b`; lifecycle line reconciled by W2-01, nothing else in this record changed).
+One bounded, Product-Owner-authorized Production Integration slice; it opens no other wave or Product area.
 
 ---
 

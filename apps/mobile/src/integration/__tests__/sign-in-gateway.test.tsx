@@ -29,31 +29,44 @@ import { CANONICAL_VISUAL } from '../../conversation/visual/canonical-visual.gen
 const AR = productSignInCopy('ar');
 const EN = productSignInCopy('en');
 
-/** The exact frozen copy of §6, written here as literals so a drift in either file is a failure. */
+/**
+ * The exact frozen copy, written here as literals so a drift in either file is a failure.
+ *
+ * W2-01 re-anchor. T-14's §6 copy was Email-only; P1 §3 / §15.3 made the final sign-in `Login ID OR
+ * Email`, and the Product Owner approved its words in the W2-01 task and copy gate (W2-01 record §2).
+ * The expired facts are T-14's Email label, its empty-Email sentence and "Email or password is
+ * incorrect."; their replacements are pinned here exactly as strictly. Title, password label, submit,
+ * the in-flight status, the empty-password sentence, the network sentence and the unexpected sentence
+ * are T-14's, unchanged.
+ */
 const FROZEN = {
   ar: {
     title: 'تسجيل الدخول',
-    emailLabel: 'البريد الإلكتروني',
+    identifierLabel: 'معرّف الدخول أو البريد الإلكتروني',
+    identifierHelp: 'نسيت معرّف الدخول؟ يمكنك استخدام بريدك الإلكتروني بدلًا منه.',
     passwordLabel: 'كلمة المرور',
     submit: 'دخول',
     submitting: 'جارٍ تسجيل الدخول',
-    missingEmail: 'أدخل البريد الإلكتروني.',
+    missingIdentifier: 'أدخل معرّف الدخول أو البريد الإلكتروني.',
     missingPassword: 'أدخل كلمة المرور.',
-    invalidCredentials: 'البريد الإلكتروني أو كلمة المرور غير صحيحة.',
+    invalidCredentials: 'تعذّر تسجيل الدخول بهذه البيانات. تأكد منها وحاول مرة أخرى.',
     network: 'تعذّر الاتصال. حاول مرة أخرى.',
     unexpected: 'تعذّر تسجيل الدخول الآن. حاول مرة أخرى.',
+    sessionEnded: 'انتهت جلستك. سجّل الدخول للمتابعة.',
   },
   en: {
     title: 'Sign in',
-    emailLabel: 'Email',
+    identifierLabel: 'Login ID or email',
+    identifierHelp: 'Forgot your Login ID? You can use your email instead.',
     passwordLabel: 'Password',
     submit: 'Sign in',
     submitting: 'Signing in',
-    missingEmail: 'Enter your email.',
+    missingIdentifier: 'Enter your Login ID or email.',
     missingPassword: 'Enter your password.',
-    invalidCredentials: 'Email or password is incorrect.',
+    invalidCredentials: 'We couldn’t sign you in with these details. Check them and try again.',
     network: 'Couldn’t connect. Try again.',
     unexpected: 'Couldn’t sign in right now. Try again.',
+    sessionEnded: 'Your session has ended. Sign in to continue.',
   },
 } as const;
 
@@ -129,11 +142,11 @@ describe('T14-A1, T14-A2 — the frozen bilingual copy is exact', () => {
   it('the rendered Arabic surface carries the frozen title, labels and submit', async () => {
     const { view } = await mount({ language: 'ar' });
     expect(titleText(view)).toBe(FROZEN.ar.title);
-    expect(view.getByText(FROZEN.ar.emailLabel)).toBeTruthy();
+    expect(view.getByText(FROZEN.ar.identifierLabel)).toBeTruthy();
     expect(view.getByText(FROZEN.ar.passwordLabel)).toBeTruthy();
     expect(submitSays(view, FROZEN.ar.submit)).toBe(true);
     // And not one word of the other pack leaked in beside it.
-    expect(view.queryByText(FROZEN.en.emailLabel)).toBeNull();
+    expect(view.queryByText(FROZEN.en.identifierLabel)).toBeNull();
     expect(view.queryByText(FROZEN.en.passwordLabel)).toBeNull();
     await view.unmount();
   });
@@ -141,11 +154,11 @@ describe('T14-A1, T14-A2 — the frozen bilingual copy is exact', () => {
   it('the rendered English surface carries the frozen title, labels and submit', async () => {
     const { view } = await mount({ language: 'en' });
     expect(titleText(view)).toBe(FROZEN.en.title);
-    expect(view.getByText(FROZEN.en.emailLabel)).toBeTruthy();
+    expect(view.getByText(FROZEN.en.identifierLabel)).toBeTruthy();
     expect(view.getByText(FROZEN.en.passwordLabel)).toBeTruthy();
     expect(submitSays(view, FROZEN.en.submit)).toBe(true);
     expect(view.queryByText(FROZEN.ar.title)).toBeNull();
-    expect(view.queryByText(FROZEN.ar.emailLabel)).toBeNull();
+    expect(view.queryByText(FROZEN.ar.identifierLabel)).toBeNull();
     await view.unmount();
   });
 });
@@ -191,9 +204,9 @@ describe('T14-A5, T14-A6 — what crosses the boundary is exactly what the reade
     // Untouched in the UI: no trim, no lowercase, no normalization of the reader's own value.
     expect(view.getByTestId(SIGN_IN_EMAIL_TEST_ID).props.value).toBe(typed);
     await fireEvent.press(view.getByTestId(SIGN_IN_SUBMIT_TEST_ID));
-    expect(auth.calls).toEqual([{ email: 'Reader@Example.Test', password: 'correct horse' }]);
+    expect(auth.calls).toEqual([{ identifier: 'Reader@Example.Test', password: 'correct horse' }]);
     // Case is preserved: trimming is the ONLY transformation, and it is not a normalization.
-    expect(auth.calls[0].email).not.toBe('reader@example.test');
+    expect(auth.calls[0].identifier).not.toBe('reader@example.test');
     expect(view.getByTestId(SIGN_IN_EMAIL_TEST_ID).props.value).toBe(typed);
     await view.unmount();
   });
@@ -216,7 +229,7 @@ describe('T14-A7, T14-A8 — a missing field never reaches the auth authority', 
     await fill(view, '   ', 'correct horse');
     await fireEvent.press(view.getByTestId(SIGN_IN_SUBMIT_TEST_ID));
     expect(auth.calls).toEqual([]);
-    expect(noticeSays(view, FROZEN.ar.missingEmail)).toBe(true);
+    expect(noticeSays(view, FROZEN.ar.missingIdentifier)).toBe(true);
     await view.unmount();
   });
 
@@ -235,7 +248,7 @@ describe('T14-A7, T14-A8 — a missing field never reaches the auth authority', 
     await fill(view, 'reader@example.test', '   ');
     await fireEvent.press(view.getByTestId(SIGN_IN_SUBMIT_TEST_ID));
     // A password is never trimmed, so three spaces is a three-character password and is submitted.
-    expect(auth.calls).toEqual([{ email: 'reader@example.test', password: '   ' }]);
+    expect(auth.calls).toEqual([{ identifier: 'reader@example.test', password: '   ' }]);
     await view.unmount();
   });
 });
@@ -397,14 +410,16 @@ describe('T14-A17, T14-A18 — input semantics and platform intent', () => {
     await view.unmount();
   });
 
-  it('the email declares its keyboard and its autofill intent', async () => {
+  // W2-01 re-anchor: the field is the ONE identifier (Login ID or Email). The expired fact is the `email`
+  // autofill intent; `username` is the platform's name for the account identifier in either form.
+  it('the identifier declares its keyboard and its autofill intent', async () => {
     const { view } = await mount();
     const email = view.getByTestId(SIGN_IN_EMAIL_TEST_ID);
     expect(email.props.keyboardType).toBe('email-address');
     expect(email.props.autoCapitalize).toBe('none');
     expect(email.props.autoCorrect).toBe(false);
-    expect(email.props.autoComplete).toBe('email');
-    expect(email.props.textContentType).toBe('emailAddress');
+    expect(email.props.autoComplete).toBe('username');
+    expect(email.props.textContentType).toBe('username');
     expect(email.props.secureTextEntry).toBeFalsy();
     await view.unmount();
   });
@@ -463,7 +478,7 @@ describe('T14-A19 — the accessible surface', () => {
       const copy = FROZEN[language];
       expect(view.getByTestId(SIGN_IN_TITLE_TEST_ID).props.accessibilityRole).toBe('header');
       expect(titleText(view)).toBe(copy.title);
-      expect(view.getByTestId(SIGN_IN_EMAIL_TEST_ID).props.accessibilityLabel).toBe(copy.emailLabel);
+      expect(view.getByTestId(SIGN_IN_EMAIL_TEST_ID).props.accessibilityLabel).toBe(copy.identifierLabel);
       expect(view.getByTestId(SIGN_IN_PASSWORD_TEST_ID).props.accessibilityLabel).toBe(copy.passwordLabel);
       const submit = view.getByTestId(SIGN_IN_SUBMIT_TEST_ID);
       expect(submit.props.accessibilityRole).toBe('button');
@@ -512,15 +527,19 @@ describe('T14-A19 — the accessible surface', () => {
 });
 
 describe('T14-A20 — the surface offers exactly one action, and it is sign-in', () => {
+  // W2-01 re-anchor: the approved persistent Login ID help begins «نسيت معرّف الدخول؟» / "Forgot your
+  // Login ID?", so the bare words "Forgot" / «نسيت» are now legitimately present — as TEXT, not an act.
+  // The claim that stands is sharper: the gateway alone offers no password-recovery action (the Auth
+  // Gateway destination draws that beside it through `passwordAssist`), and still exactly ONE press target.
   it('there is no sign-up, no forgot-password, no social provider and no visibility toggle', async () => {
     for (const language of ['ar', 'en'] as const) {
       const { view } = await mount({ language });
       const text = tree(view);
       for (const absent of [
-        'Sign up', 'sign up', 'Create account', 'Register', 'Forgot', 'forgot', 'Reset',
+        'Sign up', 'sign up', 'Create account', 'Register', 'Forgot password', 'Reset',
         'Google', 'Apple', 'Facebook', 'Continue with', 'magic link', 'OTP', 'Remember me',
         'Show password', 'Hide password', 'Skip',
-        'إنشاء حساب', 'نسيت', 'تسجيل جديد', 'متابعة باستخدام', 'إظهار كلمة المرور', 'تذكرني',
+        'إنشاء حساب', 'نسيت كلمة المرور', 'تسجيل جديد', 'متابعة باستخدام', 'إظهار كلمة المرور', 'تذكرني',
       ]) {
         expect(text).not.toContain(absent);
       }

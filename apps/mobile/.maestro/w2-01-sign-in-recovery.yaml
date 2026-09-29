@@ -1,0 +1,184 @@
+# W2-01 — the final Sign in, its generic failure, and in-app password recovery to "Password changed."
+# and back to Sign in, still signed out. VALIDATION ONLY.
+#
+# Runs against the W2-01 proof build: the PRODUCTION `RuntimePhaseSurface` and every Product surface on
+# this path, over the W2 proof world's in-memory identity provider (w2-proof-world.ts). No Email is sent:
+# the proof world refuses every sign-in, accepts any six-digit recovery code and any new password. The
+# sign-in password and the code are RANDOM; the new password is a per-run random value from the proof
+# script, typed into masked fields. PREFIX / LOGIN_ID / EMAIL / NEW_PASSWORD come from that script.
+appId: com.qandeel.mobile
+---
+- runFlow:
+    file: w2-01-choose.yaml
+    env:
+      SCENARIO_ID: "w2-proof-scenario-signed-out"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-sign-in-email"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-01-sign-in
+# One identifier field: a Login ID here. The same field takes an Email.
+- runFlow:
+    file: w1b-01-type.yaml
+    env:
+      FIELD: "qandeel-sign-in-email"
+      TEXT: ${LOGIN_ID}
+- tapOn:
+    id: "qandeel-sign-in-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputRandomText:
+    length: 14
+# Dismiss the keyboard through the screen's own title (never the hideKeyboard heuristic).
+- tapOn:
+    id: "qandeel-sign-in-title"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-sign-in-submit"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-sign-in-submit"
+# The one approved generic failure, in either language.
+- extendedWaitUntil:
+    visible:
+      text: ".*(Check them and try again|تأكد منها وحاول مرة أخرى).*"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-02-invalid-credentials
+- scrollUntilVisible:
+    element:
+      id: "qandeel-sign-in-forgot-password"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-sign-in-forgot-password"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-recovery-email"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-03-recovery-request
+- runFlow:
+    file: w1b-01-type.yaml
+    env:
+      FIELD: "qandeel-recovery-email"
+      TEXT: ${EMAIL}
+- tapOn:
+    id: "qandeel-recovery-title"
+- tapOn:
+    id: "qandeel-recovery-send"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-recovery-code-field"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+# The code step states the ONE generic result: account or not, the same words.
+- takeScreenshot: ${PREFIX}-04-recovery-generic-result
+- tapOn:
+    id: "qandeel-recovery-code-field"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputRandomNumber:
+    length: 6
+- tapOn:
+    id: "qandeel-recovery-code-title"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-05-recovery-code
+- tapOn:
+    id: "qandeel-recovery-code-submit"
+- waitForAnimationToEnd:
+    timeout: 5000
+# The emulator keyboard can drop a commit; an incomplete code is refused locally, so type it once more.
+- runFlow:
+    when:
+      visible:
+        id: "qandeel-recovery-code-field"
+    commands:
+      - tapOn:
+          id: "qandeel-recovery-code-field"
+      - eraseText: 12
+      - inputRandomNumber:
+          length: 6
+      - tapOn:
+          id: "qandeel-recovery-code-title"
+      - tapOn:
+          id: "qandeel-recovery-code-submit"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-recovery-new-password-field"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-recovery-new-password-field"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${NEW_PASSWORD}
+- tapOn:
+    id: "qandeel-recovery-confirm-password-field"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputText: ${NEW_PASSWORD}
+- tapOn:
+    id: "qandeel-recovery-new-password-title"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-06-new-password
+- scrollUntilVisible:
+    element:
+      id: "qandeel-recovery-change-submit"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-recovery-change-submit"
+- waitForAnimationToEnd:
+    timeout: 5000
+# A dropped keyboard commit leaves the two entries different, which the form refuses locally: re-enter both.
+- runFlow:
+    when:
+      visible:
+        id: "qandeel-recovery-new-password-field"
+    commands:
+      - tapOn:
+          id: "qandeel-recovery-new-password-field"
+      - eraseText: 60
+      - inputText: ${NEW_PASSWORD}
+      - tapOn:
+          id: "qandeel-recovery-confirm-password-field"
+      - eraseText: 60
+      - inputText: ${NEW_PASSWORD}
+      - tapOn:
+          id: "qandeel-recovery-new-password-title"
+      - scrollUntilVisible:
+          element:
+            id: "qandeel-recovery-change-submit"
+          direction: DOWN
+          timeout: 20000
+          centerElement: false
+      - tapOn:
+          id: "qandeel-recovery-change-submit"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-recovery-completed-title"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-07-password-changed
+- tapOn:
+    id: "qandeel-recovery-completed-return"
+# Still signed out: the ordinary Sign in, and an explicit sign-in is the only way on.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-sign-in-email"
+    timeout: 20000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-07b-back-to-sign-in

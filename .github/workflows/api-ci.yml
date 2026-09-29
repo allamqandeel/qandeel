@@ -722,6 +722,11 @@ jobs:
       # and that the first-use read and Welcome completion are the caller's own.
       - name: Verify the W1B-01 account identity and first use against real PostgreSQL
         run: npm run verify:account-identity-first-use:integration
+      # W2-01 lets a reader sign in with their Login ID without any client learning which Email it
+      # belongs to. This verifier proves the one resolution function answers the server channel only,
+      # resolves case-insensitively, and answers NULL for every unknown or malformed Login ID.
+      - name: Verify the W2-01 server-only Login ID sign-in resolution against real PostgreSQL
+        run: npm run verify:login-id-sign-in-resolution:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

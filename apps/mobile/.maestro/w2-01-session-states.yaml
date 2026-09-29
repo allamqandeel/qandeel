@@ -1,0 +1,45 @@
+# W2-01 — the session-ended notice and the unable-to-verify-session state with its Retry. VALIDATION ONLY.
+#
+# Two launches of the W2-01 proof build:
+#   - a session the provider ENDED: the ordinary Sign in, with the approved notice;
+#   - a session that could not be VERIFIED: the approved recovery state; its Retry re-asks the
+#     authoritative restore, which the proof world answers with the restored session, and the reader's
+#     world opens — once.
+# PREFIX comes from the proof script.
+appId: com.qandeel.mobile
+---
+- runFlow:
+    file: w2-01-choose.yaml
+    env:
+      SCENARIO_ID: "w2-proof-scenario-session-ended"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-sign-in-email"
+    timeout: 60000
+- extendedWaitUntil:
+    visible:
+      text: ".*(Your session has ended|انتهت جلستك).*"
+    timeout: 10000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-08-session-ended
+- runFlow:
+    file: w2-01-choose.yaml
+    env:
+      SCENARIO_ID: "w2-proof-scenario-unknown"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-session-unverified-retry"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-09-session-unverified
+- tapOn:
+    id: "qandeel-session-unverified-retry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-input"
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-09b-retry-restored

@@ -111,7 +111,10 @@ test('AC-02.4 — a null session from the SDK IS honoured, whatever kind carries
     port.emit(null, kind);
     await settle();
 
-    expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT' });
+    // W2-01 re-anchor: the expired fact is "a bare SIGNED_OUT". This removal is exactly the reliable
+    // evidence of an ENDED session W2-01 §9.1 asks for — a live identity, no sign-out requested — so the
+    // state now carries it. The claim that matters is unchanged: the null session IS honoured.
+    expect(authority.getState()).toEqual({ kind: 'SIGNED_OUT', sessionEnded: true });
   }
 });
 

@@ -365,7 +365,9 @@ describe('Sign in with an unverified Email', () => {
     await type(m.view, 'qandeel-sign-in-email', 'mona@example.test');
     await type(m.view, 'qandeel-sign-in-password', 'wrong');
     await press(m.view, 'qandeel-sign-in-submit');
-    expect(tree(m.view)).toContain('Email or password is incorrect.');
+    // W2-01 re-anchor: the one generic sentence is now the approved final one (W2-01 record §2); the
+    // expired fact is T-14's "Email or password is incorrect.". The claim is unchanged: one sentence.
+    expect(tree(m.view)).toContain('We couldn’t sign you in with these details. Check them and try again.');
     expect(m.view.queryByTestId('qandeel-verify-email')).toBeNull();
     expect(tree(m.view)).not.toContain(DETAIL);
     await m.view.unmount();

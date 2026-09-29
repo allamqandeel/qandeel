@@ -63,6 +63,14 @@ export function createW1BProofWorld(language: ChromeLanguage): W1BProofWorld {
       return { ok: true, value: reader };
     },
     resendEmailCode: async () => ({ ok: true }),
+    verifyLoginIdEmailCode: async () => ({ ok: false, failure: { kind: 'UNEXPECTED', detail: 'the W1B proof verifies only by Email' } }),
+    resendLoginIdEmailCode: async () => ({ ok: false, failure: { kind: 'REFUSED', detail: 'the W1B proof verifies only by Email' } }),
+    // W2-01 port members, inert here: the W1B proof neither signs in by Login ID nor recovers a password.
+    signInWithLoginId: async () => ({ ok: false, failure: { kind: 'INVALID_CREDENTIALS', detail: 'the W1B proof signs in only through verification' } }),
+    requestPasswordRecovery: async () => ({ ok: true }),
+    verifyRecoveryCode: async () => ({ ok: false, failure: { kind: 'UNEXPECTED', detail: 'the W1B proof recovers nothing' } }),
+    updateRecoveredPassword: async () => ({ ok: false, failure: { kind: 'UNEXPECTED', detail: 'the W1B proof recovers nothing' } }),
+    retireRecoveryGrant: async () => undefined,
     signOut: async () => ({ ok: true, value: null }),
     onSessionChange: (listener) => {
       listeners.add(listener);

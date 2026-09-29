@@ -1,0 +1,107 @@
+# W2-01 R1 — Sign in by Login ID whose account's Email is unverified: Verify Email WITHOUT the Email.
+# VALIDATION ONLY.
+#
+# Runs against the W2-01 proof build over the W2 proof world, whose ONE fixture Login ID
+# (W2_PROOF_UNVERIFIED_LOGIN_ID, passed as UNVERIFIED_LOGIN_ID by the proof script) answers any password
+# with the bare EMAIL_NOT_CONFIRMED kind — exactly the API's answer, no Email. The step must show the
+# approved generic instruction, name no address (plain or masked), and keep Resend and Verify reachable:
+# resend answers "A new code was sent.", and the proof world refuses every code, so W1B's generic
+# verification sentence is seen. The password and the code are RANDOM.
+appId: com.qandeel.mobile
+---
+- runFlow:
+    file: w2-01-choose.yaml
+    env:
+      SCENARIO_ID: "w2-proof-scenario-signed-out"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-sign-in-email"
+    timeout: 60000
+- runFlow:
+    file: w1b-01-type.yaml
+    env:
+      FIELD: "qandeel-sign-in-email"
+      TEXT: ${UNVERIFIED_LOGIN_ID}
+- tapOn:
+    id: "qandeel-sign-in-password"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputRandomText:
+    length: 14
+# Dismiss the keyboard through the screen's own title (never the hideKeyboard heuristic).
+- tapOn:
+    id: "qandeel-sign-in-title"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-sign-in-submit"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-sign-in-submit"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-verify-email-instruction"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+# The approved generic instruction, in either language, and no address anywhere on the step.
+- assertVisible:
+    text: "(Enter the verification code sent to the email linked to your account\\.|أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك\\.)"
+- assertNotVisible:
+    text: ".*@.*"
+- assertNotVisible:
+    text: ".*(\\*\\*|••).*"
+- takeScreenshot: ${PREFIX}-10-login-id-verify-email
+# Resend stays reachable and answers W1B's own sentence.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-verify-email-resend"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-verify-email-resend"
+- extendedWaitUntil:
+    visible:
+      text: ".*(A new code was sent\\.|تم إرسال رمز جديد\\.).*"
+    timeout: 30000
+- assertNotVisible:
+    text: ".*@.*"
+- waitForAnimationToEnd:
+    timeout: 5000
+- takeScreenshot: ${PREFIX}-11-login-id-resend
+# Verify stays reachable: a six-digit code, refused by the proof world, meets W1B's generic sentence.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-verify-email-code"
+    direction: UP
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-verify-email-code"
+- waitForAnimationToEnd:
+    timeout: 5000
+- inputRandomNumber:
+    length: 6
+- tapOn:
+    id: "qandeel-verify-email-title"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-verify-email-submit"
+    direction: DOWN
+    timeout: 20000
+    centerElement: false
+- tapOn:
+    id: "qandeel-verify-email-submit"
+# W1B's generic verification sentence (or, if the emulator keyboard dropped a digit, its own local
+# fewer-than-six sentence) — either way the step answered, and named no address.
+- extendedWaitUntil:
+    visible:
+      text: ".*(We couldn't verify your email right now\\. Try again\\.|تعذّر تأكيد البريد الإلكتروني الآن\\. حاول مرة أخرى\\.|The verification code is incorrect\\.|رمز التأكيد غير صحيح\\.).*"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 5000
+- assertNotVisible:
+    text: ".*@.*"
+- takeScreenshot: ${PREFIX}-12-login-id-verify-refused

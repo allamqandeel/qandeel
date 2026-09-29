@@ -9,6 +9,13 @@
  * and the access token to forward to the QANDEEL API — and nothing else. The refresh token is never
  * surfaced across this boundary; it stays inside the SDK and its storage. No value crossing this
  * port is ever logged.
+ *
+ * W2-01 — two narrow additions, still behind this one boundary and still with one client:
+ *   - a Login ID sign-in, which the QANDEEL API resolves on the server and answers with the provider's
+ *     verdict; the tokens of a proved password are adopted into THIS client with `setSession`;
+ *   - password recovery. Its temporary authority (`RecoveryGrant`) is the one exception to "the refresh
+ *     token never crosses": it crosses to the auth authority's memory, and nowhere else — never the
+ *     SDK's session, its storage or its subscribers — and is retired as soon as the password is set.
  */
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { MobilePublicConfig } from '../config/mobile-public-config';
@@ -26,9 +33,17 @@ export type AuthPortFailure = {
    * W1B-01 adds `EMAIL_NOT_CONFIRMED`: the identity provider validated the password FIRST and only
    * then reported that the Email is not yet verified, so it reveals nothing to someone who does not
    * already hold the credential. The Product entry takes the reader to Email verification.
+   *
+   * W2-01 adds `SESSION_ENDED`, produced only by a restore: the provider PROVED the persisted session
+   * is over (it refused the refresh token, and the SDK removed the session). It is distinct from
+   * `NETWORK` / `UNEXPECTED`, where nothing was proved and the session is still held — Unknown is not
+   * Signed Out.
    */
-  readonly kind: 'INVALID_CREDENTIALS' | 'EMAIL_NOT_CONFIRMED' | 'NETWORK' | 'UNEXPECTED';
-  /** A technical description. Never contains a token or a password. */
+  readonly kind: 'INVALID_CREDENTIALS' | 'EMAIL_NOT_CONFIRMED' | 'NETWORK' | 'UNEXPECTED' | 'SESSION_ENDED';
+  /**
+   * A technical description. Never contains a token or a password — and never an Email: W2-01 R1, a
+   * Login ID's Email never reaches the device, not even after the password was proved (P1 §3).
+   */
   readonly detail: string;
 };
 
@@ -69,6 +84,43 @@ export type ResendFailure = {
 export type SignUpResult = { readonly ok: true } | { readonly ok: false; readonly failure: SignUpFailure };
 export type EmailCodeResult = { readonly ok: true; readonly value: AuthSessionSnapshot } | { readonly ok: false; readonly failure: EmailCodeFailure };
 export type ResendResult = { readonly ok: true } | { readonly ok: false; readonly failure: ResendFailure };
+
+/**
+ * W2-01 — the TEMPORARY authority a verified recovery code yields: enough to set one new password and
+ * then be retired, and nothing else. It is held in memory by the auth authority alone. It is never
+ * handed to the SDK, never written to auth storage, never announced to a session subscriber and never
+ * becomes `AUTHENTICATED` — so no bootstrap, no Conversation Session and no Personal state can start
+ * from it. It is a pair of values rather than a session snapshot on purpose: nothing that consumes a
+ * snapshot can accept it.
+ */
+export interface RecoveryGrant {
+  readonly accessToken: string;
+  readonly refreshToken: string;
+}
+
+/**
+ * Asking for a recovery code is deliberately non-enumerating: every answer the provider gives — sent,
+ * no such account, rate-limited, a server error — is the SAME result, because any of them could differ
+ * between an Email that has an account and one that does not. Only a request that never produced an
+ * HTTP answer is reported, and it says nothing about any account.
+ */
+export type RecoveryRequestResult = { readonly ok: true } | { readonly ok: false; readonly failure: { readonly kind: 'NETWORK'; readonly detail: string } };
+
+/** As with the Email code: the provider answers a wrong and an expired recovery code alike. */
+export type RecoveryCodeFailure = {
+  readonly kind: 'CODE_REJECTED' | 'NETWORK' | 'UNEXPECTED';
+  readonly detail: string;
+};
+export type RecoveryCodePortResult = { readonly ok: true; readonly value: RecoveryGrant } | { readonly ok: false; readonly failure: RecoveryCodeFailure };
+/** What the authority tells the entry: whether the code verified. The grant itself never leaves the authority. */
+export type RecoveryCodeResult = { readonly ok: true } | { readonly ok: false; readonly failure: RecoveryCodeFailure };
+
+export type PasswordUpdateFailure = {
+  /** The provider's own password rules refused it (its weak- or same-password answer). */
+  readonly kind: 'WEAK_PASSWORD' | 'NETWORK' | 'UNEXPECTED';
+  readonly detail: string;
+};
+export type PasswordUpdateResult = { readonly ok: true } | { readonly ok: false; readonly failure: PasswordUpdateFailure };
 
 /**
  * R1-01, corrected by R2-01 — the KIND of a session change, preserved across this boundary.
@@ -120,6 +172,31 @@ export interface SupabaseAuthPort {
   verifyEmailCode(email: string, code: string): Promise<EmailCodeResult>;
   /** W1B-01 — send a new sign-up verification code, replacing the previous one. */
   resendEmailCode(email: string): Promise<ResendResult>;
+  /**
+   * W2-01 R1 — verify the Email of the account a Login ID names, WITHOUT the device learning that Email:
+   * the QANDEEL API resolves the Login ID and asks the provider to verify the code. The session it yields
+   * is adopted into the ONE client (`setSession`), exactly as a Login ID sign-in's is.
+   */
+  verifyLoginIdEmailCode(loginId: string, code: string): Promise<EmailCodeResult>;
+  /** W2-01 R1 — ask, through the QANDEEL API, for a new code for that Email. One result for every Login ID. */
+  resendLoginIdEmailCode(loginId: string): Promise<ResendResult>;
+  /**
+   * W2-01 — sign in with a Login ID. The QANDEEL API resolves it on the server and spends the
+   * provider's own password grant; the device never learns which Email it belongs to. The session it
+   * yields is adopted into the ONE client (`setSession`), exactly as any other sign-in's is.
+   */
+  signInWithLoginId(loginId: string, password: string): Promise<AuthPortResult<AuthSessionSnapshot>>;
+  /** W2-01 — ask for a password recovery code for an Email. Non-enumerating by construction. */
+  requestPasswordRecovery(email: string): Promise<RecoveryRequestResult>;
+  /**
+   * W2-01 — verify a recovery code, with recovery semantics. Its temporary authority comes back as a
+   * `RecoveryGrant` and goes NOWHERE else: not to the SDK's session, its storage or its subscribers.
+   */
+  verifyRecoveryCode(email: string, code: string): Promise<RecoveryCodePortResult>;
+  /** W2-01 — set the new password with that grant, then retire the grant. It establishes nothing. */
+  updateRecoveredPassword(grant: RecoveryGrant, password: string): Promise<PasswordUpdateResult>;
+  /** W2-01 — end a recovery grant that will not be used (superseded, abandoned). Best effort; never throws. */
+  retireRecoveryGrant(grant: RecoveryGrant): Promise<void>;
   signOut(): Promise<AuthPortResult<null>>;
   /**
    * Every subsequent session change, WITH its provenance: a token refresh, a sign-in, a sign-out,
@@ -203,9 +280,43 @@ function emailCodeFailureOf(error: ProviderError): EmailCodeFailure {
   return { kind: 'UNEXPECTED', detail };
 }
 
+function recoveryCodeFailureOf(status: number, code: string | null): RecoveryCodeFailure {
+  if (status === 0) return { kind: 'NETWORK', detail: 'recovery verification transport failed' };
+  if (code === 'otp_expired' || code === 'validation_failed') return { kind: 'CODE_REJECTED', detail: code };
+  return { kind: 'UNEXPECTED', detail: `recovery verification answered ${status}` };
+}
+
+/**
+ * W2-01 — a restore failure the provider PROVED final: the server answered, with a 4xx, that the
+ * persisted refresh token is no longer valid (the SDK removes the session on that answer). A transport
+ * failure, a 5xx, a timeout or an unrecognised shape proves nothing, and stays unknown.
+ */
+function restoreProvedEnded(error: ProviderError & { name?: unknown }): boolean {
+  if (error?.name === 'AuthRetryableFetchError') return false;
+  const status = typeof error?.status === 'number' ? error.status : null;
+  return status !== null && status >= 400 && status < 500;
+}
+
+/** The HTTP answer the port needs from a REST call: a status (0 when none came back) and a JSON body. */
+interface RestAnswer {
+  readonly status: number;
+  readonly body: Record<string, unknown> | null;
+}
+
+/** The minimum `fetch` shape the port uses outside the SDK. Production passes the platform `fetch`. */
+export type AuthRestFetch = (
+  input: string,
+  init: { readonly method: string; readonly headers: Record<string, string>; readonly body?: string },
+) => Promise<{ readonly status: number; json(): Promise<unknown> }>;
+
+/** The API version whose Auth errors carry a typed `error_code`, exactly as the installed auth client pins it. */
+export const SUPABASE_AUTH_API_VERSION = '2024-01-01';
+
 export interface SupabaseAuthPortOptions {
   readonly config: MobilePublicConfig;
   readonly storage: AuthSessionStorage;
+  /** W2-01 — for the Login ID exchange and the in-memory recovery calls. Defaults to the platform `fetch`. */
+  readonly fetch?: AuthRestFetch;
 }
 
 /**
@@ -216,17 +327,108 @@ export interface SupabaseAuthPortOptions {
  * drive `startAutoRefresh` / `stopAutoRefresh` from app state, which the auth authority does
  * through the one shared foreground signal.
  */
-export function createSupabaseAuthPort({ config, storage }: SupabaseAuthPortOptions): SupabaseAuthPort {
+export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: SupabaseAuthPortOptions): SupabaseAuthPort {
   const client: SupabaseClient = createClient(config.supabaseUrl, config.supabasePublishableKey, {
     auth: { storage, ...SUPABASE_AUTH_OPTIONS },
   });
+
+  /**
+   * W2-01 — evidence that the PROVIDER ended a persisted session. The SDK recovers the stored session
+   * while the client initialises, and when the provider refuses its refresh token it removes the
+   * session and emits `SIGNED_OUT` — possibly before anything else has subscribed. This subscription is
+   * registered synchronously at construction, before the SDK's first await, so it cannot miss that.
+   * A sign-out the port itself performs is not evidence of anything and is excluded.
+   */
+  let providerEndedSession = false;
+  let ownSignOuts = 0;
+  client.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT' && ownSignOuts === 0) providerEndedSession = true;
+  });
+  const signOutOwn = async (scope?: 'local') => {
+    ownSignOuts += 1;
+    try {
+      return scope === undefined ? await client.auth.signOut() : await client.auth.signOut({ scope });
+    } finally {
+      ownSignOuts -= 1;
+    }
+  };
+
+  const httpFetch: AuthRestFetch = restFetch ?? ((input, init) => fetch(input, init as RequestInit) as unknown as ReturnType<AuthRestFetch>);
+  const authUrl = config.supabaseUrl.replace(/\/$/u, '');
+
+  /** One REST call outside the SDK. It never throws: no HTTP answer is status 0. Nothing is logged. */
+  async function rest(url: string, method: string, headers: Record<string, string>, body?: unknown): Promise<RestAnswer> {
+    let response: Awaited<ReturnType<AuthRestFetch>>;
+    try {
+      response = await httpFetch(url, { method, headers: { 'Content-Type': 'application/json', ...headers }, body: body === undefined ? undefined : JSON.stringify(body) });
+    } catch {
+      return { status: 0, body: null };
+    }
+    let parsed: unknown = null;
+    try {
+      parsed = await response.json();
+    } catch {
+      parsed = null;
+    }
+    return { status: response.status, body: parsed !== null && typeof parsed === 'object' && !Array.isArray(parsed) ? (parsed as Record<string, unknown>) : null };
+  }
+
+  /**
+   * The Auth REST endpoints, called exactly as the installed SDK calls them (`POST /verify`,
+   * `PUT /user`, `POST /logout?scope=`), with the publishable key and — for a grant — its bearer. Used
+   * ONLY for password recovery, so its temporary authority never touches the SDK's session.
+   */
+  const authRest = (path: string, method: string, bearer: string | null, body?: unknown) =>
+    rest(`${authUrl}/auth/v1${path}`, method, {
+      apikey: config.supabasePublishableKey,
+      Authorization: `Bearer ${bearer ?? config.supabasePublishableKey}`,
+      'X-Supabase-Api-Version': SUPABASE_AUTH_API_VERSION,
+    }, body);
+  const errorCodeOf = (body: Record<string, unknown> | null): string | null =>
+    typeof body?.error_code === 'string' ? body.error_code : typeof body?.code === 'string' ? body.code : null;
+  const retireGrant = async (grant: RecoveryGrant): Promise<void> => {
+    await authRest('/logout?scope=local', 'POST', grant.accessToken);
+  };
+
+  /**
+   * The provider's session, relayed by the QANDEEL API for a Login ID (a sign-in, or W2-01 R1's
+   * verification), adopted into the ONE client — which persists it and notifies its subscribers of
+   * SIGNED_IN before resolving, exactly as a password sign-in does, so the authority's barrier treats it
+   * the same. A 200 without both tokens is not a session.
+   */
+  async function adoptApiSession(answer: RestAnswer, what: string): Promise<AuthPortResult<AuthSessionSnapshot>> {
+    const accessToken = answer.body?.accessToken;
+    const refreshToken = answer.body?.refreshToken;
+    if (typeof accessToken !== 'string' || accessToken === '' || typeof refreshToken !== 'string' || refreshToken === '') {
+      return { ok: false, failure: { kind: 'UNEXPECTED', detail: `${what} answered no usable tokens` } };
+    }
+    try {
+      const { data, error } = await client.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+      if (error) return { ok: false, failure: { kind: isTransportFailure(error) ? 'NETWORK' : 'UNEXPECTED', detail: detailOf(error, 'session adoption failed') } };
+      const session = snapshotOf(data.session);
+      if (session === null) return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'session adoption returned no usable session' } };
+      return { ok: true, value: session };
+    } catch (cause) {
+      return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'session adoption threw') } };
+    }
+  }
 
   return {
     async restoreSession() {
       try {
         const { data, error } = await client.auth.getSession();
-        if (error) return { ok: false, failure: failureOf(error, 'session restore failed') };
-        return { ok: true, value: snapshotOf(data.session) };
+        const ended = providerEndedSession;
+        providerEndedSession = false;
+        if (error) {
+          // W2-01: only a refusal the provider PROVED is an ended session; anything else stays unknown.
+          if (restoreProvedEnded(error)) return { ok: false, failure: { kind: 'SESSION_ENDED', detail: detailOf(error, 'session ended') } };
+          return { ok: false, failure: failureOf(error, 'session restore failed') };
+        }
+        const session = snapshotOf(data.session);
+        // The SDK found a stored session while initialising, the provider refused it, and the SDK removed
+        // it — so the read below it is empty. That emptiness is an ended session, not a first launch.
+        if (session === null && ended) return { ok: false, failure: { kind: 'SESSION_ENDED', detail: 'the provider ended the persisted session' } };
+        return { ok: true, value: session };
       } catch (cause) {
         return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'session restore threw') } };
       }
@@ -284,9 +486,81 @@ export function createSupabaseAuthPort({ config, storage }: SupabaseAuthPortOpti
         return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'resend threw') } };
       }
     },
+    async signInWithLoginId(loginId, password) {
+      // The Login ID and the password travel in a body to the QANDEEL API, never a URL. The API answers
+      // the provider's verdict: tokens for the reader who proved the password, and otherwise a bare
+      // outcome — never which Email a Login ID belongs to (P1 §3).
+      const answer = await rest(`${config.apiBaseUrl}/account/login-id-sign-in`, 'POST', { Accept: 'application/json' }, { loginId, password });
+      if (answer.status === 0) return { ok: false, failure: { kind: 'NETWORK', detail: 'login-id sign-in transport failed' } };
+      if (answer.status === 401) return { ok: false, failure: { kind: 'INVALID_CREDENTIALS', detail: 'login-id sign-in refused' } };
+      // The provider checked the password first, and the account's Email is unverified. W2-01 R1: that is
+      // ALL the reader learns — the answer carries no Email, and nothing in it is read as one.
+      if (answer.status === 409 && answer.body?.outcome === 'EMAIL_NOT_CONFIRMED') return { ok: false, failure: { kind: 'EMAIL_NOT_CONFIRMED', detail: 'email not confirmed' } };
+      if (answer.status !== 200) return { ok: false, failure: { kind: 'UNEXPECTED', detail: `login-id sign-in answered ${answer.status}` } };
+      return adoptApiSession(answer, 'login-id sign-in');
+    },
+    async verifyLoginIdEmailCode(loginId, code) {
+      // The Login ID the reader typed and the code travel in a body; the API answers tokens or a bare outcome.
+      const answer = await rest(`${config.apiBaseUrl}/account/login-id-verify-email`, 'POST', { Accept: 'application/json' }, { loginId, code });
+      if (answer.status === 0) return { ok: false, failure: { kind: 'NETWORK', detail: 'login-id verification transport failed' } };
+      // Wrong, expired, or no such Login ID — one bounded rejection, exactly as the provider's own.
+      if (answer.status === 401) return { ok: false, failure: { kind: 'CODE_REJECTED', detail: 'login-id verification refused' } };
+      if (answer.status !== 200) return { ok: false, failure: { kind: 'UNEXPECTED', detail: `login-id verification answered ${answer.status}` } };
+      const adopted = await adoptApiSession(answer, 'login-id verification');
+      return adopted.ok ? adopted : { ok: false, failure: { kind: adopted.failure.kind === 'NETWORK' ? 'NETWORK' : 'UNEXPECTED', detail: adopted.failure.detail } };
+    },
+    async resendLoginIdEmailCode(loginId) {
+      const answer = await rest(`${config.apiBaseUrl}/account/login-id-resend-verification`, 'POST', { Accept: 'application/json' }, { loginId });
+      if (answer.status === 0) return { ok: false, failure: { kind: 'NETWORK', detail: 'login-id resend transport failed' } };
+      if (answer.status === 200 && answer.body?.outcome === 'ACCEPTED') return { ok: true };
+      return { ok: false, failure: { kind: 'REFUSED', detail: `login-id resend answered ${answer.status}` } };
+    },
+    async requestPasswordRecovery(email) {
+      try {
+        const { error } = await client.auth.resetPasswordForEmail(email);
+        // Non-enumerating: ONLY a request that produced no HTTP answer is reported. A rate limit, a 5xx
+        // or a refusal can each differ between an Email with an account and one without, so every
+        // answered request is the same result.
+        if (error && isTransportFailure(error)) return { ok: false, failure: { kind: 'NETWORK', detail: detailOf(error, 'recovery request failed') } };
+        return { ok: true };
+      } catch (cause) {
+        return { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'recovery request threw') } };
+      }
+    },
+    async verifyRecoveryCode(email, code) {
+      // Recovery semantics (`type: 'recovery'`), and deliberately NOT `client.auth.verifyOtp`: the SDK
+      // would persist the recovery session to auth storage and announce it to subscribers — so a kill
+      // before the new password was set would restore it at the next launch as an ordinary sign-in. Here
+      // the grant exists only in this return value.
+      const answer = await authRest('/verify', 'POST', null, { type: 'recovery', email, token: code });
+      if (answer.status !== 200) return { ok: false, failure: recoveryCodeFailureOf(answer.status, errorCodeOf(answer.body)) };
+      const accessToken = answer.body?.access_token;
+      const refreshToken = answer.body?.refresh_token;
+      if (typeof accessToken !== 'string' || accessToken === '' || typeof refreshToken !== 'string' || refreshToken === '') {
+        return { ok: false, failure: { kind: 'UNEXPECTED', detail: 'recovery verification returned no grant' } };
+      }
+      return { ok: true, value: { accessToken, refreshToken } };
+    },
+    async updateRecoveredPassword(grant, password) {
+      const answer = await authRest('/user', 'PUT', grant.accessToken, { password });
+      if (answer.status === 0) return { ok: false, failure: { kind: 'NETWORK', detail: 'password update transport failed' } };
+      if (answer.status !== 200) {
+        const code = errorCodeOf(answer.body);
+        // The provider's own password rules. Nothing here is a second password policy.
+        if (code === 'weak_password' || code === 'same_password') return { ok: false, failure: { kind: 'WEAK_PASSWORD', detail: code } };
+        return { ok: false, failure: { kind: 'UNEXPECTED', detail: `password update answered ${answer.status}` } };
+      }
+      // The password is changed. The recovery authority has done its one job and is retired now; a failed
+      // retirement changes nothing the reader sees — the grant was never persisted and is dropped here.
+      await retireGrant(grant);
+      return { ok: true };
+    },
+    async retireRecoveryGrant(grant) {
+      await retireGrant(grant);
+    },
     async signOut() {
       try {
-        const { error } = await client.auth.signOut();
+        const { error } = await signOutOwn();
         if (error) return { ok: false, failure: failureOf(error, 'sign-out failed') };
         return { ok: true, value: null };
       } catch (cause) {
