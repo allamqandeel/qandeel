@@ -273,6 +273,30 @@ test('Sign out uses the ONE existing auth sign-out, once, with no second path an
   for (const [file, text] of Object.entries(productionCode)) assert.doesNotMatch(text, /scope: 'others'|scope: 'global'/u, file);
 });
 
+test('W3-01 R1 — the final Sign out asks the provider for LOCAL scope only, never the SDK default (global) nor others', () => {
+  const port = code(read(PORT));
+  const body = port.slice(port.indexOf('    async signOut() {'), port.indexOf('    onSessionChange('));
+  assert.ok(body.length > 0, 'the port’s final sign-out body is located');
+  // Exactly one provider sign-out, through the existing seam, with the explicit local scope. An omitted scope is
+  // the SDK's `global`; any direct SDK call, or any other scope, is a second meaning of "Sign out".
+  const localOnly = (text) =>
+    (text.match(/signOutOwn\(\s*'local'\s*\)/gu) ?? []).length === 1 &&
+    !/signOutOwn\(\s*\)/u.test(text) &&
+    !/\.auth\.signOut\(/u.test(text) &&
+    !/scope:\s*'(?:global|others)'|scope=(?:global|others)/u.test(text);
+  guards('final-sign-out-omits-scope', body, localOnly, 'const again = await signOutOwn();');
+  guards('final-sign-out-calls-the-sdk-bare', body, localOnly, 'await client.auth.signOut();');
+  guards('final-sign-out-global-scope', body, localOnly, "await client.auth.signOut({ scope: 'global' });");
+  guards('final-sign-out-others-scope', body, localOnly, "await client.auth.signOut({ scope: 'others' });");
+  // The seam itself maps 'local' to the SDK's `{ scope: 'local' }` and admits no wider scope.
+  assert.match(port, /const signOutOwn = async \(scope\?: 'local'\) => \{/u);
+  assert.match(port, /: await client\.auth\.signOut\(\{ scope \}\);/u);
+  // The real-SDK proof observes the request, and its non-vacuity shows the default really is global.
+  const durability = read(`${SRC}/runtime-entry/__tests__/sign-out-durability.test.ts`);
+  assert.match(durability, /\/logout\?scope=local`\);/u);
+  assert.match(durability, /\/logout\\\?scope=global\$\/u\);/u);
+});
+
 test('sign-out durability: the port retires THIS device’s session material unconditionally, under the SDK’s own key', () => {
   const port = code(read(PORT));
   assert.match(port, /return `sb-\$\{new URL\(supabaseUrl\)\.hostname\.split\('\.'\)\[0\]\}-auth-token`;/u, 'exactly the SDK default key');

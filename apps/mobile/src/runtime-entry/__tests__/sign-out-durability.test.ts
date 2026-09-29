@@ -167,15 +167,31 @@ test('a successful sign-out also leaves nothing behind, and a later explicit sig
   authority.dispose();
 });
 
-test('sign-out is this device only: it asks for no other-devices scope', async () => {
+/** The one `/logout` request a sign-out made, with the network up and a live session. */
+async function logoutRequestOf(signOut: (storage: AuthSessionStorage) => Promise<unknown>): Promise<string> {
   const storage = await seeded();
   network.up = true;
   const port = createSupabaseAuthPort({ config: TEST_CONFIG, storage });
   await run(port.restoreSession());
   network.calls = [];
-  await run(port.signOut());
+  await run(signOut(storage));
   const logout = network.calls.filter((url) => url.includes('/logout'));
   expect(logout).toHaveLength(1);
-  // The SDK default scope is `global` for THIS session's refresh-token family; `others` is never requested.
-  expect(logout[0]).not.toMatch(/scope=others/u);
+  return logout[0];
+}
+
+test('W3-01 R1 NON-VACUITY — the SDK’s default sign-out, with no scope, asks the provider for GLOBAL', async () => {
+  // So "not others" proves nothing: an omitted scope would also end the reader's other devices.
+  const request = await logoutRequestOf((storage) =>
+    createClient(TEST_CONFIG.supabaseUrl, TEST_CONFIG.supabasePublishableKey, { auth: { storage, storageKey: KEY, ...SUPABASE_AUTH_OPTIONS } }).auth.signOut());
+  expect(request).toMatch(/\/logout\?scope=global$/u);
+});
+
+test('W3-01 R1 — the final Sign out is THIS session on THIS device only: the provider is asked for LOCAL scope', async () => {
+  let succeeded = false;
+  const request = await logoutRequestOf(async (storage) => {
+    succeeded = (await createSupabaseAuthPort({ config: TEST_CONFIG, storage }).signOut()).ok;
+  });
+  expect(succeeded).toBe(true);
+  expect(request).toBe(`${TEST_CONFIG.supabaseUrl}/auth/v1/logout?scope=local`);
 });

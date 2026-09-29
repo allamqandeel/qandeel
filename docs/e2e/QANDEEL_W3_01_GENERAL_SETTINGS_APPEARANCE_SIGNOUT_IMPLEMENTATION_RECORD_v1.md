@@ -169,8 +169,15 @@ the alias it is. Light World `#efeeeb`, Light error `#ad4739` (F2 FINAL). E1R's 
   to leave. The non-vacuity test proves this with the REAL SDK. Fix (narrow, one file): the port passes the session
   storage key explicitly (exactly the SDK's own default, `sb-<first host label>-auth-token`, so every existing session
   is read as before) and, after the provider's answer, unconditionally removes THIS device's session material (the
-  session, `-user`, `-code-verifier`) from the auth store. The provider's answer is still returned. Nothing is revoked
-  remotely beyond the SDK's own call; no other-devices scope is requested.
+  session, `-user`, `-code-verifier`) from the auth store. The provider's answer is still returned.
+- **R1 — sign-out scope (independent-review correction):** the final QANDEEL Sign out is current-session /
+  current-device only. The port's final sign-out calls the existing seam as `signOutOwn('local')`, i.e.
+  `client.auth.signOut({ scope: 'local' })`; before R1 it omitted the scope, which the SDK treats as `global` and which
+  would also have revoked the reader's other signed-in devices. Local session material is still retired
+  unconditionally afterwards, for restart durability. T-13 Product recovery (identity-namespaced) is not touched by
+  sign-out. Proven with the real SDK: its bare default requests `/logout?scope=global` (non-vacuity), the production
+  port requests `/logout?scope=local`; the root contract rejects a bare `signOutOwn()`, a direct `client.auth.signOut(`,
+  and a `global` or `others` scope in the final sign-out path.
 - Proven with the real `@supabase/supabase-js` client over the auth store contract: failed provider sign-out → the
   next app start is `SIGNED_OUT` (not restored, not `sessionEnded`), with no refresh even attempted; a successful
   sign-out leaves nothing; a later explicit sign-in works.
@@ -179,11 +186,11 @@ the alias it is. Light World `#efeeeb`, Light error `#ad4739` (F2 FINAL). E1R's 
 
 | Gate | Result |
 |---|---|
-| W3-01 root contract `npm run test:w3-01-general-settings-appearance-signout-contract` | 14 / 14 pass; critical predicates reject planted defects |
+| W3-01 root contract `npm run test:w3-01-general-settings-appearance-signout-contract` | 15 / 15 pass after R1 (14 before); critical predicates reject planted defects |
 | `src/appearance/__tests__/appearance-authority.test.ts` | 16 / 16 |
 | `src/settings/__tests__/settings-surface.test.tsx` (AR + EN) | 23 / 23 |
 | `src/integration/__tests__/w3-settings-appearance-signout.test.tsx` (production phase surface) | 15 / 15 |
-| `src/runtime-entry/__tests__/sign-out-durability.test.ts` (real SDK, restart) | 6 / 6 |
+| `src/runtime-entry/__tests__/sign-out-durability.test.ts` (real SDK, restart, R1 local scope) | 7 / 7 after R1 (6 before) |
 | Full mobile Jest (`jest --ci`) | 147 suites, 1726 / 1726 |
 | Mobile root contracts run by mobile CI (T-10…T-14, T-12P, W1A, W1B, W2-01, W2-02, W3-01, foundation, classifier, QAN-INF-04) | all pass (after the narrow re-anchors below) |
 | `npm run test:task-closure-governance-contract` | 24 / 24 |

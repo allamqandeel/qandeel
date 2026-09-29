@@ -593,7 +593,9 @@ export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: Su
     async signOut() {
       let result: AuthPortResult<null>;
       try {
-        const { error } = await signOutOwn();
+        // W3-01 R1 — THIS session on THIS device only. An omitted scope is the SDK's `global`, which also
+        // revokes the reader's other signed-in devices; the final Sign out never asks for that.
+        const { error } = await signOutOwn('local');
         result = error ? { ok: false, failure: failureOf(error, 'sign-out failed') } : { ok: true, value: null };
       } catch (cause) {
         result = { ok: false, failure: { kind: 'NETWORK', detail: describe(cause, 'sign-out threw') } };
