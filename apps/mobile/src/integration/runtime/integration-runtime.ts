@@ -90,7 +90,14 @@ import {
 } from '../../recovery';
 import { createConversationController, type ConversationController } from '../../conversation';
 import { createAccountController, type AccountController } from '../../account';
-import { createAccountIdentityController, createPublicIdController, type AccountIdentityController, type PublicIdController } from '../../settings';
+import {
+  createAccountIdentityController,
+  createPrivacyDataController,
+  createPublicIdController,
+  type AccountIdentityController,
+  type PrivacyDataController,
+  type PublicIdController,
+} from '../../settings';
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import {
   createAppearanceAuthority,
@@ -183,6 +190,11 @@ export interface IntegrationSessionRuntime {
    * account transport. General Settings reads it when shown; it is retired with the generation.
    */
   readonly identity: AccountIdentityController;
+  /**
+   * W3-MEGA-S: the reader's Privacy & Data state and requests (Export My Data; Delete Account), for THIS identity, on the
+   * same account transport. General Settings reads it when shown; it is retired with the generation.
+   */
+  readonly privacy: PrivacyDataController;
   /**
    * W3-MEGA-U: the reader's QANDEEL Understanding, for THIS identity, on the T-12P Understanding transport bound to it.
    * The Understanding depth reads it when shown; it is retired with the generation.
@@ -293,6 +305,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.account.retire();
     session.publicId.retire();
     session.identity.retire();
+    session.privacy.retire();
     session.understanding.retire();
     session.liveDriver.dispose();
     session.projection.retire();
@@ -369,6 +382,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       // W3-02: the Public ID, on the same account transport bound to this identity.
       publicId: createPublicIdController({ transport: entry.accountFor(bundle), isCurrent }),
       identity: createAccountIdentityController({ transport: entry.accountFor(bundle), isCurrent }),
+      privacy: createPrivacyDataController({ transport: entry.accountFor(bundle), isCurrent }),
       understanding: createUnderstandingController({ transport: entry.understandingFor(bundle), isCurrent }),
     };
     return built;

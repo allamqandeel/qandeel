@@ -22,6 +22,11 @@ import { exchange, flush, page, scriptedTransport } from '../../conversation/__f
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { SettingsSurface, settingsCopy } from '..';
 
+// W3-MEGA-S re-anchor (validation only): the Language row of «قنديل والمحادثة» / QANDEEL & Conversation is now a real group
+// of every Settings root, drawn before Appearance & Accessibility. The language name is its own run (LRI … PDI) in English.
+const drawnLanguage = (language: 'ar' | 'en') => (language === 'ar' ? 'العربية' : String.fromCodePoint(0x2066) + 'English' + String.fromCodePoint(0x2069));
+
+
 const INSETS = { top: 44, right: 0, bottom: 34, left: 0 };
 const P = CANONICAL_VISUAL.palettes;
 const style = (node: { props: { style?: unknown } }) => StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
@@ -161,7 +166,7 @@ describe.each(['ar', 'en'] as const)('%s — the General Settings surface', (lan
     const { authority } = authorityFor(null);
     const { view } = await settings(language, authority);
     const words = view.getAllByText(/.+/u).map((node) => node.props.children as string);
-    expect(words).toEqual([copy.title, copy.appearanceGroup, copy.appearance.DARK, copy.appearance.LIGHT, copy.appearance.SYSTEM, copy.supportGroup, copy.signOut]);
+    expect(words).toEqual([copy.title, copy.qandeelGroup, copy.language.term, drawnLanguage(language), copy.appearanceGroup, copy.appearance.DARK, copy.appearance.LIGHT, copy.appearance.SYSTEM, copy.supportGroup, copy.signOut]);
     const group = view.getByTestId('qandeel-settings-group-appearance');
     expect(within(group).getAllByRole('radio')).toHaveLength(3);
     expect(within(view.getByTestId('qandeel-settings-group-support')).getByRole('button').props.accessibilityLabel).toBe(copy.signOut);

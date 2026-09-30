@@ -12,6 +12,12 @@ import { AccountService } from './account.service';
 import { LoginIdSignInController } from './login-id-sign-in.controller';
 import { LoginIdSignInRepository } from './login-id-sign-in.repository';
 import { LoginIdSignInService } from './login-id-sign-in.service';
+import { PrivacyDataController } from './privacy-data.controller';
+import { PrivacyDataRepository } from './privacy-data.repository';
+import { PrivacyDataService } from './privacy-data.service';
+import { PrivacyMaintenanceRepository } from './privacy-maintenance.repository';
+import { PrivacyMaintenanceWorker } from './privacy-maintenance.worker';
+import { ProviderAccountRemovalService } from './provider-account-removal.service';
 import { SupabasePasswordGrantService } from './supabase-password-grant.service';
 
 /**
@@ -24,9 +30,13 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  *
  * W3-MEGA-A adds the owner's own identity and security routes beside them, in files of their own, on the same relay:
  * an owner reads and changes only their own account.
+ *
+ * W3-MEGA-S adds the owner's Privacy & Data routes (Export My Data; the Personal-world Delete Account) on the same relay,
+ * and the server's own asynchronous pass that prepares exports and carries due deletions through the database's ONE
+ * governed Personal erasure and the provider account's removal.
  */
 @Module({
-  controllers: [AccountController, LoginIdSignInController, AccountSecurityController],
+  controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,
     SupabaseAuthGuard,
@@ -39,6 +49,11 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
     LoginIdSignInService,
     AccountIdentityRepository,
     AccountSecurityService,
+    PrivacyDataRepository,
+    PrivacyDataService,
+    PrivacyMaintenanceRepository,
+    ProviderAccountRemovalService,
+    PrivacyMaintenanceWorker,
   ],
 })
 export class AccountModule {}

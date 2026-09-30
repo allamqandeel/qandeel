@@ -3771,3 +3771,46 @@ setup and replay, a typed lower-case Shared ID resolving through 0081 by its ref
 regeneration invalidating the old epoch's PENDING invitation; and, on committed rows across two connections whose second
 attempt is shown to block, that two accounts racing for one Login ID leave one holder and the same command twice commits
 once. The 0125 verifier's exact catalogs were re-anchored (validation only) to name 0129's additions.
+
+## W3-MEGA-S - Privacy & Data: Export My Data and Personal-world account deletion (migration 0130)
+
+`0130_personal_privacy_export_account_deletion_v1.sql` implements `E2E-D-16` Export My Data and the **Personal-world**
+part of `E2E-D-17` Delete Account (W3-PDG-01 §7 / §8, statements marked PO). Forward-only; the state lives in the new
+non-exposed `personal_data_private` schema (four tables, RLS on, no client or server-role table privilege), every
+function in `public` is SECURITY INVOKER, and there is no account parameter anywhere: the owner is `auth.uid()`.
+
+- **Owner acts** (`authenticated` only): `read_own_privacy_state_v1()`; `request_own_data_export_v1(command)` and
+  `request_own_account_deletion_v1(command)`, both refused unless the caller's token carries a provider password
+  authentication made within the last minute (0129's `account_private.has_recent_password_proof_v1`, reused, not
+  rebuilt); `read_own_data_export_v1()` (the package only while READY and unexpired); `cancel_own_account_deletion_v1()`
+  (until the grace period ends, or while BLOCKED).
+- **Server passes** (`service_role` only): `server_prepare_data_exports_v1(limit)` builds each pending package in its
+  own subtransaction (a partial package is never stored; three attempts, then FAILED) and discards expired artifacts;
+  `server_claim_due_account_deletions_v1(limit)` leases due requests; `server_erase_personal_account_v1(deletion)` runs the
+  ONE governed Personal erasure; `server_complete_account_deletion_v1(deletion)` records the provider account's removal.
+- **Export content:** the account (Name, Login ID, Public ID; the API adds the owner's Email from the provider at
+  download), the Personal conversation (both sides; no failed or system reply), Memory in every lifecycle state still
+  held (labelled), and QANDEEL Understanding as statements with their status and the owner's own disagreements. No
+  internal id, idempotency key, score, evidence reference, hypothesis reasoning or measurement. Shared / Public / Replay /
+  Introductions: `NOT YET INCLUDED — WORLD-SCOPED EXPORT AUTHORITY NOT IMPLEMENTED` (the package names them).
+- **The controlled erasure boundary.** Sixteen history guards (0011, 0012 / 0013, 0055, 0063, 0064, 0065, 0066, 0068,
+  0070, 0071, 0072) are redefined in place — same name, OID and grants, still SECURITY INVOKER with an empty
+  search_path, original body kept after one prefix — so that a **DELETE** (never an UPDATE) is admitted only when the
+  transaction-local `qandeel.personal_erasure` equals the current transaction id **and** an authorization row for that
+  transaction exists. Both are created only by `personal_data_private.erase_personal_account_v1`, for a SCHEDULED request
+  past its grace period. The erasure deletes, in one transaction, every Personal row of that account and the account row
+  last; the Login ID and Public ID are retired as one-way digests (refused later through the existing `UNAVAILABLE`
+  answers and `login_id_is_available_v1`; 0125's generator never draws a retired Public ID); an erased account row can
+  never be re-created. The deletion request is kept as the minimal non-content record.
+- **Connected Worlds hard stop.** Nothing here touches a Shared, Public, Replay or Matching / Introductions row. If one
+  still references the account (or its Personal conversation), the foreign keys refuse, the erasure is undone whole, and
+  the request is BLOCKED — never erased and never called deleted (`QAN-BL-ACCT-01`, `QAN-BL-CW-01` stay open).
+
+Implementation details, not Product authority: a 7-day grace period, 7-day export availability, 5-minute leases.
+
+`database/verify-migration-0130.mjs` (`npm run verify:personal-privacy-export-account-deletion:integration`, API CI)
+proves the catalog and exact grants; that every narrowed guard still refuses the table owner with the setting forged,
+with the row planted, and for any UPDATE; the export journey and package content; the deletion journey with the erasure
+of a real populated Personal footprint (committed units, a Memory command, Memory states, a contested Hypothesis, a HIM
+target) to zero rows while another reader is untouched; idempotent retry and completion; retired identifiers; the
+BLOCKED hard stop; and committed two-connection races.

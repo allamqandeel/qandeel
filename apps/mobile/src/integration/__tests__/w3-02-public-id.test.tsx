@@ -84,7 +84,7 @@ describe('E2E-D-09 — the Public ID and its ONE lifetime manual change, end to 
     expect(reads[0].url).not.toMatch(/alice|user/u);
 
     const settings = within(view.getByTestId('qandeel-settings'));
-    expect(settings.getAllByRole('header').map((node) => node.props.children)).toEqual([COPY.title, COPY.accountGroup, COPY.appearanceGroup, COPY.supportGroup]);
+    expect(settings.getAllByRole('header').map((node) => node.props.children)).toEqual([COPY.title, COPY.accountGroup, COPY.qandeelGroup, COPY.appearanceGroup, COPY.supportGroup]);
     expect(view.getByTestId('qandeel-public-id-value').props.children).toBe(`${LRI}@nightlamp27${PDI}`);
     expect(view.getByTestId('qandeel-public-id-allowance').props.children).toBe(COPY.publicId.available);
 

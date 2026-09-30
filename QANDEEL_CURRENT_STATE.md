@@ -280,7 +280,21 @@ implementation rows are `E2E-D-03` and `D-05`, and `E2E-D-02` is advanced only. 
 (`D-04`, `D-06`, `D-08`, `D-11`, `D-12`, `D-16`, `D-17`) are decided by W3-PDG-01 (below) and are
 `DECIDED — NOT IMPLEMENTED`. `D-17` is decided for its journey and principles only.
 
-**W3-MEGA-A — Account & Identity Completion + Security v1 (IMPLEMENTED ON A DRAFT PR — NOT MERGED).** On baseline
+**W3-MEGA-S — Personal Controls & Settings Integration v1 (IMPLEMENTED ON A DRAFT PR — NOT MERGED).** On baseline
+`1e7b681052c7af09576197bcfb204e1b39775554`: General Settings gains two real groups — «قنديل والمحادثة» / QANDEEL &
+Conversation with the Language row (the SYSTEM setting; iOS per-app language declared, Android the device language; no
+in-app toggle) and «الخصوصية والبيانات» / Privacy & Data with Export My Data (Personal world, server-prepared, owner-only,
+expiring in-app download) and Delete Account for the Personal world (password, cancellable grace period, ONE governed
+Personal erasure through a controlled change to sixteen history guards, provider account removed, identifiers not reused;
+migration `0130`). Reduce Motion is now followed mid-session on the W1A / W3 surfaces.
+**`D-17 PERSONAL-WORLD IMPLEMENTATION — READY`; `D-17 FULL ACCOUNT DELETION — BLOCKED BY CONNECTED WORLDS`**
+(`QAN-BL-ACCT-01`, `QAN-BL-CW-01` stay open). Its new
+copy awaits the Product Owner; Bold Text, the Android per-app language and device validation remain open. W3 stays ACTIVE.
+Record:
+[`docs/e2e/QANDEEL_W3_MEGA_S_PERSONAL_CONTROLS_SETTINGS_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_MEGA_S_PERSONAL_CONTROLS_SETTINGS_IMPLEMENTATION_RECORD_v1.md).
+
+**W3-MEGA-A — Account & Identity Completion + Security v1 (MERGED through PR #295 at
+`1e7b681052c7af09576197bcfb204e1b39775554`).** On baseline
 `f3355e7e0aafacec4153d9049aa029b65a851c13`: the owner's Name and Login ID changes (the Login ID behind the provider's own
 password check, demanded again by the database), Change Email with both confirmations and no partial change, the
 Security & Sign-in group (Change password, Sign out from other devices, the Email as recovery method; a password change

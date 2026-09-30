@@ -38,6 +38,7 @@ export type { AnalysisReturnBarProps } from './AnalysisReturnBar';
 export { ANALYSIS_RETURN_BAR_MIN_HEIGHT, AnalysisReturnBar } from './AnalysisReturnBar';
 
 export { DEPTH_CROSSFADE_MS, DEPTH_CROSSFADE_REDUCED_MOTION_MS } from './visual/motion';
+export { useReduceMotion } from './visual/reduce-motion';
 
 // W1B-01 — the frozen visual foundation this layer resolved, published so the account entry and the
 // first-use surfaces are painted from the SAME generated constants rather than a second copy.

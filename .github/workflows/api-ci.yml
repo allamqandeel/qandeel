@@ -67,6 +67,7 @@ jobs:
       - {name: Verify W3-MEGA-U U2 exact-revision discussion focus (API side of the U2 surface contract), run: npm run test:w3-mega-u2-understanding-surface-contract}
       - {name: Verify W3-MEGA-U U3 Contested / Under Review runtime static contract, run: npm run test:w3-mega-u3-contested-runtime-contract}
       - {name: Verify W3-MEGA-M conversational Memory control static contract, run: npm run test:w3-mega-m-conversational-memory-control-contract}
+      - {name: Verify W3-MEGA-S Personal controls and Privacy & Data static contract, run: npm run test:w3-mega-s-personal-controls-settings-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -761,6 +762,14 @@ jobs:
       # boundary; and committed two-connection races for one Login ID.
       - name: Verify W3-MEGA-A account identity completion and the Shared ID format against real PostgreSQL
         run: npm run verify:account-identity-completion-security:integration
+      # W3-MEGA-S implements Privacy & Data for the Personal world: Export My Data and the Personal-world part of Delete
+      # Account. This verifier proves the private state and exact grants; the sixteen history guards narrowed to the ONE
+      # governed, transaction-bound erasure and closed to every forgery; export re-authentication, server-only asynchronous
+      # preparation, readable content without internal ids or another reader's material, and expiry; deletion
+      # re-authentication, the cancellable grace period, the erasure of a real populated Personal footprint to zero rows,
+      # retired identifiers and no resurrection; the Connected Worlds hard stop (BLOCKED, nothing erased); committed races.
+      - name: Verify W3-MEGA-S Personal export and Personal-world account deletion against real PostgreSQL
+        run: npm run verify:personal-privacy-export-account-deletion:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

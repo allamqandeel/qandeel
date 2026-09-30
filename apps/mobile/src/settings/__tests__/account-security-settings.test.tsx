@@ -14,6 +14,11 @@ import type { ChromeLanguage } from '../../orientation-chrome';
 import type { AccountIdentityView } from '../../runtime-entry';
 import { SettingsSurface, createAccountIdentityController, createPublicIdController, settingsCopy, type AccountIdentityTransport } from '..';
 
+// W3-MEGA-S re-anchor (validation only): the Language row of «قنديل والمحادثة» / QANDEEL & Conversation is now a real group
+// of every Settings root, drawn before Appearance & Accessibility. The language name is its own run (LRI … PDI) in English.
+const drawnLanguage = (language: 'ar' | 'en') => (language === 'ar' ? 'العربية' : String.fromCodePoint(0x2066) + 'English' + String.fromCodePoint(0x2069));
+
+
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
   ...jest.requireActual<object>('react-native/Libraries/ReactNative/RendererProxy'),
   findNodeHandle: (node: unknown) => (node === null || node === undefined ? null : 4242),
@@ -100,6 +105,7 @@ describe.each(['ar', 'en'] as const)('%s — Account & Identity and Security & S
       sec.changePassword,
       sec.signOutOthers,
       id.emailTerm, `${LRI}noor@example.test${PDI}`, id.emailVerified,
+      copy.qandeelGroup, copy.language.term, drawnLanguage(language),
       copy.appearanceGroup, copy.appearance.DARK, copy.appearance.LIGHT, copy.appearance.SYSTEM,
       copy.supportGroup, copy.signOut,
     ]);

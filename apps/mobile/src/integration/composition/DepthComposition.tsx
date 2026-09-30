@@ -43,7 +43,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
-import Animated, { useAnimatedStyle, useFrameCallback, useReducedMotion, useSharedValue } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
 
 import {
@@ -52,6 +52,7 @@ import {
   ConversationSurface,
   DEPTH_CROSSFADE_MS,
   DEPTH_CROSSFADE_REDUCED_MOTION_MS,
+  useReduceMotion,
 } from '../../conversation';
 import { ConversationOpening, FirstUseGate } from '../../account';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
@@ -119,7 +120,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const [understandingShown, setUnderstandingShown] = useState(false);
   const [returnedFromUnderstanding, setReturnedFromUnderstanding] = useState(false);
   const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const incoming = useSharedValue(1);
   const incomingStyle = useAnimatedStyle(() => ({ opacity: incoming.get() }));
 
@@ -329,7 +330,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         })}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} identity={runtime.identity} publicId={runtime.publicId} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (

@@ -14,6 +14,11 @@ import type { ChromeLanguage } from '../../orientation-chrome';
 import type { AccountPublicIdOutcome, PublicIdChangeOutcome } from '../../runtime-entry';
 import { SettingsSurface, createPublicIdController, settingsCopy, type PublicIdController } from '..';
 
+// W3-MEGA-S re-anchor (validation only): the Language row of «قنديل والمحادثة» / QANDEEL & Conversation is now a real group
+// of every Settings root, drawn before Appearance & Accessibility. The language name is its own run (LRI … PDI) in English.
+const drawnLanguage = (language: 'ar' | 'en') => (language === 'ar' ? 'العربية' : String.fromCodePoint(0x2066) + 'English' + String.fromCodePoint(0x2069));
+
+
 // The test renderer has no native node: every located element answers one known handle, so a request to move
 // the screen reader is observable. Nothing else of the renderer is replaced.
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
@@ -108,13 +113,14 @@ describe.each(['ar', 'en'] as const)('%s — Account & Identity: the Public ID',
     expect(words(view)).toEqual([
       copy.title,
       copy.accountGroup, pid.term, `${LRI}@nightlamp27${PDI}`, pid.available,
+      copy.qandeelGroup, copy.language.term, drawnLanguage(language),
       copy.appearanceGroup, copy.appearance.DARK, copy.appearance.LIGHT, copy.appearance.SYSTEM,
       copy.supportGroup, copy.signOut,
     ]);
     const group = view.getByTestId('qandeel-settings-group-account');
     expect(within(group).getByTestId('qandeel-settings-group-account-name').props.accessibilityRole).toBe('header');
     expect(within(group).getAllByRole('button')).toHaveLength(1);
-    expect(view.getAllByRole('header').map((node) => node.props.children)).toEqual([copy.title, copy.accountGroup, copy.appearanceGroup, copy.supportGroup]);
+    expect(view.getAllByRole('header').map((node) => node.props.children)).toEqual([copy.title, copy.accountGroup, copy.qandeelGroup, copy.appearanceGroup, copy.supportGroup]);
   });
 
   it('the handle is an isolated left-to-right run inside the reader’s line, and the row is fully described to a screen reader', async () => {
