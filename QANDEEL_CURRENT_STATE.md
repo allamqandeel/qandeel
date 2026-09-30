@@ -280,6 +280,15 @@ implementation rows are `E2E-D-03` and `D-05`, and `E2E-D-02` is advanced only. 
 (`D-04`, `D-06`, `D-08`, `D-11`, `D-12`, `D-16`, `D-17`) are decided by W3-PDG-01 (below) and are
 `DECIDED — NOT IMPLEMENTED`. `D-17` is decided for its journey and principles only.
 
+**W3-MEGA-A — Account & Identity Completion + Security v1 (IMPLEMENTED ON A DRAFT PR — NOT MERGED).** On baseline
+`f3355e7e0aafacec4153d9049aa029b65a851c13`: the owner's Name and Login ID changes (the Login ID behind the provider's own
+password check, demanded again by the database), Change Email with both confirmations and no partial change, the
+Security & Sign-in group (Change password, Sign out from other devices, the Email as recovery method; a password change
+or recovery ends every other session), and the Shared ID format in the backend only (migration `0129`; no surface before
+W6). Account Photo is `BLOCKED / DEFERRED BY MEDIA STORAGE IMPLEMENTATION BOUNDARY`, so `E2E-D-03` stays open; the Product Owner
+approved its four new copy pairs and its Login ID verification interpretation in R1. Record:
+[`docs/e2e/QANDEEL_W3_MEGA_A_ACCOUNT_IDENTITY_SECURITY_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_MEGA_A_ACCOUNT_IDENTITY_SECURITY_IMPLEMENTATION_RECORD_v1.md).
+
 **W3-PDG-01 — Account, Security & Privacy Product Decision Closure (`CLOSED / FROZEN — PRODUCT DECISIONS` on merge;
 documentation only).** The Product Owner explicitly approved the seven decision directions recorded in
 [`QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md),

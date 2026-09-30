@@ -3732,3 +3732,42 @@ clarification binding (once, next turn only, options only); ownership and fail-c
 committed rows across two connections whose second attempt is shown to block, that two turns correcting one Memory leave
 one successor (the loser commits `TARGET_CHANGED`) and the same turn twice applies once. Its committed fixtures are
 removed and checked gone.
+
+## W3-MEGA-A - Account identity completion and the Shared ID format (migration 0129)
+
+`0129_account_identity_completion_security_v1.sql` completes the owner's account identity on the canonical account row
+(`E2E-D-03` Name, `E2E-D-05` Login ID) and gives the Shared ID its approved human-facing format in the backend only
+(`E2E-D-08`, W3-PDG-01 §4; no surface before W6). Additive and forward-only: one ledger table and ten functions;
+migrations 0001–0128 are untouched, and 0081's rotation is consumed unchanged. Every privileged part lives in the
+non-exposed `account_private` schema (0125); every function in `public` is SECURITY INVOKER.
+
+- **`public.read_own_account_identity_v1()`** — INVOKER, `authenticated`: the caller's own Name and Login ID, under RLS.
+  No Email (the provider holds it), no Public ID, no id.
+- **`public.change_own_account_name_v1(name)`** → `account_private` DEFINER: the one Name, trimmed and bounded exactly as
+  sign-up stores it (0123). `CHANGED` / `UNCHANGED` / `INVALID`; no First / Last split.
+- **`public.change_own_login_id_v1(command, login_id)`** → `account_private` DEFINER. It refuses to read or write anything
+  unless the caller's token carries a provider **password** authentication made within the last minute (`amr`,
+  checked by `account_private.has_recent_password_proof_v1()`), so the identity verification is the provider's own
+  proof, checked where the write happens. Then 0123's grammar and namespace: `CHANGED` / `UNCHANGED` / `INVALID` (also
+  the caller's own Public ID, 0125's same-row rule) / `UNAVAILABLE` (names nobody). No cooldown, no lifetime limit; 0124
+  resolves only the current value, so the old Login ID stops signing in at the commit. The idempotency ledger
+  `account_private.login_id_change_commands` keeps a command identity and a SHA-256 digest of the value, never the
+  value; a replay answers the committed truth and a reused identity for another value is `23505`.
+- **Shared ID format:** `account_private.normalize_shared_id_v1(text)` (case-insensitive; spaces and hyphens ignored; O as
+  0, I / L as 1; canonical `XXXX-XXXX-XXXX` in Crockford base-32), `account_private.generate_shared_id_v1()` (60 bits from
+  `gen_random_uuid()`), `account_private.shared_id_lookup_ref_v1(text)` (0081's representation boundary: persistence holds
+  only `sid1:` + SHA-256 of the canonical Shared ID, so no Shared ID is ever stored in clear) and
+  `account_private.regenerate_own_shared_id_v1(command)`, which takes no value, hands the generated value's reference to
+  0081's `rotate_shared_world_invite_credential_v1` (so the epoch law and the invalidation of older PENDING invitations are
+  0081's own) and returns the value once, storing it nowhere. None of the four is executable by any client role or the
+  server channel.
+
+`database/verify-migration-0129.mjs` (`npm run verify:account-identity-completion-security:integration`, API CI) proves
+the catalog and the exact client-executable set of `account_private`; the owner-only identity read and Name change; the
+Login ID change refused without, with a stale, a future, or with a non-password proof, and with one: the cut-over of 0124
+resolution, the Email unchanged, replay, conflict, every bounded outcome and a digest-only ledger; the Shared ID
+normalizer, generator, derived reference (no Shared ID in clear in state or command history), server-generated first
+setup and replay, a typed lower-case Shared ID resolving through 0081 by its reference, and
+regeneration invalidating the old epoch's PENDING invitation; and, on committed rows across two connections whose second
+attempt is shown to block, that two accounts racing for one Login ID leave one holder and the same command twice commits
+once. The 0125 verifier's exact catalogs were re-anchored (validation only) to name 0129's additions.

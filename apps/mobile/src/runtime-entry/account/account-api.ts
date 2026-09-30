@@ -5,6 +5,11 @@
  *   POST /account/first-use/welcome       — complete the caller's own Welcome step
  *   POST /account/login-id-availability   — may this Login ID still be chosen? (signed out)
  *
+ * W3-02 adds the reader's own Public ID read and change; W3-MEGA-A the reader's own identity read, Name, Login ID,
+ * Email and password changes and "sign out from other devices" (`/account/identity`, `/account/name/change`,
+ * `/account/login-id/change`, `/account/email/change`, `/account/email/confirm`, `/account/password/change`,
+ * `/account/sessions/sign-out-others`).
+ *
  * Transports and nothing else, exactly like the Conversation clients: they hold no credential (the
  * signed-in client goes through the AC-01 request-time seam its caller hands it; the availability
  * client carries none at all), they never repeat a request, and they never decide what an outcome
@@ -58,6 +63,55 @@ export type PublicIdChangeOutcome =
   | { readonly kind: 'NETWORK' };
 
 const PUBLIC_ID_ANSWERS: readonly string[] = Object.freeze(['CHANGED', 'UNCHANGED', 'INVALID', 'UNAVAILABLE', 'ALREADY_USED']);
+
+/** W3-MEGA-A — the reader's own Name, Login ID and Email with its status, as the server read them. */
+export interface AccountIdentityView {
+  readonly name: string | null;
+  readonly loginId: string | null;
+  readonly email: string;
+  readonly emailVerified: boolean;
+}
+
+export type AccountIdentityOutcome = { readonly kind: 'READ'; readonly view: AccountIdentityView } | { readonly kind: 'UNAVAILABLE' };
+
+/**
+ * W3-MEGA-A — the bounded answers of the owner routes (the database or the provider decides each). Every change also
+ * has FAILED (answered, not usably) and NETWORK (no answer): whether it committed is then NOT known here.
+ */
+export type NameChangeOutcome =
+  | { readonly kind: 'ANSWERED'; readonly answer: 'CHANGED' | 'UNCHANGED' | 'INVALID'; readonly name: string | null }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+
+export type LoginIdChangeOutcome =
+  | { readonly kind: 'ANSWERED'; readonly answer: 'CHANGED' | 'UNCHANGED' | 'INVALID' | 'UNAVAILABLE'; readonly loginId: string }
+  | { readonly kind: 'PASSWORD_REJECTED' }
+  | { readonly kind: 'CONFLICT' }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+
+export type EmailChangeRequestOutcome =
+  | { readonly kind: 'ACCEPTED' | 'UNCHANGED' | 'INVALID_EMAIL' | 'PASSWORD_REJECTED' }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+
+export type EmailChangeConfirmOutcome = { readonly kind: 'CHANGED' | 'CODE_REJECTED' } | { readonly kind: 'FAILED' } | { readonly kind: 'NETWORK' };
+
+export type PasswordChangeOutcome =
+  | { readonly kind: 'CHANGED' | 'CHANGED_SIGNED_OUT' | 'POLICY' | 'PASSWORD_REJECTED' }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+
+export type SignOutOthersOutcome = { readonly kind: 'SIGNED_OUT_OTHERS' } | { readonly kind: 'FAILED' } | { readonly kind: 'NETWORK' };
+
+export function decodeIdentity(body: unknown): AccountIdentityView | null {
+  if (!isRecord(body)) return null;
+  const { name, loginId, email, emailVerified } = body;
+  if (name !== null && (typeof name !== 'string' || name === '')) return null;
+  if (loginId !== null && (typeof loginId !== 'string' || loginId === '')) return null;
+  if (typeof email !== 'string' || email === '' || typeof emailVerified !== 'boolean') return null;
+  return { name, loginId, email, emailVerified };
+}
 
 export interface AccountApiConfig {
   /** Origin plus any base path, without a trailing slash. */
@@ -162,6 +216,93 @@ export class AccountApiClient {
     const view = decodePublicId(body);
     if (view === null || !isRecord(body) || typeof body.outcome !== 'string' || !PUBLIC_ID_ANSWERS.includes(body.outcome)) return { kind: 'FAILED' };
     return { kind: 'ANSWERED', answer: body.outcome as PublicIdChangeAnswer, view };
+  }
+
+  /** W3-MEGA-A — the reader's own identity. Read once; never repeated here. */
+  async readIdentity(): Promise<AccountIdentityOutcome> {
+    const answer = await this.exchange('GET', '/account/identity');
+    if (answer.kind !== 'OK') return { kind: 'UNAVAILABLE' };
+    const view = decodeIdentity(answer.body);
+    return view === null ? { kind: 'UNAVAILABLE' } : { kind: 'READ', view };
+  }
+
+  /** W3-MEGA-A — the reader's Name, issued once. A lost answer is reconciled by the caller, by reading. */
+  async changeName(name: string): Promise<NameChangeOutcome> {
+    const answer = await this.exchange('POST', '/account/name/change', { name });
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { outcome, name: current } = answer.body;
+    if ((outcome !== 'CHANGED' && outcome !== 'UNCHANGED' && outcome !== 'INVALID') || (current !== null && typeof current !== 'string')) return { kind: 'FAILED' };
+    return { kind: 'ANSWERED', answer: outcome, name: current };
+  }
+
+  /** W3-MEGA-A — the reader's Login ID, with the password re-entered; ONE command identity per requested value. */
+  async changeLoginId(commandId: string, loginId: string, password: string): Promise<LoginIdChangeOutcome> {
+    const answer = await this.exchange('POST', '/account/login-id/change', { commandId, loginId, password });
+    if (answer.kind === 'STATUS') return answer.status === 409 ? { kind: 'CONFLICT' } : { kind: 'FAILED' };
+    if (answer.kind !== 'OK') return answer;
+    const { outcome, loginId: current } = answer.body;
+    if (outcome === 'PASSWORD_REJECTED') return { kind: 'PASSWORD_REJECTED' };
+    if ((outcome !== 'CHANGED' && outcome !== 'UNCHANGED' && outcome !== 'INVALID' && outcome !== 'UNAVAILABLE') || typeof current !== 'string' || current === '') {
+      return { kind: 'FAILED' };
+    }
+    return { kind: 'ANSWERED', answer: outcome, loginId: current };
+  }
+
+  /** W3-MEGA-A — start an Email change: the password, then the new Email. Nothing changes yet. */
+  async requestEmailChange(password: string, email: string): Promise<EmailChangeRequestOutcome> {
+    const answer = await this.exchange('POST', '/account/email/change', { password, email });
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { outcome } = answer.body;
+    return outcome === 'ACCEPTED' || outcome === 'UNCHANGED' || outcome === 'INVALID_EMAIL' || outcome === 'PASSWORD_REJECTED' ? { kind: outcome } : { kind: 'FAILED' };
+  }
+
+  /** W3-MEGA-A — finish an Email change with the code sent to the new Email and the code sent to the current one. */
+  async confirmEmailChange(email: string, newEmailCode: string, currentEmailCode: string): Promise<EmailChangeConfirmOutcome> {
+    const answer = await this.exchange('POST', '/account/email/confirm', { email, newEmailCode, currentEmailCode });
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { outcome } = answer.body;
+    return outcome === 'CHANGED' || outcome === 'CODE_REJECTED' ? { kind: outcome } : { kind: 'FAILED' };
+  }
+
+  /** W3-MEGA-A — change the password: the current one, then the new one. */
+  async changePassword(password: string, newPassword: string): Promise<PasswordChangeOutcome> {
+    const answer = await this.exchange('POST', '/account/password/change', { password, newPassword });
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { outcome } = answer.body;
+    return outcome === 'CHANGED' || outcome === 'CHANGED_SIGNED_OUT' || outcome === 'POLICY' || outcome === 'PASSWORD_REJECTED' ? { kind: outcome } : { kind: 'FAILED' };
+  }
+
+  /** W3-MEGA-A — sign out from every other device; this one stays signed in. */
+  async signOutOtherDevices(): Promise<SignOutOthersOutcome> {
+    const answer = await this.exchange('POST', '/account/sessions/sign-out-others', {});
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    return answer.body.outcome === 'SIGNED_OUT_OTHERS' ? { kind: 'SIGNED_OUT_OTHERS' } : { kind: 'FAILED' };
+  }
+
+  /** One request on the credential seam: a decoded object body, a non-2xx status, or no usable answer. */
+  private async exchange(
+    method: 'GET' | 'POST',
+    path: string,
+    body?: Record<string, string>,
+  ): Promise<{ readonly kind: 'OK'; readonly body: Record<string, unknown> } | { readonly kind: 'STATUS'; readonly status: number } | { readonly kind: 'FAILED' } | { readonly kind: 'NETWORK' }> {
+    let response: Awaited<ReturnType<RuntimeHttpFetch>>;
+    try {
+      response = await this.config.fetch(`${this.config.baseUrl}${path}`, {
+        method,
+        headers: body === undefined ? { Accept: 'application/json' } : { Accept: 'application/json', 'Content-Type': 'application/json' },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      });
+    } catch {
+      return { kind: 'NETWORK' };
+    }
+    if (!response.ok) return { kind: 'STATUS', status: response.status };
+    let parsed: unknown;
+    try {
+      parsed = await response.json();
+    } catch {
+      return { kind: 'FAILED' };
+    }
+    return isRecord(parsed) ? { kind: 'OK', body: parsed } : { kind: 'FAILED' };
   }
 }
 

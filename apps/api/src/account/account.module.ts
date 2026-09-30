@@ -3,6 +3,9 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
+import { AccountIdentityRepository } from './account-identity.repository';
+import { AccountSecurityController } from './account-security.controller';
+import { AccountSecurityService } from './account-security.service';
 import { AccountController } from './account.controller';
 import { AccountRepository } from './account.repository';
 import { AccountService } from './account.service';
@@ -18,9 +21,12 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  *
  * W2-01 adds the Login ID sign-in exchange beside it, in files of its own: the only place on the server
  * that handles an account's Email, and it never returns one to anyone who has not proved the password.
+ *
+ * W3-MEGA-A adds the owner's own identity and security routes beside them, in files of their own, on the same relay:
+ * an owner reads and changes only their own account.
  */
 @Module({
-  controllers: [AccountController, LoginIdSignInController],
+  controllers: [AccountController, LoginIdSignInController, AccountSecurityController],
   providers: [
     SupabaseAuthService,
     SupabaseAuthGuard,
@@ -31,6 +37,8 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
     LoginIdSignInRepository,
     SupabasePasswordGrantService,
     LoginIdSignInService,
+    AccountIdentityRepository,
+    AccountSecurityService,
   ],
 })
 export class AccountModule {}

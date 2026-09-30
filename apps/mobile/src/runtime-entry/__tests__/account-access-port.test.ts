@@ -207,16 +207,31 @@ describe('password recovery — recovery semantics, kept entirely out of the SDK
     expect(!result.ok && result.failure.kind).toBe(kind);
   });
 
-  it('updates the password with the grant as bearer, then retires the grant (logout, local scope)', async () => {
+  // RE-ANCHORED by W3-MEGA-A. W2-01 left "whether a reset signs out other devices" to the Security & Login Product
+  // decision (W2-01 record §11); W3-PDG-01 §3 made it: recovering the password ends ALL other sessions. So after the
+  // update the grant ends every session of the account (`scope=global`) before it is retired as before; the reader
+  // still ends signed out, and nothing reaches the SDK session.
+  it('updates the password with the grant as bearer, ends every session of the account, then retires the grant (logout, local scope)', async () => {
     const { net, port: p } = port();
     net.answer(200, { id: 'u-1' });
+    net.answer(204, null);
     net.answer(204, null);
     expect(await p.updateRecoveredPassword({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' }, ' new pw ')).toEqual({ ok: true });
     expect(net.sent.map((request) => [request.method, request.url, request.headers.Authorization, request.body])).toEqual([
       ['PUT', `${TEST_CONFIG.supabaseUrl}/auth/v1/user`, 'Bearer recovery-access', { password: ' new pw ' }],
+      ['POST', `${TEST_CONFIG.supabaseUrl}/auth/v1/logout?scope=global`, 'Bearer recovery-access', undefined],
       ['POST', `${TEST_CONFIG.supabaseUrl}/auth/v1/logout?scope=local`, 'Bearer recovery-access', undefined],
     ]);
     expect(mockAuth.updateUser).not.toHaveBeenCalled();
+  });
+
+  it('W3-MEGA-A — a failed end-of-every-session does not turn a changed password into a failure', async () => {
+    const { net, port: p } = port();
+    net.answer(200, { id: 'u-1' });
+    net.answer(500, null);
+    net.answer(204, null);
+    expect(await p.updateRecoveredPassword({ accessToken: 'recovery-access', refreshToken: 'recovery-refresh' }, 'new pw')).toEqual({ ok: true });
+    expect(net.sent.map((request) => request.url.replace(TEST_CONFIG.supabaseUrl, ''))).toEqual(['/auth/v1/user', '/auth/v1/logout?scope=global', '/auth/v1/logout?scope=local']);
   });
 
   it.each([

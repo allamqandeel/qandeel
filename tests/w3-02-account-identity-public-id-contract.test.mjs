@@ -316,16 +316,25 @@ test('one General Settings destination: no second Public Settings destination, n
   assert.match(code(read(`${SRC}/integration/composition/DepthComposition.tsx`)), /<SettingsSurface [^>]*publicId=\{runtime\.publicId\} \/>/u);
 });
 
-test('Account & Identity holds the Public ID and NOTHING else — no placeholder rows for future Account functions', () => {
-  const surfaces = code(read(SETTINGS)) + code(read(SECTION)) + code(read(COPY));
-  const futureRows = /\b(?:loginId|login_id|emailRow|changeEmail|changeName|editName|nameRow|photo|avatar|sharedId|shared_id|security|password)\b|'(?:Login ID|Email|Name|Photo|Shared ID|Security)'|coming soon|قريبًا|placeholder|disabled: true/iu;
+// Re-anchored by W3-MEGA-A: Account & Identity now also holds the REAL Name, Login ID and Email rows (E2E-D-03 / D-05 /
+// D-04), each backed by a working change (`AccountSecuritySection.tsx`, migration 0129, `account-security.*`). The
+// permanent claims are kept: no placeholder, disabled or "coming soon" row; no Account Photo row (media storage is not
+// implemented); no Shared ID row before W6; the Public ID is still ONE row; and the W1B / W3-02 account service still
+// carries none of the newer functions.
+test('Account & Identity holds only REAL functions — no placeholder, no Photo, no Shared ID row', () => {
+  const surfaces = code(read(SETTINGS)) + code(read(SECTION)) + code(read(`${SETTINGS_DIR}/AccountSecuritySection.tsx`)) + code(read(COPY));
+  const futureRows = /\b(?:photo|avatar|sharedId|shared_id|SharedIdRow|PhotoRow)\b|'(?:Photo|Shared ID|Account photo)'|coming soon|قريبًا|placeholder|disabled: true/iu;
   const noPlaceholders = (text) => !futureRows.test(text);
   guards('placeholder-account-row', surfaces, noPlaceholders, "const loginIdRow = { label: 'Login ID', disabled: true };");
+  guards('photo-row-before-media-storage', surfaces, noPlaceholders, "<IdentityRow term={copy.identity.photo} value='' />");
+  guards('shared-id-row-before-w6', surfaces, noPlaceholders, "const sharedIdRow = <SharedIdRow />;");
   const settings = code(read(SETTINGS));
-  const group = settings.slice(settings.indexOf('testID="qandeel-settings-group-account"'), settings.indexOf('testID="qandeel-settings-group-appearance"'));
+  const group = settings.slice(settings.indexOf('testID="qandeel-settings-group-account"'), settings.indexOf('testID="qandeel-settings-group-security"'));
   assert.equal((group.match(/<PublicIdRow\b/gu) ?? []).length, 1);
-  assert.equal((group.match(/<Control\b|<Pressable\b|<TextInput\b/gu) ?? []).length, 0, 'the group’s only control is the Public ID row');
-  // No future-function API was added either.
+  assert.deepEqual([...group.matchAll(/testID="(qandeel-[a-z-]+-row)"/gu)].map((m) => m[1]), ['qandeel-name-row', 'qandeel-login-id-row', 'qandeel-email-row'],
+    'the group’s other rows are exactly Name, Login ID and Email');
+  assert.equal((group.match(/<Pressable\b|<TextInput\b/gu) ?? []).length, 0, 'no field lives on the group itself; changes are states');
+  // The W1B / W3-02 account service carries none of the newer functions: they live in their own files.
   const service = code(read(`${API}/account.service.ts`));
   assert.doesNotMatch(service, /changeName|changeLoginId|changeEmail|sharedId|uploadPhoto/u);
 });
