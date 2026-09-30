@@ -243,7 +243,13 @@ describe('UnderstandingService', () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4, status: 'MIXED' })]);
       (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'ALREADY_UNDER_REVIEW', contested_version: 3, reevaluated_version: 4 }]);
       await expect(ask(4, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')).resolves.toMatchObject({ underReview: true });
-      expect(confidenceRuntime.evaluateHypothesisVersion).not.toHaveBeenCalled();
+      // R1: nothing is mutated, but a missing exact-version evaluation of the re-evaluated version is repaired, once.
+      expect(repository.recordDisagreement).toHaveBeenCalledTimes(1);
+      expect(confidenceRuntime.evaluateHypothesisVersion).toHaveBeenCalledTimes(1);
+      expect(confidenceRuntime.evaluateHypothesisVersion).toHaveBeenCalledWith(USER, 'token', H1, 4);
+      confidence.listExactVersionsForTargets.mockResolvedValue([evaluation(hypothesis(H1, { version: 4 }))]);
+      await expect(ask(4, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')).resolves.toMatchObject({ underReview: true });
+      expect(confidenceRuntime.evaluateHypothesisVersion).toHaveBeenCalledTimes(1);
       // An old revision on an item already under review answers the same, without a command.
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 9, status: 'MIXED' })]);
       repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00Z' }]);
@@ -275,6 +281,8 @@ describe('UnderstandingService', () => {
         { before_status: 'SUPPORTED', after_status: 'MIXED', after_version: 4, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-09-30T10:00:00.000000+00:00' },
       ]);
       await expect(service.list(USER, 'token', {})).resolves.toMatchObject({ items: [{ confidence: 'MIXED', underReview: true }] });
+      // R1: the contest read is bound to the exact current items — never a capped window that could drop one.
+      expect(repository.listContestsUnderReview).toHaveBeenLastCalledWith('token', USER, [H1]);
       const detail = await service.detail(USER, 'token', understandingItemRef(USER, H1));
       expect(detail).toMatchObject({ confidence: 'MIXED', underReview: true, summary: contested.statement });
       expect(detail.evolution.map((entry) => entry.kind)).toEqual(['YOU_DISAGREED', 'FIRST_SEEN']);

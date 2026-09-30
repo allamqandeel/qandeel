@@ -86,6 +86,7 @@ DECLARE
   v_item public.hypotheses;
   v_prior public.understanding_contests;
   v_after_version integer;
+  v_conflict text;
 BEGIN
   IF v_user IS NULL THEN
     RAISE EXCEPTION 'an authenticated caller is required' USING ERRCODE = '42501';
@@ -128,23 +129,35 @@ BEGIN
     RETURN;
   END IF;
 
-  -- The re-evaluation's lifecycle step, through the ONE audited lifecycle core, at the exact version.
-  IF v_item.status = 'MIXED' THEN
-    v_after_version := v_item.version;
-  ELSE
-    SELECT t.version INTO v_after_version
-      FROM public.transition_hypothesis_core_v1(v_user, v_item.id, v_item.version, 'MIXED', 'AUTHENTICATED_TRANSITION') t;
-    IF v_after_version IS NULL OR v_after_version <> v_item.version + 1 THEN
-      RAISE EXCEPTION 'UNDERSTANDING_REEVALUATION_FAILED' USING ERRCODE = '55000';
+  -- The re-evaluation's lifecycle step, through the ONE audited lifecycle core, at the exact version, and the contest
+  -- record, as ONE unit: the one command identity used at the same instant for another item (which the item lock does
+  -- not serialize) meets the command key, and then BOTH are undone and the answer is the bounded COMMAND_CONFLICT —
+  -- never a MIXED step without its contest.
+  BEGIN
+    IF v_item.status = 'MIXED' THEN
+      v_after_version := v_item.version;
+    ELSE
+      SELECT t.version INTO v_after_version
+        FROM public.transition_hypothesis_core_v1(v_user, v_item.id, v_item.version, 'MIXED', 'AUTHENTICATED_TRANSITION') t;
+      IF v_after_version IS NULL OR v_after_version <> v_item.version + 1 THEN
+        RAISE EXCEPTION 'UNDERSTANDING_REEVALUATION_FAILED' USING ERRCODE = '55000';
+      END IF;
     END IF;
-  END IF;
 
-  INSERT INTO public.understanding_contests (
-    id, user_id, hypothesis_id, command_id, contested_version, lifecycle,
-    reevaluation_before_status, reevaluation_after_status, reevaluation_after_version, created_at)
-  VALUES (
-    pg_catalog.gen_random_uuid(), v_user, v_item.id, p_command_id, v_item.version, 'UNDER_REVIEW',
-    v_item.status, 'MIXED', v_after_version, clock_timestamp());
+    INSERT INTO public.understanding_contests (
+      id, user_id, hypothesis_id, command_id, contested_version, lifecycle,
+      reevaluation_before_status, reevaluation_after_status, reevaluation_after_version, created_at)
+    VALUES (
+      pg_catalog.gen_random_uuid(), v_user, v_item.id, p_command_id, v_item.version, 'UNDER_REVIEW',
+      v_item.status, 'MIXED', v_after_version, clock_timestamp());
+  EXCEPTION WHEN unique_violation THEN
+    GET STACKED DIAGNOSTICS v_conflict = CONSTRAINT_NAME;
+    IF v_conflict = 'understanding_contests_command_key' THEN
+      RETURN QUERY SELECT 'COMMAND_CONFLICT'::text, NULL::integer, NULL::integer;
+      RETURN;
+    END IF;
+    RAISE;
+  END;
 
   RETURN QUERY SELECT 'RECORDED'::text, v_item.version, v_after_version;
 END;

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from '../memory/memory-data-api.service';
 import type { EvidenceRole, HypothesisStatus } from '../hypothesis/hypothesis.types';
+import { MAX_ACTIVE_HYPOTHESES } from '../hypothesis/hypothesis.types';
 import { MAX_DETAIL_EVOLUTION } from './understanding.types';
 
 export interface UnderstandingEvidenceUpdateRow {
@@ -64,11 +65,17 @@ export class UnderstandingRepository {
     });
   }
 
-  /** U3 — the reader's contests under review, bounded by the one-per-item rule to the current item cap. */
-  listContestsUnderReview(token: string, userId: string): Promise<UnderstandingContestRow[]> {
+  /**
+   * U3 — the reader's contests under review ON THESE items. Contests never lapse, so an unfiltered, capped read could
+   * silently drop an old contest on a still-current item; the read is therefore bound to the exact current item ids
+   * (at most the active cap), and one contest under review per item bounds the answer to the same number.
+   */
+  listContestsUnderReview(token: string, userId: string, hypothesisIds: readonly string[]): Promise<UnderstandingContestRow[]> {
+    if (hypothesisIds.length === 0) return Promise.resolve([]);
+    if (hypothesisIds.length > MAX_ACTIVE_HYPOTHESES) throw new Error('UNDERSTANDING_CONTEST_READ_BOUND_EXCEEDED');
     const query = new URLSearchParams({
       select: 'hypothesis_id,reevaluation_after_version,created_at', user_id: `eq.${userId}`, lifecycle: 'eq.UNDER_REVIEW',
-      order: 'created_at.desc,id.asc', limit: '64',
+      hypothesis_id: `in.(${hypothesisIds.join(',')})`, order: 'created_at.desc,id.asc', limit: String(hypothesisIds.length),
     });
     return this.dataApi.request<UnderstandingContestRow[]>(token, `understanding_contests?${query}`);
   }

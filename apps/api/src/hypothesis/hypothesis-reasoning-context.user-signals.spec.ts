@@ -68,6 +68,8 @@ describe('HypothesisReasoningContextService — U2 discussion focus', () => {
     ]);
     // Contested is a reliance fact, not a deletion: the item stays in the context, marked.
     expect(context).toHaveLength(3);
+    // R1: read for exactly these candidates, so no old contest can fall outside a capped window.
+    expect(signals.listUnderReview).toHaveBeenCalledWith('token', 'user', ['a', 'b', 'c']);
   });
 
   it('a failed contest read fails the whole context, so a contested item is never consumed as uncontested', async () => {

@@ -271,7 +271,7 @@ and a provider restating the interpretation cannot clear it.
 - Mobile: a lost answer is retried as the SAME command (recorded at most once); `CHANGED` re-reads the item, shows the
   current interpretation and records nothing — the reader decides again; `CONFLICT` mints a new command next time.
 - Real PostgreSQL (`database/verify-migration-0127.mjs`): two different commands racing on one item → exactly one
-  `RECORDED`, one `ALREADY_UNDER_REVIEW`, one contest, one version step; the same command twice → one contest.
+  `RECORDED`, one `ALREADY_UNDER_REVIEW`, one contest, one version step; the same command twice → one contest; one command id on two items at once → one `RECORDED`, one `COMMAND_CONFLICT` whose `MIXED` step is undone (R1).
 
 ### 4.4 Re-evaluation — real, through existing machinery
 
@@ -283,8 +283,11 @@ and a provider restating the interpretation cannot clear it.
    one the frozen graph already allows. Nothing else of the Hypothesis changes: statement, Evidence, assumptions and
    alternatives are untouched, it is never deleted, rejected or retired, and history is not rewritten.
 2. **Confidence**: the Confidence Runtime's own `evaluateHypothesisVersion` at the returned `reevaluated_version` —
-   never a later one; at most once per version (a replay finds it); a failure degrades exactly like the Hypothesis Update
-   Loop (the committed contest stands; a replay evaluates then).
+   never a later one; at most once per version. It is a fresh structural snapshot of the new `MIXED` version from the
+   same canonical inputs; the contest itself is not a Confidence input (the Confidence Runtime has none for it, and none
+   is invented). A failure changes nothing relied on: the item is `MIXED` and under review regardless (projection rule
+   1), and a missing exact-version record is `NOT_EVALUATED_FOR_CURRENT_VERSION`, never an older one; a later
+   disagreement request on the item (replay, or another command answering `ALREADY_UNDER_REVIEW`) repairs it.
 3. **Reliance** (below). No supporting Evidence is manufactured and no user text becomes Evidence.
 
 The result of this re-evaluation is "remains contested / under review" (P1 §11.5 "become contested"). Later canonical
@@ -305,7 +308,7 @@ lifecycle moves (weaken, change, withdraw, support) stay with their existing law
 
 ### 4.6 User-visible behaviour
 
-The line says «سُجّل رأيك، وسيعيد قنديل النظر في هذا الفهم.» and the act disappears; the context stays; the draft is the
+The line says «سُجّل رأيك، وصار هذا الفهم قيد المراجعة.» and the act disappears; the context stays; the draft is the
 reader's; nothing is sent for them. Reopening Understanding always opens on the freshly read first view (a proof-found
 defect fixed in U3: it had reopened on an explanation read before the disagreement). The state is server-truth, so it
 survives a restart (integration-proven with a fresh runtime).
@@ -315,7 +318,7 @@ survives a restart (integration-proven with a fresh runtime).
 | Key | Arabic | English |
 |---|---|---|
 | disagree | أراه بشكل مختلف | I see it differently |
-| recorded | سُجّل رأيك، وسيعيد قنديل النظر في هذا الفهم. | Your view is noted. QANDEEL will reconsider this understanding. |
+| recorded | سُجّل رأيك، وصار هذا الفهم قيد المراجعة. | Your view is noted. This understanding is now under review. |
 | failed | تعذّر تسجيل رأيك. | Your view couldn't be recorded. |
 | under review | قيد المراجعة | Under review |
 | detail note | أخذ قنديل برأيك، وهذا الفهم قيد المراجعة. | QANDEEL took your view into account. This understanding is under review. |
@@ -336,11 +339,31 @@ first-person-free forms so nothing is gendered.
   no words sent, no turn sent, draft kept, list shows Mixed + under review, and again after a restart.
 - `database/verify-migration-0127.mjs` (real PostgreSQL, API CI and the focused gate): catalog, grants, every outcome,
   the audited transition, no deletion, isolation, committed two-connection races proven to block.
-- `tests/w3-mega-u3-contested-runtime-contract.test.mjs`: seven detectors, twenty planted defects (DEFINER exposed, client
+- `tests/w3-mega-u3-contested-runtime-contract.test.mjs`: seven detectors, twenty-one planted defects (a capped contest window, DEFINER exposed, client
   write grant, caller-supplied owner, message stored, words sent, cosmetic re-evaluation, unaudited status write, no
   Confidence, Confidence at a later version, objection applied to a newer interpretation, two contests, a retry as a new
   command, deletion, rejection, auto-resolution, a decorative badge, the provider never told, guidance that keeps
   relying, keyword interception, a non-explicit act).
+
+### 4.9 U3 R1 — independent adversarial self-review of the whole stack
+
+An independent review agent reviewed `92444c3..3fc14e0` against §14 of the task. Findings and dispositions:
+
+| # | Severity | Finding | Class | Disposition |
+|---|---|---|---|---|
+| 1 | HIGH | the 0126 verifier counted every `understanding_private` function, so with 0127 applied (API CI applies all migrations first) it would fail | validation | fixed: both catalog queries scoped to the discussion functions |
+| 2 | MEDIUM | contest reads were capped at 64 and unfiltered; contests never lapse, so an old contest on a still-current item could drop out and be projected / sent to the provider as uncontested | Product (reliance) | fixed: both reads bound to the exact current item ids |
+| 3 | MEDIUM | "QANDEEL will reconsider" promised a runtime step; the Confidence claim overstated its repair | Product copy / record accuracy | fixed: the copy now says the understanding is now under review; §4.4 corrected; a repair on `ALREADY_UNDER_REVIEW` added |
+| 4 | LOW | a replay could hand the client an older revision | Product | fixed: the answer is the current interpretation's revision |
+| 5 | LOW | the same command id used at the same instant for two items surfaced a unique violation as 503 | Product | fixed: the lifecycle step and the contest insert are one exception block; the violation undoes both and answers `COMMAND_CONFLICT` |
+| 6 | LOW | `ALREADY_UNDER_REVIEW` precedes `STALE`: a reader holding an older revision of an item already under review is told it is under review | Product | kept deliberately: the item IS under review by the same reader's earlier explicit act; nothing is recorded for the older revision; the copy states only that it is under review |
+| 7 | LOW | the 0127 verifier's cleanup could mask the original error after an aborted transaction | validation | fixed: `ROLLBACK` first |
+
+Recorded, not changed (concerns the review did not confirm as defects): Recommendation grounding counts contested items
+toward its coverage (the central guidance already forbids relying on them); `unresolved` shows the Hypothesis's
+explicit `assumptions` metadata (the Hypothesis Runtime defines them as "explicit metadata, not hidden reasoning", which
+is P1 §11.2's "unresolved points"); Evidence eligibility can change without the revision changing (the interpretation
+itself stays bound).
 
 ## 5. Lifecycle truth and row accounting
 
@@ -362,7 +385,8 @@ first-person-free forms so nothing is gendered.
 2. Summaries are the canonical statement text in whatever language generation produced; no rewrite into the reader's
    Product language exists.
 3. Contest resolution beyond the immediate re-evaluation is undefined by Product authority, so a contest stays under
-   review.
+   review — including when an item is later withdrawn and reopened, where it is still shown as under review and a
+   second objection answers `ALREADY_UNDER_REVIEW`.
 4. The discussion focus lapses after 30 minutes if its close request is lost.
 5. No device / raster proof campaign was run for this surface (validation proportional: React UI states, 320 / text-scale
    structure and accessibility semantics are unit- and integration-proven; the Mobile CI boot smoke runs where native

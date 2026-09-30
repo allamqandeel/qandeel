@@ -107,7 +107,7 @@ async function verifyCatalog() {
   stage = 'catalog: the privileged boundary lives in a non-exposed schema';
   const fns = await rows(`SELECT n.nspname AS schema, p.proname, p.prosecdef, p.proconfig, pg_get_function_identity_arguments(p.oid) AS args
       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-     WHERE n.nspname = 'understanding_private' OR (n.nspname = 'public' AND p.proname ~ 'understanding_discussion') ORDER BY 1, 2`);
+     WHERE p.proname ~ 'understanding_discussion' AND n.nspname IN ('public', 'understanding_private') ORDER BY 1, 2`);
   assert.deepEqual(fns.map((f) => `${f.schema}.${f.proname}(${f.args}) ${f.prosecdef ? 'DEFINER' : 'INVOKER'}`), [
     'public.close_understanding_discussion_v1(p_hypothesis_id uuid) INVOKER',
     'public.open_understanding_discussion_v1(p_hypothesis_id uuid, p_expected_version integer) INVOKER',
@@ -127,11 +127,11 @@ async function verifyCatalog() {
   }
   const executable = await rows(`SELECT r.rolname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     CROSS JOIN (SELECT 'anon' AS rolname UNION ALL SELECT 'authenticated' UNION ALL SELECT 'service_role' UNION ALL SELECT 'public') r
-    WHERE n.nspname = 'understanding_private' AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2`);
+    WHERE n.nspname = 'understanding_private' AND p.proname ~ 'understanding_discussion' AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2`);
   assert.deepEqual(executable, [
     { rolname: 'authenticated', proname: 'close_understanding_discussion_v1' },
     { rolname: 'authenticated', proname: 'open_understanding_discussion_v1' },
-  ], 'no broad grant on the private schema');
+  ], 'no broad grant on the private schema for the discussion commands (later migrations add their own, verified by their own verifier)');
   const usage = await rows(`SELECT r AS role, has_schema_privilege(r, 'understanding_private', 'USAGE') AS usage
     FROM unnest(ARRAY['anon', 'authenticated', 'service_role', 'public']) r ORDER BY r`);
   assert.deepEqual(usage.filter((u) => u.usage).map((u) => u.role), ['authenticated']);

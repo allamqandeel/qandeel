@@ -100,7 +100,10 @@ function relianceViolations(world) {
   if (!/if \(facts\.contested\) return 'MIXED';/u.test(world.projection)) out.push('a contested item is not Mixed');
   if (!/if \(value\.underReview === true && value\.confidence !== 'MIXED'\) reject\(\);/u.test(world.projection)) out.push('an item under review could be shown as anything but Mixed');
   if (!/\.\.\.\(underReview\.has\(candidate\.id\) \? \{ userContest: 'UNDER_REVIEW' as const \} : \{\}\),/u.test(world.reasoning)) out.push('the provider context does not carry the contest');
-  if (!/this\.signals \? this\.signals\.listUnderReview\(token, userId\)/u.test(world.reasoning)) out.push('the provider context does not read the contests');
+  // R1: contests never lapse, so every contest read is bound to the exact current ids — never a capped window.
+  if (!/hypothesis_id: `in\.\(\$\{hypothesisIds\.join\(','\)\}\)`/u.test(world.signals)) out.push('the provider-side contest read is not bound to the current items');
+  if (/limit: '64'/u.test(world.signals)) out.push('a capped contest window');
+  if (!/this\.signals \? this\.signals\.listUnderReview\(token, userId, candidates\.map\(\(\{ id \}\) => id\)\)/u.test(world.reasoning)) out.push('the provider context does not read the contests');
   if (!/userContest UNDER_REVIEW is one the user has explicitly disagreed with: it is contested and under review, so do not rely on it/u.test(world.guidance)) out.push('the guidance does not reduce reliance on a contested item');
   if (/userContest[^.]*(?:certain|confirmed|true)/iu.test(world.guidance.match(/A hypothesis carrying userContest[^.]*\.[^.]*\./u)?.[0] ?? '')) out.push('the guidance turns a contest into certainty');
   return out;
@@ -144,7 +147,8 @@ const PLANTED = [
   ['a disagreement that rejects the item', 'noDeletionViolations', () => plant('migration', "v_item.id, v_item.version, 'MIXED', 'AUTHENTICATED_TRANSITION'", "v_item.id, v_item.version, 'REJECTED', 'AUTHENTICATED_TRANSITION'")],
   ['a contest auto-resolved', 'noDeletionViolations', () => plant('migration', "CHECK (lifecycle IN ('UNDER_REVIEW'))", "CHECK (lifecycle IN ('UNDER_REVIEW', 'RESOLVED'))")],
   ['a decorative badge (projection ignores it)', 'relianceViolations', () => plant('service', 'contested: context.contests.has(hypothesis.id),', 'contested: false,')],
-  ['the provider never told', 'relianceViolations', () => plant('reasoning', "...(underReview.has(candidate.id) ? { userContest: 'UNDER_REVIEW' as const } : {}),", '')],
+  ['a capped, unfiltered contest window', 'relianceViolations', () => plant('signals', "hypothesis_id: `in.(${hypothesisIds.join(',')})`, limit: String(hypothesisIds.length),", "limit: '64',")],
+  ['the provider never told', 'relianceViolations',() => plant('reasoning', "...(underReview.has(candidate.id) ? { userContest: 'UNDER_REVIEW' as const } : {}),", '')],
   ['guidance that keeps relying on it', 'relianceViolations', () => plant('guidance', 'so do not rely on it', 'so rely on it as usual')],
   ['keyword interception in the conversation path', 'explicitTriggerViolations', () => ({ ...src, conversationPath: `${src.conversationPath}\nif (/I disagree|that is wrong/i.test(content)) await understanding.disagree(ref);` })],
   ['a disagreement not made by one explicit control', 'explicitTriggerViolations', () => plant('strip', 'void controller.disagree();', 'void controller.endDiscussion();')],

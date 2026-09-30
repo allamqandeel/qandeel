@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from '../memory/memory-data-api.service';
+import { MAX_ACTIVE_HYPOTHESES } from './hypothesis.types';
 
 /**
  * W3-MEGA-U — the reader's own explicit signals about their QANDEEL Understanding, as the provider-facing Hypothesis
@@ -30,11 +31,17 @@ export class HypothesisUserSignalRepository {
   }
 
   /**
-   * U3 (PG-01) — the items the reader EXPLICITLY disagreed with that are Contested / Under Review (migration 0127).
-   * One contest under review per item, so the bound is the reader's item cap.
+   * U3 (PG-01) — which of THESE items the reader EXPLICITLY disagreed with and are Contested / Under Review (migration
+   * 0127). Contests never lapse, so the read is bound to the exact candidate ids — never an unfiltered, capped window
+   * that could drop an old contest on a still-current item and hand it to the provider as uncontested.
    */
-  async listUnderReview(token: string, userId: string): Promise<ReadonlySet<string>> {
-    const query = new URLSearchParams({ select: 'hypothesis_id', user_id: `eq.${userId}`, lifecycle: 'eq.UNDER_REVIEW', limit: '64' });
+  async listUnderReview(token: string, userId: string, hypothesisIds: readonly string[]): Promise<ReadonlySet<string>> {
+    if (hypothesisIds.length === 0) return new Set();
+    if (hypothesisIds.length > MAX_ACTIVE_HYPOTHESES) throw new Error('UNDERSTANDING_CONTEST_READ_BOUND_EXCEEDED');
+    const query = new URLSearchParams({
+      select: 'hypothesis_id', user_id: `eq.${userId}`, lifecycle: 'eq.UNDER_REVIEW',
+      hypothesis_id: `in.(${hypothesisIds.join(',')})`, limit: String(hypothesisIds.length),
+    });
     const rows = await this.dataApi.request<{ hypothesis_id: string }[]>(token, `understanding_contests?${query}`);
     if (!Array.isArray(rows)) throw new Error('UNDERSTANDING_CONTEST_READ_INVALID');
     return new Set(rows.map((row) => {

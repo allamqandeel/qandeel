@@ -151,7 +151,7 @@ export class UnderstandingService {
       const seen = [hypothesis.version, hypothesis.version - 1]
         .find((version) => version >= 1 && understandingRevision(userId, hypothesis.id, version) === revision);
       if (seen === undefined) {
-        const contests = await this.repository.listContestsUnderReview(token, userId);
+        const contests = await this.repository.listContestsUnderReview(token, userId, [hypothesis.id]);
         if (Array.isArray(contests) && contests.some((row) => row?.hypothesis_id === hypothesis.id)) {
           return this.underReview(userId, hypothesis.id, hypothesis.version);
         }
@@ -163,9 +163,15 @@ export class UnderstandingService {
         case 'RECORDED': {
           if (!Number.isSafeInteger(row.reevaluated_version)) this.reject();
           await this.reevaluateConfidence(userId, token, hypothesis.id, row.reevaluated_version as number);
-          return this.underReview(userId, hypothesis.id, row.reevaluated_version as number);
+          // The revision the client keeps is the CURRENT interpretation's: a replay may answer an older committed
+          // truth while the item has since moved on.
+          return this.underReview(userId, hypothesis.id, Math.max(hypothesis.version, row.reevaluated_version as number));
         }
         case 'ALREADY_UNDER_REVIEW':
+          // A missed exact-version evaluation of the re-evaluated version is repaired here too (at most once).
+          if (Number.isSafeInteger(row.reevaluated_version) && row.reevaluated_version === hypothesis.version) {
+            await this.reevaluateConfidence(userId, token, hypothesis.id, hypothesis.version);
+          }
           return this.underReview(userId, hypothesis.id, hypothesis.version);
         case 'STALE':
           throw this.changed();
@@ -182,8 +188,10 @@ export class UnderstandingService {
   /**
    * The re-evaluation's Confidence step: the Confidence Runtime's own exact-version evaluation of the re-evaluated
    * version — at most once per version (a replayed command finds it already there), and never against a later
-   * version (the database refuses one that is no longer current). A failure leaves the committed contest untouched;
-   * the item is already MIXED / under review, and a replay of the same command evaluates it then.
+   * version (the database refuses one that is no longer current). A failure leaves the committed contest untouched and
+   * changes nothing the reader or the provider relies on: the item is already MIXED and under review (projection rule
+   * 1), and an absent exact-version record is NOT_EVALUATED_FOR_CURRENT_VERSION, never an older one. A later disagreement
+   * request on the item (a replay, or another command answering ALREADY_UNDER_REVIEW) repairs it.
    */
   private async reevaluateConfidence(userId: string, token: string, hypothesisId: string, version: number): Promise<void> {
     try {
@@ -235,7 +243,7 @@ export class UnderstandingService {
     const [eligible, evaluations, contestRows] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
       this.confidence.listExactVersionsForTargets(token, userId, surfaced.map(({ id, version }) => ({ id, version }))),
-      this.repository.listContestsUnderReview(token, userId),
+      this.repository.listContestsUnderReview(token, userId, surfaced.map(({ id }) => id)),
     ]);
     if (!Array.isArray(eligible) || !Array.isArray(evaluations) || !Array.isArray(contestRows)) this.reject();
     const contests = new Map<string, UnderstandingContestRow>();

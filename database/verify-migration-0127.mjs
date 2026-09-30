@@ -265,6 +265,8 @@ async function verifyConcurrency() {
     await client.query('INSERT INTO auth.users (id) VALUES ($1)', [reader]);
     const first = await hypothesisAlong(reader, ['ACTIVE']);
     const second = await hypothesisAlong(reader, ['ACTIVE']);
+    const third = await hypothesisAlong(reader, ['ACTIVE']);
+    const fourth = await hypothesisAlong(reader, ['ACTIVE']);
     await client.query('COMMIT');
 
     stage = 'concurrency: two different commands on one item — exactly one records, one version step';
@@ -279,10 +281,21 @@ async function verifyConcurrency() {
     assert.deepEqual([p.outcome, q.outcome, q.reevaluated_version], ['RECORDED', 'RECORDED', second.version + 1]);
     assert.equal((await itemOf(second.id)).version, second.version + 1);
     assert.equal((await contestsOf(reader)).filter((c) => c.hypothesis_id === second.id).length, 1);
+
+    stage = 'concurrency: one command id on two items at once — one records, the other is COMMAND_CONFLICT and undone';
+    const shared = randomUUID();
+    const [r, s] = await race(reader, [shared, third.id, third.version], [shared, fourth.id, fourth.version]);
+    assert.deepEqual([r.outcome, s.outcome], ['RECORDED', 'COMMAND_CONFLICT']);
+    assert.deepEqual([(await itemOf(fourth.id)).status, (await itemOf(fourth.id)).version], ['ACTIVE', fourth.version], 'the losing MIXED step is undone with its contest');
+    assert.equal((await transitionsOf(fourth.id)).filter((row) => row.after_status === 'MIXED').length, 0);
+    assert.equal((await contestsOf(reader)).filter((c) => c.hypothesis_id === fourth.id).length, 0);
   } finally {
     stage = 'concurrency: fixture removal';
     // Hypotheses and their history are append-only by design (0072), so the committed fixtures are removed as the
-    // table owner with triggers suspended for THIS session only, from every public table that names the reader.
+    // table owner with triggers suspended for THIS session only, from every public table that names the reader. A
+    // failure part-way through the fixtures may have left a transaction aborted: it is ended first, so the original
+    // error is the one reported.
+    await client.query('ROLLBACK');
     await client.query('BEGIN');
     await client.query("SET LOCAL session_replication_role = 'replica'");
     const tables = await rows(`SELECT c.table_name FROM information_schema.columns c JOIN information_schema.tables t
