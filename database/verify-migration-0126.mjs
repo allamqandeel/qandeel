@@ -186,6 +186,17 @@ async function verifyBehaviour() {
   assert.equal(await open(second.id, second.version), 'OPENED');
   assert.equal((await focusOf(reader))[0].closed_at, null, 'a later open reopens it');
 
+  stage = 'R2: the stored version is the one the command accepted, and an advance never rewrites it';
+  assert.equal((await focusOf(reader))[0].hypothesis_version, second.version);
+  await asOwner();
+  await client.query('SELECT 1 FROM public.transition_hypothesis_core_v1($1, $2, $3, $4, $5)', [reader, second.id, second.version, 'MIXED', 'AUTHENTICATED_TRANSITION']);
+  await actAs('authenticated', reader);
+  focus = await focusOf(reader);
+  assert.equal(focus[0].hypothesis_version, second.version, 'the focus keeps the version the reader chose — it is never moved to the newer one');
+  assert.equal(await open(second.id, second.version), 'STALE', 'the old revision can no longer be opened');
+  assert.equal(await open(second.id, second.version + 1), 'OPENED', 'only a new explicit selection names the new version');
+  assert.equal((await focusOf(reader))[0].hypothesis_version, second.version + 1);
+
   stage = 'isolation: another reader sees nothing and cannot close it';
   await actAs('authenticated', other);
   assert.equal((await rows('SELECT count(*)::int AS n FROM public.understanding_discussion_focus'))[0].n, 0);

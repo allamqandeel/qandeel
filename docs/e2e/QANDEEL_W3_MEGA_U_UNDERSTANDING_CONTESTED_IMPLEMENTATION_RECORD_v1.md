@@ -179,8 +179,8 @@ signal (`QAN-BL-CTX-01` stays unclaimed) and nothing is shown as a rank. With no
 - Server: migration `0126` (`database/README.md`) holds ONE owner-only discussion focus per reader (private DEFINER /
   public INVOKER, exact version under `FOR SHARE`, bounded `OPENED` / `STALE` / `NOT_FOUND`, a close that only closes the
   named item). The provider-facing `HypothesisReasoningContextService` reads it with the caller's token and, while it is
-  open and at most `DISCUSSION_FOCUS_WINDOW_MS` (30 minutes) old, marks that one item
-  `userDiscussion: 'OPENED_FROM_UNDERSTANDING'` and offers it first. It is the reader's own explicit act, not a
+  open, at most `DISCUSSION_FOCUS_WINDOW_MS` (30 minutes) old, and (R2, §3.6) the item is still at the **exact version
+  the reader chose**, marks that one item `userDiscussion: 'OPENED_FROM_UNDERSTANDING'` and offers it first. It is the reader's own explicit act, not a
   relevance ranking (`QAN-BL-CTX-01` stays unclaimed). The central hypothesis guidance gains one sentence: the item
   stays provisional, the user leads, and their view is heard rather than argued down. A failed focus read fails the
   whole Hypothesis context (it is then omitted), never consumed without it. The Conversation orchestrator, the
@@ -236,6 +236,29 @@ The Arabic avoids gendered imperatives (a verbal noun for the talk control) and 
 - `tests/w3-mega-u2-understanding-surface-contract.test.mjs`: seven detectors, fifteen planted defects.
 - Validation re-anchors: the W3-02 contract's "0125 is the last migration" is now "0125 directly follows 0124"; the U1
   contract counts one token identity per route.
+
+### 3.6 R2-A — the discussion focus is consumed at its exact revision
+
+Independent review found that migration `0126` stored the exact `hypothesis_version` the reader chose, but the
+provider-side read selected only `hypothesis_id, opened_at`, and the resolver matched the id alone. If the item advanced
+after the reader chose it (v3 → v4), the provider would have received v4 — an interpretation the reader never saw —
+marked `OPENED_FROM_UNDERSTANDING`. The U2 text above claimed "that one item" without saying which revision.
+
+Corrected on this PR (no migration, no copy, no UI change):
+
+- `HypothesisUserSignalRepository.readOpenDiscussionFocus` selects `hypothesis_id,hypothesis_version,opened_at`, and
+  `HypothesisDiscussionFocusRow` carries `hypothesis_version`.
+- `HypothesisReasoningContextService` refuses (invariant error, whole context omitted) a focus row whose version is not a
+  positive safe integer, and marks an item only when `id === focus.hypothesis_id && version === focus.hypothesis_version`.
+  An advanced (or lower) version marks nothing; the focus is never moved to the new version, never rewritten, and no
+  replacement is inferred. The stored row simply stays until the reader closes it, chooses again, or the window lapses.
+- Proof: API Jest (same revision marked; v3 focus + current v4 unmarked; lower version unmarked; another item never
+  marked; five malformed versions fail closed; window and fail-closed read unchanged). `verify-migration-0126.mjs` now
+  also proves the stored version is the one the command accepted, that an audited lifecycle advance leaves it
+  unchanged, that the old revision can no longer be opened, and that only a new explicit open names the new version.
+  The U2 contract gains an `exactRevisionFocusViolations` detector with four planted defects (reader omits the version;
+  id-only match; `>=` rebinding; version check removed) and is now also run by API CI, since its new guard reads API
+  source. The Mobile surface, transport and tests are unchanged and still pass.
 
 ## 4. U3 — User Disagreement → Contested / Under Review, with real re-evaluation (`PG-01`)
 
