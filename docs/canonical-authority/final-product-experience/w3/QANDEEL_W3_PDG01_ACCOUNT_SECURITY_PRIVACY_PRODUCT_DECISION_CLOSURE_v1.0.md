@@ -5,10 +5,12 @@
 **Track:** E2E-01 wave W3 — `W3-PDG-01 — Account, Security & Privacy Product Decision Gate`
 **Baseline:** canonical `main` = `3c0ea458a22a17a2a50c616b708f097f5911fb34` (merge of PR #293, W3-MEGA-M)
 **Rows decided:** `E2E-D-04`, `E2E-D-06`, `E2E-D-08`, `E2E-D-11`, `E2E-D-12`, `E2E-D-16`, `E2E-D-17`
-**Authority:** the Product Owner's explicit approval of every recommendation of the
-[W3-PDG-01 decision package](../../../e2e/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_DECISION_PACKAGE_v1.md), together
-with the Product Owner's decision text recorded in §2 – §8. Where that decision text and a package recommendation
-differ, the decision text binds (§1.3).
+**Authority:** the Product Owner explicitly approved the seven decision directions recorded in this closure. Only the
+statements marked **PO** in §2 – §8 are Product authority. The underlying
+[W3-PDG-01 decision package](../../../e2e/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_DECISION_PACKAGE_v1.md) remains
+research / options evidence (`DECISION EVIDENCE / OPTIONS — NOT INDEPENDENT PRODUCT AUTHORITY`). It does not become
+Product authority independently, and a recommendation or suggested answer in it is not a decision merely by appearing
+there (§1.3).
 **Authority class:** later, additive Product authority. It decides the Product journeys that
 [P1](../../../qandeel-p1-user-identity-preferences-understanding-canonical-closure.md) §8.1 placed and §16.1 deferred,
 and rewrites nothing in P1 or in any earlier record.
@@ -44,9 +46,15 @@ implemented. **Delete Account is not production-ready** and this record does not
 
 ### 1.3 Precedence inside this record
 
-1. The Product Owner's decision text (§2 – §8, the bullets marked **PO**).
-2. The package recommendation the Product Owner approved, only where (1) is silent (marked **Approved recommendation**).
-3. Where (1) and a package recommendation differ, (1) binds. The differences are listed in §10.
+1. **Product authority** is only the Product Owner's explicitly approved decision text (§2 – §8, marked **PO**).
+2. Every other detail in this record carries one of these labels, and none of them is Product authority:
+   - `IMPLEMENTATION CONSIDERATION — NOT FROZEN`: a detail a later implementation task may adopt or reject under its
+     own Task Contract.
+   - `EXTERNAL / STORE COMPLIANCE REQUIREMENT`: an obligation imposed from outside QANDEEL, recorded as a launch
+     dependency rather than a Product decision.
+   - `RESEARCH EVIDENCE — NOT PRODUCT AUTHORITY`: a package sub-recommendation kept only as a reference.
+3. A package recommendation or suggested Response-Sheet answer that §2 – §8 do not state as **PO** is not decided by
+   this record. §10 lists where the package's options differ from the approved decisions.
 
 ---
 
@@ -68,11 +76,11 @@ implemented. **Delete Account is not production-ready** and this record does not
 **PO — mechanism rule:** reuse the existing W1B / W2 mechanisms where they fit (the in-app 6-digit code, its resend
 posture, the non-enumerating wording posture of W2-01). No substitute Product mechanism is invented.
 
-**Approved recommendation, where the PO text is silent:** the old Email receives a notice that the Email was changed;
-an old inbox that is no longer reachable is handled through Support.
-
 **Consequence of rule 9:** a new Email that already belongs to another account must not be revealed as taken. The
-package's sub-choice (i), a refusal that would say so, is superseded by rule 9 (§10).
+package's sub-choice (i), a refusal that would say so, is not adopted (§10).
+
+`IMPLEMENTATION CONSIDERATION — NOT FROZEN`: a notice to the old Email after a successful change; a Support route
+when the old inbox is no longer reachable. The package suggested both (package §4.1.4). Neither is decided here.
 
 **Dependency, not a Product choice:** live Email delivery is `EXTERNAL / NOT PROVED` (W2-01 record §8).
 
@@ -98,8 +106,9 @@ package's sub-choice (i), a refusal that would say so, is superseded by rule 9 (
 strictly required to implement the decisions above, it is recorded as an implementation detail, not a Product
 expansion.
 
-**Approved recommendation, where the PO text is silent:** Email notices for password changed, Email changed and
-password reset. They depend on production Email delivery.
+`IMPLEMENTATION CONSIDERATION — NOT FROZEN`: security notification Emails for password changed, Email changed and
+password reset (package §4.2.4). They are not decided here, and any such Email would depend on production Email
+delivery.
 
 ---
 
@@ -126,10 +135,12 @@ literal value.
 **PO — sequencing:** the Product format is fixed now. The Shared ID is **not** shown in General Settings until
 Shared World invitations are actually usable, in W6. This record does not open W6 and designs no Shared World.
 
-**Approved recommendation, where the PO text is silent:** the characters avoid look-alikes, and separators are
-ignored when typed. The alphabet itself is implementation detail. The package recorded that the current backend lets
-the client supply the new secret; making generation server-owned is an implementation obligation of the task that
-surfaces the Shared ID, not a Product decision taken here.
+`IMPLEMENTATION CONSIDERATION — NOT FROZEN`: the exact alphabet, avoiding look-alike characters, and ignoring
+separators when the ID is typed (package §4.3.4).
+
+The package also recorded that the current backend lets the client supply the new secret (migration `0081`). Where
+generation happens is an implementation matter for the task that surfaces the Shared ID. It is not a Product decision
+taken here, beyond the **PO** rule that the ID is generated automatically.
 
 ---
 
@@ -177,9 +188,8 @@ Any current gap in reading these signals is an implementation obligation, never 
 accessibility switch. At this baseline the package found Reduce Transparency, Bold Text and screen-reader-enabled
 unread (package §2.3); that is evidence, not a closure.
 
-**Approved recommendation, where the PO text is silent:** the group keeps its name "Appearance & Accessibility" and
-gains one short informative line saying that QANDEEL follows the phone's accessibility settings. Its copy is not
-frozen here.
+`IMPLEMENTATION CONSIDERATION — NOT FROZEN`: whether the Settings group keeps its exact current name "Appearance &
+Accessibility", and whether it gains a short informative line (package §4.5.4). Neither is decided here.
 
 ---
 
@@ -211,9 +221,10 @@ conceptual categories include:
 - The user's data in Shared / Public, only within the limits of actual ownership and authority.
 - Replay / audio, when it exists in the future and the user has a right to that material.
 
-**Approved recommendation, where the PO text is silent:** Memory records the user asked to forget or turned off are
-included and labelled as such, because QANDEEL still holds them. Material authored by other people, and notes written
-about another person, are not exported.
+`IMPLEMENTATION CONSIDERATION — NOT FROZEN`, within the **PO** content principle above:
+
+- exactly how forgotten or disabled Memory records are handled and labelled (package §4.6.3);
+- the exact wording that excludes other people's material and notes written about another person.
 
 ### 7.4 Not frozen (PO)
 
@@ -237,9 +248,14 @@ Delete Account means **true deletion**, not Disable or merely hiding the account
 - Sessions end.
 - An account must never be described as deleted while its core personal data still works as an active user account.
 
-The length of the grace period is not frozen. **Approved recommendation, where the PO text is silent:** the entry is
-in Privacy & Data; a web deletion-request path is also required for store compliance (Google Play), and its form is
-not frozen here.
+The length of the grace period is not frozen.
+
+`IMPLEMENTATION CONSIDERATION — NOT FROZEN`: the Settings location of the entry (the package suggested Privacy &
+Data).
+
+`EXTERNAL / STORE COMPLIANCE REQUIREMENT`: Google Play requires a web path for requesting account deletion. It is
+recorded as an external launch / compliance dependency. It is not a Product decision taken through this approval, and
+its form is not decided here.
 
 ### 8.3 Data direction (PO)
 
@@ -294,19 +310,28 @@ record resolves none of them.
 
 ## 9. Proposed decomposition — sequencing only, NOT opened
 
-| Proposed task (not opened) | Takes from this record | Must not take |
-|---|---|---|
-| `W3-MEGA-A — Account & Identity Completion` | the re-authentication step; D-04 Change Email; D-06 Security & Login v1 (Change Password, Sign out from other devices, Email-as-recovery status, change / recovery ends other sessions, the security notices); D-08's format and server-owned generation fixed in code **without** a Settings surface | any Shared ID surface before W6; any device dashboard or security log as Product scope |
-| `W3-MEGA-S — Personal Controls & Settings Integration` | D-11 Language row; D-12 platform-signal parity and the informative line; the Privacy & Data group; D-16 Export; D-17 journey, re-authentication, grace, session termination and **Personal-world** deletion, through its own controlled change to the history guards | any claim that deletion covers Connected Worlds; any Connected Worlds deletion mechanism |
-| **Outside both** | the `EXPLICIT CONNECTED-WORLDS DELETION BLOCKER` (`QAN-BL-ACCT-01`, `QAN-BL-CW-01`, `ASSURE-O04`); the D-08 surface (W6); the web deletion-request path and production Email delivery (company-side / release work) | — |
+The Product Owner named the proposed order `W3-MEGA-A — Account & Identity Completion`, then
+`W3-MEGA-S — Personal Controls & Settings Integration`, and opened neither. The allocation below is
+`SUGGESTION — NOT AUTHORITY`. Each task's own Task Contract decides its scope.
 
-Each proposed task still needs its own Task Contract and its own Anti-Duplication Gate. This table authorizes nothing.
+| Proposed task (not opened) | Suggested share of the **PO** decisions | Must not take |
+|---|---|---|
+| `W3-MEGA-A` | the re-authentication step; D-04 Change Email; D-06 Security & Login v1 (Change Password, Sign out from other devices, current Email + status as recovery, change / recovery ends other sessions); D-08's Product format in code, **without** a Settings surface | any Shared ID surface before W6; any device dashboard or security log as Product scope |
+| `W3-MEGA-S` | D-11 Language row; D-12 platform-signal parity; the Privacy & Data entry; D-16 Export; D-17 journey, re-authentication, grace, session termination and **Personal-world** deletion, through its own controlled change to the history guards | any claim that deletion covers Connected Worlds; any Connected Worlds deletion mechanism |
+| **Outside both** | the `EXPLICIT CONNECTED-WORLDS DELETION BLOCKER` (`QAN-BL-ACCT-01`, `QAN-BL-CW-01`, `ASSURE-O04`); the D-08 surface (W6); the store-required web deletion-request path and production Email delivery (external / release work) | — |
+
+The `IMPLEMENTATION CONSIDERATION — NOT FROZEN` items in §2 – §8 go with whichever task owns their row, and are
+decided there. Each proposed task still needs its own Task Contract and its own Anti-Duplication Gate. This table
+authorizes nothing.
 
 ---
 
-## 10. Where the PO decision text overrides a package recommendation
+## 10. Where the package's options differ from the approved decisions
 
-| Row | Package recommendation | Binding PO text |
+`RESEARCH EVIDENCE — NOT PRODUCT AUTHORITY`. The package is evidence only. These rows record where one of its
+recommendations was not adopted, so that no reader takes the package's wording for a decision.
+
+| Row | Package recommendation (evidence only) | Approved **PO** decision |
 |---|---|---|
 | D-04 | Q2 (i): refuse a taken new Email with a generic message that reveals it cannot be used | failure behaviour preserves non-enumeration; the taken state is not revealed |
 | D-04 | after success, this device stays signed in; other devices are signed out | after success, the current session ends and the user returns to Sign in |

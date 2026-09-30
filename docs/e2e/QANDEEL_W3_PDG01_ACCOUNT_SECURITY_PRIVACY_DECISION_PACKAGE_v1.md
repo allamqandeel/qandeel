@@ -1,11 +1,15 @@
 # QANDEEL — W3-PDG-01 Account, Security & Privacy Decision Package v1
 
-**Status:** `PRODUCT DECISION PACKAGE — DECIDED — SUPERSEDED BY CANONICAL CLOSURE`. The Product Owner approved every
-recommendation on 2026-09-30. The binding record is the
+**Status:** `DECISION EVIDENCE / OPTIONS — NOT INDEPENDENT PRODUCT AUTHORITY`. On 2026-09-30 the Product Owner
+explicitly approved the seven decision directions recorded in the
 [W3-PDG-01 Product Decision Closure v1.0](../canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
-(`CLOSED / FROZEN — PRODUCT DECISIONS`), whose §10 lists where the Product Owner's decision text overrides a
-recommendation below. This package is kept unchanged below this banner as the decision evidence; its
-"NOT AUTHORITY" labels and its original "awaiting" ending describe its state when it was written.
+(`CLOSED / FROZEN — PRODUCT DECISIONS`). That closure is the only Product authority. This package remains research
+and options evidence. A recommendation or suggested Response-Sheet answer below becomes Product authority only if the
+closure states it as a **PO** decision; appearing here is never enough. The closure's §10 lists where this package's
+options differ from the approved decisions.
+
+The package is otherwise kept unchanged below this banner. Its "NOT AUTHORITY" labels and its original "awaiting"
+ending describe its state when it was written.
 **Original status:** `PRODUCT DECISION PACKAGE — AWAITING PRODUCT OWNER DECISIONS`
 **Task:** W3-PDG-01 — Account, Security & Privacy Product Decision Gate (document / decision package only)
 **Baseline:** canonical `main` = `3c0ea458a22a17a2a50c616b708f097f5911fb34` (merge of PR #293), verified by `git fetch` on 2026-09-30

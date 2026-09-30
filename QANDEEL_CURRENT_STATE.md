@@ -281,10 +281,11 @@ implementation rows are `E2E-D-03` and `D-05`, and `E2E-D-02` is advanced only. 
 `DECIDED — NOT IMPLEMENTED`. `D-17` is decided for its journey and principles only.
 
 **W3-PDG-01 — Account, Security & Privacy Product Decision Closure (`CLOSED / FROZEN — PRODUCT DECISIONS` on merge;
-documentation only).** The Product Owner approved every recommendation of the
-[decision package](docs/e2e/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_DECISION_PACKAGE_v1.md). The binding record is
-[`QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md).
-It decides:
+documentation only).** The Product Owner explicitly approved the seven decision directions recorded in
+[`QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md),
+the only binding record. Only its statements marked **PO** are Product authority. The
+[decision package](docs/e2e/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_DECISION_PACKAGE_v1.md) remains research /
+options evidence, not independent Product authority. The closure decides:
 
 - **Change Email:** password + a code to the new Email + old-Email confirmation; no partial change; signed out after.
 - **Minimal Security v1:** Change Password, Sign out from other devices, Email as the recovery method; changing or
