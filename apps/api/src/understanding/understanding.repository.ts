@@ -29,6 +29,8 @@ export interface UnderstandingDisagreementRow {
   readonly outcome: string;
   readonly contested_version: number | null;
   readonly reevaluated_version: number | null;
+  /** R2 — the contest's ONE durable Confidence evaluation identity (RECORDED / ALREADY_UNDER_REVIEW). Server-only. */
+  readonly confidence_evaluation_id: string | null;
 }
 
 /**

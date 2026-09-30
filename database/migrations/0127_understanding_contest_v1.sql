@@ -21,13 +21,24 @@
 -- The fresh exact-version Confidence evaluation (Confidence Runtime, migration 0006) runs after this transaction, from
 -- the API, against the returned after_version — never against a later version.
 --
+-- ## One Confidence evaluation identity per contest (R2)
+--
+-- Every contest owns ONE durable `confidence_evaluation_id`, generated here when the contest is first recorded, unique,
+-- and never changed afterwards (the facts trigger below). The command answers it for RECORDED (new or replayed) and for
+-- ALREADY_UNDER_REVIEW (the existing contest's). The API ENSURES the Confidence Runtime's canonical evaluation under
+-- exactly that id — it is the evaluation row's primary key — so a lost answer, a replay, a repair and two simultaneous
+-- requests all converge on one row. Confidence history is otherwise unchanged: no uniqueness is added to
+-- `confidence_evaluations`, which stays an immutable history that may hold other evaluations of the same version.
+-- The id is internal server data; it never reaches the client.
+--
 -- ## The privilege boundary (the W3-02 rule)
 --
 -- The command is SECURITY DEFINER in the non-exposed `understanding_private` (migration 0126); the `public` function of
 -- the same name is a SECURITY INVOKER pass-through. `authenticated` may SELECT its own contests (RLS) and EXECUTE the
 -- two functions; no client role may INSERT, UPDATE or DELETE a contest, and no caller supplies an owner.
 --
--- Additive and forward-only. One table, one partial unique index, two functions. Migrations 0001–0126 are untouched.
+-- Additive and forward-only. One table, one partial unique index, one facts trigger, three functions. Migrations
+-- 0001–0126 are untouched.
 BEGIN;
 
 CREATE TABLE public.understanding_contests (
@@ -40,10 +51,12 @@ CREATE TABLE public.understanding_contests (
   reevaluation_before_status text NOT NULL,
   reevaluation_after_status text NOT NULL,
   reevaluation_after_version integer NOT NULL,
+  confidence_evaluation_id uuid NOT NULL,
   created_at timestamptz NOT NULL,
   CONSTRAINT understanding_contests_owner_fk FOREIGN KEY (hypothesis_id, user_id)
     REFERENCES public.hypotheses(id, user_id) ON DELETE CASCADE,
   CONSTRAINT understanding_contests_command_key UNIQUE (user_id, command_id),
+  CONSTRAINT understanding_contests_confidence_evaluation_key UNIQUE (confidence_evaluation_id),
   CONSTRAINT understanding_contests_lifecycle_check CHECK (lifecycle IN ('UNDER_REVIEW')),
   CONSTRAINT understanding_contests_version_check CHECK (
     contested_version > 0 AND reevaluation_after_version >= contested_version
@@ -56,6 +69,28 @@ CREATE TABLE public.understanding_contests (
 -- At most ONE contest under review per item: a second disagreement, concurrent or later, can never double-mutate.
 CREATE UNIQUE INDEX understanding_contests_one_under_review_idx
   ON public.understanding_contests (user_id, hypothesis_id) WHERE lifecycle = 'UNDER_REVIEW';
+
+-- R2: a contest's recorded facts — above all its ONE Confidence evaluation identity — never change. Only `lifecycle`
+-- is left for a later, lawful resolution migration to move; v1 has no such move.
+CREATE FUNCTION understanding_private.understanding_contest_facts_immutable_v1() RETURNS trigger
+LANGUAGE plpgsql
+SET search_path = ''
+AS $$
+BEGIN
+  IF (NEW.id, NEW.user_id, NEW.hypothesis_id, NEW.command_id, NEW.contested_version, NEW.reevaluation_before_status,
+      NEW.reevaluation_after_status, NEW.reevaluation_after_version, NEW.confidence_evaluation_id, NEW.created_at)
+     IS DISTINCT FROM
+     (OLD.id, OLD.user_id, OLD.hypothesis_id, OLD.command_id, OLD.contested_version, OLD.reevaluation_before_status,
+      OLD.reevaluation_after_status, OLD.reevaluation_after_version, OLD.confidence_evaluation_id, OLD.created_at) THEN
+    RAISE EXCEPTION 'UNDERSTANDING_CONTEST_FACTS_IMMUTABLE' USING ERRCODE = '55000';
+  END IF;
+  RETURN NEW;
+END;
+$$;
+REVOKE ALL ON FUNCTION understanding_private.understanding_contest_facts_immutable_v1() FROM PUBLIC, anon, authenticated;
+CREATE TRIGGER understanding_contests_facts_immutable
+  BEFORE UPDATE ON public.understanding_contests
+  FOR EACH ROW EXECUTE FUNCTION understanding_private.understanding_contest_facts_immutable_v1();
 
 ALTER TABLE public.understanding_contests OWNER TO postgres;
 ALTER TABLE public.understanding_contests ENABLE ROW LEVEL SECURITY;
@@ -71,11 +106,12 @@ CREATE POLICY understanding_contests_select_own ON public.understanding_contests
 --   STALE                the item changed since the reader saw it — nothing was written; the caller reads it again;
 --   NOT_FOUND            not one of the caller's current items — nothing was written;
 --   COMMAND_CONFLICT     this command identity was already spent on another item or version — nothing was written.
+-- RECORDED and ALREADY_UNDER_REVIEW also carry that contest's ONE confidence_evaluation_id (R2); the others carry NULL.
 -- The item row is locked FOR UPDATE first, so concurrent disagreements on one item serialize here, and every later
 -- check reads the committed state.
 CREATE FUNCTION understanding_private.record_understanding_disagreement_v1(
   p_command_id uuid, p_hypothesis_id uuid, p_expected_version integer
-) RETURNS TABLE (outcome text, contested_version integer, reevaluated_version integer)
+) RETURNS TABLE (outcome text, contested_version integer, reevaluated_version integer, confidence_evaluation_id uuid)
 LANGUAGE plpgsql
 VOLATILE
 SECURITY DEFINER
@@ -86,6 +122,7 @@ DECLARE
   v_item public.hypotheses;
   v_prior public.understanding_contests;
   v_after_version integer;
+  v_evaluation uuid := pg_catalog.gen_random_uuid();
   v_conflict text;
 BEGIN
   IF v_user IS NULL THEN
@@ -104,28 +141,28 @@ BEGIN
    WHERE c.user_id = v_user AND c.command_id = p_command_id;
   IF FOUND THEN
     IF v_prior.hypothesis_id = p_hypothesis_id AND v_prior.contested_version = p_expected_version THEN
-      RETURN QUERY SELECT 'RECORDED'::text, v_prior.contested_version, v_prior.reevaluation_after_version;
+      RETURN QUERY SELECT 'RECORDED'::text, v_prior.contested_version, v_prior.reevaluation_after_version, v_prior.confidence_evaluation_id;
       RETURN;
     END IF;
-    RETURN QUERY SELECT 'COMMAND_CONFLICT'::text, NULL::integer, NULL::integer;
+    RETURN QUERY SELECT 'COMMAND_CONFLICT'::text, NULL::integer, NULL::integer, NULL::uuid;
     RETURN;
   END IF;
 
   IF v_item.id IS NULL OR v_item.status NOT IN ('ACTIVE', 'SUPPORTED', 'MIXED', 'WEAK') THEN
-    RETURN QUERY SELECT 'NOT_FOUND'::text, NULL::integer, NULL::integer;
+    RETURN QUERY SELECT 'NOT_FOUND'::text, NULL::integer, NULL::integer, NULL::uuid;
     RETURN;
   END IF;
 
   SELECT * INTO v_prior FROM public.understanding_contests c
    WHERE c.user_id = v_user AND c.hypothesis_id = v_item.id AND c.lifecycle = 'UNDER_REVIEW';
   IF FOUND THEN
-    RETURN QUERY SELECT 'ALREADY_UNDER_REVIEW'::text, v_prior.contested_version, v_prior.reevaluation_after_version;
+    RETURN QUERY SELECT 'ALREADY_UNDER_REVIEW'::text, v_prior.contested_version, v_prior.reevaluation_after_version, v_prior.confidence_evaluation_id;
     RETURN;
   END IF;
 
   -- Never applied to a different interpretation than the one the reader disagreed with.
   IF v_item.version <> p_expected_version THEN
-    RETURN QUERY SELECT 'STALE'::text, NULL::integer, NULL::integer;
+    RETURN QUERY SELECT 'STALE'::text, NULL::integer, NULL::integer, NULL::uuid;
     RETURN;
   END IF;
 
@@ -146,32 +183,32 @@ BEGIN
 
     INSERT INTO public.understanding_contests (
       id, user_id, hypothesis_id, command_id, contested_version, lifecycle,
-      reevaluation_before_status, reevaluation_after_status, reevaluation_after_version, created_at)
+      reevaluation_before_status, reevaluation_after_status, reevaluation_after_version, confidence_evaluation_id, created_at)
     VALUES (
       pg_catalog.gen_random_uuid(), v_user, v_item.id, p_command_id, v_item.version, 'UNDER_REVIEW',
-      v_item.status, 'MIXED', v_after_version, clock_timestamp());
+      v_item.status, 'MIXED', v_after_version, v_evaluation, clock_timestamp());
   EXCEPTION WHEN unique_violation THEN
     GET STACKED DIAGNOSTICS v_conflict = CONSTRAINT_NAME;
     IF v_conflict = 'understanding_contests_command_key' THEN
-      RETURN QUERY SELECT 'COMMAND_CONFLICT'::text, NULL::integer, NULL::integer;
+      RETURN QUERY SELECT 'COMMAND_CONFLICT'::text, NULL::integer, NULL::integer, NULL::uuid;
       RETURN;
     END IF;
     RAISE;
   END;
 
-  RETURN QUERY SELECT 'RECORDED'::text, v_item.version, v_after_version;
+  RETURN QUERY SELECT 'RECORDED'::text, v_item.version, v_after_version, v_evaluation;
 END;
 $$;
 
 CREATE FUNCTION public.record_understanding_disagreement_v1(
   p_command_id uuid, p_hypothesis_id uuid, p_expected_version integer
-) RETURNS TABLE (outcome text, contested_version integer, reevaluated_version integer)
+) RETURNS TABLE (outcome text, contested_version integer, reevaluated_version integer, confidence_evaluation_id uuid)
 LANGUAGE sql
 VOLATILE
 SECURITY INVOKER
 SET search_path = ''
 AS $$
-  SELECT r.outcome, r.contested_version, r.reevaluated_version
+  SELECT r.outcome, r.contested_version, r.reevaluated_version, r.confidence_evaluation_id
     FROM understanding_private.record_understanding_disagreement_v1(p_command_id, p_hypothesis_id, p_expected_version) r;
 $$;
 
@@ -179,6 +216,7 @@ REVOKE ALL ON FUNCTION understanding_private.record_understanding_disagreement_v
 REVOKE ALL ON FUNCTION public.record_understanding_disagreement_v1(uuid, uuid, integer) FROM PUBLIC, anon, authenticated;
 DO $$BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
   EXECUTE 'REVOKE ALL ON TABLE public.understanding_contests FROM service_role';
+  EXECUTE 'REVOKE ALL ON FUNCTION understanding_private.understanding_contest_facts_immutable_v1() FROM service_role';
   EXECUTE 'REVOKE ALL ON FUNCTION understanding_private.record_understanding_disagreement_v1(uuid, uuid, integer), public.record_understanding_disagreement_v1(uuid, uuid, integer) FROM service_role';
 END IF; END$$;
 GRANT EXECUTE ON FUNCTION understanding_private.record_understanding_disagreement_v1(uuid, uuid, integer) TO authenticated;

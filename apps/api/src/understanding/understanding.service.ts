@@ -27,6 +27,8 @@ interface OwnedContext {
 }
 
 const COMMAND_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
+const EVALUATION_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/u;
+const isEvaluationId = (value: unknown): value is string => typeof value === 'string' && EVALUATION_ID.test(value);
 
 /**
  * W3-MEGA-U U1 — the owner-only «فهم قنديل» projection.
@@ -161,16 +163,18 @@ export class UnderstandingService {
       const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : this.reject();
       switch (row.outcome) {
         case 'RECORDED': {
-          if (!Number.isSafeInteger(row.reevaluated_version)) this.reject();
-          await this.reevaluateConfidence(userId, token, hypothesis.id, row.reevaluated_version as number);
+          if (!Number.isSafeInteger(row.reevaluated_version) || !isEvaluationId(row.confidence_evaluation_id)) this.reject();
+          await this.reevaluateConfidence(userId, token, hypothesis.id, row.reevaluated_version as number, row.confidence_evaluation_id);
           // The revision the client keeps is the CURRENT interpretation's: a replay may answer an older committed
           // truth while the item has since moved on.
           return this.underReview(userId, hypothesis.id, Math.max(hypothesis.version, row.reevaluated_version as number));
         }
         case 'ALREADY_UNDER_REVIEW':
-          // A missed exact-version evaluation of the re-evaluated version is repaired here too (at most once).
+          // A missed exact-version evaluation of the re-evaluated version is repaired here too, under the EXISTING
+          // contest's one evaluation identity (R2) — never a fresh one.
+          if (!isEvaluationId(row.confidence_evaluation_id)) this.reject();
           if (Number.isSafeInteger(row.reevaluated_version) && row.reevaluated_version === hypothesis.version) {
-            await this.reevaluateConfidence(userId, token, hypothesis.id, hypothesis.version);
+            await this.reevaluateConfidence(userId, token, hypothesis.id, hypothesis.version, row.confidence_evaluation_id);
           }
           return this.underReview(userId, hypothesis.id, hypothesis.version);
         case 'STALE':
@@ -187,17 +191,16 @@ export class UnderstandingService {
 
   /**
    * The re-evaluation's Confidence step: the Confidence Runtime's own exact-version evaluation of the re-evaluated
-   * version — at most once per version (a replayed command finds it already there), and never against a later
-   * version (the database refuses one that is no longer current). A failure leaves the committed contest untouched and
+   * version, ENSURED under the contest's ONE durable evaluation identity (R2, migration 0127) — so a lost answer, a
+   * replay, a repair and simultaneous requests converge on one Confidence row rather than each creating its own — and
+   * never against a later version (the database refuses one that is no longer current). A failure leaves the committed contest untouched and
    * changes nothing the reader or the provider relies on: the item is already MIXED and under review (projection rule
    * 1), and an absent exact-version record is NOT_EVALUATED_FOR_CURRENT_VERSION, never an older one. A later disagreement
    * request on the item (a replay, or another command answering ALREADY_UNDER_REVIEW) repairs it.
    */
-  private async reevaluateConfidence(userId: string, token: string, hypothesisId: string, version: number): Promise<void> {
+  private async reevaluateConfidence(userId: string, token: string, hypothesisId: string, version: number, evaluationId: string): Promise<void> {
     try {
-      const existing = await this.confidence.listExactVersionsForTargets(token, userId, [{ id: hypothesisId, version }]);
-      if (Array.isArray(existing) && existing.some((row) => row.target_id === hypothesisId && row.target_version === version)) return;
-      await this.confidenceRuntime.evaluateHypothesisVersion(userId, token, hypothesisId, version);
+      await this.confidenceRuntime.ensureHypothesisVersionEvaluation(userId, token, hypothesisId, version, evaluationId);
     } catch {
       // PENDING_RETRY, exactly as the Hypothesis Update Loop degrades: nothing else is claimed.
     }

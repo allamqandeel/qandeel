@@ -45,7 +45,7 @@ describe('UnderstandingService', () => {
       listEvidenceUpdates: jest.fn().mockResolvedValue([]), listLifecycleTransitions: jest.fn().mockResolvedValue([]),
       listContestsUnderReview: jest.fn().mockResolvedValue([]), recordDisagreement: jest.fn(),
     } as unknown as jest.Mocked<UnderstandingRepository>;
-    confidenceRuntime = { evaluateHypothesisVersion: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<ConfidenceService>;
+    confidenceRuntime = { evaluateHypothesisVersion: jest.fn().mockResolvedValue({}), ensureHypothesisVersionEvaluation: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<ConfidenceService>;
     service = new UnderstandingService(hypotheses, evidenceService, confidence, repository, confidenceRuntime);
   });
 
@@ -204,29 +204,47 @@ describe('UnderstandingService', () => {
     const ask = (version: number, commandId = COMMAND) =>
       service.disagree(USER, 'token', understandingItemRef(USER, H1), { commandId, revision: understandingRevision(USER, H1, version) });
 
-    it('records against the exact version seen, then evaluates the exact re-evaluated version once', async () => {
+    const EVAL = '0f1e2d3c-4b5a-4968-8776-655443322110';
+    const recorded = (over: Record<string, unknown> = {}) => [{ outcome: 'RECORDED', contested_version: 3, reevaluated_version: 4, confidence_evaluation_id: EVAL, ...over }];
+
+    it('records against the exact version seen, then ENSURES the exact re-evaluated version under the contest’s one evaluation identity', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
-      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'RECORDED', contested_version: 3, reevaluated_version: 4 }]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
       await expect(ask(3)).resolves.toEqual({ underReview: true, revision: understandingRevision(USER, H1, 4) });
       expect(repository.recordDisagreement).toHaveBeenCalledWith('token', COMMAND, H1, 3);
-      expect(confidence.listExactVersionsForTargets).toHaveBeenLastCalledWith('token', USER, [{ id: H1, version: 4 }]);
-      expect(confidenceRuntime.evaluateHypothesisVersion).toHaveBeenCalledWith(USER, 'token', H1, 4);
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).toHaveBeenCalledWith(USER, 'token', H1, 4, EVAL);
+      // R2: never the old read-any-exact-version-then-create-a-random-id pattern.
+      expect(confidenceRuntime.evaluateHypothesisVersion).not.toHaveBeenCalled();
+      expect(confidence.listExactVersionsForTargets).not.toHaveBeenCalled();
     });
 
-    it('a replay whose answer was lost binds to the version before the re-evaluation and never evaluates twice', async () => {
+    it('a replay whose answer was lost binds to the version before the re-evaluation and ensures under the SAME identity', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4, status: 'MIXED' })]);
-      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'RECORDED', contested_version: 3, reevaluated_version: 4 }]);
-      confidence.listExactVersionsForTargets.mockResolvedValue([evaluation(hypothesis(H1, { version: 4 }))]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      await expect(ask(3)).resolves.toEqual({ underReview: true, revision: understandingRevision(USER, H1, 4) });
       await expect(ask(3)).resolves.toEqual({ underReview: true, revision: understandingRevision(USER, H1, 4) });
       expect(repository.recordDisagreement).toHaveBeenCalledWith('token', COMMAND, H1, 3);
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation.mock.calls).toEqual([[USER, 'token', H1, 4, EVAL], [USER, 'token', H1, 4, EVAL]]);
       expect(confidenceRuntime.evaluateHypothesisVersion).not.toHaveBeenCalled();
     });
 
-    it('a Confidence failure never undoes or hides the committed contest', async () => {
+    it('a Confidence failure never undoes or hides the committed contest, and the retry uses the same identity', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
-      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'RECORDED', contested_version: 3, reevaluated_version: 4 }]);
-      confidenceRuntime.evaluateHypothesisVersion.mockRejectedValue(new Error('stale'));
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      confidenceRuntime.ensureHypothesisVersionEvaluation.mockRejectedValueOnce(new Error('transient'));
       await expect(ask(3)).resolves.toMatchObject({ underReview: true });
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4, status: 'MIXED' })]);
+      await expect(ask(3)).resolves.toMatchObject({ underReview: true });
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation.mock.calls.map((call) => call[4])).toEqual([EVAL, EVAL]);
+    });
+
+    it('a recorded answer without a well-formed evaluation identity is refused, never evaluated under a fresh one', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
+      for (const confidence_evaluation_id of [null, undefined, 'not-a-uuid', EVAL.toUpperCase()]) {
+        (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded({ confidence_evaluation_id }));
+        await expect(ask(3)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      }
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).not.toHaveBeenCalled();
     });
 
     it('never applies an objection to a different interpretation: a changed item is 409 and nothing is recorded', async () => {
@@ -234,22 +252,23 @@ describe('UnderstandingService', () => {
       await expect(ask(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
       expect(repository.recordDisagreement).not.toHaveBeenCalled();
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
-      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'STALE', contested_version: null, reevaluated_version: null }]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'STALE', contested_version: null, reevaluated_version: null, confidence_evaluation_id: null }]);
       await expect(ask(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
-      expect(confidenceRuntime.evaluateHypothesisVersion).not.toHaveBeenCalled();
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).not.toHaveBeenCalled();
     });
 
-    it('a second disagreement on an item already under review is idempotent and mutates nothing', async () => {
+    it('a second disagreement on an item already under review mutates nothing and repairs under the EXISTING contest’s identity', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4, status: 'MIXED' })]);
-      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'ALREADY_UNDER_REVIEW', contested_version: 3, reevaluated_version: 4 }]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'ALREADY_UNDER_REVIEW', contested_version: 3, reevaluated_version: 4, confidence_evaluation_id: EVAL }]);
       await expect(ask(4, 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa')).resolves.toMatchObject({ underReview: true });
-      // R1: nothing is mutated, but a missing exact-version evaluation of the re-evaluated version is repaired, once.
-      expect(repository.recordDisagreement).toHaveBeenCalledTimes(1);
-      expect(confidenceRuntime.evaluateHypothesisVersion).toHaveBeenCalledTimes(1);
-      expect(confidenceRuntime.evaluateHypothesisVersion).toHaveBeenCalledWith(USER, 'token', H1, 4);
-      confidence.listExactVersionsForTargets.mockResolvedValue([evaluation(hypothesis(H1, { version: 4 }))]);
       await expect(ask(4, 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb')).resolves.toMatchObject({ underReview: true });
-      expect(confidenceRuntime.evaluateHypothesisVersion).toHaveBeenCalledTimes(1);
+      expect(repository.recordDisagreement).toHaveBeenCalledTimes(2);
+      // Two different commands, ONE contest, ONE evaluation identity: the Confidence Runtime converges both on one row.
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation.mock.calls).toEqual([[USER, 'token', H1, 4, EVAL], [USER, 'token', H1, 4, EVAL]]);
+      // An item that has moved past the re-evaluated version is not evaluated at the old one.
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 5, status: 'MIXED' })]);
+      await expect(ask(5, 'cccccccc-cccc-4ccc-8ccc-cccccccccccc')).resolves.toMatchObject({ underReview: true });
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).toHaveBeenCalledTimes(2);
       // An old revision on an item already under review answers the same, without a command.
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 9, status: 'MIXED' })]);
       repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00Z' }]);
@@ -258,11 +277,19 @@ describe('UnderstandingService', () => {
       expect(repository.recordDisagreement).not.toHaveBeenCalled();
     });
 
+    it('the evaluation identity never reaches the client', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      const answer = await ask(3);
+      expect(Object.keys(answer).sort()).toEqual(['revision', 'underReview']);
+      expect(JSON.stringify(answer)).not.toContain(EVAL);
+    });
+
     it('refuses another reader’s item, a spent command, and any widened body — no text is ever accepted', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
       await expect(service.disagree(USER, 'token', understandingItemRef(OTHER, H1), { commandId: COMMAND, revision: understandingRevision(USER, H1, 3) }))
         .rejects.toBeInstanceOf(NotFoundException);
-      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'COMMAND_CONFLICT', contested_version: null, reevaluated_version: null }]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'COMMAND_CONFLICT', contested_version: null, reevaluated_version: null, confidence_evaluation_id: null }]);
       await expect(ask(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_COMMAND_CONFLICT' } });
       const revision = understandingRevision(USER, H1, 3);
       for (const body of [{ revision }, { commandId: COMMAND }, { commandId: COMMAND, revision, message: 'I disagree because…' },
