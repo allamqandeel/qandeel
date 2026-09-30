@@ -388,10 +388,12 @@ test('the runtime generation owns the controller and retires it; the focused sui
   assert.match(mobileCi, /'tests\/w3-02-account-identity-public-id-contract\.test\.mjs'/u);
 });
 
+// Re-anchored by W3-MEGA-U U0: W3-02 MERGED through PR #288, which closed D-09. The permanent claims stay: the
+// baseline is W3-02's own, D-02 is advanced only, W3 is ACTIVE and Account & Identity is not complete.
 test('the implementation record tells the lifecycle truth: D-09 only, D-02 advanced, W3 ACTIVE', () => {
   const record = read(RECORD);
   assert.match(record, /\*\*Baseline:\*\* `023cb9874376ac69db5848db099d06034d5deb54`/u);
-  assert.match(record, /\*\*Status:\*\* IMPLEMENTED ON A DRAFT PR — NOT MERGED/u);
+  assert.match(record, /\*\*Status:\*\* MERGED \/ CLOSED — merged through PR #288 at `92444c3ab8c35f7d819888be76aa6395c93d94b8`/u);
   for (const moment of ['E2E-D-09', 'E2E-D-02', 'E2E-H-08']) assert.match(record, new RegExp(moment, 'u'));
   const overClaims = (text) => {
     const t = text.replace(/NOT (?:CLOSED|COMPLETE)|not closed|is not complete|does not claim[^.]*\./giu, '');

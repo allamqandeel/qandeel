@@ -182,6 +182,10 @@ test('AC-B3-01 resolved by T-03D: the B3-ONLY runtime is still never registered 
   assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator; it is no longer registered');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // W3-MEGA-U re-anchor: the application root also composes UnderstandingModule (a Personal depth, not a Conversation
+    // capability). It is stripped the same way, so every other byte stays frozen.
+    .replace("import { UnderstandingModule } from './understanding/understanding.module';\n", '')
+    .replace(', AccountModule, UnderstandingModule],', ', AccountModule],')
     .replace("import { AccountModule } from './account/account.module';\n", '')
     .replace(', HimModule, AccountModule],', ', HimModule],');
   assert.equal(gitBlobId(appModuleBeforeW1b01), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical to the baseline apart from the W1B-01 AccountModule composition');

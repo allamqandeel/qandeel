@@ -156,6 +156,10 @@ test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the deli
   // Conversation capability). Every other byte stays frozen: without exactly that import and that
   // list entry, AppModule is the T-03D baseline blob.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // W3-MEGA-U re-anchor: the application root also composes UnderstandingModule (a Personal depth, not a Conversation
+    // capability). It is stripped the same way, so every other byte stays frozen.
+    .replace("import { UnderstandingModule } from './understanding/understanding.module';\n", '')
+    .replace(', AccountModule, UnderstandingModule],', ', AccountModule],')
     .replace("import { AccountModule } from './account/account.module';\n", '')
     .replace(', HimModule, AccountModule],', ', HimModule],');
   assert.equal(gitBlobId(appModuleBeforeW1b01), 'fc3ce9c12b67552fb54214d0b6b4931b89601da6', 'AppModule is byte-identical to the T-03D baseline apart from the W1B-01 AccountModule composition');

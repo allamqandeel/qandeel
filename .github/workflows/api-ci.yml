@@ -63,6 +63,7 @@ jobs:
       - {name: Verify Shared delivery authority revalidation boundary static contract (I-03F), run: npm run test:shared-delivery-authority-revalidation-contract}
       - {name: Verify Connected Worlds I-03 authority / consent / EffectiveContext phase closure contract (I-03G), run: npm run test:connected-worlds-i03-authority-closure-contract}
       - {name: Verify task closure governance contract (BG-08 reconciliation + BG-09 status synchronization), run: npm run test:task-closure-governance-contract}
+      - {name: Verify W3-MEGA-U U1 QANDEEL Understanding projection authority static contract, run: npm run test:w3-mega-u1-understanding-projection-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
