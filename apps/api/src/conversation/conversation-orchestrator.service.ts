@@ -33,6 +33,7 @@ import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-d
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
+import { MemoryControlService } from '../memory/memory-control.service';
 
 // QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
 // maximum foreground orchestration time spent waiting for OPTIONAL Human
@@ -98,6 +99,7 @@ export class ConversationOrchestratorService {
     @Inject(MODEL_ROUTER) private readonly router: ModelRouter,
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
+    private readonly memoryControl: MemoryControlService,
   ) {}
 
   async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
@@ -155,6 +157,29 @@ export class ConversationOrchestratorService {
         if (!finalized) return this.currentResult(accessToken, userId, claimed);
         this.telemetry.recordTurnOutcome('blocked',selection.path);
         return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
+      }
+      // W3-MEGA-M (E2E-D-13): an explicit conversational Memory request (P1 §9) - what QANDEEL remembers, remember,
+      // correct, forget, stop relying on - is answered from canonical Memory truth, never by the provider. Only an
+      // ALLOW turn is eligible: a GUIDED turn keeps its Safety guidance on the ordinary provider path. The boundary is
+      // deterministic and reads only the caller's own Memory; `null` means "not a Memory request" and the turn
+      // continues below untouched. A plan is committed by ONE database transaction that applies the Memory change,
+      // records the command and finalizes this turn with the reply for the outcome actually committed, so the change
+      // and the reply that reports it exist together or not at all. It launches no Human Intelligence, Memory
+      // retrieval, Hypothesis, Question or provider work; a failure here fails the turn closed like any other stage.
+      if (safety.disposition === 'ALLOW') {
+        const previousUserContent = [...context].slice(0, -1).reverse().find(({ role }) => role === 'USER')?.content;
+        const memoryControl = await this.engine('memory_control',selection.path,()=>this.memoryControl.plan({
+          accessToken, userId, sessionId: userTurn.session_id, sourceTurnId: userTurn.id, content: userTurn.content,
+          ...(previousUserContent !== undefined ? { previousUserContent } : {}),
+        }));
+        if (memoryControl) {
+          const finalized = await this.repository.finalizeMemoryControlTurn({
+            sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id, assistantTurnId: randomUUID(), plan: memoryControl,
+          });
+          if (!finalized) return this.currentResult(accessToken, userId, claimed);
+          this.telemetry.recordTurnOutcome('completed',selection.path);
+          return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
+        }
       }
       // QIR-003: the frozen Human Intelligence foreground lane is LAUNCHED
       // HERE - byte-identical inside - and is no longer awaited inline. Its

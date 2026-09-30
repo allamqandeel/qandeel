@@ -7,12 +7,14 @@ import { MemoryRetrieverService } from './memory-retriever.service';
 import { MemoryWriteEvaluatorService } from './memory-write-evaluator.service';
 import { MemoryWriteService } from './memory-write.service';
 import { EvidenceService } from './evidence.service';
+import { MemoryControlRepository } from './memory-control.repository';
+import { MemoryControlService } from './memory-control.service';
 
 @Module({
   providers: [
     MemoryDataApiService, MemoryServiceRoleApiService, MemoryRepository, MemoryRuntimeService, MemoryRetrieverService,
-    MemoryWriteEvaluatorService, MemoryWriteService, EvidenceService,
+    MemoryWriteEvaluatorService, MemoryWriteService, EvidenceService, MemoryControlRepository, MemoryControlService,
   ],
-  exports: [MemoryDataApiService, MemoryRuntimeService, MemoryRetrieverService, MemoryWriteService, EvidenceService],
+  exports: [MemoryDataApiService, MemoryRuntimeService, MemoryRetrieverService, MemoryWriteService, EvidenceService, MemoryControlService],
 })
 export class MemoryModule {}

@@ -5,6 +5,7 @@ import { SupabaseDataApiService } from './supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
 import { CorrelationService } from '../observability/correlation.service';
 import type { RuntimeRoutePair } from '../intelligence-runtime/fast-deep-routing-contract';
+import { MEMORY_CONTROL_OUTCOMES, type MemoryControlOutcome, type MemoryControlPlan } from '../memory/memory-control.types';
 
 const SESSION_FIELDS = 'id,status,channel,created_at,updated_at,last_activity_at,closed_at';
 const TURN_FIELDS = 'id,session_id,role,status,content,processing_path,routing_reason,source_turn_id,idempotency_key,created_at,updated_at,completed_at';
@@ -183,6 +184,29 @@ export class ConversationRepository {
       p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId, p_content: input.content, p_safety_disposition: input.safetyDisposition, p_question_binding_id: input.questionBindingId ?? null, ...this.eventMetadata(),
     });
     return rows[0] ? { userTurn: rows[0].user_turn, assistantTurn: rows[0].assistant_turn } : undefined;
+  }
+
+  // W3-MEGA-M (E2E-D-13): the Memory-control finalization authority (migration 0128). In ONE transaction the database
+  // locks this GENERATING turn, re-validates the target Memory under its row lock, applies the change through the
+  // narrow Memory commands, records the command and finalizes through finalize_conversation_turn_v2 with the reply
+  // for the outcome it actually committed. Server authority only; a turn that is no longer GENERATING writes nothing.
+  async finalizeMemoryControlTurn(input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; plan: MemoryControlPlan }): Promise<{ outcome: MemoryControlOutcome; userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
+    const { plan } = input;
+    const rows = await this.serviceApi.rpc<Array<{ outcome: MemoryControlOutcome; user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('server_finalize_memory_control_turn_v1', {
+      p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId,
+      p_kind: plan.kind, p_outcome: plan.outcome,
+      p_target_memory_id: plan.targetMemoryId ?? null, p_new_memory_id: plan.newMemory?.id ?? null,
+      p_type: plan.newMemory?.type ?? null, p_content: plan.newMemory?.content ?? null,
+      p_confidence: plan.newMemory?.confidence ?? null, p_importance: plan.newMemory?.importance ?? null,
+      p_expires_at: plan.newMemory?.expiresAt ?? null,
+      p_candidate_memory_ids: [...plan.candidateMemoryIds], p_answers_command_id: plan.answersCommandId ?? null,
+      p_reply: plan.reply, p_reply_if_changed: plan.replyIfChanged ?? null,
+      ...this.eventMetadata(),
+    });
+    const row = rows[0];
+    if (!row) return undefined;
+    if (!MEMORY_CONTROL_OUTCOMES.has(row.outcome)) throw new Error('MEMORY_CONTROL_OUTCOME_INTEGRITY');
+    return { outcome: row.outcome, userTurn: row.user_turn, assistantTurn: row.assistant_turn };
   }
 
   async failTurn(sessionId: string, userId: string, turnId: string): Promise<void> {

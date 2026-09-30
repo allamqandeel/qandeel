@@ -15,6 +15,7 @@ import { projectHimHypothesisGenerationContext, type HimHypothesisGenerationCont
 import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidence } from '../memory/evidence.service';
 import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, normalizeMemoryContent } from '../memory/memory-write-evaluator.service';
 import type { MemoryWriteResult } from '../memory/memory-write.service';
+import { interpretMemoryControl } from '../memory/memory-control.interpreter';
 import type { EvidenceItem } from '../memory/evidence.types';
 import type { SafetyDisposition } from '../conversation/safety-response-gate.types';
 import { HypothesisGenerationTriggerClassificationService } from '../hypothesis/hypothesis-generation-trigger-classification.service';
@@ -109,8 +110,11 @@ export class BackgroundIntelligenceEnrichmentService {
 
  async readCanonicalSourceTurn(context:BackgroundIntelligenceExecutionContext):Promise<BackgroundCanonicalSourceTurn>{this.assert(context);const turn=await this.data.readCanonicalSourceTurn(context);if(!turn)throw new NotFoundException('Canonical source turn not found.');return turn;}
 
+ // W3-MEGA-M (E2E-D-13): an explicit conversational Memory command is the foreground's, answered from canonical
+ // Memory truth in the same transaction as its reply. Background inference never re-applies it: "I like tea, but
+ // don't rely on it" must not become a new Memory while the command disables the old one.
  async evaluateAndWriteMemory(context:BackgroundIntelligenceExecutionContext,currentUserContent:string):Promise<MemoryWriteResult>{
-  this.assert(context);const decision=this.evaluator.evaluate(currentUserContent);if(decision.decision==='SKIP')return decision;
+  this.assert(context);const decision=this.evaluator.evaluate(currentUserContent);if(decision.decision==='SKIP')return decision;if(interpretMemoryControl(currentUserContent))return{decision:'SKIP',reason:'MEMORY_CONTROL_COMMAND'};
   const active=await this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);if(active.some(memory=>memory.type===decision.candidate.type&&normalizeMemoryContent(memory.content)===normalizeMemoryContent(decision.candidate.content)))return{decision:'SKIP',reason:'EXACT_NORMALIZED_DUPLICATE',type:decision.candidate.type};
   const created=await this.data.createMemory(context,{id:randomUUID(),...decision.candidate,status:decision.candidate.status??'ACTIVE'});return{decision:'WRITE',type:decision.candidate.type,memoryId:created.id,evidenceId:`memory:${created.id}`};
  }
@@ -120,7 +124,9 @@ export class BackgroundIntelligenceEnrichmentService {
  async listActiveHypotheses(context:BackgroundIntelligenceExecutionContext):Promise<ReadonlyArray<HypothesisRecord>>{this.assert(context);return this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES);}
 
  async evaluateGenerationEligibility(context:BackgroundIntelligenceExecutionContext,text:string,safetyDisposition:SafetyDisposition):Promise<HypothesisGenerationEligibilityAssessment>{
-  this.assert(context);if(safetyDisposition!=='ALLOW')return{eligibility:{status:'NOT_ELIGIBLE',reason:'SAFETY_INELIGIBLE'}};
+  // W3-MEGA-M: an explicit Memory command is never a generation trigger - "forget that I …" must not seed a new
+  // Hypothesis about the very fact the reader just withdrew.
+  this.assert(context);if(safetyDisposition!=='ALLOW')return{eligibility:{status:'NOT_ELIGIBLE',reason:'SAFETY_INELIGIBLE'}};if(interpretMemoryControl(text))return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}};
   try{const evidence=await this.listEligibleEvidence(context);if(!boundedEvidence(evidence))return{eligibility:{status:'NOT_ELIGIBLE',reason:'EVALUATION_FAILED'}};const classification=this.classifier.classify({text,safetyDisposition});if(classification.classification==='NO_TRIGGER')return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}};if(classification.classification==='AMBIGUOUS')return{eligibility:{status:'NOT_ELIGIBLE',reason:'AMBIGUOUS_TRIGGER'}};if(evidence.length===0)return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_ELIGIBLE_EVIDENCE'}};return{eligibility:{status:'ELIGIBLE',reason:'TRIGGER_AND_EVIDENCE_AVAILABLE'},triggerClassification:classification,eligibleEvidence:evidence};}catch{return{eligibility:{status:'NOT_ELIGIBLE',reason:'EVALUATION_FAILED'}};}
  }
 

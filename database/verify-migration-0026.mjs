@@ -19,6 +19,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { MEMORY_WRITE, describeViolations, memoryAuthorityViolations } from './memory-authority-surface-v1.mjs';
 
 const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
@@ -123,15 +124,12 @@ async function verifyEffectiveAcls() {
     assert.equal(definer, true, `${signature} is SECURITY DEFINER`);
     assert.ok(Array.isArray(config) && config.length === 1 && config[0].startsWith('search_path='), `${signature} hardened search_path`);
   }
-  // Exactly the expected Memory-returning command surface exists: no extra CRUD
-  // and no broad "update arbitrary columns" RPC was introduced.
-  const returning = (await rows(
-    `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-      WHERE n.nspname='public' AND p.prorettype='public.memories'::regtype ORDER BY p.proname`,
-  )).map((r) => r.proname);
-  assert.deepEqual(returning, [
-    'server_create_memory_v1', 'server_mark_memory_deleted_v1', 'server_supersede_memory_v1', 'supersede_memory',
-  ], 'Memory command surface');
+  // No client write authority, no end-user or generic mutation surface and no
+  // bridge to one - over every function, in any schema, whenever it was added
+  // (database/memory-authority-surface-v1.mjs). The surface is discovered, not
+  // enumerated: a later narrow server-only command is legal here, and its own
+  // behaviour is proved by the verifier of the migration that introduced it.
+  await verifyMemoryAuthorityInvariants();
   // Decisive check: no function reachable by an end-user role mutates memories.
   const reachable = (await rows(
     `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
@@ -142,6 +140,38 @@ async function verifyEffectiveAcls() {
       ORDER BY p.proname`,
   )).map((r) => r.proname);
   assert.deepEqual(reachable, [], 'no end-user-executable function mutates public.memories');
+}
+
+async function verifyMemoryAuthorityInvariants() {
+  const tablePrivileges = [];
+  for (const role of ['anon', 'authenticated', 'service_role']) {
+    for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
+      const [{ allowed }] = await rows('SELECT has_table_privilege($1,$2,$3) allowed', [role, 'public.memories', privilege]);
+      tablePrivileges.push({ role, privilege, allowed });
+    }
+  }
+  // Every array is cast to text[]: node-pg has no parser for name[], and an
+  // undecoded '{postgres,service_role}' string must never reach the rules.
+  const functions = (await rows(
+    `SELECT p.oid::regprocedure::text signature, p.proname::text name, pg_get_userbyid(p.proowner)::text owner,
+            p.prosecdef definer, p.proconfig::text[] config, pg_get_function_identity_arguments(p.oid) arguments,
+            p.prorettype='public.memories'::regtype returns_memory, p.oid=$1::regprocedure legacy,
+            p.oid IN ($2::regprocedure, $3::regprocedure, $4::regprocedure) hardened_in_0026,
+            CASE WHEN p.prokind IN ('f','p') THEN pg_get_functiondef(p.oid) ELSE '' END definition,
+            ARRAY(SELECT CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee)::text END
+                    FROM aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) a
+                   WHERE a.privilege_type='EXECUTE' ORDER BY 1)::text[] executors,
+            has_function_privilege('authenticated', p.oid, 'EXECUTE')
+              OR has_function_privilege('anon', p.oid, 'EXECUTE') end_user
+       FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg\\_%'`,
+    [LEGACY, CREATE, REMOVE, SUPERSEDE],
+  )).map(({ returns_memory: returnsMemory, end_user: endUser, ...fn }) => ({ ...fn, returnsMemory, endUser }));
+  // The discovery is not vacuous: it finds the three commands 0026 introduced.
+  const hardened = functions.filter((fn) => fn.hardened_in_0026 && MEMORY_WRITE.test(fn.definition)).map((fn) => fn.signature);
+  assert.equal(hardened.length, 3, `the 0026 commands are discovered as Memory writers (found ${JSON.stringify(hardened)})`);
+  const violations = memoryAuthorityViolations({ tablePrivileges, functions });
+  assert.deepEqual(violations, [], describeViolations(violations));
 }
 
 async function reproduceBaselineVulnerability(owner, existing) {
@@ -576,5 +606,9 @@ async function main() {
 main().catch((error) => {
   const code = typeof error?.code === 'string' ? error.code : 'verification';
   console.error(`Memory authority verification failed at ${stage} (${code}). Connection details were suppressed.`);
+  // An assertion message is composed here from catalog facts (signatures,
+  // roles, invariant names), never from the connection, so it is printed: a
+  // failed invariant must name the function and the rule it breaks.
+  if (error?.code === 'ERR_ASSERTION') console.error(error.message);
   process.exitCode = 1;
 });

@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import type { CreateMemoryInput, MemoryType } from './memory.types';
 
 export const MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT = 32;
+/** W3-MEGA-M: the longest statement an explicit "remember" request keeps as one Memory. */
+export const MAX_EXPLICIT_STATEMENT_LENGTH = 280;
 
 export const MEMORY_IMPORTANCE: Readonly<Record<Exclude<MemoryType, 'DERIVED_INSIGHT'>, number>> = {
   INTERACTION_PREFERENCE: 0.90,
@@ -35,14 +37,20 @@ const SPECULATION = /\b(?:maybe|perhaps|i guess|i might be)\b|(?:يمكن|ممك
 const TRANSIENT_EMOTION = /\b(?:i(?:'m| am) (?:upset|sad|angry|annoyed) today)\b|(?:أنا|انا)\s+(?:متضايق|متضايقة|زعلان|زعلانة|غضبان|غضبانة)\s+(?:النهارده|اليوم)/iu;
 const QUOTED_OR_THIRD_PARTY = /^(?:he|she|they)\s+(?:said|told me)\b|^(?:هو|هي|هما)\s+(?:قال|قالت|قالوا)\b|^["“'«].+["”'»]$/iu;
 const MULTI_SENTENCE = /[.!؟]\s+\S/u;
+// W3-MEGA-M: Unicode-aware boundaries. JavaScript's \b is ASCII-only, so the Arabic alternatives inside \b…\b could
+// never match and Arabic secrets passed this screen. Arabic attaches و / ب / ل / ف / ال to the keyword («وكلمة السر»,
+// «والباسورد»), so those clitics are allowed in front of it. Card, account, IBAN, passport and PIN / CVV identifiers are
+// screened too; an identity-number keyword is screened with or without the number beside it.
 const OBVIOUS_SECRET = [
-  /\b(?:password|passwd|passcode|كلمة السر|كلمه السر|باسورد)\b/iu,
+  /(?<![\p{L}\p{N}_])(?:password|passwd|passcode|pin(?: code| number)?|cvv|cvc|(?:[وبلف]|ال)?(?:[وبلف]|ل)?(?:ال)?(?:كلم[ةه] (?:ال)?سر|كلم[ةه] (?:ال)?مرور|باسورد|رقم (?:ال)?سري|بين كود))(?![\p{L}\p{N}_])/iu,
+  /(?<![\p{L}\p{N}_])(?:iban|account number|passport number|(?:[وبلف]|ال)?(?:رقم (?:ال)?(?:حساب|كارت|بطاق[ةه]|فيزا|باسبور|جواز)|ايبان|آيبان))(?![\p{L}\p{N}_])/iu,
+  /\b[a-z]{2}\d{2}[a-z0-9]{11,30}\b/iu,
   /\b(?:api[ _-]?key|access[ _-]?token|auth(?:entication)?[ _-]?token|secret[ _-]?key)\b/iu,
-  /\b(?:otp|verification code|one[ -]?time (?:password|code)|كود التحقق|رمز التحقق)\b/iu,
+  /(?<![\p{L}\p{N}_])(?:otp|verification code|one[ -]?time (?:password|code)|(?:[وبلف]|ال)?(?:كود|رمز) (?:ال)?(?:تحقق|تفعيل))(?![\p{L}\p{N}_])/iu,
   /\b(?:sk|pk)_(?:live|test)_[a-z0-9]{12,}\b/iu,
   /\b(?:ghp|gho|github_pat)_[a-z0-9_]{12,}\b/iu,
   /\b(?:\d[ -]*?){13,19}\b/u,
-  /\b(?:national id|government id|ssn|social security|الرقم القومي|رقم الهوية)\b[\s:#-]*\d{8,}/iu,
+  /(?<![\p{L}\p{N}_])(?:national id|government id|ssn|social security|(?:[وبلف]|ال)?(?:ال)?رقم (?:ال)?(?:قومي|هوي[ةه]))(?![\p{L}\p{N}_])/iu,
 ];
 
 @Injectable()
@@ -68,6 +76,34 @@ export class MemoryWriteEvaluatorService {
         source: 'USER_STATED',
         status: 'ACTIVE',
         confidence: rememberRequested ? 0.98 : 0.95,
+        importance: MEMORY_IMPORTANCE[match.type],
+        ...(match.expiresAt ? { expiresAt: match.expiresAt } : {}),
+      },
+    };
+  }
+
+  /**
+   * W3-MEGA-M (E2E-D-13): the explicit "remember this" write path P1 §9 names. The user's explicit request is the
+   * authority, so the background grammar is NOT the ceiling here: a statement the typed patterns recognise keeps its
+   * canonical type and wording, and any other statement is kept in the user's own words as a PERSONAL_FACT (or the
+   * caller's fallback type). The existing secret / sensitive-identifier screen still applies unchanged.
+   */
+  explicitStatementCandidate(
+    rawStatement: string,
+    now = new Date(),
+    fallbackType: Exclude<MemoryType, 'DERIVED_INSIGHT'> = 'PERSONAL_FACT',
+  ): { decision: 'SKIP'; reason: 'SENSITIVE_DATA' | 'EMPTY' } | { decision: 'WRITE'; candidate: CreateMemoryInput } {
+    const statement = prepareRememberContent(rawStatement).replace(/^(?:إني|اني|انى|إنّي)\s+/u, 'أنا ');
+    if (OBVIOUS_SECRET.some((pattern) => pattern.test(statement))) return { decision: 'SKIP', reason: 'SENSITIVE_DATA' };
+    const words = trimValue(statement);
+    if (words.length < 2) return { decision: 'SKIP', reason: 'EMPTY' };
+    // One remembered fact, not a document: a longer request stays ordinary conversation.
+    if (words.length > MAX_EXPLICIT_STATEMENT_LENGTH) return { decision: 'SKIP', reason: 'EMPTY' };
+    const match = this.match(statement, now) ?? candidate(fallbackType, `${words}.`);
+    return {
+      decision: 'WRITE',
+      candidate: {
+        type: match.type, content: match.content, source: 'USER_STATED', status: 'ACTIVE', confidence: 0.98,
         importance: MEMORY_IMPORTANCE[match.type],
         ...(match.expiresAt ? { expiresAt: match.expiresAt } : {}),
       },
