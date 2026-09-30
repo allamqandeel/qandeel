@@ -175,7 +175,12 @@ async function verifyCommand() {
   assert.equal(item.statement, before.statement, 'the statement is never rewritten');
   assert.deepEqual(item.supporting_evidence_ids, before.supporting_evidence_ids);
   assert.deepEqual(item.assumptions, before.assumptions);
-  const audit = (await transitionsOf(active.id)).at(-1);
+  // created_at can tie for multiple lifecycle rows inside one transaction, and UUID id ordering is not chronology.
+  // Prove the exact re-evaluation transition by identity instead of assuming the last sorted row is the newest event.
+  const audit = (await transitionsOf(active.id)).find((row) =>
+    row.before_status === 'ACTIVE' && row.after_status === 'MIXED' &&
+    row.before_version === active.version && row.after_version === active.version + 1 &&
+    row.source === 'AUTHENTICATED_TRANSITION');
   assert.deepEqual(audit, { before_status: 'ACTIVE', after_status: 'MIXED', before_version: active.version, after_version: active.version + 1, source: 'AUTHENTICATED_TRANSITION' });
   let contests = await contestsOf(reader);
   assert.equal(contests.length, 1);
