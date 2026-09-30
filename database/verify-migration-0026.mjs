@@ -19,6 +19,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { MEMORY_WRITE, memoryReaderViolations, memoryWriterViolations } from './memory-authority-surface-v1.mjs';
 
 const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
@@ -123,15 +124,12 @@ async function verifyEffectiveAcls() {
     assert.equal(definer, true, `${signature} is SECURITY DEFINER`);
     assert.ok(Array.isArray(config) && config.length === 1 && config[0].startsWith('search_path='), `${signature} hardened search_path`);
   }
-  // Exactly the expected Memory-returning command surface exists: no extra CRUD
-  // and no broad "update arbitrary columns" RPC was introduced.
-  const returning = (await rows(
-    `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
-      WHERE n.nspname='public' AND p.prorettype='public.memories'::regtype ORDER BY p.proname`,
-  )).map((r) => r.proname);
-  assert.deepEqual(returning, [
-    'server_create_memory_v1', 'server_mark_memory_deleted_v1', 'server_supersede_memory_v1', 'supersede_memory',
-  ], 'Memory command surface');
+  // No extra CRUD and no broad "update arbitrary columns" RPC: every function
+  // that writes or returns Memory, in any schema and whenever it was added,
+  // holds the 0026 authority posture (database/memory-authority-surface-v1.mjs).
+  // The surface is discovered, not enumerated, so a later narrow server command
+  // with this posture is legal and a dangerous one fails whatever its name.
+  await verifyMemoryAuthoritySurface();
   // Decisive check: no function reachable by an end-user role mutates memories.
   const reachable = (await rows(
     `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
@@ -142,6 +140,43 @@ async function verifyEffectiveAcls() {
       ORDER BY p.proname`,
   )).map((r) => r.proname);
   assert.deepEqual(reachable, [], 'no end-user-executable function mutates public.memories');
+}
+
+async function verifyMemoryAuthoritySurface() {
+  const functions = await rows(
+    `SELECT p.oid::regprocedure::text signature, p.proname name, pg_get_userbyid(p.proowner) owner,
+            p.prosecdef definer, p.proconfig config, pg_get_function_identity_arguments(p.oid) arguments,
+            p.prorettype='public.memories'::regtype returns_memory, p.oid=$1::regprocedure legacy,
+            p.oid IN ($2::regprocedure, $3::regprocedure, $4::regprocedure) hardened_in_0026,
+            CASE WHEN p.prokind IN ('f','p') THEN pg_get_functiondef(p.oid) ELSE '' END definition,
+            ARRAY(SELECT CASE WHEN a.grantee=0 THEN 'PUBLIC' ELSE pg_get_userbyid(a.grantee) END
+                    FROM aclexplode(COALESCE(p.proacl, acldefault('f', p.proowner))) a
+                   WHERE a.privilege_type='EXECUTE' ORDER BY 1) executors,
+            has_function_privilege('authenticated', p.oid, 'EXECUTE')
+              OR has_function_privilege('anon', p.oid, 'EXECUTE') end_user
+       FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+      WHERE n.nspname NOT IN ('pg_catalog','information_schema') AND n.nspname NOT LIKE 'pg\\_%'`,
+    [LEGACY, CREATE, REMOVE, SUPERSEDE],
+  );
+  const writers = functions.filter((fn) => !fn.legacy && MEMORY_WRITE.test(fn.definition));
+  // The discovery is not vacuous: it finds the three 0026 commands.
+  assert.equal(writers.filter((fn) => fn.hardened_in_0026).length, 3, 'the 0026 commands are discovered as Memory writers');
+  const discovered = new Set(writers.map((fn) => fn.signature));
+  for (const fn of writers) {
+    const violations = memoryWriterViolations(fn);
+    if (fn.end_user) violations.push('executable by an end-user role');
+    assert.deepEqual(violations, [], `${fn.signature} holds the Memory writer posture`);
+  }
+  for (const fn of functions.filter((f) => !f.legacy && f.returns_memory && !discovered.has(f.signature))) {
+    assert.deepEqual(memoryReaderViolations({ definer: fn.definer, executors: fn.end_user ? ['authenticated'] : [] }), [],
+      `${fn.signature} does not return Memory past owner RLS`);
+  }
+  // No end-user-executable definer reaches a Memory writer (or the legacy RPC)
+  // indirectly, borrowing its owner's authority.
+  const writerNames = [...new Set([...writers.map((fn) => fn.name), 'supersede_memory'])];
+  const calls = new RegExp(`\\b(?:${writerNames.join('|')})\\s*\\(`, 'iu');
+  const bridges = functions.filter((fn) => fn.end_user && fn.definer && calls.test(fn.definition)).map((fn) => fn.signature);
+  assert.deepEqual(bridges, [], 'no end-user-executable SECURITY DEFINER calls a Memory writer');
 }
 
 async function reproduceBaselineVulnerability(owner, existing) {
