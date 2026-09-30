@@ -91,6 +91,7 @@ import {
 import { createConversationController, type ConversationController } from '../../conversation';
 import { createAccountController, type AccountController } from '../../account';
 import { createPublicIdController, type PublicIdController } from '../../settings';
+import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import {
   createAppearanceAuthority,
   createAppearancePreferenceStore,
@@ -177,6 +178,11 @@ export interface IntegrationSessionRuntime {
    * account transport. General Settings reads it when shown; it is retired with the generation.
    */
   readonly publicId: PublicIdController;
+  /**
+   * W3-MEGA-U: the reader's QANDEEL Understanding, for THIS identity, on the T-12P Understanding transport bound to it.
+   * The Understanding depth reads it when shown; it is retired with the generation.
+   */
+  readonly understanding: UnderstandingController;
 }
 
 /**
@@ -281,6 +287,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.conversation.retire();
     session.account.retire();
     session.publicId.retire();
+    session.understanding.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -355,6 +362,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       account: createAccountController({ transport: entry.accountFor(bundle), isCurrent }),
       // W3-02: the Public ID, on the same account transport bound to this identity.
       publicId: createPublicIdController({ transport: entry.accountFor(bundle), isCurrent }),
+      understanding: createUnderstandingController({ transport: entry.understandingFor(bundle), isCurrent }),
     };
     return built;
   }

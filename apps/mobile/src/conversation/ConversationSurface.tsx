@@ -14,8 +14,10 @@
  *     Replay, Understanding, Settings, Global Shell, Voice or Shared/Public entry is here;
  *   - W3-01 (P4-C1 S-B): beneath the upper chrome, Personal QANDEEL's own row carries the ONE General
  *     Settings entry — icon-only, 44 × 44, at the reader's END edge, drawn only when the Personal world
- *     supplies it. It is never in the upper chrome and never in the Analysis. The row is where the later
- *     QANDEEL Understanding entry (U-A) will also stand; nothing else is in it now.
+ *     supplies it. It is never in the upper chrome and never in the Analysis.
+ *   - W3-MEGA-U (P4-C1 U-A): the same row carries, at the reader's START edge, the Personal world's own entry it is
+ *     handed (personalEntry) — the QANDEEL Understanding entry. This layer draws none of it and writes none of its
+ *     words. Above the composer it also shows the bounded context it is handed (discussion), and nothing else.
  *
  * The surface lays itself out in an explicit left-to-right frame and places every element on a
  * PHYSICAL side computed from the reader's language. That is what makes the frozen side rule
@@ -79,6 +81,13 @@ export interface ConversationSurfaceProps {
   readonly onOpenSettings?: () => void;
   /** Move screen-reader focus to the Settings entry once, when returning from Settings. */
   readonly focusSettingsEntry?: boolean;
+  /**
+   * W3-MEGA-U (P4-C1 U-A): the Personal world's own entry, drawn at the reader's START edge of the Personal row
+   * (the row exists only with the Settings entry). Presentation only; this layer writes none of its words.
+   */
+  readonly personalEntry?: ReactElement | null;
+  /** W3-MEGA-U: a bounded context line the Personal world supplies, drawn above the composer. Presentation only. */
+  readonly discussion?: ReactElement | null;
 }
 
 /** G1.1 / G3.2 proof geometry, in points. Craft values of the frozen composition, not tokens. */
@@ -214,6 +223,8 @@ export function ConversationSurface({
   opening,
   onOpenSettings,
   focusSettingsEntry = false,
+  personalEntry = null,
+  discussion = null,
 }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
@@ -391,11 +402,18 @@ export function ConversationSurface({
             paddingLeft: insets.left + 10,
             paddingRight: insets.right + 10,
             height: PERSONAL_ROW_HEIGHT,
-            flexDirection: 'row',
+            // With a start-edge entry the row is laid out from the reader's start, so the screen reader reaches the
+            // entry first in both languages; the entry takes the free width and the Settings entry keeps the end edge.
+            flexDirection: personalEntry !== null && endSide === 'left' ? 'row-reverse' : 'row',
             alignItems: 'center',
             justifyContent: endSide === 'right' ? 'flex-end' : 'flex-start',
           }}
         >
+          {personalEntry === null ? null : (
+            <View testID="qandeel-personal-row-start" style={{ flex: 1, flexDirection: endSide === 'right' ? 'row' : 'row-reverse' }}>
+              {personalEntry}
+            </View>
+          )}
           <Control
             palette={palette}
             language={language}
@@ -438,6 +456,8 @@ export function ConversationSurface({
           paddingRight: insets.right + THREAD_GUTTER,
         }}
       />
+
+      {discussion}
 
       {submission !== null && submission.phase === 'UNCONFIRMED' ? (
         <View

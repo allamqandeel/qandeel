@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfidenceRepository } from '../hypothesis/confidence.repository';
 import { CONFIDENCE_MISSING_INFORMATION_CODES, CONFIDENCE_POLICY_VERSION, type ConfidenceEvaluationRecord, type ConfidenceMissingInformationCode } from '../hypothesis/confidence.types';
 import { HypothesisService } from '../hypothesis/hypothesis.service';
@@ -88,15 +88,63 @@ export class UnderstandingService {
     });
   }
 
-  private async ownedContext(userId: string, token: string): Promise<OwnedContext> {
+  /**
+   * U2 — "talk to QANDEEL about this" (P1 §11.4). Records the reader's explicit choice of ONE of their own current
+   * items, at the exact revision they saw, as their discussion focus. It edits nothing about the item.
+   *   204  the focus now names this item;
+   *   409  the item changed since the reader saw it (`UNDERSTANDING_ITEM_CHANGED`): nothing was written — read again;
+   *   404  not one of the caller's current items.
+   */
+  async openDiscussion(userId: string, token: string, ref: unknown, body: unknown): Promise<void> {
+    const revision = this.validateRevisionBody(body);
+    if (!isUnderstandingToken(ref)) throw new NotFoundException('Understanding item not found.');
+    return this.guard(async () => {
+      const active = await this.ownedActive(userId, token);
+      const hypothesis = active.find((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status) && understandingItemRef(userId, value.id) === ref);
+      if (!hypothesis) throw new NotFoundException('Understanding item not found.');
+      if (understandingRevision(userId, hypothesis.id, hypothesis.version) !== revision) throw this.changed();
+      const answer = await this.repository.openDiscussion(token, hypothesis.id, hypothesis.version);
+      if (answer === 'OPENED') return;
+      if (answer === 'STALE') throw this.changed();
+      if (answer === 'NOT_FOUND') throw new NotFoundException('Understanding item not found.');
+      this.reject();
+    });
+  }
+
+  /** Close the reader's discussion focus on this item. Idempotent: nothing open, or an item no longer current, is 204. */
+  async closeDiscussion(userId: string, token: string, ref: unknown): Promise<void> {
+    if (!isUnderstandingToken(ref)) return;
+    return this.guard(async () => {
+      const hypothesis = (await this.ownedActive(userId, token)).find((value) => understandingItemRef(userId, value.id) === ref);
+      if (!hypothesis) return;
+      const answer = await this.repository.closeDiscussion(token, hypothesis.id);
+      if (answer !== 'CLOSED' && answer !== 'NONE') this.reject();
+    });
+  }
+
+  private async ownedActive(userId: string, token: string): Promise<readonly HypothesisRecord[]> {
     const active = await this.hypotheses.listActiveForUser(userId, token);
     if (!Array.isArray(active)) this.reject();
-    // Owner re-checked defensively on every row, then only CURRENT understanding is kept. The repository order
-    // (updated_at DESC, id ASC) is the recency order the first view needs: most recently changed first.
-    const surfaced = active.filter((value) => {
-      if (!value || value.user_id !== userId) this.reject();
-      return UNDERSTANDING_SURFACE_STATUSES.includes(value.status);
-    });
+    for (const value of active) if (!value || value.user_id !== userId) this.reject();
+    return active;
+  }
+
+  private validateRevisionBody(body: unknown): string {
+    const value = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : null;
+    if (value === null || Object.keys(value).length !== 1 || !isUnderstandingToken(value.revision)) {
+      throw new BadRequestException('Request must contain exactly one revision.');
+    }
+    return value.revision;
+  }
+
+  private changed(): ConflictException {
+    return new ConflictException({ code: 'UNDERSTANDING_ITEM_CHANGED' });
+  }
+
+  private async ownedContext(userId: string, token: string): Promise<OwnedContext> {
+    // Owner re-checked defensively on every row (ownedActive), then only CURRENT understanding is kept. The
+    // repository order (updated_at DESC, id ASC) is the recency order the first view needs: most recently changed first.
+    const surfaced = (await this.ownedActive(userId, token)).filter((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status));
     if (surfaced.length === 0) return { surfaced, eligibleEvidence: new Map(), exactVersion: new Map() };
     const [eligible, evaluations] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
@@ -174,7 +222,7 @@ export class UnderstandingService {
     try {
       return await work();
     } catch (error) {
-      if (error instanceof NotFoundException || error instanceof BadRequestException) throw error;
+      if (error instanceof NotFoundException || error instanceof BadRequestException || error instanceof ConflictException) throw error;
       throw new ServiceUnavailableException('Understanding is unavailable.');
     }
   }

@@ -79,7 +79,9 @@ const productionCode = Object.fromEntries(PRODUCTION.map((file) => [file, code(r
 
 test('0125 is the next migration, additive and forward-only, on the canonical account row', () => {
   const names = readdirSync(new URL('database/migrations/', root)).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(names.at(-1), '0125_account_public_id_v1.sql');
+  // Re-anchored by W3-MEGA-U U2: 0125 was the next migration when W3-02 landed; later ones (0126 onward) follow it.
+  // The permanent claim is that 0125 directly follows 0124 and is W3-02's alone.
+  assert.equal(names[names.indexOf('0124_login_id_sign_in_resolution_v1.sql') + 1], '0125_account_public_id_v1.sql');
   assert.equal(names.filter((name) => name.startsWith('0125_')).length, 1);
   assert.match(migrationSql, /ALTER TABLE public\.users\n\s*ADD COLUMN public_id text,\n\s*ADD COLUMN public_id_changed_at timestamptz,\n\s*ADD COLUMN public_id_change_command_id uuid;/u);
   assert.doesNotMatch(migrationSql, /DROP (?:TABLE|COLUMN|FUNCTION|TRIGGER|POLICY)|CREATE OR REPLACE|ALTER COLUMN (?!public_id SET NOT NULL)/u, 'nothing existing is dropped or replaced');

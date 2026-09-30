@@ -22,6 +22,8 @@ export interface HypothesisReasoningItem {
     confidenceBand: null; calibrationState: 'UNCALIBRATED'; stability: 'UNASSESSED';
     missingInformationCodes: readonly ConfidenceMissingInformationCode[]; policyVersion: string;
   } | { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION'; targetVersion: number };
+  /** W3-MEGA-U U2: present only on the ONE item the reader chose, from QANDEEL Understanding, to talk about. */
+  userDiscussion?: 'OPENED_FROM_UNDERSTANDING';
 }
 
 export interface HypothesisReasoningContext {

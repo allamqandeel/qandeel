@@ -133,3 +133,127 @@ signal (`QAN-BL-CTX-01` stays unclaimed) and nothing is shown as a rank. With no
   `UnderstandingModule` composition exactly as they already strip `AccountModule`; the W1B-01 composition regex admits
   it. Every other byte stays pinned.
 - `tsc -p apps/api` clean; all 34 static contracts API CI runs pass locally.
+
+## 3. U2 — QANDEEL Understanding Product surface
+
+### 3.1 Entry and navigation (P4-C1 U-A, P1 §11)
+
+- **One persistent word on Personal QANDEEL's own row**, beneath the upper chrome, at the reader's **start** edge, with the
+  General Settings entry keeping the end edge (the row is `row-reverse` in Arabic so the screen reader reaches the
+  Understanding entry first in both languages). No glyph is frozen for it (P1 §16.1), so it is its frozen name. It is
+  never in the upper chrome, never in the Analysis, never inside Settings.
+- The Conversation layer only gained two neutral slot props, `personalEntry` and `discussion`. It draws and words none of
+  it, so the W1A-01 scope ban and the W3-01 row pins hold unchanged.
+- **A depth, not a route.** Like General Settings, the surface is shown OVER the Conversation, which stays mounted, out of
+  reach of touch and assistive technology. Opening it dispatches nothing, pushes no route, creates no Session and
+  persists nothing. Back (the control) and Android Back leave an open item first, then Understanding, and return to the
+  exact Personal state — same runtime, generation, Conversation controller, draft. With it closed, Back is the
+  platform's again. It is reachable only from the Conversation depth.
+- One `UnderstandingController` per runtime generation (built in `integration-runtime.ts` over
+  `entry.understandingFor(bundle)` on the AC-01 seam bound to the bundle's auth generation), retired with it.
+
+### 3.2 First view and detail
+
+- First view: title (theme), current summary, confidence **in words** (`الثقة: {state}` / `Confidence: {state}`), one
+  screen-reader stop per item in reading order. No percentage, number, score, rank or diagnostic label.
+- Detail: the summary and confidence, then only the parts that exist: «الأدلة» / Evidence, «التناقضات» / Contradictions,
+  «البدائل» / Alternatives, «نقاط غير محسومة» / Unresolved points, «تطور التحليل» / Analysis evolution. An empty part is
+  omitted; nothing is filled in. Evolution is the ordered, newest-first sequence **without dates**: the T-12 locale
+  authority records that nothing in v1 formats a date and pins no calendar, and choosing one is not this task's.
+- Honest states: nothing yet → one sentence; an unreadable answer → one sentence plus «إعادة المحاولة» / Try again,
+  asked only when the reader asks; an item no longer current → back to the refreshed list.
+- Accessibility: logical `direction` frame (RTL Arabic / LTR English); every control ≥ 44 × 44; headings are `header`;
+  no fixed widths or line clamps on reading text (320 pt and dynamic type reflow); no motion added; the canonical
+  palette in the reader's effective non-Analysis appearance (the Analysis stays dark and is untouched); Estedad v8.5
+  through the existing type roles; state is always in words, never colour alone.
+
+### 3.3 "Talk to QANDEEL about this" (P1 §11.4) — the context seam
+
+- In the detail, one control. It is bound to the **exact revision shown**: `POST /understanding/items/:ref/discussion`
+  with `{ revision }` only. 204 → the reader is back in the SAME Conversation with one quiet context line above the
+  composer («الحديث عن: {title}» + the summary) and a way to end it. 409 (the item changed) → nothing is recorded, the
+  item is read again and the reader sees the current interpretation before choosing again. Failure → one sentence, and
+  it can be asked again. **Nothing is typed into the composer and no turn is sent**: the reader says what they want.
+- Server: migration `0126` (`database/README.md`) holds ONE owner-only discussion focus per reader (private DEFINER /
+  public INVOKER, exact version under `FOR SHARE`, bounded `OPENED` / `STALE` / `NOT_FOUND`, a close that only closes the
+  named item). The provider-facing `HypothesisReasoningContextService` reads it with the caller's token and, while it is
+  open, at most `DISCUSSION_FOCUS_WINDOW_MS` (30 minutes) old, and (R2, §3.6) the item is still at the **exact version
+  the reader chose**, marks that one item `userDiscussion: 'OPENED_FROM_UNDERSTANDING'` and offers it first. It is the reader's own explicit act, not a
+  relevance ranking (`QAN-BL-CTX-01` stays unclaimed). The central hypothesis guidance gains one sentence: the item
+  stays provisional, the user leads, and their view is heard rather than argued down. A failed focus read fails the
+  whole Hypothesis context (it is then omitted), never consumed without it. The Conversation orchestrator, the
+  gatherer and the turn contract are unchanged.
+- The strip's end control closes the focus once; if that request is lost, the bounded window lets it lapse.
+
+### 3.4 Copy
+
+Frozen / approved, reused verbatim: `understanding`, `confClear`, `confForming`, `confMixed`, `confMore`, `confName`,
+the I-08A4 §9 detail names, `p3.back`, VI-01 «إعادة المحاولة» / Try again.
+
+**TASK-APPROVED DELEGATED COPY** (W3-MEGA-U §7.6; QANDEEL's formal T1 register, plain, non-diagnostic, no new concept):
+
+| Key | Arabic | English |
+|---|---|---|
+| theme `YOU` | عنك | About you |
+| theme `RELATIONSHIPS` | علاقاتك | Your relationships |
+| theme `WORK` | عملك | Your work |
+| theme `DECISIONS` | قراراتك | Your decisions |
+| theme `GOALS` | أهدافك | Your goals |
+| theme `HOW_WE_TALK` | طريقة حديثنا | How we talk |
+| empty | لم يتكوّن لدى قنديل فهمٌ يعرضه بعد. | QANDEEL hasn't formed an understanding to show yet. |
+| unavailable | تعذّر عرض فهم قنديل. | QANDEEL Understanding couldn't be shown. |
+| talk | الحديث مع قنديل عن هذا | Talk to QANDEEL about this |
+| talk failed | تعذّر نقل هذا إلى المحادثة. | This couldn't be brought into the conversation. |
+| strip | الحديث عن: {title} | Talking about: {title} |
+| end strip | إنهاء الحديث عن هذا | Stop talking about this |
+| `FIRST_SEEN` | بدأ قنديل يرى الأمر هكذا | QANDEEL began to see it this way |
+| `SUPPORT_ADDED` | أضاف كلامك ما يدعمه | Something you said supported it |
+| `CHALLENGE_ADDED` | أضاف كلامك ما يعارضه | Something you said challenged it |
+| `STRENGTHENED` | ازداد وضوحًا | It grew clearer |
+| `WEAKENED` | ضعُف | It grew weaker |
+| `BECAME_MIXED` | ظهر فيه تعارض | It became mixed |
+| `WITHDRAWN` | تركه قنديل جانبًا | QANDEEL set it aside |
+| `RECONSIDERED` | أعاد قنديل النظر فيه | QANDEEL reconsidered it |
+
+The Arabic avoids gendered imperatives (a verbal noun for the talk control) and the confession framing («لم نتمكّن»);
+«تعذّر» frames a failure as the process's.
+
+### 3.5 U2 verification
+
+- Mobile Jest: `understanding/__tests__/understanding-surface.test.tsx` and `understanding-api.test.ts` (35, Arabic and
+  English: first view words, exact confidence words, no numerals / % / score, 44 × 44, reflow, honest empty and
+  unavailable, detail omission, Back order, talk bound to revision, changed-item re-read, failure and retry, strict
+  decoding with 9 planted payload defects, no identity sent) and `integration/__tests__/w3-mega-u-understanding.test.tsx`
+  (5, the production phase surface: entry placement and reading order, same runtime / Session / draft, Android Back
+  chain, talk returns to the same Conversation with the context line and sends no turn, absent from Analysis and
+  Settings). The runtime-entry barrel test is re-anchored for the one new transport class.
+- API Jest: discussion open / stale / cross-user / withdrawn / widened body / close; reasoning-context marking, window,
+  malformed row and fail-closed read.
+- `database/verify-migration-0126.mjs` (real PostgreSQL, API CI); hazard scan 0 findings; all 1257 static database
+  contracts pass locally.
+- `tests/w3-mega-u2-understanding-surface-contract.test.mjs`: seven detectors, fifteen planted defects.
+- Validation re-anchors: the W3-02 contract's "0125 is the last migration" is now "0125 directly follows 0124"; the U1
+  contract counts one token identity per route.
+
+### 3.6 R2-A — the discussion focus is consumed at its exact revision
+
+Independent review found that migration `0126` stored the exact `hypothesis_version` the reader chose, but the
+provider-side read selected only `hypothesis_id, opened_at`, and the resolver matched the id alone. If the item advanced
+after the reader chose it (v3 → v4), the provider would have received v4 — an interpretation the reader never saw —
+marked `OPENED_FROM_UNDERSTANDING`. The U2 text above claimed "that one item" without saying which revision.
+
+Corrected on this PR (no migration, no copy, no UI change):
+
+- `HypothesisUserSignalRepository.readOpenDiscussionFocus` selects `hypothesis_id,hypothesis_version,opened_at`, and
+  `HypothesisDiscussionFocusRow` carries `hypothesis_version`.
+- `HypothesisReasoningContextService` refuses (invariant error, whole context omitted) a focus row whose version is not a
+  positive safe integer, and marks an item only when `id === focus.hypothesis_id && version === focus.hypothesis_version`.
+  An advanced (or lower) version marks nothing; the focus is never moved to the new version, never rewritten, and no
+  replacement is inferred. The stored row simply stays until the reader closes it, chooses again, or the window lapses.
+- Proof: API Jest (same revision marked; v3 focus + current v4 unmarked; lower version unmarked; another item never
+  marked; five malformed versions fail closed; window and fail-closed read unchanged). `verify-migration-0126.mjs` now
+  also proves the stored version is the one the command accepted, that an audited lifecycle advance leaves it
+  unchanged, that the old revision can no longer be opened, and that only a new explicit open names the new version.
+  The U2 contract gains an `exactRevisionFocusViolations` detector with four planted defects (reader omits the version;
+  id-only match; `>=` rebinding; version check removed) and is now also run by API CI, since its new guard reads API
+  source. The Mobile surface, transport and tests are unchanged and still pass.

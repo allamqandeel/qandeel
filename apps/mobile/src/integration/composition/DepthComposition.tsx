@@ -30,6 +30,16 @@
  *     control or Android's system Back) returns to exactly the same Personal state. Opening it dispatches
  *     nothing, writes no canonical state, pushes no route, builds no Session and persists nothing. It is
  *     reachable only from the Conversation depth: never from the Analysis.
+ *
+ * W3-MEGA-U — QANDEEL Understanding (P1 §11, P4-C1 U-A):
+ *
+ *   - its entry stands on the same Personal row, at the reader's start edge, and opens the Understanding depth OVER
+ *     the Conversation exactly as General Settings does: the Conversation stays mounted and out of reach, and Back
+ *     (the control or Android's system Back) returns to exactly the same Personal state, in the same Session and
+ *     runtime generation. It is not a route, a world, a Settings group or a Profile, and it is never reached from the
+ *     Analysis;
+ *   - "talk to QANDEEL about this" returns the reader to the Conversation carrying the item as a bounded context line
+ *     above the composer. Nothing is written into the composer and nothing is sent.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
@@ -46,6 +56,7 @@ import {
 import { ConversationOpening, FirstUseGate } from '../../account';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
+import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface } from '../../understanding';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
@@ -104,6 +115,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // the screen reader back to the entry only when the reader came back from Settings.
   const [settingsShown, setSettingsShown] = useState(false);
   const [returnedFromSettings, setReturnedFromSettings] = useState(false);
+  // W3-MEGA-U — the Understanding depth, the same kind of local presentation choice as Settings.
+  const [understandingShown, setUnderstandingShown] = useState(false);
+  const [returnedFromUnderstanding, setReturnedFromUnderstanding] = useState(false);
   const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
   const reduceMotion = useReducedMotion();
   const incoming = useSharedValue(1);
@@ -152,6 +166,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       if (to === depth) return;
       setCrossed(true);
       setReturnedFromSettings(false);
+      setReturnedFromUnderstanding(false);
       const duration = reduceMotion ? DEPTH_CROSSFADE_REDUCED_MOTION_MS : DEPTH_CROSSFADE_MS;
       // A fade still running toward the other depth stops here; its frames are not reused.
       fading.set(0);
@@ -205,6 +220,29 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     return () => subscription.remove();
   }, [closeSettings, settingsShown]);
 
+  const openUnderstanding = useCallback(() => {
+    setReturnedFromUnderstanding(false);
+    setUnderstandingShown(true);
+  }, []);
+  const closeUnderstanding = useCallback(() => {
+    setUnderstandingShown(false);
+    setReturnedFromUnderstanding(true);
+  }, []);
+  // After "talk to QANDEEL about this" the reader is back in the Conversation; the context line announces itself.
+  const talkedAboutItem = useCallback(() => {
+    setUnderstandingShown(false);
+    setReturnedFromUnderstanding(false);
+  }, []);
+  // Android system Back while Understanding is shown is its own Back, and nothing else.
+  useEffect(() => {
+    if (!understandingShown) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeUnderstanding();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [closeUnderstanding, understandingShown]);
+
   const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
 
   const layer = (which: WorldDepth, current: boolean): ReactNode =>
@@ -218,6 +256,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         opening={<ConversationOpening account={runtime.account} language={locale.language} />}
         onOpenSettings={onSignOut === undefined ? undefined : openSettings}
         focusSettingsEntry={returnedFromSettings && !settingsShown}
+        personalEntry={onSignOut === undefined ? null : (
+          <UnderstandingEntry language={locale.language} onOpen={openUnderstanding} focus={returnedFromUnderstanding && !understandingShown} />
+        )}
+        discussion={<UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />}
       />
     ) : (
       <AnalysisAppearanceScope>
@@ -268,8 +310,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         )}
         {stack.map((which) => {
           const current = which === depth;
-          // Beneath General Settings the Personal world stays mounted, untouched, and out of reach.
-          const reachable = current && !settingsShown;
+          // Beneath General Settings or Understanding the Personal world stays mounted, untouched, and out of reach.
+          const reachable = current && !settingsShown && !understandingShown;
           return (
             <Animated.View
               key={which}
@@ -288,6 +330,11 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
             <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} publicId={runtime.publicId} />
+          </View>
+        ) : null}
+        {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <View style={StyleSheet.absoluteFill}>
+            <UnderstandingSurface controller={runtime.understanding} language={locale.language} insets={edges} onBack={closeUnderstanding} onTalk={talkedAboutItem} />
           </View>
         ) : null}
       </View>

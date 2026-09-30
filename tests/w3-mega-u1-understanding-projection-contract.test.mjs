@@ -97,7 +97,9 @@ function identityViolations(world) {
   const out = [];
   if (!/@Controller\('understanding'\)\n@UseGuards\(SupabaseAuthGuard\)/u.test(world.controller)) out.push('routes are not guarded at the class');
   if (/@(?:Query|Body|Param|Headers)\(\s*'(?:userId|user_id|owner|ownerId)'\s*\)/u.test(world.controller)) out.push('a client-supplied identity');
-  if ((world.controller.match(/request\.authenticatedUser/gu) ?? []).length !== 2) out.push('identity does not come only from the verified token');
+  // Every route handler takes its identity from the verified token, once. (U2 added the discussion routes.)
+  const handlers = (world.controller.match(/@(?:Get|Post|Put|Patch|Delete)\(/gu) ?? []).length;
+  if (handlers === 0 || (world.controller.match(/const \{ userId, accessToken \} = request\.authenticatedUser;/gu) ?? []).length !== handlers) out.push('identity does not come only from the verified token');
   if (!/key !== 'limit'/u.test(world.service)) out.push('unknown query keys (e.g. a user id) are not refused');
   return out;
 }

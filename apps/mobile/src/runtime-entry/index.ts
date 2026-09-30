@@ -96,6 +96,19 @@ export type {
   PublicIdChangeOutcome,
 } from './account/account-api';
 export { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
+export type {
+  UnderstandingApiConfig,
+  UnderstandingConfidence,
+  UnderstandingDetailOutcome,
+  UnderstandingDetailView,
+  UnderstandingDiscussionOutcome,
+  UnderstandingEvolutionKind,
+  UnderstandingEvolutionView,
+  UnderstandingItemView,
+  UnderstandingListOutcome,
+  UnderstandingTheme,
+} from './understanding-api';
+export { UnderstandingApiClient } from './understanding-api';
 
 export type {
   BootstrapFailure,

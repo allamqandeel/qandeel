@@ -35,6 +35,7 @@ import type { BootstrapResult, CanonicalRuntimeBundle, InitialViewpoint } from '
 import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversation/conversation-session-api';
 import { ConversationTurnApiClient } from './conversation/conversation-turn-api';
 import { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
+import { UnderstandingApiClient } from './understanding-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -114,6 +115,11 @@ export interface MobileRuntimeEntry {
    * to the bundle's own auth generation: a replaced identity's request is refused before it is issued.
    */
   accountFor(bundle: CanonicalRuntimeBundle): AccountApiClient;
+  /**
+   * W3-MEGA-U — the QANDEEL Understanding client for a bundle this coordinator produced, on the same AC-01 seam bound
+   * to the bundle's own auth generation: a replaced identity's request is refused before it is issued.
+   */
+  understandingFor(bundle: CanonicalRuntimeBundle): UnderstandingApiClient;
   /**
    * W1B-01 — the one signed-out account question: may a Login ID still be chosen. It carries no
    * credential, because there is no account yet.
@@ -269,6 +275,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     accountFor(bundle) {
       return new AccountApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    understandingFor(bundle) {
+      return new UnderstandingApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     loginIds: new LoginIdAvailabilityClient({ baseUrl: config.apiBaseUrl, fetch: httpFetch }),
     currentRuntimeGeneration: () => runtimeGeneration,
