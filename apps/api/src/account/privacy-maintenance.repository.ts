@@ -30,6 +30,7 @@ export class PrivacyMaintenanceRepository {
     const rows = await this.serviceApi.rpc<unknown>('server_claim_due_account_deletions_v1', { p_limit: limit });
     if (!Array.isArray(rows)) return [];
     return rows.flatMap((row: unknown) => {
+      if (typeof row !== 'object' || row === null) return [];
       const r = row as { deletion_id?: unknown; user_id?: unknown; deletion_status?: unknown };
       if (typeof r.deletion_id !== 'string' || !UUID.test(r.deletion_id) || typeof r.user_id !== 'string' || !UUID.test(r.user_id)) return [];
       if (r.deletion_status !== 'SCHEDULED' && r.deletion_status !== 'ERASED') return [];

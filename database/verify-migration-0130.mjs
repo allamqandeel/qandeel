@@ -110,6 +110,8 @@ async function exchange(userId, sessionId, content, reply) {
     [sessionId, userId, userTurn, assistantTurn, reply, 'ALLOW', randomUUID(), null, null, null]);
   assert.equal(finalized.length, 1, 'fixture exchange finalized');
   const units = [{ unit_id: randomUUID(), span_start: 0, span_end: Array.from(content).length }];
+  // 0071 revoked the frozen unit commit from service_role; the fixture commits as the owner, as verify-migration-0072 does.
+  await asOwner();
   await rows('SELECT * FROM public.commit_conversation_units_v1($1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10)',
     [sessionId, userId, userTurn, randomUUID(), JSON.stringify(units), ...PROVENANCE]);
   await asOwner();
@@ -168,6 +170,16 @@ async function himTarget(userId) {
   await asOwner();
 }
 
+/** A HIM measurement carried all the way to a calculated snapshot: target, event, observation, result, snapshot. */
+async function himMeasured(userId) {
+  await actAs('authenticated', userId);
+  const [target] = await rows("SELECT * FROM public.create_him_motivation_measurement_target('GOAL', 'verifier measured goal')");
+  const [observation] = await rows("SELECT * FROM public.create_hse_motivation_measurement($1, 'HIGH', NULL)", [target.id]);
+  const [snapshot] = await rows('SELECT * FROM public.calculate_hse_motivation_measurement($1)', [observation.id]);
+  await asOwner();
+  assert.ok(snapshot, 'fixture HIM snapshot calculated');
+}
+
 /** A full Personal footprint. */
 async function populated(loginId, words) {
   const user = await reader(loginId);
@@ -186,6 +198,7 @@ async function populated(loginId, words) {
   await memory(user, `${words} forgotten fact`, 'DELETED');
   const hypothesis = await contestedUnderstanding(user, `${words} prepare early for deadlines.`);
   await himTarget(user);
+  await himMeasured(user);
   return { user, session: s, hypothesis };
 }
 
@@ -403,6 +416,11 @@ async function verifyExport(alice, bob) {
   await rejected(() => client.query('SELECT public.server_prepare_data_exports_v1(20)'), ['42501']);
   await rejected(() => client.query('SELECT personal_data_private.build_personal_export_v1($1)', [alice.user]), ['42501']);
   await asOwner();
+  // An interpretation QANDEEL formed but never admitted (CANDIDATE) is its own unshown reasoning, never exported.
+  await client.query(
+    `INSERT INTO public.hypotheses (id, user_id, statement, type, domain, scope, origin, assumptions)
+     VALUES ($1, $2, 'alice unshown candidate.', 'BEHAVIORAL', 'WORK', 'verifier scope', 'SYSTEM_GENERATED', ARRAY['An internal assumption.'])`,
+    [randomUUID(), alice.user]);
   assert.ok(await prepare() >= 1, 'the preparation pass prepared the package');
   const ready = await readExport(alice.user);
   assert.equal(ready.export_status, 'READY');
@@ -428,8 +446,11 @@ async function verifyExport(alice, bob) {
   assert.equal(memory['alice remembered fact'], 'active');
   assert.equal(memory['alice disabled fact'], 'not relied on');
   assert.equal(memory['alice forgotten fact'], 'forgotten', 'a forgotten Memory still held is exported, labelled');
+  assert.equal(pkg.understanding.length, 1, 'only an interpretation the owner could have been shown');
   const [understanding] = pkg.understanding;
   assert.equal(understanding.statement, 'alice prepare early for deadlines.');
+  assert.equal(understanding.status, 'current', 'a readable status, not the internal lifecycle name');
+  assert.doesNotMatch(JSON.stringify(pkg), /unshown candidate/u, 'a CANDIDATE is never exported');
   assert.equal(understanding.yourDisagreements.length, 1, 'the owner\'s own disagreement');
   assert.deepEqual(pkg.notYetIncluded, ['shared', 'public', 'replay', 'introductions']);
   const text = JSON.stringify(pkg);
@@ -519,7 +540,8 @@ async function verifyDeletion(alice, bob) {
   const aliceBefore = await footprint(alice.user);
   for (const table of ['public.conversation_turns.user_id', 'public.conversation_units.user_id', 'public.memories.user_id',
     'public.memory_control_commands.user_id', 'public.hypotheses.user_id', 'public.understanding_contests.user_id',
-    'public.historical_material_events.user_id', 'public.him_measurement_targets.user_id', 'public.runtime_event_outbox.subject_user_id']) {
+    'public.historical_material_events.user_id', 'public.him_measurement_targets.user_id', 'public.him_measurement_observations.user_id',
+    'public.him_calculation_results.user_id', 'public.him_metric_snapshots.user_id', 'public.runtime_event_outbox.subject_user_id']) {
     assert.ok(aliceBefore[table] > 0, `the fixture really populates ${table}`);
   }
   const claimed = await server('SELECT * FROM public.server_claim_due_account_deletions_v1(20)');
@@ -534,6 +556,15 @@ async function verifyDeletion(alice, bob) {
   const erased = await one('SELECT status, erased_at IS NOT NULL AS erased, completed_at FROM personal_data_private.account_deletions WHERE id = $1', [deletionId]);
   assert.deepEqual(erased, { status: 'ERASED', erased: true, completed_at: null }, 'the request is kept as the minimal record');
   assert.equal(await count('SELECT count(*) AS n FROM auth.users WHERE id = $1', [alice.user]), 1, 'the provider account is the API\'s to remove next');
+
+  stage = 'deletion: a measurement written after the erasure by a still-valid session is swept before the provider removal';
+  await himTarget(alice.user);
+  assert.deepEqual(await footprint(alice.user), { 'public.him_measurement_targets.user_id': 1, 'public.users.id': 0 },
+    'the HIM tables reference the provider account, so a stale session can still write one');
+  assert.equal(await erase(deletionId), 'ALREADY_ERASED');
+  assert.deepEqual(await footprint(alice.user), { 'public.users.id': 0 }, 'the pass before the provider removal sweeps it');
+  assert.equal(await count('SELECT count(*) AS n FROM personal_data_private.erasure_authorizations'), 0, 'the boundary is closed again');
+  assert.equal((await one('SELECT status FROM personal_data_private.account_deletions WHERE id = $1', [deletionId])).status, 'ERASED');
 
   stage = 'deletion: retry and completion are idempotent';
   assert.equal(await erase(deletionId), 'ALREADY_ERASED');
@@ -556,7 +587,7 @@ async function verifyDeletion(alice, bob) {
   const publicChange = await one('SELECT * FROM public.change_own_public_id_v1($1, $2)', [randomUUID(), publicId]);
   assert.equal(publicChange.outcome, 'UNAVAILABLE', 'the existing Public ID change answers UNAVAILABLE');
   await asOwner();
-  await rejected(() => client.query('INSERT INTO public.users (id, auth_subject) VALUES ($1, $1::text)', [alice.user]), ['42501']);
+  await rejected(() => client.query('INSERT INTO public.users (id, auth_subject) VALUES ($1::uuid, $1::text)', [alice.user]), ['42501']);
 }
 
 // ------------------------------------------------------------------------------------------------------

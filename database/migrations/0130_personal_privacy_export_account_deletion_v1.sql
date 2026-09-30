@@ -27,7 +27,9 @@
 -- Stage 6.6 denies physical DELETE of historical canonical rows "unless a separately governed Product erasure policy
 -- explicitly owns it"; W3-PDG-01 §8.3 / §8.6 is that policy for the Personal world. Sixteen history guards (0011,
 -- 0012 / 0013, 0055, 0063, 0064, 0065, 0066, 0068, 0070, 0071, 0072) are redefined IN PLACE (same name, same OID,
--- same grants, still SECURITY INVOKER with an empty search_path). Each keeps its original body byte-for-byte after
+-- still SECURITY INVOKER with an empty search_path; no role may execute one directly — a trigger function is never
+-- EXECUTE-checked when it fires, and the four that had kept PUBLIC's default are revoked here). Each keeps its original
+-- body byte-for-byte after
 -- one prefix that admits a DELETE — never an UPDATE — and only when BOTH hold:
 --
 --   * the transaction-local setting `qandeel.personal_erasure` equals the CURRENT transaction id; and
@@ -590,7 +592,9 @@ AS $$
         'understanding', coalesce((
             SELECT jsonb_agg(jsonb_build_object(
                        'statement', h.statement,
-                       'status', lower(h.status),
+                       'status', CASE WHEN h.status IN ('ACTIVE', 'SUPPORTED', 'MIXED', 'WEAK') THEN 'current'
+                                      WHEN h.status = 'REOPENED' THEN 'being reconsidered'
+                                      ELSE 'withdrawn' END,
                        'firstFormedAt', h.created_at,
                        'lastChangedAt', h.updated_at,
                        'yourDisagreements', coalesce((
@@ -598,7 +602,16 @@ AS $$
                              FROM public.understanding_contests c
                             WHERE c.hypothesis_id = h.id AND c.user_id = p_subject), '[]'::jsonb))
                    ORDER BY h.created_at, h.id)
-              FROM public.hypotheses h WHERE h.user_id = p_subject), '[]'::jsonb),
+              FROM public.hypotheses h
+             WHERE h.user_id = p_subject
+               -- Only an interpretation the owner could have been shown: current now (the statuses the Understanding
+               -- surface lists), or current at some point before it was reconsidered or withdrawn. A CANDIDATE, or one
+               -- withdrawn before it was ever admitted, is QANDEEL's own unshown reasoning (hypothesis restraint).
+               AND (h.status IN ('ACTIVE', 'SUPPORTED', 'MIXED', 'WEAK')
+                    OR (h.status IN ('REOPENED', 'REJECTED', 'RETIRED')
+                        AND EXISTS (SELECT 1 FROM public.hypothesis_lifecycle_transitions t
+                                     WHERE t.hypothesis_id = h.id AND t.user_id = p_subject
+                                       AND t.after_status IN ('ACTIVE', 'SUPPORTED', 'MIXED', 'WEAK'))))), '[]'::jsonb),
         'notYetIncluded', jsonb_build_array('shared', 'public', 'replay', 'introductions'));
 $$;
 
@@ -895,7 +908,8 @@ $$;
 -- THE governed Personal erasure. It runs only for a SCHEDULED request past its grace period, and it is final: the
 -- account row and every Personal-world row of that account are deleted in ONE transaction, or nothing is.
 -- Outcomes: ERASED | BLOCKED (a Connected Worlds row still references the account) | ALREADY_ERASED | NOT_DUE |
--- CANCELLED | UNKNOWN. Safe to retry: each outcome is judged again from the committed request under its locks.
+-- CANCELLED | UNKNOWN. Safe to retry: each outcome is judged again from the committed request under its locks. For an
+-- ERASED request it sweeps the provider-referenced HIM rows again (see below) and answers ALREADY_ERASED.
 CREATE FUNCTION personal_data_private.erase_personal_account_v1(p_deletion_id uuid)
 RETURNS text
 LANGUAGE plpgsql
@@ -919,7 +933,27 @@ BEGIN
     -- erasure are serialized and exactly one of them wins.
     SELECT u.login_id, u.public_id INTO v_login_id, v_public_id FROM public.users u WHERE u.id = v_user FOR UPDATE;
     SELECT * INTO v_request FROM personal_data_private.account_deletions d WHERE d.id = p_deletion_id FOR UPDATE;
-    IF v_request.status IN ('ERASED', 'COMPLETED') THEN
+    IF v_request.status = 'ERASED' THEN
+        -- Erased, the provider account not yet removed. The HIM measurement tables reference the PROVIDER account
+        -- (0011-0013), not public.users, so a session still valid at the provider could have written a row since the
+        -- erasure; its immutability guard would then refuse the provider's cascading delete forever. The server
+        -- therefore passes here right before every removal attempt, and those rows are swept under a fresh
+        -- authorization of this same request.
+        INSERT INTO personal_data_private.erasure_authorizations (transaction_id, deletion_id)
+        VALUES (pg_catalog.txid_current(), v_request.id);
+        PERFORM pg_catalog.set_config('qandeel.personal_erasure', pg_catalog.txid_current()::text, true);
+        DELETE FROM public.him_energy_calculation_supersessions x WHERE x.user_id = v_user;
+        DELETE FROM public.him_calibration_evaluations x WHERE x.user_id = v_user;
+        -- A snapshot references its calculation result and observation (0012): it goes before both.
+        DELETE FROM public.him_metric_snapshots x WHERE x.user_id = v_user;
+        DELETE FROM public.him_calculation_results x WHERE x.user_id = v_user;
+        DELETE FROM public.him_measurement_observations x WHERE x.user_id = v_user;
+        DELETE FROM public.him_measurement_events x WHERE x.user_id = v_user;
+        DELETE FROM public.him_measurement_targets x WHERE x.user_id = v_user;
+        DELETE FROM personal_data_private.erasure_authorizations a WHERE a.transaction_id = pg_catalog.txid_current();
+        PERFORM pg_catalog.set_config('qandeel.personal_erasure', '', true);
+        RETURN 'ALREADY_ERASED';
+    ELSIF v_request.status = 'COMPLETED' THEN
         RETURN 'ALREADY_ERASED';
     ELSIF v_request.status = 'CANCELLED' THEN
         RETURN 'CANCELLED';
@@ -1021,11 +1055,12 @@ BEGIN
         -- HIM measurements (the provider account removal cascades into these, so they go first).
         DELETE FROM public.him_energy_calculation_supersessions x WHERE x.user_id = v_user;
         DELETE FROM public.him_calibration_evaluations x WHERE x.user_id = v_user;
+        -- A snapshot references its calculation result and observation (0012): it goes before both.
+        DELETE FROM public.him_metric_snapshots x WHERE x.user_id = v_user;
         DELETE FROM public.him_calculation_results x WHERE x.user_id = v_user;
         DELETE FROM public.him_measurement_observations x WHERE x.user_id = v_user;
         DELETE FROM public.him_measurement_events x WHERE x.user_id = v_user;
         DELETE FROM public.him_measurement_targets x WHERE x.user_id = v_user;
-        DELETE FROM public.him_metric_snapshots x WHERE x.user_id = v_user;
 
         -- The Personal conversation itself, its operational events and the owner's pending exports.
         DELETE FROM public.conversation_turns x WHERE x.user_id = v_user;
@@ -1146,6 +1181,19 @@ DO $$BEGIN
     EXECUTE 'REVOKE ALL ON ALL FUNCTIONS IN SCHEMA personal_data_private FROM service_role';
     EXECUTE 'REVOKE ALL ON FUNCTION public.read_own_privacy_state_v1(), public.request_own_data_export_v1(uuid), '
          || 'public.read_own_data_export_v1(), public.request_own_account_deletion_v1(uuid), public.cancel_own_account_deletion_v1() '
+         || 'FROM service_role';
+  END IF;
+END$$;
+
+-- The narrowed guards are trigger functions only: no role may call one directly. Twelve were already revoked by their
+-- own migrations; these four had kept PUBLIC's default EXECUTE (0011, 0012, 0063).
+REVOKE ALL ON FUNCTION public.reject_him_runtime_mutation(), public.reject_him_energy_immutable_mutation(),
+    public.guard_information_gap_lifecycle_mutation(), public.guard_formal_question_turn_binding_mutation()
+    FROM PUBLIC, anon, authenticated;
+DO $$BEGIN
+  IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'service_role') THEN
+    EXECUTE 'REVOKE ALL ON FUNCTION public.reject_him_runtime_mutation(), public.reject_him_energy_immutable_mutation(), '
+         || 'public.guard_information_gap_lifecycle_mutation(), public.guard_formal_question_turn_binding_mutation() '
          || 'FROM service_role';
   END IF;
 END$$;

@@ -55,7 +55,7 @@ import { settingsCopy } from './copy';
 import { saveExportDocument } from './export-file';
 import { openLanguageSettings } from './language-settings';
 import type { PrivacyDataController, PrivacyDataState } from './privacy-data-controller';
-import { DeletionRequest, ExportRequest, formatDay, LanguageRow, PrivacyDataRows } from './PrivacyDataSection';
+import { DeletionRequest, deletionStatusSaid, ExportRequest, exportStatusSaid, LanguageRow, PrivacyDataRows } from './PrivacyDataSection';
 import type { PublicIdController, PublicIdState } from './public-id-controller';
 import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
 
@@ -242,7 +242,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     const target = rowNodes.current[returnTo];
     const node = target === null || target === undefined ? null : findNodeHandle(target);
     if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
-  }, [changing, returnTo, publicIdState, identityState]);
+  }, [changing, returnTo, publicIdState, identityState, privacyState]);
 
   // The screen reader arrives on the destination's name, once, when the surface is drawn.
   const titleRef = useRef<Text | null>(null);
@@ -329,21 +329,22 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     privacyActRef.current = false;
     setCancelling(false);
     if (result === null) return;
+    // The Cancel row is gone once the deletion is; the screen reader returns to the Delete account row.
+    setReturnTo('DELETE');
     say(setDeletionNotice, result === 'CANCELLED' ? copy.privacy.deleteCancelled
       : result === 'NOT_CANCELLABLE' ? copy.privacy.deleteNotCancellable : copy.privacy.network);
   }, [copy, privacy, say]);
-  // A request that the server now holds closes its form, and what is now true is said once.
+  // A request that the server now holds closes its form, and what is now true is said once — the same words its row
+  // shows, from the state the server returned.
   const exportAccepted = useCallback(() => {
     leaveChange();
-    const held = privacy?.getState().view?.export;
-    const until = held?.status === 'READY' && held.availableUntil !== null ? held.availableUntil : null;
-    AccessibilityInfo.announceForAccessibility(until === null ? copy.privacy.exportPreparing : copy.privacy.exportReady(formatDay(until, language)));
+    const said = exportStatusSaid(privacy?.getState().view ?? null, copy.privacy, language);
+    if (said !== null) AccessibilityInfo.announceForAccessibility(said);
   }, [copy, language, leaveChange, privacy]);
   const deletionAccepted = useCallback(() => {
     leaveChange();
-    const held = privacy?.getState().view?.deletion;
-    const on = held?.status === 'SCHEDULED' && held.finalAt !== null ? held.finalAt : null;
-    AccessibilityInfo.announceForAccessibility(on === null ? copy.privacy.deleteFinalizing : copy.privacy.deleteScheduled(formatDay(on, language)));
+    const said = deletionStatusSaid(privacy?.getState().view ?? null, copy.privacy, language);
+    if (said !== null) AccessibilityInfo.announceForAccessibility(said);
   }, [copy, language, leaveChange, privacy]);
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={SETTINGS_SURFACE_TEST_ID} />;

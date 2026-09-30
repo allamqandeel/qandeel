@@ -106,8 +106,14 @@ export function createPrivacyDataController({
     }
   };
 
+  /** Counts every published view, so an unrequested read that an act's answer overtook is dropped, not shown. */
+  let published = 0;
   const publish = (view: PrivacyStateView) => {
+    published += 1;
     state = { status: 'READY', view };
+    // A request the server shows as held is no longer unsettled: the next request is a new one.
+    if (view.export.status === 'PREPARING' || view.export.status === 'READY') exportCommand = null;
+    if (view.deletion.status !== 'NONE') deletionCommand = null;
     for (const listener of Array.from(listeners)) listener();
     watchPreparation();
   };
@@ -128,15 +134,24 @@ export function createPrivacyDataController({
     );
   };
 
-  /** After an answer that does not say what happened: read the canonical state, and say only that. */
-  async function reread(): Promise<PrivacyStateView | null> {
-    let outcome: PrivacyStateOutcome;
+  /**
+   * Read the canonical state and show it. An act's own read (after an answer that does not say what happened) is
+   * always shown. An unrequested read (Settings shown again, the preparing poll) is dropped when an act is in flight
+   * or has published since it was issued — its answer may predate that act. A failed read leaves the poll running.
+   */
+  async function reread(forAct = false): Promise<PrivacyStateView | null> {
+    const issued = published;
+    let outcome: PrivacyStateOutcome | null;
     try {
       outcome = await transport.readPrivacyState();
     } catch {
+      outcome = null;
+    }
+    if (!live()) return null;
+    if (outcome === null || outcome.kind !== 'READ' || (!forAct && (busy || published !== issued))) {
+      if (poll === null) watchPreparation();
       return null;
     }
-    if (!live() || outcome.kind !== 'READ') return null;
     publish(outcome.view);
     return outcome.view;
   }
@@ -187,7 +202,7 @@ export function createPrivacyDataController({
           withView({ export: outcome.view });
           return 'ACCEPTED';
         }
-        const read = await reread();
+        const read = await reread(true);
         if (read !== null && (read.export.status === 'PREPARING' || read.export.status === 'READY')) {
           exportCommand = null;
           return 'ACCEPTED';
@@ -201,7 +216,7 @@ export function createPrivacyDataController({
         const outcome = await transport.downloadDataExport().catch((): ExportDownloadOutcome => ({ kind: 'NETWORK' }));
         if (!live()) return { kind: 'RETRY' };
         if (outcome.kind === 'READY') return { kind: 'READY', document: outcome.document };
-        await reread();
+        await reread(true);
         return outcome.kind === 'NOT_READY' ? { kind: 'NOT_READY' } : { kind: 'RETRY' };
       });
     },
@@ -219,7 +234,7 @@ export function createPrivacyDataController({
           return 'ACCEPTED';
         }
         if (outcome.kind === 'CANCELLED') deletionCommand = null;
-        const read = await reread();
+        const read = await reread(true);
         if (read !== null && read.deletion.status !== 'NONE') {
           deletionCommand = null;
           return 'ACCEPTED';
@@ -233,10 +248,12 @@ export function createPrivacyDataController({
         const outcome = await transport.cancelAccountDeletion().catch((): DeletionCancelOutcome => ({ kind: 'NETWORK' }));
         if (!live()) return 'RETRY';
         if (outcome.kind === 'CANCELLED' || outcome.kind === 'NONE') {
+          deletionCommand = null;
           withView({ deletion: { status: 'NONE', finalAt: null } });
           return 'CANCELLED';
         }
-        const read = await reread();
+        const read = await reread(true);
+        if (read !== null && read.deletion.status === 'NONE') deletionCommand = null;
         if (outcome.kind === 'NOT_CANCELLABLE') return 'NOT_CANCELLABLE';
         return read !== null && read.deletion.status === 'NONE' ? 'CANCELLED' : 'RETRY';
       });

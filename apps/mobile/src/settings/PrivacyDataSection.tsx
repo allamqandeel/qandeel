@@ -31,23 +31,54 @@ const ROW_END = 20;
 
 const writingOf = (language: ChromeLanguage) => (language === 'ar' ? 'rtl' : 'ltr');
 
-/** A day, in the reader's Product language, on the one locale authority's numeral policy and the Gregorian calendar. */
+/**
+ * A day, in the reader's Product language, on the one locale authority's numeral policy and the Gregorian calendar.
+ * It is called while drawing, so it never throws: a value the engine cannot format is shown as its ISO day.
+ */
 export function formatDay(instant: string, language: ChromeLanguage): string {
   const tag = `${numberFormattingTag(productLocale(language, language === 'ar' ? 'RTL' : 'LTR'))}-ca-gregory`;
-  return new Intl.DateTimeFormat(tag, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(instant));
+  try {
+    return new Intl.DateTimeFormat(tag, { year: 'numeric', month: 'long', day: 'numeric' }).format(new Date(instant));
+  } catch {
+    return instant.slice(0, 10);
+  }
+}
+
+/** What the export row says about the package the server holds; `null` when there is nothing held to report. */
+export function exportStatusSaid(view: PrivacyStateView | null, copy: PrivacyDataCopy, language: ChromeLanguage): string | null {
+  const held = view?.export;
+  if (held === undefined) return null;
+  if (held.status === 'PREPARING') return copy.exportPreparing;
+  if (held.status === 'READY' && held.availableUntil !== null) return copy.exportReady(formatDay(held.availableUntil, language));
+  if (held.status === 'EXPIRED') return copy.exportExpired;
+  if (held.status === 'FAILED') return copy.exportFailed;
+  return null;
+}
+
+/** What the deletion row says about the deletion the server holds; `null` when none is held. */
+export function deletionStatusSaid(view: PrivacyStateView | null, copy: PrivacyDataCopy, language: ChromeLanguage): string | null {
+  const held = view?.deletion;
+  if (held === undefined) return null;
+  if (held.status === 'SCHEDULED' && held.finalAt !== null) return copy.deleteScheduled(formatDay(held.finalAt, language));
+  if (held.status === 'BLOCKED') return copy.deleteBlocked;
+  if (held.status === 'FINALIZING' || held.status === 'SCHEDULED') return copy.deleteFinalizing;
+  return null;
 }
 
 /** A term and the state it is in: read, never pressed. */
-function StatusRow({ term, status, language, palette, testID }: {
+function StatusRow({ term, status, language, palette, testID, rowRef }: {
   readonly term: string;
   readonly status: string;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
   readonly testID: string;
+  /** Where the screen reader returns after an act that this row now reports. */
+  readonly rowRef?: (node: View | null) => void;
 }) {
   const writing = writingOf(language);
   return (
     <View
+      ref={rowRef}
       testID={testID}
       accessible
       accessibilityLabel={[term, status].join(', ')}
@@ -106,11 +137,11 @@ export function PrivacyDataRows({ view, copy, language, palette, notices, busy, 
   const deletion = view.deletion;
   let exportRows;
   if (exportState.status === 'PREPARING') {
-    exportRows = <StatusRow term={copy.exportAction} status={copy.exportPreparing} language={language} palette={palette} testID="qandeel-export-status" />;
+    exportRows = <StatusRow term={copy.exportAction} status={copy.exportPreparing} language={language} palette={palette} rowRef={rowRef('EXPORT')} testID="qandeel-export-status" />;
   } else if (exportState.status === 'READY' && exportState.availableUntil !== null) {
     exportRows = (
       <>
-        <StatusRow term={copy.exportAction} status={copy.exportReady(formatDay(exportState.availableUntil, language))} language={language} palette={palette} testID="qandeel-export-status" />
+        <StatusRow term={copy.exportAction} status={copy.exportReady(formatDay(exportState.availableUntil, language))} language={language} palette={palette} rowRef={rowRef('EXPORT')} testID="qandeel-export-status" />
         <ActionRow label={copy.exportDownload} notice={notices.export} busy={busy.download} language={language} palette={palette} onPress={onDownload} testID="qandeel-export-download" />
       </>
     );
@@ -123,19 +154,19 @@ export function PrivacyDataRows({ view, copy, language, palette, notices, busy, 
   if (deletion.status === 'SCHEDULED' && deletion.finalAt !== null) {
     deletionRows = (
       <>
-        <StatusRow term={copy.deleteAction} status={copy.deleteScheduled(formatDay(deletion.finalAt, language))} language={language} palette={palette} testID="qandeel-deletion-status" />
+        <StatusRow term={copy.deleteAction} status={copy.deleteScheduled(formatDay(deletion.finalAt, language))} language={language} palette={palette} rowRef={rowRef('DELETE')} testID="qandeel-deletion-status" />
         <ActionRow label={copy.deleteCancel} notice={notices.deletion} busy={busy.cancel} language={language} palette={palette} onPress={onCancelDeletion} testID="qandeel-deletion-cancel" />
       </>
     );
   } else if (deletion.status === 'BLOCKED') {
     deletionRows = (
       <>
-        <StatusRow term={copy.deleteAction} status={copy.deleteBlocked} language={language} palette={palette} testID="qandeel-deletion-status" />
+        <StatusRow term={copy.deleteAction} status={copy.deleteBlocked} language={language} palette={palette} rowRef={rowRef('DELETE')} testID="qandeel-deletion-status" />
         <ActionRow label={copy.deleteCancel} notice={notices.deletion} busy={busy.cancel} language={language} palette={palette} onPress={onCancelDeletion} testID="qandeel-deletion-cancel" />
       </>
     );
   } else if (deletion.status === 'FINALIZING' || deletion.status === 'SCHEDULED') {
-    deletionRows = <StatusRow term={copy.deleteAction} status={copy.deleteFinalizing} language={language} palette={palette} testID="qandeel-deletion-status" />;
+    deletionRows = <StatusRow term={copy.deleteAction} status={copy.deleteFinalizing} language={language} palette={palette} rowRef={rowRef('DELETE')} testID="qandeel-deletion-status" />;
   } else {
     deletionRows = <ActionRow label={copy.deleteAction} notice={notices.deletion} busy={false} language={language} palette={palette} onPress={onRequestDeletion} rowRef={rowRef('DELETE')} testID="qandeel-deletion-request" />;
   }

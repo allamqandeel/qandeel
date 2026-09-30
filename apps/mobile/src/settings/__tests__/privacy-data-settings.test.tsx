@@ -148,6 +148,8 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL & Conversation and Privacy 
     expect(view.getByTestId('qandeel-export-status-status').props.children).toBe(p.exportPreparing);
     expect(view.getByTestId('qandeel-export-status').props.accessibilityLabel).toBe([p.exportAction, p.exportPreparing].join(', '));
     expect(announce).toHaveBeenLastCalledWith(p.exportPreparing);
+    // The screen reader returns to the row that now reports the request, not to nowhere.
+    expect(focus.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 
   it('Export: a lost answer is reconciled by reading — held means accepted, never a false failure', async () => {
@@ -214,9 +216,11 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL & Conversation and Privacy 
     // Never "deleted" before the final deletion: the scheduled line is a future.
     expect(words(view).some((w) => w === p.deleteFinalizing)).toBe(false);
 
+    const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
     server.answer({ kind: 'CANCELLED' });
     await press(view, 'qandeel-deletion-cancel');
     expect(announce).toHaveBeenLastCalledWith(p.deleteCancelled);
+    expect(focus).toHaveBeenCalled(); // the Cancel row is gone; focus returns to the Delete account row
     expect(view.getByTestId('qandeel-deletion-request')).toBeTruthy();
     expect(view.getByTestId('qandeel-deletion-request-notice')).toBeTruthy();
     expect(words(view)).toContain(p.deleteCancelled);
@@ -243,6 +247,18 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL & Conversation and Privacy 
     expect(blocked.view.getByTestId('qandeel-deletion-cancel')).toBeTruthy();
   });
 
+  it('Delete: what is said after a lost answer is what the server holds — BLOCKED is never announced as “being deleted”', async () => {
+    const announce = jest.spyOn(AccessibilityInfo, 'announceForAccessibility');
+    const { view, server } = await settings(language);
+    await press(view, 'qandeel-deletion-request');
+    await type(view, 'qandeel-deletion-request-form-password', 'secret');
+    server.answer({ kind: 'NETWORK' });
+    server.commit({ ...NONE, deletion: { status: 'BLOCKED', finalAt: UNTIL } });
+    await press(view, 'qandeel-deletion-request-form-confirm');
+    expect(announce).toHaveBeenLastCalledWith(p.deleteBlocked);
+    expect(view.getByTestId('qandeel-deletion-status-status').props.children).toBe(p.deleteBlocked);
+  });
+
   it('scales with the platform text size: no fixed-height text row, no cap, no truncation', async () => {
     const { view } = await settings(language, { ...NONE, export: { status: 'READY', availableUntil: UNTIL }, deletion: { status: 'SCHEDULED', finalAt: UNTIL } });
     for (const node of view.getAllByText(/.+/u)) {
@@ -255,6 +271,20 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL & Conversation and Privacy 
       expect(frame.height).toBeUndefined();
       expect(frame.minHeight).toBe(44);
     }
+  });
+});
+
+describe('a day, on the one locale authority (Western digits, Gregorian calendar)', () => {
+  // The database's own instant form: microseconds and an offset.
+  const AT = '2026-10-07T09:00:00.123456+00:00';
+  it('Arabic: the Egyptian month name with Western digits', () => {
+    expect(formatDay(AT, 'ar')).toBe('7 أكتوبر 2026');
+  });
+  it('English: Western digits, Gregorian', () => {
+    expect(formatDay(AT, 'en')).toBe('October 7, 2026');
+  });
+  it('never throws while drawing: an unreadable value is shown as its ISO day', () => {
+    expect(formatDay('2026-10-07 not a date', 'ar')).toBe('2026-10-07');
   });
 });
 

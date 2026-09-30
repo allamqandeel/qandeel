@@ -14,8 +14,8 @@ const BATCH = 10;
  *
  *   1. prepares pending export packages and discards expired ones (the database does both, in its own transaction);
  *   2. claims the deletions that are due (a short database lease, so several servers never advance one request), and
- *      for each: runs the ONE governed Personal erasure when it is SCHEDULED, then removes the provider account once
- *      the database says ERASED, then records it COMPLETED. Every step is idempotent and judged again by the database,
+ *      for each: runs the ONE governed Personal erasure (for an ERASED request, its residual sweep), then removes the
+ *      provider account once the database says ERASED, then records it COMPLETED. Every step is idempotent and judged again by the database,
  *      so a crash or lost answer anywhere resumes on a later cycle and never reports a deletion it did not finish.
  *
  * BLOCKED (a Connected Worlds row still references the account) is the database's answer and stops there: nothing is
@@ -66,10 +66,11 @@ export class PrivacyMaintenanceWorker implements OnModuleInit, OnModuleDestroy {
 
   private async advance(deletion: DueDeletion): Promise<void> {
     try {
-      if (deletion.status === 'SCHEDULED') {
-        const outcome = await this.repository.erase(deletion.deletionId);
-        if (outcome !== 'ERASED' && outcome !== 'ALREADY_ERASED') return;
-      }
+      // Always through the erasure, also for an ERASED request: there it sweeps the measurement rows that hang off the
+      // provider account (a still-valid session could have written one since), which would otherwise refuse the
+      // provider's delete. Only ERASED / ALREADY_ERASED go on to the provider.
+      const outcome = await this.repository.erase(deletion.deletionId);
+      if (outcome !== 'ERASED' && outcome !== 'ALREADY_ERASED') return;
       if ((await this.provider.remove(deletion.userId)) !== 'REMOVED') return;
       await this.repository.complete(deletion.deletionId);
     } catch {

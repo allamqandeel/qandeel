@@ -1,5 +1,5 @@
 import { BadRequestException, RequestMethod, ServiceUnavailableException } from '@nestjs/common';
-import { GUARDS_METADATA, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
+import { GUARDS_METADATA, HEADERS_METADATA, METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { DataApiError } from '../conversation/supabase-data-api.service';
 import { PrivacyDataController } from './privacy-data.controller';
@@ -174,6 +174,13 @@ describe('PrivacyDataController — the route surface', () => {
       });
     expect(routes).toEqual([['GET', '/'], ['POST', 'export'], ['GET', 'export/download'], ['POST', 'deletion'], ['POST', 'deletion/cancel']]);
   });
+
+  it('no answer is kept by any cache on the way — above all the package', () => {
+    for (const name of ['readState', 'requestExport', 'downloadExport', 'requestDeletion', 'cancelDeletion']) {
+      const handler = (PrivacyDataController.prototype as unknown as Record<string, object>)[name];
+      expect(Reflect.getMetadata(HEADERS_METADATA, handler)).toEqual([{ name: 'Cache-Control', value: 'no-store' }]);
+    }
+  });
 });
 
 function makeWorker() {
@@ -190,8 +197,12 @@ function makeWorker() {
   return { repository, provider, worker: new PrivacyMaintenanceWorker(repository, provider) };
 }
 
-const SCHEDULED = { deletionId: 'd1', userId: 'u1', status: 'SCHEDULED' as const };
-const ERASED = { deletionId: 'd2', userId: 'u2', status: 'ERASED' as const };
+const D1 = '11111111-1111-4111-8111-111111111111';
+const U1 = '22222222-2222-4222-8222-222222222222';
+const D2 = '33333333-3333-4333-8333-333333333333';
+const U2 = '44444444-4444-4444-8444-444444444444';
+const SCHEDULED = { deletionId: D1, userId: U1, status: 'SCHEDULED' as const };
+const ERASED = { deletionId: D2, userId: U2, status: 'ERASED' as const };
 
 describe('PrivacyMaintenanceWorker — the server’s asynchronous pass', () => {
   it('prepares exports, then erases, removes the provider account, and completes — in that order', async () => {
@@ -205,8 +216,8 @@ describe('PrivacyMaintenanceWorker — the server’s asynchronous pass', () => 
     repository.complete.mockImplementation(async () => { order.push('complete'); return 'COMPLETED'; });
     await worker.runOnce();
     expect(order).toEqual(['prepare', 'erase', 'remove', 'complete']);
-    expect(provider.remove).toHaveBeenCalledWith('u1');
-    expect(repository.complete).toHaveBeenCalledWith('d1');
+    expect(provider.remove).toHaveBeenCalledWith(U1);
+    expect(repository.complete).toHaveBeenCalledWith(D1);
   });
 
   it('a BLOCKED, NOT_DUE or CANCELLED erasure stops there: the provider account is never touched', async () => {
@@ -220,27 +231,33 @@ describe('PrivacyMaintenanceWorker — the server’s asynchronous pass', () => 
     }
   });
 
-  it('an already-erased request resumes at the provider removal; a failed removal is never recorded complete', async () => {
+  it('an already-erased request passes the erasure’s residual sweep, then the provider removal; a failed removal is never recorded complete', async () => {
     const { repository, provider, worker } = makeWorker();
     repository.claimDueDeletions.mockResolvedValue([ERASED]);
-    provider.remove.mockResolvedValue('UNAVAILABLE');
+    const order: string[] = [];
+    repository.erase.mockImplementation(async () => { order.push('sweep'); return 'ALREADY_ERASED'; });
+    provider.remove.mockImplementation(async () => { order.push('remove'); return 'UNAVAILABLE'; });
     await worker.runOnce();
-    expect(repository.erase).not.toHaveBeenCalled();
-    expect(provider.remove).toHaveBeenCalledWith('u2');
+    expect(repository.erase).toHaveBeenCalledWith(D2);
+    expect(order).toEqual(['sweep', 'remove']);
+    expect(provider.remove).toHaveBeenCalledWith(U2);
     expect(repository.complete).not.toHaveBeenCalled();
     provider.remove.mockResolvedValue('REMOVED');
     await worker.runOnce();
-    expect(repository.complete).toHaveBeenCalledWith('d2');
+    expect(repository.complete).toHaveBeenCalledWith(D2);
   });
 
   it('a failure in one deletion or in preparation does not stop the others', async () => {
     const { repository, provider, worker } = makeWorker();
     repository.prepareExports.mockRejectedValue(new Error('down'));
     repository.claimDueDeletions.mockResolvedValue([SCHEDULED, ERASED]);
-    repository.erase.mockRejectedValue(new Error('down'));
+    repository.erase.mockImplementation(async (id: string) => {
+      if (id === D1) throw new Error('down');
+      return 'ALREADY_ERASED';
+    });
     await worker.runOnce();
     expect(provider.remove).toHaveBeenCalledTimes(1);
-    expect(provider.remove).toHaveBeenCalledWith('u2');
+    expect(provider.remove).toHaveBeenCalledWith(U2);
   });
 
   it('never runs two cycles at once, and is off under tests', async () => {
@@ -253,6 +270,37 @@ describe('PrivacyMaintenanceWorker — the server’s asynchronous pass', () => 
     release();
     await first;
     expect(worker.enabled).toBe(false);
+  });
+});
+
+describe('PrivacyMaintenanceRepository — the server channel’s answers, decoded strictly', () => {
+  function repositoryAnswering(answer: unknown) {
+    const serviceApi = { rpc: jest.fn().mockResolvedValue(answer) };
+    return { serviceApi, repository: new PrivacyMaintenanceRepository(serviceApi as never) };
+  }
+
+  it('claims: only well-formed rows of the database’s own ids and statuses', async () => {
+    const { serviceApi, repository } = repositoryAnswering([
+      { deletion_id: D1, user_id: U1, deletion_status: 'SCHEDULED' },
+      { deletion_id: D2, user_id: U2, deletion_status: 'ERASED' },
+      { deletion_id: 'd3', user_id: U2, deletion_status: 'SCHEDULED' },
+      { deletion_id: D2, user_id: U2, deletion_status: 'BLOCKED' },
+      null,
+    ]);
+    await expect(repository.claimDueDeletions(10)).resolves.toEqual([SCHEDULED, ERASED]);
+    expect(serviceApi.rpc).toHaveBeenCalledWith('server_claim_due_account_deletions_v1', { p_limit: 10 });
+    await expect(repositoryAnswering({ not: 'an array' }).repository.claimDueDeletions(10)).resolves.toEqual([]);
+  });
+
+  it('scalar answers: the database’s own word, else UNKNOWN / 0', async () => {
+    await expect(repositoryAnswering('ERASED').repository.erase(D1)).resolves.toBe('ERASED');
+    await expect(repositoryAnswering(null).repository.erase(D1)).resolves.toBe('UNKNOWN');
+    await expect(repositoryAnswering('COMPLETED').repository.complete(D1)).resolves.toBe('COMPLETED');
+    await expect(repositoryAnswering(3).repository.prepareExports(10)).resolves.toBe(3);
+    await expect(repositoryAnswering('3').repository.prepareExports(10)).resolves.toBe(0);
+    const { serviceApi, repository } = repositoryAnswering('ERASED');
+    await repository.erase(D1);
+    expect(serviceApi.rpc).toHaveBeenCalledWith('server_erase_personal_account_v1', { p_deletion_id: D1 });
   });
 });
 

@@ -100,6 +100,16 @@ test('HARD STOP: the erasure deletes no Connected Worlds row — a referencing o
   assert.equal(personalOnly([...deletes, 'public.shared_world_materials']), false, 'a planted Connected Worlds delete is refused');
   assert.match(erase, /DELETE FROM public\.users x WHERE x\.id = v_user;\n\s+EXCEPTION WHEN foreign_key_violation THEN/u, 'the account row last, and a foreign key refusal undoes the whole erasure');
   assert.match(erase, /SET status = 'BLOCKED'/u);
+  // Foreign-key order inside the HIM family (0012): a snapshot goes before the result and observation it references,
+  // or every account with a calculated measurement would be reported BLOCKED.
+  for (const referent of ['public.him_calculation_results', 'public.him_measurement_observations']) {
+    assert.ok(deletes.indexOf('public.him_metric_snapshots') < deletes.indexOf(referent), `snapshots are erased before ${referent}`);
+  }
+  // The residual sweep of an ERASED request touches only the provider-referenced HIM tables.
+  const sweep = erase.slice(erase.indexOf("IF v_request.status = 'ERASED' THEN"), erase.indexOf("ELSIF v_request.status = 'COMPLETED' THEN"));
+  const swept = [...sweep.matchAll(/DELETE FROM ([\w.]+)/gu)].map((m) => m[1]);
+  assert.ok(swept.length > 0, 'an ERASED request is swept again before the provider removal');
+  assert.deepEqual(swept.filter((table) => !/^public\.him_|^personal_data_private\.erasure_authorizations$/u.test(table)), [], `swept: ${swept.join(', ')}`);
 });
 
 test('the owner acts take no account parameter and demand the reused re-authentication', () => {
@@ -131,6 +141,8 @@ test('the owner routes are guarded, account-free and silent; only the provider-r
   const controller = read(`${API}/privacy-data.controller.ts`);
   assert.match(controller, /@Controller\('account\/privacy'\)\n@UseGuards\(SupabaseAuthGuard\)\nexport class PrivacyDataController/u);
   assert.deepEqual([...code(controller).matchAll(/@(Get|Post)\(([^)]*)\)/gu)].map((m) => `${m[1]} ${m[2]}`), ["Get ", "Post 'export'", "Get 'export/download'", "Post 'deletion'", "Post 'deletion/cancel'"]);
+  assert.equal((code(controller).match(/@Header\(\.\.\.NO_STORE\)/gu) ?? []).length, 5, 'no answer — above all the package — is kept by a cache');
+  assert.match(controller, /const NO_STORE = \['Cache-Control', 'no-store'\] as const;/u);
   const files = readdirSync(new URL(`${API}/`, root)).filter((name) => name.endsWith('.ts') && !name.endsWith('.spec.ts'));
   const adminReachers = files.filter((name) => /\/auth\/v1\/admin\//u.test(code(read(`${API}/${name}`))));
   assert.deepEqual(adminReachers, ['provider-account-removal.service.ts']);

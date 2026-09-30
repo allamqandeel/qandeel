@@ -23,6 +23,7 @@ function harness(initial: PrivacyStateView = NONE) {
     cancelAccountDeletion: jest.fn(next),
   };
   const timers: { tick: () => void; ms: number }[] = [];
+  const cleared: unknown[] = [];
   let ids = 0;
   let live = true;
   const controller = createPrivacyDataController({
@@ -33,12 +34,15 @@ function harness(initial: PrivacyStateView = NONE) {
       timers.push({ tick, ms });
       return timers.length;
     },
-    clearTimer: () => undefined,
+    clearTimer: (handle) => {
+      cleared.push(handle);
+    },
   });
   return {
     controller,
     transport,
     timers,
+    cleared,
     answer: (...outcomes: unknown[]) => queue.push(...outcomes),
     set: (view: PrivacyStateView | null) => {
       current = view;
@@ -179,12 +183,62 @@ describe('the Privacy & Data controller', () => {
     expect(h.controller.getState().view?.export.status).toBe('EXPIRED');
   });
 
-  it('a retired generation does nothing', async () => {
+  it('a retired generation does nothing, and its pending timers are cleared', async () => {
+    const h = harness(PREPARING);
+    h.controller.start();
+    await flush();
+    const pollHandle = h.timers.findIndex((t) => t.ms === PRIVACY_PREPARING_POLL_MS) + 1;
+    expect(pollHandle).toBeGreaterThan(0);
+    h.controller.retire();
+    expect(h.cleared).toContain(pollHandle);
+    await expect(h.controller.requestExport('pw')).resolves.toBeNull();
+    expect(h.transport.requestDataExport).not.toHaveBeenCalled();
+  });
+
+  it('a failed poll read keeps the package being watched', async () => {
+    const h = harness(PREPARING);
+    h.controller.start();
+    await flush();
+    const polls = () => h.timers.filter((t) => t.ms === PRIVACY_PREPARING_POLL_MS);
+    h.set(null);
+    polls()[0].tick();
+    await flush();
+    expect(polls()).toHaveLength(2);
+    h.set(READY);
+    polls()[1].tick();
+    await flush();
+    expect(h.controller.getState().view).toEqual(READY);
+  });
+
+  it('an unrequested read that an act’s answer overtook is dropped, never shown', async () => {
+    const h = harness(NONE);
+    h.controller.start();
+    await flush();
+    let answerStaleRead: (value: unknown) => void = () => undefined;
+    (h.transport.readPrivacyState as jest.Mock).mockImplementationOnce(() => new Promise((resolve) => { answerStaleRead = resolve; }));
+    h.controller.start(); // Settings shown again: a read is issued while the state is still NONE.
+    h.answer({ kind: 'ACCEPTED', view: SCHEDULED.deletion });
+    await expect(h.controller.requestDeletion('pw')).resolves.toBe('ACCEPTED');
+    answerStaleRead({ kind: 'READ', view: NONE });
+    await flush();
+    expect(h.controller.getState().view).toEqual(SCHEDULED);
+  });
+
+  it('a request found held later settles its command, so a later request is a new one', async () => {
     const h = harness();
     h.controller.start();
     await flush();
-    h.controller.retire();
-    await expect(h.controller.requestExport('pw')).resolves.toBeNull();
-    expect(h.transport.requestDataExport).not.toHaveBeenCalled();
+    h.answer({ kind: 'NETWORK' });
+    (h.transport.readPrivacyState as jest.Mock).mockRejectedValueOnce(new Error('offline'));
+    await expect(h.controller.requestDeletion('pw')).resolves.toBe('RETRY');
+    h.set(SCHEDULED); // it was held after all; Settings is shown again.
+    h.controller.start();
+    await flush();
+    expect(h.controller.getState().view).toEqual(SCHEDULED);
+    h.answer({ kind: 'CANCELLED' });
+    await h.controller.cancelDeletion();
+    h.answer({ kind: 'ACCEPTED', view: SCHEDULED.deletion });
+    await expect(h.controller.requestDeletion('pw')).resolves.toBe('ACCEPTED');
+    expect((h.transport.requestAccountDeletion as jest.Mock).mock.calls.map((c) => c[0])).toEqual(['command-1', 'command-2']);
   });
 });

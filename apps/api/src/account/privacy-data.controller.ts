@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Header, HttpCode, Post, Req, UseGuards } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { PrivacyDataService } from './privacy-data.service';
@@ -15,36 +15,44 @@ type OwnerRequest = AuthenticatedRequest & { readonly ip?: string };
  *   POST /account/privacy/deletion           { commandId, password } → ACCEPTED | CANCELLED | PASSWORD_REJECTED
  *   POST /account/privacy/deletion/cancel    {}                      → CANCELLED | NONE | NOT_CANCELLABLE
  *
- * 400 for any other body, 503 whenever there is no usable answer.
+ * 400 for any other body, 503 whenever there is no usable answer. No answer is stored by any cache on the way: the package
+ * carries the owner's whole Personal record and Email (`Cache-Control: no-store` on every route).
  */
+const NO_STORE = ['Cache-Control', 'no-store'] as const;
+
 @Controller('account/privacy')
 @UseGuards(SupabaseAuthGuard)
 export class PrivacyDataController {
   constructor(private readonly privacy: PrivacyDataService) {}
 
   @Get()
+  @Header(...NO_STORE)
   readState(@Req() request: OwnerRequest) {
     return this.privacy.readState(request.authenticatedUser.accessToken);
   }
 
   @Post('export')
+  @Header(...NO_STORE)
   @HttpCode(200)
   requestExport(@Req() request: OwnerRequest, @Body() body: unknown) {
     return this.privacy.requestExport(request.authenticatedUser.accessToken, body, request.ip);
   }
 
   @Get('export/download')
+  @Header(...NO_STORE)
   downloadExport(@Req() request: OwnerRequest) {
     return this.privacy.downloadExport(request.authenticatedUser.accessToken, request.ip);
   }
 
   @Post('deletion')
+  @Header(...NO_STORE)
   @HttpCode(200)
   requestDeletion(@Req() request: OwnerRequest, @Body() body: unknown) {
     return this.privacy.requestDeletion(request.authenticatedUser.accessToken, body, request.ip);
   }
 
   @Post('deletion/cancel')
+  @Header(...NO_STORE)
   @HttpCode(200)
   cancelDeletion(@Req() request: OwnerRequest, @Body() body: unknown) {
     return this.privacy.cancelDeletion(request.authenticatedUser.accessToken, body);

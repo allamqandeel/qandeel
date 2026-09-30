@@ -110,7 +110,8 @@ function in `public` is SECURITY INVOKER; no account parameter anywhere — the 
 
 Stage 6.6 denies physical DELETE of historical canonical rows "unless a separately governed Product erasure policy
 explicitly owns it"; W3-PDG-01 §8.3 / §8.6 is that policy for the Personal world. The sixteen guards (0011, 0012 / 0013,
-0055, 0063, 0064, 0065, 0066, 0068, 0070, 0071, 0072) are redefined **in place** — same name, OID and grants, still
+0055, 0063, 0064, 0065, 0066, 0068, 0070, 0071, 0072) are redefined **in place** — same name and OID, directly executable by no
+role (a trigger function is never EXECUTE-checked when it fires; the four that had kept PUBLIC's default are revoked here), still
 SECURITY INVOKER with an empty search_path, the original body kept byte-for-byte after ONE prefix that admits a
 **DELETE, never an UPDATE**, only when BOTH hold: the transaction-local `qandeel.personal_erasure` equals the current
 transaction id, **and** an authorization row for that transaction exists in `personal_data_private.erasure_authorizations`
@@ -120,6 +121,12 @@ history-delete: it takes a deletion-request id, never an account id; it is execu
 only that request's account's rows, in foreign-key order, with the account row LAST; and normal immutability is
 unchanged for every other statement (proved: the owner with the setting forged, with the row planted, and any UPDATE are
 all still refused).
+
+**Residual sweep.** The six HIM tables reference the PROVIDER account (0011 – 0013), not `public.users`, so a session still
+valid at the provider can write a measurement after the erasure; its immutability guard would then refuse the provider's
+cascading delete for ever. `erase_personal_account_v1` on an ERASED request therefore sweeps those rows again, under a
+fresh authorization of the same request, and answers `ALREADY_ERASED`; the server passes through it right before every
+provider-removal attempt. Proved in the verifier (a target written after ERASED, then swept).
 
 ### 5.4 The state machines
 
@@ -150,7 +157,7 @@ proves the catalog and exact grants; the narrowed guards' refusals; the export j
 one in flight, replay, server-only preparation, content, no ids / another reader's material / reasoning, expiry discarding
 the artifact); the deletion journey with the erasure of a **real populated** Personal footprint — committed units through
 the real pipeline, a Memory-control command, Memory in three states, a contested Hypothesis through the real disagreement
-command, a HIM target — to **zero rows in every table carrying the account**, while another reader's footprint is
+command, a HIM target and a HIM measurement calculated to its snapshot — to **zero rows in every table carrying the account**, while another reader's footprint is
 untouched; idempotent retry and completion; retired identifiers through the existing Login ID / Public ID answers; no
 resurrection; the BLOCKED hard stop; and committed two-connection races (a cancellation after the committed erasure is
 refused; two erasures erase once).
@@ -194,7 +201,7 @@ not downloadable, a new copy can be requested. The package is built by the serve
 | Account | Name, Login ID, Public ID, account creation time; Email and its verification (added by the API at download from the owner's own provider session) |
 | Personal conversation | every session, both sides: the owner's turns and QANDEEL's completed replies with times; no failed or system text |
 | Memory | every lifecycle state still held, labelled `active` / `not relied on` / `forgotten` / `replaced by a correction`, with times and expiry |
-| QANDEEL Understanding | each statement QANDEEL holds, its status, when it formed and last changed, and the owner's own disagreements |
+| QANDEEL Understanding | each statement the owner could have been shown — current now, or current before it was reconsidered or withdrawn — labelled `current` / `being reconsidered` / `withdrawn`, when it formed and last changed, and the owner's own disagreements. A never-admitted CANDIDATE is QANDEEL's unshown reasoning and is not exported (hypothesis restraint) |
 | Shared / Public / Replay / Introductions | **`NOT YET INCLUDED — WORLD-SCOPED EXPORT AUTHORITY NOT IMPLEMENTED`** (the package names them in `notYetIncluded`) |
 
 Never included: internal ids, idempotency keys, routing, scores (confidence, importance), evidence references, hypothesis
@@ -295,12 +302,13 @@ does, full account deletion is truthfully impossible, which is exactly the Launc
 |---|---|
 | `database/verify-migration-0130.mjs` (real PostgreSQL) | registered in API CI; **not runnable on this host** (no local PostgreSQL — application control) — proven by CI on the pushed head |
 | Static database contracts `node --test database/tests/*.test.mjs` | 1281 / 1281 |
-| API `src/account` Jest (incl. new `privacy-data.spec.ts`) | 5 suites, 142 / 142 |
+| API `src/account` Jest (incl. new `privacy-data.spec.ts`) | 5 suites, 145 / 145 |
 | `apps/api` `tsc --noEmit` | pass |
-| Full mobile Jest (`jest --ci`), incl. `privacy-data-controller`, `privacy-data-settings` (AR + EN), `w3-mega-s-privacy-data` (production surface), `reduce-motion` | see §14 (final numbers recorded at hand-off) |
+| Full mobile Jest (`jest --ci`), incl. `privacy-data-controller`, `privacy-data-settings` (AR + EN), `w3-mega-s-privacy-data` (production surface), `reduce-motion`, `export-file` | 161 suites, 1902 / 1902 |
 | `npm run typecheck:mobile` | pass — re-run after the last test edit |
-| W3-MEGA-S root contract | see §14 |
-| Every root contract (the forward-safety mirror excluded, see below) | see §14 |
+| ESLint on every changed mobile file | 0 problems |
+| W3-MEGA-S root contract | pass (inside the run below) |
+| Every root contract (the forward-safety mirror excluded, see below) | 882 / 882 |
 
 No device (Maestro) run was performed: this slice is Settings rows and forms over the frozen composition, proven in RNTL
 for AR / EN, RTL / LTR, accessible names, live regions, focus, large text and reduced motion.
@@ -318,7 +326,9 @@ Failure classification during the work (none was fixed by changing production co
 - a Privacy & Data test whose unawaited `unmount()` left an open `act` scope and a `Platform.Version` getter — **validation**
   (the test's own defects);
 - a Settings return that did not re-read the Privacy & Data state — **implementation** (fixed: the controller reads again
-  each time Settings is shown).
+  each time Settings is shown);
+- the independent review's findings (§16) — each classified there; production fixes were made only for implementation
+  defects, never to satisfy a proof.
 
 The ten "mirror" tests of the forward-safety contract fail locally at any baseline on this host (the mirror lacks the root
 Expo module; documented host fact) and are left to CI.
@@ -348,8 +358,9 @@ Independent review: §16.
    device language setting.
 3. **Bold Text (iOS)** needs the Estedad v8.5 600 static face; W1A-01's PO font authorization covers 400 / 500 only. `E2E-D-12`
    stays open on it.
-4. **Reduce Motion in the T-10 camera / temporal hooks** (CLOSED / FROZEN code) still reads the launch value; changing them
-   is a controlled change for their owner (the Stage 2 port consumes them).
+4. **Reduce Motion in the T-10 camera / temporal hooks** (CLOSED / FROZEN code) still reads the launch value, and so does any
+   Reanimated animation left on its default `ReduceMotion.System`; changing them is a controlled change for their owner (the
+   Stage 2 port consumes them).
 5. **Real-PostgreSQL proof** is CI-only on this host.
 6. **Hosted-provider facts not provable here:** the admin delete with the project's server credential; the API guard
    refusing a deleted account's live token (Supabase `/auth/v1/user`); both follow the verified source, neither is proved
@@ -362,7 +373,34 @@ Independent review: §16.
 10. HIM measurements and QANDEEL's question planning are not exported (no owner-readable form).
 11. A reserved identifier digest of a low-entropy Login ID can confirm that a given Login ID once belonged to a deleted
     account (it names nobody); accepted as the cost of "not reused directly".
-12. No device validation (large text, VoiceOver / TalkBack, the folder picker on both platforms, the iOS per-app language).
+12. No device validation (large text, VoiceOver / TalkBack, the folder picker on both platforms, the iOS per-app language,
+    Hermes' `DateTimeFormat` with `-u-nu-latn`, and whether Android's Activity re-creation after a device-language change
+    re-reads the locale that ProductRoot reads once at mount).
+13. **Download re-authentication (security review, not decided).** Requesting a package demands a fresh password; downloading
+    a READY one needs only a valid session, so a stolen access token could fetch it (with the Email) while it is available.
+    The same token already reads the same Personal material through the product's own surfaces, and W3-PDG-01 §7.2 asks
+    re-authentication for the request only; binding the download to a fresh proof or a one-time grant is a Product /
+    security decision, not taken here. Likewise a session can cancel a scheduled deletion without a password (it only keeps
+    the account; W3-PDG-01 does not ask for more).
+14. **Very large accounts.** A database `statement_timeout` cancels a statement past PL/pgSQL's `EXCEPTION` handlers: a package
+    or an erasure that exceeds it rolls back its whole pass and is retried each cycle (the export never reaches FAILED; the
+    deletion stays FINALIZING). Nothing is lost or half-done — the invariants hold — but it does not finish. Bounded,
+    committed batches are the follow-up if real account sizes approach the limit.
+15. **Expired-artifact discard depends on the pass running.** A READY package past its date is never served (the read refuses
+    it), but its content is nulled only by the pass or by the owner's next request; a production deployment must run the
+    pass (it is off without the server credential or with `PRIVACY_MAINTENANCE_DISABLED=true`).
+16. **Hardening not taken:** the erasure authorization is per-transaction, not bound to the account in every guard (every
+    erasure DELETE filters by the account and no cross-account cascade exists today); every foreign-key refusal during the
+    erasure is reported as BLOCKED, not only a Connected Worlds one (fail-safe: nothing is erased); the retired-identifier
+    digests are unsalted (the table is readable by no application role); the verifier's `footprint()` census covers ten
+    account-column names, not every name a Connected Worlds table uses.
+17. **The iOS `CFBundleLocalizations` key** is an `app.json` value Expo writes into Info.plist (no config plugin, no dangerous
+    mod); it passed the frozen plugin-list and Level-4 confinement contracts. It is recorded here so its CNG level is
+    confirmed at the same architecture review as item 2.
+18. While a package is being prepared, the app reads its state every 15 s for the rest of the runtime generation, also when
+    Settings is closed (it stops at READY / EXPIRED / FAILED or when the generation retires).
+19. A reader whose Email is unconfirmed cannot pass the password proof; the request is answered as unavailable. W2-01 creates
+    no such session today.
 
 ## 14. Rows
 
@@ -386,3 +424,30 @@ condition is not met: no auth-storage mechanism, backup policy or credential mod
 `QAN-BL-LANTERN-01` and `QAN-BL-VOICE-01` are unrelated and untouched. BG-08: this Draft slice closes no phase and no
 `CLOSED / FROZEN` task; its residues (§13) are tracked by this record and the E2E rows they name; the copy items are
 active-task blockers (BG-01), not backlog. No item is admitted.
+
+## 16. Independent review (before the PR) — findings and dispositions
+
+Three read-only reviewers traced the first commit (`d10ff94`) by hand: the migration and its verifier, security / privacy,
+and API ↔ mobile correctness. Each finding was checked against the source before it was acted on.
+
+| # | Finding | Class | Disposition |
+|---|---|---|---|
+| R1 | Four narrowed guards (0011, 0012, two of 0063) still had PUBLIC's default EXECUTE; the verifier's catalog stage would fail | implementation | fixed — EXECUTE revoked on those four (the other twelve were already revoked by their own migrations; §5.3) |
+| R2 | The verifier committed units as `service_role`, which 0071 revoked | validation / proof | fixed — commits as the owner, as `verify-migration-0072` does |
+| R3 | `VALUES ($1, $1::text)` raises 42P08, not the asserted 42501 | validation / proof | fixed — `$1::uuid` |
+| R4 | The erasure deleted HIM calculation results and observations before the snapshots that reference them: every account with a calculated HIM measurement would have been BLOCKED | **implementation (real)** | fixed — snapshots first; the fixture now calculates a measurement to its snapshot, so the order is proven |
+| R5 | A still-valid session can write a HIM row after ERASED; the provider's cascading delete is then refused for ever | **implementation (real)** | fixed — residual sweep before every removal (§5.3); proved |
+| R6 | The export included never-admitted (CANDIDATE) interpretations and internal status names | **implementation (real)** | fixed — only interpretations the owner could have been shown, with readable labels (§7.3); proved |
+| R7 | The download response had no `Cache-Control: no-store` | implementation | fixed on all five routes; pinned |
+| R8 | Reduce Motion was per-component: a surface mounted after a change started from the launch value | implementation | fixed — one process-wide store with one platform listener; pinned (remount test) |
+| R9 | `formatDay` could throw while drawing on an unreadable instant | implementation | fixed at three layers: the API normalizes to ISO-8601 UTC, the app refuses an unreadable instant, the formatter never throws; literal AR / EN dates pinned on the database's microsecond form |
+| R10 | iOS refuses to create a file that exists: a second download the same day failed | implementation | fixed — the next free name; tested |
+| R11 | One failed poll read stopped the preparing poll; an unrequested read could overwrite a newer act's answer; a command could stay unsettled after its request was found held | implementation | fixed — re-armed, overtaken reads dropped, commands settled on sight; each pinned |
+| R12 | The sentence said aloud after a lost answer could differ from the state (BLOCKED said as "being deleted") | implementation | fixed — the announcement is the row's own sentence; pinned |
+| R13 | Focus was lost after an accepted request or a cancellation | implementation (accessibility) | fixed — the status rows carry the return target; focus returns to Delete account after Cancel |
+| R14 | A `null` row in the claim answer dropped the whole batch (found by the new repository test) | implementation | fixed |
+| R15 | Reduce Motion in the T-10 hooks / Reanimated defaults | — | already disclosed; residual §13 item 4 widened |
+| R16 | Download and cancellation need no fresh password; very large accounts under a statement timeout; expired-artifact discard depends on the pass; per-transaction (not per-account) authorization; FK-only BLOCKED detection; unsalted digests; footprint census names; iOS Info.plist CNG level; polling while Settings is closed; unconfirmed Email | Product / security decision or accepted limitation | recorded, not changed: §13 items 12 – 19 |
+
+No reviewer found a way to open the erasure boundary, an erasure or export across accounts, a logging leak, or an API ↔
+database or API ↔ app contract mismatch.

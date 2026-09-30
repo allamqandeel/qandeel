@@ -143,7 +143,9 @@ export type ExportDownloadOutcome =
 
 const EXPORT_STATUSES: readonly string[] = Object.freeze(['NONE', 'PREPARING', 'READY', 'EXPIRED', 'FAILED']);
 const DELETION_STATUSES: readonly string[] = Object.freeze(['NONE', 'SCHEDULED', 'FINALIZING', 'BLOCKED']);
-const instantOrNull = (value: unknown): string | null | undefined => (value === null ? null : typeof value === 'string' && value !== '' ? value : undefined);
+/** An instant the app can show: `null` stays null; a string that is not a readable date is refused, never drawn. */
+const instantOrNull = (value: unknown): string | null | undefined =>
+  value === null ? null : typeof value === 'string' && value !== '' && !Number.isNaN(Date.parse(value)) ? value : undefined;
 
 function decodeExportPart(value: unknown): PrivacyStateView['export'] | null {
   if (!isRecord(value) || typeof value.status !== 'string' || !EXPORT_STATUSES.includes(value.status)) return null;

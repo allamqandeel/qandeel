@@ -69,7 +69,12 @@ function deletionStatus(value: unknown): DeletionStatus {
   throw unavailable();
 }
 
-const instant = (value: unknown): string | null => (typeof value === 'string' && value !== '' ? value : null);
+/** One instant form for the client: the database's timestamptz (microseconds, offset) as ISO-8601 UTC; unreadable → null. */
+const instant = (value: unknown): string | null => {
+  if (typeof value !== 'string' || value === '') return null;
+  const at = Date.parse(value);
+  return Number.isNaN(at) ? null : new Date(at).toISOString();
+};
 
 @Injectable()
 export class PrivacyDataService {
