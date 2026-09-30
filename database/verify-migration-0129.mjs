@@ -262,7 +262,9 @@ async function verifySharedId(accounts) {
   assert.match(await refOf('K7QM-4XWD-P9TR'), REF);
   assert.equal(await refOf(' k7qm 4xwd p9tr '), await refOf('K7QM-4XWD-P9TR'), 'one reference for every spelling of one Shared ID');
   assert.notEqual(await refOf('K7QM-4XWD-P9TR'), await refOf('K7QM-4XWD-P9TS'));
-  assert.equal(await refOf('not a shared id'), null);
+  // R1: 'not a shared id' was a wrong fixture — without spaces it is 12 valid alphabet characters. U is outside the
+  // alphabet (and not a look-alike), so this cannot be a Shared ID under any spelling.
+  assert.equal(await refOf('K7QM 4XWD P9TU'), null, 'not a Shared ID: U is outside the alphabet');
 
   stage = 'shared id: server-generated first setup; the value is returned once and stored nowhere';
   const regenerate = async (commandId) => (await rows('SELECT * FROM account_private.regenerate_own_shared_id_v1($1)', [commandId]))[0];

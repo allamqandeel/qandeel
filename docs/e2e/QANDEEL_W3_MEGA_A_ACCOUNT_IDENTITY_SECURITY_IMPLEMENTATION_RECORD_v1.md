@@ -35,9 +35,10 @@ Used:
   Arabic line is an LRI … PDI isolate; each Latin field (Login ID, Email, password, code) is its own explicit LTR
   context, while the Name field follows the reader's direction (a Name may be Arabic). §3: both Arabic-Indic digit
   ranges normalize in the code fields (W1B-01's `normalizeEmailCode`, reused).
-- `sibawayh:writing-eloquent-arabic` — the four PROPOSED Arabic candidates (§7) were drafted in MSA to match their
+- `sibawayh:writing-eloquent-arabic` — the four Arabic candidates (§7.6) were drafted in MSA to match their
   approved siblings' structure («كلمة المرور غير صحيحة.» beside «رمز التأكيد غير صحيح.»; «تم تسجيل الخروج من الأجهزة
-  الأخرى.» beside «تم تغيير كلمة المرور.»). Drafting is not approval.
+  الأخرى.» beside «تم تغيير كلمة المرور.»). Drafting is not approval: the Product Owner approved them in R1, with C1 changed
+  to «تم التحقق».
 
 Could not run: `security-review` and `code-review` (their inline shell steps use the Bash tool, which this host's
 application-control policy blocks). Their purpose is served by independent review agents on the finished diff (§12).
@@ -149,7 +150,7 @@ reconciled by reading.
 ### 7.3 Change Login ID (D-05)
 New Login ID with W1B's persistent help, then the password. The server proves the password and makes the change **on
 the proof token**, which the database checks (§4). Answers: W1B's malformed / empty / unavailable sentences; the
-password refusal (PROPOSED, §7.6); the network sentence after a lost answer that the read-back does not show committed.
+password refusal (C4, §7.6); the network sentence after a lost answer that the read-back does not show committed.
 
 ### 7.4 Security & Sign-in v1 (D-06)
 Exactly: Change password; Sign out from other devices; the current Email and its status as the recovery method. No
@@ -174,27 +175,33 @@ Phone, 2FA, Passkeys, device list, activity log or disabled row.
 | Change password, New password, Confirm new password, mismatch, password rules, "Password changed.", the rejected code (N7) | W2-01 `accountAccessCopy` |
 | «تعذّر الاتصال. حاول مرة أخرى.» | T-14 network sentence |
 
-### 7.6 `PROPOSED — PO COPY GATE` (four pairs; they are NOT frozen)
+### 7.6 The four new pairs — `APPROVED — PRODUCT OWNER (W3-MEGA-A R1)`
 
 | # | Use | Arabic | English |
 |---|---|---|---|
-| C1 | Email status (recovery method) | مؤكَّد | Verified |
+| C1 | Email status (recovery method) | تم التحقق | Verified |
 | C2 | The action (the English is the PO's own row name, W3-PDG-01 §3) | تسجيل الخروج من الأجهزة الأخرى | Sign out from other devices |
 | C3 | Its confirmed result | تم تسجيل الخروج من الأجهزة الأخرى. | Signed out from other devices. |
 | C4 | A re-entered password the provider refused | كلمة المرور غير صحيحة. | The password is incorrect. |
 
-**PRODUCT COPY DECISION REQUIRED** before merge for C1–C4. Also for the Product Owner's attention (reused, not new):
-the W1B instruction "We sent a code to {email}" is shown for the new Email even when another account holds it (nothing
-is sent then) — the same non-enumerating posture W1B-01 sign-up already has for an existing address.
+The Product Owner approved C1–C4 in R1, replacing the first C1 candidate «مؤكَّد» with «تم التحقق»; C2–C4 are approved
+as proposed. They are frozen for this slice, live only in `apps/mobile/src/settings/copy.ts`, and are pinned byte-for-byte
+by the W3-MEGA-A contract. No other new copy exists. Noted for the Product Owner, reused rather than new: the W1B
+instruction "We sent a code to {email}" is shown for the new Email even when another account holds it (nothing is sent
+then) — the same non-enumerating posture W1B-01 sign-up already has for an existing address.
 
-## 8. `E2E-D-05` verification-boundary disposition — RESOLVED BY REUSE, not a Product blocker
+## 8. `E2E-D-05` verification-boundary disposition — RESOLVED BY REUSE — PRODUCT OWNER APPROVED
 
 P1 §2.1 requires "appropriate identity verification" and freezes no mechanism. W3-PDG-01 §2 froze current-password
 re-entry as the first step of changing an identifier (the Email), and W2-01 already relays a password to the provider's
 own password grant. W3-MEGA-A reuses exactly that: the password is proved by the provider on the caller's own Email, and
 the database accepts the change only on a token that carries that fresh provider password authentication. No new
-journey, no OTP invented, no weaker check. This is an implementation detail, not new Product authority; it is the one
-interpretive point for Product Owner review.
+journey, no OTP invented, no weaker check. This is an implementation detail, not new Product authority.
+
+**`D-05 verification-boundary interpretation — PRODUCT OWNER APPROVED` (R1).** The Product Owner approved that re-entering
+the password through the provider's password grant is "appropriate identity verification", that reusing this path needs
+no new Product journey, and that the current recent-password-proof window (about one minute) is accepted as an
+implementation detail and recorded residual (§13 item 12). No reauthentication subsystem is to be built.
 
 Independent security review (§12) noted that the database cannot tell the API's proof session from any other session
 whose password sign-in is equally fresh: the Product RPC is callable by `authenticated`, so a session signed in with a
@@ -291,7 +298,7 @@ getting 503 instead of INVALID (unreachable: its row is not drawn).
 
 ## 13. Residues and external dependencies
 
-1. **Copy gate (merge blocker, BG-01):** C1–C4 (§7.6).
+1. **Copy gate — RESOLVED in R1:** the Product Owner approved C1–C4 (§7.6); no copy decision remains.
 2. **External configuration, not held by this repository:** "Secure email change" ON (otherwise Change Email fails
    closed, by design); the change-email template emitting the six-digit code to BOTH addresses; OTP length 6;
    `SUPABASE_SECRET_KEY` with IP forwarding (W2-01 §7). Live Email delivery remains **EXTERNAL / NOT PROVED**.
@@ -310,7 +317,8 @@ getting 503 instead of INVALID (unreachable: its row is not drawn).
 10. Account deletion (W3-MEGA-S / `QAN-BL-ACCT-01`) must cover `account_private.login_id_change_commands` (it cascades
     with the account row).
 11. Real-PostgreSQL proof is CI-only on this host.
-12. **Login ID reauthentication window (review finding, narrowed not removed):** any session whose provider password
+12. **Login ID reauthentication window (review finding, narrowed not removed; ACCEPTED by the Product Owner in R1 as an
+    implementation detail):** any session whose provider password
     authentication is under a minute old satisfies the database check (§8).
 13. A proof session whose `logout?scope=local` gets no answer stays alive until the provider expires it; its refresh
     token was discarded, and "Sign out from other devices" ends it.
@@ -324,9 +332,9 @@ getting 503 instead of INVALID (unreachable: its row is not drawn).
 | Row | Status after this slice |
 |---|---|
 | `E2E-D-03` | ADVANCED — Name implemented; **Account Photo BLOCKED / DEFERRED BY MEDIA STORAGE IMPLEMENTATION BOUNDARY**; row NOT closed |
-| `E2E-D-04` | IMPLEMENTED on the Draft PR (server + mobile, both confirmations, no partial change, signed out after, non-enumerating); closes on merge once C1–C4 are approved; live delivery EXTERNAL / NOT PROVED |
-| `E2E-D-05` | IMPLEMENTED on the Draft PR (reauthentication resolved by reuse, §8); closes on merge once C4 is approved |
-| `E2E-D-06` | IMPLEMENTED on the Draft PR (v1 exactly; change / recovery end other sessions); closes on merge once C1–C4 are approved |
+| `E2E-D-04` | IMPLEMENTED on the Draft PR (server + mobile, both confirmations, no partial change, signed out after, non-enumerating); copy approved (R1); closes when this PR merges green; live delivery EXTERNAL / NOT PROVED |
+| `E2E-D-05` | IMPLEMENTED on the Draft PR (reauthentication resolved by reuse — PRODUCT OWNER APPROVED, §8); closes when this PR merges green |
+| `E2E-D-06` | IMPLEMENTED on the Draft PR (v1 exactly; change / recovery end other sessions); copy approved (R1); closes when this PR merges green |
 | `E2E-D-08` | DECIDED — backend format ready; surface sequenced to W6; user journey NOT closed |
 | `E2E-D-02` | ADVANCED — four real groups; the nine-group hierarchy is NOT closed |
 
@@ -341,3 +349,25 @@ model changed — the recovery amendment is a provider call, and no password is 
 implemented. BG-08: this Draft slice closes no phase and no `CLOSED / FROZEN` task; its residues (§13) are tracked by
 this record and the E2E rows they name, and the copy items are active-task blockers (BG-01), not backlog. No item is
 admitted.
+
+## 16. R1 — independent-review correction (same branch, same Draft PR #295)
+
+A narrow correction on reviewed head `906ebf59fdca2ebd8893c19aafef3115143a8769`. No scope, design or Product decision was
+reopened; migration `0129` is unchanged.
+
+- **First API CI failure — VALIDATION / PROOF defect, not implementation.** API CI run `36754110029` failed in the step
+  "Verify W3-MEGA-A account identity completion and the Shared ID format against real PostgreSQL", at the stage
+  `shared id: the derived lookup reference (0081 representation boundary)`. The fixture `'not a shared id'` was assumed
+  invalid, but with its spaces ignored it is `NOTASHAREDID` — twelve characters of the Crockford alphabet, so a valid
+  Shared ID whose reference is non-NULL. The fixture is now `'K7QM 4XWD P9TU'` (U is outside the alphabet and not a
+  look-alike). Every earlier 0129 stage — catalog, identity read, Name, the Login ID reauthentication and cut-over, the
+  normalizer and the generator — had already passed on PostgreSQL 17 in that run.
+- **First Mobile CI failure — INFRASTRUCTURE FLAKE.** Mobile CI run `36754109766` failed only in "iOS (iPhone 17 / iOS
+  26.5 simulator boot smoke)": the Maestro / XCTest iOS driver was not ready in time. The iOS build producer, artifact
+  provenance, simulator boot and install, the Android smoke and the fast mobile contract gate all passed. No application,
+  timeout or workflow change was made for it.
+- **Product Owner decisions recorded:** `D-05 verification-boundary interpretation — PRODUCT OWNER APPROVED` (§8); C1–C4
+  approved, with C1's final Arabic «تم التحقق» (§7.6).
+- **R1 files:** `database/verify-migration-0129.mjs` (the fixture), `apps/mobile/src/settings/copy.ts` (C1 and the
+  approved block), `tests/w3-mega-a-account-identity-security-contract.test.mjs` (the four approved pairs pinned
+  byte-for-byte), this record, `docs/e2e/E2E01_READ_FIRST.md` and `QANDEEL_CURRENT_STATE.md` (locator wording).

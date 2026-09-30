@@ -267,17 +267,28 @@ test('the Product surface: one destination, real rows only, Latin content isolat
   }
 });
 
-test('the copy: reused approved words by reference; exactly four PROPOSED pairs, flagged for the Product Owner', () => {
+// R1: the Product Owner approved the four new pairs (C1 final Arabic «تم التحقق»). They are pinned byte-for-byte, and
+// they are still the ONLY words this module writes itself.
+test('the copy: reused approved words by reference; exactly the four PO-approved pairs of its own', () => {
   const copy = read(`${SETTINGS}/copy.ts`);
   const registry = readJson('docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/data/COPY_REGISTRY.json');
   const rows = Array.isArray(registry) ? registry : registry.rows ?? Object.values(registry).find(Array.isArray);
   const gSecurity = rows.find((row) => row.k === 'gSecurity');
   assert.ok(copy.includes(`'${gSecurity.ar}'`) && copy.includes(`'${gSecurity.en}'`), 'gSecurity, byte-for-byte');
   assert.match(copy, /import \{ accountAccessCopy, accountEntryCopy \} from '\.\.\/account';/u, 'W1B / W2 words by reference, never re-typed');
-  const proposed = code(copy).slice(code(copy).indexOf('const PROPOSED'), code(copy).indexOf('function identityCopy'));
-  const fourPairs = (text) => (text.match(/^\s+(?:emailVerified|signOutOthers|signedOutOthers|passwordIncorrect): '/gmu) ?? []).length === 8;
-  guards('an-unflagged-new-string', proposed, fourPairs, "    emailVerified: 'Confirmed',");
-  assert.match(read(RECORD), /PROPOSED — PO COPY GATE/u);
+  const own = code(copy).slice(code(copy).indexOf('const APPROVED'), code(copy).indexOf('function identityCopy'));
+  const APPROVED = [
+    ['emailVerified', 'تم التحقق', 'Verified'],
+    ['signOutOthers', 'تسجيل الخروج من الأجهزة الأخرى', 'Sign out from other devices'],
+    ['signedOutOthers', 'تم تسجيل الخروج من الأجهزة الأخرى.', 'Signed out from other devices.'],
+    ['passwordIncorrect', 'كلمة المرور غير صحيحة.', 'The password is incorrect.'],
+  ];
+  const exactlyApproved = (text) => (text.match(/^\s+\w+: '/gmu) ?? []).length === 8 &&
+    APPROVED.every(([key, ar, en]) => text.includes(`    ${key}: '${ar}',`) && text.includes(`    ${key}: '${en}',`));
+  guards('an-unapproved-string', own, exactlyApproved, "    emailVerified: 'Confirmed',");
+  assert.equal(exactlyApproved(own.replace("'تم التحقق'", "'مؤكَّد'")), false, 'the superseded C1 candidate is rejected');
+  assert.match(read(RECORD), /APPROVED — PRODUCT OWNER \(W3-MEGA-A R1\)/u);
+  assert.doesNotMatch(read(RECORD), /PRODUCT COPY DECISION REQUIRED/u, 'no open copy decision remains for C1–C4');
   // W1B's and W2's own copy modules are byte-for-byte unchanged by this task (their contracts pin them).
 });
 

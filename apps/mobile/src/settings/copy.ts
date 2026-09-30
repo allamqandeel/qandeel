@@ -39,7 +39,8 @@
  *     "Password changed." and the rejected-code sentence (N7) — W2-01's own (`accountAccessCopy`);
  *   - T-14's network sentence, as above.
  *
- * FOUR pairs are new and are `PROPOSED — PO COPY GATE` (W3-MEGA-A record §7): the Email status «مؤكَّد» / Verified,
+ * FOUR pairs are new, and the Product Owner approved them in the W3-MEGA-A R1 Copy Gate (record §7.6): the Email status
+ * «تم التحقق» / Verified,
  * the action «تسجيل الخروج من الأجهزة الأخرى» / Sign out from other devices (the English is the Product Owner's own
  * row name, W3-PDG-01 §3), its result «تم تسجيل الخروج من الأجهزة الأخرى.» / Signed out from other devices., and the
  * re-entered password's refusal «كلمة المرور غير صحيحة.» / The password is incorrect.
@@ -116,10 +117,10 @@ export interface SettingsCopy {
   readonly signOut: string;
 }
 
-/** W3-MEGA-A — the four PROPOSED pairs (PO copy gate), and nothing else of its own. */
-const PROPOSED = Object.freeze({
+/** W3-MEGA-A — the four pairs the Product Owner approved (R1 Copy Gate), and nothing else of its own. */
+const APPROVED = Object.freeze({
   ar: Object.freeze({
-    emailVerified: 'مؤكَّد',
+    emailVerified: 'تم التحقق',
     signOutOthers: 'تسجيل الخروج من الأجهزة الأخرى',
     signedOutOthers: 'تم تسجيل الخروج من الأجهزة الأخرى.',
     passwordIncorrect: 'كلمة المرور غير صحيحة.',
@@ -132,17 +133,17 @@ const PROPOSED = Object.freeze({
   }),
 });
 
-/** Composed from the approved W1B-01, W2-01 and P4-C4 words; only the PROPOSED pairs are this module's own. */
+/** Composed from the approved W1B-01, W2-01 and P4-C4 words; only the APPROVED pairs are this module's own. */
 function identityCopy(language: ChromeLanguage, publicId: PublicIdCopy, network: string): AccountIdentityCopy {
   const entry = accountEntryCopy(language);
   const access = accountAccessCopy(language);
-  const proposed = PROPOSED[language === 'ar' ? 'ar' : 'en'];
+  const approved = APPROVED[language === 'ar' ? 'ar' : 'en'];
   return Object.freeze({
     nameTerm: entry.nameLabel,
     loginIdTerm: entry.loginIdLabel,
     loginIdHelp: entry.loginIdHelp,
     emailTerm: entry.emailLabel,
-    emailVerified: proposed.emailVerified,
+    emailVerified: approved.emailVerified,
     current: publicId.current,
     next: publicId.next,
     confirm: publicId.confirm,
@@ -151,7 +152,7 @@ function identityCopy(language: ChromeLanguage, publicId: PublicIdCopy, network:
     emptyLoginId: entry.emptyLoginId,
     malformedLoginId: entry.malformedLoginId,
     loginIdUnavailable: entry.loginIdUnavailable,
-    passwordIncorrect: proposed.passwordIncorrect,
+    passwordIncorrect: approved.passwordIncorrect,
     invalidEmail: entry.invalidEmail,
     codeLabel: entry.codeLabel,
     codeInstruction: entry.verifyInstruction,
@@ -167,7 +168,7 @@ function identityCopy(language: ChromeLanguage, publicId: PublicIdCopy, network:
 function securityCopy(language: ChromeLanguage, group: string): SecurityCopy {
   const access = accountAccessCopy(language);
   const entry = accountEntryCopy(language);
-  const proposed = PROPOSED[language === 'ar' ? 'ar' : 'en'];
+  const approved = APPROVED[language === 'ar' ? 'ar' : 'en'];
   return Object.freeze({
     group,
     changePassword: access.changePassword,
@@ -177,8 +178,8 @@ function securityCopy(language: ChromeLanguage, group: string): SecurityCopy {
     mismatch: access.passwordMismatch,
     policy: access.passwordRejected,
     passwordChanged: access.passwordChanged,
-    signOutOthers: proposed.signOutOthers,
-    signedOutOthers: proposed.signedOutOthers,
+    signOutOthers: approved.signOutOthers,
+    signedOutOthers: approved.signedOutOthers,
   });
 }
 
