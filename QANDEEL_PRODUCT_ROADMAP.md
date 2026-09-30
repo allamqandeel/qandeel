@@ -159,6 +159,11 @@ T-14 already provides the narrow Product Sign-In Gateway, but deliberately exclu
 sign-up, password reset, onboarding, social auth and broader credential UX.
 The end-to-end audit must determine the complete Product entry/account lifecycle and identify which parts need
 Product contracts and implementation.
+*Status note (2026-09-30):* the account / security / privacy Product decisions — Change Email, Security & Login v1,
+the Shared ID format, app language, accessibility preferences, Export and the Delete Account journey — are closed by the
+[W3-PDG-01 Product Decision Closure](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md).
+None is implemented. Account deletion across Connected Worlds stays blocked (`QAN-BL-ACCT-01`). That record proposes
+`W3-MEGA-A` then `W3-MEGA-S` as sequencing only; this roadmap opens neither.
 ---
 ## 4. Production Integration & Implementation
 After the Final Product Decision Closure and the End-to-End Product Experience Completeness Audit have produced

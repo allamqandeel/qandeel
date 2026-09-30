@@ -3,10 +3,11 @@
 **Task:** W3-MEGA-M — Conversational Memory Control & Trust (E2E-01 wave W3)
 **Row:** `E2E-D-13` — ask what QANDEEL remembers; correct it; ask it to forget
 **Baseline:** `12282a29180a564f165a5a310a50b8fe1e476a27` (merge of PR #292, the current E2E execution map after W3-MEGA-U)
-**Branch:** `feat/w3-mega-m-conversational-memory-control` — one Draft PR; its number and head are recorded in the PR
-(a record cannot name its own head)
-**Status:** **IMPLEMENTED — NOT CLOSED.** `E2E-D-13` closes only when the Draft PR is independently reviewed and merged
-by the Product Owner. W3 stays ACTIVE.
+**Branch:** `feat/w3-mega-m-conversational-memory-control` — one PR, #293
+**Status:** **MERGED / CLOSED** — merged through PR #293 at `3c0ea458a22a17a2a50c616b708f097f5911fb34`. `E2E-D-13` is
+closed. This was one Product-Owner-authorized Production Integration task; it opened no other wave or Product area and
+does not close W3. (Before the merge this banner read "IMPLEMENTED — NOT CLOSED"; §11 below records that state as it
+was written.)
 
 ---
 
@@ -280,6 +281,7 @@ and their own request already carries those words in the transcript (§10.8).
 10. **Arabic copula-less corrections** («أنا مش مهندس، أنا دكتور») share no predicate word and stay ordinary conversation.
 ## 11. Lifecycle truth
 
-- **`E2E-D-13` — IMPLEMENTED on the Draft PR; closes on merge.** Not closed now.
+- **`E2E-D-13` — IMPLEMENTED on the Draft PR; closes on merge.** Not closed now. *(Superseded: CLOSED by the merge of
+  PR #293 at `3c0ea458a22a17a2a50c616b708f097f5911fb34`; see the Status banner.)*
 - **W3 remains ACTIVE.** `E2E-D-03` and `D-05` stay open; `E2E-D-02` stays advanced only. No other Stage is opened.
 - The current-state locators say exactly this and nothing more; no historical audit was rewritten.

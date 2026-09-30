@@ -156,7 +156,7 @@ production implementation. The table keeps three things apart:
 | Replay | CW2-05; the G1.1 placement ("an action on the current Conversation / Analysis context") | the I-06 backend runtime (0100–0107) | the Product Replay surface (`QAN-BL-NAV-02`). No media, storage or transport. Distribution is `NOT CLEARED / FAIL-CLOSED` |
 | Voice / Live Call | G1.2; P2's Call Rail A; P4's non-signal Voice visual language (P4-C2 §4, frozen by the P4 closure §6) | none | all of it (`QAN-BL-VOICE-01`), including the signal-bearing morphology and Voice / call strings P4 keeps runtime-gated |
 | App ↔ Company Operations | APP-OPS-01 (`CLOSED / FROZEN` with P4) | partial foundations only: bounded API telemetry, the content-free outbox and health probes. No mobile crash reporting, feature-usage, cost, call-status or version-adoption signal; no control plane | the whole implementation (Production Integration, after the audit); the audit fields `Operational Events Required` / `Company Controls Required` (End-to-End audit); operational readiness (Release Hardening) |
-| User Identity / Preferences / QANDEEL Understanding | P1 (`CLOSED / FROZEN`): one account identity with context-scoped projections; private Login ID, verified Email, Name, Shared ID and unique Public ID; no traditional Profile page; one General Settings destination; Memory versus «فهم قنديل / QANDEEL Understanding»; the exposure matrix; the Dark / Light / System preference (default Dark, Analysis always dark); the Shared-ID reachability law; three-stage sequential Introduction image disclosure | in part. W1B-01 (merged through PR #284) adds the canonical Name, the private case-insensitive Login ID store, verified-Email sign-up and first use; W2-01 (merged through PR #285) adds Login-ID sign-in; W3-01 (merged through PR #287) adds the ONE General Settings destination (two groups) and the Dark / Light / System preference; W3-02 (merged through PR #288) adds Account & Identity with the auto-generated Public ID and its one lifetime manual change (migration `0125`). No Shared-ID surface exists in production code, and no Name / Login ID / Email change. W3-MEGA-U (stacked Draft PRs, not merged) implements QANDEEL Understanding (`E2E-D-14`) and its Contested / Under Review runtime (`E2E-D-15`, `PG-01`; migrations `0126`–`0127`) | the whole production implementation and the implementation/runtime carry-forwards in P1 §16 |
+| User Identity / Preferences / QANDEEL Understanding | P1 (`CLOSED / FROZEN`): one account identity with context-scoped projections; private Login ID, verified Email, Name, Shared ID and unique Public ID; no traditional Profile page; one General Settings destination; Memory versus «فهم قنديل / QANDEEL Understanding»; the exposure matrix; the Dark / Light / System preference (default Dark, Analysis always dark); the Shared-ID reachability law; three-stage sequential Introduction image disclosure | in part. W1B-01 (merged through PR #284) adds the canonical Name, the private case-insensitive Login ID store, verified-Email sign-up and first use; W2-01 (merged through PR #285) adds Login-ID sign-in; W3-01 (merged through PR #287) adds the ONE General Settings destination (two groups) and the Dark / Light / System preference; W3-02 (merged through PR #288) adds Account & Identity with the auto-generated Public ID and its one lifetime manual change (migration `0125`). No Shared-ID surface exists in production code, and no Name / Login ID / Email change. W3-MEGA-U (merged through PR #291) implements QANDEEL Understanding (`E2E-D-14`) and its Contested / Under Review runtime (`E2E-D-15`, `PG-01`; migrations `0126`–`0127`); W3-MEGA-M (merged through PR #293) implements conversational Memory control (`E2E-D-13`, migration `0128`) | the whole production implementation and the implementation/runtime carry-forwards in P1 §16. The account / security / privacy journeys P1 deferred are now decided by the [W3-PDG-01 closure](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md) and are not implemented; account deletion across Connected Worlds is blocked (`QAN-BL-ACCT-01`) |
 | Final iconography | P2 (`CLOSED / FROZEN`): the Hybrid QANDEEL Icon System, frozen by reference to the merged P2-A package's geometry, machines and utility sourcing rule. G1.2's icon glyphs are superseded; its audio strip and the broader Voice visual language are still not frozen | none. No final icon, rail, spine or utility glyph exists in `apps/mobile/`; the production port and integration are not yet established. `react-native-svg` is not a dependency and is not authorized by P2 | the production vector / component port and device accessibility validation (P2 §14); a truthful speaking indicator waits on `QAN-BL-VOICE-01`. The non-signal Voice visuals were later frozen by P4 |
 | Notifications / proactive attention | I-08N-01 freezes the foundational semantics: the Product gate, attention budgets, interruption classes, privacy/disclosure contract, Direct Entry constraints and user controls. P3 (`CLOSED / FROZEN`) freezes the final Product realization by reference to the merged P3-A package: the Activity surface and entry, Open Ledger / Open Link, the attention mark and counts, the Attention Strip, the Analysis and Live Call attention laws, the Lock Screen labels, permission education, Notifications & Activity settings, Quiet Hours / Snooze defaults and the v1 frequency ceilings | none. No production notification runtime / transport, Push provider, Activity surface, attention mark or notification setting is established on `main`, and none is established by the P3 closure | the whole production implementation and the carry-forwards in P3 §18: Push provider, APNs / FCM, device tokens, workers, storage / pagination / retention, scoring / ranking, iOS categories and Android channels, the Product-class → OS-level mapping, native badges, platform permission wording, device validation. Of the copy P3 §17 left unfrozen, P4 ratified the residual copy on frozen P3 surfaces (P4-C4); the permission-education sheet and lower-priority journey copy go to the End-to-End audit |
 | Plans / Credits / Usage Economy | CW2-08 freezes only the high-level law: entitlement restricts actions rather than ownership, and Credits are resource/compute availability only and never alter consent/ownership/truth | no complete plan/credit/billing Product system is established on `main` | roadmap places the Product economy work alongside the End-to-End audit, using provider/workload evidence; no formula or pricing is frozen |
@@ -174,18 +174,18 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 |---|---:|
 | `DEFERRED — OWNED` | 3 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 9 |
+| `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **24** |
+| **Total** | **25** |
 
-| Severity (all 24) | Count |
+| Severity (all 25) | Count |
 |---|---:|
-| `HIGH` | 15 |
+| `HIGH` | 16 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
-The severity table counts all 24 rows, tombstones included. The 12 active (non-tombstone) items split
-6 `HIGH`, 5 `MEDIUM` and 1 `LOW`. Here they are in the backlog's own index order:
+The severity table counts all 25 rows, tombstones included. The 13 active (non-tombstone) items split
+7 `HIGH`, 5 `MEDIUM` and 1 `LOW`. Here they are in the backlog's own index order:
 
 | ID | Title | Owner | Severity | Status |
 |---|---|---|---|---|
@@ -201,6 +201,7 @@ The severity table counts all 24 rows, tombstones included. The 12 active (non-t
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 Severity states the consequence *if an item is reopened*. It is not a priority or a schedule (backlog §2).
 An entry authorizes no implementation (BG-07).
@@ -272,10 +273,47 @@ explicitly Product-Owner-authorized slices only** — `W1A-01 Authenticated Pers
 (below); no other wave or Product area is opened by them, and the audit
 phase is not closed. W3-MEGA-U is now also MERGED / CLOSED through PR #291 at
 `226b61710b36c1ecba27b816a460fe16c040639a`. **W2 is CLOSED. W3 is ACTIVE**, not closed: `E2E-D-14`,
-`E2E-D-15` and `PG-01` are closed; the remaining core implementation rows are `E2E-D-03`, `D-05` and `D-13`,
-and `E2E-D-02` is advanced only. `E2E-D-13` is IMPLEMENTED by W3-MEGA-M (conversational Memory control, migration
-`0128`) on its Draft PR and is NOT CLOSED until that PR merges
-([record](docs/e2e/QANDEEL_W3_MEGA_M_CONVERSATIONAL_MEMORY_CONTROL_IMPLEMENTATION_RECORD_v1.md)). The adjacent W3 Product-decision rows remain explicit and are not inferred.
+`E2E-D-15` and `PG-01` are closed. W3-MEGA-M is MERGED / CLOSED through PR #293 at
+`3c0ea458a22a17a2a50c616b708f097f5911fb34` and closed `E2E-D-13`
+([record](docs/e2e/QANDEEL_W3_MEGA_M_CONVERSATIONAL_MEMORY_CONTROL_IMPLEMENTATION_RECORD_v1.md)). The remaining W3 core
+implementation rows are `E2E-D-03` and `D-05`, and `E2E-D-02` is advanced only. The adjacent W3 Product-decision rows
+(`D-04`, `D-06`, `D-08`, `D-11`, `D-12`, `D-16`, `D-17`) are decided by W3-PDG-01 (below) and are
+`DECIDED — NOT IMPLEMENTED`. `D-17` is decided for its journey and principles only.
+
+**W3-PDG-01 — Account, Security & Privacy Product Decision Closure (`CLOSED / FROZEN — PRODUCT DECISIONS` on merge;
+documentation only).** The Product Owner approved every recommendation of the
+[decision package](docs/e2e/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_DECISION_PACKAGE_v1.md). The binding record is
+[`QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md).
+It decides:
+
+- **Change Email:** password + a code to the new Email + old-Email confirmation; no partial change; signed out after.
+- **Minimal Security v1:** Change Password, Sign out from other devices, Email as the recovery method; changing or
+  recovering the password ends other sessions; no Phone, 2FA or Passkeys rows.
+- **Shared ID format:** the pattern `K7QM-4XWD-P9TR` (12 random characters; a pattern, not a value); the surface
+  waits for W6.
+- **App language:** a system per-app language row; no in-app toggle.
+- **Accessibility:** no in-app accessibility settings, with platform-signal parity as an implementation obligation.
+- **Export:** an in-app, asynchronous export journey.
+- **Delete Account:** the journey and principles, including the Connected Worlds Launch Gate.
+
+Nothing is implemented. **Delete Account is not production-ready.** Its Connected Worlds completeness is the
+`EXPLICIT CONNECTED-WORLDS DELETION BLOCKER` (`QAN-BL-ACCT-01`, linked to `QAN-BL-CW-01`). The proposed next tasks,
+`W3-MEGA-A — Account & Identity Completion` and `W3-MEGA-S — Personal Controls & Settings Integration`, are
+sequencing only and are **not opened**.
+
+**W3-MEGA-M — Conversational Memory Control & Trust (MERGED / CLOSED through PR #293 at
+`3c0ea458a22a17a2a50c616b708f097f5911fb34`).** Closed `E2E-D-13` in the Conversation, with no Memory editor. It works
+from canonical owner-only Memory truth, and covers:
+
+- inspect;
+- explicit remember;
+- correction by supersession;
+- forget (`DELETED`, a status change, not physical erasure);
+- do-not-rely (`DISABLED`);
+- clarification instead of a guessed change.
+
+Each change commits in one transaction with the reply that reports it (migration `0128`). Record:
+[`docs/e2e/QANDEEL_W3_MEGA_M_CONVERSATIONAL_MEMORY_CONTROL_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_MEGA_M_CONVERSATIONAL_MEMORY_CONTROL_IMPLEMENTATION_RECORD_v1.md).
 
 **W3-02 — Account & Identity Foundation + Public ID v1 (MERGED / CLOSED through PR #288 at
 `92444c3ab8c35f7d819888be76aa6395c93d94b8`).** Closed `E2E-D-09`: every account

@@ -158,6 +158,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -502,6 +503,45 @@ Admitted by the recovered canonical authority preservation, at the explicit dire
 Product Owner (BG-06). This entry chooses no remedy. The register's "remediation direction" is evidence, not a
 decision, and nothing here authorizes implementation (BG-07).
 
+**Current-truth note (W3-PDG-01, 2026-09-30).** The
+[W3-PDG-01 Product Decision Closure](canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
+§8.5 names this item as one cause of the `EXPLICIT CONNECTED-WORLDS DELETION BLOCKER` on account deletion, carried
+as `QAN-BL-ACCT-01`. This note changes none of this item's fields: it stays `UNASSIGNED`, `HIGH`,
+`OPEN — UNASSIGNED`, and its own open Product ruling on the retained bytes is still not answered.
+
+### `QAN-BL-ACCT-01` — Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker
+
+- **Title / Finding:** the Product Owner froze the Delete Account journey and principles: true deletion, not disable;
+  re-authentication; a short grace period; final deletion after it; sessions ending; Personal-world deletion intent;
+  removal of the user's own Shared / Public material where authority allows. No Connected World (Shared, Public,
+  Replay, Introductions) has an end-to-end account-deletion contract sufficient to prove that account deletion can be
+  carried out there completely, safely and truthfully.
+- **Source:** [W3-PDG-01 Product Decision Closure](canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
+  §8.4 item 9 (the Launch Gate) and §8.5 (`EXPLICIT CONNECTED-WORLDS DELETION BLOCKER`). The evidence is in the
+  [decision package](e2e/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_DECISION_PACKAGE_v1.md) §4.7 and §6. It rests on
+  `QAN-BL-CW-01` (`ASSURE-F05`) and on `ASSURE-O04` in the
+  [assurance register](assurance/connected-worlds/QANDEEL_CONNECTED_WORLDS_ASSURANCE_FINDINGS_v1.md): `ON DELETE
+  RESTRICT` chains leave Connected Worlds participants with no hard-deletion path.
+- **Current truth:** no account-deletion code exists on `main`. The Connected Worlds runtimes (I-04 … I-07) are
+  database / server only, with no user surface. Their owner-deletion, disappearance and source-availability primitives
+  exist per world. No account-level deletion contract joins them.
+- **Why deferred:** the Product Owner explicitly left the exact Shared / Public / Connected Worlds deletion behaviour
+  open (closure §8.5), and forbade inventing a remedy for foreign keys or retained derivatives inside W3-PDG-01. The
+  proposed W3 tasks, which are not opened, cover the Personal world only (closure §9).
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `HIGH`. If this is reopened, it decides whether any Connected World may launch (closure §8.4 item 9),
+  and it lands on the frozen CW2-08 §2 non-waivable deleted-content non-serving law.
+- **Reopen condition:** Architecture or the Product Owner opens a task to take any Connected World toward
+  production-ready for users; or opens a Connected Worlds account-deletion or erasure task; or assigns an owner to
+  `QAN-BL-CW-01`.
+- **Required future property:** the one the closure already states, and no other. No Connected World is considered
+  production-ready for users while Account Deletion cannot meet its deletion contract there.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by the W3-PDG-01 Product Decision Closure under BG-06, as a canonical record's explicit deferral. This
+entry chooses no deletion mechanism, erasure exception or retention rule. Nothing here authorizes implementation
+(BG-07).
+
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
 - **Title / Finding:** the exceptional lantern gateway identity moment is frozen as **present in v1**, but it has no
@@ -680,13 +720,13 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | --- | ---: |
 | `DEFERRED — OWNED` | 3 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 9 |
+| `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **24** |
+| **Total** | **25** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 15 |
+| `HIGH` | 16 |
 | `MEDIUM` | 8 |
 | `LOW` | 1 |
 
@@ -728,6 +768,11 @@ owner `QANDEEL — Lantern Gateway Identity Moment v1`, and adds a current-truth
 its fields. The register now holds **24** items: 3 `DEFERRED — OWNED`, 9 `OPEN — UNASSIGNED`, 12 `CLOSED — TOMBSTONE`,
 and 15 `HIGH`. The sentences above are left as they were written at their own baselines. This admission authorizes no
 implementation (BG-07).
+
+**W3-PDG-01 admission (2026-09-30).** The W3-PDG-01 Product Decision Closure admits `QAN-BL-ACCT-01` (`HIGH`,
+`OPEN — UNASSIGNED`), the Connected Worlds account-deletion blocker, and adds a current-truth note to `QAN-BL-CW-01`
+without changing its fields. The register now holds **25** items: 3 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED`,
+12 `CLOSED — TOMBSTONE`, and 16 `HIGH`. This admission authorizes no implementation (BG-07).
 
 ---
 
