@@ -205,14 +205,39 @@ Current sequence:
    Foundation + Appearance + Sign Out (MERGED / CLOSED through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54`;
    [record](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)). then W3-02 Account &
    Identity Foundation + Public ID v1 (MERGED / CLOSED through PR #288 at `92444c3ab8c35f7d819888be76aa6395c93d94b8`;
-   [record](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)). **W2 is CLOSED; W3 is
-   ACTIVE**: `E2E-D-09` is closed; `E2E-D-03`, `D-05`, `D-13`, `D-14` and `D-15` remain open, and `E2E-D-02` is
-   advanced only. W3-MEGA-U (QANDEEL Understanding + Contested; stacked Draft PRs, not merged;
-   [record](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md)) implements `D-14` and
-   `D-15`, which close only when the stack merges.
+   [record](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)). **W2 is CLOSED; W3 is ACTIVE**: W3-MEGA-U (QANDEEL Understanding + Contested) is MERGED / CLOSED through
+   PR #291 at `226b61710b36c1ecba27b816a460fe16c040639a`
+   ([record](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md)); `E2E-D-14`,
+   `E2E-D-15` and `PG-01` are closed. W3's remaining core implementation rows are `E2E-D-03`, `D-05` and
+   `D-13`; `E2E-D-02` is advanced only. The adjacent W3 decision queue (`D-04`, `D-06`, `D-08`, `D-11`,
+   `D-12`, `D-16`, `D-17`) remains explicit and is not silently inferred.
 4. Release Hardening & Launch.
 
 This sequencing creates no runtime semantics and opens no implementation task by itself.
+
+### 5.1 Current E2E execution map — working delivery map (2026-09-30)
+
+This is the current Product-Owner working execution map synthesized from repository truth after W3-MEGA-U. It does
+**not** rewrite the historical E2E-01 census or its proposed wave file. Before every future implementation task, run an
+**Anti-Duplication Gate** and report four facts: what is already Product/design frozen; what backend/runtime already
+exists; what is already production-implemented; and only then what work is genuinely missing. Frozen Product/design,
+closed backend/runtime and merged production work are consumed, never redesigned or rebuilt without a real
+contradiction.
+
+| Stage | Delivery objective | Reuse / no-repeat boundary |
+|---|---|---|
+| **1 — Personal Core / W3 core completion** | Memory through Conversation; remaining Account & Identity implementation; advance Settings only with real available capabilities; explicitly resolve / assign the remaining W3 Product-decision rows | consume W1A/W1B/W2, W3-01, W3-02 and W3-MEGA-U; do not rebuild Settings, Public ID or Understanding; D-02 closes progressively as later real groups land — no empty placeholder groups |
+| **2 — Final Visual Production Port** | port the final Living Analysis world and the final cross-surface visual/icon system into production | consume I-08B1 FAR/MID/NEAR, I-08B3, P2 and the existing Map/Timeline/Temporal/Return runtime; no visual redesign |
+| **3 — Activity & Notifications Production** | implement Activity, attention, notification storage/delivery, Direct Entry and native Push/platform integration | consume I-08N-01 + P3 + P4; no redesign of Activity, strips, privacy, Quiet Hours, Snooze or notification settings |
+| **4 — Shared World Product Integration** | application boundary and mobile Product surfaces over the closed Shared runtime | consume I-04 and migrations 0075–0090; do not rebuild invitation, birth, governance, history, leave or material semantics |
+| **5 — Public World Product Integration** | Public browse/search/read/publication Product surfaces and required application boundaries | consume I-05 and migrations 0091–0099; do not rebuild Public publication/visibility/search runtime |
+| **6 — Matching / Introductions Product Integration** | participation, proposals and Introduction surfaces including progressive disclosure | consume I-07 and migrations 0108–0118, 0120 and 0122; do not rebuild matching lifecycle/runtime |
+| **7 — Replay Product Integration** | Replay entry, selection, preview, navigation and media/export realization | consume I-06 and migrations 0100–0107 plus the frozen Replay name/placement; do not rebuild Replay authority/runtime |
+| **8 — Voice Runtime** | Voice Notes and Live Calls: realtime audio, ASR/TTS, barge-in, background/interruption, durable audio and provider integration | consume G1.2/P2/P4 frozen Product/non-signal visual law; only runtime-gated truth is newly resolved |
+| **9 — Economy + Launch Closure** | Plans/Credits/Usage from measured provider economics; Lantern; maintenance/min-version; security, device/store/legal/operations and release hardening | consume all prior frozen/implemented work; this stage closes release-specific gaps rather than reopening Product foundations |
+
+At the start of **every** executor task, show this map with each stage marked **DONE / ACTIVE / NEXT / LATER**, name the
+specific Mega Task being opened, and state what prior authority/runtime it must reuse.
 
 ---
 

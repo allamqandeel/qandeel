@@ -3,9 +3,10 @@
 **Task:** W3-MEGA-U — «فهم قنديل» / QANDEEL Understanding + User Disagreement / Contested Runtime (E2E-01 wave W3)
 **Rows:** `E2E-D-14` (open QANDEEL Understanding) and `E2E-D-15` (disagree → Contested / Under Review)
 **Baseline:** `92444c3ab8c35f7d819888be76aa6395c93d94b8` (merge of PR #288, W3-02)
-**Stack:** three stacked Draft PRs — U1 projection → U2 surface → U3 contested runtime (§0)
-**Status:** IMPLEMENTED ON STACKED DRAFT PRs — NOT MERGED. One Product-Owner-authorized Production Integration task; it
-opens no other wave or Product area, closes no phase, and does not close W3.
+**Stack:** three stacked PRs — U1 projection → U2 surface → U3 contested runtime (§0), all merged in order
+**Status:** **MERGED / CLOSED** — final stack merged through PR #291 at
+`226b61710b36c1ecba27b816a460fe16c040639a`. `E2E-D-14`, `E2E-D-15` and `PG-01` are closed. This was one
+Product-Owner-authorized Production Integration task; it opened no other wave or Product area and does not close W3.
 
 ---
 
