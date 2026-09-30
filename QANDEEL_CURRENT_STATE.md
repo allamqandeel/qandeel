@@ -270,8 +270,10 @@ explicitly Product-Owner-authorized slices only** — `W1A-01 Authenticated Pers
 `W2-02 Production Launch Identity` (merged) and `W3-01 General Settings Foundation + Appearance + Sign Out` (merged) and
 `W3-02 Account & Identity Foundation + Public ID v1` (merged)
 (below); no other wave or Product area is opened by them, and the audit
-phase is not closed. **W2 is CLOSED. W3 is ACTIVE**, not closed: of its core rows, `E2E-D-03`, `D-05`, `D-13`,
-`D-14` and `D-15` remain open, and `E2E-D-02` is advanced only.
+phase is not closed. W3-MEGA-U is now also MERGED / CLOSED through PR #291 at
+`226b61710b36c1ecba27b816a460fe16c040639a`. **W2 is CLOSED. W3 is ACTIVE**, not closed: `E2E-D-14`,
+`E2E-D-15` and `PG-01` are closed; the remaining core implementation rows are `E2E-D-03`, `D-05` and `D-13`,
+and `E2E-D-02` is advanced only. The adjacent W3 Product-decision rows remain explicit and are not inferred.
 
 **W3-02 — Account & Identity Foundation + Public ID v1 (MERGED / CLOSED through PR #288 at
 `92444c3ab8c35f7d819888be76aa6395c93d94b8`).** Closed `E2E-D-09`: every account
@@ -285,12 +287,13 @@ groups), NOT CLOSED; `E2E-H-08` is not closed; Account & Identity is not complet
 Record:
 [`docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md).
 
-**W3-MEGA-U — QANDEEL Understanding + User Disagreement / Contested (stacked Draft PRs, NOT merged).** U1 the
-owner-only Understanding projection (deterministic, qualitative confidence from canonical structure; the Confidence
-Runtime stays uncalibrated), U2 the Personal-QANDEEL entry (P4-C1 U-A), first view, detail and "talk to QANDEEL about
-this" (migration `0126`), U3 the explicit disagreement → Contested / Under Review runtime with real re-evaluation and
-reduced reliance (migration `0127`, `PG-01`). `E2E-D-14` and `E2E-D-15` close only when the stack merges; `PG-02` and
-`PG-04` stay open; W3 stays ACTIVE. Record:
+**W3-MEGA-U — QANDEEL Understanding + User Disagreement / Contested (MERGED / CLOSED through PR #291 at
+`226b61710b36c1ecba27b816a460fe16c040639a`).** U1 provides the owner-only Understanding projection
+(deterministic, qualitative confidence from canonical structure; the Confidence Runtime stays uncalibrated), U2 the
+Personal-QANDEEL entry (P4-C1 U-A), first view, detail and "talk to QANDEEL about this" (migration `0126`), and U3 the
+explicit disagreement → Contested / Under Review runtime with real re-evaluation and reduced reliance (migration
+`0127`, `PG-01`). `E2E-D-14`, `E2E-D-15` and `PG-01` are CLOSED; `PG-02` and `PG-04` stay open; W3 stays ACTIVE.
+Record:
 [`docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md).
 
 **W3-01 — General Settings Foundation + Appearance + Sign Out (MERGED / CLOSED through PR #287 at
