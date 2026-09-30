@@ -226,7 +226,7 @@ contradiction.
 
 | Stage | Delivery objective | Reuse / no-repeat boundary |
 |---|---|---|
-| **1 — Personal Core / W3 closure** | Memory through Conversation; remaining Account & Identity implementation; complete the Settings hierarchy and explicitly resolve only the remaining W3 Product-decision rows needed for closure | consume W1A/W1B/W2, W3-01, W3-02 and W3-MEGA-U; do not rebuild Settings, Public ID or Understanding |
+| **1 — Personal Core / W3 core completion** | Memory through Conversation; remaining Account & Identity implementation; advance Settings only with real available capabilities; explicitly resolve / assign the remaining W3 Product-decision rows | consume W1A/W1B/W2, W3-01, W3-02 and W3-MEGA-U; do not rebuild Settings, Public ID or Understanding; D-02 closes progressively as later real groups land — no empty placeholder groups |
 | **2 — Final Visual Production Port** | port the final Living Analysis world and the final cross-surface visual/icon system into production | consume I-08B1 FAR/MID/NEAR, I-08B3, P2 and the existing Map/Timeline/Temporal/Return runtime; no visual redesign |
 | **3 — Activity & Notifications Production** | implement Activity, attention, notification storage/delivery, Direct Entry and native Push/platform integration | consume I-08N-01 + P3 + P4; no redesign of Activity, strips, privacy, Quiet Hours, Snooze or notification settings |
 | **4 — Shared World Product Integration** | application boundary and mobile Product surfaces over the closed Shared runtime | consume I-04 and migrations 0075–0090; do not rebuild invitation, birth, governance, history, leave or material semantics |
