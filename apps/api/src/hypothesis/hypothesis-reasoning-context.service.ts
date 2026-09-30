@@ -97,9 +97,13 @@ export class HypothesisReasoningContextService {
   private discussedHypothesisId(focus: HypothesisDiscussionFocusRow | null, candidates: readonly HypothesisRecord[]): string | null {
     if (focus === null) return null;
     const openedAt = typeof focus.opened_at === 'string' ? Date.parse(focus.opened_at) : Number.NaN;
-    if (typeof focus.hypothesis_id !== 'string' || !Number.isFinite(openedAt)) this.reject();
+    if (typeof focus.hypothesis_id !== 'string' || !Number.isSafeInteger(focus.hypothesis_version) || focus.hypothesis_version < 1 ||
+      !Number.isFinite(openedAt)) this.reject();
     if (Date.now() - openedAt > DISCUSSION_FOCUS_WINDOW_MS) return null;
-    return candidates.some(({ id }) => id === focus.hypothesis_id) ? focus.hypothesis_id : null;
+    // R2: the reader chose the EXACT revision they saw. Once that item has advanced, the focus names an interpretation
+    // that is no longer current, so it marks nothing — it is never silently moved onto the newer version.
+    return candidates.some(({ id, version }) => id === focus.hypothesis_id && version === focus.hypothesis_version)
+      ? focus.hypothesis_id : null;
   }
   private reject(): never { throw new HypothesisReasoningInvariantError(); }
 }

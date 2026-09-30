@@ -10,6 +10,8 @@ import { MemoryDataApiService } from '../memory/memory-data-api.service';
  */
 export interface HypothesisDiscussionFocusRow {
   readonly hypothesis_id: string;
+  /** The exact version the reader saw and chose; the focus holds only while the item is still at this version. */
+  readonly hypothesis_version: number;
   readonly opened_at: string;
 }
 
@@ -22,7 +24,7 @@ export class HypothesisUserSignalRepository {
 
   async readOpenDiscussionFocus(token: string, userId: string): Promise<HypothesisDiscussionFocusRow | null> {
     const query = new URLSearchParams({
-      select: 'hypothesis_id,opened_at', user_id: `eq.${userId}`, closed_at: 'is.null', limit: '1',
+      select: 'hypothesis_id,hypothesis_version,opened_at', user_id: `eq.${userId}`, closed_at: 'is.null', limit: '1',
     });
     const rows = await this.dataApi.request<HypothesisDiscussionFocusRow[]>(token, `understanding_discussion_focus?${query}`);
     return Array.isArray(rows) && rows.length > 0 ? rows[0] : null;

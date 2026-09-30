@@ -35,6 +35,8 @@ const src = {
   conversation: read(`${MOBILE}/conversation/ConversationSurface.tsx`),
   settings: read(`${MOBILE}/settings/SettingsSurface.tsx`) + read(`${MOBILE}/settings/copy.ts`),
   analysis: read(`${MOBILE}/conversation/AnalysisReturnBar.tsx`) + read(`${MOBILE}/integration/composition/LivingAnalysisMap.tsx`),
+  signals: read('apps/api/src/hypothesis/hypothesis-user-signal.repository.ts'),
+  reasoning: read('apps/api/src/hypothesis/hypothesis-reasoning-context.service.ts'),
 };
 const plant = (key, from, to) => {
   assert.ok(src[key].includes(from), `planting anchor missing in ${key}: ${from}`);
@@ -118,12 +120,25 @@ function talkViolations(world) {
   return out;
 }
 
+// R2: the provider consumes the discussion focus only at the EXACT revision the reader chose.
+function exactRevisionFocusViolations(world) {
+  const out = [];
+  if (!/readonly hypothesis_version: number;/u.test(world.signals)) out.push('the focus row has no stored version');
+  if (!/select: 'hypothesis_id,hypothesis_version,opened_at'/u.test(world.signals)) out.push('the focus reader does not fetch the stored version');
+  if (!/!Number\.isSafeInteger\(focus\.hypothesis_version\) \|\| focus\.hypothesis_version < 1/u.test(world.reasoning)) out.push('a focus without a well-formed version is not refused');
+  const match = code(world.reasoning).match(/candidates\.some\(\(\{[^}]*\}\) => ([^)]*)\)\s*\?\s*focus\.hypothesis_id/u);
+  if (!match || match[1].trim() !== 'id === focus.hypothesis_id && version === focus.hypothesis_version') out.push('the focus is not bound to the exact id AND version — a stale focus can be rebound');
+  if ((code(world.reasoning).match(/userDiscussion: 'OPENED_FROM_UNDERSTANDING'/gu) ?? []).length !== 1 ||
+    !/\.\.\.\(candidate\.id === discussedId \? \{ userDiscussion: 'OPENED_FROM_UNDERSTANDING' as const \} : \{\}\)/u.test(world.reasoning)) out.push('the marker is set by anything other than the exact-revision resolver');
+  return out;
+}
+
 function privacyViolations(world) {
   const all = [world.surface, world.controller, world.strip, world.entry, world.api].map(code).join('\n');
   return /console\.|Logger|logger\.|Sentry|captureMessage|analytics|telemetry/u.test(all) ? ['Understanding content can reach a log or telemetry'] : [];
 }
 
-const DETECTORS = { placementViolations, notARouteViolations, copyViolations, numericViolations, strictDecodingViolations, talkViolations, privacyViolations };
+const DETECTORS = { placementViolations, notARouteViolations, copyViolations, numericViolations, strictDecodingViolations, talkViolations, exactRevisionFocusViolations, privacyViolations };
 
 test('the Understanding layer and its transport exist, with one barrel and no route file', () => {
   for (const file of ['copy.ts', 'index.ts', 'understanding-controller.ts', 'UnderstandingEntry.tsx', 'UnderstandingSurface.tsx', 'UnderstandingDiscussionStrip.tsx']) {
@@ -155,6 +170,10 @@ const PLANTED = [
   ['a client-supplied user id', 'strictDecodingViolations', () => plant('api', 'body: JSON.stringify({ revision })', 'body: JSON.stringify({ revision, userId: "me" })')],
   ['talk against a newer interpretation', 'talkViolations', () => plant('controller', 'transport.openDiscussion(view.ref, view.revision)', 'transport.openDiscussion(view.ref, latestRevision)')],
   ['talk that types for the reader', 'talkViolations', () => plant('depth', 'const talkedAboutItem = useCallback(() => {', 'const talkedAboutItem = useCallback(() => {\n    runtime.conversation.setDraft("I disagree");')],
+  ['R2: the focus reader omits the stored version', 'exactRevisionFocusViolations', () => plant('signals', "select: 'hypothesis_id,hypothesis_version,opened_at'", "select: 'hypothesis_id,opened_at'")],
+  ['R2: a v3 focus marks the current v4 (id-only match)', 'exactRevisionFocusViolations', () => plant('reasoning', 'id === focus.hypothesis_id && version === focus.hypothesis_version', 'id === focus.hypothesis_id')],
+  ['R2: a stale focus silently rebound to a newer version', 'exactRevisionFocusViolations', () => plant('reasoning', 'version === focus.hypothesis_version)', 'version >= focus.hypothesis_version)')],
+  ['R2: a missing stored version read as "any version"', 'exactRevisionFocusViolations', () => plant('reasoning', '!Number.isSafeInteger(focus.hypothesis_version) || focus.hypothesis_version < 1 ||', '')],
   ['Understanding text logged', 'privacyViolations', () => plant('controller', "if (outcome.kind === 'READ') update({ list: 'READY', items: outcome.items });", "if (outcome.kind === 'READ') { console.log(outcome.items); update({ list: 'READY', items: outcome.items }); }")],
 ];
 
