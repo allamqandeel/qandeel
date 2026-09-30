@@ -95,6 +95,8 @@ import { HypothesisGenerationRequestAssemblerService } from '../src/hypothesis/h
 import { HypothesisGenerationTriggerClassificationService } from '../src/hypothesis/hypothesis-generation-trigger-classification.service';
 import { HimReasoningConsumptionService } from '../src/human-model/him-reasoning-consumption.service';
 import { MemoryWriteEvaluatorService } from '../src/memory/memory-write-evaluator.service';
+import { MemoryControlRepository } from '../src/memory/memory-control.repository';
+import { MemoryControlService } from '../src/memory/memory-control.service';
 import { CorrelationService } from '../src/observability/correlation.service';
 import { TelemetryService } from '../src/observability/telemetry.service';
 import { ModelAssistedHypothesisAssociationService } from '../src/post-response-intelligence/model-assisted-hypothesis-association.service';
@@ -720,7 +722,9 @@ async function main(): Promise<void> {
       // UTF-8 accounting - end to end, with no test-only assembly shortcut.
       new IntegratedContextBudgetAssemblerService(telemetry),
       new RecommendationGroundingService(),
-      conversationalRouter, correlation, telemetry);
+      conversationalRouter, correlation, telemetry,
+      // W3-MEGA-M: the real Memory-control boundary. No turn of this smoke is a Memory command.
+      new MemoryControlService(new MemoryControlRepository(memoryDataApi), new MemoryWriteEvaluatorService()));
 
     // Background provider doubles exist from the start so the foreground phase
     // can prove they were never touched before background dispatch.

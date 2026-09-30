@@ -209,7 +209,8 @@ Current sequence:
    PR #291 at `226b61710b36c1ecba27b816a460fe16c040639a`
    ([record](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md)); `E2E-D-14`,
    `E2E-D-15` and `PG-01` are closed. W3's remaining core implementation rows are `E2E-D-03`, `D-05` and
-   `D-13`; `E2E-D-02` is advanced only. The adjacent W3 decision queue (`D-04`, `D-06`, `D-08`, `D-11`,
+   `D-13`; `E2E-D-02` is advanced only. `D-13` is implemented by W3-MEGA-M on its Draft PR and closes only when it merges
+   ([record](docs/e2e/QANDEEL_W3_MEGA_M_CONVERSATIONAL_MEMORY_CONTROL_IMPLEMENTATION_RECORD_v1.md)). The adjacent W3 decision queue (`D-04`, `D-06`, `D-08`, `D-11`,
    `D-12`, `D-16`, `D-17`) remains explicit and is not silently inferred.
 4. Release Hardening & Launch.
 

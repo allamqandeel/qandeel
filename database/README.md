@@ -3694,3 +3694,41 @@ key (`23505`) and re-reads the same id — leaving exactly one contest-owned Con
 a retry after a failed attempt converge on it too; and another evaluation of the same version under a different id is
 still accepted (history semantics unchanged). Its committed fixtures are removed (triggers suspended for that session only, since Hypotheses are append-only)
 and checked gone.
+
+## W3-MEGA-M - Conversational Memory control (migration 0128)
+
+`0128_conversational_memory_control_v1.sql` closes `E2E-D-13` under the P1 §9 rule: the user asks IN CONVERSATION what
+QANDEEL remembers, asks it to remember, corrects, forgets (`DELETED`) or keeps-but-stops-relying (`DISABLED`), under the
+existing Memory Runtime authority. There is no Memory editor. Additive and forward-only: one table, one immutability
+trigger, three functions; migrations 0001–0127 are untouched.
+
+- **`server_disable_memory_v1(user, memory)`** — the missing DISABLED primitive (the vocabulary has held `DISABLED` since
+  0004, but no authority reached it). SECURITY DEFINER, `service_role` only, empty `search_path`. It locks the owner's
+  row; `ACTIVE` and unexpired → `DISABLED`, moving only `status` and `updated_at`; already `DISABLED` → the same row,
+  unchanged (convergent); anything else (another reader's, missing, superseded, deleted, expired, pending) → no row and
+  no change. There is still no generic status updater and no role regained direct Memory write.
+- **`public.memory_control_commands`** — ONE immutable record per conversational Memory command, `UNIQUE
+  (source_turn_id)`: owner, Session, kind (`INSPECT` / `REMEMBER` / `CORRECT` / `FORGET` / `DISABLE`), the bounded
+  outcome, the target and result Memory ids (composite FKs to the owner's own rows), up to three clarification options,
+  and the clarification it answers (`UNIQUE (answers_command_id)`). No Memory content, conversation text, reasoning or
+  score. One `CHECK` gives every outcome exactly one lawful shape. RLS with one owner SELECT policy; no client or
+  server-role write; a `BEFORE UPDATE` trigger refuses any change.
+- **`server_finalize_memory_control_turn_v1(...)`** — the ONE atomic command, SECURITY DEFINER, `service_role` only. It
+  locks the canonical `GENERATING` user turn (anything else: no row, no write), verifies every target and option belongs
+  to the owner and that an answer binds to the clarification of the IMMEDIATELY preceding user turn and to one of its
+  options, applies the change through the existing narrow commands (`server_create_memory_v1`,
+  `server_supersede_memory_v1`, `server_mark_memory_deleted_v1`, `server_disable_memory_v1`) with source forced to
+  `USER_STATED` and status to `ACTIVE`, records the command, and finalizes through `finalize_conversation_turn_v2` —
+  all in one transaction. A target that no longer qualifies under its row lock commits `TARGET_CHANGED` with the
+  caller's "changed" reply and changes nothing; `TARGET_CHANGED` can never be requested. Forget is lifecycle `DELETED`,
+  never a physical DELETE.
+- **`pending_memory_clarification_v1(session, source_turn)`** — SECURITY INVOKER, `authenticated` only: under RLS, the
+  reader's own clarification that the immediately preceding user turn of the Session received and nobody answered.
+
+`database/verify-migration-0128.mjs` (`npm run verify:conversational-memory-control:integration`, API CI) proves the
+catalog and grants; the primitive's status-only, convergent, owner-bound behaviour and its refusals; each outcome of the
+atomic command with its record and canonical finalization; replay writing nothing; `TARGET_CHANGED`; lifecycle deletion;
+clarification binding (once, next turn only, options only); ownership and fail-closed refusals; immutability; and, on
+committed rows across two connections whose second attempt is shown to block, that two turns correcting one Memory leave
+one successor (the loser commits `TARGET_CHANGED`) and the same turn twice applies once. Its committed fixtures are
+removed and checked gone.

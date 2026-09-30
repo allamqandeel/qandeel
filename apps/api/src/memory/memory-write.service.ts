@@ -6,6 +6,7 @@ import {
   normalizeMemoryContent,
 } from './memory-write-evaluator.service';
 import type { MemoryType } from './memory.types';
+import { interpretMemoryControl } from './memory-control.interpreter';
 
 export type MemoryWriteResult =
   | { decision: 'SKIP'; reason: string; type?: MemoryType }
@@ -21,6 +22,8 @@ export class MemoryWriteService {
   async evaluateAndWrite(userId: string, accessToken: string, currentUserContent: string): Promise<MemoryWriteResult> {
     const decision = this.evaluator.evaluate(currentUserContent);
     if (decision.decision === 'SKIP') return decision;
+    // W3-MEGA-M: an explicit conversational Memory command is never re-applied by inference.
+    if (interpretMemoryControl(currentUserContent)) return { decision: 'SKIP', reason: 'MEMORY_CONTROL_COMMAND' };
 
     const active = await this.runtime.listActiveForUser(userId, accessToken, MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);
     const duplicate = active.some((memory) =>

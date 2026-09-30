@@ -106,6 +106,8 @@ import { QuestionForegroundSelectionService } from '../src/question/question-for
 import { QUESTION_FOREGROUND_WAIT_BUDGET_MS } from '../src/question/question-foreground-selection.types';
 import { FORMAL_QUESTION_TYPES, QUESTION_INFORMATION_OBJECTIVES, type QuestionContextV1 } from '../src/question/question-context.types';
 import { MemoryWriteEvaluatorService } from '../src/memory/memory-write-evaluator.service';
+import { MemoryControlRepository } from '../src/memory/memory-control.repository';
+import { MemoryControlService } from '../src/memory/memory-control.service';
 import { CorrelationService } from '../src/observability/correlation.service';
 import { TelemetryService } from '../src/observability/telemetry.service';
 // Background production services (same real classes the frozen A2 smoke runs).
@@ -495,7 +497,9 @@ async function main(): Promise<void> {
       new HimFastDeepConsumptionService(), new HimInteractionAdaptationService(), himContextualCurrentService,
       new HimSessionReflectionConsumptionService(), himCrossContextForegroundService, himBrainContextService,
       foregroundGatherer, questionSelectionService, contextBudgetAssembler, new RecommendationGroundingService(),
-      conversationalRouter, correlation, telemetry);
+      conversationalRouter, correlation, telemetry,
+      // W3-MEGA-M: the real Memory-control boundary. No turn of this smoke is a Memory command.
+      new MemoryControlService(new MemoryControlRepository(memoryDataApi), new MemoryWriteEvaluatorService()));
 
     // Background composition. The ledger substitute is wrapped by the QIR-007
     // fault injector so a LOST TRANSPORT (never a fabricated durable state) can

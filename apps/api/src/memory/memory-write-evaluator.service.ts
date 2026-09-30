@@ -35,14 +35,16 @@ const SPECULATION = /\b(?:maybe|perhaps|i guess|i might be)\b|(?:يمكن|ممك
 const TRANSIENT_EMOTION = /\b(?:i(?:'m| am) (?:upset|sad|angry|annoyed) today)\b|(?:أنا|انا)\s+(?:متضايق|متضايقة|زعلان|زعلانة|غضبان|غضبانة)\s+(?:النهارده|اليوم)/iu;
 const QUOTED_OR_THIRD_PARTY = /^(?:he|she|they)\s+(?:said|told me)\b|^(?:هو|هي|هما)\s+(?:قال|قالت|قالوا)\b|^["“'«].+["”'»]$/iu;
 const MULTI_SENTENCE = /[.!؟]\s+\S/u;
+// W3-MEGA-M: Unicode-aware boundaries. JavaScript's \b is ASCII-only, so the Arabic alternatives inside \b…\b could
+// never match and Arabic secrets passed this screen; the English alternatives behave exactly as before.
 const OBVIOUS_SECRET = [
-  /\b(?:password|passwd|passcode|كلمة السر|كلمه السر|باسورد)\b/iu,
+  /(?<![\p{L}\p{N}_])(?:password|passwd|passcode|كلمة السر|كلمه السر|كلمة سر|كلمه سر|كلمة المرور|كلمه المرور|(?:ال)?باسورد|(?:ال)?رقم (?:ال)?سري)(?![\p{L}\p{N}_])/iu,
   /\b(?:api[ _-]?key|access[ _-]?token|auth(?:entication)?[ _-]?token|secret[ _-]?key)\b/iu,
-  /\b(?:otp|verification code|one[ -]?time (?:password|code)|كود التحقق|رمز التحقق)\b/iu,
+  /(?<![\p{L}\p{N}_])(?:otp|verification code|one[ -]?time (?:password|code)|كود التحقق|رمز التحقق)(?![\p{L}\p{N}_])/iu,
   /\b(?:sk|pk)_(?:live|test)_[a-z0-9]{12,}\b/iu,
   /\b(?:ghp|gho|github_pat)_[a-z0-9_]{12,}\b/iu,
   /\b(?:\d[ -]*?){13,19}\b/u,
-  /\b(?:national id|government id|ssn|social security|الرقم القومي|رقم الهوية)\b[\s:#-]*\d{8,}/iu,
+  /(?<![\p{L}\p{N}_])(?:national id|government id|ssn|social security|الرقم القومي|رقم الهوية)(?![\p{L}\p{N}_])[\s:#-]*\d{8,}/iu,
 ];
 
 @Injectable()
@@ -68,6 +70,32 @@ export class MemoryWriteEvaluatorService {
         source: 'USER_STATED',
         status: 'ACTIVE',
         confidence: rememberRequested ? 0.98 : 0.95,
+        importance: MEMORY_IMPORTANCE[match.type],
+        ...(match.expiresAt ? { expiresAt: match.expiresAt } : {}),
+      },
+    };
+  }
+
+  /**
+   * W3-MEGA-M (E2E-D-13): the explicit "remember this" write path P1 §9 names. The user's explicit request is the
+   * authority, so the background grammar is NOT the ceiling here: a statement the typed patterns recognise keeps its
+   * canonical type and wording, and any other statement is kept in the user's own words as a PERSONAL_FACT (or the
+   * caller's fallback type). The existing secret / sensitive-identifier screen still applies unchanged.
+   */
+  explicitStatementCandidate(
+    rawStatement: string,
+    now = new Date(),
+    fallbackType: Exclude<MemoryType, 'DERIVED_INSIGHT'> = 'PERSONAL_FACT',
+  ): { decision: 'SKIP'; reason: 'SENSITIVE_DATA' | 'EMPTY' } | { decision: 'WRITE'; candidate: CreateMemoryInput } {
+    const statement = prepareRememberContent(rawStatement).replace(/^(?:إني|اني|انى|إنّي)\s+/u, 'أنا ');
+    if (OBVIOUS_SECRET.some((pattern) => pattern.test(statement))) return { decision: 'SKIP', reason: 'SENSITIVE_DATA' };
+    const words = trimValue(statement);
+    if (words.length < 2) return { decision: 'SKIP', reason: 'EMPTY' };
+    const match = this.match(statement, now) ?? candidate(fallbackType, `${words}.`);
+    return {
+      decision: 'WRITE',
+      candidate: {
+        type: match.type, content: match.content, source: 'USER_STATED', status: 'ACTIVE', confidence: 0.98,
         importance: MEMORY_IMPORTANCE[match.type],
         ...(match.expiresAt ? { expiresAt: match.expiresAt } : {}),
       },

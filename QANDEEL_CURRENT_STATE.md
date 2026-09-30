@@ -273,7 +273,9 @@ explicitly Product-Owner-authorized slices only** — `W1A-01 Authenticated Pers
 phase is not closed. W3-MEGA-U is now also MERGED / CLOSED through PR #291 at
 `226b61710b36c1ecba27b816a460fe16c040639a`. **W2 is CLOSED. W3 is ACTIVE**, not closed: `E2E-D-14`,
 `E2E-D-15` and `PG-01` are closed; the remaining core implementation rows are `E2E-D-03`, `D-05` and `D-13`,
-and `E2E-D-02` is advanced only. The adjacent W3 Product-decision rows remain explicit and are not inferred.
+and `E2E-D-02` is advanced only. `E2E-D-13` is IMPLEMENTED by W3-MEGA-M (conversational Memory control, migration
+`0128`) on its Draft PR and is NOT CLOSED until that PR merges
+([record](docs/e2e/QANDEEL_W3_MEGA_M_CONVERSATIONAL_MEMORY_CONTROL_IMPLEMENTATION_RECORD_v1.md)). The adjacent W3 Product-decision rows remain explicit and are not inferred.
 
 **W3-02 — Account & Identity Foundation + Public ID v1 (MERGED / CLOSED through PR #288 at
 `92444c3ab8c35f7d819888be76aa6395c93d94b8`).** Closed `E2E-D-09`: every account

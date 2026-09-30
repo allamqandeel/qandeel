@@ -89,6 +89,8 @@ describe('ConversationOrchestratorService', () => {
   let hypothesisCandidateGenerator: jest.Mocked<HypothesisCandidateGenerator>;
   let correlation: CorrelationService;
   let telemetry: TelemetryService;
+  // W3-MEGA-M: the Memory-control boundary answers "not a Memory request" unless a test says otherwise.
+  let memoryControl: { plan: jest.Mock };
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -234,7 +236,7 @@ describe('ConversationOrchestratorService', () => {
   beforeEach(() => {
     repository = {
       claimTurn: jest.fn(), finalizeTurn: jest.fn(), failTurn: jest.fn(), findTurn: jest.fn(),
-      findAssistantForSource: jest.fn(), recoverExpiredGeneratingTurn: jest.fn(),
+      findAssistantForSource: jest.fn(), recoverExpiredGeneratingTurn: jest.fn(), finalizeMemoryControlTurn: jest.fn(),
     } as unknown as jest.Mocked<ConversationRepository>;
     router = { generate: jest.fn().mockResolvedValue({ content: 'response', routingMetadata: { path: 'FAST' }, usage: { inputTokens: 1, outputTokens: 1 } }) };
     // QIR-004 retired ContextBuilder.assemble: the builder now owns canonical
@@ -269,6 +271,7 @@ describe('ConversationOrchestratorService', () => {
     himBrainContext = { read: jest.fn().mockResolvedValue(undefined), consumeSourceRows: jest.fn() } as unknown as jest.Mocked<HimBrainContextService>;
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
+    memoryControl = { plan: jest.fn().mockResolvedValue(null) };
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
     hypothesisExtraction = { extract: jest.fn().mockResolvedValue({ status: 'NOT_AUTHORIZED', reason: 'AUTHORITY_REJECTED', authorityReason: 'PROBLEM_NOT_GROUNDED' }) } as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;
     hypothesisRequestAssembler = { assemble: jest.fn().mockReturnValue({ status: 'READY', request: { problem: 'problem', domain: 'GENERAL', scope: 'CONVERSATION_SESSION:session', evidenceIds: [] } }) } as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;
@@ -292,7 +295,7 @@ describe('ConversationOrchestratorService', () => {
     // QIR-004: the REAL assembler, so every orchestrator proof runs through the
     // production single normalized provider-request assembly boundary.
     integratedContextBudget = new IntegratedContextBudgetAssemblerService(telemetry);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router,correlation,telemetry);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router,correlation,telemetry,memoryControl as never);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -599,6 +602,57 @@ describe('ConversationOrchestratorService', () => {
     expect(request.humanIntelligence?.sessionReasoningContext).toEqual(providerSessionReasoningContext());
   });
 
+  describe('W3-MEGA-M conversational Memory control', () => {
+    const plan = { kind: 'FORGET', outcome: 'FORGOTTEN', targetMemoryId: 'm-1', candidateMemoryIds: [], reply: 'done', replyIfChanged: 'changed' };
+
+    it('an ALLOW Memory command is finalized by the ONE atomic command, with no other lane and no provider', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      memoryControl.plan.mockResolvedValue(plan);
+      repository.finalizeMemoryControlTurn.mockResolvedValue({ outcome: 'FORGOTTEN', userTurn: completedUser, assistantTurn: { ...assistant, content: 'done' } });
+
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: completedUser, assistantTurn: { ...assistant, content: 'done' } });
+      expect(memoryControl.plan).toHaveBeenCalledWith({ accessToken: 'token', userId: 'user', sessionId: 'session', sourceTurnId: 'user-turn', content: 'hello' });
+      expect(repository.finalizeMemoryControlTurn).toHaveBeenCalledWith(expect.objectContaining({ sessionId: 'session', userId: 'user', sourceTurnId: 'user-turn', plan }));
+      expect(repository.finalizeTurn).not.toHaveBeenCalled();
+      expect(router.generate).not.toHaveBeenCalled();
+      expect(himSelector.select).not.toHaveBeenCalled();
+      expect(memoryRetriever.retrieve).not.toHaveBeenCalled();
+      expect(questionForegroundSelection.select).not.toHaveBeenCalled();
+    });
+
+    it('passes the previous user words from the canonical context, for "that information"', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      contextBuilder.build.mockResolvedValue([
+        { role: 'USER', content: 'I like tea' }, { role: 'ASSISTANT', content: 'Nice.' }, { role: 'USER', content: 'hello' },
+      ]);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(memoryControl.plan).toHaveBeenCalledWith(expect.objectContaining({ previousUserContent: 'I like tea' }));
+    });
+
+    it('a GUIDED turn keeps its Safety guidance on the provider path: the Memory boundary is never consulted', async () => {
+      safetyGate.evaluate.mockReturnValue({ category: 'SELF_HARM_OR_SUICIDE', disposition: 'GUIDED', safetyGuidance: 'guidance' });
+      repository.claimTurn.mockResolvedValue(claimed);
+      repository.finalizeTurn.mockResolvedValue({ userTurn: completedUser, assistantTurn: assistant });
+      await orchestrator.orchestrate('token', 'user', userTurn);
+      expect(memoryControl.plan).not.toHaveBeenCalled();
+      expect(router.generate).toHaveBeenCalledTimes(1);
+    });
+
+    it('a turn no longer GENERATING answers the current canonical state; a boundary failure fails the turn closed', async () => {
+      repository.claimTurn.mockResolvedValue(claimed);
+      memoryControl.plan.mockResolvedValue(plan);
+      repository.finalizeMemoryControlTurn.mockResolvedValue(undefined);
+      repository.findTurn.mockResolvedValue({ ...claimed, status: 'CANCELLED' });
+      repository.findAssistantForSource.mockResolvedValue(undefined);
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).resolves.toEqual({ userTurn: { ...claimed, status: 'CANCELLED' } });
+
+      memoryControl.plan.mockRejectedValue(new Error('Memory persistence is unavailable.'));
+      await expect(orchestrator.orchestrate('token', 'user', userTurn)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(repository.failTurn).toHaveBeenCalledWith('session', 'user', 'user-turn');
+      expect(router.generate).not.toHaveBeenCalled();
+    });
+  });
   it('atomically finalizes BLOCK without behavioral policy or router calls', async () => {
     safetyGate.evaluate.mockReturnValue({
       category: 'SELF_HARM_OR_SUICIDE', disposition: 'BLOCK', deterministicResponse: 'safe deterministic response',
@@ -1593,7 +1647,7 @@ describe('ConversationOrchestratorService', () => {
       const wired = new ConversationOrchestratorService(
         repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge,
         himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation, himBrainContext,
-        foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router, correlation, telemetry,
+        foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router, correlation, telemetry, memoryControl as never,
       );
       return { wired, crossContextRepository, situationRepository, decisionRepository, goalRepository, relationshipRepository, situationDirectRead, decisionDirectRead, goalDirectRead, relationshipDirectRead };
     };

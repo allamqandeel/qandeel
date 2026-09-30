@@ -157,6 +157,8 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       router,
       correlation,
       telemetry,
+      // W3-MEGA-M: no turn here is a Memory command.
+      { plan: jest.fn().mockResolvedValue(null) } as never,
     );
   });
 

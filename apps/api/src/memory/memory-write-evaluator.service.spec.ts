@@ -65,6 +65,24 @@ describe('MemoryWriteEvaluatorService', () => {
     expect(evaluator.evaluate(content, now)).toEqual({ decision: 'SKIP', reason: 'SENSITIVE_DATA' });
   });
 
+  // W3-MEGA-M: JavaScript's \b is ASCII-only, so these Arabic phrases used to pass the screen.
+  it.each([
+    'افتكر إن كلمة السر بتاعتي هي 123456', 'الباسورد بتاعي abc123', 'كود التحقق 4431', 'الرقم السري للكارت 9911',
+  ])('denies Arabic secrets too: %s', (content) => {
+    expect(evaluator.evaluate(content, now)).toEqual({ decision: 'SKIP', reason: 'SENSITIVE_DATA' });
+    expect(evaluator.explicitStatementCandidate(content, now)).toEqual({ decision: 'SKIP', reason: 'SENSITIVE_DATA' });
+  });
+
+  it('W3-MEGA-M explicit statements: typed when the grammar knows them, otherwise kept in the user\'s own words', () => {
+    expect(evaluator.explicitStatementCandidate('إني ساكن في طنطا', now)).toEqual({ decision: 'WRITE', candidate: {
+      type: 'PERSONAL_FACT', content: 'أنا ساكن في طنطا.', source: 'USER_STATED', status: 'ACTIVE', confidence: 0.98, importance: MEMORY_IMPORTANCE.PERSONAL_FACT,
+    } });
+    expect(evaluator.explicitStatementCandidate('إني بحب القهوة', now)).toMatchObject({ decision: 'WRITE', candidate: { type: 'STABLE_PREFERENCE', content: 'أنا بحب القهوة.' } });
+    expect(evaluator.explicitStatementCandidate('أحمد عنده امتحان الخميس', now)).toMatchObject({ decision: 'WRITE', candidate: { type: 'PERSONAL_FACT', content: 'أحمد عنده امتحان الخميس.' } });
+    expect(evaluator.explicitStatementCandidate('we meet on Fridays', now, 'RELATIONSHIP_CONTEXT')).toMatchObject({ decision: 'WRITE', candidate: { type: 'RELATIONSHIP_CONTEXT', content: 'we meet on Fridays.' } });
+    expect(evaluator.explicitStatementCandidate('.', now)).toEqual({ decision: 'SKIP', reason: 'EMPTY' });
+  });
+
   it('never expands a multi-fact turn into multiple candidates', () => {
     const decision = evaluator.evaluate('I prefer short answers. My goal is to run a marathon.', now);
     expect(decision.decision).toBe('SKIP');

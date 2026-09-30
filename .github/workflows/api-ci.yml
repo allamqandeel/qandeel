@@ -66,6 +66,7 @@ jobs:
       - {name: Verify W3-MEGA-U U1 QANDEEL Understanding projection authority static contract, run: npm run test:w3-mega-u1-understanding-projection-contract}
       - {name: Verify W3-MEGA-U U2 exact-revision discussion focus (API side of the U2 surface contract), run: npm run test:w3-mega-u2-understanding-surface-contract}
       - {name: Verify W3-MEGA-U U3 Contested / Under Review runtime static contract, run: npm run test:w3-mega-u3-contested-runtime-contract}
+      - {name: Verify W3-MEGA-M conversational Memory control static contract, run: npm run test:w3-mega-m-conversational-memory-control-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -747,6 +748,12 @@ jobs:
       # one contest under review per item, the bounded refusals, the privilege boundary, and committed two-connection races.
       - name: Verify the W3-MEGA-U Understanding contest against real PostgreSQL
         run: npm run verify:understanding-contest:integration
+      # W3-MEGA-M closes E2E-D-13: conversational Memory control. This verifier proves the missing DISABLED primitive (status
+      # only, convergent, owner-bound, service-role only), the one atomic command that applies a Memory change, records it and
+      # finalizes the turn with the reply for the committed outcome, TARGET_CHANGED under the row lock, lifecycle deletion,
+      # clarification binding, ownership, fail-closed refusals, and committed two-connection races (one successor, one effect).
+      - name: Verify W3-MEGA-M conversational Memory control against real PostgreSQL
+        run: npm run verify:conversational-memory-control:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
