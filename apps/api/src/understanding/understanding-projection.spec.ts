@@ -52,7 +52,7 @@ describe('opaque item tokens', () => {
 
 describe('outbound audit — planted defects fail closed', () => {
   const ref = understandingItemRef('user-a', 'h1');
-  const summary = { ref, revision: understandingRevision('user-a', 'h1', 1), theme: 'WORK', summary: 'You prepare early.', confidence: 'TAKING_SHAPE' };
+  const summary = { ref, revision: understandingRevision('user-a', 'h1', 1), theme: 'WORK', summary: 'You prepare early.', confidence: 'TAKING_SHAPE', underReview: false };
   const detail = { ...summary, evidence: ['I plan ahead'], contradictions: [], alternatives: [], unresolved: [], evolution: [{ kind: 'FIRST_SEEN', at: '2026-09-30T10:00:00.000+00:00' }] };
 
   it('accepts the exact Product shapes', () => {
@@ -77,6 +77,8 @@ describe('outbound audit — planted defects fail closed', () => {
     ['an invented theme', { items: [{ ...summary, theme: 'PERSONALITY' }] }],
     ['an empty summary', { items: [{ ...summary, summary: '  ' }] }],
     ['a duplicated item', { items: [summary, summary] }],
+    ['an item under review not shown as Mixed', { items: [{ ...summary, underReview: true }] }],
+    ['a missing under-review flag', { items: [{ ref: summary.ref, revision: summary.revision, theme: 'WORK', summary: 'x', confidence: 'MIXED' }] }],
   ])('list: %s', (_name, payload) => {
     expect(() => auditUnderstandingList(payload)).toThrow(UnderstandingProjectionInvariantError);
   });

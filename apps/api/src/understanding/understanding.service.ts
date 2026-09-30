@@ -1,6 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConfidenceRepository } from '../hypothesis/confidence.repository';
 import { CONFIDENCE_MISSING_INFORMATION_CODES, CONFIDENCE_POLICY_VERSION, type ConfidenceEvaluationRecord, type ConfidenceMissingInformationCode } from '../hypothesis/confidence.types';
+import { ConfidenceService } from '../hypothesis/confidence.service';
 import { HypothesisService } from '../hypothesis/hypothesis.service';
 import type { HypothesisRecord } from '../hypothesis/hypothesis.types';
 import { EvidenceService } from '../memory/evidence.service';
@@ -8,12 +9,12 @@ import {
   auditUnderstandingDetail, auditUnderstandingList, isUnderstandingToken, projectUnderstandingConfidence,
   understandingItemRef, understandingRevision,
 } from './understanding-projection';
-import { UnderstandingRepository, type UnderstandingLifecycleTransitionRow } from './understanding.repository';
+import { UnderstandingRepository, type UnderstandingContestRow, type UnderstandingLifecycleTransitionRow } from './understanding.repository';
 import {
   MAX_DETAIL_ALTERNATIVES, MAX_DETAIL_CONTEXT_ITEMS, MAX_DETAIL_EVOLUTION, THEME_BY_DOMAIN, UNDERSTANDING_LIST_DEFAULT_LIMIT,
   UNDERSTANDING_LIST_MAX_LIMIT, UNDERSTANDING_SURFACE_STATUSES, UnderstandingProjectionInvariantError,
   type UnderstandingEvolutionEntry, type UnderstandingEvolutionKind, type UnderstandingItemDetail, type UnderstandingItemSummary,
-  type UnderstandingListView,
+  type UnderstandingDisagreementView, type UnderstandingListView,
 } from './understanding.types';
 
 /** The one owned read context both routes share. Every read uses the caller's own token under RLS. */
@@ -21,7 +22,11 @@ interface OwnedContext {
   readonly surfaced: readonly HypothesisRecord[];
   readonly eligibleEvidence: ReadonlyMap<string, string>;
   readonly exactVersion: ReadonlyMap<string, readonly ConfidenceMissingInformationCode[]>;
+  /** U3: the reader's contests under review, by item. */
+  readonly contests: ReadonlyMap<string, UnderstandingContestRow>;
 }
+
+const COMMAND_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
 
 /**
  * W3-MEGA-U U1 — the owner-only «فهم قنديل» projection.
@@ -40,6 +45,8 @@ export class UnderstandingService {
     private readonly evidence: EvidenceService,
     private readonly confidence: ConfidenceRepository,
     private readonly repository: UnderstandingRepository,
+    // U3: the Confidence Runtime's own exact-version evaluation, for the re-evaluation after a disagreement.
+    private readonly confidenceRuntime: ConfidenceService,
   ) {}
 
   async list(userId: string, token: string, query: unknown): Promise<UnderstandingListView> {
@@ -81,7 +88,7 @@ export class UnderstandingService {
         unresolved: hypothesis.assumptions.slice(0, MAX_DETAIL_CONTEXT_ITEMS),
         evolution: this.evolution(hypothesis, updates.map((row): UnderstandingEvolutionEntry => ({
           kind: row.evidence_role === 'SUPPORTING' ? 'SUPPORT_ADDED' : 'CHALLENGE_ADDED', at: row.created_at,
-        })), transitions),
+        })), transitions, context.contests.get(hypothesis.id) ?? null),
       };
       auditUnderstandingDetail(view);
       return view;
@@ -122,6 +129,85 @@ export class UnderstandingService {
     });
   }
 
+  /**
+   * U3 — an EXPLICIT disagreement with one of the caller's current items (P1 §11.4, PG-01), bound to the exact revision
+   * the reader saw and to one command identity. The database records the contest and performs the re-evaluation's
+   * lifecycle step in one transaction (migration 0127); the Confidence Runtime then evaluates the exact re-evaluated
+   * version. Nothing is deleted, no statement is rewritten and no conversation text is stored.
+   *   200  { underReview: true, revision }  — recorded now, the same command replayed, or already under review;
+   *   409  UNDERSTANDING_ITEM_CHANGED        — the item changed since the reader saw it; nothing was recorded;
+   *   409  UNDERSTANDING_COMMAND_CONFLICT    — this command identity was spent on another item or version;
+   *   404                                    — not one of the caller's current items.
+   */
+  async disagree(userId: string, token: string, ref: unknown, body: unknown): Promise<UnderstandingDisagreementView> {
+    const { commandId, revision } = this.validateDisagreementBody(body);
+    if (!isUnderstandingToken(ref)) throw new NotFoundException('Understanding item not found.');
+    return this.guard(async () => {
+      const hypothesis = (await this.ownedActive(userId, token))
+        .find((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status) && understandingItemRef(userId, value.id) === ref);
+      if (!hypothesis) throw new NotFoundException('Understanding item not found.');
+      // The version the reader saw: the current one, or — when their own disagreement already moved the item on
+      // (a lost answer, a replay) — the one just before it. The database decides which of those is true.
+      const seen = [hypothesis.version, hypothesis.version - 1]
+        .find((version) => version >= 1 && understandingRevision(userId, hypothesis.id, version) === revision);
+      if (seen === undefined) {
+        const contests = await this.repository.listContestsUnderReview(token, userId);
+        if (Array.isArray(contests) && contests.some((row) => row?.hypothesis_id === hypothesis.id)) {
+          return this.underReview(userId, hypothesis.id, hypothesis.version);
+        }
+        throw this.changed();
+      }
+      const rows = await this.repository.recordDisagreement(token, commandId, hypothesis.id, seen);
+      const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : this.reject();
+      switch (row.outcome) {
+        case 'RECORDED': {
+          if (!Number.isSafeInteger(row.reevaluated_version)) this.reject();
+          await this.reevaluateConfidence(userId, token, hypothesis.id, row.reevaluated_version as number);
+          return this.underReview(userId, hypothesis.id, row.reevaluated_version as number);
+        }
+        case 'ALREADY_UNDER_REVIEW':
+          return this.underReview(userId, hypothesis.id, hypothesis.version);
+        case 'STALE':
+          throw this.changed();
+        case 'NOT_FOUND':
+          throw new NotFoundException('Understanding item not found.');
+        case 'COMMAND_CONFLICT':
+          throw new ConflictException({ code: 'UNDERSTANDING_COMMAND_CONFLICT' });
+        default:
+          return this.reject();
+      }
+    });
+  }
+
+  /**
+   * The re-evaluation's Confidence step: the Confidence Runtime's own exact-version evaluation of the re-evaluated
+   * version — at most once per version (a replayed command finds it already there), and never against a later
+   * version (the database refuses one that is no longer current). A failure leaves the committed contest untouched;
+   * the item is already MIXED / under review, and a replay of the same command evaluates it then.
+   */
+  private async reevaluateConfidence(userId: string, token: string, hypothesisId: string, version: number): Promise<void> {
+    try {
+      const existing = await this.confidence.listExactVersionsForTargets(token, userId, [{ id: hypothesisId, version }]);
+      if (Array.isArray(existing) && existing.some((row) => row.target_id === hypothesisId && row.target_version === version)) return;
+      await this.confidenceRuntime.evaluateHypothesisVersion(userId, token, hypothesisId, version);
+    } catch {
+      // PENDING_RETRY, exactly as the Hypothesis Update Loop degrades: nothing else is claimed.
+    }
+  }
+
+  private underReview(userId: string, hypothesisId: string, version: number): UnderstandingDisagreementView {
+    return { underReview: true, revision: understandingRevision(userId, hypothesisId, version) };
+  }
+
+  private validateDisagreementBody(body: unknown): { commandId: string; revision: string } {
+    const value = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : null;
+    if (value === null || Object.keys(value).length !== 2 || typeof value.commandId !== 'string' || !COMMAND_ID.test(value.commandId) ||
+      !isUnderstandingToken(value.revision)) {
+      throw new BadRequestException('Request must contain exactly one commandId and one revision.');
+    }
+    return { commandId: value.commandId.toLowerCase(), revision: value.revision };
+  }
+
   private async ownedActive(userId: string, token: string): Promise<readonly HypothesisRecord[]> {
     const active = await this.hypotheses.listActiveForUser(userId, token);
     if (!Array.isArray(active)) this.reject();
@@ -145,12 +231,19 @@ export class UnderstandingService {
     // Owner re-checked defensively on every row (ownedActive), then only CURRENT understanding is kept. The
     // repository order (updated_at DESC, id ASC) is the recency order the first view needs: most recently changed first.
     const surfaced = (await this.ownedActive(userId, token)).filter((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status));
-    if (surfaced.length === 0) return { surfaced, eligibleEvidence: new Map(), exactVersion: new Map() };
-    const [eligible, evaluations] = await Promise.all([
+    if (surfaced.length === 0) return { surfaced, eligibleEvidence: new Map(), exactVersion: new Map(), contests: new Map() };
+    const [eligible, evaluations, contestRows] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
       this.confidence.listExactVersionsForTargets(token, userId, surfaced.map(({ id, version }) => ({ id, version }))),
+      this.repository.listContestsUnderReview(token, userId),
     ]);
-    if (!Array.isArray(eligible) || !Array.isArray(evaluations)) this.reject();
+    if (!Array.isArray(eligible) || !Array.isArray(evaluations) || !Array.isArray(contestRows)) this.reject();
+    const contests = new Map<string, UnderstandingContestRow>();
+    for (const row of contestRows) {
+      if (!row || typeof row.hypothesis_id !== 'string' || !Number.isSafeInteger(row.reevaluation_after_version) ||
+        typeof row.created_at !== 'string' || !Number.isFinite(Date.parse(row.created_at)) || contests.has(row.hypothesis_id)) this.reject();
+      contests.set(row.hypothesis_id, row);
+    }
     const exactVersion = new Map<string, readonly ConfidenceMissingInformationCode[]>();
     for (const evaluation of evaluations) {
       const target = surfaced.find(({ id }) => id === evaluation.target_id);
@@ -163,6 +256,7 @@ export class UnderstandingService {
       surfaced,
       eligibleEvidence: new Map(eligible.map((item) => [item.evidenceId, item.statement])),
       exactVersion,
+      contests,
     };
   }
 
@@ -178,20 +272,25 @@ export class UnderstandingService {
         eligibleSupporting: eligible(hypothesis.supporting_evidence_ids),
         eligibleContradicting: eligible(hypothesis.contradicting_evidence_ids),
         exactVersionMissingInformation: context.exactVersion.get(hypothesis.id) ?? null,
-        contested: false,
+        contested: context.contests.has(hypothesis.id),
       }),
+      underReview: context.contests.has(hypothesis.id),
     };
   }
 
   private evolution(
     hypothesis: HypothesisRecord, updates: UnderstandingEvolutionEntry[], transitions: readonly UnderstandingLifecycleTransitionRow[],
+    contest: UnderstandingContestRow | null,
   ): UnderstandingEvolutionEntry[] {
     const lifecycle = transitions.flatMap((row): UnderstandingEvolutionEntry[] => {
+      // The re-evaluation's own MIXED step is told as the reader's disagreement, once, not as a second event.
+      if (contest !== null && row.after_status === 'MIXED' && row.after_version === contest.reevaluation_after_version) return [];
       const kind = lifecycleKind(row);
       return kind === null ? [] : [{ kind, at: row.created_at }];
     });
     const first: UnderstandingEvolutionEntry = { kind: 'FIRST_SEEN', at: hypothesis.created_at };
-    return [...updates, ...lifecycle, first]
+    const disagreed: UnderstandingEvolutionEntry[] = contest === null ? [] : [{ kind: 'YOU_DISAGREED', at: contest.created_at }];
+    return [...updates, ...lifecycle, ...disagreed, first]
       .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
       .slice(0, MAX_DETAIL_EVOLUTION);
   }

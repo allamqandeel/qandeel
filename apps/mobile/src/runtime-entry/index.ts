@@ -101,6 +101,7 @@ export type {
   UnderstandingConfidence,
   UnderstandingDetailOutcome,
   UnderstandingDetailView,
+  UnderstandingDisagreementOutcome,
   UnderstandingDiscussionOutcome,
   UnderstandingEvolutionKind,
   UnderstandingEvolutionView,

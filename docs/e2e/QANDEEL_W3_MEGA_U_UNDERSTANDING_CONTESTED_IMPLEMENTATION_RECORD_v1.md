@@ -50,10 +50,12 @@ already owner-SELECT-only under RLS and is read with the caller's own token.
 ### 2.2 The Product view model
 
 ```
-GET /understanding/items?limit=N   → { items: [{ ref, revision, theme, summary, confidence }] }
-GET /understanding/items/:ref      → { ref, revision, theme, summary, confidence,
+GET /understanding/items?limit=N   → { items: [{ ref, revision, theme, summary, confidence, underReview }] }
+GET /understanding/items/:ref      → { ref, revision, theme, summary, confidence, underReview,
                                         evidence[], contradictions[], alternatives[], unresolved[], evolution[{kind, at}] }
 ```
+
+(`underReview` — the one boolean U3 adds for P1 §11.4's Contested / Under Review state; the U1 contract pins the shape.)
 
 - **`ref`** — opaque, one-way (domain-separated SHA-256 of reader + item, 22 base64url characters), stable across versions.
   It resolves only against the caller's own current items; a malformed ref, another reader's ref and a withdrawn item's
@@ -234,3 +236,137 @@ The Arabic avoids gendered imperatives (a verbal noun for the talk control) and 
 - `tests/w3-mega-u2-understanding-surface-contract.test.mjs`: seven detectors, fifteen planted defects.
 - Validation re-anchors: the W3-02 contract's "0125 is the last migration" is now "0125 directly follows 0124"; the U1
   contract counts one token identity per route.
+
+## 4. U3 — User Disagreement → Contested / Under Review, with real re-evaluation (`PG-01`)
+
+### 4.1 The trigger — explicit, bound, never inferred
+
+- The ONE act is «أراه بشكل مختلف» / "I see it differently" on the Conversation's discussion line, i.e. only after the
+  reader chose "talk to QANDEEL about this" for that item. It is an intentional control, bound to that item's exact
+  revision and to one command identity. Nothing in the Conversation turn path (API or mobile) reads what the reader
+  types for a disagreement — the U3 contract proves the whole path free of it (no keyword interception).
+- The request is `POST /understanding/items/:ref/disagreement` with exactly `{ commandId, revision }`. **No words the
+  reader typed are sent or stored**; the Conversation simply continues, and whatever they say next is an ordinary turn.
+
+### 4.2 Persistence — migration `0127`
+
+`public.understanding_contests`: owner, item (composite FK to the reader's own Hypothesis), command identity
+(`UNIQUE (user_id, command_id)`), the EXACT contested version, lifecycle, the re-evaluation's before / after status and
+after version, and the instant. No text, reasoning, score or payload column. At most ONE contest under review per item
+(partial unique index). RLS owner SELECT only; no client write; the command is DEFINER in `understanding_private` with a
+`public` INVOKER pass-through; the owner is `auth.uid()` only.
+
+Contest lifecycle v1 is exactly `UNDER_REVIEW`. No Product authority defines what resolves a contest beyond the
+re-evaluation, so it **stays under review** rather than pretending to be resolved; no manual "resolved" control exists,
+and a provider restating the interpretation cannot clear it.
+
+### 4.3 Stale, concurrency, idempotency
+
+- The command locks the item `FOR UPDATE` first, then: same command replayed → `RECORDED` with the committed truth
+  (nothing repeated); a command id spent elsewhere → `COMMAND_CONFLICT`; not one of the caller's current items →
+  `NOT_FOUND`; a contest already under review → `ALREADY_UNDER_REVIEW`; a version other than the one seen → `STALE`.
+  Every non-recording answer writes nothing.
+- The API maps the revision the reader saw to the current version, or the one just before it (their own disagreement
+  may already have moved it); anything else is `409 UNDERSTANDING_ITEM_CHANGED` unless the item is already under review.
+- Mobile: a lost answer is retried as the SAME command (recorded at most once); `CHANGED` re-reads the item, shows the
+  current interpretation and records nothing — the reader decides again; `CONFLICT` mints a new command next time.
+- Real PostgreSQL (`database/verify-migration-0127.mjs`): two different commands racing on one item → exactly one
+  `RECORDED`, one `ALREADY_UNDER_REVIEW`, one contest, one version step; the same command twice → one contest.
+
+### 4.4 Re-evaluation — real, through existing machinery
+
+1. **Lifecycle** (same transaction as the contest): a current `ACTIVE` / `SUPPORTED` / `WEAK` interpretation becomes
+   `MIXED` through the ONE audited lifecycle core (`transition_hypothesis_core_v1`, migration 0036) at the exact
+   version — a new version and an `AUTHENTICATED_TRANSITION` audit row; 0072 captures it historically. One already
+   `MIXED` keeps its version. Authority: P1 §11.4 ("makes the item contested / under review and causes re-evaluation")
+   and the P4-C3R ruling that one label, `MIXED`, covers mixed evidence and an explicit disagreement; the transition is
+   one the frozen graph already allows. Nothing else of the Hypothesis changes: statement, Evidence, assumptions and
+   alternatives are untouched, it is never deleted, rejected or retired, and history is not rewritten.
+2. **Confidence**: the Confidence Runtime's own `evaluateHypothesisVersion` at the returned `reevaluated_version` —
+   never a later one; at most once per version (a replay finds it); a failure degrades exactly like the Hypothesis Update
+   Loop (the committed contest stands; a replay evaluates then).
+3. **Reliance** (below). No supporting Evidence is manufactured and no user text becomes Evidence.
+
+The result of this re-evaluation is "remains contested / under review" (P1 §11.5 "become contested"). Later canonical
+lifecycle moves (weaken, change, withdraw, support) stay with their existing lawful authorities.
+
+### 4.5 Contested affects reliance, not merely UI
+
+- **Product projection:** a contest under review forces `MIXED` (rule 1 of §2.3) and `underReview: true`; the outbound
+  audit refuses any item under review that is not `MIXED`. The detail shows «أخذ قنديل برأيك، وهذا الفهم قيد المراجعة.» and
+  the evolution «سُجّل رأيك المختلف» (the re-evaluation's own `MIXED` step is folded into it, not told twice); the list row
+  says «قيد المراجعة» / Under review in words.
+- **Provider-facing:** `HypothesisReasoningContextService` reads the reader's contests (owner RLS, caller token) and marks
+  each item `userContest: 'UNDER_REVIEW'`; its lifecycle state is `MIXED` too. The central guidance adds: it is
+  contested and under review, so do not rely on it, do not present it as QANDEEL's current understanding of the user,
+  and do not treat the disagreement as proof either way. A failed contest read fails the whole Hypothesis context (it is
+  omitted), so a contested item is never consumed as uncontested. Provider-neutral: the guidance is the central
+  composition both adapters consume; no provider-specific logic, no numeric penalty.
+
+### 4.6 User-visible behaviour
+
+The line says «سُجّل رأيك، وسيعيد قنديل النظر في هذا الفهم.» and the act disappears; the context stays; the draft is the
+reader's; nothing is sent for them. Reopening Understanding always opens on the freshly read first view (a proof-found
+defect fixed in U3: it had reopened on an explanation read before the disagreement). The state is server-truth, so it
+survives a restart (integration-proven with a fresh runtime).
+
+### 4.7 U3 copy (TASK-APPROVED DELEGATED COPY, same register)
+
+| Key | Arabic | English |
+|---|---|---|
+| disagree | أراه بشكل مختلف | I see it differently |
+| recorded | سُجّل رأيك، وسيعيد قنديل النظر في هذا الفهم. | Your view is noted. QANDEEL will reconsider this understanding. |
+| failed | تعذّر تسجيل رأيك. | Your view couldn't be recorded. |
+| under review | قيد المراجعة | Under review |
+| detail note | أخذ قنديل برأيك، وهذا الفهم قيد المراجعة. | QANDEEL took your view into account. This understanding is under review. |
+| `YOU_DISAGREED` | سُجّل رأيك المختلف | Your different view was noted |
+
+«قيد المراجعة» / Under review names P1 §11.4's own concept ("contested / under review"); the Arabic uses passive or
+first-person-free forms so nothing is gendered.
+
+### 4.8 U3 verification
+
+- API Jest: disagreement recorded / replay (version before) / Confidence once / Confidence failure / stale ×2 /
+  already under review ×2 / cross-user / spent command / six widened bodies (a message included) / contested projection
+  (Mixed, under review, not deleted, evolution); reasoning context marks `UNDER_REVIEW` and fails closed on a failed read;
+  outbound audit refuses under-review-not-Mixed and a missing flag.
+- Mobile Jest: the act, bound to revision, UUID command, recorded words; lost answer → SAME command; changed → re-read,
+  nothing recorded, new command; under-review words in list and detail; transport sends exactly `{ commandId, revision }`
+  and types every answer; production-surface integration: disagreement from the Conversation line with the bearer,
+  no words sent, no turn sent, draft kept, list shows Mixed + under review, and again after a restart.
+- `database/verify-migration-0127.mjs` (real PostgreSQL, API CI and the focused gate): catalog, grants, every outcome,
+  the audited transition, no deletion, isolation, committed two-connection races proven to block.
+- `tests/w3-mega-u3-contested-runtime-contract.test.mjs`: seven detectors, twenty planted defects (DEFINER exposed, client
+  write grant, caller-supplied owner, message stored, words sent, cosmetic re-evaluation, unaudited status write, no
+  Confidence, Confidence at a later version, objection applied to a newer interpretation, two contests, a retry as a new
+  command, deletion, rejection, auto-resolution, a decorative badge, the provider never told, guidance that keeps
+  relying, keyword interception, a non-explicit act).
+
+## 5. Lifecycle truth and row accounting
+
+- **`E2E-D-14` — IMPLEMENTED on the stacked Draft PRs (U1 + U2); closes on merge of the stack.** Not closed now.
+- **`E2E-D-15` — IMPLEMENTED on the stacked Draft PRs (U3, over U1 + U2); closes on merge of the stack.** Not closed now.
+- **`PG-01`** (I-08A4 §18) — implemented by U3 as recorded above; it stops being a gap only when the stack merges. The
+  I-08A4 register text is historical and is not edited.
+- **`PG-02` — Personal Evidence Invalidation → Derived Understanding Propagation — remains NOT IMPLEMENTED.** Narrowly, the
+  projection already counts only CURRENTLY eligible Evidence (a withdrawn Memory stops supporting an item at once); no
+  propagation into the Hypothesis lifecycle exists, and that is not claimed.
+- **`PG-04` — Selective Understanding Sharing — remains NOT IMPLEMENTED.** Nothing here reaches Shared, Public or
+  Introductions.
+- **W3 remains ACTIVE.** `E2E-D-03`, `D-05` and `D-13` stay open; `E2E-D-02` stays advanced only; the Account & Identity
+  residues stay separate.
+
+## 6. Residues (owned by the End-to-End audit / Production Integration, BG-06: none is a new backlog item)
+
+1. Evolution shows no dates: the T-12 locale authority formats no date and pins no calendar.
+2. Summaries are the canonical statement text in whatever language generation produced; no rewrite into the reader's
+   Product language exists.
+3. Contest resolution beyond the immediate re-evaluation is undefined by Product authority, so a contest stays under
+   review.
+4. The discussion focus lapses after 30 minutes if its close request is lost.
+5. No device / raster proof campaign was run for this surface (validation proportional: React UI states, 320 / text-scale
+   structure and accessibility semantics are unit- and integration-proven; the Mobile CI boot smoke runs where native
+   impact is classified).
+
+No backlog item is inherited or admitted: this task closes no phase and no `CLOSED / FROZEN` task (BG-08 runs at a
+closure); each residue is owned by the End-to-End audit or Production Integration.

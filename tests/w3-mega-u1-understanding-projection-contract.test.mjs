@@ -26,8 +26,9 @@ const plant = (key, from, to) => {
   return { ...code, [key]: code[key].replace(from, to) };
 };
 
-// The one exact Product shape of a summary and a detail. A new key needs a new Product decision.
-const SUMMARY_FIELDS = ['confidence', 'ref', 'revision', 'summary', 'theme'];
+// The one exact Product shape of a summary and a detail. A new key needs a new Product decision. U3 added exactly one,
+// `underReview` — P1 §11.4's own Contested / Under Review state, a boolean, never a score.
+const SUMMARY_FIELDS = ['confidence', 'ref', 'revision', 'summary', 'theme', 'underReview'];
 const DETAIL_FIELDS = [...SUMMARY_FIELDS, 'alternatives', 'contradictions', 'evidence', 'evolution', 'unresolved'].sort();
 function interfaceFields(text, name) {
   const match = text.match(new RegExp(`export interface ${name}(?: extends (\\w+))? \\{([\\s\\S]*?)\\n\\}`, 'u'));
@@ -45,7 +46,7 @@ function outboundShapeViolations(world) {
   const detail = interfaceFields(world.types, 'UnderstandingItemDetail');
   if (JSON.stringify(summary) !== JSON.stringify(SUMMARY_FIELDS)) out.push(`summary fields ${summary}`);
   if (JSON.stringify(detail) !== JSON.stringify(DETAIL_FIELDS)) out.push(`detail fields ${detail}`);
-  if (!/const SUMMARY_KEYS = \['confidence', 'ref', 'revision', 'summary', 'theme'\];/u.test(world.projection)) out.push('the audit key list drifted');
+  if (!/const SUMMARY_KEYS = \['confidence', 'ref', 'revision', 'summary', 'theme', 'underReview'\];/u.test(world.projection)) out.push('the audit key list drifted');
   return out;
 }
 
@@ -109,7 +110,9 @@ function crossUserViolations(world) {
   if (!/value\.user_id !== userId\) this\.reject\(\)/u.test(world.service)) out.push('no defensive owner check on Hypothesis rows');
   if (!/value\.user_id !== userId \|\| value\.target_type !== 'HYPOTHESIS'/u.test(world.service)) out.push('no owner check on Confidence rows');
   if (!/surfaced\.find\(\(value\) => understandingItemRef\(userId, value\.id\) === ref\)/u.test(world.service)) out.push('a detail is not resolved among the caller’s own items');
-  if ((world.repository.match(/user_id: `eq\.\$\{userId\}`/gu) ?? []).length !== 2) out.push('an evolution read is not filtered by the caller');
+  // Every table read the repository builds is filtered by the caller (U3 added the contest read).
+  const queries = world.repository.split('new URLSearchParams({').slice(1);
+  if (queries.length === 0 || queries.some((query) => !/^[^}]*user_id: `eq\.\$\{userId\}`/u.test(query))) out.push('an evolution read is not filtered by the caller');
   if (/ServiceRole|SUPABASE_SERVICE_ROLE_KEY|serverAuthority/u.test(Object.values(world).join('\n'))) out.push('a service-role channel');
   return out;
 }

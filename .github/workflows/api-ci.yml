@@ -64,6 +64,7 @@ jobs:
       - {name: Verify Connected Worlds I-03 authority / consent / EffectiveContext phase closure contract (I-03G), run: npm run test:connected-worlds-i03-authority-closure-contract}
       - {name: Verify task closure governance contract (BG-08 reconciliation + BG-09 status synchronization), run: npm run test:task-closure-governance-contract}
       - {name: Verify W3-MEGA-U U1 QANDEEL Understanding projection authority static contract, run: npm run test:w3-mega-u1-understanding-projection-contract}
+      - {name: Verify W3-MEGA-U U3 Contested / Under Review runtime static contract, run: npm run test:w3-mega-u3-contested-runtime-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -740,6 +741,11 @@ jobs:
       # a close that can never close a newer focus.
       - name: Verify the W3-MEGA-U Understanding discussion focus against real PostgreSQL
         run: npm run verify:understanding-discussion:integration
+      # W3-MEGA-U U3 turns an explicit disagreement into a Contested / Under Review item (PG-01). This verifier proves the
+      # exact-version binding, the re-evaluation through the audited lifecycle core (to MIXED; never a deletion), replay,
+      # one contest under review per item, the bounded refusals, the privilege boundary, and committed two-connection races.
+      - name: Verify the W3-MEGA-U Understanding contest against real PostgreSQL
+        run: npm run verify:understanding-contest:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

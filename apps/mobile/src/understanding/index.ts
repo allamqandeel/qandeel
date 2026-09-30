@@ -10,13 +10,14 @@ export type {
   UnderstandingController,
   UnderstandingControllerOptions,
   UnderstandingDetailState,
+  UnderstandingDisagreementResult,
   UnderstandingDiscussion,
   UnderstandingReadStatus,
   UnderstandingState,
   UnderstandingTalkResult,
   UnderstandingTransport,
 } from './understanding-controller';
-export { createUnderstandingController } from './understanding-controller';
+export { createUnderstandingController, mintUnderstandingCommandId } from './understanding-controller';
 export type { UnderstandingCopy } from './copy';
 export { understandingCopy } from './copy';
 export type { UnderstandingEntryProps } from './UnderstandingEntry';

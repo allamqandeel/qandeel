@@ -47,6 +47,8 @@ export const MAX_DETAIL_EVOLUTION = 16;
 /** How an understanding changed, in the P1 §11.5 vocabulary. Rendered as words by the client. */
 export const UNDERSTANDING_EVOLUTION_KINDS = [
   'FIRST_SEEN', 'SUPPORT_ADDED', 'CHALLENGE_ADDED', 'STRENGTHENED', 'WEAKENED', 'BECAME_MIXED', 'WITHDRAWN', 'RECONSIDERED',
+  // U3: the reader's own explicit disagreement, which put the item under review.
+  'YOU_DISAGREED',
 ] as const;
 export type UnderstandingEvolutionKind = (typeof UNDERSTANDING_EVOLUTION_KINDS)[number];
 
@@ -58,6 +60,8 @@ export interface UnderstandingItemSummary {
   readonly theme: UnderstandingTheme;
   readonly summary: string;
   readonly confidence: UnderstandingConfidenceState;
+  /** U3 (PG-01): the reader explicitly disagreed and the item is Contested / Under Review. */
+  readonly underReview: boolean;
 }
 
 export interface UnderstandingEvolutionEntry {
@@ -78,6 +82,12 @@ export interface UnderstandingItemDetail extends UnderstandingItemSummary {
 
 export interface UnderstandingListView {
   readonly items: readonly UnderstandingItemSummary[];
+}
+
+/** U3 — what an explicit disagreement answers: the item is under review, at this (opaque) revision. */
+export interface UnderstandingDisagreementView {
+  readonly underReview: true;
+  readonly revision: string;
 }
 
 export class UnderstandingProjectionInvariantError extends Error {

@@ -24,6 +24,8 @@ export interface HypothesisReasoningItem {
   } | { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION'; targetVersion: number };
   /** W3-MEGA-U U2: present only on the ONE item the reader chose, from QANDEEL Understanding, to talk about. */
   userDiscussion?: 'OPENED_FROM_UNDERSTANDING';
+  /** W3-MEGA-U U3 (PG-01): present only on an item the reader explicitly disagreed with — Contested / Under Review. */
+  userContest?: 'UNDER_REVIEW';
 }
 
 export interface HypothesisReasoningContext {

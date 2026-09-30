@@ -21,10 +21,12 @@ export class HypothesisReasoningContextService {
     if (!Array.isArray(candidates) || candidates.length > MAX_ACTIVE_HYPOTHESES) this.reject();
     if (candidates.length === 0) return { coverageState: 'EMPTY', candidateHypothesisCount: 0 };
     candidates.forEach((value) => this.validateHypothesis(value, userId));
-    const [eligibleEvidence, evaluations, focus] = await Promise.all([
+    const [eligibleEvidence, evaluations, focus, underReview] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
       this.confidence.listExactVersionsForTargets(token, userId, candidates.map(({ id, version }) => ({ id, version }))),
       this.signals ? this.signals.readOpenDiscussionFocus(token, userId) : Promise.resolve(null),
+      // U3 (PG-01): the reader's explicit disagreements. A contested interpretation is never offered as uncontested.
+      this.signals ? this.signals.listUnderReview(token, userId) : Promise.resolve(new Set<string>()),
     ]);
     // W3-MEGA-U U2: the ONE item the reader explicitly chose, from QANDEEL Understanding, to talk about — while its
     // focus is open and recent — is marked and offered first. It is the reader's own act, not a relevance ranking;
@@ -59,6 +61,7 @@ export class HypothesisReasoningContextService {
           missingInformationCodes: [...evaluation.missing_information_codes], policyVersion: evaluation.policy_version,
         } : { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION', targetVersion: candidate.version },
         ...(candidate.id === discussedId ? { userDiscussion: 'OPENED_FROM_UNDERSTANDING' as const } : {}),
+        ...(underReview.has(candidate.id) ? { userContest: 'UNDER_REVIEW' as const } : {}),
       };
       const itemChars = stringCharacterCount(item);
       if (chars + itemChars > MAX_HYPOTHESIS_CONTEXT_STRING_CHARS) break;

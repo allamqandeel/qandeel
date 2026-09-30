@@ -1,5 +1,5 @@
 /**
- * W3-MEGA-U (E2E-D-14) — the reader's «فهم قنديل» / QANDEEL Understanding, for ONE runtime generation.
+ * W3-MEGA-U (E2E-D-14 / D-15) — the reader's «فهم قنديل» / QANDEEL Understanding, for ONE runtime generation.
  *
  * It holds exactly what the server projected — the current items, one opened item's explanation, and the one item the
  * reader chose to talk to QANDEEL about — and nothing it has not been told. It owns no identity, no credential and no
@@ -9,12 +9,18 @@
  *   - Reads happen when the surface asks (it is opened, an item is opened, the reader asks again). Nothing polls.
  *   - "Talk to QANDEEL about this" is bound to the exact revision the reader is looking at. When the item changed in
  *     the meantime nothing is recorded: the item is read again and the reader sees the current interpretation before
- *     choosing again. An objection or a choice is never silently moved onto a newer interpretation.
- *   - One talk request at a time.
+ *     choosing again. A choice is never silently moved onto a newer interpretation.
+ *   - U3 — "I see it differently" (P1 §11.4, PG-01) is an EXPLICIT act on the discussed item, bound to the revision the
+ *     reader was shown and to ONE command identity. A retry after a lost answer is the SAME command, so the server
+ *     records it once. When the item changed, nothing is recorded: the current interpretation is shown first and the
+ *     reader decides again — an objection is never applied to an interpretation they did not see. No words the reader
+ *     typed are ever sent with it.
+ *   - One talk and one disagreement request at a time.
  */
 import type {
   UnderstandingDetailOutcome,
   UnderstandingDetailView,
+  UnderstandingDisagreementOutcome,
   UnderstandingDiscussionOutcome,
   UnderstandingItemView,
   UnderstandingListOutcome,
@@ -30,11 +36,16 @@ export interface UnderstandingDetailState {
   readonly view: UnderstandingDetailView | null;
 }
 
-/** The one item the reader chose to talk to QANDEEL about, as they saw it when they chose it. */
+/** The one item the reader chose to talk to QANDEEL about, as they were last shown it. */
 export interface UnderstandingDiscussion {
   readonly ref: string;
+  readonly revision: string;
   readonly theme: UnderstandingTheme;
   readonly summary: string;
+  /** U3: the reader explicitly disagreed and it is Contested / Under Review. */
+  readonly underReview: boolean;
+  /** U3: the state of the reader's disagreement request. */
+  readonly disagreement: 'IDLE' | 'SENDING' | 'FAILED';
 }
 
 export interface UnderstandingState {
@@ -50,6 +61,7 @@ export interface UnderstandingTransport {
   readItem(ref: string): Promise<UnderstandingDetailOutcome>;
   openDiscussion(ref: string, revision: string): Promise<UnderstandingDiscussionOutcome>;
   closeDiscussion(ref: string): Promise<boolean>;
+  disagree(ref: string, commandId: string, revision: string): Promise<UnderstandingDisagreementOutcome>;
 }
 
 /**
@@ -61,6 +73,15 @@ export interface UnderstandingTransport {
  */
 export type UnderstandingTalkResult = 'OPENED' | 'CHANGED' | 'GONE' | 'FAILED';
 
+/**
+ * What an explicit disagreement came to:
+ *   UNDER_REVIEW  recorded (now, as the same command replayed, or already): the item is Contested / Under Review;
+ *   CHANGED       the item changed since it was shown — nothing was recorded; the current one is shown;
+ *   GONE          it is no longer one of the reader's current items;
+ *   FAILED        it is not known whether it was recorded; asking again is the SAME command.
+ */
+export type UnderstandingDisagreementResult = 'UNDER_REVIEW' | 'CHANGED' | 'GONE' | 'FAILED';
+
 export interface UnderstandingController {
   getState(): UnderstandingState;
   subscribe(listener: () => void): () => void;
@@ -70,6 +91,8 @@ export interface UnderstandingController {
   closeItem(): void;
   /** "Talk to QANDEEL about this" for the opened item. `null` when refused (nothing opened, or one in flight). */
   talk(): Promise<UnderstandingTalkResult | null>;
+  /** U3 — "I see it differently" for the discussed item. `null` when refused (nothing discussed, done, or in flight). */
+  disagree(): Promise<UnderstandingDisagreementResult | null>;
   /** The reader ends the discussion context. Local first; the server is told once. */
   endDiscussion(): void;
   retire(): void;
@@ -78,22 +101,44 @@ export interface UnderstandingController {
 export interface UnderstandingControllerOptions {
   readonly transport: UnderstandingTransport;
   readonly isCurrent: () => boolean;
+  readonly newCommandId?: () => string;
+}
+
+/**
+ * A command identity: UUID-shaped, unique per disagreement within this account. It is never a credential and carries
+ * no reader data; the database compares it only with that account's own contests, so no cryptographic source is needed.
+ */
+export function mintUnderstandingCommandId(): string {
+  const hex = (count: number) => Array.from({ length: count }, () => Math.floor(Math.random() * 16).toString(16)).join('');
+  const variant = (8 + Math.floor(Math.random() * 4)).toString(16);
+  return `${hex(8)}-${hex(4)}-4${hex(3)}-${variant}${hex(3)}-${hex(12)}`;
 }
 
 const INITIAL: UnderstandingState = Object.freeze({ list: 'LOADING', items: [], detail: null, talk: 'IDLE', discussion: null });
 
-export function createUnderstandingController({ transport, isCurrent }: UnderstandingControllerOptions): UnderstandingController {
+export function createUnderstandingController({
+  transport,
+  isCurrent,
+  newCommandId = mintUnderstandingCommandId,
+}: UnderstandingControllerOptions): UnderstandingController {
   let state: UnderstandingState = INITIAL;
   let retired = false;
   let listRead = 0;
   let detailRead = 0;
   let talking = false;
+  let disagreeing = false;
+  /** The ONE command identity for the disagreement the reader is making: same item, same revision → same command. */
+  let command: { readonly ref: string; readonly revision: string; readonly id: string } | null = null;
   const listeners = new Set<() => void>();
   const live = () => !retired && isCurrent();
 
   const update = (next: Partial<UnderstandingState>) => {
     state = { ...state, ...next };
     for (const listener of Array.from(listeners)) listener();
+  };
+  const updateDiscussion = (ref: string, next: Partial<UnderstandingDiscussion>) => {
+    if (state.discussion === null || state.discussion.ref !== ref) return;
+    update({ discussion: { ...state.discussion, ...next } });
   };
 
   const readDetail = (ref: string) => {
@@ -155,7 +200,10 @@ export function createUnderstandingController({ transport, isCurrent }: Understa
         if (!live()) return 'FAILED';
         switch (outcome.kind) {
           case 'OPENED':
-            update({ talk: 'IDLE', discussion: { ref: view.ref, theme: view.theme, summary: view.summary } });
+            update({
+              talk: 'IDLE',
+              discussion: { ref: view.ref, revision: view.revision, theme: view.theme, summary: view.summary, underReview: view.underReview, disagreement: 'IDLE' },
+            });
             return 'OPENED';
           case 'CHANGED':
             // The interpretation moved: show the current one first; the reader chooses again.
@@ -171,6 +219,54 @@ export function createUnderstandingController({ transport, isCurrent }: Understa
         }
       } finally {
         talking = false;
+      }
+    },
+    async disagree() {
+      const discussion = state.discussion;
+      if (!live() || disagreeing || discussion === null || discussion.underReview) return null;
+      const { ref, revision } = discussion;
+      if (command === null || command.ref !== ref || command.revision !== revision) command = { ref, revision, id: newCommandId() };
+      const commandId = command.id;
+      disagreeing = true;
+      updateDiscussion(ref, { disagreement: 'SENDING' });
+      try {
+        const outcome = await transport.disagree(ref, commandId, revision).catch((): UnderstandingDisagreementOutcome => ({ kind: 'FAILED' }));
+        if (!live()) return 'FAILED';
+        switch (outcome.kind) {
+          case 'UNDER_REVIEW':
+            command = null;
+            updateDiscussion(ref, { underReview: true, revision: outcome.revision, disagreement: 'IDLE' });
+            return 'UNDER_REVIEW';
+          case 'CHANGED': {
+            // Never applied to an interpretation the reader did not see: show the current one; they decide again.
+            command = null;
+            const fresh = await transport.readItem(ref).catch((): UnderstandingDetailOutcome => ({ kind: 'UNAVAILABLE' }));
+            if (!live()) return 'CHANGED';
+            if (fresh.kind === 'READ') {
+              updateDiscussion(ref, { revision: fresh.view.revision, summary: fresh.view.summary, theme: fresh.view.theme, underReview: fresh.view.underReview, disagreement: 'IDLE' });
+            } else if (fresh.kind === 'GONE') {
+              update({ discussion: null });
+            } else {
+              updateDiscussion(ref, { disagreement: 'FAILED' });
+            }
+            return 'CHANGED';
+          }
+          case 'GONE':
+            command = null;
+            update({ discussion: null });
+            return 'GONE';
+          case 'CONFLICT':
+            // This identity was spent elsewhere: the next attempt is a new command; nothing is known to be recorded.
+            command = null;
+            updateDiscussion(ref, { disagreement: 'FAILED' });
+            return 'FAILED';
+          case 'FAILED':
+            // Unknown: the SAME command is sent again next time, so it is recorded at most once.
+            updateDiscussion(ref, { disagreement: 'FAILED' });
+            return 'FAILED';
+        }
+      } finally {
+        disagreeing = false;
       }
     },
     endDiscussion() {

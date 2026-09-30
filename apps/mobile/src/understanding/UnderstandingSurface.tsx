@@ -80,7 +80,7 @@ function ItemRow({ item, copy, language, palette, writing, onOpen }: {
       palette={palette}
       language={language}
       // One stop for the screen reader, in reading order: title, summary, then the confidence named in words.
-      accessibilityLabel={`${title}, ${item.summary}, ${confidence}`}
+      accessibilityLabel={item.underReview ? `${title}, ${item.summary}, ${confidence}, ${copy.underReview}` : `${title}, ${item.summary}, ${confidence}`}
       onPress={() => onOpen(item.ref)}
       testID={`qandeel-understanding-item-${item.ref}`}
       style={{ minHeight: MIN_TARGET, paddingVertical: 12, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0 }}
@@ -90,6 +90,11 @@ function ItemRow({ item, copy, language, palette, writing, onOpen }: {
       <Text testID={`qandeel-understanding-item-${item.ref}-confidence`} style={{ ...typeStyle('metadata'), color: palette.tertiary, paddingTop: 4, writingDirection: writing }}>
         {confidence}
       </Text>
+      {item.underReview ? (
+        <Text testID={`qandeel-understanding-item-${item.ref}-under-review`} style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: writing }}>
+          {copy.underReview}
+        </Text>
+      ) : null}
     </Control>
   );
 }
@@ -112,6 +117,11 @@ function Detail({ view, copy, language, palette, writing, talkState, onTalk }: {
       <Text testID="qandeel-understanding-detail-confidence" style={{ ...typeStyle('metadata'), color: palette.tertiary, paddingStart: ROW_START, paddingEnd: ROW_END, paddingTop: 4, writingDirection: writing }}>
         {copy.confidenceName(copy.confidence[view.confidence])}
       </Text>
+      {view.underReview ? (
+        <Text testID="qandeel-understanding-detail-under-review" style={{ ...typeStyle('supporting'), color: palette.secondary, paddingStart: ROW_START, paddingEnd: ROW_END, paddingTop: 8, writingDirection: writing }}>
+          {copy.underReviewNote}
+        </Text>
+      ) : null}
       {sections.map(([heading, texts, key]) => texts.length === 0 ? null : (
         <View key={key} testID={`qandeel-understanding-detail-${key}`}>
           <SectionHeading text={heading} language={language} palette={palette} writing={writing} />
@@ -156,8 +166,10 @@ export function UnderstandingSurface({ controller, language, insets, onBack, onT
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const detail = state.detail;
 
-  // The current understanding is read each time the surface is shown.
+  // Each time the surface is shown it opens on the first view, read afresh — never on an item explanation read
+  // earlier, which a disagreement or a newer interpretation may since have changed.
   useEffect(() => {
+    controller.closeItem();
     controller.refresh();
   }, [controller]);
 
