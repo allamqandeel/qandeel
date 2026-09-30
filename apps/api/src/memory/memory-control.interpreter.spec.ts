@@ -25,14 +25,18 @@ describe('W3-MEGA-M conversational Memory command interpretation', () => {
 
   it('a correction keeps the old words for resolution and the new words for the successor', () => {
     expect(interpretMemoryControl('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.'))
-      .toEqual({ kind: 'CORRECT', previous: 'ساكن في أكتوبر دلوقتي', replacement: 'أنا ساكن في طنطا' });
+      .toEqual({ kind: 'CORRECT', previous: 'ساكن في أكتوبر دلوقتي', replacement: 'أنا ساكن في طنطا', copula: false });
     expect(interpretMemoryControl("I don't live in October anymore, I live in Tanta."))
-      .toEqual({ kind: 'CORRECT', previous: 'live in October', replacement: 'I live in Tanta' });
+      .toEqual({ kind: 'CORRECT', previous: 'live in October', replacement: 'I live in Tanta', copula: false });
     expect(interpretMemoryControl("I'm not a student anymore, I'm an engineer"))
-      .toEqual({ kind: 'CORRECT', previous: 'a student', replacement: "I'm an engineer" });
+      .toEqual({ kind: 'CORRECT', previous: 'a student', replacement: "I'm an engineer", copula: true });
+    // «بس» opening the second clause is not part of the new statement.
+    expect(interpretMemoryControl('أنا مش بحب الشغل ده، بس لازم أروح')).toEqual({ kind: 'CORRECT', previous: 'بحب الشغل ده', replacement: 'أنا لازم أروح', copula: false });
   });
 
-  it('forget: explicit verbs, and the soft «امسح» that only counts when something remembered matches', () => {
+  it('forget: anchored to Memory is EXPLICIT; unanchored words are SOFT and only count on a full match', () => {
+    expect(interpretMemoryControl('Forget about work, let us talk about movies')).toEqual({ kind: 'FORGET', target: 'work, let us talk about movies', strength: 'SOFT' });
+    expect(interpretMemoryControl('انسى إني بحب المكان ده.')).toEqual({ kind: 'FORGET', target: 'إني بحب المكان ده', strength: 'EXPLICIT' });
     expect(interpretMemoryControl('انسى إني بحب كافيه النيل.')).toEqual({ kind: 'FORGET', target: 'إني بحب كافيه النيل', strength: 'EXPLICIT' });
     expect(interpretMemoryControl('متفتكرش إني بشتغل في البنك تاني')).toEqual({ kind: 'FORGET', target: 'إني بشتغل في البنك', strength: 'EXPLICIT' });
     expect(interpretMemoryControl('امسح موضوع الشغل.')).toEqual({ kind: 'FORGET', target: 'موضوع الشغل', strength: 'SOFT' });
@@ -55,6 +59,10 @@ describe('W3-MEGA-M conversational Memory command interpretation', () => {
     'انسى', 'انساها', 'forget it', 'Forget about it', 'forget that',
     'افتكر تجيب العيش', 'متنساش تكلمني بكرة', 'remember to call mom', 'افتكر إن ده صح؟',
     'Remember what I told you about training every morning?',
+    // Security / correctness review of W3-MEGA-M: watch-out, conversation references, habits, other people.
+    'خلي بالك إن الطريق زحمة النهارده', 'Remember that movie I told you about', 'remember I told you about my sister',
+    'I want to sleep better and stop relying on coffee', 'هو قالي، متعتمدش على حد', 'متبنيش آمال كبيرة على الشغل ده',
+    'انسى الموضوع ده', 'Forget it, never mind', 'forget it, let us move on',
     "Don't rely on me", 'متعتمدش عليا', "My boss said don't rely on me", 'مديري قالي متعتمدش عليا',
     'أنا بحب القهوة', 'How are you?', 'I decided to train every morning even though I keep skipping my sessions',
     'أنا مش متأكد، بس أظن إن ده صح؟',
@@ -87,6 +95,12 @@ describe('W3-MEGA-M reply to "which one do you mean?"', () => {
     ['الاتنين', { type: 'ALL' }],
     ['both', { type: 'ALL' }],
     ['اللي عن البنك', { type: 'WORDS', text: 'اللي عن البنك' }],
+    // Pointing is a yes (asked again when there are several options); a verb only repeats the request.
+    ['that one', { type: 'YES' }],
+    ['it is this one', { type: 'YES' }],
+    ['انسى التانية', { type: 'OPTION', index: 1 }],
+    ['forget the second one', { type: 'OPTION', index: 1 }],
+    ['I mean the first', { type: 'OPTION', index: 0 }],
   ])('%s', (content, expected) => {
     expect(readClarificationAnswer(content)).toEqual(expected);
   });
@@ -94,5 +108,6 @@ describe('W3-MEGA-M reply to "which one do you mean?"', () => {
   it('longer text or a question is not an answer', () => {
     expect(readClarificationAnswer('I was thinking about what we discussed yesterday and the day before')).toBeNull();
     expect(readClarificationAnswer('ليه بتسأل ده كله يعني؟')).toBeNull();
+    expect(readClarificationAnswer('تاني؟')).toBeNull();
   });
 });

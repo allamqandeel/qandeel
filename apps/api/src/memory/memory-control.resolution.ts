@@ -5,8 +5,10 @@
 //
 //   * the user's DISTINCTIVE words (pronouns, particles and "the topic / the information" removed, light Arabic
 //     prefix / suffix stemming) must ALL appear in exactly ONE candidate → that one is RESOLVED;
-//   * several candidates contain all of them, or some contain only part of them → AMBIGUOUS, and QANDEEL asks —
-//     it never picks the "best" one of several, and never acts on a partial match;
+//   * several candidates contain all of them → AMBIGUOUS, and QANDEEL asks — it never picks the "best" one;
+//   * some contain only part of them → PARTIAL: never acted on; the caller either asks (the request is anchored to
+//     Memory) or treats the words as ordinary conversation;
+//   * words that only name a predicate («بحب», "like", «ساكن») cannot identify a Memory by themselves: at best PARTIAL;
 //   * nothing matches → NONE; no distinctive word at all ("that information", «المعلومة دي») → UNSPECIFIED.
 //
 // RESOLVED only proposes a target: the database re-checks it under a row lock before anything changes.
@@ -16,6 +18,7 @@ import { MAX_CLARIFICATION_OPTIONS } from './memory-control.types';
 export type MemoryTargetResolution =
   | { state: 'RESOLVED'; memory: MemoryRecord }
   | { state: 'AMBIGUOUS'; options: ReadonlyArray<MemoryRecord> }
+  | { state: 'PARTIAL'; options: ReadonlyArray<MemoryRecord> }
   | { state: 'NONE' }
   | { state: 'UNSPECIFIED' };
 
@@ -26,13 +29,19 @@ const STOP_WORDS = new Set([
   'بس', 'لكن', 'و', 'يا', 'مش', 'ما', 'لا', 'معايا', 'معاك', 'معانا', 'تاني', 'خالص', 'بقي', 'بقيت', 'بقت', 'دلوقتي',
   'حاليا', 'خلاص', 'موضوع', 'الموضوع', 'حكايه', 'الحكايه', 'قصه', 'القصه', 'معلومه', 'المعلومه', 'حاجه', 'الحاجه',
   'قنديل', 'كان', 'كنت', 'بعد', 'قبل', 'كمان', 'برضه', 'ذاكرتك', 'دماغك', 'كلامنا', 'كلامك', 'بتاع', 'بتاعه', 'بتاعت',
-  'مكان', 'المكان',
   // English
   'i', "i'm", 'im', 'me', 'my', 'mine', 'you', 'your', 'the', 'a', 'an', 'that', 'this', 'it', 'is', 'am', 'are', 'was',
   'be', 'to', 'of', 'in', 'on', 'at', 'about', 'and', 'but', 'or', 'anymore', 'any', 'more', 'now', 'fact', 'info',
   'information', 'thing', 'stuff', 'topic', 'memory', 'please', 'qandeel', 'with', 'when', 'talking', 'so', 'just',
   'not', "don't", 'dont', 'no', 'longer', 'part', 'bit', 'from', 'there',
 ]);
+
+/** Predicate words: many Memories share them, so they alone never name one. Compared after stemming. */
+const PREDICATE_WORDS_RAW = [
+  'بحب', 'بحبه', 'بحبها', 'بكره', 'بفضل', 'ساكن', 'ساكنه', 'عايش', 'عايشه', 'بشتغل', 'شغال', 'شغاله', 'عندي', 'نفسي',
+  // English verbs that are not also everyday nouns: "work" and "live" are left out ("the work stuff" names a topic).
+  'like', 'love', 'prefer', 'hate', 'have', 'want', 'enjoy',
+];
 
 const ARABIC_PREFIX = /^(?:وال|بال|فال|كال|لل|ال|و|ب|ف)(?=[؀-ۿ]{3,})/u;
 const ARABIC_SUFFIX = /(?:هم|كم|نا|ها|ي|ك|ه)$/u;
@@ -52,6 +61,8 @@ function stem(token: string): string {
   }
   return token.length > 3 && token.endsWith('s') && !token.endsWith('ss') ? token.slice(0, -1) : token;
 }
+
+const PREDICATE_WORDS = new Set(PREDICATE_WORDS_RAW.map((word) => stem(normalizeMemoryWords(word))));
 
 /** The words that can identify one Memory. */
 export function distinctiveWords(value: string): Set<string> {
@@ -75,14 +86,17 @@ export function resolveMemoryTarget(
   if (query.size === 0) return { state: 'UNSPECIFIED' };
   const scored = candidates.map((memory, order) => {
     const remembered = distinctiveWords(memory.content);
-    const matched = [...query].filter((word) => remembered.has(word)).length;
-    return { memory, order, coverage: matched / query.size };
+    const matched = [...query].filter((word) => remembered.has(word));
+    // A partial match must share something that is not a mere predicate: «بحب» alone points at every preference.
+    const telling = matched.some((word) => !PREDICATE_WORDS.has(word));
+    return { memory, order, coverage: matched.length / query.size, telling };
   });
-  const full = scored.filter(({ coverage }) => coverage === 1);
+  const predicateOnly = [...query].every((word) => PREDICATE_WORDS.has(word));
+  const full = predicateOnly ? [] : scored.filter(({ coverage }) => coverage === 1);
   if (full.length === 1) return { state: 'RESOLVED', memory: full[0].memory };
   if (full.length > 1) return { state: 'AMBIGUOUS', options: full.slice(0, MAX_CLARIFICATION_OPTIONS).map(({ memory }) => memory) };
-  const partial = scored.filter(({ coverage }) => coverage >= 0.5)
+  const partial = scored.filter(({ coverage, telling }) => (predicateOnly ? coverage === 1 : coverage >= 0.5 && telling))
     .sort((left, right) => right.coverage - left.coverage || left.order - right.order);
-  if (partial.length > 0) return { state: 'AMBIGUOUS', options: partial.slice(0, MAX_CLARIFICATION_OPTIONS).map(({ memory }) => memory) };
+  if (partial.length > 0) return { state: 'PARTIAL', options: partial.slice(0, MAX_CLARIFICATION_OPTIONS).map(({ memory }) => memory) };
   return { state: 'NONE' };
 }

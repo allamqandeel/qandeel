@@ -35,9 +35,16 @@ describe('W3-MEGA-M Memory target resolution', () => {
     expect(resolveMemoryTarget('موضوع الشغل', [bank, boss, memory('أنا بحب القهوة.')])).toEqual({ state: 'AMBIGUOUS', options: [bank, boss] });
   });
 
-  it('a partial match is never acted on: it is offered as an option', () => {
+  it('a partial match is never acted on: it is PARTIAL, for the caller to ask about or leave alone', () => {
     const cafe = memory('أنا بحب كافيه النيل.');
-    expect(resolveMemoryTarget('إني بحب المكان الهادي', [cafe])).toEqual({ state: 'AMBIGUOUS', options: [cafe] });
+    expect(resolveMemoryTarget('كافيه الزمالك', [cafe])).toEqual({ state: 'PARTIAL', options: [cafe] });
+  });
+
+  it('a predicate alone («بحب», "like") never names a Memory, even when it is all the words there are', () => {
+    const kushari = memory('أنا بحب الكشري.');
+    expect(resolveMemoryTarget('إني بحب المكان ده', [kushari])).toEqual({ state: 'NONE' });
+    expect(resolveMemoryTarget('إني بحب', [kushari])).toEqual({ state: 'PARTIAL', options: [kushari] });
+    expect(resolveMemoryTarget('that I like', [memory('I like tea.')]).state).toBe('PARTIAL');
   });
 
   it('offers at most three options', () => {

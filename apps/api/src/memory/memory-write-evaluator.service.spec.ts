@@ -68,9 +68,20 @@ describe('MemoryWriteEvaluatorService', () => {
   // W3-MEGA-M: JavaScript's \b is ASCII-only, so these Arabic phrases used to pass the screen.
   it.each([
     'افتكر إن كلمة السر بتاعتي هي 123456', 'الباسورد بتاعي abc123', 'كود التحقق 4431', 'الرقم السري للكارت 9911',
+    // Arabic clitics on the keyword, and identifiers beyond passwords (security review of W3-MEGA-M).
+    'إيميلي x وكلمة السر بتاعتي 1234', 'والباسورد 55', 'my pin is 4821', 'the CVV is 123', 'رقم الحساب بتاعي 100200300',
+    'IBAN EG380019000500000000263180002', 'رقم الباسبور A1234567', 'الرقم القومي بتاعي معايا',
   ])('denies Arabic secrets too: %s', (content) => {
     expect(evaluator.evaluate(content, now)).toEqual({ decision: 'SKIP', reason: 'SENSITIVE_DATA' });
     expect(evaluator.explicitStatementCandidate(content, now)).toEqual({ decision: 'SKIP', reason: 'SENSITIVE_DATA' });
+  });
+
+  it.each(['أنا ساكن في طنطا', 'بحب الشاي بالنعناع', 'أحمد عنده امتحان الخميس', 'I work at the bank', 'رقم أوضتي في الفندق 12'])('ordinary statements still pass the screen: %s', (content) => {
+    expect(evaluator.explicitStatementCandidate(content, now).decision).toBe('WRITE');
+  });
+
+  it('W3-MEGA-M a remembered fact is one statement, not a document', () => {
+    expect(evaluator.explicitStatementCandidate('كلام '.repeat(80), now)).toEqual({ decision: 'SKIP', reason: 'EMPTY' });
   });
 
   it('W3-MEGA-M explicit statements: typed when the grammar knows them, otherwise kept in the user\'s own words', () => {

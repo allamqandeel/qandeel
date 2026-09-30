@@ -120,6 +120,9 @@ function guessViolations(w) {
   if (!deictic || /lifecycleChange|targetMemoryId/u.test(deictic)) out.push('a pointer to earlier words can change Memory without asking');
   if (/targetMemoryId: (?!target\.id)/u.test(w.service)) out.push('a target id comes from somewhere other than a canonical row');
   if (!/if \(resolution\.state !== 'RESOLVED'\) return null;/u.test(w.service)) out.push('an answer in words is acted on without a unique match');
+  if (!w.service.includes('if (soft) return clarification(intent.kind, language, [resolution.memory]);')) out.push('unanchored words change Memory without asking');
+  if (!w.service.includes('if (shared.size === 0 && !intent.copula) return null;')) out.push('a correction need not restate the predicate');
+  if (!/predicateOnly \? \[\] :/u.test(w.resolution)) out.push('a predicate alone can resolve a Memory');
   return out;
 }
 
@@ -129,7 +132,8 @@ function replyViolations(w) {
   if (/\.id\b|status|confidence|importance|\bACTIVE\b|\bDISABLED\b|\bDELETED\b/u.test(w.copy.replace(/\/\/.*$/gmu, '').replace(/import[^;]+;/gu, '').replace(/Extract<[^>]+>|case '[A-Z_]+'/gu, ''))) out.push('a reply can carry an id, a status or a score');
   if (/console\.|Logger|logger\./u.test(controlModules(w))) out.push('Memory control logs');
   if (!/if\(decision\.decision==='SKIP'\)return decision;if\(interpretMemoryControl\(currentUserContent\)\)return\{decision:'SKIP',reason:'MEMORY_CONTROL_COMMAND'\};/u.test(w.enrichment)) out.push('background inference can re-apply an explicit Memory command');
-  if (!/\(\?<!\[\\p\{L\}\\p\{N\}_\]\)\(\?:password\|passwd\|passcode\|كلمة السر/u.test(w.evaluator)) out.push('the Arabic secret screen is ASCII-bounded again');
+  if (!w.evaluator.includes('/(?<![\\p{L}\\p{N}_])(?:password|passwd|passcode|pin(?: code| number)?|cvv|cvc|(?:[وبلف]|ال)?')) out.push('the Arabic secret screen is ASCII-bounded again, or refuses clitics');
+  if (!/this\.assert\(context\);if\(safetyDisposition!=='ALLOW'\)return\{eligibility:\{status:'NOT_ELIGIBLE',reason:'SAFETY_INELIGIBLE'\}\};if\(interpretMemoryControl\(text\)\)return\{eligibility:\{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'\}\};/u.test(w.enrichment)) out.push('an explicit Memory command can seed Hypothesis generation');
   return out;
 }
 
@@ -179,11 +183,15 @@ const PLANTED = [
   ['disable without the row lock', 'disableViolations', () => ({ ...src, migration: src.migration.replace('m.id=p_memory_id AND m.user_id=p_user_id FOR UPDATE', 'm.id=p_memory_id') })],
   ['best-of-several is acted on', 'guessViolations', () => ({ ...src, resolution: src.resolution.replace("if (full.length > 1) return { state: 'AMBIGUOUS'", "if (full.length > 1) return { state: 'RESOLVED', memory: full[0].memory }; if (false) return { state: 'AMBIGUOUS'") })],
   ['a pointer changes Memory directly', 'guessViolations', () => ({ ...src, service: src.service.replace("if (pointed.state === 'RESOLVED') return clarification(kind, language, [pointed.memory]);", "if (pointed.state === 'RESOLVED') return lifecycleChange(kind, language, pointed.memory);") })],
+  ['unanchored words delete directly', 'guessViolations', () => ({ ...src, service: src.service.replace('if (soft) return clarification(intent.kind, language, [resolution.memory]);', '') })],
+  ['any negated-then-affirmed sentence corrects', 'guessViolations', () => ({ ...src, service: src.service.replace('if (shared.size === 0 && !intent.copula) return null;', '') })],
+  ['a predicate alone resolves', 'guessViolations', () => ({ ...src, resolution: src.resolution.replace('predicateOnly ? [] :', '') })],
   ['a words answer acted on loosely', 'guessViolations', () => ({ ...src, service: src.service.replace("if (resolution.state !== 'RESOLVED') return null;", "if (resolution.state === 'NONE') return null;") })],
   ['a reply shows an id', 'replyViolations', () => ({ ...src, copy: `${src.copy}\nexport const leak = (m: { id: string }) => m.id;` })],
   ['Memory control logs content', 'replyViolations', () => ({ ...src, service: `${src.service}\nconsole.log(turn.content);` })],
   ['background re-applies the command', 'replyViolations', () => ({ ...src, enrichment: src.enrichment.replace("if(interpretMemoryControl(currentUserContent))return{decision:'SKIP',reason:'MEMORY_CONTROL_COMMAND'};", '') })],
-  ['the Arabic secret screen regresses', 'replyViolations', () => ({ ...src, evaluator: src.evaluator.replace('(?<![\\p{L}\\p{N}_])(?:password|passwd|passcode|كلمة السر', '\\b(?:password|passwd|passcode|كلمة السر') })],
+  ['the Arabic secret screen regresses', 'replyViolations', () => ({ ...src, evaluator: src.evaluator.replace('(?<![\\p{L}\\p{N}_])(?:password|passwd|passcode|pin(?: code| number)?|cvv|cvc|(?:[وبلف]|ال)?', '\\b(?:password|passwd|passcode|') })],
+  ['a Memory command seeds generation', 'replyViolations', () => ({ ...src, enrichment: src.enrichment.replace("if(interpretMemoryControl(text))return{eligibility:{status:'NOT_ELIGIBLE',reason:'NO_TRIGGER'}};", '') })],
   ['a Memory editor screen', 'surfaceViolations', () => ({ ...src, mobileNames: `${src.mobileNames}\napps/mobile/src/memory/MemoryEditorScreen.tsx` })],
   ['a Settings destination for Memory', 'surfaceViolations', () => ({ ...src, mobileSource: `${src.mobileSource}\nconst rows = [{ key: 'memory_control', label: 'ذاكرة قنديل' }];` })],
   ['the verifier is not run', 'registrationViolations', () => ({ ...src, ci: src.ci.replace('run: npm run verify:conversational-memory-control:integration', 'run: echo skipped') })],

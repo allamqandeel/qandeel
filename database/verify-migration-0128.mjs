@@ -110,21 +110,19 @@ function commandArgs(c) {
     c.candidates ?? [], c.answers ?? null, c.reply ?? 'the reply', c.replyIfChanged ?? null, randomUUID(), null, null,
   ];
 }
+// The role is reset only on success: after a refusal the transaction is aborted until the caller's savepoint rollback,
+// which also undoes SET LOCAL ROLE — a RESET ROLE there would fail with 25P02 and mask the refusal being proven.
 async function command(c, on = client) {
   await actAs('service_role', null, on);
-  try {
-    return await rows(COMMAND, commandArgs(c), on);
-  } finally {
-    await asOwner(on);
-  }
+  const answer = await rows(COMMAND, commandArgs(c), on);
+  await asOwner(on);
+  return answer;
 }
 async function disable(userId, memoryId, on = client) {
   await actAs('service_role', null, on);
-  try {
-    return await rows('SELECT * FROM public.server_disable_memory_v1($1, $2)', [userId, memoryId], on);
-  } finally {
-    await asOwner(on);
-  }
+  const answer = await rows('SELECT * FROM public.server_disable_memory_v1($1, $2)', [userId, memoryId], on);
+  await asOwner(on);
+  return answer;
 }
 
 // ------------------------------------------------------------------------------------------------------
@@ -382,6 +380,19 @@ async function verifyCommand() {
     }
     assert.equal((await turnRow(later)).status, 'GENERATING');
 
+    stage = 'command: a question asked again keeps the words of the request that first asked';
+    const s2 = await session(alice);
+    const asked = await turn(alice, s2, 'GENERATING', 'forget the difficult boss');
+    await command({ session: s2, user: alice, turn: asked, kind: 'FORGET', outcome: 'CLARIFICATION_REQUIRED', candidates: [boss], reply: 'Do you mean it?' });
+    const askedRecord = (await commandsOf(alice)).find((c) => c.source_turn_id === asked);
+    const outOfRange = await turn(alice, s2, 'GENERATING', '5');
+    await command({ session: s2, user: alice, turn: outOfRange, kind: 'FORGET', outcome: 'CLARIFICATION_REQUIRED', candidates: [boss], answers: askedRecord.id, reply: 'Which one?' });
+    const askedAgain = (await commandsOf(alice)).find((c) => c.source_turn_id === outOfRange);
+    const confirm = await turn(alice, s2, 'GENERATING', 'yes');
+    await actAs('authenticated', alice);
+    const chained = await rows('SELECT * FROM public.pending_memory_clarification_v1($1, $2)', [s2, confirm]);
+    await asOwner();
+    assert.deepEqual(chained.map((p) => [p.command_id, p.clarified_turn_content]), [[askedAgain.id, 'forget the difficult boss']]);
     stage = 'command: INSPECT records only its outcome';
     assert.equal((await command({ session: s, user: alice, turn: later, kind: 'INSPECT', outcome: 'INSPECTED', reply: 'Here is what I remember.' }))[0].outcome, 'INSPECTED');
 

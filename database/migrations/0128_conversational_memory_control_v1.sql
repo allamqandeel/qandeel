@@ -25,7 +25,8 @@
 --      reply claims a change that did not happen. A turn that is no longer GENERATING (replayed, recovered, cancelled,
 --      foreign) writes nothing and answers nothing.
 --   4. `pending_memory_clarification_v1` — an owner-token (SECURITY INVOKER, RLS) read of the clarification the
---      IMMEDIATELY preceding user turn received, so "the second one" can answer "which one do you mean?".
+--      IMMEDIATELY preceding user turn received, so "the second one" can answer "which one do you mean?", together with
+--      the words of the request that first asked (a question asked again keeps them).
 --
 -- Additive and forward-only. Migrations 0001–0127 are untouched.
 BEGIN;
@@ -257,19 +258,31 @@ GRANT EXECUTE ON FUNCTION public.server_finalize_memory_control_turn_v1(uuid,uui
 CREATE FUNCTION public.pending_memory_clarification_v1(p_session_id uuid, p_source_turn_id uuid)
 RETURNS TABLE(command_id uuid, kind text, candidate_memory_ids uuid[], clarified_turn_content text)
 LANGUAGE sql STABLE SECURITY INVOKER SET search_path='' AS $$
-  WITH current_turn AS (
+  WITH RECURSIVE current_turn AS (
     SELECT t.id, t.session_id, t.created_at FROM public.conversation_turns t
      WHERE t.id=p_source_turn_id AND t.session_id=p_session_id AND t.role='USER'
   ), previous_turn AS (
-    SELECT t.id, t.content FROM public.conversation_turns t, current_turn cur
+    SELECT t.id FROM public.conversation_turns t, current_turn cur
      WHERE t.session_id=cur.session_id AND t.role='USER' AND t.status<>'CANCELLED' AND t.id<>cur.id
        AND (t.created_at, t.id) < (cur.created_at, cur.id)
      ORDER BY t.created_at DESC, t.id DESC LIMIT 1
+  ), pending AS (
+    SELECT c.id, c.kind, c.candidate_memory_ids, c.answers_command_id, c.source_turn_id
+      FROM public.memory_control_commands c JOIN previous_turn p ON p.id=c.source_turn_id
+     WHERE c.session_id=p_session_id AND c.outcome='CLARIFICATION_REQUIRED'
+       AND NOT EXISTS (SELECT 1 FROM public.memory_control_commands a WHERE a.answers_command_id=c.id)
+  ), origin AS (
+    -- A question asked again ("5" was not an option) answers the one before it; the words that asked for the change
+    -- are those of the first request in that chain, so a later answer still knows what was asked, and in which language.
+    SELECT pd.answers_command_id, pd.source_turn_id, 0 AS depth FROM pending pd
+    UNION ALL
+    SELECT c.answers_command_id, c.source_turn_id, o.depth + 1
+      FROM public.memory_control_commands c JOIN origin o ON c.id=o.answers_command_id
+     WHERE o.depth < 16
   )
-  SELECT c.id, c.kind, c.candidate_memory_ids, p.content
-    FROM public.memory_control_commands c JOIN previous_turn p ON p.id=c.source_turn_id
-   WHERE c.session_id=p_session_id AND c.outcome='CLARIFICATION_REQUIRED'
-     AND NOT EXISTS (SELECT 1 FROM public.memory_control_commands a WHERE a.answers_command_id=c.id)
+  SELECT pd.id, pd.kind, pd.candidate_memory_ids, t.content
+    FROM pending pd, origin o JOIN public.conversation_turns t ON t.id=o.source_turn_id
+   WHERE o.answers_command_id IS NULL
 $$;
 ALTER FUNCTION public.pending_memory_clarification_v1(uuid,uuid) OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.pending_memory_clarification_v1(uuid,uuid) FROM PUBLIC,anon;

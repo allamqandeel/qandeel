@@ -42,7 +42,8 @@ In the same Conversation, in Arabic or English:
 - **Forget** — «انسى إني بحب كافيه النيل.» — that Memory is marked `DELETED`; the row and its history remain.
 - **Keep it but stop relying on it** — «متعتمدش على إني بحب الشاي بالنعناع» — that Memory is `DISABLED`: kept, out of
   every retrieval and Evidence path, and listed separately when the reader asks what QANDEEL remembers.
-- **Be asked, not guessed** — «امسح موضوع الشغل.» with two matching Memories → «تقصد أنهي واحدة؟» with the two remembered
+- **Be asked, not guessed** — nothing changes on a partial match, on words that only say "I like", or on words not tied to
+  Memory; «امسح موضوع الشغل.» with two matching Memories → «تقصد أنهي واحدة؟» with the two remembered
   sentences numbered; nothing changes until the reader answers («2», «التانية», "the first one", «أيوه» for a single
   option, «لا» to change nothing). A pointer such as «متنساش المعلومة، بس متعتمدش عليها معايا.» is resolved against the
   reader's previous words but is always confirmed before anything changes.
@@ -86,15 +87,28 @@ Candidates are the reader's own `ACTIVE` (unexpired) and `DISABLED` rows, read w
 explicit owner filter, bounded to 64, newest change first. Per command: correct → current rows only; forget →
 current + `DISABLED`; disable → current + `DISABLED` (an already disabled row converges).
 
-Distinctive words (pronouns, particles and "the topic / the information" removed; light Arabic prefix / suffix
-stemming) must **all** appear in **exactly one** candidate for it to be acted on. Several full matches, or any partial
-match, produce a clarification offering at most three remembered sentences; nothing matches → "nothing like that" (a
-soft «امسح» / "delete" with no match is ordinary conversation). For a correction, the words the old and the new statement
-share («ساكن» / "live") are set aside, so «أكتوبر» — not the predicate — names the target. A pointer ("that
-information") is resolved against the previous user turn's words and is always confirmed first, even with one match.
-An answer is read only right after the question: a number / ordinal picks that option (out of range → asked again), a
-yes confirms a single option, a no changes nothing, words must match exactly one of the offered options.
-
+- **Full match only.** The reader's distinctive words (pronouns, particles and "the topic / the information" removed;
+  light Arabic prefix / suffix stemming) must **all** appear in **exactly one** candidate. Several full matches →
+  "which one?" with at most three remembered sentences. A partial match is never acted on.
+- **A predicate is not a name.** Words that only say "like / have / want" («بحب», «ساكن», «بشتغل», "like", "prefer") never
+  resolve a Memory by themselves, and a partial match must share at least one word that is not such a predicate — so
+  «انسى إني بحب المكان ده» can never forget «أنا بحب الكشري».
+- **Anchored or not.** A forget / do-not-rely request is *anchored* to Memory when it names Memory or phrases its target
+  as a proposition («إن / إني …», "that …", «ذاكرتك», «متفتكرش», «متنساش», «معايا», "anymore", "the fact that", or a
+  pronoun pointing at the reader's own preceding clause: "I like tea, but don't rely on it"). Anchored: a unique full
+  match is applied, a partial one or none is asked about / answered "nothing like that". **Unanchored**
+  («امسح موضوع الشغل», "forget the work stuff"): only full matches count — one match is *confirmed* first («تقصد «…»؟»),
+  several are asked about, anything less is ordinary conversation ("forget about work, let's talk movies", «امسح رقم
+  أحمد», «امسح الصورة»). An unanchored do-not-rely ("stop relying on coffee", «متعتمدش على حد») is ordinary conversation.
+- **A correction restates its predicate.** «ساكن في أكتوبر» → «ساكن في طنطا», "live in …" → "live in …", or "I'm X" → "I'm Y".
+  The shared words are set aside so the old value («أكتوبر») names the target. "I don't like my job, but I need the money"
+  restates nothing and is ordinary conversation. Partial matches never become corrections.
+- **Pointers are confirmed.** "That information" is resolved against the previous user turn's words and always asked
+  about first, even with one match.
+- **Answers are read only right after the question.** A number / ordinal picks that option (out of range → asked again);
+  a verb that repeats the request is fine («انسى التانية», "forget the second one"); pointing («هي دي», "that one") is a
+  yes, asked again when there are several options; a no changes nothing; a question is never an answer; words must match
+  exactly one offered option. A question asked again keeps the original request's words and language.
 ### 3.3 The missing primitive and the atomic command (M2, M3) — migration 0128
 
 - **`server_disable_memory_v1(user, memory)`** — owner-bound, row-locked, `service_role` only, status-only
@@ -132,7 +146,9 @@ source — is reused in the command record, and made stronger by committing with
 
 `BackgroundIntelligenceEnrichmentService.evaluateAndWriteMemory` (and the legacy `MemoryWriteService`) skip an explicit
 Memory command with `MEMORY_CONTROL_COMMAND` after the existing screens: "I like tea, but don't rely on it" would
-otherwise have been written as a new Memory while the command disabled the old one (proven in the enrichment spec).
+otherwise have been written as a new Memory while the command disabled the old one (proven in the enrichment spec). An
+explicit Memory command is also never a Hypothesis-generation trigger, so "forget that I …" cannot seed a new Hypothesis
+about the fact just withdrawn.
 
 ## 4. Security and privacy
 
@@ -147,7 +163,9 @@ otherwise have been written as a new Memory while the command disabled the old o
 - **Pre-existing Product defect found and fixed (Safety):** the shared secret screen wrapped its Arabic alternatives in
   `\b…\b`, and JavaScript's `\b` is ASCII-only, so «كلمة السر», «باسورد», «كود التحقق», «الرقم القومي» could never match
   and Arabic secrets passed the screen — including on the background write path. The screen now uses Unicode-aware
-  boundaries (English behaviour unchanged) and names «كلمة المرور», «الرقم السري», «الباسورد».
+  boundaries (English behaviour unchanged), accepts the Arabic clitics و / ب / ل / ف / ال on the keyword, and also screens
+  PIN / CVV, card, account, IBAN and passport numbers and identity-number keywords; an explicit statement is at most 280
+  characters.
 - No human-review path, no Memory screen, no Settings destination, no service-role credential on the client.
 
 ## 5. Command matrix
@@ -194,12 +212,12 @@ Local (this host; the API bootstrap spec and real PostgreSQL cannot run here —
 | Evidence | Result |
 |---|---|
 | `tsc -p apps/api` and `tsc -p apps/api/tsconfig.scripts.json` | clean |
-| New API Jest: interpreter, resolution, **production-route** spec | 73 / 73 |
+| New API Jest: interpreter, resolution, **production-route** spec | 93 / 93 |
 | Production route (`conversation-memory-control.route.spec.ts`): the REAL `ConversationService` → orchestrator → Context Builder → Safety gate → Memory-control boundary → Conversation / Memory-control repositories, over an in-memory store that applies RLS by token and mirrors the SQL commands; every non-Memory lane is a proxy that records any touch. Arabic M-01…M-06 and English; lost answer after commit + same-key retry (one Memory, one record, one assistant turn, one command call); lost correction + re-sent message (one successor); a competing correction committed first (`TARGET_CHANGED`, one successor); cross-reader isolation; failed Memory read = failed turn; no id / status in any reply; RPC parameter names pinned to the migration's SQL signature | pass |
 | Orchestrator spec: ALLOW Memory command ends in the atomic command with no other lane or provider; previous-words hand-off; GUIDED never consults the boundary; stale turn → current canonical state; boundary failure fails the turn closed | pass (217 with the HIM regression gate) |
 | Evaluator spec (+ Arabic secrets on both paths, explicit statements) and enrichment spec (+ command guard) | pass |
-| Full API Jest except `api-http-bootstrap` | 201 suites, 4,564 tests — all pass after the one ordering correction in §9 |
-| `tests/w3-mega-m-conversational-memory-control-contract.test.mjs` | 27 / 27 — 8 detectors clean, 26 planted defects caught |
+| Full API Jest except `api-http-bootstrap` | 201 suites, 4,600 tests — all pass |
+| `tests/w3-mega-m-conversational-memory-control-contract.test.mjs` | 31 / 31 — 8 detectors clean, 30 planted defects caught |
 | 61 static contracts that read any touched file (incl. W1A-01, U1–U3, QIR-001/003/004/006, Full-Intelligence and Integrated-Brain smokes) | all pass |
 | `database/tests/*.test.mjs` (incl. the verifier-hazard contract over the new verifier) | 1,257 / 1,257 |
 
@@ -218,13 +236,27 @@ races). The results are reported on the PR, not claimed here.
 
 ## 9. Defects found and their class
 
-| Found | Class | Disposition |
-|---|---|---|
-| Arabic secrets passed the shared secret screen (ASCII `\b`) | Product defect (pre-existing, Safety) | fixed, both write paths, with tests and a contract guard |
-| a correction's shared predicate («ساكن») made a re-sent correction ask instead of answering "already" | implementation defect | fixed: old-only words resolve; "already correct" is checked first |
-| an out-of-range number («5») fell through to ordinary conversation instead of asking again | implementation defect | fixed |
-| the command guard ran before the secret screen and changed a frozen skip reason (`SENSITIVE_DATA`) | validation / ordering defect (no write either way) | fixed: the existing screens answer first |
-| route-spec doubles crashed Node with unhandled rejections; one planted contract defect was mis-built | validation / proof defects | fixed in the proofs only |
+Two independent review agents (security / authority and correctness) reviewed the first commit adversarially, with
+probes; every accepted finding was fixed and proven on this PR.
+
+| Found | By | Class | Disposition |
+|---|---|---|---|
+| Arabic secrets passed the shared secret screen (ASCII `\b`) | implementation | Product defect (pre-existing, Safety) | fixed on both write paths |
+| …and the fix still missed clitics («وكلمة السر», «والباسورد»), PIN / CVV / IBAN / account / passport numbers; free-text remember had no length bound | security review | Product defect (Safety) | fixed: clitics allowed, identifiers added, statements ≤ 280 characters |
+| a Memory-command turn could still seed background Hypothesis generation from the words just withdrawn | security review | Product defect (reliance) | fixed: an explicit Memory command is never a generation trigger |
+| any "I don't X, … I Y" sentence could supersede a Memory ("I don't like my job but I need the money") | correctness review | Product defect (HIGH) | fixed: a correction must restate its predicate; partial matches never correct |
+| «انسى إني بحب المكان ده» reduced to «بحب» and could forget another preference | correctness review | Product defect (HIGH) | fixed: «مكان» is distinctive; a predicate alone never resolves or partially matches |
+| "that one" picked option 1; «تاني؟» counted as an answer | correctness review | Product defect (HIGH) | fixed: pointing is a yes; questions are not answers |
+| ordinary talk hijacked («انسى الموضوع ده», "stop relying on coffee", «امسح رقم أحمد») | correctness review | Product defect | fixed: the anchored / unanchored rule (§3.2); an unanchored unique match is confirmed first |
+| «خلي بالك إن…», "remember that movie I told you about" stored | correctness review | Product defect | fixed |
+| a question asked again lost the original request and language; «انسى التانية» was not an answer | correctness review | implementation defect | fixed (migration 0128's clarification read follows the chain) |
+| the verifier's `finally { RESET ROLE }` in an aborted transaction would have masked every expected refusal (`25P02`) | correctness review | validation defect | fixed before any CI run |
+| a correction's shared predicate made a re-sent correction ask instead of "already"; «5» fell to ordinary talk | implementation | implementation defect | fixed |
+| the command guard ran before the secret screen and changed the frozen `SENSITIVE_DATA` skip reason | implementation | validation / ordering defect (no write either way) | fixed: the existing screens answer first |
+| route-spec doubles crashed Node with unhandled rejections; two planted contract defects were mis-built | implementation | validation / proof defects | fixed in the proofs only |
+
+Kept deliberately (review LOW): the confirmation quotes the remembered words — the reader must see WHICH Memory changed,
+and their own request already carries those words in the transcript (§10.8).
 
 ## 10. Deliberately not done / residues (BG-06: none is a new backlog item)
 
@@ -232,14 +264,18 @@ races). The results are reported on the PR, not claimed here.
    disabled until forgotten.
 2. **No "forget everything" / bulk command.** Only one target per command; a bulk request is ordinary conversation.
 3. **Candidates are bounded to the 64 most recently changed controllable Memories**; an older one cannot be named in
-   conversation. Ambiguity inside the bound always asks.
+   conversation, and "exactly one match" is judged inside that bound.
 4. **Remembered words are shown as stored**, in whatever language they were said; no rewrite into the reply language.
-5. **Egyptian «افتكر إن …» can also mean "I think that …".** Arabic remember needs «إن / إني» and a statement; the
-   "I think" reading remains a known ambiguity of the dialect.
+5. **Egyptian «افتكر إن …» can also mean "I think that …".** Arabic remember needs «إن / إني» and a statement that does not
+   point back at the conversation; the "I think" reading remains an ambiguity of the dialect.
 6. **A short reply (≤ 6 words) triggers one owner-token read** to learn whether a clarification is pending; a failure of
    that read only means the reply is ordinary conversation.
 7. **INSPECT orders by recency only** (`QAN-BL-CTX-01` unclaimed).
-
+8. **Confirmation replies quote the remembered words**, so a forgotten / disabled fact's words also stand in that reply
+   in the transcript the provider may read as recent history (they already stand in the reader's own request).
+9. **Two answers to one clarification racing** hit `UNIQUE (answers_command_id)`: one applies, the other turn fails
+   closed with the ordinary failed-reply state.
+10. **Arabic copula-less corrections** («أنا مش مهندس، أنا دكتور») share no predicate word and stay ordinary conversation.
 ## 11. Lifecycle truth
 
 - **`E2E-D-13` — IMPLEMENTED on the Draft PR; closes on merge.** Not closed now.

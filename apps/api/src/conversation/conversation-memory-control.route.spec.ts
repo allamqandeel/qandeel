@@ -111,7 +111,12 @@ class CanonicalStore {
       const previous = this.previousUserTurn(current);
       const command = previous && this.commands.find((c) => c.user_id === owner && c.source_turn_id === previous.id && c.session_id === body.p_session_id
         && c.outcome === 'CLARIFICATION_REQUIRED' && !this.commands.some((a) => a.answers_command_id === c.id));
-      return command ? [{ command_id: command.id, kind: command.kind, candidate_memory_ids: command.candidate_memory_ids, clarified_turn_content: previous.content }] : [];
+      if (!command) return [];
+      // A question asked again keeps the words of the request that first asked.
+      let origin = command;
+      while (origin.answers_command_id) origin = this.commands.find((c) => c.id === origin.answers_command_id)!;
+      const asked = this.turns.find((t) => t.id === origin.source_turn_id)!;
+      return [{ command_id: command.id, kind: command.kind, candidate_memory_ids: command.candidate_memory_ids, clarified_turn_content: asked.content }];
     }
     const query = new URLSearchParams(search);
     const table: Row[] = resource === 'conversation_sessions' ? this.sessions : resource === 'conversation_turns' ? this.turns as unknown as Row[] : resource === 'memories' ? this.memories as unknown as Row[] : [];
@@ -255,7 +260,8 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
   const activeContents = (user = A) => store.memories.filter((m) => m.user_id === user && m.status === 'ACTIVE').map((m) => m.content).sort();
   afterEach(() => {
     // A Memory command never reaches Human Intelligence, retrieval, Hypothesis, Question or the provider.
-    if (!expect.getState().currentTestName?.includes('ordinary') && !expect.getState().currentTestName?.includes('only counts right after')) expect(touched).toEqual([]);
+    const name = expect.getState().currentTestName ?? '';
+    if (!name.includes('ordinary') && !name.includes('only counts right after')) expect(touched).toEqual([]);
   });
   const expectCleanReply = (reply: string) => {
     expect(reply).not.toMatch(UUID_ANYWHERE);
@@ -508,6 +514,61 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       expect(memoryOf(mine.id).status).toBe('ACTIVE');
     });
 
+    it('review regressions: look-alike sentences stay ordinary conversation and change nothing', async () => {
+      store.remember(A, 'I like my job at Google.');
+      store.remember(A, 'أنا بحب الشغل بتاعي في فودافون.');
+      store.remember(A, 'I love coffee.', 'STABLE_PREFERENCE');
+      store.remember(A, 'أحمد عنده امتحان الخميس.');
+      const before = JSON.stringify(store.memories);
+      for (const content of [
+        "I don't like my job but I need the money",
+        'أنا مش بحب الشغل ده، بس لازم أروح',
+        'I want to sleep better and stop relying on coffee',
+        'امسح رقم أحمد',
+        'Forget about work, let us talk about movies',
+        'خلي بالك إن الطريق زحمة النهارده',
+      ]) {
+        touched.length = 0;
+        await expect(say(content)).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(touched).toContain('FOREGROUND_GATHER');
+      }
+      expect(JSON.stringify(store.memories)).toBe(before);
+      expect(store.commands).toHaveLength(0);
+    });
+
+    it('an unanchored request that matches one Memory («امسح موضوع البنك») is confirmed before anything changes', async () => {
+      const bank = store.remember(A, 'شغلي الجديد في البنك.');
+      expect((await say('امسح موضوع البنك')).reply).toBe('تقصد «شغلي الجديد في البنك.»؟');
+      expect(memoryOf(bank.id).status).toBe('ACTIVE');
+      expect((await say('أيوه')).reply).toBe('تمام، نسيت «شغلي الجديد في البنك.» ومش هرجع له تاني.');
+      expect(memoryOf(bank.id).status).toBe('DELETED');
+    });
+    it('«انسى إني بحب المكان ده» never forgets a different preference that merely shares «بحب»', async () => {
+      const kushari = store.remember(A, 'أنا بحب الكشري.', 'STABLE_PREFERENCE');
+      expect((await say('انسى إني بحب المكان ده.')).reply).toBe('مش لاقي حاجة زي كده في اللي فاكره.');
+      expect(memoryOf(kushari.id).status).toBe('ACTIVE');
+    });
+
+    it('pointing («هي دي») with several options asks again; «انسى التانية» answers', async () => {
+      const bank = store.remember(A, 'شغلي الجديد في البنك.');
+      const boss = store.remember(A, 'مديري في الشغل صعب.');
+      await say('امسح موضوع الشغل.');
+      expect((await say('هي دي')).reply).toContain('1. «مديري في الشغل صعب.»');
+      expect(store.memories.map((m) => m.status)).toEqual(['ACTIVE', 'ACTIVE']);
+      expect((await say('انسى التانية')).reply).toBe('تمام، نسيت «شغلي الجديد في البنك.» ومش هرجع له تاني.');
+      expect([memoryOf(bank.id).status, memoryOf(boss.id).status]).toEqual(['DELETED', 'ACTIVE']);
+    });
+
+    it('a question asked again keeps the original request and its language', async () => {
+      const mine = store.remember(A, 'I live in October.');
+      const sams = store.remember(A, 'My friend Sam lives in October.');
+      const ask = await say("I don't live in October anymore, I live in Tanta.");
+      expect(ask.reply).toBe('Which one do you mean?\n1. “My friend Sam lives in October.”\n2. “I live in October.”\nThe number is enough.');
+      expect((await say('5')).reply).toContain('Which one do you mean?');
+      expect((await say('the second one')).reply).toBe("Got it, I've corrected it. I now remember “I live in Tanta.” instead of “I live in October.”.");
+      expect([memoryOf(mine.id).status, memoryOf(sams.id).status]).toEqual(['SUPERSEDED', 'ACTIVE']);
+      expect(store.commands.map((c) => c.outcome)).toEqual(['CLARIFICATION_REQUIRED', 'CLARIFICATION_REQUIRED', 'CORRECTED']);
+    });
     it('ordinary conversation — and a correction that names nothing remembered — continues on the ordinary path', async () => {
       store.remember(A, 'أنا ساكن في طنطا.');
       await expect(say('أنا بحب القهوة')).rejects.toBeInstanceOf(ServiceUnavailableException);

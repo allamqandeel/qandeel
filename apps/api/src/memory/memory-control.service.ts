@@ -47,7 +47,11 @@ export class MemoryControlService {
 
   async plan(turn: MemoryControlTurn, now = new Date()): Promise<MemoryControlPlan | null> {
     const intent = interpretMemoryControl(turn.content);
-    if (intent) return this.planCommand(turn, intent, now);
+    if (intent) {
+      const planned = await this.planCommand(turn, intent, now);
+      if (planned) return planned;
+    }
+    // «انسى التانية» / "forget the second one" names no Memory by itself, but it may answer the question just asked.
     const answer = readClarificationAnswer(turn.content);
     if (!answer) return null;
     let pending: PendingMemoryClarification | undefined;
@@ -93,11 +97,15 @@ export class MemoryControlService {
         };
       }
       case 'CORRECT': {
+        // A correction restates the SAME predicate with a new value («ساكن في أكتوبر» → «ساكن في طنطا», "live in …" →
+        // "live in …", or "I'm X" → "I'm Y"). "I don't like my job, but I need the money" restates nothing: ordinary talk.
+        const shared = new Set([...distinctiveWords(intent.previous)].filter((word) => distinctiveWords(intent.replacement).has(word)));
+        if (shared.size === 0 && !intent.copula) return null;
         const replacement = this.evaluator.explicitStatementCandidate(intent.replacement, now);
         const replacementKey = replacement.decision === 'WRITE' ? normalizeMemoryContent(replacement.candidate.content) : undefined;
         // A Memory that already says the new thing is not what is being corrected.
         const correctable = current.filter((memory) => normalizeMemoryContent(memory.content) !== replacementKey);
-        const resolution = resolveMemoryTarget(intent.previous, correctable, distinctiveWords(intent.replacement));
+        const resolution = resolveMemoryTarget(intent.previous, correctable, shared);
         if (resolution.state === 'RESOLVED') return this.correction(language, resolution.memory, intent.replacement, now);
         const existing = replacementKey === undefined ? undefined : current.find((memory) => normalizeMemoryContent(memory.content) === replacementKey);
         if (existing) return { kind: 'CORRECT', outcome: 'ALREADY_CORRECT', candidateMemoryIds: [], reply: alreadyCorrectReply(language, existing.content) };
@@ -107,7 +115,7 @@ export class MemoryControlService {
           }
           return clarification('CORRECT', language, resolution.options);
         }
-        // Nothing remembered matches the old words: an ordinary statement, not a Memory command.
+        // Nothing remembered fully matches the old words: an ordinary statement, not a Memory command.
         return null;
       }
       case 'FORGET':
@@ -117,12 +125,17 @@ export class MemoryControlService {
         if (resolution.state === 'UNSPECIFIED' && intent.kind === 'DISABLE' && intent.alternateTarget) {
           resolution = resolveMemoryTarget(intent.alternateTarget, candidates);
         }
+        // Words not anchored to Memory («امسح موضوع الشغل», "forget the work stuff") count only on a full match; anything
+        // less stays ordinary conversation, so "forget about work, let's talk movies" is never a Memory question.
+        const soft = intent.kind === 'FORGET' && intent.strength === 'SOFT';
+        if (soft && resolution.state !== 'RESOLVED' && resolution.state !== 'AMBIGUOUS') return null;
         if (resolution.state === 'UNSPECIFIED') return this.deictic(intent.kind, language, turn.previousUserContent, candidates);
-        if (resolution.state === 'AMBIGUOUS') return clarification(intent.kind, language, resolution.options);
+        if (resolution.state === 'AMBIGUOUS' || resolution.state === 'PARTIAL') return clarification(intent.kind, language, resolution.options);
         if (resolution.state === 'NONE') {
-          if (intent.kind === 'FORGET' && intent.strength === 'SOFT') return null;
           return { kind: intent.kind, outcome: 'TARGET_NOT_FOUND', candidateMemoryIds: [], reply: plainReply(language, 'TARGET_NOT_FOUND') };
         }
+        // Unanchored words that happen to match one Memory («امسح الصورة») are confirmed, never acted on directly.
+        if (soft) return clarification(intent.kind, language, [resolution.memory]);
         return lifecycleChange(intent.kind, language, resolution.memory);
       }
     }
@@ -138,7 +151,7 @@ export class MemoryControlService {
   ): MemoryControlPlan {
     const pointed: MemoryTargetResolution = previousUserContent ? resolveMemoryTarget(previousUserContent, candidates) : { state: 'NONE' };
     if (pointed.state === 'RESOLVED') return clarification(kind, language, [pointed.memory]);
-    if (pointed.state === 'AMBIGUOUS') return clarification(kind, language, pointed.options);
+    if (pointed.state === 'AMBIGUOUS' || pointed.state === 'PARTIAL') return clarification(kind, language, pointed.options);
     return { kind, outcome: 'TARGET_NOT_SPECIFIED', candidateMemoryIds: [], reply: plainReply(language, 'TARGET_NOT_SPECIFIED') };
   }
 
