@@ -3652,3 +3652,45 @@ schema; `OPENED` at the exact version; `STALE` for any other version, writing no
 reader's, a withdrawn and a missing item; one focus per reader, moved by a second open; a close that only closes the
 named item and is idempotent; that another reader sees and closes nothing; and that direct writes, `anon` and an
 unauthenticated caller are refused.
+
+## W3-MEGA-U - QANDEEL Understanding contest: disagreement → Contested / Under Review (migration 0127)
+
+`0127_understanding_contest_v1.sql` is the runtime of `PG-01` (I-08A4 §18) under the P1 §11.4 rule: an EXPLICIT
+disagreement makes a QANDEEL Understanding item contested / under review and causes re-evaluation, and does not delete
+it. It is additive and forward-only: one table, one partial unique index, one facts trigger, three functions.
+
+- **`public.understanding_contests`** — owner, item (composite FK `(hypothesis_id, user_id)` to the reader's own
+  Hypothesis), command identity (`UNIQUE (user_id, command_id)`), the EXACT contested version, lifecycle
+  (`UNDER_REVIEW` only), the re-evaluation's before / after status and after version, the contest's ONE Confidence
+  evaluation identity (`confidence_evaluation_id`, `UNIQUE`, R2), and the instant. No text,
+  reasoning, score or payload column. At most ONE contest under review per item (partial unique index). RLS with one
+  owner SELECT policy; no client role holds INSERT, UPDATE or DELETE. A `BEFORE UPDATE` trigger
+  (`understanding_private.understanding_contest_facts_immutable_v1`) refuses any change to a recorded fact, the
+  evaluation identity above all.
+- **`record_understanding_disagreement_v1(command, hypothesis, expected_version)`** — SECURITY DEFINER in
+  `understanding_private`, with a `public` INVOKER pass-through; owner `auth.uid()` only. It locks the item `FOR UPDATE`
+  and answers one bounded row: `RECORDED` (also for the same command replayed), `ALREADY_UNDER_REVIEW`, `STALE`,
+  `NOT_FOUND` or `COMMAND_CONFLICT`; every non-recording answer writes nothing. `RECORDED` performs the re-evaluation's
+  lifecycle step in the same transaction through the audited core `transition_hypothesis_core_v1` (migration 0036):
+  `ACTIVE` / `SUPPORTED` / `WEAK` → `MIXED` at version + 1 with one `AUTHENTICATED_TRANSITION` audit row; an item already
+  `MIXED` keeps its version. The Hypothesis is never deleted, rejected, retired or rewritten.
+
+`RECORDED` (new or replayed) and `ALREADY_UNDER_REVIEW` also answer the contest's `confidence_evaluation_id`, generated
+once by the database when the contest is recorded. The API then ENSURES the Confidence Runtime's canonical evaluation
+(`create_confidence_evaluation`, 0006 / 0028) of the exact re-evaluated version under exactly that id — the
+evaluation's primary key — so a lost answer, a replay, a repair and simultaneous requests converge on ONE row. No
+(target, version) uniqueness is added to `confidence_evaluations`, which remains an immutable history: the contest's row
+is ensured even when that version was already evaluated by another source. The id is not part of the API's answer and
+the mobile client never handles it (it is the owner's own data under RLS). A contest stays `UNDER_REVIEW`: no Product authority defines its resolution yet.
+
+`database/verify-migration-0127.mjs` (`npm run verify:understanding-contest:integration`, API CI) proves the catalog and
+grants (no Understanding DEFINER in an exposed schema); every outcome, including the audited transition, the untouched
+statement / Evidence / assumptions, replay, one contest under review, stale, spent command, another reader's / withdrawn /
+missing item; isolation, direct-write, `anon` and unauthenticated refusals; and, on committed rows across two connections
+whose second attempt is shown to block, that two commands on one item record once and the same command twice is one
+contest (and both sides are answered the same evaluation identity). R2: on committed rows, two connections that
+have BOTH observed no evaluation create under the contest's identity at once — the second blocks, meets the primary
+key (`23505`) and re-reads the same id — leaving exactly one contest-owned Confidence row; a lost-response replay and
+a retry after a failed attempt converge on it too; and another evaluation of the same version under a different id is
+still accepted (history semantics unchanged). Its committed fixtures are removed (triggers suspended for that session only, since Hypotheses are append-only)
+and checked gone.

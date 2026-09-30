@@ -10,6 +10,7 @@ import { UnderstandingService } from './understanding.service';
  *   GET /understanding/items/:ref      — one of the caller's items, with its user-facing explanation (guarded)
  *   POST   /understanding/items/:ref/discussion — "talk to QANDEEL about this", at the revision seen (guarded, U2)
  *   DELETE /understanding/items/:ref/discussion — close that discussion focus (guarded, U2)
+ *   POST   /understanding/items/:ref/disagreement — explicit disagreement → Contested / Under Review (guarded, U3)
  *
  * Identity is the verified token only; no route takes a user id, and `:ref` is an opaque token that resolves only
  * against the caller's own items.
@@ -37,6 +38,14 @@ export class UnderstandingController {
   async openDiscussion(@Req() request: AuthenticatedRequest, @Param('ref') ref: string, @Body() body: unknown): Promise<void> {
     const { userId, accessToken } = request.authenticatedUser;
     await this.understanding.openDiscussion(userId, accessToken, ref, body);
+  }
+
+  /** U3 — an explicit disagreement: the item becomes Contested / Under Review and is re-evaluated (PG-01). */
+  @Post('items/:ref/disagreement')
+  @HttpCode(200)
+  disagree(@Req() request: AuthenticatedRequest, @Param('ref') ref: string, @Body() body: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.understanding.disagree(userId, accessToken, ref, body);
   }
 
   @Delete('items/:ref/discussion')

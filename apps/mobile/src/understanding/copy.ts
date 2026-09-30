@@ -12,7 +12,8 @@
  *
  * TASK-APPROVED DELEGATED COPY (W3-MEGA-U §7.6, recorded in the implementation record): the six theme titles, the empty
  * and unavailable sentences, "talk to QANDEEL about this", its failure sentence, the discussion strip and the evolution
- * phrases. Plain, non-diagnostic, in QANDEEL's formal T1 register; none names a new Product concept.
+ * phrases, and (U3) the disagreement act, its two outcomes and the under-review words for P1 §11.4's own concept.
+ * Plain, non-diagnostic, in QANDEEL's formal T1 register; none names a new Product concept.
  */
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { UnderstandingConfidence, UnderstandingEvolutionKind, UnderstandingTheme } from '../runtime-entry';
@@ -36,6 +37,11 @@ export interface UnderstandingCopy {
   readonly talkFailed: string;
   readonly discussing: (title: string) => string;
   readonly endDiscussion: string;
+  readonly disagree: string;
+  readonly disagreeRecorded: string;
+  readonly disagreeFailed: string;
+  readonly underReview: string;
+  readonly underReviewNote: string;
 }
 
 const AR: UnderstandingCopy = Object.freeze({
@@ -71,6 +77,7 @@ const AR: UnderstandingCopy = Object.freeze({
     BECAME_MIXED: 'ظهر فيه تعارض',
     WITHDRAWN: 'تركه قنديل جانبًا',
     RECONSIDERED: 'أعاد قنديل النظر فيه',
+    YOU_DISAGREED: 'سُجّل رأيك المختلف',
   }),
   empty: 'لم يتكوّن لدى قنديل فهمٌ يعرضه بعد.',
   unavailable: 'تعذّر عرض فهم قنديل.',
@@ -78,6 +85,11 @@ const AR: UnderstandingCopy = Object.freeze({
   talkFailed: 'تعذّر نقل هذا إلى المحادثة.',
   discussing: (title: string) => `الحديث عن: ${title}`,
   endDiscussion: 'إنهاء الحديث عن هذا',
+  disagree: 'أراه بشكل مختلف',
+  disagreeRecorded: 'سُجّل رأيك، وصار هذا الفهم قيد المراجعة.',
+  disagreeFailed: 'تعذّر تسجيل رأيك.',
+  underReview: 'قيد المراجعة',
+  underReviewNote: 'أخذ قنديل برأيك، وهذا الفهم قيد المراجعة.',
 });
 
 const EN: UnderstandingCopy = Object.freeze({
@@ -113,6 +125,7 @@ const EN: UnderstandingCopy = Object.freeze({
     BECAME_MIXED: 'It became mixed',
     WITHDRAWN: 'QANDEEL set it aside',
     RECONSIDERED: 'QANDEEL reconsidered it',
+    YOU_DISAGREED: 'Your different view was noted',
   }),
   empty: "QANDEEL hasn't formed an understanding to show yet.",
   unavailable: "QANDEEL Understanding couldn't be shown.",
@@ -120,6 +133,11 @@ const EN: UnderstandingCopy = Object.freeze({
   talkFailed: "This couldn't be brought into the conversation.",
   discussing: (title: string) => `Talking about: ${title}`,
   endDiscussion: 'Stop talking about this',
+  disagree: 'I see it differently',
+  disagreeRecorded: 'Your view is noted. This understanding is now under review.',
+  disagreeFailed: "Your view couldn't be recorded.",
+  underReview: 'Under review',
+  underReviewNote: 'QANDEEL took your view into account. This understanding is under review.',
 });
 
 export function understandingCopy(language: ChromeLanguage): UnderstandingCopy {

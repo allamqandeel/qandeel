@@ -25,7 +25,7 @@ const LANGUAGE = deviceProductLocale().language;
 const COPY = understandingCopy(LANGUAGE);
 const REF = 'AAAAAAAAAAAAAAAAAAAAAA';
 const REV = 'rrrrrrrrrrrrrrrrrrrrr1';
-const ITEM = { ref: REF, revision: REV, theme: 'GOALS', summary: 'Finishing the course matters to you.', confidence: 'MIXED' };
+const ITEM = { ref: REF, revision: REV, theme: 'GOALS', summary: 'Finishing the course matters to you.', confidence: 'MIXED', underReview: false };
 const style = (node: { props: { style?: unknown } }) => StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
 
 async function world(): Promise<{ h: IntegrationHarness; view: RenderResult }> {
@@ -164,6 +164,46 @@ describe('E2E-D-14 — QANDEEL Understanding, a depth of Personal QANDEEL (P4-C1
     expect(view.queryByTestId('qandeel-understanding-discussion')).toBeNull();
     expect(understandingRequests(h).filter((request) => request.method === 'DELETE')).toHaveLength(1);
     h.dispose();
+  });
+
+  it('E2E-D-15: I see it differently → recorded against the revision seen, no words sent; the item reads Mixed and under review, also after a restart', async () => {
+    // A stateful stand-in for the server's contest truth (migration 0127): the disagreement makes the item MIXED /
+    // under review at a new revision, and every later read — in this runtime or a new one — reflects it.
+    let contested = false;
+    const serve = (h: IntegrationHarness) => {
+      h.http.on('/understanding/items', () => ({ status: 200, body: { items: [contested ? { ...ITEM, revision: 'rrrrrrrrrrrrrrrrrrrrr2', confidence: 'MIXED', underReview: true } : ITEM] } }));
+      h.http.on(`/understanding/items/${REF}/disagreement`, () => {
+        contested = true;
+        return { status: 200, body: { underReview: true, revision: 'rrrrrrrrrrrrrrrrrrrrr2' } };
+      });
+    };
+    const first = await world();
+    serve(first.h);
+    await press(first.view, 'qandeel-understanding-entry');
+    await press(first.view, `qandeel-understanding-item-${REF}`);
+    await press(first.view, 'qandeel-understanding-talk');
+    await fireEvent.changeText(first.view.getByTestId('qandeel-conversation-input'), 'my own words');
+    await press(first.view, 'qandeel-understanding-disagree');
+    const sent = understandingRequests(first.h).filter((request) => request.url.endsWith('/disagreement'));
+    expect(sent).toHaveLength(1);
+    expect(sent[0].authorization).toBe('Bearer token-a');
+    expect(Object.keys(JSON.parse(sent[0].body ?? '{}')).sort()).toEqual(['commandId', 'revision']);
+    expect(JSON.parse(sent[0].body ?? '{}').revision).toBe(REV);
+    expect(sent[0].body).not.toContain('my own words');
+    expect(first.view.getByTestId('qandeel-understanding-disagreement-recorded').props.children).toBe(COPY.disagreeRecorded);
+    // The Conversation continues: the reader's draft is theirs, and nothing was sent for them.
+    expect(first.view.getByTestId('qandeel-conversation-input').props.value).toBe('my own words');
+    expect(first.h.http.calls.filter((request) => request.url.endsWith('/turns') && request.method === 'POST')).toEqual([]);
+    await press(first.view, 'qandeel-understanding-entry');
+    expect(first.view.getByTestId(`qandeel-understanding-item-${REF}-under-review`).props.children).toBe(COPY.underReview);
+    expect(first.view.getByText(COPY.confidenceName(COPY.confidence.MIXED))).toBeTruthy();
+    first.h.dispose();
+
+    const restarted = await world();
+    serve(restarted.h);
+    await press(restarted.view, 'qandeel-understanding-entry');
+    expect(restarted.view.getByTestId(`qandeel-understanding-item-${REF}-under-review`)).toBeTruthy();
+    restarted.h.dispose();
   });
 
   it('is never in the Analysis and never inside General Settings', async () => {

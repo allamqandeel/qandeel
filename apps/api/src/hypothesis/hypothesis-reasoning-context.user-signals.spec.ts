@@ -20,7 +20,7 @@ describe('HypothesisReasoningContextService — U2 discussion focus', () => {
     hypotheses = { listActiveForUser: jest.fn().mockResolvedValue([hypothesis('a'), hypothesis('b'), hypothesis('c')]) } as unknown as jest.Mocked<HypothesisService>;
     const evidence = { listEligibleForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<EvidenceService>;
     const confidence = { listExactVersionsForTargets: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<ConfidenceRepository>;
-    signals = { readOpenDiscussionFocus: jest.fn().mockResolvedValue(null) } as unknown as jest.Mocked<HypothesisUserSignalRepository>;
+    signals = { readOpenDiscussionFocus: jest.fn().mockResolvedValue(null), listUnderReview: jest.fn().mockResolvedValue(new Set()) } as unknown as jest.Mocked<HypothesisUserSignalRepository>;
     service = new HypothesisReasoningContextService(hypotheses, evidence, confidence, signals);
   });
   const items = async () => {
@@ -88,6 +88,23 @@ describe('HypothesisReasoningContextService — U2 discussion focus', () => {
     signals.readOpenDiscussionFocus.mockClear();
     await expect(service.build('user', 'token')).resolves.toEqual({ coverageState: 'EMPTY', candidateHypothesisCount: 0 });
     expect(signals.readOpenDiscussionFocus).not.toHaveBeenCalled();
+  });
+
+  it('U3: an item the reader explicitly disagreed with carries UNDER_REVIEW to the provider — never offered as uncontested', async () => {
+    signals.listUnderReview.mockResolvedValue(new Set(['b']));
+    const context = await items();
+    expect(context.map((item) => [item.statement, item.userContest])).toEqual([
+      ['statement a', undefined], ['statement b', 'UNDER_REVIEW'], ['statement c', undefined],
+    ]);
+    // Contested is a reliance fact, not a deletion: the item stays in the context, marked.
+    expect(context).toHaveLength(3);
+    // R1: read for exactly these candidates, so no old contest can fall outside a capped window.
+    expect(signals.listUnderReview).toHaveBeenCalledWith('token', 'user', ['a', 'b', 'c']);
+  });
+
+  it('a failed contest read fails the whole context, so a contested item is never consumed as uncontested', async () => {
+    signals.listUnderReview.mockRejectedValue(new Error('unavailable'));
+    await expect(service.build('user', 'token')).rejects.toThrow('unavailable');
   });
 
   it('a failed signal read fails the whole context, so no item is ever consumed without it', async () => {

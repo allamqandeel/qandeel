@@ -6,7 +6,7 @@ import { UnderstandingApiClient, type RuntimeHttpFetch } from '../../runtime-ent
 
 const REF = 'AAAAAAAAAAAAAAAAAAAAAA';
 const REV = 'rrrrrrrrrrrrrrrrrrrrr1';
-const summary = { ref: REF, revision: REV, theme: 'WORK', summary: 'You prepare early.', confidence: 'CLEAR' };
+const summary = { ref: REF, revision: REV, theme: 'WORK', summary: 'You prepare early.', confidence: 'CLEAR', underReview: false };
 const detail = { ...summary, evidence: ['x'], contradictions: [], alternatives: [], unresolved: [], evolution: [{ kind: 'FIRST_SEEN', at: '2026-09-30T10:00:00.123+00:00' }] };
 
 function client(answer: { status: number; body?: unknown }) {
@@ -34,6 +34,7 @@ describe('UnderstandingApiClient', () => {
     ['a raw id as the ref', { items: [{ ...summary, ref: '4f1c9a70-0b7a-4f55-9d3e-2a8f6b1c0d11' }] }],
     ['category tabs', { items: [], tabs: ['WORK'] }],
     ['a duplicated item', { items: [summary, summary] }],
+    ['an item under review that is not Mixed', { items: [{ ...summary, underReview: true }] }],
   ])('refuses %s as unavailable', async (_name, body) => {
     await expect(client({ status: 200, body }).api.readItems()).resolves.toEqual({ kind: 'UNAVAILABLE' });
   });
@@ -43,6 +44,22 @@ describe('UnderstandingApiClient', () => {
     await expect(client({ status: 200, body: { ...detail, evidence: [{ text: 'x', weight: 1 }] } }).api.readItem(REF)).resolves.toEqual({ kind: 'UNAVAILABLE' });
     await expect(client({ status: 200, body: detail }).api.readItem('BBBBBBBBBBBBBBBBBBBBBB')).resolves.toEqual({ kind: 'UNAVAILABLE' });
     await expect(client({ status: 404, body: {} }).api.readItem(REF)).resolves.toEqual({ kind: 'GONE' });
+  });
+
+  it('U3 — a disagreement sends the command and the revision seen, and NO words; its answers are typed', async () => {
+    const COMMAND = '5b2f6c3e-7a1d-4c2e-9f00-1234567890ab';
+    const REV_2 = 'rrrrrrrrrrrrrrrrrrrrr2';
+    const recorded = client({ status: 200, body: { underReview: true, revision: REV_2 } });
+    await expect(recorded.api.disagree(REF, COMMAND, REV)).resolves.toEqual({ kind: 'UNDER_REVIEW', revision: REV_2 });
+    expect(recorded.requests).toEqual([{ url: `https://api.example.test/v1/understanding/items/${REF}/disagreement`, method: 'POST', body: JSON.stringify({ commandId: COMMAND, revision: REV }) }]);
+    await expect(client({ status: 409, body: { code: 'UNDERSTANDING_ITEM_CHANGED' } }).api.disagree(REF, COMMAND, REV)).resolves.toEqual({ kind: 'CHANGED' });
+    await expect(client({ status: 409, body: { code: 'UNDERSTANDING_COMMAND_CONFLICT' } }).api.disagree(REF, COMMAND, REV)).resolves.toEqual({ kind: 'CONFLICT' });
+    await expect(client({ status: 404, body: {} }).api.disagree(REF, COMMAND, REV)).resolves.toEqual({ kind: 'GONE' });
+    await expect(client({ status: 503, body: {} }).api.disagree(REF, COMMAND, REV)).resolves.toEqual({ kind: 'FAILED' });
+    await expect(client({ status: 200, body: { underReview: true, revision: REV_2, score: 1 } }).api.disagree(REF, COMMAND, REV)).resolves.toEqual({ kind: 'FAILED' });
+    const refused = client({ status: 200 });
+    await expect(refused.api.disagree(REF, 'not-a-command', REV)).resolves.toEqual({ kind: 'GONE' });
+    expect(refused.requests).toEqual([]);
   });
 
   it('talk sends the revision seen and nothing else; the answer is typed, never interpreted', async () => {

@@ -87,7 +87,7 @@ export function isUnderstandingToken(value: unknown): value is string {
 // widened upstream object, a numeric field, an internal identifier or an added reasoning field fails closed instead
 // of reaching the client.
 
-const SUMMARY_KEYS = ['confidence', 'ref', 'revision', 'summary', 'theme'];
+const SUMMARY_KEYS = ['confidence', 'ref', 'revision', 'summary', 'theme', 'underReview'];
 const DETAIL_KEYS = [...SUMMARY_KEYS, 'alternatives', 'contradictions', 'evidence', 'evolution', 'unresolved'].sort();
 const MAX_TEXT = 2000;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
@@ -110,7 +110,10 @@ function textList(value: unknown, max: number): boolean {
 function auditSummaryFields(value: Record<string, unknown>): void {
   if (!isUnderstandingToken(value.ref) || !isUnderstandingToken(value.revision) ||
     !(UNDERSTANDING_THEMES as readonly unknown[]).includes(value.theme) ||
-    !(UNDERSTANDING_CONFIDENCE_STATES as readonly unknown[]).includes(value.confidence) || !text(value.summary)) reject();
+    !(UNDERSTANDING_CONFIDENCE_STATES as readonly unknown[]).includes(value.confidence) || !text(value.summary) ||
+    typeof value.underReview !== 'boolean') reject();
+  // An item under review is never presented as anything but Mixed (P1 §11.4; P4-C3R `confMixed`).
+  if (value.underReview === true && value.confidence !== 'MIXED') reject();
 }
 
 export function auditUnderstandingList(value: unknown): void {

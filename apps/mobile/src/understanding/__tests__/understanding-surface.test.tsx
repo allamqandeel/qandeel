@@ -5,7 +5,7 @@
  * The appearance is the REAL authority; the Understanding controller is the REAL controller over a scripted transport
  * that answers exactly what the server projection would.
  */
-import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { act, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
 import { BackHandler, StyleSheet } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
@@ -13,6 +13,7 @@ import type { ChromeLanguage } from '../../orientation-chrome';
 import type {
   UnderstandingDetailOutcome,
   UnderstandingDetailView,
+  UnderstandingDisagreementOutcome,
   UnderstandingDiscussionOutcome,
   UnderstandingItemView,
   UnderstandingListOutcome,
@@ -33,7 +34,7 @@ const REV_1 = 'rrrrrrrrrrrrrrrrrrrrr1';
 const REV_2 = 'rrrrrrrrrrrrrrrrrrrrr2';
 
 const item = (ref: string, overrides: Partial<UnderstandingItemView> = {}): UnderstandingItemView => ({
-  ref, revision: REV_1, theme: 'WORK', summary: 'You prepare well before big deadlines.', confidence: 'TAKING_SHAPE', ...overrides,
+  ref, revision: REV_1, theme: 'WORK', summary: 'You prepare well before big deadlines.', confidence: 'TAKING_SHAPE', underReview: false, ...overrides,
 });
 const detailOf = (base: UnderstandingItemView, overrides: Partial<UnderstandingDetailView> = {}): UnderstandingDetailView => ({
   ...base, evidence: ['I plan my week on Sunday.'], contradictions: [], alternatives: ['You prepare early only for others.'],
@@ -46,8 +47,11 @@ function server(initial: { list?: UnderstandingListOutcome; detail?: Understandi
   const discussions: { ref: string; revision: string }[] = [];
   const closes: string[] = [];
   const answers: UnderstandingDiscussionOutcome[] = [];
+  const disagreements: { ref: string; commandId: string; revision: string }[] = [];
+  const verdicts: UnderstandingDisagreementOutcome[] = [];
   return {
-    discussions, closes,
+    discussions, closes, disagreements,
+    verdict(value: UnderstandingDisagreementOutcome) { verdicts.push(value); },
     setList(value: UnderstandingListOutcome) { list = value; },
     setDetail(value: UnderstandingDetailOutcome) { detail = value; },
     answer(value: UnderstandingDiscussionOutcome) { answers.push(value); },
@@ -61,6 +65,10 @@ function server(initial: { list?: UnderstandingListOutcome; detail?: Understandi
       closeDiscussion: async (ref: string) => {
         closes.push(ref);
         return true;
+      },
+      disagree: async (ref: string, commandId: string, revision: string) => {
+        disagreements.push({ ref, commandId, revision });
+        return verdicts.shift() ?? { kind: 'UNDER_REVIEW' as const, revision: REV_2 };
       },
     },
   };
@@ -220,6 +228,64 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL Understanding', (language) 
     await press(view, 'qandeel-understanding-talk');
     expect(fake.discussions.at(-1)).toEqual({ ref: REF_A, revision: REV_2 });
     expect(onTalk).toHaveBeenCalledTimes(1);
+  });
+
+  describe('U3 — I see it differently (explicit disagreement → Contested / Under Review)', () => {
+    async function discussing(fake = server()) {
+      const world = await surface(language, fake);
+      await press(world.view, `qandeel-understanding-item-${REF_A}`);
+      await press(world.view, 'qandeel-understanding-talk');
+      return world;
+    }
+
+    it('is one intentional act on the discussed item, bound to the revision shown, carrying no words; it then says so', async () => {
+      const { view, fake } = await discussing();
+      expect(view.getByTestId('qandeel-understanding-disagree').props.accessibilityLabel).toBe(copy.disagree);
+      await press(view, 'qandeel-understanding-disagree');
+      expect(fake.disagreements).toHaveLength(1);
+      expect(fake.disagreements[0]).toMatchObject({ ref: REF_A, revision: REV_1 });
+      expect(fake.disagreements[0].commandId).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u);
+      expect(view.getByTestId('qandeel-understanding-disagreement-recorded').props.children).toBe(copy.disagreeRecorded);
+      // Recorded once: the act is gone, the context stays, the Conversation continues.
+      expect(view.queryByTestId('qandeel-understanding-disagree')).toBeNull();
+      expect(view.getByTestId('qandeel-understanding-discussion')).toBeTruthy();
+    });
+
+    it('a lost answer is retried as the SAME command, so the server records it at most once', async () => {
+      const fake = server();
+      fake.verdict({ kind: 'FAILED' });
+      const { view } = await discussing(fake);
+      await press(view, 'qandeel-understanding-disagree');
+      expect(view.getByTestId('qandeel-understanding-disagreement-failed').props.children).toBe(copy.disagreeFailed);
+      await press(view, 'qandeel-understanding-disagree');
+      expect(fake.disagreements).toHaveLength(2);
+      expect(fake.disagreements[1].commandId).toBe(fake.disagreements[0].commandId);
+      expect(view.getByTestId('qandeel-understanding-disagreement-recorded')).toBeTruthy();
+    });
+
+    it('never applies the objection to an interpretation the reader did not see: nothing recorded, the current one shown', async () => {
+      const fake = server();
+      const { view } = await discussing(fake);
+      fake.verdict({ kind: 'CHANGED' });
+      fake.setDetail({ kind: 'READ', view: detailOf(item(REF_A, { revision: REV_2, summary: 'You prepare early when it matters to others.' })) });
+      await press(view, 'qandeel-understanding-disagree');
+      expect(view.queryByTestId('qandeel-understanding-disagreement-recorded')).toBeNull();
+      expect(within(view.getByTestId('qandeel-understanding-discussion')).getByText('You prepare early when it matters to others.')).toBeTruthy();
+      await press(view, 'qandeel-understanding-disagree');
+      expect(fake.disagreements.map((entry) => entry.revision)).toEqual([REV_1, REV_2]);
+      expect(fake.disagreements[1].commandId).not.toBe(fake.disagreements[0].commandId);
+    });
+
+    it('an item under review reads Mixed and under review, in words, in the list and in its detail', async () => {
+      const contested = item(REF_A, { confidence: 'MIXED', underReview: true });
+      const fake = server({ list: { kind: 'READ', items: [contested] }, detail: { kind: 'READ', view: detailOf(contested, { evolution: [{ kind: 'YOU_DISAGREED', at: '2026-09-30T10:00:00Z' }, { kind: 'FIRST_SEEN', at: '2026-09-28T10:00:00Z' }] }) } });
+      const { view } = await surface(language, fake);
+      expect(view.getByTestId(`qandeel-understanding-item-${REF_A}-under-review`).props.children).toBe(copy.underReview);
+      expect(view.getByTestId(`qandeel-understanding-item-${REF_A}`).props.accessibilityLabel).toContain(copy.confidenceName(copy.confidence.MIXED));
+      await press(view, `qandeel-understanding-item-${REF_A}`);
+      expect(view.getByTestId('qandeel-understanding-detail-under-review').props.children).toBe(copy.underReviewNote);
+      expect(words(view)).toContain(copy.evolutionKind.YOU_DISAGREED);
+    });
   });
 
   it('a talk that did not land says so in words and can be asked again', async () => {
