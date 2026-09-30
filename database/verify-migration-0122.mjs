@@ -155,11 +155,34 @@ async function verifyPosture() {
   assert.equal(holder, 'introduction_disclosure_verifier_erasure_guard_v1',
     'the blanket refusal was REPLACED by the one-way guard, not removed');
 
-  // PRIVACY ERASURE IS NOT A COMMAND OF ITS OWN.
-  const [{ n: rpcs }] = await rows(
-    `SELECT count(*) n FROM pg_proc pr JOIN pg_namespace ns ON ns.oid = pr.pronamespace
-      WHERE ns.nspname = 'public' AND pr.proname ~ 'eras' AND pr.prorettype <> 'trigger'::regtype::oid`);
-  assert.equal(Number(rpcs), 0, 'there is no erasure RPC: the transition is reachable only through owner deletion');
+  // PRIVACY ERASURE OF A DISCLOSURE IS NOT A COMMAND OF ITS OWN.
+  // RE-ANCHORED by W3-MEGA-S R2 (validation only). This first counted EVERY non-trigger `public` function whose name
+  // contains "eras" - wider than 0122's authority, which is the Introduction disclosure alone, so the separately
+  // governed Personal-account erasure (0130, pinned by its own verifier) tripped it. It now proves exactly the
+  // disclosure's property, in every application schema:
+  //   (a) no erasure-named callable function - nor any function its body calls - names the disclosure at all, so no
+  //       erasure command can reach a verifier or payload outside owner deletion; and
+  //   (b) whatever its name, no callable function other than owner deletion writes the disclosure command relation.
+  const APP_SCHEMAS = `ns.nspname NOT IN ('pg_catalog', 'information_schema') AND ns.nspname !~ '^pg_'`;
+  const DISCLOSURE = /introduction_disclosure/iu;
+  const callable = await rows(
+    `SELECT ns.nspname schema, pr.proname name, pr.oid::regprocedure::text fn, pr.prosrc
+       FROM pg_proc pr JOIN pg_namespace ns ON ns.oid = pr.pronamespace
+      WHERE ${APP_SCHEMAS} AND pr.prokind = 'f' AND pr.prorettype <> 'trigger'::regtype::oid`);
+  const sourcesOf = (schema, name) => callable.filter((f) => f.schema === schema && f.name === name).map((f) => f.prosrc);
+  for (const eraser of callable.filter((f) => /eras/u.test(f.name))) {
+    const delegates = [...eraser.prosrc.matchAll(/\b([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)\s*\(/giu)]
+      .flatMap(([, schema, name]) => sourcesOf(schema.toLowerCase(), name.toLowerCase()));
+    for (const source of [eraser.prosrc, ...delegates]) {
+      assert.doesNotMatch(source, DISCLOSURE,
+        `${eraser.fn} is an erasure command that reaches the Introduction disclosure: its erasure is reachable only through owner deletion`);
+    }
+  }
+  const disclosureWriters = callable
+    .filter((f) => /\b(?:UPDATE|DELETE\s+FROM)\s+(?:public\.)?introduction_disclosure_commands\b/iu.test(f.prosrc))
+    .map((f) => `${f.schema}.${f.name}`).sort();
+  assert.deepEqual(disclosureWriters, ['public.delete_shared_world_owned_material_v1'],
+    'in every application schema, only owner deletion writes the disclosure command relation');
 
   // EXACTLY ONE FUNCTION ERASES A VERIFIER, and it is owner deletion.
   const erasers = await rows(

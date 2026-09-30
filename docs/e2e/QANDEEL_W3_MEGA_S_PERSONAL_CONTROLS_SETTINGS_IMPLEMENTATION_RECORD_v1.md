@@ -451,3 +451,36 @@ and API ↔ mobile correctness. Each finding was checked against the source befo
 
 No reviewer found a way to open the erasure boundary, an erasure or export across accounts, a logging leak, or an API ↔
 database or API ↔ app contract mismatch.
+
+## 17. R2 — the first CI round on Draft PR #296 (head `c7ea9af`)
+
+### 17.1 API CI — the initial failure was in the 0122 verifier, not in 0130
+`verify-api` failed at `database/verify-migration-0122.mjs` (QAN-CW-REM-03), scenario `P01 posture: signatures, ACLs, the
+guard and the absent erasure RPC` — 22 of its 23 scenarios passed. The failing assertion counted EVERY non-trigger
+function in `public` whose name contains `eras` and required zero: a repository-wide "no erasure RPC" ban, wider than
+0122's own authority (the Introduction disclosure alone). 0130's separately governed Personal-account erasure
+(`public.server_erase_personal_account_v1`, service role only, pinned by its own verifier) matched the name. Because the
+0122 verifier stopped the job, the later API CI steps — including the 0130 verifier — did not run on `c7ea9af`.
+
+Classification: **`VALIDATION / PROOF DEFECT — STALE CROSS-TASK ASSERTION`**. No production SQL changed (neither 0122 nor
+0130), no Introduction deletion semantics, no guard, no privilege.
+
+R2 re-anchored the assertion to the Introduction-disclosure scope only, in every application schema:
+- **(a)** no erasure-named callable function — nor any function its body calls — names the Introduction disclosure, so no
+  erasure command can reach a disclosure verifier or payload outside owner deletion; and
+- **(b)** whatever its name, no callable function other than `public.delete_shared_world_owned_material_v1` writes
+  (`UPDATE` / `DELETE`) the disclosure command relation. This widens the existing `public`-only "exactly one eraser"
+  check to every application schema.
+
+A disclosure-erasure bypass (for example a `server_erase_…` wrapper delegating to a private function that updates the
+disclosure) still fails both (a) and (b); a Personal-account erasure that never names the disclosure does not.
+
+### 17.2 Android — first failure
+`Android (API 36 emulator boot smoke)` failed on `c7ea9af` after the build producer passed, the APK installed and the
+emulator reported `sys.boot_completed=1`: `maestro test apps/mobile/.maestro/boot-smoke.yaml` failed after `Launch app …
+with clear state`, with ADB `device offline` instability in the boot log. No application code was changed for it. Per the
+workflow's own documented retry, the failed job is re-run once (consumer only, no rebuild); its classification is recorded
+in §17.3.
+
+### 17.3 Results after R2
+Recorded in the follow-up documentation commit (§17.4) once known. The E2E rows' closure state is unchanged by R2.
