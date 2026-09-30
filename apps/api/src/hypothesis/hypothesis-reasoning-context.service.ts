@@ -1,24 +1,37 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Optional } from '@nestjs/common';
 import { EvidenceService } from '../memory/evidence.service';
 import { ConfidenceRepository, MAX_BULK_CONFIDENCE_ROWS } from './confidence.repository';
 import { CONFIDENCE_MISSING_INFORMATION_CODES, CONFIDENCE_POLICY_VERSION, type ConfidenceEvaluationRecord } from './confidence.types';
 import { HypothesisService } from './hypothesis.service';
+import { DISCUSSION_FOCUS_WINDOW_MS, HypothesisUserSignalRepository, type HypothesisDiscussionFocusRow } from './hypothesis-user-signal.repository';
 import { HYPOTHESIS_DOMAINS, HYPOTHESIS_ORIGINS, HYPOTHESIS_STATUSES, HYPOTHESIS_TYPES, MAX_ACTIVE_HYPOTHESES, MAX_ASSUMPTIONS, MAX_DISCONFIRMING_CONDITIONS, MAX_EVIDENCE_LINKS_PER_ROLE, MAX_SCOPE_LENGTH, MAX_STATEMENT_LENGTH, MAX_STRUCTURED_TEXT_LENGTH, type HypothesisRecord } from './hypothesis.types';
 import { HYPOTHESIS_REASONING_CONTEXT_CONTRACT_VERSION, HypothesisReasoningInvariantError, MAX_HYPOTHESIS_CONTEXT_STRING_CHARS, MAX_MODEL_HYPOTHESES, type HypothesisReasoningContextResult, type HypothesisReasoningItem } from './hypothesis-reasoning-context.types';
 
 @Injectable()
 export class HypothesisReasoningContextService {
-  constructor(private readonly hypotheses: HypothesisService, private readonly evidence: EvidenceService, private readonly confidence: ConfidenceRepository) {}
+  constructor(
+    private readonly hypotheses: HypothesisService, private readonly evidence: EvidenceService, private readonly confidence: ConfidenceRepository,
+    // W3-MEGA-U: the reader's own explicit Understanding signals. Absent only where a caller composes the service
+    // without the Hypothesis module (unit tests); the module always provides it.
+    @Optional() private readonly signals?: HypothesisUserSignalRepository,
+  ) {}
 
   async build(userId: string, token: string): Promise<HypothesisReasoningContextResult> {
     const candidates = await this.hypotheses.listActiveForUser(userId, token);
     if (!Array.isArray(candidates) || candidates.length > MAX_ACTIVE_HYPOTHESES) this.reject();
     if (candidates.length === 0) return { coverageState: 'EMPTY', candidateHypothesisCount: 0 };
     candidates.forEach((value) => this.validateHypothesis(value, userId));
-    const [eligibleEvidence, evaluations] = await Promise.all([
+    const [eligibleEvidence, evaluations, focus] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
       this.confidence.listExactVersionsForTargets(token, userId, candidates.map(({ id, version }) => ({ id, version }))),
+      this.signals ? this.signals.readOpenDiscussionFocus(token, userId) : Promise.resolve(null),
     ]);
+    // W3-MEGA-U U2: the ONE item the reader explicitly chose, from QANDEEL Understanding, to talk about — while its
+    // focus is open and recent — is marked and offered first. It is the reader's own act, not a relevance ranking;
+    // every other item keeps the repository order.
+    const discussedId = this.discussedHypothesisId(focus, candidates);
+    const ordered = discussedId === null ? candidates
+      : [...candidates.filter(({ id }) => id === discussedId), ...candidates.filter(({ id }) => id !== discussedId)];
     const eligibleIds = new Set(eligibleEvidence.map(({ evidenceId }) => evidenceId));
     if (!Array.isArray(evaluations) || evaluations.length >= MAX_BULK_CONFIDENCE_ROWS) this.reject();
     const evaluationsByTarget = new Map<string, ConfidenceEvaluationRecord>();
@@ -30,7 +43,7 @@ export class HypothesisReasoningContextService {
     }
     const included: HypothesisReasoningItem[] = [];
     let chars = 0;
-    for (const candidate of candidates) {
+    for (const candidate of ordered) {
       if (included.length === MAX_MODEL_HYPOTHESES) break;
       this.validateLinks(candidate);
       const evaluation = evaluationsByTarget.get(candidate.id);
@@ -45,6 +58,7 @@ export class HypothesisReasoningContextService {
           numericScore: null, confidenceBand: null, calibrationState: 'UNCALIBRATED', stability: 'UNASSESSED',
           missingInformationCodes: [...evaluation.missing_information_codes], policyVersion: evaluation.policy_version,
         } : { state: 'NOT_EVALUATED_FOR_CURRENT_VERSION', targetVersion: candidate.version },
+        ...(candidate.id === discussedId ? { userDiscussion: 'OPENED_FROM_UNDERSTANDING' as const } : {}),
       };
       const itemChars = stringCharacterCount(item);
       if (chars + itemChars > MAX_HYPOTHESIS_CONTEXT_STRING_CHARS) break;
@@ -79,6 +93,13 @@ export class HypothesisReasoningContextService {
       !validStringList(value.assumptions, MAX_ASSUMPTIONS, MAX_STRUCTURED_TEXT_LENGTH) || !validIds(value.alternative_hypothesis_ids, 16) ||
       !Array.isArray(value.missing_information_codes) || new Set(value.missing_information_codes).size !== value.missing_information_codes.length ||
       value.missing_information_codes.some((code) => !CONFIDENCE_MISSING_INFORMATION_CODES.includes(code))) this.reject();
+  }
+  private discussedHypothesisId(focus: HypothesisDiscussionFocusRow | null, candidates: readonly HypothesisRecord[]): string | null {
+    if (focus === null) return null;
+    const openedAt = typeof focus.opened_at === 'string' ? Date.parse(focus.opened_at) : Number.NaN;
+    if (typeof focus.hypothesis_id !== 'string' || !Number.isFinite(openedAt)) this.reject();
+    if (Date.now() - openedAt > DISCUSSION_FOCUS_WINDOW_MS) return null;
+    return candidates.some(({ id }) => id === focus.hypothesis_id) ? focus.hypothesis_id : null;
   }
   private reject(): never { throw new HypothesisReasoningInvariantError(); }
 }

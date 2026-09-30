@@ -734,6 +734,12 @@ jobs:
       # UNAVAILABLE without an oracle, the grants, and two-connection races that cannot both win.
       - name: Verify the W3-02 account Public ID and its one lifetime change against real PostgreSQL
         run: npm run verify:account-public-id:integration
+      # W3-MEGA-U U2 records the reader's explicit "talk to QANDEEL about this" choice as one owner-only discussion
+      # focus. This verifier proves the owner-scoped table, the private DEFINER / public INVOKER boundary, exact-version
+      # opening (STALE writes nothing), NOT_FOUND for another reader's or a withdrawn item, one focus per reader, and
+      # a close that can never close a newer focus.
+      - name: Verify the W3-MEGA-U Understanding discussion focus against real PostgreSQL
+        run: npm run verify:understanding-discussion:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

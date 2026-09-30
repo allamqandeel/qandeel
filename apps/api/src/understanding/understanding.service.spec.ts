@@ -149,6 +149,52 @@ describe('UnderstandingService', () => {
     expect(JSON.stringify(view)).not.toContain('SESSION:');
   });
 
+  describe('U2 — talk to QANDEEL about this (discussion focus)', () => {
+    beforeEach(() => {
+      repository.openDiscussion = jest.fn().mockResolvedValue('OPENED');
+      repository.closeDiscussion = jest.fn().mockResolvedValue('CLOSED');
+    });
+
+    it('records the caller’s choice of their own current item at the exact version they saw', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4 })]);
+      await expect(service.openDiscussion(USER, 'token', understandingItemRef(USER, H1), { revision: understandingRevision(USER, H1, 4) })).resolves.toBeUndefined();
+      expect(repository.openDiscussion).toHaveBeenCalledWith('token', H1, 4);
+    });
+
+    it('never records a choice against a newer interpretation than the one seen', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 5 })]);
+      await expect(service.openDiscussion(USER, 'token', understandingItemRef(USER, H1), { revision: understandingRevision(USER, H1, 4) }))
+        .rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      expect(repository.openDiscussion).not.toHaveBeenCalled();
+      // The database's own recheck under lock answers STALE when the item moved in between.
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4 })]);
+      (repository.openDiscussion as jest.Mock).mockResolvedValue('STALE');
+      await expect(service.openDiscussion(USER, 'token', understandingItemRef(USER, H1), { revision: understandingRevision(USER, H1, 4) }))
+        .rejects.toMatchObject({ status: 409 });
+    });
+
+    it('refuses another reader’s ref, a withdrawn item and any widened body', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1), hypothesis(H2, { status: 'REJECTED' })]);
+      const revision = understandingRevision(USER, H1, 2);
+      await expect(service.openDiscussion(USER, 'token', understandingItemRef(OTHER, H1), { revision })).rejects.toBeInstanceOf(NotFoundException);
+      await expect(service.openDiscussion(USER, 'token', understandingItemRef(USER, H2), { revision: understandingRevision(USER, H2, 2) })).rejects.toBeInstanceOf(NotFoundException);
+      for (const body of [{}, { revision, userId: OTHER }, { revision: 'x' }, null, [revision]]) {
+        await expect(service.openDiscussion(USER, 'token', understandingItemRef(USER, H1), body)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      expect(repository.openDiscussion).not.toHaveBeenCalled();
+    });
+
+    it('closes only the named item, idempotently, and fails closed on an unknown answer', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1)]);
+      await expect(service.closeDiscussion(USER, 'token', understandingItemRef(USER, H1))).resolves.toBeUndefined();
+      expect(repository.closeDiscussion).toHaveBeenCalledWith('token', H1);
+      await expect(service.closeDiscussion(USER, 'token', understandingItemRef(OTHER, H1))).resolves.toBeUndefined();
+      expect(repository.closeDiscussion).toHaveBeenCalledTimes(1);
+      (repository.closeDiscussion as jest.Mock).mockResolvedValue('SOMETHING');
+      await expect(service.closeDiscussion(USER, 'token', understandingItemRef(USER, H1))).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+  });
+
   it('sanitizes an upstream failure into one generic 503', async () => {
     hypotheses.listActiveForUser.mockRejectedValue(new Error('upstream secret detail'));
     await expect(service.list(USER, 'token', {})).rejects.toThrow('Understanding is unavailable.');

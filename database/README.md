@@ -3622,3 +3622,33 @@ rolled-back transaction it proves several things:
 then proves on committed rows, across two connections whose second attempt is shown to block, that two
 commands of one account cannot both win, that the same command twice is one change, and that two
 accounts racing for one Public ID leave exactly one holder; those fixtures are removed and checked gone.
+
+## W3-MEGA-U - QANDEEL Understanding discussion focus (migration 0126)
+
+`0126_understanding_discussion_focus_v1.sql` records the reader's explicit "talk to QANDEEL about this" choice
+(P1 §11.4) so QANDEEL knows which of their «فهم قنديل» / QANDEEL Understanding items they chose to talk about. It is
+additive and forward-only: the non-exposed schema `understanding_private`, one table
+`public.understanding_discussion_focus` and four functions.
+
+- **One focus per reader** (primary key `user_id`): which item, at which exact version, since when, and whether it
+  was closed. No text, no reasoning, no score. A composite foreign key `(hypothesis_id, user_id)` to the reader's own
+  Hypothesis row means it can never name another tenant's item.
+- **Owner-only.** RLS with one owner SELECT policy; no client role holds INSERT, UPDATE or DELETE.
+- **The W3-02 privilege rule.** The two commands, `open_understanding_discussion_v1(hypothesis, expected_version)`
+  and `close_understanding_discussion_v1(hypothesis)`, are SECURITY DEFINER in `understanding_private`; the two
+  `public` functions of the same names are SECURITY INVOKER pass-throughs. `authenticated` has USAGE on the schema
+  and EXECUTE on exactly those; `anon` and `service_role` nothing. The owner is `auth.uid()` only.
+- **Bounded answers, never a parsed error.** Open answers `OPENED`, `STALE` (the item changed since the reader saw
+  it; nothing written) or `NOT_FOUND` (not one of the caller's current `ACTIVE` / `SUPPORTED` / `MIXED` /
+  `WEAK` items); the item is locked `FOR SHARE` so its version cannot move in between. Close acts only while the
+  focus still names that item, so closing an old context never closes a newer one; it answers `CLOSED` or `NONE`.
+
+The provider-facing Hypothesis reasoning context reads the open focus with the caller's token and marks that one item
+for a bounded window (`DISCUSSION_FOCUS_WINDOW_MS`, 30 minutes).
+
+`database/verify-migration-0126.mjs` (`npm run verify:understanding-discussion:integration`, API CI) proves,
+in one rolled-back transaction: the catalog, RLS and grants, including that no Understanding DEFINER is in an exposed
+schema; `OPENED` at the exact version; `STALE` for any other version, writing nothing; `NOT_FOUND` for another
+reader's, a withdrawn and a missing item; one focus per reader, moved by a second open; a close that only closes the
+named item and is idempotent; that another reader sees and closes nothing; and that direct writes, `anon` and an
+unauthenticated caller are refused.
