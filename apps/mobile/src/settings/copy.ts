@@ -26,9 +26,27 @@
  *
  * Nothing else is written: no progress words, no success sentence, no "used" error — the row itself shows
  * the canonical Public ID and `pidUsed` when the change is over.
+ *
+ * W3-MEGA-A adds the Name, Login ID and Email rows to Account & Identity and the Security & Sign-in group. Its words
+ * are COMPOSED from already-approved sources, never re-typed:
+ *
+ *   - «الأمان وتسجيل الدخول» / Security & Sign-in — the group name (P4-C4 §4 `gSecurity`);
+ *   - Current / New / Confirm change — `pidCurrent`, `pidNew`, `pidConfirm` (P4-C4 §5), reused for every change here;
+ *   - Name, Login ID, its persistent help, Email, Password, the empty / malformed / unavailable Login ID and empty
+ *     Name sentences, the invalid-Email sentence, the verification code, instruction, action, resend and the
+ *     incomplete-code sentence — W1B-01's own (`accountEntryCopy`);
+ *   - Change password, New password, Confirm new password, the mismatch, the password-rules sentence,
+ *     "Password changed." and the rejected-code sentence (N7) — W2-01's own (`accountAccessCopy`);
+ *   - T-14's network sentence, as above.
+ *
+ * FOUR pairs are new and are `PROPOSED — PO COPY GATE` (W3-MEGA-A record §7): the Email status «مؤكَّد» / Verified,
+ * the action «تسجيل الخروج من الأجهزة الأخرى» / Sign out from other devices (the English is the Product Owner's own
+ * row name, W3-PDG-01 §3), its result «تم تسجيل الخروج من الأجهزة الأخرى.» / Signed out from other devices., and the
+ * re-entered password's refusal «كلمة المرور غير صحيحة.» / The password is incorrect.
  */
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { AppearancePreference } from '../appearance';
+import { accountAccessCopy, accountEntryCopy } from '../account';
 
 export interface PublicIdCopy {
   readonly term: string;
@@ -45,18 +63,126 @@ export interface PublicIdCopy {
   readonly network: string;
 }
 
+/** W3-MEGA-A — the words of the Name, Login ID and Email rows and their changes. */
+export interface AccountIdentityCopy {
+  readonly nameTerm: string;
+  readonly loginIdTerm: string;
+  readonly loginIdHelp: string;
+  readonly emailTerm: string;
+  readonly emailVerified: string;
+  readonly current: string;
+  readonly next: string;
+  readonly confirm: string;
+  readonly password: string;
+  readonly emptyName: string;
+  readonly emptyLoginId: string;
+  readonly malformedLoginId: string;
+  readonly loginIdUnavailable: string;
+  readonly passwordIncorrect: string;
+  readonly invalidEmail: string;
+  readonly codeLabel: string;
+  readonly codeInstruction: (email: string) => string;
+  readonly verifyAction: string;
+  readonly resendAction: string;
+  readonly codeIncomplete: string;
+  readonly codeRejected: string;
+  readonly network: string;
+}
+
+/** W3-MEGA-A — the words of the Security & Sign-in group. */
+export interface SecurityCopy {
+  readonly group: string;
+  readonly changePassword: string;
+  readonly currentPassword: string;
+  readonly newPassword: string;
+  readonly confirmPassword: string;
+  readonly mismatch: string;
+  readonly policy: string;
+  readonly passwordChanged: string;
+  readonly signOutOthers: string;
+  readonly signedOutOthers: string;
+}
+
 export interface SettingsCopy {
   readonly title: string;
   readonly backName: string;
   readonly accountGroup: string;
   readonly publicId: PublicIdCopy;
+  readonly identity: AccountIdentityCopy;
+  readonly security: SecurityCopy;
   readonly appearanceGroup: string;
   readonly supportGroup: string;
   readonly appearance: Readonly<Record<AppearancePreference, string>>;
   readonly signOut: string;
 }
 
-const AR: SettingsCopy = Object.freeze({
+/** W3-MEGA-A — the four PROPOSED pairs (PO copy gate), and nothing else of its own. */
+const PROPOSED = Object.freeze({
+  ar: Object.freeze({
+    emailVerified: 'مؤكَّد',
+    signOutOthers: 'تسجيل الخروج من الأجهزة الأخرى',
+    signedOutOthers: 'تم تسجيل الخروج من الأجهزة الأخرى.',
+    passwordIncorrect: 'كلمة المرور غير صحيحة.',
+  }),
+  en: Object.freeze({
+    emailVerified: 'Verified',
+    signOutOthers: 'Sign out from other devices',
+    signedOutOthers: 'Signed out from other devices.',
+    passwordIncorrect: 'The password is incorrect.',
+  }),
+});
+
+/** Composed from the approved W1B-01, W2-01 and P4-C4 words; only the PROPOSED pairs are this module's own. */
+function identityCopy(language: ChromeLanguage, publicId: PublicIdCopy, network: string): AccountIdentityCopy {
+  const entry = accountEntryCopy(language);
+  const access = accountAccessCopy(language);
+  const proposed = PROPOSED[language === 'ar' ? 'ar' : 'en'];
+  return Object.freeze({
+    nameTerm: entry.nameLabel,
+    loginIdTerm: entry.loginIdLabel,
+    loginIdHelp: entry.loginIdHelp,
+    emailTerm: entry.emailLabel,
+    emailVerified: proposed.emailVerified,
+    current: publicId.current,
+    next: publicId.next,
+    confirm: publicId.confirm,
+    password: entry.passwordLabel,
+    emptyName: entry.emptyName,
+    emptyLoginId: entry.emptyLoginId,
+    malformedLoginId: entry.malformedLoginId,
+    loginIdUnavailable: entry.loginIdUnavailable,
+    passwordIncorrect: proposed.passwordIncorrect,
+    invalidEmail: entry.invalidEmail,
+    codeLabel: entry.codeLabel,
+    codeInstruction: entry.verifyInstruction,
+    verifyAction: entry.verifyAction,
+    resendAction: entry.resendAction,
+    codeIncomplete: entry.codeIncorrect,
+    // W2-01's N7: a rejected code (wrong, expired or never sent) — and the way on is a new one.
+    codeRejected: access.codeRejected,
+    network,
+  });
+}
+
+function securityCopy(language: ChromeLanguage, group: string): SecurityCopy {
+  const access = accountAccessCopy(language);
+  const entry = accountEntryCopy(language);
+  const proposed = PROPOSED[language === 'ar' ? 'ar' : 'en'];
+  return Object.freeze({
+    group,
+    changePassword: access.changePassword,
+    currentPassword: entry.passwordLabel,
+    newPassword: access.newPasswordLabel,
+    confirmPassword: access.confirmPasswordLabel,
+    mismatch: access.passwordMismatch,
+    policy: access.passwordRejected,
+    passwordChanged: access.passwordChanged,
+    signOutOthers: proposed.signOutOthers,
+    signedOutOthers: proposed.signedOutOthers,
+  });
+}
+
+const AR_BASE = Object.freeze({
   title: 'الإعدادات',
   backName: 'رجوع',
   accountGroup: 'الحساب والهوية',
@@ -80,7 +206,7 @@ const AR: SettingsCopy = Object.freeze({
   signOut: 'تسجيل الخروج',
 });
 
-const EN: SettingsCopy = Object.freeze({
+const EN_BASE = Object.freeze({
   title: 'Settings',
   backName: 'Back',
   accountGroup: 'Account & Identity',
@@ -102,6 +228,18 @@ const EN: SettingsCopy = Object.freeze({
   supportGroup: 'Support & About',
   appearance: Object.freeze({ DARK: 'Dark', LIGHT: 'Light', SYSTEM: 'System' }),
   signOut: 'Sign out',
+});
+
+const AR: SettingsCopy = Object.freeze({
+  ...AR_BASE,
+  identity: identityCopy('ar', AR_BASE.publicId, AR_BASE.publicId.network),
+  security: securityCopy('ar', 'الأمان وتسجيل الدخول'),
+});
+
+const EN: SettingsCopy = Object.freeze({
+  ...EN_BASE,
+  identity: identityCopy('en', EN_BASE.publicId, EN_BASE.publicId.network),
+  security: securityCopy('en', 'Security & Sign-in'),
 });
 
 /** The copy for one Product language. There is no default language. */

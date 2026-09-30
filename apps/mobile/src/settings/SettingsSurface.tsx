@@ -1,11 +1,11 @@
 /**
- * W3-01 (E2E-D-01 / D-10 / D-07) — the ONE General Settings destination, bounded to what W3-01 owns.
+ * W3-01 (E2E-D-01 / D-10 / D-07) — the ONE General Settings destination, bounded to what the implemented tasks own.
  *
  * P1 §8 / P4-C1 S-B: one application-wide destination, entered from Personal QANDEEL's own row. It is not a
  * route, a world, a Session or a canonical state: the Personal world shows it over itself and keeps
  * everything beneath it exactly as it was, so Back returns to the same place.
  *
- * It exposes only the two groups whose functions exist now, and draws no placeholder for any other group:
+ * It exposes only the groups whose functions exist now, and draws no placeholder for any other group:
  *
  *   - «المظهر وتسهيلات الاستخدام» / Appearance & Accessibility — Dark / Light / System (P1 §12), one choice of
  *     three. The selected one is told by E1R's selected treatment (the filled marker inside a selected-ink
@@ -16,11 +16,19 @@
  *
  * W3-02 (E2E-D-09) adds, first, the third real group:
  *
- *   - «الحساب والهوية» / Account & Identity — the reader's Public ID and its ONE lifetime manual change
- *     (P1 §6). It is drawn once the Public ID has been read, and it holds that one function and nothing
- *     else: no Name, photo, Login ID, Email, Shared ID or Security row, disabled or otherwise. The change
- *     is a state of THIS destination — not a route, a dialog or a world — and Back leaves the change, not
- *     Settings.
+ *   - «الحساب والهوية» / Account & Identity — the reader's Public ID and its ONE lifetime manual change (P1 §6).
+ *
+ * W3-MEGA-A (E2E-D-03 Name, D-04 Email, D-05 Login ID, D-06 Security & Sign-in) completes Account & Identity with
+ * the Name, Login ID and Email rows, and adds the fourth real group:
+ *
+ *   - «الأمان وتسجيل الدخول» / Security & Sign-in — Change password, Sign out from other devices, and the current
+ *     Email with its status as the recovery method (W3-PDG-01 §3). Nothing else: no Phone, 2FA, Passkeys, device
+ *     list or activity log, disabled or otherwise. No Account Photo and no Shared ID row exists (media storage is
+ *     not implemented; the Shared ID waits for W6).
+ *
+ * Every change is a STATE of this destination — not a route, a dialog or a world — and Back leaves the change, not
+ * Settings. A change in flight is never abandoned half-way. An Email change, or a password change the provider made
+ * on a fresh session, ends this device's session: the ONE sign-out below then returns the reader to Sign in.
  *
  * The final nine-group Settings hierarchy is NOT this surface (D-02 advances only).
  *
@@ -33,6 +41,8 @@ import { AccessibilityInfo, BackHandler, ScrollView, Text, View, findNodeHandle 
 import { APPEARANCE_PREFERENCES, AppearanceStatusBar, useAppearance, useAppearanceChoice, type AppearancePreference } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
+import { ActionRow, EmailChange, IdentityRow, LoginIdChange, NameChange, PasswordChange } from './AccountSecuritySection';
+import type { AccountIdentityController, AccountIdentityState } from './account-identity-controller';
 import { settingsCopy } from './copy';
 import type { PublicIdController, PublicIdState } from './public-id-controller';
 import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
@@ -46,11 +56,19 @@ export interface SettingsSurfaceProps {
   readonly onBack: () => void;
   /** The ONE sign-out: the frozen auth authority's own. */
   readonly onSignOut: () => Promise<unknown>;
-  /** W3-02: the reader's Public ID for this runtime generation. Without it, Account & Identity is not drawn. */
+  /** W3-MEGA-A: the reader's identity and security acts for this runtime generation. Without it, those rows are not drawn. */
+  readonly identity?: AccountIdentityController;
+  /** W3-02: the reader's Public ID for this runtime generation. Without it, the Public ID row is not drawn. */
   readonly publicId?: PublicIdController;
 }
 
+/** The change shown in place of the groups, if any. */
+type Change = 'PUBLIC_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD';
+/** Where the screen reader returns when a change closes. */
+type RowKey = Change;
+
 const NO_PUBLIC_ID: PublicIdState = Object.freeze({ status: 'LOADING', publicId: null, changeAvailable: false });
+const NO_IDENTITY: AccountIdentityState = Object.freeze({ status: 'LOADING', identity: null });
 const noSubscription = () => () => undefined;
 
 /** The Public ID state of the generation's controller, or LOADING when there is none. */
@@ -58,6 +76,14 @@ function usePublicIdState(controller: PublicIdController | undefined): PublicIdS
   return useSyncExternalStore(
     controller === undefined ? noSubscription : controller.subscribe,
     controller === undefined ? () => NO_PUBLIC_ID : controller.getState,
+  );
+}
+
+/** The identity state of the generation's controller, or LOADING when there is none. */
+function useIdentityState(controller: AccountIdentityController | undefined): AccountIdentityState {
+  return useSyncExternalStore(
+    controller === undefined ? noSubscription : controller.subscribe,
+    controller === undefined ? () => NO_IDENTITY : controller.getState,
   );
 }
 
@@ -134,7 +160,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, publicId }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -142,43 +168,53 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, publicId 
   const choose = useAppearanceChoice();
   const writing = language === 'ar' ? 'rtl' : 'ltr';
 
-  // W3-02 — the Public ID: read when Settings is shown, and changed only inside this destination.
+  // W3-02 / W3-MEGA-A — read when Settings is shown, and changed only inside this destination.
   const publicIdState = usePublicIdState(publicId);
+  const identityState = useIdentityState(identity);
+  const account = identityState.status === 'READY' ? identityState.identity : null;
   useEffect(() => {
     publicId?.start();
   }, [publicId]);
-  const [changingPublicId, setChangingPublicId] = useState(false);
+  useEffect(() => {
+    identity?.start();
+  }, [identity]);
+
+  const [changing, setChanging] = useState<Change | null>(null);
   const committingRef = useRef(false);
-  const [returnToRow, setReturnToRow] = useState(false);
-  const rowNode = useRef<View | null>(null);
-  const openChange = useCallback(() => {
-    setReturnToRow(false);
-    setChangingPublicId(true);
+  const [returnTo, setReturnTo] = useState<RowKey | null>(null);
+  const rowNodes = useRef<Partial<Record<RowKey, View | null>>>({});
+  const rowRef = useCallback((key: RowKey) => (node: View | null) => {
+    rowNodes.current[key] = node;
+  }, []);
+  const openChange = useCallback((change: Change) => {
+    setReturnTo(null);
+    setChanging(change);
   }, []);
   const leaveChange = useCallback(() => {
     // A commit in flight is never abandoned half-way: its answer decides what the reader sees next.
     if (committingRef.current) return;
-    setChangingPublicId(false);
-    setReturnToRow(true);
-  }, []);
+    setReturnTo(changing);
+    setChanging(null);
+  }, [changing]);
   const onCommitBusy = useCallback((busy: boolean) => {
     committingRef.current = busy;
   }, []);
-  // Android system Back while the change is shown leaves the change, and nothing else.
+  // Android system Back while a change is shown leaves the change, and nothing else.
   useEffect(() => {
-    if (!changingPublicId) return undefined;
+    if (changing === null) return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       leaveChange();
       return true;
     });
     return () => subscription.remove();
-  }, [changingPublicId, leaveChange]);
-  // Back from the change, the screen reader returns to the Public ID row.
+  }, [changing, leaveChange]);
+  // Back from a change, the screen reader returns to the row that opened it.
   useEffect(() => {
-    if (!returnToRow || changingPublicId || rowNode.current === null) return;
-    const node = findNodeHandle(rowNode.current);
+    if (returnTo === null || changing !== null) return;
+    const target = rowNodes.current[returnTo];
+    const node = target === null || target === undefined ? null : findNodeHandle(target);
     if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
-  }, [changingPublicId, returnToRow, publicIdState]);
+  }, [changing, returnTo, publicIdState, identityState]);
 
   // The screen reader arrives on the destination's name, once, when the surface is drawn.
   const titleRef = useRef<Text | null>(null);
@@ -188,7 +224,9 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, publicId 
     if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
   }, [ready]);
 
-  // One sign-out. The ref refuses a second press in the same frame, before the busy state has rendered.
+  // One sign-out. The ref refuses a second press in the same frame, before the busy state has rendered. It is also
+  // how an Email change, or a password change made on a fresh session, returns the reader to Sign in: the
+  // provider has already ended this device's session, and this ends it here.
   const signingOutRef = useRef(false);
   const [signingOut, setSigningOut] = useState(false);
   const signOut = useCallback(() => {
@@ -199,11 +237,70 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, publicId 
     void onSignOut();
   }, [onSignOut]);
 
+  // Security & Sign-in results, told beneath their own row in a polite region.
+  const [passwordNotice, setPasswordNotice] = useState<string | null>(null);
+  const [othersNotice, setOthersNotice] = useState<string | null>(null);
+  const [signingOutOthers, setSigningOutOthers] = useState(false);
+  const othersRef = useRef(false);
+  const signOutOthers = useCallback(async () => {
+    if (identity === undefined || othersRef.current) return;
+    othersRef.current = true;
+    setSigningOutOthers(true);
+    setOthersNotice(null);
+    const result = await identity.signOutOtherDevices();
+    othersRef.current = false;
+    setSigningOutOthers(false);
+    if (result === null) return;
+    const said = result === 'DONE' ? copy.security.signedOutOthers : copy.identity.network;
+    setOthersNotice(said);
+    AccessibilityInfo.announceForAccessibility(said);
+  }, [copy, identity]);
+  const passwordChanged = useCallback(() => {
+    setPasswordNotice(copy.security.passwordChanged);
+    AccessibilityInfo.announceForAccessibility(copy.security.passwordChanged);
+    leaveChange();
+  }, [copy, leaveChange]);
+
   const onChoose = useCallback((preference: AppearancePreference) => {
     choose?.(preference);
   }, [choose]);
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={SETTINGS_SURFACE_TEST_ID} />;
+
+  const changeProps = { language, palette, onFinished: leaveChange, busyChanged: onCommitBusy } as const;
+  let change = null;
+  if (changing === 'PUBLIC_ID' && publicId !== undefined && publicIdState.publicId !== null) {
+    change = (
+      <PublicIdChangeSurface
+        controller={publicId}
+        currentPublicId={publicIdState.publicId}
+        copy={copy.publicId}
+        language={language}
+        palette={palette}
+        onFinished={leaveChange}
+        busyChanged={onCommitBusy}
+      />
+    );
+  } else if (identity !== undefined && account !== null) {
+    if (changing === 'NAME' && account.name !== null) change = <NameChange controller={identity} current={account.name} copy={copy.identity} {...changeProps} />;
+    if (changing === 'LOGIN_ID' && account.loginId !== null) change = <LoginIdChange controller={identity} current={account.loginId} copy={copy.identity} {...changeProps} />;
+    if (changing === 'EMAIL') change = <EmailChange controller={identity} current={account.email} copy={copy.identity} onChanged={signOut} {...changeProps} />;
+    if (changing === 'PASSWORD') {
+      change = (
+        <PasswordChange
+          controller={identity}
+          copy={copy.security}
+          network={copy.identity.network}
+          passwordIncorrect={copy.identity.passwordIncorrect}
+          onChanged={passwordChanged}
+          onSignedOut={signOut}
+          {...changeProps}
+        />
+      );
+    }
+  }
+
+  const publicIdReady = publicIdState.status === 'READY' && publicIdState.publicId !== null;
 
   return (
     <View
@@ -228,7 +325,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, publicId 
           palette={palette}
           language={language}
           accessibilityLabel={copy.backName}
-          onPress={changingPublicId ? leaveChange : onBack}
+          onPress={changing !== null ? leaveChange : onBack}
           testID="qandeel-settings-back"
           style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}
         >
@@ -251,31 +348,50 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, publicId 
         keyboardShouldPersistTaps="handled"
         contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingLeft: insets.left, paddingRight: insets.right }}
       >
-        {changingPublicId && publicId !== undefined && publicIdState.publicId !== null ? (
-          <PublicIdChangeSurface
-            controller={publicId}
-            currentPublicId={publicIdState.publicId}
-            copy={copy.publicId}
-            language={language}
-            palette={palette}
-            onFinished={leaveChange}
-            busyChanged={onCommitBusy}
-          />
-        ) : (
+        {change !== null ? change : (
           <>
-            {publicIdState.status === 'READY' && publicIdState.publicId !== null ? (
+            {publicIdReady || account !== null ? (
               <View testID="qandeel-settings-group-account">
                 <GroupHeading text={copy.accountGroup} language={language} palette={palette} testID="qandeel-settings-group-account-name" />
-                <PublicIdRow
-                  state={{ ...publicIdState, publicId: publicIdState.publicId }}
-                  copy={copy.publicId}
-                  language={language}
-                  palette={palette}
-                  onOpen={openChange}
-                  rowRef={(node) => {
-                    rowNode.current = node;
+                {account !== null && account.name !== null ? (
+                  <IdentityRow term={copy.identity.nameTerm} value={account.name} ltr={false} language={language} palette={palette}
+                    onOpen={() => openChange('NAME')} rowRef={rowRef('NAME')} testID="qandeel-name-row" />
+                ) : null}
+                {account !== null && account.loginId !== null ? (
+                  <IdentityRow term={copy.identity.loginIdTerm} value={account.loginId} ltr language={language} palette={palette}
+                    onOpen={() => openChange('LOGIN_ID')} rowRef={rowRef('LOGIN_ID')} testID="qandeel-login-id-row" />
+                ) : null}
+                {account !== null ? (
+                  <IdentityRow term={copy.identity.emailTerm} value={account.email} ltr language={language} palette={palette}
+                    onOpen={() => openChange('EMAIL')} rowRef={rowRef('EMAIL')} testID="qandeel-email-row" />
+                ) : null}
+                {publicIdReady && publicIdState.publicId !== null ? (
+                  <PublicIdRow
+                    state={{ ...publicIdState, publicId: publicIdState.publicId }}
+                    copy={copy.publicId}
+                    language={language}
+                    palette={palette}
+                    onOpen={() => openChange('PUBLIC_ID')}
+                    rowRef={rowRef('PUBLIC_ID')}
+                  />
+                ) : null}
+              </View>
+            ) : null}
+
+            {account !== null ? (
+              <View testID="qandeel-settings-group-security">
+                <GroupHeading text={copy.security.group} language={language} palette={palette} testID="qandeel-settings-group-security-name" />
+                <ActionRow label={copy.security.changePassword} notice={passwordNotice} busy={false} language={language} palette={palette}
+                  onPress={() => {
+                    setPasswordNotice(null);
+                    openChange('PASSWORD');
                   }}
-                />
+                  rowRef={rowRef('PASSWORD')} testID="qandeel-change-password" />
+                <ActionRow label={copy.security.signOutOthers} notice={othersNotice} busy={signingOutOthers} language={language} palette={palette}
+                  onPress={() => void signOutOthers()} testID="qandeel-sign-out-others" />
+                {/* The current Email and its status, as the recovery method (W3-PDG-01 §3). Read here, changed above. */}
+                <IdentityRow term={copy.identity.emailTerm} value={account.email} ltr status={account.emailVerified ? copy.identity.emailVerified : undefined}
+                  language={language} palette={palette} testID="qandeel-recovery-email" />
               </View>
             ) : null}
 

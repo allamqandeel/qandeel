@@ -111,10 +111,15 @@ async function verifyCatalog() {
   stage = 'catalog: the privileged boundary lives in a non-exposed schema';
   // Every W3-02 function, wherever it lives. Exactly two in the exposed `public` schema, both INVOKER; every
   // privileged one in `account_private`, which no Data API configuration in this database names.
+  //
+  // RE-ANCHORED by W3-MEGA-A (migration 0129), validation only. This list used to be EVERY function of
+  // `account_private`, which made any later account function — however correct — fail 0125's own proof. 0129 adds
+  // the Name and Login ID changes and the Shared ID format there, each pinned by its own verifier
+  // (verify-migration-0129.mjs). The permanent claim kept here is W3-02's: its Public-ID functions are exactly these.
   const fns = await rows(
     `SELECT n.nspname AS schema, p.proname, p.prosecdef, p.proconfig, pg_get_function_identity_arguments(p.oid) AS args
        FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-      WHERE n.nspname = 'account_private' OR (n.nspname = 'public' AND p.proname ~ 'public_id(_|$)') ORDER BY 1, 2`,
+      WHERE n.nspname IN ('account_private', 'public') AND p.proname ~ 'public_id(_|$)' ORDER BY 1, 2`,
   );
   const signature = fns.map((f) => `${f.schema}.${f.proname}(${f.args}) ${f.prosecdef ? 'DEFINER' : 'INVOKER'}`);
   assert.deepEqual(signature, [
@@ -141,12 +146,18 @@ async function verifyCatalog() {
     assert.equal(await can('authenticated', fn), true, `authenticated EXECUTE ${fn}`);
     for (const role of ['anon', 'public', 'service_role']) assert.equal(await can(role, fn), false, `${role} EXECUTE ${fn}`);
   }
-  // The whole private schema, not a list: exactly ONE function is executable by any client role, by
-  // `authenticated` only, because the INVOKER Product wrapper runs as it.
+  // The whole private schema, not a list: every client-executable function is named, by `authenticated` only,
+  // because each INVOKER Product wrapper runs as it. RE-ANCHORED by W3-MEGA-A (0129): the owner's Name and Login
+  // ID changes join the Public ID change; each is proven by verify-migration-0129.mjs. Still no broad grant, and
+  // nothing for `anon`, PUBLIC or the server channel.
   const executable = await rows(`SELECT r.rolname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     CROSS JOIN (SELECT 'anon' AS rolname UNION ALL SELECT 'authenticated' UNION ALL SELECT 'service_role' UNION ALL SELECT 'public') r
     WHERE n.nspname = 'account_private' AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2`);
-  assert.deepEqual(executable, [{ rolname: 'authenticated', proname: 'change_own_public_id_v1' }], 'no broad grant on the private schema');
+  assert.deepEqual(executable, [
+    { rolname: 'authenticated', proname: 'change_own_account_name_v1' },
+    { rolname: 'authenticated', proname: 'change_own_login_id_v1' },
+    { rolname: 'authenticated', proname: 'change_own_public_id_v1' },
+  ], 'no broad grant on the private schema');
   const schemaAccess = await rows(`SELECT r AS role, has_schema_privilege(r, 'account_private', 'USAGE') AS usage, has_schema_privilege(r, 'account_private', 'CREATE') AS "create"
     FROM unnest(ARRAY['anon', 'authenticated', 'service_role', 'public']) r ORDER BY r`);
   assert.deepEqual(schemaAccess, [
@@ -163,9 +174,11 @@ async function verifyCatalog() {
   assert.equal(anonRead, false, 'anon cannot read the account table');
   // No Public-ID lookup, search or availability function exists beside the two Product functions.
   // (The exact signature list above is also the proof: nothing else carries a Public-ID name in either schema.)
+  // RE-ANCHORED by W3-MEGA-A (0129): the owner's own Login ID CHANGE joins the named set. It is a command, not a
+  // lookup: it answers only the caller's own state, behind a recent password proof (verify-migration-0129.mjs).
   const oracles = await rows(`SELECT n.nspname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname NOT IN ('pg_catalog', 'information_schema', 'account_private') AND p.proname ~ '(public_id|login_id)(_|$)'
-      AND p.proname !~ '^(read_own_public_id_v1|change_own_public_id_v1|login_id_is_available_v1|resolve_login_id_sign_in_email_v1)$'`);
+      AND p.proname !~ '^(read_own_public_id_v1|change_own_public_id_v1|login_id_is_available_v1|resolve_login_id_sign_in_email_v1|change_own_login_id_v1)$'`);
   assert.deepEqual(oracles, [], 'no other Public-ID or Login-ID function (no lookup, no availability oracle)');
 }
 

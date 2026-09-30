@@ -754,6 +754,13 @@ jobs:
       # clarification binding, ownership, fail-closed refusals, and committed two-connection races (one successor, one effect).
       - name: Verify W3-MEGA-M conversational Memory control against real PostgreSQL
         run: npm run verify:conversational-memory-control:integration
+      # W3-MEGA-A completes the owner's account identity and gives the Shared ID its approved format in the backend only.
+      # This verifier proves the owner-only identity read and Name change; the Login ID change refused without a recent
+      # password proof and, with one, its cut-over (the old Login ID stops resolving), replay, conflict and bounded answers;
+      # the Shared ID normalizer, generator and server-generated regeneration through 0081's frozen epoch law; the privilege
+      # boundary; and committed two-connection races for one Login ID.
+      - name: Verify W3-MEGA-A account identity completion and the Shared ID format against real PostgreSQL
+        run: npm run verify:account-identity-completion-security:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

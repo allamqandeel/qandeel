@@ -103,21 +103,24 @@ test('Settings is not in the Analysis, and it is ONE destination with no extra r
 
 // Re-anchored by W3-02 (E2E-D-09): Account & Identity (`gAccount`) is now a REAL group with one function, the Public
 // ID. Every OTHER P4-C4 group name is still refused, and so is any placeholder; D-02 is still advanced, not closed.
-test('exactly the functional groups that exist (W3-01’s two, W3-02’s Account & Identity) — no placeholder, no other group name — so D-02 is advanced, not closed', () => {
+// Re-anchored by W3-MEGA-A (E2E-D-06): Security & Sign-in (`gSecurity`) is now a REAL group — Change password, Sign out
+// from other devices and the Email as recovery method (W3-PDG-01 §3). The permanent claims are kept: every group NOT
+// implemented (QANDEEL & Conversation, Privacy & Data, Plan & Usage) is still refused, as is any placeholder.
+test('exactly the functional groups that exist (W3-01’s two, W3-02’s Account & Identity, W3-MEGA-A’s Security & Sign-in) — no placeholder, no other group name — so D-02 is advanced, not closed', () => {
   const settings = code(read(SETTINGS));
   const copy = code(read(SETTINGS_COPY));
   // P4-C4 §4's other group names, exactly as the pinned registry carries them.
   const registry = readJson('docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/data/COPY_REGISTRY.json');
   const rows = Array.isArray(registry) ? registry : registry.rows ?? Object.values(registry).find(Array.isArray);
   const byKey = new Map(rows.map((row) => [row.k, row]));
-  for (const key of ['gAccount', 'gAppearance', 'gSupport']) {
+  for (const key of ['gAccount', 'gSecurity', 'gAppearance', 'gSupport']) {
     assert.ok(copy.includes(`'${byKey.get(key).ar}'`) && copy.includes(`'${byKey.get(key).en}'`), `${key} is the approved text`);
   }
-  const others = ['gSecurity', 'gQandeel', 'gPrivacy', 'gPlan'].flatMap((key) => [byKey.get(key).ar, byKey.get(key).en]);
-  assert.equal(others.length, 8);
+  const others = ['gQandeel', 'gPrivacy', 'gPlan'].flatMap((key) => [byKey.get(key).ar, byKey.get(key).en]);
+  assert.equal(others.length, 6);
   const noOtherGroup = (text) => others.every((name) => !text.includes(name)) && !/coming soon|قريبًا|placeholder|disabled: true/iu.test(text);
-  guards('no-other-group-or-placeholder', settings + copy, noOtherGroup, `const later = '${byKey.get('gSecurity').ar}';`);
-  assert.equal((settings.match(/<GroupHeading\b/gu) ?? []).length, 3, 'three group headings: Account & Identity, Appearance & Accessibility, Support & About');
+  guards('no-other-group-or-placeholder', settings + copy, noOtherGroup, `const later = '${byKey.get('gPrivacy').ar}';`);
+  assert.equal((settings.match(/<GroupHeading\b/gu) ?? []).length, 4, 'four group headings: Account & Identity, Security & Sign-in, Appearance & Accessibility, Support & About');
   // The record must not claim the nine-group hierarchy closed.
   const record = read(RECORD);
   const overClaimsD02 = (text) => /E2E-D-02[^\n]*\b(CLOSED|COMPLETE)\b(?! — NOT)/u.test(text.replace(/NOT (?:CLOSED|COMPLETE)/gu, ''));

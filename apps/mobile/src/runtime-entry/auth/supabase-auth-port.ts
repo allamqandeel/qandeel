@@ -582,6 +582,11 @@ export function createSupabaseAuthPort({ config, storage, fetch: restFetch }: Su
         if (code === 'weak_password' || code === 'same_password') return { ok: false, failure: { kind: 'WEAK_PASSWORD', detail: code } };
         return { ok: false, failure: { kind: 'UNEXPECTED', detail: `password update answered ${answer.status}` } };
       }
+      // W3-MEGA-A (W3-PDG-01 §3) — recovering the password ends ALL the account's other sessions. The provider
+      // already ends every session but the recovery one as the password changes (`UpdatePassword` →
+      // `LogoutAllExceptMe`); this makes it explicit and ends the recovery session with them. The reader still ends
+      // signed out, exactly as W2-01 froze it.
+      await authRest('/logout?scope=global', 'POST', grant.accessToken);
       // The password is changed. The recovery authority has done its one job and is retired now; a failed
       // retirement changes nothing the reader sees — the grant was never persisted and is dropped here.
       await retireGrant(grant);
