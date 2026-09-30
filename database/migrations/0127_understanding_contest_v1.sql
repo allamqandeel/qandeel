@@ -29,7 +29,7 @@
 -- exactly that id — it is the evaluation row's primary key — so a lost answer, a replay, a repair and two simultaneous
 -- requests all converge on one row. Confidence history is otherwise unchanged: no uniqueness is added to
 -- `confidence_evaluations`, which stays an immutable history that may hold other evaluations of the same version.
--- The id is internal server data; it never reaches the client.
+-- The id is not part of the API's Product answer and the mobile client never handles it (owner-only under RLS).
 --
 -- ## The privilege boundary (the W3-02 rule)
 --

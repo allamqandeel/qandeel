@@ -416,8 +416,16 @@ Corrected on this PR (migration `0127` edited in place — it is unmerged):
   calls `evaluateHypothesisVersion` or pre-reads by (target, version).
 - **Failure semantics unchanged.** A Confidence failure never undoes the contest, restores reliance or clears Under
   Review; the next replay or `ALREADY_UNDER_REVIEW` repair ensures under the same id.
-- **Nothing reaches mobile.** The answer is still exactly `{ underReview: true, revision }`; the mobile client sends only
-  `{ commandId, revision }`.
+- **Not in the Product answer.** The API answer is still exactly `{ underReview: true, revision }`, and the mobile client
+  sends only `{ commandId, revision }` and never handles the id. (Precisely: the id is the owner's own data — like the
+  item ids already in these tables, the owner's token can read it through the Data API under RLS; no other reader can.)
+- **Exactly once per contest, not per version (R2.1 precision).** The contest-owned row is ensured even when the
+  re-evaluated version already has an evaluation from another source (an item that was already `MIXED`): that is one
+  more canonical, identical-content history row, never a second one for the same contest. The pre-R2 wording "at most
+  once per version" is superseded by this.
+- **Integrity refusal is terminal for that contest.** A row under the contest's id that is not this exact evaluation
+  (reachable only by the owner deliberately creating one through the Data API) makes every later ensure refuse; the
+  contest then stays Mixed / under review with no exact-version Confidence record, which is the conservative state.
 
 Proof:
 
@@ -426,7 +434,8 @@ Proof:
   ALREADY_UNDER_REVIEW paths and both sides of both command races; the trigger refusing a changed identity.
   *Case C:* two connections, BOTH having read no row under the contest's id, create under it at once — the second is
   shown to block, fails on the primary key (`23505`), re-reads the same id and finds the winner's row: exactly **1**
-  row under the id and exactly **1** `QANDEEL_CONFIDENCE_RUNTIME` evaluation of that target version, uncalibrated with null
+  row under the id and (in that fixture, where no other source evaluated it) exactly **1** `QANDEEL_CONFIDENCE_RUNTIME` evaluation of that
+  target version, uncalibrated with null
   score and band. *Case A:* replay and a second command answer the same id; still 1 row. *Case B:* a create rolled back
   (no row), then a retry under the same id → 1 row. A further evaluation under a different id is still accepted
   (history semantics unchanged).

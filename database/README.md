@@ -3679,8 +3679,9 @@ it. It is additive and forward-only: one table, one partial unique index, one fa
 once by the database when the contest is recorded. The API then ENSURES the Confidence Runtime's canonical evaluation
 (`create_confidence_evaluation`, 0006 / 0028) of the exact re-evaluated version under exactly that id — the
 evaluation's primary key — so a lost answer, a replay, a repair and simultaneous requests converge on ONE row. No
-(target, version) uniqueness is added to `confidence_evaluations`, which remains an immutable history. The id never
-leaves the server. A contest stays `UNDER_REVIEW`: no Product authority defines its resolution yet.
+(target, version) uniqueness is added to `confidence_evaluations`, which remains an immutable history: the contest's row
+is ensured even when that version was already evaluated by another source. The id is not part of the API's answer and
+the mobile client never handles it (it is the owner's own data under RLS). A contest stays `UNDER_REVIEW`: no Product authority defines its resolution yet.
 
 `database/verify-migration-0127.mjs` (`npm run verify:understanding-contest:integration`, API CI) proves the catalog and
 grants (no Understanding DEFINER in an exposed schema); every outcome, including the audited transition, the untouched
