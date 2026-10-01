@@ -50,6 +50,19 @@ const createOwnedTurn = async (owner, session, content, idempotencyKey = null) =
   await identity('postgres');
   return id;
 };
+// RE-ANCHORED by PROD-SEC-02 (migration 0131): turn admission is bounded. A session admits a new turn only while
+// none of its turns is still in flight, and a user holds at most two. This verifier runs inside one transaction, so
+// a scenario's finished but non-terminal fixture turn would stay "in flight" for the rest of the run. Once a
+// scenario has made its last assertion about such a turn, and before the next turn is admitted to the same
+// conversation head, the owner closes it through its own canonical cancel command. Nothing this verifier proves
+// about migration 0039 changes.
+async function settleConversationHead(owner, session) {
+  await identity('postgres');
+  const open = await rows("SELECT id FROM public.conversation_turns WHERE user_id=$1 AND session_id=$2 AND role='USER' AND status IN ('RECEIVED','GENERATING')", [owner, session]);
+  await identity('authenticated', owner);
+  for (const { id } of open) await rows('SELECT * FROM cancel_conversation_turn($1,$2,$3,$4,$5,$6)', [session, owner, id, randomUUID(), null, null]);
+  await identity('postgres');
+}
 const expireLease = (turn) => q("UPDATE public.conversation_turns SET generation_claimed_at=now()-interval '10 minutes', generation_lease_expires_at=now()-interval '8 minutes' WHERE id=$1", [turn]);
 
 async function verifyStaticAuthority() {
@@ -207,6 +220,7 @@ async function verifyTerminalAndForeignNoOps(owner, other, session, otherSession
   assert.equal((await recover(session, owner, received)).length, 0, 'a RECEIVED turn cannot be recovered');
   await identity('postgres');
   assert.equal((await rows('SELECT status FROM public.conversation_turns WHERE id=$1', [received]))[0].status, 'RECEIVED');
+  await settleConversationHead(owner, session);
 
   // COMPLETED cannot be recovered as stale generation.
   const completed = await createOwnedTurn(owner, session, 'to complete');
@@ -365,6 +379,7 @@ async function main() {
       await verifyIdempotentRecoveryAndLateTerminalSafety(owner, session, turn);
       await verifyTerminalAndForeignNoOps(owner, other, session, otherSession);
       await verifyLegacyNullLeaseFallback(owner, session);
+      await settleConversationHead(owner, session);
       await verifyRuntimeAcl(owner, session);
       await identity('postgres');
     } finally { await q('ROLLBACK'); }

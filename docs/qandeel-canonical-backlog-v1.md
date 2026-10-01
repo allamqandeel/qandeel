@@ -159,6 +159,11 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-02` | API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04) | `PROD-SEC-01 — API Baseline Hardening` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-03` | Readiness Probe Cannot Pass Against the Current Supabase Project (PR01-S05) | `PROD-OPS-01 — Readiness Probe Correction` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-04` | Remote Auth Verification Cost and Capacity (PR01-A01 / A-03 / A-04) | `PROD-AUTH-01 — Auth Verification Path` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-05` | List / Fan-out Corrections and Unmeasured Payload / Semantic-Phase Sizes (PR01-D/M) | `PROD-DATA-01 — List/Fan-out Correction` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -573,6 +578,98 @@ This entry defines **no** animation technology, motion choreography, timing, Q r
 visual composition or implementation. Those belong to the named task and its own Task Contract. The entry records the
 obligation only (BG-07).
 
+### `QAN-BL-PROD-01` — Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02)
+
+- **Title / Finding:** one authenticated account could admit any number of cost-bearing conversation turns at once and
+  keep doing so: `create_user_conversation_turn` bounded nothing, `claim_conversation_turn` only stops two claimants of
+  the same turn, and every turn fans into several model-provider calls (reply, segmentation, focus, Thread continuity
+  and establishment), with no request deadline.
+- **Source:** `PROD-READINESS-01` review record §15 / §16 (`PR01-S02`, the review's only P0), Draft PR #298 at
+  `03685fd55257e1dea5b5eb2049dc0ac0a79b4aa2`, accepted by the Product Owner as the `PROD-SEC-02` corrective.
+- **Why deferred:** it is not deferred work but the active corrective. It is admitted here so the obligation never
+  survives only in a review record (BG-08), and it stays open until the corrective is implemented, validated and
+  accepted.
+- **Owner task:** `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound`
+- **Severity:** `HIGH`: unbounded provider spend and provider-quota exhaustion for every user, from one ordinary account.
+- **Reopen condition:** none needed; the owner task is active.
+- **Current truth:** implemented in Draft PR #299
+  ([implementation record](e2e/QANDEEL_PROD_SEC_02_TURN_ADMISSION_CONCURRENCY_COST_BOUND_IMPLEMENTATION_RECORD_v1.md)),
+  including the R2 correction that bounds replays and semantic retries over time with a durable per-user
+  work-start budget and proves the `PT429` → HTTP 429 refusal through live PostgREST; not merged. It becomes `CLOSED — TOMBSTONE` in the change that records the Product Owner's acceptance of that PR.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-PROD-02` — API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04)
+
+- **Title / Finding:** no application-layer rate limit on any route, and the unauthenticated
+  `/account/login-id-availability` and `/health/ready` are bounded by no layer (S-01). `trust proxy` is unset while
+  `request.ip` is forwarded to Supabase Auth as `Sb-Forwarded-For`, so behind a platform proxy the provider's per-IP
+  limits collapse into one shared bucket, and `trust proxy = true` would be spoofable (S-03). No header baseline, and
+  `X-Powered-By: Express` is sent (S-04).
+- **Source:** `PROD-READINESS-01` review record §3 / §15 / §16 (Draft PR #298, `03685fd`); S-03 is also the recorded W2-01
+  external gate ([W2-01 record](e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md) §7 item 4 and §11).
+- **Why deferred:** its exact trusted-proxy setting depends on the edge / hosting decision that the repository does not
+  yet hold (review §4), and it is a separate corrective from the per-account bound.
+- **Owner task:** `PROD-SEC-01 — API Baseline Hardening`
+- **Severity:** `HIGH`: required before any public production exposure.
+- **Reopen condition:** automatic when the Product Owner / Company records the edge and hosting decision, and in any
+  case before public production exposure.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-PROD-03` — Readiness Probe Cannot Pass Against the Current Supabase Project (PR01-S05)
+
+- **Title / Finding:** the database readiness probe sends `HEAD /rest/v1/` with the publishable key and treats any
+  non-2xx as unavailable. Supabase withdrew Data API root access for anon / publishable keys (11 March 2026), so the
+  probe received `401` in 20 of 20 measured requests and `/health/ready` always reports `503 not_ready`.
+- **Source:** `PROD-READINESS-01` review record §3.4 / §15 (Draft PR #298, `03685fd`; measurement run `36830247454`).
+- **Why deferred:** a separate, small operational corrective. No deployment admits traffic through this probe yet.
+- **Owner task:** `PROD-OPS-01 — Readiness Probe Correction`
+- **Severity:** `HIGH`: a load balancer configured as the health contract prescribes would never admit traffic.
+- **Reopen condition:** automatic before any deployment uses `/health/ready` for traffic admission.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-PROD-04` — Remote Auth Verification Cost and Capacity (PR01-A01 / A-03 / A-04)
+
+- **Title / Finding:** every guarded request makes one remote `GET /auth/v1/user` (measured p50 441 ms against 32 ms for a
+  Data API round trip), multiplied by the 5-second foreground poll. `/auth/v1/user` is fetched twice on the identity,
+  export, deletion and download routes. Supabase Auth capacity under that load is not established. Local ES256
+  verification alone was measured to accept a signed-out session's token, so it is excluded.
+- **Source:** `PROD-READINESS-01` review record §5–§7 / §15 / §16 (Draft PR #298, `03685fd`).
+- **Why deferred:** it needs a Product Owner / security decision among the review's options O1–O3 before any change,
+  because it touches session-revocation semantics.
+- **Owner task:** `PROD-AUTH-01 — Auth Verification Path`
+- **Severity:** `MEDIUM`: latency and capacity, not correctness.
+- **Reopen condition:** the Product Owner's choice among O1–O3, or a measured capacity limit from the chosen deployment
+  region.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-PROD-05` — List / Fan-out Corrections and Unmeasured Payload / Semantic-Phase Sizes (PR01-D/M)
+
+- **Title / Finding:** the review's optimisations and measurements:
+  - **Server:** the O(T²/32) dossier-page completeness re-check; the duplicate memories reads per turn and on
+    disagreement.
+  - **Mobile:** the launch waterfall; the duplicate launch snapshot; the history re-read on every Analysis return;
+    retry without backoff (first-use, `loadOlder`); the idle poll on non-Live screens.
+  - **Not yet established, to be measured:** the semantic-phase provider-call count against CU count and Thread count;
+    the historical-projection payload; the export-package size; the projection failed-key / open-head stall risk.
+  - **Recorded by `PROD-SEC-02`:** its request deadline (default 90 s) stops a semantic walk that would need longer;
+    nothing is committed and the exchange stays retryable, but a walk that always needs longer than the deadline
+    cannot complete. Measuring that bound against real Thread counts belongs to the same measurement. This is a
+    completion / latency item only: the cost of retrying such a walk is already bounded by `PROD-SEC-02`'s durable
+    work-start budget, so no AI-cost path is deferred here.
+- **Source:** `PROD-READINESS-01` review record §9–§12 / §15 / §16 (Draft PR #298, `03685fd`); the deadline residual from
+  the
+  [`PROD-SEC-02` implementation record](e2e/QANDEEL_PROD_SEC_02_TURN_ADMISSION_CONCURRENCY_COST_BOUND_IMPLEMENTATION_RECORD_v1.md).
+- **Why deferred:** all P2 or not established. None is a defect of a frozen contract, and none may merge distinct truth
+  boundaries.
+- **Owner task:** `PROD-DATA-01 — List/Fan-out Correction`
+- **Severity:** `MEDIUM`
+- **Reopen condition:** the Product Owner opens `PROD-DATA-01`; or, for the semantic-phase deadline residual, any
+  measurement or production report of a semantic walk that does not complete within the `PROD-SEC-02` deadline.
+- **Status:** `DEFERRED — OWNED`
+
+These five entries add no Product semantics and authorize no implementation (BG-07). `QAN-BL-SEC-01` (mobile credential
+storage) is a different obligation and is neither duplicated nor re-owned here.
+
 ---
 
 ## 6. Tombstones
@@ -718,16 +815,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 3 |
+| `DEFERRED — OWNED` | 8 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 12 |
-| **Total** | **25** |
+| **Total** | **30** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 16 |
-| `MEDIUM` | 8 |
+| `HIGH` | 19 |
+| `MEDIUM` | 10 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -773,6 +870,18 @@ implementation (BG-07).
 `OPEN — UNASSIGNED`), the Connected Worlds account-deletion blocker, and adds a current-truth note to `QAN-BL-CW-01`
 without changing its fields. The register now holds **25** items: 3 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED`,
 12 `CLOSED — TOMBSTONE`, and 16 `HIGH`. This admission authorizes no implementation (BG-07).
+
+**PROD-READINESS-01 corrective admission (2026-10-01).** The Product Owner accepted the corrective roadmap of the
+`PROD-READINESS-01` review (Draft PR #298, `03685fd`). The first change after that decision, `PROD-SEC-02` (Draft
+PR #299), admits all five accepted findings in one step, so none survives only in the review record (BG-08):
+
+- `QAN-BL-PROD-01` (`HIGH`), owned by the active `PROD-SEC-02`;
+- documentation-only, exactly the scope of the review: `QAN-BL-PROD-02` (`HIGH`, `PROD-SEC-01`), `QAN-BL-PROD-03`
+  (`HIGH`, `PROD-OPS-01`), `QAN-BL-PROD-04` (`MEDIUM`, `PROD-AUTH-01`) and `QAN-BL-PROD-05` (`MEDIUM`, `PROD-DATA-01`).
+
+All five are `DEFERRED — OWNED`. The register now holds **30** items: 8 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED`,
+12 `CLOSED — TOMBSTONE`; 19 `HIGH`, 10 `MEDIUM`, 1 `LOW`. These admissions authorize no implementation beyond
+`PROD-SEC-02`'s own Task Contract (BG-07).
 
 ---
 

@@ -307,13 +307,21 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   // typed unavailability, under the same rule: the raw detail never leaves the server.
   // W3-02's account service reads it to recognise exactly one typed refusal,
   // PUBLIC_ID_COMMAND_CONFLICT, and answer a bounded 409, under the same rule.
+  // RE-ANCHORED by PROD-SEC-02 (migration 0131): the conversation service reads it to recognise exactly one typed
+  // refusal, PT429 TURN_ADMISSION_LIMITED, and answer the bounded 429, under the same rule.
   // The list stays exact: any further production reader fails here.)
-  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
   const account = stripComments(read('apps/api/src/account/account.service.ts'));
   assert.equal((account.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, 'the account service reads the identity once');
   assert.match(account, /identity\.databaseCode === '23505' && identity\.databaseMessage === 'PUBLIC_ID_COMMAND_CONFLICT'/u,
     'it recognises exactly the one typed command conflict');
   assert.doesNotMatch(account, /console\.|Logger|\$\{identity|identity\.database(Code|Message)\s*[,)}]/u,
+    'the raw identity is never logged, interpolated or returned');
+  const conversation = stripComments(read('apps/api/src/conversation/conversation.service.ts'));
+  assert.equal((conversation.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, 'the conversation service reads the identity once');
+  assert.match(conversation, /identity\.databaseCode === 'PT429' && identity\.databaseMessage === TURN_ADMISSION_LIMITED/u,
+    'it recognises exactly the one typed admission refusal');
+  assert.doesNotMatch(conversation, /console\.|Logger|\$\{identity|identity\.database(Code|Message)\s*[,)}]/u,
     'the raw identity is never logged, interpolated or returned');
 });
 

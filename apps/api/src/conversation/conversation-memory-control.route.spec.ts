@@ -285,7 +285,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       untouchable('CONTEXT_BUDGET'), untouchable('RECOMMENDATION'), untouchable('MODEL_ROUTER'), correlation, telemetry as never, memoryControl,
     );
     const semantic = { establish: (_user: string, result: unknown) => Promise.resolve(result) };
-    conversations = new ConversationService(repository, orchestrator, correlation, semantic as never);
+    conversations = new ConversationService(repository, orchestrator, correlation, semantic as never, { begin: jest.fn().mockResolvedValue({ outcome: 'GRANTED', leaseId: 'lease-route' }), end: jest.fn().mockResolvedValue(undefined) } as never);
     sessionA = store.session(A);
   });
 

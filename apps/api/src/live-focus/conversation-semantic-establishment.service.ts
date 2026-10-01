@@ -51,6 +51,7 @@
 import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConversationLiveDelivery, ConversationalUnitsCommittedWireEvent, LiveFocusTransitionWireEvent } from '@qandeel/runtime';
 import type { ConversationTurn, OrchestratedTurnResult } from '../conversation/conversation.types';
+import { enterForegroundTurnWork, ForegroundTurnDeadlineExceededError } from '../conversation/foreground-turn-work';
 import { ConversationUnitCommitmentService } from '../conversation-unit/conversation-unit-commitment.service';
 import type { CuSegmentationBinding, CuSegmentationBindingFactory } from '../conversation-unit/conversation-temporal-establishment.service';
 import { CommitmentRejectedError, type CommitConversationUnitsRequest, type CommittedConversationUnitEventRow } from '../conversation-unit/conversation-unit.types';
@@ -180,6 +181,9 @@ export class ConversationSemanticEstablishmentService {
       if (error instanceof ConversationSemanticIntegrityError || error instanceof ConversationSemanticUnavailableError) throw error;
       // The reused T-03B2b3 / T-03B3 mappers report their integrity failures in their own classes; they stay integrity.
       if (error instanceof ConversationThreadIntegrityError || error instanceof ConversationThreadLifecycleIntegrityError) throw error;
+      // PROD-SEC-02: the request's foreground deadline stopped the walk before a further provider call. Nothing
+      // was committed (the commit is one integrated write), so this is retryable, never a semantic answer.
+      if (error instanceof ForegroundTurnDeadlineExceededError) throw new ConversationSemanticUnavailableError('FOREGROUND_DEADLINE_EXHAUSTED', { cause: error });
       // A segmentation outage or rejection (T-03A1), a focus provider outage
       // or rejected focus proposal (T-03B1a), a Thread provider outage or
       // rejected promotion (T-03B2a), or a continuity provider outage or
@@ -209,6 +213,13 @@ export class ConversationSemanticEstablishmentService {
     const snapshots = await this.readSnapshots(userId, userTurn, assistantTurn, userBatchId, assistantBatchId);
     const replayed = this.canonicalDelivery(userTurn.session_id, snapshots);
     if (replayed) return replayed;
+
+    // PROD-SEC-02: an exchange that is not yet established is provider-bearing work, so it runs only under the
+    // exchange's database work lease (migration 0131). The request that generated the reply already holds it; a
+    // replay must take it, and never starts a second concurrent walk of the same exchange. A deferral changes no
+    // semantics: nothing was evaluated, the completed turns stay completed, and a later replay re-enters here.
+    const work = await enterForegroundTurnWork(userTurn.session_id, userTurn.id);
+    if (work === 'LIMITED' || work === 'IN_PROGRESS') throw new ConversationSemanticUnavailableError('FOREGROUND_WORK_DEFERRED');
 
     // D. One authoritative context, read outside any database lock.
     let context = await this.repository.readRuntimeContext({ sessionId: userTurn.session_id, userId });

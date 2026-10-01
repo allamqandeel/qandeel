@@ -234,6 +234,19 @@ async function verifyCancellation(owner, other, session) {
   assert.equal(again.length, 0);
 }
 
+// RE-ANCHORED by PROD-SEC-02 (migration 0131): turn admission is bounded. A session admits a new turn only while
+// none of its turns is still in flight, and a user holds at most two. This verifier runs inside one transaction, so
+// a scenario's finished but non-terminal fixture turn would stay "in flight" for the rest of the run. Before the
+// next scenario admits a turn to the same conversation head, the owner closes those finished fixture turns through
+// its own canonical cancel command. Nothing this verifier proves about migration 0025 changes.
+async function settleConversationHead(owner, session) {
+  await identity('postgres');
+  const open = await rows("SELECT id FROM public.conversation_turns WHERE user_id=$1 AND session_id=$2 AND role='USER' AND status IN ('RECEIVED','GENERATING')", [owner, session]);
+  await identity('authenticated', owner);
+  for (const { id } of open) await rows('SELECT * FROM cancel_conversation_turn($1,$2,$3,$4,$5,$6)', [session, owner, id, randomUUID(), null, null]);
+  await identity('postgres');
+}
+
 async function verifyTenantIsolation(owner, other, session, otherSession) {
   stage = 'tenant isolation';
   await identity('authenticated', owner);
@@ -263,7 +276,9 @@ async function main() {
     await verifyEffectiveAcls();
     await reproduceBaselineVulnerability(owner, session);
     await verifyDirectTableAttacksRejected(owner, session, received);
+    await settleConversationHead(owner, session);
     await verifyNarrowUserCreation(owner, other, session, otherSession);
+    await settleConversationHead(owner, session);
     await verifyServerOnlyLifecycle(owner, session);
     await verifyCancellation(owner, other, session);
     await verifyTenantIsolation(owner, other, session, otherSession);

@@ -3,6 +3,7 @@ import { Inject, Injectable, ServiceUnavailableException } from '@nestjs/common'
 import { MODEL_ROUTER, type ModelRouter, type ProcessingPath } from '../model-router/model-router.types';
 import { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn, OrchestratedTurnResult } from './conversation.types';
+import { enterForegroundTurnWork } from './foreground-turn-work';
 import { CONTEXT_BUILDER, type ContextBuilder } from './context-builder.types';
 import {
   BEHAVIORAL_RESPONSE_POLICY,
@@ -126,6 +127,17 @@ export class ConversationOrchestratorService {
     // explanatory execution metadata and never reach persistence, the provider,
     // or any semantic subsystem.
     const selection = decideFastDeepRoute(userTurn.content);
+    // PROD-SEC-02: provider-bearing generation starts only under this exchange's database work lease (migration
+    // 0131), taken BEFORE the claim so a RECEIVED turn admitted earlier - by a crashed request or a direct RPC
+    // caller - can never be generated beside the user's other live work. The turn is already committed, so a
+    // deferral never fails it: it stays RECEIVED, recoverable by a later replay, and the answer is retryable.
+    const work = await enterForegroundTurnWork(userTurn.session_id, userTurn.id);
+    if (work === 'LIMITED') throw new ServiceUnavailableException('Conversation turn work is temporarily deferred.');
+    if (work === 'IN_PROGRESS') {
+      // Another live request owns this exchange's work: this one reports canonical state and starts nothing.
+      const current = await this.repository.findTurn(accessToken, userTurn.session_id, userId, userTurn.id);
+      return this.currentResult(accessToken, userId, current ?? userTurn);
+    }
     const claimed = await this.repository.claimTurn(userTurn.session_id, userId, userTurn.id,
       { path: selection.path, reason: selection.reason });
     if (!claimed) {

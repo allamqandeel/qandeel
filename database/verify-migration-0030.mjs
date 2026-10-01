@@ -471,6 +471,19 @@ async function verifyTurnRegression(owner, session) {
   await rejected(() => q('SELECT create_user_conversation_turn($1,$2,$3,$4)', [randomUUID(), session, 'x', 'k'.repeat(129)]), ['22023']);
 }
 
+// RE-ANCHORED by PROD-SEC-02 (migration 0131): turn admission is bounded. A session admits a new turn only while
+// none of its turns is still in flight, and a user holds at most two. This verifier runs inside one transaction, so
+// a scenario's finished but non-terminal fixture turn would stay "in flight" for the rest of the run. Before the
+// next scenario admits a turn to the same conversation head, the owner closes those finished fixture turns through
+// its own canonical cancel command. Nothing this verifier proves about migration 0030 changes.
+async function settleConversationHead(owner, session) {
+  await identity('postgres');
+  const open = await rows("SELECT id FROM public.conversation_turns WHERE user_id=$1 AND session_id=$2 AND role='USER' AND status IN ('RECEIVED','GENERATING')", [owner, session]);
+  await identity('authenticated', owner);
+  for (const { id } of open) await rows('SELECT * FROM cancel_conversation_turn($1,$2,$3,$4,$5,$6)', [session, owner, id, randomUUID(), null, null]);
+  await identity('postgres');
+}
+
 async function verifyTurnAuthorityIntact(owner, session) {
   stage = 'migration 0025 turn authority regression';
   const fn = [
@@ -560,6 +573,7 @@ async function main() {
     await verifyNarrowSessionCreation(owner, other);
     await verifyAdmissionMatrix(owner, other, otherSession);
     await verifyTurnRegression(owner, session);
+    await settleConversationHead(owner, session);
     await verifyTurnAuthorityIntact(owner, session);
     await verifyBackgroundSessionRead(owner, session);
     await verifyTenantIsolation(owner, other, session, otherSession);
