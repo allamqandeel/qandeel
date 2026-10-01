@@ -1,0 +1,8 @@
+PASS ar-standard
+PASS en-standard
+PASS travel-standard
+PASS ar-increased
+PASS ar-reduced
+PASS travel-reduced
+PASS ar-narrow
+PASS ar-landscape
