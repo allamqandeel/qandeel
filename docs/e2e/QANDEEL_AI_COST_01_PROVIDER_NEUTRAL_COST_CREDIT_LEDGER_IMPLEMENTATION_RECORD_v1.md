@@ -7,10 +7,12 @@ are canonical.
 - **Implementation commit:** `2b273d9`.
 - **Code-review corrections:** `04d61c1`.
 - **CI corrections:** `316b9da` (verifier counts are semantic, hazard H4) and `1c7fa3e` (the OpenAI smoke script treats
-  unknown usage as a failed smoke). `1c7fa3e` is the **implementation evidence head**: API CI `36921034566` and
-  focused `migration-0135` run `36922278357` both passed on it.
+  unknown usage as a failed smoke). API CI `36921034566` and focused `migration-0135` run `36922278357` both passed on
+  `1c7fa3e`.
+- **Independent review correction:** `ee6d983` (IR-A: a visible operations scan; IR-B: three content-free reads). It is
+  the **implementation evidence head**: API CI `36923977488` passed on it.
 
-Every commit after `1c7fa3e` is documentation / governance only.
+Every commit after `ee6d983` is documentation / governance only.
 **Migration:** `0135_ai_usage_cost_credit_ledger_v1.sql` (the next free slot).
 **Backlog:** no item names this task, so it inherits none (BG-05). No item is admitted (§13).
 **Claude did not merge anything.**
