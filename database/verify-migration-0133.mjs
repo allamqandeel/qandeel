@@ -233,6 +233,7 @@ async function verifySupabaseDefaults(ci) {
     const files = readdirSync(MIGRATIONS).filter((name) => name.endsWith('.sql')).sort();
     for (const file of files.filter((name) => name < '0133')) psql(join(MIGRATIONS, file));
     await sim.connect();
+    await sim.query("SET search_path = ''"); // every regprocedure renders schema-qualified
     const before = await snapshot(sim);
 
     stage = 'scratch: the census reproduces the drift exactly';
@@ -340,6 +341,7 @@ async function verifySupabaseDefaults(ci) {
 
 try {
   await main.connect();
+  await main.query("SET search_path = ''"); // every regprocedure renders schema-qualified
   await verifyCiDatabase();
   stage = 'ci: snapshot for comparison';
   const ci = await snapshot(main);
