@@ -1,4 +1,4 @@
-import { parseProxyConfiguration, ProxyConfigurationError, type ProxyConfiguration } from './client-address';
+import { isLocalEnvironment, parseProxyConfiguration, ProxyConfigurationError, type ProxyConfiguration } from './client-address';
 
 /**
  * PROD-SEC-01 (SEC-D) — the production security configuration preflight, run by `main.ts` before the application is
@@ -11,8 +11,9 @@ import { parseProxyConfiguration, ProxyConfigurationError, type ProxyConfigurati
  *   SUPABASE_SERVICE_ROLE_KEY the server-only authority key;
  *   SUPABASE_SECRET_KEY       the ONLY key that carries `Sb-Forwarded-For` (Supabase Auth honours the forwarded reader
  *                             address only with a secret key; publishable and legacy anon / service_role keys are not
- *                             honoured). It may not be the same value as either key above, and it may not be a known
- *                             publishable or legacy anon / service_role key — there is no fallback credential;
+ *                             honoured). It may not be the publishable key, any publishable key, or a legacy anon /
+ *                             service_role JWT - there is no fallback credential. (One new-format secret key may serve
+ *                             as both this and SUPABASE_SERVICE_ROLE_KEY: that is a secret key, which is what is needed.)
  *   QANDEEL_API_PROXY_MODE    the proxy topology (SEC-B), with its trusted list when `trusted_proxy`.
  *
  * The secret key's own format is NOT pinned: Supabase may evolve it. The refusals are semantic — equality with another
@@ -23,7 +24,8 @@ import { parseProxyConfiguration, ProxyConfigurationError, type ProxyConfigurati
  *
  * Errors name variables and rules only. No value, prefix or length of any secret is ever printed.
  *
- * Outside production nothing here is required: local and test runs keep the partial configuration they rely on, and
+ * "Production" is every environment that is not an explicit local run (NODE_ENV development or test): a deployment that
+ * forgets NODE_ENV is held to these rules rather than starting unconfigured. A local run keeps the partial configuration it relies on, and
  * the routes that need a missing key keep failing closed per request exactly as before.
  */
 export class ProductionSecurityConfigurationError extends Error {
@@ -49,7 +51,7 @@ export function runSecurityPreflight(environment: Readonly<Record<string, string
     problems.push(error.message);
   }
 
-  if (environment.NODE_ENV === 'production') {
+  if (!isLocalEnvironment(environment)) {
     const value = (name: string) => environment[name]?.trim() ?? '';
     for (const name of REQUIRED) if (value(name) === '') problems.push(`${name} is required in production`);
 
@@ -59,7 +61,6 @@ export function runSecurityPreflight(environment: Readonly<Record<string, string
     const secret = value('SUPABASE_SECRET_KEY');
     if (secret !== '') {
       if (secret === value('SUPABASE_PUBLISHABLE_KEY')) problems.push('SUPABASE_SECRET_KEY must not be the publishable key');
-      if (secret === value('SUPABASE_SERVICE_ROLE_KEY')) problems.push('SUPABASE_SECRET_KEY must not be the service-role key');
       if (secret.startsWith('sb_publishable_')) problems.push('SUPABASE_SECRET_KEY must not be a publishable key');
       const legacyRole = legacyJwtRoleOf(secret);
       if (legacyRole === 'anon' || legacyRole === 'service_role') problems.push('SUPABASE_SECRET_KEY must not be a legacy anon or service_role key');

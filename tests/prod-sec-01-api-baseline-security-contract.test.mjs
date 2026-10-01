@@ -65,6 +65,8 @@ function rateLimitViolations(w, controllerSources = controllers) {
   if (/SkipThrottle|skipIf: \(\) => true/u.test(code(w.policy) + code(w.census))) out.push('a route skips the throttler');
   const census = code(w.census);
   for (const [path, source] of controllerSources) {
+    // A path this contract cannot read is itself a violation: the census must be checkable, never silently skipped.
+    if (/@(?:Controller|Get|Post|Put|Patch|Delete)\((?!\)|'[^']*'\))/u.test(source)) out.push(`${path}: a route path is not a single-quoted literal`);
     const base = /@Controller\((?:'([^']*)')?\)/u.exec(source)?.[1] ?? '';
     for (const [, verb, sub] of source.matchAll(/@(Get|Post|Put|Patch|Delete)\((?:'([^']*)')?\)/gu)) {
       const key = `${verb.toUpperCase()} /${[base, sub ?? ''].join('/').split('/').filter(Boolean).join('/')}`;
@@ -97,7 +99,7 @@ function proxyViolations(w, sources = productionSources) {
   const out = [];
   const all = code(w.address) + code(w.http);
   if (/'trust proxy',\s*true|=== 'true'\s*\?\s*true/u.test(all)) out.push('trust proxy = true');
-  if (/'trust proxy',\s*\d|parseInt|Number\(raw(?:Mode|List)\)/u.test(all)) out.push('a numeric hop count');
+  if (/'trust proxy',\s*(?:\d|Number\(|parseInt\()/u.test(all)) out.push('a numeric hop count');
   if (!/return configuration\.mode === 'direct' \? false : \[\.\.\.configuration\.trustedProxies\];/u.test(code(w.address))) out.push('the Express setting is not false-or-explicit-list');
   if (!/app\.set\('trust proxy', expressTrustProxySetting\(proxy\)\);/u.test(code(w.http))) out.push('trust proxy is not set from the parsed topology');
   if (!/return prefix >= 1 && prefix <= \(version === 4 \? 32 : 128\);/u.test(code(w.address))) out.push('a zero-prefix (trust-everything) range is admitted');
@@ -260,6 +262,8 @@ test('the planted-defect suite covers all 27 items of the Task Contract', () => 
 test('a controller with an unclassified route, and a hand-read forwarding header in any source, are caught', () => {
   const extra = [`${API}/probe/probe.controller.ts`, "@Controller('probe')\nexport class ProbeController {\n  @Get('x')\n  x() { return 1; }\n}\n"];
   assert.notDeepEqual(rateLimitViolations(shipped, [...controllers, extra]), []);
+  const computed = [`${API}/probe/computed.controller.ts`, "@Controller('health')\nexport class ComputedController {\n  @Get(LIVE_PATH)\n  x() { return 1; }\n}\n"];
+  assert.notDeepEqual(rateLimitViolations(shipped, [...controllers, computed]), [], 'a non-literal route path is not silently skipped');
   const sneaky = [`${API}/x/x.service.ts`, "const ip = request.headers['x-forwarded-for'];"];
   assert.notDeepEqual(proxyViolations(shipped, [...productionSources, sneaky]), []);
   const cors = [`${API}/x/y.ts`, 'app.enableCors();'];

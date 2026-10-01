@@ -41,16 +41,24 @@ export class ProxyConfigurationError extends Error {
 }
 
 /**
- * Parse the topology once, at startup. In production the mode must be stated explicitly; elsewhere an absent mode is
- * `direct`, which trusts nothing. A stated value is validated in every environment: a typo never degrades silently.
+ * Only an explicit local run relaxes a security requirement. ANY other NODE_ENV - `production`, a typo, or none at all -
+ * is held to production's rules, so a deployment that forgets NODE_ENV fails closed instead of starting unconfigured.
+ */
+export function isLocalEnvironment(environment: Readonly<Record<string, string | undefined>>): boolean {
+  return environment.NODE_ENV === 'development' || environment.NODE_ENV === 'test';
+}
+
+/**
+ * Parse the topology once, at startup. Outside an explicit local run the mode must be stated; in a local run an absent
+ * mode is `direct`, which trusts nothing. A stated value is validated everywhere: a typo never degrades silently.
  */
 export function parseProxyConfiguration(environment: Readonly<Record<string, string | undefined>>): ProxyConfiguration {
-  const production = environment.NODE_ENV === 'production';
+  const production = !isLocalEnvironment(environment);
   const rawMode = environment[PROXY_MODE_VARIABLE]?.trim() ?? '';
   const rawList = environment[TRUSTED_PROXIES_VARIABLE]?.trim() ?? '';
 
   if (rawMode === '') {
-    if (production) throw new ProxyConfigurationError(`${PROXY_MODE_VARIABLE} must be set explicitly in production (direct | trusted_proxy)`);
+    if (production) throw new ProxyConfigurationError(`${PROXY_MODE_VARIABLE} must be set explicitly outside a local run (direct | trusted_proxy)`);
     if (rawList !== '') throw new ProxyConfigurationError(`${TRUSTED_PROXIES_VARIABLE} is set but ${PROXY_MODE_VARIABLE} is not trusted_proxy`);
     return { mode: 'direct', trustedProxies: [] };
   }
@@ -72,18 +80,32 @@ export function parseProxyConfiguration(environment: Readonly<Record<string, str
 
 /**
  * A literal address or a CIDR range. A zero-length prefix (`0.0.0.0/0`, `::/0`) trusts every peer and is exactly
- * `trust proxy = true` under another name, so it is refused, as are Express's named ranges: the list names hosts.
+ * `trust proxy = true` under another name, so it is refused, as are Express's named ranges: the list names hosts. An
+ * IPv4-mapped IPv6 entry (`::ffff:0.0.0.0/96`) is refused too - it can cover every IPv4 peer; write the IPv4 form.
  */
 export function isTrustableProxyEntry(entry: string): boolean {
   const slash = entry.indexOf('/');
   const address = slash === -1 ? entry : entry.slice(0, slash);
   const version = isIP(address);
   if (version === 0) return false;
+  if (version === 6 && isIpv4MappedIpv6(address)) return false;
   if (slash === -1) return true;
   const prefixText = entry.slice(slash + 1);
   if (!/^[0-9]{1,3}$/u.test(prefixText)) return false;
   const prefix = Number(prefixText);
   return prefix >= 1 && prefix <= (version === 4 ? 32 : 128);
+}
+
+/** `::ffff:a.b.c.d` in any spelling: the first five hextets zero and the sixth `ffff`. */
+function isIpv4MappedIpv6(address: string): boolean {
+  const lower = address.toLowerCase();
+  const tail = lower.slice(lower.lastIndexOf(':') + 1);
+  const head = tail.includes('.') ? `${lower.slice(0, lower.lastIndexOf(':') + 1)}0:0` : lower;
+  const [left, right] = head.includes('::') ? head.split('::') : [head, null];
+  const leftParts = left === '' ? [] : left.split(':');
+  const rightParts = right === null || right === '' ? [] : right.split(':');
+  const hextets = right === null ? leftParts : [...leftParts, ...Array(8 - leftParts.length - rightParts.length).fill('0'), ...rightParts];
+  return hextets.length === 8 && hextets.slice(0, 5).every((part) => parseInt(part, 16) === 0) && parseInt(hextets[5], 16) === 0xffff;
 }
 
 /** The value given to Express. `false` or an explicit list — never `true`, never a number. */

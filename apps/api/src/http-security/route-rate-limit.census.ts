@@ -78,14 +78,17 @@ export function routeKeyOf(controller: object, handler: object): string | null {
   return `${RequestMethod[method]} /${path}`;
 }
 
-const resolved = new WeakMap<object, RateLimitClass>();
+/** Per controller, per handler: one handler function mounted under two controllers is two routes. */
+const resolved = new WeakMap<object, WeakMap<object, RateLimitClass>>();
 
-/** The class of the routed handler, resolved once per handler. A route the census does not name is `UNCLASSIFIED`. */
+/** The class of the routed handler, resolved once per route. A route the census does not name is `UNCLASSIFIED`. */
 export function censusClassOf(controller: object, handler: object): RateLimitClass {
-  const cached = resolved.get(handler);
+  let routes = resolved.get(controller);
+  if (routes === undefined) resolved.set(controller, (routes = new WeakMap()));
+  const cached = routes.get(handler);
   if (cached !== undefined) return cached;
   const key = routeKeyOf(controller, handler);
   const routeClass = (key !== null && Object.prototype.hasOwnProperty.call(ROUTE_RATE_LIMIT_CENSUS, key) ? ROUTE_RATE_LIMIT_CENSUS[key] : undefined) ?? 'UNCLASSIFIED';
-  resolved.set(handler, routeClass);
+  routes.set(handler, routeClass);
   return routeClass;
 }

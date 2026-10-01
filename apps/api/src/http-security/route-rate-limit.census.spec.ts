@@ -56,7 +56,18 @@ describe('the route census covers the real application exactly', () => {
   it('finds every application route, each once', () => {
     expect(routes.length).toBeGreaterThanOrEqual(40);
     expect(new Set(routes.map((route) => route.key)).size).toBe(routes.length);
-    expect(PATH_METADATA).toBe('path'); // the metadata the census reads is Nest's own
+  });
+
+  it('classifies one handler mounted under two controllers as two routes', () => {
+    const shared = function sharedHandler() {};
+    Reflect.defineMetadata(METHOD_METADATA, 0, shared);
+    Reflect.defineMetadata(PATH_METADATA, '/', shared);
+    class Health {}
+    class Elsewhere {}
+    Reflect.defineMetadata(PATH_METADATA, 'health', Health);
+    Reflect.defineMetadata(PATH_METADATA, 'elsewhere', Elsewhere);
+    expect(censusClassOf(Health, shared)).toBe('HEALTH');
+    expect(censusClassOf(Elsewhere, shared)).toBe('UNCLASSIFIED');
   });
 
   it('names every routed handler of every controller with a deliberate class', () => {

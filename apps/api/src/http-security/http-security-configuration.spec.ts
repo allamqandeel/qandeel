@@ -33,9 +33,15 @@ const PRODUCTION_OK = Object.freeze({
 });
 
 describe('SEC-B — the proxy topology is parsed once, strictly, and never becomes trust-everything', () => {
-  it('defaults to direct (trust nothing) outside production', () => {
-    expect(parseProxyConfiguration({})).toEqual({ mode: 'direct', trustedProxies: [] });
+  it('defaults to direct (trust nothing) only in an explicit local run', () => {
     expect(parseProxyConfiguration({ NODE_ENV: 'development' })).toEqual({ mode: 'direct', trustedProxies: [] });
+    expect(parseProxyConfiguration({ NODE_ENV: 'test' })).toEqual({ mode: 'direct', trustedProxies: [] });
+  });
+
+  it('holds an unset or unknown NODE_ENV to production rules: a forgotten NODE_ENV fails closed', () => {
+    for (const environment of [{}, { NODE_ENV: 'prod' }, { NODE_ENV: 'staging' }, { NODE_ENV: '' }]) {
+      expect(() => parseProxyConfiguration(environment)).toThrow(ProxyConfigurationError);
+    }
   });
 
   it('requires an explicit mode in production', () => {
@@ -53,6 +59,7 @@ describe('SEC-B — the proxy topology is parsed once, strictly, and never becom
   it.each([
     ['true'], ['1'], ['2'], ['loopback'], ['uniquelocal'], ['0.0.0.0/0'], ['::/0'], ['10.0.0.0/33'], ['10.0.0.0/'],
     ['10.0.0.0/x'], ['not-an-ip'], ['203.0.113.1:443'], ['*'],
+    ['::ffff:0.0.0.0/96'], ['::FFFF:10.0.0.1'], ['0:0:0:0:0:ffff:0:0/96'], ['::ffff:a00:1'],
   ])('refuses %s as a trusted proxy entry: only literal addresses / non-zero-prefix CIDRs name a proxy', (entry) => {
     expect(isTrustableProxyEntry(entry)).toBe(false);
     expect(() => parseProxyConfiguration({ QANDEEL_API_PROXY_MODE: 'trusted_proxy', QANDEEL_API_TRUSTED_PROXIES: entry })).toThrow(ProxyConfigurationError);
@@ -110,9 +117,20 @@ describe('SEC-D — the production security preflight', () => {
     expect(runSecurityPreflight(PRODUCTION_OK).proxy).toEqual({ mode: 'direct', trustedProxies: [] });
   });
 
-  it('requires nothing outside production: local and test runs keep their partial configuration', () => {
+  it('requires nothing in an explicit local run: development and test keep their partial configuration', () => {
     expect(() => runSecurityPreflight({ NODE_ENV: 'test' })).not.toThrow();
-    expect(() => runSecurityPreflight({})).not.toThrow();
+    expect(() => runSecurityPreflight({ NODE_ENV: 'development' })).not.toThrow();
+  });
+
+  it('holds a deployment that forgot NODE_ENV to the production rules', () => {
+    expect(() => runSecurityPreflight({})).toThrow(ProductionSecurityConfigurationError);
+    const { NODE_ENV: _omitted, ...withoutNodeEnv } = PRODUCTION_OK;
+    expect(() => runSecurityPreflight(withoutNodeEnv)).not.toThrow();
+    expect(() => runSecurityPreflight({ ...withoutNodeEnv, SUPABASE_SECRET_KEY: undefined })).toThrow(ProductionSecurityConfigurationError);
+  });
+
+  it('admits one new-format secret key serving as both the service-role and the forwarding key', () => {
+    expect(() => runSecurityPreflight({ ...PRODUCTION_OK, SUPABASE_SERVICE_ROLE_KEY: 'sb_secret_shared_fixture', SUPABASE_SECRET_KEY: 'sb_secret_shared_fixture' })).not.toThrow();
   });
 
   it.each(['SUPABASE_URL', 'SUPABASE_PUBLISHABLE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_SECRET_KEY', 'QANDEEL_API_PROXY_MODE'])(

@@ -1,4 +1,4 @@
-import { request as httpRequest } from 'node:http';
+import { Agent, request as httpRequest } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { Controller, Get, Req, type ExecutionContext } from '@nestjs/common';
 import type { NestExpressApplication } from '@nestjs/platform-express';
@@ -48,11 +48,15 @@ interface Answer {
   readonly text: string;
 }
 
+/** One keep-alive agent: the bursts below reuse connections instead of opening one per request. */
+const agent = new Agent({ keepAlive: true, maxSockets: 1 });
+afterAll(() => agent.destroy());
+
 function call(origin: string, method: string, path: string, options: { headers?: Record<string, string>; body?: string } = {}): Promise<Answer> {
   return new Promise((resolve, reject) => {
     const target = new URL(path, origin);
     const outgoing = httpRequest(
-      { host: target.hostname, port: target.port, path: target.pathname + target.search, method, headers: { 'Content-Type': 'application/json', ...options.headers }, agent: false },
+      { host: target.hostname, port: target.port, path: target.pathname + target.search, method, headers: { 'Content-Type': 'application/json', ...options.headers }, agent },
       (response) => {
         const chunks: Buffer[] = [];
         response.on('data', (chunk: Buffer) => chunks.push(chunk));

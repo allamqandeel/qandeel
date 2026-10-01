@@ -36,8 +36,9 @@
 --
 -- PREVENTION. The default privileges of the migration role in `public` stop granting new functions, tables and
 -- sequences to `anon` and `authenticated`, so a hosted project behaves like the CI database every migration is proven
--- against: a new object is reachable by a client role only where a migration says so. On the CI database, which has
--- no such default, these statements change nothing.
+-- against: a new object is reachable by a client role only where a migration says so. Default privileges belong to the
+-- role that CREATES an object, and that is the role running migrations - the one these statements and the assertion
+-- below address. On the CI database, which has no such default, these statements change nothing.
 BEGIN;
 
 -- A. ---------------------------------------------------------------------------------------------------------------
@@ -107,6 +108,20 @@ BEGIN
       AND (has_function_privilege('anon', p.oid, 'EXECUTE') OR has_function_privilege('authenticated', p.oid, 'EXECUTE'))
   ) THEN
     RAISE EXCEPTION '0133: a public trigger function is still executable by a client role';
+  END IF;
+
+  -- Prevention took effect for the role that runs migrations (and so owns what they create): neither its public nor its
+  -- global default privileges grant anything to a client role. A run under another role is checked for THAT role.
+  IF EXISTS (
+    SELECT 1
+    FROM pg_default_acl d
+    LEFT JOIN pg_namespace n ON n.oid = d.defaclnamespace
+    CROSS JOIN LATERAL aclexplode(d.defaclacl) a
+    WHERE d.defaclrole = current_user::text::regrole
+      AND (d.defaclnamespace = 0 OR n.nspname = 'public')
+      AND a.grantee IN ('anon'::regrole, 'authenticated'::regrole)
+  ) THEN
+    RAISE EXCEPTION '0133: the migration role''s default privileges still grant new objects to a client role';
   END IF;
 
   IF has_sequence_privilege('anon', 'public.conversation_turn_work_grants_id_seq', 'USAGE, SELECT, UPDATE')
