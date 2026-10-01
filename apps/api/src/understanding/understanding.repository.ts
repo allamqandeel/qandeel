@@ -24,6 +24,25 @@ export interface UnderstandingContestRow {
   readonly created_at: string;
 }
 
+/**
+ * W3-CORR-U — one of the reader's contests on ONE item, for that item's evolution: under review or resolved (migration
+ * 0134). The resolution reason stays on the server; only whether the reader themself agreed reaches the projection.
+ */
+export interface UnderstandingContestHistoryRow {
+  readonly lifecycle: 'UNDER_REVIEW' | 'RESOLVED';
+  readonly reevaluation_before_status: HypothesisStatus;
+  readonly reevaluation_after_version: number;
+  readonly created_at: string;
+  readonly resolved_at: string | null;
+  readonly resolution_reason: 'USER_CONFIRMED_CURRENT_INTERPRETATION' | 'INTERPRETATION_WITHDRAWN' | null;
+}
+
+/** W3-CORR-U — the resolution command's one bounded answer. */
+export interface UnderstandingResolutionRow {
+  readonly outcome: string;
+  readonly resolved_version: number | null;
+}
+
 /** U3 — the disagreement command's one bounded answer. */
 export interface UnderstandingDisagreementRow {
   readonly outcome: string;
@@ -91,6 +110,29 @@ export class UnderstandingRepository {
     return this.dataApi.request<UnderstandingDisagreementRow[]>(token, 'rpc/record_understanding_disagreement_v1', {
       method: 'POST', body: JSON.stringify({ p_command_id: commandId, p_hypothesis_id: hypothesisId, p_expected_version: expectedVersion }),
     });
+  }
+
+  /**
+   * W3-CORR-U — the reader's explicit resolution (migration 0134), on the caller's own token: "I agree with this now"
+   * at the exact version they see. The database derives the owner, locks the item, owns the reason and answers one
+   * bounded row. The request carries no text and no reason.
+   */
+  resolveDisagreement(token: string, commandId: string, hypothesisId: string, expectedVersion: number): Promise<UnderstandingResolutionRow[]> {
+    return this.dataApi.request<UnderstandingResolutionRow[]>(token, 'rpc/resolve_understanding_disagreement_v1', {
+      method: 'POST', body: JSON.stringify({ p_command_id: commandId, p_hypothesis_id: hypothesisId, p_expected_version: expectedVersion }),
+    });
+  }
+
+  /**
+   * W3-CORR-U — every contest the reader made on ONE item, newest first and bounded like the rest of the evolution. A
+   * resolved contest is history that is never erased, so its disagreement is still told.
+   */
+  listContestHistory(token: string, userId: string, hypothesisId: string): Promise<UnderstandingContestHistoryRow[]> {
+    const query = new URLSearchParams({
+      select: 'lifecycle,reevaluation_before_status,reevaluation_after_version,created_at,resolved_at,resolution_reason',
+      user_id: `eq.${userId}`, hypothesis_id: `eq.${hypothesisId}`, order: 'created_at.desc,id.asc', limit: String(MAX_DETAIL_EVOLUTION),
+    });
+    return this.dataApi.request<UnderstandingContestHistoryRow[]>(token, `understanding_contests?${query}`);
   }
 
   listLifecycleTransitions(token: string, userId: string, hypothesisId: string): Promise<UnderstandingLifecycleTransitionRow[]> {

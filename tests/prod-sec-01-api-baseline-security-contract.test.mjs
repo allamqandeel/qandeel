@@ -199,8 +199,11 @@ test('the shipped tree satisfies every PROD-SEC-01 detector', () => {
 
 test('0133 is the next migration, forward-only, and the historical migrations and authorities are byte-identical', () => {
   const migrations = readdirSync(join(rootPath, 'database/migrations')).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(migrations.at(-1), '0133_supabase_default_privilege_drift_closure_v1.sql');
-  assert.equal(migrations.at(-2), '0132_operational_readiness_failure_visibility_v1.sql');
+  // Re-anchored by W3-CORR-U: 0133 directly follows 0132 and is the only 0133; later migrations may follow it.
+  const at = migrations.indexOf('0133_supabase_default_privilege_drift_closure_v1.sql');
+  assert.ok(at > 0, '0133 exists');
+  assert.equal(migrations[at - 1], '0132_operational_readiness_failure_visibility_v1.sql');
+  assert.equal(migrations.filter((name) => name.startsWith('0133_')).length, 1);
   for (const [path, blob] of [
     ['database/migrations/0123_account_identity_first_use_v1.sql', null],
     ['database/migrations/0130_personal_privacy_export_account_deletion_v1.sql', '0ce164c15b66a55ebffee93b2f14ade48f067818'],

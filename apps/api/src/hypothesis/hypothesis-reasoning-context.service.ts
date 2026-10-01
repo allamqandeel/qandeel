@@ -29,11 +29,16 @@ export class HypothesisReasoningContextService {
       this.signals ? this.signals.listUnderReview(token, userId, candidates.map(({ id }) => id)) : Promise.resolve(new Set<string>()),
     ]);
     // W3-MEGA-U U2: the ONE item the reader explicitly chose, from QANDEEL Understanding, to talk about — while its
-    // focus is open and recent — is marked and offered first. It is the reader's own act, not a relevance ranking;
-    // every other item keeps the repository order.
+    // focus is open and recent — is marked and offered first. W3-CORR-U (U-5): every other item the reader explicitly
+    // disagreed with and is still under review comes next, ahead of ordinary items, so an active contest never gives
+    // way to an ordinary item under the model bound. Both groups are the reader's own explicit acts, not a relevance
+    // ranking (that remains QAN-BL-CTX-01): within each group, and for every other item, the repository order is kept.
     const discussedId = this.discussedHypothesisId(focus, candidates);
-    const ordered = discussedId === null ? candidates
-      : [...candidates.filter(({ id }) => id === discussedId), ...candidates.filter(({ id }) => id !== discussedId)];
+    const ordered = [
+      ...candidates.filter(({ id }) => id === discussedId),
+      ...candidates.filter(({ id }) => id !== discussedId && underReview.has(id)),
+      ...candidates.filter(({ id }) => id !== discussedId && !underReview.has(id)),
+    ];
     const eligibleIds = new Set(eligibleEvidence.map(({ evidenceId }) => evidenceId));
     if (!Array.isArray(evaluations) || evaluations.length >= MAX_BULK_CONFIDENCE_ROWS) this.reject();
     const evaluationsByTarget = new Map<string, ConfidenceEvaluationRecord>();
@@ -104,7 +109,9 @@ export class HypothesisReasoningContextService {
       !Number.isFinite(openedAt)) this.reject();
     if (Date.now() - openedAt > DISCUSSION_FOCUS_WINDOW_MS) return null;
     // R2: the reader chose the EXACT revision they saw. Once that item has advanced, the focus names an interpretation
-    // that is no longer current, so it marks nothing — it is never silently moved onto the newer version.
+    // that is no longer current, so it marks nothing — it is never silently moved onto the newer version here. The one
+    // lawful move is the database's own (W3-CORR-U, migration 0134): the reader's disagreement re-binds their open focus
+    // to the re-evaluated version inside the same transaction, so the exact match below still holds after it.
     return candidates.some(({ id, version }) => id === focus.hypothesis_id && version === focus.hypothesis_version)
       ? focus.hypothesis_id : null;
   }

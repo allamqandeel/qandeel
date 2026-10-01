@@ -64,6 +64,7 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /understanding/items/:ref': 'AUTHENTICATED',
   'POST /understanding/items/:ref/discussion': 'AUTHENTICATED',
   'POST /understanding/items/:ref/disagreement': 'AUTHENTICATED',
+  'POST /understanding/items/:ref/disagreement/resolve': 'AUTHENTICATED',
   'DELETE /understanding/items/:ref/discussion': 'AUTHENTICATED',
 });
 

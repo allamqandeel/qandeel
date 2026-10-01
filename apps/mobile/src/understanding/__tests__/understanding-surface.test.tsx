@@ -17,6 +17,7 @@ import type {
   UnderstandingDiscussionOutcome,
   UnderstandingItemView,
   UnderstandingListOutcome,
+  UnderstandingResolutionOutcome,
 } from '../../runtime-entry';
 import { UnderstandingDiscussionStrip, UnderstandingSurface, createUnderstandingController, understandingCopy } from '..';
 
@@ -49,9 +50,19 @@ function server(initial: { list?: UnderstandingListOutcome; detail?: Understandi
   const answers: UnderstandingDiscussionOutcome[] = [];
   const disagreements: { ref: string; commandId: string; revision: string }[] = [];
   const verdicts: UnderstandingDisagreementOutcome[] = [];
+  const resolutions: { ref: string; commandId: string; revision: string }[] = [];
+  const resolutionVerdicts: UnderstandingResolutionOutcome[] = [];
+  let holdResolution: Promise<void> | null = null;
   return {
-    discussions, closes, disagreements,
+    discussions, closes, disagreements, resolutions,
     verdict(value: UnderstandingDisagreementOutcome) { verdicts.push(value); },
+    resolutionVerdict(value: UnderstandingResolutionOutcome) { resolutionVerdicts.push(value); },
+    /** The next resolution answer waits until the returned release is called. */
+    holdNextResolution() {
+      let release = () => undefined as void;
+      holdResolution = new Promise<void>((resolve) => { release = resolve; });
+      return () => release();
+    },
     setList(value: UnderstandingListOutcome) { list = value; },
     setDetail(value: UnderstandingDetailOutcome) { detail = value; },
     answer(value: UnderstandingDiscussionOutcome) { answers.push(value); },
@@ -69,6 +80,13 @@ function server(initial: { list?: UnderstandingListOutcome; detail?: Understandi
       disagree: async (ref: string, commandId: string, revision: string) => {
         disagreements.push({ ref, commandId, revision });
         return verdicts.shift() ?? { kind: 'UNDER_REVIEW' as const, revision: REV_2 };
+      },
+      resolveDisagreement: async (ref: string, commandId: string, revision: string): Promise<UnderstandingResolutionOutcome> => {
+        resolutions.push({ ref, commandId, revision });
+        const held = holdResolution;
+        holdResolution = null;
+        if (held !== null) await held;
+        return resolutionVerdicts.shift() ?? { kind: 'RESOLVED', revision };
       },
     },
   };
@@ -285,6 +303,131 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL Understanding', (language) 
       await press(view, `qandeel-understanding-item-${REF_A}`);
       expect(view.getByTestId('qandeel-understanding-detail-under-review').props.children).toBe(copy.underReviewNote);
       expect(words(view)).toContain(copy.evolutionKind.YOU_DISAGREED);
+    });
+  });
+
+  describe('W3-CORR-U — I agree with this now (explicit resolution; the disagreement stays history)', () => {
+    async function contested(fake = server()) {
+      const world = await surface(language, fake);
+      await press(world.view, `qandeel-understanding-item-${REF_A}`);
+      await press(world.view, 'qandeel-understanding-talk');
+      await press(world.view, 'qandeel-understanding-disagree');
+      return world;
+    }
+
+    it('the exact approved copy, in both languages', () => {
+      expect(copy.agree).toBe(language === 'ar' ? 'أوافق عليه الآن' : 'I agree with this now');
+      expect(copy.evolutionKind.YOU_RESOLVED_DISAGREEMENT).toBe(language === 'ar' ? 'وافقت لاحقًا على هذا الفهم' : 'You later agreed with this understanding');
+    });
+
+    it('is absent while the item is not under review, and offered once it is', async () => {
+      const world = await surface(language);
+      await press(world.view, `qandeel-understanding-item-${REF_A}`);
+      await press(world.view, 'qandeel-understanding-talk');
+      expect(world.view.queryByTestId('qandeel-understanding-agree')).toBeNull();
+      await press(world.view, 'qandeel-understanding-disagree');
+      const agree = world.view.getByTestId('qandeel-understanding-agree');
+      expect(agree.props.accessibilityLabel).toBe(copy.agree);
+      expect(within(agree).getByText(copy.agree)).toBeTruthy();
+      expect(agree.props.accessibilityState).toMatchObject({ busy: false, disabled: false });
+    });
+
+    it('bound to the revision shown with its OWN command; success keeps the discussion open and offers a NEW disagreement', async () => {
+      const { view, fake } = await contested();
+      await press(view, 'qandeel-understanding-agree');
+      expect(fake.resolutions).toHaveLength(1);
+      expect(fake.resolutions[0]).toMatchObject({ ref: REF_A, revision: REV_2 });
+      expect(fake.resolutions[0].commandId).not.toBe(fake.disagreements[0].commandId);
+      expect(view.getByTestId('qandeel-understanding-discussion')).toBeTruthy();
+      expect(view.queryByTestId('qandeel-understanding-agree')).toBeNull();
+      expect(view.queryByTestId('qandeel-understanding-disagreement-recorded')).toBeNull();
+      // A later change of mind is a new explicit contest, under a new command identity.
+      await press(view, 'qandeel-understanding-disagree');
+      expect(fake.disagreements).toHaveLength(2);
+      expect(fake.disagreements[1]).toMatchObject({ ref: REF_A, revision: REV_2 });
+      expect(fake.disagreements[1].commandId).not.toBe(fake.disagreements[0].commandId);
+      expect(fake.closes).toEqual([]);
+    });
+
+    it('one request while busy, and the screen reader hears it busy', async () => {
+      const fake = server();
+      const { view, controller } = await contested(fake);
+      const release = fake.holdNextResolution();
+      await fireEvent.press(view.getByTestId('qandeel-understanding-agree'));
+      await act(async () => {
+        await flush();
+      });
+      expect(view.getByTestId('qandeel-understanding-agree').props.accessibilityState).toMatchObject({ busy: true, disabled: true });
+      await expect(controller.agree()).resolves.toBeNull();
+      await act(async () => {
+        release();
+        await flush();
+      });
+      expect(fake.resolutions).toHaveLength(1);
+      expect(view.queryByTestId('qandeel-understanding-agree')).toBeNull();
+    });
+
+    it('a lost answer is retried as the SAME resolution command, and says so in words meanwhile', async () => {
+      const fake = server();
+      const { view } = await contested(fake);
+      fake.resolutionVerdict({ kind: 'FAILED' });
+      await press(view, 'qandeel-understanding-agree');
+      expect(view.getByTestId('qandeel-understanding-resolution-failed').props.children).toBe(copy.disagreeFailed);
+      expect(view.getByTestId('qandeel-understanding-agree')).toBeTruthy();
+      await press(view, 'qandeel-understanding-agree');
+      expect(fake.resolutions).toHaveLength(2);
+      expect(fake.resolutions[1].commandId).toBe(fake.resolutions[0].commandId);
+      expect(view.queryByTestId('qandeel-understanding-agree')).toBeNull();
+    });
+
+    it.each(['CHANGED', 'NOT_UNDER_REVIEW'] as const)('%s is read again first — nothing applied to an unseen revision', async (kind) => {
+      const fake = server();
+      const { view } = await contested(fake);
+      fake.resolutionVerdict({ kind });
+      fake.setDetail({ kind: 'READ', view: detailOf(item(REF_A, { revision: REV_1, summary: 'You prepare early when it matters to others.', confidence: 'MIXED', underReview: true })) });
+      await press(view, 'qandeel-understanding-agree');
+      expect(within(view.getByTestId('qandeel-understanding-discussion')).getByText('You prepare early when it matters to others.')).toBeTruthy();
+      await press(view, 'qandeel-understanding-agree');
+      expect(fake.resolutions.map((entry) => entry.revision)).toEqual([REV_2, REV_1]);
+      expect(fake.resolutions[1].commandId).not.toBe(fake.resolutions[0].commandId);
+    });
+
+    it('a gone item removes the discussion', async () => {
+      const fake = server();
+      const { view } = await contested(fake);
+      fake.resolutionVerdict({ kind: 'GONE' });
+      await press(view, 'qandeel-understanding-agree');
+      expect(view.queryByTestId('qandeel-understanding-discussion')).toBeNull();
+    });
+
+    it('a completion after the controller is retired changes nothing', async () => {
+      const fake = server();
+      const { view, controller } = await contested(fake);
+      const release = fake.holdNextResolution();
+      let pending: Promise<unknown> = Promise.resolve();
+      await act(async () => {
+        pending = controller.agree();
+        await flush();
+      });
+      controller.retire();
+      await act(async () => {
+        release();
+        await flush();
+      });
+      await expect(pending).resolves.toBe('FAILED');
+      expect(controller.getState().discussion?.underReview).toBe(true);
+      expect(view.getByTestId('qandeel-understanding-agree')).toBeTruthy();
+    });
+
+    it('the evolution keeps the disagreement and tells the later agreement, in words', async () => {
+      const resolved = item(REF_A, { confidence: 'MIXED' });
+      const fake = server({ list: { kind: 'READ', items: [resolved] }, detail: { kind: 'READ', view: detailOf(resolved, { evolution: [
+        { kind: 'YOU_RESOLVED_DISAGREEMENT', at: '2026-10-01T10:00:00Z' }, { kind: 'YOU_DISAGREED', at: '2026-09-30T10:00:00Z' }, { kind: 'FIRST_SEEN', at: '2026-09-28T10:00:00Z' },
+      ] }) } });
+      const { view } = await surface(language, fake);
+      await press(view, `qandeel-understanding-item-${REF_A}`);
+      expect(words(view)).toEqual(expect.arrayContaining([copy.evolutionKind.YOU_RESOLVED_DISAGREEMENT, copy.evolutionKind.YOU_DISAGREED]));
+      expect(view.queryByTestId('qandeel-understanding-detail-under-review')).toBeNull();
     });
   });
 

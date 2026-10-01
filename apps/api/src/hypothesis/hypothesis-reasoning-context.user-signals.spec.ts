@@ -93,8 +93,9 @@ describe('HypothesisReasoningContextService — U2 discussion focus', () => {
   it('U3: an item the reader explicitly disagreed with carries UNDER_REVIEW to the provider — never offered as uncontested', async () => {
     signals.listUnderReview.mockResolvedValue(new Set(['b']));
     const context = await items();
+    // W3-CORR-U (U-5): an item under review is offered ahead of ordinary items; the others keep the repository order.
     expect(context.map((item) => [item.statement, item.userContest])).toEqual([
-      ['statement a', undefined], ['statement b', 'UNDER_REVIEW'], ['statement c', undefined],
+      ['statement b', 'UNDER_REVIEW'], ['statement a', undefined], ['statement c', undefined],
     ]);
     // Contested is a reliance fact, not a deletion: the item stays in the context, marked.
     expect(context).toHaveLength(3);
@@ -110,5 +111,96 @@ describe('HypothesisReasoningContextService — U2 discussion focus', () => {
   it('a failed signal read fails the whole context, so no item is ever consumed without it', async () => {
     signals.readOpenDiscussionFocus.mockRejectedValue(new Error('unavailable'));
     await expect(service.build('user', 'token')).rejects.toThrow('unavailable');
+  });
+});
+
+// W3-CORR-U (U-1 + U-5) — the reader's explicit focus and their contests under review survive the hard model bound.
+describe('HypothesisReasoningContextService — W3-CORR-U focus + UNDER_REVIEW priority under MAX_MODEL_HYPOTHESES', () => {
+  const TEN = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j'];
+  let hypotheses: jest.Mocked<HypothesisService>, signals: jest.Mocked<HypothesisUserSignalRepository>, service: HypothesisReasoningContextService;
+  const at = (id: string, version = 2, status: HypothesisRecord['status'] = 'ACTIVE') => ({ ...hypothesis(id), version, status });
+  beforeEach(() => {
+    hypotheses = { listActiveForUser: jest.fn().mockResolvedValue(TEN.map((id) => at(id))) } as unknown as jest.Mocked<HypothesisService>;
+    const evidence = { listEligibleForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<EvidenceService>;
+    const confidence = { listExactVersionsForTargets: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<ConfidenceRepository>;
+    signals = { readOpenDiscussionFocus: jest.fn().mockResolvedValue(null), listUnderReview: jest.fn().mockResolvedValue(new Set()) } as unknown as jest.Mocked<HypothesisUserSignalRepository>;
+    service = new HypothesisReasoningContextService(hypotheses, evidence, confidence, signals);
+  });
+  const context = async () => {
+    const result = await service.build('user', 'token');
+    if (result.coverageState !== 'AVAILABLE') throw new Error('expected AVAILABLE');
+    return result.context;
+  };
+  const shape = (value: Awaited<ReturnType<typeof context>>) =>
+    value.hypotheses.map((item) => [item.statement.slice(-1), item.hypothesisVersion, item.userDiscussion ?? '-', item.userContest ?? '-']);
+
+  it('the combined 10-hypothesis proof: focus first before and after the disagreement, contests next, resolution and close', async () => {
+    // Before: the reader opened j (v2) from Understanding; i was disagreed with earlier and sits past slot 8.
+    const opened = recently();
+    signals.readOpenDiscussionFocus.mockResolvedValue({ hypothesis_id: 'j', hypothesis_version: 2, opened_at: opened });
+    signals.listUnderReview.mockResolvedValue(new Set(['i']));
+    let now = await context();
+    expect(shape(now)).toEqual([
+      ['j', 2, 'OPENED_FROM_UNDERSTANDING', '-'], ['i', 2, '-', 'UNDER_REVIEW'],
+      ['a', 2, '-', '-'], ['b', 2, '-', '-'], ['c', 2, '-', '-'], ['d', 2, '-', '-'], ['e', 2, '-', '-'], ['f', 2, '-', '-'],
+    ]);
+    expect([now.candidateHypothesisCount, now.includedHypothesisCount, now.truncated]).toEqual([10, 8, true]);
+
+    // The reader disagrees with j: the database moves j to v3 (MIXED) and, in the same transaction, re-binds the open
+    // focus to v3 with the SAME opened_at (migration 0134). j stays first, now marked BOTH ways.
+    hypotheses.listActiveForUser.mockResolvedValue([...TEN.slice(0, 9).map((id) => at(id)), at('j', 3, 'MIXED')]);
+    signals.readOpenDiscussionFocus.mockResolvedValue({ hypothesis_id: 'j', hypothesis_version: 3, opened_at: opened });
+    signals.listUnderReview.mockResolvedValue(new Set(['i', 'j']));
+    now = await context();
+    expect(shape(now)).toEqual([
+      ['j', 3, 'OPENED_FROM_UNDERSTANDING', 'UNDER_REVIEW'], ['i', 2, '-', 'UNDER_REVIEW'],
+      ['a', 2, '-', '-'], ['b', 2, '-', '-'], ['c', 2, '-', '-'], ['d', 2, '-', '-'], ['e', 2, '-', '-'], ['f', 2, '-', '-'],
+    ]);
+    // The focused contested item appears once, not twice.
+    expect(now.hypotheses.filter((item) => item.statement === 'statement j')).toHaveLength(1);
+
+    // The defect W3-CORR-U closes, for contrast: had the focus stayed at v2, j would lose its discussion marker (the
+    // exact-version rule holds) — U-5 alone still keeps it inside the bound as a contest, but no longer first.
+    signals.readOpenDiscussionFocus.mockResolvedValue({ hypothesis_id: 'j', hypothesis_version: 2, opened_at: opened });
+    expect(shape(await context()).slice(0, 3)).toEqual([['i', 2, '-', 'UNDER_REVIEW'], ['j', 3, '-', 'UNDER_REVIEW'], ['a', 2, '-', '-']]);
+
+    // The reader agrees with j now: its contest is resolved, the discussion is still open. Only userContest goes.
+    signals.readOpenDiscussionFocus.mockResolvedValue({ hypothesis_id: 'j', hypothesis_version: 3, opened_at: opened });
+    signals.listUnderReview.mockResolvedValue(new Set(['i']));
+    now = await context();
+    expect(shape(now).slice(0, 2)).toEqual([['j', 3, 'OPENED_FROM_UNDERSTANDING', '-'], ['i', 2, '-', 'UNDER_REVIEW']]);
+
+    // The reader ends the discussion: only userDiscussion goes; j returns to the repository order and the bound.
+    signals.readOpenDiscussionFocus.mockResolvedValue(null);
+    now = await context();
+    expect(shape(now)).toEqual([
+      ['i', 2, '-', 'UNDER_REVIEW'], ['a', 2, '-', '-'], ['b', 2, '-', '-'], ['c', 2, '-', '-'], ['d', 2, '-', '-'], ['e', 2, '-', '-'],
+      ['f', 2, '-', '-'], ['g', 2, '-', '-'],
+    ]);
+  });
+
+  it('more contests than the bound: still exactly 8, deterministic in repository order, honestly truncated', async () => {
+    signals.listUnderReview.mockResolvedValue(new Set(TEN));
+    signals.readOpenDiscussionFocus.mockResolvedValue({ hypothesis_id: 'h', hypothesis_version: 2, opened_at: recently() });
+    const now = await context();
+    expect(now.hypotheses.map((item) => item.statement.slice(-1))).toEqual(['h', 'a', 'b', 'c', 'd', 'e', 'f', 'g']);
+    expect(now.hypotheses.every((item) => item.userContest === 'UNDER_REVIEW')).toBe(true);
+    expect([now.includedHypothesisCount, now.truncated]).toEqual([8, true]);
+  });
+
+  it('the character budget is still enforced with the priority applied, and truncation stays truthful', async () => {
+    const heavy = (id: string) => ({ ...at(id), statement: `${'x'.repeat(1999)}${id}`, assumptions: Array.from({ length: 8 }, (_, n) => `${'y'.repeat(499)}${n}`) });
+    hypotheses.listActiveForUser.mockResolvedValue(TEN.map(heavy));
+    signals.readOpenDiscussionFocus.mockResolvedValue({ hypothesis_id: 'j', hypothesis_version: 2, opened_at: recently() });
+    signals.listUnderReview.mockResolvedValue(new Set(['i']));
+    const now = await context();
+    expect(now.hypotheses.map((item) => item.statement.slice(-1))).toEqual(['j', 'i', 'a']);
+    expect([now.includedHypothesisCount, now.truncated]).toEqual([3, true]);
+  });
+
+  it('with no contest and no focus, the repository order and the cap are exactly as before — no relevance is invented', async () => {
+    const now = await context();
+    expect(now.hypotheses.map((item) => item.statement.slice(-1))).toEqual(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h']);
+    expect(now.hypotheses.some((item) => item.userDiscussion || item.userContest)).toBe(false);
   });
 });

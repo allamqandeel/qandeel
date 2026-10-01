@@ -11,12 +11,14 @@ import {
   auditUnderstandingDetail, auditUnderstandingList, isUnderstandingToken, projectUnderstandingConfidence,
   understandingItemRef, understandingRevision,
 } from './understanding-projection';
-import { UnderstandingRepository, type UnderstandingContestRow, type UnderstandingLifecycleTransitionRow } from './understanding.repository';
+import {
+  UnderstandingRepository, type UnderstandingContestHistoryRow, type UnderstandingContestRow, type UnderstandingLifecycleTransitionRow,
+} from './understanding.repository';
 import {
   MAX_DETAIL_ALTERNATIVES, MAX_DETAIL_CONTEXT_ITEMS, MAX_DETAIL_EVOLUTION, THEME_BY_DOMAIN, UNDERSTANDING_LIST_DEFAULT_LIMIT,
   UNDERSTANDING_LIST_MAX_LIMIT, UNDERSTANDING_SURFACE_STATUSES, UnderstandingProjectionInvariantError,
   type UnderstandingEvolutionEntry, type UnderstandingEvolutionKind, type UnderstandingItemDetail, type UnderstandingItemSummary,
-  type UnderstandingDisagreementView, type UnderstandingListView,
+  type UnderstandingDisagreementView, type UnderstandingListView, type UnderstandingResolutionView,
 } from './understanding.types';
 
 /** The one owned read context both routes share. Every read uses the caller's own token under RLS. */
@@ -74,11 +76,13 @@ export class UnderstandingService {
       const context = await this.ownedContext(userId, token);
       const hypothesis = context.surfaced.find((value) => understandingItemRef(userId, value.id) === ref);
       if (!hypothesis) throw new NotFoundException('Understanding item not found.');
-      const [updates, transitions] = await Promise.all([
+      const [updates, transitions, contestHistory] = await Promise.all([
         this.repository.listEvidenceUpdates(token, userId, hypothesis.id),
         this.repository.listLifecycleTransitions(token, userId, hypothesis.id),
+        this.repository.listContestHistory(token, userId, hypothesis.id),
       ]);
-      if (!Array.isArray(updates) || !Array.isArray(transitions)) this.reject();
+      if (!Array.isArray(updates) || !Array.isArray(transitions) || !Array.isArray(contestHistory)) this.reject();
+      for (const row of contestHistory) this.validateContestHistory(row);
       const texts = (ids: readonly string[]) => ids.flatMap((id) => {
         const statement = context.eligibleEvidence.get(id);
         return statement === undefined ? [] : [statement];
@@ -94,7 +98,7 @@ export class UnderstandingService {
         unresolved: hypothesis.assumptions.slice(0, MAX_DETAIL_CONTEXT_ITEMS),
         evolution: this.evolution(hypothesis, updates.map((row): UnderstandingEvolutionEntry => ({
           kind: row.evidence_role === 'SUPPORTING' ? 'SUPPORT_ADDED' : 'CHALLENGE_ADDED', at: row.created_at,
-        })), transitions, context.contests.get(hypothesis.id) ?? null),
+        })), transitions, contestHistory),
       };
       auditUnderstandingDetail(view);
       return view;
@@ -181,6 +185,46 @@ export class UnderstandingService {
             await this.reevaluateConfidence(userId, token, hypothesis.id, hypothesis.version, row.confidence_evaluation_id);
           }
           return this.underReview(userId, hypothesis.id, hypothesis.version);
+        case 'STALE':
+          throw this.changed();
+        case 'NOT_FOUND':
+          throw new NotFoundException('Understanding item not found.');
+        case 'COMMAND_CONFLICT':
+          throw new ConflictException({ code: 'UNDERSTANDING_COMMAND_CONFLICT' });
+        default:
+          return this.reject();
+      }
+    });
+  }
+
+  /**
+   * W3-CORR-U (U-2) — «أوافق عليه الآن» / "I agree with this now": the reader's EXPLICIT agreement with the interpretation
+   * they are looking at, bound to that exact revision and to one command identity, resolves the item's contest under
+   * review (migration 0134). It is not an undo: the disagreement stays durable history. Nothing about the item changes —
+   * no status, version, statement, Evidence or Confidence — and no provider and no Confidence Runtime is called.
+   *   200  { underReview: false, revision }  — resolved now, or the same command replayed;
+   *   409  UNDERSTANDING_ITEM_CHANGED         — the item changed since the reader saw it; nothing was resolved;
+   *   409  UNDERSTANDING_NOT_UNDER_REVIEW     — the item has no contest under review any more; the reader reads it again;
+   *   409  UNDERSTANDING_COMMAND_CONFLICT     — this command identity was spent on another item or version;
+   *   404                                     — not one of the caller's current items.
+   */
+  async resolveDisagreement(userId: string, token: string, ref: unknown, body: unknown): Promise<UnderstandingResolutionView> {
+    const { commandId, revision } = this.validateDisagreementBody(body);
+    if (!isUnderstandingToken(ref)) throw new NotFoundException('Understanding item not found.');
+    return this.guard(async () => {
+      const hypothesis = (await this.ownedActive(userId, token))
+        .find((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status) && understandingItemRef(userId, value.id) === ref);
+      if (!hypothesis) throw new NotFoundException('Understanding item not found.');
+      // A resolution never moves the version, so the revision the reader saw is the current one or it is stale.
+      if (understandingRevision(userId, hypothesis.id, hypothesis.version) !== revision) throw this.changed();
+      const rows = await this.repository.resolveDisagreement(token, commandId, hypothesis.id, hypothesis.version);
+      const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : this.reject();
+      switch (row.outcome) {
+        case 'RESOLVED':
+          if (row.resolved_version !== hypothesis.version) this.reject();
+          return { underReview: false, revision: understandingRevision(userId, hypothesis.id, hypothesis.version) };
+        case 'NOT_UNDER_REVIEW':
+          throw new ConflictException({ code: 'UNDERSTANDING_NOT_UNDER_REVIEW' });
         case 'STALE':
           throw this.changed();
         case 'NOT_FOUND':
@@ -310,19 +354,42 @@ export class UnderstandingService {
 
   private evolution(
     hypothesis: HypothesisRecord, updates: UnderstandingEvolutionEntry[], transitions: readonly UnderstandingLifecycleTransitionRow[],
-    contest: UnderstandingContestRow | null,
+    contests: readonly UnderstandingContestHistoryRow[],
   ): UnderstandingEvolutionEntry[] {
+    // The MIXED steps a disagreement's own re-evaluation made. One made on an item already MIXED made no step, so the
+    // earlier, independent MIXED step is still told.
+    const reevaluationSteps = new Set(contests.filter((row) => row.reevaluation_before_status !== 'MIXED').map((row) => row.reevaluation_after_version));
     const lifecycle = transitions.flatMap((row): UnderstandingEvolutionEntry[] => {
       // The re-evaluation's own MIXED step is told as the reader's disagreement, once, not as a second event.
-      if (contest !== null && row.after_status === 'MIXED' && row.after_version === contest.reevaluation_after_version) return [];
+      if (row.after_status === 'MIXED' && reevaluationSteps.has(row.after_version)) return [];
       const kind = lifecycleKind(row);
       return kind === null ? [] : [{ kind, at: row.created_at }];
     });
     const first: UnderstandingEvolutionEntry = { kind: 'FIRST_SEEN', at: hypothesis.created_at };
-    const disagreed: UnderstandingEvolutionEntry[] = contest === null ? [] : [{ kind: 'YOU_DISAGREED', at: contest.created_at }];
-    return [...updates, ...lifecycle, ...disagreed, first]
+    // W3-CORR-U: every disagreement stays history, resolved or not. Only the reader's OWN confirmation is told as their
+    // agreement; a withdrawal is already told as WITHDRAWN and is never attributed to the reader.
+    const contested = contests.flatMap((row): UnderstandingEvolutionEntry[] => [
+      { kind: 'YOU_DISAGREED', at: row.created_at },
+      ...(row.lifecycle === 'RESOLVED' && row.resolution_reason === 'USER_CONFIRMED_CURRENT_INTERPRETATION' && row.resolved_at !== null
+        ? [{ kind: 'YOU_RESOLVED_DISAGREEMENT' as const, at: row.resolved_at }] : []),
+    ]);
+    return [...updates, ...lifecycle, ...contested, first]
       .sort((left, right) => Date.parse(right.at) - Date.parse(left.at))
       .slice(0, MAX_DETAIL_EVOLUTION);
+  }
+
+  private validateContestHistory(row: UnderstandingContestHistoryRow): void {
+    const instant = (value: unknown) => typeof value === 'string' && Number.isFinite(Date.parse(value));
+    if (!row || !Number.isSafeInteger(row.reevaluation_after_version) || !instant(row.created_at) ||
+      !['ACTIVE', 'SUPPORTED', 'MIXED', 'WEAK'].includes(row.reevaluation_before_status)) this.reject();
+    if (row.lifecycle === 'UNDER_REVIEW') {
+      if (row.resolved_at !== null || row.resolution_reason !== null) this.reject();
+    } else if (row.lifecycle === 'RESOLVED') {
+      if (!instant(row.resolved_at) ||
+        (row.resolution_reason !== 'USER_CONFIRMED_CURRENT_INTERPRETATION' && row.resolution_reason !== 'INTERPRETATION_WITHDRAWN')) this.reject();
+    } else {
+      this.reject();
+    }
   }
 
   private validateEvaluation(value: ConfidenceEvaluationRecord, userId: string, target: HypothesisRecord): void {

@@ -122,6 +122,7 @@ export type {
   UnderstandingEvolutionView,
   UnderstandingItemView,
   UnderstandingListOutcome,
+  UnderstandingResolutionOutcome,
   UnderstandingTheme,
 } from './understanding-api';
 export { UnderstandingApiClient } from './understanding-api';

@@ -14,6 +14,10 @@
  * and unavailable sentences, "talk to QANDEEL about this", its failure sentence, the discussion strip and the evolution
  * phrases, and (U3) the disagreement act, its two outcomes and the under-review words for P1 §11.4's own concept.
  * Plain, non-diagnostic, in QANDEEL's formal T1 register; none names a new Product concept.
+ *
+ * W3-CORR-U EXACT CORRECTIVE COPY (Product Owner, binding): «أوافق عليه الآن» / "I agree with this now" (the resolution
+ * act) and «وافقت لاحقًا على هذا الفهم» / "You later agreed with this understanding" (its evolution sentence). A failed
+ * resolution reuses the existing «تعذّر تسجيل رأيك.» / "Your view couldn't be recorded." — no third wording is invented.
  */
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { UnderstandingConfidence, UnderstandingEvolutionKind, UnderstandingTheme } from '../runtime-entry';
@@ -40,6 +44,8 @@ export interface UnderstandingCopy {
   readonly disagree: string;
   readonly disagreeRecorded: string;
   readonly disagreeFailed: string;
+  /** W3-CORR-U: the reader's explicit agreement that resolves their own disagreement. */
+  readonly agree: string;
   readonly underReview: string;
   readonly underReviewNote: string;
 }
@@ -78,6 +84,7 @@ const AR: UnderstandingCopy = Object.freeze({
     WITHDRAWN: 'تركه قنديل جانبًا',
     RECONSIDERED: 'أعاد قنديل النظر فيه',
     YOU_DISAGREED: 'سُجّل رأيك المختلف',
+    YOU_RESOLVED_DISAGREEMENT: 'وافقت لاحقًا على هذا الفهم',
   }),
   empty: 'لم يتكوّن لدى قنديل فهمٌ يعرضه بعد.',
   unavailable: 'تعذّر عرض فهم قنديل.',
@@ -88,6 +95,7 @@ const AR: UnderstandingCopy = Object.freeze({
   disagree: 'أراه بشكل مختلف',
   disagreeRecorded: 'سُجّل رأيك، وصار هذا الفهم قيد المراجعة.',
   disagreeFailed: 'تعذّر تسجيل رأيك.',
+  agree: 'أوافق عليه الآن',
   underReview: 'قيد المراجعة',
   underReviewNote: 'أخذ قنديل برأيك، وهذا الفهم قيد المراجعة.',
 });
@@ -126,6 +134,7 @@ const EN: UnderstandingCopy = Object.freeze({
     WITHDRAWN: 'QANDEEL set it aside',
     RECONSIDERED: 'QANDEEL reconsidered it',
     YOU_DISAGREED: 'Your different view was noted',
+    YOU_RESOLVED_DISAGREEMENT: 'You later agreed with this understanding',
   }),
   empty: "QANDEEL hasn't formed an understanding to show yet.",
   unavailable: "QANDEEL Understanding couldn't be shown.",
@@ -136,6 +145,7 @@ const EN: UnderstandingCopy = Object.freeze({
   disagree: 'I see it differently',
   disagreeRecorded: 'Your view is noted. This understanding is now under review.',
   disagreeFailed: "Your view couldn't be recorded.",
+  agree: 'I agree with this now',
   underReview: 'Under review',
   underReviewNote: 'QANDEEL took your view into account. This understanding is under review.',
 });
