@@ -17,6 +17,7 @@ import { contextOf, envelope, testStore } from '../../map/__fixtures__/store';
 import { MapCanvas, decodeCameraIntent, envelopeCenter, hitTest, placeScene, type MapCamera } from '../../map';
 import { DISCLOSURE_ENTRY_SCALE, MOTION_DURATIONS_MS, disclosureArrivalPlan } from '..';
 import { canvasProps } from '../__fixtures__/canvas';
+import { circles } from '../__fixtures__/paint';
 import { stubPresentationCamera } from '../__fixtures__/presentation-camera';
 
 const WORLD = (threads: readonly { id: string; x: string; y: string }[], appearances: readonly { bindingId: string; threadId: string }[] = []) =>
@@ -33,21 +34,27 @@ interface Painted {
   readonly r: number;
 }
 
-/** Every circle the renderer actually asked Skia to paint, in tree order. */
-function painted(json: unknown): Painted[] {
-  const found: Painted[] = [];
-  const walk = (node: unknown): void => {
-    if (node === null || typeof node !== 'object') return;
-    const record = node as { props?: Record<string, unknown>; children?: unknown[] };
-    const props = record.props;
-    if (props !== undefined && typeof props.cx === 'number' && typeof props.cy === 'number' && typeof props.r === 'number') {
-      found.push({ cx: props.cx, cy: props.cy, r: props.r });
-    }
-    for (const child of record.children ?? []) walk(child);
-  };
-  walk(json);
-  return found;
+/**
+ * Every OBJECT the renderer actually asked Skia to paint, in tree order, by its anchor.
+ *
+ * VPORT-01 re-anchor: the placeholder drew one circle per object at the placement radius, so counting
+ * circles counted objects. The final world draws each object as its canonical morphology inside an
+ * anchor group carrying only the object's origin (see `../__fixtures__/paint.ts`), plus the light and
+ * ground around it, so objects are read off their anchors. `r` is the placement radius of the node
+ * that anchor belongs to, which keeps the comparison below exactly the claim it was: the painted set
+ * IS the current placement — no more, no less, no object leaving.
+ */
+function painted(json: unknown, placement: { readonly nodes: readonly { x: number; y: number; radius: number }[] }): Painted[] {
+  return circles(json)
+    .filter((entry) => entry.r === 0)
+    .map((anchor) => {
+      const node = placement.nodes.find((candidate) => candidate.x === anchor.cx && candidate.y === anchor.cy);
+      return { cx: anchor.cx, cy: anchor.cy, r: node === undefined ? Number.NaN : node.radius };
+    });
 }
+
+/** Any paint at all — mark anchor, light or ground — centred on a point. */
+const paintAt = (json: unknown, x: number, y: number) => circles(json).some((entry) => entry.cx === x && entry.cy === y);
 
 const sorted = (nodes: readonly Painted[]) => [...nodes].sort((a, b) => a.cx - b.cx || a.cy - b.cy || a.r - b.r);
 
@@ -79,8 +86,8 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
     ]);
     const one = WORLD([{ id: 'thread-a', x: '0', y: '0' }]);
 
-    const { rendered, motion, camera } = await paintScene(store, both);
-    const beforeCircles = painted(rendered.toJSON());
+    const { rendered, motion, camera, placed } = await paintScene(store, both);
+    const beforeCircles = painted(rendered.toJSON(), placed);
     expect(beforeCircles).toHaveLength(2);
 
     const nextContext = contextOf(store, one);
@@ -91,7 +98,7 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
       );
     });
 
-    const afterCircles = painted(rendered.toJSON());
+    const afterCircles = painted(rendered.toJSON(), nextPlaced);
     // Exactly the current placement. Not "the current placement plus something leaving".
     expect(sorted(afterCircles)).toEqual(sorted(nextPlaced.visibleNodes.map((node) => ({ cx: node.x, cy: node.y, r: node.radius }))));
     expect(afterCircles).toHaveLength(1);
@@ -99,13 +106,15 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
     const departed = beforeCircles.find((circle) => !afterCircles.some((kept) => kept.cx === circle.cx && kept.cy === circle.cy));
     expect(departed).toBeDefined();
     expect(afterCircles.some((circle) => circle.cx === departed!.cx && circle.cy === departed!.cy)).toBe(false);
+    // Not its mark, and not its ground or its light either: nothing is centred where it was.
+    expect(paintAt(rendered.toJSON(), departed!.cx, departed!.cy)).toBe(false);
   });
 
   it('A35 — a shallower rung removes the detail it no longer discloses, immediately', async () => {
     const store = testStore({ depth: 'ANALYTICAL_OBJECT' });
     const deep = WORLD([{ id: 'thread-a', x: '0', y: '0' }], [{ bindingId: 'binding-1', threadId: 'thread-a' }]);
-    const { rendered, motion, camera } = await paintScene(store, deep);
-    expect(painted(rendered.toJSON())).toHaveLength(2);
+    const { rendered, motion, camera, placed } = await paintScene(store, deep);
+    expect(painted(rendered.toJSON(), placed)).toHaveLength(2);
 
     // The shallower viewpoint: the Thread's Home is still disclosed, its contextual detail is not.
     const shallowStore = testStore({ depth: 'THREAD' });
@@ -117,7 +126,7 @@ describe('T10-A21…A29, A35 — current V is what is painted, in the same commi
         <MapCanvas {...canvasProps({ placed: shallowPlaced, motion: motion, envelope: view })} />,
       );
     });
-    const after = painted(rendered.toJSON());
+    const after = painted(rendered.toJSON(), shallowPlaced);
     expect(after).toHaveLength(1);
     // The detail did not animate back into its host; it simply stopped being disclosed.
     expect(sorted(after)).toEqual(sorted(shallowPlaced.visibleNodes.map((node) => ({ cx: node.x, cy: node.y, r: node.radius }))));

@@ -68,6 +68,8 @@ import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture,
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import { mapContextFreshness } from '../projection';
+import { useIncreasedContrast } from '../../conversation/visual/theme';
+import { worldPresentation } from '../visual';
 import type { MapActionOutcome } from '../outcome';
 import { MapCanvas, type CanonicalCameraCommit } from './MapCanvas';
 import { CULL_MARGIN_POINTS, hitTest, placeScene, sceneMembershipKeys, type PlacedNode, type PlacedScene } from './map-geometry';
@@ -190,6 +192,21 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
   useLayoutEffect(() => {
     cameraBox.set(motion);
   }, [cameraBox, motion]);
+  // VPORT-01: the facts the world's EXPRESSION reads, gathered once per commit. The camera's distance
+  // and anchor, the device's reduced-motion answer, the platform contrast setting and the current
+  // inspection — none of which reaches placement, hit testing, membership or the accessible tree.
+  const increasedContrast = useIncreasedContrast();
+  const world = useMemo(
+    () =>
+      camera === null
+        ? undefined
+        : worldPresentation(camera, {
+            reducedMotion: motion.reducedMotion,
+            contrast: increasedContrast ? 'increased' : 'standard',
+            inspection: state.inspection,
+          }),
+    [camera, increasedContrast, motion.reducedMotion, state.inspection],
+  );
   const authority = useAuthorityGeneration(store);
   const { gesture: panGesture } = useMapPanGesture(store, { enabled: usable, camera: motion, authority, onSettled: onOutcome });
   const { gesture: zoomGesture } = useMapSemanticZoomGesture(store, { enabled: usable, authority, onSettled: onOutcome });
@@ -387,6 +404,7 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
             arrivals={arrivals}
             cameraCommit={cameraCommit}
             style={style}
+            world={world}
           />
         </View>
       </GestureDetector>

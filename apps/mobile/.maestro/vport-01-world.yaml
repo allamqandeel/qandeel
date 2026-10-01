@@ -1,0 +1,40 @@
+# VPORT-01 — the final Living Analysis World on the production route, settled at each distance. VALIDATION ONLY.
+#
+# Conversation → Analysis through the real door; then the world at the WORLD rung (FAR), one Semantic Zoom
+# step in (THREAD — MID), another (SESSION — NEAR), the origin Home inspected (SELECTED), and one more step
+# (ANALYTICAL_OBJECT — the ungrounded Readings join the ungeographic register). Each zoom step is the
+# reader's own canonical act through the production executor (the proof root's link; see
+# Vport01ProofRoot.tsx). Every capture waits for the world to settle, so it shows the arrival SETTLED.
+# Driven by scripts/vport01/run-vport01-visual-proof.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-01-far-world
+- openLink: "qandeel://vport01-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-02-mid-thread
+- openLink: "qandeel://vport01-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-03-near-session
+- openLink: "qandeel://vport01-proof/inspect-home"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-04-near-selected
+- openLink: "qandeel://vport01-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-05-analytical-register

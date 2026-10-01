@@ -6,6 +6,7 @@ import { MAP_ACCESSIBILITY_TEST_ID } from '../accessibility';
 import { canvasProps } from '../../motion/__fixtures__/canvas';
 import { stubPresentationCamera } from '../../motion/__fixtures__/presentation-camera';
 import { inspectObject } from '../inspection';
+import { MARK_RADIUS_POINTS, WORLD_VISUAL } from '../visual';
 import { decodeCameraIntent, envelopeCenter } from '../camera';
 import {
   MAP_CANVAS_TEST_ID,
@@ -136,8 +137,11 @@ describe('the structural Skia renderer', () => {
     const context = contextOf(store, DISCLOSURE());
     const view = await render(<MapSurface store={store} context={context} envelope={envelope()} />);
 
+    // VPORT-01 re-anchor: a Home is found by what only a Home is painted with — the cleared local
+    // ground of the major tier — rather than by the placeholder circle's 13-point radius.
+    const groundRadius = MARK_RADIUS_POINTS.THREAD_HOME * WORLD_VISUAL.material.objGnd.r;
     const homeX = () => {
-      const found = JSON.stringify(view.toJSON()).match(/"cx":(-?[0-9.]+),"cy":434,"r":13/u);
+      const found = JSON.stringify(view.toJSON()).match(new RegExp(`"cx":(-?[0-9.]+),"cy":434,"r":${groundRadius}[,}]`, 'u'));
       if (found === null) throw new Error('expected a painted Home');
       return Number(found[1]);
     };

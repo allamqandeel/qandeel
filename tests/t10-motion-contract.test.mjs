@@ -338,7 +338,10 @@ test('§13 — the rebase is issued from inside the Skia root, after the positio
     canvas,
     /<DisclosureArrival key=\{node\.key\}[^>]*>\s*<Group transform=\{motion\.objectTransform\} origin=\{vec\(node\.x, node\.y\)\}>/u,
   );
-  assert.match(canvas, /strokeWidth=\{motion\.objectScale\}/u);
+  // VPORT-01 re-anchor: the tether is now the canonical connection grammar (`WorldTether`), and its
+  // three strokes are counter-scaled by the SAME factor, handed to it here and read there.
+  assert.match(canvas, /strokeScale=\{motion\.objectScale\}/u);
+  assert.match(mapCode['visual/WorldMarks.tsx'], /useReadingOf\(strokeScale, \(k\) =>/u);
   assert.match(motionCode['presentation-camera/residual.ts'], /export function counterScale\(zoom: number\): number \{/u);
 });
 
@@ -843,17 +846,14 @@ test('the world is a world, not reading-order content: no motion knows a directi
 
 test('the static visual language was not redesigned by T-10', () => {
   const canvas = mapCode['renderer/MapCanvas.tsx'];
-  for (const value of [
-    "const GROUND = 'rgb(246,246,244)';",
-    "const AMBIENT = 'rgb(226,226,222)';",
-    "const EMPTY_SPACE = 'rgb(208,208,204)';",
-    "const HOME_FILL = 'rgb(64,64,62)';",
-    "const APPEARANCE_FILL = 'rgb(126,126,122)';",
-    "const TETHER = 'rgb(178,178,174)';",
-    "const REGISTER_FILL = 'rgb(150,150,146)';",
-  ]) {
-    assert.ok(canvas.includes(value), `T-10 changed no colour: ${value}`);
+  // VPORT-01 re-anchor, as this test always said would happen ("a later visual task re-anchors this
+  // test; T-10 does not"). The neutral placeholder palette is GONE, replaced by the final world, and it
+  // was replaced by the visual owner — not by the motion owner, which still paints no colour (below).
+  for (const value of ['GROUND', 'AMBIENT', 'EMPTY_SPACE', 'HOME_FILL', 'APPEARANCE_FILL', 'TETHER', 'REGISTER_FILL']) {
+    assert.equal(new RegExp(`const ${value} = 'rgb\\(`, 'u').test(canvas), false, `the placeholder ${value} is gone`);
   }
+  assert.equal(canvas.includes('rgb('), false, 'the renderer holds no colour literal of its own');
+  assert.match(canvas, /from '\.\.\/visual';/u, 'the renderer paints the visual owner\'s world');
   const geometry = mapCode['renderer/map-geometry.ts'];
   for (const value of ['HOME_RADIUS_POINTS = 13', 'APPEARANCE_RADIUS_POINTS = 6', 'APPEARANCE_RING_RADIUS_POINTS = 40', 'REGISTER_RADIUS_POINTS = 6']) {
     assert.ok(geometry.includes(value), `T-10 changed no geometry: ${value}`);

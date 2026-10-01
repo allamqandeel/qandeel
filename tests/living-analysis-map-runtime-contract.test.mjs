@@ -49,6 +49,17 @@ const PRODUCTION_FILES = [
   'renderer/index.ts',
   'renderer/map-geometry.ts',
   'renderer/render-style.ts',
+  // VPORT-01: the final world's EXPRESSION — material, morphology, distance response and the two
+  // generated modules it reads. Paint only: none of these files is an input to scene membership,
+  // placement, hit testing, accessibility or any act (asserted by the VPORT-01 contract).
+  'visual/WorldMarks.tsx',
+  'visual/WorldStrata.tsx',
+  'visual/index.ts',
+  'visual/useWorldResponse.ts',
+  'visual/world-field.generated.ts',
+  'visual/world-presentation.ts',
+  'visual/world-resolver.ts',
+  'visual/world-visual.generated.ts',
   'world/exact-math.ts',
   'world/index.ts',
   'world/osdap.ts',

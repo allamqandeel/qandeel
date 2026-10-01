@@ -90,6 +90,8 @@ export type {
   PresentationCameraOptions,
 } from './presentation-camera/usePresentationCamera';
 export { usePresentationCamera } from './presentation-camera/usePresentationCamera';
+// VPORT-01: a read-only reading of the presented plane, for paint that must agree with it.
+export { usePresentationReading, useReadingOf } from './presentation-camera/usePresentationReading';
 
 export type { ArrivalPresentation, DisclosureArrivalInput, DisclosureArrivalPlan } from './presence/arrival';
 export { ARRIVAL_AT_REST, arrivalPresentation, disclosureArrivalPlan, newlyDisclosedKeys } from './presence/arrival';
