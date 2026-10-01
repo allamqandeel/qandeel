@@ -269,6 +269,11 @@ Corrected on this PR (no migration, no copy, no UI change):
   reader chose "talk to QANDEEL about this" for that item. It is an intentional control, bound to that item's exact
   revision and to one command identity. Nothing in the Conversation turn path (API or mobile) reads what the reader
   types for a disagreement — the U3 contract proves the whole path free of it (no keyword interception).
+  *W3-CORR-U correction (U-3):* "only after the reader chose talk to QANDEEL about this" describes where the mobile
+  Product places the control. It is not a server rule. The API and the database accept an explicit disagreement on
+  one owned item, at one exact revision, under one command identity, with or without an open discussion. That act is
+  itself the reader's intent, and no prior gesture is required (`NO ISSUE BY PRODUCT SEMANTICS`; see the
+  [W3-CORR-U record](QANDEEL_W3_CORR_U_UNDERSTANDING_INTEGRITY_IMPLEMENTATION_RECORD_v1.md) §5).
 - The request is `POST /understanding/items/:ref/disagreement` with exactly `{ commandId, revision }`. **No words the
   reader typed are sent or stored**; the Conversation simply continues, and whatever they say next is an ordinary turn.
 
@@ -283,6 +288,11 @@ after version, the contest's ONE Confidence evaluation identity (R2, §4.10), an
 Contest lifecycle v1 is exactly `UNDER_REVIEW`. No Product authority defines what resolves a contest beyond the
 re-evaluation, so it **stays under review** rather than pretending to be resolved; no manual "resolved" control exists,
 and a provider restating the interpretation cannot clear it.
+*W3-CORR-U (later, forward):* the Product Owner has since defined the resolution. Migration `0134` implements
+`UNDER_REVIEW → RESOLVED` in two cases only: the reader's explicit agreement at the exact revision, or the
+interpretation's withdrawal through `REJECTED` / `RETIRED`. The disagreement stays history either way. A provider
+restating the interpretation, or any confidence change, still clears nothing. The paragraph above stays as written: it
+is the U3 truth at its own baseline.
 
 ### 4.3 Stale, concurrency, idempotency
 

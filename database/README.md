@@ -3695,6 +3695,10 @@ a retry after a failed attempt converge on it too; and another evaluation of the
 still accepted (history semantics unchanged). Its committed fixtures are removed (triggers suspended for that session only, since Hypotheses are append-only)
 and checked gone.
 
+**Superseded in part by 0134 (W3-CORR-U).** The sentence "a contest stays `UNDER_REVIEW`" was true of 0127 alone. The
+Product Owner has since defined the resolution, and migration 0134 implements it forward (see its section below). Every
+0127 fact above still holds.
+
 ## W3-MEGA-M - Conversational Memory control (migration 0128)
 
 `0128_conversational_memory_control_v1.sql` closes `E2E-D-13` under the P1 §9 rule: the user asks IN CONVERSATION what
@@ -3814,3 +3818,45 @@ with the row planted, and for any UPDATE; the export journey and package content
 of a real populated Personal footprint (committed units, a Memory command, Memory states, a contested Hypothesis, a HIM
 target) to zero rows while another reader is untouched; idempotent retry and completion; retired identifiers; the
 BLOCKED hard stop; and committed two-connection races.
+
+## W3-CORR-U - QANDEEL Understanding Integrity: focus continuity, contest resolution, withdrawal (migration 0134)
+
+`0134_understanding_integrity_v1.sql` closes the Understanding Integrity direction under the Product Owner's binding
+rule: a reader's disagreement is durable history and is never erased. Forward-only; 0126 and 0127 are untouched and
+0127's command is redefined in place with its exact signature.
+
+- **Contest lifecycle `UNDER_REVIEW -> RESOLVED`.** Four nullable resolution facts are added to
+  `public.understanding_contests`: `resolved_at`, `resolved_version`, `resolution_reason` and `resolution_command_id`.
+  A `CHECK` shapes them. An open contest carries none of them. A resolved one carries all of them: after the contest,
+  at or after its re-evaluated version, with a command identity exactly for `USER_CONFIRMED_CURRENT_INTERPRETATION`
+  and none for `INTERPRETATION_WITHDRAWN`. `UNIQUE (user_id, resolution_command_id)` holds, and 0127's partial index
+  still allows one contest under review per item and any number of resolved ones. A `BEFORE UPDATE` trigger
+  (`understanding_private.understanding_contest_lifecycle_forward_only_v1`) makes a resolved row final, and 0127's facts
+  trigger keeps the original disagreement immutable.
+- **`resolve_understanding_disagreement_v1(command, hypothesis, expected_version)`.** It is SECURITY DEFINER in
+  `understanding_private`, with a `public` INVOKER pass-through, and is `authenticated` only. It is the reader's explicit
+  "I agree with this now" at the exact version they see. It locks the item `FOR UPDATE` and answers one of `RESOLVED`
+  (also for the same command replayed), `NOT_UNDER_REVIEW`, `STALE`, `NOT_FOUND` or `COMMAND_CONFLICT`. The reason is
+  server-owned. No Hypothesis status, version, statement, Evidence or Confidence changes, and no provider is involved.
+- **Withdrawal.** An `AFTER INSERT` trigger on `public.hypothesis_lifecycle_transitions` fires only `WHEN after_status
+  IN ('REJECTED', 'RETIRED')`. That table is the audit row the lifecycle core (0036) writes in the same transaction as
+  the step. The trigger resolves the item's open contest as `INTERPRETATION_WITHDRAWN`, with no command identity. No
+  other status resolves anything, the lifecycle core is not redefined, and no read is intercepted.
+- **U-1 focus continuity.** The disagreement command moves the reader's open discussion focus on the same item from the
+  contested version to the re-evaluated one, in the same transaction. Only the version changes: `opened_at` is kept, a
+  closed focus is never matched, and no other item's focus moves. A replay or an `ALREADY_UNDER_REVIEW` answer repairs a
+  still-open stale focus that meets exactly those facts. A one-time forward reconciliation repairs the rows that already
+  meet them, and resolves a pre-0134 open contest whose item was since withdrawn.
+- **Lock order.** The hypotheses row is locked first, then the contest row, then the focus row.
+
+`database/verify-migration-0134.mjs` (`npm run verify:understanding-integrity:integration`, API CI) proves:
+- the catalog and every explicit grant;
+- focus continuity, repair and the migration's own reconciliation, run from its text;
+- U-3, a direct disagreement with no discussion;
+- the lifecycle: refusals, replay, conflict, immutability, one open contest, and a new contest after resolution;
+- withdrawal by `REJECTED` / `RETIRED` only, with `REOPENED` leaving history untouched;
+- the combined 10-hypothesis provider-context proof, through the real compiled `HypothesisReasoningContextService` on
+  real rows;
+- isolation and privileges;
+- committed two-connection races: disagreement vs close, disagreement vs a new selection, replays, resolutions, and
+  resolution vs withdrawal.
