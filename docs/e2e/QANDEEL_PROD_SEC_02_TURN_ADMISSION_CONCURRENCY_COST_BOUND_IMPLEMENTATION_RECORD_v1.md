@@ -189,7 +189,11 @@ gateway status would fail safe as an ordinary error rather than be misread.
 | All 41 static `test:*` contracts that API CI runs (local) | **all pass** after the round-1 correction |
 | API Jest, every touched directory (`conversation/`, `live-focus/`, `model-router/`, `conversation-unit/`, `conversational-focus/`, `thread-lifecycle/`, `thread-establishment/`), local | **63 suites, 1310 tests, all pass** |
 | Mobile `conversation-turns.test.ts` (local) | **11 / 11** |
-| Full API CI and Mobile CI on PR #299 | stated in the PR at hand-off |
+| **(R2)** `database/verify-migration-0131.mjs` with the work-start budget, Focused DB gate, run `36843859014` (`0d6bc59`) | **success** |
+| **(R2)** Live PostgREST wire proof inside API CI run `36843840304` (`0d6bc59`): v12.2.9, v13.0.8, v14.18, v16.4 | **4 / 4 verified** (429 `PT429` / `TURN_ADMISSION_LIMITED`; replay 409; `GRANTED` / `LIMITED` row shapes; user token refused) |
+| **(R2)** Full API CI run `36843840304` (`0d6bc59`), every verifier and static contract | **success** |
+| **(R2)** Local: prod-sec-02 contract 4/4, `test:database` 1281/1281, re-anchored contracts 41/41, governance 24/24, hazards 0, API Jest (service, semantic, scope specs) 82/82 | **all pass** |
+| Full API CI and Mobile CI on the final head | stated in the PR at hand-off |
 
 **What `verify-migration-0131.mjs` proves** (the task's twelve points and more):
 
@@ -300,7 +304,7 @@ The five files are 0025, 0030, 0039, 0062 and 0064. No assertion changed, and al
 | Skill | Inspected | Used | Why |
 |---|---|---|---|
 | `security-review` | yes | **attempted, could not run** | It starts by running `git status` through Bash, and Bash is non-functional on this host (Windows Application Control). The security pass was instead done manually against the task's §11 planted-defect list (§14). |
-| `code-review` (high) | yes | **yes** | Ran on the final-round diff and reported seven findings. Outcomes are in §15. Finding 3 (per-provider guard list) led directly to the binding-seam design. Re-run on the final R2 diff (results in the PR). |
+| `code-review` (high) | yes | **yes** | Ran on the final-round diff and reported seven findings. Outcomes are in §15. Finding 3 (per-provider guard list) led directly to the binding-seam design. Re-run on the final R2 diff: five low-severity findings, none an open cost path — admission at budget−1 may meet a `LIMITED` generation (bounded, retryable 503); ledger pruned only on the user's next grant (≤ 900 rows per dormant user); PostgREST images pinned by tag, not digest; the hosted gateway itself is not exercised (fail-safe, §15); the API retry spec uses a stub gate (the ledger is proven in PostgreSQL). All recorded, none changed. |
 | others (UI, motion, mobile and design skills) | yes | no | Not applicable to a database and API security corrective. |
 
 ## 14. Security review against the planted-defect list (§11 of the task)
