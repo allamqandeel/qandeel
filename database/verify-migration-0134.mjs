@@ -334,6 +334,7 @@ async function verifyLifecycle() {
   const [original] = await contestsOn(item.id);
   const audits = await auditCount(item.id);
   const evaluations = await confidenceCount(me);
+  const itemBefore = await itemOf(item.id);
 
   stage = 'U-2: the stale, not-found and not-under-review refusals write nothing';
   await actAs('authenticated', me);
@@ -359,7 +360,8 @@ async function verifyLifecycle() {
   for (const fact of ['id', 'command_id', 'contested_version', 'reevaluation_before_status', 'reevaluation_after_version', 'confidence_evaluation_id', 'created_at']) {
     assert.deepEqual(resolved[fact], original[fact], `the original fact ${fact} is unchanged`);
   }
-  assert.deepEqual(await itemOf(item.id), { status: 'MIXED', version: item.version, statement: (await itemOf(item.id)).statement }, 'the Hypothesis is not moved — never forced to SUPPORTED');
+  assert.deepEqual(await itemOf(item.id), itemBefore, 'the Hypothesis is not moved — never forced to SUPPORTED, never rewritten');
+  assert.deepEqual([itemBefore.status, itemBefore.version], ['MIXED', item.version]);
   assert.equal(await auditCount(item.id), audits, 'no lifecycle step');
   assert.equal(await confidenceCount(me), evaluations, 'no Confidence created');
 

@@ -161,10 +161,7 @@ export class UnderstandingService {
       const seen = [hypothesis.version, hypothesis.version - 1]
         .find((version) => version >= 1 && understandingRevision(userId, hypothesis.id, version) === revision);
       if (seen === undefined) {
-        const contests = await this.repository.listContestsUnderReview(token, userId, [hypothesis.id]);
-        if (Array.isArray(contests) && contests.some((row) => row?.hypothesis_id === hypothesis.id)) {
-          return this.underReview(userId, hypothesis.id, hypothesis.version);
-        }
+        if (await this.hasContestUnderReview(userId, token, hypothesis.id)) return this.underReview(userId, hypothesis.id, hypothesis.version);
         throw this.changed();
       }
       const rows = await this.repository.recordDisagreement(token, commandId, hypothesis.id, seen);
@@ -172,6 +169,9 @@ export class UnderstandingService {
       switch (row.outcome) {
         case 'RECORDED': {
           if (!Number.isSafeInteger(row.reevaluated_version) || !isEvaluationId(row.confidence_evaluation_id)) this.reject();
+          // W3-CORR-U: a replayed command answers its committed contest, which the reader may since have resolved. It
+          // is then not under review: the reader is told the item changed and reads the current truth.
+          if (!(await this.hasContestUnderReview(userId, token, hypothesis.id))) throw this.changed();
           await this.reevaluateConfidence(userId, token, hypothesis.id, row.reevaluated_version as number, row.confidence_evaluation_id);
           // The revision the client keeps is the CURRENT interpretation's: a replay may answer an older committed
           // truth while the item has since moved on.
@@ -215,13 +215,16 @@ export class UnderstandingService {
       const hypothesis = (await this.ownedActive(userId, token))
         .find((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status) && understandingItemRef(userId, value.id) === ref);
       if (!hypothesis) throw new NotFoundException('Understanding item not found.');
-      // A resolution never moves the version, so the revision the reader saw is the current one or it is stale.
-      if (understandingRevision(userId, hypothesis.id, hypothesis.version) !== revision) throw this.changed();
-      const rows = await this.repository.resolveDisagreement(token, commandId, hypothesis.id, hypothesis.version);
+      // The version the reader saw: usually the current one (a resolution never moves it). An older one is sent too, so
+      // that the SAME command, whose answer was lost before the item moved on, is answered its committed truth; the
+      // database resolves only at the exact current version and answers STALE for anything else.
+      const seen = seenVersion(hypothesis.version, (version) => understandingRevision(userId, hypothesis.id, version) === revision);
+      if (seen === undefined) throw this.changed();
+      const rows = await this.repository.resolveDisagreement(token, commandId, hypothesis.id, seen);
       const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : this.reject();
       switch (row.outcome) {
         case 'RESOLVED':
-          if (row.resolved_version !== hypothesis.version) this.reject();
+          if (row.resolved_version !== seen) this.reject();
           return { underReview: false, revision: understandingRevision(userId, hypothesis.id, hypothesis.version) };
         case 'NOT_UNDER_REVIEW':
           throw new ConflictException({ code: 'UNDERSTANDING_NOT_UNDER_REVIEW' });
@@ -267,6 +270,12 @@ export class UnderstandingService {
     } catch {
       // Losing a signal is acceptable; changing the answer is not.
     }
+  }
+
+  private async hasContestUnderReview(userId: string, token: string, hypothesisId: string): Promise<boolean> {
+    const rows = await this.repository.listContestsUnderReview(token, userId, [hypothesisId]);
+    if (!Array.isArray(rows)) this.reject();
+    return rows.some((row) => row?.hypothesis_id === hypothesisId);
   }
 
   private underReview(userId: string, hypothesisId: string, version: number): UnderstandingDisagreementView {
@@ -381,7 +390,7 @@ export class UnderstandingService {
   private validateContestHistory(row: UnderstandingContestHistoryRow): void {
     const instant = (value: unknown) => typeof value === 'string' && Number.isFinite(Date.parse(value));
     if (!row || !Number.isSafeInteger(row.reevaluation_after_version) || !instant(row.created_at) ||
-      !['ACTIVE', 'SUPPORTED', 'MIXED', 'WEAK'].includes(row.reevaluation_before_status)) this.reject();
+      !UNDERSTANDING_SURFACE_STATUSES.includes(row.reevaluation_before_status)) this.reject();
     if (row.lifecycle === 'UNDER_REVIEW') {
       if (row.resolved_at !== null || row.resolution_reason !== null) this.reject();
     } else if (row.lifecycle === 'RESOLVED') {
@@ -424,6 +433,16 @@ export class UnderstandingService {
   }
 
   private reject(): never { throw new UnderstandingProjectionInvariantError(); }
+}
+
+/** How far back a revision may be matched to the version it names: bounded, so a forged token costs bounded hashing. */
+const MAX_SEEN_VERSION_LOOKBACK = 64;
+
+function seenVersion(current: number, matches: (version: number) => boolean): number | undefined {
+  for (let version = current; version >= Math.max(1, current - MAX_SEEN_VERSION_LOOKBACK + 1); version -= 1) {
+    if (matches(version)) return version;
+  }
+  return undefined;
 }
 
 function lifecycleKind(row: UnderstandingLifecycleTransitionRow): UnderstandingEvolutionKind | null {

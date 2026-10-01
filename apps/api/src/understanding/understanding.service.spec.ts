@@ -221,6 +221,16 @@ describe('UnderstandingService', () => {
 
     const EVAL = '0f1e2d3c-4b5a-4968-8776-655443322110';
     const recorded = (over: Record<string, unknown> = {}) => [{ outcome: 'RECORDED', contested_version: 3, reevaluated_version: 4, confidence_evaluation_id: EVAL, ...over }];
+    // A recorded contest is under review until the reader resolves it (W3-CORR-U).
+    beforeEach(() => repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00Z' }]));
+
+    it('W3-CORR-U: a replayed command whose contest was since resolved is told the item changed — never "under review"', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4, status: 'MIXED' })]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      repository.listContestsUnderReview.mockResolvedValue([]);
+      await expect(ask(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).not.toHaveBeenCalled();
+    });
 
     it('records against the exact version seen, then ENSURES the exact re-evaluated version under the contest’s one evaluation identity', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
@@ -315,6 +325,7 @@ describe('UnderstandingService', () => {
 
     it('never applies an objection to a different interpretation: a changed item is 409 and nothing is recorded', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 6 })]);
+      repository.listContestsUnderReview.mockResolvedValue([]);
       await expect(ask(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
       expect(repository.recordDisagreement).not.toHaveBeenCalled();
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
@@ -393,6 +404,7 @@ describe('UnderstandingService', () => {
       // The owner and version checks still hold: another reader's ref is 404 and a stale revision is 409, unrecorded.
       await expect(service.disagree(USER, 'token', understandingItemRef(OTHER, H1), { commandId: COMMAND, revision: understandingRevision(OTHER, H1, 3) }))
         .rejects.toBeInstanceOf(NotFoundException);
+      repository.listContestsUnderReview.mockResolvedValue([]);
       await expect(ask(1)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
       expect(repository.recordDisagreement).toHaveBeenCalledTimes(1);
     });
@@ -423,6 +435,11 @@ describe('UnderstandingService', () => {
       const first = await resolve(4);
       await expect(resolve(4)).resolves.toEqual(first);
       expect((repository.resolveDisagreement as jest.Mock).mock.calls).toEqual([['token', COMMAND, H1, 4], ['token', COMMAND, H1, 4]]);
+      // The answer was lost and the item moved on since: the SAME command is still answered its committed truth, at the
+      // version it resolved, and the client is handed the current revision.
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 6, status: 'SUPPORTED' })]);
+      await expect(resolve(4)).resolves.toEqual({ underReview: false, revision: understandingRevision(USER, H1, 6) });
+      expect(repository.resolveDisagreement).toHaveBeenLastCalledWith('token', COMMAND, H1, 4);
     });
 
     it('bounded refusals: conflict, stale, no longer under review, gone', async () => {
@@ -435,9 +452,14 @@ describe('UnderstandingService', () => {
       await expect(resolve(4)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_NOT_UNDER_REVIEW' } });
       (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce([{ outcome: 'NOT_FOUND', resolved_version: null }]);
       await expect(resolve(4)).rejects.toBeInstanceOf(NotFoundException);
-      // A revision the reader saw before the item moved is never resolved: nothing reaches the database.
-      (repository.resolveDisagreement as jest.Mock).mockClear();
+      // A revision the reader saw before the item moved is never resolved: the database answers STALE at that version.
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce([{ outcome: 'STALE', resolved_version: null }]);
       await expect(resolve(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      expect(repository.resolveDisagreement).toHaveBeenLastCalledWith('token', COMMAND, H1, 3);
+      // A revision that names no recent version never reaches the database.
+      (repository.resolveDisagreement as jest.Mock).mockClear();
+      await expect(service.resolveDisagreement(USER, 'token', understandingItemRef(USER, H1), { commandId: COMMAND, revision: understandingRevision(USER, H2, 4) }))
+        .rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
       // Another reader's ref, a withdrawn item and a missing one are the same 404.
       await expect(resolve(4, COMMAND, understandingItemRef(OTHER, H1))).rejects.toBeInstanceOf(NotFoundException);
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 5, status: 'REJECTED' })]);
