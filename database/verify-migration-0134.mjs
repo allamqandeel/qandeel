@@ -28,6 +28,7 @@
 //      resolutions (different and same command), resolution vs withdrawal (both orders). Fixtures are removed and the
 //      removal is checked.
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { existsSync, readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -476,7 +477,9 @@ async function verifyWithdrawal() {
 // ------------------------------------------------------------------------------------------------------------------
 function compiledReasoningContext() {
   const path = join(root, 'apps/api/dist/hypothesis/hypothesis-reasoning-context.service.js');
-  if (!existsSync(path)) throw new Error('apps/api/dist is required (API CI builds it before this step): npm run build:api');
+  // API CI builds apps/api/dist before the database steps; the focused gate installs but does not build, so build here.
+  if (!existsSync(path)) execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build:api'], { cwd: root, stdio: ['ignore', 'ignore', 'inherit'] });
+  if (!existsSync(path)) throw new Error('apps/api/dist could not be built: npm run build:api');
   const require = createRequire(import.meta.url);
   try { require('reflect-metadata'); } catch { /* the compiled decorators tolerate its absence */ }
   return require(path).HypothesisReasoningContextService;
