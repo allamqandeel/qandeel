@@ -5,6 +5,9 @@ import { CONFIDENCE_POLICY_VERSION, type ConfidenceEvaluationRecord } from '../h
 import type { HypothesisService } from '../hypothesis/hypothesis.service';
 import type { HypothesisRecord } from '../hypothesis/hypothesis.types';
 import type { EvidenceService } from '../memory/evidence.service';
+import { DataApiError } from '../conversation/supabase-data-api.service';
+import { CorrelationService } from '../observability/correlation.service';
+import { TelemetryService } from '../observability/telemetry.service';
 import { understandingItemRef, understandingRevision } from './understanding-projection';
 import type { UnderstandingRepository } from './understanding.repository';
 import { UnderstandingService } from './understanding.service';
@@ -36,6 +39,7 @@ describe('UnderstandingService', () => {
   let hypotheses: jest.Mocked<HypothesisService>, evidenceService: jest.Mocked<EvidenceService>;
   let confidence: jest.Mocked<ConfidenceRepository>, repository: jest.Mocked<UnderstandingRepository>, service: UnderstandingService;
   let confidenceRuntime: jest.Mocked<ConfidenceService>;
+  let telemetry: TelemetryService, reevaluationSignals: jest.Mock;
 
   beforeEach(() => {
     hypotheses = { listActiveForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<HypothesisService>;
@@ -46,7 +50,11 @@ describe('UnderstandingService', () => {
       listContestsUnderReview: jest.fn().mockResolvedValue([]), recordDisagreement: jest.fn(),
     } as unknown as jest.Mocked<UnderstandingRepository>;
     confidenceRuntime = { evaluateHypothesisVersion: jest.fn().mockResolvedValue({}), ensureHypothesisVersionEvaluation: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<ConfidenceService>;
-    service = new UnderstandingService(hypotheses, evidenceService, confidence, repository, confidenceRuntime);
+    // PROD-OPS-01: the real telemetry service with a captured counter, so the emitted labels are the shipped ones.
+    telemetry = new TelemetryService(new CorrelationService());
+    reevaluationSignals = jest.fn();
+    (telemetry as unknown as { operationalOutcomes: unknown }).operationalOutcomes = { add: reevaluationSignals };
+    service = new UnderstandingService(hypotheses, evidenceService, confidence, repository, confidenceRuntime, telemetry);
   });
 
   it('is honestly empty: no current understanding, no further reads, nothing manufactured', async () => {
@@ -236,6 +244,57 @@ describe('UnderstandingService', () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4, status: 'MIXED' })]);
       await expect(ask(3)).resolves.toMatchObject({ underReview: true });
       expect(confidenceRuntime.ensureHypothesisVersionEvaluation.mock.calls.map((call) => call[4])).toEqual([EVAL, EVAL]);
+    });
+
+    // PROD-OPS-01 — the re-evaluation is visible, content-free, and changes nothing.
+    const signals = () => reevaluationSignals.mock.calls.map(([value, labels]) => {
+      expect(value).toBe(1);
+      return labels as Record<string, string>;
+    });
+    const CONTENT = /[0-9a-f]{8}-[0-9a-f]{4}-|token|prepare early|transient|SECRET|23505|user|hypothesis|evaluation_id|message/iu;
+
+    it('a successful re-evaluation emits exactly one bounded success, with no identity', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      await ask(3);
+      expect(signals()).toEqual([{ domain: 'UNDERSTANDING_CONFIDENCE', operation: 'confidence_reevaluate', outcome: 'success', policy_version: '1' }]);
+      expect(JSON.stringify(reevaluationSignals.mock.calls)).not.toMatch(CONTENT);
+    });
+
+    it('a failed re-evaluation emits retry_pending with a bounded class; the answer is byte-identical to a success', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      const succeeded = await ask(3);
+      for (const [error, failureClass] of [
+        [new ServiceUnavailableException('SECRET relay down'), 'TRANSPORT'],
+        [new DataApiError(503), 'TRANSPORT'],
+        [new DataApiError(409, { databaseCode: '23505', databaseMessage: 'SECRET duplicate' }), 'INTEGRITY'],
+        [new Error(`transient SECRET ${H1}`), 'INTEGRITY'],
+      ] as const) {
+        reevaluationSignals.mockClear();
+        confidenceRuntime.ensureHypothesisVersionEvaluation.mockRejectedValueOnce(error);
+        await expect(ask(3)).resolves.toEqual(succeeded);
+        expect(signals()).toEqual([{ domain: 'UNDERSTANDING_CONFIDENCE', operation: 'confidence_reevaluate', outcome: 'retry_pending', policy_version: '1', failure_class: failureClass }]);
+        expect(JSON.stringify(reevaluationSignals.mock.calls)).not.toMatch(CONTENT);
+      }
+      // No automatic retry is added: one call per request, exactly as before.
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).toHaveBeenCalledTimes(5);
+    });
+
+    it('telemetry that throws never changes the reader’s answer or the lifecycle path', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      const expected = await ask(3);
+      reevaluationSignals.mockImplementation(() => { throw new Error('meter down'); });
+      await expect(ask(3)).resolves.toEqual(expected);
+      confidenceRuntime.ensureHypothesisVersionEvaluation.mockRejectedValueOnce(new Error('transient'));
+      await expect(ask(3)).resolves.toEqual(expected);
+      (telemetry as unknown as { recordOperationalOutcome: unknown }).recordOperationalOutcome = () => { throw new Error('telemetry down'); };
+      await expect(ask(3)).resolves.toEqual(expected);
+      confidenceRuntime.ensureHypothesisVersionEvaluation.mockRejectedValueOnce(new Error('transient'));
+      await expect(ask(3)).resolves.toEqual(expected);
+      expect(repository.recordDisagreement).toHaveBeenCalledTimes(5);
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).toHaveBeenCalledTimes(5);
     });
 
     it('a recorded answer without a well-formed evaluation identity is refused, never evaluated under a fresh one', async () => {

@@ -159,9 +159,9 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
-| `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-02` | API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04) | `PROD-SEC-01 — API Baseline Hardening` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-PROD-03` | Readiness Probe Cannot Pass Against the Current Supabase Project (PR01-S05) | `PROD-OPS-01 — Readiness Probe Correction` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-03` | Operational Readiness & Silent-Failure Visibility: Readiness Probe (PR01-S05), Privacy Deletion / Export Preparation / Confidence Re-evaluation Silent Failures (P-1 / P-5 / U-4), Stuck-Job Visibility | `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-04` | Remote Auth Verification Cost and Capacity (PR01-A01 / A-03 / A-04) | `PROD-AUTH-01 — Auth Verification Path` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-05` | List / Fan-out Corrections and Unmeasured Payload / Semantic-Phase Sizes (PR01-D/M) | `PROD-DATA-01 — List/Fan-out Correction` | `MEDIUM` | `DEFERRED — OWNED` |
 
@@ -580,6 +580,9 @@ obligation only (BG-07).
 
 ### `QAN-BL-PROD-01` — Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02)
 
+> **Historical pre-closure schema.** This block records the item as admitted, including its pre-merge wording. It is
+> not the current lifecycle state; the current state is the `CLOSED — TOMBSTONE` record in §6 below.
+
 - **Title / Finding:** one authenticated account could admit any number of cost-bearing conversation turns at once and
   keep doing so: `create_user_conversation_turn` bounded nothing, `claim_conversation_turn` only stops two claimants of
   the same turn, and every turn fans into several model-provider calls (reply, segmentation, focus, Thread continuity
@@ -615,14 +618,31 @@ obligation only (BG-07).
   case before public production exposure.
 - **Status:** `DEFERRED — OWNED`
 
-### `QAN-BL-PROD-03` — Readiness Probe Cannot Pass Against the Current Supabase Project (PR01-S05)
+### `QAN-BL-PROD-03` — Operational Readiness & Silent-Failure Visibility (PR01-S05; P-1 / P-5 / U-4; stuck-job visibility)
 
-- **Title / Finding:** the database readiness probe sends `HEAD /rest/v1/` with the publishable key and treats any
-  non-2xx as unavailable. Supabase withdrew Data API root access for anon / publishable keys (11 March 2026), so the
-  probe received `401` in 20 of 20 measured requests and `/health/ready` always reports `503 not_ready`.
-- **Source:** `PROD-READINESS-01` review record §3.4 / §15 (Draft PR #298, `03685fd`; measurement run `36830247454`).
+> **Historical pre-closure schema.** This block records what `PROD-OPS-01` inherited and the direction the Product
+> Owner widened it to. It is not the current lifecycle state; the current state is the `CLOSED — TOMBSTONE` record in
+> §6 below.
+
+- **Title / Finding:** originally `PR01-S05` alone: the database readiness probe sends `HEAD /rest/v1/` with the
+  publishable key and treats any non-2xx as unavailable. Supabase withdrew Data API root access for anon / publishable
+  keys (11 March 2026), so the probe received `401` in 20 of 20 measured requests and `/health/ready` always reports
+  `503 not_ready`. The Product Owner's `PROD-OPS-01` Task Contract widened the item to the whole Operational Readiness &
+  Failure Visibility direction, so these are ONE item with ONE owner rather than orphan rows:
+  - `PR01-S05` — the readiness probe above;
+  - `P-1` (independent W3 review) — the Privacy deletion pass swallowed every failure: preparation and claim errors,
+    erasure and completion errors, and a provider removal that stays `UNAVAILABLE` forever, all with no signal;
+  - `P-5` (independent W3 review) — export preparation failed into `FAILED` after three attempts with no bounded
+    operational reason;
+  - `U-4` (independent W3 review) — the Understanding Confidence re-evaluation failure was swallowed into
+    `PENDING_RETRY` with no signal;
+  - stuck-job visibility — per-attempt signals do not survive a restart, so stuck Privacy / export work had no
+    deterministic aggregate signal.
+- **Source:** `PROD-READINESS-01` review record §3.4 / §15 (Draft PR #298, `03685fd`; measurement run `36830247454`); the
+  independent W3 review findings `P-1`, `P-5` and `U-4`; the `PROD-OPS-01` Task Contract.
 - **Why deferred:** a separate, small operational corrective. No deployment admits traffic through this probe yet.
-- **Owner task:** `PROD-OPS-01 — Readiness Probe Correction`
+- **Owner task:** `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` (originally named
+  `PROD-OPS-01 — Readiness Probe Correction`)
 - **Severity:** `HIGH`: a load balancer configured as the health contract prescribes would never admit traffic.
 - **Reopen condition:** automatic before any deployment uses `/health/ready` for traffic admission.
 - **Status:** `DEFERRED — OWNED`
@@ -789,6 +809,43 @@ This tombstone was recorded by `T-14 — Mobile Product Sign-In Gateway v1` unde
 without reconciling its own inherited item, and this is that reconciliation; it reopens nothing and
 changes no T-13 semantics.
 
+### `QAN-BL-PROD-01` — Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02)
+
+- **Closing task:** `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound`
+- **PR / SHA:** `#299` / merged as `ce2b86d0caaeb063ec4593663d9dbf806e51b4f4` (implementation head `a6c9ca5`)
+- **Disposition:** completed. Migration `0131` bounds turn admission atomically at the database (one in-flight turn
+  per session, two per user, rolling 10-minute and 24-hour allowances, one typed `PT429` refusal proven as HTTP 429
+  through live PostgREST), leases every provider-bearing exchange, and charges a durable per-user work-start budget
+  so replays and semantic retries are bounded over time as well as in concurrency. The foreground AI-cost direction is
+  closed.
+- **Status:** `CLOSED — TOMBSTONE`
+
+This tombstone was recorded by `PROD-OPS-01` under BG-08, as that task's Task Contract (§10) instructs: PR #299 merged
+while this register still carried its pre-merge wording. It is a register correction, not a lifecycle change, and it
+reopens nothing in `PROD-SEC-02`.
+
+### `QAN-BL-PROD-03` — Operational Readiness & Silent-Failure Visibility (PR01-S05; P-1 / P-5 / U-4; stuck-job visibility)
+
+- **Closing task:** `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility`
+- **PR / SHA:** `#300` / implementation evidence head `76d1d4b` — every runtime, migration and test change of the
+  task. The commits after it are this BG-08 record and the implementation record; neither changes runtime behaviour.
+  The tombstone is true from the merge of PR #300, which happens only after independent review on green CI.
+- **Disposition:** completed, all five rows FIXED + VALIDATED.
+  - **Readiness (`PR01-S05`):** the probe calls one zero-parameter, row-free, read-only RPC
+    (`server_database_ready_v1`, migration `0132`) with the canonical server credential, executable by `service_role`
+    only; `available` only for HTTP 200 with exactly `true`; concurrent checks coalesce. Proven through live PostgREST
+    with the API's compiled probe.
+  - **Privacy deletion (`P-1`):** every step of the pass emits one content-free outcome; provider `UNAVAILABLE` stays
+    retryable and is visible; Connected Worlds `BLOCKED` is `blocked_expected`, never a failure; no attempt cutoff.
+  - **Export preparation (`P-5`):** a failed attempt records one closed class (`TRANSIENT_DATABASE`,
+    `CONSTRAINT_OR_INTEGRITY`, `RESOURCE_OR_CAPACITY`, `INTERNAL_OTHER`) and its time, never the SQLSTATE or text; three
+    attempts, the one-minute backoff and owner-facing `FAILED` are unchanged; a success clears the class.
+  - **Confidence re-evaluation (`U-4`):** `success` or `retry_pending` with a two-value failure class; the answer and
+    the lifecycle are unchanged; no automatic retry was added.
+  - **Stuck-job visibility:** a service-role-only aggregate summary (counts and ages only) emitted as gauges; it is
+    not a readiness input.
+- **Status:** `CLOSED — TOMBSTONE`
+
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
 
 - **Closing task:** `T-14 — Mobile Product Sign-In Gateway v1`
@@ -815,10 +872,10 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 8 |
+| `DEFERRED — OWNED` | 6 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 12 |
+| `CLOSED — TOMBSTONE` | 14 |
 | **Total** | **30** |
 
 | Severity | Count |
@@ -883,6 +940,15 @@ All five are `DEFERRED — OWNED`. The register now holds **30** items: 8 `DEFER
 12 `CLOSED — TOMBSTONE`; 19 `HIGH`, 10 `MEDIUM`, 1 `LOW`. These admissions authorize no implementation beyond
 `PROD-SEC-02`'s own Task Contract (BG-07).
 
+**PROD-OPS-01 reconciliation (2026-10-01).** Two tombstones and no admission. `QAN-BL-PROD-01` is tombstoned for
+`PROD-SEC-02` (PR #299, merged as `ce2b86d`), whose pre-merge wording this register still carried. `QAN-BL-PROD-03`
+was widened by the `PROD-OPS-01` Task Contract to the whole Operational Readiness & Failure Visibility direction —
+`PR01-S05` plus the independent W3 review's `P-1`, `P-5` and `U-4` and stuck-job visibility, kept as ONE item with ONE
+owner rather than orphan rows — and is tombstoned by `PROD-OPS-01` itself (PR #300). No new item qualifies under BG-06;
+the record's §12 gives each residue's disposition. `PROD-SEC-01`, `PROD-AUTH-01` and `PROD-DATA-01` keep their items
+unchanged. The register now holds **30** items: 6 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED`, 14 `CLOSED — TOMBSTONE`;
+19 `HIGH`, 10 `MEDIUM`, 1 `LOW`, counted mechanically from the §4 index.
+
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -926,6 +992,8 @@ Inherited after T-12 closure reconciliation:
 | `T-13 — Recovery / Persistence` | `QAN-BL-T13-01` — delivered; tombstoned under BG-08 by T-14 |
 | `T-12 — Final Integration` | none — reconciled and tombstoned under BG-08 / PR #220 |
 | `T-14 — Mobile Product Sign-In Gateway v1` | `QAN-BL-AUTH-01` — explicitly claimed by the T-14 contract |
+| `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `QAN-BL-PROD-01` — delivered by PR #299; tombstoned under BG-08 by `PROD-OPS-01` |
+| `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` | `QAN-BL-PROD-03` — widened by its contract and delivered; tombstoned by itself under BG-08 |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

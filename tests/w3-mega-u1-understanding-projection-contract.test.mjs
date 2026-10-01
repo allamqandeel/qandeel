@@ -170,7 +170,8 @@ test('every Understanding source exists and the module is composed by the applic
     Object.values(FILES).map((path) => path.split('/').pop()).sort(), 'no unreviewed production file in the module');
   assert.match(read('apps/api/src/app.module.ts'), /imports: \[[^\]]*, AccountModule, UnderstandingModule\]/u);
   assert.doesNotMatch(read('apps/api/src/conversation/conversation.module.ts'), /Understanding/u);
-  assert.match(code.module, /imports: \[MemoryModule, HypothesisModule\]/u);
+  // PROD-OPS-01 admits exactly the content-free telemetry module, for the Confidence re-evaluation's visibility.
+  assert.match(code.module, /imports: \[MemoryModule, HypothesisModule, ObservabilityModule\]/u);
 });
 
 test('the shipped projection is clean under every detector', () => {

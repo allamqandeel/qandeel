@@ -5,6 +5,8 @@ import { ConfidenceService } from '../hypothesis/confidence.service';
 import { HypothesisService } from '../hypothesis/hypothesis.service';
 import type { HypothesisRecord } from '../hypothesis/hypothesis.types';
 import { EvidenceService } from '../memory/evidence.service';
+import { classifyOperationalFailure, type OperationalFailureClass } from '../observability/operational-failure';
+import { TelemetryService } from '../observability/telemetry.service';
 import {
   auditUnderstandingDetail, auditUnderstandingList, isUnderstandingToken, projectUnderstandingConfidence,
   understandingItemRef, understandingRevision,
@@ -49,6 +51,8 @@ export class UnderstandingService {
     private readonly repository: UnderstandingRepository,
     // U3: the Confidence Runtime's own exact-version evaluation, for the re-evaluation after a disagreement.
     private readonly confidenceRuntime: ConfidenceService,
+    // PROD-OPS-01: content-free visibility of the re-evaluation's outcome; never an input to any answer.
+    private readonly telemetry: TelemetryService,
   ) {}
 
   async list(userId: string, token: string, query: unknown): Promise<UnderstandingListView> {
@@ -197,12 +201,27 @@ export class UnderstandingService {
    * changes nothing the reader or the provider relies on: the item is already MIXED and under review (projection rule
    * 1), and an absent exact-version record is NOT_EVALUATED_FOR_CURRENT_VERSION, never an older one. A later disagreement
    * request on the item (a replay, or another command answering ALREADY_UNDER_REVIEW) repairs it.
+   *
+   * PROD-OPS-01: the outcome is visible as one content-free signal — success, or retry_pending with a bounded failure
+   * class — and carries no user, item, hypothesis or evaluation identity and no error text. It changes nothing here.
    */
   private async reevaluateConfidence(userId: string, token: string, hypothesisId: string, version: number, evaluationId: string): Promise<void> {
     try {
       await this.confidenceRuntime.ensureHypothesisVersionEvaluation(userId, token, hypothesisId, version, evaluationId);
-    } catch {
+    } catch (error) {
       // PENDING_RETRY, exactly as the Hypothesis Update Loop degrades: nothing else is claimed.
+      this.recordReevaluation('retry_pending', classifyOperationalFailure(error));
+      return;
+    }
+    this.recordReevaluation('success');
+  }
+
+  /** Fail-soft: a telemetry failure can never change the reader's answer. */
+  private recordReevaluation(outcome: 'success' | 'retry_pending', failureClass?: OperationalFailureClass): void {
+    try {
+      this.telemetry.recordOperationalOutcome('UNDERSTANDING_CONFIDENCE', 'confidence_reevaluate', outcome, failureClass);
+    } catch {
+      // Losing a signal is acceptable; changing the answer is not.
     }
   }
 
