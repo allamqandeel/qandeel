@@ -274,7 +274,7 @@ async function verifySettle() {
     assert.deepEqual([rating.unpriced_reason, rating.total_amount, rating.currency, rating.cost_basis], ['NO_EFFECTIVE_PRICE_CARD', null, null, 'RATED_APPLICATION_COST']);
     const replay = await settle(call, alice, 'SUCCEEDED', 'COMPLETE', { OUTPUT_TOKEN: 250, INPUT_TOKEN: 300, CACHE_WRITE_INPUT_TOKEN: 100, CACHE_READ_INPUT_TOKEN: 600 });
     assert.deepEqual(replay, { settle_outcome: 'ALREADY_SETTLED', call_state: 'SUCCEEDED_USAGE_REPORTED', rating_state: 'UNPRICED' }, 'the same settlement (any key order) replays');
-    assert.equal(await count('SELECT count(*) AS n FROM public.ai_provider_call_usage WHERE provider_call_id = $1', [call]), 4, 'usage written once');
+    assert.equal(await count('SELECT count(*) AS n FROM public.ai_provider_call_usage WHERE provider_call_id = $1', [call]), Object.keys(OPENAI_COMPLETE).length, 'usage written once: one row per reported kind');
     assert.equal(await count('SELECT count(*) AS n FROM public.ai_cost_ratings WHERE provider_call_id = $1', [call]), 1, 'rated once');
     await identity('service_role');
     const conflict = await rejected(() => q(SETTLE, [call, alice, 'SUCCEEDED', 'COMPLETE', JSON.stringify({ ...OPENAI_COMPLETE, OUTPUT_TOKEN: 251 })]), ['PT409']);
@@ -581,6 +581,7 @@ async function verifyErasure() {
       + (SELECT count(*) FROM public.ai_provider_call_usage u JOIN public.ai_provider_calls c ON c.id = u.provider_call_id WHERE c.user_id = $1)
       + (SELECT count(*) FROM public.ai_cost_ratings r JOIN public.ai_provider_calls c ON c.id = r.provider_call_id WHERE c.user_id = $1) AS n`, [user])).n);
     const bobBefore = await footprint(bob);
+    const cardsBefore = await count("SELECT count(*) AS n FROM public.ai_price_cards WHERE provider = 'TEST_PROVIDER'");
     assert.ok(await footprint(alice) > 0 && bobBefore > 0);
     const deletionId = randomUUID();
     await q(`INSERT INTO personal_data_private.account_deletions (id, user_id, command_id, status, requested_at, final_at)
@@ -591,7 +592,7 @@ async function verifyErasure() {
     assert.equal(await footprint(alice), 0, 'no call, usage or rating of the erased account remains');
     assert.equal(await count(`SELECT count(*) AS n FROM public.ai_cost_rating_components x WHERE NOT EXISTS (SELECT 1 FROM public.ai_cost_ratings r WHERE r.id = x.cost_rating_id)`), 0, 'no orphan component');
     assert.equal(await footprint(bob), bobBefore, 'another account is untouched');
-    assert.equal(await count("SELECT count(*) AS n FROM public.ai_price_cards WHERE provider = 'TEST_PROVIDER'"), 4, 'price cards are not personal data and stay');
+    assert.equal(await count("SELECT count(*) AS n FROM public.ai_price_cards WHERE provider = 'TEST_PROVIDER'"), cardsBefore, 'price cards are not personal data and stay');
     await identity('service_role');
     await rejected(() => q(BEGIN, [randomUUID(), alice, null, null, 'OPENAI', 'gpt-5-mini', 'OPENAI_RESPONSES_CREATE', 'CU_SEGMENTATION', null]), ['23503']);
     await identity('postgres');
@@ -632,7 +633,7 @@ async function verifyCommittedRaces() {
     const usage = JSON.stringify(OPENAI_COMPLETE);
     const outcomes = await Promise.all([a, b, c, d].map((connection) => settled(connection.query(SETTLE, [call, alice, 'SUCCEEDED', 'COMPLETE', usage]))));
     assert.deepEqual(outcomes.sort(), ['ALREADY_SETTLED', 'ALREADY_SETTLED', 'ALREADY_SETTLED', 'SETTLED']);
-    assert.equal(await count('SELECT count(*) AS n FROM public.ai_provider_call_usage WHERE provider_call_id = $1', [call]), 4);
+    assert.equal(await count('SELECT count(*) AS n FROM public.ai_provider_call_usage WHERE provider_call_id = $1', [call]), Object.keys(OPENAI_COMPLETE).length, 'one row per reported kind, once');
     assert.equal(await count('SELECT count(*) AS n FROM public.ai_cost_ratings WHERE provider_call_id = $1', [call]), 1);
 
     stage = 'committed race: conflicting settlements - exactly one wins, the other is refused';
