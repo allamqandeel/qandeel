@@ -51,7 +51,9 @@ import {
   WorldAtmosphere,
   WorldGround,
   WorldObject,
+  WorldPlaceAtmosphere,
   WorldTether,
+  WorldTone,
   WorldVeil,
   isSelectedNode,
   scheduleAt,
@@ -193,6 +195,9 @@ export function MapCanvas({
 
   return (
     <Canvas testID={MAP_CANVAS_TEST_ID} style={{ width: envelope.width, height: envelope.height }}>
+      {/* The canonical tone curve over the whole world (I-08B1 renderComposite); the veil and the
+          screen-space register sit above it, as the canonical vignette, grain and type do. */}
+      <WorldTone>
       <WorldGround envelope={envelope} response={response} />
       {/* The world plane: it travels with the camera, and it is the ONLY thing camera opacity
           reaches. A cut-and-resolve is a statement about the camera's path, and the register has
@@ -208,6 +213,14 @@ export function MapCanvas({
           emptySpace={style.emptySpace}
         />
         <Group transform={motion.planeTransform} origin={vec(center.x, center.y)}>
+          {/* The world's colour around each disclosed place: one per presented Home, identical for every
+              Home. It follows the surface's presentation culling like everything else on the plane — the
+              renderer makes no culling decision of its own. */}
+          {planeNodes
+            .filter((node) => node.locus?.kind === 'THREAD_HOME')
+            .map((node) => (
+              <WorldPlaceAtmosphere key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} response={response} />
+            ))}
           {planeNodes
             .filter((node) => node.locus?.kind === 'CONTEXTUAL_APPEARANCE')
             .map((node) => {
@@ -255,6 +268,7 @@ export function MapCanvas({
           <PresentationCameraRebase motion={motion} cameraCommit={cameraCommit} />
         </Group>
       </Group>
+      </WorldTone>
       <WorldVeil envelope={envelope} response={response} />
       {/* Screen space. It does not translate, scale or dim with the camera; it changes only when
           its own current-`V` membership does, and then by its own local arrival. */}

@@ -22,7 +22,7 @@ import type { PlacedNode } from '../renderer/map-geometry';
 import { mapSceneObjectKey } from '../projection';
 import { WORLD_DUST, WORLD_NEBULA, WORLD_STARS } from './world-field.generated';
 import { WORLD_VISUAL } from './world-visual.generated';
-import { approachOf, stratumDrift, type StratumDrift, type WorldContrast } from './world-resolver';
+import { approachOf, placeAtmosphereRadius, stratumDrift, type StratumDrift, type WorldContrast } from './world-resolver';
 
 export interface WorldSelection {
   readonly objectKey: string;
@@ -32,6 +32,8 @@ export interface WorldSelection {
 
 export interface WorldPresentation {
   readonly approach: number;
+  /** The radius, in points, of the world's colour around each disclosed place. */
+  readonly placeAtmosphere: number;
   readonly contrast: WorldContrast;
   readonly selection: WorldSelection | null;
   readonly drift: { readonly nebula: StratumDrift; readonly stars: StratumDrift; readonly dust: StratumDrift };
@@ -42,6 +44,7 @@ const STILL: StratumDrift = Object.freeze({ offsetX: 0, offsetY: 0, follow: 1 })
 /** The world at its widest distance, unanchored, standard contrast, nothing inspected. */
 export const DEFAULT_WORLD_PRESENTATION: WorldPresentation = Object.freeze({
   approach: 0,
+  placeAtmosphere: 0,
   contrast: 'standard',
   selection: null,
   drift: Object.freeze({ nebula: STILL, stars: STILL, dust: STILL }),
@@ -76,6 +79,7 @@ export function worldPresentation(
   const p = WORLD_VISUAL.parallax;
   return {
     approach: approachOf(camera.scale),
+    placeAtmosphere: placeAtmosphereRadius(camera.scale),
     contrast,
     selection: worldSelection(inspection),
     drift: {

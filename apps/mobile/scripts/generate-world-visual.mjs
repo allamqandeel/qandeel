@@ -226,8 +226,38 @@ const relation = {
   widthScale: 1.3,
 };
 
+// The tone curve (renderComposite): the light buffer is drawn over itself with `multiply` at P.toneA, which
+// is out = (1 - a)·w + a·w² per channel — it crushes the lows and leaves 1.0 at 1.0.
+exactLine('/* THE TONE CURVE:  out = (1-a)*w + a*w*w  */');
+exactLine("vctx.globalCompositeOperation='multiply';");
+exactLine('vctx.globalAlpha=P.toneA;');
+const tone = { a: P.toneA };
+if (typeof tone.a !== 'number') fail('P.toneA moved');
+
+// The world's colour as atmosphere (§9 "territory colour atmospheres"): at FAR "the territory atmospheres ARE
+// the world's luminous mass". No territory exists in production, so the RIM of that material (the territory
+// boundary, its 0.90 peak) is not carried; its interior stops, its saturation and its weight law are.
+exactLine("const dep=1-t.d*0.5, A=P.atmo.ter*dep*S.atmo, Sa=P.atmo.sat;");
+exactLine("      [0,`hsla(${t.hue},${Sa-6}%,24%,0.41)`],");
+exactLine("      [0.58,`hsla(${t.hue},${Sa-4}%,29%,0.66)`],");
+const worldAtmosphere = {
+  weight: P.atmo.ter,
+  // [offset, saturation, lightness, alpha] — the interior stops; the rim stop is not carried (no territory).
+  stops: [[0, P.atmo.sat - 6, 24, 0.41], [0.58, P.atmo.sat - 4, 29, 0.66], [1, P.atmo.sat - 4, 29, 0]],
+};
+if (typeof worldAtmosphere.weight !== 'number' || typeof P.atmo.sat !== 'number') fail('P.atmo moved');
+
+// The phone scale G2/G3 froze for the world ("one constant world scale"): the 2,100 × 1,181 hero frame is
+// shown at a reference height of 844 points, so one hero pixel is this many points. Sizes the canonical
+// painter states in hero pixels (stars, which hold constant apparent size) are converted with it.
+const G32_APP = join(REPO, 'docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/src/app.js');
+const g32 = readFileSync(G32_APP, 'utf8');
+for (const line of ['var REF_H = 844;', 'stageH = phoneH; stageW = Math.ceil(REF_H * 2100 / 1181);']) {
+  if (!g32.includes(line)) fail(`G3.2 no longer contains: ${line}`);
+}
+const heroPointsPerPixel = Math.ceil((844 * 2100) / 1181) / 2100;
 // ----------------------------------------------------------------------------- the distance schedule
-const SCHEDULE_KEYS = ['lod', 'map', 'mapA', 'far', 'cosmos', 'rel', 'relBead', 'relGnd', 'relW', 'objMin', 'objMaj', 'objMat', 'objGnd', 'hier'];
+const SCHEDULE_KEYS = ['lod', 'map', 'mapA', 'far', 'atmo', 'cosmos', 'rel', 'relBead', 'relGnd', 'relW', 'objMin', 'objMaj', 'objMat', 'objGnd', 'hier'];
 const scheduleLines = SCHEDULE_KEYS.map((key) => {
   const match = new RegExp(`^\\s*S\\.${key}\\s*=\\s*(.+?);(?:\\s*//.*)?$`, 'mu').exec(html);
   if (match === null) fail(`schedule line S.${key} not found`);
@@ -390,7 +420,14 @@ const STAR_TILE = 1024;
 const NEB_TILE = 2048;
 
 const { out: rng } = sandbox('', ['mulberry32']);
+// The canonical clustered density (WS7R-R §R8, "CLUSTERED, NOT UNIFORM": "uniform star noise" is on the avoid
+// list). The mask is a product of sines with integer periods in the tile, so it tiles exactly at any size;
+// it is lifted from `dustTile` as text and evaluated for the star tile's own size.
+const dustText = block('function dustTile(){');
+const maskText = /const mask=\(x,y\)=>\{[\s\S]*?\n {2}\};/u.exec(dustText)?.[0];
+if (maskText === undefined) fail('the canonical dust density mask moved');
 function starTile() {
+  const starMask = sandbox(`const T=${STAR_TILE};\n${maskText}`, ['mask']).out.mask;
   const R = rng.mulberry32(STAR_SEED);
   const count = Math.round((34000 * STAR_TILE * STAR_TILE) / STAR_AREA);
   const kept = [];
@@ -403,7 +440,10 @@ function starTile() {
     const a = 0.09 + Math.pow(R(), 1.9) * 0.58;
     const rank = R();
     // Only the ranks any distance can ever admit (the cut never exceeds 0.40) are kept.
-    if (rank <= 0.4) kept.push({ x, y, r: m * 1.02, colour: { h: Math.round(hue), s: 22, l: 93 }, alpha: a, rank, soft: false });
+    const keep = R() < starMask(x, y);
+    // Only the ranks any distance can ever admit (the cut never exceeds 0.40) are kept. The radius is the
+    // canonical constant apparent size, `m · S.stars.px` hero pixels, in points at the G2/G3 phone scale.
+    if (keep && rank <= 0.4) kept.push({ x, y, r: m * 1.02 * heroPointsPerPixel, colour: { h: Math.round(hue), s: 22, l: 93 }, alpha: a, rank, soft: false });
   }
   const band = (lo, hi) => bucketise(kept.filter((s) => s.rank > lo && s.rank <= hi), { hueStep: 8, radiusStep: 0.3, alphaStep: 0.08 });
   // Three admission bands of the rank cut, so the distance can open the census as the canonical cut does.
@@ -505,12 +545,15 @@ const visual = {
   profiles,
   shade,
   shapes,
+  tone,
+  worldAtmosphere,
+  heroPointsPerPixel,
   palettes: { standard: standard.value, increased: increased.value },
   parallax,
 };
 
 const tokenSources = [...new Set([...standard.sources, ...increased.sources].map((source) => source.rel))].map((path) => join(F2R, path));
-const sources = [I08B1, join(dirname(I08B1), 'I-08B1-WS7R-NOTES.md'), join(F2R, 'tools/f2-resolve.mjs'), ...tokenSources];
+const sources = [I08B1, join(dirname(I08B1), 'I-08B1-WS7R-NOTES.md'), G32_APP, join(F2R, 'tools/f2-resolve.mjs'), ...tokenSources];
 const header = (what) => `/**
  * GENERATED by apps/mobile/scripts/generate-world-visual.mjs — do not edit by hand.
  *

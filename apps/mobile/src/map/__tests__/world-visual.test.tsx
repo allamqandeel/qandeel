@@ -178,6 +178,23 @@ describe('the world expresses only what the Map holds', () => {
     }
   });
 
+  it('the world carries the canonical tone curve once, and its colour around every presented Home and nowhere else', async () => {
+    const store = testStore({ depth: 'ANALYTICAL_OBJECT' });
+    const camera = cameraOf(store);
+    const world = worldPresentation(camera, { reducedMotion: false, contrast: 'standard', inspection: null });
+    const { placed, element } = paint(world);
+    const rendered = await render(element);
+    const json = rendered.toJSON();
+    expect(elements(json, 'RuntimeShader')).toHaveLength(1);
+    expect(elements(json, 'RuntimeShader')[0].uniforms).toEqual({ a: WORLD_VISUAL.tone.a });
+    const homes = placed.visibleNodes.filter((node) => node.locus?.kind === 'THREAD_HOME');
+    const atmospheres = elements(json, 'Circle').filter((c) => c.r === world.placeAtmosphere);
+    expect(atmospheres).toHaveLength(homes.length);
+    for (const home of homes) expect(atmospheres.some((c) => c.cx === home.x && c.cy === home.y)).toBe(true);
+    // Three quarters of the canonical Home step, at this distance.
+    expect(world.placeAtmosphere).toBeCloseTo(750_000 / 8192, 6);
+  });
+
   it('the only relation drawn is the hosting relation: one tether per contextual appearance, ending on its Home', async () => {
     const { placed, element } = paint();
     const rendered = await render(element);

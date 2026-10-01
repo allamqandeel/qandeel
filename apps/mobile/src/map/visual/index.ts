@@ -6,7 +6,9 @@
 export { WORLD_VISUAL, worldSchedule, type WorldSchedule } from './world-visual.generated';
 export {
   MARK_RADIUS_POINTS,
+  PLACE_ATMOSPHERE_WORLD_UNITS,
   approachOf,
+  placeAtmosphereRadius,
   hsla,
   morphologyPath,
   placementOf,
@@ -31,5 +33,5 @@ export {
   type WorldSelection,
 } from './world-presentation';
 export { useWorldResponse, type WorldResponse } from './useWorldResponse';
-export { WorldAtmosphere, WorldGround, WorldVeil, type WorldStrataDrift } from './WorldStrata';
-export { RegisterMark, WorldObject, WorldTether, markerRadius } from './WorldMarks';
+export { WorldAtmosphere, WorldGround, WorldTone, WorldVeil, type WorldStrataDrift } from './WorldStrata';
+export { RegisterMark, WorldObject, WorldPlaceAtmosphere, WorldTether, markerRadius } from './WorldMarks';

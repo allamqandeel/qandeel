@@ -34,6 +34,8 @@ export interface WorldResponse {
   readonly near: DerivedValue<number>;
   readonly relationGround: DerivedValue<number>;
   readonly relationBody: DerivedValue<number>;
+  /** The world's colour around its disclosed places (the canonical territory-atmosphere weight law). */
+  readonly placeAtmosphere: DerivedValue<number>;
 }
 
 const M = WORLD_VISUAL.material;
@@ -41,6 +43,7 @@ const FLOOR = WORLD_VISUAL.floor.alpha;
 const RELIEF = WORLD_VISUAL.vignette.mapRelief;
 const NEAR_GAIN = WORLD_VISUAL.mark.haloNearGain;
 const WIDE_SHARE = WORLD_VISUAL.mark.haloWideShare;
+const ATMOSPHERE = WORLD_VISUAL.worldAtmosphere.weight;
 
 /** A star band is admitted as the canonical rank cut passes through it. */
 function starBand(A: number, S: WorldSchedule, lo: number, hi: number): number {
@@ -129,8 +132,14 @@ export function useWorldResponse(motion: PresentationCameraBinding, canonicalApp
     return s.relGnd;
   });
 
+  const placeAtmosphere = useReadingOf(S, ({ S: s }) => {
+    'worklet';
+    return Math.min(1, ATMOSPHERE * s.atmo);
+  });
+
   return {
     approach,
+    placeAtmosphere,
     floor,
     vignette,
     nebulaBase,

@@ -176,8 +176,13 @@ jest.mock('@shopify/react-native-skia', () => {
     LinearGradient: element('LinearGradient'),
     BlurMask: element('BlurMask'),
     FractalNoise: element('FractalNoise'),
+    RuntimeShader: element('RuntimeShader'),
     createPicture: () => picture,
-    Skia: { XYWHRect: (x, y, width, height) => ({ x, y, width, height }) },
+    Skia: {
+      XYWHRect: (x, y, width, height) => ({ x, y, width, height }),
+      // The tone curve's effect: an inert handle, so the element tree carrying it can be asserted.
+      RuntimeEffect: { Make: () => Object.freeze({ __standIn: 'SkRuntimeEffect' }) },
+    },
     PointMode: { Points: 0, Lines: 1, Polygon: 2 },
     StrokeCap: { Butt: 0, Round: 1, Square: 2 },
     BlurStyle: { Normal: 0, Solid: 1, Outer: 2, Inner: 3 },

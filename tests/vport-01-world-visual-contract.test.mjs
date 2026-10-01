@@ -51,7 +51,7 @@ test('the generator takes the world from the canonical source itself, never from
     assert.ok(generator.includes(declaration), `the generator lifts ${declaration} from the canonical file`);
   }
   // The distance schedule is copied expression for expression, and its flags are the shipped ones.
-  assert.match(generator, /const SCHEDULE_KEYS = \['lod', 'map', 'mapA', 'far', 'cosmos'/u);
+  assert.match(generator, /const SCHEDULE_KEYS = \['lod', 'map', 'mapA', 'far', 'atmo', 'cosmos'/u);
   assert.match(generator, /for \(const flag of \['let HIER=true;', 'let LODON=true;', 'let MAPON=true;', 'let FARCAL=true;'\]\) exactLine\(flag\);/u);
   // Tokens through F2 FINAL's own resolver.
   assert.match(generator, /f2r\.loadTokens\(\{ appearance: 'dark', contrast \}\)/u);
@@ -71,7 +71,10 @@ test('the neutral placeholder world is gone, and no palette fork replaced it', (
   // Plain circles are no longer the world: every object is its canonical morphology through the visual owner.
   assert.equal(canvas.includes('<Circle'), false, 'the renderer draws no plain circle of its own');
   assert.equal(canvas.includes('<Line'), false, 'the renderer draws no plain line of its own');
-  for (const required of ['<WorldGround', '<WorldAtmosphere', '<WorldObject', '<WorldTether', '<WorldVeil', '<RegisterMark']) {
+  // The canonical tone curve, exactly (renderComposite: out = (1-a)*w + a*w*w), and its a from P.toneA.
+  assert.ok(visual['WorldStrata.tsx'].includes('return half4(c.rgb * (1.0 - a) + c.rgb * c.rgb * a, c.a);'), 'the tone curve is the canonical one');
+  assert.match(visual['world-visual.generated.ts'], /"tone": \{\s*"a": 0\.46\s*\}/u);
+  for (const required of ['<WorldTone', '<WorldPlaceAtmosphere', '<WorldGround', '<WorldAtmosphere', '<WorldObject', '<WorldTether', '<WorldVeil', '<RegisterMark']) {
     assert.ok(canvas.includes(required), `the renderer paints ${required}`);
   }
   // The hand-written visual modules hold no colour or palette literal: every value is generated.

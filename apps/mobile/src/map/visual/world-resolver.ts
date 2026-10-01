@@ -185,6 +185,20 @@ export const MARK_RADIUS_POINTS: Readonly<Record<WorldPlacement, number>> = Obje
   UNGEOGRAPHIC: 3.2,
 });
 
+/**
+ * How far the world's colour reaches around one disclosed place, in WORLD units: three quarters of the
+ * canonical Home step (1,000,000 world units, the step the Map already uses to size its default view), so neighbouring places'
+ * atmospheres meet and the world reads as one luminous body at FAR, and at MID / NEAR the reader is inside
+ * the colour of the place they are looking at. A world-space quantity: it scales with the camera, exactly
+ * as the canonical territory atmospheres do. A VPORT-01 presentation calibration, not a Product quantity.
+ */
+export const PLACE_ATMOSPHERE_WORLD_UNITS = 750_000;
+
+/** The place atmosphere's radius in points at the current distance. */
+export function placeAtmosphereRadius(scale: MapScale): number {
+  return PLACE_ATMOSPHERE_WORLD_UNITS / unitsPerPoint(scale);
+}
+
 /** A stable, meaning-free rotation from the scene key (FNV-1a), in radians. */
 export function presentationRotation(key: string): number {
   let hash = 0x811c9dc5;

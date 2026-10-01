@@ -20,6 +20,7 @@ import {
   PointMode,
   RadialGradient,
   Rect,
+  RuntimeShader,
   Skia,
   StrokeCap,
   TileMode,
@@ -238,6 +239,44 @@ export function WorldAtmosphere({
         </Stratum>
       </Group>
     </>
+  );
+}
+
+// ------------------------------------------------------------------------------------- the tone curve
+
+/**
+ * The canonical tone curve, exactly: `out = (1 − a)·w + a·w²` per channel (renderComposite draws the light
+ * buffer over itself with `multiply` at `P.toneA`). It crushes the lows and leaves 1.0 at 1.0 — it is why the
+ * I-08B1 sky is near-black rather than grey, and why its colour is mass rather than haze.
+ */
+const TONE_SKSL = `
+uniform shader image;
+uniform float a;
+half4 main(float2 xy) {
+  half4 c = image.eval(xy);
+  return half4(c.rgb * (1.0 - a) + c.rgb * c.rgb * a, c.a);
+}`;
+
+let toneEffect: ReturnType<typeof Skia.RuntimeEffect.Make> | undefined;
+
+function worldTone() {
+  if (toneEffect === undefined) toneEffect = Skia.RuntimeEffect.Make(TONE_SKSL);
+  return toneEffect;
+}
+
+/**
+ * Applies the tone curve to the world it wraps, as an image filter on one layer. The curve is pointwise,
+ * so it needs no neighbourhood and no display fact: the Map reads no pixel ratio (T-11 — a reusable
+ * surface does not take the display as its authority).
+ */
+export function WorldTone({ children }: { readonly children: React.ReactNode }) {
+  const effect = worldTone();
+  if (effect === null) return <>{children}</>;
+  return (
+    <Group>
+      <RuntimeShader source={effect} uniforms={{ a: WORLD_VISUAL.tone.a }} />
+      {children}
+    </Group>
   );
 }
 

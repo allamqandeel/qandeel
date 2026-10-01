@@ -7,6 +7,7 @@
  * Sources (sha256):
  *   docs/design/canonical-artifacts/living-analysis/i-08b1/wf-living-constellation.html  4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413
  *   docs/design/canonical-artifacts/living-analysis/i-08b1/I-08B1-WS7R-NOTES.md  fbaa8712e1454132a681f8f478ba75ee35ceae7af392a49d3f374ebad8440704
+ *   docs/design/canonical-artifacts/product-proofs/g3/g3.2/source/src/app.js  3916a59c86b82c592f8c3dbd8f83a1ef0b91914f1e48f144b33456b98b9d1709
  *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/tools/f2-resolve.mjs  def095f5b5da30d97f770df71d8cbd5b04f691843f465062d0b756a91777f806
  *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/c3/b4r/semantic.tokens.json  2ac7c739091446b2c4bba53cd9058ac86cac9b877c1c975cb0a781f6a490c441
  *   docs/design/canonical-artifacts/accessibility-appearance/i-08b3.1-f2r/vendor/f1/vendor/c3/tokens/base/material.tokens.json  bb841aa9ce194102da7a2567fd84fc95e9075e6e13805efc0c9698c4c6465928
@@ -367,6 +368,33 @@ export const WORLD_VISUAL = {
       "stroked": true
     }
   },
+  "tone": {
+    "a": 0.46
+  },
+  "worldAtmosphere": {
+    "weight": 0.86,
+    "stops": [
+      [
+        0,
+        54,
+        24,
+        0.41
+      ],
+      [
+        0.58,
+        56,
+        29,
+        0.66
+      ],
+      [
+        1,
+        56,
+        29,
+        0
+      ]
+    ]
+  },
+  "heroPointsPerPixel": 0.7147619047619047,
   "palettes": {
     "standard": {
       "world": "#101010",
@@ -411,6 +439,7 @@ export interface WorldSchedule {
   map: number;
   mapA: number;
   far: number;
+  atmo: number;
   cosmos: number;
   rel: number;
   relBead: number;
@@ -438,6 +467,7 @@ export function worldSchedule(A: number): WorldSchedule {
   S.map = MAPON? ss(0.12,0.50,A)*(1-ss(0.56,0.98,A)) : 0;
   S.mapA = S.map*ss(0,0.04,S.map);
   S.far = FARCAL? (1-ss(0.0,0.12,A)) : 0;
+  S.atmo = Math.min(1,(0.56+ss(0.06,0.54,A)*0.44)*(1+S.far*0.80));
   S.cosmos = (1-ss(0.26,0.88,A)*0.78)*(1-S.map*0.34);
   S.rel = (0.30+ss(0.24,0.66,A)*0.70)*(1-S.far*0.84);
   S.relBead = 1+ss(0.55,1.0,A)*0.55;

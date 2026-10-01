@@ -183,6 +183,29 @@ export function WorldObject({ family, nodeKey, x, y, placement, S, response, con
   );
 }
 
+/**
+ * The world's colour around ONE disclosed place: the canonical territory-atmosphere material (its interior
+ * stops, in the world's colour) without its rim — there is no territory, so there is no boundary to draw.
+ * One per Home, identical for every Home: where the reader's places are, the world is; nothing else is said.
+ * A world-space quantity, so it is NOT counter-scaled: it travels and scales with the plane like the world.
+ */
+export function WorldPlaceAtmosphere({ x, y, radius, response }: { x: number; y: number; radius: number; response: WorldResponse }) {
+  if (!(radius > 0)) return null;
+  const stops = V.worldAtmosphere.stops;
+  return (
+    <Group opacity={response.placeAtmosphere}>
+      <Circle cx={x} cy={y} r={radius}>
+        <RadialGradient
+          c={vec(x, y)}
+          r={radius}
+          colors={stops.map(([, s, l, a]) => hsla(V.worldHue, s, l, a))}
+          positions={stops.map(([offset]) => offset)}
+        />
+      </Circle>
+    </Group>
+  );
+}
+
 export interface WorldTetherProps {
   readonly fromX: number;
   readonly fromY: number;

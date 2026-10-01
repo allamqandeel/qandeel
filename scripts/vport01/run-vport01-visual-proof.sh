@@ -16,8 +16,7 @@
 #   travel-standard  one recording of FAR → MID → NEAR → MID → FAR with frame statistics
 #   travel-reduced   the same under Reduce Motion (the cut-and-resolve)
 #
-# After each world run the device's own accessibility hierarchy is dumped and censused: one accessible
-# node per entitled identity at the final rung, and no internal id in any label. Every run is attempted
+# After each run the device's final UI hierarchy and logcat are kept. Every run is attempted
 # even when an earlier one fails; the script exits non-zero if ANY failed.
 set -u
 
@@ -50,42 +49,17 @@ run() {
   fi
   adb shell uiautomator dump /sdcard/vport01-ui.xml >/dev/null 2>&1 && adb pull /sdcard/vport01-ui.xml "$OUT/$name-final-hierarchy.xml" >/dev/null 2>&1
   adb logcat -d > "$OUT/logcat-$name.txt" 2>&1 || true
+  # The device's own frame statistics for everything this run rendered, read BEFORE the process stops.
+  adb shell dumpsys gfxinfo "$PKG" > "$OUT/$name-gfxinfo.txt" 2>&1 || true
   adb shell am force-stop "$PKG"
   echo "::endgroup::"
 }
 
-# The accessible Map at the final rung (ANALYTICAL_OBJECT): 8 Threads + 17 hosted Readings + 2 ungrounded
-# Readings + 2 Emerging Focuses = 29 entitled identities, each exactly once, with no internal id in a label.
-census() {
-  local name="$1"
-  if python3 - "$OUT/$name-final-hierarchy.xml" > "$OUT/$name-accessibility-census.txt" 2>&1 <<'PY'
-import re, sys, xml.etree.ElementTree as ET
-nodes = []
-for node in ET.parse(sys.argv[1]).iter('node'):
-    rid = node.get('resource-id', '')
-    if rid.startswith('qandeel-map-accessibility:'):
-        nodes.append((rid, node.get('content-desc', '') or node.get('text', '')))
-keys = [rid.split(':', 1)[1] for rid, _ in nodes]
-families = {}
-for key in keys:
-    families[key.split(':', 1)[0]] = families.get(key.split(':', 1)[0], 0) + 1
-internal = re.compile(r'v-thread|v-reading|v-focus|v-binding|THREAD_HOME|UNGEOGRAPHIC|[0-9a-f]{8}-', re.I)
-leaks = [label for _, label in nodes if internal.search(label)]
-print(f'accessible Map nodes: {len(nodes)}  unique: {len(set(keys))}  by family: {families}')
-for rid, label in nodes:
-    print(f'  {rid}  |  {label}')
-print(f'labels carrying an internal id: {len(leaks)}')
-ok = len(nodes) == 29 and len(set(keys)) == 29 and families == {'THREAD': 8, 'READING': 19, 'EMERGING_FOCUS': 2} and not leaks
-sys.exit(0 if ok else 1)
-PY
-  then
-    echo "PASS $name-accessibility-census" | tee -a "$OUT/results.txt"
-  else
-    echo "FAIL $name-accessibility-census" | tee -a "$OUT/results.txt"
-    status=1
-  fi
-  cat "$OUT/$name-accessibility-census.txt"
-}
+# No device accessibility census. The accessible Map's object nodes are zero-size, screen-reader-only views,
+# and `uiautomator dump` omits zero-size nodes, so a census through it reads 0 whatever the tree holds (the
+# first run measured exactly that on every leg). Accessibility parity — one accessible node per entitled
+# identity, no internal id in a label — is proved by the Map's Jest suites against the same scene; the final
+# hierarchy of every run is still dumped above as evidence.
 
 {
   echo "device: $(adb shell getprop ro.product.model) / Android $(adb shell getprop ro.build.version.release) / API $(adb shell getprop ro.build.version.sdk)"
@@ -99,27 +73,21 @@ set_motion 1
 # Arabic and English, standard contrast.
 adb shell cmd locale set-app-locales "$PKG" --locales ar-EG
 run ar-standard vport-01-world.yaml
-census ar-standard
 adb shell cmd locale set-app-locales "$PKG" --locales en-US
 run en-standard vport-01-world.yaml
-census en-standard
 adb shell cmd locale set-app-locales "$PKG" --locales ar-EG
 
 # The travel, with the device's own frame statistics for the whole recording.
-adb shell dumpsys gfxinfo "$PKG" reset >/dev/null 2>&1 || true
 run travel-standard vport-01-travel.yaml
-adb shell dumpsys gfxinfo "$PKG" > "$OUT/travel-standard-gfxinfo.txt" 2>&1 || true
 
 # Increased contrast (Android: high-text-contrast, which the app reads as the platform contrast setting).
 adb shell settings put secure high_text_contrast_enabled 1
 run ar-increased vport-01-world.yaml
-census ar-increased
 adb shell settings put secure high_text_contrast_enabled 0
 
 # Reduce Motion: the animator scales at 0 are the Android Reduce Motion signal.
 set_motion 0
 run ar-reduced vport-01-world.yaml
-census ar-reduced
 run travel-reduced vport-01-travel.yaml
 set_motion 1
 
@@ -127,7 +95,6 @@ set_motion 1
 adb shell wm size 720x1520
 adb shell wm density 320
 run ar-narrow vport-01-world.yaml
-census ar-narrow
 adb shell wm size reset
 adb shell wm density reset
 
@@ -135,7 +102,6 @@ adb shell wm density reset
 adb shell settings put system accelerometer_rotation 0
 adb shell settings put system user_rotation 1
 run ar-landscape vport-01-world.yaml
-census ar-landscape
 adb shell settings put system user_rotation 0
 
 adb shell cmd locale set-app-locales "$PKG" --locales ""
