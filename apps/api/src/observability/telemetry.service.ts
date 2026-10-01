@@ -3,6 +3,7 @@ import { metrics,SpanStatusCode,trace,type Attributes,type Span,type Tracer } fr
 import { CorrelationService } from './correlation.service';
 import{RUNTIME_ROUTING_MAX_COMPLEXITY_SCORE,RUNTIME_ROUTING_MIN_COMPLEXITY_SCORE,RUNTIME_ROUTING_POLICY_VERSION,isLegalCurrentRoutePair,isRuntimeRoutingPath,type RuntimeRoutingDecision}from'../intelligence-runtime/fast-deep-routing-contract';
 import{POST_RESPONSE_PROVIDER_BUDGET_DECISION_KEYS,POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION,POST_RESPONSE_PROVIDER_EFFECT_KEYS}from'../post-response-intelligence/post-response-provider-budget';
+import{AI_FEATURE_FAMILIES,AI_PROVIDERS,AI_USAGE_KINDS,type NormalizedAiUsage}from'../ai-usage/ai-usage.types';
 
 type Usage={inputTokens:number;outputTokens:number};
 type Instrument={add?:(value:number,attributes?:Attributes)=>void;record?:(value:number,attributes?:Attributes)=>void};
@@ -70,6 +71,8 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  ['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
  ['ACCOUNT_DELETION',new Map([['claim',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','blocked_expected','superseded_expected',...OPERATION_FAILURES])],['provider_remove',new Set(['success','provider_unavailable'])],['complete',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
  ['UNDERSTANDING_CONFIDENCE',new Map([['confidence_reevaluate',new Set(['success','retry_pending'])]])],
+ // AI-COST-01: the accounting ledger's own health scan (migration 0135 operations summary).
+ ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],
 ]);
 // The bounded class of a retry_pending outcome, attached to it and to nothing else.
 const OPERATIONAL_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSPORT','INTEGRITY']);
@@ -82,6 +85,18 @@ const PRIVACY_OPERATION_STATES:ReadonlyMap<string,ReadonlyMap<string,boolean>>=n
 ]);
 const PRIVACY_EXPORT_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSIENT_DATABASE','CONSTRAINT_OR_INTEGRITY','RESOURCE_OR_CAPACITY','INTERNAL_OTHER']);
 const OPERATIONS_POLICY_VERSION='1';
+// AI-COST-01: the finite label registries of provider-call accounting. The DB ledger (migration 0135) is the
+// accounting authority; these are observability only. Provider, feature family, outcome, completeness and usage kind
+// are closed registries - never a user, session, turn or call id, a model string, a price, a payload or an error.
+// Token quantities are metric VALUES, never labels.
+const AI_USAGE_PROVIDERS:ReadonlySet<string>=new Set(AI_PROVIDERS);
+const AI_USAGE_FEATURE_FAMILIES:ReadonlySet<string>=new Set(AI_FEATURE_FAMILIES);
+const AI_USAGE_KIND_LABELS:ReadonlySet<string>=new Set(AI_USAGE_KINDS);
+const AI_USAGE_OUTCOMES:ReadonlySet<string>=new Set(['SUCCEEDED','FAILED','CANCELLED_BEFORE_PROVIDER']);
+const AI_USAGE_ACCOUNTING_OUTCOMES:ReadonlyMap<string,ReadonlySet<string>>=new Map([['begin',new Set(['success','failure','unattributed'])],['settle',new Set(['success','failure'])]]);
+// The aggregate accounting state from migration 0135's service-role summary: state -> whether an oldest age exists.
+const AI_USAGE_OPERATION_STATES:ReadonlyMap<string,boolean>=new Map([['pending',false],['stale_pending',true],['settled_24h',false],['failed_24h',false],['cancelled_24h',false],['usage_unknown_24h',false],['rated_24h',false],['unpriced_24h',false]]);
+const AI_USAGE_POLICY_VERSION='1';
 
 @Injectable()
 export class TelemetryService{
@@ -96,6 +111,11 @@ export class TelemetryService{
  private readonly privacyOperationStateCounts:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy.state_count'),{});
  private readonly privacyOperationOldestAges:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy.oldest_age',{unit:'s'}),{});
  private readonly privacyExportRecentFailures:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy_export.recent_failures'),{});
+ private readonly aiUsageAccounting:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.accounting'),{});
+ private readonly aiUsageProviderCalls:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.provider_calls'),{});
+ private readonly aiUsageTokens:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.ai_usage.tokens',{unit:'{token}'}),{});
+ private readonly aiUsageOperationStateCounts:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.ai_usage.operations.state_count'),{});
+ private readonly aiUsageOperationOldestAges:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.ai_usage.operations.oldest_age',{unit:'s'}),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
  constructor(private readonly correlation:CorrelationService){
   this.tracer=this.safe(()=>trace.getTracer('qandeel-api'),{startActiveSpan:(_name:string,_options:unknown,callback:(span:Span)=>unknown)=>callback(this.noopSpan())}as unknown as Tracer);
@@ -215,6 +235,35 @@ export class TelemetryService{
  recordPrivacyExportRecentFailures(failureClass:string,count:number):void{this.safeVoid(()=>{
   if(!PRIVACY_EXPORT_FAILURE_CLASSES.has(failureClass)||!Number.isSafeInteger(count)||count<0)return;
   this.privacyExportRecentFailures.record?.(count,{failure_class:failureClass,policy_version:OPERATIONS_POLICY_VERSION});
+ });}
+ // AI-COST-01 accounting boundary outcome: begin (success | failure | unattributed) and settle (success | failure).
+ // A settle failure leaves the call PENDING in the ledger, where the stale summary finds it. Fail-soft.
+ recordAiProviderCallAccounting(stage:string,outcome:string):void{this.safeVoid(()=>{
+  if(!AI_USAGE_ACCOUNTING_OUTCOMES.get(stage)?.has(outcome))return;
+  this.aiUsageAccounting.add?.(1,{stage,outcome,policy_version:AI_USAGE_POLICY_VERSION});
+ });}
+ // AI-COST-01 one settled provider attempt: a call count by provider / feature / outcome / usage completeness, and the
+ // reported quantity of each normalized kind as the VALUE of a token counter. An unreported kind emits nothing - never
+ // a zero. Anything outside the registries is DROPPED. Fail-soft.
+ recordAiProviderCallSettlement(provider:string,featureFamily:string,outcome:string,usage:NormalizedAiUsage):void{this.safeVoid(()=>{
+  if(!AI_USAGE_PROVIDERS.has(provider)||!AI_USAGE_FEATURE_FAMILIES.has(featureFamily)||!AI_USAGE_OUTCOMES.has(outcome))return;
+  if(usage?.completeness!=='COMPLETE'&&usage?.completeness!=='INCOMPLETE'&&usage?.completeness!=='ABSENT')return;
+  this.aiUsageProviderCalls.add?.(1,{provider,feature_family:featureFamily,outcome,usage_completeness:usage.completeness,policy_version:AI_USAGE_POLICY_VERSION});
+  if(usage.completeness==='ABSENT')return;
+  for(const[kind,quantity]of Object.entries(usage.quantities)){
+   if(!AI_USAGE_KIND_LABELS.has(kind)||!Number.isSafeInteger(quantity)||(quantity as number)<0)continue;
+   this.aiUsageTokens.add?.(quantity as number,{provider,feature_family:featureFamily,usage_kind:kind,policy_version:AI_USAGE_POLICY_VERSION});
+  }
+ });}
+ // AI-COST-01 aggregate accounting state (migration 0135 summary): the count, and for stale_pending the oldest age in
+ // whole seconds, are gauge VALUES. An unknown state, a bad number or an age offered for a state without one is DROPPED.
+ recordAiUsageOperationsState(state:string,count:number,oldestAgeSeconds?:number):void{this.safeVoid(()=>{
+  const hasAge=AI_USAGE_OPERATION_STATES.get(state);
+  if(hasAge===undefined||!Number.isSafeInteger(count)||count<0)return;
+  if(hasAge?!Number.isSafeInteger(oldestAgeSeconds)||(oldestAgeSeconds as number)<0:oldestAgeSeconds!==undefined)return;
+  const labels={state,policy_version:AI_USAGE_POLICY_VERSION};
+  this.aiUsageOperationStateCounts.record?.(count,labels);
+  if(hasAge)this.aiUsageOperationOldestAges.record?.(oldestAgeSeconds as number,labels);
  });}
  recordHypothesisContext(outcome:'available'|'consumed'|'empty'|'rejected'|'failed',path:string,contractVersion=1,_candidateCount?:number,_includedCount?:number):void{this.safeVoid(()=>this.hypothesisContextOutcomes.add?.(1,{outcome,processing_path:path,contract_version:String(contractVersion)}));}
  recordHypothesisGenerationEligibility(outcome:'eligible'|'not_eligible'|'ambiguous'|'safety_ineligible'|'no_evidence'|'replay_skipped'|'failed',path?:string):void{this.safeVoid(()=>this.hypothesisEligibilityOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{}),contract_version:'1'}));}

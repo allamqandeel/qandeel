@@ -30,19 +30,27 @@ export interface ThreadContinuityBinding {
 
 export type ThreadContinuityBindingFactory = () => ThreadContinuityBinding;
 
+/** Decorates the transport client the adapter is built with (AI-COST-01 provider-call accounting). */
+export type ThreadContinuityClientDecorator = (client: ReturnType<typeof createOpenAiThreadContinuityClient>) => ReturnType<typeof createOpenAiThreadContinuityClient>;
+
 /**
  * The production factory. Calling the returned function reads the provider
  * identity only; the adapter (and the credential) is constructed on the first
  * real screening or resolution call.
  */
-export function openAiThreadContinuityBinding(environment: NodeJS.ProcessEnv = process.env): ThreadContinuityBindingFactory {
+export function openAiThreadContinuityBinding(
+  environment: NodeJS.ProcessEnv = process.env,
+  // AI-COST-01: the composition root passes the provider-call accounting decorator for the transport client; the
+  // adapter itself is unchanged and this slice imports nothing new.
+  decorateClient: ThreadContinuityClientDecorator = (client) => client,
+): ThreadContinuityBindingFactory {
   return () => {
     const identity = loadThreadContinuityProviderIdentity(environment);
     let adapter: OpenAiThreadContinuityProvider | undefined;
     const real = (): OpenAiThreadContinuityProvider => {
       if (adapter === undefined) {
         const config = loadThreadContinuityOpenAIConfig(environment);
-        adapter = new OpenAiThreadContinuityProvider(config, createOpenAiThreadContinuityClient(config));
+        adapter = new OpenAiThreadContinuityProvider(config, decorateClient(createOpenAiThreadContinuityClient(config)));
       }
       return adapter;
     };

@@ -20,8 +20,10 @@ export const EVALUATION_PRICING: Record<EvaluationProvider, Record<ProcessingPat
   },
 };
 
-export function estimateCostUsd(provider: EvaluationProvider, path: ProcessingPath, inputTokens: number, outputTokens: number): number | null {
+export function estimateCostUsd(provider: EvaluationProvider, path: ProcessingPath, inputTokens: number | null, outputTokens: number | null): number | null {
   const price = EVALUATION_PRICING[provider][path];
   if (price.inputUsdPerMillionTokens === null || price.outputUsdPerMillionTokens === null) return null;
+  // Unknown usage has no cost estimate (AI-COST-01: unknown is never zero).
+  if (inputTokens === null || outputTokens === null) return null;
   return (inputTokens * price.inputUsdPerMillionTokens + outputTokens * price.outputUsdPerMillionTokens) / 1_000_000;
 }

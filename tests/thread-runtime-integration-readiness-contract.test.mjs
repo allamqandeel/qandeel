@@ -344,7 +344,9 @@ test('stale recovery is bounded to one, checks the database winner first, and ne
 });
 
 test('both semantic bindings are lazy and no Thread, Home or Origin payload reaches the wire', () => {
-  assert.match(binding, /export function openAiThreadEstablishmentBinding\(environment: NodeJS\.ProcessEnv = process\.env\): ThreadEstablishmentBindingFactory \{\s*return \(\) => \{\s*const config = loadThreadEstablishmentOpenAIConfig\(environment\);/u);
+  // RE-ANCHORED by AI-COST-01: the factory gains an optional transport-client decorator (provider-call accounting,
+  // identity by default); it is still lazy - the config is read only inside the returned closure.
+  assert.match(binding, /export function openAiThreadEstablishmentBinding\(\s*environment: NodeJS\.ProcessEnv = process\.env,\s*decorateClient: ThreadEstablishmentClientDecorator = \(client\) => client,\s*\): ThreadEstablishmentBindingFactory \{\s*return \(\) => \{\s*const config = loadThreadEstablishmentOpenAIConfig\(environment\);/u);
   assert.match(service, /this\.focus \?\?= this\.createFocusBinding\(\);/u);
   assert.match(service, /this\.thread \?\?= this\.createThreadBinding\(\);/u);
   assert.equal((service.match(/this\.createThreadBinding\(\)/gu) ?? []).length, 1);

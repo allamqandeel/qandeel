@@ -5,6 +5,8 @@ import { MODEL_ROUTER, type ModelRouter } from './model-router.types';
 import { OpenAIModelRouter } from './providers/openai/openai-model-router';
 import { ObservabilityModule } from '../observability/observability.module';
 import { TelemetryService } from '../observability/telemetry.service';
+import { productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
+import { AiUsageModule } from '../ai-usage/ai-usage.module';
 
 export function createConfiguredModelRouter(
   environment: NodeJS.ProcessEnv = process.env,telemetry?:TelemetryService,
@@ -12,11 +14,12 @@ export function createConfiguredModelRouter(
   if (environment.NODE_ENV === 'test') return new FakeModelRouter();
   if (!telemetry) throw new Error('TelemetryService is required for a production model router.');
 
+  // AI-COST-01: every production reply attempt passes the one accounting boundary.
   switch (environment.MODEL_PROVIDER?.trim().toLowerCase()) {
     case 'anthropic':
-      return ClaudeModelRouter.fromEnvironment(telemetry);
+      return ClaudeModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
     case 'openai':
-      return OpenAIModelRouter.fromEnvironment(telemetry);
+      return OpenAIModelRouter.fromEnvironment(telemetry, productionAiProviderCallAccounting());
     default:
       throw new Error('MODEL_PROVIDER must be either anthropic or openai.');
   }
@@ -53,7 +56,8 @@ export function deferredModelRouter(resolve: () => ModelRouter): ModelRouter {
 }
 
 @Module({
-  imports:[ObservabilityModule],
+  // AI-COST-01: the provider-call accounting's operational visibility travels with the provider surface.
+  imports:[ObservabilityModule, AiUsageModule],
   providers: [
     {
       provide: MODEL_ROUTER,

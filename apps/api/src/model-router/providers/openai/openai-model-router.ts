@@ -12,6 +12,9 @@ import {
 } from './openai-model-router.config';
 import { TelemetryService } from '../../../observability/telemetry.service';
 import { assertForegroundProviderBudget } from '../../../conversation/foreground-turn-work';
+import type { AiProviderCallAccounting } from '../../../ai-usage/ai-provider-call-accounting';
+import { accountedOpenAIResponsesClient } from '../../../ai-usage/accounted-provider-clients';
+import { runWithAiUsageProcessingPath } from '../../../ai-usage/ai-usage-attribution';
 
 interface OpenAIResponse {
   output_text: string;
@@ -35,9 +38,14 @@ interface OpenAIResponsesClient {
 }
 
 export class OpenAIModelRouter implements ModelRouter {
-  static fromEnvironment(telemetry?:TelemetryService): OpenAIModelRouter {
+  /**
+   * AI-COST-01: production composition passes the accounting boundary, so every reply attempt is one ledger row;
+   * the operator-only evaluation harness (brain-eval, not production) composes without it.
+   */
+  static fromEnvironment(telemetry?:TelemetryService, accounting?: AiProviderCallAccounting): OpenAIModelRouter {
     const config = loadOpenAIModelRouterConfig();
-    return new OpenAIModelRouter(config, createOpenAIClient(config),telemetry);
+    const client = createOpenAIClient(config);
+    return new OpenAIModelRouter(config, accounting ? accountedOpenAIResponsesClient(client, 'CONVERSATION_REPLY', accounting) : client, telemetry);
   }
 
   constructor(
@@ -46,7 +54,11 @@ export class OpenAIModelRouter implements ModelRouter {
     private readonly telemetry?:TelemetryService,
   ) {}
 
-  async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+  generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+    return runWithAiUsageProcessingPath(request.path, () => this.generateOnce(request));
+  }
+
+  private async generateOnce(request: ModelRouterRequest): Promise<ModelRouterResult> {
     assertForegroundProviderBudget();
     const modelConfiguration = this.config.resolveModel(request.path);
     const timeout = Math.min(request.latencyBudgetMs, this.config.timeoutMs);
@@ -77,9 +89,10 @@ export class OpenAIModelRouter implements ModelRouter {
       return {
         content,
         routingMetadata: { path: request.path },
+        // AI-COST-01: a usage the provider did not report is unknown, never zero.
         usage: {
-          inputTokens: response.usage?.input_tokens ?? 0,
-          outputTokens: response.usage?.output_tokens ?? 0,
+          inputTokens: response.usage?.input_tokens ?? null,
+          outputTokens: response.usage?.output_tokens ?? null,
         },
       };
     } catch {

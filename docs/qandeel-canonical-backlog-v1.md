@@ -1100,6 +1100,16 @@ orders the provider context only by the reader's own explicit focus and contests
 residue is admitted with a named owner: `QAN-BL-PRIV-01` (`MEDIUM`, `PRIV-EXPORT-01`). The register now holds **33**
 items: 8 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED` and 15 `CLOSED — TOMBSTONE`; by severity, 20 `HIGH`, 12 `MEDIUM`
 and 1 `LOW`, counted mechanically from the §4 index.
+
+**AI-COST-01 reconciliation (2026-10-01).** AI-COST-01 (provider-neutral AI usage / cost ledger + Credit accounting
+foundation, migration `0135`, Draft PR #303) inherits no item and admits none. Its residues already have owners and
+qualify under none of BG-06's routes: the numeric Credit formula, plans, allowances, balances and exhaustion belong to the
+roadmap's *Plans / Credits / Usage Economy*; provider / model selection, registering verified production prices and the
+operator-only `brain-eval` harness belong to *QANDEEL-specific Model / Provider Benchmark & Selection*; a reconciled
+provider bill belongs to Release Hardening's billing readiness; Company Ops consumption belongs to APP-OPS-01's
+implementation. Its Gap Closure Matrix is §14 of its
+[implementation record](e2e/QANDEEL_AI_COST_01_PROVIDER_NEUTRAL_COST_CREDIT_LEDGER_IMPLEMENTATION_RECORD_v1.md). The
+register is unchanged: **33** items, 8 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED`, 15 `CLOSED — TOMBSTONE`.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1150,6 +1160,7 @@ Inherited after T-12 closure reconciliation:
 | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-02` |
 | `W3-CORR-U — Understanding Integrity` | none — U-1 … U-5 closed inside the task; admitted `QAN-BL-PRIV-01` |
 | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01` |
+| `AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation` | none — no item names it; none admitted |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

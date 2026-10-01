@@ -1,13 +1,20 @@
 import { Module } from '@nestjs/common';
 import { FakeHypothesisIntentExtractionProvider } from './fake-hypothesis-intent-extraction.provider';
-import { OpenAIHypothesisIntentExtractionProvider } from './openai-hypothesis-intent-extraction.provider';
+import { createOpenAIExtractionClient, OpenAIHypothesisIntentExtractionProvider } from './openai-hypothesis-intent-extraction.provider';
+import { loadHypothesisIntentExtractionOpenAIConfig } from './hypothesis-intent-extraction-provider.config';
+import { accountedOpenAIResponsesClient } from '../ai-usage/accounted-provider-clients';
+import { productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
 import { HYPOTHESIS_INTENT_EXTRACTION_PROVIDER, type HypothesisIntentExtractionProvider } from './hypothesis-intent-extraction-provider.types';
 
 export function createConfiguredHypothesisIntentExtractionProvider(
   environment: NodeJS.ProcessEnv = process.env,
 ): HypothesisIntentExtractionProvider {
   if (environment.NODE_ENV === 'test') return new FakeHypothesisIntentExtractionProvider();
-  return OpenAIHypothesisIntentExtractionProvider.fromEnvironment(environment);
+  // AI-COST-01: the same configuration and client as `fromEnvironment`, with every extraction attempt passing the one
+  // accounting boundary. The adapter is unchanged.
+  const config = loadHypothesisIntentExtractionOpenAIConfig(environment);
+  return new OpenAIHypothesisIntentExtractionProvider(config, accountedOpenAIResponsesClient(
+    createOpenAIExtractionClient(config), 'HYPOTHESIS_INTENT_EXTRACTION', productionAiProviderCallAccounting()));
 }
 
 /**

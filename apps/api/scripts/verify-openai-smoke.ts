@@ -14,7 +14,8 @@ async function main(): Promise<void> {
       locale: 'en', modality: 'TEXT', latencyBudgetMs: 3_000,
       costBudget: 'LOW', safetyLevel: 'STANDARD',
     });
-    if (!result.content || result.usage.inputTokens <= 0 || result.usage.outputTokens <= 0) {
+    if (!result.content || result.usage.inputTokens === null || result.usage.inputTokens <= 0
+      || result.usage.outputTokens === null || result.usage.outputTokens <= 0) {
       throw new Error('Smoke verification failed.');
     }
     console.log('OpenAI smoke: PASS (normalized text and usage metadata verified).');

@@ -436,7 +436,9 @@ test('FIX-T03B2B3-01 preserved: the direct completed-exchange gate proves the WH
 });
 
 test('the continuity provider is lazy and strict, and no Thread, Home, binding or lifecycle payload reaches the wire', () => {
-  assert.match(binding, /export function openAiThreadContinuityBinding\(environment: NodeJS\.ProcessEnv = process\.env\): ThreadContinuityBindingFactory \{\s*return \(\) => \{\s*const identity = loadThreadContinuityProviderIdentity\(environment\);/u);
+  // RE-ANCHORED by AI-COST-01: the factory gains an optional transport-client decorator (provider-call accounting,
+  // identity by default, applied only where the adapter is built on the FIRST real call).
+  assert.match(binding, /export function openAiThreadContinuityBinding\(\s*environment: NodeJS\.ProcessEnv = process\.env,[\s\S]*?decorateClient: ThreadContinuityClientDecorator = \(client\) => client,\s*\): ThreadContinuityBindingFactory \{\s*return \(\) => \{\s*const identity = loadThreadContinuityProviderIdentity\(environment\);/u);
   assert.match(binding, /const real = \(\): OpenAiThreadContinuityProvider => \{\s*if \(adapter === undefined\) \{\s*const config = loadThreadContinuityOpenAIConfig\(environment\);/u, 'the adapter (and the credential) is built on the FIRST real call');
   assert.match(service, /this\.continuity \?\?= this\.createContinuityBinding\(\);/u);
   assert.match(service, /this\.focus \?\?= this\.createFocusBinding\(\);/u);

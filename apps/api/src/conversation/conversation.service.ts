@@ -14,6 +14,7 @@ import { foregroundTurnWorkDeadlineMs, runForegroundTurnWork, type ForegroundTur
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { CorrelationService } from '../observability/correlation.service';
+import { runWithAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 
 // T-03A2 / T-03D: turn handling is TWO distinct technical phases.
 //
@@ -89,7 +90,10 @@ export class ConversationService {
       begin: (workSessionId, userTurnId) => this.turnWork.begin(workSessionId, userId, userTurnId),
       end: (userTurnId, leaseId) => this.turnWork.end(userId, userTurnId, leaseId),
     };
-    return runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), () => this.admitAndRunTurn(userId, accessToken, sessionId, input));
+    // AI-COST-01: every provider attempt of this request (reply and semantic establishment) is charged to the
+    // authenticated reader; the session and user turn come from the canonical correlation bound below.
+    return runWithAiUsageAttribution({ userId }, () =>
+      runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), () => this.admitAndRunTurn(userId, accessToken, sessionId, input)));
   }
 
   private async admitAndRunTurn(userId: string, accessToken: string, sessionId: string, input: { content: string; idempotencyKey?: string }): Promise<OrchestratedTurnResult> {
