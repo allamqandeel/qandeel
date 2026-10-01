@@ -1,4 +1,5 @@
 import { Injectable } from '@nestjs/common';
+import { clientAddressOf } from '../http-security/client-address';
 
 /**
  * W2-01 — the provider's OWN password check, asked from the server for a Login ID sign-in.
@@ -198,10 +199,12 @@ export class SupabasePasswordGrantService {
   }
 
   /** One provider request. `null` when this server cannot ask or no HTTP answer came back. Nothing is logged. */
-  private async ask(path: string, payload: Record<string, string>, clientIp: string): Promise<ProviderAnswer> {
+  private async ask(path: string, payload: Record<string, string>, readerAddress: string): Promise<ProviderAnswer> {
     const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/u, '');
     const secretKey = process.env.SUPABASE_SECRET_KEY;
-    if (!baseUrl || !secretKey) return null;
+    // PROD-SEC-01: only a valid, normalized address is ever forwarded; anything else fails closed here.
+    const clientIp = clientAddressOf({ ip: readerAddress });
+    if (!baseUrl || !secretKey || clientIp === undefined) return null;
 
     let response: Response;
     try {
@@ -229,11 +232,12 @@ export class SupabasePasswordGrantService {
     path: string,
     accessToken: string,
     payload: Record<string, string> | null,
-    clientIp: string,
+    readerAddress: string,
   ): Promise<ProviderAnswer> {
     const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/u, '');
     const secretKey = process.env.SUPABASE_SECRET_KEY;
-    if (!baseUrl || !secretKey) return null;
+    const clientIp = clientAddressOf({ ip: readerAddress });
+    if (!baseUrl || !secretKey || clientIp === undefined) return null;
 
     let response: Response;
     try {

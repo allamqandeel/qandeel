@@ -48,6 +48,7 @@ jobs:
       - {name: Verify Question / Information-Gap Closed Loop static contract, run: npm run test:question-information-gap-closed-loop-v1-contract}
       - {name: Verify PROD-SEC-02 turn admission concurrency and cost bound static contract, run: npm run test:prod-sec-02-turn-admission-cost-bound-contract}
       - {name: Verify PROD-OPS-01 operational readiness and failure visibility static contract, run: npm run test:prod-ops-01-operational-readiness-failure-visibility-contract}
+      - {name: Verify PROD-SEC-01 API baseline security static contract, run: npm run test:prod-sec-01-api-baseline-security-contract}
       - {name: Verify Integrated Brain E2E Hardening v2 static contract, run: npm run test:integrated-brain-e2e-hardening-v2-contract}
       - {name: Verify Integrated Intelligence Runtime phase closure contract, run: npm run test:integrated-intelligence-runtime-phase-closure-contract}
       - {name: Verify Committed Conversational Unit activation boundary static contract, run: npm run test:committed-conversational-unit-activation-boundary-contract}
@@ -786,6 +787,13 @@ jobs:
       # work counted by number only, Connected Worlds BLOCKED never counted); and that the erasure leaves no orphan.
       - name: Verify PROD-OPS-01 operational readiness and failure visibility against real PostgreSQL
         run: npm run verify:operational-readiness-failure-visibility:integration
+      # PROD-SEC-01 closes the Supabase default-privilege drift (SEC-E). This verifier proves the CI privilege matrix and
+      # the server channel, then rebuilds a scratch database with hosted Supabase's public default privileges, replays
+      # every migration, reproduces the exact census (five functions, fourteen PUBLIC trigger functions, one sequence)
+      # and proves that after 0133 every public object grants anon / authenticated exactly what the migrations grant,
+      # nothing was broadened, row-level security is unchanged and a new public object reaches no client role.
+      - name: Verify PROD-SEC-01 Supabase default-privilege drift closure against real PostgreSQL
+        run: npm run verify:supabase-default-privilege-drift:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

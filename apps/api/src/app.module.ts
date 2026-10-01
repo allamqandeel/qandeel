@@ -13,9 +13,10 @@ import { BackgroundIntelligenceModule } from './background-intelligence/backgrou
 import { PostResponseIntelligenceModule } from './post-response-intelligence/post-response-intelligence.module';
 import { AccountModule } from './account/account.module';
 import { UnderstandingModule } from './understanding/understanding.module';
+import { HttpSecurityModule } from './http-security/http-security.module';
 
 @Module({
-  imports: [SentryModule.forRoot(),ObservabilityModule,RuntimeEventsModule,BackgroundIntelligenceModule,PostResponseIntelligenceModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule, AccountModule, UnderstandingModule],
+  imports: [HttpSecurityModule,SentryModule.forRoot(),ObservabilityModule,RuntimeEventsModule,BackgroundIntelligenceModule,PostResponseIntelligenceModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule, AccountModule, UnderstandingModule],
   providers:[{provide:APP_FILTER,useClass:SentryGlobalFilter}],
 })
 export class AppModule {}
