@@ -20,3 +20,12 @@ export type {
 } from './account-identity-controller';
 export { ACCOUNT_IDENTITY_READ_RETRY_DELAYS_MS, createAccountIdentityController } from './account-identity-controller';
 export type { AccountIdentityCopy, SecurityCopy } from './copy';
+export type { LanguageCopy, PrivacyDataCopy } from './copy';
+export type {
+  PrivacyDataController,
+  PrivacyDataControllerOptions,
+  PrivacyDataState,
+  PrivacyDataStatus,
+  PrivacyDataTransport,
+} from './privacy-data-controller';
+export { PRIVACY_PREPARING_POLL_MS, PRIVACY_READ_RETRY_DELAYS_MS, createPrivacyDataController } from './privacy-data-controller';

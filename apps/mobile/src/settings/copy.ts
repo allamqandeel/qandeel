@@ -104,6 +104,39 @@ export interface SecurityCopy {
   readonly signedOutOthers: string;
 }
 
+/** W3-MEGA-S — the Language row (W3-PDG-01 §5): its term and the name of each Product language, in that language. */
+export interface LanguageCopy {
+  readonly term: string;
+  readonly names: Readonly<Record<ChromeLanguage, string>>;
+}
+
+/** W3-MEGA-S — the words of the Privacy & Data group (W3-PDG-01 §7, §8). */
+export interface PrivacyDataCopy {
+  readonly exportAction: string;
+  readonly exportExplain: string;
+  readonly exportConfirm: string;
+  readonly exportPreparing: string;
+  readonly exportReady: (until: string) => string;
+  readonly exportDownload: string;
+  readonly exportSaved: string;
+  readonly exportSaveFailed: string;
+  readonly exportExpired: string;
+  readonly exportFailed: string;
+  readonly deleteAction: string;
+  readonly deleteExplain: string;
+  readonly deleteConfirm: string;
+  readonly deleteScheduled: (on: string) => string;
+  readonly deleteCancel: string;
+  readonly deleteCancelled: string;
+  readonly deleteFinalizing: string;
+  readonly deleteNotCancellable: string;
+  readonly deleteBlocked: string;
+  readonly enterPassword: string;
+  readonly password: string;
+  readonly passwordIncorrect: string;
+  readonly network: string;
+}
+
 export interface SettingsCopy {
   readonly title: string;
   readonly backName: string;
@@ -111,7 +144,11 @@ export interface SettingsCopy {
   readonly publicId: PublicIdCopy;
   readonly identity: AccountIdentityCopy;
   readonly security: SecurityCopy;
+  readonly qandeelGroup: string;
+  readonly language: LanguageCopy;
   readonly appearanceGroup: string;
+  readonly privacyGroup: string;
+  readonly privacy: PrivacyDataCopy;
   readonly supportGroup: string;
   readonly appearance: Readonly<Record<AppearancePreference, string>>;
   readonly signOut: string;
@@ -183,6 +220,101 @@ function securityCopy(language: ChromeLanguage, group: string): SecurityCopy {
   });
 }
 
+/**
+ * W3-MEGA-S — the new pairs of the Language row and the Privacy & Data group. PROPOSED — NOT APPROVED: every one waits
+ * for the Product Owner's Copy Gate, and those marked PRODUCT COPY DECISION REQUIRED define a deletion consequence,
+ * the grace behaviour, the export promise or its expiry (W3-MEGA-S record §7). Drafted in MSA, verb-first, beside
+ * their approved siblings («تم تغيير كلمة المرور.»); the language names are each language's own name for itself.
+ */
+const PROPOSED_W3_MEGA_S = Object.freeze({
+  ar: Object.freeze({
+    languageTerm: 'اللغة',
+    exportAction: 'تصدير بياناتي',
+    // PRODUCT COPY DECISION REQUIRED — the export promise and its limited availability.
+    exportExplain: 'سنجهّز نسخة من بياناتك، ويمكنك تنزيلها من هنا حين تجهز لمدة محدودة.',
+    exportConfirm: 'طلب نسخة',
+    exportPreparing: 'جارٍ تجهيز نسخة من بياناتك',
+    // PRODUCT COPY DECISION REQUIRED — expiry.
+    exportReady: 'النسخة جاهزة للتنزيل حتى {date}',
+    exportDownload: 'تنزيل',
+    exportSaved: 'تم حفظ الملف.',
+    exportSaveFailed: 'تعذّر حفظ الملف.',
+    // PRODUCT COPY DECISION REQUIRED — expiry.
+    exportExpired: 'انتهت مدة التنزيل. يمكنك طلب نسخة جديدة.',
+    exportFailed: 'تعذّر تجهيز النسخة. يمكنك طلبها مرة أخرى.',
+    deleteAction: 'حذف الحساب',
+    // PRODUCT COPY DECISION REQUIRED — the deletion consequence, the grace period and irreversibility.
+    deleteExplain: 'سيُحذف حسابك وبياناتك الشخصية نهائيًا، ومنها محادثاتك وما يحتفظ به قنديل عنك، بعد مهلة قصيرة يمكنك الإلغاء خلالها. وبعد انقضائها لا يمكن التراجع عن الحذف.',
+    deleteConfirm: 'حذف الحساب',
+    // PRODUCT COPY DECISION REQUIRED — the grace behaviour.
+    deleteScheduled: 'سيُحذف حسابك في {date}',
+    deleteCancel: 'إلغاء الحذف',
+    deleteCancelled: 'تم إلغاء الحذف.',
+    // PRODUCT COPY DECISION REQUIRED — never "deleted" before the final deletion.
+    deleteFinalizing: 'يجري حذف حسابك الآن.',
+    // PRODUCT COPY DECISION REQUIRED — irreversibility.
+    deleteNotCancellable: 'لم يعد إلغاء الحذف ممكنًا.',
+    // PRODUCT COPY DECISION REQUIRED — the Connected Worlds hard stop, told without naming the mechanism.
+    deleteBlocked: 'يتعذّر إتمام الحذف حاليًا، ويبقى حسابك كما هو.',
+    enterPassword: 'أدخل كلمة المرور.',
+  }),
+  en: Object.freeze({
+    languageTerm: 'Language',
+    exportAction: 'Export my data',
+    exportExplain: "We'll prepare a copy of your data. When it's ready, you can download it here for a limited time.",
+    exportConfirm: 'Request a copy',
+    exportPreparing: 'Preparing a copy of your data',
+    exportReady: 'Ready to download until {date}',
+    exportDownload: 'Download',
+    exportSaved: 'File saved.',
+    exportSaveFailed: "The file couldn't be saved.",
+    exportExpired: 'The download period has ended. You can request a new copy.',
+    exportFailed: "The copy couldn't be prepared. You can request it again.",
+    deleteAction: 'Delete account',
+    deleteExplain: 'Your account and your personal data, including your conversations and what QANDEEL keeps about you, will be deleted permanently after a short waiting period. You can cancel during it. After it ends, the deletion can’t be undone.',
+    deleteConfirm: 'Delete account',
+    deleteScheduled: 'Your account will be deleted on {date}',
+    deleteCancel: 'Cancel deletion',
+    deleteCancelled: 'Deletion cancelled.',
+    deleteFinalizing: 'Your account is being deleted now.',
+    deleteNotCancellable: 'The deletion can no longer be cancelled.',
+    deleteBlocked: "The deletion can't be completed right now. Your account stays as it is.",
+    enterPassword: 'Enter your password.',
+  }),
+});
+
+function privacyCopy(language: ChromeLanguage, network: string): PrivacyDataCopy {
+  const entry = accountEntryCopy(language);
+  const approved = APPROVED[language === 'ar' ? 'ar' : 'en'];
+  const proposed = PROPOSED_W3_MEGA_S[language === 'ar' ? 'ar' : 'en'];
+  return Object.freeze({
+    exportAction: proposed.exportAction,
+    exportExplain: proposed.exportExplain,
+    exportConfirm: proposed.exportConfirm,
+    exportPreparing: proposed.exportPreparing,
+    exportReady: (until: string) => proposed.exportReady.replace('{date}', until),
+    exportDownload: proposed.exportDownload,
+    exportSaved: proposed.exportSaved,
+    exportSaveFailed: proposed.exportSaveFailed,
+    exportExpired: proposed.exportExpired,
+    exportFailed: proposed.exportFailed,
+    deleteAction: proposed.deleteAction,
+    deleteExplain: proposed.deleteExplain,
+    deleteConfirm: proposed.deleteConfirm,
+    deleteScheduled: (on: string) => proposed.deleteScheduled.replace('{date}', on),
+    deleteCancel: proposed.deleteCancel,
+    deleteCancelled: proposed.deleteCancelled,
+    deleteFinalizing: proposed.deleteFinalizing,
+    deleteNotCancellable: proposed.deleteNotCancellable,
+    deleteBlocked: proposed.deleteBlocked,
+    enterPassword: proposed.enterPassword,
+    // Reused, not new: W1B-01's password label, W3-MEGA-A's approved C4 and T-14's network sentence.
+    password: entry.passwordLabel,
+    passwordIncorrect: approved.passwordIncorrect,
+    network,
+  });
+}
+
 const AR_BASE = Object.freeze({
   title: 'الإعدادات',
   backName: 'رجوع',
@@ -231,16 +363,28 @@ const EN_BASE = Object.freeze({
   signOut: 'Sign out',
 });
 
+/** Each Product language by its own name (implementation-owned: a language is named in itself, never translated). */
+const LANGUAGE_NAMES = Object.freeze({ ar: 'العربية', en: 'English' });
+
 const AR: SettingsCopy = Object.freeze({
   ...AR_BASE,
   identity: identityCopy('ar', AR_BASE.publicId, AR_BASE.publicId.network),
   security: securityCopy('ar', 'الأمان وتسجيل الدخول'),
+  // P4-C4 §4 `gQandeel` and `gPrivacy`, verbatim.
+  qandeelGroup: 'قنديل والمحادثة',
+  language: Object.freeze({ term: PROPOSED_W3_MEGA_S.ar.languageTerm, names: LANGUAGE_NAMES }),
+  privacyGroup: 'الخصوصية والبيانات',
+  privacy: privacyCopy('ar', AR_BASE.publicId.network),
 });
 
 const EN: SettingsCopy = Object.freeze({
   ...EN_BASE,
   identity: identityCopy('en', EN_BASE.publicId, EN_BASE.publicId.network),
   security: securityCopy('en', 'Security & Sign-in'),
+  qandeelGroup: 'QANDEEL & Conversation',
+  language: Object.freeze({ term: PROPOSED_W3_MEGA_S.en.languageTerm, names: LANGUAGE_NAMES }),
+  privacyGroup: 'Privacy & Data',
+  privacy: privacyCopy('en', EN_BASE.publicId.network),
 });
 
 /** The copy for one Product language. There is no default language. */

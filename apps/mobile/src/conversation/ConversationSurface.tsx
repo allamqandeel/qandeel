@@ -38,7 +38,6 @@ import {
   type NativeScrollEvent,
   type NativeSyntheticEvent,
 } from 'react-native';
-import { useReducedMotion } from 'react-native-reanimated';
 
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { ConversationExchangeView } from '../runtime-entry';
@@ -49,6 +48,7 @@ import { conversationCopy, type ConversationCopy } from './copy';
 import { Control, MIN_TARGET } from './visual/Control';
 import { useConversationTypeface } from './visual/fonts';
 import { Glyph } from './visual/Glyph';
+import { useReduceMotion } from './visual/reduce-motion';
 import { typeStyle, usePalette, type ConversationPalette } from './visual/theme';
 
 export const CONVERSATION_SURFACE_TEST_ID = 'qandeel-conversation';
@@ -229,7 +229,7 @@ export function ConversationSurface({
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const palette = usePalette();
-  const reduceMotion = useReducedMotion();
+  const reduceMotion = useReduceMotion();
   const copy = conversationCopy(language);
   const { width } = useWindowDimensions();
   const mine = readerSide(language);

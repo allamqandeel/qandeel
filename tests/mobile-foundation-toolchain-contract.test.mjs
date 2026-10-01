@@ -47,6 +47,11 @@ const expectedDependencies = {
   expo: '~57.0.21',
   'expo-constants': '~57.0.17',
   'expo-dev-client': '~57.0.18',
+  // W3-MEGA-S (E2E-D-16): the in-app download of a ready export package writes it where the reader chooses through the
+  // system folder picker (Directory.pickDirectoryAsync). expo-file-system was already in the tree at exactly this
+  // version as a dependency of `expo` itself (Expo SDK 57's bundled module, autolinked in every build), so declaring it
+  // direct changes no installed version and no native project — the same shape as the expo-font declaration below.
+  'expo-file-system': '~57.0.6',
   // W1A-01: the Product Owner authorized Estedad v8.5 for the Conversation surface, loaded through
   // expo-font. It was already in the tree at exactly this version as a dependency of `expo` itself
   // (Expo SDK 57's bundled module), so declaring it direct changes no installed version, adds no

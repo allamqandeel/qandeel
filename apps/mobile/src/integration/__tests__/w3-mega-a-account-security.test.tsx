@@ -81,7 +81,7 @@ describe('W3-MEGA-A — Account & Identity and Security & Sign-in, end to end', 
 
     const settings = within(view.getByTestId('qandeel-settings'));
     expect(settings.getAllByRole('header').map((node) => node.props.children)).toEqual([
-      COPY.title, COPY.accountGroup, COPY.security.group, COPY.appearanceGroup, COPY.supportGroup,
+      COPY.title, COPY.accountGroup, COPY.security.group, COPY.qandeelGroup, COPY.appearanceGroup, COPY.supportGroup,
     ]);
     expect(view.getByTestId('qandeel-name-row-value').props.children).toBe('Noor Hassan');
     expect(view.getByTestId('qandeel-login-id-row-value').props.children).toBe(`${LRI}noor.h${PDI}`);

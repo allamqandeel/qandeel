@@ -433,7 +433,17 @@ test('no Thread id allocation, no Home durable allocation, no lifecycle / LF, no
     'the T-03B2b3 read/audit migration computes no placement of its own');
   assert.doesNotMatch(read(`database/migrations/${C_MIGRATION}`), /osdap|home_placement|compute_canonical_home_placement|INSERT INTO public\.conversation_thread_homes/iu,
     'the T-03C migration computes no placement and writes no Home: it reads the ONE Home of a known Thread');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION)) {
+  // RE-ANCHORED by W3-MEGA-S (validation only): the ONE governed Personal-world erasure (W3-PDG-01 §8.3 / §8.6) must
+  // name the Home / Thread tables to DELETE the erased account's rows. It is exempt for its DELETE statements alone, and
+  // computes, moves or writes no Home; beside those it may carry only its in-place redefinition of 0070's own guard.
+  // Every other migration keeps the ban.
+  const ERASURE_MIGRATION = '0130_personal_privacy_export_account_deletion_v1.sql';
+  const erasure = read(`database/migrations/${ERASURE_MIGRATION}`);
+  assert.doesNotMatch(erasure, /osdap|home_placement|compute_canonical_home_placement|INSERT\s+INTO\s+public\.conversation_thread_homes|UPDATE\s+public\.conversation_thread_homes/iu,
+    'the erasure migration computes no placement and writes no Home');
+  assert.doesNotMatch(erasure.replace(/DELETE FROM public\.\w+[^;]*;/gu, '').replace(/CREATE OR REPLACE FUNCTION public\.guard_conversation_world_thread_identity_clock_v1\(\)[\s\S]*?END;\$\$;/u, ''), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu,
+    'outside its DELETE statements the erasure migration carries no Home substrate');
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /home_anchor|canonical_spatial|osdap|thread_home|home_placement|conversation_threads/iu, `${name} carries no Home substrate`);
   }
   assert.deepEqual(readdirSync(join(rootPath, 'database')).filter((name) => SUBSTRATE_VERIFIER_NAME.test(name)), [],

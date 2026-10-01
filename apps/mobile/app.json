@@ -10,7 +10,13 @@
     ],
     "ios": {
       "bundleIdentifier": "com.qandeel.mobile",
-      "userInterfaceStyle": "automatic"
+      "userInterfaceStyle": "automatic",
+      "infoPlist": {
+        "CFBundleLocalizations": [
+          "ar",
+          "en"
+        ]
+      }
     },
     "android": {
       "package": "com.qandeel.mobile"

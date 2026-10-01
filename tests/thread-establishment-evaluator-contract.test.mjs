@@ -347,7 +347,17 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
   const C_MIGRATION = '0072_historical_coverage_projection_disclosure_v1.sql';
   assert.doesNotMatch(read(`database/migrations/${C_MIGRATION}`), /CREATE TABLE public\.(?:conversation_threads|conversation_thread_homes|conversation_thread_establishment|conversation_thread_commit_batches)\b|INSERT INTO public\.conversation_threads|INSERT INTO public\.conversation_thread_homes|thread_establish/u,
     'the T-03C migration creates no second Thread / Home substrate and establishes no Thread');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION)) {
+  // RE-ANCHORED by W3-MEGA-S (validation only): the ONE governed Personal-world erasure (W3-PDG-01 §8.3 / §8.6) must
+  // name the Thread / Home tables to DELETE the erased account's rows. It is exempt for its DELETE statements alone and
+  // must still create, insert into, update, alter or drop no Thread / Home table; the only other occurrence it may carry is
+  // its in-place redefinition of 0070's own identity-clock guard (same name). Every other migration keeps the ban.
+  const ERASURE_MIGRATION = '0130_personal_privacy_export_account_deletion_v1.sql';
+  const erasure = read(`database/migrations/${ERASURE_MIGRATION}`);
+  assert.doesNotMatch(erasure, /(?:CREATE|ALTER|DROP)\s+TABLE[^;]*conversation_thread|INSERT\s+INTO\s+public\.conversation_thread|UPDATE\s+public\.conversation_thread/iu,
+    'the erasure migration creates, writes or restructures no Thread / Home table');
+  assert.doesNotMatch(erasure.replace(/DELETE FROM public\.\w+[^;]*;/gu, '').replace(/CREATE OR REPLACE FUNCTION public\.guard_conversation_world_thread_identity_clock_v1\(\)[\s\S]*?END;\$\$;/u, ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
+    'outside its DELETE statements the erasure migration carries no Thread / Home substrate');
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));

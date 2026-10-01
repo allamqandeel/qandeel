@@ -8,7 +8,9 @@
  * W3-02 adds the reader's own Public ID read and change; W3-MEGA-A the reader's own identity read, Name, Login ID,
  * Email and password changes and "sign out from other devices" (`/account/identity`, `/account/name/change`,
  * `/account/login-id/change`, `/account/email/change`, `/account/email/confirm`, `/account/password/change`,
- * `/account/sessions/sign-out-others`).
+ * `/account/sessions/sign-out-others`). W3-MEGA-S adds the reader's own Privacy & Data state, export request and
+ * download, and account deletion request and cancellation (`/account/privacy`, `/account/privacy/export`,
+ * `/account/privacy/export/download`, `/account/privacy/deletion`, `/account/privacy/deletion/cancel`).
  *
  * Transports and nothing else, exactly like the Conversation clients: they hold no credential (the
  * signed-in client goes through the AC-01 request-time seam its caller hands it; the availability
@@ -103,6 +105,66 @@ export type PasswordChangeOutcome =
   | { readonly kind: 'NETWORK' };
 
 export type SignOutOthersOutcome = { readonly kind: 'SIGNED_OUT_OTHERS' } | { readonly kind: 'FAILED' } | { readonly kind: 'NETWORK' };
+
+/**
+ * W3-MEGA-S — the reader's own Privacy & Data state, as the server read it (migration 0130 decides each value):
+ * the export package's state and, while it is READY, until when it can be downloaded; the account deletion's state
+ * and, while SCHEDULED (or FINALIZING), when it becomes final.
+ */
+export type PrivacyExportStatus = 'NONE' | 'PREPARING' | 'READY' | 'EXPIRED' | 'FAILED';
+export type PrivacyDeletionStatus = 'NONE' | 'SCHEDULED' | 'FINALIZING' | 'BLOCKED';
+
+export interface PrivacyStateView {
+  readonly export: { readonly status: PrivacyExportStatus; readonly availableUntil: string | null };
+  readonly deletion: { readonly status: PrivacyDeletionStatus; readonly finalAt: string | null };
+}
+
+export type PrivacyStateOutcome = { readonly kind: 'READ'; readonly view: PrivacyStateView } | { readonly kind: 'UNAVAILABLE' };
+
+/** A request that needs the password: held (with the resulting state), the password refused, or not known. */
+export type PrivacyRequestOutcome =
+  | { readonly kind: 'ACCEPTED'; readonly view: PrivacyStateView['export'] | PrivacyStateView['deletion'] }
+  | { readonly kind: 'CANCELLED' }
+  | { readonly kind: 'PASSWORD_REJECTED' }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+
+export type DeletionCancelOutcome =
+  | { readonly kind: 'CANCELLED' | 'NONE' | 'NOT_CANCELLABLE' }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+
+/** The ready package, exactly as the server built it (a JSON document the reader saves), or its state alone. */
+export type ExportDownloadOutcome =
+  | { readonly kind: 'READY'; readonly availableUntil: string | null; readonly document: Record<string, unknown> }
+  | { readonly kind: 'NOT_READY'; readonly status: PrivacyExportStatus }
+  | { readonly kind: 'FAILED' }
+  | { readonly kind: 'NETWORK' };
+
+const EXPORT_STATUSES: readonly string[] = Object.freeze(['NONE', 'PREPARING', 'READY', 'EXPIRED', 'FAILED']);
+const DELETION_STATUSES: readonly string[] = Object.freeze(['NONE', 'SCHEDULED', 'FINALIZING', 'BLOCKED']);
+/** An instant the app can show: `null` stays null; a string that is not a readable date is refused, never drawn. */
+const instantOrNull = (value: unknown): string | null | undefined =>
+  value === null ? null : typeof value === 'string' && value !== '' && !Number.isNaN(Date.parse(value)) ? value : undefined;
+
+function decodeExportPart(value: unknown): PrivacyStateView['export'] | null {
+  if (!isRecord(value) || typeof value.status !== 'string' || !EXPORT_STATUSES.includes(value.status)) return null;
+  const availableUntil = instantOrNull(value.availableUntil);
+  return availableUntil === undefined ? null : { status: value.status as PrivacyExportStatus, availableUntil };
+}
+
+function decodeDeletionPart(value: unknown): PrivacyStateView['deletion'] | null {
+  if (!isRecord(value) || typeof value.status !== 'string' || !DELETION_STATUSES.includes(value.status)) return null;
+  const finalAt = instantOrNull(value.finalAt);
+  return finalAt === undefined ? null : { status: value.status as PrivacyDeletionStatus, finalAt };
+}
+
+export function decodePrivacyState(body: unknown): PrivacyStateView | null {
+  if (!isRecord(body)) return null;
+  const exportPart = decodeExportPart(body.export);
+  const deletionPart = decodeDeletionPart(body.deletion);
+  return exportPart === null || deletionPart === null ? null : { export: exportPart, deletion: deletionPart };
+}
 
 export function decodeIdentity(body: unknown): AccountIdentityView | null {
   if (!isRecord(body)) return null;
@@ -277,6 +339,54 @@ export class AccountApiClient {
     const answer = await this.exchange('POST', '/account/sessions/sign-out-others', {});
     if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
     return answer.body.outcome === 'SIGNED_OUT_OTHERS' ? { kind: 'SIGNED_OUT_OTHERS' } : { kind: 'FAILED' };
+  }
+
+  /** W3-MEGA-S — the reader's own Privacy & Data state. Read once; never repeated here. */
+  async readPrivacyState(): Promise<PrivacyStateOutcome> {
+    const answer = await this.exchange('GET', '/account/privacy');
+    if (answer.kind !== 'OK') return { kind: 'UNAVAILABLE' };
+    const view = decodePrivacyState(answer.body);
+    return view === null ? { kind: 'UNAVAILABLE' } : { kind: 'READ', view };
+  }
+
+  /** W3-MEGA-S — ask for a copy of the reader's data, with the password re-entered. ONE command identity per request. */
+  async requestDataExport(commandId: string, password: string): Promise<PrivacyRequestOutcome> {
+    const answer = await this.exchange('POST', '/account/privacy/export', { commandId, password });
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    if (answer.body.outcome === 'PASSWORD_REJECTED') return { kind: 'PASSWORD_REJECTED' };
+    const view = answer.body.outcome === 'ACCEPTED' ? decodeExportPart(answer.body.export) : null;
+    return view === null ? { kind: 'FAILED' } : { kind: 'ACCEPTED', view };
+  }
+
+  /** W3-MEGA-S — the reader's ready package. The server decides whether it is still available. */
+  async downloadDataExport(): Promise<ExportDownloadOutcome> {
+    const answer = await this.exchange('GET', '/account/privacy/export/download');
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { status, availableUntil, package: document } = answer.body;
+    if (typeof status !== 'string' || !EXPORT_STATUSES.includes(status)) return { kind: 'FAILED' };
+    if (status !== 'READY') return { kind: 'NOT_READY', status: status as PrivacyExportStatus };
+    const until = instantOrNull(availableUntil);
+    if (!isRecord(document) || until === undefined) return { kind: 'FAILED' };
+    return { kind: 'READY', availableUntil: until, document };
+  }
+
+  /** W3-MEGA-S — ask for the account's deletion, with the password re-entered. ONE command identity per request. */
+  async requestAccountDeletion(commandId: string, password: string): Promise<PrivacyRequestOutcome> {
+    const answer = await this.exchange('POST', '/account/privacy/deletion', { commandId, password });
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { outcome } = answer.body;
+    if (outcome === 'PASSWORD_REJECTED') return { kind: 'PASSWORD_REJECTED' };
+    if (outcome === 'CANCELLED') return { kind: 'CANCELLED' };
+    const view = outcome === 'ACCEPTED' ? decodeDeletionPart(answer.body.deletion) : null;
+    return view === null ? { kind: 'FAILED' } : { kind: 'ACCEPTED', view };
+  }
+
+  /** W3-MEGA-S — cancel the account's scheduled deletion. */
+  async cancelAccountDeletion(): Promise<DeletionCancelOutcome> {
+    const answer = await this.exchange('POST', '/account/privacy/deletion/cancel', {});
+    if (answer.kind !== 'OK') return answer.kind === 'STATUS' ? { kind: 'FAILED' } : answer;
+    const { outcome } = answer.body;
+    return outcome === 'CANCELLED' || outcome === 'NONE' || outcome === 'NOT_CANCELLABLE' ? { kind: outcome } : { kind: 'FAILED' };
   }
 
   /** One request on the credential seam: a decoded object body, a non-2xx status, or no usable answer. */

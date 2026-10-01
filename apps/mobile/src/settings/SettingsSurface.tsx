@@ -30,7 +30,15 @@
  * Settings. A change in flight is never abandoned half-way. An Email change, or a password change the provider made
  * on a fresh session, ends this device's session: the ONE sign-out below then returns the reader to Sign in.
  *
- * The final nine-group Settings hierarchy is NOT this surface (D-02 advances only).
+ * W3-MEGA-S (E2E-D-11, D-12, D-16, D-17 Personal world) adds the fifth and sixth real groups:
+ *
+ *   - «قنديل والمحادثة» / QANDEEL & Conversation — the Language row, which opens the SYSTEM's language setting for
+ *     QANDEEL (W3-PDG-01 §5). No in-app switch, nothing stored; the one locale authority reads the result.
+ *   - «الخصوصية والبيانات» / Privacy & Data — Export my data and Delete account (W3-PDG-01 §7, §8), each with the
+ *     state the server holds; both requests re-enter the password. Accessibility stays the platform's: no in-app
+ *     accessibility switch exists (W3-PDG-01 §6).
+ *
+ * No placeholder is drawn for a group whose function does not exist (Notifications, Introductions, Plan & Usage).
  *
  * The frame is laid out logically (`direction`), so the start and end edges are the reader's in Arabic and
  * English alike. Every colour is the canonical palette's, in the reader's effective appearance.
@@ -44,6 +52,10 @@ import type { ChromeLanguage } from '../orientation-chrome';
 import { ActionRow, EmailChange, IdentityRow, LoginIdChange, NameChange, PasswordChange } from './AccountSecuritySection';
 import type { AccountIdentityController, AccountIdentityState } from './account-identity-controller';
 import { settingsCopy } from './copy';
+import { saveExportDocument } from './export-file';
+import { openLanguageSettings } from './language-settings';
+import type { PrivacyDataController, PrivacyDataState } from './privacy-data-controller';
+import { DeletionRequest, deletionStatusSaid, ExportRequest, exportStatusSaid, LanguageRow, PrivacyDataRows } from './PrivacyDataSection';
 import type { PublicIdController, PublicIdState } from './public-id-controller';
 import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
 
@@ -60,16 +72,27 @@ export interface SettingsSurfaceProps {
   readonly identity?: AccountIdentityController;
   /** W3-02: the reader's Public ID for this runtime generation. Without it, the Public ID row is not drawn. */
   readonly publicId?: PublicIdController;
+  /** W3-MEGA-S: the reader's Privacy & Data state and requests for this runtime generation. Without it, that group is not drawn. */
+  readonly privacy?: PrivacyDataController;
 }
 
 /** The change shown in place of the groups, if any. */
-type Change = 'PUBLIC_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD';
+type Change = 'PUBLIC_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE';
 /** Where the screen reader returns when a change closes. */
 type RowKey = Change;
 
 const NO_PUBLIC_ID: PublicIdState = Object.freeze({ status: 'LOADING', publicId: null, changeAvailable: false });
 const NO_IDENTITY: AccountIdentityState = Object.freeze({ status: 'LOADING', identity: null });
+const NO_PRIVACY: PrivacyDataState = Object.freeze({ status: 'LOADING', view: null });
 const noSubscription = () => () => undefined;
+
+/** The Privacy & Data state of the generation's controller, or LOADING when there is none. */
+function usePrivacyState(controller: PrivacyDataController | undefined): PrivacyDataState {
+  return useSyncExternalStore(
+    controller === undefined ? noSubscription : controller.subscribe,
+    controller === undefined ? () => NO_PRIVACY : controller.getState,
+  );
+}
 
 /** The Public ID state of the generation's controller, or LOADING when there is none. */
 function usePublicIdState(controller: PublicIdController | undefined): PublicIdState {
@@ -160,7 +183,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, privacy }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -178,6 +201,11 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
   useEffect(() => {
     identity?.start();
   }, [identity]);
+  // W3-MEGA-S — the Privacy & Data state, read when Settings is shown.
+  const privacyState = usePrivacyState(privacy);
+  useEffect(() => {
+    privacy?.start();
+  }, [privacy]);
 
   const [changing, setChanging] = useState<Change | null>(null);
   const committingRef = useRef(false);
@@ -214,7 +242,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     const target = rowNodes.current[returnTo];
     const node = target === null || target === undefined ? null : findNodeHandle(target);
     if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
-  }, [changing, returnTo, publicIdState, identityState]);
+  }, [changing, returnTo, publicIdState, identityState, privacyState]);
 
   // The screen reader arrives on the destination's name, once, when the surface is drawn.
   const titleRef = useRef<Text | null>(null);
@@ -265,6 +293,60 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     choose?.(preference);
   }, [choose]);
 
+  // W3-MEGA-S — Privacy & Data results, told beneath their own row in a polite region.
+  const [exportNotice, setExportNotice] = useState<string | null>(null);
+  const [deletionNotice, setDeletionNotice] = useState<string | null>(null);
+  const [downloading, setDownloading] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const privacyActRef = useRef(false);
+  const say = useCallback((setNotice: (said: string | null) => void, said: string | null) => {
+    setNotice(said);
+    if (said !== null) AccessibilityInfo.announceForAccessibility(said);
+  }, []);
+  const download = useCallback(async () => {
+    if (privacy === undefined || privacyActRef.current) return;
+    privacyActRef.current = true;
+    setDownloading(true);
+    setExportNotice(null);
+    const result = await privacy.downloadExport();
+    let said: string | null = null;
+    if (result?.kind === 'READY') {
+      const saved = await saveExportDocument(result.document);
+      said = saved === 'SAVED' ? copy.privacy.exportSaved : saved === 'FAILED' ? copy.privacy.exportSaveFailed : null;
+    } else if (result?.kind === 'RETRY') {
+      said = copy.privacy.network;
+    }
+    privacyActRef.current = false;
+    setDownloading(false);
+    say(setExportNotice, said);
+  }, [copy, privacy, say]);
+  const cancelDeletion = useCallback(async () => {
+    if (privacy === undefined || privacyActRef.current) return;
+    privacyActRef.current = true;
+    setCancelling(true);
+    setDeletionNotice(null);
+    const result = await privacy.cancelDeletion();
+    privacyActRef.current = false;
+    setCancelling(false);
+    if (result === null) return;
+    // The Cancel row is gone once the deletion is; the screen reader returns to the Delete account row.
+    setReturnTo('DELETE');
+    say(setDeletionNotice, result === 'CANCELLED' ? copy.privacy.deleteCancelled
+      : result === 'NOT_CANCELLABLE' ? copy.privacy.deleteNotCancellable : copy.privacy.network);
+  }, [copy, privacy, say]);
+  // A request that the server now holds closes its form, and what is now true is said once — the same words its row
+  // shows, from the state the server returned.
+  const exportAccepted = useCallback(() => {
+    leaveChange();
+    const said = exportStatusSaid(privacy?.getState().view ?? null, copy.privacy, language);
+    if (said !== null) AccessibilityInfo.announceForAccessibility(said);
+  }, [copy, language, leaveChange, privacy]);
+  const deletionAccepted = useCallback(() => {
+    leaveChange();
+    const said = deletionStatusSaid(privacy?.getState().view ?? null, copy.privacy, language);
+    if (said !== null) AccessibilityInfo.announceForAccessibility(said);
+  }, [copy, language, leaveChange, privacy]);
+
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={SETTINGS_SURFACE_TEST_ID} />;
 
   const changeProps = { language, palette, onFinished: leaveChange, busyChanged: onCommitBusy } as const;
@@ -298,6 +380,12 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
         />
       );
     }
+  }
+
+  if (privacy !== undefined && privacyState.status === 'READY') {
+    const requestProps = { controller: privacy, copy: copy.privacy, language, palette, busyChanged: onCommitBusy } as const;
+    if (changing === 'EXPORT') change = <ExportRequest {...requestProps} onAccepted={exportAccepted} />;
+    if (changing === 'DELETE') change = <DeletionRequest {...requestProps} onAccepted={deletionAccepted} />;
   }
 
   const publicIdReady = publicIdState.status === 'READY' && publicIdState.publicId !== null;
@@ -395,6 +483,12 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
               </View>
             ) : null}
 
+            {/* W3-MEGA-S — the app language is the SYSTEM's: this row only opens its setting (W3-PDG-01 §5). */}
+            <View testID="qandeel-settings-group-qandeel">
+              <GroupHeading text={copy.qandeelGroup} language={language} palette={palette} testID="qandeel-settings-group-qandeel-name" />
+              <LanguageRow copy={copy.language} language={language} palette={palette} onOpen={() => void openLanguageSettings()} />
+            </View>
+
             <View testID="qandeel-settings-group-appearance">
               <GroupHeading text={copy.appearanceGroup} language={language} palette={palette} testID="qandeel-settings-group-appearance-name" />
               <View accessibilityRole="radiogroup" accessibilityLabel={copy.appearanceGroup} accessibilityLanguage={language}>
@@ -411,6 +505,31 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
                 ))}
               </View>
             </View>
+
+            {privacy !== undefined && privacyState.status === 'READY' && privacyState.view !== null ? (
+              <View testID="qandeel-settings-group-privacy">
+                <GroupHeading text={copy.privacyGroup} language={language} palette={palette} testID="qandeel-settings-group-privacy-name" />
+                <PrivacyDataRows
+                  view={privacyState.view}
+                  copy={copy.privacy}
+                  language={language}
+                  palette={palette}
+                  notices={{ export: exportNotice, deletion: deletionNotice }}
+                  busy={{ download: downloading, cancel: cancelling }}
+                  onRequestExport={() => {
+                    setExportNotice(null);
+                    openChange('EXPORT');
+                  }}
+                  onDownload={() => void download()}
+                  onRequestDeletion={() => {
+                    setDeletionNotice(null);
+                    openChange('DELETE');
+                  }}
+                  onCancelDeletion={() => void cancelDeletion()}
+                  rowRef={rowRef}
+                />
+              </View>
+            ) : null}
 
             <View testID="qandeel-settings-group-support">
               <GroupHeading text={copy.supportGroup} language={language} palette={palette} testID="qandeel-settings-group-support-name" />

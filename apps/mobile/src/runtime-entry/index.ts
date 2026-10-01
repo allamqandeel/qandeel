@@ -102,6 +102,13 @@ export type {
   PublicIdChangeAnswer,
   PublicIdChangeOutcome,
   SignOutOthersOutcome,
+  DeletionCancelOutcome,
+  ExportDownloadOutcome,
+  PrivacyDeletionStatus,
+  PrivacyExportStatus,
+  PrivacyRequestOutcome,
+  PrivacyStateOutcome,
+  PrivacyStateView,
 } from './account/account-api';
 export { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 export type {
