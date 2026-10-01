@@ -166,6 +166,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PROD-05` | List / Fan-out Corrections and Unmeasured Payload / Semantic-Phase Sizes (PR01-D/M) | `PROD-DATA-01 — List/Fan-out Correction` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-01` | Trusted Proxy / Edge / Origin Production Proof | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-PRIV-01` | Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -764,6 +765,32 @@ only in a task record. Neither authorizes implementation (BG-07).
 
 ---
 
+### `QAN-BL-PRIV-01` — Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item
+
+- **Title / Finding:** W3-CORR-U (migration `0134`) lets the reader resolve their own disagreement explicitly («أوافق
+  عليه الآن» / "I agree with this now"), recorded as durable owner-only facts on `public.understanding_contests`. The
+  Personal export (`personal_data_private.build_personal_export_v1`, migration `0130`) lists every disagreement
+  (`yourDisagreements`), which stays complete and true. It does not carry the reader's later explicit agreement.
+- **Source:** the W3-CORR-U Gap Sweep
+  ([implementation record](e2e/QANDEEL_W3_CORR_U_UNDERSTANDING_INTEGRITY_IMPLEMENTATION_RECORD_v1.md) §5 and §10).
+  The current export contract is the [W3-MEGA-S record](e2e/QANDEEL_W3_MEGA_S_PERSONAL_CONTROLS_SETTINGS_IMPLEMENTATION_RECORD_v1.md)
+  under the W3-PDG-01 Product decisions.
+- **Current truth:** nothing in the export is false. A withdrawal-resolved contest is not the reader's act and must
+  never be exported as one.
+- **Why deferred:** the export's content and shape are a Privacy & Data Product decision. Adding a field from inside an
+  Understanding corrective would invent it (AGENTS.md §2).
+- **Owner task:** `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts`
+- **Severity:** `MEDIUM`. If reopened, it concerns the completeness of the reader's own exported data, not its
+  truthfulness.
+- **Reopen condition:** automatic when `PRIV-EXPORT-01` starts. It must also be reopened before Export My Data is
+  declared complete for launch.
+- **Required future properties:** export only the reader's OWN explicit agreements (never a withdrawal) as readable
+  facts; no internal id, command id or reason code; the disagreements stay listed.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by W3-CORR-U under BG-06, designated by Architecture in its closing change. Nothing here authorizes
+implementation (BG-07).
+
 ## 6. Tombstones
 
 All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final Living Analysis Map
@@ -976,16 +1003,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 7 |
+| `DEFERRED — OWNED` | 8 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 15 |
-| **Total** | **32** |
+| **Total** | **33** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 20 |
-| `MEDIUM` | 11 |
+| `MEDIUM` | 12 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -1065,6 +1092,14 @@ admitted with one named Final Launch owner:
 `PROD-AUTH-01` and `PROD-DATA-01` keep their items unchanged, and no duplicate row is created for them. The register
 now holds **32** items: 7 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED` and 15 `CLOSED — TOMBSTONE`; by severity, 20
 `HIGH`, 11 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**W3-CORR-U reconciliation (2026-10-01).** W3-CORR-U (Understanding Integrity, migration `0134`) inherits no item.
+U-1 … U-5 were active-direction gaps, so they are closed inside the task and are not entered here (BG-01). Its record's
+§13 is the Gap Closure Matrix. `QAN-BL-CTX-01` is unchanged and still owns general conversational relevance. The task
+orders the provider context only by the reader's own explicit focus and contests, under the unchanged bound. One
+residue is admitted with a named owner: `QAN-BL-PRIV-01` (`MEDIUM`, `PRIV-EXPORT-01`). The register now holds **33**
+items: 8 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED` and 15 `CLOSED — TOMBSTONE`; by severity, 20 `HIGH`, 12 `MEDIUM`
+and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1113,6 +1148,8 @@ Inherited after T-12 closure reconciliation:
 | `PROD-SEC-01 — API Baseline Hardening` | `QAN-BL-PROD-02` — widened by its contract to SEC-A … SEC-H and delivered; tombstoned by itself under BG-08 |
 | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `QAN-BL-LAUNCH-01` |
 | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-02` |
+| `W3-CORR-U — Understanding Integrity` | none — U-1 … U-5 closed inside the task; admitted `QAN-BL-PRIV-01` |
+| `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01` |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

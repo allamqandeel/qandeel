@@ -49,6 +49,8 @@ export const UNDERSTANDING_EVOLUTION_KINDS = [
   'FIRST_SEEN', 'SUPPORT_ADDED', 'CHALLENGE_ADDED', 'STRENGTHENED', 'WEAKENED', 'BECAME_MIXED', 'WITHDRAWN', 'RECONSIDERED',
   // U3: the reader's own explicit disagreement, which put the item under review.
   'YOU_DISAGREED',
+  // W3-CORR-U: the reader later explicitly agreed with the interpretation. Never told for a withdrawal.
+  'YOU_RESOLVED_DISAGREEMENT',
 ] as const;
 export type UnderstandingEvolutionKind = (typeof UNDERSTANDING_EVOLUTION_KINDS)[number];
 
@@ -87,6 +89,12 @@ export interface UnderstandingListView {
 /** U3 — what an explicit disagreement answers: the item is under review, at this (opaque) revision. */
 export interface UnderstandingDisagreementView {
   readonly underReview: true;
+  readonly revision: string;
+}
+
+/** W3-CORR-U — what an explicit resolution answers: the item is no longer under review, at this (opaque) revision. */
+export interface UnderstandingResolutionView {
+  readonly underReview: false;
   readonly revision: string;
 }
 

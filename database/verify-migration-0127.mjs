@@ -93,11 +93,14 @@ async function verifyCatalog() {
   stage = 'catalog: the contest table and its rules';
   const columns = await rows(`SELECT column_name, data_type, is_nullable FROM information_schema.columns
     WHERE table_schema = 'public' AND table_name = 'understanding_contests' ORDER BY ordinal_position`);
+  // W3-CORR-U (0134) appends the four nullable resolution facts; 0127's own eleven facts stay exactly as they were.
+  const RESOLUTION_FACTS = ['resolved_at', 'resolved_version', 'resolution_reason', 'resolution_command_id'];
   assert.deepEqual(columns.map((c) => c.column_name), [
     'id', 'user_id', 'hypothesis_id', 'command_id', 'contested_version', 'lifecycle',
     'reevaluation_before_status', 'reevaluation_after_status', 'reevaluation_after_version', 'confidence_evaluation_id', 'created_at',
+    ...RESOLUTION_FACTS,
   ], 'facts only: no conversation text, no reasoning, no score');
-  assert.ok(columns.every((c) => c.is_nullable === 'NO'));
+  assert.ok(columns.filter((c) => !RESOLUTION_FACTS.includes(c.column_name)).every((c) => c.is_nullable === 'NO'));
   const constraints = Object.fromEntries((await rows(`SELECT conname, pg_get_constraintdef(oid) AS def FROM pg_constraint
     WHERE conrelid = 'public.understanding_contests'::regclass`)).map((c) => [c.conname, c.def]));
   assert.match(constraints.understanding_contests_owner_fk, /FOREIGN KEY \(hypothesis_id, user_id\) REFERENCES hypotheses\(id, user_id\)/u);
@@ -108,9 +111,12 @@ async function verifyCatalog() {
   stage = 'catalog: R2 — contest facts are immutable, and Confidence history gains no global uniqueness';
   const triggers = await rows(`SELECT t.tgname, n.nspname AS schema, p.proname, p.prosecdef, p.proconfig, pg_get_triggerdef(t.oid) AS def
       FROM pg_trigger t JOIN pg_proc p ON p.oid = t.tgfoid JOIN pg_namespace n ON n.oid = p.pronamespace
-     WHERE t.tgrelid = 'public.understanding_contests'::regclass AND NOT t.tgisinternal`);
-  assert.deepEqual(triggers.map((tr) => [tr.tgname, `${tr.schema}.${tr.proname}`, tr.prosecdef]),
-    [['understanding_contests_facts_immutable', 'understanding_private.understanding_contest_facts_immutable_v1', false]]);
+     WHERE t.tgrelid = 'public.understanding_contests'::regclass AND NOT t.tgisinternal ORDER BY t.tgname`);
+  // W3-CORR-U (0134) adds the forward-only lifecycle guard beside 0127's facts trigger (verified by its own verifier).
+  assert.deepEqual(triggers.map((tr) => [tr.tgname, `${tr.schema}.${tr.proname}`, tr.prosecdef]), [
+    ['understanding_contests_facts_immutable', 'understanding_private.understanding_contest_facts_immutable_v1', false],
+    ['understanding_contests_lifecycle_forward_only', 'understanding_private.understanding_contest_lifecycle_forward_only_v1', false],
+  ]);
   assert.match(triggers[0].def, /BEFORE UPDATE ON public\.understanding_contests FOR EACH ROW/u);
   assert.deepEqual(triggers[0].proconfig, ['search_path=""']);
   const [{ confidenceUnique }] = await rows(`SELECT count(*)::int AS "confidenceUnique" FROM pg_index i

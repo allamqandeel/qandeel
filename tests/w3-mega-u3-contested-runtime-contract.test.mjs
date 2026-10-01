@@ -64,7 +64,8 @@ function noTextViolations(world) {
   const columns = [...table.matchAll(/^\s{2}(\w+) (\w+)/gmu)].map((m) => m[1]).filter((name) => name !== 'CONSTRAINT');
   if (columns.length === 0) out.push('no table found');
   for (const column of columns) if (/message|content|text|reason|rationale|statement|note|payload|score|band|weight/iu.test(column)) out.push(`a content or score column: ${column}`);
-  if (/content|message/iu.test(code(world.api).match(/JSON\.stringify\(\{ commandId, revision \}\)/u)?.[0] ?? 'missing')) out.push('the disagreement carries text');
+  // W3-CORR-U: the resolution sends the same exact body, so EVERY request body is checked — never only the first.
+  if ([...code(world.api).matchAll(/body: JSON\.stringify\(\{[^}]*\}\)/gu)].some(([body]) => /content|message|reason/iu.test(body))) out.push('the disagreement carries text');
   if (!/body: JSON\.stringify\(\{ commandId, revision \}\)/u.test(world.api)) out.push('the disagreement body is not exactly the command and the revision');
   if (!/Object\.keys\(value\)\.length !== 2/u.test(world.service)) out.push('the server accepts a widened disagreement body');
   return out;

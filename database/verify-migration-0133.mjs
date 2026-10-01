@@ -129,8 +129,8 @@ const ROLES = ['anon', 'authenticated', 'service_role'];
 async function verifyCiDatabase() {
   stage = 'ci: the migration is the next slot, forward-only';
   const files = readdirSync(MIGRATIONS).filter((name) => name.endsWith('.sql')).sort();
-  assert.equal(files.at(-1), MIGRATION, '0133 is the latest migration');
-  assert.equal(files.at(-2), '0132_operational_readiness_failure_visibility_v1.sql');
+  // Re-anchored by W3-CORR-U (0134): 0133 directly follows 0132; later forward migrations may follow it.
+  assert.equal(files[files.indexOf(MIGRATION) - 1], '0132_operational_readiness_failure_visibility_v1.sql', '0133 directly follows 0132');
   const migration = readFileSync(join(MIGRATIONS, MIGRATION), 'utf8').replace(/--.*$/gmu, '');
   assert.doesNotMatch(migration, /\bGRANT\s+(?!EXECUTE ON FUNCTION public\.(?:login_id_is_available_v1\(text\) TO service_role|read_account_first_use_v1\(\) TO authenticated|complete_first_use_welcome_v1\(\) TO authenticated);)/u,
     'the only GRANTs re-state the three explicit intended grants; nothing is broadened');
@@ -268,20 +268,6 @@ async function verifySupabaseDefaults(ci) {
     psql(join(MIGRATIONS, MIGRATION));
     const after = await snapshot(sim);
 
-    stage = 'scratch: hosted == CI, object by object';
-    assert.deepEqual([...after.functions.keys()].sort(), [...ci.functions.keys()].sort(), 'the same functions');
-    for (const [object, row] of after.functions) {
-      const intended = ci.functions.get(object);
-      for (const role of ['anon', 'authenticated']) assert.equal(row[role], intended[role], `${role} EXECUTE ${object} matches the explicit migrations`);
-      assert.equal(row.public, false, `${object} keeps no PUBLIC EXECUTE`);
-    }
-    for (const [object, row] of after.relations) {
-      const intended = ci.relations.get(object);
-      assert.ok(intended, `${object} exists in both databases`);
-      assert.deepEqual(row.privileges.filter((p) => !p.startsWith('service_role:')), intended.privileges.filter((p) => !p.startsWith('service_role:')),
-        `${object}: client privileges match the explicit migrations`);
-    }
-
     stage = 'scratch: nothing gained a privilege, and row-level security is unchanged';
     for (const [object, row] of after.functions) {
       const prior = before.functions.get(object);
@@ -302,6 +288,26 @@ async function verifySupabaseDefaults(ci) {
       if (ROLES.some((role) => prior[role] && !row[role]) || (prior.public && !row.public)) narrowed.push(object);
     }
     assert.deepEqual(narrowed.sort(), [...Object.keys(DRIFTED_FUNCTIONS), ...PUBLIC_TRIGGER_FUNCTIONS].sort(), 'only the census functions were narrowed');
+
+    // Every later forward migration (W3-CORR-U: 0134 onward) applies on top, under the defaults 0133 left, so the CI
+    // database — which carries every migration — is compared with the same set.
+    stage = 'scratch: every later migration applies after 0133';
+    for (const file of files.filter((name) => name > MIGRATION)) psql(join(MIGRATIONS, file));
+    const latest = await snapshot(sim);
+
+    stage = 'scratch: hosted == CI, object by object';
+    assert.deepEqual([...latest.functions.keys()].sort(), [...ci.functions.keys()].sort(), 'the same functions');
+    for (const [object, row] of latest.functions) {
+      const intended = ci.functions.get(object);
+      for (const role of ['anon', 'authenticated']) assert.equal(row[role], intended[role], `${role} EXECUTE ${object} matches the explicit migrations`);
+      assert.equal(row.public, false, `${object} keeps no PUBLIC EXECUTE`);
+    }
+    for (const [object, row] of latest.relations) {
+      const intended = ci.relations.get(object);
+      assert.ok(intended, `${object} exists in both databases`);
+      assert.deepEqual(row.privileges.filter((p) => !p.startsWith('service_role:')), intended.privileges.filter((p) => !p.startsWith('service_role:')),
+        `${object}: client privileges match the explicit migrations`);
+    }
 
     stage = 'scratch: the oracle refuses clients and still answers the server channel';
     await sim.query('BEGIN');

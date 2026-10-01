@@ -15,7 +15,12 @@
  *     records it once. When the item changed, nothing is recorded: the current interpretation is shown first and the
  *     reader decides again — an objection is never applied to an interpretation they did not see. No words the reader
  *     typed are ever sent with it.
- *   - One talk and one disagreement request at a time.
+ *   - W3-CORR-U — «أوافق عليه الآن» / "I agree with this now" is the ONE explicit way to resolve the reader's own
+ *     disagreement, offered only while the discussed item is under review. It is bound to the revision shown and to ONE
+ *     command identity of its own (never the disagreement's); a retry after a lost answer is the SAME command. It is not
+ *     an undo: the disagreement stays in the item's history, the discussion stays open, and a later "I see it
+ *     differently" is a new disagreement.
+ *   - One talk, one disagreement and one resolution request at a time.
  */
 import type {
   UnderstandingDetailOutcome,
@@ -24,6 +29,7 @@ import type {
   UnderstandingDiscussionOutcome,
   UnderstandingItemView,
   UnderstandingListOutcome,
+  UnderstandingResolutionOutcome,
   UnderstandingTheme,
 } from '../runtime-entry';
 
@@ -46,6 +52,8 @@ export interface UnderstandingDiscussion {
   readonly underReview: boolean;
   /** U3: the state of the reader's disagreement request. */
   readonly disagreement: 'IDLE' | 'SENDING' | 'FAILED';
+  /** W3-CORR-U: the state of the reader's resolution ("I agree with this now") request. */
+  readonly resolution: 'IDLE' | 'SENDING' | 'FAILED';
 }
 
 export interface UnderstandingState {
@@ -62,6 +70,7 @@ export interface UnderstandingTransport {
   openDiscussion(ref: string, revision: string): Promise<UnderstandingDiscussionOutcome>;
   closeDiscussion(ref: string): Promise<boolean>;
   disagree(ref: string, commandId: string, revision: string): Promise<UnderstandingDisagreementOutcome>;
+  resolveDisagreement(ref: string, commandId: string, revision: string): Promise<UnderstandingResolutionOutcome>;
 }
 
 /**
@@ -82,6 +91,15 @@ export type UnderstandingTalkResult = 'OPENED' | 'CHANGED' | 'GONE' | 'FAILED';
  */
 export type UnderstandingDisagreementResult = 'UNDER_REVIEW' | 'CHANGED' | 'GONE' | 'FAILED';
 
+/**
+ * What an explicit resolution came to:
+ *   RESOLVED  recorded (now, or as the same command replayed): the item is no longer under review; its history stays;
+ *   CHANGED   the item changed, or is no longer under review — nothing was resolved; the current one is shown;
+ *   GONE      it is no longer one of the reader's current items;
+ *   FAILED    it is not known whether it was resolved; asking again is the SAME command.
+ */
+export type UnderstandingResolutionResult = 'RESOLVED' | 'CHANGED' | 'GONE' | 'FAILED';
+
 export interface UnderstandingController {
   getState(): UnderstandingState;
   subscribe(listener: () => void): () => void;
@@ -93,6 +111,8 @@ export interface UnderstandingController {
   talk(): Promise<UnderstandingTalkResult | null>;
   /** U3 — "I see it differently" for the discussed item. `null` when refused (nothing discussed, done, or in flight). */
   disagree(): Promise<UnderstandingDisagreementResult | null>;
+  /** W3-CORR-U — "I agree with this now" for the discussed item. `null` when refused (not under review, or in flight). */
+  agree(): Promise<UnderstandingResolutionResult | null>;
   /** The reader ends the discussion context. Local first; the server is told once. */
   endDiscussion(): void;
   retire(): void;
@@ -127,8 +147,11 @@ export function createUnderstandingController({
   let detailRead = 0;
   let talking = false;
   let disagreeing = false;
+  let agreeing = false;
   /** The ONE command identity for the disagreement the reader is making: same item, same revision → same command. */
   let command: { readonly ref: string; readonly revision: string; readonly id: string } | null = null;
+  /** W3-CORR-U: the resolution's OWN command identity, by the same rule and never shared with a disagreement. */
+  let resolutionCommand: { readonly ref: string; readonly revision: string; readonly id: string } | null = null;
   const listeners = new Set<() => void>();
   const live = () => !retired && isCurrent();
 
@@ -202,7 +225,10 @@ export function createUnderstandingController({
           case 'OPENED':
             update({
               talk: 'IDLE',
-              discussion: { ref: view.ref, revision: view.revision, theme: view.theme, summary: view.summary, underReview: view.underReview, disagreement: 'IDLE' },
+              discussion: {
+                ref: view.ref, revision: view.revision, theme: view.theme, summary: view.summary, underReview: view.underReview,
+                disagreement: 'IDLE', resolution: 'IDLE',
+              },
             });
             return 'OPENED';
           case 'CHANGED':
@@ -235,7 +261,7 @@ export function createUnderstandingController({
         switch (outcome.kind) {
           case 'UNDER_REVIEW':
             command = null;
-            updateDiscussion(ref, { underReview: true, revision: outcome.revision, disagreement: 'IDLE' });
+            updateDiscussion(ref, { underReview: true, revision: outcome.revision, disagreement: 'IDLE', resolution: 'IDLE' });
             return 'UNDER_REVIEW';
           case 'CHANGED': {
             // Never applied to an interpretation the reader did not see: show the current one; they decide again.
@@ -267,6 +293,59 @@ export function createUnderstandingController({
         }
       } finally {
         disagreeing = false;
+      }
+    },
+    async agree() {
+      const discussion = state.discussion;
+      if (!live() || agreeing || discussion === null || !discussion.underReview) return null;
+      const { ref, revision } = discussion;
+      if (resolutionCommand === null || resolutionCommand.ref !== ref || resolutionCommand.revision !== revision) {
+        resolutionCommand = { ref, revision, id: newCommandId() };
+      }
+      const commandId = resolutionCommand.id;
+      agreeing = true;
+      updateDiscussion(ref, { resolution: 'SENDING' });
+      try {
+        const outcome = await transport.resolveDisagreement(ref, commandId, revision).catch((): UnderstandingResolutionOutcome => ({ kind: 'FAILED' }));
+        if (!live()) return 'FAILED';
+        switch (outcome.kind) {
+          case 'RESOLVED':
+            // The discussion stays open; a later disagreement is a new one, with a new command.
+            resolutionCommand = null;
+            command = null;
+            updateDiscussion(ref, { underReview: false, revision: outcome.revision, resolution: 'IDLE', disagreement: 'IDLE' });
+            return 'RESOLVED';
+          case 'CHANGED':
+          case 'NOT_UNDER_REVIEW': {
+            // Never applied to an interpretation the reader did not see: show the current one; they decide again.
+            resolutionCommand = null;
+            const fresh = await transport.readItem(ref).catch((): UnderstandingDetailOutcome => ({ kind: 'UNAVAILABLE' }));
+            if (!live()) return 'CHANGED';
+            if (fresh.kind === 'READ') {
+              updateDiscussion(ref, { revision: fresh.view.revision, summary: fresh.view.summary, theme: fresh.view.theme, underReview: fresh.view.underReview, resolution: 'IDLE' });
+            } else if (fresh.kind === 'GONE') {
+              update({ discussion: null });
+            } else {
+              updateDiscussion(ref, { resolution: 'FAILED' });
+            }
+            return 'CHANGED';
+          }
+          case 'GONE':
+            resolutionCommand = null;
+            update({ discussion: null });
+            return 'GONE';
+          case 'CONFLICT':
+            // This identity was spent elsewhere: the next attempt is a new command; nothing is known to be resolved.
+            resolutionCommand = null;
+            updateDiscussion(ref, { resolution: 'FAILED' });
+            return 'FAILED';
+          case 'FAILED':
+            // Unknown: the SAME command is sent again next time, so it is resolved at most once.
+            updateDiscussion(ref, { resolution: 'FAILED' });
+            return 'FAILED';
+        }
+      } finally {
+        agreeing = false;
       }
     },
     endDiscussion() {

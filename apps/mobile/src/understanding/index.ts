@@ -13,6 +13,7 @@ export type {
   UnderstandingDisagreementResult,
   UnderstandingDiscussion,
   UnderstandingReadStatus,
+  UnderstandingResolutionResult,
   UnderstandingState,
   UnderstandingTalkResult,
   UnderstandingTransport,

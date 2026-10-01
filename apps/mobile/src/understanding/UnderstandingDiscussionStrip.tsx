@@ -8,6 +8,9 @@
  * U3 (P1 §11.4, PG-01): it also carries the ONE explicit way to disagree — «أراه بشكل مختلف» / "I see it differently".
  * It is an intentional act on this item, never inferred from what the reader types. Once it is recorded the item is
  * Contested / Under Review and the block says so in words; the Conversation simply continues.
+ *
+ * W3-CORR-U: while it is under review the block offers the ONE explicit way to resolve it — «أوافق عليه الآن» / "I agree
+ * with this now". It is not an undo: the disagreement stays in the item's history and the block stays open.
  */
 import { useSyncExternalStore } from 'react';
 import { Text, View } from 'react-native';
@@ -33,6 +36,7 @@ export function UnderstandingDiscussionStrip({ controller, language, insets }: U
   if (discussion === null) return null;
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const sending = discussion.disagreement === 'SENDING';
+  const agreeing = discussion.resolution === 'SENDING';
   return (
     <View
       testID="qandeel-understanding-discussion"
@@ -66,9 +70,31 @@ export function UnderstandingDiscussionStrip({ controller, language, insets }: U
         </Control>
       </View>
       {discussion.underReview ? (
-        <Text testID="qandeel-understanding-disagreement-recorded" accessibilityLiveRegion="polite" style={{ ...typeStyle('supporting'), color: palette.secondary, paddingTop: 4, writingDirection: writing }}>
-          {copy.disagreeRecorded}
-        </Text>
+        <>
+          <Text testID="qandeel-understanding-disagreement-recorded" accessibilityLiveRegion="polite" style={{ ...typeStyle('supporting'), color: palette.secondary, paddingTop: 4, writingDirection: writing }}>
+            {copy.disagreeRecorded}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 8 }}>
+            <Control
+              palette={palette}
+              language={language}
+              accessibilityLabel={copy.agree}
+              accessibilityState={{ busy: agreeing, disabled: agreeing }}
+              onPress={() => {
+                void controller.agree();
+              }}
+              testID="qandeel-understanding-agree"
+              style={{ paddingHorizontal: 10, opacity: agreeing ? BUSY_OPACITY : 1 }}
+            >
+              <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{copy.agree}</Text>
+            </Control>
+            {discussion.resolution === 'FAILED' ? (
+              <Text testID="qandeel-understanding-resolution-failed" accessibilityLiveRegion="polite" style={{ ...typeStyle('supporting'), color: palette.error, writingDirection: writing }}>
+                {copy.disagreeFailed}
+              </Text>
+            ) : null}
+          </View>
+        </>
       ) : (
         <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 8 }}>
           <Control

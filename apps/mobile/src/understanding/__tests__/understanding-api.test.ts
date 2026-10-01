@@ -62,6 +62,30 @@ describe('UnderstandingApiClient', () => {
     expect(refused.requests).toEqual([]);
   });
 
+  it('W3-CORR-U — a resolution sends the command and the revision seen, and NO reason; its answers are typed', async () => {
+    const COMMAND = '6c3f7d4e-8b2e-4d3f-a011-234567890abc';
+    const resolved = client({ status: 200, body: { underReview: false, revision: REV } });
+    await expect(resolved.api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'RESOLVED', revision: REV });
+    expect(resolved.requests).toEqual([{ url: `https://api.example.test/v1/understanding/items/${REF}/disagreement/resolve`, method: 'POST', body: JSON.stringify({ commandId: COMMAND, revision: REV }) }]);
+    await expect(client({ status: 409, body: { message: { code: 'UNDERSTANDING_ITEM_CHANGED' } } }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'CHANGED' });
+    await expect(client({ status: 409, body: { code: 'UNDERSTANDING_NOT_UNDER_REVIEW' } }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'NOT_UNDER_REVIEW' });
+    await expect(client({ status: 409, body: { code: 'UNDERSTANDING_COMMAND_CONFLICT' } }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'CONFLICT' });
+    await expect(client({ status: 409, body: { code: 'SOMETHING_ELSE' } }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'FAILED' });
+    await expect(client({ status: 404, body: {} }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'GONE' });
+    await expect(client({ status: 503, body: {} }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'FAILED' });
+    // Only the exact answer: still under review, a widened body or a reason is not a resolution.
+    await expect(client({ status: 200, body: { underReview: true, revision: REV } }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'FAILED' });
+    await expect(client({ status: 200, body: { underReview: false, revision: REV, reason: 'USER_CONFIRMED_CURRENT_INTERPRETATION' } }).api.resolveDisagreement(REF, COMMAND, REV)).resolves.toEqual({ kind: 'FAILED' });
+    const refused = client({ status: 200 });
+    await expect(refused.api.resolveDisagreement(REF, 'not-a-command', REV)).resolves.toEqual({ kind: 'GONE' });
+    expect(refused.requests).toEqual([]);
+  });
+
+  it('W3-CORR-U — the later agreement is a known evolution fact', async () => {
+    const resolved = { ...detail, evolution: [{ kind: 'YOU_RESOLVED_DISAGREEMENT', at: '2026-10-01T10:00:00Z' }, { kind: 'YOU_DISAGREED', at: '2026-09-30T10:00:00Z' }] };
+    await expect(client({ status: 200, body: resolved }).api.readItem(REF)).resolves.toEqual({ kind: 'READ', view: resolved });
+  });
+
   it('talk sends the revision seen and nothing else; the answer is typed, never interpreted', async () => {
     const opened = client({ status: 204 });
     await expect(opened.api.openDiscussion(REF, REV)).resolves.toEqual({ kind: 'OPENED' });

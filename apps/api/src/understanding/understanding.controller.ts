@@ -11,6 +11,7 @@ import { UnderstandingService } from './understanding.service';
  *   POST   /understanding/items/:ref/discussion — "talk to QANDEEL about this", at the revision seen (guarded, U2)
  *   DELETE /understanding/items/:ref/discussion — close that discussion focus (guarded, U2)
  *   POST   /understanding/items/:ref/disagreement — explicit disagreement → Contested / Under Review (guarded, U3)
+ *   POST   /understanding/items/:ref/disagreement/resolve — explicit agreement → the contest is resolved (guarded, W3-CORR-U)
  *
  * Identity is the verified token only; no route takes a user id, and `:ref` is an opaque token that resolves only
  * against the caller's own items.
@@ -46,6 +47,14 @@ export class UnderstandingController {
   disagree(@Req() request: AuthenticatedRequest, @Param('ref') ref: string, @Body() body: unknown) {
     const { userId, accessToken } = request.authenticatedUser;
     return this.understanding.disagree(userId, accessToken, ref, body);
+  }
+
+  /** W3-CORR-U — "I agree with this now": the reader's explicit agreement resolves the contest; the history stays. */
+  @Post('items/:ref/disagreement/resolve')
+  @HttpCode(200)
+  resolveDisagreement(@Req() request: AuthenticatedRequest, @Param('ref') ref: string, @Body() body: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    return this.understanding.resolveDisagreement(userId, accessToken, ref, body);
   }
 
   @Delete('items/:ref/discussion')

@@ -34,6 +34,11 @@ const evaluation = (target: HypothesisRecord, overrides: Partial<ConfidenceEvalu
 });
 const evidence = (id: string, statement: string, confidence = 0.97) =>
   ({ evidenceId: id, statement, confidence, importance: 0.8 }) as never;
+/** One of the reader's contests on an item, as the evolution reads it (0127 + 0134). */
+const contestRow = (overrides: Record<string, unknown> = {}) => ({
+  lifecycle: 'UNDER_REVIEW', reevaluation_before_status: 'SUPPORTED', reevaluation_after_version: 4,
+  created_at: '2026-09-30T10:00:00.000000+00:00', resolved_at: null, resolution_reason: null, ...overrides,
+}) as never;
 
 describe('UnderstandingService', () => {
   let hypotheses: jest.Mocked<HypothesisService>, evidenceService: jest.Mocked<EvidenceService>;
@@ -48,6 +53,8 @@ describe('UnderstandingService', () => {
     repository = {
       listEvidenceUpdates: jest.fn().mockResolvedValue([]), listLifecycleTransitions: jest.fn().mockResolvedValue([]),
       listContestsUnderReview: jest.fn().mockResolvedValue([]), recordDisagreement: jest.fn(),
+      listContestHistory: jest.fn().mockResolvedValue([]), resolveDisagreement: jest.fn(),
+      openDiscussion: jest.fn(), closeDiscussion: jest.fn(),
     } as unknown as jest.Mocked<UnderstandingRepository>;
     confidenceRuntime = { evaluateHypothesisVersion: jest.fn().mockResolvedValue({}), ensureHypothesisVersionEvaluation: jest.fn().mockResolvedValue({}) } as unknown as jest.Mocked<ConfidenceService>;
     // PROD-OPS-01: the real telemetry service with a captured counter, so the emitted labels are the shipped ones.
@@ -214,6 +221,16 @@ describe('UnderstandingService', () => {
 
     const EVAL = '0f1e2d3c-4b5a-4968-8776-655443322110';
     const recorded = (over: Record<string, unknown> = {}) => [{ outcome: 'RECORDED', contested_version: 3, reevaluated_version: 4, confidence_evaluation_id: EVAL, ...over }];
+    // A recorded contest is under review until the reader resolves it (W3-CORR-U).
+    beforeEach(() => repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00Z' }]));
+
+    it('W3-CORR-U: a replayed command whose contest was since resolved is told the item changed — never "under review"', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4, status: 'MIXED' })]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      repository.listContestsUnderReview.mockResolvedValue([]);
+      await expect(ask(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).not.toHaveBeenCalled();
+    });
 
     it('records against the exact version seen, then ENSURES the exact re-evaluated version under the contest’s one evaluation identity', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
@@ -308,6 +325,7 @@ describe('UnderstandingService', () => {
 
     it('never applies an objection to a different interpretation: a changed item is 409 and nothing is recorded', async () => {
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 6 })]);
+      repository.listContestsUnderReview.mockResolvedValue([]);
       await expect(ask(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
       expect(repository.recordDisagreement).not.toHaveBeenCalled();
       hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
@@ -363,6 +381,7 @@ describe('UnderstandingService', () => {
       evidenceService.listEligibleForUser.mockResolvedValue([evidence('memory:s1', 'x')]);
       confidence.listExactVersionsForTargets.mockResolvedValue([evaluation(contested)]);
       repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00.000000+00:00' }]);
+      repository.listContestHistory.mockResolvedValue([contestRow()]);
       repository.listLifecycleTransitions.mockResolvedValue([
         { before_status: 'SUPPORTED', after_status: 'MIXED', after_version: 4, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-09-30T10:00:00.000000+00:00' },
       ]);
@@ -372,6 +391,173 @@ describe('UnderstandingService', () => {
       const detail = await service.detail(USER, 'token', understandingItemRef(USER, H1));
       expect(detail).toMatchObject({ confidence: 'MIXED', underReview: true, summary: contested.statement });
       expect(detail.evolution.map((entry) => entry.kind)).toEqual(['YOU_DISAGREED', 'FIRST_SEEN']);
+    });
+
+    it('U-3: a direct exact-owned disagreement needs no open discussion — it is its own explicit act', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue(recorded());
+      await expect(ask(3)).resolves.toEqual({ underReview: true, revision: understandingRevision(USER, H1, 4) });
+      // No discussion focus was opened, read or required on the way.
+      expect(repository.openDiscussion).not.toHaveBeenCalled();
+      expect(repository.closeDiscussion).not.toHaveBeenCalled();
+      expect(repository.recordDisagreement).toHaveBeenCalledWith('token', COMMAND, H1, 3);
+      // The owner and version checks still hold: another reader's ref is 404 and a stale revision is 409, unrecorded.
+      await expect(service.disagree(USER, 'token', understandingItemRef(OTHER, H1), { commandId: COMMAND, revision: understandingRevision(OTHER, H1, 3) }))
+        .rejects.toBeInstanceOf(NotFoundException);
+      repository.listContestsUnderReview.mockResolvedValue([]);
+      await expect(ask(1)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      expect(repository.recordDisagreement).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe('W3-CORR-U — explicit resolution: I agree with this now (UNDER_REVIEW → RESOLVED)', () => {
+    const COMMAND = '6c3f7d4e-8b2e-4d3f-a011-234567890abc';
+    const resolve = (version: number, commandId = COMMAND, ref = understandingItemRef(USER, H1)) =>
+      service.resolveDisagreement(USER, 'token', ref, { commandId, revision: understandingRevision(USER, H1, version) });
+    const contestedItem = () => hypothesis(H1, { version: 4, status: 'MIXED' });
+
+    it('resolves at the exact current version with the server-owned reason; nothing else happens', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([contestedItem()]);
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'RESOLVED', resolved_version: 4 }]);
+      await expect(resolve(4)).resolves.toEqual({ underReview: false, revision: understandingRevision(USER, H1, 4) });
+      // The client sends no reason; the repository is told only the command, the item and the version seen.
+      expect(repository.resolveDisagreement).toHaveBeenCalledWith('token', COMMAND, H1, 4);
+      // No provider, no Confidence, no re-evaluation signal, no disagreement, no lifecycle step.
+      expect(confidenceRuntime.ensureHypothesisVersionEvaluation).not.toHaveBeenCalled();
+      expect(confidenceRuntime.evaluateHypothesisVersion).not.toHaveBeenCalled();
+      expect(reevaluationSignals).not.toHaveBeenCalled();
+      expect(repository.recordDisagreement).not.toHaveBeenCalled();
+    });
+
+    it('the same command replayed answers the same success', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([contestedItem()]);
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'RESOLVED', resolved_version: 4 }]);
+      const first = await resolve(4);
+      await expect(resolve(4)).resolves.toEqual(first);
+      expect((repository.resolveDisagreement as jest.Mock).mock.calls).toEqual([['token', COMMAND, H1, 4], ['token', COMMAND, H1, 4]]);
+      // The answer was lost and the item moved on since: the SAME command is still answered its committed truth, at the
+      // version it resolved, and the client is handed the current revision.
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 6, status: 'SUPPORTED' })]);
+      await expect(resolve(4)).resolves.toEqual({ underReview: false, revision: understandingRevision(USER, H1, 6) });
+      expect(repository.resolveDisagreement).toHaveBeenLastCalledWith('token', COMMAND, H1, 4);
+    });
+
+    it('bounded refusals: conflict, stale, no longer under review, gone', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([contestedItem()]);
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce([{ outcome: 'COMMAND_CONFLICT', resolved_version: null }]);
+      await expect(resolve(4)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_COMMAND_CONFLICT' } });
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce([{ outcome: 'STALE', resolved_version: null }]);
+      await expect(resolve(4)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce([{ outcome: 'NOT_UNDER_REVIEW', resolved_version: null }]);
+      await expect(resolve(4)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_NOT_UNDER_REVIEW' } });
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce([{ outcome: 'NOT_FOUND', resolved_version: null }]);
+      await expect(resolve(4)).rejects.toBeInstanceOf(NotFoundException);
+      // A revision the reader saw before the item moved is never resolved: the database answers STALE at that version.
+      (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce([{ outcome: 'STALE', resolved_version: null }]);
+      await expect(resolve(3)).rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      expect(repository.resolveDisagreement).toHaveBeenLastCalledWith('token', COMMAND, H1, 3);
+      // A revision that names no recent version never reaches the database.
+      (repository.resolveDisagreement as jest.Mock).mockClear();
+      await expect(service.resolveDisagreement(USER, 'token', understandingItemRef(USER, H1), { commandId: COMMAND, revision: understandingRevision(USER, H2, 4) }))
+        .rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      // Another reader's ref, a withdrawn item and a missing one are the same 404.
+      await expect(resolve(4, COMMAND, understandingItemRef(OTHER, H1))).rejects.toBeInstanceOf(NotFoundException);
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 5, status: 'REJECTED' })]);
+      await expect(resolve(5)).rejects.toBeInstanceOf(NotFoundException);
+      expect(repository.resolveDisagreement).not.toHaveBeenCalled();
+    });
+
+    it('refuses any widened body — a client-supplied reason or user id is never accepted', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([contestedItem()]);
+      const revision = understandingRevision(USER, H1, 4);
+      for (const body of [{ revision }, { commandId: COMMAND }, { commandId: COMMAND, revision, reason: 'USER_CONFIRMED_CURRENT_INTERPRETATION' },
+        { commandId: COMMAND, revision, userId: OTHER }, { commandId: 'not-a-uuid', revision }, null, []]) {
+        await expect(service.resolveDisagreement(USER, 'token', understandingItemRef(USER, H1), body)).rejects.toBeInstanceOf(BadRequestException);
+      }
+      expect(repository.resolveDisagreement).not.toHaveBeenCalled();
+    });
+
+    it('fails closed on an answer it cannot trust', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([contestedItem()]);
+      for (const rows of [[{ outcome: 'RESOLVED', resolved_version: 5 }], [{ outcome: 'MAYBE', resolved_version: 4 }], [], null]) {
+        (repository.resolveDisagreement as jest.Mock).mockResolvedValueOnce(rows);
+        await expect(resolve(4)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      }
+    });
+
+    it('the projection turns underReview true → false, and the evolution keeps YOU_DISAGREED and adds the agreement', async () => {
+      const item = contestedItem();
+      hypotheses.listActiveForUser.mockResolvedValue([item]);
+      confidence.listExactVersionsForTargets.mockResolvedValue([evaluation(item)]);
+      repository.listLifecycleTransitions.mockResolvedValue([
+        { before_status: 'SUPPORTED', after_status: 'MIXED', after_version: 4, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-09-30T10:00:00.000000+00:00' },
+      ]);
+      repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00.000000+00:00' }]);
+      repository.listContestHistory.mockResolvedValue([contestRow()]);
+      await expect(service.list(USER, 'token', {})).resolves.toMatchObject({ items: [{ underReview: true, confidence: 'MIXED' }] });
+      // After the resolution the contest is no longer under review, and its row is history.
+      repository.listContestsUnderReview.mockResolvedValue([]);
+      repository.listContestHistory.mockResolvedValue([contestRow({
+        lifecycle: 'RESOLVED', resolved_at: '2026-10-01T10:00:00.000000+00:00', resolution_reason: 'USER_CONFIRMED_CURRENT_INTERPRETATION',
+      })]);
+      await expect(service.list(USER, 'token', {})).resolves.toMatchObject({ items: [{ underReview: false }] });
+      const detail = await service.detail(USER, 'token', understandingItemRef(USER, H1));
+      expect(detail.underReview).toBe(false);
+      // The item is still MIXED: resolving manufactured no confidence.
+      expect(detail.confidence).toBe('MIXED');
+      expect(detail.evolution).toEqual([
+        { kind: 'YOU_RESOLVED_DISAGREEMENT', at: '2026-10-01T10:00:00.000000+00:00' },
+        { kind: 'YOU_DISAGREED', at: '2026-09-30T10:00:00.000000+00:00' },
+        { kind: 'FIRST_SEEN', at: item.created_at },
+      ]);
+      expect(repository.listContestHistory).toHaveBeenCalledWith('token', USER, H1);
+      // No reason, id or internal status leaks.
+      expect(JSON.stringify(detail)).not.toMatch(/USER_CONFIRMED|INTERPRETATION_WITHDRAWN|RESOLVED"|UNDER_REVIEW/u);
+    });
+
+    it('a withdrawal-resolved contest is never told as the reader agreeing; a later disagreement is a second one', async () => {
+      const item = hypothesis(H1, { version: 8, status: 'MIXED' });
+      hypotheses.listActiveForUser.mockResolvedValue([item]);
+      repository.listLifecycleTransitions.mockResolvedValue([
+        { before_status: 'ACTIVE', after_status: 'MIXED', after_version: 8, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-10-01T12:00:00.000000+00:00' },
+        { before_status: 'REOPENED', after_status: 'ACTIVE', after_version: 7, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-10-01T11:00:00.000000+00:00' },
+        { before_status: 'REJECTED', after_status: 'REOPENED', after_version: 6, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-10-01T10:00:00.000000+00:00' },
+        { before_status: 'MIXED', after_status: 'REJECTED', after_version: 5, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-09-30T12:00:00.000000+00:00' },
+        { before_status: 'SUPPORTED', after_status: 'MIXED', after_version: 4, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-09-30T10:00:00.000000+00:00' },
+      ]);
+      repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 8, created_at: '2026-10-01T12:00:00.000000+00:00' }]);
+      repository.listContestHistory.mockResolvedValue([
+        contestRow({ reevaluation_before_status: 'ACTIVE', reevaluation_after_version: 8, created_at: '2026-10-01T12:00:00.000000+00:00' }),
+        contestRow({ lifecycle: 'RESOLVED', resolved_at: '2026-09-30T12:00:00.000000+00:00', resolution_reason: 'INTERPRETATION_WITHDRAWN' }),
+      ]);
+      const detail = await service.detail(USER, 'token', understandingItemRef(USER, H1));
+      expect(detail.underReview).toBe(true);
+      expect(detail.evolution.map((entry) => entry.kind)).toEqual(['YOU_DISAGREED', 'RECONSIDERED', 'WITHDRAWN', 'YOU_DISAGREED', 'FIRST_SEEN']);
+      expect(detail.evolution.map((entry) => entry.kind)).not.toContain('YOU_RESOLVED_DISAGREEMENT');
+    });
+
+    it('a disagreement on an item already MIXED does not hide the independent, earlier MIXED step', async () => {
+      const item = hypothesis(H1, { version: 4, status: 'MIXED' });
+      hypotheses.listActiveForUser.mockResolvedValue([item]);
+      repository.listLifecycleTransitions.mockResolvedValue([
+        { before_status: 'ACTIVE', after_status: 'MIXED', after_version: 4, source: 'AUTHENTICATED_TRANSITION', created_at: '2026-09-29T10:00:00.000000+00:00' },
+      ]);
+      repository.listContestHistory.mockResolvedValue([contestRow({ reevaluation_before_status: 'MIXED' })]);
+      const detail = await service.detail(USER, 'token', understandingItemRef(USER, H1));
+      expect(detail.evolution.map((entry) => entry.kind)).toEqual(['YOU_DISAGREED', 'BECAME_MIXED', 'FIRST_SEEN']);
+    });
+
+    it('fails closed on a malformed contest history row', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([contestedItem()]);
+      for (const row of [
+        contestRow({ lifecycle: 'CLEARED' }),
+        contestRow({ lifecycle: 'RESOLVED', resolved_at: null, resolution_reason: 'USER_CONFIRMED_CURRENT_INTERPRETATION' }),
+        contestRow({ lifecycle: 'RESOLVED', resolved_at: '2026-10-01T10:00:00Z', resolution_reason: 'BECAUSE_CONFIDENT' }),
+        contestRow({ resolved_at: '2026-10-01T10:00:00Z' }),
+      ]) {
+        repository.listContestHistory.mockResolvedValueOnce([row]);
+        await expect(service.detail(USER, 'token', understandingItemRef(USER, H1))).rejects.toBeInstanceOf(ServiceUnavailableException);
+      }
     });
   });
 

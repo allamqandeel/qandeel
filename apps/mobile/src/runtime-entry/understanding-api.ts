@@ -6,6 +6,7 @@
  *   POST   /understanding/items/:ref/discussion   — "talk to QANDEEL about this", at the revision the reader saw
  *   DELETE /understanding/items/:ref/discussion   — close that discussion
  *   POST   /understanding/items/:ref/disagreement — an explicit disagreement (U3): Contested / Under Review
+ *   POST   /understanding/items/:ref/disagreement/resolve — an explicit agreement (W3-CORR-U): no longer under review
  *
  * A transport and nothing else, exactly like the account clients: it holds no credential (it goes through the AC-01
  * request-time seam its caller hands it), sends no user id, never repeats a request and never decides what an outcome
@@ -19,13 +20,13 @@ export type UnderstandingConfidence = 'CLEAR' | 'TAKING_SHAPE' | 'MIXED' | 'NEED
 export type UnderstandingTheme = 'YOU' | 'RELATIONSHIPS' | 'WORK' | 'DECISIONS' | 'GOALS' | 'HOW_WE_TALK';
 export type UnderstandingEvolutionKind =
   | 'FIRST_SEEN' | 'SUPPORT_ADDED' | 'CHALLENGE_ADDED' | 'STRENGTHENED' | 'WEAKENED' | 'BECAME_MIXED' | 'WITHDRAWN' | 'RECONSIDERED'
-  | 'YOU_DISAGREED';
+  | 'YOU_DISAGREED' | 'YOU_RESOLVED_DISAGREEMENT';
 
 const CONFIDENCES: readonly string[] = Object.freeze(['CLEAR', 'TAKING_SHAPE', 'MIXED', 'NEEDS_MORE']);
 const THEMES: readonly string[] = Object.freeze(['YOU', 'RELATIONSHIPS', 'WORK', 'DECISIONS', 'GOALS', 'HOW_WE_TALK']);
 const EVOLUTION_KINDS: readonly string[] = Object.freeze([
   'FIRST_SEEN', 'SUPPORT_ADDED', 'CHALLENGE_ADDED', 'STRENGTHENED', 'WEAKENED', 'BECAME_MIXED', 'WITHDRAWN', 'RECONSIDERED',
-  'YOU_DISAGREED',
+  'YOU_DISAGREED', 'YOU_RESOLVED_DISAGREEMENT',
 ]);
 const TOKEN = /^[A-Za-z0-9_-]{22}$/u;
 const COMMAND = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -87,6 +88,19 @@ export type UnderstandingDisagreementOutcome =
   /** This command identity was already spent on something else; nothing was recorded. */
   | { readonly kind: 'CONFLICT' }
   /** No usable answer: it is not known whether it was recorded. The SAME command may be sent again. */
+  | { readonly kind: 'FAILED' };
+
+export type UnderstandingResolutionOutcome =
+  /** Resolved (now, or as the same command replayed): the item is no longer under review, at this revision. */
+  | { readonly kind: 'RESOLVED'; readonly revision: string }
+  /** The item changed since the reader saw it; nothing was resolved. */
+  | { readonly kind: 'CHANGED' }
+  /** The item has no disagreement under review any more; nothing was resolved. */
+  | { readonly kind: 'NOT_UNDER_REVIEW' }
+  | { readonly kind: 'GONE' }
+  /** This command identity was already spent on something else; nothing was resolved. */
+  | { readonly kind: 'CONFLICT' }
+  /** No usable answer: it is not known whether it was resolved. The SAME command may be sent again. */
   | { readonly kind: 'FAILED' };
 
 export interface UnderstandingApiConfig {
@@ -223,6 +237,39 @@ export class UnderstandingApiClient {
     if (!response.ok || !isRecord(body) || !hasExactly(body, ['underReview', 'revision']) || body.underReview !== true ||
       typeof body.revision !== 'string' || !TOKEN.test(body.revision)) return { kind: 'FAILED' };
     return { kind: 'UNDER_REVIEW', revision: body.revision };
+  }
+
+  /**
+   * W3-CORR-U — an explicit agreement with the interpretation the reader sees, issued once. The body is the command
+   * identity and the revision the reader saw, and nothing else: no reason, no words, no user id.
+   */
+  async resolveDisagreement(ref: string, commandId: string, revision: string): Promise<UnderstandingResolutionOutcome> {
+    if (!TOKEN.test(ref) || !TOKEN.test(revision) || !COMMAND.test(commandId)) return { kind: 'GONE' };
+    let response: Awaited<ReturnType<RuntimeHttpFetch>>;
+    try {
+      response = await this.config.fetch(`${this.config.baseUrl}/understanding/items/${ref}/disagreement/resolve`, {
+        method: 'POST', headers: { Accept: 'application/json', 'Content-Type': 'application/json' }, body: JSON.stringify({ commandId, revision }),
+      });
+    } catch {
+      return { kind: 'FAILED' };
+    }
+    if (response.status === 404) return { kind: 'GONE' };
+    let body: unknown;
+    try {
+      body = await response.json();
+    } catch {
+      return { kind: 'FAILED' };
+    }
+    if (response.status === 409) {
+      const code = isRecord(body) && isRecord(body.message) ? body.message.code : isRecord(body) ? body.code : undefined;
+      if (code === 'UNDERSTANDING_ITEM_CHANGED') return { kind: 'CHANGED' };
+      if (code === 'UNDERSTANDING_NOT_UNDER_REVIEW') return { kind: 'NOT_UNDER_REVIEW' };
+      if (code === 'UNDERSTANDING_COMMAND_CONFLICT') return { kind: 'CONFLICT' };
+      return { kind: 'FAILED' };
+    }
+    if (!response.ok || !isRecord(body) || !hasExactly(body, ['underReview', 'revision']) || body.underReview !== false ||
+      typeof body.revision !== 'string' || !TOKEN.test(body.revision)) return { kind: 'FAILED' };
+    return { kind: 'RESOLVED', revision: body.revision };
   }
 
   /** Issued once; whether it landed is reported and nothing is repeated here. */
