@@ -156,6 +156,11 @@ test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the deli
   // Conversation capability). Every other byte stays frozen: without exactly that import and that
   // list entry, AppModule is the T-03D baseline blob.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // PROD-SEC-01 re-anchor: the application root also composes HttpSecurityModule (the global request rate limit, a
+    // cross-cutting HTTP boundary rather than a Conversation capability). It is stripped the same way, so every other
+    // byte stays frozen.
+    .replace("import { HttpSecurityModule } from './http-security/http-security.module';\n", '')
+    .replace('imports: [HttpSecurityModule,', 'imports: [')
     // W3-MEGA-U re-anchor: the application root also composes UnderstandingModule (a Personal depth, not a Conversation
     // capability). It is stripped the same way, so every other byte stays frozen.
     .replace("import { UnderstandingModule } from './understanding/understanding.module';\n", '')

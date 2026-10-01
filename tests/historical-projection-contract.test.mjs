@@ -414,6 +414,11 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // PROD-SEC-01 re-anchor: the application root also composes HttpSecurityModule (the global request rate limit, a
+    // cross-cutting HTTP boundary rather than a Conversation capability). It is stripped the same way, so every other
+    // byte stays frozen.
+    .replace("import { HttpSecurityModule } from './http-security/http-security.module';\n", '')
+    .replace('imports: [HttpSecurityModule,', 'imports: [')
     // W3-MEGA-U re-anchor: the application root also composes UnderstandingModule (a Personal depth, not a Conversation
     // capability). It is stripped the same way, so every other byte stays frozen.
     .replace("import { UnderstandingModule } from './understanding/understanding.module';\n", '')
