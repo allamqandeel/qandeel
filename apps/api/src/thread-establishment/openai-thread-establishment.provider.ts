@@ -26,7 +26,6 @@ import {
   type ThreadEstablishmentRequest,
 } from './thread-establishment-provider.types';
 import { THREAD_ESTABLISHMENT_DECISIONS, THREAD_ESTABLISHMENT_PATHS } from './thread-establishment.types';
-import { assertForegroundProviderBudget } from '../conversation/foreground-turn-work';
 
 interface OpenAIThreadResponse {
   output_text: string;
@@ -54,7 +53,6 @@ export class OpenAiThreadEstablishmentProvider implements ThreadEstablishmentPro
 
   async propose(request: ThreadEstablishmentRequest): Promise<ThreadEstablishmentProposal> {
     if (!isValidRequest(request)) throw new ThreadEstablishmentProviderError('INVALID_STRUCTURED_OUTPUT');
-    assertForegroundProviderBudget();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {

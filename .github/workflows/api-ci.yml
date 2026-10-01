@@ -46,6 +46,7 @@ jobs:
       - {name: Verify Integrated Context Budget & Conflict Resolution static contract, run: npm run test:integrated-context-budget-conflict-resolution-v1-contract}
       - {name: Verify Post-Response Intelligence Scheduler & Provider Budget static contract, run: npm run test:post-response-intelligence-scheduler-provider-budget-v1-contract}
       - {name: Verify Question / Information-Gap Closed Loop static contract, run: npm run test:question-information-gap-closed-loop-v1-contract}
+      - {name: Verify PROD-SEC-02 turn admission concurrency and cost bound static contract, run: npm run test:prod-sec-02-turn-admission-cost-bound-contract}
       - {name: Verify Integrated Brain E2E Hardening v2 static contract, run: npm run test:integrated-brain-e2e-hardening-v2-contract}
       - {name: Verify Integrated Intelligence Runtime phase closure contract, run: npm run test:integrated-intelligence-runtime-phase-closure-contract}
       - {name: Verify Committed Conversational Unit activation boundary static contract, run: npm run test:committed-conversational-unit-activation-boundary-contract}

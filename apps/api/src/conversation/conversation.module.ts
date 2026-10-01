@@ -6,6 +6,7 @@ import { ConversationContextActivationController } from './conversation-context-
 import { ConversationContextActivationService } from './conversation-context-activation.service';
 import { ConversationRepository } from './conversation.repository';
 import { ConversationTurnWorkRepository } from './conversation-turn-work.repository';
+import { guardForegroundBinding } from './foreground-turn-work';
 import { ConversationService } from './conversation.service';
 import { SupabaseDataApiService } from './supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
@@ -138,10 +139,12 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
       useFactory: (dataApi: SupabaseDataApiService) => new HistoricalProjectionRepository(dataApi),
       inject: [SupabaseDataApiService],
     },
-    { provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: openAiSegmentationBinding },
-    { provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: openAiFocusResolutionBinding() },
-    { provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: openAiThreadEstablishmentBinding() },
-    { provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: openAiThreadContinuityBinding() },
+    // PROD-SEC-02: each foreground semantic provider is reached only through a binding guarded by the request's
+    // foreground deadline, so no provider request opens after it. The frozen provider classes stay untouched.
+    { provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: guardForegroundBinding(openAiSegmentationBinding) },
+    { provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding(openAiFocusResolutionBinding()) },
+    { provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadEstablishmentBinding()) },
+    { provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadContinuityBinding()) },
     {
       provide: ConversationSemanticRuntimeRepository,
       useFactory: (serviceApi: SupabaseServiceRoleApiService) => new ConversationSemanticRuntimeRepository(serviceApi),

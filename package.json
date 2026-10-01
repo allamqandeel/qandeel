@@ -103,6 +103,7 @@
     "test:integrated-context-budget-conflict-resolution-v1-contract": "node --test tests/integrated-context-budget-conflict-resolution-v1-contract.test.mjs",
     "test:post-response-intelligence-scheduler-provider-budget-v1-contract": "node --test tests/post-response-intelligence-scheduler-provider-budget-v1-contract.test.mjs",
     "test:question-information-gap-closed-loop-v1-contract": "node --test tests/question-information-gap-closed-loop-v1-contract.test.mjs",
+    "test:prod-sec-02-turn-admission-cost-bound-contract": "node --test tests/prod-sec-02-turn-admission-cost-bound-contract.test.mjs",
     "verify:question-information-gap-closed-loop:integration": "node --env-file-if-exists=.env database/verify-migration-0063.mjs",
     "test:committed-conversational-unit-activation-boundary-contract": "node --test tests/committed-conversational-unit-activation-boundary-contract.test.mjs",
     "verify:committed-conversational-unit-substrate:integration": "node --env-file-if-exists=.env database/verify-migration-0064.mjs",

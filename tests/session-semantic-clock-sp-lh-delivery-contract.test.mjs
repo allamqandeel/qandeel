@@ -183,7 +183,8 @@ test('the API temporal boundary exists and holds no conversation-lifecycle autho
   // The provider is created lazily, never at bootstrap.
   assert.match(code, /this\.binding \?\?= this\.createBinding\(\);/u);
   assert.doesNotMatch(code, /OPENAI_API_KEY/u, 'no provider credential is read here');
-  assert.match(conversationModule, /useValue: openAiSegmentationBinding/u,
+  // RE-ANCHORED by PROD-SEC-02: the lazy factory is registered inside guardForegroundBinding(...), which is itself lazy.
+  assert.match(conversationModule, /useValue: guardForegroundBinding\(openAiSegmentationBinding\)/u,
     'the module registers the FACTORY, never its product, so nothing is constructed at bootstrap');
   assert.doesNotMatch(stripComments(conversationModule), /useValue: openAiSegmentationBinding\(\)/u);
 });

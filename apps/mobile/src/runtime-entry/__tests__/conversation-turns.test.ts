@@ -69,6 +69,14 @@ describe('W1A-01 — POST /conversation/sessions/:sessionId/turns', () => {
     }
   });
 
+  it('PROD-SEC-02: the typed admission limit (429) is a definitive REFUSAL carrying its own status, never a generic failure', async () => {
+    // The server answers 429 { code: 'TURN_ADMISSION_LIMITED' } only when it committed nothing, so the existing
+    // "not sent" presentation is truthful and no new copy exists; the status keeps the condition distinguishable.
+    const { http, api } = client();
+    http.on('/turns', () => ({ status: 429, body: { code: 'TURN_ADMISSION_LIMITED' } }));
+    await expect(api.submitTurn(SESSION_A, { content: 'fixture: words', idempotencyKey: 'k-1' })).resolves.toEqual({ kind: 'REFUSED', status: 429 });
+  });
+
   it('issues exactly one request per call — the transport never repeats a submission', async () => {
     const { http, api } = client();
     http.on('/turns', () => ({ status: 503, body: {} }));

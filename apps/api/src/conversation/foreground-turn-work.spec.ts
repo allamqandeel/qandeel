@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { join } from 'node:path';
 import { ServiceUnavailableException } from '@nestjs/common';
 import {
   assertForegroundProviderBudget,
@@ -9,6 +7,7 @@ import {
   FOREGROUND_TURN_WORK_DEADLINE_MIN_MS,
   ForegroundTurnDeadlineExceededError,
   foregroundTurnWorkDeadlineMs,
+  guardForegroundBinding,
   runForegroundTurnWork,
   type ForegroundTurnWorkBegin,
 } from './foreground-turn-work';
@@ -21,10 +20,6 @@ import type { ModelRouter, ModelRouterRequest } from '../model-router/model-rout
 import { OpenAIModelRouter } from '../model-router/providers/openai/openai-model-router';
 import type { OpenAIModelRouterConfig } from '../model-router/providers/openai/openai-model-router.config';
 import { resolveOpenAIModel } from '../model-router/model-profile.registry';
-import { OpenAiCuSegmentationProvider } from '../conversation-unit/openai-cu-segmentation.provider';
-import { CU_SEGMENTATION_PROMPT_VERSION, type CuSegmentationOpenAIConfig } from '../conversation-unit/cu-segmentation-provider.config';
-import { CU_SEGMENTATION_SCHEMA_VERSION } from '../conversation-unit/cu-segmentation-provider.types';
-import { MAX_SOURCE_EXCERPT_CHARS, MAX_UNITS_PER_COMMIT_BATCH } from '../conversation-unit/conversation-unit.types';
 
 // PROD-SEC-02 - the request-scoped foreground work context: the deadline that stops NEW provider calls, and the
 // database work lease that must be held before provider-bearing work starts.
@@ -138,11 +133,6 @@ describe('the deadline stops NEW provider calls - it never races or abandons a c
     context: [{ role: 'USER', content: 'hello' }], locale: 'und', modality: 'TEXT', latencyBudgetMs: 3_000,
     costBudget: 'LOW', safetyLevel: 'STANDARD',
   };
-  const segmentationConfig: CuSegmentationOpenAIConfig = {
-    provider: 'OPENAI', apiKey: 'test-key', model: 'gpt-5-mini', timeoutMs: 5_000, maxOutputTokens: 2_048, maxRetries: 0,
-    promptVersion: CU_SEGMENTATION_PROMPT_VERSION, schemaVersion: 1,
-  };
-
   it('the reply router opens no provider request once the deadline has passed', async () => {
     const create = jest.fn();
     const router = new OpenAIModelRouter(routerConfig, { responses: { create } });
@@ -167,37 +157,39 @@ describe('the deadline stops NEW provider calls - it never races or abandons a c
     expect(create).toHaveBeenCalledTimes(1);
   });
 
-  it('a semantic provider refuses before its request with the typed deadline error, not a provider outage', async () => {
-    const create = jest.fn();
-    const provider = new OpenAiCuSegmentationProvider(segmentationConfig, { responses: { create } });
-    const time = clock();
+});
+
+describe('guardForegroundBinding - the semantic providers are guarded at their binding seam, never edited', () => {
+  class CountingProvider {
+    calls = 0;
+    readonly label = 'counting';
+    async propose(input: string): Promise<string> { this.calls += 1; return `${this.label}:${input}`; }
+  }
+  const binding = () => ({ provider: new CountingProvider(), providerName: 'OPENAI', providerModel: 'model-x' });
+
+  it('delegates unchanged before the deadline, keeping the provider\'s own `this` and the binding identity', async () => {
+    const guarded = guardForegroundBinding(binding)();
     await runForegroundTurnWork(gateAnswering(), 30_000, async () => {
-      time.advance(31_000);
-      await expect(provider.propose({
-        sourceText: 'hello there.', sourceRole: 'USER', maxUnits: MAX_UNITS_PER_COMMIT_BATCH,
-        maxExcerptChars: MAX_SOURCE_EXCERPT_CHARS, schemaVersion: CU_SEGMENTATION_SCHEMA_VERSION,
-      })).rejects.toBeInstanceOf(ForegroundTurnDeadlineExceededError);
-    }, time.now);
-    expect(create).not.toHaveBeenCalled();
+      await expect(guarded.provider.propose('a')).resolves.toBe('counting:a');
+    });
+    expect(guarded.provider.calls).toBe(1);
+    expect(guarded.provider.label).toBe('counting');
+    expect({ name: guarded.providerName, model: guarded.providerModel }).toEqual({ name: 'OPENAI', model: 'model-x' });
   });
 
-  it('every foreground provider checks the deadline before it opens its provider request', () => {
-    const root = join(__dirname, '..');
-    const providers: Array<[string, string]> = [
-      ['model-router/providers/openai/openai-model-router.ts', 'this.client.responses.create('],
-      ['model-router/providers/anthropic/claude-model-router.ts', 'this.client.messages.create('],
-      ['conversation-unit/openai-cu-segmentation.provider.ts', 'this.client.responses.create('],
-      ['conversational-focus/openai-focus-resolution.provider.ts', 'this.client.responses.create('],
-      ['thread-lifecycle/openai-thread-continuity.provider.ts', 'this.client.responses.create('],
-      ['thread-establishment/openai-thread-establishment.provider.ts', 'this.client.responses.create('],
-    ];
-    for (const [file, call] of providers) {
-      const source = readFileSync(join(root, file), 'utf8');
-      const guard = source.indexOf('assertForegroundProviderBudget();');
-      expect({ file, guarded: guard > 0 && guard < source.indexOf(call) }).toEqual({ file, guarded: true });
-      // No timer is raced against provider work anywhere in the guard.
-      expect(source).not.toContain('Promise.race');
-    }
+  it('refuses with the typed deadline error before entering the provider once the deadline has passed', async () => {
+    const guarded = guardForegroundBinding(binding)();
+    const time = clock();
+    await runForegroundTurnWork(gateAnswering(), 30_000, async () => {
+      time.advance(30_000);
+      await expect(guarded.provider.propose('b')).rejects.toBeInstanceOf(ForegroundTurnDeadlineExceededError);
+    }, time.now);
+    expect(guarded.provider.calls).toBe(0);
+  });
+
+  it('is inert outside a foreground scope', async () => {
+    const guarded = guardForegroundBinding(binding)();
+    await expect(guarded.provider.propose('c')).resolves.toBe('counting:c');
   });
 });
 

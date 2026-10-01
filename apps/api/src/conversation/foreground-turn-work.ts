@@ -99,6 +99,34 @@ export function assertForegroundProviderBudget(): void {
 }
 
 /**
+ * Guards a lazy semantic-provider binding at the seam the semantic chain already uses. The provider classes
+ * themselves stay byte-identical (their frozen contracts forbid edits and new imports): every method the chain
+ * calls on `binding.provider` first checks the deadline, then delegates unchanged. A refusal is an ordinary
+ * rejected promise, raised before the provider is entered, so no provider request is ever opened after the
+ * deadline - and any method a provider gains later is guarded too, because nothing here names a method.
+ */
+export function guardForegroundBinding<B extends { readonly provider: object }>(factory: () => B): () => B {
+  return () => {
+    const binding = factory();
+    const provider = new Proxy(binding.provider, {
+      get(target, key, receiver) {
+        const value: unknown = Reflect.get(target, key, receiver);
+        if (typeof value !== 'function') return value;
+        return (...args: unknown[]) => {
+          try {
+            assertForegroundProviderBudget();
+          } catch (error) {
+            return Promise.reject(error);
+          }
+          return (value as (...parameters: unknown[]) => unknown).apply(target, args);
+        };
+      },
+    });
+    return { ...binding, provider };
+  };
+}
+
+/**
  * Asks the database for this user turn's work lease before the first provider-bearing step of the exchange
  * (the generation claim, or the post-finalization semantic walk of an exchange that is not yet established).
  * A lease this request already holds is reused, so one exchange never counts twice.
