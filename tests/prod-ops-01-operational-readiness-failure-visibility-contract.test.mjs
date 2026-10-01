@@ -47,7 +47,9 @@ function readinessViolations(w) {
   if (!/\/rest\/v1\/rpc\/\$\{DATABASE_READINESS_RPC\}/u.test(probe) || !/DATABASE_READINESS_RPC='server_database_ready_v1'/u.test(probe)) out.push('the probe does not call the readiness RPC');
   if (/SUPABASE_PUBLISHABLE_KEY|SUPABASE_ANON_KEY/u.test(probe) || !/SUPABASE_SERVICE_ROLE_KEY/u.test(probe)) out.push('the probe does not use the canonical server credential');
   if (!/response\.status!==200\)return'unavailable'/u.test(probe) || !/answer\.trim\(\)==='true'\?'available':'unavailable'/u.test(probe)) out.push('available is not the exact successful answer');
-  if (/return\s*(?:answer|response)\b(?!\.length<=MAX_READINESS_ANSWER_LENGTH&&answer\.trim\(\)==='true'\?'available':'unavailable';)|JSON\.parse|console\./u.test(probe)) out.push('the probe can leak the upstream answer');
+  if (/return\s*(?:answer|response)\b(?!!==null&&answer\.trim\(\)==='true'\?'available':'unavailable';)|JSON\.parse|console\./u.test(probe)) out.push('the probe can leak the upstream answer');
+  if (!/readBounded\(response,MAX_READINESS_ANSWER_BYTES\)/u.test(probe) || !/if\(total>limit\)\{await reader\.cancel\(\)/u.test(probe)) out.push('the readiness answer is read without a bound');
+  if (!/return this\.inflight\?\?=this\.probe\(\)/u.test(probe) || !/DATABASE_READINESS_REUSE_MS=1000;/u.test(probe)) out.push('unauthenticated readiness checks are not coalesced (database amplification)');
   const ready = sql(fn(w.migration, 'CREATE FUNCTION public.server_database_ready_v1()'));
   if (!/RETURNS boolean\s+LANGUAGE sql\s+STABLE\s+SECURITY INVOKER\s+SET search_path = ''\s+AS \$\$ SELECT true \$\$/u.test(ready)) out.push('the readiness RPC is not a read-only, row-free `SELECT true`');
   if (/\bFROM\b|INSERT|UPDATE|DELETE/iu.test(ready)) out.push('the readiness RPC reads or writes a table');
@@ -130,7 +132,9 @@ const PLANTED = [
   ['readiness probe on the publishable key', 'readinessViolations', () => plant('probe', 'key=process.env.SUPABASE_SERVICE_ROLE_KEY', 'key=process.env.SUPABASE_PUBLISHABLE_KEY')],
   ['readiness RPC executable by anon', 'readinessViolations', () => plant('migration', 'GRANT EXECUTE ON FUNCTION public.server_database_ready_v1() TO service_role;', 'GRANT EXECUTE ON FUNCTION public.server_database_ready_v1() TO anon, service_role;')],
   ['readiness RPC executable by authenticated (not revoked)', 'readinessViolations', () => plant('migration', 'REVOKE ALL ON FUNCTION public.server_database_ready_v1() FROM PUBLIC, anon, authenticated;', 'REVOKE ALL ON FUNCTION public.server_database_ready_v1() FROM PUBLIC, anon;')],
-  ['readiness response leaking the upstream body', 'readinessViolations', () => plant('probe', "return answer.length<=MAX_READINESS_ANSWER_LENGTH&&answer.trim()==='true'?'available':'unavailable';", 'return answer as never;')],
+  ['readiness response leaking the upstream body', 'readinessViolations', () => plant('probe', "return answer!==null&&answer.trim()==='true'?'available':'unavailable';", 'return answer as never;')],
+  ['readiness body read without a bound', 'readinessViolations', () => plant('probe', 'const answer=await readBounded(response,MAX_READINESS_ANSWER_BYTES);', 'const answer=await response.text();')],
+  ['every unauthenticated readiness call reaching the database', 'readinessViolations', () => plant('probe', 'return this.inflight??=this.probe()', 'return this.probe()')],
   ['readiness depending on a table / user row', 'readinessViolations', () => plant('migration', 'AS $$ SELECT true $$;', 'AS $$ SELECT EXISTS (SELECT 1 FROM public.users) $$;')],
   ['readiness mutating the database', 'readinessViolations', () => plant('migration', 'AS $$ SELECT true $$;', 'AS $$ UPDATE public.users SET name = name; SELECT true $$;')],
   ['readiness accepting any 2xx', 'readinessViolations', () => plant('probe', "if(response.status!==200)return'unavailable';", "if(!response.ok)return'unavailable';")],

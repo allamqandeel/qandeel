@@ -1,4 +1,4 @@
-import { DATABASE_READINESS_RPC,DatabaseHealthProbe,databaseHealthTimeoutMs } from './database-health.probe';
+import { DATABASE_READINESS_REUSE_MS,DATABASE_READINESS_RPC,DatabaseHealthProbe,databaseHealthTimeoutMs } from './database-health.probe';
 import { HealthController } from './health.controller';
 import { HealthService } from './health.service';
 import type { HealthProbe } from './health.types';
@@ -26,6 +26,16 @@ describe('DatabaseHealthProbe (PROD-OPS-01)',()=>{const saved={...process.env};a
  it('maps transport failures to a finite unavailable state and never leaks them',async()=>{configure();jest.spyOn(global,'fetch').mockRejectedValue(new TypeError('fetch failed RAW_DATABASE_SECRET'));await expect(new DatabaseHealthProbe().check()).resolves.toBe('unavailable');
   jest.spyOn(global,'fetch').mockResolvedValue({status:200,text:jest.fn().mockRejectedValue(new Error('RAW_BODY_SECRET'))}as unknown as Response);await expect(new DatabaseHealthProbe().check()).resolves.toBe('unavailable');});
  it('actually aborts a hanging request at the bounded timeout without network',async()=>{configure();process.env.HEALTH_DATABASE_TIMEOUT_MS='100';jest.spyOn(global,'fetch').mockImplementation((_input,init)=>new Promise((_resolve,reject)=>{const signal=init?.signal as AbortSignal;signal.addEventListener('abort',()=>reject(signal.reason),{once:true});}));const started=Date.now();await expect(new DatabaseHealthProbe().check()).resolves.toBe('timeout');expect(Date.now()-started).toBeGreaterThanOrEqual(75);expect(Date.now()-started).toBeLessThan(1000);});
+ it('reads a real streamed answer, and stops reading an oversized one past the bound',async()=>{configure();
+  jest.spyOn(global,'fetch').mockResolvedValueOnce(new Response('true',{status:200}));await expect(new DatabaseHealthProbe().check()).resolves.toBe('available');
+  let pulled=0;const huge=new ReadableStream<Uint8Array>({pull(controller){pulled+=1;controller.enqueue(new TextEncoder().encode('t'.repeat(1024)));if(pulled>1000)controller.close();}});
+  jest.spyOn(global,'fetch').mockResolvedValueOnce(new Response(huge,{status:200}));await expect(new DatabaseHealthProbe().check()).resolves.toBe('unavailable');expect(pulled).toBeLessThan(5);});
+ it('coalesces concurrent checks into one request and reuses a result for one second only (no database amplification)',async()=>{configure();jest.useFakeTimers({doNotFake:['nextTick','setImmediate','queueMicrotask']});try{
+  const request=jest.spyOn(global,'fetch').mockResolvedValue(answer(200,'true'));const probe=new DatabaseHealthProbe();
+  await expect(Promise.all(Array.from({length:50},()=>probe.check()))).resolves.toEqual(Array(50).fill('available'));expect(request).toHaveBeenCalledTimes(1);
+  await probe.check();expect(request).toHaveBeenCalledTimes(1);
+  jest.advanceTimersByTime(DATABASE_READINESS_REUSE_MS);request.mockResolvedValue(answer(500,'{}'));
+  await expect(probe.check()).resolves.toBe('unavailable');expect(request).toHaveBeenCalledTimes(2);}finally{jest.useRealTimers();}});
  it('clamps external probe timeouts to a strict 100–5000 ms boundary',()=>{expect(databaseHealthTimeoutMs({})).toBe(1500);expect(databaseHealthTimeoutMs({HEALTH_DATABASE_TIMEOUT_MS:'1'})).toBe(100);expect(databaseHealthTimeoutMs({HEALTH_DATABASE_TIMEOUT_MS:'99999'})).toBe(5000);expect(databaseHealthTimeoutMs({HEALTH_DATABASE_TIMEOUT_MS:'invalid'})).toBe(1500);});
 });
 
