@@ -3860,3 +3860,36 @@ rule: a reader's disagreement is durable history and is never erased. Forward-on
 - isolation and privileges;
 - committed two-connection races: disagreement vs close, disagreement vs a new selection, replays, resolutions, and
   resolution vs withdrawal.
+
+## AI-COST-01 - Provider-neutral AI usage / cost ledger + Credit accounting foundation (migration 0135)
+
+`0135_ai_usage_cost_credit_ledger_v1.sql` gives every production provider attempt a durable, content-free accounting
+fact, and keeps provider usage, rated cost and the QANDEEL Credit apart. Forward-only; 0001-0134 are untouched.
+
+- **Call ledger.** `ai_provider_calls` holds one row per EXTERNAL attempt.
+  - The service role writes it `PENDING` through `begin_ai_provider_call_v1` before the request starts. A replay is
+    idempotent and a different identity under the same id is `PT409`. The session and turn are checked against the
+    account.
+  - `settle_ai_provider_call_v1` closes it exactly once (digest-idempotent; a conflict is `PT409`). It writes the
+    reported normalized kinds to `ai_provider_call_usage` and rates the call in the same transaction.
+  - A PENDING call older than five minutes is stale: its cost is unknown, never zero.
+- **Price Cards.** `ai_price_cards` are effective-dated, never overlapping (per-key lock), immutable once used, and
+  registered by the database owner only (`register_ai_price_card_v1`). None is seeded. `TEST_ONLY` cards can name only
+  `TEST_PROVIDER`, which `begin` refuses.
+- **Rating.** Each call is rated by the cards effective at its `started_at`, in exact numeric
+  (`ai_rated_component_amount_v1`), into versioned `ai_cost_ratings` (`RATED_APPLICATION_COST`: `RATED` / `UNPRICED` /
+  `USAGE_UNKNOWN`) with per-kind `ai_cost_rating_components`. Re-rating is owner-only, explicit and versioned. A rating
+  reads cards under shared per-key locks, so a window never closes under it.
+- **Credits.** `ai_credit_policies` admits `DRAFT` only (the activation gate). `ai_credit_ratings` can be written only
+  under an `ACTIVE` policy, so nothing is rated or debited. `server_read_ai_credit_policy_state_v1()` answers
+  `CREDIT_POLICY_NOT_ACTIVATED`. `ai_credits_for_rated_cost_v1` is the pure formula family for simulation.
+- **Reads.** `server_read_ai_usage_operations_summary_v1()` (numbers only, including stale PENDING) and
+  `server_read_ai_cost_aggregates_v1(from, to)` (day / provider / model / feature / path / state, never per account).
+- **Authority and erasure.** RLS on with zero policies; no privilege for any application role on any table; exactly five
+  functions executable by `service_role`. `user_id` cascades from `public.users`, which the governed 0130 erasure
+  deletes, and the immutability guards allow only that cascade.
+
+`database/verify-migration-0135.mjs` (`npm run verify:ai-usage-cost-ledger:integration`, API CI) proves the catalog
+and privilege census, begin / settle exactly-once semantics, unknown and unpriced truth, exact per-kind rating by
+effective date, overlap refusal, stable history and explicit re-rating, the compiled simulator equal to the database,
+the Credit activation gate, the operational summary, erasure coverage and committed multi-connection races.
