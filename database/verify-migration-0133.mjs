@@ -244,7 +244,9 @@ async function verifySupabaseDefaults(ci) {
       const roles = ['anon', 'authenticated'].filter((role) => row[role] && !intended[role]);
       if (roles.length > 0) drift[object] = roles;
     }
-    assert.deepEqual(drift, DRIFTED_FUNCTIONS, 'exactly the five drifted functions, for exactly these roles');
+    // Measured against the CI ACL AFTER 0133, the PUBLIC trigger functions are client-reachable before 0133 too.
+    const expectedDrift = { ...DRIFTED_FUNCTIONS, ...Object.fromEntries(PUBLIC_TRIGGER_FUNCTIONS.map((signature) => [signature, ['anon', 'authenticated']])) };
+    assert.deepEqual(drift, expectedDrift, 'exactly the five drifted functions and the fourteen PUBLIC trigger functions, for exactly these roles');
     const publicTriggers = [...before.functions.values()].filter((row) => row.public).map((row) => row.object).sort();
     assert.deepEqual(publicTriggers, [...PUBLIC_TRIGGER_FUNCTIONS].sort(), 'exactly the fourteen PUBLIC trigger functions');
     const relationDrift = [...before.relations.values()]
