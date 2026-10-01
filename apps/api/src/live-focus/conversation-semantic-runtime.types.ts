@@ -97,7 +97,14 @@ export class ConversationSemanticIntegrityError extends Error {
  */
 export class ConversationSemanticUnavailableError extends Error {
   constructor(
-    readonly reason: 'PROVIDER_UNAVAILABLE' | 'TRANSPORT_UNAVAILABLE' | 'STALE_CONTEXT_RETRY_EXHAUSTED',
+    readonly reason:
+      | 'PROVIDER_UNAVAILABLE'
+      | 'TRANSPORT_UNAVAILABLE'
+      | 'STALE_CONTEXT_RETRY_EXHAUSTED'
+      // PROD-SEC-02: the exchange's work lease is held by another live request, or the user is at the bound.
+      | 'FOREGROUND_WORK_DEFERRED'
+      // PROD-SEC-02: the request's foreground deadline passed, so no further provider call was started.
+      | 'FOREGROUND_DEADLINE_EXHAUSTED',
     options?: { cause?: unknown },
   ) {
     super(`Conversation semantic establishment is unavailable: ${reason}.`, options);

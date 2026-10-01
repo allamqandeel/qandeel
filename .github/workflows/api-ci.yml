@@ -770,6 +770,13 @@ jobs:
       # retired identifiers and no resurrection; the Connected Worlds hard stop (BLOCKED, nothing erased); committed races.
       - name: Verify W3-MEGA-S Personal export and Personal-world account deletion against real PostgreSQL
         run: npm run verify:personal-privacy-export-account-deletion:integration
+      # PROD-SEC-02 closes PROD-READINESS-01's P0 (unbounded per-account AI work). This verifier proves the admission
+      # bound decided atomically by the authenticated RPC (one in-flight turn per session, two per user, the rolling
+      # 10-minute and 24-hour allowances), the one typed PT429 refusal, replay never charged, self-expiring slots, the
+      # service-role work lease for banked and cancelled-but-working turns, unchanged authority, lease cascade, and
+      # committed races that serialize one user but never two, without deadlock.
+      - name: Verify PROD-SEC-02 turn admission concurrency and cost bound against real PostgreSQL
+        run: npm run verify:turn-admission-cost-bound:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

@@ -22,6 +22,7 @@ import {
   type CuSegmentationProvider,
   type CuSegmentationRequest,
 } from './cu-segmentation-provider.types';
+import { assertForegroundProviderBudget } from '../conversation/foreground-turn-work';
 
 interface OpenAISegmentationResponse {
   output_text: string;
@@ -49,6 +50,7 @@ export class OpenAiCuSegmentationProvider implements CuSegmentationProvider {
 
   async propose(request: CuSegmentationRequest): Promise<CuSegmentationProposal> {
     if (!isValidRequest(request)) throw new CuSegmentationProviderError('INVALID_STRUCTURED_OUTPUT');
+    assertForegroundProviderBudget();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {

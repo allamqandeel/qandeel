@@ -40,6 +40,7 @@ import {
   type FocusResolutionRequest,
   type ReferenceResolutionProposal,
 } from './focus-resolution-provider.types';
+import { assertForegroundProviderBudget } from '../conversation/foreground-turn-work';
 
 interface OpenAIFocusResponse {
   output_text: string;
@@ -67,6 +68,7 @@ export class OpenAiFocusResolutionProvider implements FocusResolutionProvider {
 
   async propose(request: FocusResolutionRequest): Promise<FocusResolutionProposal> {
     if (!isValidRequest(request)) throw new FocusResolutionProviderError('INVALID_STRUCTURED_OUTPUT');
+    assertForegroundProviderBudget();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {

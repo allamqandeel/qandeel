@@ -424,6 +424,19 @@ async function verifyRejections(owner, other, session, otherSession) {
   await rejected(() => commit(voiceSession, owner, voiceTurn, randomUUID(), [unit(E1, 'أنا سبت الشغل امبارح.')]), 'UNSUPPORTED_SOURCE_MODALITY');
 }
 
+// RE-ANCHORED by PROD-SEC-02 (migration 0131): turn admission is bounded. A session admits a new turn only while
+// none of its turns is still in flight, and a user holds at most two. This verifier runs inside one transaction, so
+// the RECEIVED source fixture of the rejection cases would stay "in flight" for the rest of the run. Once those
+// cases are proven, and before the next turn is admitted to the same conversation head, the owner closes it
+// through its own canonical cancel command. Nothing this verifier proves about migration 0064 changes.
+async function settleConversationHead(owner, session) {
+  await identity('postgres');
+  const open = await rows("SELECT id FROM public.conversation_turns WHERE user_id=$1 AND session_id=$2 AND role='USER' AND status IN ('RECEIVED','GENERATING')", [owner, session]);
+  await identity('authenticated', owner);
+  for (const { id } of open) await rows('SELECT * FROM cancel_conversation_turn($1,$2,$3,$4,$5,$6)', [session, owner, id, randomUUID(), null, null]);
+  await identity('postgres');
+}
+
 async function createRawTurn(owner, session, content, status, role = 'USER') {
   // Verifier-only fixture under postgres authority: the runtime has no producer
   // for SUPERSEDED or SYSTEM, so those states must be constructed directly.
@@ -708,6 +721,7 @@ async function main() {
       await verifySegmentationRestraint(owner, session);
       await verifyZeroUnitBatch(owner, session);
       await verifyRejections(owner, other, session, otherSession);
+      await settleConversationHead(owner, session);
       await verifySourceIntegrityGuard(owner, session);
       await verifyRetryAndConflict(owner, session);
       await verifyFrontierAndReplaySplit(owner, session);

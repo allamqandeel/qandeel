@@ -1,17 +1,20 @@
-import { BadRequestException, ConflictException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, NotFoundException, ServiceUnavailableException } from '@nestjs/common';
 import { ConversationRepository } from './conversation.repository';
-import { ConversationService } from './conversation.service';
+import { ConversationService, TURN_ADMISSION_LIMITED } from './conversation.service';
+import { assertForegroundProviderBudget, enterForegroundTurnWork, FOREGROUND_TURN_WORK_DEADLINE_DEFAULT_MS, ForegroundTurnDeadlineExceededError } from './foreground-turn-work';
 import type { ConversationSession, ConversationTurn, OrchestratedTurnResult } from './conversation.types';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { CorrelationService } from '../observability/correlation.service';
 import { DataApiError } from './supabase-data-api.service';
+import { ConversationTurnWorkRepository } from './conversation-turn-work.repository';
 
 describe('ConversationService', () => {
   let repository: jest.Mocked<ConversationRepository>;
   let service: ConversationService;
   let orchestrator: jest.Mocked<ConversationOrchestratorService>;
   let semantic: jest.Mocked<ConversationSemanticEstablishmentService>;
+  let turnWork: jest.Mocked<ConversationTurnWorkRepository>;
   const session: ConversationSession = {
     id: 'session-a', status: 'ACTIVE', channel: 'TEXT', created_at: 'now', updated_at: 'now',
     last_activity_at: 'now', closed_at: null,
@@ -36,7 +39,11 @@ describe('ConversationService', () => {
     semantic = {
       establish: jest.fn(async (_userId: string, result: OrchestratedTurnResult) => result),
     } as unknown as jest.Mocked<ConversationSemanticEstablishmentService>;
-    service = new ConversationService(repository, orchestrator,new CorrelationService(), semantic);
+    turnWork = {
+      begin: jest.fn().mockResolvedValue({ outcome: 'GRANTED', leaseId: 'lease-a' }),
+      end: jest.fn().mockResolvedValue(undefined),
+    } as unknown as jest.Mocked<ConversationTurnWorkRepository>;
+    service = new ConversationService(repository, orchestrator,new CorrelationService(), semantic, turnWork);
   });
 
   it('creates a session with only the caller token and a generated UUID — identity stays with the database', async () => {
@@ -48,7 +55,7 @@ describe('ConversationService', () => {
   });
 
   it('binds the repository-returned canonical session ID to the active request scope',async()=>{
-    const correlation=new CorrelationService();service=new ConversationService(repository,orchestrator,correlation,semantic);repository.createSession.mockResolvedValue(session);
+    const correlation=new CorrelationService();service=new ConversationService(repository,orchestrator,correlation,semantic,turnWork);repository.createSession.mockResolvedValue(session);
     await correlation.runRequest(async()=>{await service.createSession('user-a','token-a');expect(correlation.current()?.session_id).toBe(session.id);});
   });
 
@@ -261,6 +268,94 @@ describe('ConversationService', () => {
       // The idempotency winner lookup guards durable admission only.
       expect(repository.findTurnByIdempotencyKey).toHaveBeenCalledTimes(1);
       expect(orchestrator.orchestrate).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe('PROD-SEC-02 turn admission bound and foreground work', () => {
+    const limited = () => new DataApiError(429, { databaseCode: 'PT429', databaseMessage: 'TURN_ADMISSION_LIMITED' });
+
+    it('maps the database admission refusal to the typed 429 and starts no orchestration, provider or semantic work', async () => {
+      repository.findSession.mockResolvedValue(session);
+      repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+      repository.createTurn.mockRejectedValue(limited());
+      const refusal = await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }).catch((error: unknown) => error);
+      expect(refusal).toBeInstanceOf(HttpException);
+      expect((refusal as HttpException).getStatus()).toBe(429);
+      // Exactly the code and nothing else: no counter, window, limit, session or other user.
+      expect((refusal as HttpException).getResponse()).toEqual({ code: TURN_ADMISSION_LIMITED });
+      expect(orchestrator.orchestrate).not.toHaveBeenCalled();
+      expect(semantic.establish).not.toHaveBeenCalled();
+      expect(turnWork.begin).not.toHaveBeenCalled();
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    });
+
+    it('never reads a different failure as the admission bound: a bare 429 or a foreign PT429 message stays what it was', async () => {
+      repository.findSession.mockResolvedValue(session);
+      for (const error of [new DataApiError(429), new DataApiError(429, { databaseCode: 'PT429', databaseMessage: 'SOMETHING_ELSE' }), new DataApiError(500, { databaseCode: 'PT429', databaseMessage: 'TURN_ADMISSION_LIMITED' })]) {
+        repository.createTurn.mockRejectedValueOnce(error);
+        await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello' })).rejects.toBe(error);
+      }
+      expect(orchestrator.orchestrate).not.toHaveBeenCalled();
+    });
+
+    it('an idempotent replay is resolved before admission, so it is never limited and never charged', async () => {
+      repository.findSession.mockResolvedValue(session);
+      repository.findTurnByIdempotencyKey.mockResolvedValue(turn);
+      repository.createTurn.mockRejectedValue(limited());
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' })).resolves.toEqual({ userTurn: turn });
+      expect(repository.createTurn).not.toHaveBeenCalled();
+      expect(orchestrator.orchestrate).toHaveBeenCalledWith('token-a', 'user-a', turn);
+    });
+
+    it('returns the exchange\'s work lease when the request ends - after success and after a failure', async () => {
+      repository.findSession.mockResolvedValue(session);
+      repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+      repository.createTurn.mockResolvedValue(turn);
+      orchestrator.orchestrate.mockImplementationOnce(async () => {
+        await enterForegroundTurnWork(session.id, turn.id);
+        return { userTurn: turn };
+      });
+      await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' });
+      expect(turnWork.begin).toHaveBeenCalledWith(session.id, 'user-a', turn.id);
+      expect(turnWork.end).toHaveBeenCalledWith('user-a', turn.id, 'lease-a');
+
+      orchestrator.orchestrate.mockImplementationOnce(async () => {
+        await enterForegroundTurnWork(session.id, turn.id);
+        throw new ServiceUnavailableException('Conversation generation failed.');
+      });
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' })).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(turnWork.end).toHaveBeenCalledTimes(2);
+    });
+
+    it('a completed reply whose semantic phase is deferred or out of time stays completed: the turn is never failed', async () => {
+      const completed = { ...turn, status: 'COMPLETED' as const };
+      const assistant = { ...turn, id: 'assistant-a', role: 'ASSISTANT' as const, status: 'COMPLETED' as const, source_turn_id: turn.id };
+      repository.findSession.mockResolvedValue(session);
+      repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+      repository.createTurn.mockResolvedValue(turn);
+      orchestrator.orchestrate.mockResolvedValue({ userTurn: completed, assistantTurn: assistant });
+      semantic.establish.mockRejectedValue(new ServiceUnavailableException('Conversation semantic establishment is unavailable.'));
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' })).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    });
+
+    it('runs the whole request under one deadline: a provider asked after it has passed is refused', async () => {
+      const now = jest.spyOn(Date, 'now');
+      try {
+        now.mockReturnValue(1_000_000);
+        repository.findSession.mockResolvedValue(session);
+        repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+        repository.createTurn.mockResolvedValue(turn);
+        orchestrator.orchestrate.mockImplementationOnce(async () => {
+          expect(() => assertForegroundProviderBudget()).not.toThrow();
+          now.mockReturnValue(1_000_000 + FOREGROUND_TURN_WORK_DEADLINE_DEFAULT_MS);
+          expect(() => assertForegroundProviderBudget()).toThrow(ForegroundTurnDeadlineExceededError);
+          return { userTurn: turn };
+        });
+        await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' });
+        expect(orchestrator.orchestrate).toHaveBeenCalledTimes(1);
+      } finally {
+        now.mockRestore();
+      }
     });
   });
 });

@@ -2,6 +2,7 @@ import { ServiceUnavailableException } from '@nestjs/common';
 import type { ConversationLiveDelivery } from '@qandeel/runtime';
 import type { ConversationTurn, OrchestratedTurnResult } from '../conversation/conversation.types';
 import { DataApiError } from '../conversation/supabase-data-api.service';
+import { ForegroundTurnDeadlineExceededError, runForegroundTurnWork } from '../conversation/foreground-turn-work';
 import type { CuSegmentationBinding } from '../conversation-unit/conversation-temporal-establishment.service';
 import type { CommittedConversationUnit } from '../conversation-unit/conversation-unit.types';
 import type { SourceAnchor } from '../conversation-unit/cu-anchor-mapper';
@@ -752,5 +753,72 @@ describe('bounded recovery with BOTH stale authorities and no third one (cases 7
     await b.service.establish(USER, exchange);
     expect(lfOf(b.h.commitRequests[0])[0]).toEqual([U1_ID, 'THREAD', T_AHMED, true, 'NEW_INDEPENDENT_FOCUS']);
     expect(lfOf(b.h.commitRequests[1])[0]).toEqual([U1_ID, 'THREAD', T_AHMED, true, 'FOCUS_REPLACEMENT']);
+  });
+});
+
+
+// PROD-SEC-02 - the exchange's foreground work lease and the request deadline, through the real service.
+class DeadlineFocusProvider implements FocusResolutionProvider {
+  readonly requests: FocusResolutionRequest[] = [];
+  async propose(request: FocusResolutionRequest): Promise<FocusResolutionProposal> {
+    this.requests.push(request);
+    // Exactly what a real foreground provider does once the request's deadline has passed: it refuses BEFORE
+    // opening a provider request.
+    throw new ForegroundTurnDeadlineExceededError();
+  }
+}
+
+const workGate = (outcome: 'GRANTED' | 'IN_PROGRESS' | 'LIMITED') => ({
+  begin: jest.fn(async () => (outcome === 'GRANTED' ? { outcome, leaseId: 'lease-semantic' } as const : { outcome } as const)),
+  end: jest.fn(async () => undefined),
+});
+
+describe('PROD-SEC-02 foreground work lease and deadline in the semantic phase', () => {
+  it('an exchange that is not yet established takes its work lease after the replay gate and before any context or provider', async () => {
+    const b = build();
+    const gate = workGate('GRANTED');
+    await runForegroundTurnWork(gate, 90_000, () => b.service.establishExchange(USER, userTurn, assistantTurn));
+    expect(gate.begin).toHaveBeenCalledTimes(1);
+    expect(gate.begin).toHaveBeenCalledWith(SESSION, USER_TURN);
+    expect(gate.begin.mock.invocationCallOrder[0]).toBeLessThan(b.h.readRuntimeContext.mock.invocationCallOrder[0]);
+    expect(b.h.readIntegratedBatchSnapshot.mock.invocationCallOrder[0]).toBeLessThan(gate.begin.mock.invocationCallOrder[0]);
+    expect(b.h.commitFinalizedExchangeWithFullSemanticChain).toHaveBeenCalledTimes(1);
+    expect(gate.end).toHaveBeenCalledWith(USER_TURN, 'lease-semantic');
+  });
+
+  it.each(['LIMITED', 'IN_PROGRESS'] as const)('%s defers the walk: zero providers, zero context, zero commit, retryable FOREGROUND_WORK_DEFERRED', async (outcome) => {
+    const b = build();
+    const gate = workGate(outcome);
+    const reason = await unavailable(runForegroundTurnWork(gate, 90_000, () => b.service.establishExchange(USER, userTurn, assistantTurn)));
+    expect(reason).toBe('FOREGROUND_WORK_DEFERRED');
+    expect(providerCounts(b)).toEqual([0, 0, 0, 0, 0]);
+    expect(b.h.readRuntimeContext).not.toHaveBeenCalled();
+    expect(b.h.commitFinalizedExchangeWithFullSemanticChain).not.toHaveBeenCalled();
+    expect(gate.end).not.toHaveBeenCalled();
+    // The public entry keeps the existing retryable contract: the completed turns are untouched.
+    const wrapped = await rejection(runForegroundTurnWork(workGate(outcome), 90_000, () => build().service.establish(USER, exchange)));
+    expect(wrapped).toBeInstanceOf(ServiceUnavailableException);
+  });
+
+  it('a canonical replay never asks for work: zero lease requests and zero providers', async () => {
+    const b = build(harness({
+      snapshots: (batchId) => batchId === USER_BATCH
+        ? complete(USER_BATCH, 'USER', 1, 2, 4, { live_focus_transition_count: 2, live_focus_transitions: [{ sessionPosition: 1, to: thread(T_AHMED) }, { sessionPosition: 2, to: thread(T_MANAGER) }], session_live_focus: thread(T_AHMED), session_live_focus_sp: 3 })
+        : complete(ASSISTANT_BATCH, 'ASSISTANT', 3, 2, 4, { live_focus_transition_count: 1, live_focus_transitions: [{ sessionPosition: 3, to: thread(T_AHMED) }], session_live_focus: thread(T_AHMED), session_live_focus_sp: 3 }),
+    }));
+    const gate = workGate('LIMITED');
+    await runForegroundTurnWork(gate, 90_000, () => b.service.establish(USER, exchange));
+    expect(gate.begin).not.toHaveBeenCalled();
+    expect(providerCounts(b)).toEqual([0, 0, 0, 0, 0]);
+  });
+
+  it('a deadline reached mid-walk stops before the next provider call, commits nothing and is retryable FOREGROUND_DEADLINE_EXHAUSTED', async () => {
+    const focus = new DeadlineFocusProvider();
+    const b = build(harness(), new RoleScriptedSegmentation(SEGMENTS), focus as unknown as RecordingFocusProvider);
+    const reason = await unavailable(runForegroundTurnWork(workGate('GRANTED'), 90_000, () => b.service.establishExchange(USER, userTurn, assistantTurn)));
+    expect(reason).toBe('FOREGROUND_DEADLINE_EXHAUSTED');
+    expect(focus.requests).toHaveLength(1);
+    expect(b.thread.requests).toHaveLength(0);
+    expect(b.h.commitFinalizedExchangeWithFullSemanticChain).not.toHaveBeenCalled();
   });
 });

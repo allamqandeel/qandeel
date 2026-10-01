@@ -54,7 +54,7 @@ describe('ConversationService.listTurns — the authoritative conversation-so-fa
     } as unknown as jest.Mocked<ConversationRepository>;
     orchestrator = { orchestrate: jest.fn() } as unknown as jest.Mocked<ConversationOrchestratorService>;
     const semantic = { establish: jest.fn() } as unknown as jest.Mocked<ConversationSemanticEstablishmentService>;
-    service = new ConversationService(repository, orchestrator, new CorrelationService(), semantic);
+    service = new ConversationService(repository, orchestrator, new CorrelationService(), semantic, { begin: jest.fn().mockResolvedValue({ outcome: 'GRANTED', leaseId: 'lease-route' }), end: jest.fn().mockResolvedValue(undefined) } as never);
   });
 
   it('returns completed exchanges, a committed turn whose reply FAILED, and a PENDING turn — oldest to newest', async () => {

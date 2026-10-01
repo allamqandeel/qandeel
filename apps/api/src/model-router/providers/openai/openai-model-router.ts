@@ -11,6 +11,7 @@ import {
   type OpenAIModelRouterConfig,
 } from './openai-model-router.config';
 import { TelemetryService } from '../../../observability/telemetry.service';
+import { assertForegroundProviderBudget } from '../../../conversation/foreground-turn-work';
 
 interface OpenAIResponse {
   output_text: string;
@@ -46,6 +47,7 @@ export class OpenAIModelRouter implements ModelRouter {
   ) {}
 
   async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+    assertForegroundProviderBudget();
     const modelConfiguration = this.config.resolveModel(request.path);
     const timeout = Math.min(request.latencyBudgetMs, this.config.timeoutMs);
     const controller = new AbortController();

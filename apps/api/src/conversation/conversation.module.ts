@@ -5,6 +5,7 @@ import { ConversationController } from './conversation.controller';
 import { ConversationContextActivationController } from './conversation-context-activation.controller';
 import { ConversationContextActivationService } from './conversation-context-activation.service';
 import { ConversationRepository } from './conversation.repository';
+import { ConversationTurnWorkRepository } from './conversation-turn-work.repository';
 import { ConversationService } from './conversation.service';
 import { SupabaseDataApiService } from './supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from './supabase-service-role-api.service';
@@ -90,6 +91,7 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     SupabaseDataApiService,
     SupabaseServiceRoleApiService,
     ConversationRepository,
+    ConversationTurnWorkRepository,
     ContextBuilderService,
     { provide: CONTEXT_BUILDER, useExisting: ContextBuilderService },
     SafetyResponseGateService,

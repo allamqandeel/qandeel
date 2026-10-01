@@ -11,6 +11,7 @@ import {
   type ClaudeModelRouterConfig,
 } from './claude-model-router.config';
 import { TelemetryService } from '../../../observability/telemetry.service';
+import { assertForegroundProviderBudget } from '../../../conversation/foreground-turn-work';
 
 interface AnthropicTextBlock { type: 'text'; text: string }
 interface AnthropicMessageResponse {
@@ -44,6 +45,7 @@ export class ClaudeModelRouter implements ModelRouter {
   ) {}
 
   async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+    assertForegroundProviderBudget();
     const modelConfiguration = this.config.resolveModel(request.path);
     try {
       const call=()=>this.client.messages.create(

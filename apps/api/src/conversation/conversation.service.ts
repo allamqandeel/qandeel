@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { ConversationRepository } from './conversation.repository';
+import { ConversationTurnWorkRepository } from './conversation-turn-work.repository';
 import type {
   ConversationHistoryExchange,
   ConversationHistoryPage,
@@ -8,7 +9,8 @@ import type {
   ConversationTurn,
   OrchestratedTurnResult,
 } from './conversation.types';
-import { DataApiError } from './supabase-data-api.service';
+import { DataApiError, readDataApiUpstreamIdentity } from './supabase-data-api.service';
+import { foregroundTurnWorkDeadlineMs, runForegroundTurnWork, type ForegroundTurnWorkGate } from './foreground-turn-work';
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { CorrelationService } from '../observability/correlation.service';
@@ -41,9 +43,23 @@ const HISTORY_DEFAULT_LIMIT = 50;
 const HISTORY_MAX_LIMIT = 100;
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
+/**
+ * PROD-SEC-02: the one machine-readable refusal of a NEW turn admission (HTTP 429). It names the condition and
+ * nothing else - no counter, window, limit, other session or other user - and it is only ever answered when the
+ * database committed nothing, so the client may offer the same words again later as a new command.
+ */
+export const TURN_ADMISSION_LIMITED = 'TURN_ADMISSION_LIMITED';
+
+/** The exact database refusal of migration 0131 (`RAISE ... USING ERRCODE = 'PT429'`), and nothing broader. */
+function isTurnAdmissionLimited(error: unknown): boolean {
+  if (!(error instanceof DataApiError) || error.status !== 429) return false;
+  const identity = readDataApiUpstreamIdentity(error);
+  return identity.databaseCode === 'PT429' && identity.databaseMessage === TURN_ADMISSION_LIMITED;
+}
+
 @Injectable()
 export class ConversationService {
-  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService,private readonly semantic: ConversationSemanticEstablishmentService) {}
+  constructor(private readonly repository: ConversationRepository, private readonly orchestrator: ConversationOrchestratorService,private readonly correlation:CorrelationService,private readonly semantic: ConversationSemanticEstablishmentService, private readonly turnWork: ConversationTurnWorkRepository) {}
 
   // userId stays in the signature for the authenticated controller contract,
   // but it is never serialized as mutation authority: the database derives the
@@ -61,8 +77,22 @@ export class ConversationService {
     return session;
   }
 
+  /**
+   * PROD-SEC-02: the whole request runs inside ONE foreground work scope - one bounded work deadline, and the
+   * database work lease of the exchange it advances, returned however the request ends. The admission bound
+   * itself lives in `create_user_conversation_turn` (migration 0131); a refused NEW admission commits nothing
+   * and answers the typed 429 below, before any orchestration, provider or semantic work.
+   */
   async createTurn(userId: string, accessToken: string, sessionId: string, body: unknown): Promise<OrchestratedTurnResult> {
     const input = this.validateTurnInput(body);
+    const gate: ForegroundTurnWorkGate = {
+      begin: (workSessionId, userTurnId) => this.turnWork.begin(workSessionId, userId, userTurnId),
+      end: (userTurnId, leaseId) => this.turnWork.end(userId, userTurnId, leaseId),
+    };
+    return runForegroundTurnWork(gate, foregroundTurnWorkDeadlineMs(), () => this.admitAndRunTurn(userId, accessToken, sessionId, input));
+  }
+
+  private async admitAndRunTurn(userId: string, accessToken: string, sessionId: string, input: { content: string; idempotencyKey?: string }): Promise<OrchestratedTurnResult> {
     const session = await this.resumeSession(userId, accessToken, sessionId);
     // Idempotent replay is resolved first: a turn that was already admitted
     // durably under this key is returned regardless of the session's later
@@ -89,6 +119,7 @@ export class ConversationService {
         id: randomUUID(), sessionId, userId, content: input.content, idempotencyKey: input.idempotencyKey,
       });
     } catch (error) {
+      if (isTurnAdmissionLimited(error)) throw new HttpException({ code: TURN_ADMISSION_LIMITED }, HttpStatus.TOO_MANY_REQUESTS);
       if (input.idempotencyKey && error instanceof DataApiError && error.status === 409) {
         const winner = await this.repository.findTurnByIdempotencyKey(accessToken, sessionId, userId, input.idempotencyKey);
         if (winner){this.correlation.bindCanonical(winner.session_id,winner.id);return this.establishSemanticChain(userId, await this.orchestrator.orchestrate(accessToken, userId, winner));}

@@ -98,6 +98,20 @@ const UNKNOWN_PAIRS = [
 const claim = (session, user, turn, path, reason) =>
   rows('SELECT * FROM claim_conversation_turn($1,$2,$3,$4,$5)', [session, user, turn, path, reason]);
 
+// RE-ANCHORED by PROD-SEC-02 (migration 0131): turn admission is bounded. A session admits a new turn only while
+// none of its turns is still in flight, and a user holds at most two. This verifier runs inside one transaction, so
+// a scenario's finished but non-terminal fixture turn - a claimed, never-finalized GENERATING turn, or a directly
+// inserted RECEIVED / GENERATING row - would stay "in flight" for the rest of the run. Once a scenario has made its
+// last assertion about such turns, and before the next turn is admitted to the same conversation head, the owner
+// closes them through its own canonical cancel command. Nothing this verifier proves about migration 0062 changes.
+async function settleConversationHead(owner, session) {
+  await identity('postgres');
+  const open = await rows("SELECT id FROM public.conversation_turns WHERE user_id=$1 AND session_id=$2 AND role='USER' AND status IN ('RECEIVED','GENERATING')", [owner, session]);
+  await identity('authenticated', owner);
+  for (const { id } of open) await rows('SELECT * FROM cancel_conversation_turn($1,$2,$3,$4,$5,$6)', [session, owner, id, randomUUID(), null, null]);
+  await identity('postgres');
+}
+
 const createOwnedTurn = async (owner, session, content) => {
   await identity('authenticated', owner);
   const id = randomUUID();
@@ -165,6 +179,7 @@ async function verifyEveryLegalV2PairClaims(owner, session) {
     const again = await claim(session, owner, turn, path, reason);
     assert.equal(again.length, 0, 'a claimed turn is never re-claimed');
     await identity('postgres');
+    await settleConversationHead(owner, session);
   }
 }
 
@@ -242,6 +257,7 @@ async function verifyHistoricalRowsRemainValid(owner, session) {
     }
   }
   // The pre-routing state remains the canonical shape of a fresh USER turn.
+  await settleConversationHead(owner, session);
   const fresh = await createOwnedTurn(owner, session, 'pre-routing');
   await identity('postgres');
   const [preRouting] = await rows('SELECT processing_path, routing_reason FROM public.conversation_turns WHERE id=$1', [fresh]);
@@ -400,8 +416,10 @@ async function main() {
 
       await verifyEveryLegalV2PairClaims(owner, session);
       await verifyRetiredAndIllegalPairsRejected(owner, session);
+      await settleConversationHead(owner, session);
       await verifyOwnershipStateAndRoleAuthority(owner, other, session, otherSession);
       await verifyHistoricalRowsRemainValid(owner, session);
+      await settleConversationHead(owner, session);
       await verifyDurablePropagation(owner, session);
       await identity('postgres');
     } finally {

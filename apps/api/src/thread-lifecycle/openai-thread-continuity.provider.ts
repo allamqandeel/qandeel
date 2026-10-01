@@ -27,6 +27,7 @@ import {
   type ThreadContinuityScreeningRequest,
 } from './thread-continuity-provider.types';
 import { THREAD_CONTINUITY_DECISIONS } from './thread-continuity.types';
+import { assertForegroundProviderBudget } from '../conversation/foreground-turn-work';
 
 interface OpenAIContinuityResponse {
   output_text: string;
@@ -65,6 +66,7 @@ export class OpenAiThreadContinuityProvider implements ThreadContinuityProvider 
   }
 
   private async call(instructions: string, name: string, schema: object, request: ThreadContinuityScreeningRequest | ThreadContinuityResolutionRequest): Promise<string> {
+    assertForegroundProviderBudget();
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), this.config.timeoutMs);
     try {
