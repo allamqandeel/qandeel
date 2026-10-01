@@ -1,0 +1,35 @@
+# VPORT-01 — ONE continuous recording of the world travelling FAR → MID → NEAR and back. VALIDATION ONLY.
+#
+# The same world, the same camera, the material resolving on the presentation camera's own frames: the
+# recording is the evidence that FAR, MID and NEAR are one place and not three screens. Under Reduced
+# Motion the same flow records the cut-and-resolve instead. Driven by scripts/vport01/run-vport01-visual-proof.sh.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 6000
+- startRecording: ${PREFIX}-travel
+- openLink: "qandeel://vport01-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 4000
+- openLink: "qandeel://vport01-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 4000
+- openLink: "qandeel://vport01-proof/zoom-out"
+- waitForAnimationToEnd:
+    timeout: 4000
+- openLink: "qandeel://vport01-proof/zoom-out"
+- waitForAnimationToEnd:
+    timeout: 4000
+- stopRecording
+- takeScreenshot: ${PREFIX}-back-at-far

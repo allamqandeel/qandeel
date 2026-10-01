@@ -159,6 +159,10 @@ jest.mock('@shopify/react-native-skia', () => {
     return Component;
   };
 
+  // VPORT-01 — the world's strata are recorded once into Skia pictures. The stand-in records nothing
+  // (there is no GPU here); it returns an inert handle so a test proves the element tree, the strata
+  // grid and their opacities, never the pixels a picture would draw.
+  const picture = Object.freeze({ __standIn: 'SkPicture' });
   return {
     Canvas: element('Canvas'),
     Group: element('Group'),
@@ -166,6 +170,18 @@ jest.mock('@shopify/react-native-skia', () => {
     Rect: element('Rect'),
     Line: element('Line'),
     Path: element('Path'),
+    Picture: element('Picture'),
+    Points: element('Points'),
+    RadialGradient: element('RadialGradient'),
+    LinearGradient: element('LinearGradient'),
+    BlurMask: element('BlurMask'),
+    FractalNoise: element('FractalNoise'),
+    createPicture: () => picture,
+    Skia: { XYWHRect: (x, y, width, height) => ({ x, y, width, height }) },
+    PointMode: { Points: 0, Lines: 1, Polygon: 2 },
+    StrokeCap: { Butt: 0, Round: 1, Square: 2 },
+    BlurStyle: { Normal: 0, Solid: 1, Outer: 2, Inner: 3 },
+    TileMode: { Clamp: 0, Repeat: 1, Mirror: 2, Decal: 3 },
     vec: (x, y) => ({ x, y }),
   };
 });

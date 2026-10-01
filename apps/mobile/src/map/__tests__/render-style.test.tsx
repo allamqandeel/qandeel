@@ -36,12 +36,28 @@ interface RenderedNode {
 const asNode = (value: unknown): RenderedNode | null =>
   value !== null && typeof value === 'object' && !Array.isArray(value) && 'props' in value ? (value as unknown as RenderedNode) : null;
 
+/**
+ * VPORT-01 re-anchor: a presentation value is compared by WHAT IT IS, not by which handle carries it.
+ * The world's counter-scaled strokes and strata transforms are derived values created per render, so
+ * two renders hold two handles with equal current values; comparing the handles by identity would
+ * report a difference that is not a pixel. The claim is unchanged: only `opacity` may differ.
+ */
+const settled = (value: unknown): unknown => {
+  if (Array.isArray(value)) return value.map(settled);
+  if (value !== null && typeof value === 'object') {
+    const box = value as { get?: unknown; value?: unknown };
+    if (typeof box.get === 'function' && 'value' in box) return settled(box.value);
+    return Object.fromEntries(Object.entries(value as Record<string, unknown>).map(([key, inner]) => [key, settled(inner)]));
+  }
+  return value;
+};
+
 const stripOpacity = (value: unknown): unknown => {
   if (Array.isArray(value)) return value.map(stripOpacity);
   const node = asNode(value);
   if (node === null) return value;
   const { opacity: _opacity, ...props } = node.props;
-  return { type: node.type, props, children: (node.children ?? []).map(stripOpacity) };
+  return { type: node.type, props: settled(props), children: (node.children ?? []).map(stripOpacity) };
 };
 
 const opacities = (value: unknown): number[] => {

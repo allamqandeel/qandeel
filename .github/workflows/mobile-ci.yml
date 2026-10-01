@@ -120,6 +120,7 @@ jobs:
       - {name: Verify Account & Identity + Public ID contract (W3-02), run: npm run test:w3-02-account-identity-public-id-contract}
       - {name: Verify Account & Identity completion + Security & Sign-in contract (W3-MEGA-A), run: npm run test:w3-mega-a-account-identity-security-contract}
       - {name: Verify Personal controls + Privacy & Data contract (W3-MEGA-S), run: npm run test:w3-mega-s-personal-controls-settings-contract}
+      - {name: Verify Living Analysis World production visual port contract (VPORT-01), run: npm run test:vport-01-world-visual-contract}
       - {name: Verify QANDEEL Understanding surface contract (W3-MEGA-U U2), run: npm run test:w3-mega-u2-understanding-surface-contract}
       - {name: Verify QANDEEL Understanding Contested / Under Review contract (W3-MEGA-U U3), run: npm run test:w3-mega-u3-contested-runtime-contract}
       - {name: Verify Session Semantic Clock / SP / LH delivery contract (T-03A2), run: npm run test:session-semantic-clock-sp-lh-delivery-contract}

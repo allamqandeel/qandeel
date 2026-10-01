@@ -10,7 +10,17 @@ interface TreeNode {
   readonly children?: readonly unknown[];
 }
 
-/** Every circle the renderer actually asked Skia to paint, with the ancestors it sits under. */
+/**
+ * Every circle the renderer actually asked Skia to paint, and every OBJECT ANCHOR, with the ancestors
+ * each sits under.
+ *
+ * VPORT-01 re-anchor: the placeholder drew each object as a circle, so a circle at a node's position
+ * WAS that object. The final world draws each object as its canonical morphology, a path, inside a group
+ * that carries only the object's origin — no transform and no opacity, a signature nothing else in the
+ * renderer has. That anchor is reported here as a zero-radius entry at the object's own placed point,
+ * so the claims these suites make — what is painted, where, and under which camera group — are read off
+ * the same tree as before, from the object itself.
+ */
 export function circles(json: unknown): { cx: number; cy: number; r: number; underOpacity: boolean }[] {
   const found: { cx: number; cy: number; r: number; underOpacity: boolean }[] = [];
   const walk = (node: unknown, opacityAbove: boolean): void => {
@@ -20,6 +30,18 @@ export function circles(json: unknown): { cx: number; cy: number; r: number; und
     const opacityHere = opacityAbove || (props !== undefined && props.opacity !== undefined && props.origin === undefined);
     if (props !== undefined && typeof props.cx === 'number' && typeof props.cy === 'number' && typeof props.r === 'number') {
       found.push({ cx: props.cx, cy: props.cy, r: props.r, underOpacity: opacityAbove });
+    }
+    const origin = props?.origin as { x?: unknown; y?: unknown } | undefined;
+    if (
+      props !== undefined &&
+      props.skiaElement === 'Group' &&
+      props.opacity === undefined &&
+      props.transform === undefined &&
+      origin !== undefined &&
+      typeof origin.x === 'number' &&
+      typeof origin.y === 'number'
+    ) {
+      found.push({ cx: origin.x, cy: origin.y, r: 0, underOpacity: opacityAbove });
     }
     for (const child of record.children ?? []) walk(child, opacityHere);
   };
