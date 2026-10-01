@@ -482,5 +482,20 @@ with clear state`, with ADB `device offline` instability in the boot log. No app
 workflow's own documented retry, the failed job is re-run once (consumer only, no rebuild); its classification is recorded
 in §17.3.
 
-### 17.3 Results after R2
-Recorded in the follow-up documentation commit (§17.4) once known. The E2E rows' closure state is unchanged by R2.
+### 17.3 Results after R2 (R2 head `e91578d`)
+- **API CI** — run `36782307459`: success. `verify-migration-0122.mjs` 23/23 scenarios, `P01` passes. The 0130 verifier
+  (`Verify W3-MEGA-S Personal export and Personal-world account deletion against real PostgreSQL`) ran and passed on
+  PostgreSQL 17, so PostgreSQL showed no new 0130 defect and 0130 was not touched. The W3-MEGA-S root contract step also
+  passed; R2 did not touch that contract.
+- **iOS** — the `c7ea9af` iOS smoke was `cancelled`, not failed: pushing R2 started Mobile CI run `36782307445` on the
+  same ref, and the workflow's `cancel-in-progress` concurrency stopped the older run. Nothing about R2 caused a failure.
+  On `e91578d`, iOS (iPhone 17 / iOS 26.5) smoke: success (attempt 1 and attempt 2).
+- **Android** — the R2 push's own Mobile CI run (`36782307445`, attempt 1) failed in the same way as on `c7ea9af`. The
+  step was the same, the failure came after `Launch app "com.qandeel.mobile" with clear state...`, the boot log showed the
+  same ADB `device offline` instability, and Maestro gave no assertion or crash message. The workflow does not upload the
+  Maestro debug directory, so there is no screenshot or logcat for either failure. That run's failed jobs were then
+  re-run with GitHub's "re-run failed jobs", with no workflow, timeout or code change (attempt 2). Result: **success**.
+  The code and head were the same in both attempts, `main` (`1e7b681`) is green on the same smoke, and iOS passed. The
+  first failure is therefore classified **`INFRASTRUCTURE / HARNESS FLAKE`**, not an app-level defect.
+
+The E2E rows' closure state is unchanged by R2.
