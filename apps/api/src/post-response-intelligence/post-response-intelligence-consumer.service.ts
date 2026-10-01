@@ -50,9 +50,9 @@ export function withPostResponseAiUsageAttribution<T>(envelope: string, work: ()
   let attribution: AiUsageAttribution | undefined;
   try {
     const event = JSON.parse(envelope) as { subject_user_id?: unknown; subject_session_id?: unknown; subject_turn_id?: unknown; payload?: { processing_path?: unknown } };
-    const uuid = (value: unknown): value is string => typeof value === 'string' && UUID.test(value);
     const path = event?.payload?.processing_path;
-    if (uuid(event?.subject_user_id) && uuid(event.subject_session_id) && uuid(event.subject_turn_id)) {
+    // The identities are validated by runWithAiUsageAttribution itself, which opens no scope for a non-UUID value.
+    if (typeof event?.subject_user_id === 'string' && typeof event.subject_session_id === 'string' && typeof event.subject_turn_id === 'string') {
       attribution = {
         userId: event.subject_user_id, sessionId: event.subject_session_id, sourceTurnId: event.subject_turn_id,
         ...(path === 'FAST' || path === 'DEEP' ? { processingPath: path } : {}),
@@ -63,7 +63,5 @@ export function withPostResponseAiUsageAttribution<T>(envelope: string, work: ()
   }
   return attribution ? runWithAiUsageAttribution(attribution, work) : work();
 }
-
-const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
 function boundedRetryDelay(value:string|undefined):number{const parsed=Number(value);return Number.isFinite(parsed)?Math.min(30_000,Math.max(100,Math.trunc(parsed))):1_000;}

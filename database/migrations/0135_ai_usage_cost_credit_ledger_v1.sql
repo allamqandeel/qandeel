@@ -341,6 +341,10 @@ BEGIN
     -- An unreferenced card may be withdrawn; a referenced one is held by the components' RESTRICT foreign key.
     RETURN OLD;
   END IF;
+  -- Exclusive per pricing key, taken before anything is judged. A rating takes the same key SHARED before it reads
+  -- cards, so a window can never close while a rating against it is being written.
+  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
+    'qandeel.ai-price-card.v1:' || NEW.provider || '/' || NEW.model || '/' || NEW.operation || '/' || NEW.usage_kind, 0));
   IF TG_OP = 'UPDATE' THEN
     IF OLD.effective_to IS NOT NULL OR NEW.effective_to IS NULL
        OR (to_jsonb(NEW) - 'effective_to') IS DISTINCT FROM (to_jsonb(OLD) - 'effective_to') THEN
@@ -351,8 +355,6 @@ BEGIN
       RAISE EXCEPTION 'AI_PRICE_CARD_WINDOW_IN_USE' USING ERRCODE = '55000';
     END IF;
   END IF;
-  PERFORM pg_catalog.pg_advisory_xact_lock(pg_catalog.hashtextextended(
-    'qandeel.ai-price-card.v1:' || NEW.provider || '/' || NEW.model || '/' || NEW.operation || '/' || NEW.usage_kind, 0));
   IF EXISTS (SELECT 1 FROM public.ai_price_cards p
               WHERE p.id <> NEW.id AND p.provider = NEW.provider AND p.model = NEW.model AND p.operation = NEW.operation
                 AND p.usage_kind = NEW.usage_kind
@@ -417,6 +419,12 @@ BEGIN
   IF c.usage_completeness <> 'COMPLETE' THEN
     v_state := 'USAGE_UNKNOWN';
   ELSE
+    -- Each pricing key this call reads, SHARED and in one order: ratings never block each other, and a card window
+    -- cannot be closed or overlapped (the card guard takes the key exclusively) while this rating is written.
+    PERFORM pg_catalog.pg_advisory_xact_lock_shared(pg_catalog.hashtextextended(
+      'qandeel.ai-price-card.v1:' || c.provider || '/' || c.requested_model || '/' || c.operation || '/' || k.usage_kind, 0))
+      FROM (SELECT u.usage_kind FROM public.ai_provider_call_usage u WHERE u.provider_call_id = c.id
+             ORDER BY u.usage_kind COLLATE "C") k;
     SELECT count(*) FILTER (WHERE p.id IS NULL), count(DISTINCT p.currency), min(p.currency),
            sum(public.ai_rated_component_amount_v1(u.quantity, p.unit_price, p.price_basis_units))
       INTO v_unpriced, v_currencies, v_currency, v_total

@@ -664,6 +664,26 @@ async function verifyCommittedRaces() {
     assert.equal(await blockedFor(sameAccount), 'BLOCKED', 'the same account\'s begin waits for the open one');
     await a.query('COMMIT');
     assert.equal((await sameAccount).rows[0].begin_outcome, 'BEGUN', 'and proceeds once it commits - no deadlock');
+
+    stage = 'committed race: a price window never closes under a rating being written';
+    await q(`INSERT INTO public.ai_price_cards (card_class, provider, model, operation, usage_kind, unit_price, price_basis_units, currency, effective_from, source_reference)
+             SELECT 'TEST_ONLY', 'TEST_PROVIDER', 'race-model', 'TEST_OPERATION', k, 1, 1000000, 'USD', '2026-01-01', 'TEST_ONLY race fixture'
+               FROM unnest(ARRAY['INPUT_TOKEN', 'CACHE_READ_INPUT_TOKEN', 'CACHE_WRITE_INPUT_TOKEN', 'OUTPUT_TOKEN']) k`);
+    const raceCall = randomUUID();
+    await q(`INSERT INTO public.ai_provider_calls (id, user_id, provider, requested_model, operation, feature_family, attempt_number, call_state, started_at)
+             VALUES ($1, $2, 'TEST_PROVIDER', 'race-model', 'TEST_OPERATION', 'CU_SEGMENTATION', 1, 'PENDING', '2026-06-01')`, [raceCall, alice]);
+    const owner = new Client({ connectionString: databaseUrl });
+    await owner.connect();
+    connections.push(owner);
+    await owner.query("SET lock_timeout = '10s'");
+    await a.query('BEGIN');
+    await a.query(SETTLE, [raceCall, alice, 'SUCCEEDED', 'COMPLETE', JSON.stringify(FOUR)]);
+    const closing = owner.query("SELECT public.register_ai_price_card_v1('TEST_ONLY', 'TEST_PROVIDER', 'race-model', 'TEST_OPERATION', 'INPUT_TOKEN', 9, 1000000, 'USD', '2026-03-01', 'TEST_ONLY race')");
+    assert.equal(await blockedFor(closing), 'BLOCKED', 'closing the window waits for the rating being written against it');
+    await a.query('COMMIT');
+    const closed = await closing.then(() => 'CLOSED', (error) => error.code);
+    assert.equal(closed, '55000', 'and is then refused: the committed rating falls inside the window it would have cut');
+    assert.equal(await count("SELECT count(*) AS n FROM public.ai_price_cards WHERE model = 'race-model' AND effective_to IS NOT NULL"), 0, 'no window was closed');
   } finally {
     for (const connection of connections) await connection.end().catch(() => undefined);
     // The accounting rows are append-only by design; the fixture owner removes them, then the fixture accounts, with
@@ -674,6 +694,7 @@ async function verifyCommittedRaces() {
       await q('DELETE FROM public.ai_cost_ratings WHERE provider_call_id IN (SELECT id FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[]))', [users]);
       await q('DELETE FROM public.ai_provider_call_usage WHERE provider_call_id IN (SELECT id FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[]))', [users]);
       await q('DELETE FROM public.ai_provider_calls WHERE user_id = ANY($1::uuid[])', [users]);
+      await q("DELETE FROM public.ai_price_cards WHERE model = 'race-model'");
       await q('DELETE FROM public.runtime_event_outbox WHERE subject_user_id = ANY($1::uuid[])', [users]);
       await q('DELETE FROM public.conversation_turns WHERE user_id = ANY($1::uuid[])', [users]);
       await q('DELETE FROM public.session_historical_baselines WHERE session_id = ANY($1::uuid[])', [sessions]);

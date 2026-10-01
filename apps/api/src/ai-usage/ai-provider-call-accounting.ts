@@ -104,7 +104,10 @@ export class AiProviderCallAccounting {
       this.signal('begin', 'unattributed');
       throw new AiProviderCallAccountingUnavailableError();
     }
-    if (!AI_MODEL_IDENTITY.test(descriptor.requestedModel)) throw new AiProviderCallAccountingUnavailableError();
+    if (!AI_MODEL_IDENTITY.test(descriptor.requestedModel)) {
+      this.signal('begin', 'failure');
+      throw new AiProviderCallAccountingUnavailableError();
+    }
     const correlation = safely(this.correlation);
     const callId = this.newCallId();
     try {
