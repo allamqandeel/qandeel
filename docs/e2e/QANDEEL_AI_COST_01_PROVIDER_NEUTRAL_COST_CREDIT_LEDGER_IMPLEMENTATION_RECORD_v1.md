@@ -84,6 +84,8 @@ The static contract pins this census, so a tenth path fails CI until it is liste
 | Health probes (`apps/api/src/health/`) | **no** | — | — | — | — | — | — | — | — | not applicable | — | — | the contract proves no provider transport exists in `health/` |
 | `brain-eval` harness (`apps/api/scripts/brain-eval.ts`, `apps/api/src/brain-eval/`) | yes, but **operator-only, not production** | the routers' `fromEnvironment()` without accounting | evaluation | no reader | — | yes | gated by `QANDEEL_ALLOW_PAID_EVAL=1` | — | — | **not production**: owned by the roadmap's *QANDEEL-specific Model / Provider Benchmark & Selection* | its usage is now `null` when unknown, never 0 | its prices stay `null` (contract-pinned) | the contract proves nothing in production imports it |
 
+| Operator smoke scripts (`apps/api/scripts/verify-openai-smoke.ts`, `verify-claude-smoke.ts`) | yes, one call per manual run, **operator-only, not production** | the routers' `fromEnvironment()` without accounting | smoke | no reader | — | yes | none | no | — | **not production**: manual, credential-gated provider liveness checks, owned by the same benchmark / selection work as `brain-eval` | they now fail when usage is unknown, instead of comparing `null` | — | the scripts' TypeScript project is type-checked in API CI |
+
 \* The feature family is named `THREAD_FORMATION`. The Thread-layer contract forbids the `thread_establish` substring
 in any later migration, and the family name is stored in 0135's CHECK constraint.
 
