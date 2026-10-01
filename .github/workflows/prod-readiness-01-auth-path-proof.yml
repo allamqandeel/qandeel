@@ -1,0 +1,41 @@
+name: PROD-READINESS-01 auth path proof
+# PROD-READINESS-01 — review evidence only, never a gate. Runs the bounded auth request-path measurement
+# against the existing CI test project with the existing T-12 test account A: one sign-in, at most 20 requests
+# per measured hop, and one sign-out of the session the harness itself created. The output carries timings,
+# counts, booleans and claim names only — never a token, key, email or claim value.
+on:
+  pull_request:
+    paths:
+      - 'scripts/prod-readiness-01/auth-path-measurement.mjs'
+      - '.github/workflows/prod-readiness-01-auth-path-proof.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: prod-readiness-01-auth-path-proof
+  cancel-in-progress: false
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Measure the auth request path
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          T12_TEST_EMAIL_A: ${{ secrets.T12_TEST_EMAIL_A }}
+          T12_TEST_PASSWORD_A: ${{ secrets.T12_TEST_PASSWORD_A }}
+        run: node scripts/prod-readiness-01/auth-path-measurement.mjs | tee auth-path-measurement.json
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: prod-readiness-01-auth-path-measurement
+          path: auth-path-measurement.json
+          retention-days: 30
