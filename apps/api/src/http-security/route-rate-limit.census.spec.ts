@@ -7,7 +7,7 @@ import { AppModule } from '../app.module';
 import { parseProxyConfiguration } from './client-address';
 import { configureHttpSecurity } from './http-security';
 import { RATE_LIMIT_POLICIES, type RateLimitClass } from './rate-limit.policy';
-import { censusClassOf, ROUTE_RATE_LIMIT_CENSUS } from './route-rate-limit.census';
+import { censusClassOf, routeKeyOf, ROUTE_RATE_LIMIT_CENSUS } from './route-rate-limit.census';
 
 /**
  * PROD-SEC-01 (SEC-A) — the route census against the REAL application graph. Every controller reachable from
@@ -46,48 +46,44 @@ const isGuarded = (controller: Constructor, handler: string) =>
 
 describe('the route census covers the real application exactly', () => {
   const controllers = controllersOf(AppModule);
+  const routes = [...controllers].flatMap((controller) =>
+    handlersOf(controller).map((handler) => {
+      const fn = (controller.prototype as Record<string, object>)[handler];
+      return { controller, handler, fn, key: routeKeyOf(controller, fn) as string };
+    }),
+  );
 
-  it('finds the application controllers', () => {
-    expect(controllers.size).toBe(ROUTE_RATE_LIMIT_CENSUS.size);
+  it('finds every application route, each once', () => {
+    expect(routes.length).toBeGreaterThanOrEqual(40);
+    expect(new Set(routes.map((route) => route.key)).size).toBe(routes.length);
+    expect(PATH_METADATA).toBe('path'); // the metadata the census reads is Nest's own
   });
 
   it('names every routed handler of every controller with a deliberate class', () => {
-    const unclassified: string[] = [];
-    for (const controller of controllers) {
-      for (const handler of handlersOf(controller)) {
-        if (censusClassOf(controller, handler) === 'UNCLASSIFIED') unclassified.push(`${controller.name}.${handler}`);
-      }
-    }
+    const unclassified = routes.filter((route) => censusClassOf(route.controller, route.fn) === 'UNCLASSIFIED').map((route) => route.key);
     expect(unclassified).toEqual([]);
   });
 
   it('names nothing that does not exist', () => {
-    const stale: string[] = [];
-    for (const [controller, routes] of ROUTE_RATE_LIMIT_CENSUS) {
-      if (!controllers.has(controller)) stale.push(`${controller.name} (not in AppModule)`);
-      const handlers = new Set(handlersOf(controller));
-      for (const handler of Object.keys(routes)) if (!handlers.has(handler)) stale.push(`${controller.name}.${handler}`);
-    }
-    expect(stale).toEqual([]);
+    const served = new Set(routes.map((route) => route.key));
+    expect(Object.keys(ROUTE_RATE_LIMIT_CENSUS).filter((key) => !served.has(key))).toEqual([]);
   });
 
   it('classifies every route without an authentication guard as health or pre-authentication, and nothing else that way', () => {
     const unauthenticatedClasses = new Set<RateLimitClass>(['HEALTH', 'PRE_AUTH_LOOKUP', 'PRE_AUTH_CREDENTIAL', 'PRE_AUTH_MAIL']);
     const mismatched: string[] = [];
     const unauthenticated: string[] = [];
-    for (const controller of controllers) {
-      for (const handler of handlersOf(controller)) {
-        const routeClass = censusClassOf(controller, handler);
-        const guarded = isGuarded(controller, handler);
-        if (!guarded) unauthenticated.push(`${String(Reflect.getMetadata(PATH_METADATA, controller))}.${handler}`);
-        if (guarded === unauthenticatedClasses.has(routeClass)) mismatched.push(`${controller.name}.${handler} (${routeClass}, guarded=${guarded})`);
-      }
+    for (const route of routes) {
+      const routeClass = censusClassOf(route.controller, route.fn);
+      const guarded = isGuarded(route.controller, route.handler);
+      if (!guarded) unauthenticated.push(route.key);
+      if (guarded === unauthenticatedClasses.has(routeClass)) mismatched.push(`${route.key} (${routeClass}, guarded=${guarded})`);
     }
     expect(mismatched).toEqual([]);
-    // The pre-authentication surface, stated: health and the three Login ID routes plus availability.
+    // The pre-authentication surface, stated: health, Login ID availability and the three Login ID routes.
     expect(unauthenticated.sort()).toEqual([
-      'account.checkLoginIdAvailability', 'account.resendLoginIdVerification', 'account.signInWithLoginId', 'account.verifyLoginIdEmail',
-      'health.getHealth', 'health.getLive', 'health.getReady',
+      'GET /health', 'GET /health/live', 'GET /health/ready',
+      'POST /account/login-id-availability', 'POST /account/login-id-resend-verification', 'POST /account/login-id-sign-in', 'POST /account/login-id-verify-email',
     ]);
   });
 });

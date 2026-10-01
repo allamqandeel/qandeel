@@ -91,7 +91,7 @@ const HOUR_MS = 3_600_000;
 
 /** The route's class, from the one route census. A route the census does not name is UNCLASSIFIED. */
 export function rateLimitClassOf(context: ExecutionContext): RateLimitClass {
-  return censusClassOf(context.getClass(), context.getHandler().name);
+  return censusClassOf(context.getClass(), context.getHandler());
 }
 
 const policyOf = (context: ExecutionContext): RateLimitPolicy => RATE_LIMIT_POLICIES[rateLimitClassOf(context)];
