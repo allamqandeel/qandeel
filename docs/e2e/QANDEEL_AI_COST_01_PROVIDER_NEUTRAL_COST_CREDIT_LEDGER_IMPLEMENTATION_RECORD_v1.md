@@ -5,9 +5,12 @@
 are canonical.
 **Branch:** `feat/ai-cost-01-provider-neutral-cost-credit-ledger`.
 - **Implementation commit:** `2b273d9`.
-- **Code-review corrections:** `04d61c1`. This is the **implementation evidence head**.
+- **Code-review corrections:** `04d61c1`.
+- **CI corrections:** `316b9da` (verifier counts are semantic, hazard H4) and `1c7fa3e` (the OpenAI smoke script treats
+  unknown usage as a failed smoke). `1c7fa3e` is the **implementation evidence head**: API CI `36921034566` and
+  focused `migration-0135` run `36922278357` both passed on it.
 
-Every commit after `04d61c1` is documentation / governance only.
+Every commit after `1c7fa3e` is documentation / governance only.
 **Migration:** `0135_ai_usage_cost_credit_ledger_v1.sql` (the next free slot).
 **Backlog:** no item names this task, so it inherits none (BG-05). No item is admitted (§13).
 **Claude did not merge anything.**
@@ -230,6 +233,7 @@ The boundary lives in `apps/api/src/ai-usage/`.
   |---|---|---|
   | `36914274063` | `migration-0135` | `2b273d9` |
   | `36916020098` | `migration-0135` | corrected head `04d61c1`, including the new lock race |
+  | `36922278357` | `migration-0135` | implementation evidence head `1c7fa3e` (semantic H4 counts) |
   | `36914565010` | `migration-0133` | — |
   | `36914848316` | `migration-0130` | — |
   | `36915084073` | `migration-0131` | — |
