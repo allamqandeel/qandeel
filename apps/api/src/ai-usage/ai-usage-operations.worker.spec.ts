@@ -1,4 +1,6 @@
+import { ServiceUnavailableException } from '@nestjs/common';
 import { AiUsageOperationsWorker, parseAiUsageOperationsSummary } from './ai-usage-operations.worker';
+import { DataApiError } from '../conversation/supabase-data-api.service';
 import { TelemetryService } from '../observability/telemetry.service';
 import { CorrelationService } from '../observability/correlation.service';
 import type { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
@@ -19,17 +21,67 @@ describe('AI-COST-01 accounting operations visibility', () => {
     }
   });
 
-  it('emits the stale (crash-left, unknown-cost) and unknown / unpriced counts as gauges, and survives a failed scan', async () => {
-    const rpc = jest.fn().mockResolvedValueOnce([ROW]).mockRejectedValueOnce(new Error('down'));
-    const telemetry = { recordAiUsageOperationsState: jest.fn() } as unknown as TelemetryService;
-    const worker = new AiUsageOperationsWorker({ rpc } as unknown as SupabaseServiceRoleApiService, telemetry);
+  function scanHarness(rpc: jest.Mock) {
+    const telemetry = { recordAiUsageOperationsState: jest.fn(), recordOperationalOutcome: jest.fn() };
+    const worker = new AiUsageOperationsWorker({ rpc } as unknown as SupabaseServiceRoleApiService, telemetry as unknown as TelemetryService);
+    return { worker, telemetry };
+  }
+
+  it('a successful scan emits the success outcome and the stale (crash-left, unknown-cost) and unknown / unpriced gauges', async () => {
+    const { worker, telemetry } = scanHarness(jest.fn().mockResolvedValueOnce([ROW]));
     await worker.runOnce();
-    expect(rpc).toHaveBeenCalledWith('server_read_ai_usage_operations_summary_v1', {});
-    const calls = (telemetry.recordAiUsageOperationsState as jest.Mock).mock.calls;
+    expect(telemetry.recordOperationalOutcome.mock.calls).toEqual([['AI_USAGE_ACCOUNTING', 'operations_scan', 'success']]);
+    const calls = telemetry.recordAiUsageOperationsState.mock.calls;
+    expect(calls).toHaveLength(8);
     expect(calls).toContainEqual(['stale_pending', 1, 420]);
     expect(calls).toContainEqual(['usage_unknown_24h', 4]);
     expect(calls).toContainEqual(['unpriced_24h', 26]);
+  });
+
+  it.each([
+    ['an unconfigured or unreachable server channel', new ServiceUnavailableException('connect ECONNREFUSED 10.0.0.7:5432'), 'transport_failure'],
+    ['a Data API 503', new DataApiError(503), 'transport_failure'],
+    ['a fetch timeout', Object.assign(new Error('The operation timed out'), { name: 'TimeoutError' }), 'transport_failure'],
+    ['a Data API 4xx refusal', new DataApiError(400), 'integrity_failure'],
+  ])('%s is a fail-soft, visible %s with no gauge, retried on the next cycle', async (_case, error, outcome) => {
+    const rpc = jest.fn().mockRejectedValueOnce(error).mockResolvedValueOnce([ROW]);
+    const { worker, telemetry } = scanHarness(rpc);
     await expect(worker.runOnce()).resolves.toBeUndefined();
+    expect(telemetry.recordOperationalOutcome.mock.calls).toEqual([['AI_USAGE_ACCOUNTING', 'operations_scan', outcome]]);
+    expect(telemetry.recordAiUsageOperationsState).not.toHaveBeenCalled();
+    await worker.runOnce();
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(telemetry.recordOperationalOutcome).toHaveBeenLastCalledWith('AI_USAGE_ACCOUNTING', 'operations_scan', 'success');
+  });
+
+  it.each([[[]], [[ROW, ROW]], [[{ ...ROW, pending_calls: -1 }]], [null], ['<html>502</html>']])(
+    'a malformed answer %j is a fail-soft, visible integrity_failure with no gauge', async (answer) => {
+      const { worker, telemetry } = scanHarness(jest.fn().mockResolvedValueOnce(answer));
+      await expect(worker.runOnce()).resolves.toBeUndefined();
+      expect(telemetry.recordOperationalOutcome.mock.calls).toEqual([['AI_USAGE_ACCOUNTING', 'operations_scan', 'integrity_failure']]);
+      expect(telemetry.recordAiUsageOperationsState).not.toHaveBeenCalled();
+    });
+
+  it('a throwing telemetry object fails nothing and is never counted as a failed scan', async () => {
+    const rpc = jest.fn().mockResolvedValue([ROW]);
+    const { worker, telemetry } = scanHarness(rpc);
+    telemetry.recordOperationalOutcome.mockImplementation(() => { throw new Error('exporter down'); });
+    telemetry.recordAiUsageOperationsState.mockImplementation(() => { throw new Error('exporter down'); });
+    await expect(worker.runOnce()).resolves.toBeUndefined();
+    await expect(worker.runOnce()).resolves.toBeUndefined();
+    expect(rpc).toHaveBeenCalledTimes(2);
+    expect(rpc).toHaveBeenCalledWith('server_read_ai_usage_operations_summary_v1', {});
+    expect(telemetry.recordOperationalOutcome.mock.calls.every(([, , outcome]) => outcome === 'success')).toBe(true);
+  });
+
+  it('no error text, database code, URL or identity reaches telemetry on any path', async () => {
+    const secret = Object.assign(new DataApiError(409, undefined), { message: '23505 duplicate key user 11111111-1111-4111-8111-111111111111' });
+    const { worker, telemetry } = scanHarness(jest.fn().mockRejectedValueOnce(secret).mockRejectedValueOnce(new TypeError('fetch failed https://x.supabase.co', { cause: new Error('ECONNRESET') })).mockResolvedValueOnce([ROW]));
+    for (let i = 0; i < 3; i += 1) await worker.runOnce();
+    const emitted = JSON.stringify([telemetry.recordOperationalOutcome.mock.calls, telemetry.recordAiUsageOperationsState.mock.calls]);
+    expect(emitted).not.toMatch(/23505|duplicate|1111|supabase|ECONN|fetch|user|session|turn|model/u);
+    expect(telemetry.recordOperationalOutcome.mock.calls.map(([, , outcome]) => outcome)).toEqual(['integrity_failure', 'transport_failure', 'success']);
+    for (const call of telemetry.recordOperationalOutcome.mock.calls) expect(call).toHaveLength(3);
   });
 
   it('is disabled under tests and without the server channel', () => {

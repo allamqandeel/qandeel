@@ -3883,10 +3883,11 @@ fact, and keeps provider usage, rated cost and the QANDEEL Credit apart. Forward
 - **Credits.** `ai_credit_policies` admits `DRAFT` only (the activation gate). `ai_credit_ratings` can be written only
   under an `ACTIVE` policy, so nothing is rated or debited. `server_read_ai_credit_policy_state_v1()` answers
   `CREDIT_POLICY_NOT_ACTIVATED`. `ai_credits_for_rated_cost_v1` is the pure formula family for simulation.
-- **Reads.** `server_read_ai_usage_operations_summary_v1()` (numbers only, including stale PENDING) and
-  `server_read_ai_cost_aggregates_v1(from, to)` (day / provider / model / feature / path / state, never per account).
+- **Reads.** Three content-free reads: `server_read_ai_usage_operations_summary_v1()` (numbers only, including stale
+  PENDING), `server_read_ai_cost_aggregates_v1(from, to)` (day / provider / model / feature / path / state, never per
+  account) and `server_read_ai_credit_policy_state_v1()`.
 - **Authority and erasure.** RLS on with zero policies; no privilege for any application role on any table; exactly five
-  functions executable by `service_role`. `user_id` cascades from `public.users`, which the governed 0130 erasure
+  functions executable by `service_role` (two commands, three reads). `user_id` cascades from `public.users`, which the governed 0130 erasure
   deletes, and the immutability guards allow only that cascade.
 
 `database/verify-migration-0135.mjs` (`npm run verify:ai-usage-cost-ledger:integration`, API CI) proves the catalog

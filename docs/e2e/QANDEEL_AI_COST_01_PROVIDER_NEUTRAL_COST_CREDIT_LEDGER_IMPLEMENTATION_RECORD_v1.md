@@ -147,7 +147,7 @@ Forward-only. Migrations 0001–0134 are byte-unchanged.
   - `ai_credits_for_rated_cost_v1` is the pure formula: rated cost × rate, rounded `CEILING`, `FLOOR` or `HALF_UP`,
     exactly.
   - `server_read_ai_credit_policy_state_v1()` → `CREDIT_POLICY_NOT_ACTIVATED`.
-- **Reads.**
+- **Reads.** Three content-free reads: the two below and `server_read_ai_credit_policy_state_v1()` above.
   - `server_read_ai_usage_operations_summary_v1()` returns numbers only: pending, **stale pending** (older than 5
     minutes, which no live attempt can reach) with its oldest age, and the 24-hour settled / failed / cancelled /
     unknown / rated / unpriced counts.
@@ -158,7 +158,7 @@ Forward-only. Migrations 0001–0134 are byte-unchanged.
   - All seven tables have RLS on, zero policies, and every privilege revoked from `PUBLIC`, `anon`, `authenticated` and
     `service_role`.
   - Exactly five functions are `EXECUTE`-able by `service_role`: `begin`, `settle`, the summary, the aggregates and the
-    Credit state. Every other function is executable by no application role.
+    Credit state, so two commands and three content-free reads. Every other function is executable by no application role.
   - Owner `postgres`, `search_path = ''`. There are no sequences.
 
 ## 7. Normalized usage registry
@@ -203,6 +203,14 @@ The boundary lives in `apps/api/src/ai-usage/`.
   - `qandeel.ai_usage.tokens {provider, feature_family, usage_kind}`, with the quantity as the value.
   - The `qandeel.ai_usage.operations.*` gauges, from the summary every 60 s (the worker lives in `AiUsageModule`,
     under `ModelRouterModule`).
+  - The scan's own health, through the PROD-OPS-01 operational-outcome mechanism (independent review correction A):
+    `qandeel.operations.outcomes {domain: AI_USAGE_ACCOUNTING, operation: operations_scan, outcome, policy_version}`.
+    - `outcome` is `success | transport_failure | integrity_failure`. A failed RPC or a malformed answer is classified by
+      the existing `classifyOperationalFailure` (by error kind only, never its text).
+    - The scan stays fail-soft: `runOnce()` resolves, emits no gauge for a failed read, and the next cycle retries.
+    - Read + parse is judged first. The outcome and the gauges are emitted afterwards through a `quietly` wrapper, so a
+      throwing telemetry object is never counted as a failed scan and changes no accounting.
+    - The combination is admitted in the shared finite registry `OPERATIONAL_OUTCOMES`; nothing outside it is emitted.
 
   Labels are closed registries. No account, session, turn or call id, no model string and no money ever becomes a
   label.
@@ -246,11 +254,16 @@ The boundary lives in `apps/api/src/ai-usage/`.
   - committed multi-connection races: identical settlements converge, conflicting ones refuse one, concurrent begins of
     one id converge, attempts are numbered without gaps, two accounts never wait on each other, and a window cannot
     close under a rating being written.
-- **Root static contracts: 1074 / 1074**, including the forward-safety mirror. The new
-  `tests/ai-cost-01-provider-neutral-cost-credit-ledger-contract.test.mjs` has:
+- **Root static contracts: 1081 / 1081** (after correction A), including the forward-safety mirror and PROD-OPS-01. The
+  new `tests/ai-cost-01-provider-neutral-cost-credit-ledger-contract.test.mjs` has:
   - 3 structural tests (census and frozen adapters, a clean tree, forward-only);
-  - **41 planted defects**: all 28 of §21, plus census, attribution and variant plants;
+  - **48 planted defects**: all 28 of §21, plus census, attribution and variant plants, and 7 operations-scan plants
+    (a silent inner or outer `catch`, error text in the signal, no success outcome, gauges or signal outside the
+    fail-soft wrapper, the registry entry dropped);
   - registration.
+- **Independent review correction A (local).** API Jest 215 / 215 suites, 4904 tests (all but `api-http-bootstrap`),
+  including the reworked `ai-usage-operations.worker.spec` (success, transport, integrity, throwing telemetry,
+  no private data) and `observability.spec` (the registry's legal relation). Both TypeScript projects are clean.
 - **Database static contracts:** 1281 / 1281 with 0135.
 - **API Jest (local).** Every suite passes except the known host limitation: `api-http-bootstrap` cannot load the
   platform adapter here.
@@ -278,6 +291,8 @@ The boundary lives in `apps/api/src/ai-usage/`.
 | 7 | The invalid-model refusal was silent. | **Fixed.** |
 | 8 | Duplicate UUID validation in the consumer. | **Fixed.** |
 | 9 | The operations worker mirrors the privacy worker's timer. | **Kept.** Each one is about 40 lines, and sharing them would couple two unrelated domains. |
+| IR-A | *Independent review:* a failed or malformed operations scan was swallowed by a silent `catch`, so the ledger's own monitor could go blind (PROD-OPS-01 posture). | **Fixed.** Fail-soft but visible: `AI_USAGE_ACCOUNTING / operations_scan` emits `success / transport_failure / integrity_failure` through the existing PROD-OPS-01 mechanism (§8). Proven by the worker spec and 7 planted defects. |
+| IR-B | *Independent review:* the 0135 header said "two content-free reads". | **Fixed.** Three: the operations summary, the cost aggregates and the Credit policy state. Corrected in the migration comment, `database/README.md` and §6 here. Comment only; no SQL changed. |
 
 ## 12. Privacy, deletion and PROD-SEC-02
 
@@ -324,7 +339,7 @@ The boundary lives in `apps/api/src/ai-usage/`.
 | C-2 Usage categories incomplete / provider-specific | **FIXED BOUNDEDLY** | A disjoint 4-kind partition with per-provider normalizers (§7). Audio / other units need a reviewed registry extension. |
 | C-3 No effective-dated Price Card authority | **FIXED** | `ai_price_cards`: effective windows, no overlap, immutable once used, TEST_ONLY isolation, owner-only. Verifier §4. |
 | C-4 No truthful rated-cost lifecycle | **FIXED** | `RATED_APPLICATION_COST` ratings: `RATED / UNPRICED / USAGE_UNKNOWN / PENDING`, exact numeric math, explicit versioned re-rating, a reconciled-cost seam. |
-| C-5 Unknown usage / cost can look like zero | **FIXED** | Unknown, failed and unpriced are never zero (normalizers, boundary and SQL). The stale-PENDING summary covers crashes. 8 planted defects on this. |
+| C-5 Unknown usage / cost can look like zero | **FIXED** | Unknown, failed and unpriced are never zero (normalizers, boundary and SQL). The stale-PENDING summary covers crashes, and the scan that reads it is itself visible when it fails (IR-A). 8 planted defects on this, plus 7 on the scan. |
 | C-6 No QANDEEL Credit accounting abstraction | **FIXED FOUNDATION; numeric formula NOT ACTIVATED** | Credit Policy contract, formula family, activation gate (`DRAFT` only), `CREDIT_POLICY_NOT_ACTIVATED`, simulator. No balance. |
 | C-7 Provider calls not fully attributed | **FIXED** | Account, session, turn, feature family and FAST / DEEP path on every production call, through the two attribution entries. `brain-eval` is non-production and owned by the benchmark roadmap item. |
 | C-8 Account deletion / privacy coverage | **FIXED** | Cascade from `public.users` through the governed erasure (verifier §8). Content-free schema and payloads. Export unchanged (§12). |

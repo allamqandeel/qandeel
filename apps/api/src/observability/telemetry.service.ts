@@ -71,6 +71,8 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  ['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
  ['ACCOUNT_DELETION',new Map([['claim',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','blocked_expected','superseded_expected',...OPERATION_FAILURES])],['provider_remove',new Set(['success','provider_unavailable'])],['complete',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
  ['UNDERSTANDING_CONFIDENCE',new Map([['confidence_reevaluate',new Set(['success','retry_pending'])]])],
+ // AI-COST-01: the accounting ledger's own health scan (migration 0135 operations summary).
+ ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],
 ]);
 // The bounded class of a retry_pending outcome, attached to it and to nothing else.
 const OPERATIONAL_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSPORT','INTEGRITY']);

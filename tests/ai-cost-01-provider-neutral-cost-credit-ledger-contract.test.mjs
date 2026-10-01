@@ -288,6 +288,32 @@ function telemetryViolations(world) {
   return out;
 }
 
+// Independent review correction: the ledger's own health scan is fail-soft but never silent (PROD-OPS-01 posture).
+function operationsScanViolations(world) {
+  const out = [];
+  const worker = ts(world.worker);
+  const scan = between(worker, 'async runOnce(): Promise<void> {', 'private signal(');
+  const signal = between(worker, 'private signal(', 'private quietly(');
+  if (!scan || !signal) return ['the operations scan or its signal is missing'];
+  for (const [, body] of scan.matchAll(/catch\b[^{]*\{([\s\S]*?)\n\s*\}/gu)) {
+    if (!body.includes('this.signal(')) out.push('a failure of the operations scan is caught silently');
+  }
+  if (!/\} catch \(error\) \{\s*this\.signal\(classifyOperationalFailure\(error\) === 'TRANSPORT' \? 'transport_failure' : 'integrity_failure'\);\s*return;/u.test(scan)) out.push('a failed read / parse is not classified into transport_failure | integrity_failure');
+  const read = scan.indexOf("rpc<unknown>('server_read_ai_usage_operations_summary_v1'");
+  const parse = scan.indexOf('parseAiUsageOperationsSummary(');
+  const judged = scan.indexOf('} catch (error) {');
+  if (read < 0 || parse < 0 || judged < 0 || read > judged || parse > judged) out.push('the summary read + parse is not inside the classified judgement');
+  const success = scan.indexOf("this.signal('success');");
+  const gauges = scan.indexOf('recordAiUsageOperationsState(');
+  if (success < 0 || success < judged || gauges < success) out.push('a successful scan does not emit success before its gauges');
+  if (!/this\.quietly\(\(\) => \{\s*const t = this\.telemetry;/u.test(scan) || (scan.match(/this\.telemetry/gu) ?? []).length !== 1) out.push('the gauges reach telemetry outside the fail-soft wrapper');
+  if (!/\): void \{\s*this\.quietly\(\(\) => this\.telemetry\.recordOperationalOutcome\('AI_USAGE_ACCOUNTING', 'operations_scan', outcome\)\);\s*\}\s*$/u.test(signal)) out.push('the operations outcome is not a fail-soft, closed AI_USAGE_ACCOUNTING / operations_scan signal');
+  if (!/^private signal\(outcome: 'success' \| 'transport_failure' \| 'integrity_failure'\): void/u.test(signal)) out.push('the operations outcome is not a closed union');
+  if (/this\.signal\([^;]*(?:\.message|String\(|error\.name|\.status|\.code|userId|sessionId|callId|model)/u.test(scan)) out.push('error text or an identifier reaches the operations signal');
+  if (!ts(world.telemetry).includes("['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],")) out.push('the finite operational registry does not admit exactly AI_USAGE_ACCOUNTING / operations_scan');
+  return out;
+}
+
 function authorityViolations(world) {
   const out = [];
   const migration = sql(world.migration);
@@ -358,7 +384,7 @@ function attributionViolations(world) {
   return out;
 }
 
-const DETECTORS = { censusViolations, creditViolations, pricingViolations, arithmeticViolations, unknownViolations, boundaryViolations, privacyViolations, telemetryViolations, authorityViolations, deletionViolations, prodSec02Violations, simulatorViolations, attributionViolations };
+const DETECTORS = { censusViolations, creditViolations, pricingViolations, arithmeticViolations, unknownViolations, boundaryViolations, privacyViolations, telemetryViolations, operationsScanViolations, authorityViolations, deletionViolations, prodSec02Violations, simulatorViolations, attributionViolations };
 
 // ---------------------------------------------------------------------------------------------------------------
 // The shipped tree.
@@ -436,6 +462,13 @@ const PLANTED = [
   ['28 the cost ledger accepts prompt / response text', 'privacyViolations', () => plant('migration', 'p_call_id uuid, p_user_id uuid, p_outcome text, p_usage_completeness text, p_usage jsonb\n)', 'p_call_id uuid, p_user_id uuid, p_outcome text, p_usage_completeness text, p_usage jsonb, p_response_text text\n)')],
   ['census: a new production provider path bypasses the boundary', 'censusViolations', () => plant('associationModule', "accountedGeminiTransport(\n    (url, init) => fetch(url, init), config.model, 'HYPOTHESIS_EVIDENCE_ASSOCIATION', productionAiProviderCallAccounting())", '(url, init) => fetch(url, init)')],
   ['census: a semantic binding is composed unaccounted', 'censusViolations', () => plant('conversationModule', "openAiFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))", 'openAiFocusResolutionBinding()')],
+  ['ops: a failed operations scan is swallowed by a silent catch', 'operationsScanViolations', () => plant('worker', "} catch (error) {\n        this.signal(classifyOperationalFailure(error) === 'TRANSPORT' ? 'transport_failure' : 'integrity_failure');\n        return;\n      }", '} catch {\n        return;\n      }')],
+  ['ops: a silent outer catch {} returns around the scan', 'operationsScanViolations', () => plant('worker', '    } finally {\n      this.running = false;', '    } catch {\n      // retried on the next cycle\n    } finally {\n      this.running = false;')],
+  ['ops: error text reaches the operations signal', 'operationsScanViolations', () => plant('worker', "this.signal(classifyOperationalFailure(error) === 'TRANSPORT' ? 'transport_failure' : 'integrity_failure');", 'this.signal((error as Error).message as never);')],
+  ['ops: a successful scan emits no success outcome', 'operationsScanViolations', () => plant('worker', "      this.signal('success');\n", '')],
+  ['ops: the gauges escape the fail-soft wrapper', 'operationsScanViolations', () => plant('worker', 'this.quietly(() => {\n        const t = this.telemetry;', '(() => {\n        const t = this.telemetry;')],
+  ['ops: the operations signal is not fail-soft', 'operationsScanViolations', () => plant('worker', 'this.quietly(() => this.telemetry.recordOperationalOutcome(', '(() => this.telemetry.recordOperationalOutcome(')],
+  ['ops: the registry drops the operations scan', 'operationsScanViolations', () => plant('telemetry', " ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],\n", '')],
   ['attribution: the foreground request is unattributed', 'attributionViolations', () => plant('conversationService', 'return runWithAiUsageAttribution({ userId }, () =>\n      runForegroundTurnWork(', 'return (() =>\n      runForegroundTurnWork(')],
 ];
 

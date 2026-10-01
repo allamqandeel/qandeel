@@ -1,6 +1,7 @@
 import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 import { TelemetryService } from '../observability/telemetry.service';
+import { classifyOperationalFailure } from '../observability/operational-failure';
 
 /** Default cadence of the scan. An implementation detail, not Product authority. */
 export const AI_USAGE_OPERATIONS_DEFAULT_POLL_MS = 60_000;
@@ -76,24 +77,51 @@ export class AiUsageOperationsWorker implements OnModuleInit, OnModuleDestroy {
     this.timer = undefined;
   }
 
+  /**
+   * One scan. The read + parse is judged on its own: a failure stays fail-soft (the next cycle retries it, and nothing
+   * here can alter accounting or a Product answer) but is never silent - it emits the PROD-OPS-01 operational outcome
+   * `AI_USAGE_ACCOUNTING / operations_scan` with only its closed class. Telemetry is emitted afterwards, outside that
+   * judgement, so a throwing telemetry object is never mistaken for a failed scan.
+   */
   async runOnce(): Promise<void> {
     if (this.running || this.stopped) return;
     this.running = true;
     try {
-      const summary = parseAiUsageOperationsSummary(await this.serviceApi.rpc<unknown>('server_read_ai_usage_operations_summary_v1', {}));
-      const t = this.telemetry;
-      t.recordAiUsageOperationsState('pending', summary.pendingCalls);
-      t.recordAiUsageOperationsState('stale_pending', summary.stalePendingCalls, summary.stalePendingOldestAgeSeconds);
-      t.recordAiUsageOperationsState('settled_24h', summary.settledCalls24h);
-      t.recordAiUsageOperationsState('failed_24h', summary.failedCalls24h);
-      t.recordAiUsageOperationsState('cancelled_24h', summary.cancelledCalls24h);
-      t.recordAiUsageOperationsState('usage_unknown_24h', summary.usageUnknownCalls24h);
-      t.recordAiUsageOperationsState('rated_24h', summary.ratedCalls24h);
-      t.recordAiUsageOperationsState('unpriced_24h', summary.unpricedCalls24h);
-    } catch {
-      // A failed scan is retried on the next cycle; it can never alter accounting or a Product answer.
+      let summary: AiUsageOperationsSummary;
+      try {
+        summary = parseAiUsageOperationsSummary(await this.serviceApi.rpc<unknown>('server_read_ai_usage_operations_summary_v1', {}));
+      } catch (error) {
+        this.signal(classifyOperationalFailure(error) === 'TRANSPORT' ? 'transport_failure' : 'integrity_failure');
+        return;
+      }
+      this.signal('success');
+      this.quietly(() => {
+        const t = this.telemetry;
+        t.recordAiUsageOperationsState('pending', summary.pendingCalls);
+        t.recordAiUsageOperationsState('stale_pending', summary.stalePendingCalls, summary.stalePendingOldestAgeSeconds);
+        t.recordAiUsageOperationsState('settled_24h', summary.settledCalls24h);
+        t.recordAiUsageOperationsState('failed_24h', summary.failedCalls24h);
+        t.recordAiUsageOperationsState('cancelled_24h', summary.cancelledCalls24h);
+        t.recordAiUsageOperationsState('usage_unknown_24h', summary.usageUnknownCalls24h);
+        t.recordAiUsageOperationsState('rated_24h', summary.ratedCalls24h);
+        t.recordAiUsageOperationsState('unpriced_24h', summary.unpricedCalls24h);
+      });
     } finally {
       this.running = false;
+    }
+  }
+
+  /** The closed outcome of one scan; no error text, database code or identity can be passed here. */
+  private signal(outcome: 'success' | 'transport_failure' | 'integrity_failure'): void {
+    this.quietly(() => this.telemetry.recordOperationalOutcome('AI_USAGE_ACCOUNTING', 'operations_scan', outcome));
+  }
+
+  /** Telemetry can never alter the scan, even if the telemetry object itself throws. */
+  private quietly(emit: () => void): void {
+    try {
+      emit();
+    } catch {
+      // Losing a signal is acceptable; it is not a failed scan and it changes no accounting.
     }
   }
 }

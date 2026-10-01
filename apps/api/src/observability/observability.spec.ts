@@ -170,8 +170,9 @@ const OPERATIONAL_LEGAL:ReadonlyArray<readonly [string,string,string]>=Object.fr
  ...['success','blocked_expected','superseded_expected','transport_failure','integrity_failure'].map(o=>['ACCOUNT_DELETION','erase',o] as const),
  ['ACCOUNT_DELETION','provider_remove','success'],['ACCOUNT_DELETION','provider_remove','provider_unavailable'],
  ['UNDERSTANDING_CONFIDENCE','confidence_reevaluate','success'],
+ ...['success','transport_failure','integrity_failure'].map(o=>['AI_USAGE_ACCOUNTING','operations_scan',o] as const),
 ] as const);
-const DOMAINS=['PRIVACY_EXPORT','ACCOUNT_DELETION','UNDERSTANDING_CONFIDENCE'],OPERATIONS=['prepare','claim','erase','provider_remove','complete','confidence_reevaluate','stuck_scan'],OUTCOMES=['success','retry_pending','terminal_failure','blocked_expected','superseded_expected','provider_unavailable','transport_failure','integrity_failure'];
+const DOMAINS=['PRIVACY_EXPORT','ACCOUNT_DELETION','UNDERSTANDING_CONFIDENCE','AI_USAGE_ACCOUNTING'],OPERATIONS=['prepare','claim','erase','provider_remove','complete','confidence_reevaluate','stuck_scan','operations_scan'],OUTCOMES=['success','retry_pending','terminal_failure','blocked_expected','superseded_expected','provider_unavailable','transport_failure','integrity_failure'];
 describe('PROD-OPS-01 operational telemetry',()=>{
  const harness=()=>{const t=new TelemetryService(new CorrelationService()),add=jest.fn(),state=jest.fn(),age=jest.fn(),failures=jest.fn();Object.assign(t as any,{operationalOutcomes:{add},privacyOperationStateCounts:{record:state},privacyOperationOldestAges:{record:age},privacyExportRecentFailures:{record:failures}});return{t,add,state,age,failures};};
  it('emits exactly the legal domain/operation/outcome relation and drops every other combination',()=>{const{t,add}=harness();

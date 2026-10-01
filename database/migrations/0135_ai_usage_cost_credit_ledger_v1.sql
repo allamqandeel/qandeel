@@ -29,8 +29,8 @@
 -- immutable; a new price is a new window; re-rating is an explicit, owner-only new version that keeps the old one.
 --
 -- Authority: every table is reachable by NO application role (row-level security on, zero policies, every privilege
--- revoked). The API holds exactly two commands (begin, settle) and two content-free reads through the service-role
--- channel. Price Cards and re-rating are database-owner acts only. Nothing here stores prompt, response, transcript,
+-- revoked). The API holds exactly two commands (begin, settle) and three content-free reads (operations summary, cost
+-- aggregates, Credit policy state) through the service-role channel. Price Cards and re-rating are database-owner acts only. Nothing here stores prompt, response, transcript,
 -- Memory, Hypothesis or any user text, any exception text, or any email / Login ID / Public ID: identity is the internal
 -- account UUID, and it disappears with the account (ON DELETE CASCADE from public.users, which the governed Personal
 -- erasure of 0130 deletes last), so account deletion leaves no cost row linked to anybody.
