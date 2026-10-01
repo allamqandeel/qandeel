@@ -160,10 +160,12 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `CLOSED — TOMBSTONE` |
-| `QAN-BL-PROD-02` | API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04) | `PROD-SEC-01 — API Baseline Hardening` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-02` | API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04) | `PROD-SEC-01 — API Baseline Hardening` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-03` | Operational Readiness & Silent-Failure Visibility: Readiness Probe (PR01-S05), Privacy Deletion / Export Preparation / Confidence Re-evaluation Silent Failures (P-1 / P-5 / U-4), Stuck-Job Visibility | `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-04` | Remote Auth Verification Cost and Capacity (PR01-A01 / A-03 / A-04) | `PROD-AUTH-01 — Auth Verification Path` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-05` | List / Fan-out Corrections and Unmeasured Payload / Semantic-Phase Sizes (PR01-D/M) | `PROD-DATA-01 — List/Fan-out Correction` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-LAUNCH-01` | Trusted Proxy / Edge / Origin Production Proof | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -603,6 +605,9 @@ obligation only (BG-07).
 
 ### `QAN-BL-PROD-02` — API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04)
 
+> **Historical pre-closure schema.** This block records the item as admitted. It is not the current lifecycle state; the
+> current state is the `CLOSED — TOMBSTONE` record in §6 below.
+
 - **Title / Finding:** no application-layer rate limit on any route, and the unauthenticated
   `/account/login-id-availability` and `/health/ready` are bounded by no layer (S-01). `trust proxy` is unset while
   `request.ip` is forwarded to Supabase Auth as `Sb-Forwarded-For`, so behind a platform proxy the provider's per-IP
@@ -689,6 +694,73 @@ obligation only (BG-07).
 
 These five entries add no Product semantics and authorize no implementation (BG-07). `QAN-BL-SEC-01` (mobile credential
 storage) is a different obligation and is neither duplicated nor re-owned here.
+
+### `QAN-BL-LAUNCH-01` — Trusted Proxy / Edge / Origin Production Proof
+
+- **Title / Finding:** QANDEEL's API now keeps its own boundary: an explicit trusted-proxy topology, a process-local
+  rate limit, a header baseline, and a production preflight. What lies outside the repository is still unproven, because
+  no hosting or edge provider has been chosen:
+  - TLS-only exposure;
+  - edge DoS protection;
+  - distributed, global rate limits for the abuse-sensitive routes;
+  - forwarding-header sanitation by the last proxy;
+  - the real proxy addresses for `QANDEEL_API_TRUSTED_PROXIES`;
+  - direct-origin bypass prevention;
+  - health-check compatibility;
+  - the same law for a future WebSocket / Voice path;
+  - fail-safe edge failure;
+  - Supabase Auth *IP address forwarding* enabled on the hosted project, with one controlled live proof;
+  - migration `0133`'s privilege closure confirmed on the hosted project, with an anon call to
+    `login_id_is_available_v1` refused there.
+- **Source:** `PROD-SEC-01` Task Contract §5.2, §7.2 and §9, and the
+  [Launch Edge Security Contract](../infra/LAUNCH_EDGE_SECURITY_CONTRACT_v1.md) §2. That contract is vendor-neutral and
+  is the full checklist.
+- **Why deferred:** each proof needs the real deployment, which the repository does not hold. Choosing a provider is
+  not `PROD-SEC-01`'s decision. The API's own share of every row is implemented and tested, so nothing implementable is
+  deferred.
+- **Owner task:** `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof`, a Final Launch exit
+  gate under the roadmap's Release Hardening & Launch layer.
+- **Severity:** `HIGH`. Without the origin restriction, every edge control can be bypassed, and without real
+  topology the provider's per-IP limits collapse.
+- **Reopen condition:** automatic when the Product Owner / Company records the hosting and edge decision, and in any
+  case before public production exposure.
+- **Required future property:** every item of the contract's §2 carries real-deployment evidence. A gate marked passed
+  while the direct-origin proof is missing is a false pass.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-LAUNCH-02` — Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7)
+
+- **Title / Finding:** `personal_data_private.identifier_digest_v1()` (migration `0130`) stores retired Login IDs
+  and Public IDs as `kind:sha256(lower(value))`. The digest is deterministic and unkeyed. The table is private and
+  executable by no client role, so this is not a current direct leak. If the table or a backup were disclosed, though,
+  low-entropy identifiers could be guessed offline.
+- **Source:** the independent W3 Privacy review's `P-7`, carried into the `PROD-SEC-01` Task Contract as `SEC-G`,
+  §10. Its feasibility evidence is in the
+  [`PROD-SEC-01` implementation record](e2e/QANDEEL_PROD_SEC_01_API_BASELINE_SECURITY_HARDENING_IMPLEMENTATION_RECORD_v1.md)
+  §8.
+- **Why deferred:** a safe keyed digest needs a managed secret whose root key lives outside the database and its
+  backups, with a provisioning, rotation and dual-read law. None of that can be proven today:
+  - the CI database is stock PostgreSQL 17, which has no Supabase Vault, so no migration using it can be verified;
+  - this task holds no hosted-project credential, so neither Vault capability nor an aggregate retired-row count could
+    be read;
+  - the legacy `v1` digests cannot be converted without the original identifiers.
+
+  Improvising would be the "fake hardening" the Task Contract forbids: a public salt, a key in the repository, or a key
+  stored beside the data.
+- **Owner task:** `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate`
+- **Severity:** `MEDIUM`. The residual is offline guessing after a data disclosure, not a reachable defect.
+- **Reopen condition:** a managed secret facility is proven both on the hosted project and in a reproducible verifier;
+  and in any case before real users can retire identifiers in production.
+- **Required future properties:**
+  - HMAC-SHA-256 under a managed key that is never in the repository or migrations;
+  - a versioned digest prefix (`lid2` / `pid2`) beside the `v1` rows;
+  - a dual-read refusal law that keeps every legacy `v1` row refusing reuse until proven absent;
+  - an explicit rotation law;
+  - structural, O(1) reuse prevention, unchanged.
+- **Status:** `DEFERRED — OWNED`
+
+These two launch gates are admitted by `PROD-SEC-01` under BG-08, because a genuine external dependency may not survive
+only in a task record. Neither authorizes implementation (BG-07).
 
 ---
 
@@ -846,6 +918,38 @@ reopens nothing in `PROD-SEC-02`.
     not a readiness input.
 - **Status:** `CLOSED — TOMBSTONE`
 
+### `QAN-BL-PROD-02` — API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04)
+
+- **Closing task:** `PROD-SEC-01 — API Baseline Hardening` (widened by its Task Contract to the whole API Baseline
+  Security direction, `SEC-A` … `SEC-H`)
+- **PR / SHA:** `#301` / implementation evidence head `3239f6f`. That head carries every runtime, migration and test
+  change of the task; the commits after it are this BG-08 record and the implementation record. The tombstone holds from
+  the merge of PR #301, which happens only after independent review on green CI.
+- **Disposition:** every repo-owned row is completed, and the two genuine external dependencies are re-owned by name:
+  - **SEC-A, rate limiting.** One process-local global guard bounds every routed request per trusted client address,
+    before any auth, database or provider work. It runs a per-address aggregate window plus per-route windows by class:
+    - health;
+    - pre-auth lookup, credential and mail;
+    - authenticated and authenticated mail;
+    - security-sensitive;
+    - conversation;
+    - a strict fallback for unclassified routes.
+
+    A refusal is one generic 429. No limit is configurable. `PROD-SEC-02`'s database cost authority is unchanged.
+  - **SEC-B, trusted client address.** An explicit topology is parsed once: `direct`, or `trusted_proxy` with an IP /
+    CIDR list. It is never `trust proxy = true` and never a hop count. The provider relay forwards only the normalized
+    resolved address.
+  - **SEC-C, header baseline.** Helmet runs before routes; `X-Powered-By` is off; there is no CORS.
+  - **SEC-D, secrets.** A production preflight requires the Supabase URL and keys, a secret key that substitutes for no
+    other key, and the proxy mode.
+  - **SEC-E, privilege drift.** Migration `0133` closes the Supabase default-privilege census: 5 functions, 14
+    trigger functions and 1 sequence. Hosted equals CI for every public object, proven on real PostgreSQL.
+  - **SEC-H, negative baseline.** Proven: no wildcard CORS, bounded bodies, no upload route, readiness single-flight
+    intact.
+  - **SEC-F** (edge / WAF / TLS / origin) is re-owned to `QAN-BL-LAUNCH-01`. **SEC-G** (keyed retired-identifier
+    digest) is re-owned to `QAN-BL-LAUNCH-02`.
+- **Status:** `CLOSED — TOMBSTONE`
+
 ### `QAN-BL-AUTH-01` — Mobile Product Sign-In Gateway
 
 - **Closing task:** `T-14 — Mobile Product Sign-In Gateway v1`
@@ -872,16 +976,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 6 |
+| `DEFERRED — OWNED` | 7 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 14 |
-| **Total** | **30** |
+| `CLOSED — TOMBSTONE` | 15 |
+| **Total** | **32** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 19 |
-| `MEDIUM` | 10 |
+| `HIGH` | 20 |
+| `MEDIUM` | 11 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -949,6 +1053,18 @@ the record's §12 gives each residue's disposition. `PROD-SEC-01`, `PROD-AUTH-01
 unchanged. The register now holds **30** items: 6 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED`, 14 `CLOSED — TOMBSTONE`;
 19 `HIGH`, 10 `MEDIUM`, 1 `LOW`, counted mechanically from the §4 index.
 
+**PROD-SEC-01 reconciliation (2026-10-01).** One tombstone and two admissions. `QAN-BL-PROD-02` was widened by the
+`PROD-SEC-01` Task Contract to the whole API Baseline Security direction (`SEC-A` … `SEC-H`) and is tombstoned by
+`PROD-SEC-01` itself (PR #301). Two rows depend on an external choice the repository does not hold, and each is
+admitted with one named Final Launch owner:
+- `QAN-BL-LAUNCH-01` (`HIGH`, `LAUNCH-EDGE-SECURITY-GATE`) covers the edge, the origin, the real proxy topology,
+  and the live Supabase IP-forwarding and `0133` proofs;
+- `QAN-BL-LAUNCH-02` (`MEDIUM`, `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate`) covers `P-7`'s keyed
+  digest, under managed key custody.
+
+`PROD-AUTH-01` and `PROD-DATA-01` keep their items unchanged, and no duplicate row is created for them. The register
+now holds **32** items: 7 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED` and 15 `CLOSED — TOMBSTONE`; by severity, 20
+`HIGH`, 11 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -994,6 +1110,9 @@ Inherited after T-12 closure reconciliation:
 | `T-14 — Mobile Product Sign-In Gateway v1` | `QAN-BL-AUTH-01` — explicitly claimed by the T-14 contract |
 | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `QAN-BL-PROD-01` — delivered by PR #299; tombstoned under BG-08 by `PROD-OPS-01` |
 | `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` | `QAN-BL-PROD-03` — widened by its contract and delivered; tombstoned by itself under BG-08 |
+| `PROD-SEC-01 — API Baseline Hardening` | `QAN-BL-PROD-02` — widened by its contract to SEC-A … SEC-H and delivered; tombstoned by itself under BG-08 |
+| `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `QAN-BL-LAUNCH-01` |
+| `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-02` |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
