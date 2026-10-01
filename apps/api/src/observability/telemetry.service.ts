@@ -57,6 +57,32 @@ const QUESTION_FOREGROUND_OUTCOMES:ReadonlySet<string>=new Set(['SELECTED','LEGI
 const QUESTION_FOREGROUND_EMPTY_REASONS:ReadonlySet<string>=new Set(['NO_ELIGIBLE_GAP','OUTSTANDING_OPEN_QUESTION']);
 const QUESTION_FOREGROUND_POLICY_VERSION='1';
 
+// PROD-OPS-01: the finite LEGAL relation for background operational outcomes -
+// domain -> operation -> outcome. A background pass that catches a failure and
+// retries later must still be VISIBLE; these are the only combinations that can
+// exist. Anything outside the relation is DROPPED rather than emitted, so no
+// user, session, turn, deletion, export, hypothesis or evaluation identifier,
+// exception text, SQL error, SQLSTATE, URL or body can ever become a label.
+// Connected Worlds BLOCKED is `blocked_expected`, a legitimate answer and not an
+// operational failure; a cancelled or not-yet-due request is `superseded_expected`.
+const OPERATION_FAILURES=['transport_failure','integrity_failure'] as const;
+const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<string>>>=new Map([
+ ['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
+ ['ACCOUNT_DELETION',new Map([['claim',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','blocked_expected','superseded_expected',...OPERATION_FAILURES])],['provider_remove',new Set(['success','provider_unavailable'])],['complete',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
+ ['UNDERSTANDING_CONFIDENCE',new Map([['confidence_reevaluate',new Set(['success','retry_pending'])]])],
+]);
+// The bounded class of a retry_pending outcome, attached to it and to nothing else.
+const OPERATIONAL_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSPORT','INTEGRITY']);
+// PROD-OPS-01 aggregate privacy / export state, from the service-role-only
+// summary of migration 0132: domain -> state -> whether an oldest age exists.
+// Counts and ages are metric VALUES, never labels.
+const PRIVACY_OPERATION_STATES:ReadonlyMap<string,ReadonlyMap<string,boolean>>=new Map([
+ ['PRIVACY_EXPORT',new Map([['preparing',false],['retrying',false],['stuck_preparing',true],['failed_total',false],['failed_recent',false]])],
+ ['ACCOUNT_DELETION',new Map([['stuck_due',true],['stuck_provider_pending',true]])],
+]);
+const PRIVACY_EXPORT_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSIENT_DATABASE','CONSTRAINT_OR_INTEGRITY','RESOURCE_OR_CAPACITY','INTERNAL_OTHER']);
+const OPERATIONS_POLICY_VERSION='1';
+
 @Injectable()
 export class TelemetryService{
  private readonly postResponseDispatchOperations:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.post_response_dispatch.operations'),{});
@@ -66,6 +92,10 @@ export class TelemetryService{
  private readonly questionForegroundSelections:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.question.foreground_selection'),{});
  private readonly contextBudgetBytes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createHistogram('qandeel.context_budget.bytes',{unit:'By'}),{});
  private readonly postResponseProviderBudgetDecisions:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.post_response.provider_budget'),{});
+ private readonly operationalOutcomes:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createCounter('qandeel.operations.outcomes'),{});
+ private readonly privacyOperationStateCounts:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy.state_count'),{});
+ private readonly privacyOperationOldestAges:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy.oldest_age',{unit:'s'}),{});
+ private readonly privacyExportRecentFailures:Instrument=this.safe<Instrument>(()=>metrics.getMeter('qandeel-api').createGauge('qandeel.operations.privacy_export.recent_failures'),{});
  private readonly tracer:Tracer;private readonly engineDuration:Instrument;private readonly providerDuration:Instrument;private readonly providerCalls:Instrument;private readonly providerErrors:Instrument;private readonly inputTokens:Instrument;private readonly outputTokens:Instrument;private readonly turnOutcomes:Instrument;private readonly publisherOperations:Instrument;private readonly hypothesisContextOutcomes:Instrument;private readonly hypothesisEligibilityOutcomes:Instrument;private readonly hypothesisIntentExtractionOutcomes:Instrument;private readonly hypothesisGenerationRequestAssemblyOutcomes:Instrument;private readonly controlledHypothesisGenerationOutcomes:Instrument;private readonly postGenerationConfidenceOutcomes:Instrument;
  constructor(private readonly correlation:CorrelationService){
   this.tracer=this.safe(()=>trace.getTracer('qandeel-api'),{startActiveSpan:(_name:string,_options:unknown,callback:(span:Span)=>unknown)=>callback(this.noopSpan())}as unknown as Tracer);
@@ -156,6 +186,35 @@ export class TelemetryService{
   if(!POST_RESPONSE_PROVIDER_BUDGET_DECISION_KEYS.has(decision))return;
   if(typeof path!=='string'||!isRuntimeRoutingPath(path))return;
   this.postResponseProviderBudgetDecisions.add?.(1,{effect,decision,processing_path:path,policy_version:POST_RESPONSE_PROVIDER_BUDGET_POLICY_VERSION});
+ });}
+ // PROD-OPS-01 background operational outcome. At most four FINITE dimensions -
+ // the legal domain/operation/outcome relation above, one policy version, and a
+ // bounded failure class attached ONLY to retry_pending (and required there).
+ // Anything else is DROPPED. The whole call is fail-soft: it never throws and
+ // never alters a deletion, an export or an Understanding answer.
+ recordOperationalOutcome(domain:string,operation:string,outcome:string,failureClass?:string):void{this.safeVoid(()=>{
+  if(!OPERATIONAL_OUTCOMES.get(domain)?.get(operation)?.has(outcome))return;
+  if(outcome==='retry_pending'?failureClass===undefined||!OPERATIONAL_FAILURE_CLASSES.has(failureClass):failureClass!==undefined)return;
+  this.operationalOutcomes.add?.(1,{domain,operation,outcome,policy_version:OPERATIONS_POLICY_VERSION,...(failureClass!==undefined?{failure_class:failureClass}:{})});
+ });}
+ // PROD-OPS-01 aggregate privacy / export state. The count (and, for a stuck
+ // state, the oldest age in whole seconds) are gauge VALUES; the labels are the
+ // legal domain/state pair and the policy version. An illegal pair, a negative,
+ // fractional or unsafe number, or an age offered for a state without one is
+ // DROPPED. Fail-soft.
+ recordPrivacyOperationState(domain:string,state:string,count:number,oldestAgeSeconds?:number):void{this.safeVoid(()=>{
+  const hasAge=PRIVACY_OPERATION_STATES.get(domain)?.get(state);
+  if(hasAge===undefined||!Number.isSafeInteger(count)||count<0)return;
+  if(hasAge?!Number.isSafeInteger(oldestAgeSeconds)||(oldestAgeSeconds as number)<0:oldestAgeSeconds!==undefined)return;
+  const labels={domain,state,policy_version:OPERATIONS_POLICY_VERSION};
+  this.privacyOperationStateCounts.record?.(count,labels);
+  if(hasAge)this.privacyOperationOldestAges.record?.(oldestAgeSeconds as number,labels);
+ });}
+ // PROD-OPS-01 recent export preparation failures by the closed class migration
+ // 0132 records. The count is the VALUE; the class is one of four. Fail-soft.
+ recordPrivacyExportRecentFailures(failureClass:string,count:number):void{this.safeVoid(()=>{
+  if(!PRIVACY_EXPORT_FAILURE_CLASSES.has(failureClass)||!Number.isSafeInteger(count)||count<0)return;
+  this.privacyExportRecentFailures.record?.(count,{failure_class:failureClass,policy_version:OPERATIONS_POLICY_VERSION});
  });}
  recordHypothesisContext(outcome:'available'|'consumed'|'empty'|'rejected'|'failed',path:string,contractVersion=1,_candidateCount?:number,_includedCount?:number):void{this.safeVoid(()=>this.hypothesisContextOutcomes.add?.(1,{outcome,processing_path:path,contract_version:String(contractVersion)}));}
  recordHypothesisGenerationEligibility(outcome:'eligible'|'not_eligible'|'ambiguous'|'safety_ineligible'|'no_evidence'|'replay_skipped'|'failed',path?:string):void{this.safeVoid(()=>this.hypothesisEligibilityOutcomes.add?.(1,{outcome,...(path?{processing_path:path}:{}),contract_version:'1'}));}

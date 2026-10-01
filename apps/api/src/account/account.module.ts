@@ -3,6 +3,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
+import { ObservabilityModule } from '../observability/observability.module';
 import { AccountIdentityRepository } from './account-identity.repository';
 import { AccountSecurityController } from './account-security.controller';
 import { AccountSecurityService } from './account-security.service';
@@ -34,8 +35,11 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * W3-MEGA-S adds the owner's Privacy & Data routes (Export My Data; the Personal-world Delete Account) on the same relay,
  * and the server's own asynchronous pass that prepares exports and carries due deletions through the database's ONE
  * governed Personal erasure and the provider account's removal.
+ *
+ * PROD-OPS-01 makes that pass's outcomes visible through the existing content-free telemetry (ObservabilityModule).
  */
 @Module({
+  imports: [ObservabilityModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,

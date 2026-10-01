@@ -47,6 +47,7 @@ jobs:
       - {name: Verify Post-Response Intelligence Scheduler & Provider Budget static contract, run: npm run test:post-response-intelligence-scheduler-provider-budget-v1-contract}
       - {name: Verify Question / Information-Gap Closed Loop static contract, run: npm run test:question-information-gap-closed-loop-v1-contract}
       - {name: Verify PROD-SEC-02 turn admission concurrency and cost bound static contract, run: npm run test:prod-sec-02-turn-admission-cost-bound-contract}
+      - {name: Verify PROD-OPS-01 operational readiness and failure visibility static contract, run: npm run test:prod-ops-01-operational-readiness-failure-visibility-contract}
       - {name: Verify Integrated Brain E2E Hardening v2 static contract, run: npm run test:integrated-brain-e2e-hardening-v2-contract}
       - {name: Verify Integrated Intelligence Runtime phase closure contract, run: npm run test:integrated-intelligence-runtime-phase-closure-contract}
       - {name: Verify Committed Conversational Unit activation boundary static contract, run: npm run test:committed-conversational-unit-activation-boundary-contract}
@@ -778,6 +779,13 @@ jobs:
       # committed races that serialize one user but never two, without deadlock.
       - name: Verify PROD-SEC-02 turn admission concurrency and cost bound against real PostgreSQL
         run: npm run verify:turn-admission-cost-bound:integration
+      # PROD-OPS-01 makes readiness real and the Privacy & Data / export failures visible. This verifier proves the
+      # zero-parameter, read-only, service-role-only readiness RPC; the closed export failure classification through
+      # real injected failures (no SQLSTATE or exception text persisted, three attempts and FAILED exactly as before, a
+      # successful retry clears the class); the aggregate summary with synthetic timestamps (stuck, failed and recent
+      # work counted by number only, Connected Worlds BLOCKED never counted); and that the erasure leaves no orphan.
+      - name: Verify PROD-OPS-01 operational readiness and failure visibility against real PostgreSQL
+        run: npm run verify:operational-readiness-failure-visibility:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
@@ -787,7 +795,7 @@ jobs:
       # and proves the bounded admission is HTTP 429 {code PT429, message TURN_ADMISSION_LIMITED}, the replay stays
       # 409, and the work commands answer the row shapes the API reads. It runs last because it adds the standard
       # PostgREST login role, which it drops again. The JWT secret signs tokens for this throwaway container only.
-      - name: Prove PROD-SEC-02 refusal contract through live PostgREST
+      - name: Prove PROD-SEC-02 refusal contract and PROD-OPS-01 readiness through live PostgREST
         env:
           POSTGREST_URL: http://localhost:3001
           POSTGREST_JWT_SECRET: ci-only-throwaway-postgrest-signing-secret-prod-sec-02
@@ -807,6 +815,8 @@ jobs:
             done
             if [ -z "$ready" ]; then docker logs "postgrest-$version"; exit 1; fi
             POSTGREST_VERSION="$version" npm run --silent prove:turn-admission-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # PROD-OPS-01: the API's own compiled readiness probe and summary repository against the same live engine.
+            POSTGREST_VERSION="$version" npm run --silent prove:operational-readiness:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

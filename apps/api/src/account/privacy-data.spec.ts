@@ -5,10 +5,11 @@ import { DataApiError } from '../conversation/supabase-data-api.service';
 import { PrivacyDataController } from './privacy-data.controller';
 import { PrivacyDataRepository } from './privacy-data.repository';
 import { PrivacyDataService } from './privacy-data.service';
-import { PrivacyMaintenanceRepository } from './privacy-maintenance.repository';
+import { PrivacyMaintenanceAnswerError, PrivacyMaintenanceRepository } from './privacy-maintenance.repository';
 import { PrivacyMaintenanceWorker } from './privacy-maintenance.worker';
 import { ProviderAccountRemovalService } from './provider-account-removal.service';
 import { SupabasePasswordGrantService } from './supabase-password-grant.service';
+import type { TelemetryService } from '../observability/telemetry.service';
 
 // W3-MEGA-S — Privacy & Data, the server boundary. The database (migration 0130) decides every export and deletion
 // state and demands the re-authentication itself; the provider decides the password and removes the account. This
@@ -189,12 +190,17 @@ function makeWorker() {
     claimDueDeletions: jest.fn().mockResolvedValue([]),
     erase: jest.fn(),
     complete: jest.fn().mockResolvedValue('COMPLETED'),
+    readOperationsSummary: jest.fn().mockRejectedValue(new Error('not under test here')),
   } as unknown as jest.Mocked<PrivacyMaintenanceRepository>;
   const provider = {
     isConfigured: jest.fn().mockReturnValue(true),
     remove: jest.fn().mockResolvedValue('REMOVED'),
   } as unknown as jest.Mocked<ProviderAccountRemovalService>;
-  return { repository, provider, worker: new PrivacyMaintenanceWorker(repository, provider) };
+  // PROD-OPS-01's telemetry is proven in privacy-maintenance.observability.spec.ts; here it is inert.
+  const telemetry = {
+    recordOperationalOutcome: jest.fn(), recordPrivacyOperationState: jest.fn(), recordPrivacyExportRecentFailures: jest.fn(),
+  } as unknown as TelemetryService;
+  return { repository, provider, worker: new PrivacyMaintenanceWorker(repository, provider, telemetry) };
 }
 
 const D1 = '11111111-1111-4111-8111-111111111111';
@@ -289,15 +295,16 @@ describe('PrivacyMaintenanceRepository — the server channel’s answers, decod
     ]);
     await expect(repository.claimDueDeletions(10)).resolves.toEqual([SCHEDULED, ERASED]);
     expect(serviceApi.rpc).toHaveBeenCalledWith('server_claim_due_account_deletions_v1', { p_limit: 10 });
-    await expect(repositoryAnswering({ not: 'an array' }).repository.claimDueDeletions(10)).resolves.toEqual([]);
+    // PROD-OPS-01: an answer that is not a row set is a visible integrity failure (the pass still claims nothing).
+    await expect(repositoryAnswering({ not: 'an array' }).repository.claimDueDeletions(10)).rejects.toBeInstanceOf(PrivacyMaintenanceAnswerError);
   });
 
-  it('scalar answers: the database’s own word, else UNKNOWN / 0', async () => {
+  it('scalar answers: the database’s own word, else UNKNOWN; a non-number preparation answer is an integrity failure', async () => {
     await expect(repositoryAnswering('ERASED').repository.erase(D1)).resolves.toBe('ERASED');
     await expect(repositoryAnswering(null).repository.erase(D1)).resolves.toBe('UNKNOWN');
     await expect(repositoryAnswering('COMPLETED').repository.complete(D1)).resolves.toBe('COMPLETED');
     await expect(repositoryAnswering(3).repository.prepareExports(10)).resolves.toBe(3);
-    await expect(repositoryAnswering('3').repository.prepareExports(10)).resolves.toBe(0);
+    await expect(repositoryAnswering('3').repository.prepareExports(10)).rejects.toBeInstanceOf(PrivacyMaintenanceAnswerError);
     const { serviceApi, repository } = repositoryAnswering('ERASED');
     await repository.erase(D1);
     expect(serviceApi.rpc).toHaveBeenCalledWith('server_erase_personal_account_v1', { p_deletion_id: D1 });

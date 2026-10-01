@@ -1,6 +1,9 @@
 import { CorrelationService } from './correlation.service';
 import { RequestCorrelationMiddleware } from './request-correlation.middleware';
 import { TelemetryService } from './telemetry.service';
+import { classifyOperationalFailure } from './operational-failure';
+import { ServiceUnavailableException } from '@nestjs/common';
+import { DataApiError } from '../conversation/supabase-data-api.service';
 import { sanitizeSentryEvent,sentryOptions } from './sentry';
 import { OpenAIModelRouter } from '../model-router/providers/openai/openai-model-router';
 import { ClaudeModelRouter } from '../model-router/providers/anthropic/claude-model-router';
@@ -158,4 +161,53 @@ describe('Correlation and telemetry foundation v1',()=>{
   expect(()=>t.recordPostResponseProviderBudget('INTENT_PROVIDER','AUTHORIZED','FAST')).not.toThrow();
   (t as any).postResponseProviderBudgetDecisions={};
   expect(()=>t.recordPostResponseProviderBudget('INTENT_PROVIDER','AUTHORIZED','FAST')).not.toThrow();});
+});
+
+// PROD-OPS-01: the operational outcome relation and the aggregate privacy state,
+// quoted here independently of the implementation so a silent widening fails.
+const OPERATIONAL_LEGAL:ReadonlyArray<readonly [string,string,string]>=Object.freeze([
+ ...['success','transport_failure','integrity_failure'].flatMap(o=>[['PRIVACY_EXPORT','prepare',o],['PRIVACY_EXPORT','stuck_scan',o],['ACCOUNT_DELETION','claim',o],['ACCOUNT_DELETION','complete',o],['ACCOUNT_DELETION','stuck_scan',o]] as const),
+ ...['success','blocked_expected','superseded_expected','transport_failure','integrity_failure'].map(o=>['ACCOUNT_DELETION','erase',o] as const),
+ ['ACCOUNT_DELETION','provider_remove','success'],['ACCOUNT_DELETION','provider_remove','provider_unavailable'],
+ ['UNDERSTANDING_CONFIDENCE','confidence_reevaluate','success'],
+] as const);
+const DOMAINS=['PRIVACY_EXPORT','ACCOUNT_DELETION','UNDERSTANDING_CONFIDENCE'],OPERATIONS=['prepare','claim','erase','provider_remove','complete','confidence_reevaluate','stuck_scan'],OUTCOMES=['success','retry_pending','terminal_failure','blocked_expected','superseded_expected','provider_unavailable','transport_failure','integrity_failure'];
+describe('PROD-OPS-01 operational telemetry',()=>{
+ const harness=()=>{const t=new TelemetryService(new CorrelationService()),add=jest.fn(),state=jest.fn(),age=jest.fn(),failures=jest.fn();Object.assign(t as any,{operationalOutcomes:{add},privacyOperationStateCounts:{record:state},privacyOperationOldestAges:{record:age},privacyExportRecentFailures:{record:failures}});return{t,add,state,age,failures};};
+ it('emits exactly the legal domain/operation/outcome relation and drops every other combination',()=>{const{t,add}=harness();
+  for(const d of [...DOMAINS,'FUTURE'])for(const op of [...OPERATIONS,'drop_table'])for(const o of [...OUTCOMES,'ERROR: duplicate key'])t.recordOperationalOutcome(d,op,o);
+  for(const c of ['TRANSPORT','INTEGRITY'])t.recordOperationalOutcome('UNDERSTANDING_CONFIDENCE','confidence_reevaluate','retry_pending',c);
+  const emitted=add.mock.calls.map(([v,l])=>{expect(v).toBe(1);expect(l.policy_version).toBe('1');return[l.domain,l.operation,l.outcome,l.failure_class??null].join('|');});
+  expect(emitted.sort()).toEqual([...OPERATIONAL_LEGAL.map(([d,op,o])=>[d,op,o,null].join('|')),'UNDERSTANDING_CONFIDENCE|confidence_reevaluate|retry_pending|TRANSPORT','UNDERSTANDING_CONFIDENCE|confidence_reevaluate|retry_pending|INTEGRITY'].sort());
+  expect(emitted).toHaveLength(OPERATIONAL_LEGAL.length+2);});
+ it('attaches a failure class ONLY to retry_pending, requires it there, and accepts only the two bounded classes',()=>{const{t,add}=harness();
+  t.recordOperationalOutcome('UNDERSTANDING_CONFIDENCE','confidence_reevaluate','retry_pending');
+  t.recordOperationalOutcome('UNDERSTANDING_CONFIDENCE','confidence_reevaluate','retry_pending','Error: connect ECONNREFUSED');
+  t.recordOperationalOutcome('UNDERSTANDING_CONFIDENCE','confidence_reevaluate','retry_pending','23505');
+  t.recordOperationalOutcome('UNDERSTANDING_CONFIDENCE','confidence_reevaluate','success','TRANSPORT');
+  t.recordOperationalOutcome('ACCOUNT_DELETION','erase','transport_failure','TRANSPORT');
+  expect(add).not.toHaveBeenCalled();});
+ it('records the aggregate privacy state as gauge VALUES under finite labels, with ages only for stuck states',()=>{const{t,state,age,failures}=harness();
+  for(const [d,s] of [['PRIVACY_EXPORT','preparing'],['PRIVACY_EXPORT','retrying'],['PRIVACY_EXPORT','failed_total'],['PRIVACY_EXPORT','failed_recent']])t.recordPrivacyOperationState(d,s,3);
+  for(const [d,s] of [['PRIVACY_EXPORT','stuck_preparing'],['ACCOUNT_DELETION','stuck_due'],['ACCOUNT_DELETION','stuck_provider_pending']])t.recordPrivacyOperationState(d,s,2,1800);
+  for(const c of ['TRANSIENT_DATABASE','CONSTRAINT_OR_INTEGRITY','RESOURCE_OR_CAPACITY','INTERNAL_OTHER'])t.recordPrivacyExportRecentFailures(c,1);
+  expect(state).toHaveBeenCalledTimes(7);expect(age).toHaveBeenCalledTimes(3);expect(failures).toHaveBeenCalledTimes(4);
+  for(const [value,labels] of [...state.mock.calls,...age.mock.calls]){expect(typeof value).toBe('number');expect(Object.keys(labels).sort()).toEqual(['domain','policy_version','state']);}
+  for(const [,labels] of failures.mock.calls)expect(Object.keys(labels).sort()).toEqual(['failure_class','policy_version']);
+  expect(JSON.stringify([state.mock.calls.map(c=>c[1]),age.mock.calls.map(c=>c[1]),failures.mock.calls.map(c=>c[1])])).not.toMatch(/\d{2,}/u);});
+ it('drops an illegal state, a BLOCKED state, an impossible number, or an age where none exists',()=>{const{t,state,age,failures}=harness();
+  t.recordPrivacyOperationState('ACCOUNT_DELETION','blocked',1);t.recordPrivacyOperationState('ACCOUNT_DELETION','BLOCKED',1);t.recordPrivacyOperationState('PRIVACY_EXPORT','stuck_due',1,1);
+  t.recordPrivacyOperationState('PRIVACY_EXPORT','preparing',-1);t.recordPrivacyOperationState('PRIVACY_EXPORT','preparing',1.5);t.recordPrivacyOperationState('PRIVACY_EXPORT','preparing',Number.NaN);
+  t.recordPrivacyOperationState('PRIVACY_EXPORT','preparing',1,60);t.recordPrivacyOperationState('PRIVACY_EXPORT','stuck_preparing',1);t.recordPrivacyOperationState('PRIVACY_EXPORT','stuck_preparing',1,-5);
+  t.recordPrivacyExportRecentFailures('42P01',1);t.recordPrivacyExportRecentFailures('INTERNAL_OTHER',-1);t.recordPrivacyExportRecentFailures('INTERNAL_OTHER',Number.POSITIVE_INFINITY);
+  expect(state).not.toHaveBeenCalled();expect(age).not.toHaveBeenCalled();expect(failures).not.toHaveBeenCalled();});
+ it('classifies a survived failure by its kind only, into exactly two classes',()=>{
+  const cases:Array<[unknown,string]>=[[new ServiceUnavailableException('SECRET'),'TRANSPORT'],[new DataApiError(500),'TRANSPORT'],[new DataApiError(408),'TRANSPORT'],[new DataApiError(429),'TRANSPORT'],[Object.assign(new Error('SECRET'),{name:'TimeoutError'}),'TRANSPORT'],[Object.assign(new Error('SECRET'),{name:'AbortError'}),'TRANSPORT'],[new TypeError('fetch failed',{cause:new Error('ECONNREFUSED')}),'TRANSPORT'],
+   [new DataApiError(400),'INTEGRITY'],[new DataApiError(409),'INTEGRITY'],[new TypeError("Cannot read properties of undefined (reading 'x')"),'INTEGRITY'],[new Error('TIMEOUT in the message only'),'INTEGRITY'],['a string',"INTEGRITY"],[null,'INTEGRITY'],[undefined,'INTEGRITY']];
+  for(const[error,expected]of cases)expect(classifyOperationalFailure(error)).toBe(expected);});
+ it('is fail-soft under any meter failure and with absent instruments',()=>{const t=new TelemetryService(new CorrelationService()),boom={add:()=>{throw new Error('meter down');},record:()=>{throw new Error('meter down');}};
+  Object.assign(t as any,{operationalOutcomes:boom,privacyOperationStateCounts:boom,privacyOperationOldestAges:boom,privacyExportRecentFailures:boom});
+  expect(()=>t.recordOperationalOutcome('ACCOUNT_DELETION','erase','success')).not.toThrow();expect(()=>t.recordPrivacyOperationState('ACCOUNT_DELETION','stuck_due',1,60)).not.toThrow();expect(()=>t.recordPrivacyExportRecentFailures('INTERNAL_OTHER',1)).not.toThrow();
+  Object.assign(t as any,{operationalOutcomes:{},privacyOperationStateCounts:{},privacyOperationOldestAges:{},privacyExportRecentFailures:{}});
+  expect(()=>t.recordOperationalOutcome('ACCOUNT_DELETION','erase','success')).not.toThrow();expect(()=>t.recordPrivacyOperationState('ACCOUNT_DELETION','stuck_due',1,60)).not.toThrow();});
 });
