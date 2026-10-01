@@ -21,6 +21,16 @@
 --      lasts the frozen 120-second foreground lease (`foreground_generation_lease_interval_v1`), so a crashed
 --      request frees its slot by itself; the API returns it as soon as its request ends.
 --
+--   3. WORK-START BUDGET (same commands). A lease bounds how much work runs AT ONCE, not how much runs over time:
+--      an exchange whose reply completed but whose semantic establishment failed retryably is re-walked by every
+--      replay, and each replay could take a fresh lease after the previous one ended. So every GRANTED lease is
+--      also recorded, durably, in a per-user grant ledger, and a new grant is refused (LIMITED) once the user has
+--      used the rolling 10-minute or 24-hour work-start budget. One request takes at most one lease per exchange
+--      (its generation and its semantic walk share it), so one request is charged once; a canonical replay of an
+--      already established exchange never asks for a lease and is never charged. Admission refuses a new turn
+--      while that budget is spent, so no turn is admitted that could not be worked. The windows roll, so neither
+--      a crash nor a burst of retries can lock an account out for longer than the window.
+--
 -- "In flight" is one definition, used by both: a USER turn of the user that holds a live work lease, OR is
 -- GENERATING with a live generation lease (the 0039 rule, including its legacy updated_at fallback), OR - for
 -- admission only - is RECEIVED and was admitted within the same 120-second window. Every clause expires on its
@@ -48,16 +58,25 @@ BEGIN;
 --      before the next one in its session can be admitted, so conversational use stays far below one new turn
 --      per 15 seconds sustained for ten minutes, burst included;
 --    * 600 admissions per rolling 24 hours: hours of heavy daily use, while one account's sustained ceiling is
---      roughly ten times lower than the 10-minute window alone would allow.
+--      roughly ten times lower than the 10-minute window alone would allow;
+--    * 60 work starts per rolling 10 minutes and 900 per rolling 24 hours, over the same two windows: every
+--      admitted turn is worked by the request that admitted it under ONE lease, so ordinary use spends exactly
+--      one start per admission and never exceeds 40 / 600; the further 50% is the room for genuine retries (a
+--      reply deferred while the user was at the in-flight bound, a semantic walk that failed retryably or ran
+--      out of its foreground deadline). A retry loop on one exchange therefore stops after at most 20 extra
+--      starts in ten minutes and 300 in a day, and the account's whole foreground provider-bearing work is at
+--      most 900 bounded requests a day, however it is split between new turns and retries.
 CREATE FUNCTION public.conversation_turn_admission_policy_v1(
   OUT session_in_flight_limit integer,
   OUT user_in_flight_limit integer,
   OUT short_window interval,
   OUT short_window_limit integer,
   OUT long_window interval,
-  OUT long_window_limit integer
+  OUT long_window_limit integer,
+  OUT work_short_window_limit integer,
+  OUT work_long_window_limit integer
 ) LANGUAGE sql IMMUTABLE PARALLEL SAFE SET search_path='' AS $$
-  SELECT 1, 2, interval '10 minutes', 40, interval '24 hours', 600
+  SELECT 1, 2, interval '10 minutes', 40, interval '24 hours', 600, 60, 900
 $$;
 
 -- 2. The work lease. Runtime authority state only: no application role may read or write it, every row belongs
@@ -76,6 +95,21 @@ CREATE INDEX conversation_turn_work_leases_user_idx ON public.conversation_turn_
 
 ALTER TABLE public.conversation_turn_work_leases ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON TABLE public.conversation_turn_work_leases FROM PUBLIC, anon, authenticated, service_role;
+
+-- 2b. The work-start ledger: one row per GRANTED lease, kept as long as the longest window needs it. Same
+--     authority as the lease table: no application role may read or write it, and it disappears with its turn.
+--     Ending a lease never removes its grant, so a returned or expired lease is still charged.
+CREATE TABLE public.conversation_turn_work_grants (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_turn_id uuid NOT NULL REFERENCES public.conversation_turns(id) ON DELETE CASCADE,
+  user_id uuid NOT NULL,
+  granted_at timestamptz NOT NULL
+);
+CREATE INDEX conversation_turn_work_grants_user_idx ON public.conversation_turn_work_grants (user_id, granted_at);
+CREATE INDEX conversation_turn_work_grants_turn_idx ON public.conversation_turn_work_grants (user_turn_id);
+
+ALTER TABLE public.conversation_turn_work_grants ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON TABLE public.conversation_turn_work_grants FROM PUBLIC, anon, authenticated, service_role;
 
 -- 3. The two reads the bound needs, indexed for one user rather than the whole table.
 CREATE INDEX conversation_turns_user_admission_window_idx
@@ -98,6 +132,17 @@ LANGUAGE sql STABLE SET search_path='' AS $$
            AND COALESCE(t.generation_lease_expires_at, t.updated_at + public.foreground_generation_lease_interval_v1()) > CURRENT_TIMESTAMP)
        OR (p_include_received AND t.status = 'RECEIVED'
            AND t.created_at + public.foreground_generation_lease_interval_v1() > CURRENT_TIMESTAMP))
+$$;
+
+-- 4b. Whether the user has spent either rolling work-start budget (internal; read under the per-user lock).
+CREATE FUNCTION public.conversation_turn_work_budget_spent_v1(p_user_id uuid) RETURNS boolean
+LANGUAGE sql STABLE SET search_path='' AS $$
+  SELECT count(g.id) FILTER (WHERE g.granted_at > CURRENT_TIMESTAMP - p.short_window) >= p.work_short_window_limit
+      OR count(g.id) >= p.work_long_window_limit
+    FROM public.conversation_turn_admission_policy_v1() p
+    LEFT JOIN public.conversation_turn_work_grants g
+      ON g.user_id = p_user_id AND g.granted_at > CURRENT_TIMESTAMP - p.long_window
+   GROUP BY p.short_window, p.work_short_window_limit, p.work_long_window_limit
 $$;
 
 -- 5. The per-user lock (internal). One key per user, in its own namespace.
@@ -141,7 +186,8 @@ BEGIN
       FROM public.conversation_turns t
      WHERE t.user_id=u AND t.role='USER' AND t.created_at > CURRENT_TIMESTAMP - policy.long_window;
     IF in_session >= policy.session_in_flight_limit OR in_user >= policy.user_in_flight_limit
-       OR recent_short >= policy.short_window_limit OR recent_long >= policy.long_window_limit THEN
+       OR recent_short >= policy.short_window_limit OR recent_long >= policy.long_window_limit
+       OR public.conversation_turn_work_budget_spent_v1(u) THEN
       -- One answer for every reason: no counter, window, limit or other session is disclosed.
       RAISE EXCEPTION 'TURN_ADMISSION_LIMITED' USING ERRCODE='PT429';
     END IF;
@@ -157,7 +203,8 @@ END;$$;
 --    claim/finalize/fail: the server names the user, session and USER source turn, and a mismatch fails closed.
 --      GRANTED      a new lease; the caller holds it until end_conversation_turn_work_v1 or expiry
 --      IN_PROGRESS  another live lease already covers this exchange; start nothing
---      LIMITED      the session or the user is at its in-flight bound right now; start nothing
+--      LIMITED      the session or the user is at its in-flight bound, or the user has spent its work-start
+--                   budget; start nothing (one answer for every reason, as at admission)
 CREATE FUNCTION public.begin_conversation_turn_work_v1(p_session_id uuid, p_user_id uuid, p_source_turn_id uuid)
 RETURNS TABLE(work_outcome text, work_lease_id uuid)
 LANGUAGE plpgsql SECURITY DEFINER SET search_path='' AS $$
@@ -184,10 +231,19 @@ BEGIN
   IF in_session >= policy.session_in_flight_limit OR in_user >= policy.user_in_flight_limit THEN
     RETURN QUERY SELECT 'LIMITED'::text, NULL::uuid; RETURN;
   END IF;
+  -- The work-start budget: grants older than the longest window can no longer count, so this user's are pruned
+  -- (bounded housekeeping, never another user's rows); then a spent budget refuses exactly like the bound above.
+  DELETE FROM public.conversation_turn_work_grants g
+   WHERE g.user_id=p_user_id AND g.granted_at <= CURRENT_TIMESTAMP - policy.long_window;
+  IF public.conversation_turn_work_budget_spent_v1(p_user_id) THEN
+    RETURN QUERY SELECT 'LIMITED'::text, NULL::uuid; RETURN;
+  END IF;
   granted := pg_catalog.gen_random_uuid();
   INSERT INTO public.conversation_turn_work_leases(user_turn_id, user_id, session_id, lease_id, acquired_at, expires_at)
   VALUES(p_source_turn_id, p_user_id, p_session_id, granted, CURRENT_TIMESTAMP,
          CURRENT_TIMESTAMP + public.foreground_generation_lease_interval_v1());
+  INSERT INTO public.conversation_turn_work_grants(user_turn_id, user_id, granted_at)
+  VALUES(p_source_turn_id, p_user_id, CURRENT_TIMESTAMP);
   RETURN QUERY SELECT 'GRANTED'::text, granted;
 END;$$;
 
@@ -208,6 +264,8 @@ END;$$;
 ALTER FUNCTION public.conversation_turn_admission_policy_v1() OWNER TO postgres;
 ALTER FUNCTION public.conversation_turns_in_flight_v1(uuid, boolean) OWNER TO postgres;
 ALTER FUNCTION public.lock_conversation_turn_admission_v1(uuid) OWNER TO postgres;
+ALTER FUNCTION public.conversation_turn_work_budget_spent_v1(uuid) OWNER TO postgres;
+ALTER TABLE public.conversation_turn_work_grants OWNER TO postgres;
 ALTER FUNCTION public.create_user_conversation_turn(uuid,uuid,text,text) OWNER TO postgres;
 ALTER FUNCTION public.begin_conversation_turn_work_v1(uuid,uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.end_conversation_turn_work_v1(uuid,uuid,uuid) OWNER TO postgres;
@@ -216,6 +274,7 @@ ALTER TABLE public.conversation_turn_work_leases OWNER TO postgres;
 REVOKE ALL ON FUNCTION public.conversation_turn_admission_policy_v1() FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.conversation_turns_in_flight_v1(uuid, boolean) FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.lock_conversation_turn_admission_v1(uuid) FROM PUBLIC, anon, authenticated, service_role;
+REVOKE ALL ON FUNCTION public.conversation_turn_work_budget_spent_v1(uuid) FROM PUBLIC, anon, authenticated, service_role;
 
 REVOKE ALL ON FUNCTION public.create_user_conversation_turn(uuid,uuid,text,text) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.create_user_conversation_turn(uuid,uuid,text,text) TO authenticated;

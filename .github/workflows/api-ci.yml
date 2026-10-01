@@ -782,3 +782,31 @@ jobs:
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
       - {name: Verify Integrated Brain end-to-end hardening v2, run: npm run verify:integrated-brain:e2e-hardening-v2}
+      # PROD-SEC-02: the refusal contract on the WIRE. The verifier above proves the SQLSTATE; this starts the real
+      # PostgREST engine Supabase runs - every currently supported release line - against the same migrated database
+      # and proves the bounded admission is HTTP 429 {code PT429, message TURN_ADMISSION_LIMITED}, the replay stays
+      # 409, and the work commands answer the row shapes the API reads. It runs last because it adds the standard
+      # PostgREST login role, which it drops again. The JWT secret signs tokens for this throwaway container only.
+      - name: Prove PROD-SEC-02 refusal contract through live PostgREST
+        env:
+          POSTGREST_URL: http://localhost:3001
+          POSTGREST_JWT_SECRET: ci-only-throwaway-postgrest-signing-secret-prod-sec-02
+        run: |
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticator LOGIN PASSWORD 'authenticator' NOINHERIT" -c "GRANT anon, authenticated, service_role TO authenticator"
+          for version in v12.2.9 v13.0.8 v14.18 v16.4; do
+            docker run -d --rm --name "postgrest-$version" --network host \
+              -e PGRST_DB_URI="postgresql://authenticator:authenticator@localhost:5432/qandeel_test" \
+              -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon \
+              -e PGRST_JWT_SECRET="$POSTGREST_JWT_SECRET" -e PGRST_SERVER_PORT=3001 \
+              "postgrest/postgrest:$version" >/dev/null
+            ready=""
+            for attempt in $(seq 1 60); do
+              status=$(curl -s -o /dev/null -w '%{http_code}' "$POSTGREST_URL/" || true)
+              if [ "$status" != "000" ] && [ "$status" != "503" ]; then ready=yes; break; fi
+              sleep 1
+            done
+            if [ -z "$ready" ]; then docker logs "postgrest-$version"; exit 1; fi
+            POSTGREST_VERSION="$version" npm run --silent prove:turn-admission-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            docker stop "postgrest-$version" >/dev/null
+          done
+          psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

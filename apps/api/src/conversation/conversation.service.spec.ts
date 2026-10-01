@@ -6,7 +6,7 @@ import type { ConversationSession, ConversationTurn, OrchestratedTurnResult } fr
 import { ConversationOrchestratorService } from './conversation-orchestrator.service';
 import { ConversationSemanticEstablishmentService } from '../live-focus/conversation-semantic-establishment.service';
 import { CorrelationService } from '../observability/correlation.service';
-import { DataApiError } from './supabase-data-api.service';
+import { DataApiError, SupabaseDataApiService } from './supabase-data-api.service';
 import { ConversationTurnWorkRepository } from './conversation-turn-work.repository';
 
 describe('ConversationService', () => {
@@ -285,6 +285,70 @@ describe('ConversationService', () => {
       expect(orchestrator.orchestrate).not.toHaveBeenCalled();
       expect(semantic.establish).not.toHaveBeenCalled();
       expect(turnWork.begin).not.toHaveBeenCalled();
+      expect(repository.failTurn).not.toHaveBeenCalled();
+    });
+
+    it('reads the exact PostgREST wire answer through the real Data API client as the typed 429', async () => {
+      // The body below is byte-for-byte what live PostgREST returns for the bounded admission (proven in CI by
+      // database/prove-0131-postgrest-refusal.mjs against every supported PostgREST line). Here it travels through
+      // the production SupabaseDataApiService, so the status and identity the service reads are the real ones.
+      const environment = { url: process.env.SUPABASE_URL, key: process.env.SUPABASE_PUBLISHABLE_KEY };
+      const fetchSpy = jest.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(
+        JSON.stringify({ code: 'PT429', details: null, hint: null, message: 'TURN_ADMISSION_LIMITED' }),
+        { status: 429, headers: { 'Content-Type': 'application/json; charset=utf-8' } },
+      ));
+      try {
+        process.env.SUPABASE_URL = 'https://data-api.invalid';
+        process.env.SUPABASE_PUBLISHABLE_KEY = 'publishable-test-key';
+        const dataApi = new SupabaseDataApiService();
+        repository.findSession.mockResolvedValue(session);
+        repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+        repository.createTurn.mockImplementation(() => dataApi.request('token-a', 'rpc/create_user_conversation_turn', { method: 'POST', body: '{}' }));
+        const refusal = await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' }).catch((error: unknown) => error);
+        expect(refusal).toBeInstanceOf(HttpException);
+        expect((refusal as HttpException).getStatus()).toBe(429);
+        expect((refusal as HttpException).getResponse()).toEqual({ code: TURN_ADMISSION_LIMITED });
+        expect(fetchSpy).toHaveBeenCalledTimes(1);
+        expect(orchestrator.orchestrate).not.toHaveBeenCalled();
+      } finally {
+        fetchSpy.mockRestore();
+        if (environment.url === undefined) delete process.env.SUPABASE_URL; else process.env.SUPABASE_URL = environment.url;
+        if (environment.key === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY; else process.env.SUPABASE_PUBLISHABLE_KEY = environment.key;
+      }
+    });
+
+    it('one request is charged one work start: its generation and its semantic walk share the exchange\'s lease', async () => {
+      const completed = { ...turn, status: 'COMPLETED' as const };
+      repository.findSession.mockResolvedValue(session);
+      repository.findTurnByIdempotencyKey.mockResolvedValue(undefined);
+      repository.createTurn.mockResolvedValue(turn);
+      orchestrator.orchestrate.mockImplementationOnce(async () => {
+        expect(await enterForegroundTurnWork(session.id, turn.id)).toBe('GRANTED');
+        return { userTurn: completed };
+      });
+      semantic.establish.mockImplementationOnce(async (_userId: string, result: OrchestratedTurnResult) => {
+        expect(await enterForegroundTurnWork(session.id, turn.id)).toBe('GRANTED');
+        return result;
+      });
+      await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' });
+      expect(turnWork.begin).toHaveBeenCalledTimes(1);
+      expect(turnWork.end).toHaveBeenCalledTimes(1);
+    });
+
+    it('a replay of a completed-but-unestablished exchange is a new request, so its semantic walk is charged a work start', async () => {
+      const completed = { ...turn, status: 'COMPLETED' as const };
+      repository.findSession.mockResolvedValue(session);
+      repository.findTurnByIdempotencyKey.mockResolvedValue(completed);
+      orchestrator.orchestrate.mockResolvedValue({ userTurn: completed });
+      semantic.establish.mockImplementation(async (_userId: string, result: OrchestratedTurnResult) => {
+        if (await enterForegroundTurnWork(session.id, turn.id) !== 'GRANTED') throw new ServiceUnavailableException('Conversation semantic establishment is unavailable.');
+        return result;
+      });
+      turnWork.begin.mockResolvedValueOnce({ outcome: 'GRANTED', leaseId: 'lease-1' }).mockResolvedValueOnce({ outcome: 'LIMITED' });
+      await service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' });
+      await expect(service.createTurn('user-a', 'token-a', session.id, { content: 'hello', idempotencyKey: 'client-1' })).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(turnWork.begin).toHaveBeenCalledTimes(2);
+      expect(repository.createTurn).not.toHaveBeenCalled();
       expect(repository.failTurn).not.toHaveBeenCalled();
     });
 

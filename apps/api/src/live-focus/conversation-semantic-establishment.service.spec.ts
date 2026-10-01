@@ -812,6 +812,35 @@ describe('PROD-SEC-02 foreground work lease and deadline in the semantic phase',
     expect(providerCounts(b)).toEqual([0, 0, 0, 0, 0]);
   });
 
+  it('retries of one completed-but-unestablished exchange each spend one work start, and once the budget answers LIMITED no provider is entered', async () => {
+    // The database's durable work-start budget (migration 0131), reduced to its observable contract: it grants a
+    // fixed number of starts and then answers LIMITED. Each retry is its own request, so its own foreground scope.
+    const budget = 3;
+    let starts = 0;
+    const gate = {
+      begin: jest.fn(async () => (starts < budget ? { outcome: 'GRANTED' as const, leaseId: `lease-${(starts += 1)}` } : { outcome: 'LIMITED' as const })),
+      end: jest.fn(async () => undefined),
+    };
+    // A retryable segmentation outage keeps the exchange unestablished, so every replay walks it again.
+    const b = build(harness(), new RoleScriptedSegmentation({ USER: new CuSegmentationProviderError('PROVIDER_ERROR'), ASSISTANT: SEGMENTS.ASSISTANT }));
+    const reasons: string[] = [];
+    const providerCallsAfter: number[] = [];
+    for (let attempt = 0; attempt < budget + 2; attempt += 1) {
+      reasons.push(await unavailable(runForegroundTurnWork(gate, 90_000, () => b.service.establishExchange(USER, userTurn, assistantTurn))));
+      providerCallsAfter.push(providerCounts(b).reduce((sum, count) => sum + count, 0));
+    }
+    expect(gate.begin).toHaveBeenCalledTimes(budget + 2);
+    expect(reasons.slice(0, budget)).not.toContain('FOREGROUND_WORK_DEFERRED');
+    expect(reasons.slice(budget)).toEqual(['FOREGROUND_WORK_DEFERRED', 'FOREGROUND_WORK_DEFERRED']);
+    // Every granted retry really walked the exchange again (provider work grew), and no provider was entered after
+    // the budget was spent (the count stays exactly where the last granted walk left it).
+    for (let attempt = 1; attempt < budget; attempt += 1) expect(providerCallsAfter[attempt]).toBeGreaterThan(providerCallsAfter[attempt - 1]);
+    expect(providerCallsAfter[0]).toBeGreaterThan(0);
+    expect(providerCallsAfter.slice(budget)).toEqual([providerCallsAfter[budget - 1], providerCallsAfter[budget - 1]]);
+    expect(gate.end).toHaveBeenCalledTimes(budget);
+    expect(b.h.commitFinalizedExchangeWithFullSemanticChain).not.toHaveBeenCalled();
+  });
+
   it('a deadline reached mid-walk stops before the next provider call, commits nothing and is retryable FOREGROUND_DEADLINE_EXHAUSTED', async () => {
     const focus = new DeadlineFocusProvider();
     const b = build(harness(), new RoleScriptedSegmentation(SEGMENTS), focus as unknown as RecordingFocusProvider);

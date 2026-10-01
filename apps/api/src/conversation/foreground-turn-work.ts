@@ -15,7 +15,9 @@ import { AsyncLocalStorage } from 'node:async_hooks';
 //      database under a per-user lock (`begin_conversation_turn_work_v1`), so it holds across every API
 //      instance. This context only remembers which lease it holds, so the generation and semantic phases of the
 //      same exchange share ONE lease, and returns it when the request ends. A crashed request's lease expires
-//      in the database on its own.
+//      in the database on its own. Every grant is also charged, durably, to the user's rolling work-start budget,
+//      so retrying the same exchange request after request stops too; because one request holds one lease per
+//      exchange, one request is charged once, and a canonical replay that needs no provider never asks at all.
 //
 // Outside a scope (background and post-response work, tools and specs that drive the orchestrator directly)
 // both checks are inert: those paths are bounded by their own budgets, and the only production foreground entry,
@@ -52,7 +54,7 @@ export type ForegroundTurnWorkBegin =
   | { readonly outcome: 'GRANTED'; readonly leaseId: string }
   /** Another live request already holds this turn's work lease: never start a second copy of the same work. */
   | { readonly outcome: 'IN_PROGRESS' }
-  /** The session or the user is at its foreground work bound right now. */
+  /** The session or the user is at its foreground work bound, or the user has spent its work-start budget. */
   | { readonly outcome: 'LIMITED' };
 
 export interface ForegroundTurnWorkGate {

@@ -594,7 +594,8 @@ obligation only (BG-07).
 - **Reopen condition:** none needed; the owner task is active.
 - **Current truth:** implemented in Draft PR #299
   ([implementation record](e2e/QANDEEL_PROD_SEC_02_TURN_ADMISSION_CONCURRENCY_COST_BOUND_IMPLEMENTATION_RECORD_v1.md)),
-  not merged. It becomes `CLOSED — TOMBSTONE` in the change that records the Product Owner's acceptance of that PR.
+  including the R2 correction that bounds replays and semantic retries over time with a durable per-user
+  work-start budget and proves the `PT429` → HTTP 429 refusal through live PostgREST; not merged. It becomes `CLOSED — TOMBSTONE` in the change that records the Product Owner's acceptance of that PR.
 - **Status:** `DEFERRED — OWNED`
 
 ### `QAN-BL-PROD-02` — API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04)
@@ -652,7 +653,9 @@ obligation only (BG-07).
     the historical-projection payload; the export-package size; the projection failed-key / open-head stall risk.
   - **Recorded by `PROD-SEC-02`:** its request deadline (default 90 s) stops a semantic walk that would need longer;
     nothing is committed and the exchange stays retryable, but a walk that always needs longer than the deadline
-    cannot complete. Measuring that bound against real Thread counts belongs to the same measurement.
+    cannot complete. Measuring that bound against real Thread counts belongs to the same measurement. This is a
+    completion / latency item only: the cost of retrying such a walk is already bounded by `PROD-SEC-02`'s durable
+    work-start budget, so no AI-cost path is deferred here.
 - **Source:** `PROD-READINESS-01` review record §9–§12 / §15 / §16 (Draft PR #298, `03685fd`); the deadline residual from
   the
   [`PROD-SEC-02` implementation record](e2e/QANDEEL_PROD_SEC_02_TURN_ADMISSION_CONCURRENCY_COST_BOUND_IMPLEMENTATION_RECORD_v1.md).

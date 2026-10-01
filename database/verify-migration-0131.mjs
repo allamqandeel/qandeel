@@ -4,7 +4,9 @@
 // direct caller cannot bypass it; a refusal is the one typed PT429 TURN_ADMISSION_LIMITED and commits nothing; an
 // idempotent replay is never limited and never charged; terminal, stale-RECEIVED and expired-GENERATING turns free
 // their slot by themselves; the service-role work lease bounds provider-bearing work for banked RECEIVED turns and
-// for cancelled-but-still-working turns; every authority is exactly as narrow as before; lease state disappears
+// for cancelled-but-still-working turns; the durable per-user work-start budget stops a retry loop on one
+// completed-but-unestablished exchange, charges every grant exactly once and nothing else, and rolls open again;
+// every authority is exactly as narrow as before; lease state disappears
 // with the account's turns; and committed multi-connection races serialize one user without serializing two users
 // and without deadlock.
 import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import process from 'node:process'; import pg from 'pg';
@@ -42,6 +44,7 @@ const END_WORK = 'public.end_conversation_turn_work_v1(uuid,uuid,uuid)';
 const POLICY = 'public.conversation_turn_admission_policy_v1()';
 const IN_FLIGHT = 'public.conversation_turns_in_flight_v1(uuid,boolean)';
 const LOCK = 'public.lock_conversation_turn_admission_v1(uuid)';
+const BUDGET = 'public.conversation_turn_work_budget_spent_v1(uuid)';
 const ROUTE = ['FAST', 'RUNTIME_ROUTING_V2_FAST_DEFAULT'];
 
 // ------------------------------------------------------------------ fixtures (postgres authority)
@@ -119,13 +122,14 @@ async function verifyStaticAuthority() {
       to_regprocedure($1) IS NOT NULL create_present, to_regprocedure($2) IS NOT NULL begin_present,
       to_regprocedure($3) IS NOT NULL end_present, to_regprocedure($4) IS NOT NULL policy_present,
       to_regprocedure($5) IS NOT NULL in_flight_present, to_regprocedure($6) IS NOT NULL lock_present,
+      to_regprocedure($7) IS NOT NULL budget_present,
       pg_get_functiondef(to_regprocedure($1)) create_definition,
       pg_get_functiondef(to_regprocedure($2)) begin_definition,
       pg_get_functiondef(to_regprocedure($3)) end_definition,
       (SELECT proconfig FROM pg_proc WHERE oid = to_regprocedure($1)) create_config,
       (SELECT pg_get_userbyid(proowner) FROM pg_proc WHERE oid = to_regprocedure($1)) create_owner`,
-  [CREATE, BEGIN_WORK, END_WORK, POLICY, IN_FLIGHT, LOCK]);
-  for (const key of ['create_present', 'begin_present', 'end_present', 'policy_present', 'in_flight_present', 'lock_present']) {
+  [CREATE, BEGIN_WORK, END_WORK, POLICY, IN_FLIGHT, LOCK, BUDGET]);
+  for (const key of ['create_present', 'begin_present', 'end_present', 'policy_present', 'in_flight_present', 'lock_present', 'budget_present']) {
     assert.equal(contract[key], true, `${key}: the exact signature exists`);
   }
   assert.deepEqual(contract.create_config, ['search_path=""'], 'the admission command keeps exactly one setting: an empty search_path');
@@ -142,14 +146,21 @@ async function verifyStaticAuthority() {
   assert.ok(contract.create_definition.indexOf('INVALID_IDEMPOTENCY_KEY') < contract.create_definition.indexOf('lock_conversation_turn_admission_v1'),
     'validation precedes the lock, so no caller can hold a lock with an invalid request');
   assert.match(contract.create_definition, /PT429/u);
+  assert.match(contract.create_definition, /conversation_turn_work_budget_spent_v1\(u\)/u, 'admission refuses while the work-start budget is spent');
+  assert.match(contract.begin_definition, /conversation_turn_work_budget_spent_v1\(p_user_id\)/u, 'every grant is decided against the work-start budget');
   assert.doesNotMatch(contract.begin_definition, /auth\.uid|request\.jwt/iu, 'the work lease derives no identity from caller claims: ownership is explicit');
+  assert.doesNotMatch(contract.end_definition, /conversation_turn_work_grants/u, 'returning a lease never refunds its grant');
 
   stage = 'static policy';
   const [policy] = await rows(`SELECT session_in_flight_limit, user_in_flight_limit, short_window_limit, long_window_limit,
+      work_short_window_limit, work_long_window_limit,
       short_window = interval '10 minutes' short_exact, long_window = interval '24 hours' long_exact
     FROM public.conversation_turn_admission_policy_v1()`);
-  assert.deepEqual(policy, { session_in_flight_limit: 1, user_in_flight_limit: 2, short_window_limit: 40, long_window_limit: 600, short_exact: true, long_exact: true },
-    'the engineering defaults are exactly the documented ones');
+  assert.deepEqual(policy, { session_in_flight_limit: 1, user_in_flight_limit: 2, short_window_limit: 40, long_window_limit: 600,
+    work_short_window_limit: 60, work_long_window_limit: 900, short_exact: true, long_exact: true },
+  'the engineering defaults are exactly the documented ones');
+  assert.ok(policy.work_short_window_limit > policy.short_window_limit && policy.work_long_window_limit > policy.long_window_limit,
+    'the work-start budget always covers every admission it allows, so ordinary use is never deferred by it');
 
   stage = 'static privileges';
   const matrix = [
@@ -157,24 +168,26 @@ async function verifyStaticAuthority() {
     ['service_role', BEGIN_WORK, true], ['authenticated', BEGIN_WORK, false], ['anon', BEGIN_WORK, false],
     ['service_role', END_WORK, true], ['authenticated', END_WORK, false], ['anon', END_WORK, false],
   ];
-  for (const internal of [POLICY, IN_FLIGHT, LOCK]) {
+  for (const internal of [POLICY, IN_FLIGHT, LOCK, BUDGET]) {
     for (const role of ['anon', 'authenticated', 'service_role']) matrix.push([role, internal, false]);
   }
   for (const [role, signature, expected] of matrix) {
     const [{ allowed }] = await rows('SELECT has_function_privilege($1,$2,$3) allowed', [role, signature, 'EXECUTE']);
     assert.equal(allowed, expected, `${role} EXECUTE ${signature}`);
   }
-  for (const role of ['anon', 'authenticated', 'service_role']) {
-    for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
-      const [{ allowed }] = await rows("SELECT has_table_privilege($1,'public.conversation_turn_work_leases',$2) allowed", [role, privilege]);
-      assert.equal(allowed, false, `${role} has no ${privilege} on the work lease table`);
+  for (const relation of ['public.conversation_turn_work_leases', 'public.conversation_turn_work_grants']) {
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      for (const privilege of ['SELECT', 'INSERT', 'UPDATE', 'DELETE']) {
+        const [{ allowed }] = await rows('SELECT has_table_privilege($1,$2,$3) allowed', [role, relation, privilege]);
+        assert.equal(allowed, false, `${role} has no ${privilege} on ${relation}`);
+      }
     }
+    const [table] = await rows(`SELECT c.relrowsecurity rls,
+        (SELECT confdeltype FROM pg_constraint WHERE conrelid = c.oid AND contype = 'f') delete_rule,
+        (SELECT confrelid::regclass::text FROM pg_constraint WHERE conrelid = c.oid AND contype = 'f') referenced
+      FROM pg_class c WHERE c.oid = $1::regclass`, [relation]);
+    assert.deepEqual(table, { rls: true, delete_rule: 'c', referenced: 'conversation_turns' }, `${relation}: RLS on, and its rows cascade away with their turn`);
   }
-  const [table] = await rows(`SELECT c.relrowsecurity rls,
-      (SELECT confdeltype FROM pg_constraint WHERE conrelid = c.oid AND contype = 'f') delete_rule,
-      (SELECT confrelid::regclass::text FROM pg_constraint WHERE conrelid = c.oid AND contype = 'f') referenced
-    FROM pg_class c WHERE c.oid = 'public.conversation_turn_work_leases'::regclass`);
-  assert.deepEqual(table, { rls: true, delete_rule: 'c', referenced: 'conversation_turns' }, 'RLS on, and a lease cascades away with its turn');
 }
 
 // ------------------------------------------------------------------ admission bound
@@ -338,6 +351,91 @@ async function verifyWorkLease() {
   assert.equal((await beginWork(legacy.user, legacy.sessions[0], queued)).work_outcome, 'LIMITED');
 }
 
+// ------------------------------------------------------------------ work-start budget
+const grantsOf = async (user) => (await rows('SELECT count(*)::int n FROM public.conversation_turn_work_grants WHERE user_id=$1', [user]))[0].n;
+const leasesOf = async (user) => (await rows('SELECT count(*)::int n FROM public.conversation_turn_work_leases WHERE user_id=$1', [user]))[0].n;
+const fillGrants = (user, turn, total, age) => q(`INSERT INTO public.conversation_turn_work_grants(user_turn_id, user_id, granted_at)
+  SELECT $1, $2, now() - $4::interval FROM generate_series(1, $3)`, [turn, user, total, age]);
+
+/** A COMPLETED exchange whose semantic establishment never happened: every replay of it would walk it again. */
+async function completedUnestablished(user, session) {
+  const turn = await admit(user, session);
+  await claim(user, session, turn);
+  await identity('service_role');
+  const finalized = await rows('SELECT * FROM finalize_conversation_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9)', [session, user, turn, randomUUID(), 'reply', 'ALLOW', randomUUID(), null, null]);
+  await identity('postgres');
+  assert.equal(finalized.length, 1, 'fixture finalize succeeded');
+  return turn;
+}
+
+async function verifyWorkStartBudget() {
+  const [policy] = await rows('SELECT work_short_window_limit, work_long_window_limit FROM public.conversation_turn_admission_policy_v1()');
+
+  stage = 'work-start budget: repeated semantic retries of one exchange eventually stop';
+  const { user, sessions: [session] } = await freshOwner(1);
+  const exchange = await completedUnestablished(user, session);
+  const baseline = await grantsOf(user);
+  let grantedRetries = 0;
+  for (;;) {
+    const attempt = await beginWork(user, session, exchange);
+    if (attempt.work_outcome !== 'GRANTED') {
+      assert.deepEqual(attempt, { work_outcome: 'LIMITED', work_lease_id: null }, 'an exhausted budget is the ordinary LIMITED answer');
+      break;
+    }
+    grantedRetries += 1;
+    assert.ok(grantedRetries <= policy.work_short_window_limit, 'the retry loop never outruns the 10-minute budget');
+    assert.equal(await endWork(user, exchange, attempt.work_lease_id), true, 'each retry returns its lease, exactly like a finished request');
+  }
+  assert.equal(grantedRetries, policy.work_short_window_limit, 'exactly the 10-minute work-start budget was granted, one start per retry');
+  assert.equal(await grantsOf(user) - baseline, policy.work_short_window_limit, 'a returned lease is still charged: ending work refunds nothing');
+
+  stage = 'work-start budget: no provider-bearing work begins once it is spent';
+  assert.equal(await leasesOf(user), 0, 'the refused attempt holds no lease, so no provider work may start');
+  assert.equal((await beginWork(user, session, exchange)).work_outcome, 'LIMITED', 'asking again changes nothing');
+  assert.equal(await grantsOf(user) - baseline, policy.work_short_window_limit, 'a refusal is never charged');
+  await admissionLimited(user, session, 'new-turn-after-budget');
+
+  stage = 'work-start budget: users are isolated';
+  const neighbour = await freshOwner(1);
+  const neighbourTurn = await admit(neighbour.user, neighbour.sessions[0]);
+  assert.equal((await beginWork(neighbour.user, neighbour.sessions[0], neighbourTurn)).work_outcome, 'GRANTED', 'another user\'s budget is untouched');
+
+  stage = 'work-start budget: the 10-minute window rolls, so a spent budget is never a permanent lockout';
+  await q("UPDATE public.conversation_turn_work_grants SET granted_at = granted_at - interval '10 minutes' WHERE user_id=$1", [user]);
+  const recovered = await beginWork(user, session, exchange);
+  assert.equal(recovered.work_outcome, 'GRANTED', 'the same exchange may be worked again once the window has rolled');
+  await endWork(user, exchange, recovered.work_lease_id);
+  await admit(user, session, 'new-turn-after-window');
+
+  stage = 'work-start budget: the 24-hour window, and its pruning';
+  const day = await freshOwner(1);
+  const dayExchange = await completedUnestablished(day.user, day.sessions[0]);
+  await fillGrants(day.user, dayExchange, policy.work_long_window_limit, '2 hours');
+  assert.equal((await beginWork(day.user, day.sessions[0], dayExchange)).work_outcome, 'LIMITED', 'the daily budget holds even when the 10-minute window is empty');
+  await admissionLimited(day.user, day.sessions[0]);
+  await q("UPDATE public.conversation_turn_work_grants SET granted_at = granted_at - interval '1 day' WHERE user_id=$1", [day.user]);
+  assert.equal((await beginWork(day.user, day.sessions[0], dayExchange)).work_outcome, 'GRANTED');
+  assert.equal(await grantsOf(day.user), 1, 'grants older than the longest window are pruned when the next one is granted');
+
+  stage = 'work-start budget: a crashed request is charged once and never locks out';
+  const crash = await freshOwner(1);
+  const crashed = await completedUnestablished(crash.user, crash.sessions[0]);
+  const crashBaseline = await grantsOf(crash.user);
+  assert.equal((await beginWork(crash.user, crash.sessions[0], crashed)).work_outcome, 'GRANTED');
+  // The request dies without returning its lease: the lease expires on its own and the next replay may work again.
+  await expireWork(crashed);
+  assert.equal((await beginWork(crash.user, crash.sessions[0], crashed)).work_outcome, 'GRANTED', 'an expired lease never blocks the exchange');
+  assert.equal(await grantsOf(crash.user) - crashBaseline, 2, 'the crashed start and the recovery start are each charged once');
+
+  stage = 'work-start budget: standing aside is free';
+  const aside = await freshOwner(1);
+  const asideTurn = await completedUnestablished(aside.user, aside.sessions[0]);
+  const asideBaseline = await grantsOf(aside.user);
+  assert.equal((await beginWork(aside.user, aside.sessions[0], asideTurn)).work_outcome, 'GRANTED');
+  assert.equal((await beginWork(aside.user, aside.sessions[0], asideTurn)).work_outcome, 'IN_PROGRESS');
+  assert.equal(await grantsOf(aside.user) - asideBaseline, 1, 'an IN_PROGRESS answer (the request reusing the exchange\'s work) is never charged again');
+}
+
 async function verifyAuthorityDoesNotWiden() {
   stage = 'authority does not widen';
   const { user, sessions: [session] } = await freshOwner(1);
@@ -355,6 +453,10 @@ async function verifyAuthorityDoesNotWiden() {
   await rejected(() => q('SELECT * FROM public.conversation_turn_work_leases'));
   await rejected(() => q("INSERT INTO public.conversation_turn_work_leases VALUES($1,$2,$3,$4,now(),now()+interval '1 hour')", [turn, user, session, randomUUID()]));
   await rejected(() => q('DELETE FROM public.conversation_turn_work_leases'));
+  await rejected(() => q('SELECT public.conversation_turn_work_budget_spent_v1($1)', [user]));
+  await rejected(() => q('SELECT * FROM public.conversation_turn_work_grants'));
+  await rejected(() => q('DELETE FROM public.conversation_turn_work_grants'));
+  await rejected(() => q('INSERT INTO public.conversation_turn_work_grants(user_turn_id,user_id,granted_at) VALUES($1,$2,now())', [turn, user]));
   await identity('anon');
   await rejected(() => q('SELECT * FROM create_user_conversation_turn($1,$2,$3,$4)', [randomUUID(), session, 'anon', null]));
   // Another user's token cannot spend, read or reach this user's admission state.
@@ -370,6 +472,8 @@ async function verifyAuthorityDoesNotWiden() {
   await identity('postgres');
   assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_turn_work_leases WHERE user_id IN ($1,$2)', [user, other.user]))[0].n, 0,
     'no refused attempt created a lease');
+  assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_turn_work_grants WHERE user_id IN ($1,$2)', [user, other.user]))[0].n, 0,
+    'no refused attempt was charged');
 }
 
 async function verifyLeaseStateGoesWithTheTurns() {
@@ -378,9 +482,11 @@ async function verifyLeaseStateGoesWithTheTurns() {
   const turn = await admit(user, session);
   assert.equal((await beginWork(user, session, turn)).work_outcome, 'GRANTED');
   assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_turn_work_leases WHERE user_id=$1', [user]))[0].n, 1);
+  assert.equal(await grantsOf(user), 1);
   await q('DELETE FROM public.runtime_event_outbox WHERE subject_user_id=$1', [user]);
   await q('DELETE FROM public.conversation_turns WHERE user_id=$1', [user]);
   assert.equal((await rows('SELECT count(*)::int n FROM public.conversation_turn_work_leases WHERE user_id=$1', [user]))[0].n, 0, 'no orphan lease survives its turn');
+  assert.equal(await grantsOf(user), 0, 'no orphan grant survives its turn');
 }
 
 // ------------------------------------------------------------------ committed races
@@ -398,7 +504,7 @@ const createSql = 'SELECT * FROM create_user_conversation_turn($1,$2,$3,$4)';
 
 async function verifyCommittedRaces() {
   stage = 'committed races: fixtures';
-  const users = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  const users = [randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID(), randomUUID()];
   const sessions = new Map(users.map((user) => [user, [randomUUID(), randomUUID(), randomUUID(), randomUUID()]]));
   const connections = [];
   try {
@@ -408,7 +514,7 @@ async function verifyCommittedRaces() {
         await q("INSERT INTO public.conversation_sessions(id,user_id,status,channel) VALUES($1,$2,'ACTIVE','TEXT')", [session, user]);
       }
     }
-    const [sameSessionUser, sameUser, independentA, independentB] = users;
+    const [sameSessionUser, sameUser, independentA, independentB, budgetPair, budgetBurst] = users;
 
     stage = 'committed race: one session never admits two turns';
     const a = await connectAs('authenticated', sameSessionUser); connections.push(a);
@@ -461,6 +567,44 @@ async function verifyCommittedRaces() {
     const h = await connectAs('service_role', null); connections.push(h);
     const leases = await Promise.all([g, h].map((connection) => connection.query('SELECT * FROM begin_conversation_turn_work_v1($1,$2,$3)', [target, sameSessionUser, worked]).then((r) => r.rows[0].work_outcome)));
     assert.deepEqual(leases.sort(), ['GRANTED', 'IN_PROGRESS'], 'two concurrent requests for one exchange: one works, one stands aside');
+
+    // The work-start budget under committed concurrency. Each user gets four COMPLETED exchanges in four sessions,
+    // none in flight, so the in-flight bound would admit two of them at once: any refusal beyond that is the budget.
+    const [{ work_short_window_limit: workLimit }] = await rows('SELECT work_short_window_limit FROM public.conversation_turn_admission_policy_v1()');
+    const exchangesOf = async (user, spent) => {
+      const turns = [];
+      for (const session of sessions.get(user)) {
+        const turn = randomUUID();
+        await q(`INSERT INTO public.conversation_turns(id,session_id,user_id,role,status,content,completed_at)
+          VALUES($1,$2,$3,'USER','COMPLETED','budget race fixture',now())`, [turn, session, user]);
+        turns.push({ turn, session });
+      }
+      await fillGrants(user, turns[0].turn, spent, '1 minute');
+      return turns;
+    };
+    const beginSql = 'SELECT * FROM begin_conversation_turn_work_v1($1,$2,$3)';
+
+    stage = 'committed race: the last unit of budget is granted once';
+    const pair = await exchangesOf(budgetPair, workLimit - 1);
+    const i = await connectAs('service_role', null); connections.push(i);
+    const j = await connectAs('service_role', null); connections.push(j);
+    await i.query('BEGIN');
+    assert.equal((await i.query(beginSql, [pair[0].session, budgetPair, pair[0].turn])).rows[0].work_outcome, 'GRANTED');
+    const rival = j.query(beginSql, [pair[1].session, budgetPair, pair[1].turn]);
+    rival.catch(() => undefined); // guarded branch: a teardown-path rejection must never become an unhandled rejection
+    assert.equal(await blockedFor(rival), 'BLOCKED', 'the rival grant waits on the per-user lock instead of counting early');
+    await i.query('COMMIT');
+    assert.equal((await rival).rows[0].work_outcome, 'LIMITED', 'after the last unit commits, the rival is refused');
+    assert.equal(await grantsOf(budgetPair), workLimit, 'the budget was never over-granted');
+
+    stage = 'committed race: a burst of grants never over-spends the budget';
+    const burstExchanges = await exchangesOf(budgetBurst, workLimit - 1);
+    const grantBurst = [];
+    for (let index = 0; index < burstExchanges.length; index += 1) { const connection = await connectAs('service_role', null); connections.push(connection); grantBurst.push(connection); }
+    const grants = await Promise.all(grantBurst.map((connection, index) => connection.query(beginSql, [burstExchanges[index].session, budgetBurst, burstExchanges[index].turn]).then((r) => r.rows[0].work_outcome)));
+    assert.equal(grants.filter((result) => result === 'GRANTED').length, 1, `exactly one concurrent start is granted (${grants.join(',')})`);
+    assert.equal(grants.filter((result) => result === 'LIMITED').length, burstExchanges.length - 1, 'every other start is LIMITED - never a deadlock or a timeout');
+    assert.equal(await grantsOf(budgetBurst), workLimit, 'the burst never over-spent the budget');
   } finally {
     for (const connection of connections) await connection.end().catch(() => undefined);
     await q('DELETE FROM public.runtime_event_outbox WHERE subject_user_id = ANY($1::uuid[])', [users]);
@@ -483,6 +627,8 @@ async function verifyCommittedRaces() {
     }
     const [{ n: residue }] = await rows('SELECT count(*)::int n FROM public.conversation_turn_work_leases WHERE user_id = ANY($1::uuid[])', [users]);
     assert.equal(residue, 0, 'the concurrency proof left no lease behind');
+    const [{ n: charged }] = await rows('SELECT count(*)::int n FROM public.conversation_turn_work_grants WHERE user_id = ANY($1::uuid[])', [users]);
+    assert.equal(charged, 0, 'the concurrency proof left no grant behind');
   }
 }
 
@@ -497,12 +643,13 @@ async function main() {
       await verifyStaleWorkNeverLocksOut();
       await verifySustainedAllowance();
       await verifyWorkLease();
+      await verifyWorkStartBudget();
       await verifyAuthorityDoesNotWiden();
       await verifyLeaseStateGoesWithTheTurns();
       await identity('postgres');
     } finally { await q('ROLLBACK'); }
     await verifyCommittedRaces();
-    console.log('Verified migration 0131: one in-flight turn per session and two per user, the rolling 10-minute and 24-hour allowances, all decided atomically by the authenticated RPC under a per-user lock; one typed PT429 refusal that commits and discloses nothing; idempotent replay never limited or charged; terminal, stale-RECEIVED and expired-GENERATING turns free their slot by themselves; the service-role work lease bounds banked and cancelled-but-working turns and grants one exchange once; authority unchanged; leases cascade with their turns; committed races serialize one user, never two, without deadlock.');
+    console.log('Verified migration 0131: one in-flight turn per session and two per user, the rolling 10-minute and 24-hour allowances, all decided atomically by the authenticated RPC under a per-user lock; one typed PT429 refusal that commits and discloses nothing; idempotent replay never limited or charged; terminal, stale-RECEIVED and expired-GENERATING turns free their slot by themselves; the service-role work lease bounds banked and cancelled-but-working turns and grants one exchange once; the durable rolling work-start budget stops repeated semantic retries, refuses new work and new admissions once spent, never charges a refusal or a stand-aside, never refunds a returned lease, isolates users and rolls back open after a crash; authority unchanged; leases and grants cascade with their turns; committed races serialize one user, never two, never over-grant the budget, without deadlock.');
   } finally {
     await client.end();
   }

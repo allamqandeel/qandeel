@@ -78,6 +78,15 @@ test('migration 0131 owns the bound: same admission signature, one per-user lock
   assert.match(migration, /REFERENCES public\.conversation_turns\(id\) ON DELETE CASCADE/u, 'lease state goes with its turn');
   assert.match(migration, /GRANT EXECUTE ON FUNCTION public\.begin_conversation_turn_work_v1\(uuid,uuid,uuid\) TO service_role;/u);
   assert.doesNotMatch(migration, /GRANT [^;]*TO (?:anon|authenticated)[^;]*work_v1/u, 'no client role may take or return a work lease');
+  // The work-start budget: a durable ledger written by the one grant, read by the grant and by admission, and
+  // never refunded by returning a lease.
+  assert.match(migration, /CREATE TABLE public\.conversation_turn_work_grants \(/u);
+  assert.doesNotMatch(migration, /GRANT [^;]*conversation_turn_work_grants/u, 'no application role may read or write the ledger');
+  assert.equal((migration.match(/INSERT INTO public\.conversation_turn_work_grants/gu) ?? []).length, 1, 'exactly one writer: the grant');
+  assert.match(migration, /OR public\.conversation_turn_work_budget_spent_v1\(u\) THEN/u, 'admission refuses while the budget is spent');
+  assert.match(migration, /IF public\.conversation_turn_work_budget_spent_v1\(p_user_id\) THEN/u, 'every grant is decided against the budget');
+  const end = /CREATE FUNCTION public\.end_conversation_turn_work_v1[\s\S]*?END;\$\$;/u.exec(migration)?.[0] ?? '';
+  assert.ok(end.length > 0 && !end.includes('conversation_turn_work_grants'), 'returning a lease refunds nothing');
 });
 
 test('the refusal is typed only where nothing was committed, and the verifier is registered in CI', () => {
@@ -95,4 +104,8 @@ test('the refusal is typed only where nothing was committed, and the verifier is
   const ci = read('.github/workflows/api-ci.yml');
   assert.match(ci, /run: npm run verify:turn-admission-cost-bound:integration/u);
   assert.match(ci, /npm run test:prod-sec-02-turn-admission-cost-bound-contract/u);
+  // The refusal on the wire: the live PostgREST proof is registered and runs against every pinned release line.
+  assert.equal(pkg.scripts['prove:turn-admission-refusal:postgrest'], 'node --env-file-if-exists=.env database/prove-0131-postgrest-refusal.mjs');
+  assert.match(ci, /npm run --silent prove:turn-admission-refusal:postgrest/u);
+  for (const line of ['v12.', 'v13.', 'v14.', 'v16.']) assert.ok(ci.includes(` ${line}`), `PostgREST ${line} is proven`);
 });
