@@ -25,15 +25,23 @@ export interface ThreadEstablishmentBinding {
 
 export type ThreadEstablishmentBindingFactory = () => ThreadEstablishmentBinding;
 
+/** Decorates the transport client the adapter is built with (AI-COST-01 provider-call accounting). */
+export type ThreadEstablishmentClientDecorator = (client: ReturnType<typeof createOpenAiThreadClient>) => ReturnType<typeof createOpenAiThreadClient>;
+
 /**
  * The production factory. Calling the returned function - not creating it -
  * reads the environment and constructs the adapter.
  */
-export function openAiThreadEstablishmentBinding(environment: NodeJS.ProcessEnv = process.env): ThreadEstablishmentBindingFactory {
+export function openAiThreadEstablishmentBinding(
+  environment: NodeJS.ProcessEnv = process.env,
+  // AI-COST-01: the composition root passes the provider-call accounting decorator for the transport client; the
+  // adapter itself is unchanged and this slice imports nothing new.
+  decorateClient: ThreadEstablishmentClientDecorator = (client) => client,
+): ThreadEstablishmentBindingFactory {
   return () => {
     const config = loadThreadEstablishmentOpenAIConfig(environment);
     return {
-      provider: new OpenAiThreadEstablishmentProvider(config, createOpenAiThreadClient(config)),
+      provider: new OpenAiThreadEstablishmentProvider(config, decorateClient(createOpenAiThreadClient(config))),
       providerName: config.provider,
       providerModel: config.model,
     };

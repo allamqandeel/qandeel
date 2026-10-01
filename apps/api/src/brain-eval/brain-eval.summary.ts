@@ -12,7 +12,7 @@ export function summarizeResults(results: ReadonlyArray<CandidateResult>, review
     const rows = results.filter((row) => row.path === path && row.provider === provider && row.success);
     const costs = rows.map((row) => row.estimatedCostUsd).filter((value): value is number => value !== null);
     const averageCost = average(costs);
-    return { path, provider, sampleSize: rows.length, p50LatencyMs: percentile(rows.map((row) => row.latencyMs), .5), p95LatencyMs: rows.length >= 20 ? percentile(rows.map((row) => row.latencyMs), .95) : null, averageInputTokens: average(rows.map((row) => row.inputTokens)), averageOutputTokens: average(rows.map((row) => row.outputTokens)), averageEstimatedCostPerTurnUsd: averageCost, estimatedCostPer100TurnsUsd: averageCost === null ? null : averageCost * 100, estimatedCostPer1000TurnsUsd: averageCost === null ? null : averageCost * 1000 };
+    return { path, provider, sampleSize: rows.length, p50LatencyMs: percentile(rows.map((row) => row.latencyMs), .5), p95LatencyMs: rows.length >= 20 ? percentile(rows.map((row) => row.latencyMs), .95) : null, averageInputTokens: average(rows.map((row) => row.inputTokens).filter((value): value is number => value !== null)), averageOutputTokens: average(rows.map((row) => row.outputTokens).filter((value): value is number => value !== null)), averageEstimatedCostPerTurnUsd: averageCost, estimatedCostPer100TurnsUsd: averageCost === null ? null : averageCost * 100, estimatedCostPer1000TurnsUsd: averageCost === null ? null : averageCost * 1000 };
   }));
   const preferences = Object.fromEntries(['FAST', 'DEEP'].map((path) => {
     const rows = reviews.filter((review) => review.path === path && ['A', 'B', 'Tie'].includes(String(review.overallPreference)));

@@ -212,7 +212,9 @@ test('no Thread / LF / T-03C scope, no mobile change, no new dependency', () => 
 });
 
 test('the focus provider binding is lazy and never runs at construction, replay, invalid exchange or partial history', () => {
-  assert.match(binding, /export function openAiFocusResolutionBinding\(environment: NodeJS\.ProcessEnv = process\.env\): FocusResolutionBindingFactory \{\s*return \(\) => \{\s*const config = loadFocusResolutionOpenAIConfig\(environment\);/u);
+  // RE-ANCHORED by AI-COST-01: the factory gains an optional transport-client decorator (provider-call accounting,
+  // identity by default); it is still lazy - the config is read only inside the returned closure.
+  assert.match(binding, /export function openAiFocusResolutionBinding\(\s*environment: NodeJS\.ProcessEnv = process\.env,\s*decorateClient: FocusResolutionClientDecorator = \(client\) => client,\s*\): FocusResolutionBindingFactory \{\s*return \(\) => \{\s*const config = loadFocusResolutionOpenAIConfig\(environment\);/u);
   assert.match(service, /this\.focus \?\?= this\.createFocusBinding\(\);/u);
   assert.match(service, /this\.segmentation \?\?= this\.createSegmentationBinding\(\);/u);
   // The factory is referenced exactly once, inside evaluateFocus, which runs

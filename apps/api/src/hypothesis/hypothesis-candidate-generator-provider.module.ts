@@ -1,13 +1,20 @@
 import { Module } from '@nestjs/common';
 import { FakeHypothesisCandidateGenerator } from './fake-hypothesis-candidate.generator';
 import { GeminiHypothesisCandidateGenerator } from './gemini-hypothesis-candidate.generator';
+import { loadHypothesisCandidateGenerationGeminiConfig } from './hypothesis-candidate-generator-provider.config';
+import { accountedGeminiTransport } from '../ai-usage/accounted-provider-clients';
+import { productionAiProviderCallAccounting } from '../ai-usage/production-ai-provider-call-accounting';
 import { HYPOTHESIS_CANDIDATE_GENERATOR, type BoundHypothesisCandidateGenerator } from './hypothesis-candidate-generator-provider.types';
 
 export function createConfiguredHypothesisCandidateGenerator(
   environment: NodeJS.ProcessEnv = process.env,
 ): BoundHypothesisCandidateGenerator {
   if (environment.NODE_ENV === 'test') return new FakeHypothesisCandidateGenerator();
-  return GeminiHypothesisCandidateGenerator.fromEnvironment(environment);
+  // AI-COST-01: the same configuration and transport as `fromEnvironment`, with every generation attempt passing the
+  // one accounting boundary. The adapter is unchanged.
+  const config = loadHypothesisCandidateGenerationGeminiConfig(environment);
+  return new GeminiHypothesisCandidateGenerator(config, accountedGeminiTransport(
+    (url, init) => fetch(url, init), config.model, 'HYPOTHESIS_CANDIDATE_GENERATION', productionAiProviderCallAccounting()));
 }
 
 /**

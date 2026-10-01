@@ -1,0 +1,42 @@
+[
+  {
+    "scenarioLabel": "TEST_ONLY synthetic four-kind fixture - not a provider price, not a QANDEEL price",
+    "provider": "TEST_PROVIDER",
+    "model": "test-model",
+    "eventAt": "2026-06-01T00:00:00Z",
+    "usage": {
+      "completeness": "COMPLETE",
+      "quantities": { "INPUT_TOKEN": 1234, "CACHE_READ_INPUT_TOKEN": 5000, "CACHE_WRITE_INPUT_TOKEN": 100, "OUTPUT_TOKEN": 789 }
+    },
+    "priceCards": [
+      { "usageKind": "INPUT_TOKEN", "unitPrice": "0.15", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" },
+      { "usageKind": "CACHE_READ_INPUT_TOKEN", "unitPrice": "0.015", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" },
+      { "usageKind": "CACHE_WRITE_INPUT_TOKEN", "unitPrice": "0.1875", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" },
+      { "usageKind": "OUTPUT_TOKEN", "unitPrice": "0.6", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" }
+    ],
+    "creditPolicy": {
+      "policyKey": "test_only_policy",
+      "policyVersion": 1,
+      "costCurrency": "USD",
+      "creditsPerCostUnit": "1000",
+      "creditScale": 2,
+      "roundingMode": "CEILING"
+    }
+  },
+  {
+    "scenarioLabel": "TEST_ONLY same usage, no Credit Policy supplied (answers CREDIT_POLICY_NOT_SUPPLIED, never 0 Credits)",
+    "provider": "TEST_PROVIDER",
+    "model": "test-model",
+    "eventAt": "2026-06-01T00:00:00Z",
+    "usage": {
+      "completeness": "COMPLETE",
+      "quantities": { "INPUT_TOKEN": 1234, "CACHE_READ_INPUT_TOKEN": 5000, "CACHE_WRITE_INPUT_TOKEN": 100, "OUTPUT_TOKEN": 789 }
+    },
+    "priceCards": [
+      { "usageKind": "INPUT_TOKEN", "unitPrice": "0.15", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" },
+      { "usageKind": "CACHE_READ_INPUT_TOKEN", "unitPrice": "0.015", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" },
+      { "usageKind": "CACHE_WRITE_INPUT_TOKEN", "unitPrice": "0.1875", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" },
+      { "usageKind": "OUTPUT_TOKEN", "unitPrice": "0.6", "priceBasisUnits": 1000000, "currency": "USD", "effectiveFrom": "2026-01-01T00:00:00Z", "source": "TEST_ONLY synthetic" }
+    ]
+  }
+]

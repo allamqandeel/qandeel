@@ -17,8 +17,8 @@ export interface CandidateResult {
   profile: `${EvaluationProvider}_${ProcessingPath}`;
   modelId: string;
   latencyMs: number;
-  inputTokens: number;
-  outputTokens: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
   success: boolean;
   response: string;
   estimatedCostUsd: number | null;

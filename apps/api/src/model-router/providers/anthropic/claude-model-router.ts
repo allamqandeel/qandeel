@@ -12,6 +12,9 @@ import {
 } from './claude-model-router.config';
 import { TelemetryService } from '../../../observability/telemetry.service';
 import { assertForegroundProviderBudget } from '../../../conversation/foreground-turn-work';
+import type { AiProviderCallAccounting } from '../../../ai-usage/ai-provider-call-accounting';
+import { accountedAnthropicMessagesClient } from '../../../ai-usage/accounted-provider-clients';
+import { runWithAiUsageProcessingPath } from '../../../ai-usage/ai-usage-attribution';
 
 interface AnthropicTextBlock { type: 'text'; text: string }
 interface AnthropicMessageResponse {
@@ -33,9 +36,14 @@ interface AnthropicMessagesClient {
 }
 
 export class ClaudeModelRouter implements ModelRouter {
-  static fromEnvironment(telemetry?:TelemetryService): ClaudeModelRouter {
+  /**
+   * AI-COST-01: production composition passes the accounting boundary, so every reply attempt is one ledger row;
+   * the operator-only evaluation harness (brain-eval, not production) composes without it.
+   */
+  static fromEnvironment(telemetry?:TelemetryService, accounting?: AiProviderCallAccounting): ClaudeModelRouter {
     const config = loadClaudeModelRouterConfig();
-    return new ClaudeModelRouter(config, createClaudeClient(config),telemetry);
+    const client = createClaudeClient(config);
+    return new ClaudeModelRouter(config, accounting ? accountedAnthropicMessagesClient(client, 'CONVERSATION_REPLY', accounting) : client, telemetry);
   }
 
   constructor(
@@ -44,7 +52,11 @@ export class ClaudeModelRouter implements ModelRouter {
     private readonly telemetry?:TelemetryService,
   ) {}
 
-  async generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+  generate(request: ModelRouterRequest): Promise<ModelRouterResult> {
+    return runWithAiUsageProcessingPath(request.path, () => this.generateOnce(request));
+  }
+
+  private async generateOnce(request: ModelRouterRequest): Promise<ModelRouterResult> {
     assertForegroundProviderBudget();
     const modelConfiguration = this.config.resolveModel(request.path);
     try {

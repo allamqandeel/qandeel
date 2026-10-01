@@ -19,11 +19,14 @@ const REPLY_ROUTERS = [
   ['apps/api/src/model-router/providers/openai/openai-model-router.ts', 'this.client.responses.create('],
   ['apps/api/src/model-router/providers/anthropic/claude-model-router.ts', 'this.client.messages.create('],
 ];
+// Re-anchored by AI-COST-01: each binding factory now also receives the provider-call accounting decorator for its
+// transport client. The PROD-SEC-02 property is unchanged: every semantic binding is still wrapped by
+// guardForegroundBinding, so no provider request opens after the deadline.
 const SEMANTIC_BINDINGS = [
   ['CU_SEGMENTATION_BINDING_FACTORY', 'openAiSegmentationBinding'],
-  ['FOCUS_RESOLUTION_BINDING_FACTORY', 'openAiFocusResolutionBinding()'],
-  ['THREAD_ESTABLISHMENT_BINDING_FACTORY', 'openAiThreadEstablishmentBinding()'],
-  ['THREAD_CONTINUITY_BINDING_FACTORY', 'openAiThreadContinuityBinding()'],
+  ['FOCUS_RESOLUTION_BINDING_FACTORY', "openAiFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))"],
+  ['THREAD_ESTABLISHMENT_BINDING_FACTORY', "openAiThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))"],
+  ['THREAD_CONTINUITY_BINDING_FACTORY', "openAiThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))"],
 ];
 const FROZEN_SEMANTIC_PROVIDERS = [
   'apps/api/src/conversation-unit/openai-cu-segmentation.provider.ts',

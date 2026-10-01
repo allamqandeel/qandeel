@@ -41,6 +41,7 @@ import { ConversationSemanticEstablishmentService } from '../live-focus/conversa
 import { ConversationSemanticRuntimeRepository } from '../live-focus/conversation-semantic-runtime.repository';
 import { ConversationHistoricalProjectionController } from './conversation-historical-projection.controller';
 import { HistoricalProjectionRepository } from '../historical-projection/historical-projection.repository';
+import { costLedgerDecorator } from '../ai-usage/production-ai-provider-call-accounting';
 
 /**
  * T-03A2: the LAZY CU segmentation binding.
@@ -56,7 +57,8 @@ export const CU_SEGMENTATION_BINDING_FACTORY = Symbol('CU_SEGMENTATION_BINDING_F
 function openAiSegmentationBinding(): CuSegmentationBinding {
   const config = loadCuSegmentationOpenAIConfig();
   return {
-    provider: new OpenAiCuSegmentationProvider(config, createOpenAiSegmentationClient(config)),
+    // AI-COST-01: every segmentation attempt passes the one accounting boundary; the frozen adapter is unchanged.
+    provider: new OpenAiCuSegmentationProvider(config, costLedgerDecorator('CU_SEGMENTATION')(createOpenAiSegmentationClient(config))),
     providerName: config.provider,
     providerModel: config.model,
   };
@@ -141,10 +143,11 @@ export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDI
     },
     // PROD-SEC-02: each foreground semantic provider is reached only through a binding guarded by the request's
     // foreground deadline, so no provider request opens after it. The frozen provider classes stay untouched.
+    // AI-COST-01: and each one's transport client passes the one provider-call accounting boundary.
     { provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: guardForegroundBinding(openAiSegmentationBinding) },
-    { provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding(openAiFocusResolutionBinding()) },
-    { provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadEstablishmentBinding()) },
-    { provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadContinuityBinding()) },
+    { provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding(openAiFocusResolutionBinding(process.env, costLedgerDecorator('FOCUS_RESOLUTION'))) },
+    { provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadEstablishmentBinding(process.env, costLedgerDecorator('THREAD_FORMATION'))) },
+    { provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding(openAiThreadContinuityBinding(process.env, costLedgerDecorator('THREAD_CONTINUITY'))) },
     {
       provide: ConversationSemanticRuntimeRepository,
       useFactory: (serviceApi: SupabaseServiceRoleApiService) => new ConversationSemanticRuntimeRepository(serviceApi),

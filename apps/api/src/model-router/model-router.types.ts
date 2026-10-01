@@ -60,9 +60,11 @@ export interface ModelRouterRequest {
 export interface ModelRouterResult {
   content: string;
   routingMetadata: { path: ProcessingPath };
+  // AI-COST-01: `null` when the provider did not report it - never a fabricated zero. The provider-call ledger
+  // (migration 0135) is the accounting authority; this is the adapter's own read-out.
   usage: {
-    inputTokens: number;
-    outputTokens: number;
+    inputTokens: number | null;
+    outputTokens: number | null;
   };
 }
 

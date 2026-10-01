@@ -74,7 +74,8 @@ export async function runEvaluation(
         results.push({
           caseId: testCase.id, path: testCase.path, provider,
           profile: `${provider}_${testCase.path}`, modelId: modelId(provider, testCase.path),
-          latencyMs: Math.max(0, now() - started), inputTokens: 0, outputTokens: 0,
+          // A failed attempt's usage is unknown, never zero (AI-COST-01).
+          latencyMs: Math.max(0, now() - started), inputTokens: null, outputTokens: null,
           success: false, response: '', estimatedCostUsd: null, error: 'Provider generation failed.',
         });
       }

@@ -263,9 +263,11 @@ test('THE CUTOVER: ONLY the FINAL chain is wired, the temporary T-03A2-only writ
   // RE-ANCHORED by PROD-SEC-02: each lazy factory is registered inside guardForegroundBinding(...), itself a lazy factory
   // that constructs nothing at bootstrap and adds only the request-deadline check in front of the same provider.
   assert.match(moduleCode, /\{ provide: CU_SEGMENTATION_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiSegmentationBinding\) \}/u, 'the segmentation FACTORY, never its product');
-  assert.match(moduleCode, /\{ provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiFocusResolutionBinding\(\)\) \}/u);
-  assert.match(moduleCode, /\{ provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiThreadEstablishmentBinding\(\)\) \}/u);
-  assert.match(moduleCode, /\{ provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiThreadContinuityBinding\(\)\) \}/u);
+  // RE-ANCHORED by AI-COST-01: each lazy factory also receives the provider-call accounting decorator for its transport
+  // client. Creating the decorator constructs nothing, so the factory is still registered, never its product.
+  assert.match(moduleCode, /\{ provide: FOCUS_RESOLUTION_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiFocusResolutionBinding\(process\.env, costLedgerDecorator\('FOCUS_RESOLUTION'\)\)\) \}/u);
+  assert.match(moduleCode, /\{ provide: THREAD_ESTABLISHMENT_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiThreadEstablishmentBinding\(process\.env, costLedgerDecorator\('THREAD_FORMATION'\)\)\) \}/u);
+  assert.match(moduleCode, /\{ provide: THREAD_CONTINUITY_BINDING_FACTORY, useValue: guardForegroundBinding\(openAiThreadContinuityBinding\(process\.env, costLedgerDecorator\('THREAD_CONTINUITY'\)\)\) \}/u);
   assert.doesNotMatch(moduleCode, /ConversationTemporalEstablishmentService|ConversationUnitRepository|ConversationFocusEstablishmentService|ConversationFocusRuntimeRepository|ConversationThreadEstablishmentService|ConversationThreadRuntimeRepository|ConversationThreadLifecycleEstablishmentService|ConversationThreadLifecycleRuntimeRepository/u,
     'no superseded runtime and no temporal-only fallback is registered');
   assert.doesNotMatch(moduleCode, /OpenAiFocusResolutionProvider|OpenAiThreadEstablishmentProvider|OpenAiThreadContinuityProvider|loadFocusResolutionOpenAIConfig|loadThreadEstablishmentOpenAIConfig|loadThreadContinuityOpenAIConfig/u,
