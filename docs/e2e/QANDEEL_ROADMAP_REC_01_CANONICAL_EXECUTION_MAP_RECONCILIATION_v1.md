@@ -1,9 +1,9 @@
-# QANDEEL — ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation through PR #303 — Record v1
+# QANDEEL — ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation through PR #305 — Record v1
 
-**Task:** ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation through PR #303
+**Task:** ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation through PR #305
 **Task type:** documentation / governance reconciliation only
-**Baseline:** `main = 7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`, the merge of PR #303 (AI-COST-01). This is exactly the
-expected baseline. `origin/main` had not moved at kickoff, so no intervening merge needed inspection.
+**Original kickoff baseline:** `main = 7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`, the merge of PR #303 (AI-COST-01), exactly as expected at kickoff.
+**Refresh baseline before final review:** `main = b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4`, the merge of PR #305 (W3-MEGA-S-CLOSE-01). PR #305 closed the Copy Gate this reconciliation had correctly flagged and admitted `QAN-BL-A11Y-01`; this record consumes that later truth rather than overwriting it.
 **Branch:** `docs/roadmap-rec-01-canonical-execution-map`
 **Status:** IMPLEMENTED ON DRAFT PR — AWAITING INDEPENDENT REVIEW. Not merged, and not claimed `CLOSED`. Merge authority
 belongs to the Product Owner / independent reviewer. Claude did not merge and did not enable auto-merge.
@@ -16,12 +16,12 @@ belongs to the Product Owner / independent reviewer. Claude did not merge and di
 ## 1. Product Owner decision (the task's authority)
 
 1. **Do not open or invent `W3-CORR-M`.** Memory control already has a real merged task: W3-MEGA-M, PR #293.
-2. Reconcile the canonical entry points and the merged tasks' lifecycle records through PR #303.
+2. Reconcile the canonical entry points and the merged tasks' lifecycle records through PR #305.
 3. After this reconciliation, the next implementation task is **VPORT-02 — Timeline + Orientation Chrome + P2 Final
    Coherence**. This task does not implement VPORT-02. It only makes the canonical truth say that VPORT-02 is NEXT.
 4. `PROD-AUTH-01` and `PROD-DATA-01` stay **DEFERRED — OWNED**. They are not closed, implemented or promoted here.
 
-## 2. GitHub truth (PRs #293–#303)
+## 2. GitHub truth (PRs #293–#305)
 
 Read with `gh pr view` at kickoff. Merge commits are on `main`; heads are each PR's final head.
 
@@ -38,6 +38,8 @@ Read with `gh pr view` at kickoff. Merge commits are on `main`; heads are each P
 | #301 | PROD-SEC-01 — API Baseline Security Hardening | MERGED | `ddc3e6c1531d47d2e2ef4977ace79ac97478b79f` | 2026-10-01 15:37 | `dd819b400f8eb3e190319e24ac6e46808d811838` |
 | #302 | W3-CORR-U — Understanding Integrity | MERGED | `c9add460be785fc5d4dd930146e217cee2972706` | 2026-10-01 18:01 | `0c974738eb74fb9442f819dc311dee02532fffdd` |
 | #303 | AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation | MERGED | `7221a635a6a7fe7564fb3f1e2e19c1ca189164c4` | 2026-10-01 21:17 | `5fd0ef7090ff7906afc20bb19e10751d6e5d0ae9` |
+| #304 | ROADMAP-REC-01 — this reconciliation | **OPEN / DRAFT — this PR** | — | — | current branch |
+| #305 | W3-MEGA-S-CLOSE-01 — Product Copy Approval + Residual Reconciliation | MERGED | `b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4` | 2026-10-03 23:17 | `a50ac29ca570ece8066565202c53bbc4206b1037` |
 
 No PR was open at kickoff. PR #298 stays closed unmerged: its accepted findings were admitted to the backlog as
 `QAN-BL-PROD-01` … `05` and re-owned to later tasks. This record does not turn it into merged work.
@@ -56,7 +58,7 @@ No PR was open at kickoff. PR #298 stays closed unmerged: its accepted findings 
 - T-series Map / Timeline / Temporal / Return runtime;
 - Connected Worlds I-04 … I-07 (migrations `0075`–`0122`).
 
-**Already production-implemented (merged through PR #303):**
+**Already production-implemented (merged through PR #305):**
 - W1A-01, W1B-01, W2-01, W2-02, W3-01, W3-02;
 - W3-MEGA-U (`0126`–`0127`), W3-MEGA-M (`0128`), W3-MEGA-A (`0129`), W3-MEGA-S (`0130`);
 - VPORT-01 (Map world paint);
@@ -66,17 +68,17 @@ No PR was open at kickoff. PR #298 stays closed unmerged: its accepted findings 
 **Genuinely missing (this task):** only lifecycle / status / roadmap reconciliation, plus a canonical statement of the
 still-open next implementation direction, VPORT-02. VPORT-02 itself is not implemented or scoped here.
 
-## 4. Files changed
+## 4. Files reconciled / final net diff
 
 | File | Change |
 |---|---|
-| `QANDEEL_CURRENT_STATE.md` | §1 snapshot identity; new §3.7 (merged tasks after W3-MEGA-M, PR #298, PROD-AUTH/DATA, `W3-CORR-M`); §3.6 security row; §4 cells made false by merged work; §5 register recounted (33); §7 W3 / sequencing paragraphs, W3-MEGA-S heading, W3-PDG-01 historical note, census sentence, owner rows |
+| `QANDEEL_CURRENT_STATE.md` | §1 snapshot identity; new §3.7 (merged tasks after W3-MEGA-M, PR #298, PROD-AUTH/DATA, `W3-CORR-M`); §3.6 security row; §4 cells made false by merged work; §5 register recounted (34 after PR #305); §7 W3 / sequencing paragraphs, W3-MEGA-S heading, W3-PDG-01 historical note, census sentence, owner rows |
 | `QANDEEL_PROJECT_MAP.md` | §2 script / migration counts and e2e record locator; §5 new 2026-10-04 checkpoint (P4 checkpoint labelled historical); §5 item 3 W3 / Stage wording; §5.1 status column, NEXT statement, cross-cutting track, anti-confusion rule; §6 two trap rows |
 | `QANDEEL_PRODUCT_ROADMAP.md` | §3 status note; §6 historical label and new §6.1 dated execution reconciliation |
-| `docs/qandeel-canonical-backlog-v1.md` | AI-COST-01 note: Draft PR #303 → merged `7221a635…`; ROADMAP-REC-01 reconciliation note; §9 kickoff row. No item, field or count changed |
+| `docs/qandeel-canonical-backlog-v1.md` | AI-COST-01 note: Draft PR #303 → merged `7221a635…`; ROADMAP-REC-01 reconciliation note; §9 kickoff row. No item is created by ROADMAP-REC-01; PR #305 had already admitted `QAN-BL-A11Y-01`, so current counts are preserved at 34 |
 | `docs/e2e/E2E01_READ_FIRST.md` | W3-MEGA-S "Draft PR, NOT merged" → merged through PR #296 (rows D-02, D-11, D-12, D-16, D-17 and the summary); the stale "remaining … D-05" sentence labelled as at W3-MEGA-M; "W3 is ACTIVE" → not phase-closed / Stage 2. No row's closure state changed |
 | `docs/e2e/QANDEEL_W3_MEGA_A_ACCOUNT_IDENTITY_SECURITY_IMPLEMENTATION_RECORD_v1.md` | current banner (MERGED through PR #295); handoff banner kept as historical; §14 labelled historical |
-| `docs/e2e/QANDEEL_W3_MEGA_S_PERSONAL_CONTROLS_SETTINGS_IMPLEMENTATION_RECORD_v1.md` | current banner (`MERGED / CLOSED`, PR #296; copy still PROPOSED — NOT APPROVED); handoff banner historical; §1 and §14 labelled historical |
+| `docs/e2e/QANDEEL_W3_MEGA_S_PERSONAL_CONTROLS_SETTINGS_IMPLEMENTATION_RECORD_v1.md` | no net diff after the PR #305 refresh: PR #305 already carries the truthful `MERGED / CLOSED` banner, approved Copy Gate and residual closure; ROADMAP-REC-01 consumes that main version |
 | `docs/e2e/QANDEEL_VPORT_01_LIVING_ANALYSIS_WORLD_PRODUCTION_VISUAL_PORT_v1.md` | PR line and banner (`MERGED / CLOSED`; Stage 2 ACTIVE; VPORT-02 NEXT); handoff banner historical; §1 labelled historical; §16 lifecycle note |
 | `docs/e2e/QANDEEL_PROD_SEC_02_TURN_ADMISSION_CONCURRENCY_COST_BOUND_IMPLEMENTATION_RECORD_v1.md` | current banner (`MERGED / CLOSED`, PR #299); handoff banner historical |
 | `docs/e2e/QANDEEL_PROD_OPS_01_OPERATIONAL_READINESS_FAILURE_VISIBILITY_IMPLEMENTATION_RECORD_v1.md` | current banner (`MERGED / CLOSED`, PR #300); handoff banner historical |
@@ -107,14 +109,14 @@ so it uses the house form that W2-02's record already uses.
 | C-1 | Current State §7 | W3-MEGA-S "IMPLEMENTED ON A DRAFT PR — NOT MERGED" | MERGED / CLOSED through PR #296 |
 | C-2 | Current State §7 | W3-MEGA-A / W3-MEGA-S "are not opened" (W3-PDG-01 paragraph) | kept, labelled historical; both merged (#295, #296) |
 | C-3 | Current State §3 / §7 | no mention of VPORT-01, PROD-SEC-02, PROD-OPS-01, PROD-SEC-01, W3-CORR-U, AI-COST-01, PR #298 | §3.7 table with merge SHAs; PR #298 closed unmerged; PROD-AUTH/DATA `DEFERRED — OWNED` |
-| C-4 | Current State §5 | register "25 items" (3 / 0 / 10 / 12) | 33 items (8 / 0 / 10 / 15), recounted mechanically; 18 active rows listed |
+| C-4 | Current State §5 | register "25 items" (3 / 0 / 10 / 12) | 34 items (9 / 0 / 10 / 15), recounted mechanically after PR #305; 19 active rows listed |
 | C-5 | Current State §4 | "The Map's paint is still the neutral grey structural placeholder"; "the mobile client has no Conversation surface"; "No commit after T-14's merge changes `apps/mobile/`"; "HTTP controllers exist only under `conversation/` and `health/`"; "no Name / Login ID / Email change"; account / security / privacy journeys "not implemented" | I-08B1 world painted (VPORT-01); Conversation surface exists (W1A-01); visual port in part; controllers also under `account/`, `understanding/`; W3-MEGA-A / S implementations stated; residuals named |
 | C-6 | Current State §7, Project Map §5, E2E01 READ_FIRST | "The remaining W3 core implementation rows are `E2E-D-03` and `D-05`" | D-05 implemented by W3-MEGA-A (#295); remaining W3 residuals named |
 | C-7 | Current State §7, Project Map §5, E2E01 READ_FIRST | "W3 is ACTIVE" | W3 not phase-closed (named residuals); Stage 1 DONE FOR THE CURRENT EXECUTION SEQUENCE; Stage 2 ACTIVE |
 | C-8 | Project Map §5 checkpoint / §5.1 | latest checkpoint 2026-09-27; map without status | 2026-10-04 checkpoint; status column; VPORT-02 NEXT; cross-cutting track; anti-confusion rule |
-| C-9 | Project Map §2 | migrations "0001–0127"; "201 scripts" | `0001–0135` at PR #303; 236 scripts at `7221a635` |
+| C-9 | Project Map §2 | migrations "0001–0127"; "201 scripts" | `0001–0135`; 236 scripts at the original PR #303 baseline (PR #305 adds no migration/script) |
 | C-10 | Product Roadmap §6 | the End-to-End audit "has not started" | labelled historical; §6.1 records E2E-01 started it, the merged slices, the cross-cutting tasks, and VPORT-02 as NEXT |
-| C-11 | Backlog §7 AI-COST-01 note | "Draft PR #303" | PR #303 merged as `7221a635…` |
+| C-11 | Backlog §7 AI-COST-01 note | "Draft PR #303" | PR #303 merged as `7221a635…`; PR #305 later refreshed W3-MEGA-S closure truth |
 | C-12 | 8 primary records | present-tense `DRAFT PR — NOT MERGED` / `AWAITING … REVIEW` banners | current `MERGED` banner with PR and merge commit; handoff banner historical |
 | C-13 | VPORT-01 record §1 / §16 | "ACTIVE — this record"; "VPORT-02 can start after this PR's independent review" | §1 labelled historical; precondition met, VPORT-02 NEXT, not opened |
 | C-14 | E2E01 READ_FIRST rows D-02, D-11, D-12, D-16, D-17 | W3-MEGA-S "Draft PR — NOT MERGED" | merged through PR #296; row closure states unchanged |
@@ -151,8 +153,7 @@ stage unless the Product Owner explicitly changes sequencing.
 ## 8. The two explicit statements
 
 - **`VPORT-02 = NEXT`.** VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence is the next implementation task.
-  It is not opened by this record and needs its own Task Contract. It inherits the VPORT-01 record §16 notes and nothing
-  more.
+  It is not opened by this record and needs its own Task Contract. It inherits the VPORT-01 record §16 notes plus `QAN-BL-A11Y-01`, admitted by PR #305 for mid-session Reduce Motion parity.
 - **`W3-CORR-M = NOT A CANONICAL TASK / NOT OPENED`.** No record, roadmap entry or backlog item names it, and none is
   created. Memory control is the merged W3-MEGA-M (PR #293, migration `0128`, `E2E-D-13` closed).
 
@@ -162,35 +163,30 @@ Each residual stays where its own record put it. This record re-owns nothing and
 - `E2E-D-03` Account Photo — `BLOCKED / DEFERRED BY MEDIA STORAGE IMPLEMENTATION BOUNDARY` (W3-MEGA-A §14);
 - `E2E-D-02` — the nine-group hierarchy is not closed; it closes progressively as later stages add real groups;
 - `E2E-D-08` — the Shared-ID surface waits for W6;
-- `E2E-D-11` — the Android per-app language decision and device validation (W3-MEGA-S §13 item 2);
-- `E2E-D-12` — Bold Text (§13 item 3);
+- `E2E-D-11` — Product decision closed; Android per-app-language realization / device validation remain (W3-MEGA-S §18.2 item 2);
+- `E2E-D-12` — Bold Text, plus `QAN-BL-A11Y-01` → VPORT-02 for the T-10 Reduce Motion hooks;
 - `E2E-D-16` — world-scoped export `NOT YET INCLUDED`;
 - `E2E-D-17` — `FULL ACCOUNT DELETION — BLOCKED BY CONNECTED WORLDS` (`QAN-BL-ACCT-01`, `QAN-BL-CW-01`);
 - `PG-02` and `PG-04` (W3-MEGA-U);
 - live Email delivery — `EXTERNAL / NOT PROVED`;
 - `QAN-BL-PRIV-01` → `PRIV-EXPORT-01`.
 
-**Flagged for the Product Owner, not decided here.** W3-MEGA-S merged through PR #296, but its record still carries the
-§9 copy as `PROPOSED — NOT APPROVED`, under a Copy Gate it called a merge blocker. Its contract test still pins
-`PRODUCT COPY DECISION REQUIRED`. No repository record shows the approval. This reconciliation records the fact and
-decides nothing about the copy.
+**Resolved after this reconciliation first flagged it.** The Product Owner approved the W3-MEGA-S Copy Gate; W3-MEGA-S-CLOSE-01 (PR #305) records that authority, applies the one approved Arabic wording correction and closes the bounded slice. ROADMAP-REC-01 now consumes that merged truth.
 
 ## 10. Backlog reconciliation (BG-05 / BG-08)
 
-- **Read in full** at kickoff: 33 index rows.
+- **Read in full** at kickoff: 33 index rows; refreshed after PR #305: 34 index rows.
 - **Inherited:** none. No item names ROADMAP-REC-01.
-- **Admitted:** none. No new item qualifies under BG-06: this task created no obligation, and the W3 residuals above are
-  already held by their records and rows. No item is admitted merely because this task exists. No `W3-CORR-M` item is
-  created.
+- **Admitted by ROADMAP-REC-01:** none. PR #305 independently admitted `QAN-BL-A11Y-01` under VPORT-02 before this reconciliation's final merge; this task preserves it. No item is admitted merely because ROADMAP-REC-01 exists. No `W3-CORR-M` item is created.
 - **Dispositions changed:** none.
   - `QAN-BL-PROD-04` (`PROD-AUTH-01`) and `QAN-BL-PROD-05` (`PROD-DATA-01`) stay `DEFERRED — OWNED`.
   - `QAN-BL-LAUNCH-01` / `02` keep their owners.
   - No tombstone was added or removed.
 - **Corrected:** the AI-COST-01 note's merge truth only.
 - **Counts:** unchanged and mechanically re-verified:
-  - 33 items: 8 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED`, 15 `CLOSED — TOMBSTONE`;
-  - by severity: 20 `HIGH`, 12 `MEDIUM`, 1 `LOW`;
-  - the 18 active rows: 8 `HIGH`, 9 `MEDIUM`, 1 `LOW`.
+  - 34 items: 9 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED`, 15 `CLOSED — TOMBSTONE`;
+  - by severity: 21 `HIGH`, 12 `MEDIUM`, 1 `LOW`;
+  - the 19 active rows: 9 `HIGH`, 9 `MEDIUM`, 1 `LOW`.
 
 ## 11. Gap Closure Matrix
 
@@ -206,7 +202,7 @@ decides nothing about the copy.
 | G-8 `W3-CORR-M` ambiguity | **NO TASK — NOT OPENED** (by Product Owner decision) | §8 |
 | G-9 PROD-AUTH-01 / PROD-DATA-01 status | **PRESERVED — DEFERRED — OWNED** | backlog `QAN-BL-PROD-04` / `05` |
 | G-10 PR #298 status | **PRESERVED — CLOSED UNMERGED, evidence only** | §2 |
-| G-11 W3-MEGA-S copy merged as PROPOSED — NOT APPROVED | **FLAGGED — Product Owner decision**; held by the W3-MEGA-S record §9 Copy Gate, not decided here | §9 |
+| G-11 W3-MEGA-S copy merged as PROPOSED — NOT APPROVED | **CLOSED AFTER FLAG** — Product Owner approval recorded by W3-MEGA-S-CLOSE-01 / PR #305 | W3-MEGA-S record §9 / §18 |
 | G-12 Row-level W3 residuals | **PRESERVED — OWNED WHERE RECORDED** | §9 |
 
 **Orphan gaps = 0.** Every gap is fixed, preserved under its existing owner, or flagged to the Product Owner with the
@@ -242,9 +238,9 @@ The sweep was run over the three entry documents, `E2E01_READ_FIRST.md` and the 
 | Check | Result |
 |---|---|
 | `git diff --check` | clean |
-| Changed-file allowlist | 14 files. All are the three entry docs, the backlog, or `docs/e2e/*.md`. No path under `apps/`, `packages/`, `database/`, `tests/`, `.github/` or `infra/`, and no `package*.json` |
-| Relative Markdown links, all 14 changed files | 393 relative links checked; 0 broken |
-| Backlog counts (mechanical, §4 index) | 33 = 8 / 0 / 10 / 15; 20 `HIGH` / 12 `MEDIUM` / 1 `LOW`. Equal to backlog §7, so the summary there is unchanged |
+| Changed-file allowlist | 13 net-changed files after consuming PR #305. All are the three entry docs, the backlog, or `docs/e2e/*.md`. No path under `apps/`, `packages/`, `database/`, `tests/`, `.github/` or `infra/`, and no `package*.json` |
+| Relative Markdown links, the documentation set | 393 relative links checked; 0 broken |
+| Backlog counts (mechanical, §4 index, refreshed after PR #305) | 34 = 9 / 0 / 10 / 15; 21 `HIGH` / 12 `MEDIUM` / 1 `LOW` |
 | `npm run test:task-closure-governance-contract` | **24 / 24 pass** |
 | `npm run test:forward-safety-contract` | **35 / 35 pass** |
 | Doc-pinning contracts | all pass: W3-MEGA-A 15/15, W3-MEGA-S 11/11, PROD-SEC-01 31/31, T-14 17/17, W2-02 19/19, T-11 27/27, T-12 32/32, T-12P 23/23 |
@@ -261,3 +257,8 @@ gate pass.
 
 `IMPLEMENTED ON DRAFT PR — AWAITING INDEPENDENT REVIEW`. ROADMAP-REC-01 is not merged and is not claimed closed. Claude
 did not merge and did not enable auto-merge. This record does not open VPORT-02.
+
+
+### Final refresh note — after PR #305
+
+Before final independent review, ROADMAP-REC-01 was merged logically with current `main` at `b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4`. PR #305's W3-MEGA-S record and backlog authority win on overlapping truth: Copy Gate approved/closed; `QAN-BL-A11Y-01` exists and is owned by VPORT-02; current backlog count is 34. The final PR remains documentation/governance only and changes no runtime file.
