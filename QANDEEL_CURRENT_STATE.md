@@ -15,7 +15,7 @@ The map of the repository is [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md).
 | | |
 |---|---|
 | Snapshot date | 2026-10-04 (lifecycle / sequencing reconciliation by ROADMAP-REC-01; first snapshot 2026-09-25) |
-| Canonical baseline | `b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4`, the merge of PR #305 (W3-MEGA-S-CLOSE-01). PR #303 (`7221a635…`) remains the AI-COST-01 foundation milestone inside this sequence. The first snapshot's baseline was `916792d108f01c839b607b11997775a096d31b88`, the merge of PR #269 (recovered canonical authority preservation) |
+| Reconciliation input baseline | `b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4`, the merge of PR #305 (W3-MEGA-S-CLOSE-01). PR #303 (`7221a635…`) remains the AI-COST-01 foundation milestone inside this sequence. The first snapshot's baseline was `916792d108f01c839b607b11997775a096d31b88`, the merge of PR #269 (recovered canonical authority preservation) |
 | Reconciliation record | [`docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md`](docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md) — GitHub truth through PR #305, including the post-#303 W3-MEGA-S Copy Gate closure, and every contradiction it corrected |
 | Repository | `allamqandeel/qandeel` |
 | Source of truth | GitHub `main` is the canonical code and document source |
