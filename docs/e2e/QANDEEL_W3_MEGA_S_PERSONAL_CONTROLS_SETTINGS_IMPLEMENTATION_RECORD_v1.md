@@ -5,13 +5,14 @@
 Account — **Personal world only**), `E2E-D-02` (advanced only)
 **Baseline:** `1e7b681052c7af09576197bcfb204e1b39775554` (merge of PR #295, W3-MEGA-A)
 **Branch:** `feat/w3-mega-s-personal-controls-settings`
-**Status:** **MERGED / CLOSED** — merged through PR #296 at `e87aac6b4e9ec6c1b6542d2ba3c82cc6cc9af6e8` (2026-10-01;
-PR head `b8580921fcd373d0bcd73ad3e220bc2533e70dad`). The slice is closed as merged work; it closed no phase and did not
-close W3, whose named residual rows stay as §14 records them. Its §9 copy is still recorded here as PROPOSED — NOT
-APPROVED: no repository record shows the Product Owner's approval of it, and this reconciliation does not decide it.
-Lifecycle reconciled by ROADMAP-REC-01 (2026-10-04); nothing below it was rewritten.
-**Status at handoff (historical):** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `W3-MEGA-S READY FOR INDEPENDENT REVIEW — DO NOT MERGE`. One bounded,
-Product-Owner-authorized Production Integration slice; it opens no later stage, closes no phase and does not close W3.
+**Status:** **MERGED / CLOSED as its bounded Personal Controls & Settings integration slice.** PR #296 merged as
+`e87aac6b4e9ec6c1b6542d2ba3c82cc6cc9af6e8` at 2026-10-01T03:32:22Z (PR head `b8580921fcd373d0bcd73ad3e220bc2533e70dad`);
+the Copy Gate was closed by the Product Owner in `W3-MEGA-S-CLOSE-01` (2026-10-04, §9), and the residues are reconciled
+in §18. The slice closing does **not** close W3, `E2E-D-17` full account deletion, Connected Worlds deletion, every
+accessibility / platform launch validation, or world-scoped export (§18.4).
+**Status at handoff (historical):** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `W3-MEGA-S READY FOR INDEPENDENT REVIEW — DO
+NOT MERGE`. One bounded, Product-Owner-authorized Production Integration slice; it opens no later stage, closes no phase
+and does not close W3.
 **Product authority:** only the statements marked **PO** in the
 [W3-PDG-01 closure](../canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
 §5 – §8, P1 §8.1 (placement) and P4-C4 §4 (group names). No `IMPLEMENTATION CONSIDERATION — NOT FROZEN` item and no
@@ -27,8 +28,7 @@ The truth this slice establishes, and nothing wider:
 
 ## 1. Execution map
 
-> **Historical — the map at kickoff.** The current map is
-> [`QANDEEL_PROJECT_MAP.md`](../../QANDEEL_PROJECT_MAP.md) §5.1.
+*Historical — the map at kickoff. The current map is in [`QANDEEL_PROJECT_MAP.md`](../../QANDEEL_PROJECT_MAP.md) §5.1.*
 
 | Stage | State |
 |---|---|
@@ -199,7 +199,7 @@ placeholder), after Appearance & Accessibility and before Support & About (P1 §
 ONE destination (the W3-MEGA-A `ChangeForm`): no route, dialog or second Settings root.
 
 ### 7.3 Export My Data (`E2E-D-16`) — exact scope
-Journey: Export my data → the export promise (PRODUCT COPY DECISION REQUIRED) → the password → the server holds ONE request
+Journey: Export my data → the export promise (★, approved, §9) → the password → the server holds ONE request
 (replay-safe) → «جارٍ تجهيز…» / "Preparing…" (re-read every 15 s while shown and on every return to Settings) → "Ready to
 download until {date}" + Download → the system folder picker → one JSON file written where the reader chose → expired →
 not downloadable, a new copy can be requested. The package is built by the server, never by the app; it is not emailed.
@@ -218,7 +218,7 @@ or tokens, and any other person's material. HIM measurements and QANDEEL's own q
 read yet: excluded, and listed here so the exclusion is a recorded choice (§13).
 
 ### 7.4 Delete Account — exact Personal-world scope (`E2E-D-17`)
-Journey: Delete account → the consequence (PRODUCT COPY DECISION REQUIRED) → the password → SCHEDULED: "Your account will
+Journey: Delete account → the consequence (★, approved, §9) → the password → SCHEDULED: "Your account will
 be deleted on {date}" + Cancel deletion; the reader stays signed in during the grace period → after it: "being deleted
 now", no cancellation → the server's pass: the governed Personal erasure (§5.3) → the provider account removed (every
 session and refresh token gone; a live access token is refused by the API's guard, which asks the provider on every
@@ -232,7 +232,8 @@ and the retired identifiers' digests (no reuse, no link to anyone).
 ### 7.5 Copy
 Reused by reference: P4-C4 `gQandeel` / `gPrivacy` (verbatim), W1B-01's password label, W3-MEGA-A's approved C4
 «كلمة المرور غير صحيحة.», T-14's network sentence, and each language's own name. Every other pair is in ONE block,
-`PROPOSED_W3_MEGA_S` in `apps/mobile/src/settings/copy.ts`, and is listed in §9.
+`APPROVED_W3_MEGA_S` in `apps/mobile/src/settings/copy.ts` (named `PROPOSED_W3_MEGA_S` until the Copy Gate closed), and
+is listed in §9.
 
 ## 8. Server side
 
@@ -260,17 +261,33 @@ still never reaches an admin endpoint.
 credentials and is not used. The sequence is therefore: erase in the database first (the HIM rows would otherwise block
 the provider's delete), then remove the provider account.
 
-## 9. Copy — `PRODUCT COPY DECISION REQUIRED`
+## 9. Copy — `APPROVED — PRODUCT OWNER (W3-MEGA-S-CLOSE-01)`
 
-All pairs below are PROPOSED — NOT APPROVED and are merge blockers under the Copy Gate. Rows marked **★** define a deletion
-consequence, the grace behaviour, the export promise or expiry, or irreversibility, and are
-**`PRODUCT COPY DECISION REQUIRED`**; the others are minimal implementation-owned labels proposed for confirmation.
+**Product Owner Copy Gate — APPROVED (2026-10-04, task `W3-MEGA-S-CLOSE-01`).** The Product Owner approved every pair
+below, as one package:
+
+- every pair is approved **as written** at the merge of PR #296, except ONE;
+- that one is `exportExplain` in **Arabic**, replaced by the Product Owner's own wording (the table carries it). The
+  superseded candidate was «سنجهّز نسخة من بياناتك، ويمكنك تنزيلها من هنا حين تجهز لمدة محدودة.»;
+- the English `exportExplain` is unchanged, and so is every other Arabic and English pair, byte for byte;
+- the approval is of **copy only**. It changes no export or deletion behaviour, no W3-PDG-01 decision, and none of the
+  `IMPLEMENTATION DETAIL — NOT PRODUCT-FROZEN` values of §5.4 (the grace period and the availability period stay
+  implementation details; the approved words name neither).
+
+This record is the binding place for the approval, as the W3-01 (§3), W3-02 (§4) and W3-MEGA-A (§7.6) Copy Gates were
+recorded in their own implementation records. The pairs live in ONE block, `APPROVED_W3_MEGA_S` in
+`apps/mobile/src/settings/copy.ts`, and the W3-MEGA-S root contract pins them byte for byte. Rows marked **★** state a
+deletion consequence, the grace behaviour, the export promise or expiry, or irreversibility. No ★ row may be reworded
+without a new Product Owner Copy Gate.
+
+*At handoff (historical) every pair was proposed, not yet approved, and a merge blocker; PR #296 merged before this gate was
+recorded, and `W3-MEGA-S-CLOSE-01` is the governance correction that closes it (§18).*
 
 | Key | Arabic | English |
 |---|---|---|
 | languageTerm | اللغة | Language |
 | exportAction | تصدير بياناتي | Export my data |
-| exportExplain ★ | سنجهّز نسخة من بياناتك، ويمكنك تنزيلها من هنا حين تجهز لمدة محدودة. | We'll prepare a copy of your data. When it's ready, you can download it here for a limited time. |
+| exportExplain ★ | سنجهّز نسخة من بياناتك. وعندما تصبح جاهزة، يمكنك تنزيلها من هنا لمدة محدودة. | We'll prepare a copy of your data. When it's ready, you can download it here for a limited time. |
 | exportConfirm | طلب نسخة | Request a copy |
 | exportPreparing | جارٍ تجهيز نسخة من بياناتك | Preparing a copy of your data |
 | exportReady ★ | النسخة جاهزة للتنزيل حتى {date} | Ready to download until {date} |
@@ -301,7 +318,7 @@ the whole erasure is undone, and the request is BLOCKED — never erased and nev
 Because no Connected World has a user surface today, no production account can currently reach BLOCKED; the moment one
 does, full account deletion is truthfully impossible, which is exactly the Launch Gate (W3-PDG-01 §8.4 item 9).
 
-**`D-17 PERSONAL-WORLD IMPLEMENTATION — READY`** — subject to this PR's review, CI and the §9 copy decisions.
+**`D-17 PERSONAL-WORLD IMPLEMENTATION — READY`** — merged through PR #296; its §9 copy is approved (W3-MEGA-S-CLOSE-01).
 **`D-17 FULL ACCOUNT DELETION — BLOCKED BY CONNECTED WORLDS`.**
 
 ## 11. Verification (local; CI results are in the Draft PR)
@@ -360,7 +377,9 @@ Independent review: §16.
 
 ## 13. Residues and external dependencies
 
-1. **Copy Gate** (§9): every new pair awaits the Product Owner; ★ rows are PRODUCT COPY DECISION REQUIRED. Merge blocker.
+*As recorded at handoff. Each item's current disposition and owner is in §18.2; where the two differ, §18.2 binds.*
+
+1. **Copy Gate** (§9): at handoff every new pair awaited the Product Owner. **CLOSED** by W3-MEGA-S-CLOSE-01 (§9).
 2. **Android per-app language** needs a `localeConfig` resource — a Level-4 CNG change requiring Engineering Architecture
    review (T-01 hierarchy; W2-02's approved exception is confined to its own plugin). Until then Android routes to the
    device language setting.
@@ -412,22 +431,26 @@ Independent review: §16.
 
 ## 14. Rows
 
-> **Historical — the state at handoff on the Draft PR.** PR #296 has since merged (see Status). The current row states
-> are kept in [`E2E01_READ_FIRST.md`](E2E01_READ_FIRST.md); this table is not rewritten.
+*Current (W3-MEGA-S-CLOSE-01). "Slice part" is what this slice owed the row and delivered; "still open" is the row's
+remaining truth and its owner (§18.2).*
 
-| Row | Status after this slice |
-|---|---|
-| `E2E-D-11` | IMPLEMENTED on the Draft PR — the Language row to the system setting; iOS per-app language declared; Android device-level only (§13 item 2). NOT closed here: device validation and the Android decision remain |
-| `E2E-D-12` | ADVANCED — audit done; Reduce Motion followed mid-session on the W1A / W3 surfaces; text scaling, screen reader and contrast verified on every new surface; Reduce Transparency not materially applicable; **Bold Text open** (§13 item 3); row NOT closed |
-| `E2E-D-16` | IMPLEMENTED on the Draft PR within the Personal world (§7.3); world-scoped categories NOT YET INCLUDED; closes when this PR merges green and the §9 copy is approved |
-| `E2E-D-17` | **`D-17 PERSONAL-WORLD IMPLEMENTATION — READY`**; **`D-17 FULL ACCOUNT DELETION — BLOCKED BY CONNECTED WORLDS`**. The row is NOT closed |
-| `E2E-D-02` | ADVANCED — six real groups (Account & Identity, Security & Sign-in, QANDEEL & Conversation, Appearance & Accessibility, Privacy & Data, Support & About); Notifications, Introductions and Plan & Usage have no function yet; NOT closed |
+| Row | Slice part | Still open — owner |
+|---|---|---|
+| `E2E-D-11` | **TASK-CLOSED** — the Language row to the system setting, merged; iOS per-app language declared. The Product decision is closed (W3-PDG-01 §5) | Android per-app language **realization** (a `localeConfig` resource: implementation / platform, Level-4 CNG, Engineering Architecture review) and device validation — Stage 9 (§18.2 items 2, 12, 17). The row is NOT closed |
+| `E2E-D-12` | **TASK-CLOSED** — audit; Reduce Motion followed mid-session on the W1A / W3 surfaces; text scaling, screen reader and contrast on every new surface; Reduce Transparency not materially applicable | **Bold Text** (asset gap, Product Owner font authorization) — Stage 9; **Reduce Motion in the T-10 camera / temporal hooks** — `VPORT-02` (`QAN-BL-A11Y-01`); device validation — Stage 9. The row is NOT closed |
+| `E2E-D-16` | **TASK-CLOSED** — Personal-world export, merged, copy approved | world-scoped categories `NOT YET INCLUDED` — each Connected World's integration (Stages 4 – 7); `QAN-BL-PRIV-01` → `PRIV-EXPORT-01`, before Export My Data is declared complete for launch. The row is NOT `COMPLETE / PRODUCTION-READY` |
+| `E2E-D-17` | **`D-17 PERSONAL-WORLD IMPLEMENTATION — READY`** — merged, copy approved | **`D-17 FULL ACCOUNT DELETION — BLOCKED BY CONNECTED WORLDS`** — `QAN-BL-ACCT-01`, `QAN-BL-CW-01`; launch validation — Stage 9. The row is NOT closed |
+| `E2E-D-02` | advanced only — six real groups (Account & Identity, Security & Sign-in, QANDEEL & Conversation, Appearance & Accessibility, Privacy & Data, Support & About) | Notifications, Introductions and Plan & Usage groups arrive with their stages (3, 6, 9). The row is NOT closed |
 
-W3 stays ACTIVE. No row is `COMPLETE / PRODUCTION-READY`. **W3 is not yet ready for phase-closure review**: `E2E-D-03`
-(Account Photo) is blocked by the media-storage boundary, `E2E-D-12` has an open Bold Text gap, `E2E-D-11` has an open
-Android decision, and this slice's copy is unapproved.
+No row is `COMPLETE / PRODUCTION-READY`. *At handoff (historical) this section read "W3 stays ACTIVE" and named the
+unapproved copy and an "open Android decision" among the reasons W3 was not ready for phase-closure review. The copy is
+now approved, and the Android item is an implementation residue: the Product decision was already closed by W3-PDG-01
+§5.* W3 as a whole is still not phase-closed: `E2E-D-03` (Account Photo) stays blocked by the media-storage boundary
+(W3-MEGA-A §14), and the rows above keep the residues the last column names.
 
 ## 15. Backlog (BG-05 / BG-08)
+
+*At handoff (historical). The closing BG-08 reconciliation is §18.3.*
 
 BG-05: the backlog was read in full; no item names W3-MEGA-S or W3 as its owner; nothing is inherited. `QAN-BL-ACCT-01`
 and `QAN-BL-CW-01` are adjacent and untouched (`OPEN — UNASSIGNED`); `QAN-BL-SEC-01` stays `DEFERRED — OWNED` (its reopen
@@ -510,3 +533,105 @@ in §17.3.
   first failure is therefore classified **`INFRASTRUCTURE / HARNESS FLAKE`**, not an app-level defect.
 
 The E2E rows' closure state is unchanged by R2.
+
+## 18. W3-MEGA-S-CLOSE-01 — Product copy approval and residual closure (2026-10-04)
+
+A controlled micro-correction on its own branch and Draft PR, separate from `ROADMAP-REC-01` (Draft PR #304, which stays
+documentation-only). It records the Product Owner's Copy Gate, applies the ONE approved Arabic change, and reconciles
+every residue of this slice against repository truth. It changes no export or deletion semantics, no migration, no API,
+no W3-PDG-01 decision and no motion code.
+
+### 18.1 Repo truth
+
+- `origin/main` was exactly `7221a635a6a7fe7564fb3f1e2e19c1ca189164c4` (the merge of PR #303); the branch was cut from it.
+- PR #296 is MERGED as `e87aac6b4e9ec6c1b6542d2ba3c82cc6cc9af6e8` (2026-10-01T03:32:22Z), head
+  `b8580921fcd373d0bcd73ad3e220bc2533e70dad`; every check on that head passed, including `verify-api` (run `36809638275`,
+  which runs the 0130 real-PostgreSQL verifier), and API CI on `7221a635` passed (run `36927664794`).
+- Read before the change: `AGENTS.md`, `QANDEEL_CURRENT_STATE.md`, `QANDEEL_PROJECT_MAP.md`, `QANDEEL_PRODUCT_ROADMAP.md`,
+  the canonical backlog **in full**, this record in full, the
+  [W3-PDG-01 closure](../canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
+  §5 – §8, and the records that later took W3-MEGA-S residues:
+  [PROD-OPS-01](QANDEEL_PROD_OPS_01_OPERATIONAL_READINESS_FAILURE_VISIBILITY_IMPLEMENTATION_RECORD_v1.md) (`P-1`, `P-5`,
+  stuck-job visibility, §12), [PROD-SEC-01](QANDEEL_PROD_SEC_01_API_BASELINE_SECURITY_HARDENING_IMPLEMENTATION_RECORD_v1.md)
+  (`P-7` → `QAN-BL-LAUNCH-02`) and [W3-CORR-U](QANDEEL_W3_CORR_U_UNDERSTANDING_INTEGRITY_IMPLEMENTATION_RECORD_v1.md)
+  (`QAN-BL-PRIV-01`).
+- Code truth checked for the residues: `usePresentationCamera.ts` (T-10) and `useTemporalMotion.ts` still read
+  Reanimated's launch-only `useReducedMotion()`; `DepthComposition.tsx` and `ConversationSurface.tsx` use the
+  mid-session `useReduceMotion()`. No Estedad 600 face and no Android `localeConfig` resource exist.
+
+### 18.2 Gap Closure Matrix — every §13 residue, and the items the Task Contract named
+
+| # | Residue | Disposition | Owner |
+|---|---|---|---|
+| 1 | Copy Gate | **CLOSED** — Product Owner approval, §9; one Arabic string changed | this task |
+| 2 | Android per-app language | The **Product decision is CLOSED** (W3-PDG-01 §5: no in-app toggle; the system / per-app path where the platform supports it). What remains is its **implementation / platform realization**: a generated `localeConfig` resource, a Level-4 CNG change that needs Engineering Architecture review. Until then Android opens the device language setting, which is within the decision. Not implemented here | Stage 9 — Economy + Launch Closure (native configuration / release hardening), carried by `E2E-D-11` |
+| 3 | Bold Text (iOS) | **OPEN — asset gap.** It needs the Estedad v8.5 600 static face, which W1A-01's font authorization (400 / 500) does not cover. Not faked, and no font added here | Product Owner font authorization, then Stage 9 accessibility / device validation; carried by `E2E-D-12` |
+| 4 | Reduce Motion in the T-10 camera / temporal hooks | **OPEN** (code truth §18.1). Changing CLOSED / FROZEN T-10 code is a controlled change for the task that ports it. Motion code untouched here | `VPORT-02` (Stage 2), admitted as `QAN-BL-A11Y-01` (§18.3) |
+| 5 | Real-PostgreSQL proof | **CLOSED — validation evidence, not a residue:** the 0130 verifier passed on PostgreSQL 17 in API CI (§17.3; PR #296 head run `36809638275`) | — |
+| 6 | Hosted-provider facts (admin delete with the project's credential; a deleted account's live token refused) | **LAUNCH VALIDATION** — live-environment proofs. No hosted credential is invented and no live proof is claimed. Adjacent to, not part of, `QAN-BL-LAUNCH-01` (edge / origin / IP-forwarding / `0133`) | Stage 9 — live-environment launch validation |
+| 7 | Google Play web deletion-request path | **EXTERNAL / STORE COMPLIANCE DEPENDENCY** (W3-PDG-01 §8.2, §8.6) — its form is not decided | Stage 9 — store / launch compliance |
+| 8 | Legal retention beyond the minimal deletion record and the identifier digests | **OPEN — legal / privacy decision** (W3-PDG-01 §7.4, §8.3: legal retention periods are later legal detail) | Stage 9 — legal readiness |
+| 9 | World-scoped export (`NOT YET INCLUDED — WORLD-SCOPED EXPORT AUTHORITY NOT IMPLEMENTED`) | **OPEN** — not Personal W3 work | each Connected World's integration (Stages 4 – 7: Shared, Public, Matching / Introductions, Replay) |
+| 10 | HIM measurements and QANDEEL's question planning not exported | **CLOSED — recorded exclusion:** no owner-readable form; QANDEEL's unshown reasoning stays out (hypothesis restraint, W3-PDG-01 §7.3) | — |
+| 11 | A retired low-entropy Login ID's digest confirms that it once existed | Reservation property **accepted** ("not reused directly", W3-PDG-01 §8.3); the keyed-digest hardening is existing `QAN-BL-LAUNCH-02` (`P-7`) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` |
+| 12 | No device validation (large text, screen readers, the folder picker, the iOS per-app language, Hermes `DateTimeFormat`, Android Activity re-creation) | **LAUNCH VALIDATION** | Stage 9 — device / accessibility validation |
+| 13a | Download re-authentication | **NO ISSUE BY CURRENT PRODUCT AUTHORITY.** W3-PDG-01 §7.2 requires re-authentication to REQUEST an export; it does not require it to download. No extra password is invented. The remote-verification cost of the download route is `QAN-BL-PROD-04`'s, unchanged | — |
+| 13b | Deletion cancellation re-authentication | **NO ISSUE BY CURRENT PRODUCT AUTHORITY.** W3-PDG-01 §8.2 / §8.4 require re-authentication for the deletion request; cancelling only keeps the account, and no authority asks for a password. None is invented | — |
+| 14 | Very large accounts under a `statement_timeout` | **Export half → `QAN-BL-PROD-05`**, which already names "the export-package size" among the measurements it owns. **Erasure half — not a known occurrence and no longer silent:** the server role carries no statement timeout (PROD-OPS-01 §12), and an erasure that rolls back leaves the request `SCHEDULED` past its time, which PROD-OPS-01's `stuck_due` gauge reports. Committing in batches would change the erasure semantics, which this task may not | `PROD-DATA-01` (export half); erasure half: none needed — visible, no defect at current truth |
+| 15 | Expired-artifact discard depends on the pass running | **NO DEFECT** — a READY package past its date is never served; running the pass in production (server credential present, not disabled) is a deployment requirement, and its outcomes are visible since PROD-OPS-01 | Stage 9 — operations readiness |
+| 16 | Hardening not taken (per-transaction authorization; FK-only `BLOCKED`; unsalted digests; the verifier's footprint names) | **ACCEPTED** fail-safe limitations, as recorded; the unsalted digests are `QAN-BL-LAUNCH-02` | `QAN-BL-LAUNCH-02` (digests); others accepted |
+| 17 | The iOS `CFBundleLocalizations` key's CNG level | to be confirmed at the same Engineering Architecture review as item 2 | Stage 9, with item 2 |
+| 18 | The preparing poll continues while Settings is closed | **ACCEPTED** — bounded: it stops at READY / EXPIRED / FAILED or when the runtime generation retires | — |
+| 19 | An unconfirmed Email cannot pass the password proof | **NO ISSUE AT CURRENT TRUTH** — W2-01 creates no such session | — |
+| 20 | Export omits the reader's later explicit agreement with a disagreed Understanding item | existing `QAN-BL-PRIV-01` — unchanged | `PRIV-EXPORT-01` |
+| 21 | Connected Worlds full account deletion | **BLOCKED** — `D-17 FULL ACCOUNT DELETION — BLOCKED BY CONNECTED WORLDS`; existing items, unchanged | `QAN-BL-ACCT-01`, `QAN-BL-CW-01` (`OPEN — UNASSIGNED`) |
+
+**Orphan gaps = 0.** Every residue is closed here, closed as evidence or as a recorded choice, or carried by one named
+owner: an existing backlog item, the one item admitted below, or a stage of the
+[execution map](../../QANDEEL_PROJECT_MAP.md) that carries an open E2E row.
+
+### 18.3 Backlog (BG-05 / BG-08)
+
+- **Inherited:** none. No backlog item names W3-MEGA-S or this task as its owner.
+- **Admitted: one, `QAN-BL-A11Y-01`** (`HIGH`, `DEFERRED — OWNED`, owner `VPORT-02`). It qualifies under BG-06's second
+  route: this canonical record defers it to a named future task. It is admitted so that `VPORT-02` inherits it at its
+  own kickoff (BG-05) instead of finding it only in this record (BG-08). It is not a laundered blocker (BG-01): the T-10
+  hooks are CLOSED / FROZEN code outside W3-MEGA-S's contract.
+- **Not admitted:** items 2, 3, 6 – 8, 12, 15 and 17 are the open E2E rows' own named residues, carried by those rows and
+  by Stage 9, as before (§15). None is deferred to a named future task, and none adds a new obligation. Items 11, 14, 16, 20
+  and 21 already have their backlog owners; no duplicate is created. No `W3-CORR-M` is created; it is not a canonical task.
+- **BG-09:** this record's own banner moves to its final lifecycle state in the same change.
+
+### 18.4 What this closure means, and what it does not
+
+`W3-MEGA-S` is **MERGED / CLOSED as its bounded Personal Controls & Settings integration slice**: everything it owed
+under its Task Contract is merged, and its Copy Gate is closed. That is a statement about the slice only. It does **not**
+say that:
+- W3 as a whole has no residuals (`E2E-D-03` stays blocked; the rows of §14 keep theirs);
+- `E2E-D-17` full account deletion is closed;
+- Connected Worlds deletion is closed (`QAN-BL-ACCT-01`, `QAN-BL-CW-01` stay `OPEN — UNASSIGNED`);
+- every accessibility and platform launch validation is done (items 2, 3, 4, 12);
+- world-scoped export is done (item 9).
+
+The entry points (`QANDEEL_CURRENT_STATE.md`, `QANDEEL_PROJECT_MAP.md`, `docs/e2e/E2E01_READ_FIRST.md`) are reconciled by
+`ROADMAP-REC-01` (Draft PR #304), which is refreshed onto `main` separately after this change merges. This task does not
+edit them, so that PR #304 stays documentation-only and the two changes do not overlap.
+
+### 18.5 Verification (local, on implementation head `18c32b6`)
+
+| Gate | Result |
+|---|---|
+| Copy literals of `copy.ts`, before vs after (scripted) | 85 / 85 literals; exactly ONE differs (`exportExplain`, Arabic); the code is otherwise identical apart from the rename |
+| Mobile Jest — `src/settings` + `w3-mega-s-privacy-data` (AR + EN) | 9 suites, 141 / 141. A Jest worker-exit warning appears identically on the untouched baseline |
+| W3-MEGA-S root contract | 11 / 11 (approved pairs pinned; a planted unapproved string and the superseded Arabic are both rejected) |
+| W3-MEGA-A, W3-01, W3-MEGA-U2 contracts (they read `settings/copy.ts`) | 15 / 15, 15 / 15, 23 / 23 |
+| Backlog-reading contracts (PROD-SEC-01, W2-02, T-14, T-12, T-12P, T-11) | 31 / 31, 19 / 19, 17 / 17, 32 / 32, 23 / 23, 27 / 27 |
+| `npm run typecheck:mobile` | pass |
+| ESLint on the changed mobile files | 0 problems |
+| `npm run test:task-closure-governance-contract` | 24 / 24 |
+| `npm run test:forward-safety-contract` | 35 / 35 in an LF-clean worktree of the head. This Windows checkout (`core.autocrlf=true`) fails the same 10 on the untouched baseline too: a host line-ending artefact, not this change |
+| `git diff --check`; relative links in the changed Markdown | clean; 52 links, 0 broken |
+| Backlog count, mechanical from the §4 index | 34 = 9 / 0 / 10 / 15; 21 / 12 / 1 |
+| `code-review` skill on the diff | no findings |
+
+API CI and Mobile CI results on the PR head are recorded in the Draft PR, not claimed here.
