@@ -204,8 +204,8 @@ P1, P2, P3 and P4 are `CLOSED / FROZEN` as Product / design contracts. P4 is mer
 > **QANDEEL End-to-End Product Experience Completeness Audit**
 *(Historical, as recorded on 2026-09-25: "It has not started, and this roadmap does not open it: it still requires its own
 Task Contract." That is no longer the current state; see the reconciliation below.)* The sequencing in §3–§5 is unchanged.
-### 6.1 Execution reconciliation — 2026-10-04 (through PR #303)
-**Recorded:** 2026-10-04 by ROADMAP-REC-01, on `main = 7221a635a6a7fe7564fb3f1e2e19c1ca189164c4` (the merge of PR #303).
+### 6.1 Execution reconciliation — 2026-10-04 (refreshed through PR #305)
+**Recorded:** 2026-10-04 by ROADMAP-REC-01; refreshed after `main = b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4` (PR #305, W3-MEGA-S-CLOSE-01). The original reconciliation baseline was `7221a635…` (PR #303).
 Evidence: [`docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md`](docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md).
 This is a controlled sequencing / status reconciliation. It rewrites no P1–P4 decision and no earlier section above.
 - **The End-to-End audit has started.** `E2E-01 — Complete Product Journey & Surface Census v1` started it
@@ -220,10 +220,11 @@ This is a controlled sequencing / status reconciliation. It rewrites no P1–P4 
   - PROD-OPS-01 (PR #300);
   - PROD-SEC-01 (PR #301);
   - W3-CORR-U (PR #302);
-  - AI-COST-01 (PR #303).
+  - AI-COST-01 (PR #303);
+  - W3-MEGA-S-CLOSE-01 (PR #305), which closes the previously-unapproved W3-MEGA-S Product Copy Gate and admits `QAN-BL-A11Y-01` for VPORT-02.
   `PROD-READINESS-01` (PR #298) is closed unmerged, as evidence only. AI-COST-01 is an accounting foundation coupled to
   §3's economy and provider work. It decides neither: no Credit formula is frozen or active, and no provider is selected.
-- **Next implementation task.** After this reconciliation through PR #303, the Product Owner has explicitly set
+- **Next implementation task.** After this reconciliation refreshed through PR #305, the Product Owner has explicitly set
   **VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence** as the next implementation task. It is the remaining
   Stage-2 task of the working execution map in [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md) §5.1.
 - **Not promoted.** `PROD-AUTH-01` (`QAN-BL-PROD-04`) and `PROD-DATA-01` (`QAN-BL-PROD-05`) stay `DEFERRED — OWNED`.
