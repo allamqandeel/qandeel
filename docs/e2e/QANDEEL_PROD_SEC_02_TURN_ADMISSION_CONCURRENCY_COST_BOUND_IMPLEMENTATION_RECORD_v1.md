@@ -1,6 +1,10 @@
 # QANDEEL — PROD-SEC-02 — Turn Admission Concurrency & Cost Bound — Implementation Record v1
 
-**Status:** `PROD-SEC-02` — **IMPLEMENTED — DRAFT PR #299, AWAITING PRODUCT OWNER REVIEW** (not merged; not
+**Status:** `PROD-SEC-02` — **MERGED / CLOSED** — merged through PR #299 at
+`ce2b86d0caaeb063ec4593663d9dbf806e51b4f4` (2026-10-01; PR head `a6c9ca573e74aa7b2408f3bedf74ccf82f38880d`).
+`QAN-BL-PROD-01` is `CLOSED — TOMBSTONE` (recorded by `PROD-OPS-01` under BG-08). Lifecycle reconciled by
+ROADMAP-REC-01 (2026-10-04); nothing below it was rewritten.
+**Status at handoff (historical):** `PROD-SEC-02` — **IMPLEMENTED — DRAFT PR #299, AWAITING PRODUCT OWNER REVIEW** (not merged; not
 `CLOSED / FROZEN`; `QAN-BL-PROD-01` stays `DEFERRED — OWNED` until the Product Owner accepts it)
 **Baseline:** `main = fe9d9155f122725cb669e9989fa35ff12916112a` (unchanged at start and at hand-off)
 **Branch:** `fix/prod-sec-02-turn-admission-cost-bound` — commits `bb924bb` (implementation), `702d59c` (CI round-1

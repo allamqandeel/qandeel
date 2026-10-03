@@ -1,6 +1,10 @@
 # QANDEEL — PROD-SEC-01 — API Baseline Security Hardening + Trusted Client Boundary — Implementation Record v1
 
-**Status:** `PROD-SEC-01` — **IMPLEMENTED — DRAFT PR #301, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
+**Status:** `PROD-SEC-01` — **MERGED / CLOSED** — merged through PR #301 at `ddc3e6c1531d47d2e2ef4977ace79ac97478b79f`
+(2026-10-01; PR head `dd819b400f8eb3e190319e24ac6e46808d811838`). Its two external gates stay `DEFERRED — OWNED`
+(`QAN-BL-LAUNCH-01`, `QAN-BL-LAUNCH-02`). Lifecycle reconciled by ROADMAP-REC-01 (2026-10-04); nothing below it was
+rewritten.
+**Status at handoff (historical):** `PROD-SEC-01` — **IMPLEMENTED — DRAFT PR #301, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
 **Baseline:** `main = df694fd4d86fca41c50790f24ef5463af711236f`. PR #299 (`PROD-SEC-02`) and PR #300 (`PROD-OPS-01`) are
 merged; `0131` and `0132` are canonical.
 **Branch:** `fix/prod-sec-01-api-baseline-hardening`. The **implementation evidence head** is `3239f6f`; every commit

@@ -5,7 +5,12 @@
 Account — **Personal world only**), `E2E-D-02` (advanced only)
 **Baseline:** `1e7b681052c7af09576197bcfb204e1b39775554` (merge of PR #295, W3-MEGA-A)
 **Branch:** `feat/w3-mega-s-personal-controls-settings`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `W3-MEGA-S READY FOR INDEPENDENT REVIEW — DO NOT MERGE`. One bounded,
+**Status:** **MERGED / CLOSED** — merged through PR #296 at `e87aac6b4e9ec6c1b6542d2ba3c82cc6cc9af6e8` (2026-10-01;
+PR head `b8580921fcd373d0bcd73ad3e220bc2533e70dad`). The slice is closed as merged work; it closed no phase and did not
+close W3, whose named residual rows stay as §14 records them. Its §9 copy is still recorded here as PROPOSED — NOT
+APPROVED: no repository record shows the Product Owner's approval of it, and this reconciliation does not decide it.
+Lifecycle reconciled by ROADMAP-REC-01 (2026-10-04); nothing below it was rewritten.
+**Status at handoff (historical):** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `W3-MEGA-S READY FOR INDEPENDENT REVIEW — DO NOT MERGE`. One bounded,
 Product-Owner-authorized Production Integration slice; it opens no later stage, closes no phase and does not close W3.
 **Product authority:** only the statements marked **PO** in the
 [W3-PDG-01 closure](../canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
@@ -21,6 +26,9 @@ The truth this slice establishes, and nothing wider:
 ---
 
 ## 1. Execution map
+
+> **Historical — the map at kickoff.** The current map is
+> [`QANDEEL_PROJECT_MAP.md`](../../QANDEEL_PROJECT_MAP.md) §5.1.
 
 | Stage | State |
 |---|---|
@@ -403,6 +411,9 @@ Independent review: §16.
     no such session today.
 
 ## 14. Rows
+
+> **Historical — the state at handoff on the Draft PR.** PR #296 has since merged (see Status). The current row states
+> are kept in [`E2E01_READ_FIRST.md`](E2E01_READ_FIRST.md); this table is not rewritten.
 
 | Row | Status after this slice |
 |---|---|

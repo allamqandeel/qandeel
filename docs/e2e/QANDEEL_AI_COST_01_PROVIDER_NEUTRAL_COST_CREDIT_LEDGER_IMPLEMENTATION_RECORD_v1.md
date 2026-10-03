@@ -1,6 +1,10 @@
 # QANDEEL — AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation — Implementation Record v1
 
-**Status:** `AI-COST-01` — **IMPLEMENTED — DRAFT PR #303, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
+**Status:** `AI-COST-01` — **MERGED / CLOSED** — merged through PR #303 at `7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`
+(2026-10-01; PR head `5fd0ef7090ff7906afc20bb19e10751d6e5d0ae9`). The cost / Credit accounting **foundation** is merged;
+no numeric Credit formula, plan, allowance, balance or exhaustion behaviour is active, and no provider is selected.
+Lifecycle reconciled by ROADMAP-REC-01 (2026-10-04); nothing below it was rewritten.
+**Status at handoff (historical):** `AI-COST-01` — **IMPLEMENTED — DRAFT PR #303, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
 **Baseline:** `main = c9add460be785fc5d4dd930146e217cee2972706` (PR #302, W3-CORR-U, merged). Migrations through `0134`
 are canonical.
 **Branch:** `feat/ai-cost-01-provider-neutral-cost-credit-ledger`.
@@ -331,7 +335,8 @@ The boundary lives in `apps/api/src/ai-usage/`.
   None qualifies under BG-06's four routes as a new obligation (BG-06 forbids admitting anti-scope).
 - **Re-anchored contracts** are listed in §10; no frozen semantics changed.
 - **Lifecycle (BG-09).** This record is the task's primary document. Its banner reads *IMPLEMENTED — DRAFT PR, AWAITING
-  INDEPENDENT REVIEW*. The task is not claimed `CLOSED / FROZEN` by Claude.
+  INDEPENDENT REVIEW*. The task is not claimed `CLOSED / FROZEN` by Claude. *(Historical — as at handoff. PR #303 has
+  since merged and the banner now reads `MERGED / CLOSED`, reconciled by ROADMAP-REC-01.)*
 
 ## 14. Final Gap Closure Matrix
 

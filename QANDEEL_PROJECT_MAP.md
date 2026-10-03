@@ -63,12 +63,12 @@ The rules below are the repository's own, each cited to where it is stated.
 | [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md) | current-state snapshot (locator) |
 | [`QANDEEL_PRODUCT_ROADMAP.md`](QANDEEL_PRODUCT_ROADMAP.md) | Product Owner sequencing from Final Product Decision Closure through End-to-End audit, Production Integration and Release Hardening; opens no implementation task by itself |
 | `QANDEEL_PROJECT_MAP.md` | this map (locator) |
-| [`package.json`](package.json), [`package-lock.json`](package-lock.json), [`tsconfig.base.json`](tsconfig.base.json) | root npm workspace (`apps/*`, `packages/*`) with 201 scripts at this baseline, and one lockfile |
+| [`package.json`](package.json), [`package-lock.json`](package-lock.json), [`tsconfig.base.json`](tsconfig.base.json) | root npm workspace (`apps/*`, `packages/*`) with 236 scripts at `7221a635` (PR #303), and one lockfile |
 | [`.env.example`](.env.example) | names of local integration variables. The real `.env` is ignored |
 | [`apps/api/`](apps/api/README.md) | NestJS backend. `src/` holds the conversation, intelligence, memory, hypothesis, question, human-model (HIM), thread / focus / live-focus, historical-projection, post-response, runtime-events and health modules, plus `connected-worlds/` (the server-side kernel and authority services) |
 | [`apps/mobile/`](apps/mobile/README.md) | React Native + Expo client for the Living Analysis Map: `src/state`, `map`, `timeline`, `temporal-navigation`, `return-navigation`, `orientation-chrome`, `motion`, `responsive`, `integration`, `recovery`, `runtime-entry` and others |
 | [`packages/runtime/`](packages/runtime/README.md) | `@qandeel/runtime`, the type-only wire contracts shared by API and mobile |
-| [`database/`](database/README.md) | PostgreSQL / Supabase: `migrations/` (0001–0127), `tests/`, the `verify-migration-NNNN.mjs` verifiers and the focused-verification runner. Its README is also the canonical record of Connected Worlds `I-05` |
+| [`database/`](database/README.md) | PostgreSQL / Supabase: `migrations/` (0001–0135 at PR #303), `tests/`, the `verify-migration-NNNN.mjs` verifiers and the focused-verification runner. Its README is also the canonical record of Connected Worlds `I-05` |
 | [`tests/`](tests/) | root static contract gates (`*-contract.test.mjs`), including `task-closure-governance-contract.test.mjs` and `forward-safety-contract.test.mjs` |
 | [`scripts/`](scripts/) | `preflight.mjs`, integration diagnostics, and the T-12 / T-13 Phase-M device-validation helpers |
 | [`infra/`](infra/README.md) | placeholder for deployment configuration |
@@ -79,7 +79,7 @@ The rules below are the repository's own, each cited to where it is stated.
 | [`docs/design/`](docs/design/) | design-track records: `phase-v/`, `phase-vi/`, the I-08B3.1-G closures in `i-08b3.1-g1.1/`, `i-08b3.1-g1.2/`, `i-08b3.1-g2/`, `i-08b3.1-g2.3/` and `i-08b3.1-g3/`, the P2-A iconography proof package in `p2-iconography/` (evidence for the P2 closure), the P3-A notification & Activity proof package in `p3-notifications/` (evidence for the P3 closure), and the P4-C comparative proof in `p4-shell/` and the P4-C3 residual visual + copy proof in `p4-residual/` (evidence for the P4 closure) |
 | [`docs/p4/`](docs/p4/P4_READ_FIRST.md) | P4's local evidence and reconciliation package, **final**: the 66-row residual census, the **closed** `APP-OPS-01` App ↔ Company Operations contract (`CLOSED / FROZEN`; the file keeps its `_CANDIDATE` path), the final carry-forward matrix, the resolved decision queue and the final authority compatibility matrix. P4's primary closure record is [`QANDEEL_P4_FINAL_CLOSURE_v1.0.md`](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4_FINAL_CLOSURE_v1.0.md); read it first |
 | [`docs/design/canonical-artifacts/`](docs/design/canonical-artifacts/README.md) | byte-exact final Product / design artifacts: I-08B1, brand, typography, I-08B3.1 A–G proofs. Located by its index |
-| [`docs/e2e/`](docs/e2e/E2E01_READ_FIRST.md) | End-to-End Product Experience Completeness Audit evidence: the E2E-01 journey / surface census, its gap matrix and its proposed closure waves. **Audit evidence, not Product authority**; start at `E2E01_READ_FIRST.md`. Also holds the W1A-01 implementation record ([`QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md)) the W1B-01 implementation record ([`QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md)), the W2-01 implementation record ([`QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), the W2-02 implementation record ([`QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)), the W3-01 implementation record ([`QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)) the W3-02 implementation record ([`QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)) and the W3-MEGA-U implementation record ([`QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md)), each of which carries its Product Owner-approved copy and interaction contract verbatim |
+| [`docs/e2e/`](docs/e2e/E2E01_READ_FIRST.md) | End-to-End Product Experience Completeness Audit evidence: the E2E-01 journey / surface census, its gap matrix and its proposed closure waves. **Audit evidence, not Product authority**; start at `E2E01_READ_FIRST.md`. Also holds the W1A-01 implementation record ([`QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1A01_IMPLEMENTATION_RECORD_v1.md)) the W1B-01 implementation record ([`QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md)), the W2-01 implementation record ([`QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md)), the W2-02 implementation record ([`QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W2_02_PRODUCTION_LAUNCH_IDENTITY_IMPLEMENTATION_RECORD_v1.md)), the W3-01 implementation record ([`QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)) the W3-02 implementation record ([`QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)) and the W3-MEGA-U implementation record ([`QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md)), each of which carries its Product Owner-approved copy and interaction contract verbatim. The later merged records are listed in [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md) §3.7 and §7: W3-MEGA-M, W3-MEGA-A, W3-MEGA-S, VPORT-01, PROD-SEC-02, PROD-OPS-01, PROD-SEC-01, W3-CORR-U and AI-COST-01. So is the ROADMAP-REC-01 reconciliation record ([`QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md`](docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md)) |
 | [`docs/assurance/connected-worlds/`](docs/assurance/connected-worlds/README.md) | the `QAN-CW-ASSURE-01` findings register. **Evidence only** |
 
 ---
@@ -155,9 +155,32 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
+### Execution reconciliation checkpoint — 2026-10-04 (ROADMAP-REC-01, through PR #303)
+
+This is a **locator note, not a new Product authority**. It records GitHub truth on
+`main = 7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`, the merge of PR #303. The evidence is in
+[`docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md`](docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md).
+
+- Merged since the checkpoint below:
+  - W3-MEGA-M (#293);
+  - W3-PDG-01 (#294, Product decisions);
+  - W3-MEGA-A (#295);
+  - W3-MEGA-S (#296);
+  - VPORT-01 (#297);
+  - PROD-SEC-02 (#299);
+  - PROD-OPS-01 (#300);
+  - PROD-SEC-01 (#301);
+  - W3-CORR-U (#302);
+  - AI-COST-01 (#303).
+- PR #298 (`PROD-READINESS-01`) is **CLOSED UNMERGED — evidence / review only**.
+- **NEXT IMPLEMENTATION TASK: VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence** (§5.1). It still opens
+  only through its own Task Contract.
+- `W3-CORR-M` is **not a canonical task and is not opened**. Memory control is the merged W3-MEGA-M (#293).
+
 ### Post-P4 merge checkpoint — 2026-09-27
 
-This is a **handoff / locator note, not a new Product authority**.
+This is a **handoff / locator note, not a new Product authority**. *(Historical: superseded for current sequencing by
+the 2026-10-04 checkpoint above.)*
 
 - PR #280 is **MERGED / CLOSED**. Exact independently reviewed head:
   `b9f73c3b84bee49769858b1465a1c2e118b11f5f`; merge commit and canonical `main`:
@@ -205,42 +228,79 @@ Current sequence:
    Foundation + Appearance + Sign Out (MERGED / CLOSED through PR #287 at `023cb9874376ac69db5848db099d06034d5deb54`;
    [record](docs/e2e/QANDEEL_W3_01_GENERAL_SETTINGS_APPEARANCE_SIGNOUT_IMPLEMENTATION_RECORD_v1.md)). then W3-02 Account &
    Identity Foundation + Public ID v1 (MERGED / CLOSED through PR #288 at `92444c3ab8c35f7d819888be76aa6395c93d94b8`;
-   [record](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)). **W2 is CLOSED; W3 is ACTIVE**: W3-MEGA-U (QANDEEL Understanding + Contested) is MERGED / CLOSED through
+   [record](docs/e2e/QANDEEL_W3_02_ACCOUNT_IDENTITY_PUBLIC_ID_IMPLEMENTATION_RECORD_v1.md)). **W2 is CLOSED.** W3-MEGA-U (QANDEEL Understanding + Contested) is MERGED / CLOSED through
    PR #291 at `226b61710b36c1ecba27b816a460fe16c040639a`
    ([record](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md)); `E2E-D-14`,
    `E2E-D-15` and `PG-01` are closed. W3-MEGA-M (conversational Memory control) is MERGED / CLOSED through PR #293 at
    `3c0ea458a22a17a2a50c616b708f097f5911fb34`
    ([record](docs/e2e/QANDEEL_W3_MEGA_M_CONVERSATIONAL_MEMORY_CONTROL_IMPLEMENTATION_RECORD_v1.md)); `E2E-D-13` is closed.
-   W3's remaining core implementation rows are `E2E-D-03` and `D-05`; `E2E-D-02` is advanced only. The W3 decision
-   queue (`D-04`, `D-06`, `D-08`, `D-11`, `D-12`, `D-16`, `D-17`) is decided by the
+   The W3 decision queue (`D-04`, `D-06`, `D-08`, `D-11`, `D-12`, `D-16`, `D-17`) is decided by the
    [W3-PDG-01 Product Decision Closure](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
-   (`CLOSED / FROZEN — PRODUCT DECISIONS`, documentation only). Every one of those rows is `DECIDED — NOT IMPLEMENTED`.
-   `D-17` is decided for its journey and principles only, under the `EXPLICIT CONNECTED-WORLDS DELETION BLOCKER`
-   (`QAN-BL-ACCT-01`). `W3-MEGA-A` and `W3-MEGA-S` are proposed there as sequencing only; neither is opened.
+   (`CLOSED / FROZEN — PRODUCT DECISIONS`, documentation only). `D-17` is decided for its journey and principles only,
+   under the `EXPLICIT CONNECTED-WORLDS DELETION BLOCKER` (`QAN-BL-ACCT-01`). The merged tasks that implemented it:
+   - W3-MEGA-A, merged through PR #295 at `1e7b681052c7af09576197bcfb204e1b39775554`
+     ([record](docs/e2e/QANDEEL_W3_MEGA_A_ACCOUNT_IDENTITY_SECURITY_IMPLEMENTATION_RECORD_v1.md));
+   - W3-MEGA-S, merged through PR #296 at `e87aac6b4e9ec6c1b6542d2ba3c82cc6cc9af6e8`
+     ([record](docs/e2e/QANDEEL_W3_MEGA_S_PERSONAL_CONTROLS_SETTINGS_IMPLEMENTATION_RECORD_v1.md));
+   - W3-CORR-U, merged through PR #302.
+
+   Stage 1 is **DONE FOR THE CURRENT EXECUTION SEQUENCE, WITH NAMED RESIDUALS**. W3 itself is not phase-closed: its
+   residual rows are listed in [`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md) §7. Stage 2 is **ACTIVE**:
+   VPORT-01 merged through PR #297 at `fe9d9155f122725cb669e9989fa35ff12916112a`
+   ([record](docs/e2e/QANDEEL_VPORT_01_LIVING_ANALYSIS_WORLD_PRODUCTION_VISUAL_PORT_v1.md)), and **VPORT-02 is NEXT**
+   (§5.1). The cross-cutting readiness / integrity tasks are listed beside the map in §5.1.
 4. Release Hardening & Launch.
 
 This sequencing creates no runtime semantics and opens no implementation task by itself.
 
-### 5.1 Current E2E execution map — working delivery map (2026-09-30)
+### 5.1 Current E2E execution map — working delivery map (2026-09-30; status reconciled 2026-10-04 through PR #303)
 
-This is the current Product-Owner working execution map synthesized from repository truth after W3-MEGA-U. It does
+This is the current Product-Owner working execution map synthesized from repository truth after W3-MEGA-U. ROADMAP-REC-01
+reconciled its status column against GitHub truth through PR #303 and changed no stage, objective or boundary. It does
 **not** rewrite the historical E2E-01 census or its proposed wave file. Before every future implementation task, run an
 **Anti-Duplication Gate** and report four facts: what is already Product/design frozen; what backend/runtime already
 exists; what is already production-implemented; and only then what work is genuinely missing. Frozen Product/design,
 closed backend/runtime and merged production work are consumed, never redesigned or rebuilt without a real
 contradiction.
 
-| Stage | Delivery objective | Reuse / no-repeat boundary |
-|---|---|---|
-| **1 — Personal Core / W3 core completion** | Memory through Conversation; remaining Account & Identity implementation; advance Settings only with real available capabilities; explicitly resolve / assign the remaining W3 Product-decision rows | consume W1A/W1B/W2, W3-01, W3-02 and W3-MEGA-U; do not rebuild Settings, Public ID or Understanding; D-02 closes progressively as later real groups land — no empty placeholder groups |
-| **2 — Final Visual Production Port** | port the final Living Analysis world and the final cross-surface visual/icon system into production | consume I-08B1 FAR/MID/NEAR, I-08B3, P2 and the existing Map/Timeline/Temporal/Return runtime; no visual redesign |
-| **3 — Activity & Notifications Production** | implement Activity, attention, notification storage/delivery, Direct Entry and native Push/platform integration | consume I-08N-01 + P3 + P4; no redesign of Activity, strips, privacy, Quiet Hours, Snooze or notification settings |
-| **4 — Shared World Product Integration** | application boundary and mobile Product surfaces over the closed Shared runtime | consume I-04 and migrations 0075–0090; do not rebuild invitation, birth, governance, history, leave or material semantics |
-| **5 — Public World Product Integration** | Public browse/search/read/publication Product surfaces and required application boundaries | consume I-05 and migrations 0091–0099; do not rebuild Public publication/visibility/search runtime |
-| **6 — Matching / Introductions Product Integration** | participation, proposals and Introduction surfaces including progressive disclosure | consume I-07 and migrations 0108–0118, 0120 and 0122; do not rebuild matching lifecycle/runtime |
-| **7 — Replay Product Integration** | Replay entry, selection, preview, navigation and media/export realization | consume I-06 and migrations 0100–0107 plus the frozen Replay name/placement; do not rebuild Replay authority/runtime |
-| **8 — Voice Runtime** | Voice Notes and Live Calls: realtime audio, ASR/TTS, barge-in, background/interruption, durable audio and provider integration | consume G1.2/P2/P4 frozen Product/non-signal visual law; only runtime-gated truth is newly resolved |
-| **9 — Economy + Launch Closure** | Plans/Credits/Usage from measured provider economics; Lantern; maintenance/min-version; security, device/store/legal/operations and release hardening | consume all prior frozen/implemented work; this stage closes release-specific gaps rather than reopening Product foundations |
+| Stage | Status (through PR #303) | Delivery objective | Reuse / no-repeat boundary |
+|---|---|---|---|
+| **1 — Personal Core / W3 core completion** | **DONE FOR THE CURRENT EXECUTION SEQUENCE, WITH NAMED RESIDUALS.** The merged W3 slices are consumed: W3-01, W3-02, W3-MEGA-U, W3-MEGA-M, W3-MEGA-A, W3-MEGA-S and W3-CORR-U. Do not rebuild them. The row-level residuals stay open and owned where their records put them ([Current State](QANDEEL_CURRENT_STATE.md) §7); none is silently called closed | Memory through Conversation; remaining Account & Identity implementation; advance Settings only with real available capabilities; explicitly resolve / assign the remaining W3 Product-decision rows | consume W1A/W1B/W2, W3-01, W3-02 and W3-MEGA-U; do not rebuild Settings, Public ID or Understanding; D-02 closes progressively as later real groups land — no empty placeholder groups |
+| **2 — Final Visual Production Port** | **ACTIVE.** `VPORT-01` = **DONE** (PR #297); `VPORT-02` = **NEXT** | port the final Living Analysis world and the final cross-surface visual/icon system into production | consume I-08B1 FAR/MID/NEAR, I-08B3, P2 and the existing Map/Timeline/Temporal/Return runtime; no visual redesign |
+| **3 — Activity & Notifications Production** | **LATER** | implement Activity, attention, notification storage/delivery, Direct Entry and native Push/platform integration | consume I-08N-01 + P3 + P4; no redesign of Activity, strips, privacy, Quiet Hours, Snooze or notification settings |
+| **4 — Shared World Product Integration** | **LATER** | application boundary and mobile Product surfaces over the closed Shared runtime | consume I-04 and migrations 0075–0090; do not rebuild invitation, birth, governance, history, leave or material semantics |
+| **5 — Public World Product Integration** | **LATER** | Public browse/search/read/publication Product surfaces and required application boundaries | consume I-05 and migrations 0091–0099; do not rebuild Public publication/visibility/search runtime |
+| **6 — Matching / Introductions Product Integration** | **LATER** | participation, proposals and Introduction surfaces including progressive disclosure | consume I-07 and migrations 0108–0118, 0120 and 0122; do not rebuild matching lifecycle/runtime |
+| **7 — Replay Product Integration** | **LATER** | Replay entry, selection, preview, navigation and media/export realization | consume I-06 and migrations 0100–0107 plus the frozen Replay name/placement; do not rebuild Replay authority/runtime |
+| **8 — Voice Runtime** | **LATER** (runtime / provider-gated) | Voice Notes and Live Calls: realtime audio, ASR/TTS, barge-in, background/interruption, durable audio and provider integration | consume G1.2/P2/P4 frozen Product/non-signal visual law; only runtime-gated truth is newly resolved |
+| **9 — Economy + Launch Closure** | **LATER.** The AI-COST-01 accounting foundation is DONE (PR #303). The final Product economy and provider selection are not | Plans/Credits/Usage from measured provider economics; Lantern; maintenance/min-version; security, device/store/legal/operations and release hardening | consume all prior frozen/implemented work, including AI-COST-01's ledger, Price Cards and inactive Credit Policy contract; this stage closes release-specific gaps rather than reopening Product foundations |
+
+> **NEXT IMPLEMENTATION TASK: VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence**
+
+That is the remaining Stage-2 task named by the [VPORT-01 record](docs/e2e/QANDEEL_VPORT_01_LIVING_ANALYSIS_WORLD_PRODUCTION_VISUAL_PORT_v1.md)
+§16, with the three handoff notes it inherits there. This map does not scope it further and does not open it: it needs
+its own Task Contract.
+
+#### Cross-cutting Production Readiness / Integrity
+
+These tasks run beside the 9 stages. They did not replace or renumber them.
+
+| State | Tasks |
+|---|---|
+| **DONE / MERGED** | `PROD-SEC-02` (#299, `0131`) · `PROD-OPS-01` (#300, `0132`) · `PROD-SEC-01` (#301, `0133`) · `W3-CORR-U` (#302, `0134`) · `AI-COST-01` (#303, `0135`) |
+| **DEFERRED — OWNED** | `PROD-AUTH-01` (`QAN-BL-PROD-04`) · `PROD-DATA-01` (`QAN-BL-PROD-05`) |
+| **FINAL-LAUNCH / EXTERNAL GATES** | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` (`QAN-BL-LAUNCH-01`) · `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` (`QAN-BL-LAUNCH-02`) |
+| **Evidence only** | `PROD-READINESS-01` — PR #298 **CLOSED UNMERGED**; its findings were admitted as `QAN-BL-PROD-01` … `05` |
+
+The launch-gate owners are copied from the [canonical backlog](docs/qandeel-canonical-backlog-v1.md) §4 and change
+nothing there.
+
+**Anti-confusion rule.** Cross-cutting readiness / correction tasks may be inserted when a real blocker is discovered,
+but they do not renumber or replace the 9-stage E2E delivery map. After such a correction closes, execution returns to
+the active delivery stage unless the Product Owner explicitly changes sequencing.
+
+**No invented tasks.** `W3-CORR-M` is not a canonical task and is not opened. Memory control is the merged W3-MEGA-M
+(PR #293).
 
 At the start of **every** executor task, show this map with each stage marked **DONE / ACTIVE / NEXT / LATER**, name the
 specific Mega Task being opened, and state what prior authority/runtime it must reuse.
@@ -268,7 +328,8 @@ historical and are not edited. Only the entry points that pointed at them were c
 | Proof packages' own wording: G1.x, G2, G3 "READY FOR … REVIEW"; typography, A3R2, B4R, F self-status "candidate"; the G3 handoff "G3 NOT STARTED"; G2's "Q-LIGHT-SHELL remains open" | candidate or open | the closure records and the artifact index hold the lifecycle, and the package bytes are not edited (G3 §I) |
 | Pre-closure banners with no closure record: T-04 (`awaiting independent Architecture review`), T-12P (`CANDIDATE`), QAN-INF-05 (`CANDIDATE`) | awaiting review | none is recorded as closed. `QAN-GOV-03` reported T-04 and T-12P to Architecture rather than correct them. They are not closed and not failed; their lifecycle is not established |
 | T-03B2b3 / T-03B3 `PRODUCTION-INERT` banners | nothing wired | historical: T-03D performed the production cutover |
-| Backlog §7 prose "seven `OPEN — UNASSIGNED` items" | 7 | its own correction paragraph fixes it. The mechanically counted register now holds 24 items, 9 of them `OPEN — UNASSIGNED` (after the P4-C1 and P4-closure admissions) |
+| Backlog §7 prose "seven `OPEN — UNASSIGNED` items" | 7 | its own correction paragraph fixes it. The mechanically counted register now holds 33 items, 10 of them `OPEN — UNASSIGNED` (at PR #303, recounted by ROADMAP-REC-01) |
+| Merged tasks' records still reading `IMPLEMENTED ON A DRAFT PR — NOT MERGED` or `DRAFT PR … AWAITING … REVIEW` (W3-MEGA-A/S, VPORT-01, PROD-SEC-02, PROD-OPS-01, PROD-SEC-01, W3-CORR-U, AI-COST-01) | unmerged | all eight merged through PRs #295–#303 (except #298). ROADMAP-REC-01 set their current banners and labelled the handoff wording historical. "Claude did not merge" stays true |
 | The P4-C and P4-C3 packages' own wording: "P4 remains ACTIVE — NOT CLOSED / NOT FROZEN", `P4-C3 — CORRECTIONS COMPLETE / READY FOR FINAL INDEPENDENT REVIEW`, each spec's `NOT FROZEN` banner, proof-time `PROPOSED_FOR_PO_REVIEW` labels; the P4-C3 report's "five statuses"; APP-OPS-01's `_CANDIDATE` file name and its historical `CANDIDATE` markers | P4 open; copy unapproved; APP-OPS a candidate | superseded by the P4 closure and P4-C4; the package bytes are not edited. APP-OPS-01 is `CLOSED / FROZEN` and its `CANDIDATE` clauses bind (its reading conventions). The "five statuses" sentence is a non-authoritative nit: six classes after P4-C3R |
 | I-08A4 §8 / §9 `Readings` = «القراءات», `Reading` = «قراءة» | the user-facing name of the understanding surface | P1 §10 renames that surface **QANDEEL Understanding / «فهم قنديل»**. P1 explicitly preserves the distinct in-Analysis peer-reading vocabulary of VI-01, G1.1 §2 and the T-08 chrome |
 | F2 "Default appearance follows the system" (`follow-system-no-in-app-override`); the G2 / F2 Analysis-shell amendment and G3 §C.1 "Non-Analysis surfaces keep following the system appearance" and "not a user appearance override or toggle" | no in-app appearance choice | P1 §12: non-Analysis surfaces follow a Dark / Light / System preference, default Dark. The Analysis stays one dark place under every value. No token or preserved byte changed |

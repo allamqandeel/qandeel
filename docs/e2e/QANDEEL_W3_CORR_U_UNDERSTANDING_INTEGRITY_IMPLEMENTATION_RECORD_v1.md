@@ -1,6 +1,10 @@
 # QANDEEL — W3-CORR-U — Understanding Integrity — Implementation Record v1
 
-**Status:** `W3-CORR-U` — **IMPLEMENTED — DRAFT PR, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
+**Status:** `W3-CORR-U` — **MERGED / CLOSED** — merged through PR #302 at `c9add460be785fc5d4dd930146e217cee2972706`
+(2026-10-01; PR head `0c974738eb74fb9442f819dc311dee02532fffdd`). Its admitted residue `QAN-BL-PRIV-01` stays
+`DEFERRED — OWNED` by `PRIV-EXPORT-01`. Lifecycle reconciled by ROADMAP-REC-01 (2026-10-04); nothing below it was
+rewritten.
+**Status at handoff (historical):** `W3-CORR-U` — **IMPLEMENTED — DRAFT PR, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
 **Baseline:** `main = ddc3e6c1531d47d2e2ef4977ace79ac97478b79f`. PR #301 (`PROD-SEC-01`) is merged; migrations through
 `0133` are canonical.
 **Branch:** `fix/w3-corr-u-understanding-integrity`. The **implementation evidence head** is `e5a0ed5`. Every commit
