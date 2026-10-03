@@ -617,6 +617,21 @@ The entry points (`QANDEEL_CURRENT_STATE.md`, `QANDEEL_PROJECT_MAP.md`, `docs/e2
 `ROADMAP-REC-01` (Draft PR #304), which is refreshed onto `main` separately after this change merges. This task does not
 edit them, so that PR #304 stays documentation-only and the two changes do not overlap.
 
-### 18.5 Verification
+### 18.5 Verification (local, on implementation head `18c32b6`)
 
-Recorded in the Draft PR body with each gate's actual result.
+| Gate | Result |
+|---|---|
+| Copy literals of `copy.ts`, before vs after (scripted) | 85 / 85 literals; exactly ONE differs (`exportExplain`, Arabic); the code is otherwise identical apart from the rename |
+| Mobile Jest — `src/settings` + `w3-mega-s-privacy-data` (AR + EN) | 9 suites, 141 / 141. A Jest worker-exit warning appears identically on the untouched baseline |
+| W3-MEGA-S root contract | 11 / 11 (approved pairs pinned; a planted unapproved string and the superseded Arabic are both rejected) |
+| W3-MEGA-A, W3-01, W3-MEGA-U2 contracts (they read `settings/copy.ts`) | 15 / 15, 15 / 15, 23 / 23 |
+| Backlog-reading contracts (PROD-SEC-01, W2-02, T-14, T-12, T-12P, T-11) | 31 / 31, 19 / 19, 17 / 17, 32 / 32, 23 / 23, 27 / 27 |
+| `npm run typecheck:mobile` | pass |
+| ESLint on the changed mobile files | 0 problems |
+| `npm run test:task-closure-governance-contract` | 24 / 24 |
+| `npm run test:forward-safety-contract` | 35 / 35 in an LF-clean worktree of the head. This Windows checkout (`core.autocrlf=true`) fails the same 10 on the untouched baseline too: a host line-ending artefact, not this change |
+| `git diff --check`; relative links in the changed Markdown | clean; 52 links, 0 broken |
+| Backlog count, mechanical from the §4 index | 34 = 9 / 0 / 10 / 15; 21 / 12 / 1 |
+| `code-review` skill on the diff | no findings |
+
+API CI and Mobile CI results on the PR head are recorded in the Draft PR, not claimed here.
