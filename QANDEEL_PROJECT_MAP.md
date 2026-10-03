@@ -155,7 +155,7 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
-### Execution reconciliation checkpoint — 2026-10-04 (ROADMAP-REC-01, through PR #303)
+### Execution reconciliation checkpoint — 2026-10-04 (ROADMAP-REC-01, through PR #305)
 
 This is a **locator note, not a new Product authority**. It records GitHub truth on
 `main = 7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`, the merge of PR #303. The evidence is in
@@ -253,20 +253,20 @@ Current sequence:
 
 This sequencing creates no runtime semantics and opens no implementation task by itself.
 
-### 5.1 Current E2E execution map — working delivery map (2026-09-30; status reconciled 2026-10-04 through PR #303)
+### 5.1 Current E2E execution map — working delivery map (2026-09-30; status reconciled 2026-10-04 through PR #305)
 
 This is the current Product-Owner working execution map synthesized from repository truth after W3-MEGA-U. ROADMAP-REC-01
-reconciled its status column against GitHub truth through PR #303 and changed no stage, objective or boundary. It does
+reconciled its status column against GitHub truth through PR #305 and changed no stage, objective or boundary. It does
 **not** rewrite the historical E2E-01 census or its proposed wave file. Before every future implementation task, run an
 **Anti-Duplication Gate** and report four facts: what is already Product/design frozen; what backend/runtime already
 exists; what is already production-implemented; and only then what work is genuinely missing. Frozen Product/design,
 closed backend/runtime and merged production work are consumed, never redesigned or rebuilt without a real
 contradiction.
 
-| Stage | Status (through PR #303) | Delivery objective | Reuse / no-repeat boundary |
+| Stage | Status (through PR #305) | Delivery objective | Reuse / no-repeat boundary |
 |---|---|---|---|
 | **1 — Personal Core / W3 core completion** | **DONE FOR THE CURRENT EXECUTION SEQUENCE, WITH NAMED RESIDUALS.** The merged W3 slices are consumed: W3-01, W3-02, W3-MEGA-U, W3-MEGA-M, W3-MEGA-A, W3-MEGA-S and W3-CORR-U. Do not rebuild them. The row-level residuals stay open and owned where their records put them ([Current State](QANDEEL_CURRENT_STATE.md) §7); none is silently called closed | Memory through Conversation; remaining Account & Identity implementation; advance Settings only with real available capabilities; explicitly resolve / assign the remaining W3 Product-decision rows | consume W1A/W1B/W2, W3-01, W3-02 and W3-MEGA-U; do not rebuild Settings, Public ID or Understanding; D-02 closes progressively as later real groups land — no empty placeholder groups |
-| **2 — Final Visual Production Port** | **ACTIVE.** `VPORT-01` = **DONE** (PR #297); `VPORT-02` = **NEXT** | port the final Living Analysis world and the final cross-surface visual/icon system into production | consume I-08B1 FAR/MID/NEAR, I-08B3, P2 and the existing Map/Timeline/Temporal/Return runtime; no visual redesign |
+| **2 — Final Visual Production Port** | **ACTIVE.** `VPORT-01` = **DONE** (PR #297); `VPORT-02` = **NEXT** and inherits `QAN-BL-A11Y-01` (mid-session Reduce Motion parity) | port the final Living Analysis world and the final cross-surface visual/icon system into production | consume I-08B1 FAR/MID/NEAR, I-08B3, P2 and the existing Map/Timeline/Temporal/Return runtime; no visual redesign |
 | **3 — Activity & Notifications Production** | **LATER** | implement Activity, attention, notification storage/delivery, Direct Entry and native Push/platform integration | consume I-08N-01 + P3 + P4; no redesign of Activity, strips, privacy, Quiet Hours, Snooze or notification settings |
 | **4 — Shared World Product Integration** | **LATER** | application boundary and mobile Product surfaces over the closed Shared runtime | consume I-04 and migrations 0075–0090; do not rebuild invitation, birth, governance, history, leave or material semantics |
 | **5 — Public World Product Integration** | **LATER** | Public browse/search/read/publication Product surfaces and required application boundaries | consume I-05 and migrations 0091–0099; do not rebuild Public publication/visibility/search runtime |
@@ -287,7 +287,7 @@ These tasks run beside the 9 stages. They did not replace or renumber them.
 
 | State | Tasks |
 |---|---|
-| **DONE / MERGED** | `PROD-SEC-02` (#299, `0131`) · `PROD-OPS-01` (#300, `0132`) · `PROD-SEC-01` (#301, `0133`) · `W3-CORR-U` (#302, `0134`) · `AI-COST-01` (#303, `0135`) |
+| **DONE / MERGED** | `PROD-SEC-02` (#299, `0131`) · `PROD-OPS-01` (#300, `0132`) · `PROD-SEC-01` (#301, `0133`) · `W3-CORR-U` (#302, `0134`) · `AI-COST-01` (#303, `0135`) · `W3-MEGA-S-CLOSE-01` (#305, Copy Gate / residual closure) |
 | **DEFERRED — OWNED** | `PROD-AUTH-01` (`QAN-BL-PROD-04`) · `PROD-DATA-01` (`QAN-BL-PROD-05`) |
 | **FINAL-LAUNCH / EXTERNAL GATES** | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` (`QAN-BL-LAUNCH-01`) · `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` (`QAN-BL-LAUNCH-02`) |
 | **Evidence only** | `PROD-READINESS-01` — PR #298 **CLOSED UNMERGED**; its findings were admitted as `QAN-BL-PROD-01` … `05` |
