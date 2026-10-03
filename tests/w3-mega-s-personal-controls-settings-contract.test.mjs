@@ -186,7 +186,42 @@ test('Accessibility: no in-app accessibility switch; Reduce Motion is followed m
   }
 });
 
-test('Privacy & Data: one destination, approved group names, copy isolated and flagged, never “deleted” before the end', () => {
+// W3-MEGA-S-CLOSE-01: the Product Owner approved every §9 pair as written, with ONE Arabic correction (`exportExplain`).
+// They are pinned byte-for-byte, and they are still the ONLY words this slice writes itself.
+const APPROVED_W3_MEGA_S = [
+  ['languageTerm', 'اللغة', 'Language'],
+  ['exportAction', 'تصدير بياناتي', 'Export my data'],
+  ['exportExplain', 'سنجهّز نسخة من بياناتك. وعندما تصبح جاهزة، يمكنك تنزيلها من هنا لمدة محدودة.', "We'll prepare a copy of your data. When it's ready, you can download it here for a limited time."],
+  ['exportConfirm', 'طلب نسخة', 'Request a copy'],
+  ['exportPreparing', 'جارٍ تجهيز نسخة من بياناتك', 'Preparing a copy of your data'],
+  ['exportReady', 'النسخة جاهزة للتنزيل حتى {date}', 'Ready to download until {date}'],
+  ['exportDownload', 'تنزيل', 'Download'],
+  ['exportSaved', 'تم حفظ الملف.', 'File saved.'],
+  ['exportSaveFailed', 'تعذّر حفظ الملف.', "The file couldn't be saved."],
+  ['exportExpired', 'انتهت مدة التنزيل. يمكنك طلب نسخة جديدة.', 'The download period has ended. You can request a new copy.'],
+  ['exportFailed', 'تعذّر تجهيز النسخة. يمكنك طلبها مرة أخرى.', "The copy couldn't be prepared. You can request it again."],
+  ['deleteAction', 'حذف الحساب', 'Delete account'],
+  ['deleteExplain', 'سيُحذف حسابك وبياناتك الشخصية نهائيًا، ومنها محادثاتك وما يحتفظ به قنديل عنك، بعد مهلة قصيرة يمكنك الإلغاء خلالها. وبعد انقضائها لا يمكن التراجع عن الحذف.', 'Your account and your personal data, including your conversations and what QANDEEL keeps about you, will be deleted permanently after a short waiting period. You can cancel during it. After it ends, the deletion can’t be undone.'],
+  ['deleteConfirm', 'حذف الحساب', 'Delete account'],
+  ['deleteScheduled', 'سيُحذف حسابك في {date}', 'Your account will be deleted on {date}'],
+  ['deleteCancel', 'إلغاء الحذف', 'Cancel deletion'],
+  ['deleteCancelled', 'تم إلغاء الحذف.', 'Deletion cancelled.'],
+  ['deleteFinalizing', 'يجري حذف حسابك الآن.', 'Your account is being deleted now.'],
+  ['deleteNotCancellable', 'لم يعد إلغاء الحذف ممكنًا.', 'The deletion can no longer be cancelled.'],
+  ['deleteBlocked', 'يتعذّر إتمام الحذف حاليًا، ويبقى حسابك كما هو.', "The deletion can't be completed right now. Your account stays as it is."],
+  ['enterPassword', 'أدخل كلمة المرور.', 'Enter your password.'],
+];
+const SUPERSEDED_EXPORT_EXPLAIN_AR = 'سنجهّز نسخة من بياناتك، ويمكنك تنزيلها من هنا حين تجهز لمدة محدودة.';
+
+/** Every `key: 'value'` / `key: "value"` entry of the block, in order. */
+const entries = (text) => [...code(text).matchAll(/^\s+(\w+): (?:'([^'\n]*)'|"([^"\n]*)"),$/gmu)].map((m) => [m[1], m[2] ?? m[3]]);
+/** Exactly the approved pairs: Arabic in order, then English in order, nothing more and nothing less. */
+const exactlyApproved = (text) => {
+  const expected = [...APPROVED_W3_MEGA_S.map(([key, ar]) => [key, ar]), ...APPROVED_W3_MEGA_S.map(([key, , en]) => [key, en])];
+  return JSON.stringify(entries(text)) === JSON.stringify(expected);
+};
+
+test('Privacy & Data: one destination, approved group names, exactly the PO-approved copy, never “deleted” before the end', () => {
   const copy = read(`${SETTINGS}/copy.ts`);
   const registry = readJson('docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/data/COPY_REGISTRY.json');
   const rows = Array.isArray(registry) ? registry : registry.rows ?? Object.values(registry).find(Array.isArray);
@@ -194,10 +229,13 @@ test('Privacy & Data: one destination, approved group names, copy isolated and f
     const row = rows.find((r) => r.k === key);
     assert.ok(copy.includes(`'${row.ar}'`) && copy.includes(`'${row.en}'`), `${key}, byte-for-byte`);
   }
-  const proposed = copy.slice(copy.indexOf('const PROPOSED_W3_MEGA_S'), copy.indexOf('function privacyCopy'));
-  assert.match(proposed, /PRODUCT COPY DECISION REQUIRED/u);
+  assert.ok(copy.indexOf('const APPROVED_W3_MEGA_S') > 0, 'the block carries its approval-true name');
+  const approved = copy.slice(copy.indexOf('const APPROVED_W3_MEGA_S'), copy.indexOf('function privacyCopy'));
+  guards('an-unapproved-string', approved, exactlyApproved, "    exportConfirm: 'Request your copy',");
+  assert.equal(exactlyApproved(approved.replace(APPROVED_W3_MEGA_S[2][1], SUPERSEDED_EXPORT_EXPLAIN_AR)), false, 'the superseded exportExplain candidate is rejected');
+  assert.doesNotMatch(copy, /PROPOSED_W3_MEGA_S|PROPOSED — NOT APPROVED|PRODUCT COPY DECISION REQUIRED/u, 'no stale Copy Gate wording remains');
   // Never "deleted" as a done fact before the final deletion: every deletion line is a future, a process or a refusal.
-  const deletionLines = [...proposed.matchAll(/delete\w*: '([^']*)'|delete\w*: "([^"]*)"/gu)].map((m) => m[1] ?? m[2]);
+  const deletionLines = [...approved.matchAll(/delete\w*: '([^']*)'|delete\w*: "([^"]*)"/gu)].map((m) => m[1] ?? m[2]);
   guards('no-premature-deleted', deletionLines.join('\n'), (text) => !/\b(?:has been|was) deleted\b|\bAccount deleted\b|تم حذف/u.test(text), 'Your account has been deleted.');
   const surface = code(read(`${SETTINGS}/SettingsSurface.tsx`));
   assert.equal((surface.match(/<SettingsSurface\b/gu) ?? []).length, 0);
@@ -214,7 +252,11 @@ test('the record states exactly the D-17 truth, never a wider claim, and the bac
   assert.match(record, /D-17 PERSONAL-WORLD IMPLEMENTATION — READY/u);
   assert.match(record, /D-17 FULL ACCOUNT DELETION — BLOCKED BY CONNECTED WORLDS/u);
   assert.match(record, /NOT YET INCLUDED — WORLD-SCOPED EXPORT AUTHORITY NOT IMPLEMENTED/u);
-  assert.match(record, /PRODUCT COPY DECISION REQUIRED/u);
+  // W3-MEGA-S-CLOSE-01: the Copy Gate is closed by the Product Owner, and the record says so without a stale gate.
+  assert.match(record, /APPROVED — PRODUCT OWNER \(W3-MEGA-S-CLOSE-01\)/u);
+  assert.doesNotMatch(record, /PRODUCT COPY DECISION REQUIRED|PROPOSED — NOT APPROVED/u, 'no open copy decision remains');
+  // The slice is closed; the wider truths stay open and are said to stay open.
+  assert.match(record, /MERGED \/ CLOSED as its bounded Personal Controls & Settings integration slice/u);
   const overClaim = (text) => /E2E-D-17[^\n|]*\|\s*(?:CLOSED|COMPLETE)\b/u.test(text) || /account deletion is (?:complete|production-ready)/iu.test(text);
   guards('no-d17-overclaim', record, (text) => !overClaim(text), '| `E2E-D-17` | CLOSED |');
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');

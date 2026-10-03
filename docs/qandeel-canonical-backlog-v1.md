@@ -167,6 +167,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-01` | Trusted Proxy / Edge / Origin Production Proof | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-01` | Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-A11Y-01` | Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -791,6 +792,30 @@ only in a task record. Neither authorizes implementation (BG-07).
 Admitted by W3-CORR-U under BG-06, designated by Architecture in its closing change. Nothing here authorizes
 implementation (BG-07).
 
+### `QAN-BL-A11Y-01` — Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks
+
+- **Title / Finding:** W3-MEGA-S made the W1A / W3 surfaces follow the platform's Reduce Motion setting mid-session
+  (`useReduceMotion()`). The T-10 presentation-camera and temporal-motion hooks (`usePresentationCamera.ts`,
+  `useTemporalMotion.ts`) still read Reanimated's `useReducedMotion()`, which reports the value at app start only, and so
+  does any Reanimated animation left on its default `ReduceMotion.System`. A reader who turns Reduce Motion on during a
+  session still gets those motions until the app restarts.
+- **Source:** the [W3-MEGA-S record](e2e/QANDEEL_W3_MEGA_S_PERSONAL_CONTROLS_SETTINGS_IMPLEMENTATION_RECORD_v1.md) §6 and
+  §13 item 4, disposed to Stage 2 by its closing reconciliation (§18.2 item 4, `W3-MEGA-S-CLOSE-01`). The obligation is
+  W3-PDG-01 §6.3's (Reduce Motion is a platform signal QANDEEL must honour).
+- **Current truth:** reconfirmed in code at `7221a635`. Nothing is faked and no surface is wrong at launch; only a change
+  during a session is missed.
+- **Why deferred:** the hooks are CLOSED / FROZEN T-10 / T-12 code outside W3-MEGA-S's contract. Changing them is a
+  controlled change for the task that ports the Timeline and the Map's motion, and Stage 2 consumes them.
+- **Owner task:** `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence`
+- **Severity:** `HIGH` — accessibility parity.
+- **Reopen condition:** automatic when `VPORT-02` starts; and in any case before `E2E-D-12` is closed.
+- **Required future property:** every Living Analysis camera and temporal motion follows a mid-session change of the
+  platform Reduce Motion setting, with the parity T-10 and F1R2 already define. This entry adds no motion law.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `W3-MEGA-S-CLOSE-01` under BG-06 (a canonical record's deferral to a named future task), so that `VPORT-02`
+inherits it at kickoff (BG-05). Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final Living Analysis Map
@@ -1003,15 +1028,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 8 |
+| `DEFERRED — OWNED` | 9 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 15 |
-| **Total** | **33** |
+| **Total** | **34** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 20 |
+| `HIGH` | 21 |
 | `MEDIUM` | 12 |
 | `LOW` | 1 |
 
@@ -1110,6 +1135,15 @@ provider bill belongs to Release Hardening's billing readiness; Company Ops cons
 implementation. Its Gap Closure Matrix is §14 of its
 [implementation record](e2e/QANDEEL_AI_COST_01_PROVIDER_NEUTRAL_COST_CREDIT_LEDGER_IMPLEMENTATION_RECORD_v1.md). The
 register is unchanged: **33** items, 8 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED`, 15 `CLOSED — TOMBSTONE`.
+
+**W3-MEGA-S-CLOSE-01 reconciliation (2026-10-04).** The Product Owner closed W3-MEGA-S's Copy Gate, and the task closes
+W3-MEGA-S (PR #296, merged as `e87aac6b`) as its bounded slice. It inherits no item. It admits one: `QAN-BL-A11Y-01`
+(`HIGH`, `DEFERRED — OWNED`, `VPORT-02`), Reduce Motion in the T-10 hooks, which the W3-MEGA-S record now defers to that
+named task. Every other residue is closed, already owned (`QAN-BL-PROD-05`, `QAN-BL-LAUNCH-02`, `QAN-BL-PRIV-01`,
+`QAN-BL-ACCT-01`, `QAN-BL-CW-01`, all unchanged), or carried by its open E2E row and the execution map's Stage 9. The
+record's §18.2 is the Gap Closure Matrix. The register now holds **34** items: 9 `DEFERRED — OWNED`, 10
+`OPEN — UNASSIGNED` and 15 `CLOSED — TOMBSTONE`; by severity, 21 `HIGH`, 12 `MEDIUM` and 1 `LOW`, counted mechanically
+from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1161,6 +1195,8 @@ Inherited after T-12 closure reconciliation:
 | `W3-CORR-U — Understanding Integrity` | none — U-1 … U-5 closed inside the task; admitted `QAN-BL-PRIV-01` |
 | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01` |
 | `AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation` | none — no item names it; none admitted |
+| `W3-MEGA-S-CLOSE-01 — Product Copy Approval + Residual Reconciliation` | none — admitted `QAN-BL-A11Y-01` |
+| `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `QAN-BL-A11Y-01` |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
