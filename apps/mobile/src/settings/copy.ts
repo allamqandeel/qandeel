@@ -44,6 +44,9 @@
  * the action «تسجيل الخروج من الأجهزة الأخرى» / Sign out from other devices (the English is the Product Owner's own
  * row name, W3-PDG-01 §3), its result «تم تسجيل الخروج من الأجهزة الأخرى.» / Signed out from other devices., and the
  * re-entered password's refusal «كلمة المرور غير صحيحة.» / The password is incorrect.
+ *
+ * W3-MEGA-S adds the Language row and the Privacy & Data group. Their own pairs are `APPROVED_W3_MEGA_S` below; the
+ * Product Owner approved every one in the W3-MEGA-S Copy Gate (W3-MEGA-S-CLOSE-01; record §9).
  */
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { AppearancePreference } from '../appearance';
@@ -221,40 +224,42 @@ function securityCopy(language: ChromeLanguage, group: string): SecurityCopy {
 }
 
 /**
- * W3-MEGA-S — the new pairs of the Language row and the Privacy & Data group. PROPOSED — NOT APPROVED: every one waits
- * for the Product Owner's Copy Gate, and those marked PRODUCT COPY DECISION REQUIRED define a deletion consequence,
- * the grace behaviour, the export promise or its expiry (W3-MEGA-S record §7). Drafted in MSA, verb-first, beside
- * their approved siblings («تم تغيير كلمة المرور.»); the language names are each language's own name for itself.
+ * W3-MEGA-S — the pairs of the Language row and the Privacy & Data group. APPROVED — PRODUCT OWNER (W3-MEGA-S-CLOSE-01):
+ * every pair as written in the W3-MEGA-S record §9, with ONE Arabic correction, `exportExplain`; its English is
+ * unchanged. The approval is of the words only: it changes no export or deletion behaviour. The rows marked ★ in §9
+ * state a deletion consequence, the grace behaviour, the export promise or its expiry, or irreversibility, and nothing
+ * here may reword them without a new Copy Gate. MSA, verb-first, beside their approved siblings («تم تغيير كلمة
+ * المرور.»); the language names are each language's own name for itself.
  */
-const PROPOSED_W3_MEGA_S = Object.freeze({
+const APPROVED_W3_MEGA_S = Object.freeze({
   ar: Object.freeze({
     languageTerm: 'اللغة',
     exportAction: 'تصدير بياناتي',
-    // PRODUCT COPY DECISION REQUIRED — the export promise and its limited availability.
-    exportExplain: 'سنجهّز نسخة من بياناتك، ويمكنك تنزيلها من هنا حين تجهز لمدة محدودة.',
+    // ★ the export promise and its limited availability — the Product Owner's corrected wording.
+    exportExplain: 'سنجهّز نسخة من بياناتك. وعندما تصبح جاهزة، يمكنك تنزيلها من هنا لمدة محدودة.',
     exportConfirm: 'طلب نسخة',
     exportPreparing: 'جارٍ تجهيز نسخة من بياناتك',
-    // PRODUCT COPY DECISION REQUIRED — expiry.
+    // ★ expiry.
     exportReady: 'النسخة جاهزة للتنزيل حتى {date}',
     exportDownload: 'تنزيل',
     exportSaved: 'تم حفظ الملف.',
     exportSaveFailed: 'تعذّر حفظ الملف.',
-    // PRODUCT COPY DECISION REQUIRED — expiry.
+    // ★ expiry.
     exportExpired: 'انتهت مدة التنزيل. يمكنك طلب نسخة جديدة.',
     exportFailed: 'تعذّر تجهيز النسخة. يمكنك طلبها مرة أخرى.',
     deleteAction: 'حذف الحساب',
-    // PRODUCT COPY DECISION REQUIRED — the deletion consequence, the grace period and irreversibility.
+    // ★ the deletion consequence, the grace period and irreversibility.
     deleteExplain: 'سيُحذف حسابك وبياناتك الشخصية نهائيًا، ومنها محادثاتك وما يحتفظ به قنديل عنك، بعد مهلة قصيرة يمكنك الإلغاء خلالها. وبعد انقضائها لا يمكن التراجع عن الحذف.',
     deleteConfirm: 'حذف الحساب',
-    // PRODUCT COPY DECISION REQUIRED — the grace behaviour.
+    // ★ the grace behaviour.
     deleteScheduled: 'سيُحذف حسابك في {date}',
     deleteCancel: 'إلغاء الحذف',
     deleteCancelled: 'تم إلغاء الحذف.',
-    // PRODUCT COPY DECISION REQUIRED — never "deleted" before the final deletion.
+    // ★ never "deleted" before the final deletion.
     deleteFinalizing: 'يجري حذف حسابك الآن.',
-    // PRODUCT COPY DECISION REQUIRED — irreversibility.
+    // ★ irreversibility.
     deleteNotCancellable: 'لم يعد إلغاء الحذف ممكنًا.',
-    // PRODUCT COPY DECISION REQUIRED — the Connected Worlds hard stop, told without naming the mechanism.
+    // ★ the Connected Worlds hard stop, told without naming the mechanism.
     deleteBlocked: 'يتعذّر إتمام الحذف حاليًا، ويبقى حسابك كما هو.',
     enterPassword: 'أدخل كلمة المرور.',
   }),
@@ -286,28 +291,28 @@ const PROPOSED_W3_MEGA_S = Object.freeze({
 function privacyCopy(language: ChromeLanguage, network: string): PrivacyDataCopy {
   const entry = accountEntryCopy(language);
   const approved = APPROVED[language === 'ar' ? 'ar' : 'en'];
-  const proposed = PROPOSED_W3_MEGA_S[language === 'ar' ? 'ar' : 'en'];
+  const pairs = APPROVED_W3_MEGA_S[language === 'ar' ? 'ar' : 'en'];
   return Object.freeze({
-    exportAction: proposed.exportAction,
-    exportExplain: proposed.exportExplain,
-    exportConfirm: proposed.exportConfirm,
-    exportPreparing: proposed.exportPreparing,
-    exportReady: (until: string) => proposed.exportReady.replace('{date}', until),
-    exportDownload: proposed.exportDownload,
-    exportSaved: proposed.exportSaved,
-    exportSaveFailed: proposed.exportSaveFailed,
-    exportExpired: proposed.exportExpired,
-    exportFailed: proposed.exportFailed,
-    deleteAction: proposed.deleteAction,
-    deleteExplain: proposed.deleteExplain,
-    deleteConfirm: proposed.deleteConfirm,
-    deleteScheduled: (on: string) => proposed.deleteScheduled.replace('{date}', on),
-    deleteCancel: proposed.deleteCancel,
-    deleteCancelled: proposed.deleteCancelled,
-    deleteFinalizing: proposed.deleteFinalizing,
-    deleteNotCancellable: proposed.deleteNotCancellable,
-    deleteBlocked: proposed.deleteBlocked,
-    enterPassword: proposed.enterPassword,
+    exportAction: pairs.exportAction,
+    exportExplain: pairs.exportExplain,
+    exportConfirm: pairs.exportConfirm,
+    exportPreparing: pairs.exportPreparing,
+    exportReady: (until: string) => pairs.exportReady.replace('{date}', until),
+    exportDownload: pairs.exportDownload,
+    exportSaved: pairs.exportSaved,
+    exportSaveFailed: pairs.exportSaveFailed,
+    exportExpired: pairs.exportExpired,
+    exportFailed: pairs.exportFailed,
+    deleteAction: pairs.deleteAction,
+    deleteExplain: pairs.deleteExplain,
+    deleteConfirm: pairs.deleteConfirm,
+    deleteScheduled: (on: string) => pairs.deleteScheduled.replace('{date}', on),
+    deleteCancel: pairs.deleteCancel,
+    deleteCancelled: pairs.deleteCancelled,
+    deleteFinalizing: pairs.deleteFinalizing,
+    deleteNotCancellable: pairs.deleteNotCancellable,
+    deleteBlocked: pairs.deleteBlocked,
+    enterPassword: pairs.enterPassword,
     // Reused, not new: W1B-01's password label, W3-MEGA-A's approved C4 and T-14's network sentence.
     password: entry.passwordLabel,
     passwordIncorrect: approved.passwordIncorrect,
@@ -372,7 +377,7 @@ const AR: SettingsCopy = Object.freeze({
   security: securityCopy('ar', 'الأمان وتسجيل الدخول'),
   // P4-C4 §4 `gQandeel` and `gPrivacy`, verbatim.
   qandeelGroup: 'قنديل والمحادثة',
-  language: Object.freeze({ term: PROPOSED_W3_MEGA_S.ar.languageTerm, names: LANGUAGE_NAMES }),
+  language: Object.freeze({ term: APPROVED_W3_MEGA_S.ar.languageTerm, names: LANGUAGE_NAMES }),
   privacyGroup: 'الخصوصية والبيانات',
   privacy: privacyCopy('ar', AR_BASE.publicId.network),
 });
@@ -382,7 +387,7 @@ const EN: SettingsCopy = Object.freeze({
   identity: identityCopy('en', EN_BASE.publicId, EN_BASE.publicId.network),
   security: securityCopy('en', 'Security & Sign-in'),
   qandeelGroup: 'QANDEEL & Conversation',
-  language: Object.freeze({ term: PROPOSED_W3_MEGA_S.en.languageTerm, names: LANGUAGE_NAMES }),
+  language: Object.freeze({ term: APPROVED_W3_MEGA_S.en.languageTerm, names: LANGUAGE_NAMES }),
   privacyGroup: 'Privacy & Data',
   privacy: privacyCopy('en', EN_BASE.publicId.network),
 });
