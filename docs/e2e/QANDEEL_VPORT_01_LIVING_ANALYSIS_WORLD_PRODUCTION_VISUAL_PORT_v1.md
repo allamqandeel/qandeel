@@ -3,8 +3,13 @@
 **Task:** VPORT-01 — Living Analysis World — Final Production Visual Port (Execution Stage 2)
 **Baseline:** `e87aac6b4e9ec6c1b6542d2ba3c82cc6cc9af6e8` (merge of PR #296, W3-MEGA-S) — `origin/main` at kickoff, exactly
 **Branch:** `feat/vport-01-living-analysis-world-production-port`
-**PR:** [allamqandeel/qandeel#297](https://github.com/allamqandeel/qandeel/pull/297) — Draft, not merged
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `VPORT-01 READY FOR INDEPENDENT REVIEW — DO NOT MERGE`. It closes no
+**PR:** [allamqandeel/qandeel#297](https://github.com/allamqandeel/qandeel/pull/297) — merged at
+`fe9d9155f122725cb669e9989fa35ff12916112a` (2026-10-01; PR head `119453dce5350fd0b77880b58f58136d2bb65d34`)
+**Status:** **MERGED / CLOSED** — VPORT-01 is done. **Stage 2 is still open (ACTIVE)**: VPORT-01 merged does not close
+Stage 2. VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence is the remaining Stage-2 implementation task and
+is NEXT; this record does not open it (it needs its own Task Contract). Lifecycle reconciled by ROADMAP-REC-01
+(2026-10-04); nothing below it was rewritten.
+**Status at handoff (historical):** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `VPORT-01 READY FOR INDEPENDENT REVIEW — DO NOT MERGE`. It closes no
 phase, does not close Stage 2, and does not open VPORT-02.
 
 > **The production Map now paints the frozen I-08B1 world. The world mechanics underneath it did not move.**
@@ -12,6 +17,9 @@ phase, does not close Stage 2, and does not open VPORT-02.
 ---
 
 ## 1. Execution map
+
+> **Historical — the map at kickoff.** Current: Stage 2 ACTIVE, VPORT-01 DONE, VPORT-02 NEXT
+> ([`QANDEEL_PROJECT_MAP.md`](../../QANDEEL_PROJECT_MAP.md) §5.1).
 
 | Stage | State |
 |---|---|
@@ -288,3 +296,7 @@ inherits rather than reopens:
 3. the dark-on-dark chrome observed in the narrow and landscape proof legs (§12) is OrientationChrome territory.
 
 VPORT-02 is **not opened** by this record.
+
+*Lifecycle note (ROADMAP-REC-01, 2026-10-04):* the review-and-merge precondition above is met — PR #297 merged at
+`fe9d9155f122725cb669e9989fa35ff12916112a`. VPORT-02 is NEXT and still opens only through its own Task Contract; it
+inherits the three notes above unchanged.

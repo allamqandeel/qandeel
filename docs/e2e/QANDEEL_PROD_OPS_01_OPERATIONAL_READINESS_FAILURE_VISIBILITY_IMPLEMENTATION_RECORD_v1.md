@@ -1,6 +1,9 @@
 # QANDEEL — PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility — Implementation Record v1
 
-**Status:** `PROD-OPS-01` — **IMPLEMENTED — DRAFT PR #300, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
+**Status:** `PROD-OPS-01` — **MERGED / CLOSED** — merged through PR #300 at `df694fd4d86fca41c50790f24ef5463af711236f`
+(2026-10-01; PR head `a97be9d423b00398d1896c85ae2d96b29e4adaa5`). Lifecycle reconciled by ROADMAP-REC-01 (2026-10-04);
+nothing below it was rewritten.
+**Status at handoff (historical):** `PROD-OPS-01` — **IMPLEMENTED — DRAFT PR #300, AWAITING INDEPENDENT REVIEW** (not merged by Claude).
 **Baseline:** `main = ce2b86d0caaeb063ec4593663d9dbf806e51b4f4` (PR #299 merged; PR #298 closed unmerged, evidence only).
 **Branch:** `fix/prod-ops-01-readiness-failure-visibility` — `c0ac489` (implementation), `76d1d4b` (review fix:
 readiness coalescing and bounded read; **implementation evidence head**), then documentation / governance only.

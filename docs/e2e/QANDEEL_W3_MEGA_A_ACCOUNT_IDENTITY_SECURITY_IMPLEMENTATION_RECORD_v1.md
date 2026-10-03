@@ -5,7 +5,11 @@
 (Security & Sign-in v1), `E2E-D-08` (Shared ID — format backend only), `E2E-D-02` (advanced only)
 **Baseline:** `f3355e7e0aafacec4153d9049aa029b65a851c13` (merge of PR #294, W3-PDG-01)
 **Branch:** `feat/w3-mega-a-account-identity-completion`
-**Status:** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `READY FOR INDEPENDENT REVIEW — DO NOT MERGE`. One bounded,
+**Status:** MERGED through PR #295 at `1e7b681052c7af09576197bcfb204e1b39775554` (2026-09-30; PR head
+`bc797b39940c097b6d5fec4bdd42717429bcb3f9`). The slice is closed as merged work; it closed no phase and did not close
+W3, whose named residual rows stay as §14 records them. Lifecycle reconciled by ROADMAP-REC-01 (2026-10-04); nothing
+below it was rewritten.
+**Status at handoff (historical):** IMPLEMENTED ON A DRAFT PR — NOT MERGED. `READY FOR INDEPENDENT REVIEW — DO NOT MERGE`. One bounded,
 Product-Owner-authorized Production Integration slice; it opens no later stage, closes no phase and does not close W3.
 **Product authority:** only the statements marked **PO** in the
 [W3-PDG-01 closure](../canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md),
@@ -328,6 +332,9 @@ getting 503 instead of INVALID (unreachable: its row is not drawn).
     non-blank reference (pre-existing, I-04); 0129 neither widens nor uses that grant for clients (§10, W6).
 
 ## 14. Rows
+
+> **Historical — the state at handoff on the Draft PR.** PR #295 has since merged (see Status). The current row states
+> are kept in [`E2E01_READ_FIRST.md`](E2E01_READ_FIRST.md); this table is not rewritten.
 
 | Row | Status after this slice |
 |---|---|

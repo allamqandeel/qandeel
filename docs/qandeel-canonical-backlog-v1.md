@@ -1127,7 +1127,7 @@ items: 8 `DEFERRED — OWNED`, 10 `OPEN — UNASSIGNED` and 15 `CLOSED — TOMBS
 and 1 `LOW`, counted mechanically from the §4 index.
 
 **AI-COST-01 reconciliation (2026-10-01).** AI-COST-01 (provider-neutral AI usage / cost ledger + Credit accounting
-foundation, migration `0135`, Draft PR #303) inherits no item and admits none. Its residues already have owners and
+foundation, migration `0135`, PR #303, merged as `7221a635a6a7fe7564fb3f1e2e19c1ca189164c4` on 2026-10-01 — lifecycle corrected from "Draft PR #303" by ROADMAP-REC-01) inherits no item and admits none. Its residues already have owners and
 qualify under none of BG-06's routes: the numeric Credit formula, plans, allowances, balances and exhaustion belong to the
 roadmap's *Plans / Credits / Usage Economy*; provider / model selection, registering verified production prices and the
 operator-only `brain-eval` harness belong to *QANDEEL-specific Model / Provider Benchmark & Selection*; a reconciled
@@ -1144,6 +1144,8 @@ named task. Every other residue is closed, already owned (`QAN-BL-PROD-05`, `QAN
 record's §18.2 is the Gap Closure Matrix. The register now holds **34** items: 9 `DEFERRED — OWNED`, 10
 `OPEN — UNASSIGNED` and 15 `CLOSED — TOMBSTONE`; by severity, 21 `HIGH`, 12 `MEDIUM` and 1 `LOW`, counted mechanically
 from the §4 index.
+
+**ROADMAP-REC-01 reconciliation (2026-10-04, refreshed after PR #305).** A documentation / governance reconciliation of the entry points and merged-task lifecycle truth through the current main ([record](e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md)). It inherits no item, admits none and changes no item's fields. It corrects the AI-COST-01 merge truth above, consumes W3-MEGA-S-CLOSE-01 as already-merged authority, preserves `QAN-BL-A11Y-01` under `VPORT-02`, and keeps `QAN-BL-PROD-04` / `05` and all Final Launch owners unchanged. No `W3-CORR-M` is created. The register remains **34** items: 9 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED`, 15 `CLOSED — TOMBSTONE`; 21 `HIGH`, 12 `MEDIUM`, 1 `LOW`.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1196,6 +1198,7 @@ Inherited after T-12 closure reconciliation:
 | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01` |
 | `AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation` | none — no item names it; none admitted |
 | `W3-MEGA-S-CLOSE-01 — Product Copy Approval + Residual Reconciliation` | none — admitted `QAN-BL-A11Y-01` |
+| `ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation` | none — no item names it; none admitted |
 | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `QAN-BL-A11Y-01` |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.

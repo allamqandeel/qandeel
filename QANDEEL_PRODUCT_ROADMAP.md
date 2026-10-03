@@ -164,6 +164,9 @@ the Shared ID format, app language, accessibility preferences, Export and the De
 [W3-PDG-01 Product Decision Closure](docs/canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md).
 None is implemented. Account deletion across Connected Worlds stays blocked (`QAN-BL-ACCT-01`). That record proposes
 `W3-MEGA-A` then `W3-MEGA-S` as sequencing only; this roadmap opens neither.
+*Status note (2026-10-04, ROADMAP-REC-01):* both were later opened by their own Task Contracts and merged: W3-MEGA-A
+through PR #295 and W3-MEGA-S through PR #296. Their named residuals are in
+[`QANDEEL_CURRENT_STATE.md`](QANDEEL_CURRENT_STATE.md) §7. Account deletion across Connected Worlds is still blocked.
 ---
 ## 4. Production Integration & Implementation
 After the Final Product Decision Closure and the End-to-End Product Experience Completeness Audit have produced
@@ -197,7 +200,34 @@ Architecture/design freeze never equals public-launch readiness.
 ---
 ## 6. Immediate next step
 P1, P2, P3 and P4 are `CLOSED / FROZEN` as Product / design contracts. P4 is merged through PR #280 at
-`d6d0999dea26ba97b595e8a97e1a630eb659874f`. The next roadmap phase is:
+`d6d0999dea26ba97b595e8a97e1a630eb659874f`. The next roadmap phase was:
 > **QANDEEL End-to-End Product Experience Completeness Audit**
-It has not started, and this roadmap does not open it: it still requires its own Task Contract. The sequencing in §3–§5
-is unchanged.
+*(Historical, as recorded on 2026-09-25: "It has not started, and this roadmap does not open it: it still requires its own
+Task Contract." That is no longer the current state; see the reconciliation below.)* The sequencing in §3–§5 is unchanged.
+### 6.1 Execution reconciliation — 2026-10-04 (refreshed through PR #305)
+**Recorded:** 2026-10-04 by ROADMAP-REC-01; refreshed after `main = b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4` (PR #305, W3-MEGA-S-CLOSE-01). The original reconciliation baseline was `7221a635…` (PR #303).
+Evidence: [`docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md`](docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md).
+This is a controlled sequencing / status reconciliation. It rewrites no P1–P4 decision and no earlier section above.
+- **The End-to-End audit has started.** `E2E-01 — Complete Product Journey & Surface Census v1` started it
+  ([`docs/e2e/E2E01_READ_FIRST.md`](docs/e2e/E2E01_READ_FIRST.md)). The audit phase is not closed.
+- **Bounded Production Integration slices merged after it,** each under its own Product-Owner-authorized Task Contract:
+  - W1A-01, W1B-01, W2-01, W2-02, W3-01, W3-02, W3-MEGA-U and W3-MEGA-M;
+  - W3-MEGA-A (PR #295) and W3-MEGA-S (PR #296);
+  - VPORT-01 (PR #297).
+  W3-PDG-01 (PR #294) closed the W3 Product decisions.
+- **Cross-cutting readiness / correction tasks were also completed and merged:**
+  - PROD-SEC-02 (PR #299);
+  - PROD-OPS-01 (PR #300);
+  - PROD-SEC-01 (PR #301);
+  - W3-CORR-U (PR #302);
+  - AI-COST-01 (PR #303);
+  - W3-MEGA-S-CLOSE-01 (PR #305), which closes the previously-unapproved W3-MEGA-S Product Copy Gate and admits `QAN-BL-A11Y-01` for VPORT-02.
+  `PROD-READINESS-01` (PR #298) is closed unmerged, as evidence only. AI-COST-01 is an accounting foundation coupled to
+  §3's economy and provider work. It decides neither: no Credit formula is frozen or active, and no provider is selected.
+- **Next implementation task.** After this reconciliation refreshed through PR #305, the Product Owner has explicitly set
+  **VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence** as the next implementation task. It is the remaining
+  Stage-2 task of the working execution map in [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md) §5.1.
+- **Not promoted.** `PROD-AUTH-01` (`QAN-BL-PROD-04`) and `PROD-DATA-01` (`QAN-BL-PROD-05`) stay `DEFERRED — OWNED`.
+  This update does not promote them.
+- **Opens nothing.** This sequencing update authorizes no implementation except through a separate Task Contract. This
+  document does not open VPORT-02.
