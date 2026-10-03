@@ -228,12 +228,34 @@ The sweep was run over the three entry documents, `E2E01_READ_FIRST.md` and the 
 - **Inspected:** the session skill roster, for `code-review` and for any documentation, governance, repository-truth or
   task-closure skill.
 - **Specialized skill:** none of the documentation / governance kind exists in this session.
-- **Used:** `code-review`, on the final diff. Its effect is recorded in §14.
+- **Used:** `code-review` (medium), on the diff `7221a635…8633f20`. It reported five findings, all real and all fixed in
+  the next commit:
+  - Current State §7 still said "W3 stays ACTIVE" in the present tense;
+  - the §3.7 preamble called every row `MERGED / CLOSED`, which over-claimed for PR #298 and PROD-AUTH/DATA;
+  - the Project Map checkpoint's "merged since" list left out W1A … W3-MEGA-U;
+  - this section was an empty placeholder;
+  - the VPORT-02 owner row dropped the Call Rail from VPORT-01 §16.
 - **UI / design skills:** none needed. This task creates no visual design and no production surface.
 
 ## 14. Verification evidence
 
-Recorded in the PR body and below once run.
+| Check | Result |
+|---|---|
+| `git diff --check` | clean |
+| Changed-file allowlist | 14 files. All are the three entry docs, the backlog, or `docs/e2e/*.md`. No path under `apps/`, `packages/`, `database/`, `tests/`, `.github/` or `infra/`, and no `package*.json` |
+| Relative Markdown links, all 14 changed files | 393 relative links checked; 0 broken |
+| Backlog counts (mechanical, §4 index) | 33 = 8 / 0 / 10 / 15; 20 `HIGH` / 12 `MEDIUM` / 1 `LOW`. Equal to backlog §7, so the summary there is unchanged |
+| `npm run test:task-closure-governance-contract` | **24 / 24 pass** |
+| `npm run test:forward-safety-contract` | **35 / 35 pass** |
+| Doc-pinning contracts | all pass: W3-MEGA-A 15/15, W3-MEGA-S 11/11, PROD-SEC-01 31/31, T-14 17/17, W2-02 19/19, T-11 27/27, T-12 32/32, T-12P 23/23 |
+| Stale-truth sweep (§12) | done; the remaining hits are historical or correctly still-open |
+| API / Mobile CI | not claimed. They are triggered by path filters, and no CI run was manufactured for a docs-only change |
+
+**Environment note.** The working checkout uses `core.autocrlf=true`, so files are CRLF on disk. There, forward-safety
+fails 10 / 35 **on the untouched baseline `7221a635` as well**, because its source-regex contracts read CRLF bytes. The
+same baseline gives 35 / 35 in an LF-clean worktree. Every gate above therefore ran in an LF-clean disposable worktree
+of the branch head, byte-identical to the index, as P4's own exact-head validation did. No file was changed to make a
+gate pass.
 
 ## 15. Status at handoff
 

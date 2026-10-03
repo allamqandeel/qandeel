@@ -136,7 +136,8 @@ was added later.
 
 ### 3.7 Production Integration and cross-cutting readiness — merged tasks after W3-MEGA-M
 
-Each row is `MERGED / CLOSED` as a task. A merged task closes no phase or stage beyond what its row says. The earlier
+Every task row except the last two is merged. PR #298 is closed unmerged, and PROD-AUTH-01 / PROD-DATA-01 are
+`DEFERRED — OWNED`, as their rows say. A merged task closes no phase or stage beyond what its row says. The earlier
 W-slices are in §7.
 
 | Task | Lifecycle | Primary record |
@@ -411,7 +412,8 @@ Record:
 (deterministic, qualitative confidence from canonical structure; the Confidence Runtime stays uncalibrated), U2 the
 Personal-QANDEEL entry (P4-C1 U-A), first view, detail and "talk to QANDEEL about this" (migration `0126`), and U3 the
 explicit disagreement → Contested / Under Review runtime with real re-evaluation and reduced reliance (migration
-`0127`, `PG-01`). `E2E-D-14`, `E2E-D-15` and `PG-01` are CLOSED; `PG-02` and `PG-04` stay open; W3 stays ACTIVE.
+`0127`, `PG-01`). `E2E-D-14`, `E2E-D-15` and `PG-01` are CLOSED; `PG-02` and `PG-04` stay open; W3 stayed ACTIVE at that merge (for current sequencing, see the execution paragraph
+above).
 Record:
 [`docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md`](docs/e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md).
 
@@ -492,7 +494,7 @@ create an implementation task:
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01`. Its reopen condition is "automatic before the first production-store release" | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `QAN-CTX-01 — Conversational Relevance Runtime` | `QAN-BL-CTX-01`. It owns the future runtime/client authority for item-level relation to the current conversation; no relevance-driven world behavior may be claimed before that contract exists | [P4-C1 §5–§6](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md); [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `QANDEEL — Lantern Gateway Identity Moment v1` | `QAN-BL-LANTERN-01`. Standalone future Brand / Motion task. P4 freezes only that the exceptional lantern identity moment is in v1; research, creative directions, motion, interaction choreography, implementation technology and proof wait until this task is explicitly opened | [P4-C2 §2](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md); C3 expressive headroom §4; [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
-| `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | the remaining Stage-2 port: Timeline styling, Spine / Aperture, Return icons, Orientation Chrome visuals, navigation iconography. It inherits VPORT-01's three handoff notes. **NEXT**; it opens only through its own Task Contract | [VPORT-01 record §16](docs/e2e/QANDEEL_VPORT_01_LIVING_ANALYSIS_WORLD_PRODUCTION_VISUAL_PORT_v1.md) |
+| `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | the remaining Stage-2 port: Timeline styling, Spine / Aperture, Return icons, Orientation Chrome visuals, navigation iconography, Call Rail. It inherits VPORT-01's three handoff notes. **NEXT**; it opens only through its own Task Contract | [VPORT-01 record §16](docs/e2e/QANDEEL_VPORT_01_LIVING_ANALYSIS_WORLD_PRODUCTION_VISUAL_PORT_v1.md) |
 | `PROD-AUTH-01 — Auth Verification Path`; `PROD-DATA-01 — List/Fan-out Correction` | `QAN-BL-PROD-04` and `QAN-BL-PROD-05`, both `DEFERRED — OWNED`; PROD-AUTH-01 waits on the Product Owner's choice among O1–O3 | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `LAUNCH-EDGE-SECURITY-GATE`; `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-01` (edge / origin / real proxy topology) and `QAN-BL-LAUNCH-02` (keyed retired-identifier digest), Final Launch exit gates | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01` | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |

@@ -161,7 +161,7 @@ This is a **locator note, not a new Product authority**. It records GitHub truth
 `main = 7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`, the merge of PR #303. The evidence is in
 [`docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md`](docs/e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md).
 
-- Merged since the checkpoint below:
+- Merged after W3-MEGA-U (#291). The earlier slices merged since the checkpoint below are listed in §5 item 3:
   - W3-MEGA-M (#293);
   - W3-PDG-01 (#294, Product decisions);
   - W3-MEGA-A (#295);
