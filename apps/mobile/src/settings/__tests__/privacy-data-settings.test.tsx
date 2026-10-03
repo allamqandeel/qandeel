@@ -127,6 +127,10 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL & Conversation and Privacy 
     expect(view.getByTestId(`${form}-title`).props.accessibilityRole).toBe('header');
     expect(focus).toHaveBeenCalledWith(4242);
     expect(view.getByTestId(`${form}-password-instruction`).props.children).toBe(p.exportExplain);
+    // The Product Owner's approved export promise (W3-MEGA-S-CLOSE-01), drawn byte-for-byte.
+    expect(p.exportExplain).toBe(language === 'ar'
+      ? 'سنجهّز نسخة من بياناتك. وعندما تصبح جاهزة، يمكنك تنزيلها من هنا لمدة محدودة.'
+      : "We'll prepare a copy of your data. When it's ready, you can download it here for a limited time.");
     expect(view.getByTestId(`${form}-password`).props.secureTextEntry).toBe(true);
     expect(view.getByTestId(`${form}-message`).props.accessibilityLiveRegion).toBe('polite');
 
