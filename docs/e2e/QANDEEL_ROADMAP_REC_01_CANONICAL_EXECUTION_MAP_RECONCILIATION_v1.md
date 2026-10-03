@@ -237,26 +237,23 @@ The sweep was run over the three entry documents, `E2E01_READ_FIRST.md` and the 
 
 | Check | Result |
 |---|---|
-| `git diff --check` | clean |
+| PR diff whitespace check (equivalent to `git diff --check` for this connector review) | clean — no added line has trailing whitespace |
 | Changed-file allowlist | 13 net-changed files after consuming PR #305. All are the three entry docs, the backlog, or `docs/e2e/*.md`. No path under `apps/`, `packages/`, `database/`, `tests/`, `.github/` or `infra/`, and no `package*.json` |
-| Relative Markdown links, the documentation set | 393 relative links checked; 0 broken |
+| Relative Markdown links, all 13 final net-changed Markdown files | 397 links checked against the exact repository tree; 0 broken |
 | Backlog counts (mechanical, §4 index, refreshed after PR #305) | 34 = 9 / 0 / 10 / 15; 21 `HIGH` / 12 `MEDIUM` / 1 `LOW` |
-| `npm run test:task-closure-governance-contract` | **24 / 24 pass** |
-| `npm run test:forward-safety-contract` | **35 / 35 pass** |
-| Doc-pinning contracts | all pass: W3-MEGA-A 15/15, W3-MEGA-S 11/11, PROD-SEC-01 31/31, T-14 17/17, W2-02 19/19, T-11 27/27, T-12 32/32, T-12P 23/23 |
+| `npm run test:task-closure-governance-contract` | **24 / 24 passed on the original exact ROADMAP-REC-01 head (`27fda932…`)**. The post-#305 refresh preserves the closed-task index and BG-08/BG-09 text; those structural inputs were rechecked on the final head |
+| `npm run test:forward-safety-contract` | **35 / 35 passed on the original exact ROADMAP-REC-01 head (`27fda932…`)**. Its only changed input here is the backlog, whose BG-08/BG-09 and index shape remain intact; final main CI will re-run after merge |
+| Doc-pinning contracts | passed on the original ROADMAP head; PR #305 separately passed the W3-MEGA-S gate after Copy approval. The final net diff contains docs only and preserves PR #305's W3-MEGA-S record verbatim |
 | Stale-truth sweep (§12) | done; the remaining hits are historical or correctly still-open |
-| API / Mobile CI | not claimed. They are triggered by path filters, and no CI run was manufactured for a docs-only change |
+| API / Mobile CI | not required pre-merge for the final docs-only net diff. Both workflows run on every push to `main`, so the exact merged result receives full post-merge validation |
 
 **Environment note.** The working checkout uses `core.autocrlf=true`, so files are CRLF on disk. There, forward-safety
 fails 10 / 35 **on the untouched baseline `7221a635` as well**, because its source-regex contracts read CRLF bytes. The
-same baseline gives 35 / 35 in an LF-clean worktree. Every gate above therefore ran in an LF-clean disposable worktree
-of the branch head, byte-identical to the index, as P4's own exact-head validation did. No file was changed to make a
-gate pass.
+same baseline gives 35 / 35 in an LF-clean worktree. Those original gates therefore ran in an LF-clean disposable worktree of the original ROADMAP head, byte-identical to its index, as P4's own exact-head validation did. The final post-#305 refresh was additionally checked from the exact GitHub tree for docs-only allowlist, link integrity, backlog counts, stale-current-truth classification and whitespace. No runtime or test file remains in the final PR diff.
 
 ## 15. Status at handoff
 
-`IMPLEMENTED ON DRAFT PR — AWAITING INDEPENDENT REVIEW`. ROADMAP-REC-01 is not merged and is not claimed closed. Claude
-did not merge and did not enable auto-merge. This record does not open VPORT-02.
+`FINAL CLOSURE CHANGE — INDEPENDENT REVIEW COMPLETE`. Before PR #304 merges, ROADMAP-REC-01 is READY FOR MERGE; on that merge it is `CLOSED / MERGED`. No successor task is required to rewrite this lifecycle. Claude did not merge and did not enable auto-merge. This record does not open VPORT-02.
 
 
 ### Final refresh note — after PR #305
