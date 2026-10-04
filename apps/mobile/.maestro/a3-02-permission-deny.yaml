@@ -1,0 +1,109 @@
+# A3-02 — the permission boundary, NOT NOW and DENIED paths (P3 §11; I-08N-01 D50). VALIDATION ONLY.
+# «مش دلوقتي» keeps everything working and is said once; choosing Allow for Proactive QANDEEL again does not ask again;
+# only the reader's own Device Notification Settings visit offers the education again; the REAL OS prompt answered
+# Don't allow; after that QANDEEL never re-prompts, and Device Notification Settings hands off to the OS (the leg's
+# runner asserts the OS settings screen took focus).
+# Driven by scripts/a3/run-proof-leg.sh (leg `android-permission-deny`), which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- runFlow: a3-02-open-notifications.yaml
+# A legitimate moment (P3 §11): choosing Allow for Proactive QANDEEL.
+- tapOn:
+    id: "qandeel-proactive-allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-push-education"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-01-education-at-proactive-allow
+- tapOn:
+    id: "qandeel-push-education-not-now"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-push-education"
+    timeout: 15000
+- assertNotVisible:
+    id: "com.android.permissioncontroller:id/permission_deny_button"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-push-not-now-note"
+    direction: DOWN
+- takeScreenshot: ${PREFIX}-02-not-now-said-once
+# No repeated pressure: the same moment again asks nothing.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-proactive-allow"
+    direction: UP
+- tapOn:
+    id: "qandeel-proactive-allow"
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertNotVisible:
+    id: "qandeel-push-education"
+- takeScreenshot: ${PREFIX}-03-no-repeated-pressure
+# The reader's own visit to Device Notification Settings may offer it again.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-allow"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-notifications-allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-push-education"
+    timeout: 15000
+- tapOn:
+    id: "qandeel-push-education-allow"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.permissioncontroller:id/permission_deny_button"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-the-real-os-prompt
+- tapOn:
+    id: "com.android.permissioncontroller:id/permission_deny_button"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-notifications"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-os-off"
+    direction: DOWN
+- assertNotVisible:
+    id: "qandeel-notifications-allow"
+- takeScreenshot: ${PREFIX}-05-denied-said-plainly
+# Denied: no in-app re-prompt at the proactive moment either.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-proactive-allow"
+    direction: UP
+- tapOn:
+    id: "qandeel-proactive-allow"
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertNotVisible:
+    id: "qandeel-push-education"
+- assertNotVisible:
+    id: "com.android.permissioncontroller:id/permission_deny_button"
+- openLink: "qandeel://a301-proof/push/status/0"
+- extendedWaitUntil:
+    visible:
+      text: ".*registered: DENIED · token none.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-06-denied-registered-without-token
+# The intentional settings path hands off to the OS's own notification settings for this app.
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-device"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-notifications-device"
+- waitForAnimationToEnd:
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-07-os-notification-settings

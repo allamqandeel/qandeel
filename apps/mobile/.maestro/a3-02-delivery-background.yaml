@@ -1,0 +1,9 @@
+# A3-02 — delivery, step 2: BACKGROUND. VALIDATION ONLY. Two server-rendered messages are handed to the OS to present in
+# a few seconds — the L0 case (the reader's Account ceiling at «خاصة جدًا» / Very private) and the L2 case — and the app
+# goes to the background. The runner asserts, from the OS's own notification records, the channel and the exact words
+# of each (L0: «إشعار جديد» and nothing else; L2: the context title and the bounded sentence, never the L3 preview).
+appId: com.qandeel.mobile
+---
+- openLink: "qandeel://a301-proof/push/l0/6"
+- openLink: "qandeel://a301-proof/push/valid/6"
+- pressKey: Home

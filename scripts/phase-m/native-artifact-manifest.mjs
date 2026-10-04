@@ -77,10 +77,31 @@ export const BUILD_RECIPES = Object.freeze({
   'mobile-ci-boot-smoke': 1,
   /** QAN-INF-04's own demonstration of the pipeline: Product entry, unconfigured, boot smoke. */
   'qan-inf-04-demonstration': 1,
+  /**
+   * Stage 3 (A3-01 + A3-02): the Activity / attention / native-push proof root, unconfigured, built ONCE and consumed by
+   * every isolated proof leg (.github/workflows/a3-proof.yml).
+   */
+  'a3-activity-push-proof': 1,
 });
 
 export const PRODUCT_ENTRY = 'expo-router/entry';
 export const VALIDATION_ENTRY = 'src/integration/__validation__/validation-entry.tsx';
+
+/**
+ * PROOF_VALIDATION: a proof root registered by ONE recipe, and only that recipe's root. A proof artifact can never be
+ * installed as a Product or an auth-validation artifact, nor by another recipe's consumer.
+ */
+export const PROOF_ENTRIES = Object.freeze({
+  'a3-activity-push-proof': 'src/integration/__validation__/a301-proof-entry.tsx',
+});
+
+/** The root component a role (and, for a proof, its recipe) requires. Null when the pair does not exist. */
+export function entryFor(role, recipe) {
+  if (role === 'PRODUCT') return PRODUCT_ENTRY;
+  if (role === 'AUTH_VALIDATION') return VALIDATION_ENTRY;
+  if (role === 'PROOF_VALIDATION') return Object.hasOwn(PROOF_ENTRIES, recipe) ? PROOF_ENTRIES[recipe] : null;
+  return null;
+}
 
 /** The three build-time configuration variables `apps/mobile/app.config.js` reads, and only those. */
 export const CONFIGURATION_KEYS = Object.freeze([
@@ -192,7 +213,7 @@ function main() {
   const abis = (flag('abis') ?? '').split(',').map((value) => value.trim()).filter(Boolean);
 
   if (!['android', 'ios'].includes(platform)) fail('--platform must be android or ios');
-  if (!['PRODUCT', 'AUTH_VALIDATION'].includes(role)) fail('--role must be PRODUCT or AUTH_VALIDATION');
+  if (!['PRODUCT', 'AUTH_VALIDATION', 'PROOF_VALIDATION'].includes(role)) fail('--role must be PRODUCT, AUTH_VALIDATION or PROOF_VALIDATION');
   if (!Object.hasOwn(BUILD_RECIPES, recipe)) fail(`--recipe must be one of ${Object.keys(BUILD_RECIPES).join(', ')}`);
   if (!artifactPath || !out) fail('--artifact and --out are required');
   if (!commit) fail('no commit SHA: pass --commit or set GITHUB_SHA');
@@ -207,7 +228,8 @@ function main() {
   // The entry must agree with the role, here, at the moment the binary exists. This is the check that
   // catches a job that selected the validation entry and then recorded itself as a PRODUCT artifact.
   const entry = entryPoint();
-  const expectedEntry = role === 'PRODUCT' ? PRODUCT_ENTRY : VALIDATION_ENTRY;
+  const expectedEntry = entryFor(role, recipe);
+  if (expectedEntry === null) fail(`role ${role} has no entry for recipe ${recipe}`);
   if (entry !== expectedEntry) {
     fail(`role ${role} requires main=${JSON.stringify(expectedEntry)}, but the manifest says ${JSON.stringify(entry)}`);
   }

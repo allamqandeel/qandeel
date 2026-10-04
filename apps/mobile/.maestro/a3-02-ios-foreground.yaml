@@ -1,0 +1,10 @@
+# A3-02 — iOS: a server-rendered APNs message delivered (simctl push) while the app is in FRONT is not presented by
+# iOS — the production foreground policy (D51). VALIDATION ONLY. Input: PREFIX, TEXT.
+appId: com.qandeel.mobile
+---
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertNotVisible:
+    text: ${TEXT}
+- takeScreenshot: ${PREFIX}-05-foreground-not-presented
+- pressKey: Home

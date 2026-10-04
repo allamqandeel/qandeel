@@ -1,0 +1,22 @@
+# A3-02 — reach General Settings → Notifications & Activity on the production route. A SUB-FLOW of the A3-02 legs;
+# asserts only that each destination surface is drawn before the next tap (A3-01 G-32: never a stale tap).
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-settings-entry"
+    timeout: 60000
+- tapOn:
+    id: "qandeel-settings-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-settings-notifications"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-settings-notifications"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-notifications"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000

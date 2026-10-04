@@ -1,0 +1,49 @@
+# A3-02 — iOS: the permission boundary and the REAL iOS authorization alert (P3 §11; I-08N-01 D50). VALIDATION ONLY.
+# Nothing asks at launch; «Allow notifications» opens QANDEEL's education; its Allow hands over to iOS's own alert,
+# answered Allow here; the page then says nothing about notifications being off. The app stays in front.
+# Driven by scripts/a3/run-ios-proof-leg.sh (leg `ios-permission-delivery-entry`), which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- assertNotVisible:
+    id: "qandeel-push-education"
+- takeScreenshot: ${PREFIX}-01-nothing-asked-at-launch
+- runFlow: a3-02-open-notifications.yaml
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-allow"
+    direction: DOWN
+- assertVisible:
+    id: "qandeel-notifications-os-off"
+- tapOn:
+    id: "qandeel-notifications-allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-push-education"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-02-education-before-the-os
+- tapOn:
+    id: "qandeel-push-education-allow"
+- extendedWaitUntil:
+    visible:
+      text: "Allow"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-03-the-real-ios-alert
+- tapOn:
+    text: "Allow"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-notifications-os-off"
+    timeout: 30000
+- openLink: "qandeel://a301-proof/push/status/0"
+- extendedWaitUntil:
+    visible:
+      text: ".*registered: GRANTED.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-granted-and-registered

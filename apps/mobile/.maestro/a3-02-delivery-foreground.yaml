@@ -1,0 +1,20 @@
+# A3-02 — delivery, step 1: FOREGROUND suppression (I-08N-01 D51; P3 §15). VALIDATION ONLY.
+# Notification permission is granted by the runner (setup, not proof). With the app in front, the server-rendered
+# message of a valid eligible item is handed to the REAL OS notification system at once; the production foreground
+# policy keeps the OS from presenting it (the in-app law owns that moment). The runner then asserts, from the OS's own
+# notification records, that nothing was posted.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-activity-entry"
+    timeout: 60000
+- openLink: "qandeel://a301-proof/push/valid/0"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-01-foreground-nothing-presented
