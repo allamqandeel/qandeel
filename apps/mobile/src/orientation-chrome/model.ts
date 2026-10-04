@@ -203,6 +203,29 @@ export interface OrientationModelOptions {
 }
 
 /**
+ * VPORT-02 — the temporal orientation line's answer (the G3 T-11 / T-12 controlled amendment, Decision B).
+ *
+ * The line stands at the top of the Timeline region, but T-08 still owns its words, its presence and its truth
+ * (amendment §2 items 1–2). So it is the SAME two facts `orientationModel` derives — the committed stance with its
+ * preview, and whether the conversation continued past a pinned Moment — from the same canonical state and the same
+ * read-only preview, through the same functions. Neither needs a projection: temporal truth never waited on one.
+ */
+export function temporalLineModel(store: CanonicalStore, preview?: TemporalPreview | null): { readonly temporal: TemporalChrome; readonly live: LiveChrome } {
+  const state = store.getState();
+  const availability = returnAvailability(state);
+  return Object.freeze({
+    temporal: temporalOf(state, previewOf(preview)),
+    live: Object.freeze({
+      liveEstablished: availability.liveReturnAvailable,
+      advancedWhileHistorical: availability.historical,
+      routeBackToLiveAvailable: availability.liveReturnAvailable,
+      // The line never says anything about Live Focus; the projection-bound question is not asked here.
+      focusReturn: 'UNPROVEN' as const,
+    }),
+  });
+}
+
+/**
  * The whole orientation answer for one render.
  *
  * It writes nothing, holds nothing between calls, caches nothing and adds no canonical state. Two

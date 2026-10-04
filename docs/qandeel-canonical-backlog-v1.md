@@ -167,7 +167,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-01` | Trusted Proxy / Edge / Origin Production Proof | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-01` | Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-A11Y-01` | Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-A11Y-01` | Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `HIGH` | `CLOSED — TOMBSTONE` |
 
 ---
 
@@ -794,6 +794,9 @@ implementation (BG-07).
 
 ### `QAN-BL-A11Y-01` — Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks
 
+> **Historical pre-closure schema.** This block records the item as admitted. It is not the current lifecycle state; the
+> current state is the `CLOSED — TOMBSTONE` record in §6 below.
+
 - **Title / Finding:** W3-MEGA-S made the W1A / W3 surfaces follow the platform's Reduce Motion setting mid-session
   (`useReduceMotion()`). The T-10 presentation-camera and temporal-motion hooks (`usePresentationCamera.ts`,
   `useTemporalMotion.ts`) still read Reanimated's `useReducedMotion()`, which reports the value at app start only, and so
@@ -1022,16 +1025,35 @@ The boundaries this item stated remain true: the validation-only T12-04 auth har
 into a Product experience, and `QAN-SEC-01 — Pre-release Mobile Credential Security` still owns
 credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
+### `QAN-BL-A11Y-01` — Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks
+
+- **Closing task:** `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence`
+- **PR / SHA:** `#306` / implementation evidence head `c94a96e` — every runtime and test change of the correction. The commits
+  after it are the VPORT-02 implementation record, this BG-08 record and the device evidence; none changes the Reduce
+  Motion path. The tombstone holds from the merge of PR #306, which happens only after independent review on green CI.
+- **Disposition:** completed. The ONE live Reduce Motion reader (W3-MEGA-S's `useReduceMotion`: Reanimated's launch value,
+  then the platform's `reduceMotionChanged` event; one process-wide store; one platform listener) moved unchanged into the
+  T-10 motion owner (`motion/runtime/reduce-motion.ts`). The W1A / W3 path re-exports it, so no second store or listener
+  exists. `usePresentationCamera` and `useTemporalMotion` read it instead of Reanimated's launch-only
+  `useReducedMotion()`, and every animation in both hooks names `ReduceMotion.Never`, so the plan computed from the live
+  setting is the only reduced-motion authority in either direction (turned on mid-session, or launched on and turned
+  off). The reduced counterpart is T-10's and T-06's own, unchanged: the same act, stance, Moments and offered acts; travel,
+  settle and cursor movement go; the opacity resolves stay. Proved mounted, without a remount: OFF → full plan, ON →
+  cut-and-resolve and zero-duration temporal motion, OFF again, one listener, no reader left after unmount
+  (`motion/__tests__/reduce-motion-mid-session.test.tsx`); and on an Android emulator with Reduce Motion turned on while
+  the app kept running (the VPORT-02 implementation record §15). No motion law was added.
+- **Status:** `CLOSED — TOMBSTONE`
+
 ---
 
 ## 7. Counts at this baseline
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 9 |
+| `DEFERRED — OWNED` | 8 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 15 |
+| `CLOSED — TOMBSTONE` | 16 |
 | **Total** | **34** |
 
 | Severity | Count |
@@ -1146,6 +1168,17 @@ record's §18.2 is the Gap Closure Matrix. The register now holds **34** items: 
 from the §4 index.
 
 **ROADMAP-REC-01 reconciliation (2026-10-04, refreshed after PR #305).** A documentation / governance reconciliation of the entry points and merged-task lifecycle truth through the current main ([record](e2e/QANDEEL_ROADMAP_REC_01_CANONICAL_EXECUTION_MAP_RECONCILIATION_v1.md)). It inherits no item, admits none and changes no item's fields. It corrects the AI-COST-01 merge truth above, consumes W3-MEGA-S-CLOSE-01 as already-merged authority, preserves `QAN-BL-A11Y-01` under `VPORT-02`, and keeps `QAN-BL-PROD-04` / `05` and all Final Launch owners unchanged. No `W3-CORR-M` is created. The register remains **34** items: 9 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED`, 15 `CLOSED — TOMBSTONE`; 21 `HIGH`, 12 `MEDIUM`, 1 `LOW`.
+
+**VPORT-02 reconciliation (2026-10-04).** VPORT-02 (Final Temporal / Orientation / Iconography Production Port + Stage-2
+Coherence Closure, Draft PR #306) inherits exactly one item and tombstones it: `QAN-BL-A11Y-01` (§6). It admits none. Every
+Stage-2 residue its sweep found is fixed inside the task (BG-01), already owned by an existing item or roadmap owner
+(`QAN-BL-VOICE-01` for the Call Rail's runtime truth and the speaking indicator, `QAN-BL-NAV-02` for Replay,
+`QAN-BL-VIS-01` for heavy-history density, the Release Hardening device gates), or not an obligation under BG-06; none
+is aliased. Its Stage-2 Gap Closure Matrix is §18 of its
+[implementation record](e2e/QANDEEL_VPORT_02_TIMELINE_ORIENTATION_P2_FINAL_COHERENCE_IMPLEMENTATION_RECORD_v1.md):
+**Orphan gaps = 0**. The register now holds **34** items: 8 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10
+`OPEN — UNASSIGNED` and 16 `CLOSED — TOMBSTONE`; by severity, 21 `HIGH`, 12 `MEDIUM` and 1 `LOW`, counted mechanically
+from the §4 index. The tombstone holds from the merge of PR #306.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1199,7 +1232,7 @@ Inherited after T-12 closure reconciliation:
 | `AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation` | none — no item names it; none admitted |
 | `W3-MEGA-S-CLOSE-01 — Product Copy Approval + Residual Reconciliation` | none — admitted `QAN-BL-A11Y-01` |
 | `ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation` | none — no item names it; none admitted |
-| `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `QAN-BL-A11Y-01` |
+| `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `QAN-BL-A11Y-01` — delivered by PR #306; tombstoned by itself under BG-08 |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

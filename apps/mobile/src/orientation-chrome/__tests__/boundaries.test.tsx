@@ -8,6 +8,8 @@
 import { act, render } from '@testing-library/react-native';
 
 import { sessionPosition, type CanonicalStore } from '../../state';
+import { analysisInk } from '../../analysis-visual';
+import { withAlpha } from '../../conversation/visual/theme';
 import { ORIENTATION_CHROME_TEST_ID, OrientationChrome } from '../OrientationChrome';
 import { orientationModel } from '../model';
 import { contextOrderingNote, returnActWords } from '../product-copy';
@@ -75,8 +77,16 @@ describe('OC08-L — the world is not replaced', () => {
     for (const decoration of ['shadowColor', 'shadowRadius', 'shadowOpacity', 'elevation', 'textShadow', 'glow']) {
       expect(serialized).not.toContain(decoration);
     }
-    // Colour is never an indicator at all: the chrome paints none, so nothing can depend on one.
-    expect(serialized).not.toContain('color');
+    // Colour is never an indicator. VPORT-02 re-anchor: "the chrome paints none" was the dark-on-dark defect itself —
+    // with no ink, its words were the platform's default black on the dark Analysis. The permanent claim is kept and
+    // asserted directly instead: every colour is one of the Analysis family's frozen INK and ground tokens (no
+    // decorative or status colour), and every state stays carried by words, which the loop below still proves.
+    const ink = analysisInk(false);
+    const allowed = new Set([ink.primary, ink.secondary, ink.tertiary, ink.restInk, ink.selectedInk, ink.world, withAlpha(ink.pressedInk, ink.pressedPresence)]);
+    const colours = [...serialized.matchAll(/"(?:color|backgroundColor|borderColor)":"([^"]+)"/gu)].map((match) => match[1]);
+    expect(colours.length).toBeGreaterThan(0);
+    for (const colour of colours) expect(allowed.has(colour)).toBe(true);
+    expect(serialized).not.toContain(ink.error);
     // Every offered control says what it does in words, so presence is never the only signal either.
     for (const opportunity of orientationModel(store, projectionFor(store, fetched(withInspection(TWO_CONTEXT_WORLD(), known())))).returns.offered) {
       expect(serialized).toContain(returnActWords('en', opportunity.id).label);

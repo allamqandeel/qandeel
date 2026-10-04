@@ -226,6 +226,7 @@
     "test:w3-mega-a-account-identity-security-contract": "node --test tests/w3-mega-a-account-identity-security-contract.test.mjs",
     "test:w3-mega-s-personal-controls-settings-contract": "node --test tests/w3-mega-s-personal-controls-settings-contract.test.mjs",
     "test:vport-01-world-visual-contract": "node --test tests/vport-01-world-visual-contract.test.mjs",
+    "test:vport-02-temporal-orientation-p2-contract": "node --test tests/vport-02-temporal-orientation-p2-contract.test.mjs",
     "test:w3-mega-u1-understanding-projection-contract": "node --test tests/w3-mega-u1-understanding-projection-contract.test.mjs",
     "test:w3-mega-u2-understanding-surface-contract": "node --test tests/w3-mega-u2-understanding-surface-contract.test.mjs",
     "test:w3-mega-u3-contested-runtime-contract": "node --test tests/w3-mega-u3-contested-runtime-contract.test.mjs",

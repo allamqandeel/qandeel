@@ -27,8 +27,12 @@ export interface ControlProps {
   readonly controlRef?: (node: View | null) => void;
   /** W1B-01: a control whose one request is in flight says so (busy), and still refuses in its handler. */
   readonly accessibilityState?: AccessibilityState;
-  /** W3-01: one choice of a set (`radio`) carries the same frozen states as a button. Default `button`. */
-  readonly accessibilityRole?: 'button' | 'radio';
+  /**
+   * W3-01: one choice of a set (`radio`) carries the same frozen states as a button. Default `button`.
+   * VPORT-02: a P2 toggle (the Call Rail's microphone and route) is a `togglebutton` whose `checked` state its form
+   * also carries.
+   */
+  readonly accessibilityRole?: 'button' | 'radio' | 'togglebutton';
 }
 
 export function Control({ palette, accessibilityLabel, onPress, children, style, testID, language, controlRef, accessibilityState, accessibilityRole = 'button' }: ControlProps) {

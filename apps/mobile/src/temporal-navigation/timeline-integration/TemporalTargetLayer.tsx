@@ -41,6 +41,8 @@ import { GestureDetector } from 'react-native-gesture-handler';
 import Animated from 'react-native-reanimated';
 
 import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
+import { useAnalysisInk, useAnalysisType } from '../../analysis-visual';
+import { Aperture, LiveTerminal, SpineLayer, spinePresentation } from '../../iconography';
 import type { CanonicalStore } from '../../state';
 import { TIMELINE_STEP, TimelinePresentation, type PresentationController } from '../../timeline';
 import { TemporalNavigator } from '../accessibility';
@@ -56,10 +58,12 @@ export const TEMPORAL_TARGET_STRIP_TEST_ID = 'qandeel-temporal-target-strip';
 export const TEMPORAL_COMMITTED_MARKER_TEST_ID = 'qandeel-temporal-committed-marker';
 export const TEMPORAL_PREVIEW_MARKER_TEST_ID = 'qandeel-temporal-preview-marker';
 export const TEMPORAL_LIVE_EDGE_TEST_ID = 'qandeel-temporal-live-edge';
+/** VPORT-02: the Temporal Spine (P2 C) on the strip, and the Live terminal where disclosed time ends. */
+export const TEMPORAL_SPINE_TEST_ID = 'qandeel-temporal-spine';
+export const TEMPORAL_LIVE_TERMINAL_TEST_ID = 'qandeel-temporal-live-terminal';
 
 /** Minimum touch target. The strip is the temporal surface, never a presentation control. */
 const STRIP_HEIGHT = 44;
-const MARKER_WIDTH = 2;
 /**
  * The markers sit inside the strip's clip with room to breathe: the commit acknowledgement grows
  * the committed marker by `COMMIT_SETTLE_SCALE` about its centre, and a marker that filled the
@@ -86,7 +90,12 @@ export interface LiveEdgeTargetProps {
  */
 export function LiveEdgeTarget({ store, preview, following, available, onOutcome, language = 'en' }: LiveEdgeTargetProps) {
   const copy = analysisCopy(language);
+  const ink = useAnalysisInk();
+  const type = useAnalysisType();
   const words = following ? copy.followingConversation : copy.rejoinConversation;
+  // VPORT-02: the words in the Analysis ink, on the Analysis ground. Following Live is a state, so it reads in the
+  // secondary ink; rejoining is the act, so it reads in the primary; with no Live Head there is nothing to rejoin.
+  const wordInk = !available ? ink.tertiary : following ? ink.secondary : ink.primary;
   const onPress = useCallback(() => {
     const outcome = commitLiveEdgeIntent(store, preview);
     onOutcome?.(outcome);
@@ -103,7 +112,7 @@ export function LiveEdgeTarget({ store, preview, following, available, onOutcome
       disabled={!available}
       onPress={onPress}
     >
-      <Text>{words}</Text>
+      <Text style={[type('action'), { color: wordInk }]}>{words}</Text>
     </Pressable>
   );
 }
@@ -120,6 +129,7 @@ export interface TemporalTargetLayerProps {
 }
 
 export function TemporalTargetLayer({ store, preview, presentation, enabled = true, onOutcome, language = 'en' }: TemporalTargetLayerProps) {
+  const ink = useAnalysisInk();
   const state = useSyncExternalStore(store.subscribe, store.getState);
   const previewState = useSyncExternalStore(preview.subscribe, preview.getSnapshot);
   const window = useSyncExternalStore(presentation.subscribe, presentation.getSnapshot);
@@ -171,21 +181,31 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
     onOutcome,
   });
 
-  const liveEdge = (
-    <LiveEdgeTarget
-      store={store}
-      preview={preview}
-      following={motion.plan.temporalStance === 'FOLLOWING_LIVE'}
-      available={bounds.liveHead !== null}
-      onOutcome={onOutcome}
-      language={language}
-    />
+  // VPORT-02 — the visible Temporal Spine, P2 C "Parting". Presentation over T-05's window only: it is told which
+  // Moment is committed (only while PINNED, because following Live opens no Moment) and which is previewed, and it
+  // never turns a coordinate into a Moment. The committed and preview APERTURES are the two markers below.
+  const previewSp = previewState.status === 'PREVIEWING' ? previewState.ptc : null;
+  const committedPresent = motion.plan.committedPresent;
+  const spine = useMemo(
+    () =>
+      spinePresentation({
+        disclosed: window.track.targets.length,
+        offset: window.offset,
+        viewport: window.viewport,
+        committedSp: committedPresent ? bounds.committedTc : null,
+        targetSp: previewSp,
+      }),
+    [window.track.targets.length, window.offset, window.viewport, committedPresent, bounds.committedTc, previewSp],
   );
+  const following = motion.plan.temporalStance === 'FOLLOWING_LIVE';
+  const liveAvailable = bounds.liveHead !== null;
+  const goLive = useCallback(() => {
+    const outcome = commitLiveEdgeIntent(store, preview);
+    onOutcome?.(outcome);
+  }, [store, preview, onOutcome]);
 
-  return (
-    <View testID={TEMPORAL_TARGET_LAYER_TEST_ID} style={styles.layer}>
-      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} language={language} />
-
+  const strip = (
+    <View style={styles.stripRow}>
       <GestureDetector gesture={gesture}>
         <View
           testID={TEMPORAL_TARGET_STRIP_TEST_ID}
@@ -196,18 +216,51 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
           // below, which is the non-drag route to everything reachable here.
           accessible={false}
         >
-          <Animated.View
-            testID={TEMPORAL_COMMITTED_MARKER_TEST_ID}
-            pointerEvents="none"
-            style={[styles.marker, styles.committedMarker, motion.committedStyle]}
-          />
-          <Animated.View
-            testID={TEMPORAL_PREVIEW_MARKER_TEST_ID}
-            pointerEvents="none"
-            style={[styles.marker, styles.previewMarker, motion.cursorStyle]}
-          />
+          <SpineLayer spine={spine} ink={ink.tertiary} targetInk={ink.primary} layer="SPINE" testID={TEMPORAL_SPINE_TEST_ID} />
+          {/* The two markers keep T-06's anchor geometry, motion and testIDs exactly; each now carries P2's
+              Parting drawing, hung from its anchor so the opening is centred on the Moment in both directions. */}
+          <Animated.View testID={TEMPORAL_COMMITTED_MARKER_TEST_ID} pointerEvents="none" style={[styles.marker, motion.committedStyle]}>
+            <Aperture kind="COMMITTED" ink={ink.primary} ground={ink.world} style={styles.aperture} />
+          </Animated.View>
+          <Animated.View testID={TEMPORAL_PREVIEW_MARKER_TEST_ID} pointerEvents="none" style={[styles.marker, motion.cursorStyle]}>
+            <Aperture kind="PREVIEW" ink={ink.primary} ground={ink.world} style={styles.aperture} />
+          </Animated.View>
+          <SpineLayer spine={spine} ink={ink.tertiary} targetInk={ink.primary} layer="TARGET" testID={TEMPORAL_SPINE_TEST_ID + ':target'} />
         </View>
       </GestureDetector>
+      {/* The Live Edge terminal: beyond the strip, where disclosed time ends — never on the Track, never a Moment's
+          form. It is a second touch target for the SAME act as the outboard Live words above it, and it is not an
+          accessibility element: the words are the act's one accessible route. Nothing here lies over the strip, so
+          every Moment stays reachable (F-P2-02). */}
+      <Pressable
+        testID={TEMPORAL_LIVE_TERMINAL_TEST_ID}
+        style={styles.terminal}
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        disabled={!liveAvailable}
+        onPress={goLive}
+      >
+        <LiveTerminal engaged={following} ink={following ? ink.primary : ink.restInk} rtl={rtl} />
+      </Pressable>
+    </View>
+  );
+
+  const liveEdge = (
+    <LiveEdgeTarget
+      store={store}
+      preview={preview}
+      following={following}
+      available={liveAvailable}
+      onOutcome={onOutcome}
+      language={language}
+    />
+  );
+
+  return (
+    <View testID={TEMPORAL_TARGET_LAYER_TEST_ID} style={styles.layer}>
+      {/* VPORT-02: the strip is composed directly under the Track (T-05's seam), so the Track, its strip and the
+          position rail are the one 136-point instrument T-11 allocates, and the navigators follow below it. */}
+      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} temporalSurface={strip} language={language} />
 
       <TemporalNavigator
         store={store}
@@ -228,11 +281,17 @@ const styles = StyleSheet.create({
   // T-05's Timeline is flush against. A marker for a Moment outside the presentation window has no
   // physical place inside the strip, and is clipped rather than painted over the outboard slot.
   strip: { height: STRIP_HEIGHT, alignSelf: 'flex-start', overflow: 'hidden' },
+  // VPORT-02: the strip and the Live terminal share one row. `row` is the reading direction, so the terminal is at
+  // the END of the spine in both scripts.
+  stripRow: { flexDirection: 'row', alignItems: 'center' },
+  terminal: { minHeight: STRIP_HEIGHT, minWidth: STRIP_HEIGHT, justifyContent: 'center' },
   // Anchored at the strip's logical START, so one translateX rule places it in LTR and its exact
   // reflection places it in RTL (see `presentation-geometry.ts`); inset vertically so the commit
   // acknowledgement's growth stays inside the strip's clip.
-  marker: { position: 'absolute', top: MARKER_INSET, start: 0, width: MARKER_WIDTH, height: MARKER_HEIGHT },
-  committedMarker: { borderLeftWidth: MARKER_WIDTH },
-  previewMarker: { borderLeftWidth: MARKER_WIDTH, borderStyle: 'dashed' },
+  // VPORT-02: the anchor is a point on the strip's axis (zero width), so the one translateX rule places it at the
+  // Moment in both directions; the Parting drawing hangs from it, centred, its frame aligned to the strip. `start` is
+  // exact in both directions because the drawing is symmetric about the anchor: a mirror places the same pixels.
+  marker: { position: 'absolute', top: MARKER_INSET, start: 0, width: 0, height: MARKER_HEIGHT },
+  aperture: { position: 'absolute', top: -MARKER_INSET, start: -17 },
   liveEdge: { minHeight: 44, justifyContent: 'center' },
 });

@@ -51,6 +51,7 @@
 import { useCallback, useState, useSyncExternalStore } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
+import { useAnalysisInk, useAnalysisType } from '../analysis-visual';
 import type { MapActionOutcome, MapProjectionRequest } from '../map';
 import type { ReturnMapContext, ReturnOutcome, ReturnSurface } from '../return-navigation';
 import type { TemporalPreview } from '../temporal-navigation';
@@ -119,6 +120,24 @@ export interface OrientationChromeProps {
    * either value — so no Product answer can depend on how much room the reader's window has.
    */
   readonly returnArrangement?: 'STACKED' | 'PAIRED';
+  /**
+   * VPORT-02 — where T-08's temporal orientation line is placed (the G3 T-11 / T-12 controlled amendment, Decision B).
+   *
+   * `IN_CHROME` is T-08's original placement and the default, so this surface standing alone is unchanged.
+   * `WITH_TIMELINE` is the frozen production composition: the line — the temporal sentence, the preview sentence and
+   * the "the conversation continued" sentence — stands at the top of the Timeline region instead
+   * (`TemporalOrientationLine`), and is "said once": this surface no longer renders it. Placement only; the words,
+   * their presence and their truth are T-08's either way.
+   */
+  readonly temporalLine?: 'IN_CHROME' | 'WITH_TIMELINE';
+  /**
+   * VPORT-02 — where Return Live is presented. P2 §7 and the G3 amendment §2 item 5: Return Live keeps ONE canonical
+   * home, the Live edge, with its words. `LIVE_EDGE` is that composition: the Timeline's outboard Live target, which
+   * carries the same words («العودة لمتابعة المحادثة» / "Rejoin the conversation"), is its home, and this surface does
+   * not present it a second time. T-08's offered set, meanings, order and executors are unchanged — only where the act
+   * is shown. `CHROME` (the default) is T-08's original presentation, for this surface standing alone.
+   */
+  readonly returnLiveHome?: 'CHROME' | 'LIVE_EDGE';
 }
 
 /**
@@ -151,7 +170,14 @@ export function OrientationChrome({
   onMapOutcome,
   bottomInset = 0,
   returnArrangement = 'STACKED',
+  temporalLine = 'IN_CHROME',
+  returnLiveHome = 'CHROME',
 }: OrientationChromeProps) {
+  // VPORT-02: the Analysis ink and type. The chrome painted none before, so its words were the platform's default
+  // black on whatever lay behind them — the dark-on-dark defect of the VPORT-01 narrow and landscape proof legs.
+  const ink = useAnalysisInk();
+  const type = useAnalysisType();
+  const line = [type('metadata'), { color: ink.secondary }];
   // The kernel's own subscription seam. This is the rerender trigger AND the guarantee that a
   // replaced store is resubscribed to rather than remembered.
   useSyncExternalStore(surface.store.subscribe, surface.store.getState);
@@ -189,10 +215,18 @@ export function OrientationChrome({
     [origin, onReturnOutcome],
   );
 
-  const live = liveSentence(language, model.live);
+  // With the line composed beside the Timeline, these three are said there, once (G3 amendment §2 item 4).
+  const lineHere = temporalLine === 'IN_CHROME';
+  const live = lineHere ? liveSentence(language, model.live) : null;
   // Said only while a preview is open, and it says both halves: what is being looked at, and that
   // the reader's own committed position has not moved.
-  const previewing = previewSentence(language, model.temporal.preview);
+  const previewing = lineHere ? previewSentence(language, model.temporal.preview) : null;
+  // Return Live's one home is the Live edge when the Timeline composes it (P2 §7): presentation only, so the
+  // executor of every act this surface still shows is untouched and the offered set it was derived from is T-08's.
+  const returns =
+    returnLiveHome === 'LIVE_EDGE'
+      ? Object.freeze({ ...model.returns, offered: Object.freeze(model.returns.offered.filter((each) => each.id !== 'RETURN_LIVE_HEAD')) })
+      : model.returns;
 
   return (
     <View
@@ -212,19 +246,21 @@ export function OrientationChrome({
     >
       {/* Orientation is read, never pressed. It takes no touch at all. */}
       <View style={styles.orientation} pointerEvents="none">
-        <Text testID={`${ORIENTATION_CHROME_TEST_ID}:temporal`} style={styles.line}>
-          {temporalSentence(language, model.temporal)}
-        </Text>
+        {lineHere ? (
+          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:temporal`} style={[styles.line, line]}>
+            {temporalSentence(language, model.temporal)}
+          </Text>
+        ) : null}
         {previewing === null ? null : (
-          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:preview`} style={styles.line}>
+          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:preview`} style={[styles.line, line]}>
             {previewing}
           </Text>
         )}
-        <Text testID={`${ORIENTATION_CHROME_TEST_ID}:spatial`} style={styles.line}>
+        <Text testID={`${ORIENTATION_CHROME_TEST_ID}:spatial`} style={[styles.line, line]}>
           {spatialSentence(language, model.spatial)}
         </Text>
         {live === null ? null : (
-          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:live`} style={styles.line}>
+          <Text testID={`${ORIENTATION_CHROME_TEST_ID}:live`} style={[styles.line, line]}>
             {live}
           </Text>
         )}
@@ -242,7 +278,7 @@ export function OrientationChrome({
       <ReturnControls
         surface={surface}
         language={language}
-        orientation={model.returns}
+        orientation={returns}
         context={current}
         exactReturnTarget={exactReturnTarget}
         liveContext={liveContext}

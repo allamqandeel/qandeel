@@ -30,10 +30,12 @@
  * only the evidence that lets T-10's existing plan hold its already-frozen beat.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+
+import { useAnalysisInk } from '../../analysis-visual';
 
 import { MapSurface, mapInspectionContext, mapProjectionRequest, viewportEnvelope, type MapActionOutcome } from '../../map';
-import { OrientationChrome, chromeProjection } from '../../orientation-chrome';
+import { OrientationChrome, TemporalOrientationLine, chromeProjection } from '../../orientation-chrome';
 import { returnMapContext } from '../../return-navigation';
 import {
   ResponsiveChromeBand,
@@ -80,6 +82,11 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
   // and the moments the one projection cache's contents changed. Everything else below is derived.
   const state = useSyncExternalStore(store.subscribe, store.getState);
   useSyncExternalStore(projection.subscribe, projection.revision);
+  // VPORT-02: the Analysis's own ground, under the world and the support alike. The Analysis is one dark place under
+  // every appearance preference (G3 Decision A); the support band painted nothing and showed the window behind it.
+  const ink = useAnalysisInk();
+  // VPORT-02 (G3 Decision B): the temporal orientation line's measured height, paid for by OrientationChrome.
+  const [lineHeight, setLineHeight] = useState(0);
 
   /** The viewpoint the Map is entitled to ask for, from canonical state alone. */
   const request = useMemo(() => mapProjectionRequest(state), [state]);
@@ -192,8 +199,12 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
     // T-11's own surface identity is kept: the responsive container belongs to that owner, and
     // overriding its test id would make the composition unrecognizable to the owner's own tooling.
     // The integration root's stable identity is PRODUCT_ROOT_TEST_ID, one level up.
-    <ResponsiveSurface insets={insets} fontScale={fontScale} envelope={surfaceEnvelope}>
-      {(plan) => (
+    <ResponsiveSurface insets={insets} fontScale={fontScale} envelope={surfaceEnvelope} style={{ backgroundColor: ink.world }}>
+      {(plan) => {
+        // Stacked, the line's room comes out of OrientationChrome's share and never out of the world's (amendment §3
+        // rules 1 and 3); across, the line sits inside the instrument's own column and takes nothing from the chrome.
+        const linePoints = plan.support.arrangement === 'STACKED' ? Math.min(lineHeight, plan.support.chromePoints) : 0;
+        return (
         <>
           <ResponsiveMapFrame frame={plan.mapFrame}>
             {(rect) => {
@@ -233,11 +244,14 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
               widthPoints={plan.timelineWidthPoints}
               paddingHorizontal={plan.chrome.paddingHorizontal}
               support={plan.support}
+              line={<TemporalOrientationLine store={store} language={locale.language} preview={preview} />}
+              onLineHeight={setLineHeight}
+              linePoints={linePoints}
             >
               <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} />
             </ResponsiveTimelineRow>
 
-            <ResponsiveChromeBand chrome={plan.chrome} support={plan.support}>
+            <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints}>
               {chrome === null ? null : (
                 <OrientationChrome
                   surface={returnSurface}
@@ -250,13 +264,18 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
                   onReturnOutcome={observeReturnOutcome}
                   bottomInset={plan.chrome.bottomInset}
                   returnArrangement={plan.chrome.arrangement}
+                  // VPORT-02: the frozen production composition — the temporal line is said once, beside the Timeline;
+                  // Return Live has one home, the Timeline's Live edge (G3 amendment §2; P2 §7).
+                  temporalLine="WITH_TIMELINE"
+                  returnLiveHome="LIVE_EDGE"
                 />
               )}
             </ResponsiveChromeBand>
           </ResponsiveSupportBand>
           {onComposed !== undefined && settledWithoutMap ? <ComposedMark onComposed={onComposed} /> : null}
         </>
-      )}
+        );
+      }}
     </ResponsiveSurface>
   );
 }

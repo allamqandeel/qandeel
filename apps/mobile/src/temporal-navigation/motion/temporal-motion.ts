@@ -120,6 +120,17 @@ export interface TemporalMotionPlan {
   readonly cancelMs: number;
   /** Zero means the acknowledgement is skipped, not compressed. */
   readonly commitSettleMs: number;
+  /**
+   * VPORT-02 (P2 Temporal Spine C "Parting"): whether PINNED(t)'s committed aperture is shown. It is the spine opened
+   * at the committed Moment, so it exists only while pinned; following Live there is no opened Moment, and the Live
+   * terminal is engaged instead. Derived from the committed MODE alone, exactly like `temporalStance`.
+   */
+  readonly committedPresent: boolean;
+  /**
+   * How long the committed aperture takes to open or close IN PLACE — an opacity, never a travel. It reuses M1's
+   * 140 ms (P2-A clip M06), and under reduced motion it is a cut, as P2-A's Reduced Motion counterpart (M06r) shows.
+   */
+  readonly apertureMs: number;
 }
 
 export function temporalMotionPlan(input: TemporalMotionInput): TemporalMotionPlan {
@@ -139,6 +150,8 @@ export function temporalMotionPlan(input: TemporalMotionInput): TemporalMotionPl
     presenceMs: TEMPORAL_MOTION_DURATIONS.presenceMs,
     cancelMs: reduced ? 0 : TEMPORAL_MOTION_DURATIONS.cancelMs,
     commitSettleMs: reduced ? 0 : TEMPORAL_MOTION_DURATIONS.commitSettleMs,
+    committedPresent: input.mode === 'PINNED' && input.committedSp !== null,
+    apertureMs: reduced ? 0 : TEMPORAL_MOTION_DURATIONS.cursorMs,
   });
 }
 

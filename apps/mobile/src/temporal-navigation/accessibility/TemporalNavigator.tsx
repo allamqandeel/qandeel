@@ -44,6 +44,7 @@ import { useCallback, useMemo, useState, useSyncExternalStore } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View, type AccessibilityActionEvent } from 'react-native';
 
 import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
+import { useAnalysisInk, useAnalysisType } from '../../analysis-visual';
 import type { CanonicalStore } from '../../state';
 import type { DisclosedTrack } from '../../timeline';
 import type { TemporalOutcome } from '../outcome';
@@ -87,6 +88,9 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
   const [entry, setEntry] = useState('');
   const [entryRefused, setEntryRefused] = useState(false);
   const copy = analysisCopy(language);
+  // VPORT-02: the Analysis ink and type (the dark-on-dark correction). Words, routes and actions are unchanged.
+  const ink = useAnalysisInk();
+  const type = useAnalysisType();
 
   const targeting = useMemo(() => temporalTargeting(state, track), [state, track]);
   const model = useMemo(() => temporalAccessibilityModel(targeting, previewState, language), [targeting, previewState, language]);
@@ -153,13 +157,14 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         accessibilityActions={model.actions.map((action) => ({ name: action.name, label: action.label }))}
         onAccessibilityAction={(event: AccessibilityActionEvent) => runAction(event.nativeEvent.actionName)}
       >
-        <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`}>{model.stanceLabel}</Text>
-        {model.previewLabel !== null && <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`}>{model.previewLabel}</Text>}
+        <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`} style={[type('metadata'), { color: ink.secondary }]}>{model.stanceLabel}</Text>
+        {model.previewLabel !== null && <Text testID={`${TEMPORAL_NAVIGATOR_TEST_ID}:preview`} style={[type('metadata'), { color: ink.secondary }]}>{model.previewLabel}</Text>}
       </View>
 
       <TextInput
         testID={TEMPORAL_EXACT_ENTRY_TEST_ID}
-        style={styles.entry}
+        style={[styles.entry, type('supporting'), { color: ink.primary, borderBottomWidth: 1, borderColor: ink.tertiary }]}
+        selectionColor={ink.primary}
         accessibilityLabel={copy.momentNumber}
         accessibilityLanguage={language}
         accessibilityHint={model.exactTargetMaximum === null ? copy.noMomentYet : copy.momentNumberHint(model.exactTargetMaximum)}
@@ -172,7 +177,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         autoCorrect={false}
         maxLength={9}
       />
-      {entryRefused && <Text accessibilityRole="alert" accessibilityLanguage={language}>{copy.momentUnavailable}</Text>}
+      {entryRefused && <Text accessibilityRole="alert" accessibilityLanguage={language} style={[type('metadata'), { color: ink.error }]}>{copy.momentUnavailable}</Text>}
 
       {/* Commit and cancel act on a temporary look, and their approved words name it («الانتقال إلى
           اللحظة {n}»). With no temporary look there is nothing to name and nothing they could do, so
@@ -189,7 +194,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
             disabled={!model.commitAvailable}
             onPress={() => runAction('commit-previewed-moment')}
           >
-            <Text>{copy.goToMoment(previewState.ptc)}</Text>
+            <Text style={[type('action'), { color: ink.primary }]}>{copy.goToMoment(previewState.ptc)}</Text>
           </Pressable>
 
           <Pressable
@@ -202,7 +207,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
             disabled={!model.cancelAvailable}
             onPress={() => runAction('cancel-preview')}
           >
-            <Text>{copy.cancelTemporaryLook}</Text>
+            <Text style={[type('action'), { color: ink.primary }]}>{copy.cancelTemporaryLook}</Text>
           </Pressable>
         </>
       )}
@@ -217,7 +222,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         disabled={!model.forwardAvailable}
         onPress={() => runAction('preview-later-moment')}
       >
-        <Text>{copy.previewNextMoment}</Text>
+        <Text style={[type('action'), { color: ink.primary }]}>{copy.previewNextMoment}</Text>
       </Pressable>
 
       {/* The current-edge target is its own control, never the last Moment of the Track: they are
@@ -232,7 +237,7 @@ export function TemporalNavigator({ store, preview, track, onCommitted, onCancel
         disabled={!model.liveAvailable}
         onPress={() => runAction('commit-live-edge')}
       >
-        <Text>{copy.rejoinConversation}</Text>
+        <Text style={[type('action'), { color: ink.primary }]}>{copy.rejoinConversation}</Text>
       </Pressable>
     </View>
   );

@@ -296,7 +296,10 @@ test('FCR-03 — the temporal strip and its markers share one RTL-aware presenta
   // arithmetic over T-05's outboard extents.
   assert.match(layer, /style=\{\[styles\.strip, \{ width: window\.viewport \}\]\}/u);
   assert.match(layer, /strip: \{ height: STRIP_HEIGHT, alignSelf: 'flex-start', overflow: 'hidden' \},/u);
-  assert.match(layer, /marker: \{ position: 'absolute', top: MARKER_INSET, start: 0, width: MARKER_WIDTH, height: MARKER_HEIGHT \},/u);
+  // VPORT-02 re-anchor (P2 Temporal Spine C): the marker is now a zero-width ANCHOR at the same logical start, inset and
+  // height, and P2's Parting drawing hangs from it centred on the Moment. The one translateX rule, the clip and the
+  // settle's room inside the strip are unchanged.
+  assert.match(layer, /marker: \{ position: 'absolute', top: MARKER_INSET, start: 0, width: 0, height: MARKER_HEIGHT \},/u);
   // FCR-MOTION-02 — the strip clips, so the markers are inset far enough that the commit
   // acknowledgement's growth never enters the clipped region.
   assert.match(layer, /const MARKER_INSET = 2;\s*\n\s*const MARKER_HEIGHT = STRIP_HEIGHT - 2 \* MARKER_INSET;/u);
@@ -307,7 +310,9 @@ test('FCR-03 — the temporal strip and its markers share one RTL-aware presenta
   assert.doesNotMatch(binding, /restTrack\.set\(with/u, 'the rest target is never animated');
   assert.match(
     binding,
-    /useAnimatedReaction\(\s*\n\s*\(\) => tracking\.get\(\),\s*\n\s*\(now, before\) => \{\s*\n\s*if \(before !== 1 \|\| now !== 0\) return;\s*\n\s*const logical = presentationX\(fingerX\.get\(\), viewport\.get\(\), rtl\.get\(\) === 1\);\s*\n\s*if \(logical === null\) return;\s*\n\s*cursorTrack\.set\(logical \+ windowOffset\.get\(\)\);\s*\n\s*cursorTrack\.set\(withTiming\(restTrack\.get\(\), \{ duration: cursorMs, easing: EASE_OUT \}\)\);/u,
+    /useAnimatedReaction\(\s*\n\s*\(\) => tracking\.get\(\),\s*\n\s*\(now, before\) => \{\s*\n\s*if \(before !== 1 \|\| now !== 0\) return;\s*\n\s*const logical = presentationX\(fingerX\.get\(\), viewport\.get\(\), rtl\.get\(\) === 1\);\s*\n\s*if \(logical === null\) return;\s*\n\s*cursorTrack\.set\(logical \+ windowOffset\.get\(\)\);\s*\n\s*cursorTrack\.set\(withTiming\(restTrack\.get\(\), \{ duration: cursorMs, easing: EASE_OUT, reduceMotion: NEVER \}\)\);/u,
+    // VPORT-02 re-anchor (QAN-BL-A11Y-01): the release handoff is unchanged. Every T-06 animation now names
+    // `ReduceMotion.Never`, so the plan — read from the ONE live Reduce Motion reader — is the only reduced-motion authority.
   );
   assert.equal(binding.includes('scheduleOnRN'), false, 'the release handoff never crosses to the RN runtime');
   // FCR-MOTION-03 — the never-animated geometry lands in a layout effect, with the content.
@@ -906,7 +911,7 @@ test('no temporal act can be reached from a camera act, an animation or a presen
   assert.equal(binding.includes('settleStyle'), false, 'the dead acknowledgement overlay is gone');
   assert.equal(code['timeline-integration/TemporalTargetLayer.tsx'].includes('settleStyle'), false);
   // Reduced motion never depends on a spring's zero-duration behaviour.
-  assert.match(binding, /\} else if \(cancelMs === 0\) \{\s*\n\s*cursorTrack\.set\(withTiming\(committedTarget, \{ duration: 0 \}\)\);/u);
+  assert.match(binding, /\} else if \(cancelMs === 0\) \{\s*\n\s*cursorTrack\.set\(withTiming\(committedTarget, \{ duration: 0, reduceMotion: NEVER \}\)\);/u); // VPORT-02 re-anchor: still a timing, never a zero-duration spring
   // The commit acknowledgement is called with the store's answer already in hand.
   assert.match(code['timeline-integration/scrub.ts'], /const outcome = commitPreviewedTarget\(store, preview, targeting\(observers\)\);\s*\n\s*observers\.onOutcome\?\.\(outcome\);/u);
   // Per-frame work never crosses to the RN runtime: only a threshold crossing and the ending do.
@@ -960,9 +965,13 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
     // W1A-01: the bilingual command words.
     ['apps/mobile/src/timeline/accessibility/commands.ts', '81214572561c3b95e31fa8377a21192509cf2ad9'],
     // W1A-01: the reader's language.
-    ['apps/mobile/src/timeline/accessibility/PresentationNavigator.tsx', '1c12fe2330fbf0db28725d819eec35505936602f'],
+    // VPORT-02: the Analysis ink and type (the dark-on-dark correction); no word, route or action moved.
+    ['apps/mobile/src/timeline/accessibility/PresentationNavigator.tsx', '2d3cc7e7738bef2189b0c540586cfa43252d13e0'],
     // T-12 §17: the outboard slot's fixed width and clip became a floor. W1A-01: the reader's language.
-    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', 'cca6112a7e55973dd7168675fceec102a43b5dd0'],
+    // VPORT-02: the Analysis ink and type for the numerals, the discontinuity and the position rail, and one composition
+    // seam (`temporalSurface`) placing T-06's strip directly under the Track. No step, key,
+    // window, measurement or authority moved; the permanent claims below still hold and are still asserted.
+    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', 'a19383725a2d3e28855ed6b85bd32e5f69845784'],
     ['apps/mobile/src/timeline/testing/fixtures.ts', 'f59c962d13e6af81088e69168c0c00f307acbf8e'],
     ['apps/mobile/src/timeline/__tests__/controller.test.ts', '8453bae72e867c13788384a81f3eaca17cde2ada'],
     // T-12 §17 and W1A-01: the same corrections' own assertions, re-anchored beside them.
@@ -976,6 +985,10 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
   // Code only: the correction's own comment necessarily names the clip it removed in order to
   // explain it, and a comment is not a style.
   const presentation = stripComments(await read('apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx'));
+  // VPORT-02: the temporal seam is a slot T-05 renders and never inspects, directly after the Track row and before the
+  // position rail — so the Track, the strip and the rail are the one instrument T-11's 136-point row allocates.
+  assert.match(presentation, /<\/View>\n\s*\{temporalSurface\}\n\s*<View testID="timeline-position-rail"/u, 'the strip sits directly under the Track');
+  assert.equal((presentation.match(/temporalSurface/gu) ?? []).length, 3, 'T-05 only receives (prop, type) and places the strip');
   // T-05 still writes no canonical state and holds no store authority of any kind.
   for (const forbidden of ['CanonicalStore', 'dispatch', 'store.', 'commitPreviewedTarget', 'temporalTargeting', 'inspection']) {
     assert.equal(presentation.includes(forbidden), false, `T-05 presentation must not reach ${forbidden}`);
@@ -988,8 +1001,10 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
       assert.equal(text.includes(forbidden), false, `${file} must not reach ${forbidden}`);
     }
     for (const match of text.matchAll(/from '([^']+)'/gu)) {
-      assert.ok(match[1] === 'react' || match[1] === 'react-native' || match[1].startsWith('./') || match[1].startsWith('../window/') || match[1] === '../../analysis-language',
-        `${file} imports only T-05, React and the leaf Analysis copy: ${match[1]}`);
+      // VPORT-02 re-anchor: the navigator also reads the Analysis ink and type (`analysis-visual`), which carries no
+      // store, no dispatch and no temporal authority — only frozen colour and type tokens.
+      assert.ok(match[1] === 'react' || match[1] === 'react-native' || match[1].startsWith('./') || match[1].startsWith('../window/') || match[1] === '../../analysis-language' || match[1] === '../../analysis-visual',
+        `${file} imports only T-05, React, the leaf Analysis copy and the Analysis ink: ${match[1]}`);
     }
   }
   // The Track's invariant step is untouched: the correction changed the slot BESIDE the strip, and

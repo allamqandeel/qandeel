@@ -1,0 +1,25 @@
+# VPORT-02 — QAN-BL-A11Y-01 on a device, part B: the SAME running app, after the driver turned Reduce Motion ON
+# mid-session (no launchApp here, no relaunch). The same kinds of act are recorded again: the camera's travel must now
+# be the cut-and-resolve and the temporal aperture must cut rather than move. VALIDATION ONLY.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 30000
+- startRecording: ${PREFIX}-after
+- openLink: "qandeel://vport02-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 4000
+- openLink: "qandeel://vport02-proof/zoom-out"
+- waitForAnimationToEnd:
+    timeout: 4000
+- openLink: "qandeel://vport02-proof/pin/9"
+- waitForAnimationToEnd:
+    timeout: 4000
+- tapOn:
+    id: "qandeel-temporal-live-edge"
+- waitForAnimationToEnd:
+    timeout: 4000
+- stopRecording
+- takeScreenshot: ${PREFIX}-after-settled

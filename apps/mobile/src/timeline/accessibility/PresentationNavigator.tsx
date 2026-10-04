@@ -1,6 +1,7 @@
 import { useState, useSyncExternalStore } from 'react';
 import { Pressable, Text, TextInput, View } from 'react-native';
 import { analysisCopy, presentationCommandHelper, type AnalysisLanguage } from '../../analysis-language';
+import { useAnalysisInk, useAnalysisType } from '../../analysis-visual';
 import type { PresentationController } from '../window/controller';
 import { runPresentationCommand } from './commands';
 
@@ -13,6 +14,9 @@ export function PresentationNavigator({ controller, language = 'en' }: { control
   const [command, setCommand] = useState('');
   const [invalid, setInvalid] = useState(false);
   const copy = analysisCopy(language);
+  // VPORT-02: the Analysis ink and type. The navigator's words, routes and actions are unchanged.
+  const ink = useAnalysisInk();
+  const type = useAnalysisType();
   const helper = presentationCommandHelper(language);
   const available = state.maximum > 0;
   const percent = Math.round(state.position * 100);
@@ -38,15 +42,16 @@ export function PresentationNavigator({ controller, language = 'en' }: { control
         if (!available) return;
         if (actionName === 'increment' || actionName === 'decrement') controller.adjust(actionName === 'increment' ? 1 : -1);
         else runPresentationCommand(controller, actionName);
-      }}><Text>{copy.viewPercentage(percent)}</Text></View>
-    <Text>{helper}</Text>
-    <TextInput testID="timeline-command" accessibilityLabel={copy.moveView} accessibilityLanguage={language} style={{ minHeight: 44 }}
+      }}><Text style={[type('metadata'), { color: ink.secondary }]}>{copy.viewPercentage(percent)}</Text></View>
+    <Text style={[type('metadata'), { color: ink.tertiary }]}>{helper}</Text>
+    <TextInput testID="timeline-command" accessibilityLabel={copy.moveView} accessibilityLanguage={language} style={[type('supporting'), { minHeight: 44, color: ink.primary, borderBottomWidth: 1, borderColor: ink.tertiary }]}
+      selectionColor={ink.primary}
       accessibilityHint={helper}
       value={command} onChangeText={setCommand} onSubmitEditing={submit} returnKeyType="go"
       autoCapitalize="none" autoCorrect={false} maxLength={16} />
     <Pressable accessibilityRole="button" accessibilityLabel={copy.moveView} onPress={submit} style={{ minHeight: 44, justifyContent: 'center' }}>
-      <Text>{copy.moveView}</Text>
+      <Text style={[type('action'), { color: ink.primary }]}>{copy.moveView}</Text>
     </Pressable>
-    {invalid && <Text accessibilityRole="alert">{helper}</Text>}
+    {invalid && <Text accessibilityRole="alert" style={[type('metadata'), { color: ink.error }]}>{helper}</Text>}
   </View>;
 }

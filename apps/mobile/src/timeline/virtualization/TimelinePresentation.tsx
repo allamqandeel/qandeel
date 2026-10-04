@@ -1,14 +1,17 @@
-import { memo, type ReactNode, useCallback, useLayoutEffect, useRef, useSyncExternalStore } from 'react';
-import { FlatList, I18nManager, Text, View } from 'react-native';
+import { memo, type ReactNode, useCallback, useLayoutEffect, useMemo, useRef, useSyncExternalStore } from 'react';
+import { FlatList, I18nManager, Text, View, type TextStyle } from 'react-native';
 import { analysisCopy, type AnalysisLanguage } from '../../analysis-language';
+import { useAnalysisInk, useAnalysisType, type AnalysisInk } from '../../analysis-visual';
 import { PresentationNavigator } from '../accessibility/PresentationNavigator';
 import { type DisclosedMomentTarget, itemLayout, targetKey, TIMELINE_STEP } from '../model/disclosedTrack';
 import type { PresentationController } from '../window/controller';
 
-const MomentStep = memo(function MomentStep({ target, language }: { target: DisclosedMomentTarget; language: AnalysisLanguage }) {
+// VPORT-02: the numeral in the Analysis ink (tertiary, E3 metadata), centred on its 48-point step, which is exactly
+// where the Temporal Spine's notch for the same Moment falls below it. Nothing about the step, its key or its label moved.
+const MomentStep = memo(function MomentStep({ target, language, numeral }: { target: DisclosedMomentTarget; language: AnalysisLanguage; numeral: TextStyle }) {
   return <View testID={`timeline-sp-${target.sessionPosition}`} style={{ width: TIMELINE_STEP, height: TIMELINE_STEP }}
     accessible accessibilityLabel={analysisCopy(language).timelinePoint(target.sessionPosition)} accessibilityLanguage={language}>
-    <Text numberOfLines={1}>{target.sessionPosition}</Text>
+    <Text numberOfLines={1} style={numeral}>{target.sessionPosition}</Text>
   </View>;
 });
 
@@ -37,14 +40,27 @@ const DISCONTINUITY_EXTENT = 16;
 /** Composition seam only: a parent supplies disclosed input via the controller.
  * The optional outboard slot is supplied by the later temporal composition. T-05
  * never manufactures a Live target, its activation, or a committed-mode indicator. */
-export function TimelinePresentation({ controller, outboardLivePresentation, language = 'en' }: {
+export function TimelinePresentation({ controller, outboardLivePresentation, temporalSurface, language = 'en' }: {
   controller: PresentationController;
   outboardLivePresentation?: ReactNode;
+  /**
+   * VPORT-02 — the later temporal composition's strip, placed DIRECTLY under the Track. Composition seam only, like the
+   * outboard slot: T-05 renders what it is given and decides nothing about it. The device proof showed why it is needed:
+   * composed after this whole component, the strip landed below T-05's navigator, outside the 136-point row T-11
+   * allocates to exactly the Track, the position rail and the strip — so it was never on screen.
+   */
+  temporalSurface?: ReactNode;
   /** The reader's Product language for every word here (W1A-01). */
   language?: AnalysisLanguage;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getSnapshot);
-  const renderItem = useCallback(({ item }: { item: DisclosedMomentTarget }) => <MomentStep target={item} language={language} />, [language]);
+  // VPORT-02: the Analysis ink and type (`QAN` dark-on-dark correction). Presentation only; read once per surface.
+  const ink: AnalysisInk = useAnalysisInk();
+  const type = useAnalysisType();
+  const metadata = type('metadata');
+  // Centred in its own step by the line box alone, so the step keeps its exact invariant extent and style.
+  const numeral = useMemo<TextStyle>(() => ({ ...metadata, color: ink.tertiary, textAlign: 'center', lineHeight: TIMELINE_STEP }), [metadata, ink.tertiary]);
+  const renderItem = useCallback(({ item }: { item: DisclosedMomentTarget }) => <MomentStep target={item} language={language} numeral={numeral} />, [language, numeral]);
   const list = useRef<FlatList<DisclosedMomentTarget>>(null);
   const railWidth = useRef(0);
   const nativeOffset = useRef(0);
@@ -89,7 +105,7 @@ export function TimelinePresentation({ controller, outboardLivePresentation, lan
       }} scrollEventThrottle={16} />
     {outboardLivePresentation != null && <>
       <View style={{ width: DISCONTINUITY_EXTENT }}>
-        {state.offset < state.maximum && <Text testID="timeline-discontinuity"
+        {state.offset < state.maximum && <Text testID="timeline-discontinuity" style={[metadata, { color: ink.tertiary }]}
           accessibilityLabel={analysisCopy(language).trackContinues} accessibilityLanguage={language}>…</Text>}
       </View>
       {/* Sizes to its content, never below the floor, and never clipped. `flexShrink: 0` is what
@@ -100,12 +116,13 @@ export function TimelinePresentation({ controller, outboardLivePresentation, lan
       </View>
     </>}
     </View>
+    {temporalSurface}
     <View testID="timeline-position-rail" style={{ height: 44 }} accessible={false}
       onLayout={({ nativeEvent }) => { railWidth.current = nativeEvent.layout.width; }}
       onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true}
       onResponderGrant={({ nativeEvent }) => railMove(nativeEvent.locationX)}
       onResponderMove={({ nativeEvent }) => railMove(nativeEvent.locationX)}>
-      <View pointerEvents="none" style={{ position: 'absolute', left: `${(I18nManager.isRTL ? 1 - state.position : state.position) * 100}%`, height: 44, borderLeftWidth: 2 }} />
+      <View pointerEvents="none" style={{ position: 'absolute', left: `${(I18nManager.isRTL ? 1 - state.position : state.position) * 100}%`, height: 44, borderLeftWidth: 2, borderColor: ink.restInk }} />
     </View>
     <PresentationNavigator key={`navigator:${state.track.sessionId}`} controller={controller} language={language} />
   </View>;
