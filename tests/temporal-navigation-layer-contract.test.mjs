@@ -968,9 +968,10 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
     // VPORT-02: the Analysis ink and type (the dark-on-dark correction); no word, route or action moved.
     ['apps/mobile/src/timeline/accessibility/PresentationNavigator.tsx', '2d3cc7e7738bef2189b0c540586cfa43252d13e0'],
     // T-12 §17: the outboard slot's fixed width and clip became a floor. W1A-01: the reader's language.
-    // VPORT-02: the Analysis ink and type for the numerals, the discontinuity and the position rail. No step, key,
+    // VPORT-02: the Analysis ink and type for the numerals, the discontinuity and the position rail, and one composition
+    // seam (`temporalSurface`) placing T-06's strip directly under the Track. No step, key,
     // window, measurement or authority moved; the permanent claims below still hold and are still asserted.
-    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', '0df44b5d5467262a5e9a4f772c29febff5433675'],
+    ['apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx', 'a19383725a2d3e28855ed6b85bd32e5f69845784'],
     ['apps/mobile/src/timeline/testing/fixtures.ts', 'f59c962d13e6af81088e69168c0c00f307acbf8e'],
     ['apps/mobile/src/timeline/__tests__/controller.test.ts', '8453bae72e867c13788384a81f3eaca17cde2ada'],
     // T-12 §17 and W1A-01: the same corrections' own assertions, re-anchored beside them.
@@ -984,6 +985,10 @@ test('T-05 stays presentation-only: every T-05 file is byte-identical and gains 
   // Code only: the correction's own comment necessarily names the clip it removed in order to
   // explain it, and a comment is not a style.
   const presentation = stripComments(await read('apps/mobile/src/timeline/virtualization/TimelinePresentation.tsx'));
+  // VPORT-02: the temporal seam is a slot T-05 renders and never inspects, directly after the Track row and before the
+  // position rail — so the Track, the strip and the rail are the one instrument T-11's 136-point row allocates.
+  assert.match(presentation, /<\/View>\n\s*\{temporalSurface\}\n\s*<View testID="timeline-position-rail"/u, 'the strip sits directly under the Track');
+  assert.equal((presentation.match(/temporalSurface/gu) ?? []).length, 3, 'T-05 only receives (prop, type) and places the strip');
   // T-05 still writes no canonical state and holds no store authority of any kind.
   for (const forbidden of ['CanonicalStore', 'dispatch', 'store.', 'commitPreviewedTarget', 'temporalTargeting', 'inspection']) {
     assert.equal(presentation.includes(forbidden), false, `T-05 presentation must not reach ${forbidden}`);

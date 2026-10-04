@@ -204,6 +204,47 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
     onOutcome?.(outcome);
   }, [store, preview, onOutcome]);
 
+  const strip = (
+    <View style={styles.stripRow}>
+      <GestureDetector gesture={gesture}>
+        <View
+          testID={TEMPORAL_TARGET_STRIP_TEST_ID}
+          // Exactly T-05's viewport, at the row's start edge: under the Track in both directions,
+          // and never under the discontinuity or the outboard Live slot.
+          style={[styles.strip, { width: window.viewport }]}
+          // The strip is the temporal surface. Its own semantics are supplied by the navigator
+          // below, which is the non-drag route to everything reachable here.
+          accessible={false}
+        >
+          <SpineLayer spine={spine} ink={ink.tertiary} targetInk={ink.primary} layer="SPINE" testID={TEMPORAL_SPINE_TEST_ID} />
+          {/* The two markers keep T-06's anchor geometry, motion and testIDs exactly; each now carries P2's
+              Parting drawing, hung from its anchor so the opening is centred on the Moment in both directions. */}
+          <Animated.View testID={TEMPORAL_COMMITTED_MARKER_TEST_ID} pointerEvents="none" style={[styles.marker, motion.committedStyle]}>
+            <Aperture kind="COMMITTED" ink={ink.primary} ground={ink.world} style={styles.aperture} />
+          </Animated.View>
+          <Animated.View testID={TEMPORAL_PREVIEW_MARKER_TEST_ID} pointerEvents="none" style={[styles.marker, motion.cursorStyle]}>
+            <Aperture kind="PREVIEW" ink={ink.primary} ground={ink.world} style={styles.aperture} />
+          </Animated.View>
+          <SpineLayer spine={spine} ink={ink.tertiary} targetInk={ink.primary} layer="TARGET" testID={TEMPORAL_SPINE_TEST_ID + ':target'} />
+        </View>
+      </GestureDetector>
+      {/* The Live Edge terminal: beyond the strip, where disclosed time ends — never on the Track, never a Moment's
+          form. It is a second touch target for the SAME act as the outboard Live words above it, and it is not an
+          accessibility element: the words are the act's one accessible route. Nothing here lies over the strip, so
+          every Moment stays reachable (F-P2-02). */}
+      <Pressable
+        testID={TEMPORAL_LIVE_TERMINAL_TEST_ID}
+        style={styles.terminal}
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        disabled={!liveAvailable}
+        onPress={goLive}
+      >
+        <LiveTerminal engaged={following} ink={following ? ink.primary : ink.restInk} rtl={rtl} />
+      </Pressable>
+    </View>
+  );
+
   const liveEdge = (
     <LiveEdgeTarget
       store={store}
@@ -217,46 +258,9 @@ export function TemporalTargetLayer({ store, preview, presentation, enabled = tr
 
   return (
     <View testID={TEMPORAL_TARGET_LAYER_TEST_ID} style={styles.layer}>
-      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} language={language} />
-
-      <View style={styles.stripRow}>
-        <GestureDetector gesture={gesture}>
-          <View
-            testID={TEMPORAL_TARGET_STRIP_TEST_ID}
-            // Exactly T-05's viewport, at the row's start edge: under the Track in both directions,
-            // and never under the discontinuity or the outboard Live slot.
-            style={[styles.strip, { width: window.viewport }]}
-            // The strip is the temporal surface. Its own semantics are supplied by the navigator
-            // below, which is the non-drag route to everything reachable here.
-            accessible={false}
-          >
-            <SpineLayer spine={spine} ink={ink.tertiary} targetInk={ink.primary} layer="SPINE" testID={TEMPORAL_SPINE_TEST_ID} />
-            {/* The two markers keep T-06's anchor geometry, motion and testIDs exactly; each now carries P2's
-                Parting drawing, hung from its anchor so the opening is centred on the Moment in both directions. */}
-            <Animated.View testID={TEMPORAL_COMMITTED_MARKER_TEST_ID} pointerEvents="none" style={[styles.marker, motion.committedStyle]}>
-              <Aperture kind="COMMITTED" ink={ink.primary} ground={ink.world} style={styles.aperture} />
-            </Animated.View>
-            <Animated.View testID={TEMPORAL_PREVIEW_MARKER_TEST_ID} pointerEvents="none" style={[styles.marker, motion.cursorStyle]}>
-              <Aperture kind="PREVIEW" ink={ink.primary} ground={ink.world} style={styles.aperture} />
-            </Animated.View>
-            <SpineLayer spine={spine} ink={ink.tertiary} targetInk={ink.primary} layer="TARGET" testID={TEMPORAL_SPINE_TEST_ID + ':target'} />
-          </View>
-        </GestureDetector>
-        {/* The Live Edge terminal: beyond the strip, where disclosed time ends — never on the Track, never a Moment's
-            form. It is a second touch target for the SAME act as the outboard Live words above it, and it is not an
-            accessibility element: the words are the act's one accessible route. Nothing here lies over the strip, so
-            every Moment stays reachable (F-P2-02). */}
-        <Pressable
-          testID={TEMPORAL_LIVE_TERMINAL_TEST_ID}
-          style={styles.terminal}
-          accessible={false}
-          importantForAccessibility="no-hide-descendants"
-          disabled={!liveAvailable}
-          onPress={goLive}
-        >
-          <LiveTerminal engaged={following} ink={following ? ink.primary : ink.restInk} rtl={rtl} />
-        </Pressable>
-      </View>
+      {/* VPORT-02: the strip is composed directly under the Track (T-05's seam), so the Track, its strip and the
+          position rail are the one 136-point instrument T-11 allocates, and the navigators follow below it. */}
+      <TimelinePresentation controller={presentation} outboardLivePresentation={liveEdge} temporalSurface={strip} language={language} />
 
       <TemporalNavigator
         store={store}

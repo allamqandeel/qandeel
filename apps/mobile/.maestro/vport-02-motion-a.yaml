@@ -20,7 +20,7 @@ appId: com.qandeel.mobile
 - openLink: "qandeel://vport02-proof/zoom-in"
 - waitForAnimationToEnd:
     timeout: 4000
-- openLink: "qandeel://vport02-proof/pin/5"
+- openLink: "qandeel://vport02-proof/zoom-out"
 - waitForAnimationToEnd:
     timeout: 4000
 - stopRecording

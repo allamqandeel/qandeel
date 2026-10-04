@@ -8,10 +8,17 @@ appId: com.qandeel.mobile
       id: "qandeel-map-surface"
     timeout: 30000
 - startRecording: ${PREFIX}-after
+- openLink: "qandeel://vport02-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 4000
 - openLink: "qandeel://vport02-proof/zoom-out"
 - waitForAnimationToEnd:
     timeout: 4000
 - openLink: "qandeel://vport02-proof/pin/9"
+- waitForAnimationToEnd:
+    timeout: 4000
+- tapOn:
+    id: "qandeel-temporal-live-edge"
 - waitForAnimationToEnd:
     timeout: 4000
 - stopRecording

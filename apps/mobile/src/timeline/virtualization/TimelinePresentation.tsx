@@ -40,9 +40,16 @@ const DISCONTINUITY_EXTENT = 16;
 /** Composition seam only: a parent supplies disclosed input via the controller.
  * The optional outboard slot is supplied by the later temporal composition. T-05
  * never manufactures a Live target, its activation, or a committed-mode indicator. */
-export function TimelinePresentation({ controller, outboardLivePresentation, language = 'en' }: {
+export function TimelinePresentation({ controller, outboardLivePresentation, temporalSurface, language = 'en' }: {
   controller: PresentationController;
   outboardLivePresentation?: ReactNode;
+  /**
+   * VPORT-02 — the later temporal composition's strip, placed DIRECTLY under the Track. Composition seam only, like the
+   * outboard slot: T-05 renders what it is given and decides nothing about it. The device proof showed why it is needed:
+   * composed after this whole component, the strip landed below T-05's navigator, outside the 136-point row T-11
+   * allocates to exactly the Track, the position rail and the strip — so it was never on screen.
+   */
+  temporalSurface?: ReactNode;
   /** The reader's Product language for every word here (W1A-01). */
   language?: AnalysisLanguage;
 }) {
@@ -109,6 +116,7 @@ export function TimelinePresentation({ controller, outboardLivePresentation, lan
       </View>
     </>}
     </View>
+    {temporalSurface}
     <View testID="timeline-position-rail" style={{ height: 44 }} accessible={false}
       onLayout={({ nativeEvent }) => { railWidth.current = nativeEvent.layout.width; }}
       onStartShouldSetResponder={() => true} onMoveShouldSetResponder={() => true}

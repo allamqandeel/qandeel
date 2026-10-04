@@ -115,6 +115,8 @@ run ar-reduced vport-02-temporal.yaml
 set_motion 1
 
 # QAN-BL-A11Y-01 on a device: Reduce Motion turned ON while the app keeps running — no relaunch between A and B.
+adb shell settings put system user_rotation 0
+sleep 2
 echo "::group::motion-midsession"
 adb logcat -c || true
 flow motion-midsession vport-02-motion-a.yaml
