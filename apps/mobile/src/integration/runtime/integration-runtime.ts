@@ -117,6 +117,18 @@ import {
   type NativeAppearanceSink,
   type SystemAppearanceSource,
 } from '../../appearance';
+import {
+  createNotificationEntryInbox,
+  createPushController,
+  createPushDeviceStore,
+  type NotificationEntryInbox,
+  type PushController,
+  type PushDeviceStore,
+  type PushPlatformPort,
+} from '../../push';
+import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
+import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
+import { deviceProductLanguage } from '../locale/device-locale';
 import { createInspectionJourneyCoordinator, type InspectionJourneyCoordinator } from '../journey/inspection-journey';
 import { createCanonicalTransitionWitness, type CanonicalTransitionWitness } from '../motion/canonical-transition-witness';
 import { createSpatialCauseBinding, type SpatialCauseBinding } from '../motion/spatial-cause';
@@ -216,6 +228,10 @@ export interface IntegrationSessionRuntime {
   readonly attention: ActivityAttentionController;
   readonly activityFeed: ActivityFeedController;
   readonly activityPreferences: ActivityPreferencesController;
+  /** A3-02 — this installation's OS permission and registration, for this identity. */
+  readonly push: PushController;
+  /** A3-02 — the native Direct Entry waiting for the ONE Activity `open` boundary (app-level; shared, never per identity). */
+  readonly notificationEntries: NotificationEntryInbox;
 }
 
 /**
@@ -284,6 +300,9 @@ export interface IntegrationRuntimeOptions extends MobileRuntimeEntryOptions {
   readonly appearanceStore?: AppearancePreferenceStore;
   readonly systemAppearance?: SystemAppearanceSource;
   readonly nativeAppearance?: NativeAppearanceSink;
+  /** A3-02 — the device's notification system. Production: `expo-notifications`; tests and proofs: their own. */
+  readonly pushPlatform?: PushPlatformPort;
+  readonly pushDeviceStore?: PushDeviceStore;
 }
 
 export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}): IntegrationRuntimeResult {
@@ -301,6 +320,25 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     system: options.systemAppearance ?? createSystemAppearanceSource(),
     native: options.nativeAppearance ?? createNativeAppearanceSink(),
   });
+
+  // A3-02 — the device's notification system, app-level: a tap that launched the app arrives before any identity is
+  // restored, so it is held here and executed only through the reader's own Activity `open` (D38).
+  const pushPlatform: PushPlatformPort = options.pushPlatform ?? createExpoPushPlatformPort();
+  const pushDeviceStore: PushDeviceStore = options.pushDeviceStore ?? createPushDeviceStore();
+  const notificationEntries = createNotificationEntryInbox();
+  const unsubscribePush: (() => void)[] = [
+    // In front, the in-app law owns the moment (D51): nothing is presented by the OS, and attention re-reads at once.
+    pushPlatform.installForegroundPolicy(() => session?.attention.refresh()),
+    // Signed out, a tap is not held for whoever signs in next: no cross-account resume.
+    pushPlatform.onTap((tap) => {
+      const kind = entry.auth.getState().kind;
+      if (kind !== 'SIGNED_OUT' && kind !== 'ERROR') notificationEntries.put(tap);
+    }),
+  ];
+  void pushPlatform.takeLaunchTap().then((tap) => {
+    const kind = entry.auth.getState().kind;
+    if (tap !== null && !disposed && kind !== 'SIGNED_OUT' && kind !== 'ERROR') notificationEntries.put(tap);
+  }).catch(() => undefined);
 
   const listeners = new Set<() => void>();
   let phase: IntegrationPhase = { kind: 'RESTORING' };
@@ -326,6 +364,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.attention.retire();
     session.activityFeed.retire();
     session.activityPreferences.retire();
+    session.push.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -375,6 +414,30 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     });
 
     const activity = entry.activityFor(bundle);
+    const push = createPushController({
+      port: pushPlatform, store: pushDeviceStore, transport: entry.pushFor(bundle), foreground: entry.foreground, isCurrent,
+      language: deviceProductLanguage,
+    });
+    // A3-02: when other sessions end ("sign out from other devices", or a password change), their installations stop
+    // receiving too. The identity controller is unchanged; only its transport learns to tell the push boundary.
+    const accountTransport = entry.accountFor(bundle);
+    const identityTransport: AccountIdentityTransport = {
+      readIdentity: () => accountTransport.readIdentity(),
+      changeName: (name) => accountTransport.changeName(name),
+      changeLoginId: (commandId, loginId, password) => accountTransport.changeLoginId(commandId, loginId, password),
+      requestEmailChange: (password, email) => accountTransport.requestEmailChange(password, email),
+      confirmEmailChange: (email, newCode, currentCode) => accountTransport.confirmEmailChange(email, newCode, currentCode),
+      changePassword: async (password, newPassword) => {
+        const outcome = await accountTransport.changePassword(password, newPassword);
+        if (outcome.kind === 'CHANGED') void push.detachOthers();
+        return outcome;
+      },
+      signOutOtherDevices: async () => {
+        const outcome = await accountTransport.signOutOtherDevices();
+        if (outcome.kind === 'SIGNED_OUT_OTHERS') void push.detachOthers();
+        return outcome;
+      },
+    };
     const built: IntegrationSessionRuntime = {
       generation,
       bundle,
@@ -401,13 +464,15 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       account: createAccountController({ transport: entry.accountFor(bundle), isCurrent }),
       // W3-02: the Public ID, on the same account transport bound to this identity.
       publicId: createPublicIdController({ transport: entry.accountFor(bundle), isCurrent }),
-      identity: createAccountIdentityController({ transport: entry.accountFor(bundle), isCurrent }),
+      identity: createAccountIdentityController({ transport: identityTransport, isCurrent }),
       privacy: createPrivacyDataController({ transport: entry.accountFor(bundle), isCurrent }),
       understanding: createUnderstandingController({ transport: entry.understandingFor(bundle), isCurrent }),
       // A3-01: Activity, on the Activity transport bound to this identity. Attention re-reads when a row is seen or opened.
       attention: createActivityAttentionController({ transport: activity, foreground: entry.foreground, isCurrent }),
       activityFeed: createActivityFeedController({ transport: activity, isCurrent, onAttentionChanged: () => built.attention.refresh() }),
       activityPreferences: createActivityPreferencesController({ transport: activity, isCurrent }),
+      push,
+      notificationEntries,
     };
     return built;
   }
@@ -445,6 +510,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session = buildSession(result.bundle, decision);
     session.liveDriver.start();
     session.account.start();
+    session.push.start();
     publish({ kind: 'READY', runtime: session });
   }
 
@@ -462,6 +528,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       return;
     }
     attemptedAuthGeneration = null;
+    // A3-02: a tap is never carried across accounts. Signed out (or failed), the pending entry is dropped.
+    if (state.kind === 'SIGNED_OUT' || state.kind === 'ERROR') notificationEntries.drop();
     retireSession();
     publish(state.kind === 'SIGNED_OUT' ? { kind: 'SIGNED_OUT' } : state.kind === 'ERROR' ? { kind: 'AUTH_ERROR' } : { kind: 'RESTORING' });
   });
@@ -497,6 +565,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         if (disposed) return;
         disposed = true;
         unsubscribeAuth();
+        for (const unsubscribe of unsubscribePush.splice(0)) unsubscribe();
         retireSession();
         appearance.dispose();
         entry.dispose();

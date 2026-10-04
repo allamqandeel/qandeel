@@ -275,7 +275,11 @@ function ComposedWorld({ runtime, auth }: {
   const locale = useMemo(() => deviceProductLocale(), []);
   // W3-01 (E2E-D-07): the ONE sign-out, the frozen auth authority's own. Nothing here signs out any other
   // way, and nothing retires the world by hand: the phase machinery does that when the authority publishes.
-  const signOut = useCallback(() => auth.signOut(), [auth]);
+  // A3-02: this installation first stops receiving for this account (bounded; a failure never blocks sign-out).
+  const signOut = useCallback(async () => {
+    await runtime.push.detach();
+    return auth.signOut();
+  }, [auth, runtime.push]);
   return <DepthComposition runtime={runtime} locale={locale} insets={insets} fontScale={fontScale} envelope={envelope} onSignOut={signOut} />;
 }
 

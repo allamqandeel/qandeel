@@ -15,9 +15,10 @@ import { AccountModule } from './account/account.module';
 import { UnderstandingModule } from './understanding/understanding.module';
 import { HttpSecurityModule } from './http-security/http-security.module';
 import { ActivityModule } from './activity/activity.module';
+import { PushModule } from './push/push.module';
 
 @Module({
-  imports: [HttpSecurityModule,SentryModule.forRoot(),ObservabilityModule,RuntimeEventsModule,BackgroundIntelligenceModule,PostResponseIntelligenceModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule, ActivityModule, AccountModule, UnderstandingModule],
+  imports: [HttpSecurityModule,SentryModule.forRoot(),ObservabilityModule,RuntimeEventsModule,BackgroundIntelligenceModule,PostResponseIntelligenceModule,HealthModule, ConversationModule, MemoryModule, HypothesisModule, QuestionModule, HimModule, ActivityModule, PushModule, AccountModule, UnderstandingModule],
   providers:[{provide:APP_FILTER,useClass:SentryGlobalFilter}],
 })
 export class AppModule {}

@@ -39,6 +39,21 @@ export function validTimeZone(value: unknown): string | null {
 }
 
 /**
+ * One stored preference row → the preferences the decision layer reads. A malformed row is a refusal, never a guess.
+ * Exported for A3-02's platform dispatcher, which reads the same row through its server claim.
+ */
+export function preferencesFromRow(row: ActivityPreferencesRow): ActivityPreferences {
+  const lock = Object.fromEntries(LOCK_SUBJECTS.map((subject) => [subject, row[LOCK_COLUMN[subject]]]));
+  if (!PROACTIVE.includes(row.proactive as ProactiveChoice) || !LOCK_SUBJECTS.every((s) => isLevel(lock[s]))) throw new Error('ACTIVITY_PREFERENCES_MALFORMED');
+  return {
+    proactive: row.proactive as ProactiveChoice, sharedAlerts: row.shared_alerts, publicInteractions: row.public_interactions,
+    publicDiscovery: row.public_discovery, introductionsAlerts: row.introductions_alerts, accountUpdates: row.account_updates,
+    quietHours: { enabled: row.quiet_hours_enabled, start: row.quiet_hours_start, end: row.quiet_hours_end },
+    snoozeUntil: row.snooze_until, lock: lock as Record<LockSubject, DisclosureLevel>,
+  };
+}
+
+/**
  * A3-01 — the owner-only Activity application boundary (I-08N-01 + P3). Identity is the verified token only; no route
  * takes a user id. Attention state and preferences are the only things a caller can change, and no answer carries a
  * global count, an internal reference or another account's anything.
@@ -242,16 +257,7 @@ export class ActivityService {
   private async preferencesOf(token: string, userId: string): Promise<ActivityPreferences> {
     const rows = await this.repository.preferences(token, userId);
     if (!Array.isArray(rows)) throw new Error('ACTIVITY_PREFERENCES_MALFORMED');
-    if (rows.length === 0) return DEFAULT_PREFERENCES;
-    const row = rows[0];
-    const lock = Object.fromEntries(LOCK_SUBJECTS.map((subject) => [subject, row[LOCK_COLUMN[subject]]]));
-    if (!PROACTIVE.includes(row.proactive as ProactiveChoice) || !LOCK_SUBJECTS.every((s) => isLevel(lock[s]))) throw new Error('ACTIVITY_PREFERENCES_MALFORMED');
-    return {
-      proactive: row.proactive as ProactiveChoice, sharedAlerts: row.shared_alerts, publicInteractions: row.public_interactions,
-      publicDiscovery: row.public_discovery, introductionsAlerts: row.introductions_alerts, accountUpdates: row.account_updates,
-      quietHours: { enabled: row.quiet_hours_enabled, start: row.quiet_hours_start, end: row.quiet_hours_end },
-      snoozeUntil: row.snooze_until, lock: lock as Record<LockSubject, DisclosureLevel>,
-    };
+    return rows.length === 0 ? DEFAULT_PREFERENCES : preferencesFromRow(rows[0]);
   }
 
   private async mutesOf(token: string, userId: string): Promise<ReadonlySet<string>> {

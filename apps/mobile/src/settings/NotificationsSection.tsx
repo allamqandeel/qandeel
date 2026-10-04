@@ -9,6 +9,12 @@
  * editable), Snooze (1 h / 8 h / 24 h / Custom), Lock Screen previews (one ceiling per subject, in the approved words),
  * and the separate hand-off to the device's own notification settings, which QANDEEL does not fake owning.
  *
+ * A3-02 adds the device's OS permission to that last section: when it is not granted the page says so once, plainly
+ * (`p3.osOff`), and Activity keeps working; before the OS has ever asked, «السماح بالإشعارات» / Allow notifications
+ * opens QANDEEL's education, which hands over to the real OS prompt; the Device Notification Settings row hands off to
+ * the app's own notification settings in the OS. Choosing «سماح» / Allow for Proactive QANDEEL is one of P3 §11's
+ * legitimate moments for the education (once; never again after "Not now").
+ *
  * No meter, no remaining count, no per-channel list, no off switch for critical security, nothing implying that
  * QANDEEL's understanding is turned off. Per-World Shared mutes are drawn only for Worlds that exist for the reader —
  * no Product route lists a reader's Shared Worlds yet (Stage 4), so none is drawn.
@@ -23,6 +29,7 @@ import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../con
 import type { ChromeLanguage } from '../orientation-chrome';
 import { DISCLOSURE_LEVELS, LOCK_SUBJECTS } from '../activity/vocabulary';
 import type { ActivityPreferences, DisclosureLevel, LockSubject, ProactiveChoice } from '../runtime-entry';
+import { pushCopy, type PushController, type PushState } from '../push';
 
 const ROW_START = 24;
 const ROW_END = 20;
@@ -125,12 +132,18 @@ export interface NotificationsSettingsProps {
   readonly controller: ActivityPreferencesController;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
+  /** A3-02 — the device's OS permission and the education; absent where no push boundary exists. */
+  readonly push?: PushController;
 }
+
+const NO_PUSH = { subscribe: () => () => undefined, getState: (): PushState | null => null };
 
 type Open = { readonly kind: 'QUIET'; readonly edge: 'start' | 'end' } | { readonly kind: 'LOCK'; readonly subject: LockSubject } | { readonly kind: 'SNOOZE_CUSTOM' } | null;
 
-export function NotificationsSettings({ controller, language, palette }: NotificationsSettingsProps) {
+export function NotificationsSettings({ controller, language, palette, push }: NotificationsSettingsProps) {
   const words = notificationsCopy(language);
+  const pushWords = pushCopy(language);
+  const device: PushState | null = useSyncExternalStore(push?.subscribe ?? NO_PUSH.subscribe, push?.getState ?? NO_PUSH.getState);
   const saveFailed = words.gate.saveFailed;
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
@@ -161,7 +174,11 @@ export function NotificationsSettings({ controller, language, palette }: Notific
   const save = (apply: Parameters<ActivityPreferencesController['change']>[0]) => {
     void controller.change(apply).then(() => setOpen(null));
   };
-  const choose = (proactive: ProactiveChoice) => save((c) => ({ ...c, proactive }));
+  const choose = (proactive: ProactiveChoice) => {
+    save((c) => ({ ...c, proactive }));
+    // P3 §11: choosing Allow is a legitimate moment for the education — only if the OS has not been asked yet.
+    if (proactive === 'ALLOW') push?.offer('PROACTIVE_ALLOW');
+  };
   const lockLevel = (subject: LockSubject, level: DisclosureLevel) => save((c) => ({ ...c, lockScreen: { ...c.lockScreen, [subject]: level } }));
   const setQuiet = (edge: 'start' | 'end', time: string) => {
     const other = edge === 'start' ? p.quietHours.end : p.quietHours.start;
@@ -314,8 +331,25 @@ export function NotificationsSettings({ controller, language, palette }: Notific
         );
       })}
 
+      {/* A3-02 — the OS permission, said once and plainly when it is not granted; Activity keeps working (P3 §12.2). */}
+      {device !== null && (device.permission === 'DENIED' || device.permission === 'NOT_REQUESTED') ? (
+        <Text testID="qandeel-notifications-os-off" style={{ ...typeStyle('supporting'), color: palette.secondary, paddingTop: 16, paddingStart: ROW_START, paddingEnd: ROW_END, writingDirection: writing }}>
+          {pushWords.osOff}
+        </Text>
+      ) : null}
+      {push !== undefined && device !== null && device.permission === 'NOT_REQUESTED' && device.canAskAgain ? (
+        <Control palette={palette} language={language} accessibilityLabel={pushWords.eduAllow} onPress={() => push.offer('DEVICE_SETTINGS')} testID="qandeel-notifications-allow"
+          style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, justifyContent: 'center' }}>
+          <Text style={{ ...typeStyle('body'), color: palette.selectedInk, writingDirection: writing }}>{pushWords.eduAllow}</Text>
+        </Control>
+      ) : null}
+      {device?.notNowNote ? (
+        <Text testID="qandeel-push-not-now-note" accessibilityLiveRegion="polite" style={{ ...typeStyle('supporting'), color: palette.secondary, paddingStart: ROW_START, paddingEnd: ROW_END, writingDirection: writing }}>
+          {pushWords.notNowNote}
+        </Text>
+      ) : null}
       {/* The device's own notification settings: a hand-off, never an imitation of an OS page (P3 §12.2). */}
-      <Control palette={palette} language={language} accessibilityLabel={words.device} onPress={() => void Linking.openSettings()} testID="qandeel-notifications-device"
+      <Control palette={palette} language={language} accessibilityLabel={words.device} onPress={() => void (push !== undefined ? push.openDeviceSettings() : Linking.openSettings())} testID="qandeel-notifications-device"
         style={{ marginTop: 16, minHeight: 52, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, justifyContent: 'center' }}>
         <Text style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{words.device}</Text>
         <Text style={{ ...typeStyle('supporting'), color: palette.secondary, writingDirection: writing }}>{words.deviceHelp}</Text>

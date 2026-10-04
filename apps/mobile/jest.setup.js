@@ -192,3 +192,28 @@ jest.mock('@shopify/react-native-skia', () => {
     vec: (x, y) => ({ x, y }),
   };
 });
+
+// A3-02 — `expo-notifications` needs its native module, which Jest does not have (jest-expo's automock answers
+// `undefined` everywhere, so even a subscription has no `remove`). The stand-in below is the honest "no notification
+// system" host: the OS permission reads undetermined, no device token exists, nothing is presented and no tap arrives.
+// It never fakes a grant. Tests that need permission or taps use their own `PushPlatformPort`, not this module.
+jest.mock('expo-notifications', () => {
+  const subscription = () => ({ remove: () => undefined });
+  const undetermined = { status: 'undetermined', granted: false, canAskAgain: true, expires: 'never' };
+  return {
+    AndroidImportance: { DEFAULT: 5 },
+    IosAuthorizationStatus: { NOT_DETERMINED: 0, DENIED: 1, AUTHORIZED: 2, PROVISIONAL: 3, EPHEMERAL: 4 },
+    DEFAULT_ACTION_IDENTIFIER: 'expo.modules.notifications.actions.DEFAULT',
+    getPermissionsAsync: async () => undetermined,
+    requestPermissionsAsync: async () => undetermined,
+    getDevicePushTokenAsync: async () => { throw new Error('no push service in Jest'); },
+    addPushTokenListener: subscription,
+    setNotificationChannelAsync: async () => null,
+    setNotificationHandler: () => undefined,
+    addNotificationReceivedListener: subscription,
+    addNotificationResponseReceivedListener: subscription,
+    getLastNotificationResponse: () => null,
+    clearLastNotificationResponse: () => undefined,
+    scheduleNotificationAsync: async () => 'jest',
+  };
+});

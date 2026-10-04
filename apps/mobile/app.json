@@ -23,7 +23,14 @@
     },
     "plugins": [
       "expo-router",
-      "./plugins/with-qandeel-launch-identity"
+      "./plugins/with-qandeel-launch-identity",
+      [
+        "expo-notifications",
+        {
+          "mode": "production"
+        }
+      ],
+      "./plugins/with-qandeel-push"
     ]
   }
 }
