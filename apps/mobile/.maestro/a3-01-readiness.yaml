@@ -1,0 +1,45 @@
+# A3-01 — the cold-start READINESS gate run once before the first matrix leg. VALIDATION ONLY; NOT EVIDENCE.
+#
+# A freshly booted CI emulator is still finishing its own first-boot work, and the app's first launch pays the cold
+# costs (JS load, first Skia surfaces, the Analysis world's first draw). Measured on GitHub's emulator, that made the
+# first leg's first strip dismiss land after the strip's 6-s readable hold had already ended (P3 behaviour), so the tap
+# reached the General Settings entry beneath it. This flow walks the same cold paths once — Conversation, the Activity
+# entry, one strip, the Analysis world and back — and the script runs it until it completes, so every counted leg starts
+# on a ready device. It asserts nothing the matrix asserts, taps no strip, and its screenshots are not proof.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-activity-entry"
+    timeout: 60000
+- openLink: "qandeel://a301-proof/arrive/system"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-attention-strip"
+    timeout: 60000
+# Never tapped: the strip is left to end its own readable hold.
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-attention-strip"
+    timeout: 60000
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 180000
+- waitForAnimationToEnd:
+    timeout: 10000
+- tapOn:
+    id: "qandeel-depth-to-conversation"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 10000

@@ -123,7 +123,9 @@ test('exactly the functional groups that exist (W3-01’s two, W3-02’s Account
   assert.equal(others.length, 2);
   const noOtherGroup = (text) => others.every((name) => !text.includes(name)) && !/coming soon|قريبًا|placeholder|disabled: true/iu.test(text);
   guards('no-other-group-or-placeholder', settings + copy, noOtherGroup, `const later = '${byKey.get('gPlan').ar}';`);
-  assert.equal((settings.match(/<GroupHeading\b/gu) ?? []).length, 6, 'six group headings: Account & Identity, Security & Sign-in, QANDEEL & Conversation, Appearance & Accessibility, Privacy & Data, Support & About');
+  // A3-01 re-anchor: «الإشعارات والنشاط» / Notifications & Activity is now a REAL group (P3 §12, placed where P1 §8.1 reserved
+  // it), backed by a working page and migration 0136. The permanent claims stay: no placeholder, no Plan & Usage group.
+  assert.equal((settings.match(/<GroupHeading\b/gu) ?? []).length, 7, 'seven group headings: Account & Identity, Security & Sign-in, QANDEEL & Conversation, Notifications & Activity, Appearance & Accessibility, Privacy & Data, Support & About');
   // The record must not claim the nine-group hierarchy closed.
   const record = read(RECORD);
   const overClaimsD02 = (text) => /E2E-D-02[^\n]*\b(CLOSED|COMPLETE)\b(?! — NOT)/u.test(text.replace(/NOT (?:CLOSED|COMPLETE)/gu, ''));

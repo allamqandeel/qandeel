@@ -40,8 +40,20 @@
  *     Analysis;
  *   - "talk to QANDEEL about this" returns the reader to the Conversation carrying the item as a bounded context line
  *     above the composer. Nothing is written into the composer and nothing is sent.
+ *
+ * A3-01 — «النشاط» / Activity and in-app attention (P3 §3, §7, §8, §15):
+ *
+ *   - the ONE global Activity entry is handed to the Conversation's upper chrome, at the reader's START edge. Activity is
+ *     not a World and not a depth: it opens OVER the Conversation exactly as General Settings does, and Back (the control
+ *     or Android's system Back) returns to exactly the same place. The Analysis never receives the entry;
+ *   - this owner's own state is the surface truth the attention law reads (`setSurface`): the Analysis depth, or the
+ *     non-Analysis surface in front. Nothing here is a parallel navigation state;
+ *   - the one ordinary Attention Strip is drawn only at the Conversation depth; inside the Analysis nothing ordinary is
+ *     ever laid over the world, and leaving it re-evaluates current truth (at most one strip follows);
+ *   - a Direct Entry (from a row, or the strip) is revalidated by the server first, and executed here only into a surface
+ *     that exists: the Personal Conversation, QANDEEL Understanding, or General Settings.
  */
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle, useFrameCallback, useSharedValue } from 'react-native-reanimated';
 import { scheduleOnRN } from 'react-native-worklets';
@@ -58,6 +70,8 @@ import { ConversationOpening, FirstUseGate } from '../../account';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface } from '../../understanding';
+import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
+import type { DirectEntryDestination } from '../../runtime-entry';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
@@ -119,6 +133,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // W3-MEGA-U — the Understanding depth, the same kind of local presentation choice as Settings.
   const [understandingShown, setUnderstandingShown] = useState(false);
   const [returnedFromUnderstanding, setReturnedFromUnderstanding] = useState(false);
+  // A3-01 — Activity, the same kind of local presentation choice; Settings may open over it on its own page.
+  const [activityShown, setActivityShown] = useState(false);
+  const [returnedFromActivity, setReturnedFromActivity] = useState(false);
+  const [settingsPage, setSettingsPage] = useState<'NOTIFICATIONS' | undefined>(undefined);
   const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
   const reduceMotion = useReduceMotion();
   const incoming = useSharedValue(1);
@@ -205,10 +223,12 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   const openSettings = useCallback(() => {
     setReturnedFromSettings(false);
+    setSettingsPage(undefined);
     setSettingsShown(true);
   }, []);
   const closeSettings = useCallback(() => {
     setSettingsShown(false);
+    setSettingsPage(undefined);
     setReturnedFromSettings(true);
   }, []);
   // Android system Back while Settings is shown is Settings' own Back, and nothing else.
@@ -244,6 +264,69 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     return () => subscription.remove();
   }, [closeUnderstanding, understandingShown]);
 
+  // A3-01 — Activity over the Conversation. Back returns to exactly where the reader was.
+  const openActivity = useCallback(() => {
+    setReturnedFromActivity(false);
+    setActivityShown(true);
+  }, []);
+  const closeActivity = useCallback(() => {
+    setActivityShown(false);
+    setReturnedFromActivity(true);
+  }, []);
+  useEffect(() => {
+    if (!activityShown || settingsShown) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeActivity();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [activityShown, closeActivity, settingsShown]);
+  const openNotificationSettings = useCallback(() => {
+    setReturnedFromSettings(false);
+    setSettingsPage('NOTIFICATIONS');
+    setSettingsShown(true);
+  }, []);
+
+  // A revalidated Direct Entry, executed only into a Product surface that exists (D38–D43).
+  const enter = useCallback((destination: DirectEntryDestination) => {
+    setActivityShown(false);
+    setReturnedFromActivity(false);
+    if (destination.kind === 'PERSONAL_CONVERSATION') {
+      setSettingsShown(false);
+      setUnderstandingShown(false);
+      cross('CONVERSATION');
+    } else if (destination.kind === 'QANDEEL_UNDERSTANDING') {
+      setSettingsShown(false);
+      cross('CONVERSATION');
+      setUnderstandingShown(true);
+    } else {
+      setUnderstandingShown(false);
+      cross('CONVERSATION');
+      setSettingsPage(destination.section === 'NOTIFICATIONS' ? 'NOTIFICATIONS' : undefined);
+      setSettingsShown(true);
+    }
+  }, [cross]);
+
+  // The surface truth the attention law reads: the composition's own state, never a second navigation state.
+  const surface: ProductSurface = depth === 'ANALYSIS' ? 'ANALYSIS'
+    : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : activityShown ? 'ACTIVITY' : 'CONVERSATION';
+  const attention = runtime.attention;
+  useEffect(() => {
+    attention.start();
+  }, [attention]);
+  useEffect(() => {
+    attention.setSurface(surface);
+  }, [attention, surface]);
+  const { strip } = useSyncExternalStore(attention.subscribe, attention.getState);
+  const enterFromStrip = useCallback(async () => {
+    const taken = attention.takeStrip();
+    if (taken === null) return;
+    const outcome = await runtime.activityFeed.open(taken.item.id);
+    if (outcome.kind === 'ENTER') enter(outcome.destination);
+    else if ((outcome.kind === 'STALE' || outcome.kind === 'UNAVAILABLE') && outcome.fallback !== null) enter(outcome.fallback);
+    else openActivity();
+  }, [attention, enter, openActivity, runtime.activityFeed]);
+
   const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
 
   const layer = (which: WorldDepth, current: boolean): ReactNode =>
@@ -261,6 +344,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           <UnderstandingEntry language={locale.language} onOpen={openUnderstanding} focus={returnedFromUnderstanding && !understandingShown} />
         )}
         discussion={<UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />}
+        chromeStart={onSignOut === undefined ? null : (
+          <ActivityEntry controller={runtime.attention} language={locale.language} onOpen={openActivity} focus={returnedFromActivity && !activityShown} />
+        )}
       />
     ) : (
       <AnalysisAppearanceScope>
@@ -313,6 +399,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           const current = which === depth;
           // Beneath General Settings or Understanding the Personal world stays mounted, untouched, and out of reach.
           const reachable = current && !settingsShown && !understandingShown;
+          // A3-01: beneath Activity, too, the Personal world stays mounted and out of reach.
+          const personalReachable = reachable && !activityShown;
           return (
             <Animated.View
               key={which}
@@ -320,17 +408,27 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
               // The Analysis world reports its own composition instead (see `beginFade`).
               onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
-              pointerEvents={reachable ? 'auto' : 'none'}
-              importantForAccessibility={reachable ? 'auto' : 'no-hide-descendants'}
-              accessibilityElementsHidden={!reachable}
+              pointerEvents={personalReachable ? 'auto' : 'none'}
+              importantForAccessibility={personalReachable ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={!personalReachable}
             >
               {layer(which, current)}
             </Animated.View>
           );
         })}
+        {activityShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <View
+            style={StyleSheet.absoluteFill}
+            pointerEvents={settingsShown ? 'none' : 'auto'}
+            importantForAccessibility={settingsShown ? 'no-hide-descendants' : 'auto'}
+            accessibilityElementsHidden={settingsShown}
+          >
+            <ActivitySurface feed={runtime.activityFeed} attention={runtime.attention} language={locale.language} insets={edges} onBack={closeActivity} onOpenSettings={openNotificationSettings} onEnter={enter} />
+          </View>
+        ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
@@ -338,10 +436,28 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             <UnderstandingSurface controller={runtime.understanding} language={locale.language} insets={edges} onBack={closeUnderstanding} onTalk={talkedAboutItem} />
           </View>
         ) : null}
+        {/*
+          A3-01 — the one ordinary Attention Strip, attached under the non-Analysis upper chrome. Never at the Analysis
+          depth: the presentation law never presents ordinary attention there, and this host never mounts it there.
+        */}
+        {strip !== null && strip.form === 'ORDINARY' && depth === 'CONVERSATION' && leaving === null ? (
+          <AttentionStrip
+            key={strip.candidate.item.id}
+            item={strip.candidate.item}
+            language={locale.language}
+            top={edges.top + CHROME_MIN_HEIGHT}
+            insets={edges}
+            onEnter={() => void enterFromStrip()}
+            onDismiss={() => attention.dismissStrip()}
+          />
+        ) : null}
       </View>
     </FirstUseGate>
   );
 }
+
+/** The non-Analysis upper chrome's height under the safe area (G1.1 / G3.2 proof geometry): where the strip attaches. */
+const CHROME_MIN_HEIGHT = 48;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },

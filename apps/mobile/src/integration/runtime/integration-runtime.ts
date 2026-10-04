@@ -100,6 +100,14 @@ import {
 } from '../../settings';
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import {
+  createActivityAttentionController,
+  createActivityFeedController,
+  createActivityPreferencesController,
+  type ActivityAttentionController,
+  type ActivityFeedController,
+  type ActivityPreferencesController,
+} from '../../activity';
+import {
   createAppearanceAuthority,
   createAppearancePreferenceStore,
   createNativeAppearanceSink,
@@ -200,6 +208,14 @@ export interface IntegrationSessionRuntime {
    * The Understanding depth reads it when shown; it is retired with the generation.
    */
   readonly understanding: UnderstandingController;
+  /**
+   * A3-01: the reader's Activity attention (the presence mark and the one Attention Strip), feed and Notifications &
+   * Activity preferences, for THIS identity, on the Activity transport bound to it. Attention follows the runtime entry's
+   * ONE foreground signal; all three are retired with the generation.
+   */
+  readonly attention: ActivityAttentionController;
+  readonly activityFeed: ActivityFeedController;
+  readonly activityPreferences: ActivityPreferencesController;
 }
 
 /**
@@ -307,6 +323,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.identity.retire();
     session.privacy.retire();
     session.understanding.retire();
+    session.attention.retire();
+    session.activityFeed.retire();
+    session.activityPreferences.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -355,6 +374,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       startSequence: decision.kind === 'RESUME' ? decision.record.sequence : 0,
     });
 
+    const activity = entry.activityFor(bundle);
     const built: IntegrationSessionRuntime = {
       generation,
       bundle,
@@ -384,6 +404,10 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       identity: createAccountIdentityController({ transport: entry.accountFor(bundle), isCurrent }),
       privacy: createPrivacyDataController({ transport: entry.accountFor(bundle), isCurrent }),
       understanding: createUnderstandingController({ transport: entry.understandingFor(bundle), isCurrent }),
+      // A3-01: Activity, on the Activity transport bound to this identity. Attention re-reads when a row is seen or opened.
+      attention: createActivityAttentionController({ transport: activity, foreground: entry.foreground, isCurrent }),
+      activityFeed: createActivityFeedController({ transport: activity, isCurrent, onAttentionChanged: () => built.attention.refresh() }),
+      activityPreferences: createActivityPreferencesController({ transport: activity, isCurrent }),
     };
     return built;
   }

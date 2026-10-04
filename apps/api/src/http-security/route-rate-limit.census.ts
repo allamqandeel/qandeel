@@ -66,6 +66,17 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /understanding/items/:ref/disagreement': 'AUTHENTICATED',
   'POST /understanding/items/:ref/disagreement/resolve': 'AUTHENTICATED',
   'DELETE /understanding/items/:ref/discussion': 'AUTHENTICATED',
+
+  // Activity & Notifications (A3-01). The attention read is polled while the app is in the foreground (30 s cadence).
+  'GET /activity/items': 'AUTHENTICATED',
+  'GET /activity/attention': 'AUTHENTICATED',
+  'POST /activity/items/seen': 'AUTHENTICATED',
+  'POST /activity/items/:itemId/open': 'AUTHENTICATED',
+  'POST /activity/strip': 'AUTHENTICATED',
+  'GET /activity/preferences': 'AUTHENTICATED',
+  'PUT /activity/preferences': 'AUTHENTICATED',
+  'PUT /activity/snooze': 'AUTHENTICATED',
+  'PUT /activity/mutes': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

@@ -12,6 +12,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
 import { settingsCopy } from '../../settings';
+import { notificationsCopy } from '../../activity';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
@@ -19,6 +20,9 @@ import { harness, settle, type IntegrationHarness } from '../__fixtures__/integr
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 44, left: 0, right: 0, bottom: 34 } };
 const LANGUAGE = deviceProductLocale().language;
 const COPY = settingsCopy(LANGUAGE);
+// A3-01 re-anchor (validation only): «الإشعارات والنشاط» / Notifications & Activity is now a real group, placed where P1 §8.1
+// reserved it — after QANDEEL & Conversation. Every other group, and the absence of any placeholder, is unchanged.
+const NOTIFICATIONS = notificationsCopy(LANGUAGE).section;
 const LRI = String.fromCodePoint(0x2066);
 const PDI = String.fromCodePoint(0x2069);
 
@@ -81,7 +85,7 @@ describe('W3-MEGA-A — Account & Identity and Security & Sign-in, end to end', 
 
     const settings = within(view.getByTestId('qandeel-settings'));
     expect(settings.getAllByRole('header').map((node) => node.props.children)).toEqual([
-      COPY.title, COPY.accountGroup, COPY.security.group, COPY.qandeelGroup, COPY.appearanceGroup, COPY.supportGroup,
+      COPY.title, COPY.accountGroup, COPY.security.group, COPY.qandeelGroup, NOTIFICATIONS, COPY.appearanceGroup, COPY.supportGroup,
     ]);
     expect(view.getByTestId('qandeel-name-row-value').props.children).toBe('Noor Hassan');
     expect(view.getByTestId('qandeel-login-id-row-value').props.children).toBe(`${LRI}noor.h${PDI}`);

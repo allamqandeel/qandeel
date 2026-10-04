@@ -73,6 +73,7 @@ jobs:
       - {name: Verify AI-COST-01 provider-neutral usage / cost ledger + Credit foundation static contract (provider-call census + planted defects), run: npm run test:ai-cost-01-provider-neutral-cost-credit-ledger-contract}
       - {name: Verify W3-MEGA-M conversational Memory control static contract, run: npm run test:w3-mega-m-conversational-memory-control-contract}
       - {name: Verify W3-MEGA-S Personal controls and Privacy & Data static contract, run: npm run test:w3-mega-s-personal-controls-settings-contract}
+      - {name: Verify A3-01 Activity & Attention Core + in-app production integration static contract, run: npm run test:a3-01-activity-attention-inapp-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -811,6 +812,13 @@ jobs:
       # five-function service-role surface with no content column; erasure coverage; and committed races that converge.
       - name: Verify AI-COST-01 provider-call ledger, Price Cards, exact rating and Credit foundation against real PostgreSQL
         run: npm run verify:ai-usage-cost-ledger:integration
+      # A3-01 builds the Product Activity spine. This verifier proves one item per published candidate and recipient, a
+      # replay that changes nothing, the frozen authority constraints (no cross-World Direct Entry, QANDEEL voice only for
+      # QANDEEL, the two exception facts only where their kinds allow), account isolation under RLS, same-context-only
+      # coalescing, attention that never resolves anything, withdrawal that never resurrects, one presented strip with the
+      # rest settled, preference / Snooze / mute bounds, bounded retention, and erasure through the governed Personal erasure.
+      - name: Verify A3-01 Activity projection, attention state and preferences against real PostgreSQL
+        run: npm run verify:activity-attention-core:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

@@ -10,8 +10,10 @@
  *   - the composer is the FIELD role: one lower line with its Send at the end edge, shown only while
  *     there are words to send;
  *   - every paragraph takes its OWN direction from its words, independently of its speaker's side;
- *   - the only upper chrome is the Conversation → Analysis depth control (B-07). No Activity,
- *     Replay, Understanding, Settings, Global Shell, Voice or Shared/Public entry is here;
+ *   - the upper chrome's own control is the Conversation → Analysis depth control (B-07). No Replay, Understanding,
+ *     Settings, Global Shell, Voice or Shared/Public entry is here. A3-01 (P3 §3): the non-Analysis upper chrome also
+ *     carries, at the reader's START edge, the one global entry it is handed (chromeStart) — this layer draws none of it
+ *     and writes none of its words;
  *   - W3-01 (P4-C1 S-B): beneath the upper chrome, Personal QANDEEL's own row carries the ONE General
  *     Settings entry — icon-only, 44 × 44, at the reader's END edge, drawn only when the Personal world
  *     supplies it. It is never in the upper chrome and never in the Analysis.
@@ -88,6 +90,11 @@ export interface ConversationSurfaceProps {
   readonly personalEntry?: ReactElement | null;
   /** W3-MEGA-U: a bounded context line the Personal world supplies, drawn above the composer. Presentation only. */
   readonly discussion?: ReactElement | null;
+  /**
+   * A3-01 (P3 §3): the one global entry the composition hands the non-Analysis upper chrome, drawn at the reader's START
+   * edge opposite the depth control. Presentation only; this layer writes none of its words.
+   */
+  readonly chromeStart?: ReactElement | null;
 }
 
 /** G1.1 / G3.2 proof geometry, in points. Craft values of the frozen composition, not tokens. */
@@ -225,6 +232,7 @@ export function ConversationSurface({
   focusSettingsEntry = false,
   personalEntry = null,
   discussion = null,
+  chromeStart = null,
 }: ConversationSurfaceProps) {
   const ready = useConversationTypeface();
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
@@ -358,18 +366,20 @@ export function ConversationSurface({
       // An explicit LEFT-TO-RIGHT frame: every side below is physical, computed from the language.
       style={{ flex: 1, backgroundColor: palette.world, direction: 'ltr' }}
     >
-      {/* The upper chrome: exactly one control, Conversation → Analysis, at the reader's END edge. */}
+      {/* The upper chrome: its one own control, Conversation → Analysis, at the reader's END edge; the handed entry at START. */}
       <View
         style={{
           paddingTop: insets.top,
           paddingLeft: insets.left + 10,
           paddingRight: insets.right + 10,
           minHeight: insets.top + HEADER_MIN_HEIGHT,
-          flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: endSide === 'right' ? 'flex-end' : 'flex-start',
+          justifyContent: chromeStart !== null ? 'space-between' : endSide === 'right' ? 'flex-end' : 'flex-start',
+          // The reader's START edge holds the handed entry; the frame is physical, so START is the side opposite END.
+          flexDirection: chromeStart !== null && endSide === 'left' ? 'row-reverse' : 'row',
         }}
       >
+        {chromeStart === null ? null : <View testID="qandeel-chrome-start">{chromeStart}</View>}
         <Control
           palette={palette}
           language={language}

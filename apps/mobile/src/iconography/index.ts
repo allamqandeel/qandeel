@@ -6,6 +6,9 @@
  * glyphs (send, the depth door, the back chevron) stay where W1A-01 put them, in `conversation/visual`, from the same
  * P2 source. Nothing here is a navigation glyph: no production Global Switcher exists yet to carry one, and P2's
  * navigation family is not ported ahead of a surface that would use it.
+ *
+ * A3-01 adds the two P3 members P3 §5 freezes — Open Ledger (the Activity entry) and Open Link (the Introductions row
+ * source mark) — generated the same way from the merged P3-A package (`p3-production.generated.ts`).
  */
 export { P2_CALL_GLYPHS, P2_CALL_RAIL, P2_SPINE } from './p2-production.generated';
 export type { ApertureProps, LiveTerminalProps } from './TemporalMachine';
@@ -16,3 +19,6 @@ export type { SpineLayerProps } from './SpineLayer';
 export { SpineLayer } from './SpineLayer';
 export type { CallRailLabels, CallRailProps } from './CallRail';
 export { CALL_RAIL_MORPH_MS, CALL_RAIL_TEST_ID, CallRail } from './CallRail';
+export { P3_GLYPHS } from './p3-production.generated';
+export type { P3GlyphName, P3GlyphProps } from './P3Glyph';
+export { P3Glyph } from './P3Glyph';

@@ -11,6 +11,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
 import { settingsCopy } from '../../settings';
+import { notificationsCopy } from '../../activity';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
@@ -18,6 +19,9 @@ import { harness, settle, type IntegrationHarness } from '../__fixtures__/integr
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 44, left: 0, right: 0, bottom: 34 } };
 const LANGUAGE = deviceProductLocale().language;
 const COPY = settingsCopy(LANGUAGE);
+// A3-01 re-anchor (validation only): «الإشعارات والنشاط» / Notifications & Activity is now a real group, placed where P1 §8.1
+// reserved it — after QANDEEL & Conversation. Every other group, and the absence of any placeholder, is unchanged.
+const NOTIFICATIONS = notificationsCopy(LANGUAGE).section;
 const LRI = String.fromCodePoint(0x2066);
 const PDI = String.fromCodePoint(0x2069);
 
@@ -84,7 +88,7 @@ describe('E2E-D-09 — the Public ID and its ONE lifetime manual change, end to 
     expect(reads[0].url).not.toMatch(/alice|user/u);
 
     const settings = within(view.getByTestId('qandeel-settings'));
-    expect(settings.getAllByRole('header').map((node) => node.props.children)).toEqual([COPY.title, COPY.accountGroup, COPY.qandeelGroup, COPY.appearanceGroup, COPY.supportGroup]);
+    expect(settings.getAllByRole('header').map((node) => node.props.children)).toEqual([COPY.title, COPY.accountGroup, COPY.qandeelGroup, NOTIFICATIONS, COPY.appearanceGroup, COPY.supportGroup]);
     expect(view.getByTestId('qandeel-public-id-value').props.children).toBe(`${LRI}@nightlamp27${PDI}`);
     expect(view.getByTestId('qandeel-public-id-allowance').props.children).toBe(COPY.publicId.available);
 

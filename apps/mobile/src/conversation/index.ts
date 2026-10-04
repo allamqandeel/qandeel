@@ -43,7 +43,7 @@ export { useReduceMotion } from './visual/reduce-motion';
 // W1B-01 — the frozen visual foundation this layer resolved, published so the account entry and the
 // first-use surfaces are painted from the SAME generated constants rather than a second copy.
 export type { ConversationPalette, TypeRole } from './visual/theme';
-export { typeStyle, usePalette, withAlpha } from './visual/theme';
+export { typeStyle, useIncreasedContrast, usePalette, withAlpha } from './visual/theme';
 export type { ControlProps } from './visual/Control';
 export { Control, MIN_TARGET } from './visual/Control';
 export type { GlyphName, GlyphProps } from './visual/Glyph';

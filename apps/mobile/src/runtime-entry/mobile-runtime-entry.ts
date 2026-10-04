@@ -36,6 +36,7 @@ import { ConversationSessionApiClient, type RuntimeHttpFetch } from './conversat
 import { ConversationTurnApiClient } from './conversation/conversation-turn-api';
 import { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 import { UnderstandingApiClient } from './understanding-api';
+import { ActivityApiClient } from './activity-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -83,6 +84,11 @@ export interface BootstrapOverrides {
 export interface MobileRuntimeEntry {
   readonly config: MobilePublicConfig;
   readonly auth: MobileAuthAuthority;
+  /**
+   * A3-01 — the ONE foreground signal this entry already owns (shared by auth refresh and the live driver), read by the
+   * Activity attention seam so it installs no second platform listener.
+   */
+  readonly foreground: ForegroundSignal;
   /** Restore the persisted session and begin observing auth. Idempotent. */
   start(): Promise<void>;
   /**
@@ -120,6 +126,11 @@ export interface MobileRuntimeEntry {
    * to the bundle's own auth generation: a replaced identity's request is refused before it is issued.
    */
   understandingFor(bundle: CanonicalRuntimeBundle): UnderstandingApiClient;
+  /**
+   * A3-01 — the Activity client for a bundle this coordinator produced, on the same AC-01 seam bound to the bundle's own
+   * auth generation: a replaced identity's request is refused before it is issued.
+   */
+  activityFor(bundle: CanonicalRuntimeBundle): ActivityApiClient;
   /**
    * W1B-01 — the one signed-out account question: may a Login ID still be chosen. It carries no
    * credential, because there is no account yet.
@@ -209,6 +220,7 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
   const runtime: MobileRuntimeEntry = {
     config,
     auth,
+    foreground,
     async start() {
       await auth.start();
     },
@@ -275,6 +287,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     accountFor(bundle) {
       return new AccountApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    activityFor(bundle) {
+      return new ActivityApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     understandingFor(bundle) {
       return new UnderstandingApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

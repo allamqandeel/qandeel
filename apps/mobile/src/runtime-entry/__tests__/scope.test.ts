@@ -22,8 +22,10 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // whether a typed identifier is an Email or a Login ID, so the account layer routes an unconfirmed
   // reader's Verify Email by the same rule the credential was routed by — never by a second copy of it.
   // W3-MEGA-U added exactly one: UnderstandingApiClient, the QANDEEL Understanding transport (a plain class).
+  // A3-01 added exactly one: ActivityApiClient, the Activity transport (a plain class).
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
+    'ActivityApiClient',
     'CONVERSATION_HISTORY_PAGE_LIMIT',
     'ConversationSessionApiClient',
     'ConversationTurnApiClient',
@@ -68,8 +70,8 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     // A React component is conventionally PascalCase. Every function here is a factory, a reader or
     // a class, and `ConversationSessionApiClient` is a plain class with no render.
     // W1B-01's two account transports are plain classes too.
-    // W3-MEGA-U's Understanding transport is a plain class too.
-    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient'].includes(name)) continue;
+    // W3-MEGA-U's Understanding transport is a plain class too, and so is A3-01's Activity transport.
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

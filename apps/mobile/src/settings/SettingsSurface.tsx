@@ -38,7 +38,12 @@
  *     state the server holds; both requests re-enter the password. Accessibility stays the platform's: no in-app
  *     accessibility switch exists (W3-PDG-01 §6).
  *
- * No placeholder is drawn for a group whose function does not exist (Notifications, Introductions, Plan & Usage).
+ * A3-01 (P3 §12) adds the seventh real group, «الإشعارات والنشاط» / Notifications & Activity, placed where P1 §8.1 reserved it
+ * (after QANDEEL & Conversation): one row that opens its page (`NotificationsSection.tsx`), a state of this destination
+ * like every other change. Activity's own settings act opens this destination directly on that page, and Back from it
+ * then returns to Activity.
+ *
+ * No placeholder is drawn for a group whose function does not exist (Introductions, Plan & Usage).
  *
  * The frame is laid out logically (`direction`), so the start and end edges are the reader's in Arabic and
  * English alike. Every colour is the canonical palette's, in the reader's effective appearance.
@@ -55,6 +60,9 @@ import { settingsCopy } from './copy';
 import { saveExportDocument } from './export-file';
 import { openLanguageSettings } from './language-settings';
 import type { PrivacyDataController, PrivacyDataState } from './privacy-data-controller';
+import { NotificationsSettings } from './NotificationsSection';
+import type { ActivityPreferencesController } from '../activity/preferences-controller';
+import { notificationsCopy } from '../activity/copy';
 import { DeletionRequest, deletionStatusSaid, ExportRequest, exportStatusSaid, LanguageRow, PrivacyDataRows } from './PrivacyDataSection';
 import type { PublicIdController, PublicIdState } from './public-id-controller';
 import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
@@ -74,10 +82,14 @@ export interface SettingsSurfaceProps {
   readonly publicId?: PublicIdController;
   /** W3-MEGA-S: the reader's Privacy & Data state and requests for this runtime generation. Without it, that group is not drawn. */
   readonly privacy?: PrivacyDataController;
+  /** A3-01: the reader's Notifications & Activity preferences for this runtime generation. Without it, that group is not drawn. */
+  readonly notifications?: ActivityPreferencesController;
+  /** A3-01: open directly on Notifications & Activity (from Activity, or a Direct Entry); Back from it is then Back. */
+  readonly initialPage?: 'NOTIFICATIONS';
 }
 
 /** The change shown in place of the groups, if any. */
-type Change = 'PUBLIC_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE';
+type Change = 'PUBLIC_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS';
 /** Where the screen reader returns when a change closes. */
 type RowKey = Change;
 
@@ -183,7 +195,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, privacy }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, privacy, notifications, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -207,7 +219,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     privacy?.start();
   }, [privacy]);
 
-  const [changing, setChanging] = useState<Change | null>(null);
+  const [changing, setChanging] = useState<Change | null>(initialPage === 'NOTIFICATIONS' && notifications !== undefined ? 'NOTIFICATIONS' : null);
   const committingRef = useRef(false);
   const [returnTo, setReturnTo] = useState<RowKey | null>(null);
   const rowNodes = useRef<Partial<Record<RowKey, View | null>>>({});
@@ -221,9 +233,14 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
   const leaveChange = useCallback(() => {
     // A commit in flight is never abandoned half-way: its answer decides what the reader sees next.
     if (committingRef.current) return;
+    // Opened directly on a page (from Activity), its Back is the destination's Back.
+    if (initialPage !== undefined && changing === initialPage) {
+      onBack();
+      return;
+    }
     setReturnTo(changing);
     setChanging(null);
-  }, [changing]);
+  }, [changing, initialPage, onBack]);
   const onCommitBusy = useCallback((busy: boolean) => {
     committingRef.current = busy;
   }, []);
@@ -388,6 +405,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     if (changing === 'DELETE') change = <DeletionRequest {...requestProps} onAccepted={deletionAccepted} />;
   }
 
+  if (changing === 'NOTIFICATIONS' && notifications !== undefined) {
+    change = <NotificationsSettings controller={notifications} language={language} palette={palette} />;
+  }
+
   const publicIdReady = publicIdState.status === 'READY' && publicIdState.publicId !== null;
 
   return (
@@ -488,6 +509,14 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
               <GroupHeading text={copy.qandeelGroup} language={language} palette={palette} testID="qandeel-settings-group-qandeel-name" />
               <LanguageRow copy={copy.language} language={language} palette={palette} onOpen={() => void openLanguageSettings()} />
             </View>
+
+            {notifications !== undefined ? (
+              <View testID="qandeel-settings-group-notifications">
+                <GroupHeading text={notificationsCopy(language).section} language={language} palette={palette} testID="qandeel-settings-group-notifications-name" />
+                <ActionRow label={notificationsCopy(language).section} notice={null} busy={false} language={language} palette={palette}
+                  onPress={() => openChange('NOTIFICATIONS')} rowRef={rowRef('NOTIFICATIONS')} testID="qandeel-settings-notifications" />
+              </View>
+            ) : null}
 
             <View testID="qandeel-settings-group-appearance">
               <GroupHeading text={copy.appearanceGroup} language={language} palette={palette} testID="qandeel-settings-group-appearance-name" />

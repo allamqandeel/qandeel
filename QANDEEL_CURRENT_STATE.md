@@ -130,7 +130,7 @@ was added later.
 | Domain | Lifecycle | Primary record |
 |---|---|---|
 | Voice / Live Call | the Product interaction is `CLOSED / FROZEN` at proof level, and P4 freezes the non-signal Voice visual language. Signal-bearing morphology and Voice / call strings wait on the runtime, which is `OPEN — UNASSIGNED` (`QAN-BL-VOICE-01`) | [`docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md`](docs/design/i-08b3.1-g1.2/QANDEEL_G1_2_CANONICAL_CLOSURE.md), [backlog](docs/qandeel-canonical-backlog-v1.md) |
-| Notifications / proactive attention | the Product contract is frozen by `I-08N-01`, and its final Product realization by P3 (`CLOSED / FROZEN`). G3 §D's compatible rule stays binding: Matching must not interrupt a Live Call. No production notification runtime is established on `main`, and none of these records defines the runtime transport / mechanism | [`I-08N-01`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md), [P3 closure](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md), [G3 closure §D](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) |
+| Notifications / proactive attention | the Product contract is frozen by `I-08N-01`, and its final Product realization by P3 (`CLOSED / FROZEN`). G3 §D's compatible rule stays binding: Matching must not interrupt a Live Call. No production notification runtime is established on `main`; A3-01 (Draft PR, §3.7) implements the in-app spine and `A3-02` owns platform delivery (`QAN-BL-NOTIF-01`). None of these records defines the transport | [`I-08N-01`](docs/canonical-authority/final-product-experience/i-08n/QANDEEL_I-08N-01_FINAL_CLOSURE_PACKAGE.md), [P3 closure](docs/qandeel-p3-notification-activity-final-realization-canonical-closure.md), [G3 closure §D](docs/design/i-08b3.1-g3/QANDEEL_G3_CANONICAL_CLOSURE.md) |
 | Security / pre-release | `QAN-BL-SEC-01` `DEFERRED — OWNED`; `QAN-BL-CW-01` `OPEN — UNASSIGNED`; the launch prerequisites fail closed. The API-side readiness correctives are merged (§3.7). Still `DEFERRED — OWNED`: `QAN-BL-PROD-04` (`PROD-AUTH-01`), `QAN-BL-PROD-05` (`PROD-DATA-01`) and the two Final Launch gates `QAN-BL-LAUNCH-01` (`LAUNCH-EDGE-SECURITY-GATE` — edge / origin) and `QAN-BL-LAUNCH-02` (`FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate`) | [`docs/t12-auth-storage-at-rest-disposition-v1.md`](docs/t12-auth-storage-at-rest-disposition-v1.md), [backlog](docs/qandeel-canonical-backlog-v1.md) |
 | Governance | the canonical backlog is `ACTIVE — governance authority` | [`docs/qandeel-canonical-backlog-v1.md`](docs/qandeel-canonical-backlog-v1.md) |
 
@@ -151,7 +151,8 @@ W-slices are in §7.
 | W3-CORR-U — Understanding Integrity (migration `0134`) | `MERGED / CLOSED` through PR #302 at `c9add460be785fc5d4dd930146e217cee2972706`; `QAN-BL-PRIV-01` admitted | [record](docs/e2e/QANDEEL_W3_CORR_U_UNDERSTANDING_INTEGRITY_IMPLEMENTATION_RECORD_v1.md) |
 | AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation (migration `0135`) | `MERGED / CLOSED` through PR #303 at `7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`. The foundation only: no Credit formula, plan, allowance, balance or exhaustion is active, and no provider is selected | [record](docs/e2e/QANDEEL_AI_COST_01_PROVIDER_NEUTRAL_COST_CREDIT_LEDGER_IMPLEMENTATION_RECORD_v1.md) |
 | PROD-READINESS-01 — API Security & Performance Adversarial Review | **PR #298 CLOSED UNMERGED — evidence / review only.** Its accepted findings were admitted to the backlog as `QAN-BL-PROD-01` … `05` and re-owned to the tasks above | [backlog](docs/qandeel-canonical-backlog-v1.md) `PROD-READINESS-01 corrective admission` |
-| VPORT-02 — Final Temporal / Orientation / Iconography Production Port + Stage-2 Coherence Closure | **IMPLEMENTED ON DRAFT PR #306 — `READY FOR INDEPENDENT REVIEW — DO NOT MERGE`; NOT MERGED.** Spine C, the Live terminal, the Analysis chrome ground / ink (the dark-on-dark fix), G3 Decision B, the Call Rail A component, and `QAN-BL-A11Y-01` (tombstoned from merge). Stage 2 is not closed by it until review and merge | [record](docs/e2e/QANDEEL_VPORT_02_TIMELINE_ORIENTATION_P2_FINAL_COHERENCE_IMPLEMENTATION_RECORD_v1.md) |
+| VPORT-02 — Final Temporal / Orientation / Iconography Production Port + Stage-2 Coherence Closure | **`MERGED / CLOSED` through PR #306 at `34ea439b98eecd5f22628f41749245f81bb2b9f8`.** Spine C, the Live terminal, the Analysis chrome ground / ink (the dark-on-dark fix), G3 Decision B, the Call Rail A component; `QAN-BL-A11Y-01` tombstoned. **Stage 2 is DONE / MERGED.** Its record keeps its pre-merge banner (§6 of the Project Map lists the trap) | [record](docs/e2e/QANDEEL_VPORT_02_TIMELINE_ORIENTATION_P2_FINAL_COHERENCE_IMPLEMENTATION_RECORD_v1.md) |
+| A3-01 — Activity & Attention Core + In-App Production Integration (migration `0136`) | **IMPLEMENTED ON A DRAFT PR — PRODUCT COPY GATE APPROVED — EXACT-HEAD PROOF PASSED — GITHUB CI PENDING — DO NOT MERGE; NOT MERGED.** Opens Stage 3. The provider-neutral Activity spine and in-app surfaces; no source producer exists, so production Activity is truthfully empty; admits `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02`. **It does not close Stage 3: `A3-02` is the named remaining owner** | [record](docs/e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) |
 | PROD-AUTH-01 — Auth Verification Path; PROD-DATA-01 — List/Fan-out Correction | **`DEFERRED — OWNED`** (`QAN-BL-PROD-04`, `QAN-BL-PROD-05`). Not opened, and not promoted ahead of VPORT-02 | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 
 There is no task named `W3-CORR-M`. Memory control is the merged W3-MEGA-M (PR #293); no record or backlog item
@@ -196,22 +197,23 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 
 | Status | Count |
 |---|---:|
-| `DEFERRED — OWNED` | 8 |
+| `DEFERRED — OWNED` | 13 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 16 |
-| **Total** | **34** |
+| **Total** | **39** |
 
-| Severity (all 34) | Count |
+| Severity (all 39) | Count |
 |---|---:|
-| `HIGH` | 21 |
-| `MEDIUM` | 12 |
+| `HIGH` | 24 |
+| `MEDIUM` | 14 |
 | `LOW` | 1 |
 
 Recounted mechanically from the §4 index at `b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4` by ROADMAP-REC-01 after PR #305; the
 previous table (25 items) predated the `QAN-BL-PROD-*`, `QAN-BL-LAUNCH-*` and `QAN-BL-PRIV-01` admissions. The severity
 table counts all 34 rows, tombstones included. VPORT-02 (Draft PR #306) tombstones `QAN-BL-A11Y-01`, effective from that
-PR's merge; the 18 active (non-tombstone) items then split 8 `HIGH`, 9 `MEDIUM` and 1 `LOW`. Here they are in the
+PR's merge; the 18 active (non-tombstone) items then split 8 `HIGH`, 9 `MEDIUM` and 1 `LOW`. A3-01 (Draft PR, 2026-10-04) admits `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02` (all `DEFERRED — OWNED`): the register
+holds 39 items, 13 / 0 / 10 / 16 by status and 24 / 14 / 1 by severity, recounted mechanically. The 23 active items, in the
 backlog's own index order:
 
 | ID | Title | Owner | Severity | Status |
@@ -234,6 +236,11 @@ backlog's own index order:
 | `QAN-BL-LAUNCH-01` | Trusted Proxy / Edge / Origin Production Proof | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-01` | Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-01` | Native Push, OS Permission and Platform Delivery for the A3-01 Activity Spine | `A3-02 — Native Push, Permission & Platform Delivery Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-02` | No Proactive QANDEEL Gate and No Proactive Event Producer | `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-03` | No User-Requested Exact-Time Reminder Runtime and No Reminder Event Producer | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-04` | No Security / Sign-in / Account Event Source for Activity | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PRIV-02` | Export My Data Omits the Reader's Notifications & Activity Preferences and Context Mutes | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 
 Severity states the consequence *if an item is reopened*. It is not a priority or a schedule (backlog §2).
 An entry authorizes no implementation (BG-07).
@@ -328,10 +335,12 @@ integrity.
   - `QAN-BL-PRIV-01`, owned by `PRIV-EXPORT-01`.
 - **Current sequencing.** In the Product Owner's 9-stage execution map ([Project Map §5.1](QANDEEL_PROJECT_MAP.md)):
   - Stage 1 (Personal Core / W3 core) is **DONE FOR THE CURRENT EXECUTION SEQUENCE, WITH NAMED RESIDUALS**;
-  - Stage 2 (Final Visual Production Port) is **ACTIVE**: `VPORT-01` is **DONE**, and **`VPORT-02 — Timeline +
-    Orientation Chrome + P2 Final Coherence` is NEXT**;
-  - Stages 3–9 are **LATER**.
-  `VPORT-02` still opens only through its own Task Contract.
+  - Stage 2 (Final Visual Production Port) is **DONE / MERGED**: `VPORT-01` (PR #297) and `VPORT-02` (PR #306, merged as
+    `34ea439b98eecd5f22628f41749245f81bb2b9f8`);
+  - Stage 3 (Activity & Notifications Production) is **ACTIVE**: `A3-01 — Activity & Attention Core + In-App Production
+    Integration` is on a Draft PR (Product Copy Gate APPROVED; not merged), and `A3-02 — Native Push, Permission & Platform
+    Delivery Integration` is the named remaining Stage-3 owner (`QAN-BL-NOTIF-01`). Stage 3 is not complete;
+  - Stages 4–9 are **LATER**.
   `PROD-AUTH-01` and `PROD-DATA-01` stay `DEFERRED — OWNED` and are not promoted ahead of it.
 
 **W3-MEGA-S — Personal Controls & Settings Integration v1 (MERGED / CLOSED through PR #296 at
@@ -494,7 +503,9 @@ create an implementation task:
 | `QAN-SEC-01 — Pre-release Mobile Credential Security` | `QAN-BL-SEC-01`. Its reopen condition is "automatic before the first production-store release" | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `QAN-CTX-01 — Conversational Relevance Runtime` | `QAN-BL-CTX-01`. It owns the future runtime/client authority for item-level relation to the current conversation; no relevance-driven world behavior may be claimed before that contract exists | [P4-C1 §5–§6](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C1_SHELL_CHROME_DECISIONS_AND_LIVE_CONTEXT_CONTROLLED_AMENDMENT_v1.0.md); [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `QANDEEL — Lantern Gateway Identity Moment v1` | `QAN-BL-LANTERN-01`. Standalone future Brand / Motion task. P4 freezes only that the exceptional lantern identity moment is in v1; research, creative directions, motion, interaction choreography, implementation technology and proof wait until this task is explicitly opened | [P4-C2 §2](docs/canonical-authority/final-product-experience/p4/QANDEEL_P4C2_BRAND_SCOPE_VOICE_COPY_APP_OPS_PRODUCT_DECISIONS_v1.0.md); C3 expressive headroom §4; [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
-| `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | the remaining Stage-2 port: Timeline styling, Spine / Aperture, Return icons, Orientation Chrome visuals, navigation iconography, Call Rail. It inherits VPORT-01's three handoff notes. **NEXT**; it opens only through its own Task Contract | [VPORT-01 record §16](docs/e2e/QANDEEL_VPORT_01_LIVING_ANALYSIS_WORLD_PRODUCTION_VISUAL_PORT_v1.md) |
+| `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | the remaining Stage-2 port. **Merged through PR #306** | [VPORT-02 record](docs/e2e/QANDEEL_VPORT_02_TIMELINE_ORIENTATION_P2_FINAL_COHERENCE_IMPLEMENTATION_RECORD_v1.md) |
+| `A3-02 — Native Push, Permission & Platform Delivery Integration` | `QAN-BL-NOTIF-01`: APNs / FCM, device tokens, per-device evidence, the OS prompt, channels / categories, Lock Screen projection, badge, native Direct Entry, physical proof. The remaining Stage-3 owner | [A3-01 record §21](docs/e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) |
+| `PROACTIVE-EVT-01`; `REMINDER-EVT-01`; `ACCOUNT-SEC-EVT-01` | `QAN-BL-NOTIF-02` (the Proactive Gate + producer), `QAN-BL-NOTIF-03` (the requested-reminder runtime + producer), `QAN-BL-NOTIF-04` (the security / sign-in event source): each publishes through the A3-01 boundary | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `PROD-AUTH-01 — Auth Verification Path`; `PROD-DATA-01 — List/Fan-out Correction` | `QAN-BL-PROD-04` and `QAN-BL-PROD-05`, both `DEFERRED — OWNED`; PROD-AUTH-01 waits on the Product Owner's choice among O1–O3 | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `LAUNCH-EDGE-SECURITY-GATE`; `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-01` (edge / origin / real proxy topology) and `QAN-BL-LAUNCH-02` (keyed retired-identifier digest), Final Launch exit gates | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01` | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |

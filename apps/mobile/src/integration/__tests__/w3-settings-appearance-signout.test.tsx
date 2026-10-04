@@ -15,6 +15,7 @@ import { exchange, historyBody } from '../../conversation/__fixtures__/conversat
 import { CANONICAL_VISUAL } from '../../conversation/visual/canonical-visual.generated';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { settingsCopy } from '../../settings';
+import { notificationsCopy } from '../../activity';
 import { productSignInCopy } from '../auth-gateway';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
@@ -31,6 +32,9 @@ jest.mock('expo-status-bar', () => {
 const METRICS: Metrics = { frame: { x: 0, y: 0, width: 390, height: 844 }, insets: { top: 44, left: 0, right: 0, bottom: 34 } };
 const LANGUAGE = deviceProductLocale().language;
 const COPY = settingsCopy(LANGUAGE);
+// A3-01 re-anchor (validation only): «الإشعارات والنشاط» / Notifications & Activity is now a real group, placed where P1 §8.1
+// reserved it — after QANDEEL & Conversation. Every other group, and the absence of any placeholder, is unchanged.
+const NOTIFICATIONS = notificationsCopy(LANGUAGE).section;
 const DARK = CANONICAL_VISUAL.palettes.DARK.standard;
 const LIGHT = CANONICAL_VISUAL.palettes.LIGHT.standard;
 
@@ -197,12 +201,12 @@ describe('E2E-D-01 — the ONE General Settings destination, entered from Person
     await press(view, 'qandeel-settings-entry');
     const settings = within(view.getByTestId('qandeel-settings'));
     const headers = settings.getAllByRole('header').map((node) => (node.props.children as string));
-    expect(headers).toEqual([COPY.title, COPY.accountGroup, COPY.qandeelGroup, COPY.appearanceGroup, COPY.supportGroup]);
+    expect(headers).toEqual([COPY.title, COPY.accountGroup, COPY.qandeelGroup, NOTIFICATIONS, COPY.appearanceGroup, COPY.supportGroup]);
     const controls = [...settings.getAllByRole('button'), ...settings.getAllByRole('radio')].map((node) => node.props.accessibilityLabel as string).sort();
     const publicIdRow = [COPY.publicId.term, '@nightlamp27', COPY.publicId.available].join(', ');
     // W3-MEGA-S re-anchor (validation only): the Language row is a real control of the QANDEEL & Conversation group.
     const languageRow = [COPY.language.term, COPY.language.names[LANGUAGE]].join(', ');
-    expect(controls).toEqual([COPY.backName, publicIdRow, languageRow, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
+    expect(controls).toEqual([COPY.backName, publicIdRow, languageRow, NOTIFICATIONS, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
     for (const node of settings.getAllByRole('radio')) expect(style(node).minHeight).toBeGreaterThanOrEqual(44);
     expect(style(settings.getByTestId('qandeel-settings-back'))).toMatchObject({ width: 44, height: 44 });
     h.dispose();

@@ -126,6 +126,28 @@ export type {
   UnderstandingTheme,
 } from './understanding-api';
 export { UnderstandingApiClient } from './understanding-api';
+export type {
+  ActivityAttention,
+  ActivityAttentionOutcome,
+  ActivityAttentionSnapshot,
+  ActivityCategory,
+  ActivityContextKind,
+  ActivityIndicators,
+  ActivityItem,
+  ActivityOpenOutcome,
+  ActivityPage,
+  ActivityPreferences,
+  ActivityPreferencesInput,
+  ActivityPreferencesOutcome,
+  BilingualText,
+  DirectEntryDestination,
+  DisclosureLevel,
+  InterruptionCandidate,
+  LockSubject,
+  ProactiveChoice,
+  SettingsSection,
+} from './activity-api';
+export { ActivityApiClient } from './activity-api';
 
 export type {
   BootstrapFailure,
