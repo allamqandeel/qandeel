@@ -82,6 +82,9 @@ adb shell pm path "$PKG" >/dev/null 2>&1 || { echo "READINESS: $PKG is not insta
 # The readiness walk never touches notifications, so it leaves no OS permission behind for an A3-02 leg.
 ready=0
 for attempt in 1 2 3; do
+  # A shade or system dialog left open over the app (seen on a freshly cold-booted emulator) hides it from the walk.
+  adb shell cmd statusbar collapse >/dev/null 2>&1 || true
+  adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
   if maestro test --debug-output "$OUT/debug-readiness-$attempt" "$FLOWS/a3-01-readiness.yaml"; then
     echo "READINESS: app cold paths walked (attempt $attempt)" | tee -a "$OUT/readiness.txt"
     ready=1
