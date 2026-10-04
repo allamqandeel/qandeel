@@ -5,7 +5,7 @@
 **Baseline:** `a2ec76507e43c82dcabf4194053e318c2fb9d509` (the merge of PR #307, A3-01)
 **Branch:** `feat/a3-02-native-push-platform-delivery`
 **PR:** Draft — see §1
-**Status:** **`A3-02 IMPLEMENTED — PRODUCT COPY GATE PROPOSED (§24a, AWAITING THE PRODUCT OWNER) — DEVICE PROOF / GITHUB CI: SEE §16–§19, §24 — DO NOT MERGE`**. Claude does not merge it.
+**Status:** **`A3-02 IMPLEMENTED — PRODUCT COPY GATE APPROVED (§24a) — DEVICE PROOF / GITHUB CI: SEE §16–§19, §24 — DO NOT MERGE`**. Claude does not merge it.
 
 > A3-01 decides what may interrupt and what the reader sees. A3-02 delivers that eligible intent to the reader's own
 > Android / iOS devices when the app is not already handling it in-app — through the platforms' own push services, at
@@ -354,7 +354,7 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 | G-08 | Isolated proof legs + build once | Task §10 | 2 | §18 |
 | G-09 | Android never-asked = denied | device proof | 3 | fixed (§8) |
 | G-10 | Icon meta-data stripped by plugin order | generated manifest | 3 | fixed (§5) |
-| G-11 | Permission-education copy unapproved (`AUDIT_OWNED`) | registry; NOTIF-01 Exit Gate | 3 | A3-02 Product Copy Gate (§24a) — resolved inside this task |
+| G-11 | Permission-education copy unapproved (`AUDIT_OWNED`) | registry; NOTIF-01 Exit Gate | 3 | **fixed in A3-02: the Product Copy Gate (§24a), APPROVED by the Product Owner and bound byte-exact** |
 | G-12 | Education moments at first Shared entry / entering Introductions | P3 §11 | 5 | Stage 4 / Stage 6 (A3-01 G-15 / G-17 owners). Exit Gate: those surfaces call `push.offer(...)` at first entry |
 | G-13 | Physical device proof, credentials provisioning | Task §12 | 5 | `QAN-BL-NOTIF-05` (§20) |
 | G-14 | Producers (Proactive, Reminder, Security) | A3-01 | 4 | `QAN-BL-NOTIF-02` / `03` / `04` |
@@ -369,8 +369,8 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 
 Stage 3 closes only if A3-01 + A3-02 are production-complete under the contract: A3-01 merged ✔; native permission
 boundary, registration / token lifecycle, Android / iOS paths, Direct Entry, retry / dedupe / evidence implemented ✔;
-physical-device items named with an owner ✔; `QAN-BL-NOTIF-01` tombstoned ✔; orphan gaps 0 ✔; **the Copy Gate approval
-(§24a) and green GitHub CI on the exact final head (§24) are the remaining conditions.** Stage 3 closing does not mean
+physical-device items named with an owner ✔; `QAN-BL-NOTIF-01` tombstoned ✔; orphan gaps 0 ✔; the Copy Gate APPROVED (§24a) ✔; **green GitHub CI on the exact final head (§24) is the remaining
+condition.** Stage 3 closing does not mean
 production Activity is populated: producers are separately owned. The next numbered direction is **Stage 4 — Shared
 World Product Integration**.
 
@@ -378,16 +378,19 @@ World Product Integration**.
 
 PENDING — filled from GitHub truth on the final head.
 
-## 24a. A3-02 Product Copy Gate — PROPOSED, AWAITING THE PRODUCT OWNER
+## 24a. A3-02 Product Copy Gate — APPROVED by the Product Owner
 
 The permission-education sheet is `AUDIT_OWNED` (P4-C2 §5; E2E-E-10 `PRODUCT OWNER DECISION REQUIRED`), and the
-NOTIF-01 Exit Gate requires it approved before the OS prompt ships. Proposed **unchanged** from P3-A's own DIRECTION /
-PROOF wording (casing per P4-C2 §5). Bound in `apps/mobile/src/push/copy.ts` (`PUSH_COPY_GATE`, status PROPOSED).
+NOTIF-01 Exit Gate requires it approved before the OS prompt ships. Proposed from P3-A's own DIRECTION / PROOF wording;
+the Product Owner **approved with edits** to `eduTitle` (Arabic: «خلّيني») and `eduBody` (both languages); the other three
+rows were approved as proposed. Bound **byte-exact** in `apps/mobile/src/push/copy.ts` (`PUSH_COPY_GATE`, status
+`APPROVED BY THE PRODUCT OWNER — A3-02 PRODUCT COPY GATE`), and pinned row by row by the A3-02 contract §9. No other
+copy changed.
 
-| Key | Where | Arabic — PROPOSED | English — PROPOSED |
+| Key | Where | Arabic — APPROVED | English — APPROVED |
 |---|---|---|---|
-| `eduTitle` | sheet heading | خليني أوصلك لما يكون في حاجة تستاهل | Let me reach you when it's worth it |
-| `eduBody` | sheet body | مش هبعتلك علشان أرجعك للتطبيق وخلاص. هستخدم الإشعارات لما يكون في سبب له قيمة ليك، وتقدر تقللها أو توقفها في أي وقت. | I won't notify you just to pull you back into the app. I'll use notifications when there's a reason that matters to you, and you can reduce or turn them off anytime. |
+| `eduTitle` | sheet heading | خلّيني أوصلك لما يكون في حاجة تستاهل | Let me reach you when it's worth it |
+| `eduBody` | sheet body | مش هبعتلك إشعار لمجرد إني أرجعك للتطبيق. هستخدم الإشعارات بس لما يكون في حاجة مهمة ليك، وتقدر تقللها أو توقفها في أي وقت. | I won't notify you just to bring you back to the app. I'll use notifications only when there's something that matters to you, and you can get fewer notifications or turn them off anytime. |
 | `eduAllow` | sheet primary act → the OS prompt; also the Device Notification Settings act before any ask | السماح بالإشعارات | Allow notifications |
 | `eduNotNow` | sheet secondary act | مش دلوقتي | Not now |
 | `notNowNote` | said once after "Not now" | تمام. النشاط هيفضل يظهر هنا جوه التطبيق. | Okay. Activity will keep showing here in the app. |

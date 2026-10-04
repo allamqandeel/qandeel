@@ -1192,7 +1192,7 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   column exists); user-level attention untouched; Quiet Hours / Snooze deferral re-evaluated with at most one item per
   reader per pass; the device's IANA zone persisted; the bounded projection rendered at `disclosureLevel` with the
   approved Lock Screen words and L0 on a neutral channel; OS permission requested only after QANDEEL's education at a
-  legitimate moment (its copy through the A3-02 Product Copy Gate); native Direct Entry through Activity's `open`;
+  legitimate moment (its copy through the A3-02 Product Copy Gate, APPROVED by the Product Owner); native Direct Entry through Activity's `open`;
   device registration, rotation, detach, detach-others, invalidation and erasure (migration `0137`, real-PostgreSQL
   verifier); FCM HTTP v1 and APNs HTTP/2 directly, no relay; Android channels, no iOS category, no badge. Proved by unit,
   integration and database tests and on Android / iOS emulators through isolated proof legs. Its physical-evidence clause

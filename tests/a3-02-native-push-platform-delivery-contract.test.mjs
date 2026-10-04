@@ -156,7 +156,22 @@ test('8 — the Lock Screen words are the approved registry bytes; L0 is one sen
 
 test('9 — permission education: the copy authority is explicit; nothing asks at launch; Not now is remembered', () => {
   const copy = read(`${MOBILE}/copy.ts`);
-  assert.match(copy, /status: '(PROPOSED — A3-02 PRODUCT COPY GATE — AWAITING THE PRODUCT OWNER|APPROVED BY THE PRODUCT OWNER — A3-02 PRODUCT COPY GATE)'/u);
+  assert.match(copy, /status: 'APPROVED BY THE PRODUCT OWNER — A3-02 PRODUCT COPY GATE' as PushCopyGateStatus,/u, 'the Copy Gate is APPROVED');
+  // The five rows the Product Owner approved (record §24a), byte-exact.
+  const APPROVED = {
+    eduTitle: ['خلّيني أوصلك لما يكون في حاجة تستاهل', "Let me reach you when it's worth it"],
+    eduBody: ['مش هبعتلك إشعار لمجرد إني أرجعك للتطبيق. هستخدم الإشعارات بس لما يكون في حاجة مهمة ليك، وتقدر تقللها أو توقفها في أي وقت.',
+      "I won't notify you just to bring you back to the app. I'll use notifications only when there's something that matters to you, and you can get fewer notifications or turn them off anytime."],
+    eduAllow: ['السماح بالإشعارات', 'Allow notifications'],
+    eduNotNow: ['مش دلوقتي', 'Not now'],
+    notNowNote: ['تمام. النشاط هيفضل يظهر هنا جوه التطبيق.', 'Okay. Activity will keep showing here in the app.'],
+  };
+  for (const [key, [ar, en]] of Object.entries(APPROVED)) {
+    const row = copy.match(new RegExp(`${key}: \\{\\s*ar: '([^']*)',\\s*en: (['"])(.*?)\\2,?\\s*\\}`, 'u'));
+    assert.ok(row, `${key} is bound`);
+    assert.equal(row[1], ar, `${key} Arabic is the approved bytes`);
+    assert.equal(row[3], en, `${key} English is the approved bytes`);
+  }
   for (const key of ['eduTitle', 'eduAllow', 'eduNotNow', 'notNowNote']) assert.equal(registry(`p3.${key}`).st, 'AUDIT_OWNED', `p3.${key} was audit-owned before this gate`);
   const controller = stripComments(read(`${MOBILE}/push-controller.ts`));
   assert.match(controller, /async allow\(\) \{\n\s+if \(!live\(\) \|\| !state\.education\) return;/u, 'the OS prompt only follows the education');

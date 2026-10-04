@@ -10,8 +10,8 @@
  *   - A3-02 PRODUCT COPY GATE — `PUSH_COPY_GATE` below: the permission-education sheet and its "Not now" note. Their
  *     registry status is `AUDIT_OWNED` (P4-C2 §5 handed the sheet to the End-to-End audit; E2E-E-10 is
  *     `PRODUCT OWNER DECISION REQUIRED`), and the backlog Exit Gate of QAN-BL-NOTIF-01 requires them approved BEFORE the
- *     OS prompt ships. The rows below are P3-A's own DIRECTION / PROOF wording, PROPOSED to the Product Owner unchanged
- *     except the P4-C2 §5 casing rule; the status says so until the Product Owner decides (record §24a).
+ *     OS prompt ships. The rows below are APPROVED BY THE PRODUCT OWNER, bound byte-exact as given (record §24a): the
+ *     title and body as edited by the Product Owner, the other three rows as proposed from P3-A's own wording.
  *
  * The OS permission prompt itself is the platform's and is never drawn or imitated here (P3 §11, P3-A C-PERM).
  */
@@ -23,14 +23,14 @@ export type PushCopyGateStatus =
 
 /** A3-02 Product Copy Gate (record §24a). */
 export const PUSH_COPY_GATE = Object.freeze({
-  status: 'PROPOSED — A3-02 PRODUCT COPY GATE — AWAITING THE PRODUCT OWNER' as PushCopyGateStatus,
+  status: 'APPROVED BY THE PRODUCT OWNER — A3-02 PRODUCT COPY GATE' as PushCopyGateStatus,
   rows: Object.freeze({
     /** p3.eduTitle — the education sheet's heading (QANDEEL speaks in the first person, P3-A EDU). */
-    eduTitle: { ar: 'خليني أوصلك لما يكون في حاجة تستاهل', en: "Let me reach you when it's worth it" },
+    eduTitle: { ar: 'خلّيني أوصلك لما يكون في حاجة تستاهل', en: "Let me reach you when it's worth it" },
     /** p3.eduBody — what notifications are for, and that they can be reduced or turned off. */
     eduBody: {
-      ar: 'مش هبعتلك علشان أرجعك للتطبيق وخلاص. هستخدم الإشعارات لما يكون في سبب له قيمة ليك، وتقدر تقللها أو توقفها في أي وقت.',
-      en: "I won't notify you just to pull you back into the app. I'll use notifications when there's a reason that matters to you, and you can reduce or turn them off anytime.",
+      ar: 'مش هبعتلك إشعار لمجرد إني أرجعك للتطبيق. هستخدم الإشعارات بس لما يكون في حاجة مهمة ليك، وتقدر تقللها أو توقفها في أي وقت.',
+      en: "I won't notify you just to bring you back to the app. I'll use notifications only when there's something that matters to you, and you can get fewer notifications or turn them off anytime.",
     },
     /** p3.eduAllow — hands over to the platform's own prompt. Also the Device Notification Settings act before any ask. */
     eduAllow: { ar: 'السماح بالإشعارات', en: 'Allow notifications' },
