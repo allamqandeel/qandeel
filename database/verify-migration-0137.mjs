@@ -85,6 +85,8 @@ async function publish(user, o = {}) {
   return answer.item_id;
 }
 
+// The migration's own policy (0137 header): at most this many live registrations per account.
+const LIVE_REGISTRATION_CEILING = 10;
 const SYNC = 'SELECT * FROM public.sync_own_push_device_v1($1::uuid, $2, $3, $4, $5, $6, $7, $8)';
 async function sync(user, installation, o = {}) {
   const d = { platform: 'ANDROID', token: `fcm-${randomUUID()}`, env: null, permission: 'GRANTED', zone: 'Africa/Cairo', locale: 'ar', version: '0.1.0', ...o };
@@ -247,7 +249,7 @@ async function verifyRegistration() {
     assert.ok(await count("SELECT count(*) AS n FROM public.push_devices WHERE user_id = $1 AND status = 'ACTIVE'", [bob]) >= 2,
       'another account’s registrations are untouched');
     for (let i = 0; i < 12; i += 1) await sync(carol, randomUUID());
-    assert.equal(await count("SELECT count(*) AS n FROM public.push_devices WHERE user_id = $1 AND status = 'ACTIVE'", [carol]), 10);
+    assert.equal(await count("SELECT count(*) AS n FROM public.push_devices WHERE user_id = $1 AND status = 'ACTIVE'", [carol]), LIVE_REGISTRATION_CEILING);
   } finally {
     await client.query('ROLLBACK');
   }
