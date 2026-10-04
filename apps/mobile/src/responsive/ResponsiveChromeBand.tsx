@@ -64,10 +64,19 @@ export interface ResponsiveChromeBandProps {
   readonly support: SupportComposition;
   readonly children: ReactNode;
   readonly testID?: string;
+  /**
+   * VPORT-02 — the room this band yields to the temporal orientation line in the Timeline row above it (the G3
+   * T-11 / T-12 controlled amendment §3 rule 3: OrientationChrome yields first). Stacked only: across, the line sits
+   * inside the instrument's own column and takes nothing from this one. What no longer fits stays reachable inside
+   * this band's scroller, exactly as before.
+   */
+  readonly yieldPoints?: number;
 }
 
-export function ResponsiveChromeBand({ chrome, support, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID }: ResponsiveChromeBandProps) {
+export function ResponsiveChromeBand({ chrome, support, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID, yieldPoints = 0 }: ResponsiveChromeBandProps) {
   const across = support.arrangement === 'SIDE_BY_SIDE';
+  // The line is paid for out of this band's allocation and nothing else; never more than the band holds.
+  const yielded = across ? 0 : Math.min(Math.max(0, yieldPoints), support.chromePoints);
   return (
     <View
       testID={testID}
@@ -82,8 +91,8 @@ export function ResponsiveChromeBand({ chrome, support, children, testID = RESPO
           // reading order, which is the right-hand side in Arabic and the left-hand side in English.
           marginStart: across ? support.gapPoints : 0,
           width: across ? support.chromeWidthPoints : undefined,
-          height: support.chromePoints,
-          minHeight: Math.min(CHROME_FLOOR_POINTS, support.chromePoints),
+          height: support.chromePoints - yielded,
+          minHeight: Math.min(CHROME_FLOOR_POINTS, support.chromePoints - yielded),
         },
       ]}
       // The band claims no touch of its own, exactly as the chrome inside it does not: a press that

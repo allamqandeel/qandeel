@@ -218,7 +218,17 @@ test('no reusable surface takes the display as its authority', () => {
     .filter(([, text]) => /onLayout/u.test(text))
     .map(([file]) => file)
     .sort();
-  assert.deepEqual(measuring, ['ResponsiveMapFrame.tsx', 'ResponsiveSurface.tsx', 'useResponsiveSurface.ts'], 'measurement lives in one owner');
+  // VPORT-02 re-anchor (the G3 T-11 / T-12 controlled amendment, Decision B). The Timeline row now places T-08's
+  // temporal orientation line at its top, and the amendment's yield rule (§3 rule 3: OrientationChrome yields first)
+  // needs the line's height, which only its own layout knows. So the row measures exactly that one child it places —
+  // never the display, never a width, never a breakpoint — and the measurement still lives inside the responsive
+  // owner. Everything else this test protects is unchanged and still asserted.
+  assert.deepEqual(measuring, ['ResponsiveMapFrame.tsx', 'ResponsiveSurface.tsx', 'ResponsiveTimelineRow.tsx', 'useResponsiveSurface.ts'], 'measurement lives in one owner');
+  assert.match(
+    responsiveCode['ResponsiveTimelineRow.tsx'],
+    /onLayout=\{\(event: LayoutChangeEvent\) => onLineHeight\?\.\(Math\.ceil\(event\.nativeEvent\.layout\.height\)\)\}/u,
+    'the row measures only the height of the temporal line it places',
+  );
   assert.doesNotMatch(chromeText, /onLayout/u, 'the chrome measures nothing');
 });
 

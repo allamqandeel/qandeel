@@ -462,6 +462,19 @@ export const spatialSentence = (language: ChromeLanguage, spatial: SpatialChrome
 /** Everything a historical reader may be told about Live: that it moved on, and nothing about where. */
 export const liveSentence = (language: ChromeLanguage, live: LiveChrome): string | null => pack(language).live(live);
 
+/**
+ * VPORT-02 — the temporal orientation line (G3 T-11 / T-12 amendment §2 item 3), built only from the sentences above:
+ * the preview sentence while a preview is open; while PINNED, the pinned sentence with its second sentence only when the
+ * conversation did continue; following Live, nothing. No word is added or rewritten — the two sentences are joined as
+ * the one line they already were in the chrome.
+ */
+export const temporalLineSentence = (language: ChromeLanguage, temporal: TemporalChrome, live: LiveChrome): string | null => {
+  if (temporal.preview.status === 'PREVIEWING') return previewSentence(language, temporal.preview);
+  if (temporal.mode !== 'PINNED') return null;
+  const continued = liveSentence(language, live);
+  return continued === null ? temporalSentence(language, temporal) : [temporalSentence(language, temporal), continued].join(' ');
+};
+
 /** One step of the disclosed route, as its structural role. The identity it names is never spoken. */
 export const contextStepWord = (language: ChromeLanguage, step: ContextStep): string => pack(language).step[step.kind];
 

@@ -108,5 +108,8 @@ export { useAuthorityGeneration } from './runtime/authority';
 export type { DerivedValue, SharedValue } from './runtime/bridge';
 export { handoffToProduct } from './runtime/bridge';
 
+// VPORT-02 (`QAN-BL-A11Y-01`): the ONE live reader of the platform's Reduce Motion setting.
+export { reduceMotionReadersForTests, resetReduceMotionForTests, useReduceMotion } from './runtime/reduce-motion';
+
 export type { MutableBox } from './runtime/box';
 export { createBox } from './runtime/box';

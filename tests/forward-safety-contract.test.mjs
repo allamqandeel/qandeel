@@ -328,7 +328,9 @@ test('authorized T-10 motion, T-11 responsive work and T-12 shell integration br
   // that mutation has moved to the refused half below, where it belongs — the authorized claim is
   // demonstrated with the presentation change T-11 actually makes.
   patch(`${chrome}/ReturnControls.tsx`,
-    (text) => text.replace('  pressed: { opacity: 0.6 },', "  wrapped: { flexDirection: 'row', flexWrap: 'wrap' },\n  pressed: { opacity: 0.6 },"),
+    // VPORT-02 re-anchor: the pressed opacity swap became E1R's ground wash, so this authorized presentation change is
+    // anchored on the group style that is still there. The claim it demonstrates is unchanged.
+    (text) => text.replace("  group: { flexDirection: 'column', rowGap: 8 },", "  wrapped: { flexDirection: 'row', flexWrap: 'wrap' },\n  group: { flexDirection: 'column', rowGap: 8 },"),
     'wrapped:');
   // T-12: the app shell mounts the chrome — through the public barrel, as the boundary requires.
   patch('apps/mobile/src/shell/FoundationShell.tsx',
@@ -455,7 +457,8 @@ function applyEveryAuthorizedChange() {
   // and the shape it took is a presentation arrangement rather than a window measurement. Reading
   // the display here is now a defect, and is proven refused in the negative half.
   patch('apps/mobile/src/orientation-chrome/ReturnControls.tsx',
-    (text) => text.replace('  pressed: { opacity: 0.6 },', "  wrapped: { flexDirection: 'row', flexWrap: 'wrap' },\n  pressed: { opacity: 0.6 },"),
+    // VPORT-02 re-anchor (see the scenario above): anchored on the group style, not the retired pressed opacity.
+    (text) => text.replace("  group: { flexDirection: 'column', rowGap: 8 },", "  wrapped: { flexDirection: 'row', flexWrap: 'wrap' },\n  group: { flexDirection: 'column', rowGap: 8 },"),
     'wrapped:');
   patch('apps/mobile/src/shell/FoundationShell.tsx',
     (text) => `import { OrientationChrome } from '../orientation-chrome';\n${text}`,

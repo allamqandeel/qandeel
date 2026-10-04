@@ -30,7 +30,6 @@ import {
   cancelAnimation,
   useAnimatedReaction,
   useDerivedValue,
-  useReducedMotion,
   useSharedValue,
   withDelay,
   withSequence,
@@ -39,6 +38,7 @@ import {
 } from 'react-native-reanimated';
 
 import { MOTION_DURATIONS_MS, QANDEEL_EASE_OUT, REDUCED_RESOLVE_FROM_OPACITY } from '../tokens';
+import { useReduceMotion } from '../runtime/reduce-motion';
 import { handoffToProduct, type DerivedValue, type SharedValue } from '../runtime/bridge';
 import {
   RESIDUAL_AT_REST,
@@ -160,7 +160,12 @@ export interface PresentationCameraBinding {
    * replaced. Read at a bounded boundary — a notification, never a frame.
    */
   readonly epoch: SharedValue<number>;
-  /** Whether this device asked for reduced motion. Read once at start, exactly as the platform reports it. */
+  /**
+   * Whether the platform asks for reduced motion right now.
+   *
+   * VPORT-02 (`QAN-BL-A11Y-01`): read from the ONE live reader, so a reader who changes the setting mid-session gets
+   * the reduced plan on the next act without a restart. It was Reanimated's launch-only value, which never updated.
+   */
   readonly reducedMotion: boolean;
   /** UI runtime: a finger arrives. Cancels the running settle and takes the frame. */
   readonly grab: () => void;
@@ -206,7 +211,7 @@ export interface PresentationCameraBinding {
 
 export function usePresentationCamera(options: PresentationCameraOptions): PresentationCameraBinding {
   const { center, diagonalPoints, onTravelCorridorRetired, onPresentationAdvanced, advancePoints } = options;
-  const reducedMotion = useReducedMotion();
+  const reducedMotion = useReduceMotion();
 
   const tx = useSharedValue(0);
   const ty = useSharedValue(0);
@@ -317,9 +322,12 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
   const resolveToRest = useCallback(() => {
     epoch.set(epoch.get() + 1);
     const duration = reducedMotion ? 0 : MOTION_DURATIONS_MS.localResolve;
-    tx.set(withTiming(0, { duration, easing: EASE_OUT }));
-    ty.set(withTiming(0, { duration, easing: EASE_OUT }));
-    zoom.set(withTiming(1, { duration, easing: EASE_OUT }));
+    // `Never`, here and on every animation below: the plan already read the LIVE setting, so its duration is the one
+    // authority. Left on Reanimated's default (`System`), a launch-time Reduce Motion would still jump this resolve to
+    // its end after the reader turned the setting off mid-session (`QAN-BL-A11Y-01`).
+    tx.set(withTiming(0, { duration, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }));
+    ty.set(withTiming(0, { duration, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }));
+    zoom.set(withTiming(1, { duration, easing: EASE_OUT, reduceMotion: ReduceMotion.Never }));
   }, [epoch, reducedMotion, tx, ty, zoom]);
 
   const reset = useCallback(() => {
@@ -441,13 +449,13 @@ export function usePresentationCamera(options: PresentationCameraOptions): Prese
       ty.set(rebased.ty);
       zoom.set(rebased.zoom);
       if (plan.translationMs > 0) {
-        const spring = { duration: plan.translationMs, dampingRatio: plan.dampingRatio };
+        const spring = { duration: plan.translationMs, dampingRatio: plan.dampingRatio, reduceMotion: ReduceMotion.Never };
         tx.set(withDelay(plan.spatialDelayMs, withSpring(0, spring)));
         ty.set(withDelay(plan.spatialDelayMs, withSpring(0, spring)));
       }
       if (plan.zoomMs > 0) {
         zoom.set(
-          withDelay(plan.spatialDelayMs + plan.zoomDelayMs, withSpring(1, { duration: plan.zoomMs, dampingRatio: plan.dampingRatio })),
+          withDelay(plan.spatialDelayMs + plan.zoomDelayMs, withSpring(1, { duration: plan.zoomMs, dampingRatio: plan.dampingRatio, reduceMotion: ReduceMotion.Never })),
         );
       }
       return plan;

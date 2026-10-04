@@ -177,9 +177,19 @@ test('App language: the system’s own setting — no in-app switch, no stored l
 test('Accessibility: no in-app accessibility switch; Reduce Motion is followed mid-session where the surfaces read it', () => {
   const settingsCode = readdirSync(new URL(`${SETTINGS}/`, root)).filter((name) => /\.tsx?$/u.test(name)).map((name) => code(read(`${SETTINGS}/${name}`))).join('\n');
   guards('no-accessibility-switch', settingsCode, (text) => !/<Switch\b|reduceMotion(?:Preference|Override)|textSizePreference|boldTextPreference/u.test(text), '<Switch value={reduceMotionOverride} />');
-  const hook = code(read('apps/mobile/src/conversation/visual/reduce-motion.ts'));
+  // VPORT-02 re-anchor (QAN-BL-A11Y-01): the ONE reader moved, unchanged, into the T-10 motion owner so the camera and
+  // temporal hooks can read it too. The W1A / W3 path is now a re-export of it, never a second store or listener.
+  const hook = code(read('apps/mobile/src/motion/runtime/reduce-motion.ts'));
   assert.match(hook, /AccessibilityInfo\.addEventListener\('reduceMotionChanged'/u);
-  for (const file of ['apps/mobile/src/integration/composition/DepthComposition.tsx', 'apps/mobile/src/conversation/ConversationSurface.tsx']) {
+  const legacyPath = code(read('apps/mobile/src/conversation/visual/reduce-motion.ts'));
+  assert.match(legacyPath, /export \{ resetReduceMotionForTests, useReduceMotion \} from '\.\.\/\.\.\/motion\/runtime\/reduce-motion';/u);
+  assert.doesNotMatch(legacyPath, /addEventListener/u, 'the W1A / W3 path holds no second platform listener');
+  for (const file of [
+    'apps/mobile/src/integration/composition/DepthComposition.tsx',
+    'apps/mobile/src/conversation/ConversationSurface.tsx',
+    'apps/mobile/src/motion/presentation-camera/usePresentationCamera.ts',
+    'apps/mobile/src/temporal-navigation/motion/useTemporalMotion.ts',
+  ]) {
     const text = code(read(file));
     assert.match(text, /useReduceMotion\(\)/u, `${file} follows the platform setting mid-session`);
     assert.doesNotMatch(text, /useReducedMotion\(\)/u, `${file} no longer reads the launch-only value`);

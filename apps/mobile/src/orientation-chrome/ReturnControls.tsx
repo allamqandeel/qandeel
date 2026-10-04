@@ -45,6 +45,9 @@
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAnalysisInk, useAnalysisType, type AnalysisInk } from '../analysis-visual';
+import { withAlpha } from '../conversation/visual/theme';
+
 import type { MapInspectionContext, MapProjectionRequest } from '../map';
 import {
   backOneStep,
@@ -162,6 +165,9 @@ export function ReturnControls({
     [surface, orientation, context, exactReturnTarget, liveContext, onOutcome],
   );
 
+  // VPORT-02: the Analysis ink, read once for the group.
+  const ink = useAnalysisInk();
+
   // Nothing meaningful to offer is a legitimate answer, and an empty group is not a surface.
   if (orientation.offered.length === 0) return null;
 
@@ -180,7 +186,7 @@ export function ReturnControls({
       accessibilityRole="none"
     >
       {orientation.offered.map((candidate) => (
-        <ReturnControl key={candidate.id} language={language} opportunity={candidate} onPress={run} paired={arrangement === 'PAIRED'} />
+        <ReturnControl key={candidate.id} language={language} opportunity={candidate} onPress={run} paired={arrangement === 'PAIRED'} ink={ink} />
       ))}
     </View>
   );
@@ -192,6 +198,7 @@ interface ReturnControlProps {
   readonly onPress: (id: ReturnOpportunityId) => void;
   /** Whether this control shares its row. Layout only: the act, its words and its target are the same. */
   readonly paired: boolean;
+  readonly ink: AnalysisInk;
 }
 
 /**
@@ -208,12 +215,15 @@ interface ReturnControlProps {
  * The pressed state is a static opacity swap, not an animation: no duration, no easing and no
  * animation driver. Motion is T-10's.
  */
-function ReturnControl({ language, opportunity, onPress, paired }: ReturnControlProps) {
+function ReturnControl({ language, opportunity, onPress, paired, ink }: ReturnControlProps) {
   const words = returnActWords(language, opportunity.id);
+  const type = useAnalysisType();
   return (
     <Pressable
       testID={`${RETURN_CONTROLS_TEST_ID}:${opportunity.id}`}
-      style={({ pressed }) => [styles.control, paired ? styles.pairedControl : null, pressed ? styles.pressed : null]}
+      // VPORT-02: PRESSED belongs to the ground (E1R; P2 F-P2-06) — the pressed ink at its token presence under the
+      // words, never a fade of the words themselves. Still static: no duration, no easing, no driver.
+      style={({ pressed }) => [styles.control, paired ? styles.pairedControl : null, pressed ? { backgroundColor: withAlpha(ink.pressedInk, ink.pressedPresence) } : null]}
       // Horizontal only. The controls are stacked, so a vertical slop would make adjacent hit areas
       // overlap and turn a near-miss into the wrong act; the 44pt minimum already covers the
       // vertical axis, and the group's own gap keeps the targets apart. Symmetric, so it is the
@@ -224,8 +234,8 @@ function ReturnControl({ language, opportunity, onPress, paired }: ReturnControl
       accessibilityHint={words.hint}
       onPress={() => onPress(opportunity.id)}
     >
-      <Text style={styles.label}>{words.label}</Text>
-      <Text style={styles.hint}>{words.hint}</Text>
+      <Text style={[styles.label, type('action'), { color: ink.primary }]}>{words.label}</Text>
+      <Text style={[styles.hint, type('metadata'), { color: ink.secondary }]}>{words.hint}</Text>
     </Pressable>
   );
 }
@@ -245,14 +255,13 @@ const styles = StyleSheet.create({
   // text size and under Arabic wording that runs longer than the English; 44 is the platform
   // minimum for a comfortable target. Growing downwards can never overlap a sibling, because the
   // group lays them out in a column with a gap.
-  control: { minHeight: 44, justifyContent: 'center', paddingVertical: 8 },
+  control: { minHeight: 44, justifyContent: 'center', paddingVertical: 8, borderRadius: 12 },
   // A basis under half the row plus the 8pt gap, so exactly two share a line and a third wraps;
   // `flexGrow` lets a lone control on the last line take the whole measure rather than half of it.
   // No `width`, no `maxWidth` and no `numberOfLines`: the cell is a floor for the words, never a
   // ceiling, so the control still grows downwards to contain the longest Arabic wording at the
   // largest text size.
   pairedControl: { flexBasis: '48%', flexGrow: 1 },
-  pressed: { opacity: 0.6 },
   label: { fontSize: 15, lineHeight: 24, fontWeight: '600' },
   hint: { fontSize: 13, lineHeight: 21 },
 });

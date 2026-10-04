@@ -37,6 +37,9 @@
 import { useCallback } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useAnalysisInk, useAnalysisType } from '../analysis-visual';
+import { withAlpha } from '../conversation/visual/theme';
+
 import { switchContext, type MapActionOutcome, type MapInspectionContext } from '../map';
 import type { CanonicalStore } from '../state';
 import {
@@ -63,6 +66,9 @@ export interface InspectionOrientationProps {
 
 export function InspectionOrientation({ store, language, inspection, context, mapContext, onOutcome }: InspectionOrientationProps) {
   const render = inspection.render;
+  // VPORT-02: the Analysis ink and type; the region's words, order and routes are unchanged.
+  const ink = useAnalysisInk();
+  const type = useAnalysisType();
 
   const choose = useCallback(
     (ordinal: number) => {
@@ -106,12 +112,12 @@ export function InspectionOrientation({ store, language, inspection, context, ma
     >
       {/* Text only. It is read and heard, never pressed, so it intercepts nothing. */}
       <View pointerEvents="none">
-        <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:statement`} style={styles.statement}>
+        <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:statement`} style={[styles.statement, type('supporting'), { color: ink.primary }]}>
           {inspectionSentence(language, render)}
         </Text>
 
         {path === null ? null : (
-          <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:lineage`} style={styles.lineage}>
+          <Text testID={`${INSPECTION_ORIENTATION_TEST_ID}:lineage`} style={[styles.lineage, type('metadata'), { color: ink.secondary }]}>
             {path}
           </Text>
         )}
@@ -130,10 +136,10 @@ export function InspectionOrientation({ store, language, inspection, context, ma
             seen and heard, which is what a sentence explaining the chooser is for.
           */}
           <View pointerEvents="none">
-            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:title`} style={styles.choiceTitle}>
+            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:title`} style={[styles.choiceTitle, type('supporting'), { color: ink.primary }]}>
               {contextChoiceTitle(language)}
             </Text>
-            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:ordering`} style={styles.ordering}>
+            <Text testID={`${CONTEXT_CHOICE_TEST_ID}:ordering`} style={[styles.ordering, type('metadata'), { color: ink.tertiary }]}>
               {contextOrderingNote(language)}
             </Text>
           </View>
@@ -141,7 +147,7 @@ export function InspectionOrientation({ store, language, inspection, context, ma
             <Pressable
               key={option.ordinal}
               testID={`${CONTEXT_CHOICE_TEST_ID}:option:${option.ordinal}`}
-              style={({ pressed }) => [styles.option, pressed ? styles.pressed : null]}
+              style={({ pressed }) => [styles.option, pressed ? { backgroundColor: withAlpha(ink.pressedInk, ink.pressedPresence) } : null]}
               // Horizontal only: the options are stacked, so vertical slop would overlap them.
               hitSlop={HORIZONTAL_SLOP}
               accessibilityRole="button"
@@ -151,7 +157,7 @@ export function InspectionOrientation({ store, language, inspection, context, ma
               accessibilityState={{ selected: option.current }}
               onPress={() => choose(option.ordinal)}
             >
-              <Text style={styles.optionLabel}>{contextChoiceLabel(language, option.current, option.boundAtMoment)}</Text>
+              <Text style={[styles.optionLabel, type('action'), { color: option.current ? ink.selectedInk : ink.primary }]}>{contextChoiceLabel(language, option.current, option.boundAtMoment)}</Text>
             </Pressable>
           ))}
         </View>
@@ -174,8 +180,7 @@ const styles = StyleSheet.create({
   choice: { flexDirection: 'column', marginTop: 8, rowGap: 8 },
   choiceTitle: { fontSize: 15, lineHeight: 24 },
   ordering: { fontSize: 13, lineHeight: 21 },
-  option: { minHeight: 44, justifyContent: 'center', paddingVertical: 8 },
+  option: { minHeight: 44, justifyContent: 'center', paddingVertical: 8, borderRadius: 12 },
   // A control, so it is primary-tier and legible; the return labels stay distinct by weight.
   optionLabel: { fontSize: 15, lineHeight: 24 },
-  pressed: { opacity: 0.6 },
 });

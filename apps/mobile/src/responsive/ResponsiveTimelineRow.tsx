@@ -32,7 +32,7 @@
  * navigation.
  */
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { TIMELINE_ROW_POINTS, type SupportComposition } from './plan';
 
@@ -40,6 +40,7 @@ export const RESPONSIVE_TIMELINE_ROW_TEST_ID = 'qandeel-responsive-timeline-row'
 
 /** The rate at which the instrument yields, relative to the orientation beside it. */
 export const TIMELINE_ROW_SHRINK = 2;
+export const RESPONSIVE_TIMELINE_LINE_TEST_ID = 'qandeel-responsive-timeline-line';
 
 export interface ResponsiveTimelineRowProps {
   /** The width the row is composed in — the whole available width, never the reading measure. */
@@ -57,6 +58,19 @@ export interface ResponsiveTimelineRowProps {
   readonly support: SupportComposition;
   readonly children: ReactNode;
   readonly testID?: string;
+  /**
+   * VPORT-02 — the G3 T-11 / T-12 controlled amendment (Decision B): T-08's temporal orientation line, placed at the
+   * TOP of this row, directly above the Track. The row owns its placement; T-08 owns what it says and whether it
+   * exists. It sits OUTSIDE the row's scroller, so it never scrolls away (amendment §3 rule 2).
+   */
+  readonly line?: ReactNode;
+  /** Reports the line's measured height, so the composition can pay for it from the orientation's room. */
+  readonly onLineHeight?: (points: number) => void;
+  /**
+   * The room this row is given for the line, ON TOP of its own allocation, taken from OrientationChrome's share by
+   * the composition (amendment §3 rule 3: OrientationChrome yields first). Never taken from the world.
+   */
+  readonly linePoints?: number;
 }
 
 export function ResponsiveTimelineRow({
@@ -65,6 +79,9 @@ export function ResponsiveTimelineRow({
   support,
   children,
   testID = RESPONSIVE_TIMELINE_ROW_TEST_ID,
+  line,
+  onLineHeight,
+  linePoints = 0,
 }: ResponsiveTimelineRowProps) {
   return (
     <View
@@ -74,12 +91,22 @@ export function ResponsiveTimelineRow({
         {
           width: widthPoints,
           marginHorizontal: paddingHorizontal,
-          height: support.timelinePoints,
-          minHeight: Math.min(TIMELINE_ROW_POINTS, support.timelinePoints),
+          height: support.timelinePoints + linePoints,
+          minHeight: Math.min(TIMELINE_ROW_POINTS, support.timelinePoints) + linePoints,
         },
       ]}
       pointerEvents="box-none"
     >
+      {line === undefined ? null : (
+        <View
+          testID={RESPONSIVE_TIMELINE_LINE_TEST_ID}
+          style={styles.line}
+          pointerEvents="none"
+          onLayout={(event: LayoutChangeEvent) => onLineHeight?.(Math.ceil(event.nativeEvent.layout.height))}
+        >
+          {line}
+        </View>
+      )}
       <ScrollView
         style={styles.scroller}
         contentContainerStyle={styles.content}
@@ -116,4 +143,6 @@ const styles = StyleSheet.create({
   },
   scroller: { flexGrow: 0, flexShrink: 1 },
   content: { flexGrow: 1 },
+  // The line holds no room of its own: it is exactly as tall as what it says, and nothing at all when it says nothing.
+  line: { flexShrink: 0 },
 });

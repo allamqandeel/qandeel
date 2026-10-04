@@ -76,6 +76,7 @@ export {
   liveSentence,
   orientationChromeLabel,
   previewSentence,
+  temporalLineSentence,
   returnActWords,
   returnControlsLabel,
   spatialSentence,
@@ -113,6 +114,10 @@ export { chromeProjection, mapProjectionRequest, orientationModel } from './mode
 
 export type { OrientationChromeProps } from './OrientationChrome';
 export { ORIENTATION_CHROME_TEST_ID, OrientationChrome } from './OrientationChrome';
+// VPORT-02: T-08's temporal orientation line, for the Timeline region (G3 T-11 / T-12 amendment, Decision B).
+export type { TemporalOrientationLineProps } from './TemporalOrientationLine';
+export { TEMPORAL_ORIENTATION_LINE_TEST_ID, TemporalOrientationLine, temporalOrientationLine } from './TemporalOrientationLine';
+export { temporalLineModel } from './model';
 
 export type { InspectionOrientationProps } from './InspectionOrientation';
 export { CONTEXT_CHOICE_TEST_ID, INSPECTION_ORIENTATION_TEST_ID, InspectionOrientation } from './InspectionOrientation';

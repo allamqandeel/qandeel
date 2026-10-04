@@ -26,9 +26,9 @@
 import { useCallback, useEffect, useLayoutEffect, useRef } from 'react';
 import {
   Easing,
+  ReduceMotion,
   useAnimatedReaction,
   useAnimatedStyle,
-  useReducedMotion,
   useSharedValue,
   withSequence,
   withSpring,
@@ -36,6 +36,7 @@ import {
   type SharedValue,
 } from 'react-native-reanimated';
 
+import { useReduceMotion } from '../../motion';
 import {
   markerTranslateX,
   presentationX,
@@ -54,6 +55,15 @@ import {
 } from './temporal-motion';
 
 const EASE_OUT = Easing.bezier(EASE_OUT_BEZIER[0], EASE_OUT_BEZIER[1], EASE_OUT_BEZIER[2], EASE_OUT_BEZIER[3]);
+
+/**
+ * Every animation here is `Never` (VPORT-02, `QAN-BL-A11Y-01`). The plan already read the LIVE Reduce Motion setting
+ * and set every movement to zero under it, while keeping the preview's opacity resolve (M4) because an opacity is not
+ * movement. Reanimated's default (`System`) reads the setting once at launch, so it would jump that resolve to its end
+ * for a reader who launched with Reduce Motion on, and keep moving for one who turned it on later: two authorities
+ * that disagree. The plan is the only one.
+ */
+const NEVER = ReduceMotion.Never;
 
 /** Presentation opacity of a preview marker. A preview is never drawn at committed weight. */
 export const PREVIEW_MARKER_OPACITY = 0.72;
@@ -85,7 +95,9 @@ export function useTemporalMotion(
   input: Omit<TemporalMotionInput, 'reducedMotion'>,
   geometry: TemporalMarkerGeometry,
 ): TemporalMotionBinding {
-  const reducedMotion = useReducedMotion();
+  // VPORT-02 (`QAN-BL-A11Y-01`): the ONE live reader, not Reanimated's launch-only value. A reader who turns Reduce
+  // Motion on or off mid-session gets the matching plan on the next render, with no restart.
+  const reducedMotion = useReduceMotion();
   const plan = temporalMotionPlan({ ...input, reducedMotion });
 
   const { stepWidth } = geometry;
@@ -136,18 +148,18 @@ export function useTemporalMotion(
       cursorTrack.set(cursorTo);
       return;
     }
-    committedTrack.set(withTiming(committedTarget, { duration: cursorMs, easing: EASE_OUT }));
+    committedTrack.set(withTiming(committedTarget, { duration: cursorMs, easing: EASE_OUT, reduceMotion: NEVER }));
     // Two destinations, two characters, and which one applies is derived from Product truth alone:
     // moving TO a preview target is a retargetable timing (M1), and returning to committed truth
     // because the preview is gone is a critically damped spring (M3) — it cannot overshoot past
     // committed truth and momentarily draw the cursor at a position nobody is at. At zero duration
     // a timing is used instead, so reduced motion never depends on a spring's zero-duration case.
     if (previewPresent) {
-      cursorTrack.set(withTiming(cursorTo, { duration: cursorMs, easing: EASE_OUT }));
+      cursorTrack.set(withTiming(cursorTo, { duration: cursorMs, easing: EASE_OUT, reduceMotion: NEVER }));
     } else if (cancelMs === 0) {
-      cursorTrack.set(withTiming(committedTarget, { duration: 0 }));
+      cursorTrack.set(withTiming(committedTarget, { duration: 0, reduceMotion: NEVER }));
     } else {
-      cursorTrack.set(withSpring(committedTarget, { duration: cancelMs, dampingRatio: CANCEL_DAMPING_RATIO }));
+      cursorTrack.set(withSpring(committedTarget, { duration: cancelMs, dampingRatio: CANCEL_DAMPING_RATIO, reduceMotion: NEVER }));
     }
   }, [committedTarget, cursorTarget, previewPresent, cursorMs, cancelMs, committedTrack, cursorTrack, restTrack]);
 
@@ -165,12 +177,12 @@ export function useTemporalMotion(
       const logical = presentationX(fingerX.get(), viewport.get(), rtl.get() === 1);
       if (logical === null) return;
       cursorTrack.set(logical + windowOffset.get());
-      cursorTrack.set(withTiming(restTrack.get(), { duration: cursorMs, easing: EASE_OUT }));
+      cursorTrack.set(withTiming(restTrack.get(), { duration: cursorMs, easing: EASE_OUT, reduceMotion: NEVER }));
     },
   );
 
   const cursorStyle = useAnimatedStyle(() => ({
-    opacity: withTiming(previewPresent ? PREVIEW_MARKER_OPACITY : 0, { duration: presenceMs, easing: EASE_OUT }),
+    opacity: withTiming(previewPresent ? PREVIEW_MARKER_OPACITY : 0, { duration: presenceMs, easing: EASE_OUT, reduceMotion: NEVER }),
     // A finger on the surface wins over every animation: 1:1, no easing, no lag, no argument with
     // the hand. A finger position is already physical, in the strip's own space, so it needs no
     // window offset and no mirror — only the marker's own anchor convention. The rest position is
@@ -186,7 +198,12 @@ export function useTemporalMotion(
     ],
   }));
 
+  const committedOpacity = plan.committedPresent ? 1 : 0;
+  const apertureMs = plan.apertureMs;
   const committedStyle = useAnimatedStyle(() => ({
+    // VPORT-02 (P2 C): the committed aperture opens and closes IN PLACE with the committed stance. An opacity, never a
+    // travel: Return Live closes it where it stands while the Live terminal engages.
+    opacity: withTiming(committedOpacity, { duration: apertureMs, easing: EASE_OUT, reduceMotion: NEVER }),
     // Committed truth never follows a preview. It moves only when a commit has already been applied,
     // and it follows the scroll instantly because the offset it subtracts is not animated.
     transform: [
@@ -206,8 +223,8 @@ export function useTemporalMotion(
       return;
     }
     settle.set(withSequence(
-      withTiming(1, { duration: Math.round(commitSettleMs * 0.4), easing: EASE_OUT }),
-      withTiming(0, { duration: Math.round(commitSettleMs * 0.6), easing: EASE_OUT }),
+      withTiming(1, { duration: Math.round(commitSettleMs * 0.4), easing: EASE_OUT, reduceMotion: NEVER }),
+      withTiming(0, { duration: Math.round(commitSettleMs * 0.6), easing: EASE_OUT, reduceMotion: NEVER }),
     ));
   }, [settle, commitSettleMs]);
 

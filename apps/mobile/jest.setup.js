@@ -168,6 +168,8 @@ jest.mock('@shopify/react-native-skia', () => {
     Group: element('Group'),
     Circle: element('Circle'),
     Rect: element('Rect'),
+    // VPORT-02 — the committed Parting aperture's mark.
+    RoundedRect: element('RoundedRect'),
     Line: element('Line'),
     Path: element('Path'),
     Picture: element('Picture'),
