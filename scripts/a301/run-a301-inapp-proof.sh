@@ -26,7 +26,38 @@ PKG="com.qandeel.mobile"
 mkdir -p "$OUT"
 cd "$OUT" || exit 1
 
+# --- Cold-start readiness gate (validation infrastructure; nothing below is evidence) -------------------------------
+# A real condition each time, never a bare sleep: the device reports a completed boot, its package manager answers,
+# the app is installed, and the app has walked its cold paths once (a3-01-readiness.yaml) before the first counted leg.
+# Without this, GitHub's freshly booted emulator made the first leg's first strip dismiss arrive after the strip's 6-s
+# readable hold had ended, so the tap reached the General Settings entry beneath it (A3-01 record G-32).
+adb wait-for-device
+ready_deadline=$((SECONDS + 600))
+until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1" ] \
+  && [ "$(adb shell getprop dev.bootcomplete 2>/dev/null | tr -d '\r')" = "1" ] \
+  && adb shell pm path android >/dev/null 2>&1; do
+  [ "$SECONDS" -ge "$ready_deadline" ] && { echo "READINESS: the device never reported a completed boot" | tee "$OUT/readiness.txt"; exit 1; }
+  sleep 5
+done
+echo "READINESS: device boot completed and package manager answering" | tee "$OUT/readiness.txt"
+
 adb install -r "$APK" || exit 1
+adb shell pm path "$PKG" >/dev/null 2>&1 || { echo "READINESS: $PKG is not installed" | tee -a "$OUT/readiness.txt"; exit 1; }
+
+ready=0
+for attempt in 1 2 3; do
+  if maestro test --debug-output "$OUT/debug-readiness-$attempt" "$FLOWS/a3-01-readiness.yaml"; then
+    echo "READINESS: app cold paths walked (attempt $attempt)" | tee -a "$OUT/readiness.txt"
+    ready=1
+    break
+  fi
+  echo "READINESS: attempt $attempt did not complete; the device is not ready yet" | tee -a "$OUT/readiness.txt"
+  adb shell am force-stop "$PKG"
+done
+adb shell am force-stop "$PKG"
+[ "$ready" = "1" ] || { echo "READINESS: not ready after 3 attempts; no leg was run" | tee -a "$OUT/readiness.txt"; exit 1; }
+# ------------------------------------------------------------------------------------------------------------------
+
 status=0
 
 set_motion() {

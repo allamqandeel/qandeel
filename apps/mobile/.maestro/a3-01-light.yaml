@@ -25,6 +25,10 @@ appId: com.qandeel.mobile
 - takeScreenshot: ${PREFIX}-01-light-strip
 - tapOn:
     id: "qandeel-attention-strip-dismiss"
+# The dismiss reached the strip, not what lies beneath it (a tap that arrives after the readable hold would open
+# General Settings instead — record G-32).
+- assertNotVisible:
+    id: "qandeel-settings"
 - tapOn:
     id: "qandeel-activity-entry"
 - extendedWaitUntil:
