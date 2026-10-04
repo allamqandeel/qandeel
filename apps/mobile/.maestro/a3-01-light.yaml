@@ -50,6 +50,10 @@ appId: com.qandeel.mobile
 - takeScreenshot: ${PREFIX}-03-analysis-stays-dark-no-entry
 - tapOn:
     id: "qandeel-depth-to-conversation"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 15000
 - tapOn:
     id: "qandeel-settings-entry"
 - scrollUntilVisible:
