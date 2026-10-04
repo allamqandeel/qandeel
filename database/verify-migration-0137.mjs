@@ -96,6 +96,7 @@ async function sync(user, installation, o = {}) {
   return answer.outcome;
 }
 
+const intentsFor = (item) => count('SELECT count(*) AS n FROM public.push_delivery_attempts WHERE item_id = $1', [item]);
 const device = (user, installation) => one('SELECT * FROM public.push_devices WHERE user_id = $1 AND installation_id = $2', [user, installation]);
 
 async function plan(limit = 500) {
@@ -187,7 +188,8 @@ async function verifyRegistration() {
     assert.equal((await device(alice, installation)).token_updated_at.getTime(), first.token_updated_at.getTime(), 'a refresh is not a rotation');
 
     const item = await publish(alice);
-    assert.equal(await plan(), 1);
+    await plan();
+    assert.equal(await intentsFor(item), 1, 'one intent: the item on its one live device');
     assert.equal(await sync(alice, installation, { token: 'token-a2' }), 'ROTATED');
     assert.equal((await one('SELECT state, reason FROM public.push_delivery_attempts WHERE item_id = $1', [item])).reason, 'device_changed',
       'an intent planned for the old token is never sent to the new one');
@@ -231,7 +233,9 @@ async function verifyRegistration() {
     await sync(carol, here);
     await sync(carol, there);
     const carolItem = await publish(carol);
-    assert.equal(await plan(), 2);
+    // The plan pass is global; this transaction also holds other accounts' items, so count only this item's intents.
+    await plan();
+    assert.equal(await intentsFor(carolItem), 2, 'one intent per live device of the reader');
     await actAs('authenticated', carol);
     assert.equal((await one('SELECT * FROM public.detach_own_push_device_v1($1)', [there])).outcome, 'DETACHED');
     assert.equal((await one('SELECT * FROM public.detach_own_push_device_v1($1)', [there])).outcome, 'NOT_ATTACHED');
