@@ -45,14 +45,19 @@ const latest: { camera: PresentationCameraBinding | null; temporal: TemporalMoti
   conversation: null,
 };
 
+type Readers = typeof latest;
+/** Records what this render read, so the test can look at the mounted hooks without remounting them. */
+const report = (seen: Readers) => Object.assign(latest, seen);
+
 /** One mounted reader of each kind: the Map's camera, the Timeline's temporal motion, and a W1A / W3 surface. */
 function Probe() {
-  latest.camera = usePresentationCamera({ center: { x: 180, y: 300 }, diagonalPoints: 700 });
-  latest.temporal = useTemporalMotion(
+  const camera = usePresentationCamera({ center: { x: 180, y: 300 }, diagonalPoints: 700 });
+  const temporal = useTemporalMotion(
     { committedSp: 3, previewSp: 5, mode: 'PINNED', dragging: false },
     { stepWidth: 48, windowOffset: 0, viewport: 320, rtl: false },
   );
-  latest.conversation = conversationReduceMotion();
+  const conversation = conversationReduceMotion();
+  report({ camera, temporal, conversation });
   return null;
 }
 

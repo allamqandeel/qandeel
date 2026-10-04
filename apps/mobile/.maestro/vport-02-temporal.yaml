@@ -1,0 +1,71 @@
+# VPORT-02 — the final VPORT-01 world with the VPORT-02 temporal / orientation / iconography layer, on the production
+# route, through every temporal stance. VALIDATION ONLY.
+#
+# Conversation → Analysis through the real door. FOLLOW_LIVE (the Live terminal engaged, no line), PINNED at an earlier
+# Moment (the Parting aperture, the temporal line above the Track, OrientationChrome without a second Return Live),
+# a preview beside the committed opening, PINNED at the newest Moment (Moment(LH) ≠ Live Edge), then Return Live by
+# TAPPING the Live edge itself — its one home. Each stance is reached through the production executor the proof root
+# names (Vport02ProofRoot.tsx); every capture waits for the surface to settle.
+# Driven by scripts/vport02/run-vport02-visual-proof.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-01-follow-live
+- openLink: "qandeel://vport02-proof/pin/6"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-temporal-orientation-line"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-02-pinned
+- openLink: "qandeel://vport02-proof/preview/3"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-03-preview
+- openLink: "qandeel://vport02-proof/cancel"
+- openLink: "qandeel://vport02-proof/pin/12"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-04-pinned-newest
+- tapOn:
+    id: "qandeel-temporal-live-edge"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-temporal-orientation-line"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-05-return-live
+- openLink: "qandeel://vport02-proof/zoom-in"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-06-world-mid
+- openLink: "qandeel://vport02-proof/rail/live-earpiece"
+- extendedWaitUntil:
+    visible:
+      id: "vport02-call-rail-specimen"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: ${PREFIX}-07-call-rail-live
+- openLink: "qandeel://vport02-proof/rail/muted-loudspeaker"
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: ${PREFIX}-08-call-rail-muted
+- openLink: "qandeel://vport02-proof/rail/connecting"
+- waitForAnimationToEnd:
+    timeout: 4000
+- takeScreenshot: ${PREFIX}-09-call-rail-connecting
