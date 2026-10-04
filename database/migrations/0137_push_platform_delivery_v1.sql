@@ -80,7 +80,7 @@ CREATE TABLE public.push_devices (
   CONSTRAINT push_devices_installation_unique UNIQUE (user_id, installation_id),
   CONSTRAINT push_devices_platform_check CHECK (
     (platform = 'ANDROID' AND transport = 'FCM' AND apns_environment IS NULL)
-    OR (platform = 'IOS' AND transport = 'APNS' AND apns_environment IN ('PRODUCTION', 'SANDBOX'))),
+    OR (platform = 'IOS' AND transport = 'APNS' AND apns_environment IS NOT NULL AND apns_environment IN ('PRODUCTION', 'SANDBOX'))),
   CONSTRAINT push_devices_token_check CHECK (
     (push_token IS NULL AND token_digest IS NULL)
     OR (push_token IS NOT NULL AND char_length(push_token) BETWEEN 1 AND 4096 AND token_digest ~ '^[0-9a-f]{64}$'
