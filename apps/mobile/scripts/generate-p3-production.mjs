@@ -1,0 +1,107 @@
+#!/usr/bin/env node
+// A3-01 — generate the production geometry of the TWO P3 glyph members, FROM THE FROZEN P3-A SOURCES, through the same
+// production vector mechanism P2 / VPORT-02 established (generated path data → the installed Skia renderer; no runtime
+// icon package, no react-native-svg).
+//
+// The P3 closure freezes both glyphs BY REFERENCE to the merged P3-A package (its §5): `source/src/p3glyphs.mjs`, built
+// on P2's own `sig.mjs`, unchanged. Nothing below is typed by hand:
+//
+//   - «النشاط» / Activity entry — **Open Ledger**: `P3G.ledger(22)`, executed (22 px, the upper-chrome size);
+//   - Introductions Activity-row source mark — **Open Link**: `P3G.link(20)`, executed (20 px, P3-A C-GLY-3);
+//   - the build refuses unless the package still records Open Ledger and Open Link as the accepted members, and unless
+//     its vendored `sig.mjs` is byte-identical to P2-A's — P3 applies P2's grammar and does not extend it.
+//
+// The comparison drawings — Quiet Bell, At the Door, the withdrawn two-opening mark — are never executed: they are
+// history evidence, not alternatives (P3 §5).
+//
+//   node apps/mobile/scripts/generate-p3-production.mjs          write the module
+//   node apps/mobile/scripts/generate-p3-production.mjs --check  exit 1 if the module is stale
+import { createHash } from 'node:crypto';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join, relative } from 'node:path';
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const REPO = join(HERE, '..', '..', '..');
+const P3 = join(REPO, 'docs/design/p3-notifications/QANDEEL_P3-A_NOTIFICATION_ACTIVITY_INTEGRATED_VISUAL_PROOF/source/src');
+const GLYPHS = join(P3, 'p3glyphs.mjs');
+const P3_SIG = join(P3, 'sig.mjs');
+const P2_SIG = join(REPO, 'docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/source/src/sig.mjs');
+const OUT = join(REPO, 'apps/mobile/src/iconography/p3-production.generated.ts');
+
+const sha = (path) => createHash('sha256').update(readFileSync(path)).digest('hex');
+const rel = (path) => relative(REPO, path).replace(/\\/gu, '/');
+const fail = (message) => {
+  process.stderr.write(`generate-p3-production: ${message}\n`);
+  process.exit(1);
+};
+const attr = (markup, name) => {
+  const match = new RegExp(`\\s${name}="([^"]*)"`, 'u').exec(markup);
+  if (match === null) fail(`attribute ${name} missing from ${markup.slice(0, 80)}…`);
+  return match[1];
+};
+const elements = (markup, tag) => markup.match(new RegExp(`<${tag}\\b[^>]*>`, 'gu')) ?? [];
+
+if (sha(P3_SIG) !== sha(P2_SIG)) fail('the P3-A vendored sig.mjs is no longer byte-identical to P2-A — P3 may not extend P2');
+
+const p3 = await import(pathToFileURL(GLYPHS).href);
+if (p3.ACTIVITY_ACCEPTED !== 'ledger') fail(`ACTIVITY_ACCEPTED is ${p3.ACTIVITY_ACCEPTED}, not the frozen 'ledger' (Open Ledger)`);
+if (p3.INTRO_ACCEPTED !== 'link') fail(`INTRO_ACCEPTED is ${p3.INTRO_ACCEPTED}, not the frozen 'link' (Open Link)`);
+if (p3.INTRO_VARIANTS?.link?.ring !== false) fail('Open Link must be ring-free (P3 §5.2)');
+
+/** One executed P3 glyph as primitives: strokes (one shared width) and filled dots. Nothing else is accepted. */
+function glyph(name, size) {
+  const markup = p3.P3G[name](size);
+  const paths = elements(markup, 'path');
+  const circles = elements(markup, 'circle');
+  if (elements(markup, 'rect').length > 0 || elements(markup, 'polygon').length > 0) fail(`${name}: unexpected primitive`);
+  const strokes = paths.map((path) => {
+    if (attr(path, 'fill') !== 'none' || attr(path, 'stroke-linecap') !== 'round' || attr(path, 'stroke-linejoin') !== 'round') fail(`${name}: not an N1 round-terminal stroke`);
+    return { d: attr(path, 'd'), strokeWidth: Number(attr(path, 'stroke-width')) };
+  });
+  const widths = new Set(strokes.map((s) => s.strokeWidth));
+  if (widths.size !== 1) fail(`${name}: one optical stroke per size expected`);
+  const dots = circles.map((circle) => ({ cx: Number(attr(circle, 'cx')), cy: Number(attr(circle, 'cy')), r: Number(attr(circle, 'r')) }));
+  return { size, grid: 24, mirrorsInRtl: false, strokes, dots };
+}
+
+const P3_GLYPHS = {
+  provenance: 'P3-A source/src/p3glyphs.mjs on P2-A sig.mjs (byte-identical); frozen by the P3 closure §5',
+  /** «النشاط» / Activity entry. Rest ink in every state; never Living Brass; never mirrored (P3 §5.1, §16). */
+  ledger: glyph('ledger', 22),
+  /** Introductions Activity-row source mark. No ring; the link is offered, not made (P3 §5.2). */
+  link: glyph('link', 20),
+};
+if (P3_GLYPHS.ledger.strokes.length !== 2 || P3_GLYPHS.ledger.dots.length !== 0) fail('Open Ledger is no longer one open frame and two rows');
+if (P3_GLYPHS.link.strokes.length !== 1 || P3_GLYPHS.link.dots.length !== 2) fail('Open Link is no longer two reaching strokes and two points');
+
+const sources = [GLYPHS, P3_SIG, P2_SIG];
+const header = [
+  '/**',
+  ' * GENERATED by apps/mobile/scripts/generate-p3-production.mjs — do not edit by hand.',
+  ' *',
+  ' * A3-01: the production geometry of the two P3 glyph members — Open Ledger (the «النشاط» / Activity entry) and Open',
+  ' * Link (the Introductions Activity-row source mark) — produced by executing the merged P3-A package\'s own',
+  ' * `p3glyphs.mjs` on P2\'s unchanged `sig.mjs`. The A3-01 contract fails on drift.',
+  ' *',
+  ' * Sources (sha256):',
+  ...sources.map((path) => ` *   ${rel(path)}  ${sha(path)}`),
+  ' */',
+  '',
+].join('\n');
+const output = `${header}export const P3_GLYPHS = ${JSON.stringify(P3_GLYPHS, null, 2)} as const;\n`;
+
+if (process.argv.includes('--check')) {
+  let current = '';
+  try {
+    current = readFileSync(OUT, 'utf8');
+  } catch {
+    fail(`${rel(OUT)} does not exist; run without --check`);
+  }
+  if (current !== output) fail(`${rel(OUT)} is stale; run node apps/mobile/scripts/generate-p3-production.mjs`);
+  process.stdout.write('generate-p3-production: current\n');
+} else {
+  mkdirSync(dirname(OUT), { recursive: true });
+  writeFileSync(OUT, output);
+  process.stdout.write(`generate-p3-production: wrote ${rel(OUT)}\n`);
+}

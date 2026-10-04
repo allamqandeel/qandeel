@@ -1,0 +1,56 @@
+# A3-01 — Activity follows the reader's appearance: switch General Settings → Appearance to Light, then Activity and its
+# strip in Light. VALIDATION ONLY (synthetic events from A301ProofRoot's validation-only producer).
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- tapOn:
+    id: "qandeel-settings-entry"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-appearance-light"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-appearance-light"
+- tapOn:
+    id: "qandeel-settings-back"
+- openLink: "qandeel://a301-proof/arrive/system"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-attention-strip"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-01-light-strip
+- tapOn:
+    id: "qandeel-attention-strip-dismiss"
+- tapOn:
+    id: "qandeel-activity-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-activity-feed"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-02-light-activity
+# The Analysis stays one dark place under Light (P1 §12).
+- tapOn:
+    id: "qandeel-activity-back"
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 60000
+- takeScreenshot: ${PREFIX}-03-analysis-stays-dark-no-entry
+- tapOn:
+    id: "qandeel-depth-to-conversation"
+- tapOn:
+    id: "qandeel-settings-entry"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-appearance-dark"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-appearance-dark"

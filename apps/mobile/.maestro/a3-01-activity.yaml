@@ -1,0 +1,154 @@
+# A3-01 — the integrated in-app proof: «النشاط» / Activity, the attention mark, the ordinary Attention Strip, the
+# Analysis deferral and its exit re-evaluation, Direct Entry (valid and failing closed), and Notifications & Activity,
+# on the production route. VALIDATION ONLY: every event is a SYNTHETIC fixture the proof root's validation-only producer
+# announces (A301ProofRoot.tsx); no source producer exists on main.
+# Driven by scripts/a301/run-a301-inapp-proof.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-activity-entry"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-01-entry-at-start-edge
+# An event outside the origin, on a non-Analysis surface: ONE ordinary strip, and the presence mark.
+- openLink: "qandeel://a301-proof/arrive/system"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-attention-strip"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-strip-and-mark
+- tapOn:
+    id: "qandeel-attention-strip-dismiss"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-attention-strip"
+    timeout: 15000
+- takeScreenshot: ${PREFIX}-03-dismissed-mark-stays
+# The same kind of event in its own origin (the Personal Conversation): no strip — it is there in place.
+- openLink: "qandeel://a301-proof/arrive/reminder"
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertNotVisible:
+    id: "qandeel-attention-strip"
+- takeScreenshot: ${PREFIX}-04-in-origin-no-strip
+# Inside the Analysis: no strip, no announcement, nothing laid over the world — two events wait.
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 60000
+- openLink: "qandeel://a301-proof/arrive/shared"
+- openLink: "qandeel://a301-proof/arrive/public"
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertNotVisible:
+    id: "qandeel-attention-strip"
+- takeScreenshot: ${PREFIX}-05-analysis-no-strip
+# Leaving the Analysis re-reads current truth: AT MOST ONE strip — no dump.
+- tapOn:
+    id: "qandeel-depth-to-conversation"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-attention-strip"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-06-exit-one-strip
+- tapOn:
+    id: "qandeel-attention-strip-dismiss"
+# Activity: one quiet feed, every waited event still here; stale and muted rows say so in words.
+- tapOn:
+    id: "qandeel-activity-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-activity-feed"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-07-activity-all
+- tapOn:
+    id: "qandeel-activity-filter-shared"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-08-filter-shared
+- tapOn:
+    id: "qandeel-activity-row-a3010000-0000-4000-8000-000000000001"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-09-stale-fails-closed
+- tapOn:
+    id: "qandeel-activity-filter-all"
+- waitForAnimationToEnd:
+    timeout: 6000
+# Back returns to exactly where the reader was.
+- tapOn:
+    id: "qandeel-activity-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 15000
+- takeScreenshot: ${PREFIX}-10-back-to-conversation
+# Notifications & Activity, from Activity's own settings act.
+- tapOn:
+    id: "qandeel-activity-entry"
+- tapOn:
+    id: "qandeel-activity-settings"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-notifications"
+    timeout: 30000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-11-notifications-top
+- tapOn:
+    id: "qandeel-proactive-reduce"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-12-reduce-selected
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-quiet-range"
+    direction: DOWN
+- takeScreenshot: ${PREFIX}-13-quiet-hours
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-snooze-1h"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-notifications-snooze-1h"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-notifications-snoozed"
+    timeout: 15000
+- takeScreenshot: ${PREFIX}-14-snoozed
+- scrollUntilVisible:
+    element:
+      id: "qandeel-lock-shared"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-lock-shared"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-15-lock-screen-ceilings
+- tapOn:
+    id: "qandeel-settings-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-activity"
+    timeout: 15000
+- tapOn:
+    id: "qandeel-activity-back"
+# The call-safe strip: a SPECIMEN only — no call authority exists, nothing here is a call.
+- openLink: "qandeel://a301-proof/callsafe/on"
+- extendedWaitUntil:
+    visible:
+      id: "a301-call-safe-specimen"
+    timeout: 15000
+- takeScreenshot: ${PREFIX}-16-call-safe-specimen
+- openLink: "qandeel://a301-proof/callsafe/off"

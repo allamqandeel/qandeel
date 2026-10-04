@@ -232,6 +232,8 @@
     "test:w3-mega-u3-contested-runtime-contract": "node --test tests/w3-mega-u3-contested-runtime-contract.test.mjs",
     "test:w3-corr-u-understanding-integrity-contract": "node --test tests/w3-corr-u-understanding-integrity-contract.test.mjs",
     "verify:ai-usage-cost-ledger:integration": "node --env-file-if-exists=.env database/verify-migration-0135.mjs",
+    "verify:activity-attention-core:integration": "node --env-file-if-exists=.env database/verify-migration-0136.mjs",
+    "test:a3-01-activity-attention-inapp-contract": "node --test tests/a3-01-activity-attention-inapp-contract.test.mjs",
     "test:ai-cost-01-provider-neutral-cost-credit-ledger-contract": "node --test tests/ai-cost-01-provider-neutral-cost-credit-ledger-contract.test.mjs",
     "simulate:ai-cost": "node scripts/ai-cost-simulate.mjs",
     "test:w3-mega-m-conversational-memory-control-contract": "node --test tests/w3-mega-m-conversational-memory-control-contract.test.mjs",
