@@ -232,7 +232,8 @@ test('10 — copy authority: APPROVED / CANON byte-equal to the pinned registry;
 
 test('11 — A3-02 is the named owner of native Push, and Stage 3 is not claimed closed', () => {
   const backlog = read(BACKLOG);
-  assert.match(backlog, /\| `QAN-BL-NOTIF-01` \| [^|]+ \| `A3-02 — Native Push, Permission & Platform Delivery Integration` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
+  // Re-anchored by A3-02 (controlled): its owner stays A3-02; A3-02 itself tombstones it under BG-08 when it delivers.
+  assert.match(backlog, /\| `QAN-BL-NOTIF-01` \| [^|]+ \| `A3-02 — Native Push, Permission & Platform Delivery Integration` \| `HIGH` \| `(?:DEFERRED — OWNED|CLOSED — TOMBSTONE)` \|/u);
   const record = read(RECORD);
   assert.match(record, /Orphan gaps = 0/u);
   assert.match(record, /DO NOT MERGE/u);

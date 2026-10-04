@@ -123,7 +123,7 @@ jobs:
       - {name: Verify Living Analysis World production visual port contract (VPORT-01), run: npm run test:vport-01-world-visual-contract}
       - {name: Verify Temporal / Orientation / P2 final coherence contract (VPORT-02), run: npm run test:vport-02-temporal-orientation-p2-contract}
       - {name: Verify A3-01 Activity & Attention Core + in-app production integration static contract, run: npm run test:a3-01-activity-attention-inapp-contract}
-      - {name: Verify A3-02 Native Push, Permission & Platform Delivery static contract, run: npm run test:a3-02-native-push-platform-delivery-contract}
+      - {name: "Verify A3-02 Native Push, Permission & Platform Delivery static contract", run: npm run test:a3-02-native-push-platform-delivery-contract}
       - {name: Verify the Stage-3 proof LEG-isolation contract (A3-02), run: npm run test:a3-proof-leg-isolation-contract}
       - {name: Verify QANDEEL Understanding surface contract (W3-MEGA-U U2), run: npm run test:w3-mega-u2-understanding-surface-contract}
       - {name: Verify QANDEEL Understanding Contested / Under Review contract (W3-MEGA-U U3), run: npm run test:w3-mega-u3-contested-runtime-contract}

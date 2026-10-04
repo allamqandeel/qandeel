@@ -7,6 +7,23 @@ appId: com.qandeel.mobile
     visible:
       text: ${TEXT}
     timeout: 30000
+# Two or more QANDEEL messages are bundled by the OS into one collapsed group; a tap on its line lands on the OS's own
+# group summary (which opens the app plainly and clears the group), not on the message. A reader expands the group
+# first, so the flow does: the group's count pill, the nearest one above this message's words (absent when the message
+# stands alone or its group is already open).
+- runFlow:
+    when:
+      visible:
+        id: "android:id/expand_button_number"
+        above:
+          text: ${TEXT}
+    commands:
+      - tapOn:
+          id: "android:id/expand_button_number"
+          above:
+            text: ${TEXT}
+      - waitForAnimationToEnd:
+          timeout: 4000
 - takeScreenshot: ${PREFIX}-${STEP}-a-in-the-os-shade
 - tapOn:
     text: ${TEXT}

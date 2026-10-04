@@ -70,7 +70,9 @@ until [ "$(adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" = "1"
   sleep 5
 done
 echo "READINESS: device boot completed and package manager answering" | tee "$OUT/readiness.txt"
-adb install -r "$APK" || exit 1
+# One leg, one clean install: no device-local state (installation id, education answers) survives an earlier leg.
+adb uninstall "$PKG" >/dev/null 2>&1 || true
+adb install "$APK" || exit 1
 adb shell pm path "$PKG" >/dev/null 2>&1 || { echo "READINESS: $PKG is not installed" | tee -a "$OUT/readiness.txt"; exit 1; }
 {
   echo "leg: $LEG"
@@ -109,10 +111,12 @@ word() { node -e "const p=require(process.argv[1]); const n=p[process.argv[2]].a
 # The QANDEEL notifications the OS currently holds, one record per line: channel | title | text.
 posted() {
   adb shell dumpsys notification --noredact | tr -d '\r' | awk -v pkg="$PKG" '
-    /NotificationRecord\(/ { inpkg = index($0, "pkg=" pkg) > 0; if (inpkg) { n++; ch[n] = ""; t[n] = ""; x[n] = "" } }
+    # The OS files its own auto-group summary under the package; it is not a QANDEEL message.
+    /NotificationRecord\(/ { inpkg = index($0, "pkg=" pkg) > 0 && index($0, "GROUP_SUMMARY") == 0; if (inpkg) { n++; ch[n] = ""; t[n] = ""; x[n] = "" } }
     inpkg && /channel=/ && ch[n] == "" { if (match($0, /channel=[^ ]+/)) ch[n] = substr($0, RSTART + 8, RLENGTH - 8) }
-    inpkg && /android\.title=/ { sub(/.*android\.title=[A-Za-z]* \(/, ""); sub(/\)$/, ""); t[n] = $0 }
-    inpkg && /android\.text=/ { sub(/.*android\.text=[A-Za-z]* \(/, ""); sub(/\)$/, ""); x[n] = $0 }
+    # An absent extra prints as "=null"; a present one as "=String (value)".
+    inpkg && /android\.title=/ { sub(/.*android\.title=/, ""); if ($0 == "null") $0 = ""; else { sub(/^[A-Za-z]* \(/, ""); sub(/\)$/, "") }; t[n] = $0 }
+    inpkg && /android\.text=/ { sub(/.*android\.text=/, ""); if ($0 == "null") $0 = ""; else { sub(/^[A-Za-z]* \(/, ""); sub(/\)$/, "") }; x[n] = $0 }
     END { for (i = 1; i <= n; i++) print ch[i] " | " t[i] " | " x[i] }'
 }
 wait_posted() { # <count> — a real condition: the OS holds at least <count> QANDEEL notifications
