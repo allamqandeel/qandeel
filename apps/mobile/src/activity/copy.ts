@@ -9,9 +9,9 @@
  *     `docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/data/COPY_REGISTRY.json` (blob `feaee440…`);
  *     the registry key is named beside each row;
  *   - VI-01 T03 — «إعادة المحاولة» / "Try again", reused from `conversation/copy.ts`, not rewritten;
- *   - A3-01 PRODUCT COPY GATE — `ACTIVITY_COPY_GATE` below: the rows no record approves, required by controls the Task
- *     Contract requires. They are PROPOSED, awaiting the Product Owner, and A3-01 is not READY FOR INDEPENDENT REVIEW
- *     until each one is approved (or replaced) and re-marked here.
+ *   - A3-01 PRODUCT COPY GATE — `ACTIVITY_COPY_GATE` below: the twelve rows no earlier record approved, required by
+ *     controls the Task Contract requires. APPROVED by the Product Owner, byte-exact as given (A3-01 record §24a);
+ *     the English keeps the approval's straight apostrophe, as the P3 registry does.
  *
  * Not used: the permission-education sheet (`p3.edu*`, `AUDIT_OWNED`; A3-02), and every `FIXTURE_ONLY` event sentence —
  * event sentences come only from the source domain that publishes them.
@@ -19,33 +19,33 @@
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { ActivityCategory, DisclosureLevel, LockSubject, ProactiveChoice } from '../runtime-entry';
 
-export type CopyGateStatus = 'PROPOSED — AWAITING PRODUCT OWNER APPROVAL';
+export type CopyGateStatus = 'APPROVED BY THE PRODUCT OWNER — A3-01 PRODUCT COPY GATE';
 
-/** A3-01 Product Copy Gate — every row here is unapproved. Presented to the Product Owner; bound only once approved. */
+/** A3-01 Product Copy Gate — every row here is the Product Owner's approved wording, bound byte-exact (record §24a). */
 export const ACTIVITY_COPY_GATE = Object.freeze({
-  status: 'PROPOSED — AWAITING PRODUCT OWNER APPROVAL' as CopyGateStatus,
+  status: 'APPROVED BY THE PRODUCT OWNER — A3-01 PRODUCT COPY GATE' as CopyGateStatus,
   rows: Object.freeze({
     /** Activity: the first page is being read. */
     loading: { ar: 'جارٍ تحميل النشاط…', en: 'Loading Activity…' },
     /** Activity: the page could not be read (the act beside it is the frozen «إعادة المحاولة»). */
-    unavailable: { ar: 'تعذّر تحميل النشاط.', en: 'Activity couldn’t load.' },
+    unavailable: { ar: 'تعذّر تحميل النشاط.', en: "Activity couldn't load." },
     /** A row whose destination's surface does not exist yet (Stage 4–8): typed, failing closed. */
-    entryUnavailable: { ar: 'لا يمكن فتح هذا من هنا بعد.', en: 'This can’t be opened from here yet.' },
+    entryUnavailable: { ar: 'لا يمكن فتح هذا من هنا بعد.', en: "This can't be opened from here yet." },
     /** Snooze is on: {0} is the device-local end time. */
     snoozeActive: { ar: 'الإيقاف المؤقت مفعّل حتى {0}', en: 'Snoozed until {0}' },
     /** Ends Snooze now. */
     snoozeEnd: { ar: 'إنهاء الإيقاف المؤقت', en: 'End Snooze' },
     /** The custom Snooze picker: the end it would set ({0}), and its two steps. */
     snoozeUntil: { ar: 'حتى {0}', en: 'Until {0}' },
-    snoozeLonger: { ar: 'ساعة أكثر', en: 'One hour more' },
-    snoozeShorter: { ar: 'ساعة أقل', en: 'One hour less' },
+    snoozeLonger: { ar: 'إضافة ساعة', en: 'Add an hour' },
+    snoozeShorter: { ar: 'تقليل ساعة', en: 'Subtract an hour' },
     /** Quiet Hours: the two edit labels. */
-    quietStart: { ar: 'البداية', en: 'Starts' },
-    quietEnd: { ar: 'النهاية', en: 'Ends' },
+    quietStart: { ar: 'من', en: 'From' },
+    quietEnd: { ar: 'إلى', en: 'To' },
     /** Notifications & Activity: a change the server did not confirm. */
-    saveFailed: { ar: 'تعذّر حفظ التغيير. حاول مرة أخرى.', en: 'The change couldn’t be saved. Try again.' },
+    saveFailed: { ar: 'تعذّر حفظ التغيير. حاول مرة أخرى.', en: "The change couldn't be saved. Try again." },
     /** Notifications & Activity: the page could not be read. */
-    settingsUnavailable: { ar: 'تعذّر تحميل إعدادات الإشعارات.', en: 'Notification settings couldn’t load.' },
+    settingsUnavailable: { ar: 'تعذّر تحميل إعدادات الإشعارات.', en: "Notification settings couldn't load." },
   }),
 });
 

@@ -200,7 +200,26 @@ test('10 — copy authority: APPROVED / CANON byte-equal to the pinned registry;
   const fixtures = registry.rows.filter((row) => row.st === 'FIXTURE_ONLY' || row.st === 'AUDIT_OWNED').flatMap((row) => [row.ar, row.en]).filter((text) => text && text !== '—' && text.length > 6);
   const production = [...sourcesUnder(ACTIVITY), `${MOBILE}/settings/NotificationsSection.tsx`].map(read).join('\n');
   for (const text of fixtures) assert.equal(production.includes(text), false, `FIXTURE / AUDIT_OWNED text is not Product copy: ${text}`);
-  assert.match(copy, /export const ACTIVITY_COPY_GATE = Object\.freeze\(\{\n {2}status: '(PROPOSED — AWAITING PRODUCT OWNER APPROVAL|APPROVED BY THE PRODUCT OWNER[^']*)'/u, 'the one Copy Gate states its status');
+  assert.match(copy, /export const ACTIVITY_COPY_GATE = Object\.freeze\(\{\n {2}status: 'APPROVED BY THE PRODUCT OWNER — A3-01 PRODUCT COPY GATE' as CopyGateStatus,/u, 'the one Copy Gate is APPROVED');
+  assert.doesNotMatch(copy, /PROPOSED — AWAITING/u, 'no stale Copy Gate status remains');
+  // The Product Owner's approved wording (A3-01 record §24a), byte-exact, every row and no other.
+  const APPROVED = {
+    loading: ['جارٍ تحميل النشاط…', 'Loading Activity…'],
+    unavailable: ['تعذّر تحميل النشاط.', "Activity couldn't load."],
+    entryUnavailable: ['لا يمكن فتح هذا من هنا بعد.', "This can't be opened from here yet."],
+    snoozeActive: ['الإيقاف المؤقت مفعّل حتى {0}', 'Snoozed until {0}'],
+    snoozeEnd: ['إنهاء الإيقاف المؤقت', 'End Snooze'],
+    snoozeUntil: ['حتى {0}', 'Until {0}'],
+    snoozeLonger: ['إضافة ساعة', 'Add an hour'],
+    snoozeShorter: ['تقليل ساعة', 'Subtract an hour'],
+    quietStart: ['من', 'From'],
+    quietEnd: ['إلى', 'To'],
+    saveFailed: ['تعذّر حفظ التغيير. حاول مرة أخرى.', "The change couldn't be saved. Try again."],
+    settingsUnavailable: ['تعذّر تحميل إعدادات الإشعارات.', "Notification settings couldn't load."],
+  };
+  const gate = copy.slice(copy.indexOf('rows: Object.freeze({'), copy.indexOf('type Gate ='));
+  const bound = [...gate.matchAll(/^ {4}(\w+): \{ ar: '([^']*)', en: (?:'([^']*)'|"([^"]*)") \},$/gmu)].map((m) => [m[1], [m[2], m[3] ?? m[4]]]);
+  assert.deepEqual(Object.fromEntries(bound), APPROVED, 'the Copy Gate binds exactly the approved wording');
 });
 
 test('11 — A3-02 is the named owner of native Push, and Stage 3 is not claimed closed', () => {

@@ -5,7 +5,7 @@
 **Baseline:** `34ea439b98eecd5f22628f41749245f81bb2b9f8` (the merge of PR #306, VPORT-02)
 **Branch:** `feat/a3-01-activity-attention-inapp`
 **PR:** Draft — see §1
-**Status:** **`A3-01 IMPLEMENTED — PRODUCT COPY GATE OPEN (§24a) — NOT YET READY FOR INDEPENDENT REVIEW — DO NOT MERGE`**. Claude does not merge it.
+**Status:** **`A3-01 IMPLEMENTED — PRODUCT COPY GATE APPROVED — EXACT-HEAD PROOF AND CI PENDING — NOT YET READY FOR INDEPENDENT REVIEW — DO NOT MERGE`**. Claude does not merge it.
 
 > The provider-neutral Product notification / Activity spine and its in-app production integration, over I-08N-01 + P3:
 > the durable per-user Activity projection, the attention decision, the global entry and presence mark, Activity, the
@@ -22,7 +22,7 @@
 | Baseline | `34ea439b98eecd5f22628f41749245f81bb2b9f8` |
 | Branch | `feat/a3-01-activity-attention-inapp`, cut from the exact baseline |
 | PR | Draft (opened with this record; number in the PR) |
-| Implementation evidence head | **`c749b48f0a0e62a1faa4c6fd1c9e810cd9714e13`** — the code head the Release proof APK was built from and proved on (§18). The one commit after it changes only this record (`git diff --stat c749b48..HEAD` lists this file alone) |
+| Implementation evidence head | **re-proof pending at the Copy Gate binding head** — recorded here and in §18 by the record-only commit that follows it. Earlier proof head (before the Copy Gate binding): `c749b48` |
 
 ## 2. Repo Truth Gate
 
@@ -118,7 +118,7 @@ production Activity feed is truthfully empty until a source domain publishes thr
 | the 72 `p3.*` rows + `activityNew` | `APPROVED` by P4-C4 (exact bytes in the pinned registry, which differ from P3-A's table — e.g. `p3.empty` «لا شيء هنا الآن.», `p3.proactive` «مبادرة قنديل», `activityNew` «هناك جديد») | final, byte-exact from the registry |
 | permission education (`p3.edu*`, `p3.osBoundary*`, `p3.notNowNote`) | `AUDIT_OWNED` | not used — A3-02 |
 | every event sentence (`p3fx.*`) | `FIXTURE_ONLY` | validation fixtures only, never Product copy |
-| Snooze-active state, end-Snooze, custom-duration picker, Quiet Hours start / end edit labels, Activity loading / load-failure state | **no approved copy exists** | Product Copy Gate unless existing approved strings cover them |
+| Snooze-active state, end-Snooze, custom-duration picker, Quiet Hours start / end edit labels, Activity loading / load-failure state | **no approved copy existed** | the A3-01 Product Copy Gate — now APPROVED by the Product Owner (§24a) |
 
 ---
 
@@ -330,7 +330,9 @@ and `a3-01-light.yaml` through `scripts/a301/run-a301-inapp-proof.sh`, on an And
 `.github/workflows/a3-01-inapp-proof.yml` (branch-scoped). The proof root is the ONE validation-only producer seam: an
 in-memory stand-in for `/activity/*` announcing synthetic events by proof link; it is unreachable from a Product build.
 
-**Proof head: `c749b48f0a0e62a1faa4c6fd1c9e810cd9714e13`.** The Release APK was built from exactly this commit (fresh
+**Re-proof pending:** the Product Copy Gate binding changed Product copy, so the Release APK is rebuilt from that exact head and the 9 legs re-run; the results replace this section. **The earlier proof below (before the Copy Gate binding) is not closure evidence for the final head.**
+
+**Earlier proof head: `c749b48f0a0e62a1faa4c6fd1c9e810cd9714e13`.** The Release APK was built from exactly this commit (fresh
 `expo prebuild` + `:app:assembleRelease -PreactNativeArchitectures=x86_64`, no build cache carried across heads) with
 the ONE recorded difference applied in the ephemeral proof worktree — `apps/mobile/package.json` `main`:
 `expo-router/entry` → `src/integration/__validation__/a301-proof-entry.tsx` (`select-a301-proof-entry.mjs --apply`).
@@ -434,7 +436,7 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 | G-18 | Live Call truth; mounting the call-safe strip; Replay-slot occlusion | P3 §9 | 4 | `QAN-BL-VOICE-01` (unchanged; its future call authority replaces `PRODUCTION_CALL_TRUTH`) |
 | G-19 | Export My Data carries no Activity preferences / mutes | W3-PDG-01 §7.3 | 5 | `QAN-BL-PRIV-02` → `PRIV-EXPORT-01` |
 | G-20 | 30-s foreground attention read: auth-verification cost | PROD-READINESS-01 | 4 | `QAN-BL-PROD-04` (note added) |
-| G-21 | Unapproved copy (Snooze state / End / picker; Quiet Hours labels; loading / failure; unavailable entry; save / page failure) | copy sweep §3.3 | 3 | **the A3-01 Product Copy Gate (§24a) — an ACTIVE-task blocker, not backlog (BG-01); A3-01 is not READY until approved** |
+| G-21 | Unapproved copy (Snooze state / End / picker; Quiet Hours labels; loading / failure; unavailable entry; save / page failure) | copy sweep §3.3 | 3 | **fixed in A3-01: the Product Copy Gate (§24a), APPROVED by the Product Owner and bound byte-exact** |
 | G-22 | P2 World navigation glyphs as Activity row source marks | P3 §4 (identity "glyph / context") | 6 | identity is carried by approved words; the glyph port stays VPORT-02 G-14's owner (the first Global Switcher task, Stage 4) |
 | G-23 | P2 `close` glyph for the strip dismiss | P3-A craft | 6 | the Task Contract ports only Open Ledger / Open Link; dismiss carries approved words |
 | G-24 | Physical VoiceOver / TalkBack, iOS, haptics, device Increased Contrast | P3 §16, §18 | 5 | Release Hardening device gates (the owners VPORT-02 G-26 / G-27 / G-29 named) |
@@ -446,7 +448,7 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 | G-30 | The A3-01 contract asked git for the P3-A package status and read the root Project Map — neither exists in the forward-safety mirror (no repository; locators not mirrored), so `forward-safety-contract` failed | clean-worktree run | 3 | fixed: P3-A pinned by a content digest (140 files, as at the baseline); the Stage-3 owner read from this record. `forward-safety-contract` 35 / 35 |
 | G-31 | The validation-only producer returned its seeded events in seed order, so the device screenshots showed «اليوم» / Today again below «أمس» / Yesterday | device-proof screenshot review | 3 | fixed in the validation producer: it answers in the server's order (`last_occurred_at DESC, id DESC`, as `ActivityRepository.page` does); production was never affected |
 
-**Orphan gaps = 0.** Every candidate is implemented here, fixed here, held inside the active task (the Copy Gate), owned
+**Orphan gaps = 0.** Every candidate is implemented here, fixed here, resolved inside the active task (the Copy Gate, APPROVED), owned
 by an existing backlog item, given a named owner with an Exit Gate, or shown not to be an obligation; none survives only in
 this prose, and no backlog alias was created.
 
@@ -454,32 +456,35 @@ this prose, and no backlog alias was created.
 
 **Orphan gaps = 0** (matrix above).
 
-## 24a. A3-01 Product Copy Gate — PROPOSED, awaiting the Product Owner
+## 24a. A3-01 Product Copy Gate — APPROVED by the Product Owner
 
-Every row below is required by a control the Task Contract requires, and no record approves it. They are written once,
-in `apps/mobile/src/activity/copy.ts` (`ACTIVITY_COPY_GATE`), marked PROPOSED. **A3-01 is not READY FOR INDEPENDENT REVIEW
-until each row is approved or replaced, re-marked APPROVED there, and recorded here.** Everything else A3-01 shows is CANON
-or P4-C4-APPROVED, byte-exact (contract §10). Reused unchanged: «إعادة المحاولة» / "Try again" (VI-01 T03).
+Every row below is required by a control the Task Contract requires, and no earlier record approved it. The Product Owner
+approved the wording below; it is bound **byte-exact** in `apps/mobile/src/activity/copy.ts` (`ACTIVITY_COPY_GATE`,
+status `APPROVED BY THE PRODUCT OWNER — A3-01 PRODUCT COPY GATE`), and `a3-01-activity-attention-inapp-contract` §10
+pins every row and the status. The English keeps the approval's straight apostrophe, as the P3 registry does. Four rows
+differ from the proposal: `snoozeLonger`, `snoozeShorter`, `quietStart`, `quietEnd`. Everything else A3-01 shows is
+CANON or P4-C4-APPROVED, byte-exact (contract §10). Reused unchanged: «إعادة المحاولة» / "Try again" (VI-01 T03). No
+provisional copy remains.
 
-| Key | Where | Arabic (PROPOSED) | English (PROPOSED) |
+| Key | Where | Arabic — APPROVED | English — APPROVED |
 |---|---|---|---|
 | `loading` | Activity, first page loading | جارٍ تحميل النشاط… | Loading Activity… |
-| `unavailable` | Activity could not be read (beside «إعادة المحاولة») | تعذّر تحميل النشاط. | Activity couldn’t load. |
-| `entryUnavailable` | a row whose destination has no surface yet (Stage 4–8) | لا يمكن فتح هذا من هنا بعد. | This can’t be opened from here yet. |
+| `unavailable` | Activity could not be read (beside «إعادة المحاولة») | تعذّر تحميل النشاط. | Activity couldn't load. |
+| `entryUnavailable` | a row whose destination has no surface yet (Stage 4–8) | لا يمكن فتح هذا من هنا بعد. | This can't be opened from here yet. |
 | `snoozeActive` | Snooze is on (`{0}` = device-local weekday + time) | الإيقاف المؤقت مفعّل حتى {0} | Snoozed until {0} |
 | `snoozeEnd` | ends Snooze | إنهاء الإيقاف المؤقت | End Snooze |
 | `snoozeUntil` | custom picker: the end it would set | حتى {0} | Until {0} |
-| `snoozeLonger` | custom picker step | ساعة أكثر | One hour more |
-| `snoozeShorter` | custom picker step | ساعة أقل | One hour less |
-| `quietStart` | Quiet Hours start edit label | البداية | Starts |
-| `quietEnd` | Quiet Hours end edit label | النهاية | Ends |
-| `saveFailed` | a Notifications & Activity change not confirmed | تعذّر حفظ التغيير. حاول مرة أخرى. | The change couldn’t be saved. Try again. |
-| `settingsUnavailable` | the Notifications & Activity page could not be read | تعذّر تحميل إعدادات الإشعارات. | Notification settings couldn’t load. |
+| `snoozeLonger` | custom picker step | إضافة ساعة | Add an hour |
+| `snoozeShorter` | custom picker step | تقليل ساعة | Subtract an hour |
+| `quietStart` | Quiet Hours start edit label | من | From |
+| `quietEnd` | Quiet Hours end edit label | إلى | To |
+| `saveFailed` | a Notifications & Activity change not confirmed | تعذّر حفظ التغيير. حاول مرة أخرى. | The change couldn't be saved. Try again. |
+| `settingsUnavailable` | the Notifications & Activity page could not be read | تعذّر تحميل إعدادات الإشعارات. | Notification settings couldn't load. |
 
 ## 25. Readiness recommendation
 
-Implementation, tests, local real-PostgreSQL verification, the integrated proof harness and the governance
-reconciliation are complete on this branch. **One gate remains before `A3-01 READY FOR INDEPENDENT REVIEW — DO NOT
-MERGE`: the Product Owner's decision on the twelve Copy Gate rows (§24a).** Once approved (or replaced), the approved
-words are bound into `copy.ts`, re-marked APPROVED there and here, and the status moves to READY FOR INDEPENDENT REVIEW.
-Claude does not merge. **A3-01 does not close Stage 3**: `A3-02` remains its named owner.
+Implementation, tests, local real-PostgreSQL verification, the integrated proof harness, the governance reconciliation
+and the Product Copy Gate (§24a, APPROVED) are complete on this branch. **`A3-01 READY FOR INDEPENDENT REVIEW — DO NOT
+MERGE` is stated only once the Release APK built from the exact code head passes the full 9-leg proof (§18) and GitHub
+CI is green on the final pushed head.** Backlog owners and Exit Gates are unchanged by the Copy Gate approval. Claude does
+not merge. **A3-01 does not close Stage 3**: `A3-02` remains its named owner.
