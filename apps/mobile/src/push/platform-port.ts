@@ -11,7 +11,7 @@
  * importance and Focus / Do Not Disturb (P3-A platform gate, "ownership split"). QANDEEL owns WHEN to ask, the education
  * before it, which events may interrupt, the words, and the Direct Entry after a tap.
  */
-import type { OsPermission, PushPlatform } from '../runtime-entry/push-api';
+import type { OsPermission, PushPlatform } from '../runtime-entry';
 
 export interface OsPermissionState {
   readonly permission: OsPermission;

@@ -24,13 +24,13 @@
     "plugins": [
       "expo-router",
       "./plugins/with-qandeel-launch-identity",
+      "./plugins/with-qandeel-push",
       [
         "expo-notifications",
         {
           "mode": "production"
         }
-      ],
-      "./plugins/with-qandeel-push"
+      ]
     ]
   }
 }

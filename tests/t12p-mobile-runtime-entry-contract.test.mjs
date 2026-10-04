@@ -482,7 +482,14 @@ test('the backend gains no mobile token-issuance endpoint', () => {
   // asserted over every OTHER file exactly as before.
   const RELAY = 'account/supabase-password-grant.service.ts';
   assert.match(read('apps/api/src/auth/supabase-auth.service.ts'), /auth\/v1\/user/u, 'the API verifies a token');
-  const otherApiText = apiFiles.filter((file) => file !== RELAY).map((file) => stripComments(read(`apps/api/src/${file}`))).join('\n');
+  // A3-02 RE-ANCHOR — equally bounded. The FCM transport obtains an access token FOR THE SERVER ITSELF from Google
+  // (the OAuth JWT-bearer grant of a Firebase service account) to call FCM. That is the API as a client of a platform
+  // service, not an identity provider: it issues nothing to any reader, and the grant it names is exactly that one.
+  const FCM_TRANSPORT = 'push/push-transport.ts';
+  const fcm = stripComments(read(`apps/api/src/${FCM_TRANSPORT}`));
+  assert.deepEqual([...fcm.matchAll(/grant_type: '([^']+)'/gu)].map((m) => m[1]), ['urn:ietf:params:oauth:grant-type:jwt-bearer']);
+  assert.doesNotMatch(fcm, /auth\/v1\/token|signInWithPassword|refresh_token/u);
+  const otherApiText = apiFiles.filter((file) => file !== RELAY && file !== FCM_TRANSPORT).map((file) => stripComments(read(`apps/api/src/${file}`))).join('\n');
   for (const forbidden of [/auth\/v1\/token/u, /grant_type/u, /signInWithPassword/u, /issueToken/u, /mintToken/u]) {
     assert.doesNotMatch(otherApiText, forbidden, `the API must not issue tokens (${forbidden})`);
   }

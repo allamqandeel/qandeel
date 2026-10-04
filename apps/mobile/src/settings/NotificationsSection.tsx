@@ -10,10 +10,10 @@
  * and the separate hand-off to the device's own notification settings, which QANDEEL does not fake owning.
  *
  * A3-02 adds the device's OS permission to that last section: when it is not granted the page says so once, plainly
- * (`p3.osOff`), and Activity keeps working; before the OS has ever asked, «السماح بالإشعارات» / Allow notifications
- * opens QANDEEL's education, which hands over to the real OS prompt; the Device Notification Settings row hands off to
- * the app's own notification settings in the OS. Choosing «سماح» / Allow for Proactive QANDEEL is one of P3 §11's
- * legitimate moments for the education (once; never again after "Not now").
+ * (`p3.osOff`), and Activity keeps working; before the OS has ever asked, the education's own allow act (A3-02 Product
+ * Copy Gate, `push/copy.ts`) opens QANDEEL's education, which hands over to the real OS prompt; the Device Notification
+ * Settings row hands off to the app's own notification settings in the OS. Choosing «سماح» / Allow for Proactive
+ * QANDEEL is one of P3 §11's legitimate moments for the education (once; never again after the reader declined it).
  *
  * No meter, no remaining count, no per-channel list, no off switch for critical security, nothing implying that
  * QANDEEL's understanding is turned off. Per-World Shared mutes are drawn only for Worlds that exist for the reader —

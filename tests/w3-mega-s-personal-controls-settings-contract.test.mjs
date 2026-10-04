@@ -169,7 +169,9 @@ test('App language: the system’s own setting — no in-app switch, no stored l
   assert.match(language, /Linking\.sendIntent\('android\.settings\.LOCALE_SETTINGS'\)/u);
   const app = readJson('apps/mobile/app.json');
   assert.deepEqual(app.expo.ios.infoPlist.CFBundleLocalizations, ['ar', 'en'], 'iOS offers the per-app language');
-  assert.deepEqual(app.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity'], 'no new native plugin and no new Level-4 step');
+  // A3-02 RE-ANCHOR: native Push adds exactly two plugins — its own typed manifest mod (no dangerous mod) and Expo's
+  // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
+  assert.deepEqual(app.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }]], 'no new native plugin and no new Level-4 step');
   // The one locale authority is unchanged: the device is still read once, by the same call.
   assert.match(read('apps/mobile/src/integration/composition/ProductRoot.tsx'), /const locale = useMemo\(\(\) => deviceProductLocale\(\), \[\]\);/u);
 });

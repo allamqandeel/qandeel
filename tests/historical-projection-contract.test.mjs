@@ -414,6 +414,10 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // A3-02 re-anchor: the application root also composes PushModule (native Push device boundary and platform
+    // dispatcher, not a Conversation capability). It is stripped the same way, so every other byte stays frozen.
+    .replace("import { PushModule } from './push/push.module';\n", '')
+    .replace(', ActivityModule, PushModule, AccountModule', ', ActivityModule, AccountModule')
     // A3-01 re-anchor: the application root also composes ActivityModule (the Product Activity spine, not a Conversation
     // capability). It is stripped the same way, so every other byte stays frozen.
     .replace("import { ActivityModule } from './activity/activity.module';\n", '')

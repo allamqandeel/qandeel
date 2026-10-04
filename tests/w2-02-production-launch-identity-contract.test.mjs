@@ -311,7 +311,9 @@ test('generated native projects are never W2-02 source, and the Level-4 install 
     (code(text).match(/install(?:Android|Ios)Resources\(modConfig\.modRequest\.platformProjectRoot/gu) ?? []).length === 2 &&
     !/projectRoot,\s*['"](?:src|assets|plugins)|__dirname,\s*['"]\.\.['"],\s*['"](?:src|app)/u.test(code(text));
   guards('writes-only-into-generated-project', pluginText, writesOnlyIntoGeneratedProject, "fs.writeFileSync(path.join(modConfig.modRequest.projectRoot, 'src', 'x.ts'), '');");
-  assert.deepEqual(appJson.plugins, ['expo-router', './plugins/with-qandeel-launch-identity']);
+  // A3-02 RE-ANCHOR: native Push adds exactly two plugins — its own typed manifest mod (no dangerous mod) and Expo's
+  // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
+  assert.deepEqual(appJson.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }]]);
   // Exactly two dangerous mods: one Android install, one iOS install. Everything else is a typed mod.
   const dangerousCount = (text) => (code(text).match(/withDangerousMod\(config,/gu) ?? []).length;
   assert.equal(dangerousCount(pluginText), 2);
@@ -321,7 +323,11 @@ test('generated native projects are never W2-02 source, and the Level-4 install 
   for (const file of W2_02_OWNED_FILES.filter((path) => path !== PLUGIN_PATH)) {
     assert.doesNotMatch(read(file), /withDangerousMod/u, `${file} must not use a dangerous mod`);
   }
-  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN_PATH]);
+  // A3-02 RE-ANCHOR: one more plugin, `with-qandeel-push.js` — TYPED manifest mods only (the notification small icon
+  // REFERENCES this plugin's installed monochrome drawable; it copies, derives or deletes nothing). It is not a second
+  // Level-4 step: the dangerous-mod scan below and the level-4 exception set still name this plugin alone.
+  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN_PATH, 'apps/mobile/plugins/with-qandeel-push.js']);
+  assert.doesNotMatch(read('apps/mobile/plugins/with-qandeel-push.js'), /withDangerousMod|writeFileSync|copyFileSync|unlinkSync|rmSync/u);
   assert.match(read('tests/mobile-foundation-toolchain-contract.test.mjs'), /const level4Exceptions = new Set\(\['apps\/mobile\/plugins\/with-qandeel-launch-identity\.js'\]\);/u);
   const readme = read('apps/mobile/README.md');
   assert.match(readme, /\*\*W2-02 Level-4 exception — APPROVED \(bounded\)\.\*\*/u, 'the approved, bounded exception is recorded in the CNG policy');

@@ -128,8 +128,15 @@ test('§2 — Product recovery and auth persistence are two stores, two files, a
   // preference, in its OWN database file — and names it here; any fourth is still refused. It holds neither auth
   // material nor Product recovery truth (W3-01's contract pins its database name and vocabulary).
   const APPEARANCE_STORAGE = 'apps/mobile/src/appearance/appearance-storage.ts';
+  // A3-02 RE-ANCHOR: A3-02 added the fourth deliberately — this installation's random id and the reader's "Not now" to
+  // the permission education, in its OWN database file (`qandeel-push.db`). It holds no auth material, no push token
+  // and no Product recovery truth; any fifth is still refused.
+  const PUSH_STORAGE = 'apps/mobile/src/push/device-store.ts';
   const storageUsers = mobileProduction.filter((file) => /expo-sqlite|SQLiteStorage/u.test(stripComments(read(file))));
-  assert.deepEqual(storageUsers, [`${INTEGRATION_DIR}`.replace(INTEGRATION_DIR, RECOVERY_STORAGE), AUTH_STORAGE, APPEARANCE_STORAGE].sort(), 'exactly the three storage modules');
+  assert.deepEqual(storageUsers, [`${INTEGRATION_DIR}`.replace(INTEGRATION_DIR, RECOVERY_STORAGE), AUTH_STORAGE, APPEARANCE_STORAGE, PUSH_STORAGE].sort(), 'exactly the four storage modules');
+  const pushStorage = stripComments(read(PUSH_STORAGE));
+  assert.doesNotMatch(pushStorage, /accessToken|refresh_token|supabase|sessionId|viewpoint|checkpoint|pushToken|deviceToken/iu, 'the push device store holds an installation id and one decision only');
+  assert.match(pushStorage, /PUSH_DATABASE_NAME = 'qandeel-push\.db'/u, 'in its own database file');
   const appearanceStorage = stripComments(read(APPEARANCE_STORAGE));
   assert.doesNotMatch(appearanceStorage, /accessToken|refresh_token|supabase|sessionId|viewpoint|checkpoint/iu, 'the appearance store holds a preference only');
   assert.match(appearanceStorage, /APPEARANCE_DATABASE_NAME = 'qandeel-appearance\.db'/u, 'in its own database file');

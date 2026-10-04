@@ -8,6 +8,10 @@
 //   2. A message that names no channel lands on QANDEEL's neutral channel (`qandeel`, the L0 channel), never on a
 //      library default whose name QANDEEL did not choose.
 //
+// ORDER: app.json lists this plugin BEFORE `expo-notifications`, because that plugin's manifest mod runs after the
+// ones listed ahead of it and removes the icon meta-data whenever its own `icon` option is unset; listed first, this
+// mod runs last and its two icon entries stand (verified on the generated manifest).
+//
 // It adds no permission (expo-notifications declares POST_NOTIFICATIONS itself), no background mode, no Firebase
 // configuration and no credential. The Firebase client configuration (`google-services.json`) is a build-time input,
 // supplied from the build's secret store through `QANDEEL_ANDROID_GOOGLE_SERVICES_FILE` (app.config.js) and never

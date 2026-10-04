@@ -74,6 +74,7 @@ jobs:
       - {name: Verify W3-MEGA-M conversational Memory control static contract, run: npm run test:w3-mega-m-conversational-memory-control-contract}
       - {name: Verify W3-MEGA-S Personal controls and Privacy & Data static contract, run: npm run test:w3-mega-s-personal-controls-settings-contract}
       - {name: Verify A3-01 Activity & Attention Core + in-app production integration static contract, run: npm run test:a3-01-activity-attention-inapp-contract}
+      - {name: Verify A3-02 Native Push, Permission & Platform Delivery static contract, run: npm run test:a3-02-native-push-platform-delivery-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -819,6 +820,14 @@ jobs:
       # rest settled, preference / Snooze / mute bounds, bounded retention, and erasure through the governed Personal erasure.
       - name: Verify A3-01 Activity projection, attention state and preferences against real PostgreSQL
         run: npm run verify:activity-attention-core:integration
+      # A3-02 delivers eligible A3-01 items to the reader's own devices. This verifier proves the privilege boundary (no
+      # client reads a token or per-device evidence; the server passes are service_role only), register / refresh /
+      # rotate, a token that is not identity (it moves with the installation's account), detach and detach-others,
+      # bounded live registrations, one intent per (eligible item, live granted device) and nothing else, the lease and
+      # claim token, ACCEPTED never DELIVERED, a dead token retiring its device, opened evidence for THIS device only,
+      # user-level attention untouched, and erasure through the governed Personal erasure.
+      - name: Verify A3-02 device registrations, delivery intents and per-device evidence against real PostgreSQL
+        run: npm run verify:push-platform-delivery:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

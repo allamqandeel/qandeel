@@ -1118,8 +1118,11 @@ test('the gate registers itself and the four owned files exist', () => {
   }
   // The three recipes, and only deliberate ones: an artifact built for one purpose can never be
   // installed by a job validating another.
+  // A3-02 RE-ANCHOR: a fourth, deliberate recipe — the Stage-3 proof root (`a3-activity-push-proof`, role
+  // PROOF_VALIDATION, its own entry), built once and consumed by the isolated proof legs. It is pinned by the
+  // LEG-isolation contract; this pipeline's producers and consumers are unchanged.
   assert.deepEqual(Object.keys(BUILD_RECIPES).sort(),
-    ['mobile-ci-boot-smoke', 'qan-inf-04-demonstration', 't13-recovery-validation']);
+    ['a3-activity-push-proof', 'mobile-ci-boot-smoke', 'qan-inf-04-demonstration', 't13-recovery-validation']);
   assert.equal(MANIFEST_SCHEMA, 'qandeel.native-artifact-identity/1');
   // A digest of the canonical rule set, recomputed here from the module's own exports, so a silent
   // widening of the exclusions changes this file too rather than passing unnoticed.

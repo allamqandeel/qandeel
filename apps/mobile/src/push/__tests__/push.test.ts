@@ -1,8 +1,7 @@
 /**
  * A3-02 — the device permission runtime, registration lifecycle, tap inbox and copy authority (unit level).
  */
-import { createManualForegroundSignal } from '../../runtime-entry';
-import { PushApiClient, type PushDeviceSync } from '../../runtime-entry/push-api';
+import { PushApiClient, createManualForegroundSignal, type PushDeviceSync } from '../../runtime-entry';
 import { PUSH_COPY_GATE, pushCopy } from '../copy';
 import { createEphemeralPushDeviceStore, newInstallationId } from '../device-store';
 import { createNotificationEntryInbox } from '../entry-inbox';

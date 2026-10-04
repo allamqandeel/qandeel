@@ -17,8 +17,7 @@
  * held only while the OS permission is granted. Sign-out detaches this installation first; "sign out from other
  * devices" detaches every other one.
  */
-import type { ForegroundSignal } from '../runtime-entry';
-import type { OsPermission, PushApiClient, PushDeviceSync } from '../runtime-entry/push-api';
+import type { ForegroundSignal, OsPermission, PushApiClient, PushDeviceSync } from '../runtime-entry';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { pushCopy } from './copy';
 import type { PushDeviceStore } from './device-store';
