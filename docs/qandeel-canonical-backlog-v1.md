@@ -168,11 +168,12 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-01` | Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-A11Y-01` | Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `HIGH` | `CLOSED — TOMBSTONE` |
-| `QAN-BL-NOTIF-01` | Native Push, OS Permission and Platform Delivery for the A3-01 Activity Spine | `A3-02 — Native Push, Permission & Platform Delivery Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-01` | Native Push, OS Permission and Platform Delivery for the A3-01 Activity Spine | `A3-02 — Native Push, Permission & Platform Delivery Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-NOTIF-02` | No Proactive QANDEEL Gate and No Proactive Event Producer | `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-NOTIF-03` | No User-Requested Exact-Time Reminder Runtime and No Reminder Event Producer | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-NOTIF-04` | No Security / Sign-in / Account Event Source for Activity | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-02` | Export My Data Omits the Reader's Notifications & Activity Preferences and Context Mutes | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-05` | Native Push Physical-Device Exit Gates (PD-01 … PD-09) | `Release Hardening & Launch — physical iOS / Android device validation` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -831,6 +832,9 @@ inherits it at kickoff (BG-05). Nothing here authorizes implementation (BG-07).
 
 ### `QAN-BL-NOTIF-01` — Native Push, OS Permission and Platform Delivery for the A3-01 Activity Spine
 
+> **Historical pre-closure schema.** This block records the item as admitted. It is not the current lifecycle state; the
+> current state is the `CLOSED — TOMBSTONE` record in §6 below.
+
 - **Title / Finding:** A3-01 builds the provider-neutral Product notification spine — the typed candidate boundary
   (`ActivityPublisher`), the per-user Activity projection (migration `0136`), the server-side eligibility decision, the
   provider-neutral platform verdict (`platformVerdict`, the P3 §14 ceilings over delivery evidence, the disclosure
@@ -940,6 +944,36 @@ inherits it at kickoff (BG-05). Nothing here authorizes implementation (BG-07).
 Admitted by A3-01 under BG-06 (the A3-01 Task Contract defers `QAN-BL-NOTIF-01` to the named `A3-02` by name; the
 Product Owner's A3-01 kickoff decisions name the owners of `NOTIF-02` … `NOTIF-04`; `PRIV-02` follows the
 `QAN-BL-PRIV-01` precedent). Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-NOTIF-05` — Native Push Physical-Device Exit Gates (PD-01 … PD-09)
+
+- **Title / Finding:** A3-02 implements and proves native Push on emulators / simulators only: the server-rendered
+  messages are presented through the real OS notification systems, but no real FCM / APNs message is received (no
+  production credential exists in CI), and no physical Lock Screen, real OS tray tap, real permission prompt, badge
+  absence or VoiceOver / TalkBack behaviour on the new surfaces is attested on hardware. The gates are named PD-01 …
+  PD-09 in the A3-02 record §20 (credentials provisioned by name; real FCM receipt; real APNs receipt, production and
+  sandbox; Lock Screen at L0 and L2; token rotation / reinstall / account switch; tray tap → Direct Entry, stale, another
+  account's item; the real prompts and settings hand-off; no app-icon badge; assistive technology on the education sheet
+  and the device section).
+- **Source:** the A3-02 Task Contract §12 ("record named Exit Gates for any capability that cannot be honestly proven in
+  CI"); the `QAN-BL-NOTIF-01` Exit Gate ("physical iOS and Android evidence"); P3 §18 (device validation carried
+  forward); the roadmap §5 ("physical iOS / Android device validation"); the
+  [A3-02 implementation record](e2e/QANDEEL_A3_02_NATIVE_PUSH_PLATFORM_DELIVERY_IMPLEMENTATION_RECORD_v1.md) §20.
+- **Current truth:** the production boundary is implemented and fails closed without credentials (the transports answer
+  `NOT_CONFIGURED` and send nothing; a build without the Firebase client file registers no token).
+- **Why deferred:** real platform delivery needs production credentials and physical hardware, which the roadmap places in
+  Release Hardening & Launch; claiming them from emulators would be fake proof.
+- **Owner task:** `Release Hardening & Launch — physical iOS / Android device validation`
+- **Severity:** `HIGH` — every background notification a reader would receive depends on it.
+- **Reopen condition:** automatic when Release Hardening & Launch starts; and before any production build enables Push.
+- **Required future properties (Exit Gate):** PD-01 … PD-09 each pass on physical iOS and Android hardware against the
+  production API, with evidence recorded; nothing in the A3-02 law (disclosure, revalidation, per-device evidence,
+  no badge, no relay) is relaxed to pass them.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by A3-02 under BG-06 (the A3-02 Task Contract defers physical-device proof to named pre-release gates; the roadmap
+§5 names the owner). It re-owns the physical-evidence clause of `QAN-BL-NOTIF-01` and is not an alias of any item.
+Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -1147,6 +1181,26 @@ The boundaries this item stated remain true: the validation-only T12-04 auth har
 into a Product experience, and `QAN-SEC-01 — Pre-release Mobile Credential Security` still owns
 credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
+### `QAN-BL-NOTIF-01` — Native Push, OS Permission and Platform Delivery for the A3-01 Activity Spine
+
+- **Closing task:** `A3-02 — Native Push, Permission & Platform Delivery Integration`
+- **PR / SHA:** the A3-02 Draft PR / the final code head recorded in the A3-02 record §24. The tombstone holds from that
+  PR's merge, which happens only after independent review on green CI.
+- **Disposition:** completed for every implementation obligation of its Exit Gate: A3-01's ONE projection, candidate
+  boundary and `open` contract consumed (no second model); `platformVerdict` asked before every delivery, re-judged at
+  every attempt; per-device evidence that claims only provider acceptance and THIS device's tap (no delivered / presented
+  column exists); user-level attention untouched; Quiet Hours / Snooze deferral re-evaluated with at most one item per
+  reader per pass; the device's IANA zone persisted; the bounded projection rendered at `disclosureLevel` with the
+  approved Lock Screen words and L0 on a neutral channel; OS permission requested only after QANDEEL's education at a
+  legitimate moment (its copy through the A3-02 Product Copy Gate); native Direct Entry through Activity's `open`;
+  device registration, rotation, detach, detach-others, invalidation and erasure (migration `0137`, real-PostgreSQL
+  verifier); FCM HTTP v1 and APNs HTTP/2 directly, no relay; Android channels, no iOS category, no badge. Proved by unit,
+  integration and database tests and on Android / iOS emulators through isolated proof legs. Its physical-evidence clause
+  is re-owned, not dropped, to `QAN-BL-NOTIF-05`.
+- **Status:** `CLOSED — TOMBSTONE`
+
+---
+
 ### `QAN-BL-A11Y-01` — Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks
 
 - **Closing task:** `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence`
@@ -1175,12 +1229,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | `DEFERRED — OWNED` | 13 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 16 |
-| **Total** | **39** |
+| `CLOSED — TOMBSTONE` | 17 |
+| **Total** | **40** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 24 |
+| `HIGH` | 25 |
 | `MEDIUM` | 14 |
 | `LOW` | 1 |
 
@@ -1311,6 +1365,16 @@ Live Call truth the call-safe path waits for; the Shared / Public / Introduction
 the execution map. Its Stage-3 Gap Matrix is §23 of its [implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**. The
 register now holds **39** items: 13 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 16
 `CLOSED — TOMBSTONE`; by severity, 24 `HIGH`, 14 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**A3-02 reconciliation (2026-10-04).** A3-02 (Native Push, Permission & Platform Delivery Integration, migration `0137`)
+inherits exactly one item and tombstones it: `QAN-BL-NOTIF-01` (§6). It admits one: `QAN-BL-NOTIF-05` (`HIGH`,
+`DEFERRED — OWNED`, Release Hardening & Launch), the physical-device Exit Gates PD-01 … PD-09 that emulators cannot
+honestly prove. `QAN-BL-NOTIF-02` … `04` and `QAN-BL-PRIV-02` are unchanged: their producers publish through A3-01, and
+A3-02 delivers what they publish. Its Stage-3 Gap Matrix is §22 of its
+[implementation record](e2e/QANDEEL_A3_02_NATIVE_PUSH_PLATFORM_DELIVERY_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
+The register now holds **40** items: 13 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17
+`CLOSED — TOMBSTONE`; by severity, 25 `HIGH`, 14 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index. The
+tombstone holds from the merge of the A3-02 PR.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1366,7 +1430,8 @@ Inherited after T-12 closure reconciliation:
 | `ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation` | none — no item names it; none admitted |
 | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `QAN-BL-A11Y-01` — delivered by PR #306; tombstoned by itself under BG-08 |
 | `A3-01 — Activity & Attention Core + In-App Production Integration` | none — no item names it; admitted `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02` |
-| `A3-02 — Native Push, Permission & Platform Delivery Integration` | `QAN-BL-NOTIF-01` |
+| `A3-02 — Native Push, Permission & Platform Delivery Integration` | `QAN-BL-NOTIF-01` — delivered; tombstoned by itself under BG-08; admitted `QAN-BL-NOTIF-05` |
+| `Release Hardening & Launch — physical iOS / Android device validation` | `QAN-BL-NOTIF-05` |
 | `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `QAN-BL-NOTIF-02` |
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |

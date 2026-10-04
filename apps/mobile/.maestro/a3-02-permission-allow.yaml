@@ -4,7 +4,10 @@
 # Driven by scripts/a3/run-proof-leg.sh (leg `android-permission-allow`), which passes PREFIX.
 appId: com.qandeel.mobile
 ---
-- launchApp
+# Maestro grants every permission at launch by default; the permission legs need the REAL never-asked state.
+- launchApp:
+    permissions:
+      notifications: unset
 - extendedWaitUntil:
     visible:
       id: "qandeel-conversation-thread"
