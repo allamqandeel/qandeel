@@ -168,6 +168,11 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-01` | Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-A11Y-01` | Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-NOTIF-01` | Native Push, OS Permission and Platform Delivery for the A3-01 Activity Spine | `A3-02 — Native Push, Permission & Platform Delivery Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-02` | No Proactive QANDEEL Gate and No Proactive Event Producer | `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-03` | No User-Requested Exact-Time Reminder Runtime and No Reminder Event Producer | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-NOTIF-04` | No Security / Sign-in / Account Event Source for Activity | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PRIV-02` | Export My Data Omits the Reader's Notifications & Activity Preferences and Context Mutes | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -669,6 +674,11 @@ obligation only (BG-07).
   region.
 - **Status:** `DEFERRED — OWNED`
 
+**Current-truth note (A3-01, 2026-10-04).** A3-01 adds one authenticated foreground read, `GET /activity/attention`, on a
+30-second cadence while the app is in the foreground (never in the background), plus reads when the reader opens
+Activity or leaves the Analysis. Each is one more `/auth/v1/user` verification under this item's measurement. This note
+changes none of this item's fields.
+
 ### `QAN-BL-PROD-05` — List / Fan-out Corrections and Unmeasured Payload / Semantic-Phase Sizes (PR01-D/M)
 
 - **Title / Finding:** the review's optimisations and measurements:
@@ -818,6 +828,118 @@ implementation (BG-07).
 
 Admitted by `W3-MEGA-S-CLOSE-01` under BG-06 (a canonical record's deferral to a named future task), so that `VPORT-02`
 inherits it at kickoff (BG-05). Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-NOTIF-01` — Native Push, OS Permission and Platform Delivery for the A3-01 Activity Spine
+
+- **Title / Finding:** A3-01 builds the provider-neutral Product notification spine — the typed candidate boundary
+  (`ActivityPublisher`), the per-user Activity projection (migration `0136`), the server-side eligibility decision, the
+  provider-neutral platform verdict (`platformVerdict`, the P3 §14 ceilings over delivery evidence, the disclosure
+  level) and the in-app surfaces. Nothing delivers outside the app: there is no APNs / FCM transport, no device-token
+  registration, rotation or removal, no per-device delivery evidence, no multi-device de-duplication, no background
+  delivery or retry, no OS permission prompt, no permission-education → real OS prompt boundary, no iOS categories, no
+  Android channels, no platform Lock Screen projection (the Lock Screen ceilings are stored preferences only), no
+  app-icon badge, no notification-specific OS settings hand-off (the row opens the app's settings), no Direct Entry from
+  a native notification, and no physical iOS / Android notification proof.
+- **Source:** the A3-01 Task Contract §0, §17 ("Record exactly one future task: `A3-02 — Native Push, Permission &
+  Platform Delivery Integration`"); P3 §18 (Push provider, APNs / FCM, tokens, categories / channels, OS-level mapping,
+  badge, permission wording, device validation carried forward); I-08N-01 §21 *Platform implementation*; the
+  [A3-01 implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) §21.
+- **Why deferred:** the Product Owner split Stage 3 deliberately: platform transport is a separate engineering
+  boundary (Task Contract §0). A3-01 must not choose or integrate a provider.
+- **Owner task:** `A3-02 — Native Push, Permission & Platform Delivery Integration`
+- **Severity:** `HIGH` — Stage 3 cannot close without it, and every interrupting background notification depends on it.
+- **Reopen condition:** automatic when `A3-02` is opened by its Task Contract.
+- **Required future properties (Exit Gate):** consume A3-01's ONE candidate boundary, projection and Direct Entry
+  contract (no second notification model); ask `platformVerdict` before every platform delivery and record per-user,
+  per-device delivery evidence it actually holds (D41, D53, D56 — never inferred); keep user-level attention separate
+  from per-device evidence; re-evaluate (never flush) after Quiet Hours / Snooze, with at most one interruption per
+  re-evaluation pass; persist the device's IANA time zone so background Quiet Hours stay device-local; render only the
+  bounded projection at `disclosureLevel` (never above the user's ceiling, never relying on the OS to hide more);
+  request OS permission only at a legitimate contextual moment, with the education sheet's copy approved first (it is
+  `AUDIT_OWNED`); revalidate Direct Entry from a native notification through the same `open` boundary; physical
+  iOS and Android evidence. **Stage 3 does not close before this gate.**
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-NOTIF-02` — No Proactive QANDEEL Gate and No Proactive Event Producer
+
+- **Title / Finding:** I-08N-01 §4 requires every proactive candidate to pass the Proactive Gate (P1–P7), and P3 §12.1
+  freezes Reduce as a tighter Gate decision, "not a numeric score or threshold". No Gate runtime exists on `main`, and
+  nothing produces a proactive candidate. A3-01 therefore fails closed: under Allow and Reduce alike, a proactive item may
+  enter Activity but never interrupts (`PROACTIVE_GATE_ABSENT`), and no proactive candidate is ever published.
+- **Source:** I-08N-01 §4, D01, D04, D05, D23, D35; P3 §12.1; A3-01 Task Contract §7; the
+  [A3-01 implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) §3.2, §9.
+- **Why deferred:** a Proactive Gate is QANDEEL intelligence and source-domain semantics, not Activity infrastructure;
+  inventing one inside A3-01 would be exactly the score / threshold the Task Contract forbids.
+- **Owner task:** `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration`
+- **Severity:** `HIGH` — Proactive QANDEEL is a frozen v1 behaviour (D01) and Allow / Reduce have no effect until it exists.
+- **Reopen condition:** automatic when the task opens; and it must open before any real Proactive QANDEEL notification
+  can be emitted.
+- **Required future properties (Exit Gate):** the Gate's own authoritative verdict (including its stronger Reduce
+  decision) reaches the A3-01 decision as a typed fact replacing `PROACTIVE_GATE = 'ABSENT'` — never a score, weight,
+  class rule or threshold; candidates are published only through `ActivityPublisher` with QANDEEL Voice and the reader's
+  language / dialect profile (D18–D18B); no manipulative copy (D20); silence is never evidence (D05); the event sentences
+  carry Product-approved copy; the From QANDEEL row source glyph question is settled with the P2 navigation-family owner.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-NOTIF-03` — No User-Requested Exact-Time Reminder Runtime and No Reminder Event Producer
+
+- **Title / Finding:** I-08N-01 D06 / D37 and P3 §9 / §13 name an exact-time reminder the user explicitly requested as
+  one of the two exceptions (Quiet Hours, ordinary budget, Live Call). A3-01 carries the typed fact (`requested`, kind
+  `REMINDER`) and its exception path end to end, but no reminder runtime exists (Memory explicitly classes reminder cues
+  as not-Memory), so nothing produces one.
+- **Source:** I-08N-01 D06, D08, D10, D37; P3 §9, §13; A3-01 Task Contract §8; the
+  [A3-01 implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) §3.2.
+- **Why deferred:** a reminder runtime (capture, scheduling, delivery-time truth, cancellation) is its own source domain.
+- **Owner task:** `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer`
+- **Severity:** `MEDIUM` — a Product capability not yet present; it violates no frozen contract while absent.
+- **Reopen condition:** automatic when the task opens; and it must open before exact-time requested reminders can emit
+  real notification events.
+- **Required future properties (Exit Gate):** publish only through `ActivityPublisher` with `requested: true` set only
+  for a reminder the reader explicitly asked for at an exact time, an honest `expiresAt`, and approved copy.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-NOTIF-04` — No Security / Sign-in / Account Event Source for Activity
+
+- **Title / Finding:** I-08N-01 D27 / D36 and P3 §9 / §12.2 make a genuinely critical security / account event the
+  other exception, with no in-app off switch. A3-01 implements that path (`critical`, kind `SECURITY`; the statement row
+  in Notifications & Activity; the call-safe component), but nothing on `main` records a security or sign-in event: the
+  W3-MEGA-A account acts are provider calls that write no event, and no new-sign-in detection exists.
+- **Source:** I-08N-01 D10, D27, D36; P3 §9, §12.2; the [A3-01 implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) §3.2.
+- **Why deferred:** detecting and recording security events is Account & Security source truth, not Activity.
+- **Owner task:** `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration`
+- **Severity:** `HIGH` — critical-security notification is a frozen exception whose absence leaves a security journey without
+  its Product signal.
+- **Reopen condition:** automatic when the task opens; and it must open before Security / Account Activity events can be
+  emitted.
+- **Required future properties (Exit Gate):** publish only through `ActivityPublisher`; `critical` only for a genuinely
+  critical event (Class 1); Direct Entry `GENERAL_SETTINGS` / `SECURITY` (or `ACCOUNT`), revalidated at open; disclosure
+  bounded at L2 by default and never raised by importance (D14); any inline action (for example a "review" act) and every
+  event sentence Product-approved.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-PRIV-02` — Export My Data Omits the Reader's Notifications & Activity Preferences and Context Mutes
+
+- **Title / Finding:** A3-01 adds per-reader data: Notifications & Activity preferences and per-context mutes (migration
+  `0136`). The Personal export (`personal_data_private.build_personal_export_v1`, migration `0130`) does not carry them.
+  The Activity projection itself is a presentation of other domains' events and carries no source content of its own
+  beyond the bounded sentences producers render.
+- **Source:** W3-PDG-01 §7.3 (export what belongs to the user, including account data); the
+  [A3-01 implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) §19. The precedent is `QAN-BL-PRIV-01`.
+- **Current truth:** nothing in the export is false; it is incomplete for these new rows. No producer exists, so the
+  projection is empty in production.
+- **Why deferred:** the export's content and shape are a Privacy & Data Product decision; adding a section from inside the
+  Activity task would invent it (AGENTS.md §2), exactly as W3-CORR-U found for `QAN-BL-PRIV-01`.
+- **Owner task:** `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` (the named Export completeness task)
+- **Severity:** `MEDIUM` — completeness of the reader's own export, not its truthfulness.
+- **Reopen condition:** automatic when `PRIV-EXPORT-01` starts; and before Export My Data is declared complete for launch.
+- **Required future properties (Exit Gate):** the reader's own Notifications & Activity preferences and context mutes
+  appear in Export My Data as readable facts, proved by an export test over a populated `0136` footprint; whether
+  Activity items belong in the export is decided there, not here.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by A3-01 under BG-06 (the A3-01 Task Contract defers `QAN-BL-NOTIF-01` to the named `A3-02` by name; the
+Product Owner's A3-01 kickoff decisions name the owners of `NOTIF-02` … `NOTIF-04`; `PRIV-02` follows the
+`QAN-BL-PRIV-01` precedent). Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -1050,16 +1172,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 8 |
+| `DEFERRED — OWNED` | 13 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 16 |
-| **Total** | **34** |
+| **Total** | **39** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 21 |
-| `MEDIUM` | 12 |
+| `HIGH` | 24 |
+| `MEDIUM` | 14 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -1179,6 +1301,16 @@ is aliased. Its Stage-2 Gap Closure Matrix is §18 of its
 **Orphan gaps = 0**. The register now holds **34** items: 8 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10
 `OPEN — UNASSIGNED` and 16 `CLOSED — TOMBSTONE`; by severity, 21 `HIGH`, 12 `MEDIUM` and 1 `LOW`, counted mechanically
 from the §4 index. The tombstone holds from the merge of PR #306.
+
+**A3-01 reconciliation (2026-10-04).** A3-01 (Activity & Attention Core + In-App Production Integration, migration
+`0136`) inherits no item and admits five, each with one named owner and an Exit Gate: `QAN-BL-NOTIF-01` (`HIGH`,
+`A3-02`), `QAN-BL-NOTIF-02` (`HIGH`, `PROACTIVE-EVT-01`), `QAN-BL-NOTIF-03` (`MEDIUM`, `REMINDER-EVT-01`),
+`QAN-BL-NOTIF-04` (`HIGH`, `ACCOUNT-SEC-EVT-01`) and `QAN-BL-PRIV-02` (`MEDIUM`, `PRIV-EXPORT-01`). It adds a
+current-truth note to `QAN-BL-PROD-04` and leaves every other item unchanged: `QAN-BL-VOICE-01` still owns the canonical
+Live Call truth the call-safe path waits for; the Shared / Public / Introductions producers stay with Stages 4 / 5 / 6 of
+the execution map. Its Stage-3 Gap Matrix is §23 of its [implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**. The
+register now holds **39** items: 13 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 16
+`CLOSED — TOMBSTONE`; by severity, 24 `HIGH`, 14 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1228,11 +1360,16 @@ Inherited after T-12 closure reconciliation:
 | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `QAN-BL-LAUNCH-01` |
 | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-02` |
 | `W3-CORR-U — Understanding Integrity` | none — U-1 … U-5 closed inside the task; admitted `QAN-BL-PRIV-01` |
-| `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01` |
+| `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02` |
 | `AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation` | none — no item names it; none admitted |
 | `W3-MEGA-S-CLOSE-01 — Product Copy Approval + Residual Reconciliation` | none — admitted `QAN-BL-A11Y-01` |
 | `ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation` | none — no item names it; none admitted |
 | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `QAN-BL-A11Y-01` — delivered by PR #306; tombstoned by itself under BG-08 |
+| `A3-01 — Activity & Attention Core + In-App Production Integration` | none — no item names it; admitted `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02` |
+| `A3-02 — Native Push, Permission & Platform Delivery Integration` | `QAN-BL-NOTIF-01` |
+| `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `QAN-BL-NOTIF-02` |
+| `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
+| `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

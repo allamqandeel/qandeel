@@ -131,6 +131,7 @@ type Open = { readonly kind: 'QUIET'; readonly edge: 'start' | 'end' } | { reado
 
 export function NotificationsSettings({ controller, language, palette }: NotificationsSettingsProps) {
   const words = notificationsCopy(language);
+  const saveFailed = words.gate.saveFailed;
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const [open, setOpen] = useState<Open>(null);
@@ -141,8 +142,9 @@ export function NotificationsSettings({ controller, language, palette }: Notific
     controller.start();
   }, [controller]);
   useEffect(() => {
-    if (state.failed) AccessibilityInfo.announceForAccessibility(words.gate.saveFailed);
-  }, [state.failed, words]);
+    // Said once per failure: keyed on the failure and the one stable sentence, not on the (rebuilt) copy object.
+    if (state.failed) AccessibilityInfo.announceForAccessibility(saveFailed);
+  }, [state.failed, saveFailed]);
 
   if (state.status !== 'READY' || state.preferences === null) {
     return (
