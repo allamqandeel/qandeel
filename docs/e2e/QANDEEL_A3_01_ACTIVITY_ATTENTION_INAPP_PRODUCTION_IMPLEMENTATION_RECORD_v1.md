@@ -22,7 +22,7 @@
 | Baseline | `34ea439b98eecd5f22628f41749245f81bb2b9f8` |
 | Branch | `feat/a3-01-activity-attention-inapp`, cut from the exact baseline |
 | PR | Draft (opened with this record; number in the PR) |
-| Implementation evidence head | the code head the Release proof APK was built from and proved on (§18). The commit after it, if any, changes only this record (proved by `git diff --stat <proof head>..HEAD`) |
+| Implementation evidence head | **`c749b48f0a0e62a1faa4c6fd1c9e810cd9714e13`** — the code head the Release proof APK was built from and proved on (§18). The one commit after it changes only this record (`git diff --stat c749b48..HEAD` lists this file alone) |
 
 ## 2. Repo Truth Gate
 
@@ -314,7 +314,7 @@ P2's `close` utility glyph (the dismiss carries approved words instead).
 | database static (`npm run test:database`) | **1 281 / 1 281**; `verifier-hazards` 0 findings |
 | real PostgreSQL 17.10 (local, fresh cluster: bootstrap + 0001–0136) | **Migration `0136` itself: `verify-migration-0136` PASS on all ten stages** (catalog / privileges; publication + replay; authority constraints; account isolation; coalescing; attention ≠ resolution; withdrawal; strip evidence; preferences / Snooze / mute; retention + governed erasure). **Wider local verifier sweep (CI order): 133 / 137.** The four not passing locally are classified environment / baseline, not A3-01 regressions, and no Product code was changed for them: (a) two verifiers need a Redis server this host does not run; (b) `0133` shells out to a `psql` binary this PostgreSQL build does not ship; (c) `0130` fails two 7-day-window assertions on this host clock / timing — the identical two fail on the untouched baseline `34ea439` (with only those two neutralised in a scratch diagnostic copy, never committed, `0130` otherwise verifies end to end on the A3-01 set, including the Personal erasure of a populated footprint to zero rows). **The full integration-verifier sweep is NOT claimed green until CI (`api-ci`) proves it.** |
 | mobile `src/activity` + A3-01 integration | **43 / 43** (attention law, controllers, strict wire, surfaces in ar / en × Dark / Light, Reduced Motion, screen reader, Notifications & Activity; 8 end-to-end scenarios on the production phase surface) |
-| mobile full (`npm run test:mobile`) | **167 suites; 2 004 / 2 010 pass on this host.** The six failures are pre-existing locale-dependent W1A-01 / session-state tests that assume an English device; the identical six fail on the untouched baseline on this host (`ar-EG`). Every A3-01 and re-anchored suite passes |
+| mobile full (`npm run test:mobile`) | **167 suites; 2 004 / 2 010 pass on this host** (clean worktree: the full suite at `c05ccc1` and `src/integration` + `src/activity` + `src/settings` at the proof head `c749b48` fail the same six, and only them). The six failures are pre-existing locale-dependent W1A-01 / session-state tests that assume an English device; the identical six fail on the untouched baseline on this host (`ar-EG`). Every A3-01 and re-anchored suite passes |
 | mobile `tsc` / `expo lint` | clean / 0 errors (no warning in any A3-01 file) |
 | root contracts | clean worktree at the proof head (no local `android/`): **every root contract passes**, including `a3-01-activity-attention-inapp-contract` **12 / 12** and `forward-safety-contract` **35 / 35** (G-30). In this checkout five contracts that assert no `apps/mobile/android` directory exists fail only because of an ignored local native build folder |
 
@@ -330,8 +330,40 @@ and `a3-01-light.yaml` through `scripts/a301/run-a301-inapp-proof.sh`, on an And
 `.github/workflows/a3-01-inapp-proof.yml` (branch-scoped). The proof root is the ONE validation-only producer seam: an
 in-memory stand-in for `/activity/*` announcing synthetic events by proof link; it is unreachable from a Product build.
 
-**Proof head and results:** recorded below in a record-only commit made after the Release proof APK was built from, and the
-matrix run against, this exact code head (§1).
+**Proof head: `c749b48f0a0e62a1faa4c6fd1c9e810cd9714e13`.** The Release APK was built from exactly this commit (fresh
+`expo prebuild` + `:app:assembleRelease -PreactNativeArchitectures=x86_64`, no build cache carried across heads) with
+the ONE recorded difference applied in the ephemeral proof worktree — `apps/mobile/package.json` `main`:
+`expo-router/entry` → `src/integration/__validation__/a301-proof-entry.tsx` (`select-a301-proof-entry.mjs --apply`).
+APK SHA-256 `1ef31e767eaf04478e770116ee9402d13b12c4b43d30b78fe7f700c412febe61`. The generated world / P2 / P3
+geometry was `--check`ed current before the build. The commit after the proof head changes only this record (§1).
+
+Device: Android emulator `sdk_gphone64_x86_64`, Android 16 / API 36, 1080 × 2400 @ 420 dpi; Maestro 2.10.0.
+
+| Leg | Setting | Flow | Result |
+|---|---|---|---|
+| `ar-standard` | Arabic (RTL), standard phone | `a3-01-activity.yaml` | **PASS** |
+| `en-standard` | English (LTR), standard phone | `a3-01-activity.yaml` | **PASS** |
+| `ar-rtl-device` | Arabic, Android system RTL layout forced | `a3-01-activity.yaml` | **PASS** |
+| `ar-narrow` | Arabic, 320 dp wide | `a3-01-activity.yaml` | **PASS** |
+| `en-narrow` | English, 320 dp wide | `a3-01-activity.yaml` | **PASS** |
+| `ar-narrow-large` | Arabic, 320 dp at 200 % system text | `a3-01-activity.yaml` | **PASS** |
+| `ar-increased` | Arabic, high-text-contrast (Increased Contrast) | `a3-01-activity.yaml` | **PASS** |
+| `ar-reduced` | Arabic, launched under Reduce Motion (animator scales 0) | `a3-01-activity.yaml` | **PASS** |
+| `en-light` | English, Light appearance (General Settings → Appearance) | `a3-01-light.yaml` | **PASS** |
+
+**9 / 9 PASS**; 131 screenshots, a final hierarchy dump and a logcat per leg (no `FATAL EXCEPTION`, no JS error in any
+logcat). Each `a3-01-activity` leg proves, by element, on the production phase surface: the global entry at the
+Conversation's START edge (one control, not a fourth World); a synthetic arrival → one ordinary strip + presence mark;
+dismiss keeps the mark (dismiss ≠ resolve); an arrival in its origin context → no strip; an arrival while in the Analysis
+→ no strip and no Activity entry there; leaving the Analysis → exactly one strip; Activity: «الكل» / All grouped by day
+newest first, the Shared filter, a stale row failing closed with its approved sentence, Back to the same Conversation;
+Notifications & Activity: Allow / Reduce / Off (Reduce selected and confirmed), Quiet Hours, a Snooze set and shown,
+the Lock Screen ceilings; and the call-safe strip only as a labelled validation specimen (no call runtime exists).
+`en-light` proves the strip and Activity in Light and the Analysis staying one dark place with no entry.
+
+Diagnostic runs (not closure evidence): `bc83f8c` (9 / 9) and `c05ccc1` (2 legs, stopped) preceded the proof head. Review
+of their screenshots found G-31 (fixed at the proof head); `c05ccc1`'s clean-worktree run found G-30. The CI workflow
+re-proves every pushed head of this branch on GitHub's emulator.
 
 ## 19. Privacy / security
 
