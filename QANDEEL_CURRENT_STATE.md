@@ -151,6 +151,7 @@ W-slices are in §7.
 | W3-CORR-U — Understanding Integrity (migration `0134`) | `MERGED / CLOSED` through PR #302 at `c9add460be785fc5d4dd930146e217cee2972706`; `QAN-BL-PRIV-01` admitted | [record](docs/e2e/QANDEEL_W3_CORR_U_UNDERSTANDING_INTEGRITY_IMPLEMENTATION_RECORD_v1.md) |
 | AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation (migration `0135`) | `MERGED / CLOSED` through PR #303 at `7221a635a6a7fe7564fb3f1e2e19c1ca189164c4`. The foundation only: no Credit formula, plan, allowance, balance or exhaustion is active, and no provider is selected | [record](docs/e2e/QANDEEL_AI_COST_01_PROVIDER_NEUTRAL_COST_CREDIT_LEDGER_IMPLEMENTATION_RECORD_v1.md) |
 | PROD-READINESS-01 — API Security & Performance Adversarial Review | **PR #298 CLOSED UNMERGED — evidence / review only.** Its accepted findings were admitted to the backlog as `QAN-BL-PROD-01` … `05` and re-owned to the tasks above | [backlog](docs/qandeel-canonical-backlog-v1.md) `PROD-READINESS-01 corrective admission` |
+| VPORT-02 — Final Temporal / Orientation / Iconography Production Port + Stage-2 Coherence Closure | **IMPLEMENTED ON DRAFT PR #306 — `READY FOR INDEPENDENT REVIEW — DO NOT MERGE`; NOT MERGED.** Spine C, the Live terminal, the Analysis chrome ground / ink (the dark-on-dark fix), G3 Decision B, the Call Rail A component, and `QAN-BL-A11Y-01` (tombstoned from merge). Stage 2 is not closed by it until review and merge | [record](docs/e2e/QANDEEL_VPORT_02_TIMELINE_ORIENTATION_P2_FINAL_COHERENCE_IMPLEMENTATION_RECORD_v1.md) |
 | PROD-AUTH-01 — Auth Verification Path; PROD-DATA-01 — List/Fan-out Correction | **`DEFERRED — OWNED`** (`QAN-BL-PROD-04`, `QAN-BL-PROD-05`). Not opened, and not promoted ahead of VPORT-02 | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 
 There is no task named `W3-CORR-M`. Memory control is the merged W3-MEGA-M (PR #293); no record or backlog item
@@ -195,10 +196,10 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 
 | Status | Count |
 |---|---:|
-| `DEFERRED — OWNED` | 9 |
+| `DEFERRED — OWNED` | 8 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 15 |
+| `CLOSED — TOMBSTONE` | 16 |
 | **Total** | **34** |
 
 | Severity (all 34) | Count |
@@ -209,8 +210,9 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 
 Recounted mechanically from the §4 index at `b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4` by ROADMAP-REC-01 after PR #305; the
 previous table (25 items) predated the `QAN-BL-PROD-*`, `QAN-BL-LAUNCH-*` and `QAN-BL-PRIV-01` admissions. The severity
-table counts all 34 rows, tombstones included. The 19 active (non-tombstone) items split 9 `HIGH`, 9 `MEDIUM` and
-1 `LOW`. Here they are in the backlog's own index order:
+table counts all 34 rows, tombstones included. VPORT-02 (Draft PR #306) tombstones `QAN-BL-A11Y-01`, effective from that
+PR's merge; the 18 active (non-tombstone) items then split 8 `HIGH`, 9 `MEDIUM` and 1 `LOW`. Here they are in the
+backlog's own index order:
 
 | ID | Title | Owner | Severity | Status |
 |---|---|---|---|---|
@@ -232,7 +234,6 @@ table counts all 34 rows, tombstones included. The 19 active (non-tombstone) ite
 | `QAN-BL-LAUNCH-01` | Trusted Proxy / Edge / Origin Production Proof | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-02` | Retired Login ID / Public ID Digest: Keyed (HMAC) Hardening Under Managed Key Custody (P-7) | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-01` | Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-A11Y-01` | Reduce Motion Read Only at Launch by the T-10 Camera / Temporal Motion Hooks | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `HIGH` | `DEFERRED — OWNED` |
 
 Severity states the consequence *if an item is reopened*. It is not a priority or a schedule (backlog §2).
 An entry authorizes no implementation (BG-07).
