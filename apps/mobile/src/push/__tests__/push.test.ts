@@ -107,6 +107,20 @@ describe('A3-02 permission runtime (D50, P3 §11)', () => {
     expect(calls.request).toBe(0);
   });
 
+  it('Android 13+ reports a never-asked permission like a refusal: before QANDEEL ever asked, it is NOT_REQUESTED', async () => {
+    const f = fakePort({ permission: 'DENIED', canAskAgain: true }, { permission: 'DENIED', canAskAgain: true });
+    const { c, store } = controller(f.port);
+    c.start();
+    await flush();
+    expect(c.getState().permission).toBe('NOT_REQUESTED');
+    expect(c.offer('DEVICE_SETTINGS')).toBe('EDUCATION');
+    await c.allow();
+    expect(store.osPromptShown()).toBe(true);
+    // Refused after QANDEEL's own ask: DENIED, and the moment no longer asks.
+    expect(c.getState().permission).toBe('DENIED');
+    expect(c.offer('PROACTIVE_ALLOW')).toBe('NOTHING');
+  });
+
   it('a declined education survives a new identity on the same device', async () => {
     const { port } = fakePort({ permission: 'NOT_REQUESTED', canAskAgain: true });
     const { c } = controller(port, true);
@@ -161,7 +175,7 @@ describe('A3-02 sign-out and other devices', () => {
     expect(t.detached).toEqual(['11111111-1111-4111-8111-111111111111']);
     const broken = createPushController({
       port: f.port, foreground: createManualForegroundSignal('ACTIVE'), isCurrent: () => true, language: () => 'en',
-      store: { installationId: () => { throw new Error('storage'); }, educationDeclined: () => false, declineEducation: () => undefined },
+      store: { installationId: () => { throw new Error('storage'); }, educationDeclined: () => false, declineEducation: () => undefined, osPromptShown: () => false, markOsPromptShown: () => undefined },
       transport: { sync: async () => true, detach: async () => { throw new Error('network'); }, detachOthers: async () => true, recordOpened: async () => true },
     });
     await expect(broken.detach()).resolves.toBeUndefined();

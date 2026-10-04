@@ -6,6 +6,8 @@
  *   - the installation id: a random UUID this app creates for itself on first use. It is what lets the server keep ONE
  *     registration per installation and move it when another account signs in here. It is not hardware identity and
  *     not user identity;
+ *   - whether QANDEEL has ever shown the OS prompt on this installation. Android 13+ reports a never-asked notification
+ *     permission exactly as a refused one (`denied`, may ask again), so this is how a first ask is told from a refusal;
  *   - the education decision: the reader said "Not now" to QANDEEL's permission education on this device. After that,
  *     QANDEEL does not ask again by itself (I-08N-01 D50, P3 §11); only the reader's own visit to Device Notification
  *     Settings offers it again. The OS permission itself is the platform's, read live, never cached here.
@@ -18,11 +20,14 @@ import { SQLiteStorage } from 'expo-sqlite/kv-store';
 export const PUSH_DATABASE_NAME = 'qandeel-push.db';
 const INSTALLATION_KEY = 'qandeel.push.installation.v1';
 const EDUCATION_KEY = 'qandeel.push.education.v1';
+const PROMPT_KEY = 'qandeel.push.os-prompt.v1';
 
 export interface PushDeviceStore {
   installationId(): string;
   educationDeclined(): boolean;
   declineEducation(): void;
+  osPromptShown(): boolean;
+  markOsPromptShown(): void;
 }
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/u;
@@ -57,16 +62,21 @@ export function createPushDeviceStore(databaseName: string = PUSH_DATABASE_NAME)
     },
     educationDeclined: () => open().getItemSync(EDUCATION_KEY) === 'DECLINED',
     declineEducation: () => open().setItemSync(EDUCATION_KEY, 'DECLINED'),
+    osPromptShown: () => open().getItemSync(PROMPT_KEY) === 'SHOWN',
+    markOsPromptShown: () => open().setItemSync(PROMPT_KEY, 'SHOWN'),
   };
 }
 
 /** The same contract in memory, for the focused tests and the validation proof. */
-export function createEphemeralPushDeviceStore(initial: { readonly installationId?: string; readonly declined?: boolean } = {}): PushDeviceStore {
+export function createEphemeralPushDeviceStore(initial: { readonly installationId?: string; readonly declined?: boolean; readonly prompted?: boolean } = {}): PushDeviceStore {
   let id = initial.installationId ?? null;
   let declined = initial.declined ?? false;
+  let prompted = initial.prompted ?? false;
   return {
     installationId: () => (id ??= newInstallationId()),
     educationDeclined: () => declined,
     declineEducation: () => { declined = true; },
+    osPromptShown: () => prompted,
+    markOsPromptShown: () => { prompted = true; },
   };
 }

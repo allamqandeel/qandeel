@@ -123,8 +123,18 @@ export function createPushController(options: PushControllerOptions): PushContro
     if (await transport.sync(input)) lastSync = { key, at: now() };
   }
 
+  /**
+   * The OS answer, read truthfully. Android 13+ reports a permission nobody has asked for yet exactly like a refusal
+   * (`DENIED`, may ask again); before QANDEEL has ever shown the OS prompt here, that is NOT_REQUESTED. After it has,
+   * DENIED is a refusal and is never re-prompted by QANDEEL.
+   */
+  const truthful = (read: Awaited<ReturnType<PushPlatformPort['readPermission']>>) =>
+    (port.platform === 'ANDROID' && read.permission === 'DENIED' && read.canAskAgain && !store.osPromptShown()
+      ? { permission: 'NOT_REQUESTED' as const, canAskAgain: true }
+      : read);
+
   async function readPermission(): Promise<void> {
-    const read = await port.readPermission();
+    const read = truthful(await port.readPermission());
     if (!live()) return;
     if (read.permission !== state.permission || read.canAskAgain !== state.canAskAgain) set(read);
     await sync();
@@ -167,6 +177,7 @@ export function createPushController(options: PushControllerOptions): PushContro
     async allow() {
       if (!live() || !state.education) return;
       set({ education: false });
+      store.markOsPromptShown();
       const answer = await port.requestPermission().catch(() => null);
       if (!live() || answer === null) return;
       set(answer);
