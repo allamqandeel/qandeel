@@ -316,7 +316,7 @@ P2's `close` utility glyph (the dismiss carries approved words instead).
 | mobile `src/activity` + A3-01 integration | **43 / 43** (attention law, controllers, strict wire, surfaces in ar / en × Dark / Light, Reduced Motion, screen reader, Notifications & Activity; 8 end-to-end scenarios on the production phase surface) |
 | mobile full (`npm run test:mobile`) | **167 suites; 2 004 / 2 010 pass on this host.** The six failures are pre-existing locale-dependent W1A-01 / session-state tests that assume an English device; the identical six fail on the untouched baseline on this host (`ar-EG`). Every A3-01 and re-anchored suite passes |
 | mobile `tsc` / `expo lint` | clean / 0 errors (no warning in any A3-01 file) |
-| root contracts | `a3-01-activity-attention-inapp-contract` **12 / 12**; every other contract passes except five that assert no `apps/mobile/android` directory exists — this checkout has an ignored local native build folder; they pass on a clean worktree |
+| root contracts | clean worktree at the proof head (no local `android/`): **every root contract passes**, including `a3-01-activity-attention-inapp-contract` **12 / 12** and `forward-safety-contract` **35 / 35** (G-30). In this checkout five contracts that assert no `apps/mobile/android` directory exists fail only because of an ignored local native build folder |
 
 Re-anchored (validation only, each with its reason in place): the three `AppModule` byte-pins (one more `.replace` for
 `ActivityModule`, exactly as W3-MEGA-U / PROD-SEC-01 did), the W3-01 group-count contract (6 → 7 real groups), four
@@ -411,6 +411,7 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 | G-27 | Six locale-dependent tests failing on an `ar-EG` host; five native-dir checks with a local `android/` | host | 6 | pre-existing / host-only; identical on the baseline; CI is the authority |
 | G-28 | Local verifier sweep 133 / 137: two Redis verifiers, `0133` (needs `psql`), `0130` (two 7-day-window assertions on host clock / timing) | host | 6 | environment / baseline; `0130` identical on the untouched baseline; no Product code changed for them; the sweep is not claimed green until `api-ci` runs it |
 | G-29 | Notifications & Activity save-failure announcement keyed on the rebuilt copy object (could repeat on re-render) | self-review | 3 | fixed: keyed on the failure and the one stable sentence (§10) |
+| G-30 | The A3-01 contract asked git for the P3-A package status and read the root Project Map — neither exists in the forward-safety mirror (no repository; locators not mirrored), so `forward-safety-contract` failed | clean-worktree run | 3 | fixed: P3-A pinned by a content digest (140 files, as at the baseline); the Stage-3 owner read from this record. `forward-safety-contract` 35 / 35 |
 
 **Orphan gaps = 0.** Every candidate is implemented here, fixed here, held inside the active task (the Copy Gate), owned
 by an existing backlog item, given a named owner with an Exit Gate, or shown not to be an obligation; none survives only in

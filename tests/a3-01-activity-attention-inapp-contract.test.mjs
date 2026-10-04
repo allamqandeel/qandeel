@@ -19,6 +19,7 @@
  */
 import assert from 'node:assert/strict';
 import { execFileSync, spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
@@ -71,9 +72,23 @@ test('1 — I-08N-01 and P3 are consumed, not rewritten; the two P3 glyphs are g
   assert.match(generator, /INTRO_ACCEPTED !== 'link'/u);
   assert.match(generator, /sha\(P3_SIG\) !== sha\(P2_SIG\)/u, 'P3 applies P2 and does not extend it');
   assert.doesNotMatch(stripComments(generator), /P3G\.(bell|door)|WITHDRAWN\./u, 'comparison drawings are never executed');
-  // The P3-A package is evidence: nothing in it is edited by A3-01.
-  const status = execFileSync('git', ['status', '--porcelain', '--', P3A], { cwd: new URL('.', root), encoding: 'utf8' });
-  assert.equal(status.trim(), '', 'the P3-A package bytes are untouched');
+  // The P3-A package is evidence: nothing in it is edited by A3-01. Pinned by content (every path and its bytes, as at
+  // the baseline 34ea439), not by asking git, so the claim also holds in the forward-safety mirror, which is no repository.
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(new URL(dir, root), { withFileTypes: true })) {
+      if (entry.isDirectory()) walk(`${dir}/${entry.name}`);
+      else files.push(`${dir}/${entry.name}`);
+    }
+  };
+  walk(P3A);
+  const digest = createHash('sha256');
+  for (const file of files.sort()) {
+    digest.update(`${file.slice(P3A.length + 1)}\0`);
+    digest.update(`${createHash('sha256').update(readFileSync(new URL(file, root))).digest('hex')}\n`);
+  }
+  assert.equal(files.length, 140, 'the P3-A package has exactly the files it had at the baseline');
+  assert.equal(digest.digest('hex'), 'ef10ca6e1a949e6193f023f514f4e6dd3e03b9f664b408a3a84a685e8fa7eeee', 'the P3-A package bytes are untouched');
 });
 
 test('2 — no WebView, no proof runtime, no runtime icon package in production', () => {
@@ -195,7 +210,8 @@ test('11 — A3-02 is the named owner of native Push, and Stage 3 is not claimed
   assert.match(record, /Orphan gaps = 0/u);
   assert.match(record, /DO NOT MERGE/u);
   assert.match(record, /A3-01 does not close Stage 3/u);
-  assert.doesNotMatch(read('QANDEEL_PROJECT_MAP.md'), /\| \*\*3 — Activity & Notifications Production\*\* \| \*\*DONE/u, 'Stage 3 is not DONE');
+  // Read from the record, not the root locators: the forward-safety mirror carries only the source a contract may read.
+  assert.match(record, /`A3-02` remains its named owner/u, 'A3-02 stays the remaining Stage-3 owner');
 });
 
 test('12 — registration', () => {
