@@ -5,7 +5,7 @@
 **Baseline:** `34ea439b98eecd5f22628f41749245f81bb2b9f8` (the merge of PR #306, VPORT-02)
 **Branch:** `feat/a3-01-activity-attention-inapp`
 **PR:** Draft — see §1
-**Status:** **`A3-01 IMPLEMENTED — PRODUCT COPY GATE APPROVED — EXACT-HEAD PROOF AND CI PENDING — NOT YET READY FOR INDEPENDENT REVIEW — DO NOT MERGE`**. Claude does not merge it.
+**Status:** **`A3-01 IMPLEMENTED — PRODUCT COPY GATE APPROVED — EXACT-HEAD PROOF PASSED (a50e847) — GITHUB CI PENDING — NOT YET READY FOR INDEPENDENT REVIEW — DO NOT MERGE`**. Claude does not merge it.
 
 > The provider-neutral Product notification / Activity spine and its in-app production integration, over I-08N-01 + P3:
 > the durable per-user Activity projection, the attention decision, the global entry and presence mark, Activity, the
@@ -22,7 +22,7 @@
 | Baseline | `34ea439b98eecd5f22628f41749245f81bb2b9f8` |
 | Branch | `feat/a3-01-activity-attention-inapp`, cut from the exact baseline |
 | PR | Draft (opened with this record; number in the PR) |
-| Implementation evidence head | **re-proof pending at the Copy Gate binding head** — recorded here and in §18 by the record-only commit that follows it. Earlier proof head (before the Copy Gate binding): `c749b48` |
+| Implementation evidence head | **`a50e847405f6eaa899d1a9c3ce27618abac62858`** — the final code head (the Copy Gate binding); the Release proof APK was built from it and proved 9 / 9 on it (§18). Every commit after it changes documentation only — this record and the locator status lines (`git diff --stat a50e847..HEAD` lists no code, test, workflow or migration file) |
 
 ## 2. Repo Truth Gate
 
@@ -314,9 +314,9 @@ P2's `close` utility glyph (the dismiss carries approved words instead).
 | database static (`npm run test:database`) | **1 281 / 1 281**; `verifier-hazards` 0 findings |
 | real PostgreSQL 17.10 (local, fresh cluster: bootstrap + 0001–0136) | **Migration `0136` itself: `verify-migration-0136` PASS on all ten stages** (catalog / privileges; publication + replay; authority constraints; account isolation; coalescing; attention ≠ resolution; withdrawal; strip evidence; preferences / Snooze / mute; retention + governed erasure). **Wider local verifier sweep (CI order): 133 / 137.** The four not passing locally are classified environment / baseline, not A3-01 regressions, and no Product code was changed for them: (a) two verifiers need a Redis server this host does not run; (b) `0133` shells out to a `psql` binary this PostgreSQL build does not ship; (c) `0130` fails two 7-day-window assertions on this host clock / timing — the identical two fail on the untouched baseline `34ea439` (with only those two neutralised in a scratch diagnostic copy, never committed, `0130` otherwise verifies end to end on the A3-01 set, including the Personal erasure of a populated footprint to zero rows). **The full integration-verifier sweep is NOT claimed green until CI (`api-ci`) proves it.** |
 | mobile `src/activity` + A3-01 integration | **43 / 43** (attention law, controllers, strict wire, surfaces in ar / en × Dark / Light, Reduced Motion, screen reader, Notifications & Activity; 8 end-to-end scenarios on the production phase surface) |
-| mobile full (`npm run test:mobile`) | **167 suites; 2 004 / 2 010 pass on this host** (clean worktree: the full suite at `c05ccc1` and `src/integration` + `src/activity` + `src/settings` at the proof head `c749b48` fail the same six, and only them). The six failures are pre-existing locale-dependent W1A-01 / session-state tests that assume an English device; the identical six fail on the untouched baseline on this host (`ar-EG`). Every A3-01 and re-anchored suite passes |
+| mobile full (`npm run test:mobile`) | **167 suites; 2 004 / 2 010 pass on this host** (clean worktree, full suite at the proof head `a50e847`: the same six, and only them). The six failures are pre-existing locale-dependent W1A-01 / session-state tests that assume an English device; the identical six fail on the untouched baseline on this host (`ar-EG`). Every A3-01 and re-anchored suite passes |
 | mobile `tsc` / `expo lint` | clean / 0 errors (no warning in any A3-01 file) |
-| root contracts | clean worktree at the proof head (no local `android/`): **every root contract passes**, including `a3-01-activity-attention-inapp-contract` **12 / 12** and `forward-safety-contract` **35 / 35** (G-30). In this checkout five contracts that assert no `apps/mobile/android` directory exists fail only because of an ignored local native build folder |
+| root contracts | clean worktree at the proof head `a50e847` (no local `android/`): **1 102 / 1 102 — every root contract passes**, including `a3-01-activity-attention-inapp-contract` **12 / 12** and `forward-safety-contract` **35 / 35** (G-30). In this checkout five contracts that assert no `apps/mobile/android` directory exists fail only because of an ignored local native build folder |
 
 Re-anchored (validation only, each with its reason in place): the three `AppModule` byte-pins (one more `.replace` for
 `ActivityModule`, exactly as W3-MEGA-U / PROD-SEC-01 did), the W3-01 group-count contract (6 → 7 real groups), four
@@ -330,14 +330,14 @@ and `a3-01-light.yaml` through `scripts/a301/run-a301-inapp-proof.sh`, on an And
 `.github/workflows/a3-01-inapp-proof.yml` (branch-scoped). The proof root is the ONE validation-only producer seam: an
 in-memory stand-in for `/activity/*` announcing synthetic events by proof link; it is unreachable from a Product build.
 
-**Re-proof pending:** the Product Copy Gate binding changed Product copy, so the Release APK is rebuilt from that exact head and the 9 legs re-run; the results replace this section. **The earlier proof below (before the Copy Gate binding) is not closure evidence for the final head.**
-
-**Earlier proof head: `c749b48f0a0e62a1faa4c6fd1c9e810cd9714e13`.** The Release APK was built from exactly this commit (fresh
+**Proof head: `a50e847405f6eaa899d1a9c3ce27618abac62858`** — the Product Copy Gate binding head (§24a), i.e. the final
+code head. The Release APK was built from exactly this commit (fresh
 `expo prebuild` + `:app:assembleRelease -PreactNativeArchitectures=x86_64`, no build cache carried across heads) with
 the ONE recorded difference applied in the ephemeral proof worktree — `apps/mobile/package.json` `main`:
 `expo-router/entry` → `src/integration/__validation__/a301-proof-entry.tsx` (`select-a301-proof-entry.mjs --apply`).
-APK SHA-256 `1ef31e767eaf04478e770116ee9402d13b12c4b43d30b78fe7f700c412febe61`. The generated world / P2 / P3
-geometry was `--check`ed current before the build. The commit after the proof head changes only this record (§1).
+APK SHA-256 `2a539a5d767831fd1f50681c511b36190af8e420c10e37fa1bd432a2be266a5e`. The generated world / P2 / P3
+geometry was `--check`ed current before the build. Every commit after the proof head changes documentation only (§1). The screenshots show the approved Copy Gate wording
+(e.g. Quiet Hours «من» / «إلى», «إنهاء الإيقاف المؤقت»).
 
 Device: Android emulator `sdk_gphone64_x86_64`, Android 16 / API 36, 1080 × 2400 @ 420 dpi; Maestro 2.10.0.
 
@@ -363,7 +363,11 @@ Notifications & Activity: Allow / Reduce / Off (Reduce selected and confirmed), 
 the Lock Screen ceilings; and the call-safe strip only as a labelled validation specimen (no call runtime exists).
 `en-light` proves the strip and Activity in Light and the Analysis staying one dark place with no entry.
 
-Diagnostic runs (not closure evidence): `bc83f8c` (9 / 9) and `c05ccc1` (2 legs, stopped) preceded the proof head. Review
+Earlier runs (not closure evidence for the final head): `bc83f8c` (diagnostic, 9 / 9), `c05ccc1` (2 legs, stopped),
+`c749b48` (9 / 9, before the Copy Gate binding), and a first `a50e847` run whose emulator process was stopped by the host
+during the last leg (`en-light` FAIL with the device gone — an infrastructure stop, not a Product failure); the complete
+9-leg matrix was then re-run from the start, on the same APK (SHA-256 re-verified), into a fresh evidence folder — the
+result above. Review
 of their screenshots found G-31 (fixed at the proof head); `c05ccc1`'s clean-worktree run found G-30. The CI workflow
 re-proves every pushed head of this branch on GitHub's emulator.
 
