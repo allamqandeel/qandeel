@@ -117,7 +117,10 @@ function createValidationActivity() {
       }
       if (path.startsWith('/activity/items')) {
         const category = new URL(`https://proof${path}`).searchParams.get('category');
-        return json(200, { items: items.filter((i) => category === null || i.category === category), before: null });
+        // The server's order (`last_occurred_at DESC, id DESC`): newest first, whatever order the events were seeded in.
+        const page = items.filter((i) => category === null || i.category === category)
+          .sort((a, b) => (a.at === b.at ? b.id.localeCompare(a.id) : b.at.localeCompare(a.at)));
+        return json(200, { items: page, before: null });
       }
       if (path.startsWith('/activity/strip')) {
         const { presentedItemId, settledItemIds } = body as { presentedItemId: string | null; settledItemIds: string[] };
