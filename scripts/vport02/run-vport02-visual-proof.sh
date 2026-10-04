@@ -7,7 +7,8 @@
 # The Release APK's root is the VPORT-02 proof root: the PRODUCTION phase surface over the production integration
 # runtime, given an in-memory identity and a scripted network. The matrix (Task Contract §11.6):
 #
-#   ar-standard / en-standard        Arabic RTL / English LTR, standard phone (the emulator's own 412 dp)
+#   ar-standard / en-standard        Arabic / English on the emulator's LTR device, standard phone (412 dp)
+#   ar-rtl-device                    Arabic on an RTL device (Android's system RTL layout direction)
 #   ar-narrow / en-narrow            a 320-class narrow phone (320 dp wide)
 #   ar-landscape / en-landscape      landscape (T-11 recomposes; the support band sits across)
 #   ar-increased                     Android high-text-contrast, which the app reads as increased contrast
@@ -78,6 +79,14 @@ adb shell cmd locale set-app-locales "$PKG" --locales ar-EG
 run ar-standard vport-02-temporal.yaml
 adb shell cmd locale set-app-locales "$PKG" --locales en-US
 run en-standard vport-02-temporal.yaml
+
+# An RTL DEVICE. T-12 takes layout direction from the platform (I18nManager.isRTL), independent of the language, so the
+# per-app Arabic legs above run on an LTR device by design. This leg turns on Android's system RTL layout direction, so
+# T-06's one mirror rule and the P2 Spine / terminal / Call Rail mirror are exercised on a device.
+adb shell settings put global debug.force_rtl 1
+adb shell cmd locale set-app-locales "$PKG" --locales ar-EG
+run ar-rtl-device vport-02-temporal.yaml
+adb shell settings put global debug.force_rtl 0
 
 # A 320-class narrow phone: 320 dp wide.
 adb shell wm size 640x1386
