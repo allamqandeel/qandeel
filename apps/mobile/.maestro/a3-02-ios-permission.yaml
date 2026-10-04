@@ -46,6 +46,10 @@ appId: com.qandeel.mobile
       id: "qandeel-notifications-os-off"
     timeout: 30000
 - openLink: "qandeel://a301-proof/push/status/0"
+# iOS asks before a link from outside the app opens it («Open in "QANDEEL"?»); the flow confirms, as a reader would.
+- tapOn:
+    text: "Open"
+    optional: true
 - extendedWaitUntil:
     visible:
       text: ".*registered: GRANTED.*"

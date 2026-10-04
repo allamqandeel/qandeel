@@ -2,6 +2,19 @@
 # reader's revalidated Direct Entry (TARGET). VALIDATION ONLY. Input: PREFIX, TEXT, TARGET.
 appId: com.qandeel.mobile
 ---
+# A banner leaves the screen after a few seconds and the message stays in Notification Center; the flow starts later
+# than that, so it opens Notification Center (a swipe down from the top edge) when the message is not already in view.
+- runFlow:
+    when:
+      notVisible:
+        text: ${TEXT}
+    commands:
+      - swipe:
+          start: "50%, 1%"
+          end: "50%, 70%"
+          duration: 600
+      - waitForAnimationToEnd:
+          timeout: 4000
 - extendedWaitUntil:
     visible:
       text: ${TEXT}
