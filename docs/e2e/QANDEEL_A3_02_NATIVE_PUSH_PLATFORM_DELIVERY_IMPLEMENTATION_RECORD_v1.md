@@ -381,16 +381,34 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 
 ## 23. Stage-3 status
 
-Stage 3 closes only if A3-01 + A3-02 are production-complete under the contract: A3-01 merged ✔; native permission
-boundary, registration / token lifecycle, Android / iOS paths, Direct Entry, retry / dedupe / evidence implemented ✔;
-physical-device items named with an owner ✔; `QAN-BL-NOTIF-01` tombstoned ✔; orphan gaps 0 ✔; the Copy Gate APPROVED (§24a) ✔; **green GitHub CI on the exact final head (§24) is the remaining
-condition.** Stage 3 closing does not mean
-production Activity is populated: producers are separately owned. The next numbered direction is **Stage 4 — Shared
-World Product Integration**.
+A3-01 is merged ✔; the native permission boundary, registration / token lifecycle, Android / iOS runtime paths,
+Direct Entry, retry / dedupe / evidence are implemented ✔; physical-device items have a named owner ✔;
+`QAN-BL-NOTIF-01` is tombstoned ✔; orphan gaps = 0 ✔; and the Copy Gate is APPROVED (§24a) ✔.
+
+On the final implementation head `a7b0386f5016b3e6f95cc07f5246a4ef993a79bd`, API CI and Mobile CI are green.
+The A3 proof passed both platform builds and all 13 Android legs. The only remaining iOS proof failure is the simulator
+harness failing to expose Notification Center after the background-message step; registration, the real iOS permission
+alert, foreground non-presentation and the preceding iOS steps passed. This is classified **Validation / Infrastructure**,
+not a confirmed Product defect, and the unproved real-device facts are already owned by `QAN-BL-NOTIF-05`, especially
+PD-03 (real APNs background / terminated receipt) and PD-06 (real OS-tray tap → Direct Entry).
+
+Under **QUALITY COMPLETE, VALIDATION PROPORTIONAL TO CHANGE**, A3-02 is ready to merge with that owned pre-release
+residue. Stage 3 closes on merge. Production Activity may still be empty because its source producers are separately
+owned. The next numbered direction is **Stage 4 — Shared World Product Integration**.
 
 ## 24. Final CI run IDs / exact SHA
 
-PENDING — filled from GitHub truth on the final head.
+**Final implementation head:** `a7b0386f5016b3e6f95cc07f5246a4ef993a79bd`
+
+| Evidence | Result |
+|---|---|
+| API CI — run `37238811145` | ✅ PASS |
+| Mobile CI — run `37238811170` | ✅ PASS |
+| A3 proof — run `37238809479` | ⚠️ PARTIAL: both build producers + all 13 Android legs PASS; iOS leg fails only at simulator Notification Center exposure |
+| iOS proof job `111546688597` | Validation / Infrastructure residue → `QAN-BL-NOTIF-05` PD-03 / PD-06; no Product defect established |
+
+No further proof cycle is required for this residue before merge. Real iOS background / terminated APNs receipt and
+tray-tap Direct Entry remain explicit Release Hardening & Launch exit gates on physical hardware.
 
 ## 24a. A3-02 Product Copy Gate — APPROVED by the Product Owner
 
