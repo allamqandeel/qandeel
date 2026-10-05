@@ -583,9 +583,10 @@ async function verifyConcurrency() {
     await one.query('COMMIT');
     await disabling;
     await two.query('COMMIT');
+    const secondInvitation = await invitationOf(second);
     await client.query('BEGIN');
     await actAs('authenticated', second);
-    assert.deepEqual(await accept(randomUUID(), await invitationOf(second)), { outcome: 'UNAVAILABLE', world_id: null },
+    assert.deepEqual(await accept(randomUUID(), secondInvitation), { outcome: 'UNAVAILABLE', world_id: null },
       'the next birth is refused by the new snapshot');
     await asOwner();
     await client.query('COMMIT');
