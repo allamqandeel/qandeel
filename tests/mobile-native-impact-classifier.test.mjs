@@ -24,18 +24,29 @@ test('a root package.json-only change is NOT native impact', () => {
   assert.equal(runCli(['package.json']), 'false');
 });
 
-test('any apps/mobile change IS native impact', () => {
+test('any apps/mobile build input, and the flow the native consumers run, IS native impact', () => {
   for (const file of [
     'apps/mobile/package.json',
     'apps/mobile/app.json',
     'apps/mobile/src/app/index.tsx',
+    'apps/mobile/src/integration/__validation__/validation-entry.tsx',
     'apps/mobile/.maestro/boot-smoke.yaml',
-    'apps/mobile/README.md',
   ]) {
     assert.equal(isNativeImpactPath(file), true, `${file} must be native impact`);
     assert.equal(classifyMobileNativeImpact([file]), true, `${file} must be native impact`);
   }
   assert.equal(runCli(['apps/mobile/src/app/index.tsx']), 'true');
+});
+
+test('VAL-01 — a flow no native consumer runs, and prose, are NOT native impact', () => {
+  // The native fingerprint already proves neither reaches a binary; the only flow this gate's consumers execute is
+  // the boot smoke. So a PR that only fixes an A3 proof flow or a README no longer builds and boots both platforms.
+  for (const file of ['apps/mobile/.maestro/a3-02-tap.yaml', 'apps/mobile/.maestro/t13-recovery-after.yaml', 'apps/mobile/README.md']) {
+    assert.equal(isNativeImpactPath(file), false, `${file} must not be native impact`);
+  }
+  assert.equal(classifyChangedFiles(['apps/mobile/.maestro/a3-02-tap.yaml', 'docs/x.md']).nativeImpact, false);
+  // Non-vacuity: one real input among them still forces the gate.
+  assert.equal(classifyChangedFiles(['apps/mobile/.maestro/a3-02-tap.yaml', 'apps/mobile/app.config.js']).nativeImpact, true);
 });
 
 test('package-lock.json IS native impact', () => {

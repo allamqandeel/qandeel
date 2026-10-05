@@ -385,6 +385,7 @@ test('7 — a runner-only Phase-M orchestration or flow change stays reusable, b
     'scripts/phase-m/run-t13-recovery-phases.sh',
     'scripts/phase-m/gate-t13-recovery-phases.sh',
     'scripts/phase-m/collect-validation-evidence.mjs',
+    'scripts/a3/run-proof-leg.sh',
     'apps/mobile/.maestro/t13-recovery-after.yaml',
     'docs/recovery-persistence-v1.md',
   ]) {
@@ -392,7 +393,7 @@ test('7 — a runner-only Phase-M orchestration or flow change stays reusable, b
   }
 
   // The classification is explicit and reasoned, never incidental.
-  for (const prefix of ['scripts/phase-m/', 'apps/mobile/.maestro/', 'docs/']) {
+  for (const prefix of ['scripts/phase-m/', 'scripts/a3/', 'apps/mobile/.maestro/', 'docs/']) {
     assert.ok(EXCLUDED_PREFIXES.includes(prefix), `${prefix} is an explicit exclusion`);
   }
   assert.equal(classifyBuildInput('scripts/phase-m/run-t13-recovery-phases.sh').reason, 'EXCLUDED_PREFIX:scripts/phase-m/');
@@ -933,12 +934,20 @@ test('14d — the two Mobile CI chains are independent: one platform retry canno
   const classifier = read('scripts/classify-mobile-native-impact.mjs');
   assert.match(classifier, /export const NATIVE_IMPACT_PREFIXES = Object\.freeze\(\['apps\/mobile\/'\]\);/u);
   assert.match(classifier, /export const NATIVE_IMPACT_FILES = Object\.freeze\(\['package-lock\.json', '\.github\/workflows\/mobile-ci\.yml'\]\);/u);
-  // Every job past the fast contract gate stays behind that one decision. Stated as a RATIO rather
-  // than a count, so a later task adding a native job inherits the invariant instead of tripping it —
-  // the ceiling this task had to clear out of nineteen contracts is not worth recreating here.
-  const workflow = read(MOBILE_CI);
-  assert.equal((workflow.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
-    (workflow.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate is native-impact gated');
+  // VAL-01 RE-ANCHOR. The native decision moved from the contract gate's `native_impact` output to the change-aware
+  // planner's `mobile_native_binary` output, which applies this same classifier to the same cumulative diff with the
+  // same fail-safe, and can additionally carry a proven-green predecessor forward. Every PRODUCER stays behind that one
+  // decision — skipped only on the planner's literal NOT_RELEVANT / CARRY_FORWARD — and every CONSUMER behind the
+  // success of its own producer. Stated per chain, so a later native job inherits the rule rather than a count.
+  for (const { producer, consumer } of Object.values(MOBILE_CI_CHAINS)) {
+    assert.match(jobs.get(producer),
+      /if: \$\{\{ !cancelled\(\) && needs\.plan\.outputs\.mobile_native_binary != 'CARRY_FORWARD' && needs\.plan\.outputs\.mobile_native_binary != 'NOT_RELEVANT'/u,
+      `${producer} is behind the native decision`);
+    assert.match(jobs.get(consumer), new RegExp(`if: \\$\\{\\{ !cancelled\\(\\) && needs\\.${producer}\\.result == 'success' \\}\\}`, 'u'),
+      `${consumer} runs exactly when its producer published`);
+  }
+  assert.match(read('scripts/validation/plan-validation.mjs'), /classifyChangedFiles\(cumulative \?\? \[\]\)/u,
+    'the planner decides native relevance with THIS classifier, failing safe on an unestablished diff');
 });
 
 /**
@@ -1126,10 +1135,13 @@ test('the gate registers itself and the four owned files exist', () => {
   assert.equal(MANIFEST_SCHEMA, 'qandeel.native-artifact-identity/1');
   // A digest of the canonical rule set, recomputed here from the module's own exports, so a silent
   // widening of the exclusions changes this file too rather than passing unnoticed.
+  // VAL-01 RE-ANCHOR: `scripts/a3/` — the Stage-3 proof LEG RUNNERS — is runner-only (no build step reads it, nothing
+  // in the bundle imports it: test 7's import walk), so a runner fix is a validation change, never a rebuild. The rule
+  // change bumped FINGERPRINT_SCHEMA_VERSION, so no binary fingerprinted under the old rules can be reused.
   assert.equal(
     createHash('sha256').update([...EXCLUDED_PREFIXES, '|', ...ALWAYS_INCLUDED_PREFIXES].join('\n')).digest('hex').slice(0, 16),
     createHash('sha256').update([
-      'docs/', 'infra/', 'apps/api/', 'database/', 'tests/', 'apps/mobile/.maestro/', 'scripts/phase-m/',
+      'docs/', 'infra/', 'apps/api/', 'database/', 'tests/', 'apps/mobile/.maestro/', 'scripts/phase-m/', 'scripts/a3/',
       '|', 'apps/mobile/src/integration/__validation__/',
     ].join('\n')).digest('hex').slice(0, 16),
     'the exclusion set is exactly the reasoned one; widening it is a deliberate act, not a drift',

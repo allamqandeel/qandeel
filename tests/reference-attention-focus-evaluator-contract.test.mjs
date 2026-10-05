@@ -572,8 +572,11 @@ test('the gate is registered at the root and in API CI, and MOB-CI-01 is untouch
   assert.match(mobileCi, /^  verify-mobile-contracts:$/mu);
   assert.match(mobileCi, /^  verify-android:$/mu);
   assert.match(mobileCi, /^  verify-ios:$/mu);
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
-    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
+  // VAL-01 RE-ANCHOR: the native decision moved to the change-aware planner, which applies MOB-CI-01's classifier
+  // (scripts/validation/plan-validation.mjs). Every native BUILD job stays behind it; QAN-INF-04 pins each consumer
+  // behind its own producer.
+  assert.equal((mobileCi.match(/needs\.plan\.outputs\.mobile_native_binary != 'NOT_RELEVANT'/gu) ?? []).length,
+    (mobileCi.match(/^ {2}build-[a-z0-9-]+:$/gmu) ?? []).length, 'every job past the fast gate stays behind the classifier');
   // No new dependency: the adapter reuses the installed OpenAI SDK.
   assert.ok('openai' in apiPackage.dependencies);
   for (const name of ['zod', 'ajv', 'uuid', 'nanoid', '@anthropic-ai/sdk-focus', 'natural', 'compromise', 'franc']) {

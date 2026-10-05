@@ -273,8 +273,10 @@ test('a future authorized additive native job breaks no historical contract', ()
     (text) => text.replace(/^ {2}build-ios:$/mu, [
       `  ${FUTURE_NATIVE_JOB}:`,
       '    name: Android Release APK (arm64) — HYPOTHETICAL FUTURE PRODUCER',
-      '    needs: verify-mobile-contracts',
-      "    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'",
+      // VAL-01 RE-ANCHOR: the authorized way to add a native producer is now behind the change-aware planner's native
+      // decision (MOB-CI-01's classifier, plus a proven-green carry-forward) and a green fast gate.
+      '    needs: [plan, verify-mobile-contracts]',
+      "    if: ${{ !cancelled() && needs.plan.outputs.mobile_native_binary != 'CARRY_FORWARD' && needs.plan.outputs.mobile_native_binary != 'NOT_RELEVANT' && needs.verify-mobile-contracts.result == 'success' }}",
       '    runs-on: ubuntu-latest',
       '    steps:',
       '      - {name: Checkout, uses: actions/checkout@v4}',
