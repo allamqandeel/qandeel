@@ -155,6 +155,7 @@ test('the read is the frozen 0089 resolver, bounded and cursored, for a current 
   assert.match(list, /p_limit < 1 OR p_limit > 200/u);
   assert.match(list, /\(m\.established_at, m\.material_id\) < \(p_before_established_at, p_before_material_id\)/u, 'a keyset cursor, strictly older');
   assert.match(list, /WHERE m\.text_body IS NOT NULL/u, 'no body form without a Product source is faked');
+  assert.match(list, /COALESCE\(m\.author_user_id = v_user, false\),/u, 'QANDEEL (no author) is never the reader: is_self is FALSE, never NULL');
   assert.doesNotMatch(list, /shared_world_material_dependencies|required_approvers|source_context_ref|audio_object_ref|transcript_text(?!\b.*FROM public\.resolve)/u,
     'no provenance, authority, approver or audio reference reaches the projection');
   const del = fnBody('shared_private.delete_own_shared_world_material_v1');

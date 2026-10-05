@@ -135,7 +135,7 @@ BEGIN
     SELECT m.material_id, m.material_kind,
            CASE WHEN m.author_user_id IS NULL THEN 'QANDEEL' ELSE 'HUMAN' END,
            m.established_at,
-           m.author_user_id = v_user,
+           COALESCE(m.author_user_id = v_user, false),
            CASE WHEN m.author_user_id IS NULL THEN NULL ELSE u.name END,
            m.text_body,
            m.author_user_id IS NOT NULL AND m.author_user_id = v_user

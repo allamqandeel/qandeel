@@ -17,7 +17,7 @@
  * Nothing here reads the Personal world: no Session, camera, focus or time is passed in, so none can transfer.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AccessibilityInfo, BackHandler, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View, findNodeHandle } from 'react-native';
+import { AccessibilityInfo, BackHandler, KeyboardAvoidingView, ScrollView, Text, TextInput, View, findNodeHandle } from 'react-native';
 
 import { ActivityEntry, type ActivityAttentionController } from '../activity';
 import { AppearanceStatusBar } from '../appearance';
@@ -115,7 +115,9 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
     if (state.entry.status === 'ALLOW' && state.entry.world !== null) {
       const world = state.entry.world;
       return frame(
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        // As in the Personal Conversation: `padding` on both platforms, because Android 15+ edge-to-edge no longer
+        // resizes the window for the keyboard, and the composer and its Send must stay above it.
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
           {header(worldLabel(copy, world.members), true)}
           <ScrollView ref={threadScroll} keyboardShouldPersistTaps="handled" onContentSizeChange={followNewest}
             contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>

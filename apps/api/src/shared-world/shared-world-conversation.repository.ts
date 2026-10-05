@@ -7,7 +7,7 @@ export interface SharedMaterialRow {
   readonly material_kind: string;
   readonly producer_kind: 'HUMAN' | 'QANDEEL';
   readonly established_at: string;
-  readonly is_self: boolean | null;
+  readonly is_self: boolean;
   readonly author_name: string | null;
   readonly text_body: string;
   readonly can_delete: boolean | null;

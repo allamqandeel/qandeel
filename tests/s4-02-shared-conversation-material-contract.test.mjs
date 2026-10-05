@@ -112,6 +112,8 @@ test('5 — the mobile World reads material only after ALLOW, belongs to one Wor
   for (const file of ['SharedWorldThread.tsx', 'SharedWorldArea.tsx']) {
     assert.doesNotMatch(code(`${MOBILE}/shared-world/${file}`), /['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u, `${file} carries no Arabic literal`);
   }
+  assert.match(code(`${MOBILE}/shared-world/SharedWorldArea.tsx`), /<KeyboardAvoidingView style=\{\{ flex: 1 \}\} behavior="padding">/u,
+    'the Shared composer and Send stay above the keyboard on both platforms (Android 15+ edge-to-edge does not resize)');
   const api = code(`${MOBILE}/runtime-entry/shared-world-api.ts`);
   assert.doesNotMatch(api, /authorId|userId|audience|materialKind|viewer/u, 'the client sends no identity, audience or kind');
 });
