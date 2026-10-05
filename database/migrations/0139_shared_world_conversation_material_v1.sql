@@ -418,8 +418,20 @@ BEGIN
   v_material := shared_private.derive_shared_conversation_identity_v1('QANDEEL_REPLY_MATERIAL', p_human_command_id);
   v_item := shared_private.derive_shared_conversation_identity_v1('QANDEEL_REPLY_HISTORY_ITEM', p_human_command_id);
 
-  -- At most one reply per logical human request: an already committed reply is the answer, whatever is offered now.
-  SELECT * INTO v_committed FROM public.shared_world_material_commit_commands c WHERE c.id = v_reply_command;
+  -- First, before any answer: a human request initiated this generation — a HUMAN_TEXT command committed by a human
+  -- into this exact World. Anything else (an unknown command, another World's command) is one UNAVAILABLE that reveals
+  -- no reply and changes nothing. A read with no lock, so the lock order below is unchanged.
+  SELECT * INTO v_human FROM public.shared_world_material_commit_commands c WHERE c.id = p_human_command_id;
+  IF NOT FOUND OR v_human.world_id <> p_world_id OR v_human.producer_kind <> 'HUMAN'
+     OR v_human.material_kind <> 'HUMAN_TEXT' THEN
+    RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::uuid, NULL::timestamptz;
+    RETURN;
+  END IF;
+
+  -- At most one reply per logical human request: an already committed reply of this same World is the answer,
+  -- whatever is offered now.
+  SELECT * INTO v_committed FROM public.shared_world_material_commit_commands c
+   WHERE c.id = v_reply_command AND c.world_id = p_world_id AND c.producer_kind = 'QANDEEL';
   IF FOUND THEN
     PERFORM shared_private.end_shared_qandeel_reply_work_v1(p_human_command_id, p_lease_id);
     RETURN QUERY SELECT 'MATERIAL_COMMITTED'::text, v_committed.material_id, v_committed.committed_at;
@@ -440,15 +452,6 @@ BEGIN
    WHERE l.human_command_id = p_human_command_id AND l.lease_id = p_lease_id AND l.world_id = p_world_id
      FOR UPDATE;
   IF NOT FOUND THEN
-    RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::uuid, NULL::timestamptz;
-    RETURN;
-  END IF;
-
-  -- A human request initiated this generation: a HUMAN_TEXT command committed by a human into this exact World.
-  SELECT * INTO v_human FROM public.shared_world_material_commit_commands c WHERE c.id = p_human_command_id;
-  IF NOT FOUND OR v_human.world_id <> p_world_id OR v_human.producer_kind <> 'HUMAN'
-     OR v_human.material_kind <> 'HUMAN_TEXT' THEN
-    PERFORM shared_private.end_shared_qandeel_reply_work_v1(p_human_command_id, p_lease_id);
     RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::uuid, NULL::timestamptz;
     RETURN;
   END IF;

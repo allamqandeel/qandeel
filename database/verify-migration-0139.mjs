@@ -441,9 +441,17 @@ async function verifyQandeelReply({ a, b }, worldId, otherWorldId, { firstComman
   const unknownCommand = randomUUID();
   await actAs('service_role');
   assert.equal((await reply(a, unknownCommand, worldId, 'x', evidenceFor('x', await audienceRef(worldId)))).outcome, 'UNAVAILABLE');
+  await asOwner();
+  const before = [await materialCounts(worldId), await materialCounts(otherWorldId)];
   await actAs('service_role');
   assert.equal((await reply(a, firstCommand, otherWorldId, 'x', evidenceFor('x', await audienceRef(otherWorldId)))).outcome, 'UNAVAILABLE',
     'a human command of World A initiates nothing in World B');
+  await actAs('service_role');
+  const crossWorld = await complete(randomUUID(), firstCommand, otherWorldId, 'x', evidenceFor('x', await audienceRef(otherWorldId)));
+  assert.deepEqual([crossWorld.outcome, crossWorld.material_id, crossWorld.established_at], ['UNAVAILABLE', null, null],
+    'World A\'s committed reply is never answered through World B');
+  await asOwner();
+  assert.deepEqual([await materialCounts(worldId), await materialCounts(otherWorldId)], before, 'a cross-World request commits nothing anywhere');
 
   stage = 'reply: invalid or forged evidence is refused by the frozen core before anything is written';
   await actAs('authenticated', a);

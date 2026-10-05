@@ -126,6 +126,11 @@ test('the QANDEEL reply is the server\'s act: QANDEEL_OUTPUT only, one per human
   assert.doesNotMatch(signature, /p_(?:user|actor|author_|viewer|member|episode|audience_human|audience_user|approver|baseline|material_kind|history_item|requester)/u);
   assert.match(reply, /derive_shared_conversation_identity_v1\('QANDEEL_REPLY_COMMAND', p_human_command_id\)/u);
   assert.match(reply, /v_human\.producer_kind <> 'HUMAN'\s+OR v_human\.material_kind <> 'HUMAN_TEXT'/u, 'a human text command initiated the generation');
+  const human = reply.indexOf('SELECT * INTO v_human FROM public.shared_world_material_commit_commands c WHERE c.id = p_human_command_id;');
+  const replay = reply.indexOf('SELECT * INTO v_committed FROM public.shared_world_material_commit_commands c');
+  assert.ok(human > 0 && replay > human, 'the human command is bound to this exact World before any committed reply is answered');
+  assert.match(reply, /WHERE c\.id = v_reply_command AND c\.world_id = p_world_id AND c\.producer_kind = 'QANDEEL';/u,
+    'only this World\'s own QANDEEL reply is replayed');
   const gate = reply.indexOf("bind_shared_launch_gate_v1('SHARED_CONVERSATION')");
   const lease = reply.indexOf('l.lease_id = p_lease_id AND l.world_id = p_world_id\n     FOR UPDATE');
   const core = reply.indexOf('public.commit_shared_world_qandeel_material_v1(');
