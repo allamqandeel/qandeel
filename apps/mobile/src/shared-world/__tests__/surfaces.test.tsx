@@ -62,6 +62,9 @@ function areaController(entry: () => Promise<SharedEntryResult> = async () => AL
       accept: async () => ({ kind: 'BORN', worldId: WORLD }),
       decline: async () => ({ kind: 'DECLINED' }),
       entry,
+      materials: async () => ({ kind: 'READ', conversation: false, materials: [] }),
+      send: async () => ({ kind: 'NOT_AVAILABLE' }),
+      deleteMaterial: async () => ({ kind: 'NOT_DELETABLE' }),
     },
     isCurrent: () => true,
   });

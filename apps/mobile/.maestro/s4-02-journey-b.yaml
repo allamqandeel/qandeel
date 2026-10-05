@@ -1,0 +1,69 @@
+# S4-02 Journey B — authority-safe mutation and refresh, on the production route. VALIDATION ONLY (S401ProofRoot.tsx).
+# Another person's words carry their Name and offer no Delete; the reader deletes their own words behind the
+# confirmation; a peer's later words appear only after the reader's explicit refresh (the proof root's foreground signal
+# is manual, so nothing refreshes by itself); a revoked membership refuses the send and nothing of the World stays.
+# Driven by scripts/phase-m/run-s401-proof-leg.sh, which passes PREFIX, PEER_NAME and PEER_LATER.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- openLink: "qandeel://s401-proof/conversation/seed"
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-world-5401.*"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-world-5401.*"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-thread"
+    timeout: 30000
+- assertVisible:
+    text: "${PEER_NAME}"
+- tapOn:
+    id: "qandeel-shared-material-human-.*"
+- assertNotVisible:
+    id: "qandeel-shared-delete"
+- takeScreenshot: ${PREFIX}-01-another-persons-words
+- tapOn:
+    id: "qandeel-shared-material-self-.*"
+- tapOn:
+    id: "qandeel-shared-delete"
+- assertVisible:
+    id: "qandeel-shared-delete-confirm"
+- takeScreenshot: ${PREFIX}-02-delete-confirmation
+- tapOn:
+    id: "qandeel-shared-delete-confirm-action"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-shared-material-self-.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-03-own-words-deleted
+- openLink: "qandeel://s401-proof/conversation/peer"
+- assertNotVisible:
+    text: ".*${PEER_LATER}"
+- tapOn:
+    id: "qandeel-shared-refresh"
+- extendedWaitUntil:
+    visible:
+      text: ".*${PEER_LATER}"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-peer-after-refresh
+- openLink: "qandeel://s401-proof/world/revoke"
+- tapOn:
+    id: "qandeel-shared-input"
+- inputText: "after revoke"
+- tapOn:
+    id: "qandeel-shared-send"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-world-unavailable"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-shared-thread"
+- takeScreenshot: ${PREFIX}-05-revoked-fails-safe

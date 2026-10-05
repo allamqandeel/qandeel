@@ -9,13 +9,15 @@
  *
  * World (S4-01 §1.6, CW2-07 §19–§21): entering resolves authority FIRST. Until the server says ALLOW only a neutral
  * transition shell is drawn — no name, no member, no welcome — and a denial is one neutral "not available" with the
- * way back. On ALLOW: the World's surface, its current members and QANDEEL's short welcome. No Shared conversation, no
- * composer and no history exist here: Shared material is S4-02's.
+ * way back. On ALLOW: the World's surface, its current members and QANDEEL's short welcome.
+ *
+ * S4-02: below them, the World's real conversation (`SharedWorldThread.tsx`) — read only after ALLOW, belonging to this
+ * one World, with the reader's text input while ordinary sending is open.
  *
  * Nothing here reads the Personal world: no Session, camera, focus or time is passed in, so none can transfer.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AccessibilityInfo, BackHandler, ScrollView, Text, TextInput, View, findNodeHandle } from 'react-native';
+import { AccessibilityInfo, BackHandler, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View, findNodeHandle } from 'react-native';
 
 import { ActivityEntry, type ActivityAttentionController } from '../activity';
 import { AppearanceStatusBar } from '../appearance';
@@ -23,6 +25,7 @@ import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, useConversationTypef
 import type { ChromeLanguage } from '../orientation-chrome';
 import { fill, sharedCopy, worldLabel, type SharedCopy } from './copy';
 import type { SharedWorldController } from './shared-world-controller';
+import { SharedSendBar, SharedThread } from './SharedWorldThread';
 
 export const SHARED_AREA_TEST_ID = 'qandeel-shared-area';
 const HEADER_MIN_HEIGHT = 48;
@@ -49,6 +52,7 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
   const copy = sharedCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
+  const threadScroll = useRef<ScrollView | null>(null);
 
   // Entering the area re-reads the root and re-resolves the World the reader left it on — authority before restore.
   useEffect(() => {
@@ -101,10 +105,11 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
     if (state.entry.status === 'ALLOW' && state.entry.world !== null) {
       const world = state.entry.world;
       return frame(
-        <>
+        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           {header(worldLabel(copy, world.members), true)}
-          <ScrollView contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>
-            {/* QANDEEL's short, neutral welcome (S4-01 §1.6). No fake messages, no history, no composer. */}
+          <ScrollView ref={threadScroll} keyboardShouldPersistTaps="handled" onContentSizeChange={() => threadScroll.current?.scrollToEnd({ animated: false })}
+            contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>
+            {/* QANDEEL's short, neutral welcome (S4-01 §1.6), then the World's real conversation (S4-02). */}
             <View testID="qandeel-shared-welcome" accessible accessibilityLabel={`${copy.personalWorld}: ${copy.welcome}`} accessibilityLanguage={language}
               style={{ paddingStart: ROW_START, paddingEnd: ROW_END, paddingTop: 18, rowGap: 4 }}>
               <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: writing }}>{copy.personalWorld}</Text>
@@ -120,8 +125,10 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
                 </View>
               ))}
             </View>
+            <SharedThread key={world.worldId} controller={controller} language={language} palette={palette} />
           </ScrollView>
-        </>,
+          <SharedSendBar key={`send-${world.worldId}`} controller={controller} language={language} palette={palette} bottomInset={insets.bottom} />
+        </KeyboardAvoidingView>,
         'qandeel-shared-world',
       );
     }

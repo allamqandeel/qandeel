@@ -3920,3 +3920,22 @@ second World, membership, invitation, history or material model exists. Every pr
 
 Verifier: `npm run verify:shared-world-reachability-invitation-birth:integration` (`database/verify-migration-0138.mjs`).
 Record: [`docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md`](../docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md).
+
+## S4-02 - Shared conversation and material (migration 0139)
+
+The Product execution boundary over the frozen I-04G material runtime (`0089` / `0090`, as `0118`, `0119` and `0122`
+extended it), forward-only; migrations `0001`–`0138` are untouched. It creates no table: no second message, history,
+ownership, audience or QANDEEL material model exists.
+
+- **One more gate scope.** `SHARED_CONVERSATION` is added to the S4-01 scope CHECK (the same CHECK plus one literal). It
+  gates ordinary sending and the QANDEEL reply; it is closed until an operator opens it. Owner deletion is not gated.
+- **Human commands** (`authenticated`, the human from `auth.uid()`): `list_own_shared_world_material_v1` (a current
+  member's visible text material through the frozen resolver, bounded and cursored), `send_shared_world_human_text_v1`
+  (the frozen HUMAN_TEXT commit behind the gate; persistence identities derived server-side from the command), and
+  `delete_own_shared_world_material_v1` (the frozen owner deletion).
+- **The server's one act** (`service_role` only): `commit_shared_world_qandeel_reply_v1` — at most one `QANDEEL_OUTPUT`
+  per committed human text command, behind the gate, through the frozen QANDEEL core, which re-checks the I-03 evidence.
+- The `0090` primitives stay executable by no application role.
+
+Verifier: `npm run verify:shared-world-conversation-material:integration` (`database/verify-migration-0139.mjs`).
+Record: [`docs/e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md`](../docs/e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md).

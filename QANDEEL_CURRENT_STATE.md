@@ -137,7 +137,7 @@ was added later.
 ### 3.7 Production Integration and cross-cutting readiness — merged tasks after W3-MEGA-M
 
 Every task row is merged except three: PR #298 is closed unmerged, PROD-AUTH-01 / PROD-DATA-01 are `DEFERRED — OWNED`,
-and S4-01 is on an open PR, as their rows say. A merged task closes no phase or stage beyond what its row says. The earlier
+and S4-02 is not merged, as their rows say. A merged task closes no phase or stage beyond what its row says. The earlier
 W-slices are in §7.
 
 | Task | Lifecycle | Primary record |
@@ -154,7 +154,8 @@ W-slices are in §7.
 | VPORT-02 — Final Temporal / Orientation / Iconography Production Port + Stage-2 Coherence Closure | **`MERGED / CLOSED` through PR #306 at `34ea439b98eecd5f22628f41749245f81bb2b9f8`.** Spine C, the Live terminal, the Analysis chrome ground / ink (the dark-on-dark fix), G3 Decision B, the Call Rail A component; `QAN-BL-A11Y-01` tombstoned. **Stage 2 is DONE / MERGED.** Its record keeps its pre-merge banner (§6 of the Project Map lists the trap) | [record](docs/e2e/QANDEEL_VPORT_02_TIMELINE_ORIENTATION_P2_FINAL_COHERENCE_IMPLEMENTATION_RECORD_v1.md) |
 | A3-01 — Activity & Attention Core + In-App Production Integration (migration `0136`) | **`MERGED / CLOSED` through PR #307 at `a2ec76507e43c82dcabf4194053e318c2fb9d509`.** Opened Stage 3. The provider-neutral Activity spine and in-app surfaces; no source producer exists, so production Activity is truthfully empty; admitted `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02`. Its record keeps its pre-merge banner (history is not rewritten). **It does not close Stage 3** | [record](docs/e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) |
 | A3-02 — Native Push, Permission & Platform Delivery Integration (migration `0137`) | **`MERGED / CLOSED` through PR #308 at `06a960848faaccc6e294d38fbde2918b10ed1d74`.** Device registration and token lifecycle, the OS permission runtime with education before the real prompt, FCM / APNs delivery revalidated through A3-01's verdict, per-device evidence, native Direct Entry through Activity `open`, isolated proof legs. `QAN-BL-NOTIF-01` tombstoned; `QAN-BL-NOTIF-05` admitted (physical-device Exit Gates). Its record keeps its pre-merge banner. **Stage 3 is DONE / MERGED** (reconciled by S4-01) | [record](docs/e2e/QANDEEL_A3_02_NATIVE_PUSH_PLATFORM_DELIVERY_IMPLEMENTATION_RECORD_v1.md) |
-| S4-01 — Shared World Reachability, Invitation & Birth (migration `0138`) | **IMPLEMENTED ON AN OPEN PR — READY FOR INDEPENDENT REVIEW — NOT MERGED.** Opened Stage 4. The first production Global Switcher (QANDEEL + Shared World), the Shared root, the sealed owner-readable Shared ID (copy / regenerate), the non-enumerating invitation, decline, the minimal fail-closed Shared launch gate and the launch-gated atomic birth over the frozen `0082` core, the authority-first World shell; the legacy `0081` client grant retired. Admits `QAN-BL-LAUNCH-03`. Its new copy beyond the CANON / APPROVED rows is PROPOSED for its Product Copy Gate. **It does not close Stage 4** | [record](docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md) |
+| S4-01 — Shared World Reachability, Invitation & Birth (migration `0138`) | **`MERGED / CLOSED` through PR #310 at `d6047489f402cc286e4b27954ec16dc650e57339`** (reconciled by S4-02). Opened Stage 4. The first production Global Switcher (QANDEEL + Shared World), the Shared root, the sealed owner-readable Shared ID (copy / regenerate), the non-enumerating invitation, decline, the minimal fail-closed Shared launch gate and the launch-gated atomic birth over the frozen `0082` core, the authority-first World shell; the legacy `0081` client grant retired. Admitted `QAN-BL-LAUNCH-03` and `QAN-BL-CI-01`; its Product Copy Gate is CLOSED. Its record keeps its pre-merge banner. **It does not close Stage 4** | [record](docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md) |
+| S4-02 — Shared Conversation & Material Production Integration (migration `0139`) | **IMPLEMENTED ON A BRANCH — S4-02 PRODUCT COPY GATE OPEN — NOT MERGED.** Real Shared conversation over the frozen I-04G runtime: the Product-safe material read, launch-gated human text, one request-driven server-owned QANDEEL reply per human message composed over the frozen I-03 chain and the commit binder, attribution, current-member own-material deletion, refresh without restart. No Voice Note is faked (`QAN-BL-VOICE-01`); Personal Standing Context admission waits on `QAN-BL-CW-02` (admitted). **It does not close Stage 4** | [record](docs/e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md) |
 | PROD-AUTH-01 — Auth Verification Path; PROD-DATA-01 — List/Fan-out Correction | **`DEFERRED — OWNED`** (`QAN-BL-PROD-04`, `QAN-BL-PROD-05`). Not opened, and not promoted ahead of VPORT-02 | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 
 There is no task named `W3-CORR-M`. Memory control is the merged W3-MEGA-M (PR #293); no record or backlog item
@@ -174,11 +175,11 @@ production implementation. The table keeps three things apart:
 | Area | Decided (Product / Architecture / Design) | In production code today | Still open |
 |---|---|---|---|
 | Conversation and intelligence | Foundation, QHIA and QIR contracts | the NestJS API in `apps/api/src/`. Its HTTP controllers are under `conversation/`, `health/`, `account/` and `understanding/`. AI-COST-01 (merged) records every provider call in a provider-neutral usage / cost ledger (migration `0135`); PROD-SEC-02 (merged) bounds turn admission and foreground AI spend (migration `0131`) | Provider / LLM selection is deferred (QIR-001); the Product roadmap places QANDEEL-specific benchmark/selection alongside the End-to-End Product Experience Completeness Audit |
-| Product shell / Global navigation / first use | I-08A4 freezes the Personal-centered App Shell, three-area Global Switcher, local-only Back, Direct Entry, bilingual Product language and first-use foundation; later G1.1 / G1.2 naming amendments bind, and so do P4-C1's shell / small-chrome decisions and P4's static launch → system handoff | no complete production Global Shell implementing the I-08A contract is established on `main`; current mobile composition is the T-series / T-12 shell. S4-01 (open PR) adds the first production Global Switcher with two of the three areas (QANDEEL, Shared World; P4-C1 SW-3, P2 `navMine` / `navShared`) | production realization of the frozen I-08A shell while preserving later amendments |
+| Product shell / Global navigation / first use | I-08A4 freezes the Personal-centered App Shell, three-area Global Switcher, local-only Back, Direct Entry, bilingual Product language and first-use foundation; later G1.1 / G1.2 naming amendments bind, and so do P4-C1's shell / small-chrome decisions and P4's static launch → system handoff | no complete production Global Shell implementing the I-08A contract is established on `main`; current mobile composition is the T-series / T-12 shell. S4-01 (merged, PR #310) adds the first production Global Switcher with two of the three areas (QANDEEL, Shared World; P4-C1 SW-3, P2 `navMine` / `navShared`) | production realization of the frozen I-08A shell while preserving later amendments |
 | Living Analysis Map (Personal World) | Stages 0–6 and the T-series contracts | the mobile client in `apps/mobile/src/`: world projection, camera, Timeline, temporal navigation, Return, chrome, motion, responsive composition, recovery and sign-in. **The Map paints the frozen I-08B1 world** (VPORT-01, merged through PR #297: `apps/mobile/src/map/visual/`); the world mechanics underneath did not move. The Conversation surface exists (W1A-01, merged through PR #283). The [E2E-01 census](docs/e2e/QANDEEL_E2E01_COMPLETE_PRODUCT_JOURNEY_SURFACE_CENSUS_v1.md) §1 finding of "no Conversation surface" was true at the census | VPORT-02 (Timeline + Orientation Chrome + P2 Final Coherence) is NEXT; `QAN-BL-VIS-01` (heavy-history stress proof) stays `OPEN — UNASSIGNED` |
 | Visual system (Living Brass, Light, typography, surfaces, colour, accessibility, appearance, brand) | the frozen I-08B design canon (§3.5) | in part: W1A-01 (Conversation surface in the frozen visual language), W2-02 (launch identity), the W3 Settings surfaces, and VPORT-01 (the Living Analysis World paint) | the rest of the production port: VPORT-02 (Timeline, Orientation Chrome, P2 final coherence) is NEXT; later stages port their own surfaces |
 | Conversation / Analysis shell | G1.1; G3 Decisions A and B; the G2.3 and G3 controlled amendments to T-11 / T-12; P1 §12, under which non-Analysis surfaces follow the user's Dark / Light / System preference (default Dark) while the Analysis stays one dark place | the T-12 app-root composition | G3 §F lists these as unimplemented: the Analysis shell, the appearance cross-fade, the temporal-line placement and yield rule, compact `ReturnControls`, and device certification. The P1 appearance preference is implemented by W3-01 (merged through PR #287): non-Analysis surfaces follow Dark / Light / System, and the Analysis stays Dark |
-| Shared World, Public World | CW2-01 … CW2-04; I-04, I-05 | the database runtime (migrations 0075–0099) and server modules in `apps/api/src/connected-worlds/`. S4-01 (open PR): Shared World Product routes (`apps/api/src/shared-world/`), migration `0138` and the mobile Shared root, invitation, birth entry and Shared ID (`apps/mobile/src/shared-world/`) | Shared: conversation / material (S4-02), lifecycle and governance UI (S4-03), Activity producers / Direct Entry (S4-04); the Shared launch gate ships closed (`I-09` / `CW2-08`; `QAN-BL-ACCT-01`). Public: no authenticated Product routes and no mobile surfaces; launch prerequisites fail closed |
+| Shared World, Public World | CW2-01 … CW2-04; I-04, I-05 | the database runtime (migrations 0075–0099) and server modules in `apps/api/src/connected-worlds/`. S4-01 (merged, PR #310): Shared World Product routes (`apps/api/src/shared-world/`), migration `0138` and the mobile Shared root, invitation, birth entry and Shared ID (`apps/mobile/src/shared-world/`). S4-02 (branch, not merged): migration `0139`, the Shared conversation routes and the request-driven QANDEEL reply composed over the frozen I-03 chain (`apps/api/src/connected-worlds/material-commit/`), and the mobile World conversation | Shared: Voice Notes (`QAN-BL-VOICE-01`), Personal Standing Context admission (`QAN-BL-CW-02`), lifecycle and governance UI (S4-03), Activity producers / Direct Entry (S4-04); the Shared launch gate ships closed (`I-09` / `CW2-08`; `QAN-BL-ACCT-01`). Public: no authenticated Product routes and no mobile surfaces; launch prerequisites fail closed |
 | Matching / Introductions | CW2-06; the G2.3 copy and process; the G3 §D Live-Call rule | the I-07 database runtime (0108–0118, 0120) | the mobile Matching UI, the final Introduction screen and the navigation surfaces, owned by Connected Worlds `I-08`. G3 §G holds the `OPEN COPY` items |
 | Replay | CW2-05; the G1.1 placement ("an action on the current Conversation / Analysis context") | the I-06 backend runtime (0100–0107) | the Product Replay surface (`QAN-BL-NAV-02`). No media, storage or transport. Distribution is `NOT CLEARED / FAIL-CLOSED` |
 | Voice / Live Call | G1.2; P2's Call Rail A; P4's non-signal Voice visual language (P4-C2 §4, frozen by the P4 closure §6) | none | all of it (`QAN-BL-VOICE-01`), including the signal-bearing morphology and Voice / call strings P4 keeps runtime-gated |
@@ -199,16 +200,16 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 
 | Status | Count |
 |---|---:|
-| `DEFERRED — OWNED` | 14 |
+| `DEFERRED — OWNED` | 15 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 10 |
+| `OPEN — UNASSIGNED` | 11 |
 | `CLOSED — TOMBSTONE` | 17 |
-| **Total** | **41** |
+| **Total** | **43** |
 
-| Severity (all 41) | Count |
+| Severity (all 43) | Count |
 |---|---:|
 | `HIGH` | 25 |
-| `MEDIUM` | 15 |
+| `MEDIUM` | 17 |
 | `LOW` | 1 |
 
 Recounted mechanically from the §4 index at `b1ce9c909fc5dab341e13a2ed7593ef3f477a8f4` by ROADMAP-REC-01 after PR #305; the
@@ -217,8 +218,9 @@ table counts all 34 rows, tombstones included. VPORT-02 (Draft PR #306) tombston
 PR's merge; the 18 active (non-tombstone) items then split 8 `HIGH`, 9 `MEDIUM` and 1 `LOW`. A3-01 (Draft PR, 2026-10-04) admits `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02` (all `DEFERRED — OWNED`): the register
 holds 39 items, 13 / 0 / 10 / 16 by status and 24 / 14 / 1 by severity, recounted mechanically. A3-02 (merged, PR #308) tombstoned
 `QAN-BL-NOTIF-01` and admitted `QAN-BL-NOTIF-05`: **40** items, 13 / 0 / 10 / 17 by status and 25 / 14 / 1 by severity.
-S4-01 (open PR) admits `QAN-BL-LAUNCH-03`: **41** items, 14 / 0 / 10 / 17 by status and 25 / 15 / 1 by severity, recounted
-mechanically. The 24 active items, in the backlog's own index order:
+S4-01 (merged, PR #310) admitted `QAN-BL-LAUNCH-03` and `QAN-BL-CI-01`: **42** items, 15 / 0 / 10 / 17 by status and 25 / 16 / 1 by
+severity. S4-02 (branch) admits `QAN-BL-CW-02`: **43** items, 15 / 0 / 11 / 17 by status and 25 / 17 / 1 by severity, recounted
+mechanically. The 26 active items, in the backlog's own index order:
 
 | ID | Title | Owner | Severity | Status |
 |---|---|---|---|---|
@@ -246,6 +248,8 @@ mechanically. The 24 active items, in the backlog's own index order:
 | `QAN-BL-PRIV-02` | Export My Data Omits the Reader's Notifications & Activity Preferences and Context Mutes | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-NOTIF-05` | Native Push Physical-Device Exit Gates (PD-01 … PD-09) | `Release Hardening & Launch — physical iOS / Android device validation` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-02` | Shared Standing Context Admission: Personal-Context Collector, Source Disclosure Detector, Private Source-State Resolver and the JIT Grant Surface | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 Severity states the consequence *if an item is reopened*. It is not a priority or a schedule (backlog §2).
 An entry authorizes no implementation (BG-07).
@@ -330,7 +334,7 @@ integrity.
   - `E2E-D-03` Account Photo — `BLOCKED / DEFERRED BY MEDIA STORAGE IMPLEMENTATION BOUNDARY`;
   - `E2E-D-02` — the nine-group hierarchy is not closed (six real groups; Notifications, Introductions and Plan & Usage
     have no function yet);
-  - `E2E-D-08` — the Shared-ID surface waits for Shared invitations (W6) — implemented by S4-01 (open PR);
+  - `E2E-D-08` — the Shared-ID surface waits for Shared invitations (W6) — implemented by S4-01 (merged, PR #310);
   - `E2E-D-11` — the Product decision is closed; Android per-app-language realization (`localeConfig`) and device validation remain;
   - `E2E-D-12` — Bold Text, plus `QAN-BL-A11Y-01` for mid-session Reduce Motion in the T-10 camera / temporal hooks (owned by VPORT-02);
   - `E2E-D-16` — world-scoped export categories are `NOT YET INCLUDED`;
@@ -344,8 +348,8 @@ integrity.
     `34ea439b98eecd5f22628f41749245f81bb2b9f8`);
   - Stage 3 (Activity & Notifications Production) is **DONE / MERGED**: `A3-01` through PR #307 at
     `a2ec76507e43c82dcabf4194053e318c2fb9d509` and `A3-02` through PR #308 at `06a960848faaccc6e294d38fbde2918b10ed1d74`;
-  - Stage 4 (Shared World Product Integration) is **ACTIVE**: `S4-01 — Shared World Reachability, Invitation & Birth` is on
-    an open PR (not merged); S4-02 / S4-03 / S4-04 follow, each under its own Task Contract;
+  - Stage 4 (Shared World Product Integration) is **ACTIVE**: `S4-01` is merged (PR #310); `S4-02 — Shared Conversation &
+    Material Production Integration` is implemented on its branch (not merged); S4-03 / S4-04 follow, each under its own Task Contract;
   - Stages 5–9 are **LATER**.
   `PROD-AUTH-01` and `PROD-DATA-01` stay `DEFERRED — OWNED` and are not promoted ahead of it.
 

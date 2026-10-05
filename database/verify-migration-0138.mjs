@@ -127,8 +127,12 @@ const NEW_TABLES = ['shared_direct_birth_launch_evidence', 'shared_direct_invita
 // ------------------------------------------------------------------------------------------------------
 async function verifyBoundary() {
   stage = 'boundary: every shared_private function is a pinned SECURITY DEFINER; every public wrapper is INVOKER';
+  // RE-ANCHORED by S4-02 (migration 0139): `shared_private` is the Shared Product boundary's schema, and 0139 adds its
+  // own definers there. This verifier proves the 0138 set exactly — each of its twelve definers is present and pinned,
+  // and each of its ACL facts holds — while the later definers are proven by their own verifier (verify-migration-0139).
   const privateFns = await rows(`SELECT p.proname, p.prosecdef, p.proconfig, pg_get_userbyid(p.proowner) AS owner
-    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'shared_private' ORDER BY 1`);
+    FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'shared_private' AND p.proname = ANY($1::text[]) ORDER BY 1`,
+  [SHARED_PRIVATE_DEFINERS]);
   assert.deepEqual(privateFns.map((f) => f.proname).sort(), [...SHARED_PRIVATE_DEFINERS].sort());
   for (const f of privateFns) {
     assert.equal(f.prosecdef, true, `shared_private.${f.proname} is SECURITY DEFINER`);
@@ -146,9 +150,9 @@ async function verifyBoundary() {
   stage = 'boundary: the client-executable set is exact';
   const executable = await rows(`SELECT r.rolname, n.nspname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role'), ('public')) AS r(rolname)
-    WHERE (n.nspname = 'shared_private' OR (n.nspname = 'public' AND p.proname = ANY($1::text[])))
+    WHERE ((n.nspname = 'shared_private' AND p.proname = ANY($2::text[])) OR (n.nspname = 'public' AND p.proname = ANY($1::text[])))
       AND (r.rolname = 'public' OR EXISTS (SELECT 1 FROM pg_roles x WHERE x.rolname = r.rolname))
-      AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`, [OWNER_COMMANDS]);
+      AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`, [OWNER_COMMANDS, SHARED_PRIVATE_DEFINERS]);
   const key = (r) => `${r.rolname} ${r.nspname}.${r.proname}`;
   assert.deepEqual(executable.map(key).sort(), [
     ...OWNER_COMMANDS.map((proname) => key({ rolname: 'authenticated', nspname: 'public', proname })),

@@ -485,7 +485,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       push,
       notificationEntries,
       // S4-01: the Shared World area and the reader's Shared ID, on the Shared transport bound to this identity.
-      sharedWorld: createSharedWorldController({ transport: shared, isCurrent }),
+      sharedWorld: createSharedWorldController({ transport: shared, isCurrent, foreground: entry.foreground }),
       sharedId: createSharedIdController({ transport: shared, isCurrent }),
     };
     return built;
