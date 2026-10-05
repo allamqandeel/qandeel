@@ -1,0 +1,65 @@
+# A3-02 — the permission boundary, GRANTED path, on the production route (P3 §11; I-08N-01 D50). VALIDATION ONLY.
+# A fresh install: the OS has never asked. Nothing asks at launch; the page says so once; «السماح بالإشعارات» opens
+# QANDEEL's education; its Allow hands over to the REAL Android 13+ POST_NOTIFICATIONS prompt, answered Allow here.
+# Driven by scripts/a3/run-proof-leg.sh (leg `android-permission-allow`), which passes PREFIX.
+appId: com.qandeel.mobile
+---
+# Maestro grants every permission at launch by default; the permission legs need the REAL never-asked state.
+- launchApp:
+    permissions:
+      notifications: unset
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+# Nothing asked at launch: no education, no OS prompt.
+- assertNotVisible:
+    id: "qandeel-push-education"
+- assertNotVisible:
+    id: "com.android.permissioncontroller:id/permission_allow_button"
+- takeScreenshot: ${PREFIX}-01-nothing-asked-at-launch
+- runFlow: a3-02-open-notifications.yaml
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-allow"
+    direction: DOWN
+- assertVisible:
+    id: "qandeel-notifications-os-off"
+- takeScreenshot: ${PREFIX}-02-not-requested-said-once
+- tapOn:
+    id: "qandeel-notifications-allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-push-education"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-03-education-before-the-os
+# The education came first: the OS prompt is not on screen until the reader chooses.
+- assertNotVisible:
+    id: "com.android.permissioncontroller:id/permission_allow_button"
+- tapOn:
+    id: "qandeel-push-education-allow"
+- extendedWaitUntil:
+    visible:
+      id: "com.android.permissioncontroller:id/permission_allow_button"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-the-real-os-prompt
+- tapOn:
+    id: "com.android.permissioncontroller:id/permission_allow_button"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-notifications"
+    timeout: 30000
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-notifications-os-off"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-notifications-allow"
+- openLink: "qandeel://a301-proof/push/status/0"
+- extendedWaitUntil:
+    visible:
+      text: ".*registered: GRANTED.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-05-granted-and-registered

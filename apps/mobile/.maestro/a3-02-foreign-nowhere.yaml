@@ -1,0 +1,26 @@
+# A3-02 — another account's notification (the server answers 404 for this reader): the tap brings the app forward and
+# takes the reader NOWHERE — no destination is invented (I-08N-01 D39). VALIDATION ONLY. Input: PREFIX, TEXT.
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      text: ${TEXT}
+    timeout: 30000
+- tapOn:
+    text: ${TEXT}
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 6000
+- assertNotVisible:
+    id: "qandeel-settings"
+- assertNotVisible:
+    id: "qandeel-activity"
+- openLink: "qandeel://a301-proof/push/status/0"
+- extendedWaitUntil:
+    visible:
+      text: ".*opened: [0-9]+.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-foreign-went-nowhere

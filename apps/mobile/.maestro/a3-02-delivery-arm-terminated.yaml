@@ -1,0 +1,14 @@
+# A3-02 — terminated-state entry, step 1. VALIDATION ONLY. Three server-rendered messages (valid, stale, another
+# account's) are handed to the OS to present in a few seconds; the app goes to the background. The runner then waits
+# for the OS to post them and KILLS the app process (`am kill`, which leaves posted notifications in place).
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- openLink: "qandeel://a301-proof/push/valid/6"
+- openLink: "qandeel://a301-proof/push/stale/6"
+- openLink: "qandeel://a301-proof/push/foreign/6"
+- pressKey: Home

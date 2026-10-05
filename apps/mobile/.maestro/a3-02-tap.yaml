@@ -1,0 +1,36 @@
+# A3-02 — tap ONE notification in the OS notification shade (the runner has expanded it), then wait for the
+# destination the leg expects: the reader's revalidated Direct Entry (TARGET). A tap that lands anywhere else fails here,
+# at the tap, not later. VALIDATION ONLY. Inputs: PREFIX, STEP, TEXT (the notification's own words), TARGET (a testID).
+appId: com.qandeel.mobile
+---
+- extendedWaitUntil:
+    visible:
+      text: ${TEXT}
+    timeout: 30000
+# Two or more QANDEEL messages are bundled by the OS into one collapsed group; a tap on its line lands on the OS's own
+# group summary (which opens the app plainly and clears the group), not on the message. A reader expands the group
+# first, so the flow does: the group's count pill, the nearest one above this message's words (absent when the message
+# stands alone or its group is already open).
+- runFlow:
+    when:
+      visible:
+        id: "android:id/expand_button_number"
+        above:
+          text: ${TEXT}
+    commands:
+      - tapOn:
+          id: "android:id/expand_button_number"
+          above:
+            text: ${TEXT}
+      - waitForAnimationToEnd:
+          timeout: 4000
+- takeScreenshot: ${PREFIX}-${STEP}-a-in-the-os-shade
+- tapOn:
+    text: ${TEXT}
+- extendedWaitUntil:
+    visible:
+      id: ${TARGET}
+    timeout: 180000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-${STEP}-b-direct-entry

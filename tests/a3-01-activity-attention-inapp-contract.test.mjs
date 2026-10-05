@@ -98,17 +98,25 @@ test('2 — no WebView, no proof runtime, no runtime icon package in production'
   }
   const pkg = JSON.parse(read('apps/mobile/package.json'));
   const deps = Object.keys({ ...pkg.dependencies, ...pkg.devDependencies });
-  assert.deepEqual(deps.filter((name) => /webview|svg|hugeicons|lucide|vector-icons|notification|firebase|push/iu.test(name)), []);
+  // A3-02 RE-ANCHOR: A3-01 named A3-02 the owner of native Push; A3-02 added exactly ONE dependency for it, Expo's
+  // first-party `expo-notifications` (A3-02 record §5). Nothing else of the kind may enter.
+  assert.deepEqual(deps.filter((name) => /webview|svg|hugeicons|lucide|vector-icons|notification|firebase|push/iu.test(name)), ['expo-notifications']);
   // The proof-context field `view` and the proof boolean `reduceEligible` are not production schema (P3 §12.1, §18).
   for (const file of [...sourcesUnder(ACTIVITY), ...sourcesUnder(API)]) assert.doesNotMatch(code(file), /reduceEligible|\bview\s*===\s*'analysis'/u, file);
 });
 
 test('3 — no native Push, device token, provider or OS notification code in A3-01 (A3-02 owns it)', () => {
   const forbidden = /expo-notifications|firebase|@react-native-firebase|\bapns\b|\bfcm\b|device_?token|push_?token|getDevicePushToken|requestPermissionsAsync|setBadgeCount|notification_?channel/iu;
-  for (const file of [...mobileProduction, ...apiProduction]) assert.doesNotMatch(code(file), forbidden, `${file} has no Push / OS notification code`);
+  // A3-02 RE-ANCHOR: the owner A3-01 named now exists. Its code lives in its OWN modules — `src/push` (mobile), `push`
+  // (API), its device transport `runtime-entry/push-api.ts` and the A3 proof root's validation seam — and A3-02's
+  // contract pins them. Every OTHER file, A3-01's Activity
+  // module and migration 0136 included, still carries no Push / OS notification code.
+  const a302Owned = (file) => /\/src\/push\/|__validation__\/|\/runtime-entry\/push-api\.ts$/u.test(file);
+  for (const file of [...mobileProduction, ...apiProduction].filter((file) => !a302Owned(file))) assert.doesNotMatch(code(file), forbidden, `${file} has no Push / OS notification code`);
   assert.doesNotMatch(stripComments(read(MIGRATION)).replace(/--.*$/gmu, ''), forbidden, 'no device / token column or table');
   const app = JSON.parse(read('apps/mobile/app.json'));
-  assert.doesNotMatch(JSON.stringify(app), /notification|POST_NOTIFICATIONS|aps-environment/iu, 'no permission, entitlement or plugin for notifications');
+  assert.deepEqual(app.expo.plugins.filter((plugin) => /notification/iu.test(JSON.stringify(plugin))), [['expo-notifications', { mode: 'production' }]], 'the ONE notification plugin is A3-02\'s');
+  assert.doesNotMatch(JSON.stringify(app.expo.android ?? {}) + JSON.stringify(app.expo.ios ?? {}), /POST_NOTIFICATIONS|aps-environment/iu, 'no hand-written permission or entitlement');
 });
 
 test('4 — Activity is not a World: the depth pair is unchanged and no Global Switcher destination exists', () => {
@@ -224,7 +232,8 @@ test('10 — copy authority: APPROVED / CANON byte-equal to the pinned registry;
 
 test('11 — A3-02 is the named owner of native Push, and Stage 3 is not claimed closed', () => {
   const backlog = read(BACKLOG);
-  assert.match(backlog, /\| `QAN-BL-NOTIF-01` \| [^|]+ \| `A3-02 — Native Push, Permission & Platform Delivery Integration` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
+  // Re-anchored by A3-02 (controlled): its owner stays A3-02; A3-02 itself tombstones it under BG-08 when it delivers.
+  assert.match(backlog, /\| `QAN-BL-NOTIF-01` \| [^|]+ \| `A3-02 — Native Push, Permission & Platform Delivery Integration` \| `HIGH` \| `(?:DEFERRED — OWNED|CLOSED — TOMBSTONE)` \|/u);
   const record = read(RECORD);
   assert.match(record, /Orphan gaps = 0/u);
   assert.match(record, /DO NOT MERGE/u);

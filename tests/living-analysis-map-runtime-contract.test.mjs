@@ -453,7 +453,9 @@ test('no generated native project or dangerous mod entered the tree', async () =
   }
   const appConfig = await readJson('apps/mobile/app.json');
   // Skia needs no config plugin on this SDK line; the only later plugin is W2-02's launch identity.
-  assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity']);
+  // A3-02 RE-ANCHOR: native Push adds exactly two plugins — its own typed manifest mod (no dangerous mod) and Expo's
+  // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
+  assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }]]);
   assert.equal(existsSync(new URL('apps/mobile/ios', root)), false);
   assert.equal(existsSync(new URL('apps/mobile/android', root)), false);
 });

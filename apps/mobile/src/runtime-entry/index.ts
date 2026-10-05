@@ -148,6 +148,8 @@ export type {
   SettingsSection,
 } from './activity-api';
 export { ActivityApiClient } from './activity-api';
+export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
+export { PushApiClient } from './push-api';
 
 export type {
   BootstrapFailure,

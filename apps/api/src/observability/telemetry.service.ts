@@ -73,6 +73,14 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  ['UNDERSTANDING_CONFIDENCE',new Map([['confidence_reevaluate',new Set(['success','retry_pending'])]])],
  // AI-COST-01: the accounting ledger's own health scan (migration 0135 operations summary).
  ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],
+ // A3-02: the platform dispatcher (migration 0137). Finite outcome classes only - never a user, item, device, token,
+ // sentence or provider body. Accepted is the provider's acceptance, never delivery (I-08N-01 D41, D56).
+ ['PUSH_DELIVERY',new Map([
+  ['plan',new Set(['success',...OPERATION_FAILURES])],
+  ['claim',new Set(['success',...OPERATION_FAILURES])],
+  ['decide',new Set(['suppressed','expired','deferred','lease_lost',...OPERATION_FAILURES])],
+  ...['dispatch_fcm','dispatch_apns'].map((op):[string,ReadonlySet<string>]=>[op,new Set(['accepted','token_invalid','rejected','retry_scheduled','exhausted','provider_not_configured','lease_lost',...OPERATION_FAILURES])]),
+ ])],
 ]);
 // The bounded class of a retry_pending outcome, attached to it and to nothing else.
 const OPERATIONAL_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSPORT','INTEGRITY']);

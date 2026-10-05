@@ -156,6 +156,10 @@ test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the deli
   // Conversation capability). Every other byte stays frozen: without exactly that import and that
   // list entry, AppModule is the T-03D baseline blob.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // A3-02 re-anchor: the application root also composes PushModule (native Push device boundary and platform
+    // dispatcher, not a Conversation capability). It is stripped the same way, so every other byte stays frozen.
+    .replace("import { PushModule } from './push/push.module';\n", '')
+    .replace(', ActivityModule, PushModule, AccountModule', ', ActivityModule, AccountModule')
     // A3-01 re-anchor: the application root also composes ActivityModule (the Product Activity spine, not a Conversation
     // capability). It is stripped the same way, so every other byte stays frozen.
     .replace("import { ActivityModule } from './activity/activity.module';\n", '')

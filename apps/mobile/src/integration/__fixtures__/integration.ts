@@ -29,6 +29,7 @@ import {
 } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { createManualForegroundSignal, type ForegroundState, type ManualForegroundSignal } from '../../runtime-entry';
 import { createEphemeralProductRecoveryStorage, type ProductRecoveryStorage } from '../../recovery';
+import { createEphemeralPushDeviceStore, createInertPushPlatformPort, type PushDeviceStore, type PushPlatformPort } from '../../push';
 import {
   createEphemeralAppearancePreferenceStore,
   type AppearancePreferenceStore,
@@ -83,6 +84,8 @@ export interface HarnessOptions {
   readonly appearanceStore?: AppearancePreferenceStore;
   readonly systemAppearance?: SystemAppearanceSource;
   readonly nativeAppearance?: NativeAppearanceSink;
+  readonly pushPlatform?: PushPlatformPort;
+  readonly pushDeviceStore?: PushDeviceStore;
 }
 
 /**
@@ -113,6 +116,9 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
     appearanceStore: options.appearanceStore ?? createEphemeralAppearancePreferenceStore(),
     systemAppearance: options.systemAppearance,
     nativeAppearance: options.nativeAppearance ?? { apply: () => undefined },
+    // A3-02: no notification system and an in-memory installation, unless a test brings its own.
+    pushPlatform: options.pushPlatform ?? createInertPushPlatformPort(),
+    pushDeviceStore: options.pushDeviceStore ?? createEphemeralPushDeviceStore(),
   });
   if (!built.ok) throw new Error(`the harness could not build a runtime: ${built.phase.detail}`);
   const runtime = built.runtime;

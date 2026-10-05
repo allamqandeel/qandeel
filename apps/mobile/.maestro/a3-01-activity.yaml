@@ -2,7 +2,7 @@
 # Analysis deferral and its exit re-evaluation, Direct Entry (valid and failing closed), and Notifications & Activity,
 # on the production route. VALIDATION ONLY: every event is a SYNTHETIC fixture the proof root's validation-only producer
 # announces (A301ProofRoot.tsx); no source producer exists on main.
-# Driven by scripts/a301/run-a301-inapp-proof.sh, which passes PREFIX.
+# Driven, one leg per job, by scripts/a3/run-proof-leg.sh (A3-02 isolated legs), which passes PREFIX.
 appId: com.qandeel.mobile
 ---
 - launchApp

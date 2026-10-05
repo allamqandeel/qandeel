@@ -14,8 +14,18 @@
 // Missing values stay `null` on purpose. A build with no configuration produces a bundle that
 // fails closed at runtime with a typed error naming the missing keys, rather than a bundle that
 // silently points at the wrong backend.
+//
+// A3-02 — the Android Firebase client configuration (`google-services.json`), which FCM needs to hand this app a device
+// token, is a BUILD input: a path the build's secret store provides through `QANDEEL_ANDROID_GOOGLE_SERVICES_FILE`. The
+// file is never committed and never read here; Expo copies it into the generated project. Without it the build has no
+// FCM token, so it registers no address and receives no Push — it fails closed, and every other part works. No APNs or
+// FCM SERVER credential is a mobile input at all: those live only in the API's deployment secrets.
 module.exports = ({ config }) => ({
   ...config,
+  android: {
+    ...config.android,
+    ...(process.env.QANDEEL_ANDROID_GOOGLE_SERVICES_FILE ? { googleServicesFile: process.env.QANDEEL_ANDROID_GOOGLE_SERVICES_FILE } : {}),
+  },
   extra: {
     ...config.extra,
     /** Origin plus any base path of the QANDEEL API, without a trailing slash. */

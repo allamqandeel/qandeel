@@ -1,0 +1,305 @@
+name: A3 proof — Activity, attention and native push
+# Stage 3 (A3-01 + A3-02) — the device proof of Activity, in-app attention and platform delivery, on the production
+# route. VALIDATION ONLY.
+#
+# A3-02 REPLACED the A3-01 shape (one job that built the APK and then ran all nine legs one after another, so one failed
+# leg made GitHub's "Re-run failed jobs" rebuild the APK and rerun every leg that had passed). The binding shape now
+# (A3-02 Task Contract §10; pinned by tests/a3-proof-leg-isolation-contract.test.mjs):
+#
+#   build-android  ──►  android-leg × 13   (matrix: one leg per job, fail-fast off, own emulator, own evidence)
+#   build-ios      ──►  ios-leg × 1
+#
+#   - a BUILD PRODUCER builds the exact-head proof binary ONCE per platform, records its identity manifest (role
+#     PROOF_VALIDATION, recipe a3-activity-push-proof) and uploads it;
+#   - each LEG CONSUMER downloads that artifact, re-proves its provenance BEFORE installing it, boots its OWN emulator /
+#     simulator, runs exactly ONE leg (scripts/a3/run-proof-leg.sh <apk> <leg>), and uploads only its own evidence.
+#     A consumer contains no Gradle, no xcodebuild, no pod install, no prebuild and no npm ci;
+#   - "Re-run failed jobs" therefore reruns only the failed leg(s): the succeeded producer is not rerun, the failed leg
+#     downloads the same producer artifact (artifacts belong to the run, across attempts) and nothing is rebuilt.
+#
+# The binary's ROOT COMPONENT is the A3 proof root (one recorded change of the mobile manifest's `main`, made by
+# `select-a301-proof-entry.mjs` in this ephemeral checkout only). No credential exists in this workflow: no FCM / APNs
+# key, no Firebase configuration, no API origin. Real remote delivery is a named physical-device Exit Gate (A3-02
+# record §20), never claimed here.
+#
+# Scoped to the A3-02 branch and manual dispatch: it proves those heads and is inert everywhere else.
+on:
+  push:
+    branches: ['feat/a3-02-native-push-platform-delivery']
+    paths:
+      - 'apps/mobile/**'
+      - 'apps/api/src/push/**'
+      - 'scripts/a3/**'
+      - 'scripts/phase-m/**'
+      - 'package-lock.json'
+      - '.github/workflows/a3-proof.yml'
+  workflow_dispatch:
+concurrency:
+  group: a3-proof-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+jobs:
+  build-android:
+    name: Android x86_64 Release proof binary — BUILD PRODUCER
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Setup Temurin JDK 17
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Confirm the generated world, P2 and P3 geometry are current (the build ships exactly the generated constants)
+        run: |
+          node apps/mobile/scripts/generate-world-visual.mjs --check
+          node apps/mobile/scripts/generate-p2-production.mjs --check
+          node apps/mobile/scripts/generate-p3-production.mjs --check
+      - name: Select the A3 proof entry (the one recorded difference from the Product build)
+        env: {A301_INAPP_PROOF: '1'}
+        run: |
+          node apps/mobile/scripts/select-a301-proof-entry.mjs --apply
+          echo "### A3 proof build — main: \`$(node -p "require('./apps/mobile/package.json').main")\`, commit \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+      - {name: Generate the Android project (CNG), run: npm run prebuild:android --workspace @qandeel/mobile}
+      - name: Build the Release APK ONCE (x86_64 for the emulator)
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+      - name: Stage the artifact and record its identity
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$out/app-release.apk"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform android --role PROOF_VALIDATION --recipe a3-activity-push-proof --abis x86_64 \
+            --artifact "$out/app-release.apk" --out "$out/native-artifact-manifest.json"
+          { echo '### Android proof producer — built ONCE'; echo '```json'; cat "$out/native-artifact-manifest.json"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the Android proof build
+        uses: actions/upload-artifact@v4
+        with:
+          name: a3-proof-android-build
+          path: ${{ runner.temp }}/native-build
+          if-no-files-found: error
+          retention-days: 30
+
+  android-leg:
+    name: Android leg ${{ matrix.leg }} — LEG CONSUMER (no build)
+    needs: [build-android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        leg:
+          # A3-01 — the nine semantic legs, unchanged in Product meaning.
+          - ar-standard
+          - en-standard
+          - ar-rtl-device
+          - ar-narrow
+          - en-narrow
+          - ar-narrow-large
+          - ar-increased
+          - ar-reduced
+          - en-light
+          # A3-02 — one leg per platform-delivery capability.
+          - android-permission-allow
+          - android-permission-deny
+          - android-delivery-background
+          - android-terminated-entry
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      # No `npm ci`, no build tool: every script below uses Node builtins only.
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Download the Android proof build of THIS run
+        uses: actions/download-artifact@v4
+        with:
+          name: a3-proof-android-build
+          path: ${{ runner.temp }}/native-build
+      - name: Verify the artifact provenance BEFORE anything is installed
+        run: |
+          set -o pipefail
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/app-release.apk" \
+            --mode same-run --platform android --role PROOF_VALIDATION \
+            --recipe a3-activity-push-proof --abis x86_64 --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/provenance.txt"
+          { echo "### Leg \`${{ matrix.leg }}\` — provenance verified; NO build ran in this job"; echo '```'; cat "$RUNNER_TEMP/provenance.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | sha256sum --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run ONE leg on its own Android API 36 emulator
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        env:
+          APK: ${{ runner.temp }}/native-build/app-release.apk
+          LEG: ${{ matrix.leg }}
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: false
+          emulator-boot-timeout: 900
+          script: bash scripts/a3/run-proof-leg.sh "$APK" "$LEG" "$RUNNER_TEMP/leg-evidence"
+      - name: Upload this leg's evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a3-proof-${{ matrix.leg }}-${{ github.sha }}
+          path: ${{ runner.temp }}/leg-evidence
+          if-no-files-found: warn
+          include-hidden-files: true
+
+  build-ios:
+    name: iOS Release simulator proof binary — BUILD PRODUCER
+    runs-on: macos-26
+    timeout-minutes: 120
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly (never the runner default)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          xcodebuild -version | grep -x 'Xcode 26.6'
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Select the A3 proof entry (the one recorded difference from the Product build)
+        env: {A301_INAPP_PROOF: '1'}
+        run: node apps/mobile/scripts/select-a301-proof-entry.mjs --apply
+      - {name: Generate the iOS project (CNG), run: npm run prebuild:ios --workspace @qandeel/mobile}
+      - name: Install CocoaPods dependencies
+        working-directory: apps/mobile/ios
+        run: pod install
+      - name: Build the Release simulator app ONCE
+        run: |
+          set -o pipefail
+          workspace="$(ls -d apps/mobile/ios/*.xcworkspace | head -n 1)"
+          scheme="$(basename "$workspace" .xcworkspace)"
+          xcodebuild -quiet -workspace "$workspace" -scheme "$scheme" -configuration Release -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' -derivedDataPath apps/mobile/ios/build CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO build 2>&1 | tee "$RUNNER_TEMP/xcodebuild.log"
+      - name: Package the simulator app and record its identity
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          app="$(find apps/mobile/ios/build/Build/Products/Release-iphonesimulator -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          ditto -c -k --keepParent "$app" "$out/qandeel-ios-simulator.app.zip"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform ios --role PROOF_VALIDATION --recipe a3-activity-push-proof \
+            --artifact "$out/qandeel-ios-simulator.app.zip" --out "$out/native-artifact-manifest.json"
+      - name: Upload the iOS proof build
+        uses: actions/upload-artifact@v4
+        with:
+          name: a3-proof-ios-build
+          path: ${{ runner.temp }}/native-build
+          if-no-files-found: error
+          retention-days: 30
+
+  ios-leg:
+    name: iOS leg ${{ matrix.leg }} — LEG CONSUMER (no build)
+    needs: [build-ios]
+    runs-on: macos-26
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        leg:
+          # A3-02 — iOS mechanics differ (authorization alert, APNs payload, presentation): one leg covers them.
+          - ios-permission-delivery-entry
+    permissions:
+      contents: read
+      actions: read
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
+      IOS_SIMULATOR_NAME: iPhone 17
+      IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Select Xcode 26.6 explicitly (read back, never invoked)
+        run: |
+          sudo xcode-select -s /Applications/Xcode_26.6.app
+          test "$(xcode-select -p)" = '/Applications/Xcode_26.6.app/Contents/Developer'
+      - name: Guard the simulator (iPhone 17 on iOS 26.5)
+        run: |
+          udid="$(xcrun simctl list devices available -j | jq -r --arg name "$IOS_SIMULATOR_NAME" --arg suffix "$IOS_SIMULATOR_RUNTIME_SUFFIX" '.devices | to_entries[] | select(.key | endswith($suffix)) | .value[] | select(.name == $name) | .udid' | head -n 1)"
+          if [ -z "$udid" ]; then echo "STOP: the authorized simulator is not on this image"; exit 1; fi
+          echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Download the iOS proof build of THIS run
+        uses: actions/download-artifact@v4
+        with:
+          name: a3-proof-ios-build
+          path: ${{ runner.temp }}/native-build
+      - name: Verify the artifact provenance BEFORE anything is installed
+        run: |
+          set -o pipefail
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" \
+            --mode same-run --platform ios --role PROOF_VALIDATION \
+            --recipe a3-activity-push-proof --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/provenance.txt"
+      - name: Unpack the verified app and boot the simulator
+        run: |
+          xcrun simctl boot "$IOS_SIM_UDID" || true
+          ditto -x -k "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" "$RUNNER_TEMP/native-app"
+          app="$(find "$RUNNER_TEMP/native-app" -maxdepth 1 -name '*.app' | head -n 1)"
+          test -n "$app"
+          echo "IOS_APP=$app" >> "$GITHUB_ENV"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | shasum -a 256 --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Run ONE leg on the simulator
+        env:
+          LEG: ${{ matrix.leg }}
+        run: bash scripts/a3/run-ios-proof-leg.sh "$IOS_APP" "$LEG" "$RUNNER_TEMP/leg-evidence" "$IOS_SIM_UDID"
+      - name: Upload this leg's evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: a3-proof-${{ matrix.leg }}-${{ github.sha }}
+          path: ${{ runner.temp }}/leg-evidence
+          if-no-files-found: warn
+          include-hidden-files: true

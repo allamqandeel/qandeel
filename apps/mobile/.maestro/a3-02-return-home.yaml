@@ -1,0 +1,12 @@
+# A3-02 — leave the surface a Direct Entry opened, back to the Conversation, then send the app to the background.
+# VALIDATION ONLY. Each Back is followed by the surface it must reach.
+appId: com.qandeel.mobile
+---
+- pressKey: Back
+- waitForAnimationToEnd:
+    timeout: 6000
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- pressKey: Home

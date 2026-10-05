@@ -52,6 +52,14 @@
  *     ever laid over the world, and leaving it re-evaluates current truth (at most one strip follows);
  *   - a Direct Entry (from a row, or the strip) is revalidated by the server first, and executed here only into a surface
  *     that exists: the Personal Conversation, QANDEEL Understanding, or General Settings.
+ *
+ * A3-02 — native Push (QAN-BL-NOTIF-01):
+ *
+ *   - a notification tap (running, or the one that launched the app) is the SAME Direct Entry as the strip's: the item id
+ *     goes to Activity's `open`, revalidated NOW for the account signed in NOW (D38), and is executed here exactly as the
+ *     strip's is. An item that is not this account's answers nothing and goes nowhere — no substitute (D39);
+ *   - QANDEEL's permission education is drawn here, over whatever non-Analysis surface asked for it, and hands over to
+ *     the real OS prompt; it is never drawn at the Analysis depth.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
@@ -71,6 +79,7 @@ import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface } from '../../understanding';
 import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
+import { PermissionEducationSheet } from '../../push';
 import type { DirectEntryDestination } from '../../runtime-entry';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
@@ -318,14 +327,36 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     attention.setSurface(surface);
   }, [attention, surface]);
   const { strip } = useSyncExternalStore(attention.subscribe, attention.getState);
+  // ONE revalidated Direct Entry for an Activity item, whatever surfaced it (the strip, or a native notification).
+  const enterItem = useCallback(async (itemId: string) => {
+    const outcome = await runtime.activityFeed.open(itemId);
+    if (outcome.kind === 'ENTER') enter(outcome.destination);
+    else if ((outcome.kind === 'STALE' || outcome.kind === 'UNAVAILABLE') && outcome.fallback !== null) enter(outcome.fallback);
+    // GONE: not this account's item (or no longer there). Nothing is opened in its place (D39).
+    else if (outcome.kind !== 'GONE') openActivity();
+  }, [enter, openActivity, runtime.activityFeed]);
   const enterFromStrip = useCallback(async () => {
     const taken = attention.takeStrip();
     if (taken === null) return;
-    const outcome = await runtime.activityFeed.open(taken.item.id);
-    if (outcome.kind === 'ENTER') enter(outcome.destination);
-    else if ((outcome.kind === 'STALE' || outcome.kind === 'UNAVAILABLE') && outcome.fallback !== null) enter(outcome.fallback);
-    else openActivity();
-  }, [attention, enter, openActivity, runtime.activityFeed]);
+    await enterItem(taken.item.id);
+  }, [attention, enterItem]);
+
+  // A3-02 — a native notification tap waits here until this world can take it, then takes it ONCE.
+  const entries = runtime.notificationEntries;
+  useEffect(() => {
+    if (onSignOut === undefined) return undefined;
+    const consume = () => {
+      const tap = entries.take();
+      if (tap === null) return;
+      void runtime.push.recordOpened(tap.itemId);
+      void enterItem(tap.itemId);
+    };
+    // A tap that arrived before this world existed (cold start) is taken as soon as it is drawn; later ones as they come.
+    void Promise.resolve().then(consume);
+    return entries.subscribe(consume);
+  }, [entries, enterItem, onSignOut, runtime.push]);
+  const push = runtime.push;
+  const { education } = useSyncExternalStore(push.subscribe, push.getState);
 
   const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
 
@@ -428,7 +459,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
@@ -450,6 +481,10 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             onEnter={() => void enterFromStrip()}
             onDismiss={() => attention.dismissStrip()}
           />
+        ) : null}
+        {/* A3-02 — the education before the OS prompt: never at the Analysis depth. */}
+        {education && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <PermissionEducationSheet language={locale.language} insets={edges} onAllow={() => void push.allow()} onNotNow={() => push.notNow()} />
         ) : null}
       </View>
     </FirstUseGate>

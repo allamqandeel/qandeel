@@ -1,0 +1,31 @@
+# A3-02 — iOS: the server-rendered APNs message delivered in the BACKGROUND is presented by iOS; tapping it reaches the
+# reader's revalidated Direct Entry (TARGET). VALIDATION ONLY. Input: PREFIX, TEXT, TARGET.
+appId: com.qandeel.mobile
+---
+# A banner leaves the screen after a few seconds and the message stays in Notification Center; the flow starts later
+# than that, so it opens Notification Center (a swipe down from the top edge) when the message is not already in view.
+- runFlow:
+    when:
+      notVisible:
+        text: ${TEXT}
+    commands:
+      - swipe:
+          start: "50%, 1%"
+          end: "50%, 70%"
+          duration: 600
+      - waitForAnimationToEnd:
+          timeout: 4000
+- extendedWaitUntil:
+    visible:
+      text: ${TEXT}
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-06-presented-by-ios
+- tapOn:
+    text: ${TEXT}
+- extendedWaitUntil:
+    visible:
+      id: ${TARGET}
+    timeout: 120000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-07-direct-entry

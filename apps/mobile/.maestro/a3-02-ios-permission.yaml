@@ -1,0 +1,57 @@
+# A3-02 — iOS: the permission boundary and the REAL iOS authorization alert (P3 §11; I-08N-01 D50). VALIDATION ONLY.
+# Nothing asks at launch; «Allow notifications» opens QANDEEL's education; its Allow hands over to iOS's own alert,
+# answered Allow here; the page then says nothing about notifications being off. The app stays in front.
+# Driven by scripts/a3/run-ios-proof-leg.sh (leg `ios-permission-delivery-entry`), which passes PREFIX.
+appId: com.qandeel.mobile
+---
+# iOS leaves plain container views out of its accessibility tree, so the sheet is read by its Allow control.
+# Maestro grants every permission at launch by default; the permission legs need the REAL never-asked state.
+- launchApp:
+    permissions:
+      notifications: unset
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- assertNotVisible:
+    id: "qandeel-push-education-allow"
+- takeScreenshot: ${PREFIX}-01-nothing-asked-at-launch
+- runFlow: a3-02-open-notifications.yaml
+- scrollUntilVisible:
+    element:
+      id: "qandeel-notifications-allow"
+    direction: DOWN
+- assertVisible:
+    id: "qandeel-notifications-os-off"
+- tapOn:
+    id: "qandeel-notifications-allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-push-education-allow"
+    timeout: 15000
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-02-education-before-the-os
+- tapOn:
+    id: "qandeel-push-education-allow"
+- extendedWaitUntil:
+    visible:
+      text: "Allow"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-03-the-real-ios-alert
+- tapOn:
+    text: "Allow"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-notifications-os-off"
+    timeout: 30000
+- openLink: "qandeel://a301-proof/push/status/0"
+# iOS asks before a link from outside the app opens it («Open in "QANDEEL"?»); the flow confirms, as a reader would.
+- tapOn:
+    text: "Open"
+    optional: true
+- extendedWaitUntil:
+    visible:
+      text: ".*registered: GRANTED.*"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-granted-and-registered

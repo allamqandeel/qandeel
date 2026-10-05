@@ -37,6 +37,7 @@ import { ConversationTurnApiClient } from './conversation/conversation-turn-api'
 import { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 import { UnderstandingApiClient } from './understanding-api';
 import { ActivityApiClient } from './activity-api';
+import { PushApiClient } from './push-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -131,6 +132,11 @@ export interface MobileRuntimeEntry {
    * auth generation: a replaced identity's request is refused before it is issued.
    */
   activityFor(bundle: CanonicalRuntimeBundle): ActivityApiClient;
+  /**
+   * A3-02 — the device-registration client for a bundle this coordinator produced, on the same AC-01 seam bound to the
+   * bundle's own auth generation: a replaced identity's request is refused before it is issued.
+   */
+  pushFor(bundle: CanonicalRuntimeBundle): PushApiClient;
   /**
    * W1B-01 — the one signed-out account question: may a Login ID still be chosen. It carries no
    * credential, because there is no account yet.
@@ -290,6 +296,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     activityFor(bundle) {
       return new ActivityApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    pushFor(bundle) {
+      return new PushApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     understandingFor(bundle) {
       return new UnderstandingApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

@@ -58,6 +58,9 @@ const expectedDependencies = {
   // native module and needs no config plugin: the app config's plugin list is unchanged.
   'expo-font': '~57.0.3',
   'expo-linking': '~57.0.9',
+  // A3-02: native Push, OS notification permission, channels and taps — Expo SDK 57's first-party module at its bundled
+  // version (A3-02 record §5). It talks to APNs / FCM natively; Expo's push relay is never used.
+  'expo-notifications': '~57.0.17',
   'expo-router': '~57.0.20',
   // T-12P §2.4: the Supabase auth-session store, pinned to the Expo SDK 57 bundled version. It is
   // the current official Supabase-on-Expo storage recommendation and it holds AUTHENTICATION
@@ -160,7 +163,9 @@ test('app config carries provisional technical identifiers only and no architect
   assert.equal(expo.ios.bundleIdentifier, 'com.qandeel.mobile');
   assert.equal(expo.android.package, 'com.qandeel.mobile');
   assert.deepEqual(expo.platforms, ['ios', 'android']);
-  assert.deepEqual(expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity']);
+  // A3-02 RE-ANCHOR: native Push adds exactly two plugins — its own typed manifest mod (no dangerous mod) and Expo's
+  // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
+  assert.deepEqual(expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }]]);
   assert.equal('newArchEnabled' in expo, false, 'New Architecture is structural on this SDK line; no toggle may be reintroduced');
   assert.equal('extra' in expo, false);
   assert.match(bootSmoke, /^appId: com\.qandeel\.mobile$/mu);

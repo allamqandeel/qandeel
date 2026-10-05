@@ -61,6 +61,7 @@ import { saveExportDocument } from './export-file';
 import { openLanguageSettings } from './language-settings';
 import type { PrivacyDataController, PrivacyDataState } from './privacy-data-controller';
 import { NotificationsSettings } from './NotificationsSection';
+import type { PushController } from '../push';
 import type { ActivityPreferencesController } from '../activity/preferences-controller';
 import { notificationsCopy } from '../activity/copy';
 import { DeletionRequest, deletionStatusSaid, ExportRequest, exportStatusSaid, LanguageRow, PrivacyDataRows } from './PrivacyDataSection';
@@ -84,6 +85,8 @@ export interface SettingsSurfaceProps {
   readonly privacy?: PrivacyDataController;
   /** A3-01: the reader's Notifications & Activity preferences for this runtime generation. Without it, that group is not drawn. */
   readonly notifications?: ActivityPreferencesController;
+  /** A3-02 — the device's OS permission and the education, shown in Notifications & Activity. */
+  readonly push?: PushController;
   /** A3-01: open directly on Notifications & Activity (from Activity, or a Direct Entry); Back from it is then Back. */
   readonly initialPage?: 'NOTIFICATIONS';
 }
@@ -195,7 +198,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, privacy, notifications, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, privacy, notifications, push, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -406,7 +409,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
   }
 
   if (changing === 'NOTIFICATIONS' && notifications !== undefined) {
-    change = <NotificationsSettings controller={notifications} language={language} palette={palette} />;
+    change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} />;
   }
 
   const publicIdReady = publicIdState.status === 'READY' && publicIdState.publicId !== null;

@@ -77,6 +77,12 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'PUT /activity/preferences': 'AUTHENTICATED',
   'PUT /activity/snooze': 'AUTHENTICATED',
   'PUT /activity/mutes': 'AUTHENTICATED',
+
+  // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
+  'PUT /push/device': 'AUTHENTICATED',
+  'POST /push/device/detach': 'AUTHENTICATED',
+  'POST /push/device/detach-others': 'AUTHENTICATED',
+  'POST /push/opened': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

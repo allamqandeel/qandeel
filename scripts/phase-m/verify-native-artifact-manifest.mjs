@@ -70,6 +70,7 @@ import {
   PRODUCT_ENTRY,
   VALIDATION_ENTRY,
   digestConfigurationValue,
+  entryFor,
 } from './native-artifact-manifest.mjs';
 
 /**
@@ -120,8 +121,8 @@ export function verifyManifest(manifest, expected) {
   if (manifest.role !== expected.role) {
     refuse('ROLE_MISMATCH', `artifact role is ${JSON.stringify(manifest.role)}, this consumer needs ${JSON.stringify(expected.role)}`);
   }
-  const entryForRole = manifest.role === 'PRODUCT' ? PRODUCT_ENTRY : VALIDATION_ENTRY;
-  if (manifest.entry !== entryForRole) {
+  const entryForRole = entryFor(manifest.role, manifest.buildRecipe.id);
+  if (entryForRole === null || manifest.entry !== entryForRole) {
     refuse('ENTRY_ROLE_DISAGREEMENT', `role ${manifest.role} requires entry ${JSON.stringify(entryForRole)}, manifest says ${JSON.stringify(manifest.entry)}`);
   }
   if (manifest.buildRecipe.id !== expected.recipe) {

@@ -254,7 +254,9 @@ test('Android: a Level-3 local Expo module maps Dark / Light / System to the pla
   assert.equal((code(plugin).match(/withDangerousMod\(config,/gu) ?? []).length, 2, 'the bounded W2-02 exception is not expanded');
   const noLaunchNightMode = (text) => !/setApplicationNightMode|MODE_NIGHT_|withMainApplication/u.test(code(text));
   guards('no-launch-night-mode', plugin, noLaunchNightMode, "config = withMainApplication(config, (m) => m); // setApplicationNightMode(MODE_NIGHT_YES)");
-  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN], 'no new plugin');
+  // A3-02 RE-ANCHOR: W3-01 added no plugin; A3-02 later added `with-qandeel-push.js` (typed manifest mods only, pinned by
+  // the W2-02 and A3-02 contracts). No other plugin exists.
+  assert.deepEqual(listFiles('apps/mobile/plugins'), [PLUGIN, 'apps/mobile/plugins/with-qandeel-push.js'], 'no other plugin');
 });
 
 test('iOS: the Launch Screen still follows the device (W2-02 unchanged); the root view is the World asset for its own appearance', () => {
@@ -272,7 +274,11 @@ test('iOS: the Launch Screen still follows the device (W2-02 unchanged); the roo
 
 test('Sign out uses the ONE existing auth sign-out, once, with no second path and no other-devices scope', () => {
   const rootText = code(read(ROOT));
-  assert.match(rootText, /const signOut = useCallback\(\(\) => auth\.signOut\(\), \[auth\]\);/u);
+  // A3-02 RE-ANCHOR: before the ONE auth sign-out, this installation stops receiving Push for the account (a bounded
+  // detach that never throws and never blocks; A3-02 record §8). The sign-out itself is still exactly the auth
+  // authority's own, called once, with no scope.
+  assert.match(rootText, /const signOut = useCallback\(async \(\) => \{\s*await runtime\.push\.detach\(\);\s*return auth\.signOut\(\);\s*\}, \[auth, runtime\.push\]\);/u);
+  assert.equal((rootText.match(/auth\.signOut\(/gu) ?? []).length, 1, 'one call of the auth sign-out');
   const settings = code(read(SETTINGS));
   const onePath = (text) => (text.match(/onSignOut\(\)/gu) ?? []).length === 1 && !/\.signOut\(|supabase|removeItem|scope:/u.test(text);
   guards('settings-has-one-sign-out-path', settings, onePath, "void auth.signOut({ scope: 'others' });");
