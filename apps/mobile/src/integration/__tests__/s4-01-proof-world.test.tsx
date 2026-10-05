@@ -8,6 +8,10 @@
  * row are there, and that the world's account answers are what the production decoders accept — so the gap cannot
  * return silently. It also proves the coupling is not a Product defect: for a reader whose account reads answer, the
  * Shared ID row is always drawn.
+ *
+ * It also guards the pre-authority seam Journey C asserts on a device: an entry into the seeded World stays in the neutral
+ * shell — no welcome, no member — until `allow()` releases it, however long the reader waits; never a timed delay that a
+ * slow emulator can outrun (the S4 proof race of run 37291080371).
  */
 import { act, cleanup, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
@@ -19,7 +23,7 @@ import { AccountApiClient, createManualForegroundSignal } from '../../runtime-en
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
-import { S401_PROOF_SHARED_IDS, createS401ProofWorld } from '../__validation__/s401-proof-world';
+import { S401_PROOF_SHARED_IDS, createS401ProofWorld, type S401ProofWorld } from '../__validation__/s401-proof-world';
 import { settle } from '../__fixtures__/integration';
 
 jest.mock('expo-status-bar', () => {
@@ -38,8 +42,9 @@ afterEach(async () => {
   runtime = null;
 });
 
-async function proofApp(): Promise<RenderResult> {
-  const world = createS401ProofWorld(deviceProductLanguage(), { entryDelayMs: 0 });
+const SEEDED = '54010001-0000-4000-8000-000000000000';
+
+async function proofApp(world: S401ProofWorld = createS401ProofWorld(deviceProductLanguage())): Promise<RenderResult> {
   const built = createIntegrationRuntime({
     config: world.config,
     authPort: world.auth,
@@ -75,7 +80,7 @@ async function press(view: RenderResult, testID: string): Promise<void> {
 
 describe('S4-01 proof world — a signed-in reader', () => {
   it('answers the account reads in exactly the shapes the production account client decodes', async () => {
-    const world = createS401ProofWorld('en', { entryDelayMs: 0 });
+    const world = createS401ProofWorld('en');
     // The production account client over the proof world's network — the same read path General Settings takes.
     const account = new AccountApiClient({ baseUrl: world.config.apiBaseUrl, fetch: world.fetch });
     expect((await account.readIdentity()).kind).toBe('READ');
@@ -89,5 +94,66 @@ describe('S4-01 proof world — a signed-in reader', () => {
     expect(account.getByTestId('qandeel-shared-id-row')).toBeTruthy();
     await press(view, 'qandeel-shared-id-row');
     expect(view.getByTestId('qandeel-shared-id-value').props.children).toContain(S401_PROOF_SHARED_IDS[0]);
+  });
+});
+
+describe('S4-01 proof world — the pre-authority seam is held, never timed', () => {
+  const entry = (world: S401ProofWorld, worldId: string) =>
+    world.fetch(`${world.config.apiBaseUrl}/shared/worlds/${worldId}`, { method: 'GET' }).then((answer) => answer.json());
+
+  it('holds every entry into the seeded World before ALLOW until allow() releases it, then holds the next one again', async () => {
+    jest.useFakeTimers();
+    try {
+      const world = createS401ProofWorld('en');
+      world.seed();
+      let first: unknown = null;
+      void entry(world, SEEDED).then((body) => { first = body; });
+      await act(async () => { jest.advanceTimersByTime(600_000); });
+      expect(first).toBeNull();
+      world.allow();
+      await act(async () => { await Promise.resolve(); });
+      expect(first).toMatchObject({ outcome: 'ALLOW' });
+
+      let second: unknown = null;
+      void entry(world, SEEDED).then((body) => { second = body; });
+      await act(async () => { jest.advanceTimersByTime(600_000); });
+      expect(second).toBeNull();
+      world.allow();
+      await act(async () => { await Promise.resolve(); });
+      expect(second).toMatchObject({ outcome: 'ALLOW' });
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it('answers a revoked membership at once with one neutral UNAVAILABLE, and a held entry revoked before release too', async () => {
+    const world = createS401ProofWorld('en');
+    world.seed();
+    let held: unknown = null;
+    void entry(world, SEEDED).then((body) => { held = body; });
+    await act(async () => { await Promise.resolve(); });
+    world.revoke();
+    world.allow();
+    await act(async () => { await Promise.resolve(); });
+    expect(held).toEqual({ outcome: 'UNAVAILABLE' });
+    expect(await entry(world, SEEDED)).toEqual({ outcome: 'UNAVAILABLE' });
+  });
+
+  it('on the production route, shows only the neutral shell while held, and the World only after release', async () => {
+    const world = createS401ProofWorld(deviceProductLanguage());
+    world.seed();
+    const view = await proofApp(world);
+    await press(view, 'qandeel-switcher-shared_world');
+    await press(view, `qandeel-shared-world-${SEEDED}`);
+    expect(view.getByTestId('qandeel-shared-transition')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-shared-welcome')).toBeNull();
+    expect(view.queryByTestId('qandeel-shared-members')).toBeNull();
+    await act(async () => {
+      world.allow();
+      await settle();
+    });
+    expect(view.getByTestId('qandeel-shared-welcome')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-members')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-shared-transition')).toBeNull();
   });
 });

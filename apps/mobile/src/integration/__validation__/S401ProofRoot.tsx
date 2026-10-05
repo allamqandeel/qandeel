@@ -12,6 +12,7 @@
  *
  *   qandeel://s401-proof/invite/arrive   another person (synthetic) invites the reader
  *   qandeel://s401-proof/world/seed      the reader already shares one World (Journey C)
+ *   qandeel://s401-proof/world/allow     releases the held pre-authority entry into the seeded World (Journey C)
  *   qandeel://s401-proof/world/revoke    the reader's membership ends (fail-safe re-entry)
  */
 import { useEffect, useState } from 'react';
@@ -26,7 +27,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world)\/(arrive|seed|revoke)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world)\/(arrive|seed|allow|revoke)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -50,6 +51,7 @@ export function S401ProofRoot() {
       if (match === null) return;
       if (match[1] === 'invite' && match[2] === 'arrive') world.arrive();
       if (match[1] === 'world' && match[2] === 'seed') world.seed();
+      if (match[1] === 'world' && match[2] === 'allow') world.allow();
       if (match[1] === 'world' && match[2] === 'revoke') world.revoke();
     });
     return () => {

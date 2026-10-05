@@ -42,7 +42,9 @@ appId: com.qandeel.mobile
 - takeScreenshot: ${PREFIX}-02-shared-root
 - tapOn:
     id: "qandeel-shared-world-54010001-0000-4000-8000-000000000000"
-# Before ALLOW: the neutral shell only — no welcome, no member, no title.
+# Before ALLOW: the neutral shell only — no welcome, no member, no title. The proof world HOLDS this entry before its
+# ALLOW answer until world/allow releases it (s401-proof-world.ts), so the shell is asserted deterministically, never
+# against a timed authority delay.
 - assertVisible:
     id: "qandeel-shared-transition"
 - assertNotVisible:
@@ -50,6 +52,7 @@ appId: com.qandeel.mobile
 - assertNotVisible:
     id: "qandeel-shared-members"
 - takeScreenshot: ${PREFIX}-03-pre-authority-shell
+- openLink: "qandeel://s401-proof/world/allow"
 - extendedWaitUntil:
     visible:
       id: "qandeel-shared-welcome"
@@ -88,6 +91,9 @@ appId: com.qandeel.mobile
     id: "qandeel-switcher-shared_world"
 - assertVisible:
     id: "qandeel-shared-transition"
+- assertNotVisible:
+    id: "qandeel-shared-members"
+- openLink: "qandeel://s401-proof/world/allow"
 - extendedWaitUntil:
     visible:
       id: "qandeel-shared-welcome"

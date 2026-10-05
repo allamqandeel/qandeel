@@ -7,27 +7,29 @@
  *   - `/account/identity` and `/account/public-id` — every signed-in account has a Name, a Login ID, a verified Email
  *     (W1B-01 / W3-MEGA-A) and an auto-generated Public ID (W3-02, migration 0125 backfilled every account). General
  *     Settings draws its Account & Identity group — where the Shared ID row lives (P1 §8.1) — from these reads, so a proof
- *     world without them is not a signed-in reader's world (S4-01 proof fixture gap, closed here);
+ *     world without them is not a signed-in reader's world (S4-01 proof fixture gap, closed here). The values come from
+ *     the test-only `__fixtures__/s401-account-identity.ts`, so this harness carries no Email default (T-12 Phase M);
  *   - `/shared/*` — an in-memory stand-in answering as migration 0138 and `apps/api/src/shared-world` do: the Shared ID
  *     provisioned on its first read and regenerated to a new value; SUBMITTED for every well-formed Shared ID (it names
  *     nobody), INVALID_SHARED_ID only for a malformed one; acceptance births exactly one World with exactly the two humans;
  *     decline creates nothing; entry is ALLOW only for a current member and one neutral UNAVAILABLE otherwise.
  *
+ * The pre-authority seam (Journey C): an entry into the World `seed()` made is HELD before its ALLOW answer until
+ * `allow()` releases it — deterministic, never a timed delay — so the device proof observes the neutral pre-authority shell
+ * for as long as it asserts, then releases authority explicitly. Each `allow()` releases the entries held at that moment;
+ * the next entry is held again. A non-member's UNAVAILABLE and every other World's ALLOW answer at once.
+ *
  * Every Name, Login ID, Email and Public ID here is SYNTHETIC test text, never Product copy and never a real account.
  */
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { MobilePublicConfig, RuntimeHttpFetch, SupabaseAuthPort } from '../../runtime-entry';
+import { S401_ACCOUNT_IDENTITY, S401_ACCOUNT_PUBLIC_ID } from '../__fixtures__/s401-account-identity';
 import { createVport01ProofWorld } from './vport01-proof-world';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
 const INVITER = { ar: 'هدير الاختبار', en: 'Fixture Hadir' };
 const SELF = { ar: 'القارئ الاختبار', en: 'Fixture Reader' };
-/** The signed-in reader's account identity, in exactly the shapes the production account client decodes. */
-export const S401_PROOF_IDENTITY = Object.freeze({ loginId: 's401.proof.reader', email: 's401-proof-reader@example.test', emailVerified: true });
-export const S401_PROOF_PUBLIC_ID = Object.freeze({ publicId: 's401.proof.public', changeAvailable: false });
 export const S401_PROOF_SHARED_IDS = Object.freeze(['K7QM-4XWD-P9TR', 'AB12-CD34-EF56', 'MN78-PQ90-RS12']);
-/** How long the stand-in takes to resolve an entry, so the pre-authority shell is observable on a device. */
-export const S401_ENTRY_DELAY_MS = 1500;
 const COMPACT = /^[0-9A-HJKMNP-TV-Z]{12}$/u;
 
 export interface S401ProofWorld {
@@ -36,15 +38,18 @@ export interface S401ProofWorld {
   readonly fetch: RuntimeHttpFetch;
   /** Another person (synthetic) invites the reader. */
   arrive(): void;
-  /** The reader already shares one World. */
+  /** The reader already shares one World, whose entries are held before ALLOW until `allow()`. */
   seed(): void;
+  /** Releases the entries held at this moment (each is then answered as the membership stands). */
+  allow(): void;
   /** The reader's membership ends. */
   revoke(): void;
 }
 
-export function createS401ProofWorld(language: ChromeLanguage, options: { readonly entryDelayMs?: number } = {}): S401ProofWorld {
+export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const base = createVport01ProofWorld(language);
-  const entryDelayMs = options.entryDelayMs ?? S401_ENTRY_DELAY_MS;
+  const held = new Set<string>();
+  let releases: (() => void)[] = [];
   let next = 1;
   const uuid = () => `5401${String(next++).padStart(4, '0')}-0000-4000-8000-000000000000`;
   let issued = -1;
@@ -86,7 +91,9 @@ export function createS401ProofWorld(language: ChromeLanguage, options: { readon
     }
     const entry = /^\/shared\/worlds\/([0-9a-f-]+)$/u.exec(path);
     if (entry !== null) {
-      if (entryDelayMs > 0) await new Promise((resolve) => setTimeout(resolve, entryDelayMs));
+      if (held.has(entry[1]) && worlds.some((w) => w.worldId === entry[1] && w.current)) {
+        await new Promise<void>((resolve) => { releases.push(resolve); });
+      }
       const world = worlds.find((w) => w.worldId === entry[1] && w.current);
       if (world === undefined) return json(200, { outcome: 'UNAVAILABLE' });
       return json(200, { outcome: 'ALLOW', world: { worldId: world.worldId, bornAt: new Date().toISOString(), members: members() } });
@@ -97,8 +104,8 @@ export function createS401ProofWorld(language: ChromeLanguage, options: { readon
   const fetch: RuntimeHttpFetch = async (input, init) => {
     const path = input.replace(/^https?:\/\/[^/]+/u, '').split('?')[0];
     const method = init?.method ?? 'GET';
-    if (path === '/account/identity' && method === 'GET') return json(200, { name: SELF[language], ...S401_PROOF_IDENTITY });
-    if (path === '/account/public-id' && method === 'GET') return json(200, S401_PROOF_PUBLIC_ID);
+    if (path === '/account/identity' && method === 'GET') return json(200, { name: SELF[language], ...S401_ACCOUNT_IDENTITY });
+    if (path === '/account/public-id' && method === 'GET') return json(200, S401_ACCOUNT_PUBLIC_ID);
     if (path === '/shared' || path.startsWith('/shared/')) {
       return shared(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     }
@@ -110,7 +117,16 @@ export function createS401ProofWorld(language: ChromeLanguage, options: { readon
     auth: base.auth,
     fetch,
     arrive: () => { invitations.push({ invitationId: uuid() }); },
-    seed: () => { worlds.push({ worldId: uuid(), current: true }); },
+    seed: () => {
+      const worldId = uuid();
+      worlds.push({ worldId, current: true });
+      held.add(worldId);
+    },
+    allow: () => {
+      const pending = releases;
+      releases = [];
+      for (const release of pending) release();
+    },
     revoke: () => { for (const world of worlds) world.current = false; },
   };
 }
