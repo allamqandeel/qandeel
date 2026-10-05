@@ -175,8 +175,10 @@ test('7 — the device proof adds exactly its two S4-03 legs to the existing S4 
     assert.doesNotMatch(text, /- wait:|sleep|waitForAnimationToEnd/u, `${flow} synchronizes on state, never on time`);
     assert.doesNotMatch(text, /hideKeyboard/u, `${flow} keeps the keyboard open naturally (T-13)`);
   }
-  assert.match(read('apps/mobile/.maestro/s4-03-journey-a.yaml'), /inputText: "Fixture Lantern"\n- tapOn:\n    id: "qandeel-shared-settings-send"/u,
-    'Send is pressed with the keyboard still open');
+  assert.match(read('apps/mobile/.maestro/s4-03-journey-a.yaml'), /inputText: "Fixture Lantern"\n- scrollUntilVisible:\n    element:\n      id: "qandeel-shared-settings-send"\n    direction: DOWN\n    timeout: 30000\n- tapOn:\n    id: "qandeel-shared-settings-send"/u,
+    'Send is brought into view and pressed with the keyboard still open');
+  assert.match(read('apps/mobile/.maestro/s4-03-journey-b.yaml'), /- scrollUntilVisible:\n    element:\n      id: "qandeel-shared-share-candidate"\n    direction: DOWN\n    timeout: 30000/u,
+    'the share candidate is scrolled into view, never only waited for');
   assert.match(read('.github/workflows/s4-proof.yml'), /'feat\/s4-03-shared-lifecycle-governance'/u);
   for (const file of ['SharedManagePage.tsx', 'SharedClosedWorld.tsx', 'lifecycle-copy.ts']) {
     assert.doesNotMatch(code(`${MOBILE}/shared-world/${file}`), /__validation__|S401ProofRoot|S403_PROOF/u, `${file} reaches no proof code`);

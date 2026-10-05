@@ -1774,7 +1774,7 @@ BEGIN
 
   -- The one S4-03 table is sealed: RLS on, no policy, no application role; it holds no Shared ID in clear.
   IF NOT (SELECT c.relrowsecurity FROM pg_class c WHERE c.oid = 'shared_private.shared_governance_proposal_origins'::regclass)
-     OR EXISTS (SELECT 1 FROM pg_policy p WHERE p.polrelid = 'shared_private.shared_governance_proposal_origins'::regclass) THEN
+     OR EXISTS (SELECT 1 FROM pg_policy policy_row WHERE policy_row.polrelid = 'shared_private.shared_governance_proposal_origins'::regclass) THEN
     RAISE EXCEPTION 'S4-03: the proposal origins are RLS-on and policy-free';
   END IF;
   FOREACH r IN ARRAY ARRAY['anon', 'authenticated', 'service_role'] LOOP

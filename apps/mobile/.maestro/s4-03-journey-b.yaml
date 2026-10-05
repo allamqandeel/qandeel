@@ -61,9 +61,10 @@ appId: com.qandeel.mobile
     timeout: 30000
 - tapOn:
     id: "qandeel-shared-share-with-2"
-- extendedWaitUntil:
-    visible:
+- scrollUntilVisible:
+    element:
       id: "qandeel-shared-share-candidate"
+    direction: DOWN
     timeout: 30000
 - tapOn:
     text: ".*Fixture words before Rana joined"

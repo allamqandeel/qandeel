@@ -37,6 +37,11 @@ appId: com.qandeel.mobile
 - tapOn:
     id: "qandeel-shared-settings-name"
 - inputText: "Fixture Lantern"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-settings-send"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
     id: "qandeel-shared-settings-send"
 - extendedWaitUntil:
