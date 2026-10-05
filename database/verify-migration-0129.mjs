@@ -294,7 +294,7 @@ async function verifySharedId(accounts) {
   await asOwner();
   const typedRef = await refOf(typed);
   assert.equal(typedRef, first.credential_lookup_ref);
-  await actAs('authenticated', b);
+  await asOwner(b); // S4-01 (0138): the frozen submission is reached as the owner with b's claims
   assert.equal((await rows('SELECT * FROM public.submit_shared_world_direct_invitation_v1($1, $2, $3)', [randomUUID(), invitation, typedRef]))[0].outcome, 'SUBMITTED');
   await asOwner();
   assert.deepEqual((await rows('SELECT status, target_credential_epoch FROM public.shared_world_direct_invitations WHERE id = $1', [invitation]))[0],
@@ -311,7 +311,7 @@ async function verifySharedId(accounts) {
   assert.equal(second.credential_lookup_ref, await refOf(rotated.shared_id));
   await asOwner();
   assert.equal((await rows('SELECT status FROM public.shared_world_direct_invitations WHERE id = $1', [invitation]))[0].status, 'INVALIDATED');
-  await actAs('authenticated', b);
+  await asOwner(b);
   await rejected(() => rows('SELECT * FROM public.submit_shared_world_direct_invitation_v1($1, $2, $3)', [randomUUID(), randomUUID(), typedRef]), ['P0002']);
   await asOwner(a);
   assert.deepEqual(await regenerate(setup), { command_id: setup, credential_epoch: '1', shared_id: null }, 'the first command still answers its own committed truth');
