@@ -390,6 +390,8 @@ async function verifyBoundary() {
 // ------------------------------------------------------------------------------------------------------
 async function verifyClosedGate(h, w) {
   stage = 'closed gate: nothing is proposed, approved or widened while the governance and history scopes are closed';
+  // The fixture's governed addMember already left a legitimate proposal in w.one; the closed gate must add none.
+  const baseline = await proposalCount(w.one);
   await actAs('authenticated', h.a);
   assert.deepEqual(await capabilities(), { governance_available: false, history_available: false });
   assert.deepEqual(await proposeSettings(randomUUID(), w.one, 'Closed name'), { outcome: 'UNAVAILABLE', proposal_id: null });
@@ -409,9 +411,7 @@ async function verifyClosedGate(h, w) {
     assert.equal((await proposeEnd(randomUUID(), w.one)).outcome, 'UNAVAILABLE', `${flag} / ${requirements} denies`);
     assert.deepEqual(await capabilities(), { governance_available: false, history_available: false });
   }
-  await asOwner();
-  const [{ written }] = await rows('SELECT count(*)::int AS written FROM public.shared_world_governance_proposals WHERE world_id = $1', [w.one]);
-  assert.equal(written, 0, 'nothing was written');
+  assert.equal(await proposalCount(w.one), baseline, 'the closed gate wrote no new proposal');
   await actAs('authenticated', h.c);
   await rejected(() => setGate('SHARED_GOVERNANCE', 'ENABLED', 'SATISFIED'), ['42501']);
   await asOwner();

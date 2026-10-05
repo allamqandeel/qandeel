@@ -71,6 +71,11 @@ appId: com.qandeel.mobile
       id: "qandeel-shared-leave-confirm"
     timeout: 10000
 - takeScreenshot: ${PREFIX}-04-leave-consequence-first
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-leave-confirm-action"
+    direction: DOWN
+    timeout: 30000
 - tapOn:
     id: "qandeel-shared-leave-confirm-action"
 - extendedWaitUntil:
