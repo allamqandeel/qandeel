@@ -14,6 +14,11 @@
  *   qandeel://s401-proof/world/seed      the reader already shares one World (Journey C)
  *   qandeel://s401-proof/world/allow     releases the held pre-authority entry into the seeded World (Journey C)
  *   qandeel://s401-proof/world/revoke    the reader's membership ends (fail-safe re-entry)
+ *
+ * S4-02 — the Shared conversation over the same production composition:
+ *
+ *   qandeel://s401-proof/conversation/seed   the reader shares one World with a conversation already in it
+ *   qandeel://s401-proof/conversation/peer   the other person speaks (proved visible only after the reader's refresh)
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -27,7 +32,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world)\/(arrive|seed|allow|revoke)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation)\/(arrive|seed|allow|revoke|peer)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -53,6 +58,8 @@ export function S401ProofRoot() {
       if (match[1] === 'world' && match[2] === 'seed') world.seed();
       if (match[1] === 'world' && match[2] === 'allow') world.allow();
       if (match[1] === 'world' && match[2] === 'revoke') world.revoke();
+      if (match[1] === 'conversation' && match[2] === 'seed') world.converse();
+      if (match[1] === 'conversation' && match[2] === 'peer') world.peer();
     });
     return () => {
       subscription.remove();

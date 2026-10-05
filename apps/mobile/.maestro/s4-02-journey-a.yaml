@@ -1,0 +1,48 @@
+# S4-02 Journey A — a real Shared conversation with QANDEEL, on the production route. VALIDATION ONLY (S401ProofRoot.tsx).
+# Enter a real Shared World; its history is visible with three distinct producers (another person, QANDEEL, the reader);
+# send text; the committed words and the proof world's deterministic QANDEEL reply arrive through the production
+# controller and surface. Every state change is an explicit deep-link action of the proof world — never a timed delay.
+# Driven by scripts/phase-m/run-s401-proof-leg.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- openLink: "qandeel://s401-proof/conversation/seed"
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-world-5401.*"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-world-5401.*"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-thread"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-shared-material-human-.*"
+- assertVisible:
+    id: "qandeel-shared-material-qandeel-.*"
+- assertVisible:
+    id: "qandeel-shared-material-self-.*"
+- assertVisible:
+    id: "qandeel-shared-input"
+- takeScreenshot: ${PREFIX}-01-history
+- tapOn:
+    id: "qandeel-shared-input"
+- inputText: "Fixture hello"
+- tapOn:
+    id: "qandeel-shared-send"
+- extendedWaitUntil:
+    visible:
+      text: ".*Fixture hello"
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      text: ".*${REPLY}"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-sent-and-replied

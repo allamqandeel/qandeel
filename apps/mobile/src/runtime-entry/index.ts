@@ -149,8 +149,8 @@ export type {
 } from './activity-api';
 export { ActivityApiClient } from './activity-api';
 export type {
-  SharedAcceptResult, SharedDeclineResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
-  SharedMember, SharedRoot, SharedRootResult, SharedWorldShell, SharedWorldSummary,
+  SharedAcceptResult, SharedDeclineResult, SharedDeleteResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
+  SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,
 } from './shared-world-api';
 export { SharedWorldApiClient } from './shared-world-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';

@@ -19,7 +19,19 @@
  * for as long as it asserts, then releases authority explicitly. Each `allow()` releases the entries held at that moment;
  * the next entry is held again. A non-member's UNAVAILABLE and every other World's ALLOW answer at once.
  *
- * Every Name, Login ID, Email and Public ID here is SYNTHETIC test text, never Product copy and never a real account.
+ * S4-02 — the Shared conversation, answered as migration 0139 and `apps/api/src/shared-world` do:
+ *
+ *   - `converse()` seeds one World (entered at once, never held) whose history holds another person's words, QANDEEL's
+ *     reply and the reader's own words; ordinary sending is open;
+ *   - `/materials` answers the entry verdict first, then the visible material with server-owned attribution and
+ *     deletability; a revoked membership answers one neutral UNAVAILABLE;
+ *   - `/messages` commits the reader's words once per command and answers QANDEEL's reply from the VALIDATION-ONLY
+ *     deterministic reply below — the deterministic provider seam of this proof, reachable only in the proof build;
+ *   - `/delete` removes the reader's own words only;
+ *   - `peer()` lets the other person speak, so the reader's explicit refresh can be proved to show it — never a timer.
+ *
+ * Every Name, Login ID, Email, Public ID and conversation line here is SYNTHETIC test text, never Product copy and never
+ * a real account.
  */
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { MobilePublicConfig, RuntimeHttpFetch, SupabaseAuthPort } from '../../runtime-entry';
@@ -31,6 +43,17 @@ const INVITER = { ar: 'هدير الاختبار', en: 'Fixture Hadir' };
 const SELF = { ar: 'القارئ الاختبار', en: 'Fixture Reader' };
 export const S401_PROOF_SHARED_IDS = Object.freeze(['K7QM-4XWD-P9TR', 'AB12-CD34-EF56', 'MN78-PQ90-RS12']);
 const COMPACT = /^[0-9A-HJKMNP-TV-Z]{12}$/u;
+
+/** S4-02 — SYNTHETIC conversation lines and the deterministic QANDEEL reply of this proof. Validation text, not copy. */
+export const S402_PROOF_LINES = Object.freeze({
+  peerOpening: 'Fixture hello from the other side',
+  qandeelOpening: 'Fixture QANDEEL line',
+  mine: 'Fixture words of mine',
+  peerLater: 'Fixture peer words after refresh',
+  reply: { ar: 'رد اختباري ثابت من قنديل', en: 'Fixture deterministic QANDEEL reply' },
+});
+
+interface ProofMaterial { materialId: string; producer: 'SELF' | 'HUMAN' | 'QANDEEL'; text: string; establishedAt: string }
 
 export interface S401ProofWorld {
   readonly config: MobilePublicConfig;
@@ -44,6 +67,10 @@ export interface S401ProofWorld {
   allow(): void;
   /** The reader's membership ends. */
   revoke(): void;
+  /** S4-02: the reader shares one World with a conversation already in it; it is entered at once. */
+  converse(): void;
+  /** S4-02: the other person speaks in every conversation World. */
+  peer(): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
@@ -57,9 +84,59 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const worlds: { worldId: string; current: boolean }[] = [];
   const members = () => [{ name: SELF[language], self: true }, { name: INVITER[language], self: false }];
   const json = (status: number, body: unknown) => ({ ok: status >= 200 && status < 300, status, json: async () => body });
+  // S4-02: each conversation World's material, oldest first; and each committed send command's material.
+  const threads = new Map<string, ProofMaterial[]>();
+  const sent = new Map<string, string>();
+  let clock = 0;
+  const at = () => new Date(Date.UTC(2026, 9, 5, 10, 0, clock++)).toISOString();
+  const say = (worldId: string, producer: ProofMaterial['producer'], text: string): ProofMaterial => {
+    const line: ProofMaterial = { materialId: uuid(), producer, text, establishedAt: at() };
+    threads.get(worldId)?.push(line);
+    return line;
+  };
+  const isCurrent = (worldId: string) => worldId !== '' && worlds.some((w) => w.worldId === worldId && w.current);
+  const view = (line: ProofMaterial) => ({
+    materialId: line.materialId, producer: line.producer, authorName: line.producer === 'HUMAN' ? INVITER[language] : null,
+    text: line.text, establishedAt: line.establishedAt, canDelete: line.producer === 'SELF',
+  });
+
+  async function conversation(path: string, method: string, body: Record<string, unknown> | undefined) {
+    const read = /^\/shared\/worlds\/([0-9a-f-]+)\/materials$/u.exec(path);
+    if (read !== null && method === 'GET') {
+      // Every current World answers ALLOW (a World born in an S4-01 journey simply has no conversation yet).
+      if (!isCurrent(read[1])) return json(200, { outcome: 'UNAVAILABLE' });
+      return json(200, { outcome: 'ALLOW', conversation: true, materials: (threads.get(read[1]) ?? []).map(view), hasOlder: false });
+    }
+    const message = /^\/shared\/worlds\/([0-9a-f-]+)\/messages$/u.exec(path);
+    if (message !== null && method === 'POST') {
+      const worldId = message[1];
+      if (!isCurrent(worldId)) return json(200, { outcome: 'UNAVAILABLE' });
+      if (!threads.has(worldId)) threads.set(worldId, []);
+      const commandId = typeof body?.commandId === 'string' ? body.commandId : '';
+      const content = typeof body?.content === 'string' ? body.content : '';
+      const already = sent.get(commandId);
+      if (already !== undefined) return json(200, { outcome: 'COMMITTED', materialId: already, qandeel: 'COMMITTED' });
+      const mine = say(worldId, 'SELF', content);
+      sent.set(commandId, mine.materialId);
+      // VALIDATION-ONLY deterministic provider seam: one fixed reply per human command.
+      say(worldId, 'QANDEEL', S402_PROOF_LINES.reply[language]);
+      return json(200, { outcome: 'COMMITTED', materialId: mine.materialId, qandeel: 'COMMITTED' });
+    }
+    const removal = /^\/shared\/worlds\/([0-9a-f-]+)\/materials\/([0-9a-f-]+)\/delete$/u.exec(path);
+    if (removal !== null && method === 'POST') {
+      const lines = threads.get(removal[1]);
+      const index = lines?.findIndex((line) => line.materialId === removal[2] && line.producer === 'SELF') ?? -1;
+      if (lines === undefined || index < 0) return json(200, { outcome: 'UNAVAILABLE' });
+      lines.splice(index, 1);
+      return json(200, { outcome: 'DELETED' });
+    }
+    return null;
+  }
   const wellFormed = (value: string) => COMPACT.test(value.toUpperCase().replace(/[\s-]/gu, '').replace(/O/gu, '0').replace(/[IL]/gu, '1'));
 
   async function shared(path: string, method: string, body: Record<string, unknown> | undefined) {
+    const answered = await conversation(path, method, body);
+    if (answered !== null) return answered;
     if (path === '/shared' && method === 'GET') {
       return json(200, {
         capabilities: { invitation: true, birth: true },
@@ -128,5 +205,14 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       for (const release of pending) release();
     },
     revoke: () => { for (const world of worlds) world.current = false; },
+    converse: () => {
+      const worldId = uuid();
+      worlds.push({ worldId, current: true });
+      threads.set(worldId, []);
+      say(worldId, 'HUMAN', S402_PROOF_LINES.peerOpening);
+      say(worldId, 'QANDEEL', S402_PROOF_LINES.qandeelOpening);
+      say(worldId, 'SELF', S402_PROOF_LINES.mine);
+    },
+    peer: () => { for (const worldId of threads.keys()) say(worldId, 'HUMAN', S402_PROOF_LINES.peerLater); },
   };
 }

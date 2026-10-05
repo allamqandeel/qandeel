@@ -11,6 +11,8 @@
 #   ar-journey-b   Arabic RTL — decline, non-enumerating invite, Shared ID copy/regenerate s4-01-journey-b.yaml
 #   ar-journey-c   Arabic RTL — My World ↔ Shared World, pre-authority shell, fail-safe   s4-01-journey-c.yaml
 #   en-journey-c   English LTR — the same Journey C                                       s4-01-journey-c.yaml
+#   ar-s402-journey-a  Arabic RTL — S4-02: history, send, the deterministic QANDEEL reply  s4-02-journey-a.yaml
+#   en-s402-journey-b  English LTR — S4-02: attribution, own deletion, refresh, revocation s4-02-journey-b.yaml
 #
 # Exit status: 0 only if the leg passed. Its one result line is written to <out-dir>/result.txt.
 set -u
@@ -24,7 +26,7 @@ FLOWS="$REPO/apps/mobile/.maestro"
 PKG="com.qandeel.mobile"
 
 case "$LEG" in
-  ar-journey-a|ar-journey-b|ar-journey-c|en-journey-c) ;;
+  ar-journey-a|ar-journey-b|ar-journey-c|en-journey-c|ar-s402-journey-a|en-s402-journey-b) ;;
   *) echo "run-s401-proof-leg: unknown leg '$LEG' — refusing"; exit 2 ;;
 esac
 
@@ -94,12 +96,18 @@ adb logcat -c || true
 AR_INVITATION="هدير الاختبار يدعوك لإنشاء عالم مشترك بينكما ومع قنديل."
 AR_SENT="إذا كان هذا المعرّف صحيحًا، ستصل الدعوة إلى صاحبه."
 AR_INVALID="تأكد من المعرّف المشترك وحاول مرة أخرى."
+# S4-02: the proof world's SYNTHETIC lines (apps/mobile/src/integration/__validation__/s401-proof-world.ts), byte-for-byte.
+AR_REPLY="رد اختباري ثابت من قنديل"
+EN_PEER_NAME="Fixture Hadir"
+PEER_LATER="Fixture peer words after refresh"
 
 case "$LEG" in
   ar-journey-a) maestro_flow s4-01-journey-a.yaml leg -e INVITATION="$AR_INVITATION" || fail "s4-01-journey-a.yaml" ;;
   ar-journey-b) maestro_flow s4-01-journey-b.yaml leg -e SENT="$AR_SENT" -e INVALID="$AR_INVALID" || fail "s4-01-journey-b.yaml" ;;
   ar-journey-c) maestro_flow s4-01-journey-c.yaml leg || fail "s4-01-journey-c.yaml" ;;
   en-journey-c) maestro_flow s4-01-journey-c.yaml leg || fail "s4-01-journey-c.yaml" ;;
+  ar-s402-journey-a) maestro_flow s4-02-journey-a.yaml leg -e REPLY="$AR_REPLY" || fail "s4-02-journey-a.yaml" ;;
+  en-s402-journey-b) maestro_flow s4-02-journey-b.yaml leg -e PEER_NAME="$EN_PEER_NAME" -e PEER_LATER="$PEER_LATER" || fail "s4-02-journey-b.yaml" ;;
 esac
 
 capture

@@ -8,6 +8,13 @@
  *   POST /shared/invitations/:id/accept|decline    — { commandId }
  *   GET  /shared/worlds/:worldId                   — the entry verdict, then the World shell
  *
+ * S4-02 — the Shared conversation:
+ *
+ *   GET  /shared/worlds/:worldId/materials[/before/:materialId/:establishedAt] — the entry verdict, then one bounded
+ *                                                                page: the newest, or the page older than the oldest held
+ *   POST /shared/worlds/:worldId/messages                      — { commandId, content } → the words, then QANDEEL's reply
+ *   POST /shared/worlds/:worldId/materials/:materialId/delete  — { commandId } → the reader's own words only
+ *
  * A transport and nothing else, exactly like the Activity client: no credential of its own (the request-time seam its
  * caller hands it), no user id, no retry, no meaning. Every answer is decoded strictly; anything else is no answer.
  */
@@ -41,6 +48,59 @@ export type SharedEntryResult =
   /** Denied, unknown, left or never existed — one neutral answer that reveals nothing. */
   | { readonly kind: 'DENIED' }
   | { readonly kind: 'UNAVAILABLE' };
+
+/** One visible Shared material. Who produced it, and whether this reader may delete it, are the server's answer. */
+export interface SharedMaterial {
+  readonly materialId: string;
+  readonly producer: 'SELF' | 'HUMAN' | 'QANDEEL';
+  /** Another person's legitimate Name (HUMAN only); null otherwise. */
+  readonly authorName: string | null;
+  readonly text: string;
+  readonly establishedAt: string;
+  readonly canDelete: boolean;
+}
+/** The oldest material a reader holds: the next page read is strictly older than it. */
+export interface SharedMaterialCursor { readonly materialId: string; readonly establishedAt: string }
+export type SharedMaterialsResult =
+  /** One bounded page, oldest first; `hasOlder` says whether visible material older than it exists. */
+  | { readonly kind: 'READ'; readonly conversation: boolean; readonly materials: readonly SharedMaterial[]; readonly hasOlder: boolean }
+  /** Not this reader's World now — one neutral answer that reveals nothing. */
+  | { readonly kind: 'DENIED' }
+  | { readonly kind: 'UNAVAILABLE' };
+export type SharedSendResult =
+  /**
+   * The words are committed; QANDEEL's reply is its own outcome: COMMITTED, PENDING (another request for this same
+   * message is still producing it, so it appears on the next read) or UNAVAILABLE (no reply was committed).
+   */
+  | { readonly kind: 'COMMITTED'; readonly materialId: string; readonly qandeel: 'COMMITTED' | 'PENDING' | 'UNAVAILABLE' }
+  /** The server definitively refused: conversation closed, or not a current member. Nothing was committed. */
+  | { readonly kind: 'NOT_AVAILABLE' }
+  /** No answer: the outcome is unknown, so the same command is retried. */
+  | { readonly kind: 'UNAVAILABLE' };
+export type SharedDeleteResult = { readonly kind: 'DELETED' | 'NOT_DELETABLE' | 'UNAVAILABLE' };
+
+const MATERIAL_KEYS = ['materialId', 'producer', 'authorName', 'text', 'establishedAt', 'canDelete'] as const;
+export function decodeSharedMaterials(body: unknown): SharedMaterialsResult {
+  if (!isRecord(body)) return { kind: 'UNAVAILABLE' };
+  if (hasExactly(body, ['outcome']) && body.outcome === 'UNAVAILABLE') return { kind: 'DENIED' };
+  if (body.outcome !== 'ALLOW' || !hasExactly(body, ['outcome', 'conversation', 'materials', 'hasOlder']) || typeof body.conversation !== 'boolean'
+    || typeof body.hasOlder !== 'boolean' || !Array.isArray(body.materials)) {
+    return { kind: 'UNAVAILABLE' };
+  }
+  const materials: SharedMaterial[] = [];
+  for (const m of body.materials) {
+    if (!isRecord(m) || !hasExactly(m, MATERIAL_KEYS) || typeof m.materialId !== 'string' || !UUID.test(m.materialId)) return { kind: 'UNAVAILABLE' };
+    if ((m.producer !== 'SELF' && m.producer !== 'HUMAN' && m.producer !== 'QANDEEL') || typeof m.text !== 'string' || typeof m.establishedAt !== 'string' || typeof m.canDelete !== 'boolean') {
+      return { kind: 'UNAVAILABLE' };
+    }
+    const authorName = nameOf(m.authorName);
+    if (authorName === undefined) return { kind: 'UNAVAILABLE' };
+    // Only the reader's own words are ever deletable; a contradictory answer is no answer.
+    if (m.canDelete && m.producer !== 'SELF') return { kind: 'UNAVAILABLE' };
+    materials.push({ materialId: m.materialId, producer: m.producer, authorName: m.producer === 'HUMAN' ? authorName : null, text: m.text, establishedAt: m.establishedAt, canDelete: m.canDelete });
+  }
+  return { kind: 'READ', conversation: body.conversation, materials, hasOlder: body.hasOlder };
+}
 
 export interface SharedWorldApiConfig {
   readonly baseUrl: string;
@@ -140,6 +200,29 @@ export class SharedWorldApiClient {
     if (!hasExactly(w, ['worldId', 'bornAt', 'members']) || w.worldId !== worldId || typeof w.bornAt !== 'string') return { kind: 'UNAVAILABLE' };
     const members = decodeMembers(w.members);
     return members === null ? { kind: 'UNAVAILABLE' } : { kind: 'ALLOW', world: { worldId, bornAt: w.bornAt, members } };
+  }
+
+  async materials(worldId: string, before: SharedMaterialCursor | null = null): Promise<SharedMaterialsResult> {
+    const page = before === null ? '' : `/before/${encodeURIComponent(before.materialId)}/${encodeURIComponent(before.establishedAt)}`;
+    const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/materials${page}`);
+    return answer.kind === 'OK' ? decodeSharedMaterials(answer.body) : { kind: 'UNAVAILABLE' };
+  }
+
+  async send(worldId: string, commandId: string, content: string): Promise<SharedSendResult> {
+    const answer = await this.exchange('POST', `/shared/worlds/${encodeURIComponent(worldId)}/messages`, { commandId, content });
+    if (answer.kind !== 'OK' || !isRecord(answer.body)) return { kind: 'UNAVAILABLE' };
+    const body = answer.body;
+    if (body.outcome === 'COMMITTED' && hasExactly(body, ['outcome', 'materialId', 'qandeel']) && typeof body.materialId === 'string' && UUID.test(body.materialId)
+      && (body.qandeel === 'COMMITTED' || body.qandeel === 'PENDING' || body.qandeel === 'UNAVAILABLE')) {
+      return { kind: 'COMMITTED', materialId: body.materialId, qandeel: body.qandeel };
+    }
+    if (hasExactly(body, ['outcome']) && body.outcome === 'UNAVAILABLE') return { kind: 'NOT_AVAILABLE' };
+    return { kind: 'UNAVAILABLE' };
+  }
+
+  async deleteMaterial(worldId: string, materialId: string, commandId: string): Promise<SharedDeleteResult> {
+    const outcome = await this.outcome(this.exchange('POST', `/shared/worlds/${encodeURIComponent(worldId)}/materials/${encodeURIComponent(materialId)}/delete`, { commandId }));
+    return { kind: outcome === 'DELETED' ? 'DELETED' : outcome === 'UNAVAILABLE' ? 'NOT_DELETABLE' : 'UNAVAILABLE' };
   }
 
   private async identityAnswer(pending: Promise<Exchange>): Promise<SharedIdentityResult> {
