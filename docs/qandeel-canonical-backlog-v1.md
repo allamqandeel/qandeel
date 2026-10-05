@@ -174,6 +174,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-NOTIF-04` | No Security / Sign-in / Account Event Source for Activity | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-02` | Export My Data Omits the Reader's Notifications & Activity Preferences and Context Mutes | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-NOTIF-05` | Native Push Physical-Device Exit Gates (PD-01 … PD-09) | `Release Hardening & Launch — physical iOS / Android device validation` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -557,6 +558,13 @@ Admitted by the W3-PDG-01 Product Decision Closure under BG-06, as a canonical r
 entry chooses no deletion mechanism, erasure exception or retention rule. Nothing here authorizes implementation
 (BG-07).
 
+**Current-truth note (S4-01, 2026-10-05).** S4-01 takes the Shared World toward users (the reopen condition's first
+clause) and records the disposition here: this item stays `OPEN — UNASSIGNED` and unchanged in scope. S4-01 ships the
+Shared launch gate CLOSED (no migration configures it), claims no production readiness, provisions a Shared ID only on
+the owner's first Shared ID read while Shared is open (so an account that never reaches Shared gains no Connected Worlds
+reference), and states Account Deletion across Connected Worlds as a launch prerequisite of the Shared capability
+([S4-01 record](e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md) §7, §11, §16).
+
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
 - **Title / Finding:** the exceptional lantern gateway identity moment is frozen as **present in v1**, but it has no
@@ -774,6 +782,31 @@ storage) is a different obligation and is neither duplicated nor re-owned here.
 
 These two launch gates are admitted by `PROD-SEC-01` under BG-08, because a genuine external dependency may not survive
 only in a task record. Neither authorizes implementation (BG-07).
+
+### `QAN-BL-LAUNCH-03` — Shared ID Sealing Key: Production Custody, Provisioning and Rotation
+
+- **Title / Finding:** S4-01 (migration `0138`) keeps each owner's CURRENT Shared ID only as an AES-256-GCM ciphertext
+  the database cannot open, sealed and opened by the API under `QANDEEL_SHARED_ID_SEALING_KEYS` /
+  `QANDEEL_SHARED_ID_SEALING_ACTIVE_VERSION`. The key must live outside the repository, the database and its backups.
+  The repository holds the mechanism, the fail-closed behaviour and the versioned dual-read (older versions keep opening
+  stored values); it cannot hold the production secret, its custody, its provisioning or a rotation runbook.
+- **Source:** the [S4-01 implementation record](e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md)
+  §6 and §16; the S4-01 Task Contract §5 items 7–8.
+- **Current truth:** with no key configured the Shared ID routes answer 503 and nothing is sealed, opened or shown; no
+  clear value exists anywhere. Nothing is exposed; Shared reachability is simply unavailable on that deployment.
+- **Why deferred:** a managed secret facility, its custody and its rotation law belong with the hosted deployment, which
+  this repository does not hold — the same external dependency `QAN-BL-LAUNCH-02` records for the identifier digest key.
+- **Owner task:** `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate`
+- **Severity:** `MEDIUM`. If reopened, it decides whether the Shared ID is available in production; a mis-provisioned key
+  fails closed rather than leaking.
+- **Reopen condition:** before the Shared launch capability (`SHARED_DIRECT_INVITATION`) is enabled on any hosted
+  project; or when a managed secret facility is provisioned for the API.
+- **Required future properties:** a 256-bit key per version from a managed secret store, never in the repository,
+  migrations or database; an explicit active version; old versions retained until no stored value uses them (a
+  regeneration re-seals under the active version); loss of a key is handled by regeneration, never by a clear fallback.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S4-01` under BG-08 / BG-06 (a genuine external dependency). Nothing here authorizes implementation (BG-07).
 
 ---
 
@@ -1375,6 +1408,17 @@ A3-02 delivers what they publish. Its Stage-3 Gap Matrix is §22 of its
 The register now holds **40** items: 13 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17
 `CLOSED — TOMBSTONE`; by severity, 25 `HIGH`, 14 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index. The
 tombstone holds from the merge of the A3-02 PR.
+
+**S4-01 reconciliation (2026-10-05).** S4-01 (Shared World Reachability, Invitation & Birth, migration `0138`) inherits
+no item. It observes `QAN-BL-ACCT-01`'s reopen condition and records its disposition in that item's current-truth note
+(unchanged, still `OPEN — UNASSIGNED`). It admits one: `QAN-BL-LAUNCH-03` (`MEDIUM`, `DEFERRED — OWNED`,
+`FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate`), the Shared ID sealing key's production custody. Every other
+Stage-4 residue is owned by a later Stage-4 task (S4-02 / S4-03 / S4-04), by `I-09` / `CW2-08`, or by an unchanged
+item; its Stage-4 Gap Matrix is §17 of its
+[implementation record](e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md):
+**Orphan gaps = 0**. The register now holds **41** items: 14 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10
+`OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by severity, 25 `HIGH`, 15 `MEDIUM` and 1 `LOW`, counted mechanically
+from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
