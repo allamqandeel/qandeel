@@ -148,6 +148,11 @@ export type {
   SettingsSection,
 } from './activity-api';
 export { ActivityApiClient } from './activity-api';
+export type {
+  SharedAcceptResult, SharedDeclineResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
+  SharedMember, SharedRoot, SharedRootResult, SharedWorldShell, SharedWorldSummary,
+} from './shared-world-api';
+export { SharedWorldApiClient } from './shared-world-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
 export { PushApiClient } from './push-api';
 

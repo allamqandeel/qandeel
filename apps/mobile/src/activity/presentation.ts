@@ -20,8 +20,8 @@
 import type { InterruptionCandidate } from '../runtime-entry';
 import type { CallTruth } from './call-truth';
 
-/** The Product surface in front of the reader — the composition's own state. */
-export type ProductSurface = 'CONVERSATION' | 'ANALYSIS' | 'ACTIVITY' | 'SETTINGS' | 'UNDERSTANDING';
+/** The Product surface in front of the reader — the composition's own state. S4-01 adds the Shared area, a non-Analysis surface. */
+export type ProductSurface = 'CONVERSATION' | 'ANALYSIS' | 'ACTIVITY' | 'SETTINGS' | 'UNDERSTANDING' | 'SHARED_WORLD';
 
 export interface PresentationContext {
   readonly foreground: boolean;

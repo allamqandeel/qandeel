@@ -313,7 +313,8 @@ test('one General Settings destination: no second Public Settings destination, n
   assert.deepEqual(readdirSync(new URL(`${SRC}/app`, root)).sort(), ['_layout.tsx', 'index.tsx']);
   const section = code(read(SECTION)) + code(read(SETTINGS));
   assert.doesNotMatch(section, /expo-router|router\.(?:push|navigate|replace)|useRouter|<Stack\b|Alert\.alert/u);
-  assert.match(code(read(`${SRC}/integration/composition/DepthComposition.tsx`)), /<SettingsSurface [^>]*publicId=\{runtime\.publicId\} \/>/u);
+  // S4-01 re-anchor: the same ONE destination also receives the Shared ID (E2E-D-08), after the Public ID.
+  assert.match(code(read(`${SRC}/integration/composition/DepthComposition.tsx`)), /<SettingsSurface [^>]*publicId=\{runtime\.publicId\}(?: sharedId=\{runtime\.sharedId\})? \/>/u);
 });
 
 // Re-anchored by W3-MEGA-A: Account & Identity now also holds the REAL Name, Login ID and Email rows (E2E-D-03 / D-05 /
@@ -321,13 +322,23 @@ test('one General Settings destination: no second Public Settings destination, n
 // permanent claims are kept: no placeholder, disabled or "coming soon" row; no Account Photo row (media storage is not
 // implemented); no Shared ID row before W6; the Public ID is still ONE row; and the W1B / W3-02 account service still
 // carries none of the newer functions.
+//
+// Re-anchored by S4-01: Shared invitations are now usable (the W6 condition of W3-PDG-01 §4), and the Shared ID row is a
+// REAL function — its page reads, copies and regenerates the reader's own Shared ID (`SharedIdSection.tsx`, migration
+// 0138, `apps/api/src/shared-world`). The permanent claims stay: no placeholder, disabled or "coming soon" row, and no
+// Account Photo row.
 test('Account & Identity holds only REAL functions — no placeholder, no Photo, no Shared ID row', () => {
   const surfaces = code(read(SETTINGS)) + code(read(SECTION)) + code(read(`${SETTINGS_DIR}/AccountSecuritySection.tsx`)) + code(read(COPY));
-  const futureRows = /\b(?:photo|avatar|sharedId|shared_id|SharedIdRow|PhotoRow)\b|'(?:Photo|Shared ID|Account photo)'|coming soon|قريبًا|placeholder|disabled: true/iu;
+  const futureRows = /\b(?:photo|avatar|PhotoRow)\b|'(?:Photo|Account photo)'|coming soon|قريبًا|placeholder|disabled: true/iu;
   const noPlaceholders = (text) => !futureRows.test(text);
   guards('placeholder-account-row', surfaces, noPlaceholders, "const loginIdRow = { label: 'Login ID', disabled: true };");
   guards('photo-row-before-media-storage', surfaces, noPlaceholders, "<IdentityRow term={copy.identity.photo} value='' />");
-  guards('shared-id-row-before-w6', surfaces, noPlaceholders, "const sharedIdRow = <SharedIdRow />;");
+  // S4-01: the Shared ID row exists, and only as a real function backed by its page (Copy, confirmed Regenerate).
+  const sharedIdSection = code(read(`${SETTINGS_DIR}/SharedIdSection.tsx`));
+  assert.match(surfaces, /<SharedIdRow /u);
+  assert.match(sharedIdSection, /Clipboard\.setStringAsync\(state\.sharedId\)/u);
+  assert.match(sharedIdSection, /controller\.regenerate\(\)/u);
+  assert.match(sharedIdSection, /copy\.regenerateWarning/u);
   const settings = code(read(SETTINGS));
   const group = settings.slice(settings.indexOf('testID="qandeel-settings-group-account"'), settings.indexOf('testID="qandeel-settings-group-security"'));
   assert.equal((group.match(/<PublicIdRow\b/gu) ?? []).length, 1);

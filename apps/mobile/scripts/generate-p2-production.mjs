@@ -11,7 +11,11 @@
 //     each SOURCE-LOCKED: the build fails if the frozen file stops containing that line byte for byte;
 //   - the Call Rail art is `railArt('A')` and `END_GLYPH_PX` from `source/src/machines.mjs`, executed;
 //   - the call glyphs are `SIG.mic`, `SIG.muted`, `SIG.routeMorph` and `SIG.endCall` from `source/src/sig.mjs`,
-//     executed with the accepted N1 "Open" nuance at their frozen render sizes (24 px; End Call 27 px).
+//     executed with the accepted N1 "Open" nuance at their frozen render sizes (24 px; End Call 27 px);
+//   - S4-01: the persistent navigation family's two members the first production Global Switcher carries —
+//     `SIG.navMine` («قنديل» / QANDEEL) and `SIG.navShared` («العالم المشترك» / Shared World) — executed with N1 at
+//     the 24 px the P2-A rail draws them (P2 closure §5). `SIG.navPublic` is not emitted: no Public World destination
+//     is exposed before its own Product stage.
 //
 // The comparison variants (Spine A / B, Rail B / C, N2) are never executed: they are evidence, not alternatives.
 // P2 itself classes the aperture's dimensions, the notch length, the terminal's line length and the discontinuity
@@ -221,6 +225,24 @@ const GLYPHS = {
 if (GLYPHS.mic.slash !== 'M4.2 3.6 19.8 20.4') fail('the mute slash drifted');
 if (attr(routePaths[0], 'd') !== attr(routePaths[1], 'd')) fail('the route body fill and outline are no longer one drawing');
 
+// ------------------------------------------------------------------------------------- navigation family (S4-01)
+// One open world each; they differ only in who is in it (P2-A sig.mjs). Strokes and points of light, read from the
+// executed markup, never retyped.
+const navPrimitives = (markup) => ({
+  strokes: elements(markup, 'path').map((p) => ({ d: attr(p, 'd'), strokeWidth: Number(attr(p, 'stroke-width')) })),
+  dots: elements(markup, 'circle').map((c) => ({ cx: +attr(c, 'cx'), cy: +attr(c, 'cy'), r: +attr(c, 'r') })),
+});
+const NAV = {
+  provenance: 'P2-A sig.mjs navMine / navShared, nuance N1 "Open", at the 24 px the P2-A rail draws them (P2 closure §5)',
+  grid: 24,
+  size: 24,
+  navMine: navPrimitives(SIG.navMine(OPEN, 24)),
+  navShared: navPrimitives(SIG.navShared(OPEN, 24)),
+};
+if (NAV.navMine.strokes.length !== 1 || NAV.navMine.dots.length !== 1) fail('navMine is no longer one open world with one point of light');
+if (NAV.navShared.strokes.length !== 1 || NAV.navShared.dots.length !== 2) fail('navShared is no longer one open world with two points of light');
+if (NAV.navMine.strokes[0].d !== NAV.navShared.strokes[0].d) fail('the navigation family no longer shares one ring');
+
 // ------------------------------------------------------------------------------------------------- write
 const sources = [APP, MACHINES, SIG_FILE];
 const header = [
@@ -231,14 +253,14 @@ const header = [
   ' * "Keyed Seam") and the Call Rail glyphs, produced by executing the merged P2-A package\'s own functions and',
   ' * source-locking its frozen lines. The aperture, notch, terminal and discontinuity dimensions are P2-A reference',
   ' * CRAFT values (P2 closure §7), not Product law. Regenerate after any source changes; the VPORT-02 contract fails on',
-  ' * drift.',
+  ' * drift. S4-01 adds the navigation family the first production Global Switcher carries (navMine, navShared).',
   ' *',
   ' * Sources (sha256):',
   ...sources.map((path) => ` *   ${rel(path)}  ${sha(path)}`),
   ' */',
   '',
 ].join('\n');
-const body = `export const P2_SPINE = ${JSON.stringify(SPINE, null, 2)} as const;\n\nexport const P2_CALL_RAIL = ${JSON.stringify(RAIL, null, 2)} as const;\n\nexport const P2_CALL_GLYPHS = ${JSON.stringify(GLYPHS, null, 2)} as const;\n`;
+const body = `export const P2_SPINE = ${JSON.stringify(SPINE, null, 2)} as const;\n\nexport const P2_CALL_RAIL = ${JSON.stringify(RAIL, null, 2)} as const;\n\nexport const P2_CALL_GLYPHS = ${JSON.stringify(GLYPHS, null, 2)} as const;\n\nexport const P2_NAV_GLYPHS = ${JSON.stringify(NAV, null, 2)} as const;\n`;
 const output = header + body;
 
 if (process.argv.includes('--check')) {

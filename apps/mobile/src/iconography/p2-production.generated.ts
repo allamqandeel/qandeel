@@ -5,7 +5,7 @@
  * "Keyed Seam") and the Call Rail glyphs, produced by executing the merged P2-A package's own functions and
  * source-locking its frozen lines. The aperture, notch, terminal and discontinuity dimensions are P2-A reference
  * CRAFT values (P2 closure §7), not Product law. Regenerate after any source changes; the VPORT-02 contract fails on
- * drift.
+ * drift. S4-01 adds the navigation family the first production Global Switcher carries (navMine, navShared).
  *
  * Sources (sha256):
  *   docs/design/p2-iconography/QANDEEL_P2-A_FINAL_ICONOGRAPHY_INTEGRATED_VISUAL_PROOF/source/src/app.js  bcbd688ccb0bc23a3b2c8800065e462633e67328e1e454aa0a61d73bc8111edd
@@ -136,5 +136,46 @@ export const P2_CALL_GLYPHS = {
   "endCall": {
     "size": 27,
     "d": "M3.4 14.6c-.1-1.5.3-2.8 1.5-3.7C6.8 9.5 9.3 8.8 12 8.8s5.2.7 7.1 2.1c1.2.9 1.6 2.2 1.5 3.7l-.1.8c-.1.8-.8 1.3-1.6 1.2l-2.7-.5c-.7-.1-1.2-.7-1.2-1.4v-1.5c-1-.4-2-.6-3-.6s-2 .2-3 .6v1.5c0 .7-.5 1.3-1.2 1.4l-2.7.5c-.8.1-1.5-.4-1.6-1.2z"
+  }
+} as const;
+
+export const P2_NAV_GLYPHS = {
+  "provenance": "P2-A sig.mjs navMine / navShared, nuance N1 \"Open\", at the 24 px the P2-A rail draws them (P2 closure §5)",
+  "grid": 24,
+  "size": 24,
+  "navMine": {
+    "strokes": [
+      {
+        "d": "M13.972 19.753A8 8 0 1 1 19.753 13.972",
+        "strokeWidth": 1.6
+      }
+    ],
+    "dots": [
+      {
+        "cx": 13.9,
+        "cy": 13.9,
+        "r": 2.05
+      }
+    ]
+  },
+  "navShared": {
+    "strokes": [
+      {
+        "d": "M13.972 19.753A8 8 0 1 1 19.753 13.972",
+        "strokeWidth": 1.6
+      }
+    ],
+    "dots": [
+      {
+        "cx": 14.3,
+        "cy": 14.3,
+        "r": 1.886
+      },
+      {
+        "cx": 9.5,
+        "cy": 9.5,
+        "r": 1.886
+      }
+    ]
   }
 } as const;

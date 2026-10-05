@@ -23,8 +23,11 @@
  *
  *   - «الأمان وتسجيل الدخول» / Security & Sign-in — Change password, Sign out from other devices, and the current
  *     Email with its status as the recovery method (W3-PDG-01 §3). Nothing else: no Phone, 2FA, Passkeys, device
- *     list or activity log, disabled or otherwise. No Account Photo and no Shared ID row exists (media storage is
- *     not implemented; the Shared ID waits for W6).
+ *     list or activity log, disabled or otherwise. No Account Photo row exists (media storage is not implemented).
+ *
+ * S4-01 (E2E-D-08) adds the Shared ID to Account & Identity (P1 §8.1), now that Shared invitations are usable: a row
+ * that opens its page, where the value is read (and, on that first read while Shared is open, provisioned), copied and
+ * regenerated behind a clear confirmation. Nothing is read before the reader opens it.
  *
  * Every change is a STATE of this destination — not a route, a dialog or a world — and Back leaves the change, not
  * Settings. A change in flight is never abandoned half-way. An Email change, or a password change the provider made
@@ -67,6 +70,8 @@ import { notificationsCopy } from '../activity/copy';
 import { DeletionRequest, deletionStatusSaid, ExportRequest, exportStatusSaid, LanguageRow, PrivacyDataRows } from './PrivacyDataSection';
 import type { PublicIdController, PublicIdState } from './public-id-controller';
 import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
+import { SharedIdPage, SharedIdRow } from './SharedIdSection';
+import type { SharedIdController } from '../shared-world';
 
 export const SETTINGS_SURFACE_TEST_ID = 'qandeel-settings';
 
@@ -81,6 +86,8 @@ export interface SettingsSurfaceProps {
   readonly identity?: AccountIdentityController;
   /** W3-02: the reader's Public ID for this runtime generation. Without it, the Public ID row is not drawn. */
   readonly publicId?: PublicIdController;
+  /** S4-01 — the reader's own Shared ID; read only when its page is opened. */
+  readonly sharedId?: SharedIdController;
   /** W3-MEGA-S: the reader's Privacy & Data state and requests for this runtime generation. Without it, that group is not drawn. */
   readonly privacy?: PrivacyDataController;
   /** A3-01: the reader's Notifications & Activity preferences for this runtime generation. Without it, that group is not drawn. */
@@ -92,7 +99,7 @@ export interface SettingsSurfaceProps {
 }
 
 /** The change shown in place of the groups, if any. */
-type Change = 'PUBLIC_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS';
+type Change = 'PUBLIC_ID' | 'SHARED_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS';
 /** Where the screen reader returns when a change closes. */
 type RowKey = Change;
 
@@ -198,7 +205,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, privacy, notifications, push, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, privacy, notifications, push, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -408,6 +415,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     if (changing === 'DELETE') change = <DeletionRequest {...requestProps} onAccepted={deletionAccepted} />;
   }
 
+  if (changing === 'SHARED_ID' && sharedId !== undefined) {
+    change = <SharedIdPage controller={sharedId} language={language} palette={palette} busyChanged={onCommitBusy} />;
+  }
+
   if (changing === 'NOTIFICATIONS' && notifications !== undefined) {
     change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} />;
   }
@@ -486,6 +497,9 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
                     onOpen={() => openChange('PUBLIC_ID')}
                     rowRef={rowRef('PUBLIC_ID')}
                   />
+                ) : null}
+                {sharedId !== undefined ? (
+                  <SharedIdRow language={language} palette={palette} onOpen={() => openChange('SHARED_ID')} rowRef={rowRef('SHARED_ID')} />
                 ) : null}
               </View>
             ) : null}

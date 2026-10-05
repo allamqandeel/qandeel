@@ -126,6 +126,7 @@ import {
   type PushDeviceStore,
   type PushPlatformPort,
 } from '../../push';
+import { createSharedIdController, createSharedWorldController, type SharedIdController, type SharedWorldController } from '../../shared-world';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
 import { deviceProductLanguage } from '../locale/device-locale';
@@ -232,6 +233,13 @@ export interface IntegrationSessionRuntime {
   readonly push: PushController;
   /** A3-02 — the native Direct Entry waiting for the ONE Activity `open` boundary (app-level; shared, never per identity). */
   readonly notificationEntries: NotificationEntryInbox;
+  /**
+   * S4-01 — the Shared World area's own state (its root, the World the reader is in, authority-first entry), for THIS
+   * identity, on the Shared transport bound to it. It holds nothing of the Personal world; retired with the generation.
+   */
+  readonly sharedWorld: SharedWorldController;
+  /** S4-01 — the reader's own Shared ID, read only when its Settings page is opened; retired with the generation. */
+  readonly sharedId: SharedIdController;
 }
 
 /**
@@ -365,6 +373,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.activityFeed.retire();
     session.activityPreferences.retire();
     session.push.retire();
+    session.sharedWorld.retire();
+    session.sharedId.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -414,6 +424,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     });
 
     const activity = entry.activityFor(bundle);
+    const shared = entry.sharedWorldsFor(bundle);
     const push = createPushController({
       port: pushPlatform, store: pushDeviceStore, transport: entry.pushFor(bundle), foreground: entry.foreground, isCurrent,
       language: deviceProductLanguage,
@@ -473,6 +484,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       activityPreferences: createActivityPreferencesController({ transport: activity, isCurrent }),
       push,
       notificationEntries,
+      // S4-01: the Shared World area and the reader's Shared ID, on the Shared transport bound to this identity.
+      sharedWorld: createSharedWorldController({ transport: shared, isCurrent }),
+      sharedId: createSharedIdController({ transport: shared, isCurrent }),
     };
     return built;
   }

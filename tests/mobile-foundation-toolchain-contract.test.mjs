@@ -45,6 +45,9 @@ const expectedDependencies = {
   // `expo install --check` now requires against the live registry. Only these two patch
   // pins moved; the SDK minor is unchanged and the assertion is exact, not a range.
   expo: '~57.0.21',
+  // S4-01: the Shared ID's Copy (P1 §5.1; W3-PDG-01 §4 "copyable") — Expo SDK 57's first-party clipboard module at its
+  // bundled version (`expo/bundledNativeModules.json`). It writes one string the reader asked to copy; it reads nothing.
+  'expo-clipboard': '~57.0.1',
   'expo-constants': '~57.0.17',
   'expo-dev-client': '~57.0.18',
   // W3-MEGA-S (E2E-D-16): the in-app download of a ready export package writes it where the reader chooses through the

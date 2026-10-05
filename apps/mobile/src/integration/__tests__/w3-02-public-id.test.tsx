@@ -111,7 +111,9 @@ describe('E2E-D-09 — the Public ID and its ONE lifetime manual change, end to 
     expect(view.getByTestId('qandeel-public-id-value').props.children).toBe(`${LRI}@noor.writes${PDI}`);
     expect(view.getByTestId('qandeel-public-id-allowance').props.children).toBe(COPY.publicId.used);
     expect(view.getByTestId('qandeel-public-id-row').props.accessibilityRole).toBeUndefined();
-    expect(within(view.getByTestId('qandeel-settings-group-account')).queryAllByRole('button')).toHaveLength(0);
+    // S4-01 re-anchor (validation only): the group's one remaining control is the Shared ID row (E2E-D-08); the used
+    // Public ID row still offers nothing to press.
+    expect(within(view.getByTestId('qandeel-settings-group-account')).queryAllByRole('button').map((node) => node.props.testID)).toEqual(['qandeel-shared-id-row']);
 
     await press(view, 'qandeel-settings-back');
     expect(view.queryByTestId('qandeel-settings')).toBeNull();
