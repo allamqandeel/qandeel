@@ -129,7 +129,7 @@ async function verifyBoundary() {
   stage = 'boundary: every shared_private function is a pinned SECURITY DEFINER; every public wrapper is INVOKER';
   const privateFns = await rows(`SELECT p.proname, p.prosecdef, p.proconfig, pg_get_userbyid(p.proowner) AS owner
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'shared_private' ORDER BY 1`);
-  assert.deepEqual(privateFns.map((f) => f.proname), SHARED_PRIVATE_DEFINERS);
+  assert.deepEqual(privateFns.map((f) => f.proname).sort(), [...SHARED_PRIVATE_DEFINERS].sort());
   for (const f of privateFns) {
     assert.equal(f.prosecdef, true, `shared_private.${f.proname} is SECURITY DEFINER`);
     assert.equal(f.owner, 'postgres');
@@ -137,7 +137,7 @@ async function verifyBoundary() {
   }
   const publicFns = await rows(`SELECT p.proname, p.prosecdef, p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname = ANY($1::text[]) ORDER BY 1`, [OWNER_COMMANDS]);
-  assert.deepEqual(publicFns.map((f) => f.proname), [...OWNER_COMMANDS].sort());
+  assert.deepEqual(publicFns.map((f) => f.proname).sort(), [...OWNER_COMMANDS].sort());
   for (const f of publicFns) {
     assert.equal(f.prosecdef, false, `public.${f.proname} is SECURITY INVOKER`);
     assert.ok((f.proconfig ?? []).includes('search_path=""'));
@@ -149,10 +149,11 @@ async function verifyBoundary() {
     WHERE (n.nspname = 'shared_private' OR (n.nspname = 'public' AND p.proname = ANY($1::text[])))
       AND (r.rolname = 'public' OR EXISTS (SELECT 1 FROM pg_roles x WHERE x.rolname = r.rolname))
       AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`, [OWNER_COMMANDS]);
-  assert.deepEqual(executable, [
-    ...OWNER_COMMANDS.map((proname) => ({ rolname: 'authenticated', nspname: 'public', proname })).sort((a, b) => a.proname.localeCompare(b.proname)),
-    ...OWNER_COMMANDS.map((proname) => ({ rolname: 'authenticated', nspname: 'shared_private', proname })).sort((a, b) => a.proname.localeCompare(b.proname)),
-  ], 'authenticated runs exactly the owner commands; nobody runs the operator change or the bare gate binding');
+  const key = (r) => `${r.rolname} ${r.nspname}.${r.proname}`;
+  assert.deepEqual(executable.map(key).sort(), [
+    ...OWNER_COMMANDS.map((proname) => key({ rolname: 'authenticated', nspname: 'public', proname })),
+    ...OWNER_COMMANDS.map((proname) => key({ rolname: 'authenticated', nspname: 'shared_private', proname })),
+  ].sort(), 'authenticated runs exactly the owner commands; nobody runs the operator change or the bare gate binding');
 
   stage = 'boundary: the irreversible core and the legacy credential / invitation path are server-owned';
   for (const fn of ['public.commit_shared_world_direct_acceptance_birth_v1(uuid,uuid,uuid,uuid,uuid)',
@@ -287,6 +288,7 @@ async function verifySharedId({ a, b }) {
 
 async function verifyInvitation({ a, b, c }, { valueA, valueB }) {
   stage = 'invitation: a typed Shared ID reaches its owner; the answer names nobody; no World exists yet';
+  await asOwner();
   const before = await counts();
   await actAs('authenticated', b);
   const typed = valueA.toLowerCase().replace(/-/gu, ' ');
@@ -328,6 +330,7 @@ async function verifyInvitation({ a, b, c }, { valueA, valueB }) {
 
 async function verifyBirth({ a, b, c }, invitationId) {
   stage = 'birth: a closed or not-yet-satisfied birth capability refuses before anything is written';
+  await asOwner();
   const before = await counts();
   for (const [flag, requirements] of [[null, null], ['DISABLED', 'SATISFIED'], ['ENABLED', 'UNKNOWN'], ['ENABLED', 'UNSATISFIED'],
     ['INTERNAL', 'SATISFIED'], ['LIMITED_ROLLOUT', 'SATISFIED'], ['EMERGENCY_DISABLED', 'SATISFIED']]) {
