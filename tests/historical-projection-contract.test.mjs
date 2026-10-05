@@ -417,6 +417,10 @@ test('anti-scope: no Return-to-Live-Focus, no Go Live + Locate, no Map geometry,
   assert.doesNotMatch(read('apps/api/src/app.module.ts'), /historical|projection/iu, 'AppModule is untouched: the controller lives in ConversationModule');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // S4-01 re-anchor: the application root also composes SharedWorldModule (the Shared World Product boundary), placed
+    // before AccountModule; it touches no conversation, focus, projection or thread code.
+    .replace("import { SharedWorldModule } from './shared-world/shared-world.module';\n", '')
+    .replace(', PushModule, SharedWorldModule, AccountModule', ', PushModule, AccountModule')
     // A3-02 re-anchor: the application root also composes PushModule (native Push device boundary and platform
     // dispatcher, not a Conversation capability). It is stripped the same way, so every other byte stays frozen.
     .replace("import { PushModule } from './push/push.module';\n", '')
