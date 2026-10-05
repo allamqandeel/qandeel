@@ -803,7 +803,7 @@ async function verifyReachability(h, w) {
   const idE = await giveSharedId(h.e);
   const before = await proposalCount(w.two);
   await actAs('authenticated', h.d);
-  assert.deepEqual(await proposeMember(randomUUID(), w.two, 'not a shared id'), [{ outcome: 'INVALID_SHARED_ID' }]);
+  assert.deepEqual(await proposeMember(randomUUID(), w.two, 'ZZZZ-ZZZZ-UZZZ'), [{ outcome: 'INVALID_SHARED_ID' }]);
   for (const [what, value] of [['nobody', drawSharedId()], ['the caller\'s own', idD], ['a current member', idE]]) {
     assert.deepEqual(await proposeMember(randomUUID(), w.two, value), [{ outcome: 'SUBMITTED' }], `${what}: the one answer`);
   }
