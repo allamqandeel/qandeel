@@ -19,8 +19,26 @@ appId: com.qandeel.mobile
     visible:
       id: "qandeel-shared-root"
     timeout: 30000
+# The Personal world stays MOUNTED beneath the Shared area by design (DepthComposition: pointerEvents none, hidden from
+# assistive technology), so its nodes may still be in the platform hierarchy; what is proved is what the reader meets:
+# the Shared destination is the selected one, the Shared surface is the one on screen, and a press aimed at the Personal
+# world's depth door lands on the Shared area and changes nothing. Its accessibility hiding is proved by the production
+# integration test (s4-01-shared-world.test.tsx: accessibilityElementsHidden, pointerEvents none).
+- assertVisible:
+    id: "qandeel-switcher-shared_world"
+    selected: true
+- assertVisible:
+    id: "qandeel-switcher-my_world"
+    selected: false
+- assertVisible:
+    id: "qandeel-shared-title"
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+    optional: true
 - assertNotVisible:
-    id: "qandeel-conversation-thread"
+    id: "qandeel-map-surface"
+- assertVisible:
+    id: "qandeel-shared-root"
 - takeScreenshot: ${PREFIX}-02-shared-root
 - tapOn:
     id: "qandeel-shared-world-54010001-0000-4000-8000-000000000000"
@@ -48,6 +66,22 @@ appId: com.qandeel.mobile
     timeout: 30000
 - assertNotVisible:
     id: "qandeel-shared-area"
+- assertVisible:
+    id: "qandeel-switcher-my_world"
+    selected: true
+# The same Personal state, still interactive: its depth door opens the same Analysis and returns.
+- tapOn:
+    id: "qandeel-depth-to-analysis"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-map-surface"
+    timeout: 60000
+- tapOn:
+    id: "qandeel-depth-to-conversation"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
 - takeScreenshot: ${PREFIX}-05-my-world-restored
 # Re-entry: the Shared World the reader left, after authority is resolved again.
 - tapOn:

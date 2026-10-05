@@ -50,10 +50,11 @@
 //     Memory, hypothesis or any other Personal row changes across the whole run;
 //   * zero fixture residue after completion.
 //
-// Nothing here weakens an ACL. Application roles are used only to prove denial
-// and to drive the frozen I-04A commands that build the fixtures; the birth core
-// itself is invoked as the database owner with the exact human's JWT claim set,
-// which is precisely how a later launch-gated wrapper must preserve auth.uid().
+// Nothing here weakens an ACL. Application roles are used only to prove denial.
+// The birth core, and (since S4-01's migration 0138 retired their client grant) the
+// frozen I-04A commands that build the fixtures, are invoked as the database owner
+// with the exact human's JWT claim set, which is precisely how the launch-gated
+// wrapper preserves auth.uid().
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
 import process from 'node:process';
@@ -402,12 +403,16 @@ async function verifyFunctionAcl() {
   await identity('postgres');
 }
 
-/** Builds a PENDING invitation through the frozen I-04A commands only. */
+/**
+ * Builds a PENDING invitation through the frozen I-04A commands only. S4-01 (migration 0138) retired their client grant,
+ * so the fixture drives them as the database owner carrying the exact human's claim — the same server-owned shape this
+ * verifier already uses for the birth core. The commands, their epoch law and their lock order are unchanged.
+ */
 async function provisionInvitation(inviter, target, label) {
   const ref = opaqueRef(label);
-  await identity('authenticated', target);
+  await identity('postgres', target);
   await rows(ROTATE_SQL, [randomUUID(), ref, null]);
-  await identity('authenticated', inviter);
+  await identity('postgres', inviter);
   const invitationId = randomUUID();
   await rows(SUBMIT_SQL, [randomUUID(), invitationId, ref]);
   await identity('postgres');
@@ -575,7 +580,7 @@ async function verifyStaleAndTerminal(f, pending) {
   // such rows), so it is constructed directly to prove the epoch guard is real.
   // It uses its OWN human, because rotating any other target here would
   // invalidate that target's still-PENDING invitation as a side effect.
-  await identity('authenticated', f.staleTarget);
+  await identity('postgres', f.staleTarget);
   await rows(ROTATE_SQL, [randomUUID(), opaqueRef('staleFirst'), null]);
   const [rotated] = await rows(ROTATE_SQL, [randomUUID(), opaqueRef('staleSecond'), 1]);
   assert.equal(Number(rotated.credential_epoch), 2, 'the stale-epoch fixture target is now at epoch 2');
@@ -722,11 +727,6 @@ async function verifyConcurrency(c) {
     await conn.query('BEGIN');
     await conn.query("SELECT set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: uid, role: 'authenticated' })]);
   };
-  const asHuman = async (conn, uid) => {
-    await conn.query('BEGIN');
-    await conn.query('SET LOCAL ROLE authenticated');
-    await conn.query("SELECT set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: uid, role: 'authenticated' })]);
-  };
   const blocks = async (pending) => {
     pending.catch(() => undefined);
     return Promise.race([
@@ -794,7 +794,7 @@ async function verifyConcurrency(c) {
     stage = 'concurrency: acceptance before rotation - the born World survives and the ACCEPTED invitation is untouched';
     const beforeRotation = c.invitations.beforeRotation;
     const survivor = { id: randomUUID(), world: randomUUID(), inviterEpisode: randomUUID(), targetEpisode: randomUUID() };
-    await asOwnerFor(a, c.targetC); await asHuman(b, c.targetC);
+    await asOwnerFor(a, c.targetC); await asOwnerFor(b, c.targetC);
     await a.query(BIRTH_SQL, [survivor.id, beforeRotation, survivor.world, survivor.inviterEpisode, survivor.targetEpisode]);
     const queuedRotation = b.query(ROTATE_SQL, [randomUUID(), opaqueRef('afterBirth'), 1]);
     assert.equal(await blocks(queuedRotation), 'BLOCKED', 'the rotation queues behind the acceptance that holds the credential row');
@@ -812,7 +812,7 @@ async function verifyConcurrency(c) {
     stage = 'concurrency: rotation before acceptance - no World is born';
     const afterRotation = c.invitations.afterRotation;
     const unborn = { id: randomUUID(), world: randomUUID(), inviterEpisode: randomUUID(), targetEpisode: randomUUID() };
-    await asHuman(a, c.targetD); await asOwnerFor(b, c.targetD);
+    await asOwnerFor(a, c.targetD); await asOwnerFor(b, c.targetD);
     await a.query(ROTATE_SQL, [randomUUID(), opaqueRef('beforeAcceptance'), 1]);
     const queuedAcceptance = b.query(BIRTH_SQL, [unborn.id, afterRotation, unborn.world, unborn.inviterEpisode, unborn.targetEpisode]);
     assert.equal(await blocks(queuedAcceptance), 'BLOCKED', 'the acceptance queues behind the rotation that holds the credential row');
