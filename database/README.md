@@ -3924,8 +3924,8 @@ Record: [`docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPL
 ## S4-02 - Shared conversation and material (migration 0139)
 
 The Product execution boundary over the frozen I-04G material runtime (`0089` / `0090`, as `0118`, `0119` and `0122`
-extended it), forward-only; migrations `0001`–`0138` are untouched. It creates no table: no second message, history,
-ownership, audience or QANDEEL material model exists.
+extended it), forward-only; migrations `0001`–`0138` are untouched. No second message, history, ownership, audience or
+QANDEEL material model exists: its only tables are the two content-free runtime tables of the generation work bound.
 
 - **One more gate scope.** `SHARED_CONVERSATION` is added to the S4-01 scope CHECK (the same CHECK plus one literal). It
   gates ordinary sending and the QANDEEL reply; it is closed until an operator opens it. Owner deletion is not gated.
@@ -3933,8 +3933,14 @@ ownership, audience or QANDEEL material model exists.
   member's visible text material through the frozen resolver, bounded and cursored), `send_shared_world_human_text_v1`
   (the frozen HUMAN_TEXT commit behind the gate; persistence identities derived server-side from the command), and
   `delete_own_shared_world_material_v1` (the frozen owner deletion).
-- **The server's one act** (`service_role` only): `commit_shared_world_qandeel_reply_v1` — at most one `QANDEEL_OUTPUT`
-  per committed human text command, behind the gate, through the frozen QANDEEL core, which re-checks the I-03 evidence.
+- **The server's reply work** (`service_role` only), the PROD-SEC-02 principle applied to Shared generation:
+  `begin_shared_qandeel_reply_work_v1` grants a durable work lease — one live lease per human command, at most two per
+  requesting human, a rolling 10-minute / 24-hour work-start budget, expiry after the frozen 120-second foreground lease —
+  under a per-requester advisory lock, for every API instance; `complete_shared_world_qandeel_reply_v1` commits, for the
+  current lease holder only, at most one `QANDEEL_OUTPUT` per committed human text command, behind the gate, through the
+  frozen QANDEEL core, which re-checks the I-03 evidence; `end_shared_qandeel_reply_work_v1` returns a lease. The lease and
+  grant tables (`shared_private.shared_qandeel_reply_work_leases` / `_grants`) hold no content and are reachable by no
+  application role.
 - The `0090` primitives stay executable by no application role.
 
 Verifier: `npm run verify:shared-world-conversation-material:integration` (`database/verify-migration-0139.mjs`).

@@ -176,7 +176,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-NOTIF-05` | Native Push Physical-Device Exit Gates (PD-01 … PD-09) | `Release Hardening & Launch — physical iOS / Android device validation` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
-| `QAN-BL-CW-02` | Shared Standing Context Admission: Personal-Context Collector, Source Disclosure Detector, Private Source-State Resolver and the JIT Grant Surface | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -845,32 +845,39 @@ S4-01's scope, and nothing here authorizes implementation (BG-07).
 
 ---
 
-### `QAN-BL-CW-02` — Shared Standing Context Admission: Personal-Context Collector, Source Disclosure Detector, Private Source-State Resolver and the JIT Grant Surface
+### `QAN-BL-CW-02` — Shared Standing Context Product & Private-Source Integration
 
-- **Title / Finding:** S4-02 ships the request-driven Shared QANDEEL reply over the frozen I-03 chain, but no Personal
-  context can enter it: no reviewed server-owned collector offers Personal candidate context to the frozen
-  `SharedEffectiveContextService`; the Source Disclosure detector (`SHARED_SOURCE_DISCLOSURE_DETECTOR`) and the private
-  source-state resolver (`SHARED_PRIVATE_SOURCE_STATE_RESOLVER`) have no implementation; and no Product surface asks a
-  participant for, or lets them revoke, a Standing Context Grant (the 0078 commands are unreachable from the app).
-- **Source:** CW2-02 §16–§20, §58 (detection implementation explicitly deferred); I-03F (the source-state boundary left to
-  the slice that owns Personal source exposure); E2E row `E2E-G-08`; the S4-02 record §7, §12, §13 (G-08).
-- **Current truth:** S4-02 offers the EffectiveContext NO private candidate and binds both dependency contracts to
-  fail-closed implementations (never CLEAR, never AVAILABLE), unreachable with zero candidates. The Shared reply reasons
-  over the exact World's Shared history only; Personal Memory, HIM, hypotheses and conversation never enter it.
-- **Why deferred:** each missing part is a reviewed Product / privacy boundary of its own (CW2-02 §58 defers the detector;
-  the JIT request presentation and copy are undrawn); inventing any of them inside S4-02 would be engineering inventing
-  Product logic (`AGENTS.md` §2).
-- **Owner task:** `UNASSIGNED`
-- **Severity:** `MEDIUM` — the gap withholds a capability; it fails closed and exposes nothing.
-- **Reopen condition:** a task proposes letting Personal context influence a Shared reply, implements either dependency
-  contract, or exposes the Standing Context grant / revoke commands to a client.
-- **Required future properties:** a server-owned collector whose relevance never becomes authority; a reviewed detector
-  bound to one exact operation; a digest-only source-state resolver; the private JIT request and revocation surface; the
-  frozen reasoning-only law (no REASONING_DEPENDENCY ever becomes material consent).
-- **Status:** `OPEN — UNASSIGNED`
+- **Title / Finding:** S4-02 delivers the request-driven Shared QANDEEL reply over the frozen I-03 chain with Shared-native
+  history only. Its census (S4-02 record §7.1) found no canonical way for Personal context to reach a Shared reply: the
+  Standing Context grant exists in the database (`0076`–`0078`) but no Product surface, request or copy reaches it; no
+  document defines which self-authored `MY_WORLD` source a `SharedPrivateContextCandidate` is drawn from or how it is
+  selected, and no collector exists; the Source Disclosure detector (`SHARED_SOURCE_DISCLOSURE_DETECTOR`) and the
+  Personal source-state resolver (`SHARED_PRIVATE_SOURCE_STATE_RESOLVER`) have no implementation.
+- **Source:** the [S4-02 implementation record](e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md)
+  §7.1 and §13 (`G-08`); CW2-02 §16–§21, §58; CW2-03 §39; I-03E / I-03F / I-03G; E2E row `E2E-G-08`. Designated by the
+  Product Owner at the S4-02 final pre-push decision (2026-10-05).
+- **Current truth:** S4-02 offers the frozen EffectiveContext NO private candidate and binds both dependency contracts to
+  fail-closed implementations (never CLEAR, never AVAILABLE), unused with zero candidates. Personal Memory, Understanding,
+  HIM, hypotheses and conversation never enter a Shared reply. The Shared-history portion of `G-08` is delivered; the
+  private-context portion is NOT closed.
+- **Why deferred:** each missing part is a reviewed Product / privacy boundary of its own; inventing a Personal source,
+  collector, detector or source-state resolver inside S4-02 would be engineering inventing Product and authority logic
+  (`AGENTS.md` §2). It does not block S4-02's Shared conversation over Shared-native history.
+- **Owner task:** `SHARED-CTX-01 — Shared Standing Context Product Integration`
+- **Scope:** the canonical self-authored `MY_WORLD` source definition and its server-owned collector; the JIT Standing
+  Context permission Product surface and its copy; `SharedPrivateContextCandidate` production; the server-owned Source
+  Disclosure detector implementation; the Personal source-state resolver; the authority and privacy proofs.
+- **Severity:** `HIGH` — if reopened, it decides whether a participant's private Personal context can influence what
+  QANDEEL says to other people in a Shared World.
+- **Reopen condition:** before any production Shared QANDEEL feature claims to consume Personal / private context.
+- **Required future properties:** relevance never becomes authority; the grant is requested just in time, privately, to
+  the exact grantor and revocable for future reasoning; the detector is bound to one exact operation; the source-state
+  resolver is digest-only; admitted context stays reasoning-only and never becomes material consent or a material
+  dependency; every part fails closed.
+- **Status:** `DEFERRED — OWNED`
 
-Admitted by `S4-02` under BG-08 / BG-06 (a canonical deferral: CW2-02 §58 and I-03F). Nothing here authorizes
-implementation (BG-07).
+Admitted by `S4-02` under BG-08 / BG-06 (explicitly designated by the Product Owner as a named follow-up). It is not part
+of S4-02's scope, and nothing here authorizes implementation (BG-07).
 
 ---
 
@@ -1323,16 +1330,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 15 |
+| `DEFERRED — OWNED` | 16 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 11 |
+| `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 17 |
 | **Total** | **43** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 25 |
-| `MEDIUM` | 17 |
+| `HIGH` | 26 |
+| `MEDIUM` | 16 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -1493,14 +1500,17 @@ scope. The §7 table, which had not been moved for `QAN-BL-LAUNCH-03`, is correc
 **42** items: 15 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by
 severity, 25 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 
-**S4-02 reconciliation (2026-10-05).** S4-02 (Shared Conversation & Material, migration `0139`) inherits no item by
-owner. `QAN-BL-VOICE-01`'s reopen condition is not met — S4-02 claims no Voice Note persistence or playback, and Shared
-Voice Notes (`E2E-G-06`) stay blocked on it; it is unchanged. `QAN-BL-CW-01`, `QAN-BL-ACCT-01`, `QAN-BL-CI-01` and
-`QAN-BL-LAUNCH-03` are unchanged. It admits one: `QAN-BL-CW-02` (`MEDIUM`, `OPEN — UNASSIGNED`), the Shared Standing
-Context admission chain no reviewed slice has built. Its Stage-4 Gap Matrix is §13 of its
-[implementation record](e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md). The register now
-holds **43** items: 15 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 11 `OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by
-severity, 25 `HIGH`, 17 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+**S4-02 reconciliation (2026-10-05; review candidate, not merged).** S4-02 (Shared Conversation & Material, migration
+`0139`) inherits no item by owner. `QAN-BL-VOICE-01`'s reopen condition is not met — S4-02 claims no Voice Note
+persistence or playback, and Shared Voice Notes (`E2E-G-06`) stay blocked on it; it is unchanged. `QAN-BL-CW-01`,
+`QAN-BL-ACCT-01`, `QAN-BL-CI-01` and `QAN-BL-LAUNCH-03` are unchanged. The one S4-02-owned obligation it could not
+truthfully satisfy — Personal Standing Context reaching a Shared reply (the private-context portion of `E2E-G-08`) — was
+reported with its census in §7.1 of its
+[implementation record](e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md); the Product Owner
+then designated it: S4-02 admits `QAN-BL-CW-02` (`HIGH`, `DEFERRED — OWNED`, owner `SHARED-CTX-01 — Shared Standing Context Product Integration`). The Shared-history
+portion of `G-08` is delivered; the private-context portion is not closed. Its Stage-4 Gap Matrix is §13 of the same
+record. The register now holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17
+`CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1557,11 +1567,12 @@ Inherited after T-12 closure reconciliation:
 | `VPORT-02 — Timeline + Orientation Chrome + P2 Final Coherence` | `QAN-BL-A11Y-01` — delivered by PR #306; tombstoned by itself under BG-08 |
 | `A3-01 — Activity & Attention Core + In-App Production Integration` | none — no item names it; admitted `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02` |
 | `A3-02 — Native Push, Permission & Platform Delivery Integration` | `QAN-BL-NOTIF-01` — delivered; tombstoned by itself under BG-08; admitted `QAN-BL-NOTIF-05` |
-| `S4-02 — Shared Conversation & Material Production Integration` | none — no item names it; `QAN-BL-VOICE-01` observed and left open; admitted `QAN-BL-CW-02` |
+| `S4-02 — Shared Conversation & Material Production Integration` | none — no item names it; `QAN-BL-VOICE-01` observed and left open; admitted `QAN-BL-CW-02` (designated by the Product Owner) |
 | `Release Hardening & Launch — physical iOS / Android device validation` | `QAN-BL-NOTIF-05` |
 | `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `QAN-BL-NOTIF-02` |
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
+| `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

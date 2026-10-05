@@ -33,7 +33,7 @@ function transport(overrides: Partial<SharedWorldTransport> = {}) {
     decline: jest.fn(async (...args) => { calls.push({ name: 'decline', args }); return { kind: 'DECLINED' as const }; }),
     entry: jest.fn(async (...args) => { calls.push({ name: 'entry', args }); return ALLOW; }),
     // S4-02: the World's conversation (empty here; its own suite is shared-thread.test.ts).
-    materials: jest.fn(async (...args) => { calls.push({ name: 'materials', args }); return { kind: 'READ' as const, conversation: false, materials: [] }; }),
+    materials: jest.fn(async (...args) => { calls.push({ name: 'materials', args }); return { kind: 'READ' as const, conversation: false, materials: [], hasOlder: false }; }),
     send: jest.fn(async () => ({ kind: 'NOT_AVAILABLE' as const })),
     deleteMaterial: jest.fn(async () => ({ kind: 'NOT_DELETABLE' as const })),
     ...overrides,

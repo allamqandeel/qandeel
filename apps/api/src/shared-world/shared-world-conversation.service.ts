@@ -2,10 +2,12 @@ import { BadRequestException, Injectable, ServiceUnavailableException } from '@n
 import type { SharedConversationMaterial } from '../connected-worlds/material-commit/shared-qandeel-reply.types';
 import { SharedQandeelReplyService } from '../connected-worlds/material-commit/shared-qandeel-reply.service';
 import { DataApiError } from '../conversation/supabase-data-api.service';
-import { SharedWorldConversationRepository, type SharedMaterialRow } from './shared-world-conversation.repository';
+import { SHARED_MATERIAL_PAGE, SharedWorldConversationRepository, type SharedMaterialCursor, type SharedMaterialRow } from './shared-world-conversation.repository';
 import { SharedWorldRepository } from './shared-world.repository';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+/** An instant exactly as the material read returns it (ISO 8601 with an offset), never a free-form date. */
+const INSTANT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,6})?(?:Z|[+-]\d{2}:\d{2})$/u;
 /** The same bound the Personal conversation route applies to one submission; 0139 re-checks it. */
 export const SHARED_MESSAGE_MAX_LENGTH = 20000;
 
@@ -21,16 +23,33 @@ export interface SharedMaterialView {
   readonly canDelete: boolean;
 }
 export type SharedMaterialsView =
-  | { readonly outcome: 'ALLOW'; readonly conversation: boolean; readonly materials: readonly SharedMaterialView[] }
+  | {
+    readonly outcome: 'ALLOW';
+    readonly conversation: boolean;
+    /** Oldest first: one bounded page. */
+    readonly materials: readonly SharedMaterialView[];
+    /** Whether visible material older than this page exists; the next page is read with the oldest one as the cursor. */
+    readonly hasOlder: boolean;
+  }
   | { readonly outcome: 'UNAVAILABLE' };
 export type SharedSendView =
-  | { readonly outcome: 'COMMITTED'; readonly materialId: string; readonly qandeel: 'COMMITTED' | 'UNAVAILABLE' }
+  /**
+   * `qandeel`: COMMITTED — the one reply is committed; PENDING — another request is generating it right now (a retry
+   * of a lost answer), so it appears on the next read; UNAVAILABLE — no reply was committed for this message.
+   */
+  | { readonly outcome: 'COMMITTED'; readonly materialId: string; readonly qandeel: 'COMMITTED' | 'PENDING' | 'UNAVAILABLE' }
   | { readonly outcome: 'UNAVAILABLE' };
 export type SharedDeleteView = { readonly outcome: 'DELETED' | 'UNAVAILABLE' };
 
 const record = (value: unknown): Record<string, unknown> => (value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {});
 const invalid = (): never => { throw new BadRequestException({ outcome: 'INVALID_REQUEST' }); };
 const unavailable = (): never => { throw new ServiceUnavailableException('Shared World is unavailable.'); };
+/** The older-page cursor: exactly a material identity and an instant; anything else is the client's own error. */
+function cursorOf(materialId: string, establishedAt: string): SharedMaterialCursor {
+  if (!UUID.test(materialId) || !INSTANT.test(establishedAt) || !Number.isFinite(Date.parse(establishedAt))) invalid();
+  return { materialId, establishedAt };
+}
+
 function commandOf(body: unknown, allowed: readonly string[]): Record<string, unknown> {
   const value = record(body);
   if (Object.keys(value).some((key) => !allowed.includes(key)) || typeof value.commandId !== 'string' || !UUID.test(value.commandId)) invalid();
@@ -78,15 +97,35 @@ export class SharedWorldConversationService {
 
   /** The newest page of the World's visible material, after the entry verdict, with the conversation capability hint. */
   materials(token: string, worldId: string): Promise<SharedMaterialsView> {
+    return this.page(token, worldId, null);
+  }
+
+  /** The one page strictly older than the oldest material the reader holds, after the entry verdict again. */
+  olderMaterials(token: string, worldId: string, materialId: string, establishedAt: string): Promise<SharedMaterialsView> {
+    let before: SharedMaterialCursor;
+    try {
+      before = cursorOf(materialId, establishedAt);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return this.page(token, worldId, before);
+  }
+
+  /** Never more than one page per request: one row beyond it says whether older material exists. */
+  private page(token: string, worldId: string, before: SharedMaterialCursor | null): Promise<SharedMaterialsView> {
     if (!UUID.test(worldId)) return Promise.resolve({ outcome: 'UNAVAILABLE' });
     return this.guard(async () => {
       const [verdict] = await this.shared.resolveEntry(token, worldId);
       if (verdict?.outcome !== 'ALLOW' || verdict.world_id !== worldId) return { outcome: 'UNAVAILABLE' };
-      const [rows, [capability]] = await Promise.all([this.conversation.newestMaterial(token, worldId), this.conversation.capability(token)]);
-      const materials = rows.map(viewOf);
+      // One row beyond the page says whether older material exists, without counting anything.
+      const [rows, [capability]] = await Promise.all([this.conversation.material(token, worldId, before, SHARED_MATERIAL_PAGE + 1), this.conversation.capability(token)]);
+      const materials = rows.slice(0, SHARED_MATERIAL_PAGE).map(viewOf);
       if (materials.some((m) => m === null) || capability === undefined) return unavailable();
       // Canonical order for reading: oldest first.
-      return { outcome: 'ALLOW', conversation: capability.conversation_available === true, materials: (materials as SharedMaterialView[]).reverse() };
+      return {
+        outcome: 'ALLOW', conversation: capability.conversation_available === true,
+        materials: (materials as SharedMaterialView[]).reverse(), hasOlder: rows.length > SHARED_MATERIAL_PAGE,
+      };
     });
   }
 
@@ -117,9 +156,9 @@ export class SharedWorldConversationService {
     });
   }
 
-  private async reply(userId: string, token: string, worldId: string, commandId: string, materialId: string): Promise<'COMMITTED' | 'UNAVAILABLE'> {
+  private async reply(userId: string, token: string, worldId: string, commandId: string, materialId: string): Promise<'COMMITTED' | 'PENDING' | 'UNAVAILABLE'> {
     try {
-      const rows = await this.conversation.newestMaterial(token, worldId);
+      const rows = await this.conversation.material(token, worldId);
       const requesterView: SharedConversationMaterial[] = [];
       for (const row of rows) {
         if (typeof row.text_body !== 'string' || typeof row.material_id !== 'string' || typeof row.established_at !== 'string') return 'UNAVAILABLE';
@@ -129,7 +168,8 @@ export class SharedWorldConversationService {
         });
       }
       const outcome = await this.replies.reply({ worldId, humanCommandId: commandId, humanMaterialId: materialId, requesterUserId: userId, requesterView });
-      return outcome.state === 'COMMITTED' ? 'COMMITTED' : 'UNAVAILABLE';
+      if (outcome.state === 'COMMITTED') return 'COMMITTED';
+      return outcome.reason === 'WORK_IN_PROGRESS' ? 'PENDING' : 'UNAVAILABLE';
     } catch {
       return 'UNAVAILABLE';
     }

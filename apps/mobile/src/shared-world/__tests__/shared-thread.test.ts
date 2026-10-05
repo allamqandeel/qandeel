@@ -14,7 +14,7 @@ const material = (id: string, producer: SharedMaterial['producer'], text: string
 });
 const MINE = material('66666666-6666-4666-8666-666666666661', 'SELF', 'مرحبا');
 const THEIRS = material('66666666-6666-4666-8666-666666666662', 'HUMAN', 'Hi');
-const READ = (materials: SharedMaterial[], conversation = true): SharedMaterialsResult => ({ kind: 'READ', conversation, materials });
+const READ = (materials: SharedMaterial[], conversation = true, hasOlder = false): SharedMaterialsResult => ({ kind: 'READ', conversation, materials, hasOlder });
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -176,5 +176,88 @@ describe('S4-02 Shared conversation controller', () => {
     foreground.set('ACTIVE');
     await flush();
     expect(t.materials).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe('S4-02 Shared conversation history paging', () => {
+  const OLD1 = { ...material('66666666-6666-4666-8666-666666666601', 'HUMAN', 'older one'), establishedAt: '2026-10-05T09:00:00.000001+00:00' };
+  const OLD2 = { ...material('66666666-6666-4666-8666-666666666602', 'HUMAN', 'older two'), establishedAt: '2026-10-05T09:00:00.000002+00:00' };
+  const NEWEST = material('66666666-6666-4666-8666-666666666699', 'HUMAN', 'newest');
+
+  it('reads one bounded older page only when asked, keyed by the oldest held material, and stops when none is older', async () => {
+    const t = transport({
+      materials: jest.fn(async (_worldId: string, before?: { materialId: string; establishedAt: string } | null) =>
+        (before ? READ([OLD1, OLD2], true, false) : READ([MINE, THEIRS], true, true))),
+    });
+    const c = createSharedWorldController({ transport: t, isCurrent: () => true });
+    c.openWorld(A);
+    await flush();
+    expect(t.materials).toHaveBeenCalledTimes(1);
+    expect(c.getState().thread).toMatchObject({ hasOlder: true, loadingOlder: false });
+    c.loadOlder();
+    c.loadOlder(); // one older read at a time
+    await flush();
+    expect(t.materials).toHaveBeenCalledTimes(2);
+    expect(t.materials).toHaveBeenLastCalledWith(A, { materialId: MINE.materialId, establishedAt: MINE.establishedAt });
+    expect(c.getState().thread).toMatchObject({ materials: [OLD1, OLD2, MINE, THEIRS], hasOlder: false, loadingOlder: false });
+    c.loadOlder(); // nothing older exists: nothing is read
+    await flush();
+    expect(t.materials).toHaveBeenCalledTimes(2);
+  });
+
+  it('a refresh keeps the older pages already read where the newest page joins them', async () => {
+    let newest = READ([MINE, THEIRS], true, true);
+    const t = transport({
+      materials: jest.fn(async (_worldId: string, before?: { materialId: string; establishedAt: string } | null) => (before ? READ([OLD1, OLD2], true, false) : newest)),
+    });
+    const c = createSharedWorldController({ transport: t, isCurrent: () => true });
+    c.openWorld(A);
+    await flush();
+    c.loadOlder();
+    await flush();
+    newest = READ([THEIRS, NEWEST], true, true);
+    c.refreshThread();
+    await flush();
+    expect(c.getState().thread).toMatchObject({ materials: [OLD1, OLD2, MINE, THEIRS, NEWEST], hasOlder: false });
+  });
+
+  it('an older page that arrives after the World changed is dropped', async () => {
+    const page = deferred<SharedMaterialsResult>();
+    const t = transport({
+      materials: jest.fn((_worldId: string, before?: { materialId: string; establishedAt: string } | null) => (before ? page.promise : Promise.resolve(READ([MINE, THEIRS], true, true)))),
+    });
+    const c = createSharedWorldController({ transport: t, isCurrent: () => true });
+    c.openWorld(A);
+    await flush();
+    c.loadOlder();
+    c.openWorld(B);
+    await flush();
+    page.resolve(READ([OLD1, OLD2], true, false));
+    await flush();
+    expect(c.getState().thread.worldId).toBe(B);
+    expect(c.getState().thread.materials).toEqual([MINE, THEIRS]);
+    expect(c.getState().thread.materials).not.toContain(OLD1);
+  });
+
+  it('a lost authority while reading an older page hides the World', async () => {
+    const t = transport({
+      materials: jest.fn(async (_worldId: string, before?: { materialId: string; establishedAt: string } | null) => (before ? { kind: 'DENIED' as const } : READ([MINE, THEIRS], true, true))),
+    });
+    const c = createSharedWorldController({ transport: t, isCurrent: () => true });
+    c.openWorld(A);
+    await flush();
+    c.loadOlder();
+    await flush();
+    expect(c.getState().entry).toEqual({ status: 'DENIED', world: null });
+    expect(c.getState().thread.materials).toEqual([]);
+  });
+
+  it('a reply another request is still producing (PENDING) is not reported as failed', async () => {
+    const t = transport({ send: jest.fn(async () => ({ kind: 'COMMITTED' as const, materialId: MINE.materialId, qandeel: 'PENDING' as const })) });
+    const c = createSharedWorldController({ transport: t, isCurrent: () => true });
+    c.openWorld(A);
+    await flush();
+    expect(await c.send('hello')).toBe(true);
+    expect(c.getState().thread.notice).toBeNull();
   });
 });

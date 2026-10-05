@@ -105,7 +105,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     if (read !== null && method === 'GET') {
       // Every current World answers ALLOW (a World born in an S4-01 journey simply has no conversation yet).
       if (!isCurrent(read[1])) return json(200, { outcome: 'UNAVAILABLE' });
-      return json(200, { outcome: 'ALLOW', conversation: true, materials: (threads.get(read[1]) ?? []).map(view) });
+      return json(200, { outcome: 'ALLOW', conversation: true, materials: (threads.get(read[1]) ?? []).map(view), hasOlder: false });
     }
     const message = /^\/shared\/worlds\/([0-9a-f-]+)\/messages$/u.exec(path);
     if (message !== null && method === 'POST') {

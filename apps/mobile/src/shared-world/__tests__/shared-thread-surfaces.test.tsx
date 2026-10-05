@@ -47,8 +47,12 @@ const MATERIALS: SharedMaterial[] = [
 ];
 const ALLOW: SharedEntryResult = { kind: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] } };
 
-function world(options: { conversation?: boolean; send?: () => Promise<SharedSendResult> } = {}) {
-  const read = jest.fn(async (): Promise<SharedMaterialsResult> => ({ kind: 'READ', conversation: options.conversation ?? true, materials: MATERIALS }));
+const OLDER: SharedMaterial = { materialId: '66666666-6666-4666-8666-666666666600', producer: 'HUMAN', authorName: 'Bassem Fixture', text: 'Fixture older words', establishedAt: '2026-10-05T09:00:00Z', canDelete: false };
+
+function world(options: { conversation?: boolean; send?: () => Promise<SharedSendResult>; older?: boolean } = {}) {
+  const read = jest.fn(async (_worldId: string, before?: unknown): Promise<SharedMaterialsResult> => (before
+    ? { kind: 'READ', conversation: options.conversation ?? true, materials: [OLDER], hasOlder: false }
+    : { kind: 'READ', conversation: options.conversation ?? true, materials: MATERIALS, hasOlder: options.older ?? false }));
   const transport: SharedWorldTransport = {
     root: async () => ({ kind: 'READ', root: { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [] } }),
     invite: async () => ({ kind: 'SUBMITTED' }),
@@ -56,7 +60,7 @@ function world(options: { conversation?: boolean; send?: () => Promise<SharedSen
     decline: async () => ({ kind: 'DECLINED' }),
     entry: async () => ALLOW,
     materials: read,
-    send: jest.fn(options.send ?? (async () => ({ kind: 'COMMITTED', materialId: MINE, qandeel: 'COMMITTED' }))),
+    send: jest.fn(options.send ?? (async (): Promise<SharedSendResult> => ({ kind: 'COMMITTED', materialId: MINE, qandeel: 'COMMITTED' }))),
     deleteMaterial: jest.fn(async () => ({ kind: 'DELETED' as const })),
   };
   return { controller: createSharedWorldController({ transport, isCurrent: () => true }), transport, read };
@@ -143,6 +147,25 @@ describe.each([['ar', 'DARK'], ['en', 'LIGHT']] as const)('S4-02 Shared conversa
     expect(view.getByText(copy.deleted)).toBeTruthy();
   });
 
+  it('offers no older-history control when nothing older exists', async () => {
+    const view = await openWorld(language, preference, world());
+    expect(view.queryByTestId('qandeel-shared-older')).toBeNull();
+  });
+
+  it('offers older history only when it exists, and reads exactly one older page on request', async () => {
+    const w = world({ older: true });
+    const view = await openWorld(language, preference, w);
+    const control = view.getByTestId('qandeel-shared-older');
+    expect(control.props.accessibilityLabel).toBe(copy.olderMessages);
+    expect(view.getByText(copy.olderMessages)).toBeTruthy();
+    await fireEvent.press(control);
+    await settle();
+    expect(w.read).toHaveBeenLastCalledWith(WORLD, { materialId: MATERIALS[0].materialId, establishedAt: MATERIALS[0].establishedAt });
+    expect(view.getByTestId(`qandeel-shared-material-human-${OLDER.materialId}`)).toBeTruthy();
+    // Nothing older remains: the control goes away.
+    expect(view.queryByTestId('qandeel-shared-older')).toBeNull();
+  });
+
   it('the explicit refresh re-reads the server\'s truth', async () => {
     const w = world();
     const view = await openWorld(language, preference, w);
@@ -156,7 +179,7 @@ describe.each([['ar', 'DARK'], ['en', 'LIGHT']] as const)('S4-02 Shared conversa
 });
 
 describe('S4-02 copy', () => {
-  it('reuses approved rows rather than copying them, and names every PROPOSED row in one gate', () => {
+  it('reuses approved rows rather than copying them, and carries the Product Owner\'s final words for every S4-02 row', () => {
     for (const language of ['ar', 'en'] as const) {
       const copy = sharedConversationCopy(language);
       const w1a = conversationCopy(language);
@@ -165,7 +188,20 @@ describe('S4-02 copy', () => {
       expect([copy.composerPlaceholder, copy.send, copy.waitingForReply, copy.sendUnconfirmed, copy.sendRefused, copy.replyFailed, copy.loadFailed])
         .toEqual([w1a.composerPlaceholder, w1a.sendName, w1a.waitingForReply, w1a.sendUnconfirmed, w1a.sendRefused, w1a.replyFailed, w1a.historyUnavailable]);
       expect([copy.cancel, copy.retry, copy.deleteFailed, copy.someone]).toEqual([s401.cancel, s401.retry, s401.actionUnavailable, s401.someone]);
-      for (const row of SHARED_CONVERSATION_COPY_GATE.proposed) expect((copy as unknown as Record<string, string>)[row].length).toBeGreaterThan(0);
+      for (const row of SHARED_CONVERSATION_COPY_GATE.approved) expect((copy as unknown as Record<string, string>)[row].length).toBeGreaterThan(0);
     }
+    expect(SHARED_CONVERSATION_COPY_GATE.status).toMatch(/CLOSED/u);
+    expect('proposed' in SHARED_CONVERSATION_COPY_GATE).toBe(false);
+    // The exact words the Product Owner approved (S4-02 Product Copy Gate, 2026-10-05).
+    const ar = sharedConversationCopy('ar');
+    const en = sharedConversationCopy('en');
+    expect([ar.composerName, ar.delete, ar.deleteExplanation, ar.deleteConfirm, ar.deleted, ar.refresh, ar.conversationNotOpen, ar.olderMessages]).toEqual([
+      'رسالتك في هذا العالم المشترك', 'حذف', 'سيختفي هذا الكلام من هذا العالم المشترك عند الجميع، ولن يستخدمه قنديل بعد ذلك.', 'حذف عند الجميع',
+      'تم الحذف.', 'تحديث', 'المحادثة غير متاحة الآن في هذا العالم المشترك.', 'عرض رسائل أقدم',
+    ]);
+    expect([en.composerName, en.delete, en.deleteExplanation, en.deleteConfirm, en.deleted, en.refresh, en.conversationNotOpen, en.olderMessages]).toEqual([
+      'Your message in this Shared World', 'Delete', "This message will disappear from this Shared World for everyone, and QANDEEL won't use it again.",
+      'Delete for everyone', 'Deleted.', 'Refresh', "Conversation isn't available in this Shared World right now.", 'Show older messages',
+    ]);
   });
 });

@@ -1,9 +1,10 @@
 // S4-02 — Shared Conversation & Material Production Integration v1: the real-PostgreSQL verifier for migration 0139.
 //
 // It proves, against a fully migrated database:
-//   1. the boundary: the six S4-02 definers are pinned SECURITY DEFINERs in `shared_private`; every exposed wrapper is
+//   1. the boundary: the eight S4-02 definers are pinned SECURITY DEFINERs in `shared_private`; every exposed wrapper is
 //      SECURITY INVOKER; `authenticated` executes exactly the four human commands; `service_role` executes exactly the
-//      QANDEEL reply commit and reaches no shared_private table and no human command; the frozen 0090 primitives and
+//      three QANDEEL reply-work commands and reaches no shared_private table and no human command; no application role
+//      reaches the two work-bound tables or the internal policy; no public `commit_%` function joins the T-03D census; the frozen 0090 primitives and
 //      the 0089 resolver keep their pre-S4-02 ACL; the gate scope CHECK carries three scopes; no conversation scope is
 //      configured by a migration;
 //   2. closed gate: a current member cannot send (nothing written) and the server cannot commit a reply; the read is
@@ -20,11 +21,17 @@
 //      digest or a non-derived readiness is 22023, stale audience evidence (a leave; another World's evidence; a
 //      deleted source) is STALE; a reply needs a committed human command of this exact World; an authenticated client
 //      cannot execute the commit;
+//   5b. the work lease (the provider-work bound): one live lease per human command (a second request is IN_PROGRESS), for
+//      the command's own human only; the in-flight bound (two per requester) freed by an exact-holder return; an expired
+//      lease frees its slot by itself and a superseded lease commits and returns nothing; the current holder commits and
+//      the lease is returned; a committed reply starts nothing again; the rolling 10-minute and 24-hour work-start budget
+//      refuse, roll and are pruned; refusals are never charged; a closed capability grants nothing; no client starts, ends
+//      or reads the work; a requester who left starts no new work, and a lease taken before a leave commits nothing;
 //   6. owner deletion: non-owner deletion and QANDEEL deletion are UNAVAILABLE; the owner deletes once; a retry is
 //      idempotent; the deleted body disappears from every reader's resolver; a deleted material cannot become a new
 //      source; the QANDEEL reply (an analytical derivative) stays; a closed World still permits it;
 //   7. concurrency on committed state: two identical sends commit one material; two replies for one human command
-//      commit one reply.
+//      commit one reply; concurrent begins across connections grant one lease (the second waits on the requester lock).
 //
 // Stages 1–6 run inside one transaction that is rolled back. Stage 7 needs committed rows; its fixtures (and the gate row
 // it configured) are removed afterwards and the removal is checked.
@@ -103,10 +110,23 @@ const listMaterial = async (worldId, limit = 50, cursor = null) =>
 const deleteOwn = async (commandId, worldId, materialId) =>
   (await rows('SELECT * FROM public.delete_own_shared_world_material_v1($1, $2, $3)', [commandId, worldId, materialId]))[0];
 const capability = async () => (await rows('SELECT * FROM public.read_shared_conversation_capability_v1()'))[0];
-const reply = async (humanCommandId, worldId, body, e, sources = [], reasoning = [], on = client) =>
-  (await rows('SELECT * FROM public.commit_shared_world_qandeel_reply_v1($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)',
-    [humanCommandId, worldId, body, e.effectiveContextRef, e.outputDigest, e.sourceDisclosureGateRef, e.authorityRevalidationRef,
+const beginWork = async (humanCommandId, worldId, requester, on = client) =>
+  (await rows('SELECT * FROM public.begin_shared_qandeel_reply_work_v1($1, $2, $3)', [humanCommandId, worldId, requester], on))[0];
+const endWork = async (humanCommandId, leaseId, on = client) =>
+  (await rows('SELECT public.end_shared_qandeel_reply_work_v1($1, $2) AS returned', [humanCommandId, leaseId], on))[0].returned;
+const complete = async (leaseId, humanCommandId, worldId, body, e, sources = [], reasoning = [], on = client) =>
+  (await rows('SELECT * FROM public.complete_shared_world_qandeel_reply_v1($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)',
+    [leaseId, humanCommandId, worldId, body, e.effectiveContextRef, e.outputDigest, e.sourceDisclosureGateRef, e.authorityRevalidationRef,
       e.readiness, e.audienceSnapshotRef, sources, reasoning], on))[0];
+/**
+ * The server's whole reply act for one requesting human, exactly as the API runs it: begin the work lease, then complete
+ * under it. A refused begin grants no lease, so the completion is attempted under a lease nobody holds — which commits
+ * nothing, and answers an already committed reply.
+ */
+const reply = async (requester, humanCommandId, worldId, body, e, sources = [], reasoning = [], on = client) => {
+  const work = await beginWork(humanCommandId, worldId, requester, on);
+  return complete(work.work_lease_id ?? randomUUID(), humanCommandId, worldId, body, e, sources, reasoning, on);
+};
 const setGate = async (scope, flag, requirements, on = client) =>
   (await rows('SELECT * FROM shared_private.set_shared_launch_capability_v1($1, $2, $3, $4, $5)', [scope, flag, requirements, 's4-02-verifier', 'verification fixture'], on))[0];
 
@@ -142,9 +162,10 @@ async function bornWorld(inviter, target) {
   return worldId;
 }
 
-const S402_DEFINERS = ['derive_shared_conversation_identity_v1', 'read_shared_conversation_capability_v1', 'list_own_shared_world_material_v1',
-  'send_shared_world_human_text_v1', 'commit_shared_world_qandeel_reply_v1', 'delete_own_shared_world_material_v1'];
+const SERVER_COMMANDS = ['begin_shared_qandeel_reply_work_v1', 'complete_shared_world_qandeel_reply_v1', 'end_shared_qandeel_reply_work_v1'];
 const HUMAN_COMMANDS = ['read_shared_conversation_capability_v1', 'list_own_shared_world_material_v1', 'send_shared_world_human_text_v1', 'delete_own_shared_world_material_v1'];
+const S402_DEFINERS = ['derive_shared_conversation_identity_v1', ...HUMAN_COMMANDS, ...SERVER_COMMANDS];
+const WORK_TABLES = ['shared_qandeel_reply_work_leases', 'shared_qandeel_reply_work_grants'];
 const FROZEN_PRIMITIVES = [
   'public.commit_shared_world_human_material_v1(uuid,uuid,uuid,uuid,text,text,text,text,integer)',
   'public.commit_shared_world_human_text_v1(uuid,uuid,uuid,uuid,text)',
@@ -169,37 +190,52 @@ async function verifyBoundary() {
     assert.ok((f.proconfig ?? []).includes('search_path=""'), `shared_private.${f.proname} pins an empty search_path`);
   }
   const publicFns = await rows(`SELECT p.proname, p.prosecdef, p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
-    WHERE n.nspname = 'public' AND p.proname = ANY($1::text[]) ORDER BY 1`, [[...HUMAN_COMMANDS, 'commit_shared_world_qandeel_reply_v1']]);
-  assert.equal(publicFns.length, 5);
+    WHERE n.nspname = 'public' AND p.proname = ANY($1::text[]) ORDER BY 1`, [[...HUMAN_COMMANDS, ...SERVER_COMMANDS]]);
+  assert.equal(publicFns.length, 7);
   for (const f of publicFns) {
     assert.equal(f.prosecdef, false, `public.${f.proname} is SECURITY INVOKER`);
     assert.ok((f.proconfig ?? []).includes('search_path=""'));
   }
 
-  stage = 'boundary: authenticated runs exactly the human commands; service_role exactly the QANDEEL reply commit';
+  stage = 'boundary: authenticated runs exactly the human commands; service_role exactly the three QANDEEL reply-work commands';
   const executable = await rows(`SELECT r.rolname, n.nspname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     CROSS JOIN (VALUES ('anon'), ('authenticated'), ('service_role'), ('public')) AS r(rolname)
     WHERE ((n.nspname = 'shared_private' AND p.proname = ANY($1::text[])) OR (n.nspname = 'public' AND p.proname = ANY($2::text[])))
       AND (r.rolname = 'public' OR EXISTS (SELECT 1 FROM pg_roles x WHERE x.rolname = r.rolname))
       AND has_function_privilege(r.rolname, p.oid, 'EXECUTE') ORDER BY 1, 2, 3`,
-  [S402_DEFINERS, [...HUMAN_COMMANDS, 'commit_shared_world_qandeel_reply_v1']]);
+  [S402_DEFINERS, [...HUMAN_COMMANDS, ...SERVER_COMMANDS]]);
   const key = (r) => `${r.rolname} ${r.nspname}.${r.proname}`;
   assert.deepEqual(executable.map(key).sort(), [
     ...HUMAN_COMMANDS.map((proname) => key({ rolname: 'authenticated', nspname: 'public', proname })),
     ...HUMAN_COMMANDS.map((proname) => key({ rolname: 'authenticated', nspname: 'shared_private', proname })),
-    key({ rolname: 'service_role', nspname: 'public', proname: 'commit_shared_world_qandeel_reply_v1' }),
-    key({ rolname: 'service_role', nspname: 'shared_private', proname: 'commit_shared_world_qandeel_reply_v1' }),
-  ].sort(), 'the human commands are the human\'s; the QANDEEL reply is the server\'s; the identity derivation is nobody\'s');
+    ...SERVER_COMMANDS.map((proname) => key({ rolname: 'service_role', nspname: 'public', proname })),
+    ...SERVER_COMMANDS.map((proname) => key({ rolname: 'service_role', nspname: 'shared_private', proname })),
+  ].sort(), 'the human commands are the human\'s; the QANDEEL reply work is the server\'s; the identity derivation is nobody\'s');
+  for (const role of ['public', 'anon', 'authenticated', 'service_role']) {
+    const [{ allowed }] = await rows("SELECT has_function_privilege($1, 'shared_private.shared_qandeel_reply_work_policy_v1()', 'EXECUTE') AS allowed", [role]);
+    assert.equal(allowed, false, `${role} must not execute the internal work policy`);
+  }
+  // The T-03D single-committing-authority census (verify-migration-0071) is untouched: S4-02 adds no public `commit_%`
+  // function the server channel can execute.
+  const committing = await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public' AND p.proname LIKE 'commit\\_%' AND has_function_privilege('service_role', p.oid, 'EXECUTE') ORDER BY 1`);
+  assert.deepEqual(committing.map((r) => r.proname), ['commit_finalized_exchange_with_full_semantic_chain_v1']);
 
-  stage = 'boundary: the server channel reaches no shared_private table and no 0138 human command';
+  stage = 'boundary: no application role reaches a shared_private table; the server channel reaches no 0138 human command';
   for (const table of ['shared_id_sealed_values', 'shared_launch_capability_states', 'shared_launch_capability_events',
-    'shared_direct_birth_launch_evidence', 'shared_direct_invitation_decline_commands']) {
-    const [{ reach }] = await rows('SELECT has_table_privilege($1, $2, $3) AS reach', ['service_role', `shared_private.${table}`, 'SELECT,INSERT,UPDATE,DELETE']);
-    assert.equal(reach, false, `service_role cannot reach ${table}`);
+    'shared_direct_birth_launch_evidence', 'shared_direct_invitation_decline_commands', ...WORK_TABLES]) {
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      const [{ reach }] = await rows('SELECT has_table_privilege($1, $2, $3) AS reach', [role, `shared_private.${table}`, 'SELECT,INSERT,UPDATE,DELETE']);
+      assert.equal(reach, false, `${role} cannot reach ${table}`);
+    }
+  }
+  for (const table of WORK_TABLES) {
+    const [{ rls }] = await rows('SELECT relrowsecurity AS rls FROM pg_class WHERE oid = $1::regclass', [`shared_private.${table}`]);
+    assert.equal(rls, true, `${table} has row level security enabled`);
   }
   const serverReach = await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'shared_private' AND has_function_privilege('service_role', p.oid, 'EXECUTE') ORDER BY 1`);
-  assert.deepEqual(serverReach.map((r) => r.proname), ['commit_shared_world_qandeel_reply_v1']);
+  assert.deepEqual(serverReach.map((r) => r.proname), [...SERVER_COMMANDS].sort());
 
   stage = 'boundary: the frozen 0090 primitives, the operator change and the bare gate stay executable by no application role';
   for (const fn of FROZEN_PRIMITIVES) {
@@ -250,7 +286,7 @@ async function verifyClosedGate({ a, b, c }, worldId) {
   assert.deepEqual(await send(randomUUID(), worldId, 'مرحبًا'), { outcome: 'UNAVAILABLE', material_id: null, established_at: null, qandeel_reply_material_id: null });
   assert.deepEqual(await listMaterial(worldId), [], 'the read is truthful: nothing yet');
   await actAs('service_role');
-  const closedReply = await reply(randomUUID(), worldId, 'a reply nobody asked for', evidenceFor('a reply nobody asked for', await audienceRef(worldId)));
+  const closedReply = await reply(a, randomUUID(), worldId, 'a reply nobody asked for', evidenceFor('a reply nobody asked for', await audienceRef(worldId)));
   await actAs('service_role');
   assert.deepEqual(closedReply, { outcome: 'UNAVAILABLE', material_id: null, established_at: null });
   await asOwner();
@@ -369,7 +405,7 @@ async function verifyQandeelReply({ a, b }, worldId, otherWorldId, { firstComman
   const body = 'أهلًا بكما. سمعت كلمتكما الأولى.';
   const evidence = evidenceFor(body, await audienceRef(worldId));
   await actAs('service_role');
-  const committed = await reply(firstCommand, worldId, body, evidence);
+  const committed = await reply(a, firstCommand, worldId, body, evidence);
   assert.equal(committed.outcome, 'MATERIAL_COMMITTED');
   await asOwner();
   const [material] = await rows(`SELECT m.material_kind, m.producer_kind, m.author_user_id, ev.readiness_state, ev.output_digest,
@@ -383,7 +419,7 @@ async function verifyQandeelReply({ a, b }, worldId, otherWorldId, { firstComman
   stage = 'reply: at most one reply per human command — a second generation answers the first and commits nothing';
   const counts = await materialCounts(worldId);
   await actAs('service_role');
-  const again = await reply(firstCommand, worldId, 'a different second generation', evidenceFor('a different second generation', await audienceRef(worldId)));
+  const again = await reply(a, firstCommand, worldId, 'a different second generation', evidenceFor('a different second generation', await audienceRef(worldId)));
   await actAs('service_role');
   assert.deepEqual([again.outcome, again.material_id], ['MATERIAL_COMMITTED', committed.material_id]);
   await asOwner();
@@ -404,9 +440,9 @@ async function verifyQandeelReply({ a, b }, worldId, otherWorldId, { firstComman
   assert.equal(otherSend.outcome, 'UNAVAILABLE', 'B is not a member of the other World');
   const unknownCommand = randomUUID();
   await actAs('service_role');
-  assert.equal((await reply(unknownCommand, worldId, 'x', evidenceFor('x', await audienceRef(worldId)))).outcome, 'UNAVAILABLE');
+  assert.equal((await reply(a, unknownCommand, worldId, 'x', evidenceFor('x', await audienceRef(worldId)))).outcome, 'UNAVAILABLE');
   await actAs('service_role');
-  assert.equal((await reply(firstCommand, otherWorldId, 'x', evidenceFor('x', await audienceRef(otherWorldId)))).outcome, 'UNAVAILABLE',
+  assert.equal((await reply(a, firstCommand, otherWorldId, 'x', evidenceFor('x', await audienceRef(otherWorldId)))).outcome, 'UNAVAILABLE',
     'a human command of World A initiates nothing in World B');
 
   stage = 'reply: invalid or forged evidence is refused by the frozen core before anything is written';
@@ -415,25 +451,121 @@ async function verifyQandeelReply({ a, b }, worldId, otherWorldId, { firstComman
   assert.equal((await send(thirdCommand, worldId, 'third')).outcome, 'COMMITTED');
   const good = evidenceFor('reply three', await audienceRef(worldId));
   await actAs('service_role');
-  await rejected(() => reply(thirdCommand, worldId, 'reply three', { ...good, outputDigest: digest('other bytes') }), ['22023']);
-  await rejected(() => reply(thirdCommand, worldId, 'reply three', { ...good, readiness: digest('not the fingerprint') }), ['22023']);
-  await rejected(() => reply(thirdCommand, worldId, '   ', good), ['22023']);
+  await rejected(() => reply(a, thirdCommand, worldId, 'reply three', { ...good, outputDigest: digest('other bytes') }), ['22023']);
+  await rejected(() => reply(a, thirdCommand, worldId, 'reply three', { ...good, readiness: digest('not the fingerprint') }), ['22023']);
+  await rejected(() => reply(a, thirdCommand, worldId, '   ', good), ['22023']);
   stage = 'reply: stale audience evidence is refused — another World\'s audience, a fabricated audience';
   await actAs('service_role');
-  assert.equal((await reply(thirdCommand, worldId, 'reply three', evidenceFor('reply three', await audienceRef(otherWorldId)))).outcome, 'STALE');
+  assert.equal((await reply(a, thirdCommand, worldId, 'reply three', evidenceFor('reply three', await audienceRef(otherWorldId)))).outcome, 'STALE');
   await actAs('service_role');
-  assert.equal((await reply(thirdCommand, worldId, 'reply three', evidenceFor('reply three', `sha256:${'f'.repeat(64)}`))).outcome, 'STALE');
+  assert.equal((await reply(a, thirdCommand, worldId, 'reply three', evidenceFor('reply three', `sha256:${'f'.repeat(64)}`))).outcome, 'STALE');
   await asOwner();
   const [{ replies }] = await rows(`SELECT count(*)::int AS replies FROM public.shared_world_materials WHERE world_id = $1 AND producer_kind = 'QANDEEL'`, [worldId]);
   assert.equal(replies, 1, 'no refused reply left a material behind');
 
   stage = 'reply: a client cannot commit QANDEEL material';
   await actAs('authenticated', a);
-  await rejected(() => reply(thirdCommand, worldId, 'reply three', good), ['42501']);
+  await rejected(() => reply(a, thirdCommand, worldId, 'reply three', good), ['42501']);
   await actAs('anon');
-  await rejected(() => reply(thirdCommand, worldId, 'reply three', good), ['42501']);
+  await rejected(() => reply(a, thirdCommand, worldId, 'reply three', good), ['42501']);
   await asOwner();
   return { replyMaterial: committed.material_id, thirdCommand, firstMaterial };
+}
+
+async function verifyWorkLease({ a, b }, worldId) {
+  stage = 'work lease: one live lease per human command, for the command\'s own human only';
+  await actAs('authenticated', a);
+  const [c1, c2, c3, c4] = [randomUUID(), randomUUID(), randomUUID(), randomUUID()];
+  for (const [command, text] of [[c1, 'lease one'], [c2, 'lease two'], [c3, 'lease three'], [c4, 'lease four']]) {
+    assert.equal((await send(command, worldId, text)).outcome, 'COMMITTED');
+  }
+  await asOwner();
+  const [{ grantsBefore }] = await rows('SELECT count(*)::int AS "grantsBefore" FROM shared_private.shared_qandeel_reply_work_grants WHERE requester_user_id = $1', [a]);
+  await actAs('service_role');
+  const first = await beginWork(c1, worldId, a);
+  assert.equal(first.work_outcome, 'GRANTED');
+  assert.deepEqual(await beginWork(c1, worldId, a), { work_outcome: 'IN_PROGRESS', work_lease_id: null, reply_material_id: null },
+    'one live lease per human command: a second request for it starts no provider work');
+  assert.equal((await beginWork(c1, worldId, b)).work_outcome, 'UNAVAILABLE', 'only the human whose command it answers');
+  assert.equal((await beginWork(randomUUID(), worldId, a)).work_outcome, 'UNAVAILABLE', 'no committed command, no lease');
+
+  stage = 'work lease: the in-flight bound — two live leases per requester, freed by a return';
+  const second = await beginWork(c2, worldId, a);
+  assert.equal(second.work_outcome, 'GRANTED');
+  assert.equal((await beginWork(c3, worldId, a)).work_outcome, 'LIMITED', 'the in-flight bound holds across every World and instance');
+  assert.equal(await endWork(c2, randomUUID()), false, 'only the exact holder returns a lease');
+  assert.equal(await endWork(c2, second.work_lease_id), true);
+  const third = await beginWork(c3, worldId, a);
+  assert.equal(third.work_outcome, 'GRANTED', 'a returned slot is free at once');
+
+  stage = 'work lease: an expired lease frees its slot by itself; a superseded lease commits and returns nothing';
+  await asOwner();
+  await client.query(`UPDATE shared_private.shared_qandeel_reply_work_leases SET acquired_at = CURRENT_TIMESTAMP - interval '200 seconds',
+    expires_at = CURRENT_TIMESTAMP - interval '80 seconds' WHERE human_command_id = $1`, [c1]);
+  await actAs('service_role');
+  const renewed = await beginWork(c1, worldId, a);
+  assert.equal(renewed.work_outcome, 'GRANTED', 'an expired lease frees its slot by itself (crash recovery)');
+  assert.notEqual(renewed.work_lease_id, first.work_lease_id);
+  const evidence = evidenceFor('lease reply', await audienceRef(worldId));
+  await actAs('service_role');
+  assert.equal((await complete(first.work_lease_id, c1, worldId, 'lease reply', evidence)).outcome, 'UNAVAILABLE', 'a superseded lease commits nothing');
+  assert.equal(await endWork(c1, first.work_lease_id), false, 'a superseded holder cannot return the newer lease');
+  assert.equal((await complete(randomUUID(), c1, worldId, 'lease reply', evidence)).outcome, 'UNAVAILABLE', 'no lease, no commit');
+  const done = await complete(renewed.work_lease_id, c1, worldId, 'lease reply', evidence);
+  assert.equal(done.outcome, 'MATERIAL_COMMITTED', 'the current holder commits');
+  assert.deepEqual(await beginWork(c1, worldId, a), { work_outcome: 'ALREADY_COMMITTED', work_lease_id: null, reply_material_id: done.material_id },
+    'a committed reply starts no provider work again');
+  assert.equal(await endWork(c3, third.work_lease_id), true);
+  await asOwner();
+  const [{ live }] = await rows('SELECT count(*)::int AS live FROM shared_private.shared_qandeel_reply_work_leases WHERE requester_user_id = $1', [a]);
+  assert.equal(live, 0, 'completing and returning leave no lease behind');
+  const [{ granted }] = await rows('SELECT count(*)::int AS granted FROM shared_private.shared_qandeel_reply_work_grants WHERE requester_user_id = $1', [a]);
+  assert.equal(granted, grantsBefore + 4, 'every GRANTED lease is charged exactly once; refusals are never charged');
+
+  stage = 'work lease: the work-start budget — the rolling 10-minute and 24-hour windows';
+  await client.query(`INSERT INTO shared_private.shared_qandeel_reply_work_grants (requester_user_id, granted_at)
+    SELECT $1, CURRENT_TIMESTAMP - interval '1 minute' FROM generate_series(1, 40 - $2::int)`, [a, granted]);
+  await actAs('service_role');
+  assert.equal((await beginWork(c4, worldId, a)).work_outcome, 'LIMITED', 'the 10-minute work-start budget is spent');
+  await asOwner();
+  await client.query(`UPDATE shared_private.shared_qandeel_reply_work_grants SET granted_at = CURRENT_TIMESTAMP - interval '11 minutes' WHERE requester_user_id = $1`, [a]);
+  await client.query(`INSERT INTO shared_private.shared_qandeel_reply_work_grants (requester_user_id, granted_at)
+    SELECT $1, CURRENT_TIMESTAMP - interval '1 hour' FROM generate_series(1, 560)`, [a]);
+  await actAs('service_role');
+  assert.equal((await beginWork(c4, worldId, a)).work_outcome, 'LIMITED', 'the 24-hour work-start budget is spent');
+  await asOwner();
+  await client.query(`UPDATE shared_private.shared_qandeel_reply_work_grants SET granted_at = CURRENT_TIMESTAMP - interval '25 hours' WHERE requester_user_id = $1`, [a]);
+  await actAs('service_role');
+  const after = await beginWork(c4, worldId, a);
+  assert.equal(after.work_outcome, 'GRANTED', 'the windows roll: grants older than the longest window no longer count');
+  await asOwner();
+  const [{ pruned }] = await rows(`SELECT count(*)::int AS pruned FROM shared_private.shared_qandeel_reply_work_grants
+    WHERE requester_user_id = $1 AND granted_at <= CURRENT_TIMESTAMP - interval '24 hours'`, [a]);
+  assert.equal(pruned, 0, 'this requester\'s expired grants were pruned (bounded housekeeping)');
+  await actAs('service_role');
+  assert.equal(await endWork(c4, after.work_lease_id), true);
+
+  stage = 'work lease: a closed conversation capability grants no lease';
+  await asOwner();
+  await setGate('SHARED_CONVERSATION', 'EMERGENCY_DISABLED', 'SATISFIED');
+  await actAs('service_role');
+  assert.equal((await beginWork(c4, worldId, a)).work_outcome, 'UNAVAILABLE');
+  await asOwner();
+  await setGate('SHARED_CONVERSATION', 'ENABLED', 'SATISFIED');
+
+  stage = 'work lease: no client starts, ends or reads QANDEEL work';
+  for (const [role, user] of [['authenticated', a], ['anon', null]]) {
+    await actAs(role, user);
+    await rejected(() => beginWork(c4, worldId, a), ['42501']);
+    await rejected(() => endWork(c4, randomUUID()), ['42501']);
+    await rejected(() => rows('SELECT * FROM shared_private.shared_qandeel_reply_work_leases'), ['42501']);
+    await rejected(() => rows('SELECT * FROM shared_private.shared_qandeel_reply_work_grants'), ['42501']);
+  }
+  await actAs('service_role');
+  await rejected(() => rows('SELECT * FROM shared_private.shared_qandeel_reply_work_leases'), ['42501']);
+  await asOwner();
+  // Later stages start from a clean budget for this requester.
+  await client.query('DELETE FROM shared_private.shared_qandeel_reply_work_grants WHERE requester_user_id = $1', [a]);
 }
 
 async function verifyDeletion({ a, b }, worldId, { firstMaterial, secondMaterial, replyMaterial, thirdCommand }) {
@@ -475,31 +607,40 @@ async function verifyDeletion({ a, b }, worldId, { firstMaterial, secondMaterial
   stage = 'deletion: a deleted material cannot become a new source of a reply';
   const evidence = evidenceFor('quoting the deleted words', await audienceRef(worldId));
   await actAs('service_role');
-  assert.equal((await reply(thirdCommand, worldId, 'quoting the deleted words', evidence, [firstMaterial])).outcome, 'STALE');
+  assert.equal((await reply(a, thirdCommand, worldId, 'quoting the deleted words', evidence, [firstMaterial])).outcome, 'STALE');
   await asOwner();
   const [{ replies }] = await rows(`SELECT count(*)::int AS replies FROM public.shared_world_materials WHERE world_id = $1 AND producer_kind = 'QANDEEL'`, [worldId]);
   assert.equal(replies, 1);
 }
 
 async function verifyFormerMemberAndClosure({ a, b }, worldId, { thirdCommand }) {
-  stage = 'former member: evidence produced before a leave is stale after it';
+  stage = 'former member: evidence produced before a leave is stale after it, even under a lease granted before it';
   const beforeLeave = evidenceFor('late reply', await audienceRef(worldId));
+  await actAs('service_role');
+  const held = await beginWork(thirdCommand, worldId, a);
+  assert.equal(held.work_outcome, 'GRANTED');
   await asOwner(a);
   const [left] = await rows('SELECT outcome FROM public.commit_shared_world_standard_voluntary_leave_v1($1, $2, $3)', [randomUUID(), worldId, randomUUID()]);
   assert.equal(left.outcome, 'LEFT');
   await actAs('service_role');
-  assert.equal((await reply(thirdCommand, worldId, 'late reply', beforeLeave)).outcome, 'STALE');
+  assert.equal((await complete(held.work_lease_id, thirdCommand, worldId, 'late reply', beforeLeave)).outcome, 'STALE');
+  await actAs('service_role');
+  assert.equal(await endWork(thirdCommand, held.work_lease_id), false, 'completing returned the lease, whatever the outcome');
+  assert.deepEqual(await beginWork(thirdCommand, worldId, a), { work_outcome: 'UNAVAILABLE', work_lease_id: null, reply_material_id: null },
+    'a requester who left starts no new provider work in the World');
   stage = 'former member: a former member reads nothing and cannot send; the remaining member still can';
   await actAs('authenticated', a);
   assert.deepEqual(await listMaterial(worldId), []);
   assert.equal((await send(randomUUID(), worldId, 'from outside')).outcome, 'UNAVAILABLE');
   await actAs('authenticated', b);
   assert.ok((await listMaterial(worldId)).length > 0);
-  const alone = await send(randomUUID(), worldId, 'still here');
+  const aloneCommand = randomUUID();
+  const alone = await send(aloneCommand, worldId, 'still here');
   assert.equal(alone.outcome, 'COMMITTED');
+  const currentEvidence = evidenceFor('reply to the one who stayed', await audienceRef(worldId));
   await actAs('service_role');
-  const current = await reply(thirdCommand, worldId, 'late reply', evidenceFor('late reply', await audienceRef(worldId)));
-  assert.equal(current.outcome, 'MATERIAL_COMMITTED', 'regenerated under the current audience, the reply commits');
+  const current = await reply(b, aloneCommand, worldId, 'reply to the one who stayed', currentEvidence);
+  assert.equal(current.outcome, 'MATERIAL_COMMITTED', 'generated under the current audience, the remaining member\'s reply commits');
 
   stage = 'closed gate: a committed command still replays; new sends and replies are refused; deletion is untouched';
   await asOwner();
@@ -511,7 +652,7 @@ async function verifyFormerMemberAndClosure({ a, b }, worldId, { thirdCommand })
   await actAs('authenticated', b);
   assert.deepEqual(await deleteOwn(randomUUID(), worldId, alone.material_id), { outcome: 'DELETED' });
   await actAs('service_role');
-  assert.equal((await reply(randomUUID(), worldId, 'x', evidenceFor('x', await audienceRef(worldId)))).outcome, 'UNAVAILABLE');
+  assert.equal((await reply(b, randomUUID(), worldId, 'x', evidenceFor('x', await audienceRef(worldId)))).outcome, 'UNAVAILABLE');
   await asOwner();
   await setGate('SHARED_CONVERSATION', 'ENABLED', 'SATISFIED');
 
@@ -600,11 +741,11 @@ async function verifyConcurrency() {
     const [{ pid: pidTwo }] = await rows('SELECT pg_backend_pid() AS pid', [], two);
     await one.query('BEGIN');
     await actAs('service_role', null, one);
-    const firstReply = await reply(command, worldId, 'reply one', evidenceA, [], [], one);
+    const firstReply = await reply(target, command, worldId, 'reply one', evidenceA, [], [], one);
     assert.equal(firstReply.outcome, 'MATERIAL_COMMITTED');
     await two.query('BEGIN');
     await actAs('service_role', null, two);
-    const secondReply = reply(command, worldId, 'reply two', evidenceB, [], [], two);
+    const secondReply = reply(target, command, worldId, 'reply two', evidenceB, [], [], two);
     await waitUntilBlocked(pidTwo);
     await one.query('COMMIT');
     const second = await secondReply;
@@ -612,6 +753,27 @@ async function verifyConcurrency() {
     await two.query('COMMIT');
     const [{ replies }] = await rows(`SELECT count(*)::int AS replies FROM public.shared_world_materials WHERE world_id = $1 AND producer_kind = 'QANDEEL'`, [worldId]);
     assert.equal(replies, 1);
+
+    stage = 'concurrency: concurrent begins across connections grant one lease — the second waits on the requester lock and starts nothing';
+    const leaseCommand = randomUUID();
+    await one.query('BEGIN');
+    await actAs('authenticated', target, one);
+    assert.equal((await send(leaseCommand, worldId, 'asked from two devices', one)).outcome, 'COMMITTED');
+    await one.query('COMMIT');
+    await one.query('BEGIN');
+    await actAs('service_role', null, one);
+    const won = await beginWork(leaseCommand, worldId, target, one);
+    assert.equal(won.work_outcome, 'GRANTED');
+    await two.query('BEGIN');
+    await actAs('service_role', null, two);
+    const racing = beginWork(leaseCommand, worldId, target, two);
+    await waitUntilBlocked(pidTwo);
+    await one.query('COMMIT');
+    assert.deepEqual(await racing, { work_outcome: 'IN_PROGRESS', work_lease_id: null, reply_material_id: null });
+    await two.query('COMMIT');
+    await client.query('RESET ROLE');
+    const [{ leases }] = await rows('SELECT count(*)::int AS leases FROM shared_private.shared_qandeel_reply_work_leases WHERE human_command_id = $1', [leaseCommand]);
+    assert.equal(leases, 1, 'one live lease, whichever instance asked');
   } catch (error) {
     failed = true;
     throw error;
@@ -653,7 +815,9 @@ async function verifyConcurrency() {
     const [{ residue }] = await rows(`SELECT (SELECT count(*) FROM public.users WHERE id = ANY($1::uuid[]))
       + (SELECT count(*) FROM public.shared_world_membership_episodes WHERE user_id = ANY($1::uuid[]))
       + (SELECT count(*) FROM public.shared_worlds WHERE id = ANY($2::uuid[]))
-      + (SELECT count(*) FROM public.shared_world_materials WHERE world_id = ANY($2::uuid[])) AS residue`, [humans, worldIds]);
+      + (SELECT count(*) FROM public.shared_world_materials WHERE world_id = ANY($2::uuid[]))
+      + (SELECT count(*) FROM shared_private.shared_qandeel_reply_work_leases WHERE requester_user_id = ANY($1::uuid[]))
+      + (SELECT count(*) FROM shared_private.shared_qandeel_reply_work_grants WHERE requester_user_id = ANY($1::uuid[])) AS residue`, [humans, worldIds]);
     assert.equal(Number(residue), 0, 'the committed fixtures are gone');
     const [{ gateRows }] = await rows('SELECT count(*)::int AS "gateRows" FROM shared_private.shared_launch_capability_states');
     assert.equal(gateRows, priorGateRows, 'the gate is restored');
@@ -679,13 +843,15 @@ async function main() {
       const sent = await verifyHumanText(humans, worldId, otherWorldId);
       await verifyRead(humans, worldId, otherWorldId, sent);
       const replied = await verifyQandeelReply(humans, worldId, otherWorldId, sent);
+      // In the other World, between its own two members, so the main World's reply counts stay exact.
+      await verifyWorkLease({ a: humans.c, b: humans.d }, otherWorldId);
       await verifyDeletion(humans, worldId, { ...sent, ...replied });
       await verifyFormerMemberAndClosure(humans, worldId, replied);
     } finally {
       await client.query('ROLLBACK');
     }
     await verifyConcurrency();
-    console.log('Verified migration 0139: server-owned boundary, fail-closed conversation gate, idempotent human text, Product-safe read, one QANDEEL reply per human command with re-checked evidence, owner deletion, former membership, closure, concurrency.');
+    console.log('Verified migration 0139: server-owned boundary, fail-closed conversation gate, idempotent human text, Product-safe read, one QANDEEL reply per human command with re-checked evidence under a durable work lease (one per command, in-flight bound, work-start budget, expiry), owner deletion, former membership, closure, concurrency.');
   } finally {
     await client.end();
   }

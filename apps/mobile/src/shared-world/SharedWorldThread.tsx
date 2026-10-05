@@ -141,6 +141,14 @@ export function SharedThread({ controller, language, palette }: {
 
   return (
     <View testID="qandeel-shared-thread" style={{ paddingTop: 8 }}>
+      {thread.hasOlder ? (
+        // Older history is read one bounded page at a time, and only when the reader asks for it.
+        <Control palette={palette} language={language} accessibilityLabel={copy.olderMessages} accessibilityState={{ busy: thread.loadingOlder, disabled: thread.loadingOlder }}
+          onPress={() => controller.loadOlder()} testID="qandeel-shared-older"
+          style={{ alignSelf: 'center', minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center', opacity: thread.loadingOlder ? BUSY_OPACITY : 1 }}>
+          <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.olderMessages}</Text>
+        </Control>
+      ) : null}
       {thread.materials.map(row)}
       {thread.sending !== null ? (
         <Text testID="qandeel-shared-waiting" accessibilityLiveRegion="polite"

@@ -17,7 +17,10 @@ import { SharedWorldService } from './shared-world.service';
  *
  * S4-02 — the Shared conversation over migration 0139:
  *
- *   GET  /shared/worlds/:worldId/materials                     — the entry verdict, then the newest visible material
+ *   GET  /shared/worlds/:worldId/materials                     — the entry verdict, then the newest page of visible material
+ *   GET  /shared/worlds/:worldId/materials/before/:materialId/:establishedAt
+ *                                                              — the entry verdict, then the one page strictly older than
+ *                                                                the oldest material the reader holds
  *   POST /shared/worlds/:worldId/messages                      — { commandId, content } → the human's words, then
  *                                                                QANDEEL's one reply as a separate outcome
  *   POST /shared/worlds/:worldId/materials/:materialId/delete  — { commandId } → the owner's own words only
@@ -74,6 +77,11 @@ export class SharedWorldController {
   @Get('worlds/:worldId/materials')
   materials(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string) {
     return this.conversation.materials(request.authenticatedUser.accessToken, worldId);
+  }
+
+  @Get('worlds/:worldId/materials/before/:materialId/:establishedAt')
+  olderMaterials(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('materialId') materialId: string, @Param('establishedAt') establishedAt: string) {
+    return this.conversation.olderMaterials(request.authenticatedUser.accessToken, worldId, materialId, establishedAt);
   }
 
   @Post('worlds/:worldId/messages')

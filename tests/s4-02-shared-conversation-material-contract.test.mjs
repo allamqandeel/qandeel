@@ -38,8 +38,15 @@ test('2 — the human\'s commands are 0139\'s owner wrappers on the caller\'s ow
   assert.doesNotMatch(repository, /ServiceRole|service_role|p_user_id|p_author|p_audience|p_material_kind|p_viewer|p_member/u);
   const controller = code(`${API}/shared-world.controller.ts`);
   assert.doesNotMatch(controller, /@Param\('(?:userId|authorId|memberId|audience|viewerId)'\)|@Query\(/u);
+  // Older history: one route whose only parameters are the World and the keyset cursor, validated exactly by the service.
+  assert.match(controller, /@Get\('worlds\/:worldId\/materials\/before\/:materialId\/:establishedAt'\)/u);
+  const conversationService = code(`${API}/shared-world-conversation.service.ts`);
+  assert.match(conversationService, /if \(!UUID\.test\(materialId\) \|\| !INSTANT\.test\(establishedAt\)/u, 'a malformed cursor is refused');
+  assert.match(conversationService, /this\.conversation\.material\(token, worldId, before, SHARED_MATERIAL_PAGE \+ 1\)/u, 'one page and one row: never unbounded history');
+  assert.match(repository, /p_limit: Math\.min\(Math\.max\(limit, 1\), SHARED_MATERIAL_PAGE \+ 1\)/u);
   const census = read('apps/api/src/http-security/route-rate-limit.census.ts');
   assert.match(census, /'GET \/shared\/worlds\/:worldId\/materials': 'AUTHENTICATED'/u);
+  assert.match(census, /'GET \/shared\/worlds\/:worldId\/materials\/before\/:materialId\/:establishedAt': 'AUTHENTICATED'/u);
   assert.match(census, /'POST \/shared\/worlds\/:worldId\/messages': 'SECURITY_SENSITIVE'/u);
   assert.match(census, /'POST \/shared\/worlds\/:worldId\/materials\/:materialId\/delete': 'AUTHENTICATED'/u);
   for (const file of readdirSync(new URL(`${API}/`, root)).filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts'))) {
@@ -54,12 +61,21 @@ test('3 — QANDEEL\'s reply is the server\'s act over the frozen chain: one com
   assert.match(service, /bindSharedQandeelMaterialCommit\(\{/u, 'the frozen commit binder assembles the commit inputs');
   assert.match(service, /materialKind: 'QANDEEL_OUTPUT'/u);
   assert.doesNotMatch(service, /QANDEEL_ANALYSIS/u);
-  assert.match(service, /'commit_shared_world_qandeel_reply_v1'/u);
+  assert.match(service, /'begin_shared_qandeel_reply_work_v1'/u);
+  assert.match(service, /'complete_shared_world_qandeel_reply_v1'/u);
+  assert.match(service, /'end_shared_qandeel_reply_work_v1'/u);
+  assert.doesNotMatch(service, /'commit_shared_world_qandeel_reply_v1'/u);
   assert.match(service, /'resolve_shared_world_material_v1'/u, 'the model context is what every recipient may see, through the frozen resolver');
-  const order = ['this.effectiveContext.resolve(', 'this.generator.generate(', 'this.readiness.evaluate(', 'this.revalidator.revalidate(', 'bindSharedQandeelMaterialCommit(', 'this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_COMMIT_RPC'];
+  const order = ['this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_WORK_BEGIN_RPC', 'this.effectiveContext.resolve(', 'this.generator.generate(', 'this.readiness.evaluate(',
+    'this.revalidator.revalidate(', 'bindSharedQandeelMaterialCommit(', 'this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_COMMIT_RPC'];
   const positions = order.map((step) => service.indexOf(step));
   assert.ok(positions.every((p) => p > 0), 'every frozen step is present');
-  assert.deepEqual([...positions].sort((a, b) => a - b), positions, 'the frozen order: context, generation, readiness, revalidation, binding, commit');
+  assert.deepEqual([...positions].sort((a, b) => a - b), positions, 'the order: the work lease, then context, generation, readiness, revalidation, binding, commit');
+  // The provider-work bound is the database's (PROD-SEC-02 principle): no lease, no provider work; the lease is always returned.
+  assert.match(service, /if \(work\.work_outcome !== 'GRANTED'/u);
+  assert.match(service, /\} finally \{\n[^}]*this\.server\.rpc<unknown>\(SHARED_QANDEEL_REPLY_WORK_END_RPC/u);
+  assert.match(service, /p_lease_id: leaseId,/u, 'the commit is made under the granted lease');
+  assert.doesNotMatch(service, /new Mutex|Semaphore|inFlight = new (?:Set|Map)/u, 'no process-local mutex is the authority');
   const providers = code(`${CW}/shared-qandeel-reply.providers.ts`);
   assert.match(providers, /provide: SHARED_SOURCE_DISCLOSURE_DETECTOR, useClass: UnimplementedSourceDisclosureDetector/u);
   assert.match(providers, /provide: SHARED_PRIVATE_SOURCE_STATE_RESOLVER, useClass: UnimplementedPrivateSourceState/u);
@@ -105,8 +121,10 @@ test('6 — the S4-02 words live in one copy module under one gate; approved row
   assert.match(copy, /export const SHARED_CONVERSATION_COPY_GATE = \{/u);
   assert.match(copy, /conversationCopy\(language\); \/\/ REUSED — W1A-01/u);
   assert.match(copy, /sharedCopy\(language\); \/\/ REUSED — S4-01/u);
-  const proposed = [...copy.matchAll(/^\s+(\w+): ['"][^\n]*\/\/ (PROPOSED|APPROVED) — S4-02 Product Copy Gate/gmu)].map((m) => m[1]);
-  assert.equal(proposed.length, 14, 'seven S4-02 rows in each language, each under the gate');
+  const approved = [...copy.matchAll(/^\s+(\w+): ['"][^\n]*\/\/ APPROVED — S4-02 Product Copy Gate/gmu)].map((m) => m[1]);
+  assert.equal(approved.length, 16, 'eight S4-02 rows in each language, each APPROVED under the gate');
+  assert.doesNotMatch(copy, /PROPOSED/u, 'the S4-02 Product Copy Gate is CLOSED: no PROPOSED row remains');
+  assert.match(copy, /status: 'S4-02 PRODUCT COPY GATE — CLOSED/u);
 });
 
 test('7 — the device proof adds exactly its two S4-02 legs to the existing S4 suite, deterministic and validation-only', () => {
@@ -129,6 +147,10 @@ test('8 — the implementation record exists and states its lifecycle without cl
   assert.ok(existsSync(new URL(RECORD, root)));
   const record = read(RECORD);
   assert.match(record, /^# QANDEEL — S4-02 Shared Conversation & Material Production Integration — Implementation Record v1/u);
-  assert.match(record, /Orphan gaps = 0/u);
+  assert.match(record, /^\*\*Status:\*\* \*\*`S4-02 IMPLEMENTED/mu);
+  assert.doesNotMatch(record, /^\*\*Status:\*\*[^\n]*MERGED \/ CLOSED/mu, 'the record never claims a merge it has not had');
+  assert.match(record, /\*\*Orphan gaps:\*\* none silently dropped/u);
+  // The one S4-02-owned obligation it could not satisfy is reported with its census, never silently deferred.
+  assert.match(record, /### 7\.1 Personal Standing Context — census and blocking gap \(reported, not deferred\)/u);
   assert.match(record, /QAN-BL-VOICE-01/u);
 });

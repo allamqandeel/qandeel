@@ -18,7 +18,7 @@
  */
 import type {
   ForegroundSignal,
-  SharedAcceptResult, SharedDeleteResult, SharedEntryResult, SharedInviteResult, SharedMaterial, SharedMaterialsResult, SharedRoot,
+  SharedAcceptResult, SharedDeleteResult, SharedEntryResult, SharedInviteResult, SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedRoot,
   SharedRootResult, SharedSendResult, SharedWorldShell,
 } from '../runtime-entry';
 
@@ -28,7 +28,7 @@ export interface SharedWorldTransport {
   accept(invitationId: string, commandId: string): Promise<SharedAcceptResult>;
   decline(invitationId: string, commandId: string): Promise<{ readonly kind: 'DECLINED' | 'NOT_DECLINABLE' | 'UNAVAILABLE' }>;
   entry(worldId: string): Promise<SharedEntryResult>;
-  materials(worldId: string): Promise<SharedMaterialsResult>;
+  materials(worldId: string, before?: SharedMaterialCursor | null): Promise<SharedMaterialsResult>;
   send(worldId: string, commandId: string, content: string): Promise<SharedSendResult>;
   deleteMaterial(worldId: string, materialId: string, commandId: string): Promise<SharedDeleteResult>;
 }
@@ -43,8 +43,12 @@ export interface SharedThreadState {
   /** The World this thread belongs to; null when no World is open. */
   readonly worldId: string | null;
   readonly status: 'NONE' | 'LOADING' | 'READY' | 'UNAVAILABLE';
-  /** Oldest first, as the server returned them. */
+  /** Oldest first, as the server returned them: the newest page and any older pages the reader asked for. */
   readonly materials: readonly SharedMaterial[];
+  /** Whether visible material older than the oldest held one exists. */
+  readonly hasOlder: boolean;
+  /** An older page is being read. */
+  readonly loadingOlder: boolean;
   /** The server's hint that ordinary sending is open; the composer is drawn only then. Never an authority by itself. */
   readonly conversation: boolean;
   /** A submission is in flight: its words, so the composer can keep them until the server confirms. */
@@ -78,6 +82,8 @@ export interface SharedWorldController {
   dismissNotice(): void;
   /** S4-02: re-read the open World's conversation from the server. */
   refreshThread(): void;
+  /** S4-02: read one bounded page older than the oldest held material, when there is one and none is in flight. */
+  loadOlder(): void;
   /** S4-02: send the reader's words into the open World. Resolves true once the server confirmed they are committed. */
   send(text: string): Promise<boolean>;
   /** S4-02: delete the reader's own material in the open World. */
@@ -104,8 +110,20 @@ export function mintSharedCommandId(): string {
 export const SHARED_MESSAGE_MAX_LENGTH = 20000;
 
 const NO_THREAD: SharedThreadState = Object.freeze<SharedThreadState>({
-  worldId: null, status: 'NONE', materials: [], conversation: false, sending: null, deleting: null, notice: null,
+  worldId: null, status: 'NONE', materials: [], hasOlder: false, loadingOlder: false, conversation: false, sending: null, deleting: null, notice: null,
 });
+
+/**
+ * A fresh newest page, with the older pages the reader already read kept beneath it. They are kept only where the
+ * page joins them — its oldest material is one the reader holds — so nothing is ever stitched across a gap; otherwise
+ * the newest page alone is the thread, and older history is read again on request.
+ */
+function joinNewest(held: readonly SharedMaterial[], heldHasOlder: boolean, page: readonly SharedMaterial[], pageHasOlder: boolean): Pick<SharedThreadState, 'materials' | 'hasOlder'> {
+  if (!pageHasOlder || page.length === 0) return { materials: page, hasOlder: pageHasOlder };
+  const join = held.findIndex((m) => m.materialId === page[0].materialId);
+  if (join <= 0) return { materials: page, hasOlder: pageHasOlder };
+  return { materials: [...held.slice(0, join), ...page], hasOlder: heldHasOlder };
+}
 
 const INITIAL: SharedAreaState = Object.freeze<SharedAreaState>({
   root: { status: 'IDLE', data: null },
@@ -125,6 +143,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
   let rootRead = 0;
   let entryRead = 0;
   let threadRead = 0;
+  let olderRead = 0;
   // One command per act, reused by a retry of the same act.
   const acceptCommands = new Map<string, string>();
   const declineCommands = new Map<string, string>();
@@ -161,25 +180,58 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     const result = await transport.materials(worldId);
     if (ticket !== threadRead || state.thread.worldId !== worldId) return;
     if (result.kind === 'READ') {
+      olderRead += 1;
       publishThread(worldId, {
-        status: 'READY', materials: result.materials, conversation: result.conversation,
+        status: 'READY', conversation: result.conversation, loadingOlder: false,
+        ...joinNewest(state.thread.materials, state.thread.hasOlder, result.materials, result.hasOlder),
         notice: state.thread.notice === 'LOAD_FAILED' ? null : state.thread.notice,
       });
       return;
     }
     if (result.kind === 'DENIED') {
-      // Authority was lost since entry: nothing of the World stays on screen.
-      entryRead += 1;
-      sendCommand = null;
-      publish({ ...state, entry: { status: 'DENIED', world: null }, thread: { ...NO_THREAD, worldId } });
+      denied(worldId);
       return;
     }
     publishThread(worldId, { status: state.thread.status === 'READY' ? 'READY' : 'UNAVAILABLE', notice: 'LOAD_FAILED' });
   }
 
+  /** Authority was lost since entry: nothing of the World stays on screen. */
+  function denied(worldId: string): void {
+    entryRead += 1;
+    olderRead += 1;
+    sendCommand = null;
+    publish({ ...state, entry: { status: 'DENIED', world: null }, thread: { ...NO_THREAD, worldId } });
+  }
+
+  /** One page strictly older than the oldest held material, read only on the reader's request. */
+  async function readOlder(worldId: string): Promise<void> {
+    const oldest = state.thread.materials[0];
+    if (oldest === undefined || !state.thread.hasOlder || state.thread.loadingOlder) return;
+    const ticket = ++olderRead;
+    publishThread(worldId, { loadingOlder: true });
+    const result = await transport.materials(worldId, { materialId: oldest.materialId, establishedAt: oldest.establishedAt });
+    // A newer read, another World or a lost authority since: this page belongs to nothing on screen.
+    if (ticket !== olderRead || state.thread.worldId !== worldId) return;
+    if (result.kind === 'DENIED') {
+      denied(worldId);
+      return;
+    }
+    if (result.kind !== 'READ' || state.thread.materials[0]?.materialId !== oldest.materialId) {
+      // Nothing to say: the held conversation is still true, and asking again reads it again.
+      publishThread(worldId, { loadingOlder: false });
+      return;
+    }
+    const held = new Set(state.thread.materials.map((m) => m.materialId));
+    publishThread(worldId, {
+      loadingOlder: false, hasOlder: result.hasOlder, conversation: result.conversation,
+      materials: [...result.materials.filter((m) => !held.has(m.materialId)), ...state.thread.materials],
+    });
+  }
+
   async function resolve(worldId: string): Promise<void> {
     const ticket = ++entryRead;
     threadRead += 1;
+    olderRead += 1;
     publish({ ...state, place: { kind: 'WORLD', worldId }, entry: { status: 'RESOLVING', world: null }, thread: { ...NO_THREAD, worldId } });
     const result = await transport.entry(worldId);
     if (ticket !== entryRead || state.place.kind !== 'WORLD' || state.place.worldId !== worldId) return;
@@ -209,6 +261,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     toRoot() {
       entryRead += 1;
       threadRead += 1;
+      olderRead += 1;
       sendCommand = null;
       publish({ ...state, place: { kind: 'ROOT' }, entry: { status: 'NONE', world: null }, thread: NO_THREAD });
       void readRoot();
@@ -256,6 +309,10 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       const worldId = openWorldId();
       if (worldId !== null) void readThread(worldId);
     },
+    loadOlder() {
+      const worldId = openWorldId();
+      if (worldId !== null && state.thread.status === 'READY') void readOlder(worldId);
+    },
     async send(text) {
       const worldId = openWorldId();
       if (worldId === null || state.thread.sending !== null || !state.thread.conversation) return false;
@@ -277,7 +334,8 @@ export function createSharedWorldController(options: SharedWorldControllerOption
         await readThread(worldId);
         return false;
       }
-      publishThread(worldId, { sending: null, notice: result.qandeel === 'COMMITTED' ? null : 'REPLY_FAILED' });
+      // PENDING: an earlier attempt of this same message is still producing the reply — not a failure; it is read next.
+      publishThread(worldId, { sending: null, notice: result.qandeel === 'UNAVAILABLE' ? 'REPLY_FAILED' : null });
       await readThread(worldId);
       return true;
     },

@@ -44,6 +44,12 @@ export const SHARED_QANDEEL_REPLY_GENERATOR = 'SHARED_QANDEEL_REPLY_GENERATOR' a
 /** Why no QANDEEL reply was committed. Bounded internal classes; never user-facing text, never a participant or source. */
 export const SHARED_QANDEEL_REPLY_REFUSALS = [
   'MALFORMED_REQUEST',
+  /** Another request is generating the reply to this same command right now; its reply will appear on its own. */
+  'WORK_IN_PROGRESS',
+  /** The requesting human is at the in-flight bound or has spent the rolling work-start budget. */
+  'WORK_LIMITED',
+  /** No lease: not this human's command in this World, membership ended, or the conversation capability is closed. */
+  'WORK_UNAVAILABLE',
   'CONTEXT_NOT_READY',
   'HISTORY_UNRESOLVED',
   'GENERATION_UNAVAILABLE',

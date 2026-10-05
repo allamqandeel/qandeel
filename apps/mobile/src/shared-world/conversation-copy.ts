@@ -7,8 +7,8 @@
  *   - REUSED: an already approved row of another surface, imported rather than copied, so it can never drift — the W1A-01
  *     Conversation rows (composer, Send, the read-aloud forms, waiting / unconfirmed / refused / reply-failed / history
  *     unavailable) and the S4-01 Shared rows (Cancel, Try again, the neutral "that didn't work", "Someone");
- *   - PROPOSED — S4-02 Product Copy Gate: the rows S4-02 genuinely needs and no approved surface has. They wait for the
- *     Product Owner's decision before the first push.
+ *   - APPROVED — S4-02 Product Copy Gate (CLOSED by the Product Owner, 2026-10-05): the rows S4-02 genuinely needs and
+ *     no approved surface had, in the Product Owner's final Arabic and English.
  *
  * The surfaces write no word of their own; a Name is the person's own, never copy.
  */
@@ -17,11 +17,11 @@ import type { ChromeLanguage } from '../orientation-chrome';
 import { sharedCopy } from './copy';
 
 export const SHARED_CONVERSATION_COPY_GATE = {
-  status: 'S4-02 PRODUCT COPY GATE — OPEN (rows PROPOSED for the Product Owner)',
+  status: 'S4-02 PRODUCT COPY GATE — CLOSED (every row APPROVED by the Product Owner, 2026-10-05)',
   canon: ['qandeel'],
   reused: ['composerPlaceholder', 'send', 'selfTurnName', 'qandeelTurnName', 'waitingForReply', 'sendUnconfirmed', 'sendRefused',
     'replyFailed', 'loadFailed', 'retry', 'cancel', 'deleteFailed', 'someone'],
-  proposed: ['composerName', 'delete', 'deleteExplanation', 'deleteConfirm', 'deleted', 'refresh', 'conversationNotOpen'],
+  approved: ['composerName', 'delete', 'deleteExplanation', 'deleteConfirm', 'deleted', 'refresh', 'conversationNotOpen', 'olderMessages'],
 } as const;
 
 export interface SharedConversationCopy {
@@ -46,33 +46,36 @@ export interface SharedConversationCopy {
   readonly deleteFailed: string;
   readonly refresh: string;
   readonly conversationNotOpen: string;
+  readonly olderMessages: string;
   readonly someone: string;
 }
 
-const AR_PROPOSED = {
-  composerName: 'رسالتك في هذا العالم', // PROPOSED — S4-02 Product Copy Gate — the composer's accessible name
-  delete: 'حذف', // PROPOSED — S4-02 Product Copy Gate — the action on the reader's own words
-  deleteExplanation: 'سيختفي هذا الكلام من العالم المشترك عند الجميع، ولن يستخدمه قنديل بعد ذلك.', // PROPOSED — S4-02 Product Copy Gate — states what deletion truthfully does (CW2-03 §37)
-  deleteConfirm: 'حذف عند الجميع', // PROPOSED — S4-02 Product Copy Gate
-  deleted: 'تم الحذف.', // PROPOSED — S4-02 Product Copy Gate
-  refresh: 'تحديث', // PROPOSED — S4-02 Product Copy Gate — the explicit re-read of the World's conversation
-  conversationNotOpen: 'المحادثة في العالم المشترك غير متاحة بعد.', // PROPOSED — S4-02 Product Copy Gate — while the conversation capability is closed
+const AR_APPROVED = {
+  composerName: 'رسالتك في هذا العالم المشترك', // APPROVED — S4-02 Product Copy Gate — the input's accessible name
+  delete: 'حذف', // APPROVED — S4-02 Product Copy Gate — the action on the reader's own words
+  deleteExplanation: 'سيختفي هذا الكلام من هذا العالم المشترك عند الجميع، ولن يستخدمه قنديل بعد ذلك.', // APPROVED — S4-02 Product Copy Gate — what deletion truthfully does (CW2-03 §37)
+  deleteConfirm: 'حذف عند الجميع', // APPROVED — S4-02 Product Copy Gate
+  deleted: 'تم الحذف.', // APPROVED — S4-02 Product Copy Gate
+  refresh: 'تحديث', // APPROVED — S4-02 Product Copy Gate — the explicit re-read of the World's conversation
+  conversationNotOpen: 'المحادثة غير متاحة الآن في هذا العالم المشترك.', // APPROVED — S4-02 Product Copy Gate — while the conversation capability is closed
+  olderMessages: 'عرض رسائل أقدم', // APPROVED — S4-02 Product Copy Gate — read one bounded page of older history
 } as const;
 
-const EN_PROPOSED = {
-  composerName: 'Your message in this world', // PROPOSED — S4-02 Product Copy Gate — the composer's accessible name
-  delete: 'Delete', // PROPOSED — S4-02 Product Copy Gate — the action on the reader's own words
-  deleteExplanation: "This will disappear from this Shared World for everyone, and QANDEEL won't use it again.", // PROPOSED — S4-02 Product Copy Gate — states what deletion truthfully does (CW2-03 §37)
-  deleteConfirm: 'Delete for everyone', // PROPOSED — S4-02 Product Copy Gate
-  deleted: 'Deleted.', // PROPOSED — S4-02 Product Copy Gate
-  refresh: 'Refresh', // PROPOSED — S4-02 Product Copy Gate — the explicit re-read of the World's conversation
-  conversationNotOpen: "Conversation in Shared World isn't available yet.", // PROPOSED — S4-02 Product Copy Gate — while the conversation capability is closed
+const EN_APPROVED = {
+  composerName: 'Your message in this Shared World', // APPROVED — S4-02 Product Copy Gate — the input's accessible name
+  delete: 'Delete', // APPROVED — S4-02 Product Copy Gate — the action on the reader's own words
+  deleteExplanation: "This message will disappear from this Shared World for everyone, and QANDEEL won't use it again.", // APPROVED — S4-02 Product Copy Gate — what deletion truthfully does (CW2-03 §37)
+  deleteConfirm: 'Delete for everyone', // APPROVED — S4-02 Product Copy Gate
+  deleted: 'Deleted.', // APPROVED — S4-02 Product Copy Gate
+  refresh: 'Refresh', // APPROVED — S4-02 Product Copy Gate — the explicit re-read of the World's conversation
+  conversationNotOpen: "Conversation isn't available in this Shared World right now.", // APPROVED — S4-02 Product Copy Gate — while the conversation capability is closed
+  olderMessages: 'Show older messages', // APPROVED — S4-02 Product Copy Gate — read one bounded page of older history
 } as const;
 
 function build(language: ChromeLanguage): SharedConversationCopy {
   const conversation = conversationCopy(language); // REUSED — W1A-01 (approved in the W1A-01 gate)
   const shared = sharedCopy(language); // REUSED — S4-01 (approved in the S4-01 gate)
-  const proposed = language === 'ar' ? AR_PROPOSED : EN_PROPOSED;
+  const approved = language === 'ar' ? AR_APPROVED : EN_APPROVED;
   return Object.freeze({
     qandeel: shared.personalWorld, // CANON — I-08A4 §8 / §9
     composerPlaceholder: conversation.composerPlaceholder, // REUSED — W1A-01
@@ -89,7 +92,7 @@ function build(language: ChromeLanguage): SharedConversationCopy {
     cancel: shared.cancel, // REUSED — S4-01
     deleteFailed: shared.actionUnavailable, // REUSED — S4-01
     someone: shared.someone, // REUSED — S4-01
-    ...proposed,
+    ...approved,
   });
 }
 

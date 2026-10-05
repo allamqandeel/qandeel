@@ -53,6 +53,16 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const threadScroll = useRef<ScrollView | null>(null);
+  // The World opens at its newest words and follows new ones — but an older page the reader asked for grows the thread
+  // ABOVE them, and must never pull the reader away from what they asked to read.
+  const heldEnds = useRef<{ readonly oldest: string | null; readonly newest: string | null }>({ oldest: null, newest: null });
+  const followNewest = () => {
+    const materials = state.thread.materials;
+    const ends = { oldest: materials[0]?.materialId ?? null, newest: materials[materials.length - 1]?.materialId ?? null };
+    const olderPage = heldEnds.current.oldest !== null && ends.oldest !== heldEnds.current.oldest && ends.newest === heldEnds.current.newest;
+    heldEnds.current = ends;
+    if (!olderPage) threadScroll.current?.scrollToEnd({ animated: false });
+  };
 
   // Entering the area re-reads the root and re-resolves the World the reader left it on — authority before restore.
   useEffect(() => {
@@ -107,7 +117,7 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
       return frame(
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           {header(worldLabel(copy, world.members), true)}
-          <ScrollView ref={threadScroll} keyboardShouldPersistTaps="handled" onContentSizeChange={() => threadScroll.current?.scrollToEnd({ animated: false })}
+          <ScrollView ref={threadScroll} keyboardShouldPersistTaps="handled" onContentSizeChange={followNewest}
             contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>
             {/* QANDEEL's short, neutral welcome (S4-01 §1.6), then the World's real conversation (S4-02). */}
             <View testID="qandeel-shared-welcome" accessible accessibilityLabel={`${copy.personalWorld}: ${copy.welcome}`} accessibilityLanguage={language}

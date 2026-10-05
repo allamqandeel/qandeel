@@ -97,6 +97,7 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // lease bounds Shared generation (0131 is keyed on Personal turns), so the send is held to the strict class; reading and
   // the owner's own deletion are ordinary authenticated acts.
   'GET /shared/worlds/:worldId/materials': 'AUTHENTICATED',
+  'GET /shared/worlds/:worldId/materials/before/:materialId/:establishedAt': 'AUTHENTICATED',
   'POST /shared/worlds/:worldId/messages': 'SECURITY_SENSITIVE',
   'POST /shared/worlds/:worldId/materials/:materialId/delete': 'AUTHENTICATED',
 });

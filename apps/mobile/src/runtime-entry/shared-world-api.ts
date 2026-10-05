@@ -10,7 +10,8 @@
  *
  * S4-02 — the Shared conversation:
  *
- *   GET  /shared/worlds/:worldId/materials                     — the entry verdict, then the newest visible material
+ *   GET  /shared/worlds/:worldId/materials[/before/:materialId/:establishedAt] — the entry verdict, then one bounded
+ *                                                                page: the newest, or the page older than the oldest held
  *   POST /shared/worlds/:worldId/messages                      — { commandId, content } → the words, then QANDEEL's reply
  *   POST /shared/worlds/:worldId/materials/:materialId/delete  — { commandId } → the reader's own words only
  *
@@ -58,14 +59,20 @@ export interface SharedMaterial {
   readonly establishedAt: string;
   readonly canDelete: boolean;
 }
+/** The oldest material a reader holds: the next page read is strictly older than it. */
+export interface SharedMaterialCursor { readonly materialId: string; readonly establishedAt: string }
 export type SharedMaterialsResult =
-  | { readonly kind: 'READ'; readonly conversation: boolean; readonly materials: readonly SharedMaterial[] }
+  /** One bounded page, oldest first; `hasOlder` says whether visible material older than it exists. */
+  | { readonly kind: 'READ'; readonly conversation: boolean; readonly materials: readonly SharedMaterial[]; readonly hasOlder: boolean }
   /** Not this reader's World now — one neutral answer that reveals nothing. */
   | { readonly kind: 'DENIED' }
   | { readonly kind: 'UNAVAILABLE' };
 export type SharedSendResult =
-  /** The words are committed; QANDEEL's reply is its own outcome. */
-  | { readonly kind: 'COMMITTED'; readonly materialId: string; readonly qandeel: 'COMMITTED' | 'UNAVAILABLE' }
+  /**
+   * The words are committed; QANDEEL's reply is its own outcome: COMMITTED, PENDING (another request for this same
+   * message is still producing it, so it appears on the next read) or UNAVAILABLE (no reply was committed).
+   */
+  | { readonly kind: 'COMMITTED'; readonly materialId: string; readonly qandeel: 'COMMITTED' | 'PENDING' | 'UNAVAILABLE' }
   /** The server definitively refused: conversation closed, or not a current member. Nothing was committed. */
   | { readonly kind: 'NOT_AVAILABLE' }
   /** No answer: the outcome is unknown, so the same command is retried. */
@@ -76,7 +83,8 @@ const MATERIAL_KEYS = ['materialId', 'producer', 'authorName', 'text', 'establis
 export function decodeSharedMaterials(body: unknown): SharedMaterialsResult {
   if (!isRecord(body)) return { kind: 'UNAVAILABLE' };
   if (hasExactly(body, ['outcome']) && body.outcome === 'UNAVAILABLE') return { kind: 'DENIED' };
-  if (body.outcome !== 'ALLOW' || !hasExactly(body, ['outcome', 'conversation', 'materials']) || typeof body.conversation !== 'boolean' || !Array.isArray(body.materials)) {
+  if (body.outcome !== 'ALLOW' || !hasExactly(body, ['outcome', 'conversation', 'materials', 'hasOlder']) || typeof body.conversation !== 'boolean'
+    || typeof body.hasOlder !== 'boolean' || !Array.isArray(body.materials)) {
     return { kind: 'UNAVAILABLE' };
   }
   const materials: SharedMaterial[] = [];
@@ -91,7 +99,7 @@ export function decodeSharedMaterials(body: unknown): SharedMaterialsResult {
     if (m.canDelete && m.producer !== 'SELF') return { kind: 'UNAVAILABLE' };
     materials.push({ materialId: m.materialId, producer: m.producer, authorName: m.producer === 'HUMAN' ? authorName : null, text: m.text, establishedAt: m.establishedAt, canDelete: m.canDelete });
   }
-  return { kind: 'READ', conversation: body.conversation, materials };
+  return { kind: 'READ', conversation: body.conversation, materials, hasOlder: body.hasOlder };
 }
 
 export interface SharedWorldApiConfig {
@@ -194,8 +202,9 @@ export class SharedWorldApiClient {
     return members === null ? { kind: 'UNAVAILABLE' } : { kind: 'ALLOW', world: { worldId, bornAt: w.bornAt, members } };
   }
 
-  async materials(worldId: string): Promise<SharedMaterialsResult> {
-    const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/materials`);
+  async materials(worldId: string, before: SharedMaterialCursor | null = null): Promise<SharedMaterialsResult> {
+    const page = before === null ? '' : `/before/${encodeURIComponent(before.materialId)}/${encodeURIComponent(before.establishedAt)}`;
+    const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/materials${page}`);
     return answer.kind === 'OK' ? decodeSharedMaterials(answer.body) : { kind: 'UNAVAILABLE' };
   }
 
@@ -204,7 +213,7 @@ export class SharedWorldApiClient {
     if (answer.kind !== 'OK' || !isRecord(answer.body)) return { kind: 'UNAVAILABLE' };
     const body = answer.body;
     if (body.outcome === 'COMMITTED' && hasExactly(body, ['outcome', 'materialId', 'qandeel']) && typeof body.materialId === 'string' && UUID.test(body.materialId)
-      && (body.qandeel === 'COMMITTED' || body.qandeel === 'UNAVAILABLE')) {
+      && (body.qandeel === 'COMMITTED' || body.qandeel === 'PENDING' || body.qandeel === 'UNAVAILABLE')) {
       return { kind: 'COMMITTED', materialId: body.materialId, qandeel: body.qandeel };
     }
     if (hasExactly(body, ['outcome']) && body.outcome === 'UNAVAILABLE') return { kind: 'NOT_AVAILABLE' };

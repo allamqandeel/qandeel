@@ -4,6 +4,10 @@
 // that produces one, and it adds no authority of its own — it runs the frozen boundaries in their frozen order and lets
 // the database decide:
 //
+//   0  the work lease (migration 0139)   no provider work runs unless the database grants this human command its one
+//                                         live lease — at most one generation per command, two per requesting human and
+//                                         a rolling work-start budget, across every API instance (the PROD-SEC-02
+//                                         principle); the lease is returned however the request ends
 //   1  EffectiveContext (I-03E)          exact World state (READ_ONLY_CLOSED blocks) + exact current audience; NO private
 //                                         candidate is offered, so no Personal context can enter (see the types file)
 //   2  Shared history for the audience    the requester's Product read (migration 0139), intersected with what EVERY human
@@ -13,8 +17,9 @@
 //   4  delivery readiness (I-03G → I-03F) the Source Disclosure Gate, then authority / audience revalidation, in order
 //   5  the commit binding (I-04G FIX-B)   `bindSharedQandeelMaterialCommit` refuses evidence of another World, another
 //                                         output, another operation or another audience
-//   6  the server-owned commit (0139)     the conversation gate, one reply per human command, QANDEEL_OUTPUT only; the
-//                                         frozen 0090 core re-derives the audience and recomputes every digest itself
+//   6  the server-owned commit (0139)     the conversation gate, the current lease holder only, one reply per human
+//                                         command, QANDEEL_OUTPUT only; the frozen 0090 core re-derives the audience and
+//                                         recomputes every digest itself
 //
 // A refusal at any step commits nothing and fabricates nothing: the human's message is already committed and stays.
 // No content, provider output or private context is logged, persisted or returned outside the canonical material body.
@@ -35,9 +40,11 @@ import {
   type SharedQandeelReplyRefusal,
 } from './shared-qandeel-reply.types';
 
-/** The frozen 0089 material read boundary (service_role only) and the 0139 server-owned reply commit. */
+/** The frozen 0089 material read boundary (service_role only) and the 0139 server-owned reply work. */
 export const SHARED_MATERIAL_VISIBILITY_RPC = 'resolve_shared_world_material_v1' as const;
-export const SHARED_QANDEEL_REPLY_COMMIT_RPC = 'commit_shared_world_qandeel_reply_v1' as const;
+export const SHARED_QANDEEL_REPLY_WORK_BEGIN_RPC = 'begin_shared_qandeel_reply_work_v1' as const;
+export const SHARED_QANDEEL_REPLY_WORK_END_RPC = 'end_shared_qandeel_reply_work_v1' as const;
+export const SHARED_QANDEEL_REPLY_COMMIT_RPC = 'complete_shared_world_qandeel_reply_v1' as const;
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 
@@ -86,6 +93,32 @@ export class SharedQandeelReplyService {
     // The identity names a born World: the human's message was just committed into it by the frozen 0090 core, and the
     // World-state resolver below re-establishes it canonically before anything else is read.
     const worldId = request.worldId.toLowerCase() as SharedWorldId;
+
+    // 0. The work lease. Nothing below — no read, no provider call — runs without it.
+    const begun = await this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_WORK_BEGIN_RPC, {
+      p_human_command_id: request.humanCommandId,
+      p_world_id: worldId,
+      p_requester_user_id: request.requesterUserId,
+    });
+    const work = Array.isArray(begun) ? begun[0] : undefined;
+    if (!isRecord(work)) return refused('WORK_UNAVAILABLE');
+    if (work.work_outcome === 'ALREADY_COMMITTED' && typeof work.reply_material_id === 'string' && UUID.test(work.reply_material_id)) {
+      return Object.freeze({ state: 'COMMITTED', materialId: work.reply_material_id } as const);
+    }
+    if (work.work_outcome === 'IN_PROGRESS') return refused('WORK_IN_PROGRESS');
+    if (work.work_outcome === 'LIMITED') return refused('WORK_LIMITED');
+    if (work.work_outcome !== 'GRANTED' || typeof work.work_lease_id !== 'string' || !UUID.test(work.work_lease_id)) return refused('WORK_UNAVAILABLE');
+    const leaseId = work.work_lease_id;
+    try {
+      return await this.composeUnderLease(request, worldId, leaseId);
+    } finally {
+      // Completing already returned it; otherwise the slot is freed now rather than at expiry. Best effort: a lost
+      // return still expires on its own.
+      await this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_WORK_END_RPC, { p_human_command_id: request.humanCommandId, p_lease_id: leaseId }).catch(() => undefined);
+    }
+  }
+
+  private async composeUnderLease(request: SharedQandeelReplyRequest, worldId: SharedWorldId, leaseId: string): Promise<SharedQandeelReplyOutcome> {
 
     // 1. The pre-model envelope. No private candidate is offered: Personal context never enters a Shared call here.
     const context = await this.effectiveContext.resolve(worldId, []);
@@ -136,6 +169,7 @@ export class SharedQandeelReplyService {
 
     // 6. The server's commit. The database re-checks everything it can see and refuses stale evidence on its own.
     const rows = await this.server.rpc<unknown>(SHARED_QANDEEL_REPLY_COMMIT_RPC, {
+      p_lease_id: leaseId,
       p_human_command_id: request.humanCommandId,
       p_world_id: input.worldId,
       p_body_text: input.bodyText,

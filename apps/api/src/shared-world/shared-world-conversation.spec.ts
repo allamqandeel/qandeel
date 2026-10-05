@@ -27,7 +27,7 @@ const rows: SharedMaterialRow[] = [
   { material_id: MINE, material_kind: 'HUMAN_TEXT', producer_kind: 'HUMAN', established_at: '2026-10-05T10:00:00Z', is_self: true, author_name: 'Amal', text_body: 'مرحبا', can_delete: true },
 ];
 
-function fakes(options: { entry?: 'ALLOW' | 'UNAVAILABLE'; send?: unknown; reply?: 'COMMITTED' | 'UNAVAILABLE'; conversation?: boolean } = {}) {
+function fakes(options: { entry?: 'ALLOW' | 'UNAVAILABLE'; send?: unknown; reply?: 'COMMITTED' | 'UNAVAILABLE' | 'IN_PROGRESS' | 'LIMITED'; conversation?: boolean; page?: SharedMaterialRow[] } = {}) {
   const shared = {
     resolveEntry: jest.fn(async () => [options.entry === 'UNAVAILABLE'
       ? { outcome: 'UNAVAILABLE', world_id: null, born_at: null, joined_at: null }
@@ -35,11 +35,15 @@ function fakes(options: { entry?: 'ALLOW' | 'UNAVAILABLE'; send?: unknown; reply
   };
   const conversation = {
     capability: jest.fn(async () => [{ conversation_available: options.conversation ?? true }]),
-    newestMaterial: jest.fn(async () => rows),
+    material: jest.fn(async (..._args: unknown[]) => options.page ?? rows),
     sendText: jest.fn(async () => [options.send ?? { outcome: 'COMMITTED', material_id: MINE, established_at: '2026-10-05T10:03:00Z', qandeel_reply_material_id: null }]),
     deleteOwn: jest.fn(async () => [{ outcome: 'DELETED' }]),
   };
-  const replies = { reply: jest.fn(async () => (options.reply === 'UNAVAILABLE' ? { state: 'UNAVAILABLE', reason: 'GENERATION_UNAVAILABLE' } : { state: 'COMMITTED', materialId: QANDEEL })) };
+  const replies = {
+    reply: jest.fn(async () => (options.reply === 'UNAVAILABLE' ? { state: 'UNAVAILABLE', reason: 'GENERATION_UNAVAILABLE' }
+      : options.reply === 'IN_PROGRESS' ? { state: 'UNAVAILABLE', reason: 'WORK_IN_PROGRESS' }
+      : options.reply === 'LIMITED' ? { state: 'UNAVAILABLE', reason: 'WORK_LIMITED' } : { state: 'COMMITTED', materialId: QANDEEL })),
+  };
   const service = new SharedWorldConversationService(shared as unknown as SharedWorldRepository, conversation as unknown as SharedWorldConversationRepository, replies as unknown as SharedQandeelReplyService);
   return { service, shared, conversation, replies };
 }
@@ -49,7 +53,7 @@ describe('S4-02 Shared conversation Product boundary', () => {
     const f = fakes({ entry: 'UNAVAILABLE' });
     expect(await f.service.materials('token', WORLD)).toEqual({ outcome: 'UNAVAILABLE' });
     expect(await f.service.materials('token', 'nope')).toEqual({ outcome: 'UNAVAILABLE' });
-    expect(f.conversation.newestMaterial).not.toHaveBeenCalled();
+    expect(f.conversation.material).not.toHaveBeenCalled();
   });
 
   it('projects attribution and deletability from server truth, oldest first', async () => {
@@ -59,8 +63,36 @@ describe('S4-02 Shared conversation Product boundary', () => {
         { materialId: MINE, producer: 'SELF', authorName: null, text: 'مرحبا', establishedAt: '2026-10-05T10:00:00Z', canDelete: true },
         { materialId: THEIRS, producer: 'HUMAN', authorName: 'Bassem', text: 'Hi', establishedAt: '2026-10-05T10:01:00Z', canDelete: false },
         { materialId: QANDEEL, producer: 'QANDEEL', authorName: null, text: 'أهلًا', establishedAt: '2026-10-05T10:02:00Z', canDelete: false },
-      ],
+      ], hasOlder: false,
     });
+    // The newest page: no cursor, one row beyond the page asked for.
+    expect(f.conversation.material).toHaveBeenCalledWith('token', WORLD, null, 51);
+  });
+
+  it('pages older history one bounded page at a time, and says whether more exists without counting it', async () => {
+    const many: SharedMaterialRow[] = Array.from({ length: 51 }, (_, i) => ({
+      material_id: `77777777-7777-4777-8777-${String(100000000000 - i).padStart(12, '0')}`, material_kind: 'HUMAN_TEXT', producer_kind: 'HUMAN',
+      established_at: new Date(Date.UTC(2026, 9, 5, 9, 0, 59 - i)).toISOString(), is_self: false, author_name: 'Bassem', text_body: `m${i}`, can_delete: false,
+    }));
+    const f = fakes({ page: many });
+    const page = await f.service.olderMaterials('token', WORLD, MINE, '2026-10-05T10:00:00.123456+00:00');
+    expect(page.outcome === 'ALLOW' && page.materials.length).toBe(50);
+    expect(page.outcome === 'ALLOW' && page.hasOlder).toBe(true);
+    // Oldest first, and the 51st (oldest) row only signals that more exists.
+    expect(page.outcome === 'ALLOW' && page.materials[0].text).toBe('m49');
+    expect(f.conversation.material).toHaveBeenCalledWith('token', WORLD, { materialId: MINE, establishedAt: '2026-10-05T10:00:00.123456+00:00' }, 51);
+    // The entry verdict is re-established for every page.
+    expect(f.shared.resolveEntry).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses a malformed cursor before reading anything', async () => {
+    const f = fakes();
+    for (const [materialId, establishedAt] of [['nope', '2026-10-05T10:00:00Z'], [MINE, 'yesterday'], [MINE, '2026-10-05'], [MINE, ''],
+      [MINE, '2026-10-05T10:00:00Z; DROP'], [OTHER.slice(0, 35), '2026-10-05T10:00:00Z'], [MINE, '2026-13-45T99:99:99Z']]) {
+      await expect(f.service.olderMaterials('token', WORLD, materialId, establishedAt)).rejects.toBeInstanceOf(BadRequestException);
+    }
+    expect(f.shared.resolveEntry).not.toHaveBeenCalled();
+    expect(f.conversation.material).not.toHaveBeenCalled();
   });
 
   it('commits the human words, then reports QANDEEL\'s reply as its own outcome', async () => {
@@ -72,6 +104,16 @@ describe('S4-02 Shared conversation Product boundary', () => {
 
   it('a provider failure never undoes the committed human words', async () => {
     const f = fakes({ reply: 'UNAVAILABLE' });
+    expect(await f.service.send(USER, 'token', WORLD, { commandId: COMMAND, content: 'مرحبا' })).toEqual({ outcome: 'COMMITTED', materialId: MINE, qandeel: 'UNAVAILABLE' });
+  });
+
+  it('a retry while the first request is still generating reports the reply as PENDING, not failed', async () => {
+    const f = fakes({ reply: 'IN_PROGRESS' });
+    expect(await f.service.send(USER, 'token', WORLD, { commandId: COMMAND, content: 'مرحبا' })).toEqual({ outcome: 'COMMITTED', materialId: MINE, qandeel: 'PENDING' });
+  });
+
+  it('a requester at the work bound is told no reply was committed — never an indefinite PENDING (no worker completes it later)', async () => {
+    const f = fakes({ reply: 'LIMITED' });
     expect(await f.service.send(USER, 'token', WORLD, { commandId: COMMAND, content: 'مرحبا' })).toEqual({ outcome: 'COMMITTED', materialId: MINE, qandeel: 'UNAVAILABLE' });
   });
 
@@ -117,6 +159,7 @@ describe('S4-02 Shared conversation Product boundary', () => {
 
   it('classifies every Shared conversation route; the send that can start a generation is held to the strict class', () => {
     expect(ROUTE_RATE_LIMIT_CENSUS['GET /shared/worlds/:worldId/materials']).toBe('AUTHENTICATED');
+    expect(ROUTE_RATE_LIMIT_CENSUS['GET /shared/worlds/:worldId/materials/before/:materialId/:establishedAt']).toBe('AUTHENTICATED');
     expect(ROUTE_RATE_LIMIT_CENSUS['POST /shared/worlds/:worldId/messages']).toBe('SECURITY_SENSITIVE');
     expect(ROUTE_RATE_LIMIT_CENSUS['POST /shared/worlds/:worldId/materials/:materialId/delete']).toBe('AUTHENTICATED');
   });

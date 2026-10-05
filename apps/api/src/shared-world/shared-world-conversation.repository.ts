@@ -21,8 +21,14 @@ export interface SharedSendRow {
 export interface SharedConversationCapabilityRow { readonly conversation_available: boolean }
 export interface SharedDeleteRow { readonly outcome: 'DELETED' | 'UNAVAILABLE' }
 
-/** The newest page the Product reads. Bounded by the 0139 read itself (1–200). */
+/** One page the Product reads. Bounded by the 0139 read itself (1–200). */
 export const SHARED_MATERIAL_PAGE = 50;
+
+/** The keyset position of the oldest material a reader holds: the page read next is strictly older. */
+export interface SharedMaterialCursor {
+  readonly establishedAt: string;
+  readonly materialId: string;
+}
 
 /**
  * S4-02 — the human's own Shared conversation commands (migration 0139), on the caller's own token: the database's
@@ -41,9 +47,11 @@ export class SharedWorldConversationRepository {
 
   capability(token: string) { return this.rpc<SharedConversationCapabilityRow>(token, 'read_shared_conversation_capability_v1', {}); }
 
-  newestMaterial(token: string, worldId: string) {
+  /** Newest first: the newest page, or the page strictly older than `before`; never more than one page and one row. */
+  material(token: string, worldId: string, before: SharedMaterialCursor | null = null, limit: number = SHARED_MATERIAL_PAGE) {
     return this.rpc<SharedMaterialRow>(token, 'list_own_shared_world_material_v1', {
-      p_world_id: worldId, p_before_established_at: null, p_before_material_id: null, p_limit: SHARED_MATERIAL_PAGE,
+      p_world_id: worldId, p_before_established_at: before?.establishedAt ?? null, p_before_material_id: before?.materialId ?? null,
+      p_limit: Math.min(Math.max(limit, 1), SHARED_MATERIAL_PAGE + 1),
     });
   }
 

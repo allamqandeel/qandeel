@@ -150,7 +150,7 @@ export type {
 export { ActivityApiClient } from './activity-api';
 export type {
   SharedAcceptResult, SharedDeclineResult, SharedDeleteResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
-  SharedMaterial, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,
+  SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,
 } from './shared-world-api';
 export { SharedWorldApiClient } from './shared-world-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
