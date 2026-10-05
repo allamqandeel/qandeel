@@ -1,0 +1,80 @@
+# S4-01 Journey C — My World ↔ Shared World on the production route. VALIDATION ONLY (S401ProofRoot.tsx).
+# The Personal world is kept and restored; Shared entry shows only the neutral pre-authority shell until ALLOW; re-entry
+# restores the Shared World after authority is resolved again; a revoked authority fails safe with nothing of the World.
+# Driven by scripts/phase-m/run-s401-proof-leg.sh, which passes PREFIX.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- openLink: "qandeel://s401-proof/world/seed"
+- waitForAnimationToEnd:
+    timeout: 6000
+- takeScreenshot: ${PREFIX}-01-my-world
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-root"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-conversation-thread"
+- takeScreenshot: ${PREFIX}-02-shared-root
+- tapOn:
+    id: "qandeel-shared-world-54010001-0000-4000-8000-000000000000"
+# Before ALLOW: the neutral shell only — no welcome, no member, no title.
+- assertVisible:
+    id: "qandeel-shared-transition"
+- assertNotVisible:
+    id: "qandeel-shared-welcome"
+- assertNotVisible:
+    id: "qandeel-shared-members"
+- takeScreenshot: ${PREFIX}-03-pre-authority-shell
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-welcome"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-shared-members"
+- takeScreenshot: ${PREFIX}-04-world-after-allow
+# Back to My World: the same Conversation, reachable again.
+- tapOn:
+    id: "qandeel-switcher-my_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-shared-area"
+- takeScreenshot: ${PREFIX}-05-my-world-restored
+# Re-entry: the Shared World the reader left, after authority is resolved again.
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- assertVisible:
+    id: "qandeel-shared-transition"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-welcome"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-06-shared-world-restored
+# Revoked: the next entry fails safe — one neutral answer, nothing of the World.
+- openLink: "qandeel://s401-proof/world/revoke"
+- tapOn:
+    id: "qandeel-switcher-my_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-world-unavailable"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-shared-welcome"
+- assertNotVisible:
+    id: "qandeel-shared-members"
+- takeScreenshot: ${PREFIX}-07-revoked-fails-safe

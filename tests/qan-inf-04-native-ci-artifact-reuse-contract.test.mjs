@@ -1130,8 +1130,11 @@ test('the gate registers itself and the four owned files exist', () => {
   // A3-02 RE-ANCHOR: a fourth, deliberate recipe — the Stage-3 proof root (`a3-activity-push-proof`, role
   // PROOF_VALIDATION, its own entry), built once and consumed by the isolated proof legs. It is pinned by the
   // LEG-isolation contract; this pipeline's producers and consumers are unchanged.
+  // S4-01 RE-ANCHOR: a fifth, deliberate recipe — the Stage-4 Shared World proof root (`s4-shared-world-proof`, role
+  // PROOF_VALIDATION, its own entry), built once and consumed by the isolated S4 proof legs (s4-proof.yml). This
+  // pipeline's producers and consumers are unchanged.
   assert.deepEqual(Object.keys(BUILD_RECIPES).sort(),
-    ['a3-activity-push-proof', 'mobile-ci-boot-smoke', 'qan-inf-04-demonstration', 't13-recovery-validation']);
+    ['a3-activity-push-proof', 'mobile-ci-boot-smoke', 'qan-inf-04-demonstration', 's4-shared-world-proof', 't13-recovery-validation']);
   assert.equal(MANIFEST_SCHEMA, 'qandeel.native-artifact-identity/1');
   // A digest of the canonical rule set, recomputed here from the module's own exports, so a silent
   // widening of the exclusions changes this file too rather than passing unnoticed.

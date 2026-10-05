@@ -1,0 +1,45 @@
+# S4-01 Journey A — invitation → accept → birth → immediate entry, on the production route. VALIDATION ONLY
+# (S401ProofRoot.tsx). The invitation shows the inviter's Name in the approved meaning; Accept enters the new World at
+# once: its members and QANDEEL's short welcome, no setup, no conversation, no composer.
+# Driven by scripts/phase-m/run-s401-proof-leg.sh, which passes PREFIX and INVITATION (the approved sentence).
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- openLink: "qandeel://s401-proof/invite/arrive"
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-invitation-54010001-0000-4000-8000-000000000000"
+    timeout: 30000
+- assertVisible:
+    text: "${INVITATION}"
+- assertVisible:
+    id: "qandeel-shared-no-worlds"
+- takeScreenshot: ${PREFIX}-01-invitation
+- tapOn:
+    id: "qandeel-shared-accept"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-welcome"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-shared-member-0"
+- assertVisible:
+    id: "qandeel-shared-member-1"
+- assertNotVisible:
+    id: "qandeel-composer"
+- takeScreenshot: ${PREFIX}-02-born-world
+- tapOn:
+    id: "qandeel-shared-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-world-54010002-0000-4000-8000-000000000000"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-shared-invitation-54010001-0000-4000-8000-000000000000"
+- takeScreenshot: ${PREFIX}-03-root-lists-the-world
