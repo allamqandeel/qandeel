@@ -15,8 +15,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import { createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { createEphemeralPushDeviceStore, createInertPushPlatformPort } from '../../push';
 import { createEphemeralProductRecoveryStorage } from '../../recovery';
-import { createManualForegroundSignal } from '../../runtime-entry';
-import { decodeIdentity, decodePublicId } from '../../runtime-entry/account/account-api';
+import { AccountApiClient, createManualForegroundSignal } from '../../runtime-entry';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
@@ -77,9 +76,10 @@ async function press(view: RenderResult, testID: string): Promise<void> {
 describe('S4-01 proof world — a signed-in reader', () => {
   it('answers the account reads in exactly the shapes the production account client decodes', async () => {
     const world = createS401ProofWorld('en', { entryDelayMs: 0 });
-    const read = async (path: string) => (await world.fetch(`${world.config.apiBaseUrl}${path}`, { method: 'GET' })).json();
-    expect(decodeIdentity(await read('/account/identity'))).not.toBeNull();
-    expect(decodePublicId(await read('/account/public-id'))).not.toBeNull();
+    // The production account client over the proof world's network — the same read path General Settings takes.
+    const account = new AccountApiClient({ baseUrl: world.config.apiBaseUrl, fetch: world.fetch });
+    expect((await account.readIdentity()).kind).toBe('READ');
+    expect((await account.readPublicId()).kind).toBe('READ');
   });
 
   it('draws Account & Identity with the Shared ID row, and the row opens the reader\'s Shared ID', async () => {
