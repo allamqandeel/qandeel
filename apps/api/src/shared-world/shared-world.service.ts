@@ -2,24 +2,30 @@ import { randomUUID } from 'node:crypto';
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { DataApiError, readDataApiUpstreamIdentity } from '../conversation/supabase-data-api.service';
 import { drawSharedId, SharedIdSealing, SharedIdSealingUnavailable } from './shared-id-sealing';
+import { SharedWorldLifecycleRepository } from './shared-world-lifecycle.repository';
 import { fromBytea, SharedWorldRepository, type SharedIdRow, type SharedWorldMemberRow } from './shared-world.repository';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const REF_DRAWS = 5;
 
 export interface SharedMemberView { readonly name: string | null; readonly self: boolean }
-export interface SharedWorldView { readonly worldId: string; readonly members: readonly SharedMemberView[] }
+/** S4-03: `name` is the World's committed name (the label once committed); null keeps the S4-01 member-name label. */
+export interface SharedWorldView { readonly worldId: string; readonly name: string | null; readonly members: readonly SharedMemberView[] }
 export interface SharedRootView {
   readonly capabilities: { readonly invitation: boolean; readonly birth: boolean };
   readonly worlds: readonly SharedWorldView[];
   readonly invitations: readonly { readonly invitationId: string; readonly inviterName: string | null }[];
+  /** S4-03: the ended Worlds the reader holds a closed-view entitlement for (the members at closure). Never current Worlds. */
+  readonly closedWorlds: readonly SharedWorldView[];
+  /** S4-03: the add / rejoin requests waiting on the reader as their exact target — who proposed it, and nothing of the World. */
+  readonly memberRequests: readonly { readonly requestId: string; readonly worldId: string; readonly kind: 'ADD' | 'REJOIN'; readonly proposerName: string | null }[];
 }
 export type SharedIdentityView = { readonly status: 'READY'; readonly sharedId: string } | { readonly status: 'UNAVAILABLE' };
 export type SharedInvitationView = { readonly outcome: 'SUBMITTED' | 'INVALID_SHARED_ID' | 'UNAVAILABLE' };
 export type SharedAcceptView = { readonly outcome: 'BORN'; readonly worldId: string } | { readonly outcome: 'UNAVAILABLE' | 'NOT_ACCEPTABLE' };
 export type SharedDeclineView = { readonly outcome: 'DECLINED' | 'NOT_DECLINABLE' };
 export type SharedEntryView =
-  | { readonly outcome: 'ALLOW'; readonly world: { readonly worldId: string; readonly bornAt: string; readonly members: readonly SharedMemberView[] } }
+  | { readonly outcome: 'ALLOW'; readonly world: { readonly worldId: string; readonly bornAt: string; readonly name: string | null; readonly members: readonly SharedMemberView[] } }
   | { readonly outcome: 'UNAVAILABLE' };
 
 const record = (value: unknown): Record<string, unknown> => (value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {});
@@ -43,7 +49,11 @@ const members = (rows: readonly SharedWorldMemberRow[], worldId: string): Shared
  */
 @Injectable()
 export class SharedWorldService {
-  constructor(private readonly repository: SharedWorldRepository, private readonly sealing: SharedIdSealing) {}
+  constructor(
+    private readonly repository: SharedWorldRepository,
+    private readonly sealing: SharedIdSealing,
+    private readonly lifecycle: SharedWorldLifecycleRepository,
+  ) {}
 
   private async guard<T>(work: () => Promise<T>): Promise<T> {
     try {
@@ -56,15 +66,28 @@ export class SharedWorldService {
 
   root(token: string): Promise<SharedRootView> {
     return this.guard(async () => {
-      const [[capabilities], worlds, memberRows, invitations] = await Promise.all([
+      const [[capabilities], worlds, memberRows, invitations, nameRows, closed, closedPeople, requests] = await Promise.all([
         this.repository.capabilities(token), this.repository.listWorlds(token), this.repository.listMembers(token),
-        this.repository.listInvitations(token),
+        this.repository.listInvitations(token), this.lifecycle.worldNames(token), this.lifecycle.closedWorlds(token),
+        this.lifecycle.closedMembers(token), this.lifecycle.membershipRequests(token),
       ]);
       if (capabilities === undefined) return unavailable();
+      if (requests.some((r) => !UUID.test(r.request_id) || !UUID.test(r.world_id) || (r.request_kind !== 'ADD_MEMBER' && r.request_kind !== 'REJOIN_MEMBER'))) {
+        return unavailable();
+      }
+      const nameOf = (worldId: string) => nameRows.find((n) => n.world_id === worldId)?.world_name ?? null;
       return {
         capabilities: { invitation: capabilities.invitation_available === true, birth: capabilities.birth_available === true },
-        worlds: worlds.map((w) => ({ worldId: w.world_id, members: members(memberRows, w.world_id) })),
+        worlds: worlds.map((w) => ({ worldId: w.world_id, name: nameOf(w.world_id), members: members(memberRows, w.world_id) })),
         invitations: invitations.map((i) => ({ invitationId: i.invitation_id, inviterName: i.inviter_name })),
+        closedWorlds: closed.map((w) => ({
+          worldId: w.world_id, name: w.world_name,
+          members: closedPeople.filter((m) => m.world_id === w.world_id).map((m) => ({ name: m.member_name, self: m.is_self === true })),
+        })),
+        memberRequests: requests.map((r) => ({
+          requestId: r.request_id, worldId: r.world_id, kind: r.request_kind === 'ADD_MEMBER' ? 'ADD' as const : 'REJOIN' as const,
+          proposerName: r.proposer_name,
+        })),
       };
     });
   }
@@ -133,10 +156,11 @@ export class SharedWorldService {
     return this.guard(async () => {
       const [verdict] = await this.repository.resolveEntry(token, worldId);
       if (verdict?.outcome !== 'ALLOW' || verdict.world_id !== worldId || typeof verdict.born_at !== 'string') return { outcome: 'UNAVAILABLE' };
-      const memberRows = await this.repository.listMembers(token);
+      const [memberRows, nameRows] = await Promise.all([this.repository.listMembers(token), this.lifecycle.worldNames(token)]);
       const current = members(memberRows, worldId);
       if (current.length === 0) return { outcome: 'UNAVAILABLE' };
-      return { outcome: 'ALLOW', world: { worldId, bornAt: verdict.born_at, members: current } };
+      const name = nameRows.find((n) => n.world_id === worldId)?.world_name ?? null;
+      return { outcome: 'ALLOW', world: { worldId, bornAt: verdict.born_at, name, members: current } };
     });
   }
 

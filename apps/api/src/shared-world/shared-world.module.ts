@@ -10,6 +10,8 @@ import { SharedConversationReplyGenerator } from './shared-conversation-reply.ge
 import { SharedIdSealing } from './shared-id-sealing';
 import { SharedWorldConversationRepository } from './shared-world-conversation.repository';
 import { SharedWorldConversationService } from './shared-world-conversation.service';
+import { SharedWorldLifecycleRepository } from './shared-world-lifecycle.repository';
+import { SharedWorldLifecycleService } from './shared-world-lifecycle.service';
 import { SharedWorldController } from './shared-world.controller';
 import { SharedWorldRepository } from './shared-world.repository';
 import { SharedWorldService } from './shared-world.service';
@@ -22,13 +24,18 @@ import { SharedWorldService } from './shared-world.service';
  * request-driven QANDEEL reply through the Connected Worlds composition (`connected-worlds/material-commit`), which runs
  * the frozen I-03 / I-04G chain and commits through 0139's server-owned reply command. The Model Router is the
  * provider-neutral one; the Safety Response Gate is the canonical one.
+ *
+ * S4-03 — the Shared lifecycle: leave, governed removal / settings / World end, approvals, selective history sharing, the
+ * closed World's read-only view and the reader's own words in former Worlds, through migration 0140's owner commands on
+ * the caller's own token. The server channel is not used.
  */
 @Module({
   imports: [ModelRouterModule],
   controllers: [SharedWorldController],
   providers: [
     SupabaseAuthService, SupabaseAuthGuard, SupabaseDataApiService, SharedIdSealing, SharedWorldRepository, SharedWorldService,
-    SharedWorldConversationRepository, SharedWorldConversationService, SafetyResponseGateService,
+    SharedWorldConversationRepository, SharedWorldConversationService, SharedWorldLifecycleRepository, SharedWorldLifecycleService,
+    SafetyResponseGateService,
     ...SHARED_QANDEEL_REPLY_PROVIDERS,
     { provide: SHARED_QANDEEL_REPLY_GENERATOR, useClass: SharedConversationReplyGenerator },
   ],

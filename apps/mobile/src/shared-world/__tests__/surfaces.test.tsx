@@ -17,6 +17,23 @@ import { SHARED_COPY_GATE, fill, sharedCopy, worldLabel } from '../copy';
 import { createSharedIdController } from '../shared-id-controller';
 import { createSharedWorldController } from '../shared-world-controller';
 
+/** S4-03 — the lifecycle half of the transport, answering "no answer" (these suites do not exercise it). */
+const NO_LIFECYCLE = {
+  manage: async () => ({ kind: 'UNAVAILABLE' as const }),
+  leave: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeSettings: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeRemoval: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeEnd: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approve: async () => ({ kind: 'UNAVAILABLE' as const }),
+  historyCandidates: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approveHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  closedWorld: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeMember: async () => ({ kind: 'UNAVAILABLE' as const }),
+  acceptMembershipRequest: async () => ({ kind: 'UNAVAILABLE' as const }),
+};
+
+
 jest.mock('expo-clipboard', () => ({ setStringAsync: jest.fn(async () => true) }));
 
 afterEach(async () => {
@@ -48,15 +65,18 @@ const ROOT: SharedRootResult = {
   kind: 'READ',
   root: {
     capabilities: { invitation: true, birth: true },
-    worlds: [{ worldId: WORLD, members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] }],
+    worlds: [{ worldId: WORLD, name: null, members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] }],
     invitations: [{ invitationId: INVITATION, inviterName: 'Chadi Fixture' }],
+    closedWorlds: [],
+    memberRequests: [],
   },
 };
-const ALLOW: SharedEntryResult = { kind: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] } };
+const ALLOW: SharedEntryResult = { kind: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', name: null, members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] } };
 
 function areaController(entry: () => Promise<SharedEntryResult> = async () => ALLOW) {
   return createSharedWorldController({
     transport: {
+      ...NO_LIFECYCLE,
       root: async () => ROOT,
       invite: async () => ({ kind: 'SUBMITTED' }),
       accept: async () => ({ kind: 'BORN', worldId: WORLD }),

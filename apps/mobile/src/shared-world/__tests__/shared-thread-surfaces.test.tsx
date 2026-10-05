@@ -16,6 +16,23 @@ import { sharedCopy } from '../copy';
 import { SHARED_CONVERSATION_COPY_GATE, sharedConversationCopy } from '../conversation-copy';
 import { createSharedWorldController, type SharedWorldTransport } from '../shared-world-controller';
 
+/** S4-03 — the lifecycle half of the transport, answering "no answer" (these suites do not exercise it). */
+const NO_LIFECYCLE = {
+  manage: async () => ({ kind: 'UNAVAILABLE' as const }),
+  leave: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeSettings: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeRemoval: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeEnd: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approve: async () => ({ kind: 'UNAVAILABLE' as const }),
+  historyCandidates: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approveHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  closedWorld: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeMember: async () => ({ kind: 'UNAVAILABLE' as const }),
+  acceptMembershipRequest: async () => ({ kind: 'UNAVAILABLE' as const }),
+};
+
+
 afterEach(async () => {
   await cleanup();
   jest.restoreAllMocks();
@@ -45,7 +62,7 @@ const MATERIALS: SharedMaterial[] = [
   { materialId: MINE, producer: 'SELF', authorName: null, text: 'Fixture words of mine', establishedAt: '2026-10-05T10:01:00Z', canDelete: true },
   { materialId: QANDEEL, producer: 'QANDEEL', authorName: null, text: 'Fixture reply', establishedAt: '2026-10-05T10:02:00Z', canDelete: false },
 ];
-const ALLOW: SharedEntryResult = { kind: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] } };
+const ALLOW: SharedEntryResult = { kind: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', name: null, members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] } };
 
 const OLDER: SharedMaterial = { materialId: '66666666-6666-4666-8666-666666666600', producer: 'HUMAN', authorName: 'Bassem Fixture', text: 'Fixture older words', establishedAt: '2026-10-05T09:00:00Z', canDelete: false };
 
@@ -54,7 +71,8 @@ function world(options: { conversation?: boolean; send?: () => Promise<SharedSen
     ? { kind: 'READ', conversation: options.conversation ?? true, materials: [OLDER], hasOlder: false }
     : { kind: 'READ', conversation: options.conversation ?? true, materials: MATERIALS, hasOlder: options.older ?? false }));
   const transport: SharedWorldTransport = {
-    root: async () => ({ kind: 'READ', root: { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [] } }),
+    ...NO_LIFECYCLE,
+    root: async () => ({ kind: 'READ', root: { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [], closedWorlds: [], memberRequests: [] } }),
     invite: async () => ({ kind: 'SUBMITTED' }),
     accept: async () => ({ kind: 'NOT_ACCEPTABLE' }),
     decline: async () => ({ kind: 'DECLINED' }),

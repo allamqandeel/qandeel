@@ -46,6 +46,10 @@
  * like every other change. Activity's own settings act opens this destination directly on that page, and Back from it
  * then returns to Activity.
  *
+ * S4-03 (E2E-G-18) adds one row to Privacy & Data: «كلامك في عوالم مشتركة غادرتها» / the reader's own words in Shared
+ * Worlds they no longer belong to (CW2-03 §24: own-material control through an account / privacy surface, never through
+ * the World). Its page shows only the reader's own words and deletes them through the owner's authority.
+ *
  * No placeholder is drawn for a group whose function does not exist (Introductions, Plan & Usage).
  *
  * The frame is laid out logically (`direction`), so the start and end edges are the reader's in Arabic and
@@ -71,6 +75,8 @@ import { DeletionRequest, deletionStatusSaid, ExportRequest, exportStatusSaid, L
 import type { PublicIdController, PublicIdState } from './public-id-controller';
 import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
 import { SharedIdPage, SharedIdRow } from './SharedIdSection';
+import { FormerSharedMaterialPage, FormerSharedMaterialRow } from './FormerSharedMaterialSection';
+import type { FormerSharedMaterialController } from './former-shared-material-controller';
 import type { SharedIdController } from '../shared-world';
 
 export const SETTINGS_SURFACE_TEST_ID = 'qandeel-settings';
@@ -90,6 +96,8 @@ export interface SettingsSurfaceProps {
   readonly sharedId?: SharedIdController;
   /** W3-MEGA-S: the reader's Privacy & Data state and requests for this runtime generation. Without it, that group is not drawn. */
   readonly privacy?: PrivacyDataController;
+  /** S4-03: the reader's own words in Shared Worlds they no longer belong to; read only when its page is opened. */
+  readonly formerShared?: FormerSharedMaterialController;
   /** A3-01: the reader's Notifications & Activity preferences for this runtime generation. Without it, that group is not drawn. */
   readonly notifications?: ActivityPreferencesController;
   /** A3-02 — the device's OS permission and the education, shown in Notifications & Activity. */
@@ -99,7 +107,7 @@ export interface SettingsSurfaceProps {
 }
 
 /** The change shown in place of the groups, if any. */
-type Change = 'PUBLIC_ID' | 'SHARED_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS';
+type Change = 'PUBLIC_ID' | 'SHARED_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS' | 'FORMER_SHARED';
 /** Where the screen reader returns when a change closes. */
 type RowKey = Change;
 
@@ -205,7 +213,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, privacy, notifications, push, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, privacy, formerShared, notifications, push, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -419,6 +427,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     change = <SharedIdPage controller={sharedId} language={language} palette={palette} busyChanged={onCommitBusy} />;
   }
 
+  if (changing === 'FORMER_SHARED' && formerShared !== undefined) {
+    change = <FormerSharedMaterialPage controller={formerShared} language={language} palette={palette} />;
+  }
+
   if (changing === 'NOTIFICATIONS' && notifications !== undefined) {
     change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} />;
   }
@@ -574,6 +586,9 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
                   onCancelDeletion={() => void cancelDeletion()}
                   rowRef={rowRef}
                 />
+                {formerShared !== undefined ? (
+                  <FormerSharedMaterialRow language={language} palette={palette} onOpen={() => openChange('FORMER_SHARED')} rowRef={rowRef('FORMER_SHARED')} />
+                ) : null}
               </View>
             ) : null}
 

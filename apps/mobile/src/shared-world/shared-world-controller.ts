@@ -15,11 +15,23 @@
  * app returns to the foreground, after the reader's own send or delete, and on the reader's explicit refresh; there is no
  * timer and no realtime channel. One logical submission keeps ONE command id until the server answers it, so a lost
  * answer is retried without a second message.
+ *
+ * S4-03 — the World's lifecycle. «إدارة العالم» / Manage World is a place INSIDE the exact World governed (I-08A4 §7;
+ * P1: no Settings page nested in a World): it is read only through the server's entry verdict, it belongs to one World,
+ * and a stale answer for another place is dropped. Every act — leave, a proposal, an approval, a history package — keeps
+ * ONE command id per logical act until the server answers it, so a lost answer is retried as the same act and never
+ * becomes a second one. Leaving returns the reader to the Shared root at once (the World is no longer theirs); an act that
+ * ends the reader's access (the World ended, or they are no longer a member) does the same. An ended World is a separate,
+ * read-only place reached only through the reader's closed-view entitlement, never through the active World's entry.
+ * An add / rejoin is proposed by the target's CURRENT Shared ID (the one answer reveals nothing about them); the target
+ * accepts from the Shared root and is then entered through the same authority-first entry as any World.
  */
 import type {
   ForegroundSignal,
   SharedAcceptResult, SharedDeleteResult, SharedEntryResult, SharedInviteResult, SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedRoot,
   SharedRootResult, SharedSendResult, SharedWorldShell,
+  SharedApproveResult, SharedClosedWorld, SharedClosedWorldResult, SharedHistoryApproveResult, SharedHistoryCandidate, SharedHistoryCandidatesResult,
+  SharedLeaveResult, SharedManage, SharedManageResult, SharedProposeResult, SharedProposeMemberResult, SharedJoinResult,
 } from '../runtime-entry';
 
 export interface SharedWorldTransport {
@@ -31,10 +43,62 @@ export interface SharedWorldTransport {
   materials(worldId: string, before?: SharedMaterialCursor | null): Promise<SharedMaterialsResult>;
   send(worldId: string, commandId: string, content: string): Promise<SharedSendResult>;
   deleteMaterial(worldId: string, materialId: string, commandId: string): Promise<SharedDeleteResult>;
+  // S4-03
+  manage(worldId: string): Promise<SharedManageResult>;
+  leave(worldId: string, commandId: string): Promise<SharedLeaveResult>;
+  proposeSettings(worldId: string, commandId: string, values: SharedSettingsInput): Promise<SharedProposeResult>;
+  proposeRemoval(worldId: string, commandId: string, memberHandle: string): Promise<SharedProposeResult>;
+  proposeEnd(worldId: string, commandId: string): Promise<SharedProposeResult>;
+  approve(worldId: string, proposalId: string, commandId: string): Promise<SharedApproveResult>;
+  historyCandidates(worldId: string, memberHandle: string, before?: SharedMaterialCursor | null): Promise<SharedHistoryCandidatesResult>;
+  proposeMember(worldId: string, commandId: string, sharedId: string): Promise<SharedProposeMemberResult>;
+  acceptMembershipRequest(worldId: string, requestId: string, commandId: string): Promise<SharedJoinResult>;
+  proposeHistoryShare(worldId: string, commandId: string, memberHandle: string, materialIds: readonly string[]): Promise<SharedProposeResult>;
+  approveHistoryShare(worldId: string, packageId: string, commandId: string): Promise<SharedHistoryApproveResult>;
+  closedWorld(worldId: string, before?: SharedMaterialCursor | null): Promise<SharedClosedWorldResult>;
 }
 
-export type SharedPlace = { readonly kind: 'ROOT' } | { readonly kind: 'WORLD'; readonly worldId: string };
-export type SharedNotice = 'DECLINED' | 'ACTION_UNAVAILABLE' | 'NOT_OPEN' | null;
+/** The three World Settings a proposal names, as the reader typed them (empty = not set). */
+export interface SharedSettingsInput { readonly name: string; readonly description: string; readonly topic: string }
+
+export type SharedPlace =
+  | { readonly kind: 'ROOT' }
+  | { readonly kind: 'WORLD'; readonly worldId: string }
+  /** S4-03: Manage World, inside the exact World governed. */
+  | { readonly kind: 'MANAGE'; readonly worldId: string }
+  /** S4-03: an ended World, read-only, by the reader's closed-view entitlement. */
+  | { readonly kind: 'CLOSED'; readonly worldId: string };
+export type SharedNotice = 'DECLINED' | 'ACTION_UNAVAILABLE' | 'NOT_OPEN' | 'LEFT' | null;
+
+/** What the reader is told about their own last lifecycle act. */
+export type SharedManageNotice =
+  | 'PROPOSED' | 'UNCHANGED' | 'APPROVED' | 'COMMITTED' | 'INVITED' | 'STALE' | 'GRANTED' | 'REFUSED' | 'UNAVAILABLE'
+  | 'MEMBER_SUBMITTED' | 'INVALID_SHARED_ID' | null;
+
+export interface SharedManageState {
+  readonly worldId: string | null;
+  readonly status: 'NONE' | 'LOADING' | 'READY' | 'UNAVAILABLE';
+  readonly data: SharedManage | null;
+  /** The act in flight (its key), if any: one act at a time. */
+  readonly busy: string | null;
+  readonly notice: SharedManageNotice;
+  /** The earlier words the reader may offer one member, read on request. */
+  readonly candidates: {
+    readonly memberHandle: string;
+    readonly status: 'LOADING' | 'READY' | 'UNAVAILABLE';
+    /** Oldest first: the newest page and any older pages the reader asked for. */
+    readonly list: readonly SharedHistoryCandidate[];
+    readonly hasOlder: boolean;
+    readonly loadingOlder: boolean;
+  } | null;
+}
+
+export interface SharedClosedState {
+  readonly worldId: string | null;
+  readonly status: 'NONE' | 'LOADING' | 'READY' | 'DENIED' | 'UNAVAILABLE';
+  readonly world: SharedClosedWorld | null;
+  readonly loadingOlder: boolean;
+}
 
 /** What the reader is told about their own last act in the World's conversation. */
 export type SharedThreadNotice = 'SEND_UNCONFIRMED' | 'SEND_REFUSED' | 'REPLY_FAILED' | 'DELETED' | 'DELETE_FAILED' | 'LOAD_FAILED' | null;
@@ -66,6 +130,10 @@ export interface SharedAreaState {
   readonly busy: string | null;
   readonly notice: SharedNotice;
   readonly thread: SharedThreadState;
+  /** S4-03: Manage World of the World in `place` (MANAGE only). */
+  readonly manage: SharedManageState;
+  /** S4-03: the ended World in `place` (CLOSED only). */
+  readonly closed: SharedClosedState;
 }
 
 export interface SharedWorldController {
@@ -88,6 +156,31 @@ export interface SharedWorldController {
   send(text: string): Promise<boolean>;
   /** S4-02: delete the reader's own material in the open World. */
   deleteMaterial(materialId: string): Promise<void>;
+  /** S4-03: open Manage World for the World the reader is in (after its ALLOW). */
+  openManage(): void;
+  /** S4-03: read Manage World again (the explicit retry after an unanswered read). */
+  refreshManage(): void;
+  /** S4-03: leave Manage World for the World itself, re-resolving its authority. */
+  closeManage(): void;
+  /** S4-03: leave the World the reader is in or manages. LEFT returns the reader to the Shared root. */
+  leaveWorld(): Promise<SharedLeaveResult['kind'] | null>;
+  proposeSettings(values: SharedSettingsInput): Promise<SharedProposeResult['kind'] | null>;
+  proposeRemoval(memberHandle: string): Promise<SharedProposeResult['kind'] | null>;
+  proposeEnd(): Promise<SharedProposeResult['kind'] | null>;
+  approve(proposalId: string): Promise<SharedApproveResult['kind'] | null>;
+  loadHistoryCandidates(memberHandle: string): void;
+  /** S4-03: one bounded page of earlier words older than the oldest offered (a page, never a ceiling). */
+  loadOlderHistoryCandidates(): void;
+  /** S4-03: propose adding a member — or bringing a former one back — by their CURRENT Shared ID. */
+  proposeMember(sharedId: string): Promise<SharedProposeMemberResult['kind'] | null>;
+  /** S4-03: the reader's own acceptance of an add / rejoin request; JOINED enters the World. */
+  acceptMembershipRequest(requestId: string): Promise<void>;
+  proposeHistoryShare(memberHandle: string, materialIds: readonly string[]): Promise<SharedProposeResult['kind'] | null>;
+  approveHistoryShare(packageId: string): Promise<SharedHistoryApproveResult['kind'] | null>;
+  /** S4-03: open an ended World, read-only. */
+  openClosed(worldId: string): void;
+  /** S4-03: read one page older than the oldest material held of the ended World. */
+  loadOlderClosed(): void;
   retire(): void;
 }
 
@@ -125,6 +218,9 @@ function joinNewest(held: readonly SharedMaterial[], heldHasOlder: boolean, page
   return { materials: [...held.slice(0, join), ...page], hasOlder: heldHasOlder };
 }
 
+const NO_MANAGE: SharedManageState = Object.freeze<SharedManageState>({ worldId: null, status: 'NONE', data: null, busy: null, notice: null, candidates: null });
+const NO_CLOSED: SharedClosedState = Object.freeze<SharedClosedState>({ worldId: null, status: 'NONE', world: null, loadingOlder: false });
+
 const INITIAL: SharedAreaState = Object.freeze<SharedAreaState>({
   root: { status: 'IDLE', data: null },
   place: { kind: 'ROOT' },
@@ -132,6 +228,8 @@ const INITIAL: SharedAreaState = Object.freeze<SharedAreaState>({
   busy: null,
   notice: null,
   thread: NO_THREAD,
+  manage: NO_MANAGE,
+  closed: NO_CLOSED,
 });
 
 export function createSharedWorldController(options: SharedWorldControllerOptions): SharedWorldController {
@@ -151,6 +249,10 @@ export function createSharedWorldController(options: SharedWorldControllerOption
   // S4-02: one logical submission (World + words) keeps one command until the server answers it.
   let sendCommand: { readonly worldId: string; readonly text: string; readonly commandId: string } | null = null;
   const deleteCommands = new Map<string, string>();
+  // S4-03: one command per logical lifecycle act (World + act + its exact request), until the server answers it.
+  const lifecycleCommands = new Map<string, string>();
+  let manageRead = 0;
+  let closedRead = 0;
 
   const live = () => !retired && isCurrent();
   const publish = (next: SharedAreaState) => {
@@ -240,6 +342,110 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     if (result.kind === 'ALLOW') await readThread(worldId);
   }
 
+  /** The World Manage World is open on, if any. */
+  const managedWorldId = (): string | null => (state.place.kind === 'MANAGE' ? state.place.worldId : null);
+  const publishManage = (worldId: string, change: Partial<SharedManageState>) => {
+    if (state.manage.worldId !== worldId) return;
+    publish({ ...state, manage: { ...state.manage, ...change } });
+  };
+
+  /** Back to the Shared root with the reader's own notice: the World is no longer theirs to browse. */
+  function returnToRoot(notice: SharedNotice): void {
+    entryRead += 1;
+    threadRead += 1;
+    olderRead += 1;
+    manageRead += 1;
+    closedRead += 1;
+    sendCommand = null;
+    publish({ ...state, place: { kind: 'ROOT' }, entry: { status: 'NONE', world: null }, thread: NO_THREAD, manage: NO_MANAGE, closed: NO_CLOSED, notice });
+    void readRoot();
+  }
+
+  async function readManage(worldId: string): Promise<void> {
+    const ticket = ++manageRead;
+    publishManage(worldId, { status: state.manage.status === 'READY' ? 'READY' : 'LOADING' });
+    const result = await transport.manage(worldId);
+    if (ticket !== manageRead || state.manage.worldId !== worldId) return;
+    if (result.kind === 'READ') {
+      publishManage(worldId, { status: 'READY', data: result.manage });
+      return;
+    }
+    // The World is no longer the reader's to manage (left, removed, or ended): nothing of it stays on screen.
+    if (result.kind === 'DENIED') {
+      returnToRoot(null);
+      return;
+    }
+    publishManage(worldId, { status: state.manage.status === 'READY' ? 'READY' : 'UNAVAILABLE' });
+  }
+
+  /** One lifecycle act on the managed World: one command per logical act, one act at a time, then the truth re-read. */
+  async function act<K extends string>(key: string, run: (worldId: string, commandId: string) => Promise<{ readonly kind: K }>, noticeOf: (kind: K) => SharedManageNotice): Promise<K | null> {
+    const worldId = managedWorldId();
+    if (worldId === null || state.manage.busy !== null || state.manage.status !== 'READY') return null;
+    const fullKey = `${worldId}|${key}`;
+    const commandId = lifecycleCommands.get(fullKey) ?? newCommandId();
+    lifecycleCommands.set(fullKey, commandId);
+    publishManage(worldId, { busy: key, notice: null });
+    const result = await run(worldId, commandId);
+    // A delivered answer ends the act; only a lost one keeps its command for a retry of the same act.
+    if (result.kind !== 'UNAVAILABLE') lifecycleCommands.delete(fullKey);
+    publishManage(worldId, { busy: null, notice: noticeOf(result.kind) });
+    await readManage(worldId);
+    return result.kind;
+  }
+
+  async function readClosed(worldId: string, before: SharedMaterialCursor | null): Promise<void> {
+    const ticket = ++closedRead;
+    if (before === null) publish({ ...state, closed: { ...state.closed, status: state.closed.status === 'READY' ? 'READY' : 'LOADING' } });
+    else publish({ ...state, closed: { ...state.closed, loadingOlder: true } });
+    const result = await transport.closedWorld(worldId, before);
+    if (ticket !== closedRead || state.closed.worldId !== worldId) return;
+    if (result.kind === 'DENIED') {
+      publish({ ...state, closed: { ...NO_CLOSED, worldId, status: 'DENIED' } });
+      return;
+    }
+    if (result.kind !== 'READ') {
+      publish({ ...state, closed: { ...state.closed, loadingOlder: false, status: state.closed.status === 'READY' ? 'READY' : 'UNAVAILABLE' } });
+      return;
+    }
+    if (before === null || state.closed.world === null) {
+      publish({ ...state, closed: { worldId, status: 'READY', world: result.world, loadingOlder: false } });
+      return;
+    }
+    const held = new Set(state.closed.world.materials.map((m) => m.materialId));
+    publish({ ...state, closed: { worldId, status: 'READY', loadingOlder: false,
+      world: { ...state.closed.world, hasOlder: result.world.hasOlder, materials: [...result.world.materials.filter((m) => !held.has(m.materialId)), ...state.closed.world.materials] } } });
+  }
+
+  async function readCandidates(worldId: string, memberHandle: string, before: SharedMaterialCursor | null): Promise<void> {
+    const result = await transport.historyCandidates(worldId, memberHandle, before);
+    const held = state.manage.candidates;
+    if (state.manage.worldId !== worldId || held?.memberHandle !== memberHandle) return;
+    if (result.kind === 'DENIED') {
+      returnToRoot(null);
+      return;
+    }
+    if (result.kind !== 'READ') {
+      publishManage(worldId, { candidates: { ...held, status: before === null ? 'UNAVAILABLE' : held.status, loadingOlder: false } });
+      return;
+    }
+    if (before === null) {
+      publishManage(worldId, { candidates: { memberHandle, status: 'READY', list: result.candidates, hasOlder: result.hasOlder, loadingOlder: false } });
+      return;
+    }
+    // The older page goes beneath what the reader holds, only where it still joins it.
+    if (held.list[0]?.materialId !== before.materialId) {
+      publishManage(worldId, { candidates: { ...held, loadingOlder: false } });
+      return;
+    }
+    const seen = new Set(held.list.map((c) => c.materialId));
+    publishManage(worldId, { candidates: { ...held, loadingOlder: false, hasOlder: result.hasOlder,
+      list: [...result.candidates.filter((c) => !seen.has(c.materialId)), ...held.list] } });
+  }
+
+  const PROPOSE_NOTICE = (kind: SharedProposeResult['kind']): SharedManageNotice =>
+    (kind === 'PROPOSED' ? 'PROPOSED' : kind === 'UNCHANGED' ? 'UNCHANGED' : kind === 'REFUSED' ? 'REFUSED' : 'UNAVAILABLE');
+
   const unsubscribeForeground = options.foreground?.subscribe((next) => {
     const worldId = openWorldId();
     if (next === 'ACTIVE' && worldId !== null) void readThread(worldId);
@@ -259,12 +465,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       void resolve(worldId);
     },
     toRoot() {
-      entryRead += 1;
-      threadRead += 1;
-      olderRead += 1;
-      sendCommand = null;
-      publish({ ...state, place: { kind: 'ROOT' }, entry: { status: 'NONE', world: null }, thread: NO_THREAD });
-      void readRoot();
+      returnToRoot(state.notice);
     },
     async invite(sharedId) {
       const value = sharedId.trim();
@@ -351,6 +552,120 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       if (result.kind !== 'UNAVAILABLE') deleteCommands.delete(materialId);
       publishThread(worldId, { deleting: null, notice: result.kind === 'DELETED' ? 'DELETED' : 'DELETE_FAILED' });
       await readThread(worldId);
+    },
+    openManage() {
+      const worldId = openWorldId();
+      if (worldId === null) return;
+      threadRead += 1;
+      olderRead += 1;
+      sendCommand = null;
+      publish({ ...state, place: { kind: 'MANAGE', worldId }, thread: NO_THREAD, manage: { ...NO_MANAGE, worldId, status: 'LOADING' } });
+      void readManage(worldId);
+    },
+    refreshManage() {
+      const worldId = managedWorldId();
+      if (worldId !== null) void readManage(worldId);
+    },
+    closeManage() {
+      const worldId = managedWorldId();
+      if (worldId === null) return;
+      manageRead += 1;
+      publish({ ...state, manage: NO_MANAGE });
+      void resolve(worldId);
+    },
+    async leaveWorld() {
+      const worldId = managedWorldId() ?? openWorldId();
+      if (worldId === null || state.manage.busy !== null) return null;
+      const key = `${worldId}|leave`;
+      const commandId = lifecycleCommands.get(key) ?? newCommandId();
+      lifecycleCommands.set(key, commandId);
+      if (state.manage.worldId === worldId) publishManage(worldId, { busy: 'leave', notice: null });
+      const result = await transport.leave(worldId, commandId);
+      if (result.kind !== 'UNAVAILABLE') lifecycleCommands.delete(key);
+      if (result.kind === 'LEFT') {
+        // The World is no longer the reader's: straight back to the Shared root, nothing of it kept.
+        returnToRoot('LEFT');
+        return 'LEFT';
+      }
+      if (state.manage.worldId === worldId) publishManage(worldId, { busy: null, notice: result.kind === 'REFUSED' ? 'REFUSED' : 'UNAVAILABLE' });
+      return result.kind;
+    },
+    proposeSettings(values) {
+      const key = `settings|${values.name}|${values.description}|${values.topic}`;
+      return act(key, (worldId, commandId) => transport.proposeSettings(worldId, commandId, values), PROPOSE_NOTICE);
+    },
+    proposeRemoval(memberHandle) {
+      return act(`removal|${memberHandle}`, (worldId, commandId) => transport.proposeRemoval(worldId, commandId, memberHandle), PROPOSE_NOTICE);
+    },
+    proposeEnd() {
+      return act('end', (worldId, commandId) => transport.proposeEnd(worldId, commandId), PROPOSE_NOTICE);
+    },
+    approve(proposalId) {
+      return act(`approve|${proposalId}`, (worldId, commandId) => transport.approve(worldId, proposalId, commandId),
+        (kind) => (kind === 'APPROVED' ? 'APPROVED' : kind === 'COMMITTED' ? 'COMMITTED' : kind === 'INVITED' ? 'INVITED' : kind === 'STALE' ? 'STALE'
+          : kind === 'REFUSED' ? 'REFUSED' : 'UNAVAILABLE'));
+    },
+    proposeMember(sharedId) {
+      const value = sharedId.trim();
+      return act(`member|${value}`, (worldId, commandId) => transport.proposeMember(worldId, commandId, value),
+        (kind) => (kind === 'SUBMITTED' ? 'MEMBER_SUBMITTED' : kind === 'INVALID_SHARED_ID' ? 'INVALID_SHARED_ID' : kind === 'REFUSED' ? 'REFUSED' : 'UNAVAILABLE'));
+    },
+    async acceptMembershipRequest(requestId) {
+      const request = state.root.data?.memberRequests.find((r) => r.requestId === requestId);
+      if (request === undefined || state.busy !== null) return;
+      const key = `join|${request.worldId}|${requestId}`;
+      const commandId = lifecycleCommands.get(key) ?? newCommandId();
+      lifecycleCommands.set(key, commandId);
+      publish({ ...state, busy: requestId, notice: null });
+      const result = await transport.acceptMembershipRequest(request.worldId, requestId, commandId);
+      if (result.kind !== 'UNAVAILABLE') lifecycleCommands.delete(key);
+      publish({ ...state, busy: null, notice: result.kind === 'JOINED' ? null : 'ACTION_UNAVAILABLE' });
+      void readRoot();
+      // JOINED: enter the World through the same authority-first entry as any other (FROM_JOIN_FORWARD is the server's).
+      if (result.kind === 'JOINED') await resolve(request.worldId);
+    },
+    loadHistoryCandidates(memberHandle) {
+      const worldId = managedWorldId();
+      if (worldId === null || state.manage.status !== 'READY') return;
+      publishManage(worldId, { candidates: { memberHandle, status: 'LOADING', list: [], hasOlder: false, loadingOlder: false } });
+      void readCandidates(worldId, memberHandle, null);
+    },
+    loadOlderHistoryCandidates() {
+      const worldId = managedWorldId();
+      const held = state.manage.candidates;
+      const oldest = held?.list[0];
+      if (worldId === null || held === null || oldest === undefined || held.status !== 'READY' || !held.hasOlder || held.loadingOlder) return;
+      publishManage(worldId, { candidates: { ...held, loadingOlder: true } });
+      void readCandidates(worldId, held.memberHandle, { materialId: oldest.materialId, establishedAt: oldest.establishedAt });
+    },
+    async proposeHistoryShare(memberHandle, materialIds) {
+      const ids = [...materialIds].sort();
+      const result = await act(`share|${memberHandle}|${ids.join(',')}`, (worldId, commandId) => transport.proposeHistoryShare(worldId, commandId, memberHandle, ids), PROPOSE_NOTICE);
+      if (result === 'PROPOSED') {
+        const worldId = managedWorldId();
+        if (worldId !== null) publishManage(worldId, { candidates: null });
+      }
+      return result;
+    },
+    approveHistoryShare(packageId) {
+      return act(`shareApprove|${packageId}`, (worldId, commandId) => transport.approveHistoryShare(worldId, packageId, commandId),
+        (kind) => (kind === 'APPROVED' ? 'APPROVED' : kind === 'GRANTED' ? 'GRANTED' : kind === 'STALE' ? 'STALE' : kind === 'REFUSED' ? 'REFUSED' : 'UNAVAILABLE'));
+    },
+    openClosed(worldId) {
+      entryRead += 1;
+      threadRead += 1;
+      olderRead += 1;
+      manageRead += 1;
+      sendCommand = null;
+      publish({ ...state, place: { kind: 'CLOSED', worldId }, entry: { status: 'NONE', world: null }, thread: NO_THREAD, manage: NO_MANAGE,
+        closed: { ...NO_CLOSED, worldId, status: 'LOADING' }, notice: null });
+      void readClosed(worldId, null);
+    },
+    loadOlderClosed() {
+      const world = state.closed.world;
+      const oldest = world?.materials[0];
+      if (state.place.kind !== 'CLOSED' || world === null || oldest === undefined || !world.hasOlder || state.closed.loadingOlder) return;
+      void readClosed(state.place.worldId, { materialId: oldest.materialId, establishedAt: oldest.establishedAt });
     },
     retire() {
       retired = true;

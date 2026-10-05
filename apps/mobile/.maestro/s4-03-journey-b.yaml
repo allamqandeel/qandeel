@@ -1,0 +1,149 @@
+# S4-03 Journey B — historical access and closure, on the production route. VALIDATION ONLY (S401ProofRoot.tsx).
+# The reader joined late: the other person's earlier words are not visible until the proof world stands in for their
+# approved package; the reader shares their own earlier words with a newcomer through the exact preview and approves them
+# as their author; the World's end is proposed, approved by every other member (deep link) and completed by the reader;
+# the ended World is listed apart and opens read-only — no input, no Manage World; the other person's later deletion is no
+# longer served. Every state change is an explicit deep-link action of the proof world — never a timed delay. Driven by
+# scripts/phase-m/run-s401-proof-leg.sh, which passes PREFIX and GRANTED.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- openLink: "qandeel://s401-proof/history/seed"
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-world-5401.*"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-world-5401.*"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-thread"
+    timeout: 30000
+- assertVisible:
+    text: ".*Fixture words before Rana joined"
+- assertNotVisible:
+    text: ".*Fixture words from before I joined"
+- takeScreenshot: ${PREFIX}-01-earlier-history-hidden
+- openLink: "qandeel://s401-proof/history/grant"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-refresh"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-refresh"
+- extendedWaitUntil:
+    visible:
+      text: ".*Fixture words from before I joined"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-granted-history-visible
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-manage-open"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-manage-open"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-manage"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-share-with-2"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-share-with-2"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-share-candidate"
+    timeout: 30000
+- tapOn:
+    text: ".*Fixture words before Rana joined"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-share-preview"
+    direction: DOWN
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-03-exact-preview
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-share-propose"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-share-propose"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-share-approve"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-share-approve"
+- scrollUntilVisible:
+    element:
+      text: "${GRANTED}"
+    direction: UP
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-shared-with-newcomer
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-end"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-end"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-end-confirm"
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-05-end-consequence-first
+- tapOn:
+    id: "qandeel-shared-end-confirm-action"
+- openLink: "qandeel://s401-proof/lifecycle/approve"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-approve"
+    direction: UP
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-approve"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-ended-worlds"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-shared-world-5401.*"
+- takeScreenshot: ${PREFIX}-06-ended-world-listed-apart
+- tapOn:
+    id: "qandeel-shared-ended-5401.*"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-ended-notice"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-shared-input"
+- assertNotVisible:
+    id: "qandeel-shared-manage-open"
+- assertVisible:
+    text: ".*Fixture peer words deleted after the end"
+- takeScreenshot: ${PREFIX}-07-read-only
+- openLink: "qandeel://s401-proof/history/delete"
+- tapOn:
+    id: "qandeel-shared-back"
+- tapOn:
+    id: "qandeel-shared-ended-5401.*"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-ended-notice"
+    timeout: 30000
+- assertNotVisible:
+    text: ".*Fixture peer words deleted after the end"
+- takeScreenshot: ${PREFIX}-08-owner-deletion-not-served

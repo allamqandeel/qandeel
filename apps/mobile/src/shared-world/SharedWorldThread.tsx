@@ -61,6 +61,42 @@ const noticeText = (copy: SharedConversationCopy, notice: SharedThreadNotice): s
   }
 };
 
+/**
+ * One material that is not the reader's to delete — QANDEEL's words, another person's, or (S4-03) anything in an ended
+ * World, which is read-only by entitlement. The same three treatments as the live thread; nothing here is actionable.
+ */
+export function SharedReadOnlyMaterial({ material, language, palette }: {
+  readonly material: SharedMaterial;
+  readonly language: ChromeLanguage;
+  readonly palette: ConversationPalette;
+}) {
+  const copy = sharedConversationCopy(language);
+  const fallback = language === 'ar' ? 'rtl' : 'ltr';
+  if (material.producer === 'QANDEEL') {
+    // QANDEEL — open on the World, from the other edge. No surface of its own.
+    return (
+      <View testID={`qandeel-shared-material-qandeel-${material.materialId}`} accessible
+        accessibilityLabel={copy.qandeelTurnName(material.text)} accessibilityLanguage={language}
+        style={{ alignSelf: 'flex-end', marginTop: 16, maxWidth: '88%', paddingEnd: GUTTER - 4, rowGap: 2, marginStart: QANDEEL_END_INSET }}>
+        <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{copy.qandeel}</Text>
+        <Words text={material.text} fallback={fallback} palette={palette} />
+      </View>
+    );
+  }
+  const mine = material.producer === 'SELF';
+  const name = material.authorName ?? copy.someone;
+  return (
+    <View testID={`qandeel-shared-material-${mine ? 'self' : 'human'}-${material.materialId}`} accessible
+      accessibilityLabel={mine ? copy.selfTurnName(material.text) : copy.otherTurnName(name, material.text)} accessibilityLanguage={language}
+      style={{ alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: 20, maxWidth: '88%', marginHorizontal: GUTTER - 8, marginEnd: SLAB_END_INSET }}>
+      <View style={{ backgroundColor: mine ? palette.utterance : palette.field, paddingTop: 10, paddingBottom: 11, paddingHorizontal: 16, borderRadius: 18, rowGap: 2 }}>
+        {mine ? null : <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{name}</Text>}
+        <Words text={material.text} fallback={fallback} palette={palette} />
+      </View>
+    </View>
+  );
+}
+
 /** The World's visible material, oldest first, with the reader's own words deletable behind a confirmation. */
 export function SharedThread({ controller, language, palette }: {
   readonly controller: SharedWorldController;
@@ -79,16 +115,8 @@ export function SharedThread({ controller, language, palette }: {
   }, [said]);
 
   const row = (material: SharedMaterial) => {
-    if (material.producer === 'QANDEEL') {
-      // QANDEEL — open on the World, from the other edge. No surface of its own.
-      return (
-        <View key={material.materialId} testID={`qandeel-shared-material-qandeel-${material.materialId}`} accessible
-          accessibilityLabel={copy.qandeelTurnName(material.text)} accessibilityLanguage={language}
-          style={{ alignSelf: 'flex-end', marginTop: 16, maxWidth: '88%', paddingEnd: GUTTER - 4, rowGap: 2, marginStart: QANDEEL_END_INSET }}>
-          <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{copy.qandeel}</Text>
-          <Words text={material.text} fallback={fallback} palette={palette} />
-        </View>
-      );
+    if (material.producer === 'QANDEEL' || !material.canDelete) {
+      return <SharedReadOnlyMaterial key={material.materialId} material={material} language={language} palette={palette} />;
     }
     const mine = material.producer === 'SELF';
     const name = material.authorName ?? copy.someone;
@@ -101,9 +129,6 @@ export function SharedThread({ controller, language, palette }: {
     const label = mine ? copy.selfTurnName(material.text) : copy.otherTurnName(name, material.text);
     const testID = `qandeel-shared-material-${mine ? 'self' : 'human'}-${material.materialId}`;
     const place = { alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: 20, maxWidth: '88%', marginHorizontal: GUTTER - 8 } as const;
-    if (!material.canDelete) {
-      return <View key={material.materialId} testID={testID} accessible accessibilityLabel={label} accessibilityLanguage={language} style={{ ...place, marginEnd: SLAB_END_INSET }}>{slab}</View>;
-    }
     const open = selected === material.materialId;
     const busy = thread.deleting === material.materialId;
     return (

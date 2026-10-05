@@ -13,6 +13,8 @@
 #   en-journey-c   English LTR — the same Journey C                                       s4-01-journey-c.yaml
 #   ar-s402-journey-a  Arabic RTL — S4-02: history, send, the deterministic QANDEEL reply  s4-02-journey-a.yaml
 #   en-s402-journey-b  English LTR — S4-02: attribution, own deletion, refresh, revocation s4-02-journey-b.yaml
+#   ar-s403-journey-a  Arabic RTL — S4-03: Manage World, a unanimous change, leave, own former words  s4-03-journey-a.yaml
+#   en-s403-journey-b  English LTR — S4-03: hidden history, the exact preview / grant, World end, read-only  s4-03-journey-b.yaml
 #
 # Exit status: 0 only if the leg passed. Its one result line is written to <out-dir>/result.txt.
 set -u
@@ -26,7 +28,7 @@ FLOWS="$REPO/apps/mobile/.maestro"
 PKG="com.qandeel.mobile"
 
 case "$LEG" in
-  ar-journey-a|ar-journey-b|ar-journey-c|en-journey-c|ar-s402-journey-a|en-s402-journey-b) ;;
+  ar-journey-a|ar-journey-b|ar-journey-c|en-journey-c|ar-s402-journey-a|en-s402-journey-b|ar-s403-journey-a|en-s403-journey-b) ;;
   *) echo "run-s401-proof-leg: unknown leg '$LEG' — refusing"; exit 2 ;;
 esac
 
@@ -100,6 +102,9 @@ AR_INVALID="تأكد من المعرّف المشترك وحاول مرة أخر
 AR_REPLY="رد اختباري ثابت من قنديل"
 EN_PEER_NAME="Fixture Hadir"
 PEER_LATER="Fixture peer words after refresh"
+# S4-03: the reader's own notices the flows assert, byte-for-byte from apps/mobile/src/shared-world/lifecycle-copy.ts.
+AR_LEFT="غادرت العالم."
+EN_GRANTED="Shared."
 
 case "$LEG" in
   ar-journey-a) maestro_flow s4-01-journey-a.yaml leg -e INVITATION="$AR_INVITATION" || fail "s4-01-journey-a.yaml" ;;
@@ -108,6 +113,8 @@ case "$LEG" in
   en-journey-c) maestro_flow s4-01-journey-c.yaml leg || fail "s4-01-journey-c.yaml" ;;
   ar-s402-journey-a) maestro_flow s4-02-journey-a.yaml leg -e REPLY="$AR_REPLY" || fail "s4-02-journey-a.yaml" ;;
   en-s402-journey-b) maestro_flow s4-02-journey-b.yaml leg -e PEER_NAME="$EN_PEER_NAME" -e PEER_LATER="$PEER_LATER" || fail "s4-02-journey-b.yaml" ;;
+  ar-s403-journey-a) maestro_flow s4-03-journey-a.yaml leg -e LEFT="$AR_LEFT" || fail "s4-03-journey-a.yaml" ;;
+  en-s403-journey-b) maestro_flow s4-03-journey-b.yaml leg -e GRANTED="$EN_GRANTED" || fail "s4-03-journey-b.yaml" ;;
 esac
 
 capture

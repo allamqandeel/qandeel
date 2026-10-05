@@ -6,6 +6,23 @@ import type { SharedEntryResult, SharedRootResult } from '../../runtime-entry';
 import { createSharedIdController } from '../shared-id-controller';
 import { createSharedWorldController, mintSharedCommandId, type SharedWorldTransport } from '../shared-world-controller';
 
+/** S4-03 — the lifecycle half of the transport, answering "no answer" (these suites do not exercise it). */
+const NO_LIFECYCLE = {
+  manage: async () => ({ kind: 'UNAVAILABLE' as const }),
+  leave: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeSettings: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeRemoval: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeEnd: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approve: async () => ({ kind: 'UNAVAILABLE' as const }),
+  historyCandidates: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approveHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  closedWorld: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeMember: async () => ({ kind: 'UNAVAILABLE' as const }),
+  acceptMembershipRequest: async () => ({ kind: 'UNAVAILABLE' as const }),
+};
+
+
 const WORLD = '33333333-3333-4333-8333-333333333333';
 const INVITATION = '44444444-4444-4444-8444-444444444444';
 const ROOT: SharedRootResult = {
@@ -14,9 +31,11 @@ const ROOT: SharedRootResult = {
     capabilities: { invitation: true, birth: true },
     worlds: [],
     invitations: [{ invitationId: INVITATION, inviterName: 'Bassem' }],
+    closedWorlds: [],
+    memberRequests: [],
   },
 };
-const ALLOW: SharedEntryResult = { kind: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] } };
+const ALLOW: SharedEntryResult = { kind: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', name: null, members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] } };
 
 function deferred<T>() {
   let resolve!: (value: T) => void;
@@ -27,6 +46,7 @@ function deferred<T>() {
 function transport(overrides: Partial<SharedWorldTransport> = {}) {
   const calls: { name: string; args: unknown[] }[] = [];
   const t: SharedWorldTransport = {
+    ...NO_LIFECYCLE,
     root: jest.fn(async () => { calls.push({ name: 'root', args: [] }); return ROOT; }),
     invite: jest.fn(async (...args) => { calls.push({ name: 'invite', args }); return { kind: 'SUBMITTED' as const }; }),
     accept: jest.fn(async (...args) => { calls.push({ name: 'accept', args }); return { kind: 'BORN' as const, worldId: WORLD }; }),
