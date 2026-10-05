@@ -6,8 +6,8 @@ Shared World Product Integration)
 **Product Owner decisions:** `S4-03 — PRODUCT OWNER DECISIONS / PRE-PUSH CORRECTION` (2026-10-05), applied in §4 / §9 / §11
 **Canonical baseline:** `5ea952027d8c230d5d22d82e206394a985954934` (the merge of PR #311, S4-02)
 **Branch:** `feat/s4-03-shared-lifecycle-governance`
-**Status:** **`S4-03 IMPLEMENTED — PRODUCT OWNER DECISIONS APPLIED — PRE-PUSH CHECKPOINT — PRODUCT COPY GATE OPEN — NOT PUSHED — NOT MERGED`**.
-Claude does not merge it. Nothing is pushed before the Product Owner approves the complete PROPOSED copy table (§11).
+**Status:** **`S4-03 IMPLEMENTED — REVIEW CANDIDATE — PRODUCT OWNER DECISIONS APPLIED — S4-03 PRODUCT COPY GATE CLOSED — NOT MERGED`**.
+Claude does not merge it. The review candidate is pushed only after the Product Owner closed the Copy Gate (§11).
 
 > The Shared World's lifecycle becomes real Product over the frozen I-04 runtime: a current member opens «إدارة العالم» /
 > Manage World inside the exact World, sees its committed settings and the proposals that wait on them — each with who
@@ -25,7 +25,7 @@ Claude does not merge it. Nothing is pushed before the Product Owner approves th
 |---|---|
 | Baseline | `5ea952027d8c230d5d22d82e206394a985954934` — `origin/main` confirmed equal at kickoff; PR #311 `MERGED` |
 | Branch | `feat/s4-03-shared-lifecycle-governance`, cut from `origin/main` |
-| PR | opened at the first push of the review-candidate head, only after the Product Owner approves the copy table |
+| PR | opened at the first push of the review-candidate head, after the Product Owner closed the Copy Gate |
 | Head | the review-candidate commit recorded in the PR conversation |
 
 ## 2. Start Gate
@@ -274,73 +274,93 @@ the typed Shared ID only (as S4-01's invitation does) and uses S4-01's strict cl
 | Non-null booleans | verifier (every read); static contract; API spec |
 | No application role executes a frozen core or reaches the origin table; `service_role` gains nothing | verifier §boundary; migration self-assertions |
 
-## 11. S4-03 Product Copy Gate — **OPEN (pre-push)**
+### 10.1 Authority regression check for the final copy (2026-10-05)
 
-Every S4-03 word is in `apps/mobile/src/shared-world/lifecycle-copy.ts`; the table below is generated from that source.
-**3 CANON** (the two I-08A4 names and the Product Owner's «عوالم منتهية» / "Ended Worlds"), **54 PROPOSED**, **17 REUSED**
-(imported from the S4-01 / S4-02 modules, never copied). No PROPOSED row may ship: the first remote push waits for the
-Product Owner's approval / amendment of the complete PROPOSED table. The device runner asserts `left` (ar) and `granted`
-(en) byte-for-byte.
+The ten final wordings carry authority semantics; production behaviour was re-checked against each and needed no change:
+
+| Area | Wording now promises | Runtime truth |
+|---|---|---|
+| Removal | every OTHER member approves; the target does not; earlier words stay under their name | `0085` prepares REMOVE_MEMBER with `ALL_CURRENT_MEMBERS_EXCEPT_TARGET` and excludes the target's episode from the required set (the verifier sees `required_count = 2` in a three-member World and the target's approval refused); the removal closes the episode in place and deletes nothing (`0085` verifier: no `DELETE`); material keeps its `author_user_id` (the verifier reads the removed member's own words back) |
+| Add / rejoin | the target's identity is not shown to the other members before acceptance | the Product boundary takes the CURRENT Shared ID only; the proposals read projects no target for ADD / REJOIN; the binding is re-proved under the credential row and a rotation ends the request; `0085` is byte-identical to `main` |
+| Approval status | the request waits for "the remaining required approvals" (not only members) | history packages are approved by the exact derived required set, which may include a former member (§9; verifier stage 6b) |
+| History sharing | no automatic pre-membership history; shared only after all required approvals | candidates come from the ONE visibility resolver (membership periods AND explicit History Access Grants); the frozen grant core commits only when the exact required set is complete; UNRESOLVED material is never packageable |
+| World end | read-only; each person sees only what was available to them | `0088` → `READ_ONLY_CLOSED`; closed viewing reads the per-(World, human, item) entitlement snapshot that `0088` builds through the visibility entry point while the World is still ACTIVE (`0119` §6), so closure never widens anyone; nothing is deleted; a member removed earlier is not restored (verifier) |
+
+## 11. S4-03 Product Copy Gate — **CLOSED — Product Owner, 2026-10-05**
+
+Every S4-03 word is in `apps/mobile/src/shared-world/lifecycle-copy.ts`, the ONE copy source; the table below is generated
+mechanically from that source. **3 CANON** (the two I-08A4 names and the Product Owner's «عوالم منتهية» / "Ended Worlds"),
+**54 APPROVED** (Product Owner, 2026-10-05 — ten of them in the Product Owner's own final wording: `proposalRemoval`,
+`proposeRemoval`, `removeExplain`, `confirmRemoval`, `approvedWaiting`, `addMemberExplain`, `shareExplain`,
+`shareRequestsHeading`, `shareRequest`, `endExplain`), **17 REUSED** (imported from the S4-01 / S4-02 modules, never
+copied), **0 PROPOSED**. The device runner asserts `left` (ar) and `granted` (en) byte-for-byte.
+
+The corrected wordings are narrower than the drafts on purpose and match the runtime: the approval status is not limited
+to "other members" (a required history approver may be a former member); the add-member guarantee is that QANDEEL does
+not reveal the target's identity to the other members before acceptance (the proposer may know the person outside
+QANDEEL); history sharing is not described as "since they joined" or "its author's approval" (visibility may also come
+from an explicit History Access Grant, and the required approvers are the exact derived set); and a World's end makes it
+read-only without widening anyone's visibility.
 
 | # | Key | Arabic | English | Where shown | Why needed | Status |
 |---|---|---|---|---|---|---|
 | 1 | `manageWorld` | إدارة العالم | Manage World | World shell action; Manage World title | the one way into the World's own management place (I-08A4 §7) | CANON |
 | 2 | `worldSettings` | إعدادات العالم | World Settings | Manage World section heading | the committed name / description / topic | CANON |
 | 3 | `endedHeading` | عوالم منتهية | Ended Worlds | Shared root section heading | the ended Worlds the reader may still read (closed-state name: PO decision, E2E-G-13) | CANON |
-| 4 | `nameLabel` | الاسم | Name | World Settings row + form field | label of the World name setting (0086 `name`) | PROPOSED |
-| 5 | `descriptionLabel` | الوصف | Description | World Settings row + form field | label of `description` | PROPOSED |
-| 6 | `topicLabel` | الموضوع | Topic | World Settings row + form field | label of `topic` | PROPOSED |
-| 7 | `notSet` | لم يُحدَّد بعد | Not set yet | World Settings value; field placeholder | a setting nobody has committed | PROPOSED |
-| 8 | `proposeChange` | اقتراح تغيير | Propose a change | World Settings action | opens the settings proposal form | PROPOSED |
-| 9 | `proposeSettingsExplain` | لن يتغيّر شيء إلا إذا وافق كل الأعضاء الحاليين. | Nothing changes unless every current member approves. | settings form, above the fields | unanimity stated before proposing (CW2-03 §30) | PROPOSED |
-| 10 | `sendProposal` | إرسال الاقتراح | Send proposal | settings form action | sends the exact proposed version | PROPOSED |
-| 11 | `proposalSent` | تم إرسال الاقتراح. يحتاج موافقة كل الأعضاء، وأنت منهم. | Proposal sent. It needs every member's approval, including yours. | Manage World notice (after a settings, removal or end proposal) | a proposal is not an approval; the proposer must approve too | PROPOSED |
-| 12 | `unchanged` | هذه هي الإعدادات الحالية بالفعل. | These are already the current settings. | Manage World notice | the proposed values equal the committed ones | PROPOSED |
-| 13 | `governanceNotOpen` | إدارة العالم غير متاحة بعد. | Managing this world isn't available yet. | Manage World, governance scope closed | truthful closed-capability state | PROPOSED |
-| 14 | `proposalsHeading` | اقتراحات تنتظر موافقتك | Proposals waiting for your approval | Manage World section heading | the proposals that wait on THIS reader | PROPOSED |
-| 15 | `proposalSettings` | تغيير إعدادات العالم | Change the World Settings | proposal row title | a settings-change proposal | PROPOSED |
-| 16 | `proposalRemoval` | إخراج {0} من هذا العالم | Remove {0} from this world | proposal row title ({0} = Name) | a removal proposal (never shown to its target) | PROPOSED |
-| 17 | `proposalEnd` | إنهاء هذا العالم | End this world | proposal row title | a World-end proposal | PROPOSED |
-| 18 | `proposalAdd` | انضمام شخص جديد إلى هذا العالم | A new person joining this world | proposal row title | an add request; the person is never named before acceptance | PROPOSED |
-| 19 | `proposalRejoin` | عودة عضو سابق إلى هذا العالم | A former member returning to this world | proposal row title | a rejoin request; the person is never named before acceptance | PROPOSED |
-| 20 | `proposedBy` | اقتراح من {0} | Proposed by {0} | proposal row ({0} = proposer Name) | who proposed it (Product Owner decision); no authority | PROPOSED |
-| 21 | `proposedBySelf` | اقتراح منك | Proposed by you | proposal row | the reader proposed it | PROPOSED |
-| 22 | `progress` | وافق {0} من {1} | {0} / {1} approved | proposal row ({0} approved, {1} required) | neutral progress; never who approved | PROPOSED |
-| 23 | `approve` | موافقة | Approve | proposal row; share-request row; Privacy & Data former-words request | the reader's own approval | PROPOSED |
-| 24 | `approvedWaiting` | وافقت. ينتظر الاقتراح باقي الأعضاء. | You approved. The proposal is waiting for the other members. | proposal row; share-request row; Privacy & Data request; notice | the reader approved; others still required (no names / counts) | PROPOSED |
-| 25 | `committed` | تم تطبيق التغيير. | The change has been applied. | Manage World notice | the satisfying approval applied the operation | PROPOSED |
-| 26 | `invited` | وافق الجميع. ينتظر الطلب الآن قبول الشخص. | Everyone approved. The request now waits for the person to accept. | Manage World notice | add / rejoin approved by all; waits for the person | PROPOSED |
-| 27 | `stale` | لم يعد هذا الاقتراح قائمًا. | This proposal no longer stands. | Manage World notice; Privacy & Data notice | topology moved; the proposal no longer stands | PROPOSED |
-| 28 | `addMember` | إضافة عضو | Add a member | Manage World action | opens the add-member form | PROPOSED |
-| 29 | `addMemberExplain` | يحتاج انضمام أي شخص موافقة كل الأعضاء الحاليين ثم قبوله هو. لن يرى أحد من هو قبل أن يقبل. | Anyone joining needs every current member's approval, and then their own acceptance. Nobody sees who they are until they accept. | add-member form, first line | unanimity + own acceptance; nobody named before acceptance | PROPOSED |
-| 30 | `sendRequest` | إرسال الطلب | Send request | add-member form action | sends the Shared ID | PROPOSED |
-| 31 | `memberRequestSent` | إذا كان هذا المعرّف صحيحًا، سيُطلب من الأعضاء الموافقة. | If this Shared ID is right, the members will be asked to approve. | Manage World notice | the one answer for every well-formed Shared ID | PROPOSED |
-| 32 | `memberRequestAdd` | {0} يقترح انضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه. | {0} proposed that you join a Shared World, and all its members approved. | Shared root, Invitations ({0} = proposer Name) | the target view of an add | PROPOSED |
-| 33 | `memberRequestRejoin` | {0} يقترح عودتك إلى عالم مشترك كنت فيه، وقد وافق عليها كل أعضائه. | {0} proposed that you return to a Shared World you were in, and all its members approved. | Shared root, Invitations ({0} = proposer Name) | the target view of a rejoin | PROPOSED |
-| 34 | `proposeRemoval` | اقتراح إخراج | Propose removing | member row action | opens the removal confirmation | PROPOSED |
-| 35 | `removeExplain` | يحتاج الإخراج موافقة كل الأعضاء الآخرين. لا يُسأل {0}، ويبقى كلامه السابق باسمه. | Removal needs every other member's approval. {0} isn't asked, and their earlier words stay under their name. | removal confirmation ({0} = Name) | consequence before the act (CW2-03 §25) | PROPOSED |
-| 36 | `confirmRemoval` | اقتراح الإخراج | Propose removal | removal confirmation action | sends the removal proposal | PROPOSED |
-| 37 | `shareExplain` | يرى كل عضو ما قيل منذ انضمامه فقط. يمكنك اقتراح مشاركة رسائل سابقة مع أحدهم، وتحتاج كل رسالة موافقة صاحبها. | Each member sees only what was said since they joined. You can propose sharing earlier messages with one of them; each message needs its author's approval. | share panel, first line | FROM_JOIN_FORWARD + author approval explained | PROPOSED |
-| 38 | `shareWith` | مشاركة مع {0} | Share with {0} | member row action ({0} = Name) | opens sharing earlier messages with that member | PROPOSED |
-| 39 | `noCandidates` | لا توجد رسائل سابقة يمكن مشاركتها مع {0}. | There are no earlier messages to share with {0}. | share panel ({0} = Name) | nothing the reader may offer | PROPOSED |
-| 40 | `previewHeading` | سيرى {0} هذه الرسائل فقط: | {0} will see only these messages: | share panel preview ({0} = Name) | the exact preview before proposing (CW2-03 §21) | PROPOSED |
-| 41 | `proposeShare` | اقتراح المشاركة | Propose sharing | share panel action | sends the exact package | PROPOSED |
-| 42 | `shareRequestsHeading` | طلبات لمشاركة كلامك | Requests to share your words | Manage World section heading; Privacy & Data former-words page | packages waiting on the reader's authority | PROPOSED |
-| 43 | `shareRequest` | اقتراح بأن يرى {0} كلامك السابق هذا: | A proposal for {0} to see these earlier words of yours: | share-request row ({0} = grantee Name) | only the reader's own words are shown | PROPOSED |
-| 44 | `formerShareRequest` | اقتراح بأن يرى عضو في عالم غادرته كلامك السابق هذا. موافقتك لا تعيدك إلى العالم: | A proposal for a member of a world you've left to see these earlier words of yours. Approving doesn't bring you back: | Privacy & Data former-words page | former member approves own words; no grantee | PROPOSED |
-| 45 | `granted` | تمت المشاركة. | Shared. | Manage World notice; Privacy & Data notice | the exact approver set completed; the grant committed | PROPOSED |
-| 46 | `historyNotOpen` | مشاركة الرسائل السابقة غير متاحة بعد. | Sharing earlier messages isn't available yet. | Manage World, history scope closed | truthful closed-capability state | PROPOSED |
-| 47 | `leave` | مغادرة هذا العالم | Leave this world | Manage World action | opens the leave confirmation | PROPOSED |
-| 48 | `leaveExplain` | ستغادر فورًا، ولن ترى هذا العالم ولا ما يُقال فيه بعد ذلك. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات. | You'll leave right away and won't see this world or anything said in it after that. Your earlier words stay, and you can delete them later from Settings → Privacy & Data. | leave confirmation | consequence before the act (CW2-03 §23–§24); where own words stay controllable | PROPOSED |
-| 49 | `leaveConfirm` | مغادرة | Leave | leave confirmation action | the exit right | PROPOSED |
-| 50 | `left` | غادرت العالم. | You left the world. | Shared root notice | the reader left; nothing of the World remains | PROPOSED |
-| 51 | `endWorld` | إنهاء هذا العالم | End this world | Manage World action | opens the World-end confirmation | PROPOSED |
-| 52 | `endExplain` | ينتهي العالم فقط إذا وافق كل الأعضاء الحاليين. بعدها لا يُضاف إليه شيء جديد، ويبقى تاريخه للقراءة فقط. | The world ends only if every current member approves. After that nothing new is added, and its history stays read-only. | World-end confirmation | unanimity + archival closure stated first (CW2-03 §31–§33) | PROPOSED |
-| 53 | `endConfirm` | اقتراح الإنهاء | Propose ending | World-end confirmation action | sends the World-end proposal | PROPOSED |
-| 54 | `endedNotice` | انتهى هذا العالم. يمكنك قراءة ما كان متاحًا لك فقط. | This world has ended. You can only read what was available to you. | ended World, top | read-only by entitlement | PROPOSED |
-| 55 | `formerRow` | كلامك في عوالم مشتركة غادرتها | Your words in Shared Worlds you've left | Settings → Privacy & Data row; page title | own-material control outside the World (E2E-G-18) | PROPOSED |
-| 56 | `formerExplain` | هذا كلامك أنت فقط. لا يظهر هنا شيء آخر من تلك العوالم. | These are only your own words. Nothing else from those worlds appears here. | former-material page | only the reader's own words; no World browsing | PROPOSED |
-| 57 | `formerEmpty` | لا يوجد كلام لك في عوالم غادرتها. | You have no words in worlds you've left. | former-material page | nothing to show | PROPOSED |
+| 4 | `nameLabel` | الاسم | Name | World Settings row + form field | label of the World name setting (0086 `name`) | APPROVED |
+| 5 | `descriptionLabel` | الوصف | Description | World Settings row + form field | label of `description` | APPROVED |
+| 6 | `topicLabel` | الموضوع | Topic | World Settings row + form field | label of `topic` | APPROVED |
+| 7 | `notSet` | لم يُحدَّد بعد | Not set yet | World Settings value; field placeholder | a setting nobody has committed | APPROVED |
+| 8 | `proposeChange` | اقتراح تغيير | Propose a change | World Settings action | opens the settings proposal form | APPROVED |
+| 9 | `proposeSettingsExplain` | لن يتغيّر شيء إلا إذا وافق كل الأعضاء الحاليين. | Nothing changes unless every current member approves. | settings form, above the fields | unanimity stated before proposing (CW2-03 §30) | APPROVED |
+| 10 | `sendProposal` | إرسال الاقتراح | Send proposal | settings form action | sends the exact proposed version | APPROVED |
+| 11 | `proposalSent` | تم إرسال الاقتراح. يحتاج موافقة كل الأعضاء، وأنت منهم. | Proposal sent. It needs every member's approval, including yours. | Manage World notice (after a settings, removal or end proposal) | a proposal is not an approval; the proposer must approve too | APPROVED |
+| 12 | `unchanged` | هذه هي الإعدادات الحالية بالفعل. | These are already the current settings. | Manage World notice | the proposed values equal the committed ones | APPROVED |
+| 13 | `governanceNotOpen` | إدارة العالم غير متاحة بعد. | Managing this world isn't available yet. | Manage World, governance scope closed | truthful closed-capability state | APPROVED |
+| 14 | `proposalsHeading` | اقتراحات تنتظر موافقتك | Proposals waiting for your approval | Manage World section heading | the proposals that wait on THIS reader | APPROVED |
+| 15 | `proposalSettings` | تغيير إعدادات العالم | Change the World Settings | proposal row title | a settings-change proposal | APPROVED |
+| 16 | `proposalRemoval` | إزالة {0} من هذا العالم | Remove {0} from this world | proposal row title ({0} = Name) | a removal proposal (never shown to its target) | APPROVED |
+| 17 | `proposalEnd` | إنهاء هذا العالم | End this world | proposal row title | a World-end proposal | APPROVED |
+| 18 | `proposalAdd` | انضمام شخص جديد إلى هذا العالم | A new person joining this world | proposal row title | an add request; the person is never named before acceptance | APPROVED |
+| 19 | `proposalRejoin` | عودة عضو سابق إلى هذا العالم | A former member returning to this world | proposal row title | a rejoin request; the person is never named before acceptance | APPROVED |
+| 20 | `proposedBy` | اقتراح من {0} | Proposed by {0} | proposal row ({0} = proposer Name) | who proposed it (Product Owner decision); no authority | APPROVED |
+| 21 | `proposedBySelf` | اقتراح منك | Proposed by you | proposal row | the reader proposed it | APPROVED |
+| 22 | `progress` | وافق {0} من {1} | {0} / {1} approved | proposal row ({0} approved, {1} required) | neutral progress; never who approved | APPROVED |
+| 23 | `approve` | موافقة | Approve | proposal row; share-request row; Privacy & Data former-words request | the reader's own approval | APPROVED |
+| 24 | `approvedWaiting` | تمت موافقتك. ما زال الطلب ينتظر باقي الموافقات المطلوبة. | Your approval is recorded. The request is still waiting for the remaining required approvals. | proposal row; share-request row; Privacy & Data request; notice | the reader approved; others still required (no names / counts) | APPROVED |
+| 25 | `committed` | تم تطبيق التغيير. | The change has been applied. | Manage World notice | the satisfying approval applied the operation | APPROVED |
+| 26 | `invited` | وافق الجميع. ينتظر الطلب الآن قبول الشخص. | Everyone approved. The request now waits for the person to accept. | Manage World notice | add / rejoin approved by all; waits for the person | APPROVED |
+| 27 | `stale` | لم يعد هذا الاقتراح قائمًا. | This proposal no longer stands. | Manage World notice; Privacy & Data notice | topology moved; the proposal no longer stands | APPROVED |
+| 28 | `addMember` | إضافة عضو | Add a member | Manage World action | opens the add-member form | APPROVED |
+| 29 | `addMemberExplain` | تحتاج إضافة عضو جديد موافقة جميع الأعضاء الحاليين، ثم قبول الشخص نفسه. لن تظهر هويته لباقي الأعضاء قبل أن يقبل. | Adding a new member requires every current member's approval, then the person's own acceptance. Their identity won't be shown to the other members before they accept. | add-member form, first line | unanimity + own acceptance; nobody named before acceptance | APPROVED |
+| 30 | `sendRequest` | إرسال الطلب | Send request | add-member form action | sends the Shared ID | APPROVED |
+| 31 | `memberRequestSent` | إذا كان هذا المعرّف صحيحًا، سيُطلب من الأعضاء الموافقة. | If this Shared ID is right, the members will be asked to approve. | Manage World notice | the one answer for every well-formed Shared ID | APPROVED |
+| 32 | `memberRequestAdd` | {0} يقترح انضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه. | {0} proposed that you join a Shared World, and all its members approved. | Shared root, Invitations ({0} = proposer Name) | the target view of an add | APPROVED |
+| 33 | `memberRequestRejoin` | {0} يقترح عودتك إلى عالم مشترك كنت فيه، وقد وافق عليها كل أعضائه. | {0} proposed that you return to a Shared World you were in, and all its members approved. | Shared root, Invitations ({0} = proposer Name) | the target view of a rejoin | APPROVED |
+| 34 | `proposeRemoval` | اقتراح إزالة عضو | Propose removing a member | member row action | opens the removal confirmation | APPROVED |
+| 35 | `removeExplain` | تحتاج إزالة {0} موافقة جميع الأعضاء الآخرين. لا يحتاج {0} إلى الموافقة، ويبقى كلامه السابق باسمه. | Removing {0} requires every other member's approval. {0} doesn't approve the removal, and their earlier words remain under their name. | removal confirmation ({0} = Name) | consequence before the act (CW2-03 §25) | APPROVED |
+| 36 | `confirmRemoval` | اقتراح إزالة العضو | Propose removal | removal confirmation action | sends the removal proposal | APPROVED |
+| 37 | `shareExplain` | لا يرى العضو التاريخ السابق على عضويته تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة معه، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها. | A member doesn't automatically see history from before their membership. You can propose sharing earlier messages with them, and a message is shared only after all required approvals are complete. | share panel, first line | FROM_JOIN_FORWARD + author approval explained | APPROVED |
+| 38 | `shareWith` | مشاركة مع {0} | Share with {0} | member row action ({0} = Name) | opens sharing earlier messages with that member | APPROVED |
+| 39 | `noCandidates` | لا توجد رسائل سابقة يمكن مشاركتها مع {0}. | There are no earlier messages to share with {0}. | share panel ({0} = Name) | nothing the reader may offer | APPROVED |
+| 40 | `previewHeading` | سيرى {0} هذه الرسائل فقط: | {0} will see only these messages: | share panel preview ({0} = Name) | the exact preview before proposing (CW2-03 §21) | APPROVED |
+| 41 | `proposeShare` | اقتراح المشاركة | Propose sharing | share panel action | sends the exact package | APPROVED |
+| 42 | `shareRequestsHeading` | طلبات مشاركة تحتاج موافقتك | Sharing requests needing your approval | Manage World section heading; Privacy & Data former-words page | packages waiting on the reader's authority | APPROVED |
+| 43 | `shareRequest` | اقتراح بأن يرى {0} الرسائل السابقة التالية، ويحتاج ذلك إلى موافقتك: | A proposal for {0} to see the following earlier messages; your approval is required: | share-request row ({0} = grantee Name) | only the reader's own words are shown | APPROVED |
+| 44 | `formerShareRequest` | اقتراح بأن يرى عضو في عالم غادرته كلامك السابق هذا. موافقتك لا تعيدك إلى العالم: | A proposal for a member of a world you've left to see these earlier words of yours. Approving doesn't bring you back: | Privacy & Data former-words page | former member approves own words; no grantee | APPROVED |
+| 45 | `granted` | تمت المشاركة. | Shared. | Manage World notice; Privacy & Data notice | the exact approver set completed; the grant committed | APPROVED |
+| 46 | `historyNotOpen` | مشاركة الرسائل السابقة غير متاحة بعد. | Sharing earlier messages isn't available yet. | Manage World, history scope closed | truthful closed-capability state | APPROVED |
+| 47 | `leave` | مغادرة هذا العالم | Leave this world | Manage World action | opens the leave confirmation | APPROVED |
+| 48 | `leaveExplain` | ستغادر فورًا، ولن ترى هذا العالم ولا ما يُقال فيه بعد ذلك. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات. | You'll leave right away and won't see this world or anything said in it after that. Your earlier words stay, and you can delete them later from Settings → Privacy & Data. | leave confirmation | consequence before the act (CW2-03 §23–§24); where own words stay controllable | APPROVED |
+| 49 | `leaveConfirm` | مغادرة | Leave | leave confirmation action | the exit right | APPROVED |
+| 50 | `left` | غادرت العالم. | You left the world. | Shared root notice | the reader left; nothing of the World remains | APPROVED |
+| 51 | `endWorld` | إنهاء هذا العالم | End this world | Manage World action | opens the World-end confirmation | APPROVED |
+| 52 | `endExplain` | ينتهي العالم فقط إذا وافق جميع الأعضاء الحاليين. بعدها يصبح للقراءة فقط، ويظل كل شخص يرى فقط ما كان متاحًا له. | The world ends only if every current member approves. After that it becomes read-only, and each person can see only what was available to them. | World-end confirmation | unanimity + archival closure stated first (CW2-03 §31–§33) | APPROVED |
+| 53 | `endConfirm` | اقتراح الإنهاء | Propose ending | World-end confirmation action | sends the World-end proposal | APPROVED |
+| 54 | `endedNotice` | انتهى هذا العالم. يمكنك قراءة ما كان متاحًا لك فقط. | This world has ended. You can only read what was available to you. | ended World, top | read-only by entitlement | APPROVED |
+| 55 | `formerRow` | كلامك في عوالم مشتركة غادرتها | Your words in Shared Worlds you've left | Settings → Privacy & Data row; page title | own-material control outside the World (E2E-G-18) | APPROVED |
+| 56 | `formerExplain` | هذا كلامك أنت فقط. لا يظهر هنا شيء آخر من تلك العوالم. | These are only your own words. Nothing else from those worlds appears here. | former-material page | only the reader's own words; no World browsing | APPROVED |
+| 57 | `formerEmpty` | لا يوجد كلام لك في عوالم غادرتها. | You have no words in worlds you've left. | former-material page | nothing to show | APPROVED |
 | 58 | `back` | (imported) | (imported) | S4-03 surfaces | S4-01 back | REUSED |
 | 59 | `cancel` | (imported) | (imported) | S4-03 surfaces | S4-01 cancel | REUSED |
 | 60 | `retry` | (imported) | (imported) | S4-03 surfaces | S4-01 retry | REUSED |
@@ -390,7 +410,7 @@ locally.
   closed and claim no production readiness. `QAN-BL-VOICE-01` is not claimed: voice notes appear in no S4-03 read.
   `QAN-BL-CW-02` is untouched. `QAN-BL-LAUNCH-03` (Shared ID key custody) is unchanged: S4-03 reads only the lookup
   reference and epoch, never a sealed value.
-- **Admitted:** none. Both Product Owner gates were decided at this checkpoint and are implemented / recorded here (§4).
+- **Admitted:** none. Both Product Owner gates were decided at the pre-push checkpoint and are implemented / recorded here (§4); the Copy Gate is CLOSED (§11).
 - **Unchanged:** `QAN-BL-CW-01`, `QAN-BL-CI-01` and every other item.
 
 ## 14. Stage-4 Gap Matrix (S4-03 delta)
@@ -413,5 +433,5 @@ an existing item.
 
 ## 15. Stage-4 status
 
-Stage 4 stays **ACTIVE**: S4-03 is at its pre-push checkpoint (copy approval pending); S4-04 follows. No Stage 5 work is
+Stage 4 stays **ACTIVE**: S4-03 is a review candidate on an open PR (Copy Gate CLOSED); S4-04 follows. No Stage 5 work is
 opened.

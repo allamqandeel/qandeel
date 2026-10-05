@@ -145,17 +145,19 @@ test('6 — the S4-03 words live in one copy module under one gate; canon and ap
   assert.match(copy, /worldSettings: 'World Settings', \/\/ CANON — I-08A4 §9/u);
   assert.match(copy, /const shared = sharedCopy\(language\); \/\/ REUSED — S4-01/u);
   assert.match(copy, /const conversation = sharedConversationCopy\(language\); \/\/ REUSED — S4-02/u);
+  assert.match(copy, /status: 'S4-03 PRODUCT COPY GATE — CLOSED — Product Owner, 2026-10-05',/u, 'the gate is closed by the Product Owner');
+  assert.doesNotMatch(copy.slice(copy.indexOf('const AR_OWN')), /\/\/ PROPOSED/u, 'no row is still PROPOSED');
   const rows = [...copy.matchAll(/^\s+(\w+): ['"][^\n]*\/\/ (CANON|PROPOSED|APPROVED)/gmu)].map((m) => [m[1], m[2]]);
   const gate = copy.slice(copy.indexOf('export const SHARED_LIFECYCLE_COPY_GATE'), copy.indexOf('} as const;'));
   const listed = (name) => [...(new RegExp(`${name}: \\[([^\\]]*)\\]`, 'u').exec(gate)?.[1] ?? '').matchAll(/'(\w+)'/gu)].map((m) => m[1]);
-  assert.equal(rows.length, 2 * (listed('canon').length + listed('proposed').length), 'every own row is listed under the gate, in both languages');
+  assert.equal(rows.length, 2 * (listed('canon').length + listed('approved').length), 'every own row is listed under the gate, in both languages');
   // Every own row is drawn somewhere: no word is approved for a surface that does not exist.
   const surfaces = ['SharedWorldArea.tsx', 'SharedManagePage.tsx', 'SharedClosedWorld.tsx'].map((f) => code(`${MOBILE}/shared-world/${f}`)).join('\n')
     + code(`${MOBILE}/settings/FormerSharedMaterialSection.tsx`);
-  for (const key of [...listed('canon'), ...listed('proposed'), ...listed('reused')]) {
+  for (const key of [...listed('canon'), ...listed('approved'), ...listed('reused')]) {
     assert.match(surfaces, new RegExp(`(?:copy|lifecycle)\\.${key}\\b`, 'u'), `${key} is drawn on an S4-03 surface`);
   }
-  for (const [name, status] of rows) assert.ok(['CANON', 'PROPOSED', 'APPROVED'].includes(status), `${name} carries a status`);
+  for (const [name, status] of rows) assert.ok(['CANON', 'APPROVED'].includes(status), `${name} carries a status`);
   // The runner asserts the reader's own notices byte-for-byte.
   const runner = read('scripts/phase-m/run-s401-proof-leg.sh');
   const left = /AR_LEFT="([^"]+)"/u.exec(runner)?.[1];

@@ -420,14 +420,21 @@ describe('S4-03 lifecycle — the copy gate', () => {
     expect(sharedLifecycleCopy('ar').endedHeading).toBe('عوالم منتهية');
     expect(sharedLifecycleCopy('en').endedHeading).toBe('Ended Worlds');
     expect(SHARED_LIFECYCLE_COPY_GATE.canon).toContain('endedHeading');
-    expect(SHARED_LIFECYCLE_COPY_GATE.proposed).not.toContain('endedHeading');
+    expect(SHARED_LIFECYCLE_COPY_GATE.approved).not.toContain('endedHeading');
+    expect(SHARED_LIFECYCLE_COPY_GATE.status).toBe('S4-03 PRODUCT COPY GATE — CLOSED — Product Owner, 2026-10-05');
+    expect('proposed' in SHARED_LIFECYCLE_COPY_GATE).toBe(false);
+    // Four of the Product Owner's final wordings, exact.
+    expect(sharedLifecycleCopy('en').approvedWaiting).toBe('Your approval is recorded. The request is still waiting for the remaining required approvals.');
+    expect(sharedLifecycleCopy('ar').proposalRemoval).toBe('إزالة {0} من هذا العالم');
+    expect(sharedLifecycleCopy('en').shareRequestsHeading).toBe('Sharing requests needing your approval');
+    expect(sharedLifecycleCopy('ar').endExplain).toBe('ينتهي العالم فقط إذا وافق جميع الأعضاء الحاليين. بعدها يصبح للقراءة فقط، ويظل كل شخص يرى فقط ما كان متاحًا له.');
     for (const key of ['inviteFieldLabel', 'invalidSharedId', 'accept'] as const) {
       expect(sharedLifecycleCopy('ar')[key]).toBe(sharedCopy('ar')[key]);
       expect(sharedLifecycleCopy('en')[key]).toBe(sharedCopy('en')[key]);
     }
     for (const language of ['ar', 'en'] as const) {
       const copy = sharedLifecycleCopy(language) as unknown as Record<string, string>;
-      for (const key of [...SHARED_LIFECYCLE_COPY_GATE.canon, ...SHARED_LIFECYCLE_COPY_GATE.reused, ...SHARED_LIFECYCLE_COPY_GATE.proposed]) {
+      for (const key of [...SHARED_LIFECYCLE_COPY_GATE.canon, ...SHARED_LIFECYCLE_COPY_GATE.reused, ...SHARED_LIFECYCLE_COPY_GATE.approved]) {
         expect(typeof copy[key]).toBe('string');
         expect(copy[key].length).toBeGreaterThan(0);
       }

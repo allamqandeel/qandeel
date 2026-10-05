@@ -1512,7 +1512,7 @@ portion of `G-08` is delivered; the private-context portion is not closed. Its S
 record. The register now holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17
 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 
-**S4-03 reconciliation (2026-10-05; pre-push checkpoint, not merged).** S4-03 (Shared Membership Lifecycle, Governance,
+**S4-03 reconciliation (2026-10-05; review candidate, not merged).** S4-03 (Shared Membership Lifecycle, Governance,
 Settings & Historical Access, migration `0140`) inherits no item by owner. `QAN-BL-ACCT-01`'s reopen condition is observed —
 S4-03 takes the Shared World further toward users — and the item stays `OPEN — UNASSIGNED`, unchanged in scope; both new
 launch scopes ship closed and claim no production readiness. `QAN-BL-VOICE-01` is not claimed (no S4-03 read carries a
