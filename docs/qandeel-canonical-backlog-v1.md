@@ -175,6 +175,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PRIV-02` | Export My Data Omits the Reader's Notifications & Activity Preferences and Context Mutes | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-NOTIF-05` | Native Push Physical-Device Exit Gates (PD-01 … PD-09) | `Release Hardening & Launch — physical iOS / Android device validation` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -810,6 +811,39 @@ Admitted by `S4-01` under BG-08 / BG-06 (a genuine external dependency). Nothing
 
 ---
 
+### `QAN-BL-CI-01` — iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI
+
+- **Title / Finding:** on S4-01's exact head `ada631562686c7e05f607c5a4e0ce73664c1eed4`, Mobile CI run `37298360178` failed
+  its iOS boot smoke twice (attempt 1, and the one VAL-01 infrastructure retry, attempt 2) at the same step, `Maestro
+  driver readiness (bounded)` (`maestro hierarchy` under a 300 s bound), with the same
+  `xcuitest.installer.LocalXCTestInstaller$IOSDriverTimeoutException: iOS driver not ready in time`. The step only
+  starts Maestro's XCTest driver on the booted simulator; the app was never opened in either attempt and the boot smoke
+  itself was skipped. The iOS Release simulator build and its artifact provenance passed in the same run; the immediately
+  prior branch head (`77a2c4c`, run `37293964488`) passed the identical step and smoke, as did every earlier Mobile CI
+  run that reached it.
+- **Source:** the [S4-01 implementation record](e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md) §14 (exact-head CI cycle and the persistent iOS exception).
+- **Current truth:** classified **PERSISTENT INFRASTRUCTURE — NOT PRODUCT / NOT VALIDATION LOGIC**. The VAL-01 retry
+  budget (one infrastructure retry) was spent and exhausted; no second retry was made, and no timeout, workflow or Product
+  change was made to turn the check green. The Mobile CI `MOBILE_NATIVE_BINARY` evidence for that head is recorded
+  NOT GREEN for this reason alone.
+- **Why deferred:** CI runner / simulator / Maestro driver reliability is infrastructure, outside S4-01's Product scope;
+  the reviewer dispositioned the red check as an isolated infrastructure exception and excluded it from S4-01 (BG-01: no
+  Product contract is left violated; the S4-01 Product proof — API CI, the S4 device suite — is green on that head).
+- **Owner task:** `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability`
+- **Severity:** `MEDIUM`. If reopened, it decides whether Mobile CI's iOS boot smoke is dependable evidence; it gates no
+  Product truth, and physical-device iOS validation stays separately owned (`QAN-BL-NOTIF-05`).
+- **Reopen condition:** the next Mobile CI iOS boot smoke that fails at driver readiness on any head; or before any task
+  that relies on the iOS boot smoke as release evidence.
+- **Required future properties:** a diagnosed cause (runner image, simulator boot state, Maestro / XCTest driver
+  startup) with evidence; any timeout or retry change justified by measurement and kept bounded under VAL-01; no change
+  that weakens what the smoke proves.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by `S4-01` under BG-08 / BG-06 (explicitly designated by the reviewer as a named follow-up). It is not part of
+S4-01's scope, and nothing here authorizes implementation (BG-07).
+
+---
+
 ### `QAN-BL-PRIV-01` — Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item
 
 - **Title / Finding:** W3-CORR-U (migration `0134`) lets the reader resolve their own disagreement explicitly («أوافق
@@ -1259,16 +1293,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 13 |
+| `DEFERRED — OWNED` | 15 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 17 |
-| **Total** | **40** |
+| **Total** | **42** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 25 |
-| `MEDIUM` | 14 |
+| `MEDIUM` | 16 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -1419,6 +1453,15 @@ item; its Stage-4 Gap Matrix is §17 of its
 **Orphan gaps = 0**. The register now holds **41** items: 14 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10
 `OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by severity, 25 `HIGH`, 15 `MEDIUM` and 1 `LOW`, counted mechanically
 from the §4 index.
+
+**S4-01 exact-head CI admission (2026-10-05).** On S4-01's exact head `ada6315` the one Mobile CI failure is the iOS
+simulator boot smoke's Maestro / XCTest driver readiness, twice with the same `IOSDriverTimeoutException` and the app
+never opened, after the one VAL-01 infrastructure retry; classified PERSISTENT INFRASTRUCTURE — NOT PRODUCT / NOT
+VALIDATION LOGIC. S4-01 admits `QAN-BL-CI-01` (`MEDIUM`, `DEFERRED — OWNED`,
+`CI-IOS-01 — Maestro / XCTest Driver Startup Reliability`) at the reviewer's explicit designation; it is outside S4-01's
+scope. The §7 table, which had not been moved for `QAN-BL-LAUNCH-03`, is corrected with it. The register now holds
+**42** items: 15 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by
+severity, 25 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog

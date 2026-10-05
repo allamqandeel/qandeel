@@ -89,7 +89,20 @@ test('5 — the approved meanings and the frozen names are bound byte for byte',
     "personalWorld: 'قنديل', // CANON — I-08A4 §8",
     "personalWorld: 'QANDEEL', // CANON — I-08A4 §9",
   ]) assert.ok(copy.includes(exact), `copy carries ${exact}`);
-  assert.match(copy, /status: 'S4-01 PRODUCT COPY GATE — OPEN/u, 'the PROPOSED rows are not claimed approved');
+  // The S4-01 Product Copy Gate is CLOSED (Product Owner, 2026-10-05): no row is PROPOSED, and the three amended rows
+  // are bound byte-for-byte.
+  assert.match(copy, /status: 'S4-01 PRODUCT COPY GATE — CLOSED/u, 'the S4-01 Product Copy Gate is closed');
+  assert.doesNotMatch(copy, /\/\/ PROPOSED/u, 'no S4-01 Product copy row remains PROPOSED');
+  for (const exact of [
+    "declined: 'تم رفض الدعوة.'",
+    "invalidSharedId: 'تأكد من المعرّف المشترك وحاول مرة أخرى.'",
+    "invalidSharedId: 'Check the Shared ID and try again.'",
+    "switcherLabel: 'التنقل بين قنديل والعالم المشترك'",
+    "switcherLabel: 'Switch between QANDEEL and Shared World'",
+  ]) assert.ok(copy.includes(exact), `copy carries the amended ${exact}`);
+  for (const retired of ["'رُفضت الدعوة.'", "'هذا لا يبدو معرّفًا مشتركًا.'", "switcherLabel: 'العوالم'", "switcherLabel: 'Worlds'"]) {
+    assert.equal(copy.includes(retired), false, `the retired ${retired} is gone`);
+  }
   // The surfaces write no words of their own.
   for (const file of ['SharedWorldArea.tsx', 'GlobalSwitcher.tsx']) {
     assert.doesNotMatch(code(`${MOBILE}/shared-world/${file}`), /['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u, `${file} carries no Arabic literal`);

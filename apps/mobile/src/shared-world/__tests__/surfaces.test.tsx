@@ -169,8 +169,15 @@ describe.each([['ar', 'DARK'], ['en', 'LIGHT']] as const)('S4-01 surfaces — %s
 });
 
 describe('S4-01 copy', () => {
-  it('binds the CANON names and the two APPROVED meanings exactly', () => {
+  it('binds the CANON names and the two APPROVED meanings exactly, with the copy gate closed', () => {
     expect(SHARED_COPY_GATE.approved).toEqual(['invitation', 'welcome']);
+    expect(SHARED_COPY_GATE.proposed).toEqual([]);
+    expect(SHARED_COPY_GATE.status).toMatch(/— CLOSED/u);
+    expect(sharedCopy('ar').declined).toBe('تم رفض الدعوة.');
+    expect(sharedCopy('ar').invalidSharedId).toBe('تأكد من المعرّف المشترك وحاول مرة أخرى.');
+    expect(sharedCopy('en').invalidSharedId).toBe('Check the Shared ID and try again.');
+    expect(sharedCopy('ar').switcherLabel).toBe('التنقل بين قنديل والعالم المشترك');
+    expect(sharedCopy('en').switcherLabel).toBe('Switch between QANDEEL and Shared World');
     expect(sharedCopy('ar').sharedWorld).toBe('العالم المشترك');
     expect(sharedCopy('en').sharedWorld).toBe('Shared World');
     expect(sharedCopy('ar').personalWorld).toBe('قنديل');

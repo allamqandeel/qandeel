@@ -90,10 +90,10 @@ adb shell settings put system font_scale 1.0
 adb logcat -c || true
 
 # The words the flows assert, per language, copied byte-for-byte from apps/mobile/src/shared-world/copy.ts (APPROVED
-# invitation meaning with the proof's SYNTHETIC inviter Name; the PROPOSED confirmation and malformed-ID sentences).
+# invitation meaning with the proof's SYNTHETIC inviter Name; the gate-APPROVED confirmation and malformed-ID sentences).
 AR_INVITATION="هدير الاختبار يدعوك لإنشاء عالم مشترك بينكما ومع قنديل."
 AR_SENT="إذا كان هذا المعرّف صحيحًا، ستصل الدعوة إلى صاحبه."
-AR_INVALID="هذا لا يبدو معرّفًا مشتركًا."
+AR_INVALID="تأكد من المعرّف المشترك وحاول مرة أخرى."
 
 case "$LEG" in
   ar-journey-a) maestro_flow s4-01-journey-a.yaml leg -e INVITATION="$AR_INVITATION" || fail "s4-01-journey-a.yaml" ;;

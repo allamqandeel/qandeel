@@ -5,8 +5,8 @@
 **Canonical baseline:** `09d8ec763b81ba85fce1e4b4f7fd0430d5dc1ade` (the merge of PR #309, VAL-01)
 **Branch:** `feat/s4-01-shared-world-reachability-invitation-birth`
 **PR:** see §1
-**Status:** **`S4-01 IMPLEMENTED — READY FOR INDEPENDENT REVIEW — NOT MERGED`**. Claude does not merge it. Its new
-Product copy beyond the CANON names and the two APPROVED meanings is **PROPOSED** for the S4-01 Product Copy Gate (§15).
+**Status:** **`S4-01 IMPLEMENTED — READY FOR INDEPENDENT REVIEW — NOT MERGED`**. Claude does not merge it. The S4-01
+Product Copy Gate is **CLOSED** (Product Owner, 2026-10-05): no S4-01 Product copy remains PROPOSED (§15).
 
 > The first real Shared World journey a person can walk: reach «العالم المشترك» / Shared World from the production
 > Global Switcher, see their Worlds and invitations, read / copy / regenerate their private Shared ID, invite someone by
@@ -22,8 +22,9 @@ Product copy beyond the CANON names and the two APPROVED meanings is **PROPOSED*
 |---|---|
 | Baseline | `09d8ec763b81ba85fce1e4b4f7fd0430d5dc1ade` — `origin/main` confirmed equal at kickoff; main did not move during the task |
 | Branch | `feat/s4-01-shared-world-reachability-invitation-birth` |
-| PR | opened on GitHub against `main`; its number and the final exact-head CI run ids are recorded in the PR conversation, not here (VAL-01 §14: no post-green documentation loop) |
-| Final code head | the PR head; this record is structurally complete before final validation |
+| PR | #310, against `main`; draft until review readiness |
+| Validated head | `ada631562686c7e05f607c5a4e0ce73664c1eed4` — the exact head whose full CI evidence §14 records |
+| Final head | the S4-01 Product Copy Gate closure on top of `ada6315` (§15): the copy strings, their contract / test pins, the Journey B malformed-ID sentence, and this record and the backlog — no migration, API, behaviour or workflow change. Its own VAL-01 evidence is recorded in the PR conversation |
 
 ## 2. Repo Truth Gate and the execution map
 
@@ -226,17 +227,60 @@ Real PostgreSQL is not available locally; it is proven in CI (§14).
 | Focused `migration-0138` #4 (`8deccac`) | FAIL, same | the earlier role-reset fix was not the cause; the same ordering defect located at its exact line |
 | Focused `migration-0138` #5 (`9048d6d`) | **PASS** — every stage including concurrency | — |
 
-No run was repeated blindly: every rerun followed a classified, committed fix to the verifier. No infrastructure rerun
-was needed. Final exact-head API CI, Mobile CI and S4 proof runs are recorded in the PR conversation.
+No run was repeated blindly: every rerun followed a classified, committed fix to the verifier.
+
+**PR CI cycle.** Every push after the first was a single commit fixing failures already read from their exact logs and
+classified; no workflow was re-run to obtain a different answer, except the one infrastructure retry below.
+
+| Head | Failure (exact) | Classification | Correction |
+|---|---|---|---|
+| `b760674` | API CI `verify-migration-0082`: `42501` on the retired 0081 rotate command | VALIDATION / PROOF | fixture setup re-anchored to the owner identity; every ACL assertion kept; 0081 / 0082 untouched |
+| `b760674` | S4 Journey C (ar + en): `assertNotVisible` on the still-mounted Personal thread | VALIDATION / PROOF | assertion replaced by selection / reachability proof; Product composition unchanged |
+| `b760674` | S4 Journey B: no Account & Identity group, so no Shared ID row | VALIDATION / PROOF fixture gap | the proof world answers the signed-in account reads; focused test |
+| `7311d80` | T-12P: deep import of the runtime entry in the new proof test; T-12 Phase M #611: an Email default inside `__validation__/` | VALIDATION / PROOF (deterministic contracts) | public barrel client; synthetic identity moved to `__fixtures__/`; no contract exception |
+| `4779fc8` | S4 Journey C (ar + en): `assertNotVisible qandeel-shared-members` raced the stand-in's timed 1.5 s ALLOW | VALIDATION / PROOF (timing race) | deterministic hold until `qandeel://s401-proof/world/allow`; focused test |
+| `77a2c4c` | S4 Journey B: the malformed-ID field empty after typing into the field the successful send had just cleared | VALIDATION / PROOF (device input) | a fresh invite session, the value asserted in the field before Send; focused test |
+| `77a2c4c` | API CI `verify-migration-0133`: census measured pre-0133 against the latest CI ACL, which 0138 deliberately narrowed | VALIDATION / PROOF (stale historical verifier) | census measured before0133 → after0133; hosted == CI kept; downstream 0133–0138 audit found nothing else |
+
+**Exact head `ada631562686c7e05f607c5a4e0ce73664c1eed4`.**
+
+| Workflow / gate | Result |
+|---|---|
+| API CI `37298360081` | **PASS** — forward-safety gate; verifiers `0082`, `0133` (historical census), `0134`, `0135`, `0136`, `0137`, `0138`; runtime smokes; PostgREST refusal proof |
+| S4 proof `37298356374` | **PASS** — producer build; `ar-journey-a`, `ar-journey-b`, `ar-journey-c`, `en-journey-c` |
+| Mobile CI `37298360178` | fast contracts, Android Release build, Android boot smoke, iOS Release simulator build and iOS artifact provenance **PASS**; iOS boot smoke **FAIL — persistent infrastructure** (below); its `Validation evidence (VAL-01)` job is red only as the dependent record of that gate |
+
+**The persistent iOS exception.** Both attempts of Mobile CI `37298360178` failed the iOS boot smoke at the same step,
+`Maestro driver readiness (bounded)` (`maestro hierarchy`, 300 s bound), with the same
+`xcuitest.installer.LocalXCTestInstaller$IOSDriverTimeoutException: iOS driver not ready in time` — attempt 1 after a
+3 min 36 s simulator boot and install, attempt 2 (failed jobs only, the same exact-head simulator artifact, no rebuild)
+after 2 min 46 s. That step only starts Maestro's XCTest driver on the booted simulator: **the app was never opened in
+either attempt**, and the boot smoke itself was skipped. The iOS Release simulator build and its artifact provenance
+passed in the same run. The immediately prior branch head `77a2c4c` (run `37293964488`) passed the identical step and
+boot smoke, and no file of the `77a2c4c → ada6315` delta reaches the iOS app or the Maestro driver set-up.
+Final classification: **PERSISTENT INFRASTRUCTURE — NOT PRODUCT / NOT VALIDATION LOGIC.**
+
+**VAL-01 retry budget.** The one infrastructure retry was used (attempt 2) and the budget is exhausted; **no second retry
+was performed**. No timeout, workflow or Product change was made to turn the check green. The follow-up is
+`QAN-BL-CI-01` (`CI-IOS-01 — Maestro / XCTest Driver Startup Reliability`), outside S4-01's scope (§16).
 
 ## 15. S4-01 Product Copy Gate
 
-Bound byte-for-byte and pinned by the S4-01 contract: the CANON names («قنديل» / QANDEEL, «العالم المشترك» / Shared
-World) and the two APPROVED meanings (the invitation with the inviter's real Name; the welcome). Every other string in
-`apps/mobile/src/shared-world/copy.ts` is marked **PROPOSED** — the switcher's group label, the invite field, the
-non-enumerating confirmation, the malformed-ID notice, Accept / Decline, the declined notice, the neutral unavailable
-line, the Shared ID page (privacy explanation, Copy, Regenerate and its warning), the not-open notices. The PO decides
-them before merge; the gate's status string says OPEN until then.
+**CLOSED — Product Owner, 2026-10-05.** Every string in `apps/mobile/src/shared-world/copy.ts` is CANON or APPROVED; none
+is PROPOSED, and `SHARED_COPY_GATE` states the gate closed. Bound byte-for-byte and pinned by the S4-01 contract: the
+CANON names («قنديل» / QANDEEL, «العالم المشترك» / Shared World), the two Task-Contract APPROVED meanings (the invitation
+with the inviter's real Name; the welcome), and the three rows the Product Owner amended when closing the gate:
+
+| Row | Retired | Final |
+|---|---|---|
+| `declined` (ar) | «رُفضت الدعوة.» | «تم رفض الدعوة.» |
+| `invalidSharedId` | «هذا لا يبدو معرّفًا مشتركًا.» / "That doesn't look like a Shared ID." | «تأكد من المعرّف المشترك وحاول مرة أخرى.» / "Check the Shared ID and try again." |
+| `switcherLabel` (accessible name only, never drawn) | «العوالم» / "Worlds" | «التنقل بين قنديل والعالم المشترك» / "Switch between QANDEEL and Shared World" |
+
+Every other row — the invite field, the non-enumerating confirmation, Accept / Decline, the neutral unavailable line, the
+Shared ID page (privacy explanation, Copy, Regenerate and its warning), the not-open notices — is APPROVED as drawn. The
+closure is copy-only: no behaviour, surface or scope changed. Journey B's malformed-ID assertion
+(`scripts/phase-m/run-s401-proof-leg.sh`) follows the amended Arabic sentence.
 
 ## 16. Backlog reconciliation (BG-05 / BG-08)
 
@@ -248,6 +292,9 @@ them before merge; the gate's status string says OPEN until then.
 - **Admitted (BG-06, a genuine external dependency):** `QAN-BL-LAUNCH-03` — Shared ID Sealing Key: production custody,
   provisioning and rotation — owner `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate`, `MEDIUM`,
   `DEFERRED — OWNED`.
+- **Admitted (BG-06, reviewer-designated follow-up):** `QAN-BL-CI-01` — iOS simulator Maestro / XCTest driver startup
+  reliability in Mobile CI — owner `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability`, `MEDIUM`,
+  `DEFERRED — OWNED`. Not part of S4-01's scope (§14).
 - **Unchanged:** `QAN-BL-CW-01`, `QAN-BL-NOTIF-02` … `05`, `QAN-BL-VOICE-01`, every other item.
 
 ## 17. Stage-4 Gap Matrix
@@ -280,8 +327,9 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 | G-24 | Shared ID sealing key custody / rotation in production | §6 | 4 | **`QAN-BL-LAUNCH-03`** (admitted) |
 | G-25 | World-Transition motion review (CW2-07 §41, §49) | CW2-07 | 5 | **S4-03** (a neutral cut ships; Reduce Motion parity holds) |
 | G-26 | iOS device journeys | §14 | 5 | Mobile CI iOS build + boot smoke here; physical / iOS journey legs → `Release Hardening & Launch — physical iOS / Android device validation` |
-| G-27 | PROPOSED copy rows | §15 | 3 | the S4-01 Product Copy Gate, before merge |
+| G-27 | PROPOSED copy rows | §15 | 1 | the S4-01 Product Copy Gate is CLOSED (Product Owner, 2026-10-05); none remains PROPOSED |
 | G-28 | Six host-locale mobile Jest tests | host | 6 | environment; identical on the baseline |
+| G-29 | Mobile CI iOS boot smoke: persistent Maestro / XCTest driver-readiness timeout on the exact head | §14 | 5 | **`QAN-BL-CI-01`** (admitted; `CI-IOS-01`) |
 
 The S4-02 / S4-03 / S4-04 names are the Task Contract's own sequencing labels; each opens only through its own Task
 Contract.
