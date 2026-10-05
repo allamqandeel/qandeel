@@ -567,6 +567,7 @@ async function verifyConcurrency() {
     }
     await asOwner();
     await client.query('COMMIT');
+    await client.query('RESET ROLE');
     const invitationOf = async (target) => (await pendingFor(target))[0].id;
 
     stage = 'concurrency: an emergency disable waits for the in-flight birth bound to the earlier snapshot';
@@ -588,11 +589,13 @@ async function verifyConcurrency() {
       'the next birth is refused by the new snapshot');
     await asOwner();
     await client.query('COMMIT');
+    await client.query('RESET ROLE');
 
     stage = 'concurrency: two identical acceptances birth one World';
     await client.query('BEGIN');
     await setGate('SHARED_DIRECT_WORLD_BIRTH', 'ENABLED', 'SATISFIED');
     await client.query('COMMIT');
+    await client.query('RESET ROLE');
     const target = await invitationOf(third);
     const command = randomUUID();
     const [{ pid: pidTwo }] = await rows('SELECT pg_backend_pid() AS pid', [], two);
@@ -618,7 +621,7 @@ async function verifyConcurrency() {
     await one.end();
     await two.end();
     await client.query('ROLLBACK').catch((error) => { if (error?.code !== '25P01') throw error; });
-    await asOwner();
+    await client.query('RESET ROLE');
     const worldIds = (await rows('SELECT world_id FROM public.shared_world_membership_episodes WHERE user_id = ANY($1::uuid[])', [humans])).map((r) => r.world_id);
     await client.query('DELETE FROM shared_private.shared_direct_birth_launch_evidence WHERE world_id = ANY($1::uuid[])', [worldIds]);
     await client.query('DELETE FROM public.shared_world_direct_acceptance_commands WHERE world_id = ANY($1::uuid[])', [worldIds]);
