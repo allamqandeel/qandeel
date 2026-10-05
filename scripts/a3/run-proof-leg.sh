@@ -52,10 +52,15 @@ capture() {
   adb shell dumpsys notification --noredact > "$OUT/$LEG-notifications.txt" 2>&1 || true
   adb logcat -d > "$OUT/logcat-$LEG.txt" 2>&1 || true
 }
+# VAL-01 — every Maestro invocation is bounded by the platform-neutral watchdog: an expiry is classified
+# INFRASTRUCTURE, the process group is killed, and the leg fails in minutes instead of idling to the job timeout.
+BOUND="node $REPO/scripts/validation/bounded-run.mjs"
+FLOW_SECONDS="${MAESTRO_FLOW_SECONDS:-600}"
 maestro_flow() { # <flow> <step-name> [-e KEY=VALUE ...]
   local flow="$1" step="$2"
   shift 2
-  maestro test --debug-output "$OUT/debug-$LEG-$step" --test-output-dir "$OUT/shots-$LEG" -e PREFIX="$LEG" "$@" "$FLOWS/$flow"
+  $BOUND --seconds "$FLOW_SECONDS" --label "flow-$LEG-$step" --out "$OUT" -- \
+    maestro test --debug-output "$OUT/debug-$LEG-$step" --test-output-dir "$OUT/shots-$LEG" -e PREFIX="$LEG" "$@" "$FLOWS/$flow"
 }
 
 # --- Cold-start readiness gate (validation infrastructure; nothing below is evidence) -------------------------------
@@ -81,13 +86,18 @@ adb shell pm path "$PKG" >/dev/null 2>&1 || { echo "READINESS: $PKG is not insta
   echo "apk sha256: $(sha256sum "$APK" | cut -d' ' -f1)"
 } | tee "$OUT/device.txt"
 
+# VAL-01 — the Maestro driver must answer, boundedly, before any walk: a dead driver is classified INFRASTRUCTURE here
+# within five minutes, with no Product step run, instead of three walks that each hang.
+$BOUND --seconds 300 --label driver-readiness --out "$OUT" --quiet -- maestro hierarchy --compact \
+  || { echo "READINESS: INFRASTRUCTURE — the Maestro driver did not answer; the leg was not run" | tee -a "$OUT/readiness.txt"; exit 1; }
+
 # The readiness walk never touches notifications, so it leaves no OS permission behind for an A3-02 leg.
 ready=0
 for attempt in 1 2 3; do
   # A shade or system dialog left open over the app (seen on a freshly cold-booted emulator) hides it from the walk.
   adb shell cmd statusbar collapse >/dev/null 2>&1 || true
   adb shell input keyevent KEYCODE_HOME >/dev/null 2>&1 || true
-  if maestro test --debug-output "$OUT/debug-readiness-$attempt" "$FLOWS/a3-01-readiness.yaml"; then
+  if $BOUND --seconds 300 --label "readiness-$attempt" --out "$OUT" -- maestro test --debug-output "$OUT/debug-readiness-$attempt" "$FLOWS/a3-01-readiness.yaml"; then
     echo "READINESS: app cold paths walked (attempt $attempt)" | tee -a "$OUT/readiness.txt"
     ready=1
     break

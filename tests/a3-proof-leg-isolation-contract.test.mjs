@@ -14,6 +14,7 @@ import YAML from 'yaml';
 
 import { BUILD_RECIPES, PROOF_ENTRIES, entryFor } from '../scripts/phase-m/native-artifact-manifest.mjs';
 import { verifyManifest } from '../scripts/phase-m/verify-native-artifact-manifest.mjs';
+import { parseLegRunner } from '../scripts/validation/proof-legs.mjs';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
 const read = (path) => readFileSync(join(root, path), 'utf8');
@@ -35,7 +36,9 @@ const stepsText = (job) => (job.steps ?? []).map((step) => [step.run ?? '', step
 test('1 — the sequential A3-01 proof shape is gone; one isolated workflow replaces it', () => {
   assert.equal(existsSync(join(root, '.github/workflows/a3-01-inapp-proof.yml')), false, 'the sequential all-leg workflow must not return');
   assert.equal(existsSync(join(root, 'scripts/a301/run-a301-inapp-proof.sh')), false, 'the sequential all-leg runner must not return');
-  assert.deepEqual(Object.keys(workflow().jobs).sort(), ['android-leg', 'build-android', 'build-ios', 'ios-leg']);
+  // VAL-01 RE-ANCHOR: a `plan` job selects the legs a change can affect; it builds and runs nothing.
+  assert.deepEqual(Object.keys(workflow().jobs).sort(), ['android-leg', 'build-android', 'build-ios', 'ios-leg', 'plan']);
+  for (const tool of BUILD_TOOLS) assert.doesNotMatch(stepsText(workflow().jobs.plan), tool, `plan must not build (${tool})`);
 });
 
 test('2 — a BUILD PRODUCER per platform builds the proof binary ONCE and uploads it with its identity', () => {
@@ -54,16 +57,22 @@ test('2 — a BUILD PRODUCER per platform builds the proof binary ONCE and uploa
 
 test('3 — every leg is its OWN matrix job: stable ids, fail-fast off, needs only its producer', () => {
   const { jobs } = workflow();
-  for (const [name, producer, legs] of [['android-leg', 'build-android', [...A301_LEGS, ...A302_ANDROID_LEGS]], ['ios-leg', 'build-ios', A302_IOS_LEGS]]) {
+  for (const [name, producer, platform, runner, legs] of [
+    ['android-leg', 'build-android', 'android', ANDROID_RUNNER, [...A301_LEGS, ...A302_ANDROID_LEGS]],
+    ['ios-leg', 'build-ios', 'ios', IOS_RUNNER, A302_IOS_LEGS],
+  ]) {
     const job = jobs[name];
-    assert.deepEqual(job.needs, [producer], `${name} needs exactly its producer`);
+    // VAL-01 RE-ANCHOR: the matrix is the set `plan` selected for this change (scripts/validation/proof-legs.mjs), drawn
+    // from the runner's own leg list — so the full, stable set is pinned at the runner, and a run holds a subset of it.
+    assert.deepEqual(job.needs, ['plan', producer], `${name} needs its producer and the leg selection, nothing else`);
     assert.equal(job.strategy?.['fail-fast'], false, `${name}: a failed leg never cancels a sibling`);
-    assert.deepEqual(job.strategy?.matrix?.leg, legs, `${name}: the stable leg ids, in order`);
+    assert.equal(job.strategy?.matrix?.leg, `\${{ fromJSON(needs.plan.outputs.${platform}_legs) }}`, `${name}: the selected legs`);
+    assert.deepEqual(parseLegRunner(read(runner)).legs, legs, `${name}: the stable leg ids, in order, as the runner accepts them`);
     assert.equal(Object.keys(job.strategy.matrix).length, 1, `${name}: one dimension — the leg — so a leg is never multiplied by another axis`);
     assert.match(job.name, /\$\{\{ matrix\.leg \}\}/u, `${name}: each job result is named by its leg`);
   }
-  // The A3-01 legs keep their meaning: they are all still in the matrix, none renamed.
-  for (const leg of A301_LEGS) assert.ok(workflow().jobs['android-leg'].strategy.matrix.leg.includes(leg), leg);
+  // The A3-01 legs keep their meaning: they are all still runner legs, none renamed.
+  for (const leg of A301_LEGS) assert.ok(parseLegRunner(read(ANDROID_RUNNER)).legs.includes(leg), leg);
 });
 
 test('4 — a LEG CONSUMER builds nothing, verifies provenance BEFORE install, runs exactly ONE leg, uploads its own evidence', () => {
@@ -77,7 +86,11 @@ test('4 — a LEG CONSUMER builds nothing, verifies provenance BEFORE install, r
     const verify = steps.findIndex((s) => s.includes('verify-native-artifact-manifest.mjs'));
     const run = steps.findIndex((s) => s.includes(runner));
     assert.ok(download >= 0 && verify > download && run > verify, `${name}: download → verify provenance → run`);
-    assert.match(steps[verify], new RegExp(`--mode same-run --platform ${platform} --role PROOF_VALIDATION`, 'u'));
+    // VAL-01 RE-ANCHOR: the mode is the one the PRODUCER declared — `prior-run` for a binary it restored by build-input
+    // fingerprint, `same-run` for one it built — and a lost output resolves to the stricter `same-run`.
+    assert.match(steps[verify], new RegExp(`--mode "\\$MODE" --platform ${platform} --role PROOF_VALIDATION`, 'u'));
+    const producer = name === 'android-leg' ? 'build-android' : 'build-ios';
+    assert.equal(job.steps[verify].env?.MODE, `\${{ needs.${producer}.outputs.provenance_mode == 'prior-run' && 'prior-run' || 'same-run' }}`);
     assert.match(steps[verify], /--recipe a3-activity-push-proof/u);
     assert.match(steps[verify], /set -o pipefail/u, `${name}: a refused provenance fails the job`);
     assert.equal(steps.filter((s) => s.includes(runner)).length, 1, `${name}: the runner is called once`);

@@ -27,10 +27,14 @@ case "$LEG" in
 esac
 mkdir -p "$OUT"
 fail() { echo "FAIL $LEG — $1" | tee "$OUT/result.txt"; xcrun simctl io "$UDID" screenshot "$OUT/$LEG-failure.png" >/dev/null 2>&1 || true; exit 1; }
-flow() { local file="$1" step="$2"; shift 2; maestro --device "$UDID" test --debug-output "$OUT/debug-$LEG-$step" --test-output-dir "$OUT/shots-$LEG" -e PREFIX="$LEG" "$@" "$FLOWS/$file"; }
+# VAL-01 — every simulator wait and Maestro invocation is bounded by the platform-neutral watchdog (`timeout` is absent
+# on macOS): an expiry is classified INFRASTRUCTURE and fails the leg in minutes, never at the 60-minute job limit.
+BOUND="node $REPO/scripts/validation/bounded-run.mjs"
+FLOW_SECONDS="${MAESTRO_FLOW_SECONDS:-600}"
+flow() { local file="$1" step="$2"; shift 2; $BOUND --seconds "$FLOW_SECONDS" --label "flow-$LEG-$step" --out "$OUT" -- maestro --device "$UDID" test --debug-output "$OUT/debug-$LEG-$step" --test-output-dir "$OUT/shots-$LEG" -e PREFIX="$LEG" "$@" "$FLOWS/$file"; }
 
 # Readiness: a real condition — the simulator reports a completed boot — then a fresh install (never asked before).
-xcrun simctl bootstatus "$UDID" -b || fail "the simulator did not finish booting"
+$BOUND --seconds 300 --label simulator-boot --out "$OUT" -- xcrun simctl bootstatus "$UDID" -b || fail "INFRASTRUCTURE — the simulator did not finish booting"
 xcrun simctl uninstall "$UDID" "$BUNDLE" >/dev/null 2>&1 || true
 xcrun simctl privacy "$UDID" reset all "$BUNDLE" >/dev/null 2>&1 || true
 xcrun simctl install "$UDID" "$APP" || fail "install"
@@ -43,6 +47,8 @@ xcrun simctl install "$UDID" "$APP" || fail "install"
 node -e "const p=require(process.argv[1]); require('fs').writeFileSync(process.argv[2], JSON.stringify(p.valid.en.apns))" "$PAYLOADS" "$OUT/valid.apns"
 TEXT="$(node -e "process.stdout.write(require(process.argv[1]).valid.en.apns.aps.alert.body)" "$PAYLOADS")"
 
+$BOUND --seconds 300 --label driver-readiness --out "$OUT" --quiet -- maestro --device "$UDID" hierarchy --compact \
+  || fail "INFRASTRUCTURE — the Maestro XCTest driver did not answer; no Product step was run"
 flow a3-02-ios-permission.yaml permission || fail "a3-02-ios-permission.yaml"
 xcrun simctl push "$UDID" "$BUNDLE" "$OUT/valid.apns" || fail "simctl push (foreground)"
 flow a3-02-ios-foreground.yaml foreground -e TEXT="$TEXT" || fail "a message was presented while the app was in front (D51)"

@@ -48,6 +48,11 @@
  *                                   runner or against the server. Nothing under `apps/mobile` imports
  *                                   `scripts/`, and the contract proves that by walking every import
  *                                   specifier in the mobile workspace.
+ *   `scripts/a3/`                   VAL-01: the Stage-3 proof LEG RUNNERS. A leg consumer calls them
+ *                                   after the binary is built, downloaded and provenance-verified;
+ *                                   no build step reads them, and nothing in the bundle imports them
+ *                                   (the same import walk). A runner fix is therefore a validation
+ *                                   change, never a reason to rebuild the binary it drives.
  *
  * Everything else is included, deliberately including some paths that are not literally bundled
  * (`eslint.config.js`, `jest.setup.js`, root `scripts/*.mjs`, `.github/workflows/`). Each is a safe
@@ -83,7 +88,7 @@ import process from 'node:process';
  * compare equal to one fingerprinted under the new rules, and reuse across the change fails closed
  * rather than comparing two digests that mean different things.
  */
-export const FINGERPRINT_SCHEMA_VERSION = 1;
+export const FINGERPRINT_SCHEMA_VERSION = 2;
 
 /** The domain separator. Present so a bare digest of this shape cannot be mistaken for another one. */
 export const FINGERPRINT_DOMAIN = 'qandeel.native-build-fingerprint';
@@ -97,6 +102,7 @@ export const EXCLUDED_PREFIXES = Object.freeze([
   'tests/',
   'apps/mobile/.maestro/',
   'scripts/phase-m/',
+  'scripts/a3/',
 ]);
 
 /** Individual tracked files that are prose or environment samples and reach no build. */

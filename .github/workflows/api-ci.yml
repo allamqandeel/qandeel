@@ -1,11 +1,50 @@
 name: API CI
+# VAL-01 — change-aware. The `paths` filter below still decides whether this workflow is relevant to a PR at
+# all, and it matches the PR's CUMULATIVE diff, so every later push to a PR that once touched the API used to
+# replay the whole real-PostgreSQL/Redis suite. The `plan` job now compares the LATEST update with the
+# immediately previous PR head (scripts/validation/change-planner.mjs):
+#
+#   RUN            the heavy gate runs, exactly as before. Always on `main`, on a PR's first head, and on any
+#                  update that touches the API, the database, a root contract, a shared root input, the
+#                  validation authority or an unclassified path — or whose predecessor is not PROVEN green.
+#   CARRY_FORWARD  the predecessor head's API evidence is positively proven green (same PR lineage, exact
+#                  predecessor, same base, same authority, latest attempt) and nothing in the update can reach
+#                  the API gate. The root contracts that read a changed doc still run at THIS head, in
+#                  `api-bound-contracts`; nothing is removed from `verify-api`.
+#
+# `verify-api` is skipped ONLY on the literal plan output CARRY_FORWARD, so a planner that failed or printed
+# nothing makes the gate run. A red or unknown predecessor is never carried forward.
 on:
   pull_request:
-    paths: ['apps/api/**','database/**','tests/**','package.json','package-lock.json','tsconfig.base.json','.github/workflows/api-ci.yml']
+    paths: ['apps/api/**','database/**','tests/**','packages/**','package.json','package-lock.json','tsconfig.base.json','.github/workflows/api-ci.yml','scripts/validation/**']
   push:
     branches: [main]
+permissions:
+  contents: read
+  actions: read
 jobs:
+  plan:
+    name: Change-aware plan (VAL-01)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      api_heavy: ${{ steps.plan.outputs.api_heavy }}
+      api_heavy_contracts: ${{ steps.plan.outputs.api_heavy_contracts }}
+      api_heavy_source_run_id: ${{ steps.plan.outputs.api_heavy_source_run_id }}
+      api_heavy_source_head_sha: ${{ steps.plan.outputs.api_heavy_source_head_sha }}
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Plan the API gate against the latest update
+        id: plan
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: node scripts/validation/plan-validation.mjs plan --workflow api-ci
+
   verify-api:
+    needs: [plan]
+    if: ${{ !cancelled() && needs.plan.outputs.api_heavy != 'CARRY_FORWARD' }}
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -862,3 +901,58 @@ jobs:
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"
+
+  # VAL-01 — a CARRY_FORWARD still re-runs, at THIS head, every root contract of this workflow that can read a
+  # path the update changed (scripts/validation/change-planner.mjs `analyzeLightPaths`). No database, no Redis:
+  # these are the static contracts, unchanged, run by the same `node --test`.
+  api-bound-contracts:
+    name: API contracts that read the changed paths (VAL-01)
+    needs: [plan]
+    if: ${{ needs.plan.outputs.api_heavy == 'CARRY_FORWARD' && needs.plan.outputs.api_heavy_contracts != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies, run: npm ci}
+      - name: Run the bound root contracts
+        env: {CONTRACTS: '${{ needs.plan.outputs.api_heavy_contracts }}'}
+        run: |
+          echo "### API contracts re-run at this head (VAL-01)" >> "$GITHUB_STEP_SUMMARY"
+          for contract in $CONTRACTS; do echo "- \`$contract\`" >> "$GITHUB_STEP_SUMMARY"; done
+          node --test $CONTRACTS
+
+  # VAL-01 — the gate's verdict for THIS head, recorded only when it is green: executed here, or carried forward
+  # from a proven-green predecessor with its bound contracts green. The next PR head reads this record (and this
+  # job's conclusion in the run's LATEST attempt) before it may carry anything forward.
+  evidence:
+    name: Validation evidence (VAL-01)
+    needs: [plan, verify-api, api-bound-contracts]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Record the API gate's evidence for this head
+        run: >-
+          node scripts/validation/plan-validation.mjs record --workflow api-ci --gate API_HEAVY
+          --decision "${{ needs.plan.outputs.api_heavy || 'RUN' }}"
+          --gate-result "${{ needs.verify-api.result }}"
+          --bound-result "${{ needs.api-bound-contracts.result }}"
+          --contracts "${{ needs.plan.outputs.api_heavy_contracts }}"
+          --source-run-id "${{ needs.plan.outputs.api_heavy_source_run_id }}"
+          --source-head-sha "${{ needs.plan.outputs.api_heavy_source_head_sha }}"
+          --out "$RUNNER_TEMP/val01-evidence"
+      - name: Publish the evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: val01-evidence-api-ci-API_HEAVY
+          path: ${{ runner.temp }}/val01-evidence/API_HEAVY/evidence.json
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 30

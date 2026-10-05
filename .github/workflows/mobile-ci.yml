@@ -36,9 +36,23 @@ name: Mobile CI
 # `actions/cache` is KEPT in the producers, demoted to what it always honestly was — an optimization for
 # a fresh head whose inputs already have a binary. It is no longer the retry mechanism, so its post-step
 # skip on failure costs nothing.
+#
+# VAL-01 — change-aware, in three layers (scripts/validation/change-planner.mjs):
+#
+#   MOBILE_CONTRACT       the fast contract gate. CARRY_FORWARD only when the latest update cannot reach it and
+#                         the predecessor head's evidence is PROVEN green; the root contracts that read a changed
+#                         doc / flow / runner still run at this head (`mobile-bound-contracts`).
+#   MOBILE_NATIVE_BINARY  the build producers + device consumers. NOT_RELEVANT when the PR's cumulative diff
+#                         holds no native input (MOB-CI-01, unchanged); CARRY_FORWARD when the latest update
+#                         holds none and the predecessor's native evidence is proven green; RUN otherwise.
+#   DEVICE_PROOF_FLOW     a Maestro flow is native-relevant here only if this gate's consumers run it.
+#
+# A gate is skipped ONLY on the literal plan outputs CARRY_FORWARD / NOT_RELEVANT; a failed or silent planner
+# makes it run. `main` is never carried forward. Device consumers carry the retry budget (one classified
+# rerun) and a bounded driver-readiness probe, so a dead simulator fails in minutes, classified.
 on:
   pull_request:
-    paths: ['apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12-integration-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/t13-recovery-persistence-contract.test.mjs', 'tests/t14-mobile-product-sign-in-gateway-contract.test.mjs', 'tests/w1a-01-conversation-core-contract.test.mjs', 'tests/w1b-01-account-identity-first-use-contract.test.mjs', 'tests/w2-01-final-account-access-contract.test.mjs', 'tests/w2-02-production-launch-identity-contract.test.mjs', 'tests/w3-01-general-settings-appearance-signout-contract.test.mjs', 'tests/w3-02-account-identity-public-id-contract.test.mjs', 'tests/w3-mega-a-account-identity-security-contract.test.mjs', 'tests/w3-mega-s-personal-controls-settings-contract.test.mjs', 'tests/w3-mega-u2-understanding-surface-contract.test.mjs', 'tests/w3-mega-u3-contested-runtime-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs', 'tests/qan-inf-04-native-ci-artifact-reuse-contract.test.mjs', 'tests/a3-02-native-push-platform-delivery-contract.test.mjs', 'tests/a3-proof-leg-isolation-contract.test.mjs', '.github/workflows/a3-proof.yml', 'scripts/a3/**', 'scripts/classify-mobile-native-impact.mjs', 'scripts/phase-m/native-build-fingerprint.mjs', 'scripts/phase-m/native-artifact-manifest.mjs', 'scripts/phase-m/verify-native-artifact-manifest.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml', '.github/workflows/t12-phase-m-cloud-validation.yml', '.github/workflows/mobile-expo-dependency-drift-advisory.yml']
+    paths: ['scripts/validation/**', 'tests/val-01-change-aware-validation-contract.test.mjs', 'apps/mobile/**', 'packages/runtime/**', 'tests/mobile-foundation-toolchain-contract.test.mjs', 'tests/mobile-canonical-state-contract.test.mjs', 'tests/living-analysis-map-runtime-contract.test.mjs', 'tests/temporal-navigation-layer-contract.test.mjs', 'tests/return-navigation-layer-contract.test.mjs', 'tests/inspection-orientation-return-chrome-contract.test.mjs', 'tests/t10-motion-contract.test.mjs', 'tests/t11-responsive-contract.test.mjs', 'tests/t12-integration-contract.test.mjs', 'tests/t12p-mobile-runtime-entry-contract.test.mjs', 'tests/t13-recovery-persistence-contract.test.mjs', 'tests/t14-mobile-product-sign-in-gateway-contract.test.mjs', 'tests/w1a-01-conversation-core-contract.test.mjs', 'tests/w1b-01-account-identity-first-use-contract.test.mjs', 'tests/w2-01-final-account-access-contract.test.mjs', 'tests/w2-02-production-launch-identity-contract.test.mjs', 'tests/w3-01-general-settings-appearance-signout-contract.test.mjs', 'tests/w3-02-account-identity-public-id-contract.test.mjs', 'tests/w3-mega-a-account-identity-security-contract.test.mjs', 'tests/w3-mega-s-personal-controls-settings-contract.test.mjs', 'tests/w3-mega-u2-understanding-surface-contract.test.mjs', 'tests/w3-mega-u3-contested-runtime-contract.test.mjs', 'tests/session-semantic-clock-sp-lh-delivery-contract.test.mjs', 'tests/mobile-native-impact-classifier.test.mjs', 'tests/qan-inf-03-deterministic-expo-dependency-validation-contract.test.mjs', 'tests/qan-inf-04-native-ci-artifact-reuse-contract.test.mjs', 'tests/a3-02-native-push-platform-delivery-contract.test.mjs', 'tests/a3-proof-leg-isolation-contract.test.mjs', '.github/workflows/a3-proof.yml', 'scripts/a3/**', 'scripts/classify-mobile-native-impact.mjs', 'scripts/phase-m/native-build-fingerprint.mjs', 'scripts/phase-m/native-artifact-manifest.mjs', 'scripts/phase-m/verify-native-artifact-manifest.mjs', 'package.json', 'package-lock.json', 'scripts/preflight.mjs', '.github/workflows/mobile-ci.yml', '.github/workflows/api-ci.yml', '.github/workflows/t12-phase-m-cloud-validation.yml', '.github/workflows/mobile-expo-dependency-drift-advisory.yml']
   push:
     branches: [main]
 concurrency:
@@ -50,53 +64,50 @@ env:
   MAESTRO_CLI_NO_ANALYTICS: 1
   MAESTRO_VERSION: 2.10.0
   MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+permissions:
+  contents: read
+  actions: read
 jobs:
+  # VAL-01 — the ONE place this workflow decides what runs. The native-impact classification that used to be
+  # the first step of the contract gate lives here now (`classifyChangedFiles` over the cumulative diff, with
+  # the same fail-safe), beside the latest-update carry-forward law.
+  plan:
+    name: Change-aware plan (VAL-01)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      mobile_contract: ${{ steps.plan.outputs.mobile_contract }}
+      mobile_contract_contracts: ${{ steps.plan.outputs.mobile_contract_contracts }}
+      mobile_contract_source_run_id: ${{ steps.plan.outputs.mobile_contract_source_run_id }}
+      mobile_contract_source_head_sha: ${{ steps.plan.outputs.mobile_contract_source_head_sha }}
+      mobile_native_binary: ${{ steps.plan.outputs.mobile_native_binary }}
+      mobile_native_binary_source_run_id: ${{ steps.plan.outputs.mobile_native_binary_source_run_id }}
+      mobile_native_binary_source_head_sha: ${{ steps.plan.outputs.mobile_native_binary_source_head_sha }}
+    steps:
+      # Full history so the changed-file sets can be derived deterministically from the real merge base and
+      # the real predecessor head; a shallow clone would force the fail-safe.
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Plan the mobile gates against the cumulative diff and the latest update
+        id: plan
+        env: {GH_TOKEN: '${{ github.token }}'}
+        run: node scripts/validation/plan-validation.mjs plan --workflow mobile-ci
+
   verify-mobile-contracts:
     name: Fast mobile contract gate
+    needs: [plan]
+    if: ${{ !cancelled() && needs.plan.outputs.mobile_contract != 'CARRY_FORWARD' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
-    outputs:
-      native_impact: ${{ steps.classify.outputs.native_impact }}
     steps:
-      # Full history so the changed-file set can be derived deterministically
-      # from the real merge base; a shallow clone would force the fail-safe.
-      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - {name: Checkout, uses: actions/checkout@v4}
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm}
       # No JDK is set up here on purpose: every gate in this job is Node-only.
       # Gradle and the Maestro tooling path live in the native jobs below.
-      - name: Classify native impact
-        id: classify
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PUSH_BEFORE_SHA: ${{ github.event.before }}
-          PUSH_HEAD_SHA: ${{ github.sha }}
-        run: |
-          set -uo pipefail
-          if [ "$EVENT_NAME" = "pull_request" ]; then
-            base="${PR_BASE_SHA:-}"; head="${PR_HEAD_SHA:-}"
-          else
-            base="${PUSH_BEFORE_SHA:-}"; head="${PUSH_HEAD_SHA:-}"
-          fi
-          echo "event=$EVENT_NAME base=${base:-<none>} head=${head:-<none>}"
-          files=""
-          # Fail safe: an unestablished comparison base means native smoke runs.
-          if [ -n "$base" ] && [ -n "$head" ] &&
-             [ "$base" != "0000000000000000000000000000000000000000" ] &&
-             git cat-file -e "${base}^{commit}" 2>/dev/null &&
-             git cat-file -e "${head}^{commit}" 2>/dev/null; then
-            merge_base="$(git merge-base "$base" "$head" 2>/dev/null || true)"
-            [ -n "$merge_base" ] && base="$merge_base"
-            files="$(git diff --name-only "$base" "$head" 2>/dev/null || true)"
-          else
-            echo "the comparison base could not be established; failing safe to native_impact=true"
-          fi
-          native_impact="$(printf '%s\n' "$files" | node scripts/classify-mobile-native-impact.mjs)"
-          echo "native_impact=$native_impact" >> "$GITHUB_OUTPUT"
-          echo "### Mobile CI native impact: \`$native_impact\`" >> "$GITHUB_STEP_SUMMARY"
       - {name: Install dependencies from the root lockfile, run: npm ci}
       - {name: Verify repository preflight (Node >=22.13.0), run: npm run preflight}
       - {name: Verify npm-only toolchain contract, run: npm run test:toolchain}
@@ -129,6 +140,7 @@ jobs:
       - {name: Verify QANDEEL Understanding Contested / Under Review contract (W3-MEGA-U U3), run: npm run test:w3-mega-u3-contested-runtime-contract}
       - {name: Verify Session Semantic Clock / SP / LH delivery contract (T-03A2), run: npm run test:session-semantic-clock-sp-lh-delivery-contract}
       - {name: Verify the native-impact classifier, run: npm run test:mobile-native-impact-classifier}
+      - {name: Verify change-aware validation + cross-run native reuse contract (VAL-01), run: npm run test:val-01-change-aware-validation-contract}
       - {name: Verify deterministic Expo SDK 57 dependency validation contract (QAN-INF-03), run: npm run test:qan-inf-03-deterministic-expo-dependency-validation-contract}
       - {name: Verify native CI build/validation decoupling contract (QAN-INF-04), run: npm run test:qan-inf-04-native-ci-artifact-reuse-contract}
       - {name: Type-check mobile (TypeScript 5.9 line), run: npm run typecheck:mobile}
@@ -157,8 +169,10 @@ jobs:
   # -------------------------------------------------------------------------------------------------
   build-android:
     name: Android Release APK (x86_64) — BUILD PRODUCER
-    needs: verify-mobile-contracts
-    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'
+    needs: [plan, verify-mobile-contracts]
+    # Runs unless the planner POSITIVELY said the native gate is not relevant or is carried forward, and only
+    # behind a green contract gate — or a contract gate the planner carried forward.
+    if: ${{ !cancelled() && needs.plan.outputs.mobile_native_binary != 'CARRY_FORWARD' && needs.plan.outputs.mobile_native_binary != 'NOT_RELEVANT' && (needs.verify-mobile-contracts.result == 'success' || (needs.verify-mobile-contracts.result == 'skipped' && needs.plan.outputs.mobile_contract == 'CARRY_FORWARD')) }}
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -174,9 +188,6 @@ jobs:
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm}
-      - name: Setup Temurin JDK 17
-        uses: actions/setup-java@v6
-        with: {distribution: temurin, java-version: '17'}
       # QAN-INF-04 — the binary is keyed by its build inputs, not by this run.
       #
       # The fingerprint covers every tracked path that can reach the APK and excludes only the Maestro
@@ -206,7 +217,11 @@ jobs:
           key: qandeel-native-android-x86_64-PRODUCT-mobile-ci-boot-smoke-v1-${{ steps.fingerprint.outputs.value }}
       # Everything from here to the provenance gate is the BUILD, and it is skipped wholesale on a hit.
       # `npm ci` is part of it: nothing after the gate needs `node_modules`, because the gate and the
-      # evidence use Node builtins alone.
+      # evidence use Node builtins alone. VAL-01: so is the build JDK.
+      - name: Setup Temurin JDK 17
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
       - {name: Install dependencies from the root lockfile, if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm ci}
       # The fast gate already proved contracts, typecheck, lint, Jest, Expo
       # dependency validation, Expo Doctor and prebuild idempotency. This job
@@ -267,8 +282,10 @@ jobs:
 
   verify-android:
     name: Android (API 36 emulator boot smoke)
-    needs: [verify-mobile-contracts, build-android]
-    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'
+    needs: [plan, build-android]
+    # A consumer exists to validate what ITS producer published in this run, so it runs exactly when that
+    # producer succeeded.
+    if: ${{ !cancelled() && needs.build-android.result == 'success' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     permissions:
@@ -281,6 +298,8 @@ jobs:
       - name: Setup Node.js 22
         uses: actions/setup-node@v4
         with: {node-version: '22'}
+      # VAL-01: one normal attempt and ONE classified rerun; a third unchanged attempt stops here, in seconds.
+      - {name: Enforce the validation retry budget, run: 'node scripts/validation/retry-budget.mjs --attempt "${{ github.run_attempt }}"'}
       - name: Setup Temurin JDK 17 (Maestro tooling path)
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
@@ -337,6 +356,9 @@ jobs:
       # holding the runner. The bound covers emulator boot + install + smoke, so it sits above the 900 s
       # boot allowance rather than undercutting it. A timeout is a failure like any other — it stays red,
       # and a retry is still the human "re-run failed jobs" decision above, against the published artifact.
+      # VAL-01: inside that bound, the Maestro driver must answer a bounded readiness probe before the flow
+      # starts, and the flow itself is bounded — each by the platform-neutral watchdog, which classifies an
+      # expiry as INFRASTRUCTURE and kills the process group instead of idling to the step's limit.
       - name: Boot smoke on the Android emulator (API 36, x86_64, google_apis)
         timeout-minutes: 20
         env:
@@ -351,15 +373,18 @@ jobs:
           emulator-boot-timeout: 900
           script: |
             adb install -r "$APK"
-            maestro test apps/mobile/.maestro/boot-smoke.yaml
+            node scripts/validation/bounded-run.mjs --seconds 240 --label android-driver-readiness --quiet -- maestro hierarchy --compact
+            node scripts/validation/bounded-run.mjs --seconds 300 --label android-boot-smoke -- maestro test apps/mobile/.maestro/boot-smoke.yaml
 
   # -------------------------------------------------------------------------------------------------
   # iOS — BUILD PRODUCER, then VALIDATION CONSUMER
   # -------------------------------------------------------------------------------------------------
   build-ios:
     name: iOS Release simulator app — BUILD PRODUCER
-    needs: verify-mobile-contracts
-    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'
+    needs: [plan, verify-mobile-contracts]
+    # Runs unless the planner POSITIVELY said the native gate is not relevant or is carried forward, and only
+    # behind a green contract gate — or a contract gate the planner carried forward.
+    if: ${{ !cancelled() && needs.plan.outputs.mobile_native_binary != 'CARRY_FORWARD' && needs.plan.outputs.mobile_native_binary != 'NOT_RELEVANT' && (needs.verify-mobile-contracts.result == 'success' || (needs.verify-mobile-contracts.result == 'skipped' && needs.plan.outputs.mobile_contract == 'CARRY_FORWARD')) }}
     runs-on: macos-26
     timeout-minutes: 120
     permissions:
@@ -455,8 +480,8 @@ jobs:
 
   verify-ios:
     name: iOS (iPhone 17 / iOS 26.5 simulator boot smoke)
-    needs: [verify-mobile-contracts, build-ios]
-    if: needs.verify-mobile-contracts.outputs.native_impact == 'true'
+    needs: [plan, build-ios]
+    if: ${{ !cancelled() && needs.build-ios.result == 'success' }}
     runs-on: macos-26
     timeout-minutes: 60
     permissions:
@@ -468,6 +493,11 @@ jobs:
       IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
     steps:
       - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      # VAL-01: one normal attempt and ONE classified rerun; a third unchanged attempt stops here, in seconds.
+      - {name: Enforce the validation retry budget, run: 'node scripts/validation/retry-budget.mjs --attempt "${{ github.run_attempt }}"'}
       # Selected and READ BACK, never confirmed with `xcodebuild`: this job may not invoke that binary
       # at all, and a guard that did would make the no-build claim unverifiable by inspection.
       - name: Select Xcode 26.6 explicitly (never the runner default)
@@ -485,9 +515,6 @@ jobs:
           fi
           echo "IOS_SIM_UDID=$udid" >> "$GITHUB_ENV"
           echo "simulator udid: $udid"
-      - name: Setup Node.js 22
-        uses: actions/setup-node@v4
-        with: {node-version: '22'}
       - name: Setup Temurin JDK 17 (Maestro tooling path)
         uses: actions/setup-java@v6
         with: {distribution: temurin, java-version: '17'}
@@ -519,7 +546,7 @@ jobs:
       - name: Boot the simulator and install the verified app
         run: |
           xcrun simctl boot "$IOS_SIM_UDID" || true
-          xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          node scripts/validation/bounded-run.mjs --seconds 300 --label ios-simulator-boot -- xcrun simctl bootstatus "$IOS_SIM_UDID" -b
           ditto -x -k "$RUNNER_TEMP/native-build/qandeel-ios-simulator.app.zip" "$RUNNER_TEMP/native-app"
           app="$(find "$RUNNER_TEMP/native-app" -maxdepth 1 -name '*.app' | head -n 1)"
           test -n "$app"
@@ -537,8 +564,90 @@ jobs:
         run: |
           maestro --version
           maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
+      # VAL-01: the XCTest driver must answer before the flow starts. A dead driver is classified INFRASTRUCTURE
+      # here in at most five minutes, instead of a smoke that idles to its limit with no Product step run.
+      - name: Maestro driver readiness (bounded)
+        timeout-minutes: 6
+        run: node scripts/validation/bounded-run.mjs --seconds 300 --label ios-driver-readiness --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --compact
       # Bounded at the STEP for the same reason. The simulator is already booted and the verified app
       # already installed, so this bounds the Maestro smoke alone; a timeout stays red, like any failure.
       - name: Boot smoke on the iOS simulator
         timeout-minutes: 15
-        run: maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
+        run: node scripts/validation/bounded-run.mjs --seconds 780 --label ios-boot-smoke -- maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
+
+  # -------------------------------------------------------------------------------------------------
+  # VAL-01 — bound contracts and evidence
+  # -------------------------------------------------------------------------------------------------
+  # A MOBILE_CONTRACT carry-forward still re-runs, at THIS head, every root contract of this workflow that can
+  # read a path the update changed (a doc, a flow, a proof runner) — e.g. QAN-INF-04's flow-parse gate after a
+  # Maestro edit. The typecheck / lint / Jest / Expo / prebuild gates read none of those paths, and carry.
+  mobile-bound-contracts:
+    name: Mobile contracts that read the changed paths (VAL-01)
+    needs: [plan]
+    if: ${{ needs.plan.outputs.mobile_contract == 'CARRY_FORWARD' && needs.plan.outputs.mobile_contract_contracts != '' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - {name: Install dependencies from the root lockfile, run: npm ci}
+      - name: Run the bound root contracts
+        env: {CONTRACTS: '${{ needs.plan.outputs.mobile_contract_contracts }}'}
+        run: |
+          echo "### Mobile contracts re-run at this head (VAL-01)" >> "$GITHUB_STEP_SUMMARY"
+          for contract in $CONTRACTS; do echo "- \`$contract\`" >> "$GITHUB_STEP_SUMMARY"; done
+          node --test $CONTRACTS
+
+  # The verdict of each gate for THIS head, recorded only when green; read by the next PR head before it may
+  # carry anything forward (scripts/validation/change-planner.mjs `validateEvidence`).
+  evidence:
+    name: Validation evidence (VAL-01)
+    needs: [plan, verify-mobile-contracts, mobile-bound-contracts, verify-android, verify-ios]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Record the contract gate's evidence for this head
+        run: >-
+          node scripts/validation/plan-validation.mjs record --workflow mobile-ci --gate MOBILE_CONTRACT
+          --decision "${{ needs.plan.outputs.mobile_contract || 'RUN' }}"
+          --gate-result "${{ needs.verify-mobile-contracts.result }}"
+          --bound-result "${{ needs.mobile-bound-contracts.result }}"
+          --contracts "${{ needs.plan.outputs.mobile_contract_contracts }}"
+          --source-run-id "${{ needs.plan.outputs.mobile_contract_source_run_id }}"
+          --source-head-sha "${{ needs.plan.outputs.mobile_contract_source_head_sha }}"
+          --out "$RUNNER_TEMP/val01-evidence"
+      - name: Record the native gate's evidence for this head
+        if: ${{ !cancelled() }}
+        run: >-
+          node scripts/validation/plan-validation.mjs record --workflow mobile-ci --gate MOBILE_NATIVE_BINARY
+          --decision "${{ needs.plan.outputs.mobile_native_binary || 'RUN' }}"
+          --gate-result "${{ (needs.verify-android.result == 'success' && needs.verify-ios.result == 'success') && 'success' || 'failure' }}"
+          --bound-result skipped --contracts ''
+          --source-run-id "${{ needs.plan.outputs.mobile_native_binary_source_run_id }}"
+          --source-head-sha "${{ needs.plan.outputs.mobile_native_binary_source_head_sha }}"
+          --out "$RUNNER_TEMP/val01-evidence"
+      - name: Publish the contract gate's evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: val01-evidence-mobile-ci-MOBILE_CONTRACT
+          path: ${{ runner.temp }}/val01-evidence/MOBILE_CONTRACT/evidence.json
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 30
+      - name: Publish the native gate's evidence
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: val01-evidence-mobile-ci-MOBILE_NATIVE_BINARY
+          path: ${{ runner.temp }}/val01-evidence/MOBILE_NATIVE_BINARY/evidence.json
+          if-no-files-found: ignore
+          overwrite: true
+          retention-days: 30

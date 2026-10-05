@@ -21,9 +21,10 @@ import process from 'node:process';
  * resolution, or the native gate itself.
  *
  *   apps/mobile/**                      - the mobile workspace: sources, app
- *                                         config, manifest, Maestro flow, and
- *                                         everything Continuous Native
- *                                         Generation templates from.
+ *                                         config, manifest, and everything
+ *                                         Continuous Native Generation
+ *                                         templates from (minus the runner-
+ *                                         only flows and prose excluded below).
  *   package-lock.json                   - resolved native dependency graph. A
  *                                         real dependency edit moves the lock,
  *                                         so a dependency change always forces
@@ -32,6 +33,17 @@ import process from 'node:process';
  */
 export const NATIVE_IMPACT_PREFIXES = Object.freeze(['apps/mobile/']);
 export const NATIVE_IMPACT_FILES = Object.freeze(['package-lock.json', '.github/workflows/mobile-ci.yml']);
+
+/**
+ * VAL-01 — what under `apps/mobile/` can NOT affect this gate. The native fingerprint already proves these
+ * reach no binary (`scripts/phase-m/native-build-fingerprint.mjs`): Maestro flows are interpreted on the
+ * runner, and Metro bundles no Markdown. A flow still matters when this gate's own device consumers RUN it,
+ * so those flows stay native impact by name (`NATIVE_CONSUMER_FLOWS`, pinned to the flows `mobile-ci.yml`'s
+ * consumers execute by `tests/val-01-change-aware-validation-contract.test.mjs`).
+ */
+export const NATIVE_IMPACT_EXCLUDED_PREFIXES = Object.freeze(['apps/mobile/.maestro/']);
+export const NATIVE_IMPACT_EXCLUDED_SUFFIXES = Object.freeze(['.md']);
+export const NATIVE_CONSUMER_FLOWS = Object.freeze(['apps/mobile/.maestro/boot-smoke.yaml']);
 
 /** Normalizes a changed-file entry to a repository-relative POSIX path. */
 export function normalizePath(entry) {
@@ -43,6 +55,9 @@ export function isNativeImpactPath(entry) {
   const path = normalizePath(entry);
   if (path.length === 0) return false;
   if (NATIVE_IMPACT_FILES.includes(path)) return true;
+  if (NATIVE_CONSUMER_FLOWS.includes(path)) return true;
+  if (NATIVE_IMPACT_EXCLUDED_PREFIXES.some((prefix) => path.startsWith(prefix))) return false;
+  if (NATIVE_IMPACT_EXCLUDED_SUFFIXES.some((suffix) => path.endsWith(suffix))) return false;
   return NATIVE_IMPACT_PREFIXES.some((prefix) => path.startsWith(prefix));
 }
 

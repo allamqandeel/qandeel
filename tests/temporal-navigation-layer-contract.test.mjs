@@ -1123,8 +1123,11 @@ test('the T-06 gate is registered at the root and in Mobile CI without a new nat
   // RE-ANCHORED (QAN-INF-04-FIX-01): a count froze Mobile CI at three jobs; the ratio is the invariant.
   assert.equal((mobileCi.match(/runs-on: macos-26/gu) ?? []).length,
     (mobileCi.match(/^ {2}[a-z0-9-]*ios[a-z0-9-]*:$/gmu) ?? []).length, 'macOS runs the iOS chain and nothing else');
-  assert.equal((mobileCi.match(/if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/gu) ?? []).length,
-    (mobileCi.match(/runs-on: /gu) ?? []).length - 1, 'every job past the fast gate stays behind the classifier');
+  // VAL-01 RE-ANCHOR: the native decision moved to the change-aware planner, which applies MOB-CI-01's classifier
+  // (scripts/validation/plan-validation.mjs). Every native BUILD job stays behind it; QAN-INF-04 pins each consumer
+  // behind its own producer.
+  assert.equal((mobileCi.match(/needs\.plan\.outputs\.mobile_native_binary != 'NOT_RELEVANT'/gu) ?? []).length,
+    (mobileCi.match(/^ {2}build-[a-z0-9-]+:$/gmu) ?? []).length, 'every job past the fast gate stays behind the classifier');
   assert.equal(existsSync(new URL('docs/temporal-navigation-layer-v1.md', root)), true);
   assert.match(await read('apps/mobile/README.md'), /Temporal navigation layer \(T-06\)/u);
 });

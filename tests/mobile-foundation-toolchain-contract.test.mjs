@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
-import { existsSync, readdirSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
@@ -295,16 +295,22 @@ test('mobile CI keeps root package.json in the trigger so root changes still get
 test('the fast mobile contract gate always runs and owns every Node-only gate', () => {
   const fast = jobSlice('verify-mobile-contracts');
   assert.match(fast, /runs-on: ubuntu-latest/u);
-  assert.doesNotMatch(fast, /^\s{4}if:/mu, 'the fast gate is never conditional');
-  assert.doesNotMatch(fast, /^\s{4}needs:/mu, 'the fast gate depends on nothing');
-  // Full history, so the changed-file set comes from the real merge base rather
-  // than the fail-safe.
-  assert.match(fast, /fetch-depth: 0/u);
-  assert.match(fast, /native_impact: \$\{\{ steps\.classify\.outputs\.native_impact \}\}/u);
-  assert.match(fast, /node scripts\/classify-mobile-native-impact\.mjs/u);
-  // Fail-safe classification when the comparison base cannot be established.
-  assert.match(fast, /failing safe to native_impact=true/u);
-  assert.match(fast, /git merge-base/u);
+  // VAL-01 RE-ANCHOR: the fast gate runs on every head EXCEPT a PR update the change-aware planner positively proved it
+  // may carry forward (a green, same-lineage predecessor and nothing in the update that can reach this gate; the root
+  // contracts that read a changed doc or flow still re-run in `mobile-bound-contracts`). It waits only for that plan, and
+  // a failed or silent plan makes it run.
+  assert.match(fast, /^ {4}needs: \[plan\]$/mu, 'the fast gate depends on nothing but the plan');
+  assert.match(fast, /^ {4}if: \$\{\{ !cancelled\(\) && needs\.plan\.outputs\.mobile_contract != 'CARRY_FORWARD' \}\}$/mu,
+    'the fast gate is skipped only on a proven carry-forward');
+  // The classification it used to run first now runs in the plan job, with the same full history, the same classifier
+  // over the same merge-base diff, and the same fail-safe on an unestablished base.
+  const plan = jobSlice('plan');
+  assert.match(plan, /fetch-depth: 0/u);
+  assert.match(plan, /node scripts\/validation\/plan-validation\.mjs plan --workflow mobile-ci/u);
+  const planner = readFileSync(new URL('../scripts/validation/plan-validation.mjs', import.meta.url), 'utf8');
+  assert.match(planner, /from '\.\.\/classify-mobile-native-impact\.mjs'/u);
+  assert.match(planner, /git\(\['merge-base'/u);
+  assert.match(planner, /classifyChangedFiles\(cumulative \?\? \[\]\)/u, 'an unestablished diff fails safe to native impact');
   for (const command of [
     'preflight',
     'test:toolchain',
@@ -334,13 +340,19 @@ test('both native smoke jobs are gated by native_impact and keep their full cont
   const android = jobSlice('verify-android');
   const iosBuild = jobSlice('build-ios');
   const ios = jobSlice('verify-ios');
+  // VAL-01 RE-ANCHOR: the native-impact decision is the change-aware planner's (MOB-CI-01's classifier over the PR's
+  // cumulative diff, plus a proven-green carry-forward for an update that holds no native input). Each producer waits
+  // for the fast gate and runs only behind that decision; each consumer runs exactly when its own producer published.
+  for (const [name, job] of [['android build', androidBuild], ['ios build', iosBuild]]) {
+    assert.match(job, /needs: \[plan, verify-mobile-contracts\]/u, `${name} must depend on the fast gate`);
+    assert.match(job, /needs\.plan\.outputs\.mobile_native_binary != 'NOT_RELEVANT'/u, `${name} must run only for true native-impact changes`);
+    assert.match(job, /needs\.verify-mobile-contracts\.result == 'success'/u, `${name} runs only behind a green fast gate`);
+  }
+  for (const [name, job, producer] of [['android', android, 'build-android'], ['ios', ios, 'build-ios']]) {
+    assert.match(job, new RegExp(`needs: \\[plan, ${producer}\\]`, 'u'), `${name} consumes its own producer`);
+    assert.match(job, new RegExp(`if: \\$\\{\\{ !cancelled\\(\\) && needs\\.${producer}\\.result == 'success' \\}\\}`, 'u'));
+  }
   for (const [name, job] of [['android', android], ['ios', ios], ['android build', androidBuild], ['ios build', iosBuild]]) {
-    assert.match(job, /needs: (?:\[[^\]]*)?verify-mobile-contracts/u, `${name} must depend on the fast gate`);
-    assert.match(
-      job,
-      /if: needs\.verify-mobile-contracts\.outputs\.native_impact == 'true'/u,
-      `${name} must run only for true native-impact changes`,
-    );
     assert.doesNotMatch(job, /continue-on-error/u, `${name} never soft-fails`);
   }
   for (const [name, job] of [['android', android], ['ios', ios]]) {
