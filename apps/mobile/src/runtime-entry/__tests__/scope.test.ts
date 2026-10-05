@@ -24,6 +24,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // W3-MEGA-U added exactly one: UnderstandingApiClient, the QANDEEL Understanding transport (a plain class).
   // A3-01 added exactly one: ActivityApiClient, the Activity transport (a plain class).
   // A3-02 added exactly one: PushApiClient, the device-registration transport (a plain class).
+  // S4-01 added exactly one: SharedWorldApiClient, the Shared World transport (a plain class).
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
@@ -37,6 +38,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'PushApiClient',
     'SIGN_UP_METADATA_KEYS',
     'SUPABASE_AUTH_OPTIONS',
+    'SharedWorldApiClient',
     'UnderstandingApiClient',
     'bootstrapCanonicalRuntime',
     'createAppStateForegroundSignal',
@@ -72,8 +74,9 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     // A React component is conventionally PascalCase. Every function here is a factory, a reader or
     // a class, and `ConversationSessionApiClient` is a plain class with no render.
     // W1B-01's two account transports are plain classes too.
-    // W3-MEGA-U's Understanding transport is a plain class too, and so are A3-01's Activity and A3-02's push transports.
-    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient'].includes(name)) continue;
+    // W3-MEGA-U's Understanding transport is a plain class too, and so are A3-01's Activity and A3-02's push transports,
+    // and S4-01's Shared World transport.
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

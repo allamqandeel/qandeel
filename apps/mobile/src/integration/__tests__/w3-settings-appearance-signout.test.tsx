@@ -7,6 +7,7 @@
  * the operating system's appearance (a switch) and the native appearance declaration (a recorder).
  */
 import { act, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
+import { sharedCopy } from '../../shared-world';
 import { AccessibilityInfo, BackHandler, StyleSheet } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
@@ -206,7 +207,9 @@ describe('E2E-D-01 — the ONE General Settings destination, entered from Person
     const publicIdRow = [COPY.publicId.term, '@nightlamp27', COPY.publicId.available].join(', ');
     // W3-MEGA-S re-anchor (validation only): the Language row is a real control of the QANDEEL & Conversation group.
     const languageRow = [COPY.language.term, COPY.language.names[LANGUAGE]].join(', ');
-    expect(controls).toEqual([COPY.backName, publicIdRow, languageRow, NOTIFICATIONS, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
+    // S4-01 re-anchor (validation only): Account & Identity also holds the Shared ID row (E2E-D-08).
+    const sharedIdRow = sharedCopy(LANGUAGE).yourSharedId;
+    expect(controls).toEqual([COPY.backName, publicIdRow, sharedIdRow, languageRow, NOTIFICATIONS, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
     for (const node of settings.getAllByRole('radio')) expect(style(node).minHeight).toBeGreaterThanOrEqual(44);
     expect(style(settings.getByTestId('qandeel-settings-back'))).toMatchObject({ width: 44, height: 44 });
     h.dispose();

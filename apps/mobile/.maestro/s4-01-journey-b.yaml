@@ -1,0 +1,101 @@
+# S4-01 Journey B — decline creates nothing; the invite names nobody; the Shared ID is copied and regenerated. VALIDATION
+# ONLY (S401ProofRoot.tsx). Driven by scripts/phase-m/run-s401-proof-leg.sh, which passes PREFIX, SENT and INVALID
+# (the confirmation and the malformed-ID sentence for the leg's language).
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- openLink: "qandeel://s401-proof/invite/arrive"
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-decline"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-decline"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-shared-invitation-54010001-0000-4000-8000-000000000000"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-shared-no-worlds"
+- takeScreenshot: ${PREFIX}-01-declined-no-world
+# The invite: one confirmation that names nobody.
+- tapOn:
+    id: "qandeel-shared-create"
+- tapOn:
+    id: "qandeel-shared-invite-input"
+- inputText: "k7qm 4xwd p9tr"
+- tapOn:
+    id: "qandeel-shared-invite-send"
+- extendedWaitUntil:
+    visible:
+      text: "${SENT}"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-invitation-sent
+# The malformed ID in its own, fresh invite session: the panel is closed and reopened, so the proof never depends on the
+# field's focus / input-method state left by the successful submission, and the value is proved typed before Send.
+- tapOn:
+    id: "qandeel-shared-invite-cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-shared-invite"
+    timeout: 10000
+- tapOn:
+    id: "qandeel-shared-create"
+- tapOn:
+    id: "qandeel-shared-invite-input"
+- inputText: "AB"
+- assertVisible:
+    id: "qandeel-shared-invite-input"
+    text: "AB"
+- tapOn:
+    id: "qandeel-shared-invite-send"
+- extendedWaitUntil:
+    visible:
+      text: "${INVALID}"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-03-malformed
+# The Shared ID: General Settings → Account & Identity.
+- tapOn:
+    id: "qandeel-switcher-my_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-settings-entry"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-settings-entry"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-id-row"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-id-row"
+- extendedWaitUntil:
+    visible:
+      text: ".*K7QM-4XWD-P9TR.*"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-id-copy"
+- takeScreenshot: ${PREFIX}-04-shared-id
+- tapOn:
+    id: "qandeel-shared-id-regenerate"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-id-confirm"
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-05-regenerate-confirmation
+- tapOn:
+    id: "qandeel-shared-id-regenerate-confirm"
+- extendedWaitUntil:
+    visible:
+      text: ".*AB12-CD34-EF56.*"
+    timeout: 30000
+- assertNotVisible:
+    text: ".*K7QM-4XWD-P9TR.*"
+- takeScreenshot: ${PREFIX}-06-regenerated

@@ -156,6 +156,10 @@ test('migration 0071 remains frozen, 0064 - 0070 keep their exact pins, the deli
   // Conversation capability). Every other byte stays frozen: without exactly that import and that
   // list entry, AppModule is the T-03D baseline blob.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // S4-01 re-anchor: the application root also composes SharedWorldModule (the Shared World Product boundary), placed
+    // before AccountModule; it touches no conversation, focus, projection or thread code.
+    .replace("import { SharedWorldModule } from './shared-world/shared-world.module';\n", '')
+    .replace(', PushModule, SharedWorldModule, AccountModule', ', PushModule, AccountModule')
     // A3-02 re-anchor: the application root also composes PushModule (native Push device boundary and platform
     // dispatcher, not a Conversation capability). It is stripped the same way, so every other byte stays frozen.
     .replace("import { PushModule } from './push/push.module';\n", '')

@@ -17,9 +17,12 @@
 //     INSERT / UPDATE / DELETE on any of the three (catalog AND actual 42501
 //     under SET LOCAL ROLE), and the 0075 Shared World substrate remains exactly
 //     as sealed as it was;
-//   * function ACL: authenticated can execute both commands; anon, service_role
-//     and PUBLIC cannot (catalog AND actual 42501); an authenticated call with
-//     no subject claim is refused because auth.uid() is NULL;
+//   * function ACL: since the S4-01 privilege adjustment (migration 0138) NO
+//     application role executes either command - PUBLIC, anon, authenticated and
+//     service_role are denied (catalog AND actual 42501); the behaviour below is
+//     driven as the owner with the exact human's claims, the server-owned path the
+//     S4-01 wrappers use, and a call with no subject claim is refused because
+//     auth.uid() is NULL;
 //   * credential behaviour, as the authenticated human inside one rolled-back
 //     transaction: first setup yields epoch 1 for exactly auth.uid(); another
 //     human cannot touch it; the timestamp is database-owned; exact rotation
@@ -391,10 +394,13 @@ async function verifyDirectTableAcl() {
 }
 
 async function verifyFunctionAcl() {
-  stage = 'function ACL: authenticated humans only';
+  stage = 'function ACL: server-owned since S4-01 (migration 0138)';
   for (const fn of [ROTATE_FN, SUBMIT_FN]) {
     const [{ allowed }] = await rows('SELECT has_function_privilege($1,$2,$3) AS allowed', ['authenticated', fn, 'EXECUTE']);
-    assert.equal(allowed, true, `authenticated may execute ${fn}`);
+    // 0081 granted both commands to authenticated; the reviewed S4-01 privilege adjustment (migration 0138) retired that
+    // client path, so the frozen bodies are reached only through the gated, sealed S4-01 wrappers (owner postgres, the
+    // human's own claims preserved). The bodies, the epoch law and the lock order proven below are unchanged.
+    assert.equal(allowed, false, `authenticated no longer executes ${fn} directly (0138)`);
     for (const role of ['public', 'anon', 'service_role']) {
       const [{ allowed: denied }] = await rows('SELECT has_function_privilege($1,$2,$3) AS allowed', [role, fn, 'EXECUTE']);
       assert.equal(denied, false, `${role} must not execute ${fn}`);
@@ -402,13 +408,13 @@ async function verifyFunctionAcl() {
   }
   // Real denial, not only the catalog: a system credential cannot manufacture a
   // human invitation, and neither can an anonymous caller.
-  for (const role of ['anon', 'service_role']) {
+  for (const role of ['anon', 'authenticated', 'service_role']) {
     await identity(role, randomUUID());
     await rejected(() => rotate(randomUUID(), opaqueRef('denied')), INSUFFICIENT_PRIVILEGE);
     await rejected(() => submit(randomUUID(), randomUUID(), opaqueRef('denied')), INSUFFICIENT_PRIVILEGE);
   }
-  // An authenticated session with no subject claim has no auth.uid().
-  await identity('authenticated');
+  // A session with no subject claim has no auth.uid(), even on the server-owned path.
+  await identity('postgres');
   await rejected(() => rotate(randomUUID(), opaqueRef('nosub')), INSUFFICIENT_PRIVILEGE, /SHARED_INVITE_AUTHENTICATION_REQUIRED/u);
   await rejected(() => submit(randomUUID(), randomUUID(), opaqueRef('nosub')), INSUFFICIENT_PRIVILEGE, /SHARED_INVITE_AUTHENTICATION_REQUIRED/u);
   await identity('postgres');
@@ -417,7 +423,7 @@ async function verifyFunctionAcl() {
 async function verifyCredentialBehaviour(f) {
   stage = 'credential: first setup belongs to exactly auth.uid() and starts at epoch 1';
   const before = await snapshot(f.humans);
-  await identity('authenticated', f.mohamed);
+  await identity('postgres', f.mohamed);
   const setupCommand = randomUUID();
   const [first] = await rotate(setupCommand, f.mohamedRef1);
   assert.equal(first.command_id, setupCommand);
@@ -432,7 +438,7 @@ async function verifyCredentialBehaviour(f) {
   assert.equal(others, 0, 'no other human gained credential state');
 
   stage = 'credential: nobody else can mutate it, and a duplicate reference is bounded';
-  await identity('authenticated', f.hadir);
+  await identity('postgres', f.hadir);
   // Hadir's own first setup cannot take Mohamed's reference, and the refusal
   // never says that somebody else holds it.
   const collision = await rejected(() => rotate(randomUUID(), f.mohamedRef1), CONFLICT, /SHARED_INVITE_CREDENTIAL_REF_UNAVAILABLE/u);
@@ -446,7 +452,7 @@ async function verifyCredentialBehaviour(f) {
   assert.equal(Number(mohamedState.epoch), 1);
 
   stage = 'credential: compare-and-swap, idempotency and command-id conflicts';
-  await identity('authenticated', f.mohamed);
+  await identity('postgres', f.mohamed);
   // A stale expected epoch never rotates "whatever is current".
   await rejected(() => rotate(randomUUID(), opaqueRef('stale'), 7), STALE, /SHARED_INVITE_CREDENTIAL_STALE_STATE/u);
   await rejected(() => rotate(randomUUID(), opaqueRef('stale')), STALE, /SHARED_INVITE_CREDENTIAL_STALE_STATE/u);
@@ -468,7 +474,7 @@ async function verifyCredentialBehaviour(f) {
   assert.equal(stateRows, 1, 'rotation replaces the current state; it never creates a second one');
 
   stage = 'credential: malformed input is refused before anything is written';
-  await identity('authenticated', f.mohamed);
+  await identity('postgres', f.mohamed);
   for (const bad of [[null, f.mohamedRef2, 2], [randomUUID(), null, 2], [randomUUID(), '   ', 2], [randomUUID(), f.mohamed, 2], [randomUUID(), opaqueRef('x'), 0]]) {
     await rejected(() => rotate(...bad), INVALID_PARAMETER, /SHARED_INVITE_COMMAND_INVALID/u);
   }
@@ -483,7 +489,7 @@ async function verifyCredentialBehaviour(f) {
 async function verifyInvitationBehaviour(f) {
   stage = 'invitation: the target is resolved only from the exact current lookup reference';
   const before = await snapshot(f.humans);
-  await identity('authenticated', f.ahmed);
+  await identity('postgres', f.ahmed);
   const commandId = randomUUID();
   const invitationId = randomUUID();
   const [submitted] = await submit(commandId, invitationId, f.mohamedRef2);
@@ -513,14 +519,14 @@ async function verifyInvitationBehaviour(f) {
     'one PENDING invitation row created no Shared World, no membership episode and no Standing Context grant');
 
   stage = 'invitation: every unusable reference fails through the SAME bounded class';
-  await identity('authenticated', f.ahmed);
+  await identity('postgres', f.ahmed);
   const failures = [];
   // Never existed.
   failures.push(await rejected(() => submit(randomUUID(), randomUUID(), opaqueRef('nobody')), NOT_USABLE));
   // Retired by rotation - the reference Mohamed used to have.
   failures.push(await rejected(() => submit(randomUUID(), randomUUID(), f.mohamedRef1), NOT_USABLE));
   // Resolves to the caller themselves.
-  await identity('authenticated', f.hadir);
+  await identity('postgres', f.hadir);
   failures.push(await rejected(() => submit(randomUUID(), randomUUID(), f.hadirRef1), NOT_USABLE));
   for (const failure of failures) {
     assert.match(failure.message, /SHARED_INVITE_TARGET_NOT_USABLE/u, 'one bounded non-enumerating class');
@@ -534,14 +540,14 @@ async function verifyInvitationBehaviour(f) {
   assert.equal(afterFailures.invitations, mid.invitations, 'an unusable reference creates no invitation row');
 
   stage = 'invitation: idempotency, command-id conflicts and invitation-id collisions';
-  await identity('authenticated', f.ahmed);
+  await identity('postgres', f.ahmed);
   const [again] = await submit(commandId, invitationId, f.mohamedRef2);
   assert.deepEqual(again, submitted, 'an equivalent retry returns the committed result');
   await rejected(() => submit(commandId, randomUUID(), f.mohamedRef2), CONFLICT, /SHARED_INVITE_COMMAND_ID_CONFLICT/u);
   await rejected(() => submit(commandId, invitationId, opaqueRef('other')), CONFLICT, /SHARED_INVITE_COMMAND_ID_CONFLICT/u);
   // A different command may not adopt or re-bind an existing invitation identity.
   await rejected(() => submit(randomUUID(), invitationId, f.mohamedRef2), CONFLICT, /SHARED_DIRECT_INVITATION_ID_CONFLICT/u);
-  await identity('authenticated', f.hadir);
+  await identity('postgres', f.hadir);
   await rejected(() => submit(randomUUID(), invitationId, f.mohamedRef2), CONFLICT, /SHARED_DIRECT_INVITATION_ID_CONFLICT/u);
   await identity('postgres');
   const [stillOne] = await rows(`SELECT inviter_user_id, target_user_id, status FROM ${INVITATIONS} WHERE id=$1`, [invitationId]);
@@ -551,7 +557,7 @@ async function verifyInvitationBehaviour(f) {
   assert.equal(invitationRows, 1, 'no retry or collision created a second invitation');
 
   stage = 'invitation: malformed input is refused before anything is written';
-  await identity('authenticated', f.ahmed);
+  await identity('postgres', f.ahmed);
   for (const bad of [[null, randomUUID(), f.mohamedRef2], [randomUUID(), null, f.mohamedRef2], [randomUUID(), randomUUID(), null], [randomUUID(), randomUUID(), '  ']]) {
     await rejected(() => submit(...bad), INVALID_PARAMETER, /SHARED_INVITE_COMMAND_INVALID/u);
   }
@@ -571,7 +577,7 @@ async function verifyNoOpRotation(f, pendingIds) {
   const [{ n: commandsBefore }] = await rows(`SELECT count(*)::int n FROM ${COMMANDS} WHERE actor_user_id=$1`, [f.mohamed]);
   const substrateBefore = await snapshot(f.humans);
 
-  await identity('authenticated', f.mohamed);
+  await identity('postgres', f.mohamed);
   const refused = await rejected(() => rotate(randomUUID(), f.mohamedRef2, 2), INVALID_PARAMETER, /SHARED_INVITE_CREDENTIAL_UNCHANGED/u);
   for (const secret of [f.hadir, f.ahmed, f.hadirRef1]) {
     assert.ok(!refused.message.includes(secret), 'the refusal discloses no other human and no other credential');
@@ -598,7 +604,7 @@ async function verifyRotationInvalidation(f, existing) {
   stage = 'rotation invalidation: a PENDING old-epoch invitation becomes INVALIDATED atomically';
   // A second PENDING invitation from another inviter, and one already-terminal
   // row that must stay untouched.
-  await identity('authenticated', f.hadir);
+  await identity('postgres', f.hadir);
   const secondInvitation = randomUUID();
   await submit(randomUUID(), secondInvitation, f.mohamedRef2);
   await identity('postgres');
@@ -614,7 +620,7 @@ async function verifyRotationInvalidation(f, existing) {
   await verifyNoOpRotation(f, [existing.invitationId, secondInvitation]);
 
   stage = 'rotation invalidation: a PENDING old-epoch invitation becomes INVALIDATED atomically';
-  await identity('authenticated', f.mohamed);
+  await identity('postgres', f.mohamed);
   const [rotated] = await rotate(randomUUID(), f.mohamedRef3, 2);
   assert.equal(Number(rotated.credential_epoch), 3, 'the target epoch becomes N + 1');
   await identity('postgres');
@@ -637,7 +643,7 @@ async function verifyRotationInvalidation(f, existing) {
     'rotation altered no Shared World, created no membership episode and created no Standing Context grant');
 
   stage = 'rotation invalidation: the retired reference cannot invite, the current one can';
-  await identity('authenticated', f.ahmed);
+  await identity('postgres', f.ahmed);
   await rejected(() => submit(randomUUID(), randomUUID(), f.mohamedRef2), NOT_USABLE, /SHARED_INVITE_TARGET_NOT_USABLE/u);
   const freshInvitation = randomUUID();
   await submit(randomUUID(), freshInvitation, f.mohamedRef3);
@@ -657,7 +663,6 @@ async function verifyConcurrency(c) {
   };
   const asHuman = async (conn, uid) => {
     await conn.query('BEGIN');
-    await conn.query('SET LOCAL ROLE authenticated');
     await conn.query("SELECT set_config('request.jwt.claims', $1, true)", [JSON.stringify({ sub: uid, role: 'authenticated' })]);
   };
   const blocks = async (pending) => {
@@ -934,7 +939,7 @@ async function main() {
             + (SELECT count(*) FROM auth.users WHERE id = ANY($1::uuid[])) AS n`,
       [humans]);
     assert.equal(Number(n), 0, 'no fixture row remains after completion');
-    console.log('Verified migration 0081: shared_world_invite_credential_state, shared_world_direct_invitations and shared_world_invitation_commands exist once and still carry every column they own, unchanged and in its original position, with later additive schema evolution permitted rather than censused, plus the checks (epoch >= 1, opaque reference, distinct humans, the six frozen invitation states, PENDING <=> terminal_at IS NULL), every restrictive foreign key and index they own, RLS on, zero policies, no trigger and no direct privilege for PUBLIC/anon/authenticated/service_role; the invitation table carries no world id and no expiry column; rotate_shared_world_invite_credential_v1 and submit_shared_world_direct_invitation_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived, authenticated-only commands that anon, service_role and PUBLIC cannot execute and that accept no inviter, target, status, World or timestamp parameter; first setup yields epoch 1 for the exact caller, exact rotation yields N + 1, a stale expected epoch and a duplicate reference are bounded, retries are idempotent and command-id mismatches are 23505; a submission resolves the target only from the exact current opaque reference, binds the exact current epoch, returns no target identity, and nonexistent / retired / self-target references are indistinguishable through one bounded class; a rotation must actually change the credential, so re-presenting the current reference is bounded and writes nothing - no epoch, no updated_at, no invalidation, no command row - while a genuinely new reference still rotates; rotation invalidates every PENDING old-epoch invitation with a database-clock terminal_at while already-terminal rows and the 0075 substrate are untouched; an invitation identity is never re-bound; no command, retry, collision or race ever created a Shared World or a membership episode; the credential-first lock order makes concurrent first setups, rotations, invitation-versus-rotation races and duplicate submissions resolve to exactly the canonical outcomes, and two concurrent IDENTICAL first setups create exactly one credential state and return the same committed epoch-1 result to both callers while the same command id with different semantics still fails closed; zero fixture residue.');
+    console.log('Verified migration 0081: shared_world_invite_credential_state, shared_world_direct_invitations and shared_world_invitation_commands exist once and still carry every column they own, unchanged and in its original position, with later additive schema evolution permitted rather than censused, plus the checks (epoch >= 1, opaque reference, distinct humans, the six frozen invitation states, PENDING <=> terminal_at IS NULL), every restrictive foreign key and index they own, RLS on, zero policies, no trigger and no direct privilege for PUBLIC/anon/authenticated/service_role; the invitation table carries no world id and no expiry column; rotate_shared_world_invite_credential_v1 and submit_shared_world_direct_invitation_v1 are SECURITY DEFINER, search_path-pinned, auth.uid()-derived server-owned commands (since the S4-01 migration 0138) that no application role - PUBLIC, anon, authenticated or service_role - can execute and that accept no inviter, target, status, World or timestamp parameter; first setup yields epoch 1 for the exact caller, exact rotation yields N + 1, a stale expected epoch and a duplicate reference are bounded, retries are idempotent and command-id mismatches are 23505; a submission resolves the target only from the exact current opaque reference, binds the exact current epoch, returns no target identity, and nonexistent / retired / self-target references are indistinguishable through one bounded class; a rotation must actually change the credential, so re-presenting the current reference is bounded and writes nothing - no epoch, no updated_at, no invalidation, no command row - while a genuinely new reference still rotates; rotation invalidates every PENDING old-epoch invitation with a database-clock terminal_at while already-terminal rows and the 0075 substrate are untouched; an invitation identity is never re-bound; no command, retry, collision or race ever created a Shared World or a membership episode; the credential-first lock order makes concurrent first setups, rotations, invitation-versus-rotation races and duplicate submissions resolve to exactly the canonical outcomes, and two concurrent IDENTICAL first setups create exactly one credential state and return the same committed epoch-1 result to both callers while the same command id with different semantics still fails closed; zero fixture residue.');
   } finally {
     await client.end();
   }

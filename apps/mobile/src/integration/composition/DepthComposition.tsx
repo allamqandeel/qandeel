@@ -60,6 +60,19 @@
  *     strip's is. An item that is not this account's answers nothing and goes nowhere — no substitute (D39);
  *   - QANDEEL's permission education is drawn here, over whatever non-Analysis surface asked for it, and hands over to
  *     the real OS prompt; it is never drawn at the Analysis depth.
+ *
+ * S4-01 — the first production Global Switcher and the Shared World area (I-08A4 §3–§6; CW2-07 §4–§7, §19–§21):
+ *
+ *   - the switcher stands at the bottom of the non-Analysis Personal Conversation and of the Shared area, never in the
+ *     Analysis, and never over Settings, Understanding or Activity. Switching is not pushing: it is a local presentation
+ *     choice, it enters no Back history, writes no canonical state, pushes no route and builds no Session;
+ *   - the Shared area is drawn OVER the Personal world, which stays mounted — out of reach of touch and assistive
+ *     technology — so returning to it restores exactly the Personal state the reader left (camera, time, focus,
+ *     Conversation), and nothing of it is handed to the Shared area: no Personal coordinate, time or focus can transfer;
+ *   - the Shared area keeps its own viewer-scoped state in its own controller, so returning to it restores the World
+ *     the reader was in — after its authority is resolved again, never before;
+ *   - Back stays local: inside a World it returns to the Shared root; at the Shared root nothing here listens, so Back
+ *     never silently returns to the Personal world.
  */
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BackHandler, StyleSheet, View } from 'react-native';
@@ -80,6 +93,7 @@ import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface } from '../../understanding';
 import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
 import { PermissionEducationSheet } from '../../push';
+import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
 import type { DirectEntryDestination } from '../../runtime-entry';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
@@ -146,6 +160,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const [activityShown, setActivityShown] = useState(false);
   const [returnedFromActivity, setReturnedFromActivity] = useState(false);
   const [settingsPage, setSettingsPage] = useState<'NOTIFICATIONS' | undefined>(undefined);
+  // S4-01 — the area in front: the Personal world or the Shared area. A local presentation choice; never persisted.
+  const [area, setArea] = useState<WorldArea>('MY_WORLD');
   const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
   const reduceMotion = useReduceMotion();
   const incoming = useSharedValue(1);
@@ -298,6 +314,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // A revalidated Direct Entry, executed only into a Product surface that exists (D38–D43).
   const enter = useCallback((destination: DirectEntryDestination) => {
+    setArea('MY_WORLD');
     setActivityShown(false);
     setReturnedFromActivity(false);
     if (destination.kind === 'PERSONAL_CONVERSATION') {
@@ -318,7 +335,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // The surface truth the attention law reads: the composition's own state, never a second navigation state.
   const surface: ProductSurface = depth === 'ANALYSIS' ? 'ANALYSIS'
-    : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : activityShown ? 'ACTIVITY' : 'CONVERSATION';
+    : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : activityShown ? 'ACTIVITY' : area === 'SHARED_WORLD' ? 'SHARED_WORLD' : 'CONVERSATION';
   const attention = runtime.attention;
   useEffect(() => {
     attention.start();
@@ -359,13 +376,18 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const { education } = useSyncExternalStore(push.subscribe, push.getState);
 
   const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
+  // S4-01 — the switcher's band is reserved at the Conversation depth whenever the world can switch, so opening and
+  // closing an overlay never re-lays the Conversation out.
+  const switcherBand = onSignOut === undefined ? 0 : GLOBAL_SWITCHER_HEIGHT + 1;
+  const conversationInsets = useMemo(() => ({ ...edges, bottom: edges.bottom + switcherBand }), [edges, switcherBand]);
+  const shared = runtime.sharedWorld;
 
   const layer = (which: WorldDepth, current: boolean): ReactNode =>
     which === 'CONVERSATION' ? (
       <ConversationSurface
         controller={runtime.conversation}
         language={locale.language}
-        insets={edges}
+        insets={conversationInsets}
         onOpenAnalysis={() => cross('ANALYSIS')}
         focusDepthControl={crossed && current}
         opening={<ConversationOpening account={runtime.account} language={locale.language} />}
@@ -431,7 +453,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           // Beneath General Settings or Understanding the Personal world stays mounted, untouched, and out of reach.
           const reachable = current && !settingsShown && !understandingShown;
           // A3-01: beneath Activity, too, the Personal world stays mounted and out of reach.
-          const personalReachable = reachable && !activityShown;
+          const personalReachable = reachable && !activityShown && area === 'MY_WORLD';
           return (
             <Animated.View
               key={which}
@@ -447,6 +469,30 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             </Animated.View>
           );
         })}
+        {/*
+          S4-01 — the Shared area, over the still-mounted Personal world, above the switcher's reserved band. It is handed
+          nothing of the Personal world. Settings, Understanding and Activity still open over it.
+        */}
+        {area === 'SHARED_WORLD' && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <View
+            style={[styles.sharedArea, { bottom: edges.bottom + switcherBand }]}
+            pointerEvents={settingsShown || understandingShown || activityShown ? 'none' : 'auto'}
+            importantForAccessibility={settingsShown || understandingShown || activityShown ? 'no-hide-descendants' : 'auto'}
+            accessibilityElementsHidden={settingsShown || understandingShown || activityShown}
+          >
+            <SharedWorldArea
+              controller={shared}
+              language={locale.language}
+              insets={{ ...edges, bottom: 0 }}
+              activity={{ controller: runtime.attention, onOpen: openActivity, focus: returnedFromActivity && !activityShown }}
+            />
+          </View>
+        ) : null}
+        {depth === 'CONVERSATION' && leaving === null && onSignOut !== undefined && !settingsShown && !understandingShown && !activityShown ? (
+          <View style={styles.switcher}>
+            <GlobalSwitcher area={area} language={locale.language} bottomInset={edges.bottom} onSelect={setArea} />
+          </View>
+        ) : null}
         {activityShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View
             style={StyleSheet.absoluteFill}
@@ -459,7 +505,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} sharedId={runtime.sharedId} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
@@ -497,4 +543,6 @@ const CHROME_MIN_HEIGHT = 48;
 const styles = StyleSheet.create({
   fill: { flex: 1 },
   band: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
+  sharedArea: { position: 'absolute', top: 0, left: 0, right: 0 },
+  switcher: { position: 'absolute', left: 0, right: 0, bottom: 0 },
 });

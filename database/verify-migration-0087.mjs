@@ -532,9 +532,11 @@ async function provisionTimelineWorld(spec) {
 
 async function provisionBornWorld(inviter, target, label) {
   const ref = opaqueRef(label);
-  await identity('authenticated', target);
+  // S4-01 (migration 0138) retired the client grant on the frozen 0081 commands; fixtures drive them as the owner with
+  // the exact human's claims, exactly as the 0082 core is driven.
+  await identity('postgres', target);
   await rows(ROTATE_SQL, [randomUUID(), ref, null]);
-  await identity('authenticated', inviter);
+  await identity('postgres', inviter);
   const invitationId = randomUUID();
   await rows(SUBMIT_SQL, [randomUUID(), invitationId, ref]);
   await identity('postgres', target);

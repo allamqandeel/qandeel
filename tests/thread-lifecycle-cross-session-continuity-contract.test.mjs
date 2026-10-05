@@ -182,6 +182,10 @@ test('AC-B3-01 resolved by T-03D: the B3-ONLY runtime is still never registered 
   assert.match(unitRepository, /'commit_finalized_exchange_conversation_units_v1'/u, 'the retired T-03A2 repository still names the retired coordinator; it is no longer registered');
   // W1B-01 re-anchor: the application root now composes AccountModule; every other byte is frozen.
   const appModuleBeforeW1b01 = read('apps/api/src/app.module.ts')
+    // S4-01 re-anchor: the application root also composes SharedWorldModule (the Shared World Product boundary), placed
+    // before AccountModule; it touches no conversation, focus, projection or thread code.
+    .replace("import { SharedWorldModule } from './shared-world/shared-world.module';\n", '')
+    .replace(', PushModule, SharedWorldModule, AccountModule', ', PushModule, AccountModule')
     // A3-02 re-anchor: the application root also composes PushModule (native Push device boundary and platform
     // dispatcher, not a Conversation capability). It is stripped the same way, so every other byte stays frozen.
     .replace("import { PushModule } from './push/push.module';\n", '')

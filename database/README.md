@@ -3894,3 +3894,29 @@ fact, and keeps provider usage, rated cost and the QANDEEL Credit apart. Forward
 and privilege census, begin / settle exactly-once semantics, unknown and unpriced truth, exact per-kind rating by
 effective date, overlap refusal, stable history and explicit re-rating, the compiled simulator equal to the database,
 the Credit activation gate, the operational summary, erasure coverage and committed multi-connection races.
+
+## S4-01 - Shared World reachability, invitation and birth (migration 0138)
+
+The Product execution boundary over the frozen I-04 runtime, forward-only; migrations `0001`–`0137` are untouched and no
+second World, membership, invitation, history or material model exists. Every privileged part lives in the non-exposed
+`shared_private` schema (pinned `SECURITY DEFINER`, the human from `auth.uid()`); every exposed function is a
+`SECURITY INVOKER` wrapper granted to `authenticated` only.
+
+- **Sealed Shared ID.** `shared_private.shared_id_sealed_values` holds the CURRENT Shared ID only as an AES-256-GCM
+  ciphertext (nonce, tag, key version) bound to the exact credential epoch and `sid1:` reference. The key is API server
+  configuration, never in the repository or the database (`QAN-BL-LAUNCH-03`). `rotate_own_sealed_shared_id_v1` moves the
+  reference, the epoch, the PENDING invalidation (the frozen `0081` rotation) and the sealed value in ONE transaction.
+- **Legacy client path retired.** `0081`'s `rotate_shared_world_invite_credential_v1` and
+  `submit_shared_world_direct_invitation_v1` are no longer executable by `authenticated` (a privilege adjustment; bodies
+  unchanged). The frozen verifiers drive them as the owner with the human's claims, as the `0082` verifier drives the core.
+- **Minimal Shared launch gate.** `SHARED_DIRECT_INVITATION` and `SHARED_DIRECT_WORLD_BIRTH`, one server-canonical row each,
+  changed only by `shared_private.set_shared_launch_capability_v1` (no application role), audited; ALLOW = `ENABLED` +
+  `SATISFIED` / `WAIVED_BY_AUTHORIZED_GOVERNANCE`, everything else (including an absent row) denies. No migration opens it.
+- **Commands.** the non-enumerating invitation (`SUBMITTED` for every well-formed Shared ID); decline (exact invitee,
+  idempotent, no World); the launch-gated acceptance (gate snapshot `FOR SHARE` → the frozen `0082` core → the bound
+  snapshot in `shared_direct_birth_launch_evidence`, one transaction).
+- **Reads.** current Worlds (open episode + `ACTIVE`), their current members' Names, incoming PENDING invitations at the
+  current epoch with the inviter's Name, and the exact-World entry verdict (`ALLOW` / one neutral `UNAVAILABLE`).
+
+Verifier: `npm run verify:shared-world-reachability-invitation-birth:integration` (`database/verify-migration-0138.mjs`).
+Record: [`docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md`](../docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md).

@@ -1,0 +1,28 @@
+# S4-01 — the cold-start READINESS walk run before a leg. VALIDATION ONLY; NOT EVIDENCE.
+# It walks the cold paths once (Conversation, the Global Switcher, the Shared root and back) so every counted leg starts
+# on a ready device. It asserts nothing a leg asserts and its screenshots are not proof.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 180000
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-global-switcher"
+    timeout: 60000
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-root"
+    timeout: 60000
+- tapOn:
+    id: "qandeel-switcher-my_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 60000
+- waitForAnimationToEnd:
+    timeout: 10000

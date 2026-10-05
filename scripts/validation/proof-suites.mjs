@@ -33,4 +33,16 @@ export const PROOF_SUITES = Object.freeze({
       physical('PD-09', 'VoiceOver / TalkBack on the education sheet and the device section'),
     ]),
   }),
+  // Stage 4 (S4-01): the Shared World journeys on the production route — Journey A (invite → accept → birth → entry),
+  // B (decline; the non-enumerating invite; Shared ID copy / regenerate) and C (My World ↔ Shared World; the
+  // pre-authority shell; fail-safe re-entry). Android legs: every fact here is simulator-provable on the production
+  // composition; the database facts behind them are the real-PostgreSQL verifier's (migration 0138).
+  s4: Object.freeze({
+    workflow: '.github/workflows/s4-proof.yml',
+    recipe: 's4-shared-world-proof',
+    platforms: Object.freeze({
+      android: Object.freeze({ runner: 'scripts/phase-m/run-s401-proof-leg.sh', producer: 'build-android', consumer: 'android-leg' }),
+    }),
+    physicalDeviceFacts: Object.freeze([]),
+  }),
 });

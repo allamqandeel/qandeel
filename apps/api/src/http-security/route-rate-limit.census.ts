@@ -83,6 +83,16 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /push/device/detach': 'AUTHENTICATED',
   'POST /push/device/detach-others': 'AUTHENTICATED',
   'POST /push/opened': 'AUTHENTICATED',
+
+  // Shared World (S4-01). Submitting a Shared ID and regenerating one are throttled like credential acts: secret
+  // credential attempts stay non-enumerating and slow (CW2-08 §32–§33).
+  'GET /shared': 'AUTHENTICATED',
+  'GET /shared/identity': 'AUTHENTICATED',
+  'POST /shared/identity/regenerate': 'SECURITY_SENSITIVE',
+  'POST /shared/invitations': 'SECURITY_SENSITIVE',
+  'POST /shared/invitations/:invitationId/accept': 'AUTHENTICATED',
+  'POST /shared/invitations/:invitationId/decline': 'AUTHENTICATED',
+  'GET /shared/worlds/:worldId': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

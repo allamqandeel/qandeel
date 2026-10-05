@@ -311,8 +311,11 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   // PUBLIC_ID_COMMAND_CONFLICT, and answer a bounded 409, under the same rule.
   // RE-ANCHORED by PROD-SEC-02 (migration 0131): the conversation service reads it to recognise exactly one typed
   // refusal, PT429 TURN_ADMISSION_LIMITED, and answer the bounded 429, under the same rule.
+  // RE-ANCHORED by S4-01 (migration 0138): the Shared World service reads it to recognise exactly two typed refusals of
+  // the frozen 0081 rotation — 23505 SHARED_INVITE_CREDENTIAL_REF_UNAVAILABLE (draw another Shared ID) and 40001 (another
+  // request rotated first: read the current value) — under the same rule.
   // The list stays exact: any further production reader fails here.)
-  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
   const account = stripComments(read('apps/api/src/account/account.service.ts'));
   assert.equal((account.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, 'the account service reads the identity once');
   assert.match(account, /identity\.databaseCode === '23505' && identity\.databaseMessage === 'PUBLIC_ID_COMMAND_CONFLICT'/u,

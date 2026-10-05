@@ -135,10 +135,16 @@ test('the Shared ID format: server-generated from strong randomness, case-insens
   assert.match(normalize, /upper\(coalesce\(p_value, ''\)\)/u);
   assert.match(normalize, /'\[\[:space:\]-\]'/u);
   assert.match(normalize, /'OIL', '011'/u);
-  // No Shared ID in the mobile client, the API or any route before W6.
+  // Re-anchored by S4-01 (the W6 surface of W3-PDG-01 §4): the Shared ID now has its surface. What stays permanent is
+  // where it may NOT go: no client stores it (no AsyncStorage, SecureStore, SQLite or file write of it), and no client
+  // or API path reaches the 0129 server regeneration, the 0129 private adapters or the retired 0081 client rotation —
+  // the only rotation is migration 0138's sealed one, behind the API.
   const mobile = [...listFiles('apps/mobile/src'), ...listFiles('apps/api/src')].filter((f) => /\.(ts|tsx)$/u.test(f) && !/__tests__|\.spec\.ts$/u.test(f));
-  const noSurface = (text) => !/sharedId|shared_id|regenerate_own_shared_id|SharedIdRow|normalize_shared_id|shared_id_lookup_ref/iu.test(text);
-  guards('shared-id-surface-before-w6', mobile.map((f) => code(read(f))).join('\n'), noSurface, "const sharedIdRow = { label: 'Shared ID' };");
+  const noBypass = (text) => !/regenerate_own_shared_id_v1|normalize_shared_id_v1|shared_id_lookup_ref_v1|rotate_shared_world_invite_credential_v1|submit_shared_world_direct_invitation_v1/u.test(text);
+  guards('shared-id-bypasses-the-sealed-rotation', mobile.map((f) => code(read(f))).join('\n'), noBypass, "const rows = await rpc('regenerate_own_shared_id_v1');");
+  const mobileOnly = listFiles('apps/mobile/src').filter((f) => /\.(ts|tsx)$/u.test(f) && !/__tests__/u.test(f));
+  const notStored = (text) => !/(?:setItem|SQLiteStorage|writeAsString|SecureStore)[^;\n]*sharedId/u.test(text);
+  guards('shared-id-stored-on-the-device', mobileOnly.map((f) => code(read(f))).join('\n'), notStored, "storage.setItem('k', state.sharedId);");
 });
 
 function listFiles(dir) {
@@ -256,7 +262,8 @@ test('the Product surface: one destination, real rows only, Latin content isolat
   assert.equal((surface.match(/onSignOut\(\)/gu) ?? []).length, 1, 'ONE sign-out path (W3-01), which the Email change also ends with');
   const noWords = (text) => !/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u.test(text) && !/['"`](?:Loading|Saving|Changed|Success|Failed|Error|Try again|Verified)[^'"`]*['"`]/u.test(text);
   guards('surfaces-write-their-own-words', surface + section, noWords, "const done = 'تم الحفظ';");
-  const noDeferredRows = (text) => !/\b(?:photo|avatar|sharedId|phone|twoFactor|passkey|deviceList|activityLog)\b|coming soon|قريبًا|disabled: true/iu.test(text);
+  // S4-01 re-anchor: the Shared ID is no longer deferred (it is a real Account & Identity function); the rest still are.
+  const noDeferredRows = (text) => !/\b(?:photo|avatar|phone|twoFactor|passkey|deviceList|activityLog)\b|coming soon|قريبًا|disabled: true/iu.test(text);
   guards('security-v1-grows-a-deferred-row', surface + section, noDeferredRows, "<ActionRow label='Passkeys' notice={null} busy={false} disabled: true />");
   assert.match(section, /const LRI = String\.fromCodePoint\(0x2066\);/u);
   assert.match(section, /\{ltr \? isolatedLtr\(value\) : value\}/u);

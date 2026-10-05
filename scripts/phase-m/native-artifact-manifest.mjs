@@ -82,6 +82,11 @@ export const BUILD_RECIPES = Object.freeze({
    * every isolated proof leg (.github/workflows/a3-proof.yml).
    */
   'a3-activity-push-proof': 1,
+  /**
+   * Stage 4 (S4-01): the Shared World proof root, unconfigured, built ONCE and consumed by every isolated proof leg
+   * (.github/workflows/s4-proof.yml).
+   */
+  's4-shared-world-proof': 1,
 });
 
 export const PRODUCT_ENTRY = 'expo-router/entry';
@@ -93,6 +98,7 @@ export const VALIDATION_ENTRY = 'src/integration/__validation__/validation-entry
  */
 export const PROOF_ENTRIES = Object.freeze({
   'a3-activity-push-proof': 'src/integration/__validation__/a301-proof-entry.tsx',
+  's4-shared-world-proof': 'src/integration/__validation__/s401-proof-entry.tsx',
 });
 
 /** The root component a role (and, for a proof, its recipe) requires. Null when the pair does not exist. */

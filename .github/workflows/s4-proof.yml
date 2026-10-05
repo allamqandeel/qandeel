@@ -1,0 +1,233 @@
+name: S4 proof — Shared World reachability, invitation and birth
+# Stage 4 (S4-01) — the device proof of the Shared World journeys on the production route. VALIDATION ONLY.
+#
+# The VAL-01 reference shape (a3-proof.yml), for a new suite (scripts/validation/proof-suites.mjs `s4`):
+#
+#   plan  ──►  build-android  ──►  android-leg × N   (matrix: one leg per job, fail-fast off, own emulator, own evidence)
+#
+#   - the BUILD PRODUCER publishes the proof binary ONCE, keyed by the canonical native build-input fingerprint, with its
+#     identity manifest (role PROOF_VALIDATION, recipe s4-shared-world-proof). On a hit it builds nothing and re-proves
+#     the restored binary `prior-run`; on a miss it builds once and verifies `same-run`;
+#   - each LEG CONSUMER downloads that artifact, re-proves its provenance BEFORE installing it, boots its OWN emulator,
+#     runs exactly ONE leg (scripts/phase-m/run-s401-proof-leg.sh <apk> <leg>) and uploads only its own evidence; it
+#     contains no Gradle, no prebuild and no npm ci;
+#   - `plan` selects only the legs the change can affect (proof-legs.mjs, derived from the runner); a flow fix runs
+#     only its leg and never rebuilds; each consumer enforces the retry budget (one classified rerun) and every Maestro
+#     invocation is bounded by the platform-neutral watchdog.
+#
+# The binary's ROOT COMPONENT is the S4-01 proof root (one recorded change of the mobile manifest's `main`, made by
+# `select-s401-proof-entry.mjs` in this ephemeral checkout only): the production composition over an in-memory Shared
+# stand-in. No credential, no API origin and no database exist here; the database facts are the real-PostgreSQL
+# verifier's (database/verify-migration-0138.mjs).
+#
+# Scoped to the S4-01 branch and manual dispatch: it proves those heads and is inert everywhere else.
+on:
+  push:
+    branches: ['feat/s4-01-shared-world-reachability-invitation-birth']
+    paths:
+      - 'apps/mobile/**'
+      - 'scripts/phase-m/**'
+      - 'scripts/validation/**'
+      - 'package-lock.json'
+      - '.github/workflows/s4-proof.yml'
+  workflow_dispatch:
+    inputs:
+      since_sha:
+        description: 'Select only the legs affected by the changes since this commit. Empty = every leg.'
+        required: false
+        type: string
+        default: ''
+concurrency:
+  group: s4-proof-${{ github.ref }}
+  cancel-in-progress: true
+permissions:
+  contents: read
+env:
+  CI: 1
+  EXPO_NO_TELEMETRY: 1
+  MAESTRO_CLI_NO_ANALYTICS: 1
+  MAESTRO_VERSION: 2.10.0
+  MAESTRO_ZIP_SHA256: 29b675e10cc12080e445e9bfb2e2b4e4dfb9c0f2e30d5884120d258b5e1cd991
+jobs:
+  plan:
+    name: Leg selection (VAL-01)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      android_legs: ${{ steps.legs.outputs.android_legs }}
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4, with: {fetch-depth: 0}}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - name: Select the legs the change can affect
+        id: legs
+        env: {SINCE_SHA: '${{ inputs.since_sha }}'}
+        run: node scripts/validation/plan-validation.mjs legs --suite s4 --since "$SINCE_SHA"
+
+  build-android:
+    name: Android x86_64 Release proof binary — BUILD PRODUCER
+    needs: [plan]
+    if: ${{ needs.plan.outputs.android_legs != '[]' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      provenance_mode: ${{ steps.provenance.outputs.mode }}
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22', cache: npm}
+      - name: Compute the build-input fingerprint
+        id: fingerprint
+        run: |
+          value="$(node scripts/phase-m/native-build-fingerprint.mjs)"
+          echo "value=$value" >> "$GITHUB_OUTPUT"
+          echo "### Android proof build-input fingerprint: \`$value\`" >> "$GITHUB_STEP_SUMMARY"
+      # The restore is a hint, never a licence: the provenance gate below re-derives everything and refuses the binary
+      # outright if it cannot prove it. A miss simply builds.
+      - name: Restore an equivalent proof binary from a prior run, if one exists
+        id: native-build-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/native-build
+          key: qandeel-native-android-x86_64-PROOF_VALIDATION-s4-shared-world-proof-v1-${{ steps.fingerprint.outputs.value }}
+      # Everything from here to the provenance gate is the BUILD, and it is skipped wholesale on a hit.
+      - name: Setup Temurin JDK 17
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - {name: Install dependencies from the root lockfile, if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm ci}
+      - name: Confirm the generated world, P2 and P3 geometry are current (the build ships exactly the generated constants)
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        run: |
+          node apps/mobile/scripts/generate-world-visual.mjs --check
+          node apps/mobile/scripts/generate-p2-production.mjs --check
+          node apps/mobile/scripts/generate-p3-production.mjs --check
+      - name: Select the S4-01 proof entry (the one recorded difference from the Product build)
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        env: {S401_SHARED_PROOF: '1'}
+        run: |
+          node apps/mobile/scripts/select-s401-proof-entry.mjs --apply
+          echo "### S4-01 proof build — main: \`$(node -p "require('./apps/mobile/package.json').main")\`, commit \`${GITHUB_SHA}\`" >> "$GITHUB_STEP_SUMMARY"
+      - {name: Generate the Android project (CNG), if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm run prebuild:android --workspace @qandeel/mobile}
+      - name: Build the Release APK ONCE (x86_64 for the emulator)
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        working-directory: apps/mobile/android
+        run: |
+          chmod +x ./gradlew
+          ./gradlew :app:assembleRelease -PreactNativeArchitectures=x86_64 --no-daemon
+      - name: Stage the artifact and record its identity
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        run: |
+          out="$RUNNER_TEMP/native-build"
+          mkdir -p "$out"
+          cp apps/mobile/android/app/build/outputs/apk/release/app-release.apk "$out/app-release.apk"
+          node scripts/phase-m/native-artifact-manifest.mjs \
+            --platform android --role PROOF_VALIDATION --recipe s4-shared-world-proof --abis x86_64 \
+            --artifact "$out/app-release.apk" --out "$out/native-artifact-manifest.json"
+      # THE GATE, on both paths, BEFORE the binary is published. `prior-run` is the honest mode for a restored binary:
+      # an equal fingerprint from another head is exactly the claim, and the commit is expected to differ.
+      - name: Verify the artifact provenance BEFORE it is published
+        id: provenance
+        env:
+          MODE: ${{ steps.native-build-cache.outputs.cache-hit == 'true' && 'prior-run' || 'same-run' }}
+        run: |
+          set -o pipefail
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/app-release.apk" \
+            --mode "$MODE" --platform android --role PROOF_VALIDATION \
+            --recipe s4-shared-world-proof --abis x86_64 --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/provenance.txt"
+          { echo "### Android proof producer — provenance \`$MODE\`"; echo '```'; cat "$RUNNER_TEMP/provenance.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload the Android proof build
+        uses: actions/upload-artifact@v4
+        with:
+          name: s4-proof-android-build
+          path: ${{ runner.temp }}/native-build
+          if-no-files-found: error
+          retention-days: 30
+          overwrite: true
+
+  android-leg:
+    name: Android leg ${{ matrix.leg }} — LEG CONSUMER (no build)
+    needs: [plan, build-android]
+    if: ${{ !cancelled() && needs.build-android.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        # VAL-01: the legs `plan` selected for this change; the full set is the runner's own `case "$LEG"` list.
+        leg: ${{ fromJSON(needs.plan.outputs.android_legs) }}
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - {name: Checkout, uses: actions/checkout@v4}
+      # No `npm ci`, no build tool: every script below uses Node builtins only.
+      - name: Setup Node.js 22
+        uses: actions/setup-node@v4
+        with: {node-version: '22'}
+      - {name: Enforce the validation retry budget, run: 'node scripts/validation/retry-budget.mjs --attempt "${{ github.run_attempt }}"'}
+      - name: Setup Temurin JDK 17 (Maestro tooling path)
+        uses: actions/setup-java@v6
+        with: {distribution: temurin, java-version: '17'}
+      - name: Download the Android proof build of THIS run
+        uses: actions/download-artifact@v4
+        with:
+          name: s4-proof-android-build
+          path: ${{ runner.temp }}/native-build
+          run-id: ${{ github.run_id }}
+          github-token: ${{ github.token }}
+      # The mode is the one the PRODUCER declared; an absent output resolves to the stricter `same-run`.
+      - name: Verify the artifact provenance BEFORE anything is installed
+        env:
+          MODE: ${{ needs.build-android.outputs.provenance_mode == 'prior-run' && 'prior-run' || 'same-run' }}
+        run: |
+          set -o pipefail
+          node scripts/phase-m/verify-native-artifact-manifest.mjs \
+            --manifest "$RUNNER_TEMP/native-build/native-artifact-manifest.json" \
+            --artifact "$RUNNER_TEMP/native-build/app-release.apk" \
+            --mode "$MODE" --platform android --role PROOF_VALIDATION \
+            --recipe s4-shared-world-proof --abis x86_64 --commit "${{ github.sha }}" \
+            | tee "$RUNNER_TEMP/provenance.txt"
+          { echo "### Leg \`${{ matrix.leg }}\` — provenance \`$MODE\` verified; NO build ran in this job"; echo '```'; cat "$RUNNER_TEMP/provenance.txt"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"
+      - name: Install Maestro cli-2.10.0 (pinned; SHA-256 verified before extraction)
+        run: |
+          curl --fail --location --silent --show-error --output "$RUNNER_TEMP/maestro.zip" "https://github.com/mobile-dev-inc/maestro/releases/download/cli-${MAESTRO_VERSION}/maestro.zip"
+          echo "${MAESTRO_ZIP_SHA256}  ${RUNNER_TEMP}/maestro.zip" | sha256sum --check --strict
+          unzip -q "$RUNNER_TEMP/maestro.zip" -d "$RUNNER_TEMP/maestro-dist"
+          mkdir -p "$HOME/.maestro"
+          cp -R "$RUNNER_TEMP/maestro-dist/maestro/." "$HOME/.maestro/"
+          echo "$HOME/.maestro/bin" >> "$GITHUB_PATH"
+      - name: Enable KVM for the emulator
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Run ONE leg on its own Android API 36 emulator
+        timeout-minutes: 45
+        uses: reactivecircus/android-emulator-runner@v2.38.0
+        env:
+          APK: ${{ runner.temp }}/native-build/app-release.apk
+          LEG: ${{ matrix.leg }}
+        with:
+          api-level: 36
+          arch: x86_64
+          target: google_apis
+          profile: pixel_7
+          disable-animations: false
+          emulator-boot-timeout: 900
+          script: bash scripts/phase-m/run-s401-proof-leg.sh "$APK" "$LEG" "$RUNNER_TEMP/leg-evidence"
+      - name: Upload this leg's evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: s4-proof-${{ matrix.leg }}-${{ github.sha }}
+          path: ${{ runner.temp }}/leg-evidence
+          if-no-files-found: warn
+          include-hidden-files: true
+          overwrite: true
