@@ -234,7 +234,7 @@ the typed Shared ID only (as S4-01's invitation does) and uses S4-01's strict cl
 - **Leave** returns to the Shared root at once with «غادرت العالم.» / "You left the world.".
 - **Ended Worlds** («عوالم منتهية» / "Ended Worlds" — Product Owner decision; `READ_ONLY_CLOSED`, not deletion): listed apart,
   opened read-only by entitlement.
-- **Privacy & Data:** «كلامك في عوالم مشتركة غادرتها» / "Your words in Shared Worlds you've left" — the reader's own words with
+- **Privacy & Data:** «كلامك في عوالم مشتركة لم تعد عضوًا فيها» / "Your words in Shared Worlds you're no longer part of" (left, removed, or ended) — the reader's own words with
   Delete; above them, any request to share the reader's own earlier words that still needs their approval (own words only,
   no grantee; approving brings them back into nothing).
 - **Accessibility:** 44 pt targets; roles; every name from the copy module; focus return; RTL / LTR parity (the Shared ID
@@ -302,6 +302,14 @@ QANDEEL); history sharing is not described as "since they joined" or "its author
 from an explicit History Access Grant, and the required approvers are the exact derived set); and a World's end makes it
 read-only without widening anyone's visibility.
 
+**Independent-review copy-truth correction (2026-10-06).** Nine APPROVED rows were corrected so every word matches the
+runtime, with the gate kept CLOSED: `proposalSent` (a removal's target never votes — "all required approvals", not "every
+member"), `proposalsHeading` / `shareRequestsHeading` / `shareRequest` (a row stays listed after the reader approved; the
+row's own button / `approvedWaiting` carries the reader's state), `formerRow` / `formerEmpty` / `formerShareRequest` (a
+former member may have left, been removed, or seen the World end — "no longer part of", never "left"), `leaveExplain` (the
+immediate consequence only; a later rejoin is possible) and `shareExplain` (joining does not open ALL earlier history; a
+rejoin may restore authorized prior membership-period history). No promise about absence-period history is added.
+
 | # | Key | Arabic | English | Where shown | Why needed | Status |
 |---|---|---|---|---|---|---|
 | 1 | `manageWorld` | إدارة العالم | Manage World | World shell action; Manage World title | the one way into the World's own management place (I-08A4 §7) | CANON |
@@ -314,10 +322,10 @@ read-only without widening anyone's visibility.
 | 8 | `proposeChange` | اقتراح تغيير | Propose a change | World Settings action | opens the settings proposal form | APPROVED |
 | 9 | `proposeSettingsExplain` | لن يتغيّر شيء إلا إذا وافق كل الأعضاء الحاليين. | Nothing changes unless every current member approves. | settings form, above the fields | unanimity stated before proposing (CW2-03 §30) | APPROVED |
 | 10 | `sendProposal` | إرسال الاقتراح | Send proposal | settings form action | sends the exact proposed version | APPROVED |
-| 11 | `proposalSent` | تم إرسال الاقتراح. يحتاج موافقة كل الأعضاء، وأنت منهم. | Proposal sent. It needs every member's approval, including yours. | Manage World notice (after a settings, removal or end proposal) | a proposal is not an approval; the proposer must approve too | APPROVED |
+| 11 | `proposalSent` | تم إرسال الاقتراح. لن يُطبّق إلا بعد اكتمال الموافقات المطلوبة، وموافقتك مطلوبة أيضًا. | Proposal sent. It won't take effect until all required approvals are complete, and your approval is required too. | Manage World notice (after a settings, removal or end proposal) | a proposal is not an approval; the proposer must approve too | APPROVED |
 | 12 | `unchanged` | هذه هي الإعدادات الحالية بالفعل. | These are already the current settings. | Manage World notice | the proposed values equal the committed ones | APPROVED |
 | 13 | `governanceNotOpen` | إدارة العالم غير متاحة بعد. | Managing this world isn't available yet. | Manage World, governance scope closed | truthful closed-capability state | APPROVED |
-| 14 | `proposalsHeading` | اقتراحات تنتظر موافقتك | Proposals waiting for your approval | Manage World section heading | the proposals that wait on THIS reader | APPROVED |
+| 14 | `proposalsHeading` | اقتراحات قيد الموافقة | Proposals awaiting approval | Manage World section heading | the proposals that wait on THIS reader | APPROVED |
 | 15 | `proposalSettings` | تغيير إعدادات العالم | Change the World Settings | proposal row title | a settings-change proposal | APPROVED |
 | 16 | `proposalRemoval` | إزالة {0} من هذا العالم | Remove {0} from this world | proposal row title ({0} = Name) | a removal proposal (never shown to its target) | APPROVED |
 | 17 | `proposalEnd` | إنهاء هذا العالم | End this world | proposal row title | a World-end proposal | APPROVED |
@@ -340,27 +348,27 @@ read-only without widening anyone's visibility.
 | 34 | `proposeRemoval` | اقتراح إزالة عضو | Propose removing a member | member row action | opens the removal confirmation | APPROVED |
 | 35 | `removeExplain` | تحتاج إزالة {0} موافقة جميع الأعضاء الآخرين. لا يحتاج {0} إلى الموافقة، ويبقى كلامه السابق باسمه. | Removing {0} requires every other member's approval. {0} doesn't approve the removal, and their earlier words remain under their name. | removal confirmation ({0} = Name) | consequence before the act (CW2-03 §25) | APPROVED |
 | 36 | `confirmRemoval` | اقتراح إزالة العضو | Propose removal | removal confirmation action | sends the removal proposal | APPROVED |
-| 37 | `shareExplain` | لا يرى العضو التاريخ السابق على عضويته تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة معه، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها. | A member doesn't automatically see history from before their membership. You can propose sharing earlier messages with them, and a message is shared only after all required approvals are complete. | share panel, first line | FROM_JOIN_FORWARD + author approval explained | APPROVED |
+| 37 | `shareExplain` | الانضمام إلى العالم لا يفتح كل تاريخه السابق تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة معه، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها. | Joining a World doesn't automatically open all of its earlier history. You can propose sharing earlier messages with them, and a message is shared only after all required approvals are complete. | share panel, first line | FROM_JOIN_FORWARD + author approval explained | APPROVED |
 | 38 | `shareWith` | مشاركة مع {0} | Share with {0} | member row action ({0} = Name) | opens sharing earlier messages with that member | APPROVED |
 | 39 | `noCandidates` | لا توجد رسائل سابقة يمكن مشاركتها مع {0}. | There are no earlier messages to share with {0}. | share panel ({0} = Name) | nothing the reader may offer | APPROVED |
 | 40 | `previewHeading` | سيرى {0} هذه الرسائل فقط: | {0} will see only these messages: | share panel preview ({0} = Name) | the exact preview before proposing (CW2-03 §21) | APPROVED |
 | 41 | `proposeShare` | اقتراح المشاركة | Propose sharing | share panel action | sends the exact package | APPROVED |
-| 42 | `shareRequestsHeading` | طلبات مشاركة تحتاج موافقتك | Sharing requests needing your approval | Manage World section heading; Privacy & Data former-words page | packages waiting on the reader's authority | APPROVED |
-| 43 | `shareRequest` | اقتراح بأن يرى {0} الرسائل السابقة التالية، ويحتاج ذلك إلى موافقتك: | A proposal for {0} to see the following earlier messages; your approval is required: | share-request row ({0} = grantee Name) | only the reader's own words are shown | APPROVED |
-| 44 | `formerShareRequest` | اقتراح بأن يرى عضو في عالم غادرته كلامك السابق هذا. موافقتك لا تعيدك إلى العالم: | A proposal for a member of a world you've left to see these earlier words of yours. Approving doesn't bring you back: | Privacy & Data former-words page | former member approves own words; no grantee | APPROVED |
+| 42 | `shareRequestsHeading` | طلبات مشاركة قيد الموافقة | Sharing requests awaiting approval | Manage World section heading; Privacy & Data former-words page | packages waiting on the reader's authority | APPROVED |
+| 43 | `shareRequest` | اقتراح بأن يرى {0} الرسائل السابقة التالية: | A proposal for {0} to see the following earlier messages: | share-request row ({0} = grantee Name) | only the reader's own words are shown | APPROVED |
+| 44 | `formerShareRequest` | اقتراح بأن يرى عضو في عالم مشترك لم تعد عضوًا فيه كلامك السابق هذا. موافقتك لا تعيدك إلى العالم: | A proposal for a member of a Shared World you're no longer part of to see these earlier words of yours. Approving doesn't bring you back: | Privacy & Data former-words page | former member approves own words; no grantee | APPROVED |
 | 45 | `granted` | تمت المشاركة. | Shared. | Manage World notice; Privacy & Data notice | the exact approver set completed; the grant committed | APPROVED |
 | 46 | `historyNotOpen` | مشاركة الرسائل السابقة غير متاحة بعد. | Sharing earlier messages isn't available yet. | Manage World, history scope closed | truthful closed-capability state | APPROVED |
 | 47 | `leave` | مغادرة هذا العالم | Leave this world | Manage World action | opens the leave confirmation | APPROVED |
-| 48 | `leaveExplain` | ستغادر فورًا، ولن ترى هذا العالم ولا ما يُقال فيه بعد ذلك. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات. | You'll leave right away and won't see this world or anything said in it after that. Your earlier words stay, and you can delete them later from Settings → Privacy & Data. | leave confirmation | consequence before the act (CW2-03 §23–§24); where own words stay controllable | APPROVED |
+| 48 | `leaveExplain` | ستغادر فورًا، ولن تتمكن من رؤية هذا العالم وأنت خارجه. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات. | You'll leave right away and won't be able to view this world while you're outside it. Your earlier words stay, and you can delete them later from Settings → Privacy & Data. | leave confirmation | consequence before the act (CW2-03 §23–§24); where own words stay controllable | APPROVED |
 | 49 | `leaveConfirm` | مغادرة | Leave | leave confirmation action | the exit right | APPROVED |
 | 50 | `left` | غادرت العالم. | You left the world. | Shared root notice | the reader left; nothing of the World remains | APPROVED |
 | 51 | `endWorld` | إنهاء هذا العالم | End this world | Manage World action | opens the World-end confirmation | APPROVED |
 | 52 | `endExplain` | ينتهي العالم فقط إذا وافق جميع الأعضاء الحاليين. بعدها يصبح للقراءة فقط، ويظل كل شخص يرى فقط ما كان متاحًا له. | The world ends only if every current member approves. After that it becomes read-only, and each person can see only what was available to them. | World-end confirmation | unanimity + archival closure stated first (CW2-03 §31–§33) | APPROVED |
 | 53 | `endConfirm` | اقتراح الإنهاء | Propose ending | World-end confirmation action | sends the World-end proposal | APPROVED |
 | 54 | `endedNotice` | انتهى هذا العالم. يمكنك قراءة ما كان متاحًا لك فقط. | This world has ended. You can only read what was available to you. | ended World, top | read-only by entitlement | APPROVED |
-| 55 | `formerRow` | كلامك في عوالم مشتركة غادرتها | Your words in Shared Worlds you've left | Settings → Privacy & Data row; page title | own-material control outside the World (E2E-G-18) | APPROVED |
+| 55 | `formerRow` | كلامك في عوالم مشتركة لم تعد عضوًا فيها | Your words in Shared Worlds you're no longer part of | Settings → Privacy & Data row; page title | own-material control outside the World (E2E-G-18) | APPROVED |
 | 56 | `formerExplain` | هذا كلامك أنت فقط. لا يظهر هنا شيء آخر من تلك العوالم. | These are only your own words. Nothing else from those worlds appears here. | former-material page | only the reader's own words; no World browsing | APPROVED |
-| 57 | `formerEmpty` | لا يوجد كلام لك في عوالم غادرتها. | You have no words in worlds you've left. | former-material page | nothing to show | APPROVED |
+| 57 | `formerEmpty` | لا يوجد لك كلام في عوالم مشتركة لم تعد عضوًا فيها. | You have no words in Shared Worlds you're no longer part of. | former-material page | nothing to show | APPROVED |
 | 58 | `back` | (imported) | (imported) | S4-03 surfaces | S4-01 back | REUSED |
 | 59 | `cancel` | (imported) | (imported) | S4-03 surfaces | S4-01 cancel | REUSED |
 | 60 | `retry` | (imported) | (imported) | S4-03 surfaces | S4-01 retry | REUSED |

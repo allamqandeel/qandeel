@@ -126,10 +126,10 @@ const AR_OWN = {
   proposeChange: 'اقتراح تغيير', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   proposeSettingsExplain: 'لن يتغيّر شيء إلا إذا وافق كل الأعضاء الحاليين.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — unanimity (CW2-03 §30)
   sendProposal: 'إرسال الاقتراح', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  proposalSent: 'تم إرسال الاقتراح. يحتاج موافقة كل الأعضاء، وأنت منهم.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — a proposal is no approval
+  proposalSent: 'تم إرسال الاقتراح. لن يُطبّق إلا بعد اكتمال الموافقات المطلوبة، وموافقتك مطلوبة أيضًا.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — a proposal is no approval
   unchanged: 'هذه هي الإعدادات الحالية بالفعل.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   governanceNotOpen: 'إدارة العالم غير متاحة بعد.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the governance scope is closed
-  proposalsHeading: 'اقتراحات تنتظر موافقتك', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
+  proposalsHeading: 'اقتراحات قيد الموافقة', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
   proposalSettings: 'تغيير إعدادات العالم', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   proposalRemoval: 'إزالة {0} من هذا العالم', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — {0}: the member's own Name
   proposalEnd: 'إنهاء هذا العالم', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
@@ -152,27 +152,27 @@ const AR_OWN = {
   proposeRemoval: 'اقتراح إزالة عضو', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   removeExplain: 'تحتاج إزالة {0} موافقة جميع الأعضاء الآخرين. لا يحتاج {0} إلى الموافقة، ويبقى كلامه السابق باسمه.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — CW2-03 §25
   confirmRemoval: 'اقتراح إزالة العضو', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  shareExplain: 'لا يرى العضو التاريخ السابق على عضويته تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة معه، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — CW2-03 §17–§21
+  shareExplain: 'الانضمام إلى العالم لا يفتح كل تاريخه السابق تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة معه، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — CW2-03 §17–§21
   shareWith: 'مشاركة مع {0}', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   noCandidates: 'لا توجد رسائل سابقة يمكن مشاركتها مع {0}.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   previewHeading: 'سيرى {0} هذه الرسائل فقط:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the exact preview (CW2-03 §21)
   proposeShare: 'اقتراح المشاركة', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  shareRequestsHeading: 'طلبات مشاركة تحتاج موافقتك', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  shareRequest: 'اقتراح بأن يرى {0} الرسائل السابقة التالية، ويحتاج ذلك إلى موافقتك:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — only the reader's own words are shown
-  formerShareRequest: 'اقتراح بأن يرى عضو في عالم غادرته كلامك السابق هذا. موافقتك لا تعيدك إلى العالم:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — material authority survives membership (CW2-03 §24); no grantee, no World state
+  shareRequestsHeading: 'طلبات مشاركة قيد الموافقة', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
+  shareRequest: 'اقتراح بأن يرى {0} الرسائل السابقة التالية:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — only the reader's own words are shown
+  formerShareRequest: 'اقتراح بأن يرى عضو في عالم مشترك لم تعد عضوًا فيه كلامك السابق هذا. موافقتك لا تعيدك إلى العالم:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — material authority survives membership (CW2-03 §24); no grantee, no World state
   granted: 'تمت المشاركة.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   historyNotOpen: 'مشاركة الرسائل السابقة غير متاحة بعد.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the history scope is closed
   leave: 'مغادرة هذا العالم', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  leaveExplain: 'ستغادر فورًا، ولن ترى هذا العالم ولا ما يُقال فيه بعد ذلك. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the consequence before the act (CW2-03 §23–§24)
+  leaveExplain: 'ستغادر فورًا، ولن تتمكن من رؤية هذا العالم وأنت خارجه. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — the consequence before the act (CW2-03 §23–§24)
   leaveConfirm: 'مغادرة', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   left: 'غادرت العالم.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endWorld: 'إنهاء هذا العالم', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endExplain: 'ينتهي العالم فقط إذا وافق جميع الأعضاء الحاليين. بعدها يصبح للقراءة فقط، ويظل كل شخص يرى فقط ما كان متاحًا له.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — archival closure (CW2-03 §31–§33)
   endConfirm: 'اقتراح الإنهاء', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endedNotice: 'انتهى هذا العالم. يمكنك قراءة ما كان متاحًا لك فقط.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — read-only, entitlement only
-  formerRow: 'كلامك في عوالم مشتركة غادرتها', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — Privacy & Data row (E2E-G-18)
+  formerRow: 'كلامك في عوالم مشتركة لم تعد عضوًا فيها', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — Privacy & Data row (E2E-G-18)
   formerExplain: 'هذا كلامك أنت فقط. لا يظهر هنا شيء آخر من تلك العوالم.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — no World browsing (CW2-03 §24)
-  formerEmpty: 'لا يوجد كلام لك في عوالم غادرتها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
+  formerEmpty: 'لا يوجد لك كلام في عوالم مشتركة لم تعد عضوًا فيها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
 } as const;
 
 const EN_OWN = {
@@ -186,10 +186,10 @@ const EN_OWN = {
   proposeChange: 'Propose a change', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   proposeSettingsExplain: 'Nothing changes unless every current member approves.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — unanimity (CW2-03 §30)
   sendProposal: 'Send proposal', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  proposalSent: "Proposal sent. It needs every member's approval, including yours.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — a proposal is no approval
+  proposalSent: "Proposal sent. It won't take effect until all required approvals are complete, and your approval is required too.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — a proposal is no approval
   unchanged: 'These are already the current settings.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   governanceNotOpen: "Managing this world isn't available yet.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the governance scope is closed
-  proposalsHeading: 'Proposals waiting for your approval', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
+  proposalsHeading: 'Proposals awaiting approval', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
   proposalSettings: 'Change the World Settings', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   proposalRemoval: 'Remove {0} from this world', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — {0}: the member's own Name
   proposalEnd: 'End this world', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
@@ -212,27 +212,27 @@ const EN_OWN = {
   proposeRemoval: 'Propose removing a member', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   removeExplain: "Removing {0} requires every other member's approval. {0} doesn't approve the removal, and their earlier words remain under their name.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — CW2-03 §25
   confirmRemoval: 'Propose removal', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  shareExplain: "A member doesn't automatically see history from before their membership. You can propose sharing earlier messages with them, and a message is shared only after all required approvals are complete.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — CW2-03 §17–§21
+  shareExplain: "Joining a World doesn't automatically open all of its earlier history. You can propose sharing earlier messages with them, and a message is shared only after all required approvals are complete.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — CW2-03 §17–§21
   shareWith: 'Share with {0}', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   noCandidates: 'There are no earlier messages to share with {0}.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   previewHeading: '{0} will see only these messages:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the exact preview (CW2-03 §21)
   proposeShare: 'Propose sharing', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  shareRequestsHeading: 'Sharing requests needing your approval', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  shareRequest: 'A proposal for {0} to see the following earlier messages; your approval is required:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — only the reader's own words are shown
-  formerShareRequest: "A proposal for a member of a world you've left to see these earlier words of yours. Approving doesn't bring you back:", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — material authority survives membership (CW2-03 §24); no grantee, no World state
+  shareRequestsHeading: 'Sharing requests awaiting approval', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
+  shareRequest: 'A proposal for {0} to see the following earlier messages:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — only the reader's own words are shown
+  formerShareRequest: "A proposal for a member of a Shared World you're no longer part of to see these earlier words of yours. Approving doesn't bring you back:", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — material authority survives membership (CW2-03 §24); no grantee, no World state
   granted: 'Shared.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   historyNotOpen: "Sharing earlier messages isn't available yet.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the history scope is closed
   leave: 'Leave this world', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  leaveExplain: "You'll leave right away and won't see this world or anything said in it after that. Your earlier words stay, and you can delete them later from Settings → Privacy & Data.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the consequence before the act (CW2-03 §23–§24)
+  leaveExplain: "You'll leave right away and won't be able to view this world while you're outside it. Your earlier words stay, and you can delete them later from Settings → Privacy & Data.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — the consequence before the act (CW2-03 §23–§24)
   leaveConfirm: 'Leave', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   left: 'You left the world.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endWorld: 'End this world', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endExplain: 'The world ends only if every current member approves. After that it becomes read-only, and each person can see only what was available to them.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — archival closure (CW2-03 §31–§33)
   endConfirm: 'Propose ending', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endedNotice: 'This world has ended. You can only read what was available to you.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — read-only, entitlement only
-  formerRow: "Your words in Shared Worlds you've left", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — Privacy & Data row (E2E-G-18)
+  formerRow: "Your words in Shared Worlds you're no longer part of", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — Privacy & Data row (E2E-G-18)
   formerExplain: 'These are only your own words. Nothing else from those worlds appears here.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — no World browsing (CW2-03 §24)
-  formerEmpty: "You have no words in worlds you've left.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
+  formerEmpty: "You have no words in Shared Worlds you're no longer part of.", // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
 } as const;
 
 function build(language: ChromeLanguage): SharedLifecycleCopy {

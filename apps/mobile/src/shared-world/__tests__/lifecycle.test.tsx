@@ -426,7 +426,7 @@ describe('S4-03 lifecycle — the copy gate', () => {
     // Four of the Product Owner's final wordings, exact.
     expect(sharedLifecycleCopy('en').approvedWaiting).toBe('Your approval is recorded. The request is still waiting for the remaining required approvals.');
     expect(sharedLifecycleCopy('ar').proposalRemoval).toBe('إزالة {0} من هذا العالم');
-    expect(sharedLifecycleCopy('en').shareRequestsHeading).toBe('Sharing requests needing your approval');
+    expect(sharedLifecycleCopy('en').shareRequestsHeading).toBe('Sharing requests awaiting approval');
     expect(sharedLifecycleCopy('ar').endExplain).toBe('ينتهي العالم فقط إذا وافق جميع الأعضاء الحاليين. بعدها يصبح للقراءة فقط، ويظل كل شخص يرى فقط ما كان متاحًا له.');
     for (const key of ['inviteFieldLabel', 'invalidSharedId', 'accept'] as const) {
       expect(sharedLifecycleCopy('ar')[key]).toBe(sharedCopy('ar')[key]);
