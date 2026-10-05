@@ -545,6 +545,7 @@ async function verifyConcurrency() {
   await client.query('CREATE TEMP TABLE s401_prior_gate ON COMMIT PRESERVE ROWS AS SELECT * FROM shared_private.shared_launch_capability_states');
   const [{ priorGateRows }] = await rows('SELECT count(*)::int AS "priorGateRows" FROM s401_prior_gate');
   const [{ lastEvent }] = await rows('SELECT COALESCE(max(id), 0)::bigint AS "lastEvent" FROM shared_private.shared_launch_capability_events');
+  let failed = false;
   const one = new Client({ connectionString: databaseUrl });
   const two = new Client({ connectionString: databaseUrl });
   await one.connect();
@@ -607,8 +608,12 @@ async function verifyConcurrency() {
     await two.query('COMMIT');
     const [{ born }] = await rows('SELECT count(*)::int AS born FROM public.shared_world_direct_birth_events WHERE invitation_id = $1', [target]);
     assert.equal(born, 1);
+  } catch (error) {
+    failed = true;
+    throw error;
   } finally {
-    stage = 'concurrency: fixture removal';
+    // A failure keeps its own stage; removal still runs.
+    if (!failed) stage = 'concurrency: fixture removal';
     for (const extra of [one, two]) await extra.query('ROLLBACK').catch((error) => { if (error?.code !== '25P01') throw error; });
     await one.end();
     await two.end();
@@ -679,5 +684,7 @@ main().catch((error) => {
   const code = typeof error?.code === 'string' ? error.code : 'verification';
   console.error(`Database verification failed at ${stage} (${code}). Connection details were suppressed.`);
   if (error instanceof assert.AssertionError) console.error(error.message);
+  // A PostgreSQL refusal's own message names the object, never the connection.
+  else if (typeof error?.code === 'string' && typeof error?.message === 'string') console.error(error.message.slice(0, 300));
   process.exitCode = 1;
 });
