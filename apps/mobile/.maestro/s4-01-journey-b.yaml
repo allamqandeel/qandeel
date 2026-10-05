@@ -37,9 +37,22 @@ appId: com.qandeel.mobile
       text: "${SENT}"
     timeout: 30000
 - takeScreenshot: ${PREFIX}-02-invitation-sent
+# The malformed ID in its own, fresh invite session: the panel is closed and reopened, so the proof never depends on the
+# field's focus / input-method state left by the successful submission, and the value is proved typed before Send.
+- tapOn:
+    id: "qandeel-shared-invite-cancel"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-shared-invite"
+    timeout: 10000
+- tapOn:
+    id: "qandeel-shared-create"
 - tapOn:
     id: "qandeel-shared-invite-input"
-- inputText: "12"
+- inputText: "AB"
+- assertVisible:
+    id: "qandeel-shared-invite-input"
+    text: "AB"
 - tapOn:
     id: "qandeel-shared-invite-send"
 - extendedWaitUntil:

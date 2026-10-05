@@ -12,6 +12,10 @@
  * It also guards the pre-authority seam Journey C asserts on a device: an entry into the seeded World stays in the neutral
  * shell — no welcome, no member — until `allow()` releases it, however long the reader waits; never a timed delay that a
  * slow emulator can outrun (the S4 proof race of run 37291080371).
+ *
+ * And the malformed-ID proof Journey B runs on a device: after a successful invite the panel is closed and a FRESH invite
+ * session is opened, so the malformed value is typed into a new field, proved present, and only then sent (run
+ * 37293961649 showed the field empty after typing into the field the successful submission had just cleared).
  */
 import { act, cleanup, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
@@ -20,6 +24,7 @@ import { createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { createEphemeralPushDeviceStore, createInertPushPlatformPort } from '../../push';
 import { createEphemeralProductRecoveryStorage } from '../../recovery';
 import { AccountApiClient, createManualForegroundSignal } from '../../runtime-entry';
+import { sharedCopy } from '../../shared-world';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
@@ -155,5 +160,27 @@ describe('S4-01 proof world — the pre-authority seam is held, never timed', ()
     expect(view.getByTestId('qandeel-shared-welcome')).toBeTruthy();
     expect(view.getByTestId('qandeel-shared-members')).toBeTruthy();
     expect(view.queryByTestId('qandeel-shared-transition')).toBeNull();
+  });
+});
+describe('S4-01 proof world — the malformed Shared ID in its own, fresh invite session (Journey B)', () => {
+  it('closes the panel after the sent invite, reopens it empty, holds the typed malformed value, and answers it as malformed', async () => {
+    const copy = sharedCopy(deviceProductLanguage());
+    const view = await proofApp();
+    await press(view, 'qandeel-switcher-shared_world');
+    await press(view, 'qandeel-shared-create');
+    await fireEvent.changeText(view.getByTestId('qandeel-shared-invite-input'), 'k7qm 4xwd p9tr');
+    await press(view, 'qandeel-shared-invite-send');
+    expect(within(view.getByTestId('qandeel-shared-invite-message')).getByText(copy.invitationSent)).toBeTruthy();
+
+    await press(view, 'qandeel-shared-invite-cancel');
+    expect(view.queryByTestId('qandeel-shared-invite')).toBeNull();
+    await press(view, 'qandeel-shared-create');
+    expect(view.getByTestId('qandeel-shared-invite-input').props.value).toBe('');
+    expect(view.queryByText(copy.invitationSent)).toBeNull();
+
+    await fireEvent.changeText(view.getByTestId('qandeel-shared-invite-input'), 'AB');
+    expect(view.getByTestId('qandeel-shared-invite-input').props.value).toBe('AB');
+    await press(view, 'qandeel-shared-invite-send');
+    expect(within(view.getByTestId('qandeel-shared-invite-message')).getByText(copy.invalidSharedId)).toBeTruthy();
   });
 });

@@ -7,9 +7,10 @@
 //      and no 0131 sequence is reachable by a client role; the only anon-executable public function is the deliberate
 //      keep-alive;
 //   2. in a SCRATCH database carrying hosted Supabase's real `public` default privileges (new functions, tables and
-//      sequences granted to anon / authenticated / service_role), every migration 0001-0132 applies unchanged, and the
-//      census reproduces the drift EXACTLY - five functions, fourteen PUBLIC trigger functions, one sequence, and
-//      nothing else - including anon calling login_id_is_available_v1 for real;
+//      sequences granted to anon / authenticated / service_role), every migration 0001-0132 applies unchanged, anon
+//      calls login_id_is_available_v1 for real, and the census of what 0133 closes - that scratch database before 0133
+//      against itself right after 0133, never against the latest CI state - is EXACTLY five functions, fourteen PUBLIC
+//      trigger functions, one sequence, and nothing else;
 //   3. after 0133 in that scratch database: every public function, table, view and sequence grants anon and
 //      authenticated exactly what the CI database grants (hosted == CI, object by object); nothing gained a privilege
 //      (every object's ACL is a subset of its pre-0133 ACL, service_role included); row-level security and policies are
@@ -236,24 +237,6 @@ async function verifySupabaseDefaults(ci) {
     await sim.query("SET search_path = ''"); // every regprocedure renders schema-qualified
     const before = await snapshot(sim);
 
-    stage = 'scratch: the census reproduces the drift exactly';
-    const drift = {};
-    for (const [object, row] of before.functions) {
-      const intended = ci.functions.get(object);
-      assert.ok(intended, `${object} exists in both databases`);
-      const roles = ['anon', 'authenticated'].filter((role) => row[role] && !intended[role]);
-      if (roles.length > 0) drift[object] = roles;
-    }
-    // Measured against the CI ACL AFTER 0133, the PUBLIC trigger functions are client-reachable before 0133 too.
-    const expectedDrift = { ...DRIFTED_FUNCTIONS, ...Object.fromEntries(PUBLIC_TRIGGER_FUNCTIONS.map((signature) => [signature, ['anon', 'authenticated']])) };
-    assert.deepEqual(drift, expectedDrift, 'exactly the five drifted functions and the fourteen PUBLIC trigger functions, for exactly these roles');
-    const publicTriggers = [...before.functions.values()].filter((row) => row.public).map((row) => row.object).sort();
-    assert.deepEqual(publicTriggers, [...PUBLIC_TRIGGER_FUNCTIONS].sort(), 'exactly the fourteen PUBLIC trigger functions');
-    const relationDrift = [...before.relations.values()]
-      .filter((row) => row.privileges.some((p) => /^(anon|authenticated):/u.test(p) && !ci.relations.get(row.object).privileges.includes(p)))
-      .map((row) => row.object);
-    assert.deepEqual(relationDrift, [DRIFTED_SEQUENCE], 'exactly one relation drifted: the 0131 sequence');
-
     stage = 'scratch: the drift is real - anon calls the Login ID oracle before 0133';
     await sim.query('BEGIN');
     try {
@@ -267,6 +250,29 @@ async function verifySupabaseDefaults(ci) {
     stage = 'scratch: apply 0133';
     psql(join(MIGRATIONS, MIGRATION));
     const after = await snapshot(sim);
+
+    // The historical census is what 0133 ITSELF closed: the scratch database before 0133 against the SAME database right
+    // after it (before0133 -> after0133), never against the current CI database. A later migration may deliberately
+    // narrow a privilege (S4-01 / 0138 retired authenticated EXECUTE on the two legacy 0081 commands); that is not
+    // pre-0133 drift, and measuring against the latest CI ACL would misread it as such. hosted == CI for the latest
+    // state stays proved below, object by object, after every later migration.
+    stage = 'scratch: the census reproduces the drift exactly';
+    const drift = {};
+    for (const [object, row] of before.functions) {
+      const closed = after.functions.get(object);
+      assert.ok(closed, `${object} exists before and after 0133`);
+      const roles = ['anon', 'authenticated'].filter((role) => row[role] && !closed[role]);
+      if (roles.length > 0) drift[object] = roles;
+    }
+    // Before 0133, the PUBLIC trigger functions are client-reachable through PUBLIC too.
+    const expectedDrift = { ...DRIFTED_FUNCTIONS, ...Object.fromEntries(PUBLIC_TRIGGER_FUNCTIONS.map((signature) => [signature, ['anon', 'authenticated']])) };
+    assert.deepEqual(drift, expectedDrift, 'exactly the five drifted functions and the fourteen PUBLIC trigger functions, for exactly these roles');
+    const publicTriggers = [...before.functions.values()].filter((row) => row.public).map((row) => row.object).sort();
+    assert.deepEqual(publicTriggers, [...PUBLIC_TRIGGER_FUNCTIONS].sort(), 'exactly the fourteen PUBLIC trigger functions');
+    const relationDrift = [...before.relations.values()]
+      .filter((row) => row.privileges.some((p) => /^(anon|authenticated):/u.test(p) && !after.relations.get(row.object).privileges.includes(p)))
+      .map((row) => row.object);
+    assert.deepEqual(relationDrift, [DRIFTED_SEQUENCE], 'exactly one relation drifted: the 0131 sequence');
 
     stage = 'scratch: nothing gained a privilege, and row-level security is unchanged';
     for (const [object, row] of after.functions) {
