@@ -10,11 +10,16 @@
  * reader's own token. A package that is no longer whole is one explicit stale state and is never drawn partially. The
  * lifecycle ends at READY_FOR_REVIEW, which is not public: no state here can say "published".
  *
+ * S5-03A adds the semantic stage to REVIEW, once the Experience is READY_FOR_REVIEW: QANDEEL's proposed understanding
+ * (meaning, main and other meanings, why), the publisher's acceptance of exactly the revision seen, or their correction
+ * of the MEANING in their own words — never a place, a neighbour or a rank. The lifecycle stays READY_FOR_REVIEW.
+ *
  * Its state is viewer-local and its own: nothing of the Personal world or the Shared area is held or written.
  */
 import type {
   PublicAuthoringAnswer, PublicApprovalRequest, PublicApproveOutcome, PublicAuthoringDraft, PublicAuthoringReview, PublicAuthoringSources,
-  PublicPackageOutcome, PublicReadyOutcome, PublicWithdrawOutcome,
+  PublicPackageOutcome, PublicReadyOutcome, PublicSemanticAcceptOutcome, PublicSemanticCorrectionInput, PublicSemanticCorrectionOutcome,
+  PublicSemanticProposalOutcome, PublicSemanticReview, PublicWithdrawOutcome,
 } from '../runtime-entry';
 
 export interface PublicAuthoringTransport {
@@ -30,8 +35,19 @@ export interface PublicAuthoringTransport {
   ready(experienceId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicReadyOutcome>>;
 }
 
+/** S5-03A — the semantic review of a READY_FOR_REVIEW Experience (the same Public authoring client implements it). */
+export interface PublicSemanticTransport {
+  semanticReview(experienceId: string): Promise<PublicAuthoringAnswer<PublicSemanticReview>>;
+  proposeSemantic(experienceId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicSemanticProposalOutcome>>;
+  acceptSemantic(experienceId: string, commandId: string, interpretationId: string): Promise<PublicAuthoringAnswer<PublicSemanticAcceptOutcome>>;
+  correctSemantic(experienceId: string, commandId: string, interpretationId: string,
+    correction: PublicSemanticCorrectionInput): Promise<PublicAuthoringAnswer<PublicSemanticCorrectionOutcome>>;
+}
+
 export type PublicAuthoringScreen = 'CLOSED' | 'WORKSPACE' | 'CHOOSE' | 'REVIEW';
-export type PublicAuthoringNotice = 'NONE' | 'ACTION_UNAVAILABLE' | 'NOT_PUBLISHABLE' | 'APPROVALS_INCOMPLETE' | 'APPROVED' | 'WITHDRAWN';
+export type PublicAuthoringNotice = 'NONE' | 'ACTION_UNAVAILABLE' | 'NOT_PUBLISHABLE' | 'APPROVALS_INCOMPLETE' | 'APPROVED' | 'WITHDRAWN'
+  // S5-03A
+  | 'INTERPRETATION_UNAVAILABLE' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'CORRECTION_INVALID' | 'LIMITED';
 
 export interface PublicAuthoringState {
   readonly screen: PublicAuthoringScreen;
@@ -44,6 +60,10 @@ export interface PublicAuthoringState {
   readonly selected: ReadonlyArray<string>;
   readonly experienceId: string | null;
   readonly review: PublicAuthoringReview | null;
+  /** S5-03A: QANDEEL's understanding of the reviewed Experience — only once it is READY_FOR_REVIEW. */
+  readonly semantic: PublicSemanticReview | null;
+  /** S5-03A: the correction form is open. */
+  readonly correcting: boolean;
   readonly busy: boolean;
   readonly notice: PublicAuthoringNotice;
 }
@@ -63,11 +83,21 @@ export interface PublicAuthoringController {
   approve(manifestId: string): void;
   withdraw(manifestId: string): void;
   markReady(): void;
+  /** S5-03A: ask QANDEEL to propose its understanding of the reviewed Experience. */
+  requestUnderstanding(): void;
+  /** S5-03A: accept exactly the understanding shown. */
+  acceptUnderstanding(): void;
+  openCorrection(): void;
+  cancelCorrection(): void;
+  /** S5-03A: correct the meaning — a line of meaning, and comma-separated main and other meanings. */
+  submitCorrection(meaning: string, primaryThemes: string, secondaryThemes: string): void;
   retire(): void;
 }
 
 export interface PublicAuthoringControllerOptions {
   readonly transport: PublicAuthoringTransport | null;
+  /** S5-03A: the semantic review transport; without it the semantic stage is not drawn. */
+  readonly semantic?: PublicSemanticTransport | null;
   readonly isCurrent: () => boolean;
   readonly newCommandId?: () => string;
 }
@@ -78,6 +108,25 @@ export const PUBLIC_PACKAGE_MAX_SOURCES = 20;
 export const personalKey = (sourceId: string): string => `P:${sourceId}`;
 export const sharedKey = (worldId: string, materialId: string): string => `S:${worldId}:${materialId}`;
 
+/** S5-03A: the semantic bounds — exactly the server's (one line of meaning ≤ 120; 1–3 main and 0–3 other meanings ≤ 40). */
+export const SEMANTIC_MEANING_MAX = 120;
+export const SEMANTIC_THEME_MAX = 40;
+const IDENTIFIER = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/iu;
+const oneLine = (text: string): string => text.replace(/\s+/gu, ' ').trim();
+
+/** The publisher's words, normalized; null when they cannot be a correction. Themes are separated by a comma (, or ،). */
+export function semanticCorrectionOf(meaning: string, primaryThemes: string, secondaryThemes: string): PublicSemanticCorrectionInput | null {
+  const line = oneLine(meaning);
+  const themes = (text: string) => text.split(/[,،]/u).map(oneLine).filter((theme) => theme.length > 0);
+  const primary = themes(primaryThemes);
+  const secondary = themes(secondaryThemes);
+  const all = [...primary, ...secondary];
+  const valid = (text: string, max: number) => text.length >= 1 && text.length <= max && !IDENTIFIER.test(text);
+  if (!valid(line, SEMANTIC_MEANING_MAX) || primary.length < 1 || primary.length > 3 || secondary.length > 3
+    || !all.every((theme) => valid(theme, SEMANTIC_THEME_MAX)) || new Set(all.map((theme) => theme.toLowerCase())).size !== all.length) return null;
+  return { meaning: line, primaryThemes: primary, secondaryThemes: secondary };
+}
+
 export function mintPublicCommandId(): string {
   const hex = () => Math.floor(Math.random() * 16).toString(16);
   const block = (n: number) => Array.from({ length: n }, hex).join('');
@@ -86,10 +135,10 @@ export function mintPublicCommandId(): string {
 
 const CLOSED: PublicAuthoringState = Object.freeze<PublicAuthoringState>({
   screen: 'CLOSED', status: 'READY', drafts: [], requests: [], sources: null, selected: [], experienceId: null, review: null,
-  busy: false, notice: 'NONE',
+  semantic: null, correcting: false, busy: false, notice: 'NONE',
 });
 
-export function createPublicAuthoringController({ transport, isCurrent, newCommandId = mintPublicCommandId }: PublicAuthoringControllerOptions): PublicAuthoringController {
+export function createPublicAuthoringController({ transport, semantic = null, isCurrent, newCommandId = mintPublicCommandId }: PublicAuthoringControllerOptions): PublicAuthoringController {
   const listeners = new Set<() => void>();
   let state: PublicAuthoringState = CLOSED;
   let retired = false;
@@ -114,7 +163,7 @@ export function createPublicAuthoringController({ transport, isCurrent, newComma
 
   async function loadWorkspace(): Promise<void> {
     const mine = ++ticket;
-    publish({ screen: 'WORKSPACE', status: 'LOADING', experienceId: null, review: null, sources: null, selected: [] });
+    publish({ screen: 'WORKSPACE', status: 'LOADING', experienceId: null, review: null, semantic: null, correcting: false, sources: null, selected: [] });
     if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
     const [drafts, requests] = await Promise.all([transport.drafts(), transport.approvalRequests()]);
     if (mine !== ticket) return;
@@ -124,7 +173,7 @@ export function createPublicAuthoringController({ transport, isCurrent, newComma
 
   async function loadSources(experienceId: string): Promise<void> {
     const mine = ++ticket;
-    publish({ screen: 'CHOOSE', status: 'LOADING', experienceId, review: null, selected: [] });
+    publish({ screen: 'CHOOSE', status: 'LOADING', experienceId, review: null, semantic: null, correcting: false, selected: [] });
     if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
     const sources = await transport.sources();
     if (mine !== ticket) return;
@@ -141,7 +190,14 @@ export function createPublicAuthoringController({ transport, isCurrent, newComma
     if (review.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
     // A Draft that has no package yet goes straight to choosing its material.
     if (review.value.state === 'NO_PACKAGE' && review.value.lifecycle === 'DRAFT') { await loadSources(experienceId); return; }
-    publish({ status: 'READY', review: review.value });
+    // S5-03A: the semantic stage exists only for a whole package that is READY_FOR_REVIEW.
+    let understanding: PublicSemanticReview | null = null;
+    if (semantic && review.value.state === 'CURRENT' && review.value.lifecycle === 'READY_FOR_REVIEW') {
+      const answer = await semantic.semanticReview(experienceId);
+      if (mine !== ticket) return;
+      understanding = answer.kind === 'ANSWER' ? answer.value : { state: 'UNAVAILABLE', ready: false };
+    }
+    publish({ status: 'READY', review: review.value, semantic: understanding });
   }
 
   async function act(work: () => Promise<void>): Promise<void> {
@@ -252,6 +308,72 @@ export function createPublicAuthoringController({ transport, isCurrent, newComma
           notice: answer.value === 'READY_FOR_REVIEW' || answer.value === 'ALREADY_READY' ? 'NONE'
             : answer.value === 'APPROVALS_INCOMPLETE' ? 'APPROVALS_INCOMPLETE' : 'ACTION_UNAVAILABLE',
         });
+      });
+    },
+    requestUnderstanding() {
+      const experienceId = state.experienceId;
+      if (state.screen !== 'REVIEW' || !experienceId || !semantic || state.semantic?.state !== 'NO_PROPOSAL') return;
+      void act(async () => {
+        const key = `SEMANTIC_PROPOSE:${experienceId}`;
+        const answer = await semantic.proposeSemantic(experienceId, commandFor(key));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        // An interpretation QANDEEL could not produce keeps the SAME command: a retry resumes the same request.
+        if (answer.value !== 'INTERPRETATION_UNAVAILABLE') settle(key);
+        await loadReview(experienceId);
+        publish({
+          notice: answer.value === 'PROPOSED' || answer.value === 'ALREADY_INTERPRETED' ? 'NONE'
+            : answer.value === 'INTERPRETATION_UNAVAILABLE' ? 'INTERPRETATION_UNAVAILABLE' : answer.value === 'LIMITED' ? 'LIMITED' : 'ACTION_UNAVAILABLE',
+        });
+      });
+    },
+    acceptUnderstanding() {
+      const experienceId = state.experienceId;
+      const understanding = state.semantic;
+      if (state.screen !== 'REVIEW' || !experienceId || !semantic || understanding?.state !== 'AWAITING_REVIEW') return;
+      void act(async () => {
+        const key = `SEMANTIC_ACCEPT:${understanding.interpretationId}`;
+        const answer = await semantic.acceptSemantic(experienceId, commandFor(key), understanding.interpretationId);
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        settle(key);
+        await loadReview(experienceId);
+        publish({ notice: answer.value === 'ACCEPTED' || answer.value === 'ALREADY_ACCEPTED' || answer.value === 'ALREADY_REVIEWED' ? 'NONE' : 'ACTION_UNAVAILABLE' });
+      });
+    },
+    openCorrection() {
+      const understanding = state.semantic;
+      if (state.busy || (understanding?.state !== 'AWAITING_REVIEW' && understanding?.state !== 'REVIEWED')) return;
+      publish({ correcting: true, notice: 'NONE' });
+    },
+    cancelCorrection() {
+      if (state.busy) return;
+      publish({ correcting: false, notice: 'NONE' });
+    },
+    submitCorrection(meaning, primaryThemes, secondaryThemes) {
+      const experienceId = state.experienceId;
+      const understanding = state.semantic;
+      if (state.screen !== 'REVIEW' || !experienceId || !semantic || !state.correcting
+        || (understanding?.state !== 'AWAITING_REVIEW' && understanding?.state !== 'REVIEWED')) return;
+      const correction = semanticCorrectionOf(meaning, primaryThemes, secondaryThemes);
+      if (correction === null) { publish({ notice: 'CORRECTION_INVALID' }); return; }
+      void act(async () => {
+        const key = `SEMANTIC_CORRECT:${understanding.interpretationId}:${correction.meaning}|${correction.primaryThemes.join(',')}|${correction.secondaryThemes.join(',')}`;
+        const answer = await semantic.correctSemantic(experienceId, commandFor(key), understanding.interpretationId, correction);
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        if (answer.value !== 'INTERPRETATION_UNAVAILABLE') settle(key);
+        switch (answer.value) {
+          case 'CORRECTED':
+            await loadReview(experienceId);
+            publish({ correcting: false, notice: 'NONE' });
+            return;
+          case 'NOT_SUPPORTED': case 'UNCHANGED': case 'INTERPRETATION_UNAVAILABLE': case 'LIMITED':
+            // The form stays open with the publisher's words: they can rephrase.
+            publish({ notice: answer.value });
+            return;
+          default:
+            // STALE / UNAVAILABLE / NO_PROPOSAL / NOT_READY_FOR_REVIEW: what was corrected is no longer current. Ask again.
+            await loadReview(experienceId);
+            publish({ correcting: false, notice: 'ACTION_UNAVAILABLE' });
+        }
       });
     },
     retire() {

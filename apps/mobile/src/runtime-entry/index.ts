@@ -164,6 +164,9 @@ export type {
   PublicAuthoringReview, PublicAuthoringSources, PublicOwnApproval, PublicPackageOutcome, PublicPersonalSource, PublicReadyOutcome,
   PublicSharedSource, PublicWithdrawOutcome,
 } from './public-authoring-api';
+export type {
+  PublicSemanticAcceptOutcome, PublicSemanticCorrectionInput, PublicSemanticCorrectionOutcome, PublicSemanticProposalOutcome, PublicSemanticReview,
+} from './public-semantic-api';
 export { PublicAuthoringApiClient } from './public-authoring-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
 export { PushApiClient } from './push-api';
