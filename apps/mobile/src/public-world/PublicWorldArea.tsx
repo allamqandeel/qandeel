@@ -6,8 +6,10 @@
  * "not available" with a way to try again; it says nothing about why. On ALLOW the root becomes active: the Public
  * World's own name and its own ground.
  *
- * The root's field is content-empty by truth: nothing public exists to place in it, and nothing stands in for it — no
- * sample, feed, ranking or invented geography (S5-03 realizes the semantic field). It is a World, not a feed. S5-02 adds
+ * S5-03B: the root's field is the Public semantic field (`./field`) — every Experience the server serves, at its stable
+ * place, under FAR / MID / NEAR disclosure, with search and a compact contextual panel over the SAME World. While
+ * nothing is public it is empty by truth, and nothing stands in for it — no sample, feed, ranking or invented geography.
+ * It is a World, not a feed. S5-02 adds
  * ONE way, after ALLOW, into the authoring workspace (`../public-authoring`): the reader's own non-public work, drawn in
  * place of the field and left by its own Back. It places nothing in the field.
  *
@@ -25,6 +27,7 @@ import type { ChromeLanguage } from '../orientation-chrome';
 import { publicCopy } from './copy';
 import { PublicAuthoringWorkspace, publicAuthoringCopy, type PublicAuthoringScreen } from '../public-authoring';
 import type { PublicWorldController } from './public-world-controller';
+import { PublicSemanticField } from './field/PublicSemanticField';
 
 export const PUBLIC_AREA_TEST_ID = 'qandeel-public-area';
 const HEADER_MIN_HEIGHT = 48;
@@ -106,8 +109,10 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
               </Control>
             </View>
           ) : null}
-          {/* The Public World's own ground. Its semantic field is S5-03's; nothing stands in for it. */}
-          <View testID="qandeel-public-field" style={{ flex: 1 }} />
+          {/* The Public World's own ground: its semantic field (S5-03B). Without a field controller, nothing stands in for it. */}
+          {controller.field !== null
+            ? <PublicSemanticField controller={controller.field} language={language} palette={palette} bottomInset={insets.bottom} />
+            : <View testID="qandeel-public-field" style={{ flex: 1 }} />}
         </>
       )}
     </>

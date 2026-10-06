@@ -8,10 +8,11 @@
  * every entry resolves again.
  *
  * Its state is viewer-local and its own (CW2-07 §24): it holds nothing of the Personal world (no Session, camera, focus
- * or time) and nothing of the Shared area, and it writes nothing to either. S5-01's root is content-empty by truth —
- * the Public Experiences and their semantic field are S5-03's — so there is nothing else to hold.
+ * or time) and nothing of the Shared area, and it writes nothing to either. S5-01's root was content-empty by truth;
+ * S5-03B gives it the semantic field, through its own Public-only field controller (`./field`), held here and nowhere else.
  */
 import type { PublicAuthoringController } from '../public-authoring';
+import type { PublicFieldController } from './field/public-field-controller';
 import type { PublicEntryResult } from '../runtime-entry';
 
 export interface PublicWorldTransport {
@@ -29,6 +30,8 @@ export interface PublicWorldController {
   enter(): void;
   /** S5-02 — the authoring workspace drawn inside the Public World root; null where the host provides none. */
   readonly authoring: PublicAuthoringController | null;
+  /** S5-03B — the Public semantic field; null where the host provides none (the root then stays content-empty). */
+  readonly field: PublicFieldController | null;
   retire(): void;
 }
 
@@ -36,11 +39,12 @@ export interface PublicWorldControllerOptions {
   readonly transport: PublicWorldTransport;
   readonly isCurrent: () => boolean;
   readonly authoring?: PublicAuthoringController | null;
+  readonly field?: PublicFieldController | null;
 }
 
 const INITIAL: PublicAreaState = Object.freeze<PublicAreaState>({ entry: 'NONE' });
 
-export function createPublicWorldController({ transport, isCurrent, authoring = null }: PublicWorldControllerOptions): PublicWorldController {
+export function createPublicWorldController({ transport, isCurrent, authoring = null, field = null }: PublicWorldControllerOptions): PublicWorldController {
   const listeners = new Set<() => void>();
   let state: PublicAreaState = INITIAL;
   let retired = false;
@@ -75,10 +79,12 @@ export function createPublicWorldController({ transport, isCurrent, authoring = 
       void resolve();
     },
     authoring,
+    field,
     retire() {
       retired = true;
       listeners.clear();
       authoring?.retire();
+      field?.retire();
     },
   };
 }

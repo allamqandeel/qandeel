@@ -138,6 +138,7 @@ import {
 } from '../../public-world';
 import { createPublicDisplayController, type PublicDisplayController } from '../../settings/public-display-controller';
 import { createPublicAuthoringController } from '../../public-authoring';
+import { createPublicFieldController } from '../../public-world/field';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
 import { deviceProductLanguage } from '../locale/device-locale';
@@ -547,7 +548,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       // S5-03A: its semantic review stage, on the same authoring client.
       publicWorld: createPublicWorldController({
         transport: publicTransport, isCurrent,
-        authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, semantic: publicTransport.semantic ?? null, isCurrent }),
+        authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, semantic: publicTransport.semantic ?? null, spatial: publicTransport.spatial ?? null, isCurrent }),
+        // S5-03B — the Public semantic field: its own viewer state, on the same identity-bound transport.
+        field: createPublicFieldController({ transport: publicTransport.field ?? null, isCurrent }),
       }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,

@@ -14,12 +14,15 @@
  * (meaning, main and other meanings, why), the publisher's acceptance of exactly the revision seen, or their correction
  * of the MEANING in their own words — never a place, a neighbour or a rank. The lifecycle stays READY_FOR_REVIEW.
  *
+ * S5-03B adds, once that understanding is ready, the stable place: whether QANDEEL has prepared the Experience's place
+ * in the Public field, and the request to prepare it. The reader can never choose, see or move the place itself.
+ *
  * Its state is viewer-local and its own: nothing of the Personal world or the Shared area is held or written.
  */
 import type {
   PublicAuthoringAnswer, PublicApprovalRequest, PublicApproveOutcome, PublicAuthoringDraft, PublicAuthoringReview, PublicAuthoringSources,
   PublicPackageOutcome, PublicReadyOutcome, PublicSemanticAcceptOutcome, PublicSemanticCorrectionInput, PublicSemanticCorrectionOutcome,
-  PublicSemanticProposalOutcome, PublicSemanticReview, PublicWithdrawOutcome,
+  PublicSemanticProposalOutcome, PublicSemanticReview, PublicSpatialPreparation, PublicSpatialPrepareOutcome, PublicWithdrawOutcome,
 } from '../runtime-entry';
 
 export interface PublicAuthoringTransport {
@@ -44,10 +47,18 @@ export interface PublicSemanticTransport {
     correction: PublicSemanticCorrectionInput): Promise<PublicAuthoringAnswer<PublicSemanticCorrectionOutcome>>;
 }
 
+/** S5-03B — preparing the stable place of a semantically ready Experience (the same Public client implements it). */
+export interface PublicSpatialTransport {
+  preparation(experienceId: string): Promise<PublicAuthoringAnswer<PublicSpatialPreparation>>;
+  prepare(experienceId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicSpatialPrepareOutcome>>;
+}
+
 export type PublicAuthoringScreen = 'CLOSED' | 'WORKSPACE' | 'CHOOSE' | 'REVIEW';
 export type PublicAuthoringNotice = 'NONE' | 'ACTION_UNAVAILABLE' | 'NOT_PUBLISHABLE' | 'APPROVALS_INCOMPLETE' | 'APPROVED' | 'WITHDRAWN'
   // S5-03A
-  | 'INTERPRETATION_UNAVAILABLE' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'CORRECTION_INVALID' | 'LIMITED';
+  | 'INTERPRETATION_UNAVAILABLE' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'CORRECTION_INVALID' | 'LIMITED'
+  // S5-03B
+  | 'PLACE_UNAVAILABLE';
 
 export interface PublicAuthoringState {
   readonly screen: PublicAuthoringScreen;
@@ -64,6 +75,8 @@ export interface PublicAuthoringState {
   readonly semantic: PublicSemanticReview | null;
   /** S5-03A: the correction form is open. */
   readonly correcting: boolean;
+  /** S5-03B: whether the stable place exists — only once the understanding is ready; never where it is. */
+  readonly place: PublicSpatialPreparation | null;
   readonly busy: boolean;
   readonly notice: PublicAuthoringNotice;
 }
@@ -91,6 +104,8 @@ export interface PublicAuthoringController {
   cancelCorrection(): void;
   /** S5-03A: correct the meaning — a line of meaning, and comma-separated main and other meanings. */
   submitCorrection(meaning: string, primaryThemes: string, secondaryThemes: string): void;
+  /** S5-03B: ask QANDEEL to prepare the Experience's stable place in the Public field, from its meaning alone. */
+  preparePlace(): void;
   retire(): void;
 }
 
@@ -98,6 +113,8 @@ export interface PublicAuthoringControllerOptions {
   readonly transport: PublicAuthoringTransport | null;
   /** S5-03A: the semantic review transport; without it the semantic stage is not drawn. */
   readonly semantic?: PublicSemanticTransport | null;
+  /** S5-03B: the place-preparation transport; without it the place stage is not drawn. */
+  readonly spatial?: PublicSpatialTransport | null;
   readonly isCurrent: () => boolean;
   readonly newCommandId?: () => string;
 }
@@ -135,10 +152,10 @@ export function mintPublicCommandId(): string {
 
 const CLOSED: PublicAuthoringState = Object.freeze<PublicAuthoringState>({
   screen: 'CLOSED', status: 'READY', drafts: [], requests: [], sources: null, selected: [], experienceId: null, review: null,
-  semantic: null, correcting: false, busy: false, notice: 'NONE',
+  semantic: null, correcting: false, place: null, busy: false, notice: 'NONE',
 });
 
-export function createPublicAuthoringController({ transport, semantic = null, isCurrent, newCommandId = mintPublicCommandId }: PublicAuthoringControllerOptions): PublicAuthoringController {
+export function createPublicAuthoringController({ transport, semantic = null, spatial = null, isCurrent, newCommandId = mintPublicCommandId }: PublicAuthoringControllerOptions): PublicAuthoringController {
   const listeners = new Set<() => void>();
   let state: PublicAuthoringState = CLOSED;
   let retired = false;
@@ -163,7 +180,7 @@ export function createPublicAuthoringController({ transport, semantic = null, is
 
   async function loadWorkspace(): Promise<void> {
     const mine = ++ticket;
-    publish({ screen: 'WORKSPACE', status: 'LOADING', experienceId: null, review: null, semantic: null, correcting: false, sources: null, selected: [] });
+    publish({ screen: 'WORKSPACE', status: 'LOADING', experienceId: null, review: null, semantic: null, correcting: false, place: null, sources: null, selected: [] });
     if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
     const [drafts, requests] = await Promise.all([transport.drafts(), transport.approvalRequests()]);
     if (mine !== ticket) return;
@@ -173,7 +190,7 @@ export function createPublicAuthoringController({ transport, semantic = null, is
 
   async function loadSources(experienceId: string): Promise<void> {
     const mine = ++ticket;
-    publish({ screen: 'CHOOSE', status: 'LOADING', experienceId, review: null, semantic: null, correcting: false, selected: [] });
+    publish({ screen: 'CHOOSE', status: 'LOADING', experienceId, review: null, semantic: null, correcting: false, place: null, selected: [] });
     if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
     const sources = await transport.sources();
     if (mine !== ticket) return;
@@ -197,7 +214,14 @@ export function createPublicAuthoringController({ transport, semantic = null, is
       if (mine !== ticket) return;
       understanding = answer.kind === 'ANSWER' ? answer.value : { state: 'UNAVAILABLE', ready: false };
     }
-    publish({ status: 'READY', review: review.value, semantic: understanding });
+    // S5-03B: the place stage exists only once the understanding of this exact version is ready.
+    let place: PublicSpatialPreparation | null = null;
+    if (spatial && understanding !== null && understanding.ready) {
+      const answer = await spatial.preparation(experienceId);
+      if (mine !== ticket) return;
+      place = answer.kind === 'ANSWER' ? answer.value : 'UNAVAILABLE';
+    }
+    publish({ status: 'READY', review: review.value, semantic: understanding, place });
   }
 
   async function act(work: () => Promise<void>): Promise<void> {
@@ -374,6 +398,22 @@ export function createPublicAuthoringController({ transport, semantic = null, is
             await loadReview(experienceId);
             publish({ correcting: false, notice: 'ACTION_UNAVAILABLE' });
         }
+      });
+    },
+    preparePlace() {
+      const experienceId = state.experienceId;
+      if (state.screen !== 'REVIEW' || !experienceId || !spatial || state.place !== 'NOT_PLACED') return;
+      void act(async () => {
+        const key = `PLACE:${experienceId}`;
+        const answer = await spatial.prepare(experienceId, commandFor(key));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        // A place QANDEEL could not prepare keeps the SAME command: a retry resumes the same request.
+        if (answer.value !== 'PLACEMENT_UNAVAILABLE') settle(key);
+        await loadReview(experienceId);
+        publish({
+          notice: answer.value === 'PLACED' || answer.value === 'ALREADY_PLACED' ? 'NONE'
+            : answer.value === 'PLACEMENT_UNAVAILABLE' ? 'PLACE_UNAVAILABLE' : 'ACTION_UNAVAILABLE',
+        });
       });
     },
     retire() {

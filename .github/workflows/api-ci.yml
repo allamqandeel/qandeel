@@ -121,6 +121,7 @@ jobs:
       - {name: "Verify S5-01 Public Reachability, Entry & Identity static contract", run: npm run test:s5-01-public-reachability-entry-identity-contract}
       - {name: "Verify S5-02 Public Authoring, Rights, Draft / Review & Privacy static contract", run: npm run test:s5-02-public-authoring-rights-privacy-contract}
       - {name: "Verify S5-03A Public Semantic Interpretation & Publisher Review static contract", run: npm run test:s5-03a-public-semantic-review-contract}
+      - {name: "Verify S5-03B Public Semantic Field, Stable Spatial Placement & Viewer Runtime static contract", run: npm run test:s5-03b-public-semantic-field-viewer-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -914,6 +915,13 @@ jobs:
       # correction of a superseded revision is STALE; nothing can publish and the seam answers NOT_EVALUATED.
       - name: Verify S5-03A Public semantic interpretation and publisher review against real PostgreSQL
         run: npm run verify:public-semantic-interpretation-review:integration
+      # S5-03B: a stable spatial placement exists only for a semantically ready Experience, bound to the exact version and
+      # the exact reviewed S5-03A revision, from a meaning-only input on the server channel; a client supplies no coordinate;
+      # a retry or a later model moves nothing; a correction leaves the old place stale and unserved; only PUBLICLY_VISIBLE
+      # Experiences with a current place are served to an admitted viewer, with the reviewed meaning and never the 0096
+      # constants; a withdrawal, an ASSURE-F05 erasure and a successor version make the Experience absent everywhere.
+      - name: Verify S5-03B Public semantic field, stable spatial placement and viewer runtime against real PostgreSQL
+        run: npm run verify:public-semantic-field-placement-viewer:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

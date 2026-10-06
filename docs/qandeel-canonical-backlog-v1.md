@@ -612,6 +612,14 @@ Semantic Placement, `ON DELETE RESTRICT` — are recorded here as part of this b
 author's governed Personal erasure was already BLOCKED (S5-02 note above) and still is. This item stays `HIGH`,
 `OPEN — UNASSIGNED`, its scope unchanged; the Public World is still not launch-ready ([S5-03A record](e2e/QANDEEL_S5_03A_PUBLIC_SEMANTIC_INTERPRETATION_PUBLISHER_REVIEW_IMPLEMENTATION_RECORD_v1.md) §15).
 
+**Current-truth note (S5-03B, 2026-10-06).** S5-03B does not solve this item, and it adds to the footprint the item covers.
+No S5-03B column names an account and no foreign key reaches one directly, but its two spatial relations
+(`public_spatial_private.spatial_requests`, `spatial_placements`) bind the Experience Version and the S5-03A semantic
+interpretation `ON DELETE RESTRICT` — and that interpretation binds its `0096` placement, which binds its recorder's account.
+Those dependencies — Experience Version, S5-03A interpretation, `ON DELETE RESTRICT` — are recorded here as part of this
+blocker and are not resolved by S5-03B. This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged; the Public World
+is still not launch-ready ([S5-03B record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md) §15).
+
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
 - **Title / Finding:** the exceptional lantern gateway identity moment is frozen as **present in v1**, but it has no
@@ -1645,6 +1653,19 @@ Stage 8A — no item is admitted before that designation (BG-02). Its Gap Matrix
 [implementation record](e2e/QANDEEL_S5_03A_PUBLIC_SEMANTIC_INTERPRETATION_PUBLISHER_REVIEW_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**. The register still holds **43** items: 16 `DEFERRED — OWNED`, 0
 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`,
 counted mechanically from the §4 index.
+
+**S5-03B reconciliation (2026-10-06; not merged).** S5-03A is merged (PR #316 at
+`c9338af9ecbfcecccc281f96f52fab335ad9bc7b`; its Product Copy Gate CLOSED, 21 / 21 APPROVED). S5-03B (Public Semantic Field + Stable Spatial Placement +
+Viewer Runtime, migration `0145`; the second of the Product Owner's three S5-03 tasks) inherits no item by owner and admits
+none. `QAN-BL-ACCT-01` stays `HIGH`, `OPEN — UNASSIGNED`, with a current-truth note (no direct account foreign key; its new
+Experience Version / S5-03A interpretation `RESTRICT` dependents are recorded as part of the blocker). `QAN-BL-VOICE-01`,
+`QAN-BL-NAV-02` and every launch item are unchanged: no Public Voice, Replay, Activity or Launch path is opened, and the
+CW2-08 seam still answers `NOT_EVALUATED`. The production provider behind the spatial placer is the Product Owner's
+Stage 8A, beside the S5-03A interpreter's; S5-03B records it as a closure-time admission candidate whose owner task the
+Product Owner names within Stage 8A — no item is admitted before that designation (BG-02). Its Gap Matrix is §16 of its
+[implementation record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
+The register still holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1711,6 +1732,7 @@ Inherited after T-12 closure reconciliation:
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 | `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / Semantic Placement `RESTRICT` dependents recorded; none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
+| `S5-03B — Public Semantic Field + Stable Spatial Placement + Viewer Runtime` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / S5-03A interpretation `RESTRICT` dependents recorded; none admitted; the Stage-8A spatial-placer provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

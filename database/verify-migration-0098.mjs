@@ -178,6 +178,25 @@ async function verifyCatalog() {
                                'resolve_public_publication_prerequisites_v1', 'resolve_public_experience_review_v1',
                                'resolve_public_package_items_v1', 'resolve_public_experience_disappearance_audit_v1')
       ORDER BY 1`)).map((r) => r.proname);
+  // RE-ANCHORED by S5-03B (validation only): the S5-03B viewer search is an outward Public surface of a different
+  // family — `authenticated`, the viewer derived from auth.uid() inside its definer — so it is declared here by name and
+  // its visibility dependency is proven from the live catalog rather than through the I-05B resolver posture: its
+  // wrapper calls its `public_spatial_private` definer, which serves only through the ONE visible-entry derivation,
+  // which reads the ONE canonical visibility state. A surface that bypassed visibility still could not hide here.
+  const S5_03B_SURFACES = ['search_public_semantic_field_v1'];
+  for (const name of S5_03B_SURFACES.filter((s) => declared.includes(s))) {
+    const chain = await rows(`SELECT ns.nspname || '.' || pr.proname fn, pr.prosrc FROM pg_proc pr
+      JOIN pg_namespace ns ON ns.oid = pr.pronamespace
+      WHERE (ns.nspname = 'public' AND pr.proname = $1)
+         OR (ns.nspname = 'public_spatial_private' AND pr.proname IN ($1, 'derive_visible_spatial_entry_v1'))`, [name]);
+    const source = (fn) => chain.find((c) => c.fn === fn)?.prosrc ?? '';
+    assert.ok(source(`public.${name}`).includes(`public_spatial_private.${name}(`), `${name} delegates to its definer`);
+    assert.ok(source(`public_spatial_private.${name}`).includes('public_spatial_private.derive_visible_spatial_entry_v1('),
+      `${name} serves only through the visible-entry derivation`);
+    assert.ok(source('public_spatial_private.derive_visible_spatial_entry_v1').includes('public.resolve_public_visibility_state_v1('),
+      'the visible-entry derivation reads the ONE canonical visibility state');
+    declared.splice(declared.indexOf(name), 1);
+  }
   assert.deepEqual(declared.sort(),
     PUBLIC_SURFACES.map((s) => s.replace(/^public\./u, '').replace(/\(.*$/u, '')).sort(),
     'every outward Public World surface is in the visibility dependency census');

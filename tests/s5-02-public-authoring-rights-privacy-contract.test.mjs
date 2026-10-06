@@ -139,7 +139,9 @@ test('5 — the API boundary: nine routes on the caller token, owner RPCs only',
   }
   // RE-ANCHORED by S5-03A (validation only): the S5-03A semantic review controller joins the SAME Public module — still one
   // Public module, not a parallel one. S5-03A's own contract pins its controller and routes.
-  assert.match(code(`${API}/public-world.module.ts`), /controllers: \[PublicWorldController, PublicAuthoringController(, PublicSemanticController)?\]/u, 'one Public module, not a parallel one');
+  assert.match(code(`${API}/public-world.module.ts`), /controllers: \[PublicWorldController, PublicAuthoringController(, PublicSemanticController(, PublicSpatialController, PublicFieldController)?)?\]/u, 'one Public module, not a parallel one');
+  // RE-ANCHORED by S5-03B (validation only): the S5-03B spatial and field controllers join the SAME module; S5-03B's own
+  // contract pins them.
 });
 
 test('6 — mobile: existing material only, inside the Public root, never "published", no Arabic literal in a surface', () => {
@@ -154,7 +156,7 @@ test('6 — mobile: existing material only, inside the Public root, never "publi
   assert.doesNotMatch(area, /BackHandler/u);
   // RE-ANCHORED by S5-03A (validation only): the authoring controller also receives the S5-03A semantic client, on the same
   // identity-bound Public transport; the authoring transport itself is unchanged.
-  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /authoring: createPublicAuthoringController\(\{ transport: publicTransport\.authoring \?\? null, (semantic: publicTransport\.semantic \?\? null, )?isCurrent \}\)/u);
+  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /authoring: createPublicAuthoringController\(\{ transport: publicTransport\.authoring \?\? null, (semantic: publicTransport\.semantic \?\? null, )?(spatial: publicTransport\.spatial \?\? null, )?isCurrent \}\)/u);
   const api = code(`${MOBILE}/runtime-entry/public-authoring-api.ts`);
   assert.doesNotMatch(api, /userId|publicIdentityRef|approver/u);
   // What the client SENDS: a command id, and for a package the chosen sources — never a label, a body or an audience.
