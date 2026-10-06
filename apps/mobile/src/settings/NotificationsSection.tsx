@@ -16,8 +16,13 @@
  * QANDEEL is one of P3 §11's legitimate moments for the education (once; never again after the reader declined it).
  *
  * No meter, no remaining count, no per-channel list, no off switch for critical security, nothing implying that
- * QANDEEL's understanding is turned off. Per-World Shared mutes are drawn only for Worlds that exist for the reader —
- * no Product route lists a reader's Shared Worlds yet (Stage 4), so none is drawn.
+ * QANDEEL's understanding is turned off.
+ *
+ * S4-04 — under the global Shared World alerts control, one row per Shared World the reader is CURRENTLY in (D34; P3
+ * §12.2), read from the Shared domain's own safe boundary when the page is shown: the World's own label and its state
+ * («مفعّل» / On, or «مكتوم» / Muted, p3.mutedWorld). Each row mutes or unmutes exactly that World; muting one World
+ * mutes no other, and changes notifications and attention only — never the World, its conversation or its members. No
+ * ended, former or hidden World is drawn, and no count.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Linking, ScrollView, Text, View } from 'react-native';
@@ -30,6 +35,7 @@ import type { ChromeLanguage } from '../orientation-chrome';
 import { DISCLOSURE_LEVELS, LOCK_SUBJECTS } from '../activity/vocabulary';
 import type { ActivityPreferences, DisclosureLevel, LockSubject, ProactiveChoice } from '../runtime-entry';
 import { pushCopy, type PushController, type PushState } from '../push';
+import { labelOfWorld, sharedCopy, type SharedAlertsController, type SharedAlertsState } from '../shared-world';
 
 const ROW_START = 24;
 const ROW_END = 20;
@@ -134,13 +140,67 @@ export interface NotificationsSettingsProps {
   readonly palette: ConversationPalette;
   /** A3-02 — the device's OS permission and the education; absent where no push boundary exists. */
   readonly push?: PushController;
+  /** S4-04 — the reader's current Shared Worlds, each with its own mute; absent where no Shared boundary exists. */
+  readonly sharedWorlds?: SharedAlertsController;
+}
+
+const NO_WORLDS = { subscribe: () => () => undefined, getState: (): SharedAlertsState | null => null, start: () => undefined };
+
+/** S4-04 — one row per CURRENT Shared World: its own label, and whether its alerts are on or muted (D34). */
+function SharedWorldRows({ controller, palette, language, words }: {
+  readonly controller?: SharedAlertsController; readonly palette: ConversationPalette; readonly language: ChromeLanguage; readonly words: NotificationsCopy;
+}) {
+  const source = controller ?? NO_WORLDS;
+  const state = useSyncExternalStore(source.subscribe, source.getState);
+  useEffect(() => {
+    source.start();
+  }, [source]);
+  if (state === null || state.status !== 'READY' || state.worlds.length === 0) return null;
+  const shared = sharedCopy(language);
+  const writing = language === 'ar' ? 'rtl' : 'ltr';
+  return (
+    <View testID="qandeel-notifications-shared-worlds">
+      {state.failed ? (
+        <Text accessibilityLiveRegion="polite" style={{ ...typeStyle('supporting'), color: palette.secondary, paddingStart: ROW_START, paddingEnd: ROW_END, writingDirection: writing }}>
+          {words.gate.saveFailed}
+        </Text>
+      ) : null}
+      {state.worlds.map((world) => {
+        const on = !world.muted;
+        const label = labelOfWorld(shared, world);
+        const busy = state.busy !== null;
+        const testID = `qandeel-notifications-shared-world-${world.worldId}`;
+        return (
+          <Control
+            key={world.worldId}
+            palette={palette}
+            language={language}
+            accessibilityRole="togglebutton"
+            accessibilityLabel={on ? label : `${label}${language === 'ar' ? '، ' : ', '}${words.mutedWorld}`}
+            accessibilityState={{ checked: on, busy: state.busy === world.worldId, disabled: busy }}
+            onPress={() => void controller?.setMuted(world.worldId, on)}
+            testID={testID}
+            style={{ minHeight: 52, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, justifyContent: 'center' }}
+          >
+            <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 12 }}>
+              <Text style={{ ...typeStyle('body'), color: palette.primary, flex: 1, writingDirection: writing }}>{label}</Text>
+              <Text testID={`${testID}-state`} style={{ ...typeStyle('metadata'), color: palette.secondary }}>{on ? words.on : words.mutedWorld}</Text>
+              <View testID={`${testID}-track`} style={{ width: TRACK_W, height: TRACK_H, borderRadius: TRACK_H / 2, borderWidth: palette.markerThickness, borderColor: on ? palette.selectedInk : palette.restInk, backgroundColor: on ? palette.selectedInk : 'transparent', justifyContent: 'center', alignItems: on ? 'flex-end' : 'flex-start', paddingHorizontal: 1 }}>
+                <View style={{ width: KNOB, height: KNOB, borderRadius: KNOB / 2, backgroundColor: on ? palette.world : palette.restInk }} />
+              </View>
+            </View>
+          </Control>
+        );
+      })}
+    </View>
+  );
 }
 
 const NO_PUSH = { subscribe: () => () => undefined, getState: (): PushState | null => null };
 
 type Open = { readonly kind: 'QUIET'; readonly edge: 'start' | 'end' } | { readonly kind: 'LOCK'; readonly subject: LockSubject } | { readonly kind: 'SNOOZE_CUSTOM' } | null;
 
-export function NotificationsSettings({ controller, language, palette, push }: NotificationsSettingsProps) {
+export function NotificationsSettings({ controller, language, palette, push, sharedWorlds }: NotificationsSettingsProps) {
   const words = notificationsCopy(language);
   const pushWords = pushCopy(language);
   const device: PushState | null = useSyncExternalStore(push?.subscribe ?? NO_PUSH.subscribe, push?.getState ?? NO_PUSH.getState);
@@ -208,6 +268,7 @@ export function NotificationsSettings({ controller, language, palette, push }: N
       <Heading text={words.shared} palette={palette} language={language} />
       <SwitchRow label={words.sharedAlerts} on={p.shared.alerts} busy={busy} words={words} palette={palette} language={language} testID="qandeel-notifications-shared"
         onToggle={() => save((c) => ({ ...c, shared: { alerts: !c.shared.alerts } }))} />
+      <SharedWorldRows controller={sharedWorlds} palette={palette} language={language} words={words} />
 
       <Heading text={words.public} palette={palette} language={language} />
       <SwitchRow label={words.publicInteractions} on={p.public.interactions} busy={busy} words={words} palette={palette} language={language} testID="qandeel-notifications-public-interactions"

@@ -133,6 +133,17 @@ export class ActivityRepository {
     return this.dataApi.request<unknown>(token, 'rpc/set_own_activity_snooze_v1', { method: 'POST', body: JSON.stringify({ p_until: until }) });
   }
 
+  /**
+   * S4-04 — the Shared entry verdict for ONE World, on the CALLER'S token, through the existing S4-01 owner wrapper
+   * (migration 0138). Activity reads no Connected Worlds table: it asks the Shared domain's own Product-safe verdict,
+   * which is ALLOW only for a current member of an ACTIVE World and one neutral UNAVAILABLE otherwise.
+   */
+  sharedEntry(token: string, worldId: string): Promise<{ readonly outcome: string; readonly world_id: string | null }[]> {
+    return this.dataApi.request<{ readonly outcome: string; readonly world_id: string | null }[]>(token, 'rpc/resolve_own_shared_world_entry_v1', {
+      method: 'POST', body: JSON.stringify({ p_world_id: worldId }),
+    });
+  }
+
   setMute(token: string, contextRef: string, muted: boolean): Promise<{ readonly outcome: string }[]> {
     return this.dataApi.request<{ readonly outcome: string }[]>(token, 'rpc/set_own_activity_context_mute_v1', {
       method: 'POST', body: JSON.stringify({ p_context_ref: contextRef, p_muted: muted }),

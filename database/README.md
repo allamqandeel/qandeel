@@ -3981,3 +3981,25 @@ kept). It is no second membership, governance, settings, history, closure or aut
   `commit_`; the frozen cores stay executable by no application role.
 
 Verifier: `npm run verify:shared-world-lifecycle-governance:integration` (`database/verify-migration-0140.mjs`).
+
+## S4-04 - Shared Activity, notifications and Direct Entry (migration 0141)
+
+Forward-only; migrations `0001`–`0140` are untouched. It adds NO table, column, policy or trigger: the Shared domain stays
+the source of truth and the A3-01 Activity projection (`0136`) stays its only projection.
+
+- **The Shared Activity source read** (`public.server_read_shared_activity_source_v1(kind, id)`, pinned `SECURITY DEFINER`,
+  `service_role` only — the `0136` server-pass precedent; `shared_private` grants the server channel nothing new). Given
+  the identity of ONE durable Shared fact (`HUMAN_TEXT` material, `PROPOSAL` by the proposer's command id,
+  `MEMBER_REQUEST` by proposal, `JOINED` by acceptance / rejoin command, `BIRTH` by World, `LEFT` by leave command), it
+  derives from durable truth who may be told now and the bounded facts the sentence needs: current members only, never
+  the actor; a message only to those the frozen `0089` material resolver shows it to; a proposal only to the people it
+  waits on (never the proposer or the removal target; nothing once committed or stale); a request only to its target,
+  with the proposer's Name and nothing of the World. No content, count or hidden metadata is returned.
+- **Per-World alerts** (`authenticated`, the human from `auth.uid()`): `list_own_shared_world_alerts_v1` (the reader's
+  CURRENT Worlds, each with its mute) and `set_own_shared_world_alerts_v1(world, muted)` (MUTED / UNMUTED / one neutral
+  UNAVAILABLE), authorized by the S4-01 entry law and writing only the reader's own row of `public.activity_context_mutes`.
+  This closes the `0136` command's need for an existing Activity item without giving Activity any Connected Worlds read.
+- No `commit_%` name; deploy-time self-assertions refuse a client reach to the server pass and a server reach to the
+  `shared_private` functions.
+
+Verifier: `npm run verify:shared-activity-notifications:integration` (`database/verify-migration-0141.mjs`).

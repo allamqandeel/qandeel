@@ -314,9 +314,21 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // A revalidated Direct Entry, executed only into a Product surface that exists (D38–D43).
   const enter = useCallback((destination: DirectEntryDestination) => {
-    setArea('MY_WORLD');
     setActivityShown(false);
     setReturnedFromActivity(false);
+    if (destination.kind === 'SHARED_WORLD') {
+      // S4-04 — the exact World, never a guessed one: the Shared area opens it through its OWN entry authority, which
+      // resolves it again now and shows only the neutral transition shell until ALLOW (a refusal is one neutral state).
+      // The Personal world is not touched, and no navigation history is manufactured: Back inside the area is the
+      // Shared local law (the World → the Shared root).
+      setSettingsShown(false);
+      setUnderstandingShown(false);
+      cross('CONVERSATION');
+      runtime.sharedWorld.openWorld(destination.worldId);
+      setArea('SHARED_WORLD');
+      return;
+    }
+    setArea('MY_WORLD');
     if (destination.kind === 'PERSONAL_CONVERSATION') {
       setSettingsShown(false);
       setUnderstandingShown(false);
@@ -331,7 +343,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       setSettingsPage(destination.section === 'NOTIFICATIONS' ? 'NOTIFICATIONS' : undefined);
       setSettingsShown(true);
     }
-  }, [cross]);
+  }, [cross, runtime.sharedWorld]);
 
   // The surface truth the attention law reads: the composition's own state, never a second navigation state.
   const surface: ProductSurface = depth === 'ANALYSIS' ? 'ANALYSIS'
@@ -372,8 +384,29 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     void Promise.resolve().then(consume);
     return entries.subscribe(consume);
   }, [entries, enterItem, onSignOut, runtime.push]);
+  // S4-04 — a Shared World link waits here the same way, then enters through the same Shared Direct Entry, ONCE.
+  const links = runtime.sharedLinks;
+  useEffect(() => {
+    if (onSignOut === undefined) return undefined;
+    const consume = () => {
+      const worldId = links.take();
+      if (worldId !== null) enter({ kind: 'SHARED_WORLD', worldId });
+    };
+    void Promise.resolve().then(consume);
+    return links.subscribe(consume);
+  }, [links, enter, onSignOut]);
   const push = runtime.push;
-  const { education } = useSyncExternalStore(push.subscribe, push.getState);
+  const { education, permission } = useSyncExternalStore(push.subscribe, push.getState);
+  // S4-04 — P3 §11 / A3-02 G-12: the first LEGITIMATE Shared entry (a World's entry verdict is ALLOW, the reader is in
+  // the Shared area) is a moment for the existing education — never at launch, never on a refused entry, and offered
+  // once per world; whether it may appear at all stays the push controller's own rule (the reader's "Not now" is kept).
+  const sharedEntry = useSyncExternalStore(runtime.sharedWorld.subscribe, () => runtime.sharedWorld.getState().entry.status);
+  const sharedEducationOffered = useRef(false);
+  useEffect(() => {
+    if (sharedEducationOffered.current || onSignOut === undefined || area !== 'SHARED_WORLD' || sharedEntry !== 'ALLOW' || permission === 'UNKNOWN') return;
+    sharedEducationOffered.current = true;
+    push.offer('SHARED_FIRST_ENTRY');
+  }, [area, sharedEntry, permission, push, onSignOut]);
 
   const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
   // S4-01 — the switcher's band is reserved at the Conversation depth whenever the world can switch, so opening and
@@ -505,7 +538,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} publicId={runtime.publicId} sharedId={runtime.sharedId} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} publicId={runtime.publicId} sharedId={runtime.sharedId} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (

@@ -128,7 +128,11 @@ import {
   type PushDeviceStore,
   type PushPlatformPort,
 } from '../../push';
-import { createSharedIdController, createSharedWorldController, type SharedIdController, type SharedWorldController } from '../../shared-world';
+import {
+  createSharedAlertsController, createSharedIdController, createSharedLinkInbox, createSharedWorldController, sharedWorldOfLink,
+  type SharedAlertsController, type SharedIdController, type SharedLinkInbox, type SharedLinkSource, type SharedWorldController,
+} from '../../shared-world';
+import { createLinkingSharedLinkSource } from '../../shared-world/linking-source';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
 import { deviceProductLanguage } from '../locale/device-locale';
@@ -247,6 +251,13 @@ export interface IntegrationSessionRuntime {
    * opened, on the Shared transport bound to this identity; retired with the generation.
    */
   readonly formerSharedMaterial: FormerSharedMaterialController;
+  /** S4-04 — the per-World Shared mute rows of Notifications & Activity, read when that page is shown; retired with the generation. */
+  readonly sharedAlerts: SharedAlertsController;
+  /**
+   * S4-04 — a Shared World link (`qandeel://shared/world/<id>`) waiting for the Shared entry authority (app-level, like a
+   * notification tap; never per identity, never held across accounts).
+   */
+  readonly sharedLinks: SharedLinkInbox;
 }
 
 /**
@@ -318,6 +329,8 @@ export interface IntegrationRuntimeOptions extends MobileRuntimeEntryOptions {
   /** A3-02 — the device's notification system. Production: `expo-notifications`; tests and proofs: their own. */
   readonly pushPlatform?: PushPlatformPort;
   readonly pushDeviceStore?: PushDeviceStore;
+  /** S4-04 — where QANDEEL links arrive from. Production: React Native `Linking`; tests and proofs: their own. */
+  readonly sharedLinks?: SharedLinkSource;
 }
 
 export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}): IntegrationRuntimeResult {
@@ -350,6 +363,17 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       if (kind !== 'SIGNED_OUT' && kind !== 'ERROR') notificationEntries.put(tap);
     }),
   ];
+  // S4-04 — a Shared World link, app-level and held exactly like a tap: only its exact World id, and only while someone is
+  // signed in; it is executed through the Shared entry authority, never trusted.
+  const sharedLinkSource: SharedLinkSource = options.sharedLinks ?? createLinkingSharedLinkSource();
+  const sharedLinks = createSharedLinkInbox();
+  const takeLink = (url: unknown) => {
+    const worldId = sharedWorldOfLink(url);
+    const kind = entry.auth.getState().kind;
+    if (worldId !== null && !disposed && kind !== 'SIGNED_OUT' && kind !== 'ERROR') sharedLinks.put(worldId);
+  };
+  unsubscribePush.push(sharedLinkSource.subscribe(takeLink));
+  void sharedLinkSource.initial().then(takeLink).catch(() => undefined);
   void pushPlatform.takeLaunchTap().then((tap) => {
     const kind = entry.auth.getState().kind;
     if (tap !== null && !disposed && kind !== 'SIGNED_OUT' && kind !== 'ERROR') notificationEntries.put(tap);
@@ -383,6 +407,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.sharedWorld.retire();
     session.sharedId.retire();
     session.formerSharedMaterial.retire();
+    session.sharedAlerts.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -497,6 +522,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       sharedId: createSharedIdController({ transport: shared, isCurrent }),
       // S4-03: the reader's own former Shared words, through Privacy & Data — never through a World.
       formerSharedMaterial: createFormerSharedMaterialController({ transport: shared, isCurrent }),
+      // S4-04: the per-World Shared mutes, on the same Shared transport (the reader's CURRENT Worlds only).
+      sharedAlerts: createSharedAlertsController({ transport: shared, isCurrent }),
+      sharedLinks,
     };
     return built;
   }
@@ -554,6 +582,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     attemptedAuthGeneration = null;
     // A3-02: a tap is never carried across accounts. Signed out (or failed), the pending entry is dropped.
     if (state.kind === 'SIGNED_OUT' || state.kind === 'ERROR') notificationEntries.drop();
+    // S4-04: nor is a Shared World link.
+    if (state.kind === 'SIGNED_OUT' || state.kind === 'ERROR') sharedLinks.drop();
     retireSession();
     publish(state.kind === 'SIGNED_OUT' ? { kind: 'SIGNED_OUT' } : state.kind === 'ERROR' ? { kind: 'AUTH_ERROR' } : { kind: 'RESTORING' });
   });

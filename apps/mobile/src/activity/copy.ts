@@ -115,6 +115,8 @@ export interface NotificationsCopy {
   readonly deviceHelp: string;
   readonly on: string;
   readonly off: string;
+  /** S4-04: the state word of a muted per-World row (P3 §12.2). */
+  readonly mutedWorld: string;
   readonly gate: ReturnType<typeof gate>;
 }
 
@@ -216,6 +218,7 @@ const AR_NOTIFICATIONS: Omit<NotificationsCopy, 'gate'> = Object.freeze({
   deviceHelp: 'الصوت وشكل التنبيه وشاشة القفل يتحكم فيها جهازك.', // APPROVED — p3.deviceHelp
   on: 'مفعّل', // APPROVED — p3.on
   off: 'متوقف', // APPROVED — p3.off
+  mutedWorld: 'مكتوم', // APPROVED — p3.mutedWorld
 });
 
 const EN_NOTIFICATIONS: Omit<NotificationsCopy, 'gate'> = Object.freeze({
@@ -260,6 +263,7 @@ const EN_NOTIFICATIONS: Omit<NotificationsCopy, 'gate'> = Object.freeze({
   deviceHelp: 'Sound, alert style and the Lock Screen are controlled by your device.',
   on: 'On',
   off: 'Off',
+  mutedWorld: 'Muted',
 });
 
 export function activityCopy(language: ChromeLanguage): ActivityCopy {

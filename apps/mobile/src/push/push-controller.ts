@@ -4,8 +4,9 @@
  * Permission (I-08N-01 D50; P3 §11):
  *   - nothing is asked at launch; the OS permission is read, never assumed;
  *   - QANDEEL's own education comes BEFORE the platform prompt, and only at a legitimate moment: choosing «سماح» /
- *     Allow for Proactive QANDEEL, or the reader's own visit to Device Notification Settings (the first Shared entry and
- *     entering Introductions are the other two moments; those surfaces do not exist yet — Stages 4 and 6);
+ *     Allow for Proactive QANDEEL, the reader's own visit to Device Notification Settings, or the first legitimate entry
+ *     into a Shared World (S4-04: the World's entry verdict is ALLOW — never at launch, never on a refused entry). Entering
+ *     Introductions is the fourth moment; that surface does not exist yet (Stage 6);
  *   - «السماح بالإشعارات» hands over to the REAL OS prompt; «مش دلوقتي» keeps everything working, says so once, and
  *     QANDEEL does not ask again by itself — only the reader's own Device Notification Settings visit offers it again;
  *   - once the OS has an answer it is the platform's: a refusal is never re-prompted by QANDEEL; the settings row then
@@ -23,7 +24,7 @@ import { pushCopy } from './copy';
 import type { PushDeviceStore } from './device-store';
 import type { ChannelSpec, PushPlatformPort } from './platform-port';
 
-export type EducationMoment = 'PROACTIVE_ALLOW' | 'DEVICE_SETTINGS';
+export type EducationMoment = 'PROACTIVE_ALLOW' | 'DEVICE_SETTINGS' | 'SHARED_FIRST_ENTRY';
 
 export interface PushState {
   /** The OS permission as last read; UNKNOWN until the first read answers. */

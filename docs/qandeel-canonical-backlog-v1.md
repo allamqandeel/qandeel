@@ -1035,6 +1035,9 @@ inherits it at kickoff (BG-05). Nothing here authorizes implementation (BG-07).
   [A3-01 implementation record](e2e/QANDEEL_A3_01_ACTIVITY_ATTENTION_INAPP_PRODUCTION_IMPLEMENTATION_RECORD_v1.md) §19. The precedent is `QAN-BL-PRIV-01`.
 - **Current truth:** nothing in the export is false; it is incomplete for these new rows. No producer exists, so the
   projection is empty in production.
+- **Current truth (BG-08 reconciliation at S4-04, open PR):** a Shared source producer now publishes into the projection,
+  and the reader's per-World Shared mutes are now set from Notifications & Activity into the same `activity_context_mutes`
+  table (migration `0141`). The export still carries neither; the item's scope, owner, severity and status are unchanged.
 - **Why deferred:** the export's content and shape are a Privacy & Data Product decision; adding a section from inside the
   Activity task would invent it (AGENTS.md §2), exactly as W3-CORR-U found for `QAN-BL-PRIV-01`.
 - **Owner task:** `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` (the named Export completeness task)
@@ -1512,7 +1515,7 @@ portion of `G-08` is delivered; the private-context portion is not closed. Its S
 record. The register now holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17
 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 
-**S4-03 reconciliation (2026-10-05; review candidate, not merged).** S4-03 (Shared Membership Lifecycle, Governance,
+**S4-03 reconciliation (2026-10-05; merged through PR #312 at `71015d0f031a3e161542d5aad7d5796230bdb353`, recorded by S4-04).** S4-03 (Shared Membership Lifecycle, Governance,
 Settings & Historical Access, migration `0140`) inherits no item by owner. `QAN-BL-ACCT-01`'s reopen condition is observed —
 S4-03 takes the Shared World further toward users — and the item stays `OPEN — UNASSIGNED`, unchanged in scope; both new
 launch scopes ship closed and claim no production readiness. `QAN-BL-VOICE-01` is not claimed (no S4-03 read carries a
@@ -1522,6 +1525,16 @@ World-transition visuals — were current-task decisions (BG-01), not backlog re
 pre-push checkpoint (add / rejoin by the target's CURRENT Shared ID, epoch-bound; T-A + B-A), and they are implemented /
 recorded in §4 of its [implementation record](e2e/QANDEEL_S4_03_SHARED_LIFECYCLE_GOVERNANCE_IMPLEMENTATION_RECORD_v1.md),
 whose §14 is its Stage-4 Gap Matrix. It admits nothing: the register still holds **43** items with the counts above.
+
+**S4-04 reconciliation (2026-10-06; review candidate, not merged).** S4-04 (Shared Activity, Notifications & Direct Entry,
+migration `0141`) inherits no item by owner. `QAN-BL-PRIV-02`'s current truth changes — a Shared source producer now
+exists and per-World mute rows now reach the same mute table — so a current-truth note is added; its scope, owner and
+status are unchanged. `QAN-BL-NOTIF-05` is not claimed (no physical-device gate is run). `QAN-BL-ACCT-01` stays
+`OPEN — UNASSIGNED`, unchanged in scope; no launch scope is opened. `QAN-BL-NAV-02` is not absorbed: Replay Direct Entry
+stays fail-closed (Stage 7). `QAN-BL-VOICE-01`, `QAN-BL-CW-01`, `QAN-BL-CW-02`, `QAN-BL-LAUNCH-03`, `QAN-BL-CI-01` and
+`QAN-BL-NOTIF-02` … `04` are unchanged. Its final Stage-4 Gap Matrix is §13 of its
+[implementation record](e2e/QANDEEL_S4_04_SHARED_ACTIVITY_NOTIFICATIONS_DIRECT_ENTRY_IMPLEMENTATION_RECORD_v1.md):
+**Orphan gaps = 0**. It admits nothing: the register still holds **43** items with the counts above.
 ---
 
 ## 8. What is deliberately not in this backlog

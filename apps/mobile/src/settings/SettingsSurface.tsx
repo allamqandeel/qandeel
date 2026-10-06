@@ -77,7 +77,7 @@ import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
 import { SharedIdPage, SharedIdRow } from './SharedIdSection';
 import { FormerSharedMaterialPage, FormerSharedMaterialRow } from './FormerSharedMaterialSection';
 import type { FormerSharedMaterialController } from './former-shared-material-controller';
-import type { SharedIdController } from '../shared-world';
+import type { SharedAlertsController, SharedIdController } from '../shared-world';
 
 export const SETTINGS_SURFACE_TEST_ID = 'qandeel-settings';
 
@@ -98,6 +98,8 @@ export interface SettingsSurfaceProps {
   readonly privacy?: PrivacyDataController;
   /** S4-03: the reader's own words in Shared Worlds they no longer belong to; read only when its page is opened. */
   readonly formerShared?: FormerSharedMaterialController;
+  /** S4-04 — the per-World Shared mute rows of Notifications & Activity. */
+  readonly sharedAlerts?: SharedAlertsController;
   /** A3-01: the reader's Notifications & Activity preferences for this runtime generation. Without it, that group is not drawn. */
   readonly notifications?: ActivityPreferencesController;
   /** A3-02 — the device's OS permission and the education, shown in Notifications & Activity. */
@@ -213,7 +215,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, privacy, formerShared, notifications, push, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, privacy, formerShared, sharedAlerts, notifications, push, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -432,7 +434,7 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
   }
 
   if (changing === 'NOTIFICATIONS' && notifications !== undefined) {
-    change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} />;
+    change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} sharedWorlds={sharedAlerts} />;
   }
 
   const publicIdReady = publicIdState.status === 'READY' && publicIdState.publicId !== null;

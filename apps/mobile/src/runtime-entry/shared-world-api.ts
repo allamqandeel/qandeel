@@ -38,6 +38,10 @@ export interface SharedMember { readonly name: string | null; readonly self: boo
 /** `name` (S4-03): the World's committed name, the label once committed; null keeps the S4-01 member-name label. */
 export interface SharedWorldSummary { readonly worldId: string; readonly name: string | null; readonly members: readonly SharedMember[] }
 export interface SharedInvitation { readonly invitationId: string; readonly inviterName: string | null }
+/** S4-04: one of the reader's CURRENT Worlds in Notifications & Activity, with whether the reader muted it (D34). */
+export interface SharedWorldAlert extends SharedWorldSummary { readonly muted: boolean }
+export type SharedAlertsResult = { readonly kind: 'READ'; readonly worlds: readonly SharedWorldAlert[] } | { readonly kind: 'UNAVAILABLE' };
+export type SharedSetAlertsResult = { readonly kind: 'MUTED' | 'UNMUTED' | 'NOT_A_WORLD' | 'UNAVAILABLE' };
 export interface SharedRoot {
   readonly capabilities: { readonly invitation: boolean; readonly birth: boolean };
   readonly worlds: readonly SharedWorldSummary[];
@@ -326,6 +330,19 @@ function decodeWorldList(value: unknown): SharedWorldSummary[] | null {
   return worlds;
 }
 
+/** S4-04: the per-World alert rows, strictly: the current Worlds only, each a real boolean. */
+export function decodeSharedAlerts(body: unknown): SharedWorldAlert[] | null {
+  if (!isRecord(body) || !hasExactly(body, ['worlds']) || !Array.isArray(body.worlds)) return null;
+  const out: SharedWorldAlert[] = [];
+  for (const w of body.worlds) {
+    if (!isRecord(w) || !hasExactly(w, ['worldId', 'name', 'members', 'muted']) || typeof w.muted !== 'boolean') return null;
+    const [world] = decodeWorldList([{ worldId: w.worldId, name: w.name, members: w.members }]) ?? [];
+    if (world === undefined) return null;
+    out.push({ ...world, muted: w.muted });
+  }
+  return out;
+}
+
 type Exchange = { readonly kind: 'OK'; readonly body: unknown } | { readonly kind: 'STATUS'; readonly status: number } | { readonly kind: 'NETWORK' };
 
 export class SharedWorldApiClient {
@@ -522,6 +539,20 @@ export class SharedWorldApiClient {
     return { kind: outcome === 'DELETED' ? 'DELETED' : outcome === 'UNAVAILABLE' ? 'NOT_DELETABLE' : 'UNAVAILABLE' };
   }
 
+  /** S4-04: the reader's CURRENT Worlds, each with its own mute (Notifications & Activity). */
+  async alerts(): Promise<SharedAlertsResult> {
+    const answer = await this.exchange('GET', '/shared/alerts');
+    const worlds = answer.kind === 'OK' ? decodeSharedAlerts(answer.body) : null;
+    return worlds === null ? { kind: 'UNAVAILABLE' } : { kind: 'READ', worlds };
+  }
+
+  /** S4-04: mute or unmute ONE World. NOT_A_WORLD: not a current World of the reader (one neutral answer). */
+  async setAlerts(worldId: string, muted: boolean): Promise<SharedSetAlertsResult> {
+    const outcome = await this.outcome(this.exchange('PUT', `/shared/worlds/${encodeURIComponent(worldId)}/alerts`, { muted }));
+    if (outcome === 'MUTED' || outcome === 'UNMUTED') return { kind: outcome };
+    return { kind: outcome === 'UNAVAILABLE' ? 'NOT_A_WORLD' : 'UNAVAILABLE' };
+  }
+
   private async proposal(path: string, payload: Record<string, unknown>): Promise<SharedProposeResult> {
     const outcome = await this.outcome(this.exchange('POST', path, payload));
     if (outcome === 'PROPOSED' || outcome === 'UNCHANGED') return { kind: outcome };
@@ -545,7 +576,7 @@ export class SharedWorldApiClient {
     return typeof answer.body.outcome === 'string' ? answer.body.outcome : null;
   }
 
-  private async exchange(method: 'GET' | 'POST', path: string, payload?: unknown): Promise<Exchange> {
+  private async exchange(method: 'GET' | 'POST' | 'PUT', path: string, payload?: unknown): Promise<Exchange> {
     try {
       const response = await this.config.fetch(`${this.config.baseUrl}${path}`, {
         method,

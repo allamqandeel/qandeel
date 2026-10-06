@@ -1,6 +1,8 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
+import { SharedActivityProducer } from './shared-activity.producer';
+import { SharedWorldAlertsService } from './shared-world-alerts.service';
 import { SharedWorldConversationService } from './shared-world-conversation.service';
 import { SharedWorldLifecycleService } from './shared-world-lifecycle.service';
 import { SharedWorldService } from './shared-world.service';
@@ -43,6 +45,15 @@ import { SharedWorldService } from './shared-world.service';
  *   GET  /shared/own-material[/before/:materialId/:establishedAt]        — the reader's own words in Worlds they no longer belong to
  *   POST /shared/own-material/:worldId/:materialId/delete                — { commandId } → the owner's deletion (0139, ungated)
  *
+ * S4-04 — Shared Activity and per-World alerts over migration 0141:
+ *
+ *   GET  /shared/alerts                                                  — the reader's CURRENT Worlds, each with its own mute
+ *   PUT  /shared/worlds/:worldId/alerts                                  — { muted } → MUTED / UNMUTED / UNAVAILABLE
+ *
+ *   After a command has COMMITTED its durable Shared fact, the Shared Activity producer is handed that fact's identity
+ *   (the material, the command, the proposal, the World — nothing else). It never changes the command's answer, which is
+ *   already decided, and it is never told who the recipients are: the database derives them (0141).
+ *
  * No route takes a user id, an inviter, a target, an author, a viewer or member list, an audience, a material kind, an
  * approver, an approval rule, a membership snapshot or a World authority.
  */
@@ -53,6 +64,8 @@ export class SharedWorldController {
     private readonly shared: SharedWorldService,
     private readonly conversation: SharedWorldConversationService,
     private readonly lifecycle: SharedWorldLifecycleService,
+    private readonly activity: SharedActivityProducer,
+    private readonly alerts: SharedWorldAlertsService,
   ) {}
 
   @Get()
@@ -81,8 +94,10 @@ export class SharedWorldController {
 
   @Post('invitations/:invitationId/accept')
   @HttpCode(200)
-  accept(@Req() request: AuthenticatedRequest, @Param('invitationId') invitationId: string, @Body() body: unknown) {
-    return this.shared.accept(request.authenticatedUser.accessToken, invitationId, body);
+  async accept(@Req() request: AuthenticatedRequest, @Param('invitationId') invitationId: string, @Body() body: unknown) {
+    const result = await this.shared.accept(request.authenticatedUser.accessToken, invitationId, body);
+    if (result.outcome === 'BORN') await this.activity.birth(result.worldId);
+    return result;
   }
 
   @Post('invitations/:invitationId/decline')
@@ -108,9 +123,11 @@ export class SharedWorldController {
 
   @Post('worlds/:worldId/messages')
   @HttpCode(200)
-  send(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
+  async send(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
     const { userId, accessToken } = request.authenticatedUser;
-    return this.conversation.send(userId, accessToken, worldId, body);
+    const result = await this.conversation.send(userId, accessToken, worldId, body);
+    if (result.outcome === 'COMMITTED') await this.activity.humanText(result.materialId);
+    return result;
   }
 
   @Post('worlds/:worldId/materials/:materialId/delete')
@@ -126,44 +143,71 @@ export class SharedWorldController {
 
   @Post('worlds/:worldId/leave')
   @HttpCode(200)
-  leave(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
-    return this.lifecycle.leave(request.authenticatedUser.accessToken, worldId, body);
+  async leave(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
+    const result = await this.lifecycle.leave(request.authenticatedUser.accessToken, worldId, body);
+    if (result.outcome === 'LEFT') await this.activity.left(commandIdOf(body));
+    return result;
   }
 
   @Post('worlds/:worldId/proposals/settings')
   @HttpCode(200)
-  proposeSettings(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
-    return this.lifecycle.proposeSettings(request.authenticatedUser.accessToken, worldId, body);
+  async proposeSettings(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
+    const result = await this.lifecycle.proposeSettings(request.authenticatedUser.accessToken, worldId, body);
+    if (result.outcome === 'PROPOSED') await this.activity.proposal(commandIdOf(body));
+    return result;
   }
 
   @Post('worlds/:worldId/proposals/removal')
   @HttpCode(200)
-  proposeRemoval(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
-    return this.lifecycle.proposeRemoval(request.authenticatedUser.accessToken, worldId, body);
+  async proposeRemoval(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
+    const result = await this.lifecycle.proposeRemoval(request.authenticatedUser.accessToken, worldId, body);
+    if (result.outcome === 'PROPOSED') await this.activity.proposal(commandIdOf(body));
+    return result;
   }
 
   @Post('worlds/:worldId/proposals/end')
   @HttpCode(200)
-  proposeEnd(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
-    return this.lifecycle.proposeEnd(request.authenticatedUser.accessToken, worldId, body);
+  async proposeEnd(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
+    const result = await this.lifecycle.proposeEnd(request.authenticatedUser.accessToken, worldId, body);
+    if (result.outcome === 'PROPOSED') await this.activity.proposal(commandIdOf(body));
+    return result;
   }
 
   @Post('worlds/:worldId/proposals/member')
   @HttpCode(200)
-  proposeMember(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
-    return this.lifecycle.proposeMember(request.authenticatedUser.accessToken, worldId, body);
+  async proposeMember(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
+    const result = await this.lifecycle.proposeMember(request.authenticatedUser.accessToken, worldId, body);
+    // SUBMITTED is the one answer for every well-formed Shared ID; only a request that truly opened tells anyone (0141).
+    if (result.outcome === 'SUBMITTED') await this.activity.proposal(commandIdOf(body));
+    return result;
   }
 
   @Post('membership-requests/:worldId/:requestId/accept')
   @HttpCode(200)
-  acceptMembershipRequest(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('requestId') requestId: string, @Body() body: unknown) {
-    return this.lifecycle.acceptMembershipRequest(request.authenticatedUser.accessToken, worldId, requestId, body);
+  async acceptMembershipRequest(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('requestId') requestId: string, @Body() body: unknown) {
+    const { userId, accessToken } = request.authenticatedUser;
+    const result = await this.lifecycle.acceptMembershipRequest(accessToken, worldId, requestId, body);
+    if (result.outcome === 'JOINED') await this.activity.joined(commandIdOf(body), requestId, userId);
+    return result;
   }
 
   @Post('worlds/:worldId/proposals/:proposalId/approve')
   @HttpCode(200)
-  approve(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('proposalId') proposalId: string, @Body() body: unknown) {
-    return this.lifecycle.approve(request.authenticatedUser.accessToken, worldId, proposalId, body);
+  async approve(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('proposalId') proposalId: string, @Body() body: unknown) {
+    const result = await this.lifecycle.approve(request.authenticatedUser.accessToken, worldId, proposalId, body);
+    // INVITED: every member approved an add / rejoin; the request now waits on its target alone.
+    if (result.outcome === 'INVITED') await this.activity.memberRequest(proposalId);
+    return result;
+  }
+
+  @Get('alerts')
+  alertWorlds(@Req() request: AuthenticatedRequest) {
+    return this.alerts.list(request.authenticatedUser.accessToken);
+  }
+
+  @Put('worlds/:worldId/alerts')
+  setAlerts(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Body() body: unknown) {
+    return this.alerts.set(request.authenticatedUser.accessToken, worldId, body);
   }
 
   @Get('worlds/:worldId/history-shares/candidates/:memberHandle')
@@ -227,4 +271,10 @@ export class SharedWorldController {
   deleteOwnMaterial(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('materialId') materialId: string, @Body() body: unknown) {
     return this.lifecycle.deleteOwnMaterial(request.authenticatedUser.accessToken, worldId, materialId, body);
   }
+}
+
+/** The command id of a body the service already validated (it answered a committed outcome for it). */
+function commandIdOf(body: unknown): string {
+  const value = body && typeof body === 'object' && !Array.isArray(body) ? (body as Record<string, unknown>).commandId : undefined;
+  return typeof value === 'string' ? value : '';
 }

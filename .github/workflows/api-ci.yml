@@ -117,6 +117,7 @@ jobs:
       - {name: "Verify S4-01 Shared World Reachability, Invitation & Birth static contract", run: npm run test:s4-01-shared-world-reachability-contract}
       - {name: "Verify S4-02 Shared Conversation & Material static contract", run: npm run test:s4-02-shared-conversation-material-contract}
       - {name: "Verify S4-03 Shared Lifecycle & Governance static contract", run: npm run test:s4-03-shared-lifecycle-governance-contract}
+      - {name: "Verify S4-04 Shared Activity, Notifications & Direct Entry static contract", run: npm run test:s4-04-shared-activity-notifications-direct-entry-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -884,6 +885,11 @@ jobs:
       # material, the cross-World replay law, non-null booleans and concurrency.
       - name: Verify S4-03 Shared lifecycle and governance against real PostgreSQL
         run: npm run verify:shared-world-lifecycle-governance:integration
+      # S4-04: the Shared Activity producer's one server pass derives every recipient from durable Shared truth (visible
+      # current members only, never the author / proposer / removal target, a request target with nothing of the World);
+      # the per-World alerts list current Worlds only and mute exactly one World in the one A3-01 mute table.
+      - name: Verify S4-04 Shared Activity sources and per-World alerts against real PostgreSQL
+        run: npm run verify:shared-activity-notifications:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
