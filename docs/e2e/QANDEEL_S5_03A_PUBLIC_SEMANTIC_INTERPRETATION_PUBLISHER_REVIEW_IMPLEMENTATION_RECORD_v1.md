@@ -5,7 +5,7 @@ of the Product Owner's three S5-03 tasks)
 **Task Contract:** the Product Owner's S5-03A Task Contract (2026-10-06)
 **Canonical baseline:** `1a10127672f8db7ff475bca4732635bf88536730` (the merge of PR #315, S5-02)
 **Branch:** `feat/s5-03a-public-semantic-review`
-**Status:** **`S5-03A IMPLEMENTED — DRAFT PR #316 — R1 (ASSURE-F05 semantic erasure) APPLIED — S5-03A PRODUCT COPY GATE OPEN (21 rows PROPOSED) — NOT MERGED`**.
+**Status:** **`S5-03A IMPLEMENTED — DRAFT PR #316 — R1 (ASSURE-F05 semantic erasure) APPLIED — S5-03A PRODUCT COPY GATE CLOSED (21 rows APPROVED, Product Owner, 2026-10-06) — NOT MERGED`**.
 Claude does not merge it. It waits for independent review of R1 on green CI and the Product Owner's Copy Gate decision.
 S5-03B is not started.
 
@@ -285,36 +285,36 @@ other meanings) prefilled from the current understanding, with the line "a corre
 move the experience to a place you choose". No map, coordinate, lens, model, prompt or vector appears; no Public Map is
 built; no "published" state exists. Arabic and English. Hardware Back is not registered (the S5-01 rule).
 
-## 13. Product Copy Gate — **S5-03A PRODUCT COPY GATE — OPEN — 21 rows PROPOSED**
+## 13. Product Copy Gate — **S5-03A PRODUCT COPY GATE — CLOSED — 21 rows APPROVED (Product Owner, 2026-10-06)**
 
 Census: every S5-03A user-visible string is in `apps/mobile/src/public-authoring/semantic-copy.ts`. No S5-01 / S5-02 frozen
-string was changed. Nothing is APPROVED by being written.
+string was changed. The Product Owner approved all 21 rows exactly as written on 2026-10-06; this closes the S5-03A Product Copy Gate.
 
 | Key | Class | العربية | English |
 |---|---|---|---|
 | actionUnavailable | REUSED (S4-01 gate, through S5-02) | تعذّر ذلك الآن. | That didn't work right now. |
 | cancel | REUSED (S4-01 gate) | إلغاء | Cancel |
-| heading | **PROPOSED** | كيف فهم قنديل هذه التجربة | How QANDEEL understood this experience |
-| explain | **PROPOSED** | قبل أي نشر، يقترح قنديل المعنى الذي يفهمه من هذه التجربة. يمكنك قبوله أو تصحيحه. | Before anything is published, QANDEEL proposes the meaning it understands in this experience. You can accept it or correct it. |
-| ask | **PROPOSED** | اطلب فهم قنديل لهذه التجربة | Ask for QANDEEL's understanding of this experience |
-| meaningHeading | **PROPOSED** | المعنى | Meaning |
-| primaryHeading | **PROPOSED** | المعاني الأساسية | Main meanings |
-| secondaryHeading | **PROPOSED** | معانٍ أخرى | Other meanings |
-| whyHeading | **PROPOSED** | لماذا فهمها قنديل هكذا | Why QANDEEL understands it this way |
-| accept | **PROPOSED** | أوافق على هذا الفهم | I accept this understanding |
-| correct | **PROPOSED** | تصحيح الفهم | Correct the understanding |
-| correctionScope | **PROPOSED** | التصحيح يخص المعنى فقط، ولا ينقل التجربة إلى مكان تختاره. | A correction is about the meaning only; it doesn't move the experience to a place you choose. |
-| meaningLabel | **PROPOSED** | المعنى بكلماتك | The meaning, in your words |
-| primaryLabel | **PROPOSED** | المعاني الأساسية، مفصولة بفاصلة | Main meanings, separated by commas |
-| secondaryLabel | **PROPOSED** | معانٍ أخرى، اختياري | Other meanings, optional |
-| submitCorrection | **PROPOSED** | إرسال التصحيح | Send correction |
-| acceptedState | **PROPOSED** | وافقت على فهم قنديل. | You accepted QANDEEL's understanding. |
-| correctedState | **PROPOSED** | هذا هو الفهم بعد تصحيحك. | This is the understanding after your correction. |
-| interpretationUnavailable | **PROPOSED** | تعذّر على قنديل اقتراح فهم الآن. | QANDEEL couldn't propose an understanding right now. |
-| notSupported | **PROPOSED** | محتوى التجربة لا يدعم هذا التصحيح. يمكنك صياغته بشكل آخر. | The experience's content doesn't support this correction. You can phrase it differently. |
-| unchanged | **PROPOSED** | هذا التصحيح مطابق للفهم الحالي. | This correction matches the current understanding. |
-| correctionInvalid | **PROPOSED** | المعنى سطر واحد حتى 120 حرفًا، ومن معنى أساسي إلى ثلاثة، كلٌّ منها حتى 40 حرفًا. | The meaning is one line of up to 120 characters, with one to three main meanings of up to 40 characters each. |
-| limited | **PROPOSED** | وصلت هذه التجربة إلى الحد المسموح اليوم. حاول لاحقًا. | This experience has reached today's limit. Try again later. |
+| heading | **APPROVED** | كيف فهم قنديل هذه التجربة | How QANDEEL understood this experience |
+| explain | **APPROVED** | قبل أي نشر، يقترح قنديل المعنى الذي يفهمه من هذه التجربة. يمكنك قبوله أو تصحيحه. | Before anything is published, QANDEEL proposes the meaning it understands in this experience. You can accept it or correct it. |
+| ask | **APPROVED** | اطلب فهم قنديل لهذه التجربة | Ask for QANDEEL's understanding of this experience |
+| meaningHeading | **APPROVED** | المعنى | Meaning |
+| primaryHeading | **APPROVED** | المعاني الأساسية | Main meanings |
+| secondaryHeading | **APPROVED** | معانٍ أخرى | Other meanings |
+| whyHeading | **APPROVED** | لماذا فهمها قنديل هكذا | Why QANDEEL understands it this way |
+| accept | **APPROVED** | أوافق على هذا الفهم | I accept this understanding |
+| correct | **APPROVED** | تصحيح الفهم | Correct the understanding |
+| correctionScope | **APPROVED** | التصحيح يخص المعنى فقط، ولا ينقل التجربة إلى مكان تختاره. | A correction is about the meaning only; it doesn't move the experience to a place you choose. |
+| meaningLabel | **APPROVED** | المعنى بكلماتك | The meaning, in your words |
+| primaryLabel | **APPROVED** | المعاني الأساسية، مفصولة بفاصلة | Main meanings, separated by commas |
+| secondaryLabel | **APPROVED** | معانٍ أخرى، اختياري | Other meanings, optional |
+| submitCorrection | **APPROVED** | إرسال التصحيح | Send correction |
+| acceptedState | **APPROVED** | وافقت على فهم قنديل. | You accepted QANDEEL's understanding. |
+| correctedState | **APPROVED** | هذا هو الفهم بعد تصحيحك. | This is the understanding after your correction. |
+| interpretationUnavailable | **APPROVED** | تعذّر على قنديل اقتراح فهم الآن. | QANDEEL couldn't propose an understanding right now. |
+| notSupported | **APPROVED** | محتوى التجربة لا يدعم هذا التصحيح. يمكنك صياغته بشكل آخر. | The experience's content doesn't support this correction. You can phrase it differently. |
+| unchanged | **APPROVED** | هذا التصحيح مطابق للفهم الحالي. | This correction matches the current understanding. |
+| correctionInvalid | **APPROVED** | المعنى سطر واحد حتى 120 حرفًا، ومن معنى أساسي إلى ثلاثة، كلٌّ منها حتى 40 حرفًا. | The meaning is one line of up to 120 characters, with one to three main meanings of up to 40 characters each. |
+| limited | **APPROVED** | وصلت هذه التجربة إلى الحد المسموح اليوم. حاول لاحقًا. | This experience has reached today's limit. Try again later. |
 
 Notes for the Product Owner: the heading deliberately avoids «فهم قنديل» / "QANDEEL Understanding" — P1 §10's name for the
 Personal Understanding surface; the body rows use the ordinary phrase «فهم قنديل» ("QANDEEL's understanding") in running text.
@@ -368,7 +368,7 @@ not launch-ready**; no Launch Readiness is claimed.
 | G07 | The lens-key vocabulary is the interpreter's (a bounded slug), not a frozen taxonomy; it lives in the erasable private row | 4 assigned | S5-03B — the exact semantic model and geometry (CW2-04 §36) |
 | G08 | The content of an interpretation of a later-erased package is physically erased with it (R1); only its audit identity survives | 5 — by design | ASSURE-F05 / CW2-02 §27, composed with the S5-02 erasure law (§10) |
 | G09 | Themes are free text in the publisher's language | 4 assigned | S5-03B (cross-language semantic proximity is the field's) |
-| G10 | The S5-03A Product Copy Gate | 1 current-task gate — OPEN | §13 — 21 rows PROPOSED for the Product Owner (BG-01) |
+| G10 | The S5-03A Product Copy Gate | CLOSED | §13 — 21 rows APPROVED by the Product Owner on 2026-10-06 (BG-01) |
 | G11 | Export My Data does not include the semantic footprint | 3 existing owner | `E2E-D-16` (world-scoped export `NOT YET INCLUDED`) |
 | G12 | Public semantic field, FAR / MID / NEAR, camera, search / lens / panel UI | 4 assigned | S5-03B |
 | G13 | Explicit Public relations, relation lines, integrity closure | 4 assigned | S5-03C |

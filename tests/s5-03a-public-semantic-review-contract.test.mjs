@@ -167,12 +167,12 @@ test('8 — mobile: the semantic stage inside the S5-02 review, meaning only, no
   assert.doesNotMatch(barrel, /export \{[^}]*PublicSemanticApiClient/u, 'no new runtime-barrel value');
 });
 
-test('9 — the S5-03A Product Copy Gate: one gate, OPEN, every new row PROPOSED, frozen words reused, no collision', () => {
+test('9 — the S5-03A Product Copy Gate: one gate, CLOSED by Product Owner approval, frozen words reused, no collision', () => {
   const copy = read(`${MOBILE}/public-authoring/semantic-copy.ts`);
-  assert.ok(copy.includes("status: 'S5-03A PRODUCT COPY GATE — OPEN — 21 rows PROPOSED'"));
-  assert.equal((copy.match(/\/\/ PROPOSED — S5-03A Product Copy Gate/gu) ?? []).length, 42, '21 rows, Arabic and English');
-  assert.doesNotMatch(copy, /\/\/ APPROVED/u, 'nothing is approved by being written');
-  assert.match(copy, /approved: \[\],/u);
+  assert.ok(copy.includes("status: 'S5-03A PRODUCT COPY GATE — CLOSED — 21 rows APPROVED (Product Owner, 2026-10-06)'"));
+  assert.equal((copy.match(/\/\/ APPROVED — S5-03A Product Copy Gate \(Product Owner, 2026-10-06\)/gu) ?? []).length, 42, '21 rows, Arabic and English');
+  assert.doesNotMatch(copy, /\/\/ PROPOSED — S5-03A Product Copy Gate/gu);
+  assert.match(copy, /proposed: \[\],/u);
   assert.ok(copy.includes('cancel: sharedCopy(language).cancel'));
   assert.ok(copy.includes('actionUnavailable: publicAuthoringCopy(language).actionUnavailable'));
   assert.doesNotMatch(copy, /heading: 'فهم قنديل'|heading: "QANDEEL Understanding"/u, 'the heading does not reuse P1\'s Personal surface name');
@@ -184,7 +184,7 @@ test('9 — the S5-03A Product Copy Gate: one gate, OPEN, every new row PROPOSED
 test('10 — governance: the record, the backlog and the locators tell the same truth', () => {
   const record = read(RECORD);
   assert.match(record, /^# QANDEEL — S5-03A Public Semantic Interpretation \+ Publisher Review — Implementation Record v1/u);
-  assert.ok(record.includes('**Status:** **`S5-03A IMPLEMENTED — DRAFT PR #316 — R1 (ASSURE-F05 semantic erasure) APPLIED — S5-03A PRODUCT COPY GATE OPEN (21 rows PROPOSED) — NOT MERGED`**'));
+  assert.ok(record.includes('**Status:** **`S5-03A IMPLEMENTED — DRAFT PR #316 — R1 (ASSURE-F05 semantic erasure) APPLIED — S5-03A PRODUCT COPY GATE CLOSED (21 rows APPROVED, Product Owner, 2026-10-06) — NOT MERGED`**'));
   assert.match(record, /\| F13 \| [^\n]* \| B — Validation \/ Baseline \|/u, 'the locale baseline is B, not C');
   assert.match(record, /\*\*`QAN-BL-ACCT-01 — HIGH \/ OPEN`\*\*/u, 'the new RESTRICT dependents are recorded as part of the blocker');
   assert.match(record, /1a10127672f8db7ff475bca4732635bf88536730/u);

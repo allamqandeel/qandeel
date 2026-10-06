@@ -263,13 +263,13 @@ describe('S5-03A client', () => {
 });
 
 describe('S5-03A Product Copy Gate', () => {
-  it('is OPEN, every new row PROPOSED (none approved by being written), reused words byte-exact, bilingual and in register', () => {
-    expect(PUBLIC_SEMANTIC_COPY_GATE.status).toBe('S5-03A PRODUCT COPY GATE — OPEN — 21 rows PROPOSED');
-    expect(PUBLIC_SEMANTIC_COPY_GATE.proposed).toHaveLength(21);
-    expect(PUBLIC_SEMANTIC_COPY_GATE.approved).toEqual([]);
+  it('is CLOSED by Product Owner approval, every new row APPROVED, reused words byte-exact, bilingual and in register', () => {
+    expect(PUBLIC_SEMANTIC_COPY_GATE.status).toBe('S5-03A PRODUCT COPY GATE — CLOSED — 21 rows APPROVED (Product Owner, 2026-10-06)');
+    expect(PUBLIC_SEMANTIC_COPY_GATE.proposed).toEqual([]);
+    expect(PUBLIC_SEMANTIC_COPY_GATE.approved).toHaveLength(21);
     expect(publicSemanticCopy('ar').cancel).toBe('إلغاء');
     expect(publicSemanticCopy('en').actionUnavailable).toBe(publicAuthoringCopy('en').actionUnavailable);
-    const rows = [...PUBLIC_SEMANTIC_COPY_GATE.proposed, ...PUBLIC_SEMANTIC_COPY_GATE.reused];
+    const rows = [...PUBLIC_SEMANTIC_COPY_GATE.approved, ...PUBLIC_SEMANTIC_COPY_GATE.reused];
     for (const language of ['ar', 'en'] as const) {
       const words = publicSemanticCopy(language);
       expect(Object.keys(words).sort()).toEqual([...rows].sort());
