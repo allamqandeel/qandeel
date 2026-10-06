@@ -5,7 +5,7 @@
  * `publicSeed()` (so every earlier device leg meets the field as before), and what it answers is what the production
  * strict client accepts — so a device render of the field cannot silently fall back to the unavailable state.
  */
-import { PublicFieldApiClient } from '../../runtime-entry/public-field-api';
+import { PublicWorldApiClient } from '../../runtime-entry';
 import { PUBLIC_FIELD_MAX_COORD, PUBLIC_FIELD_MIN_COORD } from '../../public-world/field/public-field-camera';
 import { createS401ProofWorld } from '../__validation__/s401-proof-world';
 
@@ -14,7 +14,7 @@ const WHOLE = { minX: PUBLIC_FIELD_MIN_COORD, minY: PUBLIC_FIELD_MIN_COORD, maxX
 describe('S5-03B — the visual-review fixture of the proof world', () => {
   it('is off until public/seed, then answers field, search and panel as the strict client accepts', async () => {
     const world = createS401ProofWorld('ar');
-    const client = new PublicFieldApiClient({ baseUrl: world.config.apiBaseUrl, fetch: world.fetch } as never);
+    const client = new PublicWorldApiClient({ baseUrl: world.config.apiBaseUrl, fetch: world.fetch }).field;
     expect(await client.field(WHOLE)).toEqual({ kind: 'NO_ANSWER' });
     world.publicSeed();
     const field = await client.field(WHOLE);
