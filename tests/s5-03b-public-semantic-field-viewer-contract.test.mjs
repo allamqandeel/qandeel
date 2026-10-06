@@ -193,7 +193,7 @@ test('9 — governance: the record, the backlog and the locators tell the same t
   }
 });
 
-test('10 — R1: the field is painted in the frozen Living Analysis World, and no client cache is a source of display', () => {
+test('10 — R1/R2: the field is painted in the frozen Living Analysis World, and no client cache is a source of display', () => {
   const world = code(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`);
   // The Stage-2 VPORT-01 owner is imported, never copied or re-styled: its strata and its mark material.
   assert.ok(world.includes("import { WorldAtmosphere, WorldGround, WorldPlaceAtmosphere, WorldTone, WorldVeil, scheduleAt, stratumDrift, useWorldResponse } from '../../map/visual';"));
@@ -209,7 +209,19 @@ test('10 — R1: the field is painted in the frozen Living Analysis World, and n
   assert.equal(controller.includes('mergeServed'), false, 'a read replaces the field; nothing older is kept to be shown again');
   assert.equal(controller.includes("state.camera.depth === 'FAR'"), false, 'FAR navigation is not exempt from reading again');
   assert.match(controller, /wholeWorld\(\) \{[\s\S]*?void reloadWorld\(\);/u, 'the whole World is read again, never re-framed from what is held');
-  assert.ok(controller.includes("publish({ status: 'LOADING', entries: [] });"), 'nothing held is on display while the World is read');
+  assert.ok(controller.includes("publish({ status: 'LOADING', entries: [], search: state.search.open ? { open: true, status: 'IDLE', results: [] } : NO_SEARCH });"), 'nothing held — no field place, no search result — is on display while the World is read');
+  // R2: every navigation asks again for everything on display — the glass, the open search, the focused panel.
+  assert.ok(controller.includes(`  const revalidateShown = () => {
+    void refreshViewport();
+    if (state.focus !== null) void openPanel(state.focus.id);
+    if (state.search.open && lastQuery !== null) runSearch(lastQuery);
+  };`), 'one revalidation of everything shown');
+  assert.ok(controller.includes(`  const setCamera = (camera: PublicFieldCamera) => {
+    publish({ camera });
+    revalidateShown();
+  };`), 'every camera move revalidates everything shown');
+  assert.ok(controller.includes(`      void reloadWorld();
+      if (state.search.open && lastQuery !== null) runSearch(lastQuery);`), 'the whole World re-runs the open search');
   assert.match(controller, /const failClosed = \(\) => \{[\s\S]*?entries: \[\], focus: null, search: NO_SEARCH/u, 'a read that cannot be made holds nothing');
   // The foreground reads again — through the runtime entry's ONE foreground signal, never a second AppState listener.
   assert.ok(controller.includes("foreground?.subscribe((next) => { if (next === 'ACTIVE') controller?.revalidate(); })"), 'the foreground reads again');

@@ -314,6 +314,88 @@ describe('S5-03B R1 — no cache is a source of display: every transition that c
   });
 });
 
+describe('S5-03B R2 — every navigation asks again for everything on display: the glass, the open search, the focused panel', () => {
+  const start = async () => {
+    const server = liveServer([E1, E2, E3]);
+    const c = createPublicFieldController({ transport: server.t as unknown as PublicFieldTransport, isCurrent: () => true });
+    c.setSize(SIZE.width, SIZE.height);
+    c.enter();
+    await flush();
+    c.openSearch();
+    c.search('hope');
+    await flush();
+    expect(ids(c.getState().search.results)).toEqual([E2.id, E3.id]);
+    return { c, server };
+  };
+
+  it('the whole World shows no held search result while it reads, and re-runs the open search', async () => {
+    const { c, server } = await start();
+    server.stop(E3);
+    const searches = server.t.search.mock.calls.length;
+    c.wholeWorld();
+    expect(c.getState().search.results).toEqual([]);
+    expect(c.getState().entries).toEqual([]);
+    await flush();
+    expect(server.t.search.mock.calls.length).toBe(searches + 1);
+    expect(c.getState().search).toMatchObject({ open: true, status: 'RESULTS' });
+    expect(ids(c.getState().search.results)).toEqual([E2.id]);
+    expect(ids(c.getState().entries)).not.toContain(E3.id);
+  });
+
+  it.each([
+    ['a pan', (c: ReturnType<typeof createPublicFieldController>) => c.pan(SIZE.width / 3, 0)],
+    ['a semantic zoom', (c: ReturnType<typeof createPublicFieldController>) => c.closer()],
+  ])('%s re-runs the open search: a no-longer-served result disappears', async (_name, navigate) => {
+    const { c, server } = await start();
+    server.stop(E3);
+    const searches = server.t.search.mock.calls.length;
+    navigate(c);
+    // Nothing held is shown while the search is asked again.
+    expect(ids(c.getState().search.results)).not.toContain(E3.id);
+    await flush();
+    expect(server.t.search.mock.calls.length).toBe(searches + 1);
+    expect(ids(c.getState().search.results)).toEqual([E2.id]);
+    expect(ids(c.getState().entries)).not.toContain(E3.id);
+  });
+
+  it('a focused panel whose Experience is withdrawn becomes ABSENT on the next navigation, and is not redrawn', async () => {
+    const { c, server } = await start();
+    c.closeSearch();
+    c.focus(E1.id);
+    await flush();
+    expect(c.getState().focus).toMatchObject({ id: E1.id, panel: { status: 'SERVED' } });
+    server.stop(E1);
+    const panels = server.t.experience.mock.calls.length;
+    c.pan(12, 0);
+    await flush();
+    expect(server.t.experience.mock.calls.length).toBe(panels + 1);
+    expect(c.getState().focus).toMatchObject({ id: E1.id, panel: { status: 'ABSENT' } });
+    expect(ids(c.getState().entries)).not.toContain(E1.id);
+  });
+
+  it('on the surface: a withdrawn search result is neither drawn nor focusable after the whole World', async () => {
+    const server = liveServer([E1, E2, E3]);
+    const { view, field } = await mountArea('en', [], undefined, server.t as unknown as ReturnType<typeof fieldTransport>);
+    await act(async () => { field.openSearch(); field.search('hope'); });
+    await flush();
+    expect(view.getByTestId(`qandeel-public-search-result-${E3.id}`)).toBeTruthy();
+    expect(view.getByTestId(`qandeel-public-mark-${E3.id}`)).toBeTruthy();
+    server.stop(E3);
+    await act(async () => { field.wholeWorld(); });
+    // In flight: the held result is not on display.
+    expect(view.queryByTestId(`qandeel-public-search-result-${E3.id}`)).toBeNull();
+    expect(view.queryByTestId(`qandeel-public-mark-${E3.id}`)).toBeNull();
+    await flush();
+    expect(view.getByTestId(`qandeel-public-search-result-${E2.id}`)).toBeTruthy();
+    expect(view.queryByTestId(`qandeel-public-search-result-${E3.id}`)).toBeNull();
+    expect(view.queryByTestId(`qandeel-public-mark-${E3.id}`)).toBeNull();
+    expect(bodyOf(view, field, E3).body).toBeUndefined();
+    await act(async () => { field.focus(E3.id); });
+    await flush();
+    expect(field.getState().focus).toBeNull();
+  });
+});
+
 const appearance = () => {
   const authority = createAppearanceAuthority({
     store: createEphemeralAppearancePreferenceStore({ reader: 'DARK' }),
@@ -346,8 +428,8 @@ function bodyOf(view: { toJSON: () => unknown }, field: { getState: () => { came
 }
 const MASS_COLOURS = WORLD_VISUAL.worldAtmosphere.stops.map(([, s, l, a]) => hsla(WORLD_VISUAL.worldHue, s, l, a));
 
-async function mountArea(language: 'ar' | 'en', entries: PublicFieldEntry[], foreground?: ForegroundSignal) {
-  const t = fieldTransport(entries);
+async function mountArea(language: 'ar' | 'en', entries: PublicFieldEntry[], foreground?: ForegroundSignal, transport?: ReturnType<typeof fieldTransport>) {
+  const t = transport ?? fieldTransport(entries);
   const field = createPublicFieldController({ transport: t as unknown as PublicFieldTransport, isCurrent: () => true, foreground });
   const controller = createPublicWorldController({ transport: { entry: jest.fn(async () => ({ kind: 'ALLOW' as const })) }, isCurrent: () => true, field });
   const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language={language} insets={INSETS} /></AppearanceProvider>);

@@ -415,3 +415,24 @@ Living Analysis Map runtime, canonical Home-placement engine and task-closure go
 `apps/mobile/android/` prebuild directory (2026-10-04, untracked, not part of the change); the same contract passes
 15 / 15 in a clean worktree of the changed tree. Not re-run (no migration / DB contract / API change): the 0145
 PostgreSQL verifier and the neighbouring DB verifiers (§17 stands).
+
+## 21. R2 — stale search / panel on navigation (2026-10-06)
+
+The R1 review accepted A1 (Living Analysis visual reuse: **CLOSED / ACCEPTED**) and found one bounded gap: the whole-World
+read cleared the field but kept the open search's results (which the surface draws with the field), and a camera move
+re-read only the glass, not the open search or the focused panel.
+
+**Correction (controller only; no DB, API, polling or realtime change).** One `revalidateShown()` asks again for
+everything on display — the glass (`refreshViewport`), the focused panel (`openPanel`), and the open search with its
+last query (`runSearch`) — and every camera move (`setCamera`: pan, Semantic Zoom, a tap at FAR, focus, Back) goes
+through it; `focusOn` sets the new focus before the camera so the one navigation read opens that panel only. The
+whole-World read publishes `LOADING` with no field place **and no search result** (the search stays open, `IDLE`), and
+re-runs the open search with its last query beside the fresh World read. A withdrawn search result is therefore neither
+drawn nor focusable during or after the transition; a withdrawn focused target becomes `ABSENT` on the next navigation.
+`revalidate()` (foreground) uses the same `revalidateShown()`.
+
+**R2 validation (as requested: focused only).** S5-03B focused mobile suite 36 / 36 (new: whole World hides and re-runs
+the search; pan and Semantic Zoom each re-run it and drop a withdrawn result; a withdrawn focused target becomes `ABSENT`
+on a pan; on the surface, a withdrawn search result is neither drawn — no row, no mark, no body — nor focusable after the
+whole World). Mutation check: against the R1 controller, 4 of the 5 new tests fail. S5-03B static contract 10 / 10
+(test 10 pins R2). Mobile `tsc` PASS. Not re-run: the 0145 PostgreSQL verifier and the DB loops (no DB change).

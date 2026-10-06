@@ -16,9 +16,10 @@
  * own root nothing is registered, so Back never silently leaves Public World (S5-01).
  *
  * No cache is a source of display (R1). The field shows exactly what the LATEST read served — never an older read kept
- * for later — and every transition that could show a different part of the World asks again: any camera move at any
- * rung (FAR included), the World as a whole (a fresh whole-World read, never a re-framing of what is held), a return to
- * the foreground, and every entry. A read that answers removes, at once, every Experience it is authoritative for and no
+ * for later — and every transition that could show a different part of the World asks again for EVERYTHING on display
+ * (R2): the glass, the open search and the focused panel, on any camera move at any rung (FAR included), the World as a
+ * whole (a fresh whole-World read, never a re-framing of what is held, with no held search result shown meanwhile), a
+ * return to the foreground, and every entry. A read that answers removes, at once, every Experience it is authoritative for and no
  * longer serves: from the field, the search results, the focused panel and its nearby context. A read that cannot be
  * made fails closed: the field becomes the one honest unavailable state and holds nothing.
  */
@@ -175,7 +176,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     if (!transport) { failClosed(); return; }
     const mine = ++viewportTicket;
     const ofVisit = visit;
-    publish({ status: 'LOADING', entries: [] });
+    publish({ status: 'LOADING', entries: [], search: state.search.open ? { open: true, status: 'IDLE', results: [] } : NO_SEARCH });
     const answer = await transport.field(WHOLE_WORLD).catch(() => ({ kind: 'NO_ANSWER' as const }));
     if (mine !== viewportTicket || ofVisit !== visit) return;
     if (answer.kind !== 'ANSWER') { failClosed(); return; }
@@ -230,9 +231,16 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     });
   };
 
+  /** R2: every navigation transition asks again for everything on display — the glass, the open search, the focused panel. */
+  const revalidateShown = () => {
+    void refreshViewport();
+    if (state.focus !== null) void openPanel(state.focus.id);
+    if (state.search.open && lastQuery !== null) runSearch(lastQuery);
+  };
+
   const setCamera = (camera: PublicFieldCamera) => {
     publish({ camera });
-    void refreshViewport();
+    revalidateShown();
   };
 
   const releaseFocus = () => {
@@ -242,10 +250,11 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
 
   const focusOn = (experienceId: string) => {
     const target = [...state.entries, ...state.search.results].find((entry) => entry.id === experienceId);
-    if (!target || !state.camera) return;
-    setCamera(focusField(state.camera, target.address));
+    const camera = state.camera;
+    if (!target || !camera) return;
+    // The new focus is set with the camera, so the one navigation read opens its panel (and nothing older's).
     publish({ focus: { id: experienceId, panel: { status: 'LOADING' } } });
-    void openPanel(experienceId);
+    setCamera(focusField(camera, target.address));
   };
 
   let controller: PublicFieldController | null = null;
@@ -299,13 +308,12 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       if (state.status === 'IDLE' || state.status === 'LOADING') return;
       releaseFocus();
       void reloadWorld();
+      if (state.search.open && lastQuery !== null) runSearch(lastQuery);
     },
     revalidate() {
       if (state.status === 'IDLE' || state.status === 'LOADING') return;
       if (state.status === 'UNAVAILABLE' || !state.camera || !isFieldSize(size)) { void load(); return; }
-      void refreshViewport();
-      if (state.focus !== null) void openPanel(state.focus.id);
-      if (state.search.open && lastQuery !== null) runSearch(lastQuery);
+      revalidateShown();
     },
     tapField(x, y) {
       const camera = state.camera;
