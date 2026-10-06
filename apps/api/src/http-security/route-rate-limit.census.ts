@@ -125,6 +125,12 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // S4-04 — the per-World Shared alerts (0141): the reader's own mute rows; no content, no fan-out.
   'GET /shared/alerts': 'AUTHENTICATED',
   'PUT /shared/worlds/:worldId/alerts': 'AUTHENTICATED',
+
+  // Public World (S5-01, 0142): the entry verdict and the reader's own display mode (a mode, never label text; no
+  // availability oracle, nothing of another reader). Ordinary authenticated own-state acts. No new class.
+  'GET /public/entry': 'AUTHENTICATED',
+  'GET /public/display': 'AUTHENTICATED',
+  'PUT /public/display': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

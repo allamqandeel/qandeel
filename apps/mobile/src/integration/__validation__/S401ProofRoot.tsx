@@ -27,6 +27,11 @@
  *   qandeel://s401-proof/history/seed        a World of three; the reader joined late; a newcomer joined after the reader
  *   qandeel://s401-proof/history/grant       the other person's approved package shows the reader their earlier words
  *   qandeel://s401-proof/history/delete      the other person deletes their own words (after the World ended)
+ *
+ * S5-01 — the Public World over the same production composition (its own link, `qandeel://public`, is the PRODUCTION
+ * link, taken by the production Linking source — never this hook):
+ *
+ *   qandeel://s401-proof/public/allow        releases the held Public World entry (the pre-authority shell, then the root)
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -41,7 +46,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history)\/(arrive|seed|allow|revoke|peer|approve|grant|delete)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public)\/(arrive|seed|allow|revoke|peer|approve|grant|delete)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -79,6 +84,7 @@ export function S401ProofRoot() {
       if (match[1] === 'history' && match[2] === 'seed') world.history();
       if (match[1] === 'history' && match[2] === 'grant') world.grant();
       if (match[1] === 'history' && match[2] === 'delete') world.peerDelete();
+      if (match[1] === 'public' && match[2] === 'allow') world.publicAllow();
     });
     return () => {
       subscription.remove();

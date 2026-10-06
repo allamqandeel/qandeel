@@ -14,6 +14,7 @@ import { SharedIdPage } from '../../settings/SharedIdSection';
 import { GlobalSwitcher } from '../GlobalSwitcher';
 import { SharedWorldArea } from '../SharedWorldArea';
 import { SHARED_COPY_GATE, fill, sharedCopy, worldLabel } from '../copy';
+import { publicCopy } from '../../public-world/copy';
 import { createSharedIdController } from '../shared-id-controller';
 import { createSharedWorldController } from '../shared-world-controller';
 
@@ -95,7 +96,8 @@ describe.each([['ar', 'DARK'], ['en', 'LIGHT']] as const)('S4-01 surfaces — %s
   const palette = P[preference].standard;
   const writing = language === 'ar' ? 'rtl' : 'ltr';
 
-  it('the Global Switcher: two destinations, words from the copy, glyphs decorative, SELECTED by marker and weight only', async () => {
+  // S5-01 re-anchor: three destinations now (the Public World joins as the third); every S4-01 law is kept.
+  it('the Global Switcher: three destinations, words from the copy, glyphs decorative, SELECTED by marker and weight only', async () => {
     const onSelect = jest.fn();
     const view = await render(
       <AppearanceProvider authority={appearance(preference)}>
@@ -103,24 +105,32 @@ describe.each([['ar', 'DARK'], ['en', 'LIGHT']] as const)('S4-01 surfaces — %s
       </AppearanceProvider>,
     );
     const root = view.getByTestId('qandeel-global-switcher');
-    expect(root.props.accessibilityLabel).toBe(copy.switcherLabel);
+    expect(root.props.accessibilityLabel).toBe(publicCopy(language).switcherLabel);
     expect(flat(root).direction).toBe(writing);
     const personal = view.getByTestId('qandeel-switcher-my_world');
     const shared = view.getByTestId('qandeel-switcher-shared_world');
-    expect([personal.props.accessibilityLabel, shared.props.accessibilityLabel]).toEqual([copy.personalWorld, copy.sharedWorld]);
+    const publicArea = view.getByTestId('qandeel-switcher-public_world');
+    expect([personal.props.accessibilityLabel, shared.props.accessibilityLabel, publicArea.props.accessibilityLabel])
+      .toEqual([copy.personalWorld, copy.sharedWorld, publicCopy(language).publicWorld]);
     expect(personal.props.accessibilityState).toMatchObject({ selected: true });
     expect(shared.props.accessibilityState).toMatchObject({ selected: false });
+    expect(publicArea.props.accessibilityState).toMatchObject({ selected: false });
+    expect(flat(publicArea).minHeight).toBeGreaterThanOrEqual(44);
     expect(flat(personal).minHeight).toBeGreaterThanOrEqual(44);
     // SW-3: the selected cell's seam is the E1R marker; the other cell has none.
     expect(flat(view.getByTestId('qandeel-switcher-seam-my_world'))).toMatchObject({ height: palette.markerThickness, backgroundColor: palette.selectedMarker });
     expect(flat(view.getByTestId('qandeel-switcher-seam-shared_world')).height).toBe(0);
+    expect(flat(view.getByTestId('qandeel-switcher-seam-public_world')).height).toBe(0);
     // Brass never carries state: both glyphs are drawn in the same ink.
-    const glyphs = [view.getByTestId('qandeel-nav-glyph-navMine', { includeHiddenElements: true }), view.getByTestId('qandeel-nav-glyph-navShared', { includeHiddenElements: true })];
+    const glyphs = [view.getByTestId('qandeel-nav-glyph-navMine', { includeHiddenElements: true }), view.getByTestId('qandeel-nav-glyph-navShared', { includeHiddenElements: true }),
+      view.getByTestId('qandeel-nav-glyph-navPublic', { includeHiddenElements: true })];
     for (const glyph of glyphs) expect(glyph.props.accessibilityElementsHidden).toBe(true);
     await fireEvent.press(shared);
     expect(onSelect).toHaveBeenCalledWith('SHARED_WORLD');
+    await fireEvent.press(publicArea);
+    expect(onSelect).toHaveBeenCalledWith('PUBLIC_WORLD');
     await fireEvent.press(personal);
-    expect(onSelect).toHaveBeenCalledTimes(1);
+    expect(onSelect).toHaveBeenCalledTimes(2);
   });
 
   it('the Shared root: invitation in the approved meaning, Accept / Decline at 44 pt, Worlds labelled by the other members', async () => {
@@ -218,10 +228,13 @@ describe('S4-01 copy', () => {
     expect(worldLabel(en, [{ name: 'A', self: true }])).toBe('Shared World');
   });
 
-  it('draws the P2 navigation family from the generated N1 geometry: one ring, one or two points of light', () => {
+  // S5-01 re-anchor: navPublic is now emitted from the same frozen P2 source (the porous ring, three people and the core).
+  it('draws the P2 navigation family from the generated N1 geometry: one ring, one or two points of light; navPublic open on every side', () => {
     expect(P2_NAV_GLYPHS.navMine.strokes[0].d).toBe(P2_NAV_GLYPHS.navShared.strokes[0].d);
     expect(P2_NAV_GLYPHS.navMine.dots).toHaveLength(1);
     expect(P2_NAV_GLYPHS.navShared.dots).toHaveLength(2);
-    expect('navPublic' in P2_NAV_GLYPHS).toBe(false);
+    expect(P2_NAV_GLYPHS.navPublic.strokes).toHaveLength(1);
+    expect(P2_NAV_GLYPHS.navPublic.dots).toHaveLength(4);
+    expect(P2_NAV_GLYPHS.navPublic.strokes[0].d).not.toBe(P2_NAV_GLYPHS.navMine.strokes[0].d);
   });
 });

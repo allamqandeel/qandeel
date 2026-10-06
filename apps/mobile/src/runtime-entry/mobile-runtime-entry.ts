@@ -39,6 +39,7 @@ import { UnderstandingApiClient } from './understanding-api';
 import { ActivityApiClient } from './activity-api';
 import { PushApiClient } from './push-api';
 import { SharedWorldApiClient } from './shared-world-api';
+import { PublicWorldApiClient } from './public-world-api';
 import {
   createAppStateForegroundSignal,
   type ForegroundSignal,
@@ -143,6 +144,11 @@ export interface MobileRuntimeEntry {
    * own auth generation: a replaced identity's request is refused before it is issued.
    */
   sharedWorldsFor(bundle: CanonicalRuntimeBundle): SharedWorldApiClient;
+  /**
+   * S5-01 — the Public World client for a bundle this coordinator produced, on the same AC-01 seam bound to the bundle's
+   * own auth generation: a replaced identity's request is refused before it is issued.
+   */
+  publicWorldFor(bundle: CanonicalRuntimeBundle): PublicWorldApiClient;
   /**
    * W1B-01 — the one signed-out account question: may a Login ID still be chosen. It carries no
    * credential, because there is no account yet.
@@ -308,6 +314,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     sharedWorldsFor(bundle) {
       return new SharedWorldApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    publicWorldFor(bundle) {
+      return new PublicWorldApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     understandingFor(bundle) {
       return new UnderstandingApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

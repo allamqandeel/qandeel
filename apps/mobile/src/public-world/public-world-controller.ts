@@ -1,0 +1,78 @@
+/**
+ * S5-01 — the «العالم العام» / Public World entry controller: the ONE way into the Public World root, for the Global
+ * Switcher and for a `qandeel://public` link alike.
+ *
+ * Entering asks the server's entry verdict NOW (CW2-07 §25: destination content renders only after the current Public
+ * audience policy allows viewing). Until it answers, the area is the neutral pre-authority shell; ALLOW makes the root
+ * active; anything else is one neutral "not available". A switcher tap, a link or a previous ALLOW is never authority:
+ * every entry resolves again.
+ *
+ * Its state is viewer-local and its own (CW2-07 §24): it holds nothing of the Personal world (no Session, camera, focus
+ * or time) and nothing of the Shared area, and it writes nothing to either. S5-01's root is content-empty by truth —
+ * the Public Experiences and their semantic field are S5-03's — so there is nothing else to hold.
+ */
+import type { PublicEntryResult } from '../runtime-entry';
+
+export interface PublicWorldTransport {
+  entry(): Promise<PublicEntryResult>;
+}
+
+export interface PublicAreaState {
+  readonly entry: 'NONE' | 'RESOLVING' | 'ALLOW' | 'DENIED';
+}
+
+export interface PublicWorldController {
+  getState(): PublicAreaState;
+  subscribe(listener: () => void): () => void;
+  /** Resolve the entry verdict now (the switcher, a link, a retry). */
+  enter(): void;
+  retire(): void;
+}
+
+export interface PublicWorldControllerOptions {
+  readonly transport: PublicWorldTransport;
+  readonly isCurrent: () => boolean;
+}
+
+const INITIAL: PublicAreaState = Object.freeze<PublicAreaState>({ entry: 'NONE' });
+
+export function createPublicWorldController({ transport, isCurrent }: PublicWorldControllerOptions): PublicWorldController {
+  const listeners = new Set<() => void>();
+  let state: PublicAreaState = INITIAL;
+  let retired = false;
+  let ticket = 0;
+  const live = () => !retired && isCurrent();
+  const publish = (next: PublicAreaState) => {
+    if (!live()) return;
+    state = next;
+    for (const listener of Array.from(listeners)) listener();
+  };
+
+  async function resolve(): Promise<void> {
+    const mine = ++ticket;
+    publish({ entry: 'RESOLVING' });
+    let result: PublicEntryResult;
+    try {
+      result = await transport.entry();
+    } catch {
+      result = { kind: 'UNAVAILABLE' };
+    }
+    if (mine !== ticket) return;
+    publish({ entry: result.kind === 'ALLOW' ? 'ALLOW' : 'DENIED' });
+  }
+
+  return {
+    getState: () => state,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    enter() {
+      void resolve();
+    },
+    retire() {
+      retired = true;
+      listeners.clear();
+    },
+  };
+}

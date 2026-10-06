@@ -1,8 +1,8 @@
 /**
  * S4-01 — the first production Global Switcher (I-08A4 §3–§4; P4-C1 SW-3 "Keyed Seam"; P2 §5).
  *
- * Two destinations at this baseline: «قنديل» / QANDEEL (the Personal world) and «العالم المشترك» / Shared World. The
- * Public World is not exposed before its own Product stage, so no inert third destination is drawn.
+ * Three destinations (I-08A4 §3): «قنديل» / QANDEEL (the Personal world), «العالم المشترك» / Shared World and — since
+ * S5-01 — «العالم العام» / Public World, each a real area behind its own entry authority (P2 `navPublic`).
  *
  *   - form: SW-3 — the plate (the one functional surface tone), a full-width hairline seam at its top edge, and the
  *     SELECTED cell's seam thickened to the E1R marker across the whole cell, with the word's weight. Brass never
@@ -17,9 +17,10 @@ import { Text, View } from 'react-native';
 import { Control, typeStyle, usePalette } from '../conversation';
 import { NavGlyph } from '../iconography';
 import type { ChromeLanguage } from '../orientation-chrome';
+import { publicCopy } from '../public-world/copy';
 import { sharedCopy } from './copy';
 
-export type WorldArea = 'MY_WORLD' | 'SHARED_WORLD';
+export type WorldArea = 'MY_WORLD' | 'SHARED_WORLD' | 'PUBLIC_WORLD';
 
 /** The plate's height inside the 56 pt the P2-A / P4-C proofs give the switcher. */
 export const GLOBAL_SWITCHER_HEIGHT = 56;
@@ -36,16 +37,18 @@ export interface GlobalSwitcherProps {
 export function GlobalSwitcher({ area, language, bottomInset, onSelect }: GlobalSwitcherProps) {
   const palette = usePalette();
   const copy = sharedCopy(language);
+  const publicWords = publicCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
-  const items: readonly { readonly key: WorldArea; readonly word: string; readonly glyph: 'navMine' | 'navShared' }[] = [
+  const items: readonly { readonly key: WorldArea; readonly word: string; readonly glyph: 'navMine' | 'navShared' | 'navPublic' }[] = [
     { key: 'MY_WORLD', word: copy.personalWorld, glyph: 'navMine' },
     { key: 'SHARED_WORLD', word: copy.sharedWorld, glyph: 'navShared' },
+    { key: 'PUBLIC_WORLD', word: publicWords.publicWorld, glyph: 'navPublic' },
   ];
   return (
     <View
       testID={GLOBAL_SWITCHER_TEST_ID}
       accessibilityRole="radiogroup"
-      accessibilityLabel={copy.switcherLabel}
+      accessibilityLabel={publicWords.switcherLabel}
       accessibilityLanguage={language}
       style={{ backgroundColor: palette.field, paddingBottom: bottomInset, direction: writing }}
     >

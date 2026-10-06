@@ -272,7 +272,8 @@ test('the record states exactly the D-17 truth, never a wider claim, and the bac
   const overClaim = (text) => /E2E-D-17[^\n|]*\|\s*(?:CLOSED|COMPLETE)\b/u.test(text) || /account deletion is (?:complete|production-ready)/iu.test(text);
   guards('no-d17-overclaim', record, (text) => !overClaim(text), '| `E2E-D-17` | CLOSED |');
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
-  for (const id of ['QAN-BL-ACCT-01', 'QAN-BL-CW-01']) {
-    assert.match(backlog, new RegExp(`\\| \`${id}\` \\|[^\\n]*\\| \`OPEN — UNASSIGNED\` \\|`, 'u'), `${id} stays OPEN — UNASSIGNED`);
-  }
+  assert.match(backlog, /\| `QAN-BL-ACCT-01` \|[^\n]*\| `OPEN — UNASSIGNED` \|/u, 'QAN-BL-ACCT-01 stays OPEN — UNASSIGNED');
+  // S5-01 re-anchor: the Product Owner assigned QAN-BL-CW-01 to S5-02 (DEFERRED — OWNED). It is still an OPEN blocker of
+  // full account deletion — owned, never tombstoned by assignment.
+  assert.match(backlog, /\| `QAN-BL-CW-01` \|[^\n]*\| `(?:OPEN — UNASSIGNED|DEFERRED — OWNED)` \|/u, 'QAN-BL-CW-01 stays open (unassigned or owned), never closed');
 });

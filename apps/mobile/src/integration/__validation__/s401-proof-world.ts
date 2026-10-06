@@ -48,6 +48,14 @@
  *     stands in for the other person deleting their own words after the end;
  *   - `/own-material` lists the reader's own words in Worlds they no longer belong to, and nothing else.
  *
+ * S5-01 — the Public World, answered as migration 0142 and `apps/api/src/public-world` do:
+ *
+ *   - `/public/entry` — the entry verdict, HELD before its ALLOW answer until `publicAllow()` releases it (the same
+ *     deterministic seam as Journey C), so the device proof observes the neutral pre-authority shell for as long as it
+ *     asserts; every entry is held again, because a previous ALLOW is never authority;
+ *   - `/public/display` — the reader's Public display MODE (PSEUDONYM by default, rendering the account's CURRENT Public
+ *     ID; REAL_NAME rendering the account's CURRENT Name); a PUT carries the mode and nothing else.
+ *
  * Every Name, Login ID, Email, Public ID and conversation line here is SYNTHETIC test text, never Product copy and never
  * a real account.
  */
@@ -138,12 +146,17 @@ export interface S401ProofWorld {
   grant(): void;
   /** S4-03: the other person deletes their own words (after the World ended). */
   peerDelete(): void;
+  /** S5-01: releases the Public World entries held at this moment (each answers ALLOW). */
+  publicAllow(): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const base = createVport01ProofWorld(language);
   const held = new Set<string>();
   let releases: (() => void)[] = [];
+  // S5-01: the held Public World entries, and the reader's Public display mode.
+  let publicReleases: (() => void)[] = [];
+  let publicMode: 'PSEUDONYM' | 'REAL_NAME' = 'PSEUDONYM';
   let next = 1;
   const uuid = () => `5401${String(next++).padStart(4, '0')}-0000-4000-8000-000000000000`;
   let issued = -1;
@@ -406,6 +419,20 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     if (path === '/account/privacy' && method === 'GET') {
       return json(200, { export: { status: 'NONE', availableUntil: null }, deletion: { status: 'NONE', finalAt: null } });
     }
+    if (path === '/public/entry' && method === 'GET') {
+      await new Promise<void>((resolve) => { publicReleases.push(resolve); });
+      return json(200, { outcome: 'ALLOW' });
+    }
+    if (path === '/public/display') {
+      if (method === 'PUT') {
+        const mode = (JSON.parse(init?.body ?? '{}') as { mode?: unknown }).mode;
+        if (mode !== 'PSEUDONYM' && mode !== 'REAL_NAME') return json(400, { outcome: 'INVALID_REQUEST' });
+        const outcome = mode === publicMode ? 'UNCHANGED' : 'UPDATED';
+        publicMode = mode;
+        return json(200, { outcome, mode, label: mode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId });
+      }
+      return json(200, { mode: publicMode, label: publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId, realNameAvailable: true });
+    }
     if (path === '/shared' || path.startsWith('/shared/')) {
       return shared(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     }
@@ -428,6 +455,11 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       for (const release of pending) release();
     },
     revoke: () => { for (const world of worlds) world.current = false; },
+    publicAllow: () => {
+      const pending = publicReleases;
+      publicReleases = [];
+      for (const release of pending) release();
+    },
     converse: () => {
       const worldId = uuid();
       worlds.push(newWorld(worldId));

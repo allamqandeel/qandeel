@@ -156,7 +156,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `CLOSED — TOMBSTONE` |
@@ -505,7 +505,8 @@ This entry defines no density, no level-of-detail rule, no token and no world ch
   a reviewed exception to the `0092` immutability guard. No write path reaches it today, because
   `prepare_public_experience_manifest_v1` is executable by no application role. The read boundary is already
   `service_role`-reachable.
-- **Owner task:** `UNASSIGNED`
+- **Owner task:** `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` (re-owned by S5-01 at the Product
+  Owner's designation, 2026-10-06; previously `UNASSIGNED`)
 - **Severity:** `HIGH`, as the source states. The register keeps HIGH over one refuter's MEDIUM, because CW2-08
   §2 makes deleted-content non-serving non-waivable and the retention is permanent.
 - **Reopen condition:** Architecture opens a Connected Worlds remediation or integration task for Public
@@ -515,7 +516,7 @@ This entry defines no density, no level-of-detail rule, no token and no world ch
 - **Required future property:** after owner deletion, no internal or public boundary serves a
   source-content-bearing Public derivative of the deleted material. This is the property CW2-02 §27 and CW2-08
   §2 already state; this entry adds none.
-- **Status:** `OPEN — UNASSIGNED`
+- **Status:** `DEFERRED — OWNED` (previously `OPEN — UNASSIGNED`)
 
 Admitted by the recovered canonical authority preservation, at the explicit direction of Architecture / the
 Product Owner (BG-06). This entry chooses no remedy. The register's "remediation direction" is evidence, not a
@@ -526,6 +527,22 @@ decision, and nothing here authorizes implementation (BG-07).
 §8.5 names this item as one cause of the `EXPLICIT CONNECTED-WORLDS DELETION BLOCKER` on account deletion, carried
 as `QAN-BL-ACCT-01`. This note changes none of this item's fields: it stays `UNASSIGNED`, `HIGH`,
 `OPEN — UNASSIGNED`, and its own open Product ruling on the retained bytes is still not answered.
+
+**Current-truth note (S5-01, 2026-10-06; Product Owner decision, recorded — not implemented).** The Product Owner has
+answered this item's open Product ruling, as a binding Stage-5 decision:
+
+> When owner deletion makes a source-content-bearing Public derivative derive from deleted owner content, the
+> derivative's retained CONTENT BYTES must be physically erased. Audit/provenance identity needed to truthfully record
+> that an item existed may remain, but the deleted source content must not remain recoverable through Public
+> Draft/review storage.
+
+The Product Owner assigned the item to `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure`, which must close
+`ASSURE-F05` before any application-reachable Draft / review creation path is opened. S5-01 implements no part of it:
+migration `0142` opens no Draft, manifest or review path and adds no reader of `public_experience_text_derivative_bodies`,
+so the finding is not made newly reachable. The finding itself, its source, severity, required future property and
+reopen condition are unchanged; only the owner and the status move (`OPEN — UNASSIGNED` → `DEFERRED — OWNED`). The
+physical erasure needs the reviewed exception to the `0092` immutability guard that this item already names; that
+exception, too, is S5-02's. `QAN-BL-ACCT-01` is not absorbed and stays `OPEN — UNASSIGNED`.
 
 ### `QAN-BL-ACCT-01` — Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker
 
@@ -566,6 +583,14 @@ Shared launch gate CLOSED (no migration configures it), claims no production rea
 the owner's first Shared ID read while Shared is open (so an account that never reaches Shared gains no Connected Worlds
 reference), and states Account Deletion across Connected Worlds as a launch prerequisite of the Shared capability
 ([S4-01 record](e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md) §7, §11, §16).
+
+**Current-truth note (S5-01, 2026-10-06).** Two of this item's reopen clauses are observed: S5-01 takes the Public World
+toward users (an authenticated, content-empty Public root), and `QAN-BL-CW-01` now has an owner (`S5-02`). At the Product
+Owner's direction this item is not absorbed: it stays `OPEN — UNASSIGNED`, unchanged in scope, as the separate launch
+blocker it is. S5-01 provisions no I-05 Public Identity (the `public_identities` row is `ON DELETE RESTRICT` to the
+account), so no account becomes undeletable by opening Public World or choosing a Public display mode; the display choice
+row cascades with the account. S5-01 claims no production readiness for the Public World
+([S5-01 record](e2e/QANDEEL_S5_01_PUBLIC_REACHABILITY_ENTRY_IDENTITY_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §6, §12).
 
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
@@ -1333,9 +1358,9 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 16 |
+| `DEFERRED — OWNED` | 17 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 10 |
+| `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 17 |
 | **Total** | **43** |
 
@@ -1535,6 +1560,22 @@ stays fail-closed (Stage 7). `QAN-BL-VOICE-01`, `QAN-BL-CW-01`, `QAN-BL-CW-02`, 
 `QAN-BL-NOTIF-02` … `04` are unchanged. Its final Stage-4 Gap Matrix is §13 of its
 [implementation record](e2e/QANDEEL_S4_04_SHARED_ACTIVITY_NOTIFICATIONS_DIRECT_ENTRY_IMPLEMENTATION_RECORD_v1.md):
 **Orphan gaps = 0**. It admits nothing: the register still holds **43** items with the counts above.
+
+**S5-01 reconciliation (2026-10-06; Draft PR, not merged).** S5-01 (Public World Reachability, Entry & Identity
+Foundation, migration `0142`; the first Stage-5 task) inherits no item by owner. At the Product Owner's designation it
+re-owns `QAN-BL-CW-01` (`ASSURE-F05`) to `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure`, records the Product
+Owner's answer to its open ruling (the derivative's retained content bytes must be physically erased) and moves it from
+`OPEN — UNASSIGNED` to `DEFERRED — OWNED`; nothing of it is implemented and its finding is unchanged. `QAN-BL-ACCT-01`'s
+reopen condition is observed and the item stays `OPEN — UNASSIGNED` (current-truth note). `QAN-BL-NOTIF-02` … `05`,
+`QAN-BL-PRIV-02`, `QAN-BL-NAV-02`, `QAN-BL-VOICE-01`, `QAN-BL-LAUNCH-01` … `03`, `QAN-BL-CI-01` and `QAN-BL-CW-02` are
+unchanged: no Public Activity producer, Public push, Replay, Voice or Launch path is opened. At R1 the Product Owner
+assigned two further obligations to `S5-02`, recorded on its row in §9 (neither is a backlog item): the final closure of
+`E2E-H-08` — ADVANCED / S5-02 OWNED — NOT CLOSED (S5-01 establishes the display foundation and creates no I-05 Public Identity), and the Name-length
+reconciliation (when the real Public Identity creation path is opened, the old I-05 64-character display-label implementation ceiling is reconciled with the valid 80-character account Name by a reviewed forward migration, so REAL_NAME can represent the full canonical account Name; no silent truncation, and the account Name limit is not redefined). It admits nothing; its Gap
+Matrix is §13 of its [implementation record](e2e/QANDEEL_S5_01_PUBLIC_REACHABILITY_ENTRY_IDENTITY_FOUNDATION_IMPLEMENTATION_RECORD_v1.md):
+**Orphan gaps = 0**. The register still holds **43** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9
+`OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from
+the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1598,6 +1639,8 @@ Inherited after T-12 closure reconciliation:
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
 | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
+| `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
+| `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

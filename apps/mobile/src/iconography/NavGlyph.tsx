@@ -1,7 +1,7 @@
 /**
  * S4-01 — the P2 persistent navigation family, drawn with the installed Skia renderer (P2 closure §5).
  *
- * The geometry is P2's own (`p2-production.generated.ts`, from `sig.mjs` `navMine` / `navShared` at the 24 px the P2-A
+ * The geometry is P2's own (`p2-production.generated.ts`, from `sig.mjs` `navMine` / `navShared` / `navPublic` (S5-01) at the 24 px the P2-A
  * rail draws them). One material for the family, identical at every state: interaction state is never carried by the
  * glyph (C3 §6; P2 §5), so this component takes a colour and nothing else. It is decorative — the destination word
  * names the control (P2 §10) — and a world glyph never mirrors (P2 §10).
@@ -11,7 +11,7 @@ import { View } from 'react-native';
 
 import { P2_NAV_GLYPHS } from './p2-production.generated';
 
-export type NavGlyphName = 'navMine' | 'navShared';
+export type NavGlyphName = 'navMine' | 'navShared' | 'navPublic';
 
 export interface NavGlyphProps {
   readonly name: NavGlyphName;

@@ -14,8 +14,8 @@
 //     executed with the accepted N1 "Open" nuance at their frozen render sizes (24 px; End Call 27 px);
 //   - S4-01: the persistent navigation family's two members the first production Global Switcher carries —
 //     `SIG.navMine` («قنديل» / QANDEEL) and `SIG.navShared` («العالم المشترك» / Shared World) — executed with N1 at
-//     the 24 px the P2-A rail draws them (P2 closure §5). `SIG.navPublic` is not emitted: no Public World destination
-//     is exposed before its own Product stage.
+//     the 24 px the P2-A rail draws them (P2 closure §5). S5-01 adds the third, `SIG.navPublic` («العالم العام» /
+//     Public World), executed the same way, now that the Public World destination exists.
 //
 // The comparison variants (Spine A / B, Rail B / C, N2) are never executed: they are evidence, not alternatives.
 // P2 itself classes the aperture's dimensions, the notch length, the terminal's line length and the discontinuity
@@ -233,15 +233,19 @@ const navPrimitives = (markup) => ({
   dots: elements(markup, 'circle').map((c) => ({ cx: +attr(c, 'cx'), cy: +attr(c, 'cy'), r: +attr(c, 'r') })),
 });
 const NAV = {
-  provenance: 'P2-A sig.mjs navMine / navShared, nuance N1 "Open", at the 24 px the P2-A rail draws them (P2 closure §5)',
+  provenance: 'P2-A sig.mjs navMine / navShared / navPublic, nuance N1 "Open", at the 24 px the P2-A rail draws them (P2 closure §5)',
   grid: 24,
   size: 24,
   navMine: navPrimitives(SIG.navMine(OPEN, 24)),
   navShared: navPrimitives(SIG.navShared(OPEN, 24)),
+  navPublic: navPrimitives(SIG.navPublic(OPEN, 24)),
 };
 if (NAV.navMine.strokes.length !== 1 || NAV.navMine.dots.length !== 1) fail('navMine is no longer one open world with one point of light');
 if (NAV.navShared.strokes.length !== 1 || NAV.navShared.dots.length !== 2) fail('navShared is no longer one open world with two points of light');
 if (NAV.navMine.strokes[0].d !== NAV.navShared.strokes[0].d) fail('the navigation family no longer shares one ring');
+// navPublic is the porous ring (open on every side) with three people in its openings and the core: it does not share
+// the closed family ring, so only its shape is checked.
+if (NAV.navPublic.strokes.length !== 1 || NAV.navPublic.dots.length !== 4) fail('navPublic is no longer one porous world with four points of light');
 
 // ------------------------------------------------------------------------------------------------- write
 const sources = [APP, MACHINES, SIG_FILE];
@@ -253,7 +257,8 @@ const header = [
   ' * "Keyed Seam") and the Call Rail glyphs, produced by executing the merged P2-A package\'s own functions and',
   ' * source-locking its frozen lines. The aperture, notch, terminal and discontinuity dimensions are P2-A reference',
   ' * CRAFT values (P2 closure §7), not Product law. Regenerate after any source changes; the VPORT-02 contract fails on',
-  ' * drift. S4-01 adds the navigation family the first production Global Switcher carries (navMine, navShared).',
+  ' * drift. S4-01 adds the navigation family the first production Global Switcher carries (navMine, navShared); S5-01',
+  ' * adds navPublic, the Public World destination.',
   ' *',
   ' * Sources (sha256):',
   ...sources.map((path) => ` *   ${rel(path)}  ${sha(path)}`),
