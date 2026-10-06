@@ -20,13 +20,13 @@ import { sharedCopy } from '../shared-world/copy';
 import { publicAuthoringCopy } from './copy';
 
 export const PUBLIC_SEMANTIC_COPY_GATE = {
-  status: 'S5-03A PRODUCT COPY GATE — OPEN — 22 rows PROPOSED',
+  status: 'S5-03A PRODUCT COPY GATE — OPEN — 21 rows PROPOSED',
   reused: ['actionUnavailable', 'cancel'],
   approved: [],
   proposed: [
     'heading', 'explain', 'ask', 'meaningHeading', 'primaryHeading', 'secondaryHeading', 'whyHeading', 'accept', 'correct',
     'correctionScope', 'meaningLabel', 'primaryLabel', 'secondaryLabel', 'submitCorrection', 'acceptedState',
-    'correctedState', 'interpretationUnavailable', 'notSupported', 'quotesContent', 'unchanged', 'correctionInvalid', 'limited',
+    'correctedState', 'interpretationUnavailable', 'notSupported', 'unchanged', 'correctionInvalid', 'limited',
   ],
 } as const;
 
@@ -57,7 +57,6 @@ export interface PublicSemanticCopy {
   readonly correctedState: string;
   readonly interpretationUnavailable: string;
   readonly notSupported: string;
-  readonly quotesContent: string;
   readonly unchanged: string;
   readonly correctionInvalid: string;
   readonly limited: string;
@@ -83,7 +82,6 @@ const AR = {
   correctedState: 'هذا هو الفهم بعد تصحيحك.', // PROPOSED — S5-03A Product Copy Gate
   interpretationUnavailable: 'تعذّر على قنديل اقتراح فهم الآن.', // PROPOSED — S5-03A Product Copy Gate
   notSupported: 'محتوى التجربة لا يدعم هذا التصحيح. يمكنك صياغته بشكل آخر.', // PROPOSED — S5-03A Product Copy Gate
-  quotesContent: 'اكتب المعنى بكلماتك بدل نسخ النص.', // PROPOSED — S5-03A Product Copy Gate
   unchanged: 'هذا التصحيح مطابق للفهم الحالي.', // PROPOSED — S5-03A Product Copy Gate
   correctionInvalid: 'المعنى سطر واحد حتى 120 حرفًا، ومن معنى أساسي إلى ثلاثة، كلٌّ منها حتى 40 حرفًا.', // PROPOSED — S5-03A Product Copy Gate
   limited: 'وصلت هذه التجربة إلى الحد المسموح اليوم. حاول لاحقًا.', // PROPOSED — S5-03A Product Copy Gate
@@ -108,7 +106,6 @@ const EN = {
   correctedState: 'This is the understanding after your correction.', // PROPOSED — S5-03A Product Copy Gate
   interpretationUnavailable: "QANDEEL couldn't propose an understanding right now.", // PROPOSED — S5-03A Product Copy Gate
   notSupported: "The experience's content doesn't support this correction. You can phrase it differently.", // PROPOSED — S5-03A Product Copy Gate
-  quotesContent: 'Describe the meaning in your own words rather than copying the text.', // PROPOSED — S5-03A Product Copy Gate
   unchanged: 'This correction matches the current understanding.', // PROPOSED — S5-03A Product Copy Gate
   correctionInvalid: 'The meaning is one line of up to 120 characters, with one to three main meanings of up to 40 characters each.', // PROPOSED — S5-03A Product Copy Gate
   limited: 'This experience has reached today\'s limit. Try again later.', // PROPOSED — S5-03A Product Copy Gate

@@ -47,7 +47,7 @@ export interface PublicSemanticTransport {
 export type PublicAuthoringScreen = 'CLOSED' | 'WORKSPACE' | 'CHOOSE' | 'REVIEW';
 export type PublicAuthoringNotice = 'NONE' | 'ACTION_UNAVAILABLE' | 'NOT_PUBLISHABLE' | 'APPROVALS_INCOMPLETE' | 'APPROVED' | 'WITHDRAWN'
   // S5-03A
-  | 'INTERPRETATION_UNAVAILABLE' | 'NOT_SUPPORTED' | 'QUOTES_CONTENT' | 'UNCHANGED' | 'CORRECTION_INVALID' | 'LIMITED';
+  | 'INTERPRETATION_UNAVAILABLE' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'CORRECTION_INVALID' | 'LIMITED';
 
 export interface PublicAuthoringState {
   readonly screen: PublicAuthoringScreen;
@@ -365,7 +365,7 @@ export function createPublicAuthoringController({ transport, semantic = null, is
             await loadReview(experienceId);
             publish({ correcting: false, notice: 'NONE' });
             return;
-          case 'NOT_SUPPORTED': case 'QUOTES_CONTENT': case 'UNCHANGED': case 'INTERPRETATION_UNAVAILABLE': case 'LIMITED':
+          case 'NOT_SUPPORTED': case 'UNCHANGED': case 'INTERPRETATION_UNAVAILABLE': case 'LIMITED':
             // The form stays open with the publisher's words: they can rephrase.
             publish({ notice: answer.value });
             return;

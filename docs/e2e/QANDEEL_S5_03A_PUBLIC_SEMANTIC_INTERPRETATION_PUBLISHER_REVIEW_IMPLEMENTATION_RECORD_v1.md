@@ -5,9 +5,9 @@ of the Product Owner's three S5-03 tasks)
 **Task Contract:** the Product Owner's S5-03A Task Contract (2026-10-06)
 **Canonical baseline:** `1a10127672f8db7ff475bca4732635bf88536730` (the merge of PR #315, S5-02)
 **Branch:** `feat/s5-03a-public-semantic-review`
-**Status:** **`S5-03A IMPLEMENTED — IMPLEMENTATION CANDIDATE (branch, not yet pushed) — S5-03A PRODUCT COPY GATE OPEN (22 rows PROPOSED) — NOT MERGED`**.
-Claude does not merge it. It waits for the Product Owner's go-ahead to push and open a Draft PR, independent review on
-green CI, and the Product Owner's Copy Gate decision.
+**Status:** **`S5-03A IMPLEMENTED — DRAFT PR #316 — R1 (ASSURE-F05 semantic erasure) APPLIED — S5-03A PRODUCT COPY GATE OPEN (21 rows PROPOSED) — NOT MERGED`**.
+Claude does not merge it. It waits for independent review of R1 on green CI and the Product Owner's Copy Gate decision.
+S5-03B is not started.
 
 > After READY_FOR_REVIEW, QANDEEL reads the exact immutable Public package of the exact current Experience Version — and
 > nothing else — and proposes what it means: a short meaning, its main and other themes, why it reads it so, and a lens key
@@ -25,7 +25,8 @@ green CI, and the Product Owner's Copy Gate decision.
 |---|---|
 | Baseline | `1a10127672f8db7ff475bca4732635bf88536730` — `origin/main` confirmed equal at kickoff (fetched), working tree clean, migration tip `0143_public_authoring_rights_privacy_v1.sql` |
 | Branch | `feat/s5-03a-public-semantic-review`, cut from `origin/main` |
-| Head | the commit carrying this record; the exact SHA is reported in the completion report (and in the PR once opened) |
+| Pull request | [allamqandeel/qandeel#316](https://github.com/allamqandeel/qandeel/pull/316) — Draft, NOT MERGED; first head `534e618a348adb7ddb2203f80d95e78b6227147f` |
+| Head | the commit carrying this record; the exact SHA is reported in the PR and the completion report |
 | Migration | `0144_public_semantic_interpretation_publisher_review_v1.sql` (one migration; no frozen function replaced) |
 
 ### 1.1 The execution map at kickoff (Project Map §5.1, as the Task Contract states it)
@@ -47,7 +48,7 @@ The order is unchanged; S5-03A reconciles the Project Map and Current State to i
 
 | Need | What already exists (consumed, never rebuilt) | Real gap | What S5-03A adds |
 |---|---|---|---|
-| Version-bound interpretation with additive correction | `public_experience_semantic_placements` (`0096`): bound to the exact version by composite FK, append-only (guard for every role), revision 1 `INITIAL_INTERPRETATION` ⇔ later `PUBLISHER_CORRECTION` by CHECK; the frozen writer `record_public_experience_semantic_placement_v1` (exact controller from `auth.uid()`, Experience lock, idempotent) and reader `derive_public_experience_current_placement_v1` (highest revision) | the descriptor is a lens key and a ≤ 120 label only: no themes, no explanation, no record of who produced a revision (QANDEEL or the publisher) or whether the publisher reviewed it; no application path | NO second history: every interpretation IS a `0096` revision, written only through the frozen writer. A companion relation for themes / explanation / origin, a review relation, and the work / outcome relations of the server channel (§5) |
+| Version-bound interpretation with additive correction | `public_experience_semantic_placements` (`0096`): bound to the exact version by composite FK, append-only (guard for every role), revision 1 `INITIAL_INTERPRETATION` ⇔ later `PUBLISHER_CORRECTION` by CHECK; the frozen writer `record_public_experience_semantic_placement_v1` (exact controller from `auth.uid()`, Experience lock, idempotent) and reader `derive_public_experience_current_placement_v1` (highest revision) | the descriptor is a lens key and a ≤ 120 label only: no themes, no explanation, no record of who produced a revision (QANDEEL or the publisher) or whether the publisher reviewed it; no application path | NO second history: every interpretation IS a `0096` revision, written only through the frozen writer. Because that revision is immutable for every role, it carries the revision order and two content-free constants only; the revision's content (meaning, lens key, themes, explanation) and origin live in a companion relation keyed by the revision id, where ASSURE-F05 can erase them (R1, §7). A review relation, and the work / outcome relations of the server channel (§5) |
 | Exact package, wholeness | `0091` / `0092` identity, version, immutable package; `public_package_state_v1` (`0143`) | none | consumed; a package fingerprint derived from the immutable items (§9) |
 | READY_FOR_REVIEW and the actor | `0093` / `0121` / `0143`; `require_authoring_actor_v1` (`0143`) | none | consumed; READY is the only lifecycle in which the semantic stage acts |
 | Provider-neutral AI | the conversational Model Router (`CONVERSATIONAL_RESPONSE` only) and the structured provider ports (hypothesis extraction / association), AI-COST-01 accounting wrappers | no structured semantic-interpretation contract; production provider selection is Stage 8A's | a provider-neutral `PublicSemanticInterpreter` port with a deterministic test implementation and a refusing production default (§6) |
@@ -85,30 +86,32 @@ The order is unchanged; S5-03A reconciles the Project Map and Current State to i
 
 ## 5. Schema, runtime, API and mobile changes
 
-### 5.1 Migration `0144` — `public_semantic_private` (non-exposed), four append-only relations, no account reference
+### 5.1 Migration `0144` — `public_semantic_private` (non-exposed), four append-only relations, no direct account reference
 
 | Relation | What it is |
 |---|---|
 | `semantic_work` | one requested PROPOSAL or CORRECTION of one exact version, bound to a server-derived package fingerprint; a correction names the exact revision it corrects and carries the publisher's meaning and themes |
 | `semantic_work_outcomes` | the interpreter's structured answer for one work — machine state, written by the server channel only: `PROPOSED` (lens key, meaning, themes, explanation), `CONSISTENT` (lens key) or `NOT_SUPPORTED` |
-| `semantic_interpretations` | the themes and explanation of ONE committed `0096` revision and the work that produced it: `QANDEEL_PROPOSAL` (revision 1) or `PUBLISHER_CORRECTION` |
+| `semantic_interpretations` | the content of ONE committed `0096` revision — meaning, lens key, themes, explanation — and the work that produced it: `QANDEEL_PROPOSAL` (revision 1) or `PUBLISHER_CORRECTION` |
 | `semantic_reviews` | the controller's review of ONE exact revision: `ACCEPTED` (a QANDEEL proposal) or `CORRECTED` (their own correction), by composite FK to the interpretation's origin |
 
-Every relation: RLS, no privilege for any application role, an append-only guard for every role including the owner, CHECKs
+Every relation: RLS, no privilege for any application role, an append-only guard for every role including the owner (its ONE
+exception is the one-way ASSURE-F05 erasure, re-proven inside the guard — §10), CHECKs
 mirroring the shape rules (one line, trimmed, ≤ 120 meaning / ≤ 40 theme / ≤ 280 explanation, 1–3 primary and 0–3 secondary
 distinct, disjoint themes, no identifier), and no foreign key to `public.users`, `auth.users` or `public_identities` (deploy
-assertion H6, verifier B05).
+assertion H6, verifier B05). They are not outside `QAN-BL-ACCT-01`, though: their version and `0096` placement bindings are
+`ON DELETE RESTRICT` (verifier B05a; §15).
 
 | Function | Who | What |
 |---|---|---|
 | `read_own_public_semantic_review_v1(experience)` | authenticated | the controller's review: `NOT_READY_FOR_REVIEW` / `UNAVAILABLE` / `NO_PROPOSAL` / `AWAITING_REVIEW` / `REVIEWED`, the current revision's id, revision, origin, meaning, themes, explanation, decision and `semantically_ready`. Zero rows for anyone else. No lens, no fingerprint, no account |
 | `request_own_public_semantic_proposal_v1(command, experience)` | authenticated | opens a PROPOSAL work: `WORK_OPEN` / `WORK_STAGED` / `ALREADY_INTERPRETED` / `NOT_READY_FOR_REVIEW` / `UNAVAILABLE` / `STALE` / `LIMITED` |
-| `request_own_public_semantic_correction_v1(command, experience, interpretation, meaning, primary, secondary)` | authenticated | opens a CORRECTION work: + `UNCHANGED` / `QUOTES_CONTENT` / `NO_PROPOSAL` |
+| `request_own_public_semantic_correction_v1(command, experience, interpretation, meaning, primary, secondary)` | authenticated | opens a CORRECTION work: + `UNCHANGED` / `NO_PROPOSAL` |
 | `commit_own_public_semantic_work_v1(work)` | authenticated | adopts the recorded answer of the requester's own work: `PROPOSED` / `CORRECTED` / `ALREADY_COMMITTED` / `NOT_SUPPORTED` / `PENDING` / `STALE` / `NOT_READY_FOR_REVIEW` / `UNAVAILABLE` |
 | `accept_own_public_semantic_proposal_v1(command, experience, interpretation)` | authenticated | `ACCEPTED` / `ALREADY_ACCEPTED` / `ALREADY_REVIEWED` / `STALE` / `NO_PROPOSAL` / `NOT_READY_FOR_REVIEW` / `UNAVAILABLE` |
 | `read_public_semantic_work_input_v1(work)` | service_role | the package-only input (§4) |
-| `record_public_semantic_work_outcome_v1(work, outcome, lens, meaning, primary, secondary, explanation)` | service_role | first answer wins: `RECORDED` / `ALREADY_RECORDED` / `COPIES_PACKAGE` / `STALE` / `UNAVAILABLE`; a malformed answer is refused (22023) |
-| `derive_public_semantic_readiness_v1(experience)` and 11 shape / derivation helpers | nobody | internal (§9) |
+| `record_public_semantic_work_outcome_v1(work, outcome, lens, meaning, primary, secondary, explanation)` | service_role | first answer wins: `RECORDED` / `ALREADY_RECORDED` / `STALE` / `UNAVAILABLE`; a malformed answer is refused (22023); no answer is judged by its text |
+| `derive_public_semantic_readiness_v1(experience)` and 11 shape / derivation / guard helpers (incl. the item lock and the erasure trigger function) | nobody | internal (§9, §10) |
 
 The seven exposed commands have `public` SECURITY INVOKER wrappers; every private function is a pinned postgres-owned
 SECURITY DEFINER with an empty `search_path` (H4).
@@ -181,13 +184,19 @@ PublicSemanticProposal       { meaning (≤120, one line), primaryThemes (1–3,
 PublicSemanticCorrectionAssessment  { verdict: 'CONSISTENT', placementIntent } | { verdict: 'NOT_SUPPORTED_BY_PACKAGE' }
 ```
 
-Stored: the meaning becomes the frozen `0096` `semantic_label`, the lens key its `lens_key`; themes and explanation live in
-`semantic_interpretations`. The lens key is the structured placement intent S5-03B consumes — the semantic region the meaning
-is read under, never a coordinate, an embedding, a rank or a neighbour (CW2-04 §36 keeps the exact model deferred).
+Stored (R1): the meaning, the lens key, the themes and the explanation live in `semantic_interpretations`, keyed by the
+`0096` revision id. The immutable `0096` revision receives the revision order and two fixed, content-free constants —
+`lens_key = 's5-03a.private'`, `semantic_label = 'S5-03A_PRIVATE_SEMANTIC_INTERPRETATION_V1'` — so nothing derived from the
+package is ever stored where it could not be erased. The lens key is the structured placement intent S5-03B consumes — the
+semantic region the meaning is read under, never a coordinate, an embedding, a rank or a neighbour (CW2-04 §36 keeps the
+exact model deferred).
 
-**Not a copy.** Every meaning, theme and explanation — QANDEEL's and the publisher's — is refused if it contains a
-32-character run of the package text (case and whitespace folded): a `0096` revision is immutable for every role, so a
-verbatim quotation could never be erased by owner deletion (ASSURE-F05 stays closed).
+**No text is judged by its content (R1).** The first head refused any meaning, theme or explanation containing a
+32-character run of the package text. That was a heuristic introduced by the implementation, not canonical law: it could
+miss a shorter or a split copy, and it could refuse a valid interpretation. It is removed, with its two outcomes
+(`QUOTES_CONTENT`, `COPIES_PACKAGE`) and its copy row. Privacy now rests on lineage and erasure (§10), never on a
+similarity threshold: even an answer that repeats the package verbatim is stored only where ASSURE-F05 erases it
+(verifier S08, E03).
 
 ## 8. Correction semantics
 
@@ -201,7 +210,7 @@ verbatim quotation could never be erased by owner deletion (ASSURE-F05 stays clo
   or lifecycle moves (S16); no new version is created.
 - A correction that would need different public content is not a semantic correction: it would be a new package / version
   through the frozen preparation path, which READY_FOR_REVIEW does not reopen here.
-- `UNCHANGED` (identical to the current revision) and `QUOTES_CONTENT` (copies the package text) are refused before any work.
+- `UNCHANGED` (identical to the current revision) is refused before any work.
 
 ## 9. Version binding and semantic readiness
 
@@ -227,10 +236,30 @@ verbatim quotation could never be erased by owner deletion (ASSURE-F05 stays clo
   words; ASSURE-F05 erases the package copy. Then: the review is `UNAVAILABLE` with no meaning, theme or explanation;
   readiness `PACKAGE_UNAVAILABLE`; the open work gets no input, no outcome, no commit; accept and new requests are refused.
   Nothing is rebuilt from private or sealed provenance; nothing is resurrected.
-- **Retained analytical text.** Committed interpretations of a later-erased package stay in their append-only relations (an
-  analytical derivative, CW2-02 §27) but are never served: every read is dark for a package that is no longer whole, and the
-  not-a-copy rule keeps them from holding a verbatim run of the deleted words (G08).
-- **Races** (two real connections, C01): two corrections of the same revision — one lands, the other is `STALE`.
+- **ASSURE-F05 reaches the semantic content (R1; verifier E03–E05).** The law is the S5-02 one, composed — never re-decided
+  by inspecting text. Shared owner deletion physically erases the deleted material and its transitive `MATERIAL_DEPENDENCY`
+  closure (never a `REASONING_DEPENDENCY` target), and `0143` erases every Public package item copied from an erased
+  material. Every semantic byte was produced FROM the whole package — QANDEEL read every item; a correction is assessed
+  against every item — so by lineage it is a material derivative of every item of that package. When ANY item of a package
+  is erased, an `AFTER UPDATE` trigger on the package items erases, in the same transaction and at the same instant, every
+  content-bearing semantic byte bound to a version of that package: QANDEEL's meaning, lens key, themes and explanation; the
+  committed meaning, lens key, themes and explanation; the publisher's correction words; and every package fingerprint and
+  request digest (content verifiers over the erased bytes and those words, as `0143` treats its digests). What survives is
+  audit identity only — ids, kinds, origins, outcomes, review decisions, the version binding, the `0096` revision order and
+  the instants — exactly as `0143` keeps an erased item's identity, ordinal and classification. Proven: every content column
+  of every semantic row of the Experience is NULL and stamped with the deletion instant, no row is deleted, no package text,
+  meaning, theme, lens key or correction word survives anywhere in the four relations, and the `0096` revisions are
+  unchanged because they held nothing to erase (E03); an Experience whose package nobody erased keeps its interpretation byte
+  for byte (E04); the erased content can never be written back, by any role (E05).
+- **Append-only, with one narrow exception.** The four relations stay append-only for every role. The guard admits exactly
+  one UPDATE — that relation's content columns to NULL, the erasure instant arriving, nothing else moving — and only while the
+  row's own package holds an `ERASED_BY_OWNER` item at exactly that instant, re-proven inside the guard. A hand-made
+  "erasure" without that proof is refused, and no row is inserted already erased (verifier S15a).
+- **Races** (two real connections): two corrections of the same revision — one lands, the other is `STALE` (C01). A semantic
+  write and an owner deletion serialize (C02): every writer takes the Experience row `FOR UPDATE` and then the current
+  package's items `FOR SHARE` before it reads wholeness; `0143`'s erasure updates those items, so a deletion that comes second
+  waits and then erases what the write committed, and a write that comes second reads `ERASED_BY_OWNER` and writes nothing.
+  Owner deletion never takes an Experience lock, so the item lock closes no cycle.
 
 ## 11. CW2-08 unchanged, PUBLISHED unreachable
 
@@ -256,7 +285,7 @@ other meanings) prefilled from the current understanding, with the line "a corre
 move the experience to a place you choose". No map, coordinate, lens, model, prompt or vector appears; no Public Map is
 built; no "published" state exists. Arabic and English. Hardware Back is not registered (the S5-01 rule).
 
-## 13. Product Copy Gate — **S5-03A PRODUCT COPY GATE — OPEN — 22 rows PROPOSED**
+## 13. Product Copy Gate — **S5-03A PRODUCT COPY GATE — OPEN — 21 rows PROPOSED**
 
 Census: every S5-03A user-visible string is in `apps/mobile/src/public-authoring/semantic-copy.ts`. No S5-01 / S5-02 frozen
 string was changed. Nothing is APPROVED by being written.
@@ -283,14 +312,14 @@ string was changed. Nothing is APPROVED by being written.
 | correctedState | **PROPOSED** | هذا هو الفهم بعد تصحيحك. | This is the understanding after your correction. |
 | interpretationUnavailable | **PROPOSED** | تعذّر على قنديل اقتراح فهم الآن. | QANDEEL couldn't propose an understanding right now. |
 | notSupported | **PROPOSED** | محتوى التجربة لا يدعم هذا التصحيح. يمكنك صياغته بشكل آخر. | The experience's content doesn't support this correction. You can phrase it differently. |
-| quotesContent | **PROPOSED** | اكتب المعنى بكلماتك بدل نسخ النص. | Describe the meaning in your own words rather than copying the text. |
 | unchanged | **PROPOSED** | هذا التصحيح مطابق للفهم الحالي. | This correction matches the current understanding. |
 | correctionInvalid | **PROPOSED** | المعنى سطر واحد حتى 120 حرفًا، ومن معنى أساسي إلى ثلاثة، كلٌّ منها حتى 40 حرفًا. | The meaning is one line of up to 120 characters, with one to three main meanings of up to 40 characters each. |
 | limited | **PROPOSED** | وصلت هذه التجربة إلى الحد المسموح اليوم. حاول لاحقًا. | This experience has reached today's limit. Try again later. |
 
 Notes for the Product Owner: the heading deliberately avoids «فهم قنديل» / "QANDEEL Understanding" — P1 §10's name for the
 Personal Understanding surface; the body rows use the ordinary phrase «فهم قنديل» ("QANDEEL's understanding") in running text.
-"Themes" are presented as «المعاني» / "meanings" so no internal term appears.
+"Themes" are presented as «المعاني» / "meanings" so no internal term appears. R1 withdrew the proposed `quotesContent` row
+("Describe the meaning in your own words rather than copying the text."): the refusal it named no longer exists.
 
 ## 14. Documentation reconciliation (current-truth entry points only)
 
@@ -308,10 +337,23 @@ Personal Understanding surface; the body rows use the ordinary phrase «فهم �
 
 ## 15. `QAN-BL-ACCT-01` — still `HIGH`, `OPEN — UNASSIGNED`
 
-S5-03A does not solve it and adds no account edge: its relations reference only the exact version, its works and the frozen
-placement revision — never an account or a Public Identity (H6, B05). The frozen `0096` placement it writes through carries
-the controller's existing identity reference (`RESTRICT`), exactly as I-05 froze it; an author's Personal erasure was already
-BLOCKED by S5-02's footprint and still is. **The Public World is not launch-ready**; no Launch Readiness is claimed.
+S5-03A does not solve it, and it does add to the footprint that blocker covers. No S5-03A column names an account and no
+foreign key reaches one directly (H6, B05). But S5-03A creates new dependent rows through edges that are part of the
+blocker:
+
+- **Experience Version.** `semantic_work` and `semantic_interpretations` bind `public_experience_versions`
+  `ON DELETE RESTRICT` (and the outcome and review rows hang from them), so an Experience Version that has semantic history
+  cannot be removed while that history exists.
+- **Semantic Placement.** `semantic_interpretations` (and a correction's `semantic_work`) bind
+  `public_experience_semantic_placements` `ON DELETE RESTRICT`; and every `0096` revision S5-03A writes through the frozen
+  primitive binds its recorder's Public identity and account (`recorded_by_public_identity_ref`, `recorded_by_user_id`,
+  `RESTRICT`, as I-05 froze it), as does its `0096` command row (`actor_user_id`).
+- **`ON DELETE RESTRICT` throughout.** Verifier B05a pins exactly these four edges.
+
+So an account that has received a semantic interpretation now has more `RESTRICT`-bound Public rows than after S5-02. An
+author's governed Personal erasure was already BLOCKED by S5-02's footprint and still is. These edges are recorded as part of
+the current blocker, **`QAN-BL-ACCT-01 — HIGH / OPEN`**, and S5-03A does not attempt to resolve them. **The Public World is
+not launch-ready**; no Launch Readiness is claimed.
 
 ## 16. Stage-5 Gap Matrix (S5-03A)
 
@@ -323,17 +365,18 @@ BLOCKED by S5-02's footprint and still is. **The Public World is not launch-read
 | G04 | The S5-02 record still carries its pre-merge banner ("NOT MERGED") | 5 — observe / report | historical record kept as written, per this Task Contract §16; a governance reconciliation may update it if the Product Owner wants (BG-09) |
 | G05 | The S5-02 record's copy table renders the reused English refusal as "That couldn't be done right now."; the frozen string is "That didn't work right now." | 5 — observe / report | historical text; the code was always correct |
 | G06 | Semantic readiness is semantic only: an approval withdrawn after READY (S5-02 G15) does not change it; publication revalidation (`0095`) and the Stage-9 path compose both | 5 — not an obligation now | Stage 9 / CW2-08 consumes readiness beside the approval state |
-| G07 | The lens-key vocabulary is the interpreter's (a bounded slug), not a frozen taxonomy | 4 assigned | S5-03B — the exact semantic model and geometry (CW2-04 §36) |
-| G08 | Interpretations of a later-erased package are retained (append-only, analytical) but never served | 5 — by design | CW2-02 §27; the not-a-copy rule bounds what they can hold |
+| G07 | The lens-key vocabulary is the interpreter's (a bounded slug), not a frozen taxonomy; it lives in the erasable private row | 4 assigned | S5-03B — the exact semantic model and geometry (CW2-04 §36) |
+| G08 | The content of an interpretation of a later-erased package is physically erased with it (R1); only its audit identity survives | 5 — by design | ASSURE-F05 / CW2-02 §27, composed with the S5-02 erasure law (§10) |
 | G09 | Themes are free text in the publisher's language | 4 assigned | S5-03B (cross-language semantic proximity is the field's) |
-| G10 | The S5-03A Product Copy Gate | 1 current-task gate — OPEN | §13 — 22 rows PROPOSED for the Product Owner (BG-01) |
+| G10 | The S5-03A Product Copy Gate | 1 current-task gate — OPEN | §13 — 21 rows PROPOSED for the Product Owner (BG-01) |
 | G11 | Export My Data does not include the semantic footprint | 3 existing owner | `E2E-D-16` (world-scoped export `NOT YET INCLUDED`) |
 | G12 | Public semantic field, FAR / MID / NEAR, camera, search / lens / panel UI | 4 assigned | S5-03B |
 | G13 | Explicit Public relations, relation lines, integrity closure | 4 assigned | S5-03C |
 | G14 | Discussion, replies, Public QANDEEL participation, Public Activity / Push | 4 assigned | S5-04 |
 | G15 | `PUBLISHED`, CW2-08, Safety / moderation, entitlement, signed-out viewing | 3 existing owner | `CW2-08` / `I-09` / Stage 9 — unchanged |
-| G16 | Account deletion across Connected Worlds | 3 existing item | `QAN-BL-ACCT-01` (unchanged, §15) |
+| G16 | Account deletion across Connected Worlds — S5-03A adds Experience Version and Semantic Placement dependents, `ON DELETE RESTRICT` | 3 existing item | `QAN-BL-ACCT-01` — `HIGH / OPEN`, scope unchanged, the new edges recorded (§15) |
 | G17 | Public Voice, Replay | 3 existing items | `QAN-BL-VOICE-01` / Stage 8B; Stage 7 |
+| G18 | The frozen I-05 public readers (`0097` search / lens projection, the `0096` placement resolver) read the `0096` descriptor, which S5-03A now fills with content-free constants (R1); the reviewed meaning and lens key live in the erasable S5-03A row | 4 assigned | S5-03B consumes the lens key through the S5-03A boundary (never the raw placement); the Stage-9 publication path must serve the S5-03A meaning, never the `0096` constant. Nothing is public today (`PUBLISHED` is unreachable) |
 
 **Orphan gaps = 0** — every row has class 1–5 and a named owner or disposition.
 
@@ -354,7 +397,7 @@ as one batch.
 
 | Check | Result |
 |---|---|
-| `0144` applies; its deploy-time self-assertions (H1–H7) pass | PASS |
+| `0144` applies; its deploy-time self-assertions (H1–H8) pass | PASS |
 | `database/verify-migration-0144.mjs` — boundary, PUBLIC PACKAGE ONLY, flow, version binding, erasure, launch closure, concurrency | PASS (first run) |
 | neighbouring verifiers on the same database: `0091`–`0099`, `0121`, `0142`, `0143` | 12 / 12 PASS |
 | every database verifier API CI runs, in CI order, on a fresh database with `0144` | 140 PASS; `0130` and `0133` C (§19 F11, F12); 8 non-database steps skipped |
@@ -366,7 +409,22 @@ as one batch.
 | mobile Jest focused (`src/public-authoring`, `src/public-world`, `src/runtime-entry`) | 283 / 283 |
 | mobile Jest (full) | 185 suites; 2196 / 2202 — the 6 failures are the recorded local-locale baseline in `w2-account-access` and `depth` (§19 F13), untouched by S5-03A |
 | root static contracts (`tests/*.test.mjs`, with the ignored `apps/mobile/android` moved aside), incl. the new S5-03A contract (10 / 10), the re-anchored S5-02 contract, the task-closure governance contract and the forward-safety mirror | 1197 / 1197 |
-| API CI, Mobile CI | not run: the branch is not pushed yet |
+| API CI, Mobile CI on the first head `534e618` | reported in Draft PR #316 |
+
+**R1 — targeted validation after the ASSURE-F05 correction** (local real PostgreSQL 17.10, the same harness; full suites and
+native proof loops were not re-run, by the Product Owner's instruction):
+
+| Check | Result |
+|---|---|
+| `0144` applies on a fresh pre-`0144` database; H1–H8 pass | PASS |
+| `database/verify-migration-0144.mjs` incl. S08 (no text judged), S10 / S13b (constants in `0096`, content in the private row), S15a (no borrowed erasure, no erased insert), E03–E05 (erasure, scoping, one way), C02 (write vs deletion race), B05a / B05b | PASS |
+| mutation check: the erasure trigger function emptied → E03 fails; the item lock emptied → C02 fails | both caught |
+| verifiers touching the package items or owner deletion, on the same database: `0090`, `0092`, `0093`, `0096`, `0100`, `0101`, `0103`, `0104`, `0122`, `0143` | 10 / 10 PASS |
+| the root static contracts that read any changed path (21 files, incl. S5-01 / S5-02 / S5-03A, task-closure governance, forward-safety mirror; `apps/mobile/android` moved aside as before) | 21 / 21 files PASS |
+| database static tests that read `0144` / `0096` / `0097` | 41 / 41 |
+| API focused (`src/public-world`, `src/http-security` incl. the route census) | 120 / 120 |
+| mobile focused (`src/public-authoring`, `src/public-world`, `src/runtime-entry`) | 283 / 283 |
+| API and mobile `tsc --noEmit` | PASS |
 
 ## 19. Failure classification (A Product / Security · B Validation / Proof · C Infrastructure)
 
@@ -384,6 +442,7 @@ as one batch.
 | F10 | `t12p-mobile-runtime-entry` contract: my mobile test deep-imported `runtime-entry/public-semantic-api` | B | the test reaches the client the way the app does: `PublicWorldApiClient(...).semantic` through the barrel |
 | F11 | `verify-migration-0130` locally: `days <= 7` | C | the clock-skew flake already reproduced without `0143` by S5-02 (database vs Node clock on Windows); no change |
 | F12 | `verify-migration-0133` locally | C | it shells out to `psql`, absent here; CI has it |
-| F13 | mobile Jest: 6 tests in `w2-account-access` / `depth` | C | the local-locale baseline (the machine renders Arabic where those tests expect English labels); recorded in the S4 / S5 sessions; unrelated suites |
+| F13 | mobile Jest: 6 tests in `w2-account-access` / `depth` | B — Validation / Baseline | the local-locale baseline (the machine renders Arabic where those tests expect English labels); recorded in the S4 / S5 sessions; unrelated suites. Reclassified from C by the Product Owner (R1): there is no evidence that it is infrastructure |
+| F14 | the first head's 32-character "not a copy" rule as the ASSURE-F05 guarantee for immutable semantic history | A — Product / Privacy (independent review R1) | a heuristic, not canonical law: it could miss a short or split copy while the history is append-only. Corrected: nothing derived from the package enters the immutable `0096` revision; every content-bearing semantic byte is erased with the package by lineage (§7, §10) |
 
-No Product or Security defect was found in the frozen runtime.
+No Product or Security defect was found in the frozen runtime. F14 was a defect of this task's own first head, corrected in R1.

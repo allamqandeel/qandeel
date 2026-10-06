@@ -24,7 +24,7 @@ export type PublicSemanticReview =
   };
 export type PublicSemanticProposalOutcome = 'PROPOSED' | 'ALREADY_INTERPRETED' | 'INTERPRETATION_UNAVAILABLE' | 'STALE' | 'UNAVAILABLE'
   | 'NOT_READY_FOR_REVIEW' | 'LIMITED';
-export type PublicSemanticCorrectionOutcome = 'CORRECTED' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'QUOTES_CONTENT' | 'INTERPRETATION_UNAVAILABLE'
+export type PublicSemanticCorrectionOutcome = 'CORRECTED' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'INTERPRETATION_UNAVAILABLE'
   | 'STALE' | 'NO_PROPOSAL' | 'UNAVAILABLE' | 'NOT_READY_FOR_REVIEW' | 'LIMITED';
 export type PublicSemanticAcceptOutcome = 'ACCEPTED' | 'ALREADY_ACCEPTED' | 'ALREADY_REVIEWED' | 'STALE' | 'NO_PROPOSAL' | 'NOT_READY_FOR_REVIEW'
   | 'UNAVAILABLE';
@@ -90,7 +90,7 @@ export class PublicSemanticApiClient {
       commandId, interpretationId, meaning: correction.meaning, primaryThemes: [...correction.primaryThemes], secondaryThemes: [...correction.secondaryThemes],
     });
     if (answer.kind !== 'OK') return NO;
-    const outcome = oneOf(answer.body, 'outcome', ['CORRECTED', 'NOT_SUPPORTED', 'UNCHANGED', 'QUOTES_CONTENT', 'INTERPRETATION_UNAVAILABLE',
+    const outcome = oneOf(answer.body, 'outcome', ['CORRECTED', 'NOT_SUPPORTED', 'UNCHANGED', 'INTERPRETATION_UNAVAILABLE',
       'STALE', 'NO_PROPOSAL', 'UNAVAILABLE', 'NOT_READY_FOR_REVIEW', 'LIMITED'] as const);
     return outcome ? yes(outcome) : NO;
   }

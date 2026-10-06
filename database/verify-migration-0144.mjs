@@ -5,7 +5,7 @@
 //      INVOKER wrapper; `authenticated` executes exactly the five owner commands, the server channel exactly the two
 //      server commands, anon nothing, and no internal derivation is reachable; no owner command accepts an account, a
 //      ref, a controller, an authority, a lifecycle, a visibility, a readiness, a fingerprint, a lens, a coordinate, a
-//      rank or a vector; the four relations are private, RLS-enabled, append-only and reference no account; no frozen
+//      rank or a vector; the four relations are private, RLS-enabled, append-only and reference no account directly; no frozen
 //      I-05 primitive became application-executable; no S5-03A body names anything beyond the exact public package;
 //   2. PUBLIC PACKAGE ONLY: the interpreter's whole input is exactly the package items of the exact version — never the
 //      Personal conversation, a hidden Shared material, the publisher's Public ID or display label;
@@ -13,13 +13,18 @@
 //      one neutral answer and writes nothing; QANDEEL's proposal becomes revision 1 (INITIAL_INTERPRETATION) only through
 //      the server channel and the requester's own commit; accept binds the exact revision; a correction is checked by
 //      QANDEEL and becomes the next revision (PUBLISHER_CORRECTION) with QANDEEL's lens key; NOT_SUPPORTED writes
-//      nothing; history is append-only; idempotent retries; a malformed or copying interpreter answer is refused;
+//      nothing; history is append-only; idempotent retries; a malformed interpreter answer is refused; no text is judged
+//      by its content, and nothing derived from the package enters the immutable 0096 revision;
 //   4. version binding: readiness is SEMANTICALLY_READY only for the reviewed CURRENT revision of the exact current
 //      version and package; a raw frozen revision is UNREVIEWED; a successor version carries nothing over; no semantic act
 //      moves a version, package, approval, controller or lifecycle;
 //   5. erasure: an ASSURE-F05 owner deletion makes the package not whole — the review shows no meaning, readiness is
 //      PACKAGE_UNAVAILABLE, no input is served, no outcome is recorded, no commit or accept lands, nothing is rebuilt;
-//   6. concurrency, on real connections: two corrections of the same revision — one lands, the other is STALE;
+//      and in the same transaction every content-bearing semantic byte derived from that package (meaning, lens key,
+//      themes, explanation, the publisher's correction words, every fingerprint and request digest) is physically
+//      erased at the deletion instant, one way, while the audit identity survives; a package nobody erased keeps its own;
+//   6. concurrency, on real connections: two corrections of the same revision — one lands, the other is STALE; a
+//      semantic write and an owner deletion serialize, and content written first is erased by the deletion that follows;
 //   7. launch closure: the seam still answers NOT_EVALUATED; nothing can publish; the interpretation is served to nobody.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -46,7 +51,7 @@ const SERVER_COMMANDS = {
 };
 const INTERNAL = ['semantic_text_is_well_formed_v1', 'semantic_themes_are_well_formed_v1', 'semantic_themes_are_disjoint_v1',
   'reject_semantic_history_mutation_v1', 'derive_semantic_identity_v1', 'derive_package_fingerprint_v1',
-  'resolve_semantic_target_v1', 'copies_package_text_v1', 'interpretation_copies_package_v1', 'derive_work_request_ref_v1',
+  'resolve_semantic_target_v1', 'lock_current_package_v1', 'erase_package_semantic_content_v1', 'derive_work_request_ref_v1',
   'work_admissibility_v1', 'derive_public_semantic_readiness_v1'];
 const RELATIONS = ['semantic_work', 'semantic_work_outcomes', 'semantic_interpretations', 'semantic_reviews'];
 const FROZEN = ['public.record_public_experience_semantic_placement_v1(uuid, uuid, uuid, uuid, text, text)',
@@ -96,6 +101,23 @@ const semanticCount = async (table, experience) => {
         : `${SCHEMA}.semantic_reviews x JOIN ${SCHEMA}.semantic_interpretations i ON i.placement_id = x.placement_id WHERE i.experience_id = $1`;
   return Number((await own(`SELECT count(*) n FROM ${join}`, [experience]))[0].n);
 };
+
+/** The fixed, content-free descriptor S5-03A writes into the immutable 0096 revision. */
+const FROZEN_DESCRIPTOR = ['s5-03a.private', 'S5-03A_PRIVATE_SEMANTIC_INTERPRETATION_V1'];
+const content = async (placement) => {
+  const [r] = await own(`SELECT meaning, lens_key, primary_themes, secondary_themes, explanation FROM ${SCHEMA}.semantic_interpretations
+    WHERE placement_id = $1`, [placement]);
+  return r ? [r.meaning, r.lens_key, r.primary_themes, r.secondary_themes, r.explanation] : null;
+};
+/** Every semantic row of one Experience, every column, as JSON - for "no byte survived" proofs. */
+const semanticRows = async (experience) => own(`
+  SELECT 'work' t, to_jsonb(w) j FROM ${SCHEMA}.semantic_work w WHERE w.experience_id = $1
+  UNION ALL SELECT 'outcome', to_jsonb(o) FROM ${SCHEMA}.semantic_work_outcomes o JOIN ${SCHEMA}.semantic_work w ON w.id = o.work_id WHERE w.experience_id = $1
+  UNION ALL SELECT 'interpretation', to_jsonb(i) FROM ${SCHEMA}.semantic_interpretations i WHERE i.experience_id = $1
+  UNION ALL SELECT 'review', to_jsonb(r) FROM ${SCHEMA}.semantic_reviews r JOIN ${SCHEMA}.semantic_interpretations i ON i.placement_id = r.placement_id
+    WHERE i.experience_id = $1`, [experience]);
+const CONTENT_COLUMNS = ['package_fingerprint', 'request_ref', 'correction_meaning', 'correction_primary_themes', 'correction_secondary_themes',
+  'lens_key', 'meaning', 'primary_themes', 'secondary_themes', 'explanation'];
 
 const PROPOSAL = Object.freeze({
   lens: 'family.fear', meaning: 'Fear for a family while work feels uncertain',
@@ -159,7 +181,21 @@ async function verifyBoundary() {
   const accountEdges = await rows(`SELECT c.conname FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid
     JOIN pg_namespace n ON n.oid = t.relnamespace WHERE n.nspname = $1 AND c.contype = 'f'
       AND c.confrelid IN ('public.users'::regclass, 'auth.users'::regclass, 'public.public_identities'::regclass)`, [SCHEMA]);
-  assert.deepEqual(accountEdges, [], 'B05 no semantic relation references an account or a Public identity (QAN-BL-ACCT-01 gains no edge)');
+  assert.deepEqual(accountEdges, [], 'B05 no semantic relation references an account or a Public identity directly');
+  // B05a ...but they are NOT outside QAN-BL-ACCT-01: the version and 0096 placement bindings are ON DELETE RESTRICT, and
+  //       the placement binds its recorder's account. Recorded, not resolved, here.
+  const restrictEdges = await rows(`SELECT t.relname, c.confrelid::regclass::text target, c.confdeltype FROM pg_constraint c
+    JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace
+    WHERE n.nspname = $1 AND c.contype = 'f' AND c.confrelid IN ('public.public_experience_versions'::regclass,
+      'public.public_experience_semantic_placements'::regclass) ORDER BY 1, 2`, [SCHEMA]);
+  assert.deepEqual(restrictEdges.map((e) => `${e.relname} → ${e.target} ${e.confdeltype}`), [
+    'semantic_interpretations → public_experience_semantic_placements r', 'semantic_interpretations → public_experience_versions r',
+    'semantic_work → public_experience_semantic_placements r', 'semantic_work → public_experience_versions r',
+  ], 'B05a the semantic relations bind the Experience Version and the 0096 placement ON DELETE RESTRICT (QAN-BL-ACCT-01)');
+  const [erasureTrigger] = await rows(`SELECT tg.tgenabled FROM pg_trigger tg WHERE NOT tg.tgisinternal
+    AND tg.tgrelid = 'public.publication_package_manifest_items'::regclass AND tg.tgfoid = $1::regprocedure`,
+  [`${SCHEMA}.erase_package_semantic_content_v1()`]);
+  assert.equal(erasureTrigger?.tgenabled, 'O', 'B05b an ASSURE-F05 package erasure reaches the semantic content (AFTER UPDATE trigger)');
   const columns = await rows(`SELECT a.attname FROM pg_attribute a JOIN pg_class c ON c.oid = a.attrelid JOIN pg_namespace n ON n.oid = c.relnamespace
     WHERE n.nspname = $1 AND a.attnum > 0 AND NOT a.attisdropped`, [SCHEMA]);
   for (const { attname } of columns) {
@@ -312,11 +348,13 @@ async function verifyFlow(f) {
   }
   assert.equal(await semanticCount('semantic_work_outcomes', f.exp), 0, 'S07 and nothing was recorded');
 
-  // S08 an answer that copies the package text is not an interpretation.
-  const quote = f.packageTexts[0].length >= 32 ? f.packageTexts[0] : `${f.packageTexts[0]} ${f.packageTexts[1]}`;
-  assert.equal(await record(work, 'PROPOSED', PROPOSAL.lens, quote.slice(0, 120).trim(), PROPOSAL.primary, PROPOSAL.secondary, PROPOSAL.explanation),
-    quote.length >= 32 ? 'COPIES_PACKAGE' : 'RECORDED', 'S08');
-  assert.equal(await semanticCount('semantic_work_outcomes', f.exp), 0, 'S08 a copying answer records nothing');
+  // S08 no answer is judged by its text: privacy rests on where it is stored (erasable by ASSURE-F05, E03), not on a
+  //     similarity threshold. Even an answer that repeats the package verbatim is recorded - and erased with it.
+  const quote = f.packageTexts[0].slice(0, 120).trim();
+  await q('SAVEPOINT verbatim');
+  assert.equal(await record(work, 'PROPOSED', PROPOSAL.lens, quote, PROPOSAL.primary, PROPOSAL.secondary, PROPOSAL.explanation), 'RECORDED', 'S08');
+  await q('ROLLBACK TO SAVEPOINT verbatim'); await q('RELEASE SAVEPOINT verbatim');
+  assert.equal(await semanticCount('semantic_work_outcomes', f.exp), 0);
 
   // S09 the interpreter's answer: first answer wins.
   assert.equal(await record(work, 'PROPOSED', PROPOSAL.lens, PROPOSAL.meaning, PROPOSAL.primary, PROPOSAL.secondary, PROPOSAL.explanation), 'RECORDED');
@@ -335,8 +373,10 @@ async function verifyFlow(f) {
   assert.deepEqual(await commitWork(f.mohamed, work), { ...committed, outcome: 'ALREADY_COMMITTED' }, 'S10 an equivalent retry');
   const [revision1] = await placements(f.version);
   assert.deepEqual([revision1.id, revision1.placement_revision, revision1.placement_basis, revision1.lens_key, revision1.semantic_label, revision1.recorded_by_user_id],
-    [committed.interpretation_id, 1, 'INITIAL_INTERPRETATION', PROPOSAL.lens, PROPOSAL.meaning, f.mohamed],
-    'S10 QANDEEL\'s proposal is the frozen INITIAL_INTERPRETATION of the exact version');
+    [committed.interpretation_id, 1, 'INITIAL_INTERPRETATION', ...FROZEN_DESCRIPTOR, f.mohamed],
+    'S10 QANDEEL\'s proposal is the frozen INITIAL_INTERPRETATION of the exact version, and the immutable row holds nothing derived from the package');
+  assert.deepEqual(await content(committed.interpretation_id), [PROPOSAL.meaning, PROPOSAL.lens, PROPOSAL.primary, PROPOSAL.secondary, PROPOSAL.explanation],
+    'S10 the content of revision 1 lives in the erasable private row, keyed by the 0096 revision');
   assert.deepEqual(await requestProposal(f.mohamed, randomUUID(), f.exp), { outcome: 'ALREADY_INTERPRETED', work_id: null }, 'S10');
 
   // S11 the controller's review: QANDEEL's proposal, awaiting review.
@@ -381,10 +421,6 @@ async function verifyFlow(f) {
   assert.equal((await requestCorrection(f.hadir, randomUUID(), f.exp, committed.interpretation_id, ...valid)).outcome, 'UNAVAILABLE', 'S13 not the controller');
   assert.equal((await requestCorrection(f.mohamed, randomUUID(), f.exp, committed.interpretation_id, PROPOSAL.meaning, PROPOSAL.primary, PROPOSAL.secondary)).outcome,
     'UNCHANGED', 'S13 identical to the current revision');
-  if (quote.length >= 32) {
-    assert.equal((await requestCorrection(f.mohamed, randomUUID(), f.exp, committed.interpretation_id, quote.slice(0, 120).trim(), ['fear'], [])).outcome,
-      'QUOTES_CONTENT', 'S13 a correction is a meaning, not a copy of the text');
-  }
   assert.equal(await semanticCount('semantic_work', f.exp), 1, 'S13 no refused correction wrote anything');
 
   // S13a QANDEEL finds the correction unsupported by the package: nothing is written.
@@ -414,9 +450,13 @@ async function verifyFlow(f) {
   assert.deepEqual([corrected.outcome, corrected.interpretation_revision], ['CORRECTED', 2], 'S13b');
   const history = await placements(f.version);
   assert.deepEqual(history.map((p) => [p.placement_revision, p.placement_basis, p.lens_key, p.semantic_label]), [
-    [1, 'INITIAL_INTERPRETATION', PROPOSAL.lens, PROPOSAL.meaning],
-    [2, 'PUBLISHER_CORRECTION', 'parenthood.fear', valid[0]],
+    [1, 'INITIAL_INTERPRETATION', ...FROZEN_DESCRIPTOR],
+    [2, 'PUBLISHER_CORRECTION', ...FROZEN_DESCRIPTOR],
   ], 'S13b append-only: revision 1 is untouched, the correction is revision 2');
+  assert.deepEqual(await content(corrected.interpretation_id), [valid[0], 'parenthood.fear', valid[1], valid[2], null],
+    'S13b the correction\'s words and QANDEEL\'s lens key live in the erasable private row');
+  assert.deepEqual(await content(committed.interpretation_id), [PROPOSAL.meaning, PROPOSAL.lens, PROPOSAL.primary, PROPOSAL.secondary, PROPOSAL.explanation],
+    'S13b revision 1\'s content is untouched');
   const [afterCorrection] = await review(f.mohamed, f.exp);
   assert.deepEqual([afterCorrection.semantic_state, afterCorrection.interpretation_origin, afterCorrection.meaning, afterCorrection.primary_themes,
     afterCorrection.secondary_themes, afterCorrection.explanation, afterCorrection.review_decision, afterCorrection.semantically_ready],
@@ -443,8 +483,17 @@ async function verifyFlow(f) {
     `UPDATE ${SCHEMA}.semantic_interpretations SET primary_themes = '{other}' WHERE placement_id = '${committed.interpretation_id}'`,
     `DELETE FROM ${SCHEMA}.semantic_reviews WHERE placement_id = '${committed.interpretation_id}'`,
     `UPDATE ${T.PLACEMENTS} SET semantic_label = 'rewritten' WHERE id = '${committed.interpretation_id}'`,
+    // S15a the erasure exception cannot be borrowed: no erased item proves it, so a hand-made "erasure" is refused...
+    `UPDATE ${SCHEMA}.semantic_reviews SET package_fingerprint = NULL, request_ref = NULL, content_erased_at = now() WHERE placement_id = '${committed.interpretation_id}'`,
+    `UPDATE ${SCHEMA}.semantic_interpretations SET meaning = NULL, lens_key = NULL, primary_themes = NULL, secondary_themes = NULL,
+       explanation = NULL, package_fingerprint = NULL, content_erased_at = now() WHERE placement_id = '${committed.interpretation_id}'`,
+    // ...and no row is ever inserted already erased.
+    `INSERT INTO ${SCHEMA}.semantic_work (id, work_kind, experience_id, experience_version_id, requested_at, content_erased_at)
+       VALUES ('${randomUUID()}', 'PROPOSAL', '${f.exp}', '${f.version}', now(), now())`,
   ]) {
+    await q('SAVEPOINT s15');
     await rejected(() => q(statement), ['55000'], null);
+    await q('ROLLBACK TO SAVEPOINT s15'); await q('RELEASE SAVEPOINT s15');
   }
 
   // S16 version binding: nothing a semantic act did moved a version, package, approval, controller or lifecycle.
@@ -490,9 +539,59 @@ async function verifyErasure(f, flow) {
   const pending = await requestCorrection(f.mohamed, randomUUID(), f.exp, flow.current, 'Keeping going for the family', ['family'], ['resolve']);
   assert.equal(pending.outcome, 'WORK_OPEN');
   assert.ok((await input(pending.work_id)).length > 0);
+  // A second READY_FOR_REVIEW Experience whose package holds only Mohamed's own sentence, with a committed interpretation.
+  const other = await startDraft(f.mohamed);
+  assert.equal(await prepareOwn(f.mohamed, other, [f.userUnit], NONE, NONE), 'PREPARED');
+  const [{ m: otherManifest }] = await own(`SELECT v.package_manifest_version_id m FROM ${T.EXPERIENCES} e
+    JOIN ${T.VERSIONS} v ON v.id = e.current_experience_version_id WHERE e.id = $1`, [other]);
+  assert.equal(await approveOwn(f.mohamed, otherManifest), 'APPROVED');
+  assert.equal(await readyOwn(f.mohamed, other), 'READY_FOR_REVIEW');
+  const otherWork = (await requestProposal(f.mohamed, randomUUID(), other)).work_id;
+  assert.equal(await record(otherWork, 'PROPOSED', PROPOSAL.lens, PROPOSAL.meaning, PROPOSAL.primary, PROPOSAL.secondary, PROPOSAL.explanation), 'RECORDED');
+  const otherInterpretation = (await commitWork(f.mohamed, otherWork)).interpretation_id;
+  const otherBefore = await semanticRows(other);
+  const shapeBefore = (await semanticRows(f.exp)).length;
+  const placementsBefore = await placements(f.version);
   // Hadir deletes her own words: ASSURE-F05 erases their Public copy in the same transaction.
   await asRole('postgres'); await actAs(f.hadir);
   assert.equal((await rt.deleteMaterial(randomUUID(), f.world, f.hadirMaterial, randomUUID()))[0].outcome, 'MATERIAL_DELETED');
+  const [{ instant }] = await own(`SELECT max(content_erased_at) instant FROM ${T.ITEMS} WHERE manifest_version_id = $1 AND content_state = 'ERASED_BY_OWNER'`, [f.manifest]);
+  assert.ok(instant, 'E00 the package item copied from Hadir\'s words was erased (0143)');
+  // E03 in the SAME transaction, every content-bearing semantic byte derived from that package is gone - QANDEEL's
+  //     meaning, lens key, themes and explanation, the publisher's correction words, and every digest over them - at
+  //     exactly the deletion instant. The audit identity survives: the same rows, ids, kinds, outcomes, decisions.
+  const erased = await semanticRows(f.exp);
+  assert.equal(erased.length, shapeBefore, 'E03 no row was deleted: the audit identity is kept');
+  for (const { t, j } of erased) {
+    for (const column of CONTENT_COLUMNS) {
+      if (column in j) assert.equal(j[column], null, `E03 ${t}.${column} is erased`);
+    }
+    assert.equal(new Date(j.content_erased_at).getTime(), new Date(instant).getTime(), `E03 ${t} was erased at the deletion instant`);
+  }
+  const everything = JSON.stringify(erased);
+  for (const text of [...f.packageTexts, PROPOSAL.meaning, PROPOSAL.explanation, PROPOSAL.lens, 'A parent afraid of losing work',
+    'Keeping going for the family', 'parenthood.fear', 'Worry for children and work']) {
+    assert.ok(!everything.includes(text), `E03 no semantic byte survives (${text.slice(0, 24)}…)`);
+  }
+  assert.deepEqual(new Set(erased.filter((r) => r.t === 'review').map((r) => r.j.decision)), new Set(['ACCEPTED', 'CORRECTED']),
+    'E03 the review decisions survive as audit identity');
+  assert.deepEqual(await placements(f.version), placementsBefore, 'E03 the immutable 0096 revisions are unchanged - and held nothing to erase');
+  for (const p of placementsBefore) assert.deepEqual([p.lens_key, p.semantic_label], FROZEN_DESCRIPTOR);
+  // E04 lineage decides, nothing else: a package nobody erased keeps its own interpretation, byte for byte.
+  assert.deepEqual(await semanticRows(other), otherBefore, 'E04 the interpretation of an unerased package is untouched');
+  assert.deepEqual(await content(otherInterpretation), [PROPOSAL.meaning, PROPOSAL.lens, PROPOSAL.primary, PROPOSAL.secondary, PROPOSAL.explanation]);
+  // E05 one way: the erased content can never be written back, by any role, the owner included.
+  await asRole('postgres');
+  for (const statement of [
+    `UPDATE ${SCHEMA}.semantic_interpretations SET meaning = 'restored', content_erased_at = NULL WHERE experience_id = '${f.exp}'`,
+    `UPDATE ${SCHEMA}.semantic_work_outcomes SET explanation = 'restored' WHERE work_id IN (SELECT id FROM ${SCHEMA}.semantic_work WHERE experience_id = '${f.exp}')`,
+    `UPDATE ${SCHEMA}.semantic_work SET content_erased_at = now() WHERE experience_id = '${f.exp}'`,
+    `DELETE FROM ${SCHEMA}.semantic_reviews WHERE placement_id IN (SELECT placement_id FROM ${SCHEMA}.semantic_interpretations WHERE experience_id = '${f.exp}')`,
+  ]) {
+    await q('SAVEPOINT e05');
+    await rejected(() => q(statement), ['55000', '23514'], null);
+    await q('ROLLBACK TO SAVEPOINT e05'); await q('RELEASE SAVEPOINT e05');
+  }
   // E01 the review shows nothing of the interpretation, and readiness fails closed.
   assert.deepEqual((await review(f.mohamed, f.exp)).map((r) => [r.semantic_state, r.meaning, r.primary_themes, r.explanation, r.semantically_ready]),
     [['UNAVAILABLE', null, null, null, false]], 'E01 no meaning is presented over a package that is no longer whole');
@@ -576,6 +675,30 @@ async function verifyConcurrency() {
     await asRole('postgres');
     assert.deepEqual((await placements((await own(`SELECT current_experience_version_id v FROM ${T.EXPERIENCES} WHERE id = $1`, [exp]))[0].v))
       .map((p) => p.placement_revision), [1, 2], 'C01 exactly one correction is history');
+
+    // C02 a semantic write and the owner's deletion, on two connections: the write holds the package items FOR SHARE,
+    //     the deletion queues behind it, and once it proceeds it erases what was written first - never content beside
+    //     an erased package.
+    const late = await requestCorrection(f.mohamed, randomUUID(), exp, won.interpretation_id, 'Quiet fear about work', ['fear'], []);
+    assert.equal(late.outcome, 'WORK_OPEN');
+    await asRole('postgres');
+    await q('BEGIN'); await q('SET LOCAL ROLE service_role');
+    const [written] = (await q('SELECT * FROM public.record_public_semantic_work_outcome_v1($1, $2, $3, $4, $5::text[], $6::text[], $7)',
+      [late.work_id, 'CONSISTENT', 'fear.work', null, null, null, null])).rows;
+    assert.equal(written.outcome, 'RECORDED');
+    await q2('BEGIN'); await actAs2(f.mohamed);
+    const deleting = q2('SELECT * FROM public.delete_shared_world_owned_material_v1($1, $2, $3, $4)', [randomUUID(), f.world, f.own, randomUUID()]);
+    assert.equal(await rt.stillPending(deleting), true, 'C02 the deletion queues behind the semantic write\'s item lock');
+    await q('COMMIT');
+    assert.equal((await deleting).rows[0].outcome, 'MATERIAL_DELETED');
+    await q2('COMMIT');
+    await asRole('postgres');
+    const afterRace = await semanticRows(exp);
+    assert.ok(afterRace.length > 0);
+    for (const { t, j } of afterRace) {
+      assert.ok(j.content_erased_at, `C02 ${t} written before the deletion was erased by it`);
+      assert.ok(!JSON.stringify(j).includes('fear.work') && !JSON.stringify(j).includes('Quiet fear about work'), `C02 nothing of ${t} survives`);
+    }
   } finally {
     await close();
     await asRole('postgres');
@@ -620,5 +743,5 @@ await runVerifier('0144', async (stage) => {
   }
   stage('concurrency');
   await verifyConcurrency();
-  console.log('Verified migration 0144: the interpreter sees exactly the public package of the exact version and nothing else; only the exact controller reviews; QANDEEL\'s proposal enters only through the server channel and becomes revision 1 (INITIAL_INTERPRETATION) on the requester\'s own commit; accept binds the exact revision; a correction is the publisher\'s words, checked by QANDEEL against the package, and becomes the next revision with QANDEEL\'s lens key; history is append-only; a malformed or copying answer is refused; readiness is derived for the exact reviewed current revision of the exact version and package and fails closed after an erasure, on a raw revision and on a successor; a concurrent correction of a superseded revision is STALE; nothing can publish and the seam answers NOT_EVALUATED.');
+  console.log('Verified migration 0144: the interpreter sees exactly the public package of the exact version and nothing else; only the exact controller reviews; QANDEEL\'s proposal enters only through the server channel and becomes revision 1 (INITIAL_INTERPRETATION) on the requester\'s own commit; accept binds the exact revision; a correction is the publisher\'s words, checked by QANDEEL against the package, and becomes the next revision with QANDEEL\'s lens key; history is append-only; a malformed answer is refused and no text is judged by its content; nothing derived from the package enters the immutable 0096 revision; an ASSURE-F05 owner deletion erases, in the same transaction and at the same instant, every content-bearing semantic byte derived from that package while the audit identity survives, a package nobody erased keeps its own, and a racing semantic write is erased by the deletion that follows it; readiness is derived for the exact reviewed current revision of the exact version and package and fails closed after an erasure, on a raw revision and on a successor; a concurrent correction of a superseded revision is STALE; nothing can publish and the seam answers NOT_EVALUATED.');
 }, async () => { await rt.client.end().catch(() => undefined); });

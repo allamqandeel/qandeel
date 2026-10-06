@@ -21,8 +21,9 @@
 --     and `PUBLISHER_CORRECTION` for every later one, written ONLY through the frozen
 --     `record_public_experience_semantic_placement_v1` (exact controller from auth.uid(), Experience lock), and read
 --     ONLY through the frozen `derive_public_experience_current_placement_v1` (the highest revision). Revision 1 is
---     QANDEEL's proposal; a publisher correction is the next revision. The frozen descriptor (`lens_key`,
---     `semantic_label` ≤ 120) carries the meaning and the structured placement intent S5-03B will consume;
+--     QANDEEL's proposal; a publisher correction is the next revision. The frozen revision is IMMUTABLE for every role,
+--     so it carries the revision order and nothing derived from the package: its descriptor (`lens_key`,
+--     `semantic_label`) receives two fixed, content-free constants (see ASSURE-F05 below);
 --   * the S5-02 actor gate (`require_authoring_actor_v1`) and package wholeness (`public_package_state_v1`: an
 --     ASSURE-F05-erased item, a missing body or a source the ONE 0093 derivation no longer accepts is not whole).
 --
@@ -36,12 +37,13 @@
 --   semantic_work_outcomes      the interpreter's structured answer for one work (machine state): PROPOSED (meaning,
 --                               primary / secondary themes, a publisher-facing explanation, a lens key), CONSISTENT (a
 --                               correction the package supports, with the lens key QANDEEL maps it to) or NOT_SUPPORTED;
---   semantic_interpretations    the themes and explanation of one committed 0096 revision, and which work produced it
---                               (QANDEEL_PROPOSAL ⇔ revision 1, PUBLISHER_CORRECTION ⇔ a later revision);
+--   semantic_interpretations    the meaning, lens key, themes and explanation of one committed 0096 revision, and which
+--                               work produced it (QANDEEL_PROPOSAL ⇔ revision 1, PUBLISHER_CORRECTION ⇔ a later revision);
 --   semantic_reviews            the publisher's review of one exact revision: ACCEPTED (a QANDEEL proposal) or
 --                               CORRECTED (the publisher's own correction, reviewed by its making).
--- The frozen descriptor has no room for themes or an explanation and records no review; those are the only reasons
--- these relations exist. There is no second interpretation history: the revision order IS the 0096 one.
+-- The content of a revision lives here, keyed by the 0096 revision id, because only here can ASSURE-F05 erase it; the
+-- frozen relation records no review either. There is no second interpretation history: the revision order IS the 0096
+-- one, and no row here exists without its 0096 revision.
 --
 -- ---------------------------------------------------------------------------------------------------------------------
 -- PUBLIC PACKAGE ONLY — structural, not a prompt instruction (CW2-04 §12 / D14, D12)
@@ -75,11 +77,33 @@
 -- correction: it is a new package through the frozen preparation path, which READY_FOR_REVIEW does not reopen here.
 --
 -- ---------------------------------------------------------------------------------------------------------------------
--- NOT A COPY (ASSURE-F05 stays closed)
+-- ASSURE-F05: SEMANTIC CONTENT FOLLOWS THE ERASURE OF THE PACKAGE IT WAS DERIVED FROM (CW2-02 §27, S5-02 R1)
 -- ---------------------------------------------------------------------------------------------------------------------
--- A 0096 revision is immutable for every role, so it could never be erased if it quoted a human's words. Every meaning,
--- theme and explanation — QANDEEL's and the publisher's — is therefore refused if it contains a 32-character run of the
--- package text (case and whitespace folded). An interpretation is an analytical derivative (CW2-02 §27), not a copy.
+-- The erasure law is the S5-02 one, composed, never re-decided by inspecting text. Shared owner deletion physically
+-- erases the deleted material and its transitive MATERIAL_DEPENDENCY closure (never a REASONING_DEPENDENCY target), and
+-- 0143 erases every Public package item copied from an erased material (CONTENT_PRESENT → ERASED_BY_OWNER). Every
+-- semantic byte here was produced FROM the bytes of the whole package — QANDEEL read every item, and a publisher's
+-- correction is assessed against every item — so by lineage it is a material derivative of every item of that package.
+-- Therefore, when ANY item of a package is erased, the same transaction erases, at the same instant, every content-
+-- bearing semantic byte bound to that package:
+--   semantic_work              the publisher's correction words; the package fingerprint and request ref (digests
+--                              over the erased bytes and those words — content verifiers, like the 0143 digests);
+--   semantic_work_outcomes     QANDEEL's lens key, meaning, themes and explanation;
+--   semantic_interpretations   the committed meaning, lens key, themes, explanation and package fingerprint;
+--   semantic_reviews           the package fingerprint and request ref.
+-- What survives is reasoning / audit identity only, exactly as 0143 keeps an erased item's identity, ordinal and
+-- classification: ids, kinds, origins, outcomes, decisions, the version binding, the 0096 revision order and the
+-- instants. No text is inspected, no threshold is applied: whether something is erased depends on lineage alone.
+-- Nothing derived from the package enters the immutable 0096 revision, so nothing there could ever outlive an erasure:
+-- its lens key and label are the constants `s5-03a.private` and `S5-03A_PRIVATE_SEMANTIC_INTERPRETATION_V1`.
+-- The four relations stay append-only for every role; the ONE permitted UPDATE is that one-way erasure, re-proven
+-- inside the guard from canonical truth (an ERASED_BY_OWNER item of the row's own package, at the row's erasure
+-- instant). There is no way back and no replacement text.
+--
+-- RACE: every writer here takes the exact Experience row FOR UPDATE and then the package items of the current version
+-- FOR SHARE before it reads wholeness. 0143's erasure UPDATEs those items, so a writer and an erasure serialize: an
+-- erasure that holds the items first makes the writer read ERASED_BY_OWNER and write nothing; a writer that holds them
+-- first commits before the erasure proceeds, and the erasure then erases what it wrote.
 --
 -- ---------------------------------------------------------------------------------------------------------------------
 -- STALE AND ERASED
@@ -92,9 +116,11 @@
 -- ---------------------------------------------------------------------------------------------------------------------
 -- Lock order
 -- ---------------------------------------------------------------------------------------------------------------------
--- Every writer takes the exact Experience row FOR UPDATE (step 2 of the canonical order) and then writes its own family
--- only — the same lock the frozen placement primitive takes inside the same transaction. None takes the Public World
--- singleton: none moves a lifecycle or widens an audience.
+-- Every writer takes the exact Experience row FOR UPDATE (step 2 of the canonical order), then the current package's
+-- items FOR SHARE, and then writes its own family only — the same Experience lock the frozen placement primitive takes
+-- inside the same transaction. None takes the Public World singleton: none moves a lifecycle or widens an audience.
+-- Owner deletion never takes an Experience lock, so the item lock adds no cycle: the deletion holds the World and
+-- waits on the items; a writer holds the Experience and the items and waits on nothing the deletion holds.
 --
 -- What stays impossible, and is asserted at the end: PUBLISHED, the CW2-08 seam (still NOT_EVALUATED), any frozen I-05
 -- primitive for an application role, discussion, Public QANDEEL, coordinates.
@@ -136,31 +162,39 @@ LANGUAGE sql IMMUTABLE SECURITY DEFINER SET search_path = '' AS $$
 $$;
 
 -- =====================================================================================================================
--- B. THE FOUR APPEND-ONLY RELATIONS. No account reference anywhere (QAN-BL-ACCT-01 gains no new edge).
+-- B. THE FOUR APPEND-ONLY RELATIONS. No column names an account, and no foreign key reaches one directly. They are
+--    NOT outside QAN-BL-ACCT-01: every relation binds an Experience Version, and semantic_interpretations /
+--    semantic_work bind a 0096 Semantic Placement, all ON DELETE RESTRICT — and that placement binds its recorder's
+--    Public identity and account (0096, ON DELETE RESTRICT). Those edges are part of the open blocker, unresolved here.
 -- =====================================================================================================================
 CREATE TABLE public_semantic_private.semantic_work (
     id uuid NOT NULL,
     work_kind text NOT NULL,
     experience_id uuid NOT NULL,
     experience_version_id uuid NOT NULL,
-    package_fingerprint text NOT NULL,
+    package_fingerprint text,
     corrects_placement_id uuid,
     correction_meaning text,
     correction_primary_themes text[],
     correction_secondary_themes text[],
-    request_ref text NOT NULL,
+    request_ref text,
     requested_at timestamptz NOT NULL,
+    content_erased_at timestamptz,
     CONSTRAINT semantic_work_pk PRIMARY KEY (id),
     CONSTRAINT semantic_work_kind_key UNIQUE (id, work_kind),
     CONSTRAINT semantic_work_kind_check CHECK (work_kind IN ('PROPOSAL', 'CORRECTION')),
     CONSTRAINT semantic_work_fingerprint_check CHECK (package_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
     CONSTRAINT semantic_work_request_check CHECK (request_ref ~ '^sha256:[0-9a-f]{64}$'),
-    -- A correction names the exact revision it corrects and carries the publisher's own words; a proposal carries none.
+    CONSTRAINT semantic_work_corrects_check CHECK ((work_kind = 'CORRECTION') = (corrects_placement_id IS NOT NULL)),
+    -- A correction carries the publisher's own words; a proposal carries none. ASSURE-F05 erases the words and both
+    -- digests, one way, and nothing else.
     CONSTRAINT semantic_work_shape_check CHECK (
-      CASE work_kind
-        WHEN 'PROPOSAL' THEN corrects_placement_id IS NULL AND correction_meaning IS NULL
-                             AND correction_primary_themes IS NULL AND correction_secondary_themes IS NULL
-        ELSE corrects_placement_id IS NOT NULL
+      CASE
+        WHEN content_erased_at IS NOT NULL THEN package_fingerprint IS NULL AND request_ref IS NULL
+             AND correction_meaning IS NULL AND correction_primary_themes IS NULL AND correction_secondary_themes IS NULL
+        WHEN work_kind = 'PROPOSAL' THEN package_fingerprint IS NOT NULL AND request_ref IS NOT NULL
+             AND correction_meaning IS NULL AND correction_primary_themes IS NULL AND correction_secondary_themes IS NULL
+        ELSE package_fingerprint IS NOT NULL AND request_ref IS NOT NULL
              AND public_semantic_private.semantic_text_is_well_formed_v1(correction_meaning, 120)
              AND public_semantic_private.semantic_themes_are_well_formed_v1(correction_primary_themes, 1, 3)
              AND public_semantic_private.semantic_themes_are_well_formed_v1(correction_secondary_themes, 0, 3)
@@ -190,6 +224,7 @@ CREATE TABLE public_semantic_private.semantic_work_outcomes (
     explanation text,
     interpreter_contract text NOT NULL,
     produced_at timestamptz NOT NULL,
+    content_erased_at timestamptz,
     CONSTRAINT semantic_work_outcomes_pk PRIMARY KEY (work_id),
     CONSTRAINT semantic_work_outcomes_work_fk
         FOREIGN KEY (work_id, work_kind) REFERENCES public_semantic_private.semantic_work (id, work_kind) ON DELETE RESTRICT,
@@ -200,14 +235,16 @@ CREATE TABLE public_semantic_private.semantic_work_outcomes (
       OR (work_kind = 'CORRECTION' AND outcome IN ('CONSISTENT', 'NOT_SUPPORTED'))),
     CONSTRAINT semantic_work_outcomes_lens_check CHECK (lens_key IS NULL OR lens_key ~ '^[a-z0-9][a-z0-9_.-]{0,63}$'),
     CONSTRAINT semantic_work_outcomes_shape_check CHECK (
-      CASE outcome
-        WHEN 'PROPOSED' THEN lens_key IS NOT NULL
+      CASE
+        WHEN content_erased_at IS NOT NULL THEN lens_key IS NULL AND meaning IS NULL AND primary_themes IS NULL
+             AND secondary_themes IS NULL AND explanation IS NULL
+        WHEN outcome = 'PROPOSED' THEN lens_key IS NOT NULL
              AND public_semantic_private.semantic_text_is_well_formed_v1(meaning, 120)
              AND public_semantic_private.semantic_themes_are_well_formed_v1(primary_themes, 1, 3)
              AND public_semantic_private.semantic_themes_are_well_formed_v1(secondary_themes, 0, 3)
              AND public_semantic_private.semantic_themes_are_disjoint_v1(primary_themes, secondary_themes)
              AND public_semantic_private.semantic_text_is_well_formed_v1(explanation, 280)
-        WHEN 'CONSISTENT' THEN lens_key IS NOT NULL AND meaning IS NULL AND primary_themes IS NULL
+        WHEN outcome = 'CONSISTENT' THEN lens_key IS NOT NULL AND meaning IS NULL AND primary_themes IS NULL
              AND secondary_themes IS NULL AND explanation IS NULL
         ELSE lens_key IS NULL AND meaning IS NULL AND primary_themes IS NULL AND secondary_themes IS NULL
              AND explanation IS NULL
@@ -225,25 +262,35 @@ CREATE TABLE public_semantic_private.semantic_interpretations (
     experience_id uuid NOT NULL,
     experience_version_id uuid NOT NULL,
     origin text NOT NULL,
-    primary_themes text[] NOT NULL,
-    secondary_themes text[] NOT NULL,
+    meaning text,
+    lens_key text,
+    primary_themes text[],
+    secondary_themes text[],
     explanation text,
-    package_fingerprint text NOT NULL,
+    package_fingerprint text,
     recorded_at timestamptz NOT NULL,
+    content_erased_at timestamptz,
     CONSTRAINT semantic_interpretations_pk PRIMARY KEY (placement_id),
     CONSTRAINT semantic_interpretations_work_key UNIQUE (work_id),
     CONSTRAINT semantic_interpretations_origin_key UNIQUE (placement_id, origin),
     CONSTRAINT semantic_interpretations_origin_check CHECK (origin IN ('QANDEEL_PROPOSAL', 'PUBLISHER_CORRECTION')),
     CONSTRAINT semantic_interpretations_origin_kind_check CHECK ((origin = 'QANDEEL_PROPOSAL') = (work_kind = 'PROPOSAL')),
-    -- QANDEEL explains its proposal to the publisher; a publisher's own correction needs no explanation.
-    CONSTRAINT semantic_interpretations_explanation_check CHECK (
-      CASE origin WHEN 'QANDEEL_PROPOSAL' THEN public_semantic_private.semantic_text_is_well_formed_v1(explanation, 280)
-                  ELSE explanation IS NULL END),
-    CONSTRAINT semantic_interpretations_themes_check CHECK (
-      public_semantic_private.semantic_themes_are_well_formed_v1(primary_themes, 1, 3)
-      AND public_semantic_private.semantic_themes_are_well_formed_v1(secondary_themes, 0, 3)
-      AND public_semantic_private.semantic_themes_are_disjoint_v1(primary_themes, secondary_themes)),
+    CONSTRAINT semantic_interpretations_lens_check CHECK (lens_key ~ '^[a-z0-9][a-z0-9_.-]{0,63}$'),
     CONSTRAINT semantic_interpretations_fingerprint_check CHECK (package_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
+    -- The content of the revision: a meaning (≤ 120), QANDEEL's lens key, themes, and — for QANDEEL's proposal only —
+    -- its explanation to the publisher. ASSURE-F05 erases all of it and the fingerprint, one way, and nothing else.
+    CONSTRAINT semantic_interpretations_shape_check CHECK (
+      CASE
+        WHEN content_erased_at IS NOT NULL THEN meaning IS NULL AND lens_key IS NULL AND primary_themes IS NULL
+             AND secondary_themes IS NULL AND explanation IS NULL AND package_fingerprint IS NULL
+        ELSE package_fingerprint IS NOT NULL AND lens_key IS NOT NULL
+             AND public_semantic_private.semantic_text_is_well_formed_v1(meaning, 120)
+             AND public_semantic_private.semantic_themes_are_well_formed_v1(primary_themes, 1, 3)
+             AND public_semantic_private.semantic_themes_are_well_formed_v1(secondary_themes, 0, 3)
+             AND public_semantic_private.semantic_themes_are_disjoint_v1(primary_themes, secondary_themes)
+             AND CASE origin WHEN 'QANDEEL_PROPOSAL' THEN public_semantic_private.semantic_text_is_well_formed_v1(explanation, 280)
+                             ELSE explanation IS NULL END
+      END),
     CONSTRAINT semantic_interpretations_placement_fk
         FOREIGN KEY (placement_id) REFERENCES public.public_experience_semantic_placements (id) ON DELETE RESTRICT,
     CONSTRAINT semantic_interpretations_work_fk
@@ -254,22 +301,27 @@ CREATE TABLE public_semantic_private.semantic_interpretations (
 );
 
 COMMENT ON TABLE public_semantic_private.semantic_interpretations IS
-  'S5-03A: the themes and explanation of ONE committed revision of the frozen 0096 semantic placement, and the work '
-  'that produced it. QANDEEL_PROPOSAL is revision 1 (INITIAL_INTERPRETATION); PUBLISHER_CORRECTION a later revision.';
+  'S5-03A: the content (meaning, lens key, themes, explanation) of ONE committed revision of the frozen 0096 semantic '
+  'placement, and the work that produced it. QANDEEL_PROPOSAL is revision 1 (INITIAL_INTERPRETATION); '
+  'PUBLISHER_CORRECTION a later revision. ASSURE-F05 erases the content with the package it was derived from.';
 
 CREATE TABLE public_semantic_private.semantic_reviews (
     placement_id uuid NOT NULL,
     origin text NOT NULL,
     decision text NOT NULL,
-    package_fingerprint text NOT NULL,
-    request_ref text NOT NULL,
+    package_fingerprint text,
+    request_ref text,
     reviewed_at timestamptz NOT NULL,
+    content_erased_at timestamptz,
     CONSTRAINT semantic_reviews_pk PRIMARY KEY (placement_id),
     CONSTRAINT semantic_reviews_decision_check CHECK (decision IN ('ACCEPTED', 'CORRECTED')),
     -- A QANDEEL proposal is accepted; a publisher correction is reviewed by its making. Never crossed.
     CONSTRAINT semantic_reviews_decision_origin_check CHECK ((decision = 'ACCEPTED') = (origin = 'QANDEEL_PROPOSAL')),
     CONSTRAINT semantic_reviews_fingerprint_check CHECK (package_fingerprint ~ '^sha256:[0-9a-f]{64}$'),
     CONSTRAINT semantic_reviews_request_check CHECK (request_ref ~ '^sha256:[0-9a-f]{64}$'),
+    CONSTRAINT semantic_reviews_shape_check CHECK (
+      (content_erased_at IS NULL AND package_fingerprint IS NOT NULL AND request_ref IS NOT NULL)
+      OR (content_erased_at IS NOT NULL AND package_fingerprint IS NULL AND request_ref IS NULL)),
     CONSTRAINT semantic_reviews_interpretation_fk
         FOREIGN KEY (placement_id, origin)
         REFERENCES public_semantic_private.semantic_interpretations (placement_id, origin) ON DELETE RESTRICT
@@ -279,24 +331,101 @@ COMMENT ON TABLE public_semantic_private.semantic_reviews IS
   'S5-03A: the exact controller''s review of ONE exact interpretation revision: ACCEPTED (QANDEEL''s proposal) or '
   'CORRECTED (their own truth-constrained correction). Append-only. Readiness is derived from it, never stored.';
 
--- B.1 Append-only, for every role including the table owner.
+-- B.1 Append-only, for every role including the table owner. The ONE permitted UPDATE is the ASSURE-F05 erasure:
+--     exactly this relation's content columns go to NULL, the erasure instant arrives, NOTHING else moves, and the row's
+--     own package holds an item erased by its owner at exactly that instant — proven here, never trusted from a caller.
+--     A row is never inserted already erased, and is never deleted.
 CREATE FUNCTION public_semantic_private.reject_semantic_history_mutation_v1()
 RETURNS trigger
 LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+DECLARE
+  v_content text[];
+  v_version uuid;
 BEGIN
+  IF TG_OP = 'INSERT' THEN
+    IF NEW.content_erased_at IS NULL THEN
+      RETURN NEW;
+    END IF;
+  ELSIF TG_OP = 'UPDATE' AND OLD.content_erased_at IS NULL AND NEW.content_erased_at IS NOT NULL THEN
+    v_content := CASE TG_TABLE_NAME
+      WHEN 'semantic_work' THEN ARRAY['package_fingerprint', 'request_ref', 'correction_meaning',
+                                      'correction_primary_themes', 'correction_secondary_themes']
+      WHEN 'semantic_work_outcomes' THEN ARRAY['lens_key', 'meaning', 'primary_themes', 'secondary_themes', 'explanation']
+      WHEN 'semantic_interpretations' THEN ARRAY['meaning', 'lens_key', 'primary_themes', 'secondary_themes', 'explanation',
+                                                 'package_fingerprint']
+      WHEN 'semantic_reviews' THEN ARRAY['package_fingerprint', 'request_ref'] END;
+    v_version := CASE TG_TABLE_NAME
+      WHEN 'semantic_work_outcomes' THEN (SELECT w.experience_version_id FROM public_semantic_private.semantic_work w
+                                           WHERE w.id = (to_jsonb(OLD) ->> 'work_id')::uuid)
+      WHEN 'semantic_reviews' THEN (SELECT i.experience_version_id FROM public_semantic_private.semantic_interpretations i
+                                     WHERE i.placement_id = (to_jsonb(OLD) ->> 'placement_id')::uuid)
+      ELSE (to_jsonb(OLD) ->> 'experience_version_id')::uuid END;
+    IF v_content IS NOT NULL
+       AND (to_jsonb(NEW) - v_content - 'content_erased_at') = (to_jsonb(OLD) - v_content - 'content_erased_at')
+       AND NOT EXISTS (SELECT 1 FROM jsonb_each(to_jsonb(NEW)) c WHERE c.key = ANY(v_content) AND c.value <> 'null'::jsonb)
+       AND EXISTS (SELECT 1 FROM public.public_experience_versions v
+                     JOIN public.publication_package_manifest_items it ON it.manifest_version_id = v.package_manifest_version_id
+                    WHERE v.id = v_version AND it.content_state = 'ERASED_BY_OWNER'
+                      AND it.content_erased_at = NEW.content_erased_at) THEN
+      RETURN NEW;
+    END IF;
+  END IF;
   RAISE EXCEPTION 'PUBLIC_SEMANTIC_HISTORY_IS_IMMUTABLE'
     USING ERRCODE = '55000',
-          DETAIL = 'Semantic work, outcomes, interpretations and reviews are append-only: a correction is a new revision.';
+          DETAIL = 'Semantic work, outcomes, interpretations and reviews are append-only: a correction is a new revision. '
+                   'The ONE exception (ASSURE-F05) is the one-way erasure of the content derived from a package one of '
+                   'whose items its owner''s deletion erased, at that exact instant.';
 END$$;
 
-CREATE TRIGGER semantic_work_immutable BEFORE UPDATE OR DELETE ON public_semantic_private.semantic_work
+CREATE TRIGGER semantic_work_immutable BEFORE INSERT OR UPDATE OR DELETE ON public_semantic_private.semantic_work
     FOR EACH ROW EXECUTE FUNCTION public_semantic_private.reject_semantic_history_mutation_v1();
-CREATE TRIGGER semantic_work_outcomes_immutable BEFORE UPDATE OR DELETE ON public_semantic_private.semantic_work_outcomes
+CREATE TRIGGER semantic_work_outcomes_immutable BEFORE INSERT OR UPDATE OR DELETE ON public_semantic_private.semantic_work_outcomes
     FOR EACH ROW EXECUTE FUNCTION public_semantic_private.reject_semantic_history_mutation_v1();
-CREATE TRIGGER semantic_interpretations_immutable BEFORE UPDATE OR DELETE ON public_semantic_private.semantic_interpretations
+CREATE TRIGGER semantic_interpretations_immutable BEFORE INSERT OR UPDATE OR DELETE ON public_semantic_private.semantic_interpretations
     FOR EACH ROW EXECUTE FUNCTION public_semantic_private.reject_semantic_history_mutation_v1();
-CREATE TRIGGER semantic_reviews_immutable BEFORE UPDATE OR DELETE ON public_semantic_private.semantic_reviews
+CREATE TRIGGER semantic_reviews_immutable BEFORE INSERT OR UPDATE OR DELETE ON public_semantic_private.semantic_reviews
     FOR EACH ROW EXECUTE FUNCTION public_semantic_private.reject_semantic_history_mutation_v1();
+
+-- B.2 THE ERASURE. When 0143 erases ANY item of a package (CONTENT_PRESENT → ERASED_BY_OWNER, inside the owner's
+--     deletion), every content-bearing semantic byte bound to a version of that package is erased in the same
+--     transaction, at the same instant. Lineage decides, never the text: every such byte was derived from the whole
+--     package. Rows already erased are left as they are.
+CREATE FUNCTION public_semantic_private.erase_package_semantic_content_v1()
+RETURNS trigger
+LANGUAGE plpgsql SECURITY DEFINER SET search_path = '' AS $$
+BEGIN
+  UPDATE public_semantic_private.semantic_reviews r
+     SET package_fingerprint = NULL, request_ref = NULL, content_erased_at = NEW.content_erased_at
+    FROM public_semantic_private.semantic_interpretations i
+    JOIN public.public_experience_versions v ON v.id = i.experience_version_id
+   WHERE r.placement_id = i.placement_id AND v.package_manifest_version_id = NEW.manifest_version_id
+     AND r.content_erased_at IS NULL;
+  UPDATE public_semantic_private.semantic_interpretations i
+     SET meaning = NULL, lens_key = NULL, primary_themes = NULL, secondary_themes = NULL, explanation = NULL,
+         package_fingerprint = NULL, content_erased_at = NEW.content_erased_at
+    FROM public.public_experience_versions v
+   WHERE v.id = i.experience_version_id AND v.package_manifest_version_id = NEW.manifest_version_id
+     AND i.content_erased_at IS NULL;
+  UPDATE public_semantic_private.semantic_work_outcomes o
+     SET lens_key = NULL, meaning = NULL, primary_themes = NULL, secondary_themes = NULL, explanation = NULL,
+         content_erased_at = NEW.content_erased_at
+    FROM public_semantic_private.semantic_work w
+    JOIN public.public_experience_versions v ON v.id = w.experience_version_id
+   WHERE o.work_id = w.id AND v.package_manifest_version_id = NEW.manifest_version_id
+     AND o.content_erased_at IS NULL;
+  UPDATE public_semantic_private.semantic_work w
+     SET package_fingerprint = NULL, request_ref = NULL, correction_meaning = NULL, correction_primary_themes = NULL,
+         correction_secondary_themes = NULL, content_erased_at = NEW.content_erased_at
+    FROM public.public_experience_versions v
+   WHERE v.id = w.experience_version_id AND v.package_manifest_version_id = NEW.manifest_version_id
+     AND w.content_erased_at IS NULL;
+  RETURN NULL;
+END$$;
+
+CREATE TRIGGER publication_package_item_erasure_reaches_semantics
+    AFTER UPDATE OF content_state ON public.publication_package_manifest_items
+    FOR EACH ROW WHEN (OLD.content_state = 'CONTENT_PRESENT' AND NEW.content_state = 'ERASED_BY_OWNER')
+    EXECUTE FUNCTION public_semantic_private.erase_package_semantic_content_v1();
 
 -- =====================================================================================================================
 -- C. INTERNAL DERIVATIONS. Executable by no application role.
@@ -356,43 +485,21 @@ BEGIN
   target_state := CASE WHEN package_fingerprint IS NULL THEN 'PACKAGE_UNAVAILABLE' ELSE 'CURRENT' END;
 END$$;
 
--- C.4 NOT A COPY: does this text contain a 32-character run of the package text (case and whitespace folded)?
-CREATE FUNCTION public_semantic_private.copies_package_text_v1(p_text text, p_manifest_version_id uuid)
-RETURNS boolean
-LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = '' AS $$
-DECLARE
-  v_needle text := lower(regexp_replace(btrim(coalesce(p_text, '')), '\s+', ' ', 'g'));
-  v_haystack text;
-  v_at integer;
+-- C.4 THE RACE WITH AN ERASURE: lock the items of the Experience's current package FOR SHARE. Called by every writer
+--     right after the Experience lock and before it reads wholeness. 0143's erasure UPDATEs these rows, so the two
+--     serialize (see the header): a writer never commits content beside a package an erasure already took.
+CREATE FUNCTION public_semantic_private.lock_current_package_v1(p_experience_id uuid)
+RETURNS void
+LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
 BEGIN
-  IF length(v_needle) < 32 THEN
-    RETURN false;
-  END IF;
-  SELECT string_agg(lower(regexp_replace(btrim(b.public_text_body), '\s+', ' ', 'g')), E'\n' ORDER BY it.item_ordinal)
-    INTO v_haystack
-    FROM public.publication_package_manifest_items it
-    JOIN public.public_experience_text_derivative_bodies b ON b.package_item_id = it.package_item_id
-   WHERE it.manifest_version_id = p_manifest_version_id;
-  IF v_haystack IS NULL THEN
-    RETURN false;
-  END IF;
-  FOR v_at IN 1 .. length(v_needle) - 31 LOOP
-    IF strpos(v_haystack, substr(v_needle, v_at, 32)) > 0 THEN
-      RETURN true;
-    END IF;
-  END LOOP;
-  RETURN false;
+  PERFORM 1
+     FROM public.publication_package_manifest_items it
+     JOIN public.public_experience_versions v ON v.package_manifest_version_id = it.manifest_version_id
+     JOIN public.public_experiences e ON e.current_experience_version_id = v.id
+    WHERE e.id = p_experience_id
+    ORDER BY it.package_item_id
+      FOR SHARE OF it;
 END$$;
-
-CREATE FUNCTION public_semantic_private.interpretation_copies_package_v1(
-  p_meaning text, p_primary text[], p_secondary text[], p_explanation text, p_manifest_version_id uuid)
-RETURNS boolean
-LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
-  SELECT public_semantic_private.copies_package_text_v1(p_meaning, p_manifest_version_id)
-      OR public_semantic_private.copies_package_text_v1(p_explanation, p_manifest_version_id)
-      OR EXISTS (SELECT 1 FROM unnest(coalesce(p_primary, '{}'::text[]) || coalesce(p_secondary, '{}'::text[])) t
-                  WHERE public_semantic_private.copies_package_text_v1(t, p_manifest_version_id));
-$$;
 
 -- C.5 The request identity of one work: the actor, the kind, the exact target and package, and (for a correction) the
 --     exact revision corrected and digests of the publisher's words. A commit re-derives it from auth.uid(), so only the
@@ -436,7 +543,7 @@ BEGIN
   IF t.target_state = 'NOT_READY_FOR_REVIEW' OR t.target_state = 'UNAVAILABLE' OR t.target_state = 'PACKAGE_UNAVAILABLE' THEN
     RETURN 'UNAVAILABLE';
   END IF;
-  IF t.experience_version_id <> v_work.experience_version_id OR t.package_fingerprint <> v_work.package_fingerprint THEN
+  IF t.experience_version_id <> v_work.experience_version_id OR t.package_fingerprint IS DISTINCT FROM v_work.package_fingerprint THEN
     RETURN 'STALE';
   END IF;
   SELECT cp.placement_id INTO v_current FROM public.derive_public_experience_current_placement_v1(v_work.experience_version_id) cp;
@@ -481,7 +588,7 @@ BEGIN
     RETURN QUERY SELECT 'NOT_READY'::text, 'UNREVIEWED_REVISION'::text, t.experience_version_id, cp.placement_id, cp.placement_revision;
     RETURN;
   END IF;
-  IF v_interpretation.package_fingerprint <> t.package_fingerprint THEN
+  IF v_interpretation.package_fingerprint IS DISTINCT FROM t.package_fingerprint THEN
     RETURN QUERY SELECT 'NOT_READY'::text, 'STALE'::text, t.experience_version_id, cp.placement_id, cp.placement_revision;
     RETURN;
   END IF;
@@ -490,7 +597,7 @@ BEGIN
     RETURN QUERY SELECT 'NOT_READY'::text, 'AWAITING_REVIEW'::text, t.experience_version_id, cp.placement_id, cp.placement_revision;
     RETURN;
   END IF;
-  IF v_review.package_fingerprint <> t.package_fingerprint THEN
+  IF v_review.package_fingerprint IS DISTINCT FROM t.package_fingerprint THEN
     RETURN QUERY SELECT 'NOT_READY'::text, 'STALE'::text, t.experience_version_id, cp.placement_id, cp.placement_revision;
     RETURN;
   END IF;
@@ -562,7 +669,7 @@ BEGIN
   SELECT d.readiness = 'SEMANTICALLY_READY' INTO v_ready FROM public_semantic_private.derive_public_semantic_readiness_v1(p_experience_id) d;
   RETURN QUERY SELECT CASE WHEN v_decision IS NULL THEN 'AWAITING_REVIEW' ELSE 'REVIEWED' END::text,
                       t.current_lifecycle, t.version_ordinal, cp.placement_id, cp.placement_revision, v_interpretation.origin,
-                      cp.semantic_label, v_interpretation.primary_themes, v_interpretation.secondary_themes,
+                      v_interpretation.meaning, v_interpretation.primary_themes, v_interpretation.secondary_themes,
                       v_interpretation.explanation, v_decision, coalesce(v_ready, false);
 END$$;
 
@@ -592,6 +699,7 @@ BEGIN
   v_work := public_semantic_private.derive_semantic_identity_v1('WORK', v_user, p_command_id);
   -- CANONICAL LOCK ORDER, STEP 2: the exact Experience.
   PERFORM 1 FROM public.public_experiences e WHERE e.id = p_experience_id FOR UPDATE;
+  PERFORM public_semantic_private.lock_current_package_v1(p_experience_id);
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.public_experience_controllers c
                                WHERE c.experience_id = p_experience_id AND c.controller_user_id = v_user) THEN
     RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::uuid;
@@ -629,7 +737,7 @@ BEGIN
     RETURN;
   END IF;
   IF v_retry THEN
-    IF v_existing.request_ref <> v_request THEN
+    IF v_existing.request_ref IS DISTINCT FROM v_request THEN
       RETURN QUERY SELECT 'STALE'::text, NULL::uuid;
       RETURN;
     END IF;
@@ -652,8 +760,8 @@ END$$;
 --     primary / 0–3 secondary themes. Never a coordinate, a location, a rank, a weight, a neighbour or a vector — the
 --     signature has no room for one. QANDEEL then assesses the correction against the same package (server channel)
 --     and D.4 commits it only when it is CONSISTENT.
---       WORK_OPEN | WORK_STAGED | UNCHANGED (identical to the current revision) | QUOTES_CONTENT (copies the package
---       text: an interpretation is not a copy) | NO_PROPOSAL | STALE (not the current revision) |
+--       WORK_OPEN | WORK_STAGED | UNCHANGED (identical to the current revision) | NO_PROPOSAL |
+--       STALE (not the current revision) |
 --       NOT_READY_FOR_REVIEW | UNAVAILABLE | LIMITED
 CREATE FUNCTION public_semantic_private.request_own_public_semantic_correction_v1(
   p_command_id uuid, p_experience_id uuid, p_interpretation_id uuid, p_meaning text, p_primary_themes text[],
@@ -679,6 +787,7 @@ BEGIN
   END IF;
   v_work := public_semantic_private.derive_semantic_identity_v1('WORK', v_user, p_command_id);
   PERFORM 1 FROM public.public_experiences e WHERE e.id = p_experience_id FOR UPDATE;
+  PERFORM public_semantic_private.lock_current_package_v1(p_experience_id);
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.public_experience_controllers c
                                WHERE c.experience_id = p_experience_id AND c.controller_user_id = v_user) THEN
     RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::uuid;
@@ -701,7 +810,7 @@ BEGIN
   v_request := public_semantic_private.derive_work_request_ref_v1(v_user, 'CORRECTION', p_experience_id, t.experience_version_id,
                  t.package_fingerprint, p_interpretation_id, p_meaning, p_primary_themes, p_secondary_themes);
   IF v_retry THEN
-    IF v_existing.request_ref <> v_request THEN
+    IF v_existing.request_ref IS DISTINCT FROM v_request THEN
       RAISE EXCEPTION 'PUBLIC_SEMANTIC_COMMAND_ID_CONFLICT' USING ERRCODE = '23505';
     END IF;
     IF EXISTS (SELECT 1 FROM public_semantic_private.semantic_work_outcomes o WHERE o.work_id = v_existing.id) THEN
@@ -728,14 +837,9 @@ BEGIN
     RETURN QUERY SELECT 'WORK_OPEN'::text, v_existing.id;
     RETURN;
   END IF;
-  IF p_meaning = cp.semantic_label AND p_primary_themes = v_interpretation.primary_themes
+  IF p_meaning = v_interpretation.meaning AND p_primary_themes = v_interpretation.primary_themes
      AND p_secondary_themes = v_interpretation.secondary_themes THEN
     RETURN QUERY SELECT 'UNCHANGED'::text, NULL::uuid;
-    RETURN;
-  END IF;
-  IF public_semantic_private.interpretation_copies_package_v1(p_meaning, p_primary_themes, p_secondary_themes, NULL,
-                                                              t.manifest_version_id) THEN
-    RETURN QUERY SELECT 'QUOTES_CONTENT'::text, NULL::uuid;
     RETURN;
   END IF;
   IF (SELECT count(*) FROM public_semantic_private.semantic_work w
@@ -787,9 +891,10 @@ BEGIN
   END IF;
   -- CANONICAL LOCK ORDER, STEP 2: the exact Experience — the lock the frozen primitive takes again below.
   PERFORM 1 FROM public.public_experiences e WHERE e.id = v_work.experience_id FOR UPDATE;
+  PERFORM public_semantic_private.lock_current_package_v1(v_work.experience_id);
   IF NOT EXISTS (SELECT 1 FROM public.public_experience_controllers c
                   WHERE c.experience_id = v_work.experience_id AND c.controller_user_id = v_user)
-     OR v_work.request_ref <> public_semantic_private.derive_work_request_ref_v1(
+     OR v_work.request_ref IS DISTINCT FROM public_semantic_private.derive_work_request_ref_v1(
           v_user, v_work.work_kind, v_work.experience_id, v_work.experience_version_id, v_work.package_fingerprint,
           v_work.corrects_placement_id, v_work.correction_meaning, v_work.correction_primary_themes,
           v_work.correction_secondary_themes) THEN
@@ -832,28 +937,22 @@ BEGIN
     v_primary := v_work.correction_primary_themes;
     v_secondary := v_work.correction_secondary_themes;
   END IF;
-  -- NOT A COPY, re-proven against the exact package at the moment of commit.
-  IF public_semantic_private.interpretation_copies_package_v1(v_meaning, v_primary, v_secondary, v_outcome.explanation,
-                                                              t.manifest_version_id) THEN
-    RETURN QUERY SELECT 'UNAVAILABLE'::text, NULL::uuid, NULL::integer;
-    RETURN;
-  END IF;
   v_placement := public_semantic_private.derive_semantic_identity_v1('PLACEMENT', v_user, v_work.id);
   SELECT d.placement_revision, d.placement_basis INTO r
     FROM public.record_public_experience_semantic_placement_v1(
            public_semantic_private.derive_semantic_identity_v1('PLACEMENT_COMMAND', v_user, v_work.id), v_placement,
-           v_work.experience_id, v_work.experience_version_id, v_outcome.lens_key, v_meaning) d;
+           v_work.experience_id, v_work.experience_version_id, 's5-03a.private', 'S5-03A_PRIVATE_SEMANTIC_INTERPRETATION_V1') d;
   -- The frozen basis must be exactly the origin: revision 1 is QANDEEL's proposal, a later one the publisher's.
   IF (v_work.work_kind = 'PROPOSAL') <> (r.placement_basis = 'INITIAL_INTERPRETATION') THEN
     RAISE EXCEPTION 'PUBLIC_SEMANTIC_REVISION_ORDER_VIOLATED' USING ERRCODE = '55000';
   END IF;
   v_instant := clock_timestamp();
   INSERT INTO public_semantic_private.semantic_interpretations
-    (placement_id, work_id, work_kind, experience_id, experience_version_id, origin, primary_themes, secondary_themes,
-     explanation, package_fingerprint, recorded_at)
+    (placement_id, work_id, work_kind, experience_id, experience_version_id, origin, meaning, lens_key, primary_themes,
+     secondary_themes, explanation, package_fingerprint, recorded_at)
   VALUES (v_placement, v_work.id, v_work.work_kind, v_work.experience_id, v_work.experience_version_id,
           CASE WHEN v_work.work_kind = 'PROPOSAL' THEN 'QANDEEL_PROPOSAL' ELSE 'PUBLISHER_CORRECTION' END,
-          v_primary, v_secondary, CASE WHEN v_work.work_kind = 'PROPOSAL' THEN v_outcome.explanation END,
+          v_meaning, v_outcome.lens_key, v_primary, v_secondary, CASE WHEN v_work.work_kind = 'PROPOSAL' THEN v_outcome.explanation END,
           v_work.package_fingerprint, v_instant);
   IF v_work.work_kind = 'CORRECTION' THEN
     INSERT INTO public_semantic_private.semantic_reviews
@@ -883,6 +982,7 @@ BEGIN
     RAISE EXCEPTION 'PUBLIC_SEMANTIC_COMMAND_INVALID' USING ERRCODE = '22023';
   END IF;
   PERFORM 1 FROM public.public_experiences e WHERE e.id = p_experience_id FOR UPDATE;
+  PERFORM public_semantic_private.lock_current_package_v1(p_experience_id);
   IF NOT FOUND OR NOT EXISTS (SELECT 1 FROM public.public_experience_controllers c
                                WHERE c.experience_id = p_experience_id AND c.controller_user_id = v_user) THEN
     RETURN QUERY SELECT 'UNAVAILABLE'::text;
@@ -967,8 +1067,8 @@ END$$;
 
 -- E.2 RECORD THE INTERPRETER'S ANSWER for one admissible work, first answer wins. The shape is the work's own: a
 --     proposal is PROPOSED (lens key, meaning, themes, explanation); a correction is CONSISTENT (lens key) or
---     NOT_SUPPORTED. A malformed answer is refused (22023) and records nothing; an answer that copies the package text
---     is COPIES_PACKAGE and records nothing. RECORDED | ALREADY_RECORDED | COPIES_PACKAGE | STALE | UNAVAILABLE.
+--     NOT_SUPPORTED. A malformed answer is refused (22023) and records nothing. RECORDED | ALREADY_RECORDED | STALE |
+--     UNAVAILABLE. The answer is stored where ASSURE-F05 can erase it; its text is never inspected.
 CREATE FUNCTION public_semantic_private.record_public_semantic_work_outcome_v1(
   p_work_id uuid, p_outcome text, p_lens_key text, p_meaning text, p_primary_themes text[], p_secondary_themes text[],
   p_explanation text)
@@ -978,7 +1078,6 @@ DECLARE
   v_work public_semantic_private.semantic_work;
   v_existing public_semantic_private.semantic_work_outcomes;
   v_admissible text;
-  v_manifest uuid;
 BEGIN
   IF p_work_id IS NULL OR p_outcome IS NULL THEN
     RAISE EXCEPTION 'PUBLIC_SEMANTIC_OUTPUT_INVALID' USING ERRCODE = '22023';
@@ -1008,6 +1107,7 @@ BEGIN
   END IF;
   -- CANONICAL LOCK ORDER, STEP 2.
   PERFORM 1 FROM public.public_experiences e WHERE e.id = v_work.experience_id FOR UPDATE;
+  PERFORM public_semantic_private.lock_current_package_v1(v_work.experience_id);
   SELECT o.* INTO v_existing FROM public_semantic_private.semantic_work_outcomes o WHERE o.work_id = p_work_id;
   IF FOUND THEN
     RETURN QUERY SELECT CASE WHEN v_existing.outcome = p_outcome AND v_existing.lens_key IS NOT DISTINCT FROM p_lens_key
@@ -1021,12 +1121,6 @@ BEGIN
   v_admissible := public_semantic_private.work_admissibility_v1(p_work_id);
   IF v_admissible <> 'ADMISSIBLE' THEN
     RETURN QUERY SELECT v_admissible;
-    RETURN;
-  END IF;
-  SELECT v.package_manifest_version_id INTO v_manifest FROM public.public_experience_versions v WHERE v.id = v_work.experience_version_id;
-  IF p_outcome = 'PROPOSED'
-     AND public_semantic_private.interpretation_copies_package_v1(p_meaning, p_primary_themes, p_secondary_themes, p_explanation, v_manifest) THEN
-    RETURN QUERY SELECT 'COPIES_PACKAGE'::text;
     RETURN;
   END IF;
   INSERT INTO public_semantic_private.semantic_work_outcomes
@@ -1133,8 +1227,8 @@ DECLARE
     'public_semantic_private.derive_semantic_identity_v1(text, uuid, uuid)',
     'public_semantic_private.derive_package_fingerprint_v1(uuid)',
     'public_semantic_private.resolve_semantic_target_v1(uuid)',
-    'public_semantic_private.copies_package_text_v1(text, uuid)',
-    'public_semantic_private.interpretation_copies_package_v1(text, text[], text[], text, uuid)',
+    'public_semantic_private.lock_current_package_v1(uuid)',
+    'public_semantic_private.erase_package_semantic_content_v1()',
     'public_semantic_private.derive_work_request_ref_v1(uuid, text, uuid, uuid, text, uuid, text, text[], text[])',
     'public_semantic_private.work_admissibility_v1(uuid)',
     'public_semantic_private.derive_public_semantic_readiness_v1(uuid)'];
@@ -1227,14 +1321,21 @@ BEGIN
     RAISE EXCEPTION 'S5-03A: the frozen 0096 placement must keep its append-only guard';
   END IF;
 
-  -- H6. No account reference: the semantic relations add no edge to QAN-BL-ACCT-01.
+  -- H6. No DIRECT account reference. (The version and 0096 placement bindings are QAN-BL-ACCT-01 edges; see B.)
   IF EXISTS (SELECT 1 FROM pg_constraint c JOIN pg_class t ON t.oid = c.conrelid JOIN pg_namespace n ON n.oid = t.relnamespace
               WHERE n.nspname = 'public_semantic_private' AND c.contype = 'f'
                 AND c.confrelid IN ('public.users'::regclass, 'public.public_identities'::regclass)) THEN
     RAISE EXCEPTION 'S5-03A: a semantic relation must not reference an account or a Public identity';
   END IF;
 
-  -- H7. Still one Public World, the signed-out policy untouched, and no Experience published.
+  -- H7. ASSURE-F05 reaches the semantic content: the erasure trigger is installed and enabled on the package items.
+  IF NOT EXISTS (SELECT 1 FROM pg_trigger tg WHERE NOT tg.tgisinternal AND tg.tgenabled = 'O'
+                   AND tg.tgrelid = 'public.publication_package_manifest_items'::regclass
+                   AND tg.tgfoid = 'public_semantic_private.erase_package_semantic_content_v1()'::regprocedure) THEN
+    RAISE EXCEPTION 'S5-03A: an ASSURE-F05 package erasure must reach the semantic content derived from the package';
+  END IF;
+
+  -- H8. Still one Public World, the signed-out policy untouched, and no Experience published.
   IF (SELECT count(*) FROM public.public_world_state) <> 1
      OR NOT EXISTS (SELECT 1 FROM public.public_audience_policy_state p2 WHERE p2.signed_out_viewing_policy = 'UNRESOLVED') THEN
     RAISE EXCEPTION 'S5-03A: one Public World, and the signed-out policy still UNRESOLVED';

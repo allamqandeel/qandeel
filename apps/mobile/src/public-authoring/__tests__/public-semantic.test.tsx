@@ -180,8 +180,8 @@ describe('S5-03A the correction is checked, and the controller never decides', (
     expect(view.getByTestId('qandeel-public-authoring-notice').props.children).toBe(publicSemanticCopy('en').correctionInvalid);
   });
 
-  it('keeps the form and the reader\'s words when QANDEEL finds the correction unsupported, copied or unchanged', async () => {
-    for (const [outcome, notice] of [['NOT_SUPPORTED', 'notSupported'], ['QUOTES_CONTENT', 'quotesContent'], ['UNCHANGED', 'unchanged'],
+  it('keeps the form and the reader\'s words when QANDEEL finds the correction unsupported or unchanged', async () => {
+    for (const [outcome, notice] of [['NOT_SUPPORTED', 'notSupported'], ['UNCHANGED', 'unchanged'],
       ['LIMITED', 'limited'], ['INTERPRETATION_UNAVAILABLE', 'interpretationUnavailable']] as const) {
       const t = transports();
       t.semantic.set(proposed());
@@ -264,8 +264,8 @@ describe('S5-03A client', () => {
 
 describe('S5-03A Product Copy Gate', () => {
   it('is OPEN, every new row PROPOSED (none approved by being written), reused words byte-exact, bilingual and in register', () => {
-    expect(PUBLIC_SEMANTIC_COPY_GATE.status).toBe('S5-03A PRODUCT COPY GATE — OPEN — 22 rows PROPOSED');
-    expect(PUBLIC_SEMANTIC_COPY_GATE.proposed).toHaveLength(22);
+    expect(PUBLIC_SEMANTIC_COPY_GATE.status).toBe('S5-03A PRODUCT COPY GATE — OPEN — 21 rows PROPOSED');
+    expect(PUBLIC_SEMANTIC_COPY_GATE.proposed).toHaveLength(21);
     expect(PUBLIC_SEMANTIC_COPY_GATE.approved).toEqual([]);
     expect(publicSemanticCopy('ar').cancel).toBe('إلغاء');
     expect(publicSemanticCopy('en').actionUnavailable).toBe(publicAuthoringCopy('en').actionUnavailable);

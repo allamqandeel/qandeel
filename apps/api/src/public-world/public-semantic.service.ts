@@ -19,7 +19,7 @@ export interface PublicSemanticProposalView {
   readonly outcome: 'PROPOSED' | 'ALREADY_INTERPRETED' | 'INTERPRETATION_UNAVAILABLE' | 'STALE' | 'UNAVAILABLE' | 'NOT_READY_FOR_REVIEW' | 'LIMITED';
 }
 export interface PublicSemanticCorrectionView {
-  readonly outcome: 'CORRECTED' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'QUOTES_CONTENT' | 'INTERPRETATION_UNAVAILABLE' | 'STALE' | 'NO_PROPOSAL'
+  readonly outcome: 'CORRECTED' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'INTERPRETATION_UNAVAILABLE' | 'STALE' | 'NO_PROPOSAL'
     | 'UNAVAILABLE' | 'NOT_READY_FOR_REVIEW' | 'LIMITED';
 }
 export interface PublicSemanticAcceptView {
@@ -125,7 +125,7 @@ export class PublicSemanticService {
         value.meaning as string, value.primaryThemes as string[], secondaryThemes as string[]);
       if (!begun) return unavailable();
       switch (begun.outcome) {
-        case 'UNCHANGED': case 'QUOTES_CONTENT': case 'NO_PROPOSAL': case 'STALE': case 'UNAVAILABLE': case 'NOT_READY_FOR_REVIEW': case 'LIMITED':
+        case 'UNCHANGED': case 'NO_PROPOSAL': case 'STALE': case 'UNAVAILABLE': case 'NOT_READY_FOR_REVIEW': case 'LIMITED':
           return { outcome: begun.outcome };
         case 'WORK_STAGED': case 'WORK_OPEN': break;
         default: return unavailable();
@@ -208,7 +208,7 @@ function recorded(rows: ReadonlyArray<{ readonly outcome: string }> | null): Int
   const outcome = rows?.[0]?.outcome;
   if (outcome === 'RECORDED' || outcome === 'ALREADY_RECORDED') return 'RECORDED';
   if (outcome === 'STALE' || outcome === 'UNAVAILABLE') return outcome;
-  // COPIES_PACKAGE, a refused shape, or no answer: QANDEEL produced no usable interpretation.
+  // A refused shape, or no answer: QANDEEL produced no usable interpretation.
   return 'INTERPRETATION_UNAVAILABLE';
 }
 

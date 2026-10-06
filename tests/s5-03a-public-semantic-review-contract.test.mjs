@@ -90,9 +90,13 @@ test('4 — authority: the client authors no proposal and supplies no identity, 
     assert.doesNotMatch(args, MAP_CONTROL, `${name} takes no map control`);
   }
   // A commit re-derives the request from auth.uid(): only the requester adopts a work.
-  assert.match(sql, /v_work\.request_ref <> public_semantic_private\.derive_work_request_ref_v1\(\s+v_user,/u);
-  // Not a copy: the 32-character rule.
-  assert.match(sql, /FOR v_at IN 1 \.\. length\(v_needle\) - 31 LOOP/u);
+  assert.match(sql, /v_work\.request_ref IS DISTINCT FROM public_semantic_private\.derive_work_request_ref_v1\(\s+v_user,/u);
+  // ASSURE-F05 by lineage, never by inspecting text (R1): no similarity threshold exists; nothing derived from the package
+  // enters the immutable 0096 revision; an erasure of any package item erases the semantic content of that package.
+  assert.doesNotMatch(sql, /copies_package|QUOTES_CONTENT|COPIES_PACKAGE|v_needle|strpos\(/u, 'no text is judged by its content');
+  assert.match(sql, /'s5-03a\.private', 'S5-03A_PRIVATE_SEMANTIC_INTERPRETATION_V1'\) d;/u, 'the 0096 descriptor is content-free');
+  assert.match(sql, /CREATE TRIGGER publication_package_item_erasure_reaches_semantics\s+AFTER UPDATE OF content_state ON public\.publication_package_manifest_items\s+FOR EACH ROW WHEN \(OLD\.content_state = 'CONTENT_PRESENT' AND NEW\.content_state = 'ERASED_BY_OWNER'\)/u);
+  assert.equal((sql.match(/PERFORM public_semantic_private\.lock_current_package_v1\(/gu) ?? []).length, 5, 'every writer locks the package items');
 });
 
 test('5 — the provider boundary: neutral, deterministic under test, refusing otherwise, never the conversational router', () => {
@@ -165,8 +169,8 @@ test('8 — mobile: the semantic stage inside the S5-02 review, meaning only, no
 
 test('9 — the S5-03A Product Copy Gate: one gate, OPEN, every new row PROPOSED, frozen words reused, no collision', () => {
   const copy = read(`${MOBILE}/public-authoring/semantic-copy.ts`);
-  assert.ok(copy.includes("status: 'S5-03A PRODUCT COPY GATE — OPEN — 22 rows PROPOSED'"));
-  assert.equal((copy.match(/\/\/ PROPOSED — S5-03A Product Copy Gate/gu) ?? []).length, 44, '22 rows, Arabic and English');
+  assert.ok(copy.includes("status: 'S5-03A PRODUCT COPY GATE — OPEN — 21 rows PROPOSED'"));
+  assert.equal((copy.match(/\/\/ PROPOSED — S5-03A Product Copy Gate/gu) ?? []).length, 42, '21 rows, Arabic and English');
   assert.doesNotMatch(copy, /\/\/ APPROVED/u, 'nothing is approved by being written');
   assert.match(copy, /approved: \[\],/u);
   assert.ok(copy.includes('cancel: sharedCopy(language).cancel'));
@@ -180,7 +184,9 @@ test('9 — the S5-03A Product Copy Gate: one gate, OPEN, every new row PROPOSED
 test('10 — governance: the record, the backlog and the locators tell the same truth', () => {
   const record = read(RECORD);
   assert.match(record, /^# QANDEEL — S5-03A Public Semantic Interpretation \+ Publisher Review — Implementation Record v1/u);
-  assert.ok(record.includes('**Status:** **`S5-03A IMPLEMENTED — IMPLEMENTATION CANDIDATE (branch, not yet pushed) — S5-03A PRODUCT COPY GATE OPEN (22 rows PROPOSED) — NOT MERGED`**'));
+  assert.ok(record.includes('**Status:** **`S5-03A IMPLEMENTED — DRAFT PR #316 — R1 (ASSURE-F05 semantic erasure) APPLIED — S5-03A PRODUCT COPY GATE OPEN (21 rows PROPOSED) — NOT MERGED`**'));
+  assert.match(record, /\| F13 \| [^\n]* \| B — Validation \/ Baseline \|/u, 'the locale baseline is B, not C');
+  assert.match(record, /\*\*`QAN-BL-ACCT-01 — HIGH \/ OPEN`\*\*/u, 'the new RESTRICT dependents are recorded as part of the blocker');
   assert.match(record, /1a10127672f8db7ff475bca4732635bf88536730/u);
   assert.match(record, /\*\*Orphan gaps = 0\*\*/u);
   for (const section of ['PUBLIC PACKAGE ONLY', 'The model / provider boundary', 'Correction semantics', 'Version binding and semantic readiness',
@@ -191,14 +197,14 @@ test('10 — governance: the record, the backlog and the locators tell the same 
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]* \| `UNASSIGNED` \| `HIGH` \| `OPEN — UNASSIGNED` \|/u);
   assert.match(backlog, /\*\*Current-truth note \(S5-03A, 2026-10-06\)\.\*\*/u);
-  assert.match(backlog, /\*\*S5-03A reconciliation \(2026-10-06; implementation candidate, not merged\)\.\*\*/u);
+  assert.match(backlog, /\*\*S5-03A reconciliation \(2026-10-06; Draft PR #316, not merged\)\.\*\*/u);
   assert.match(backlog, /\| `S5-03A — Public Semantic Interpretation \+ Publisher Review` \| none — no item names it;/u);
   assert.match(backlog, /- \*\*PR \/ SHA:\*\* PR #315, merged as `1a10127672f8db7ff475bca4732635bf88536730`/u);
   // The root locators are asserted wherever they exist: always in the repository, never in the forward-safety mirror,
   // which carries only the source trees.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
-    assert.match(state, /\| S5-03A — Public Semantic Interpretation \+ Publisher Review \(migration `0144`\) \| \*\*IMPLEMENTED — IMPLEMENTATION CANDIDATE — NOT MERGED/u);
+    assert.match(state, /\| S5-03A — Public Semantic Interpretation \+ Publisher Review \(migration `0144`\) \| \*\*IMPLEMENTED — DRAFT PR #316 — NOT MERGED/u);
     assert.match(state, /\*\*8A QANDEEL AI Brain \/ Production LLM Runtime\*\* \(before\s+Voice\)/u);
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {

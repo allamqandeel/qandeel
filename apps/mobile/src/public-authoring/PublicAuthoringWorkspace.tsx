@@ -40,7 +40,6 @@ const noticeOf = (copy: PublicAuthoringCopy, semantic: PublicSemanticCopy, notic
   switch (notice) {
     case 'INTERPRETATION_UNAVAILABLE': return semantic.interpretationUnavailable;
     case 'NOT_SUPPORTED': return semantic.notSupported;
-    case 'QUOTES_CONTENT': return semantic.quotesContent;
     case 'UNCHANGED': return semantic.unchanged;
     case 'CORRECTION_INVALID': return semantic.correctionInvalid;
     case 'LIMITED': return semantic.limited;

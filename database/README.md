@@ -4097,20 +4097,28 @@ explanation, and a lens key as the structured placement intent - never a coordin
 accept exactly the revision seen, or a truth-constrained correction of the MEANING that QANDEEL checks against the same
 package. Every committed interpretation is a revision of the frozen `0096` semantic placement, written only through
 `record_public_experience_semantic_placement_v1` under the human's own `auth.uid()`: revision 1 (`INITIAL_INTERPRETATION`)
-is QANDEEL's proposal, every later revision a `PUBLISHER_CORRECTION`. The lifecycle stays READY_FOR_REVIEW.
+is QANDEEL's proposal, every later revision a `PUBLISHER_CORRECTION`. That revision is immutable for every role, so
+it holds the revision order and two content-free constants (`lens_key = 's5-03a.private'`, `semantic_label =
+'S5-03A_PRIVATE_SEMANTIC_INTERPRETATION_V1'`) and nothing derived from the package. The lifecycle stays READY_FOR_REVIEW.
 
-The private schema `public_semantic_private` holds four append-only relations that reference no account or Public
-Identity: `semantic_work` (one requested proposal or correction, bound to the exact version and a server-derived package
+The private schema `public_semantic_private` holds four append-only relations with no direct account or Public Identity
+reference (their Experience Version and `0096` placement bindings are `ON DELETE RESTRICT` and part of
+`QAN-BL-ACCT-01`): `semantic_work` (one requested proposal or correction, bound to the exact version and a server-derived package
 fingerprint - manifest, ordinals, classifications, public digests; NULL once an ASSURE-F05 erasure NULLs a digest),
 `semantic_work_outcomes` (the interpreter's answer: machine state, written by the server channel only),
-`semantic_interpretations` (the themes and explanation of one committed `0096` revision) and `semantic_reviews` (ACCEPTED
+`semantic_interpretations` (the meaning, lens key, themes and explanation of one committed `0096` revision) and `semantic_reviews` (ACCEPTED
 for a QANDEEL proposal, CORRECTED for the publisher's own correction). `authenticated` executes five owner commands
 (review, request a proposal, request a correction, commit, accept); `service_role` executes two server commands - the
 ONE package-only input reader (its body reads the work, the Experience, the version, the package items and their public
 bodies, and nothing else: no provenance, Shared World, Personal conversation, account, identity or display label) and the
 interpreter's answer. A client can therefore never author what QANDEEL proposed. Meanings, themes and explanations are one
-line, bounded, name no identifier, and may not contain a 32-character run of the package text (an immutable `0096`
-revision must never be a copy that owner deletion could not erase). Semantic readiness
+line, bounded and name no identifier; no text is judged by its content. ASSURE-F05 reaches them by lineage: an
+`AFTER UPDATE` trigger on `publication_package_manifest_items` fires when `0143` erases ANY item of a package
+(CONTENT_PRESENT -> ERASED_BY_OWNER) and, in the same transaction and at the same instant, erases every content-bearing
+semantic byte bound to a version of that package (meanings, lens keys, themes, explanations, the publisher's correction
+words, every fingerprint and request digest), keeping only audit identity. The append-only guard admits exactly that
+one-way UPDATE, re-proven from an erased item of the row's own package. Every writer locks the current package's items
+`FOR SHARE` after the Experience lock, so a semantic write and an owner deletion serialize. Semantic readiness
 (`derive_public_semantic_readiness_v1`, internal) is derived on every call: SEMANTICALLY_READY only for the reviewed CURRENT
 revision of the exact current version against its exact whole package, NOT_READY otherwise with one reason. Nothing here
 publishes: the CW2-08 seam still answers `NOT_EVALUATED` and no application role executes a frozen I-05 primitive.
@@ -4120,11 +4128,12 @@ npm run verify:public-semantic-interpretation-review:integration
 ```
 
 `verify-migration-0144.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the boundary census
-(posture, the exact executable sets, the input census, no account edge, append-only relations, the package-only ban by
+(posture, the exact executable sets, the input census, no direct account edge and the RESTRICT edges pinned, append-only relations, the package-only ban by
 source text); PUBLIC PACKAGE ONLY (the interpreter input is exactly the package items); the flow (DRAFT refused,
 non-controllers and guessed ids answered neutrally with nothing written, the proposal only through the server channel and
-the requester's own commit, malformed and copying answers refused, accept bound to the exact revision, NOT_SUPPORTED writing
+the requester's own commit, malformed answers refused and no answer judged by its text, accept bound to the exact revision, NOT_SUPPORTED writing
 nothing, a CONSISTENT correction as the next revision with QANDEEL's lens key, retries, a stale revision refused); version
 binding (readiness for the exact revision, a raw frozen revision UNREVIEWED, a successor version carrying nothing over,
-nothing else moved); erasure mid-flight (review dark, readiness PACKAGE_UNAVAILABLE, no input / outcome / commit / accept);
-a concurrent correction race on two connections; and launch closure.
+nothing else moved); erasure mid-flight (review dark, readiness PACKAGE_UNAVAILABLE, no input / outcome / commit / accept), every content byte
+erased at the deletion instant with audit identity kept, an unerased package untouched, no way back; a concurrent
+correction race and a semantic-write-versus-deletion race on two connections; and launch closure.

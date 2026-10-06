@@ -172,10 +172,10 @@ describe('S5-03A — the proposal and the correction fail closed', () => {
     }
   });
 
-  it('maps the database\'s refusals: a copying answer, a stale or an erased package', async () => {
-    const copying = repository({ recordOutcome: jest.fn(async () => [{ outcome: 'COPIES_PACKAGE' }]) });
-    await expect(service(copying).proposal(TOKEN, EXPERIENCE, { commandId: COMMAND })).resolves.toEqual({ outcome: 'INTERPRETATION_UNAVAILABLE' });
-    expect(copying.commit).not.toHaveBeenCalled();
+  it('maps the database\'s refusals: an unrecognised answer, a stale or an erased package', async () => {
+    const unrecognised = repository({ recordOutcome: jest.fn(async () => [{ outcome: 'NOT_A_DATABASE_OUTCOME' }]) });
+    await expect(service(unrecognised).proposal(TOKEN, EXPERIENCE, { commandId: COMMAND })).resolves.toEqual({ outcome: 'INTERPRETATION_UNAVAILABLE' });
+    expect(unrecognised.commit).not.toHaveBeenCalled();
     const erased = repository({ workInput: jest.fn(async () => []) });
     const semantic = interpreter();
     await expect(service(erased, semantic).proposal(TOKEN, EXPERIENCE, { commandId: COMMAND })).resolves.toEqual({ outcome: 'STALE' });
@@ -205,7 +205,7 @@ describe('S5-03A — the proposal and the correction fail closed', () => {
   });
 
   it('passes the correction refusals through unchanged', async () => {
-    for (const outcome of ['UNCHANGED', 'QUOTES_CONTENT', 'NO_PROPOSAL', 'STALE', 'UNAVAILABLE', 'NOT_READY_FOR_REVIEW', 'LIMITED']) {
+    for (const outcome of ['UNCHANGED', 'NO_PROPOSAL', 'STALE', 'UNAVAILABLE', 'NOT_READY_FOR_REVIEW', 'LIMITED']) {
       const repo = repository({ requestCorrection: jest.fn(async () => [{ outcome, work_id: null }]) });
       await expect(service(repo).correction(TOKEN, EXPERIENCE, {
         commandId: COMMAND, interpretationId: INTERPRETATION, meaning: 'A parent afraid', primaryThemes: ['parenthood'],
