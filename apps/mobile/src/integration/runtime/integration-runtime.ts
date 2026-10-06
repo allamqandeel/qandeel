@@ -137,6 +137,7 @@ import {
   createPublicLinkInbox, createPublicWorldController, isPublicWorldLink, type PublicLinkInbox, type PublicWorldController,
 } from '../../public-world';
 import { createPublicDisplayController, type PublicDisplayController } from '../../settings/public-display-controller';
+import { createPublicAuthoringController } from '../../public-authoring';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
 import { deviceProductLanguage } from '../locale/device-locale';
@@ -542,7 +543,11 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       sharedAlerts: createSharedAlertsController({ transport: shared, isCurrent }),
       sharedLinks,
       // S5-01: the Public World entry and the reader's Public display choice, on the Public transport bound to this identity.
-      publicWorld: createPublicWorldController({ transport: publicTransport, isCurrent }),
+      // S5-02: the Public authoring workspace, on the same identity-bound Public transport; drawn inside the Public root.
+      publicWorld: createPublicWorldController({
+        transport: publicTransport, isCurrent,
+        authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, isCurrent }),
+      }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,
     };

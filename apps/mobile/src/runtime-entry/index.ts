@@ -159,6 +159,12 @@ export type {
 export { SharedWorldApiClient } from './shared-world-api';
 export type { PublicDisplay, PublicDisplayMode, PublicDisplayResult, PublicEntryResult, PublicSetDisplayResult } from './public-world-api';
 export { PublicWorldApiClient } from './public-world-api';
+export type {
+  PublicAuthoringAnswer, PublicApprovalRequest, PublicApproveOutcome, PublicAuthoringDraft, PublicAuthoringLifecycle, PublicAuthoringPublisher,
+  PublicAuthoringReview, PublicAuthoringSources, PublicOwnApproval, PublicPackageOutcome, PublicPersonalSource, PublicReadyOutcome,
+  PublicSharedSource, PublicWithdrawOutcome,
+} from './public-authoring-api';
+export { PublicAuthoringApiClient } from './public-authoring-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
 export { PushApiClient } from './push-api';
 

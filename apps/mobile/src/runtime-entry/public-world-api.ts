@@ -10,6 +10,7 @@
  * no answer.
  */
 import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
+import { PublicAuthoringApiClient } from './public-authoring-api';
 
 export interface PublicWorldApiConfig {
   readonly baseUrl: string;
@@ -41,7 +42,12 @@ const isMode = (value: unknown): value is PublicDisplayMode => value === 'PSEUDO
 const labelOf = (value: unknown): string | null | undefined => (value === null ? null : typeof value === 'string' && value.length > 0 ? value : undefined);
 
 export class PublicWorldApiClient {
-  constructor(private readonly config: PublicWorldApiConfig) {}
+  /** S5-02 — the Public authoring routes, on the same identity-bound transport. */
+  readonly authoring: PublicAuthoringApiClient;
+
+  constructor(private readonly config: PublicWorldApiConfig) {
+    this.authoring = new PublicAuthoringApiClient(config);
+  }
 
   async entry(): Promise<PublicEntryResult> {
     const answer = await this.exchange('GET', '/public/entry');

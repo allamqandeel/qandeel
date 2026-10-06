@@ -6,9 +6,10 @@
  * "not available" with a way to try again; it says nothing about why. On ALLOW the root becomes active: the Public
  * World's own name and its own ground.
  *
- * The root is content-empty by truth: S5-01 opens no Experience, Draft, publication, search, lens, placement,
- * discussion, Public QANDEEL, reaction or Replay, and draws no sample, feed, ranking or invented geography in their
- * place (S5-03 realizes the Experiences and the semantic field). It is a World, not a feed.
+ * The root's field is content-empty by truth: nothing public exists to place in it, and nothing stands in for it — no
+ * sample, feed, ranking or invented geography (S5-03 realizes the semantic field). It is a World, not a feed. S5-02 adds
+ * ONE way, after ALLOW, into the authoring workspace (`../public-authoring`): the reader's own non-public work, drawn in
+ * place of the field and left by its own Back. It places nothing in the field.
  *
  * Back at the root is local-only: nothing is registered, so Back never silently returns to the Personal world
  * (I-08A4 §4). Nothing here reads the Personal world or the Shared area: no Session, camera, focus, time or World is
@@ -22,11 +23,14 @@ import { AppearanceStatusBar } from '../appearance';
 import { Control, typeStyle, usePalette, useConversationTypeface } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { publicCopy } from './copy';
+import { PublicAuthoringWorkspace, publicAuthoringCopy, type PublicAuthoringScreen } from '../public-authoring';
 import type { PublicWorldController } from './public-world-controller';
 
 export const PUBLIC_AREA_TEST_ID = 'qandeel-public-area';
 const HEADER_MIN_HEIGHT = 48;
 const ROW_START = 24;
+const noSubscribe = () => () => undefined;
+const closedScreen = (): PublicAuthoringScreen => 'CLOSED';
 
 export interface PublicWorldAreaProps {
   readonly controller: PublicWorldController;
@@ -42,10 +46,13 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
   const copy = publicCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const { entry } = useSyncExternalStore(controller.subscribe, controller.getState);
+  const authoring = controller.authoring;
+  const authoringScreen = useSyncExternalStore(authoring ? authoring.subscribe : noSubscribe, authoring ? () => authoring.getState().screen : closedScreen);
 
   // Entering the area asks the entry verdict again — a previous ALLOW is never kept as authority.
   useEffect(() => {
     controller.enter();
+    controller.authoring?.close();
   }, [controller]);
 
   const frame = (testID: string, children: ReactNode) => (
@@ -87,8 +94,22 @@ export function PublicWorldArea({ controller, language, insets, activity }: Publ
           {copy.publicWorld}
         </Text>
       </View>
-      {/* The Public World's own ground. Its Experiences and semantic field are S5-03's; nothing stands in for them. */}
-      <View testID="qandeel-public-field" style={{ flex: 1 }} />
+      {authoring !== null && authoringScreen !== 'CLOSED' ? (
+        <PublicAuthoringWorkspace controller={authoring} language={language} palette={palette} bottomInset={insets.bottom} />
+      ) : (
+        <>
+          {authoring !== null ? (
+            <View style={{ paddingStart: ROW_START - 16, paddingTop: 4 }}>
+              <Control palette={palette} language={language} accessibilityLabel={publicAuthoringCopy(language).entry} onPress={() => authoring.open()}
+                testID="qandeel-public-authoring-entry" style={{ alignSelf: 'flex-start', paddingHorizontal: 16 }}>
+                <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{publicAuthoringCopy(language).entry}</Text>
+              </Control>
+            </View>
+          ) : null}
+          {/* The Public World's own ground. Its semantic field is S5-03's; nothing stands in for it. */}
+          <View testID="qandeel-public-field" style={{ flex: 1 }} />
+        </>
+      )}
     </>
   ));
 }

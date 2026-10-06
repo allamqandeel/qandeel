@@ -10,7 +10,7 @@ name: S5 proof — Public World reachability, entry and identity
 # Scoped to the S5-01 branch and manual dispatch: it proves that head and is inert everywhere else.
 on:
   push:
-    branches: ['feat/s5-01-public-reachability-entry-identity']
+    branches: ['feat/s5-01-public-reachability-entry-identity', 'feat/s5-02-public-publishing-rights-review-privacy']
     paths:
       - 'apps/mobile/**'
       - 'scripts/phase-m/**'

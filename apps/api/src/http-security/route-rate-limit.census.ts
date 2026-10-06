@@ -131,6 +131,18 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /public/entry': 'AUTHENTICATED',
   'GET /public/display': 'AUTHENTICATED',
   'PUT /public/display': 'AUTHENTICATED',
+  // Public authoring (S5-02, 0143). Starting a Draft (it provisions the ONE Public Identity) and preparing a package
+  // (durable state other humans are asked to approve) take the strict class, as a Shared proposal does; reading, approving,
+  // withdrawing one's own approval and committing READY_FOR_REVIEW (not public) are ordinary own acts. No new class.
+  'GET /public/authoring': 'AUTHENTICATED',
+  'GET /public/authoring/sources': 'AUTHENTICATED',
+  'POST /public/authoring/drafts': 'SECURITY_SENSITIVE',
+  'POST /public/authoring/drafts/:experienceId/package': 'SECURITY_SENSITIVE',
+  'GET /public/authoring/drafts/:experienceId/review': 'AUTHENTICATED',
+  'POST /public/authoring/drafts/:experienceId/ready': 'AUTHENTICATED',
+  'GET /public/authoring/approvals': 'AUTHENTICATED',
+  'POST /public/authoring/approvals/:manifestId/approve': 'AUTHENTICATED',
+  'POST /public/authoring/approvals/:manifestId/withdraw': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

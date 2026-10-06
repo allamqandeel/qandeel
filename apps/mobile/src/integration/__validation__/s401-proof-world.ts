@@ -56,6 +56,12 @@
  *   - `/public/display` — the reader's Public display MODE (PSEUDONYM by default, rendering the account's CURRENT Public
  *     ID; REAL_NAME rendering the account's CURRENT Name); a PUT carries the mode and nothing else.
  *
+ * S5-02 — Public authoring, answered as migration 0143 and `apps/api/src/public-world/public-authoring.*` do, for the
+ * publisher-facing journey on ONE device: one Draft at a time from the reader's own EXISTING (synthetic) words; the
+ * package's one rightsholder is the reader, so the reader's own approval completes it and READY_FOR_REVIEW is reached
+ * (never anything public). Multi-human authority — other rightsholders, members who are not, withdrawal under races — is
+ * the real-PostgreSQL verifier's (database/verify-migration-0143.mjs), not this fixture's.
+ *
  * Every Name, Login ID, Email, Public ID and conversation line here is SYNTHETIC test text, never Product copy and never
  * a real account.
  */
@@ -65,6 +71,8 @@ import { S401_ACCOUNT_IDENTITY, S401_ACCOUNT_PUBLIC_ID } from '../__fixtures__/s
 import { createVport01ProofWorld } from './vport01-proof-world';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
+/** S5-02: the reader's own SYNTHETIC earlier words offered as existing material — a validation fixture, never Product copy. */
+const OWN_WORDS = { ar: 'كلام القارئ الاختباري السابق', en: 'The fixture reader earlier words' };
 const INVITER = { ar: 'هدير الاختبار', en: 'Fixture Hadir' };
 const SELF = { ar: 'القارئ الاختبار', en: 'Fixture Reader' };
 const NEWCOMER = { ar: 'رنا الاختبار', en: 'Fixture Rana' };
@@ -157,6 +165,9 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   // S5-01: the held Public World entries, and the reader's Public display mode.
   let publicReleases: (() => void)[] = [];
   let publicMode: 'PSEUDONYM' | 'REAL_NAME' = 'PSEUDONYM';
+  // S5-02: the reader's Drafts — the chosen source, the reader's own approval, the lifecycle (never past READY_FOR_REVIEW).
+  const drafts: { experienceId: string; manifestId: string | null; lifecycle: 'DRAFT' | 'READY_FOR_REVIEW'; approval: 'MISSING' | 'EFFECTIVE' | 'WITHDRAWN' }[] = [];
+  const ownSourceId = '54020000-0000-4000-8000-000000000001';
   let next = 1;
   const uuid = () => `5401${String(next++).padStart(4, '0')}-0000-4000-8000-000000000000`;
   let issued = -1;
@@ -407,6 +418,64 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     return json(404, {});
   }
 
+  function authoring(path: string, method: string) {
+    const publisher = { mode: publicMode, label: publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId };
+    const draft = (id: string | undefined) => drafts.find((d) => d.experienceId === id);
+    const reviewOf = (d: (typeof drafts)[number]) => (d.manifestId === null
+      ? { state: 'NO_PACKAGE', lifecycle: d.lifecycle, publisher }
+      : { state: 'CURRENT', lifecycle: d.lifecycle, manifestId: d.manifestId, publisher, itemCount: 1, requiredApprovals: 1,
+        effectiveApprovals: d.approval === 'EFFECTIVE' ? 1 : 0, ownApproval: d.approval,
+        readyAllowed: d.lifecycle === 'DRAFT' && d.approval === 'EFFECTIVE', items: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: OWN_WORDS[language] }] });
+    if (path === '/public/authoring' && method === 'GET') {
+      return json(200, { drafts: drafts.map((d) => ({ experienceId: d.experienceId, lifecycle: d.lifecycle, hasPackage: d.manifestId !== null, itemCount: d.manifestId === null ? 0 : 1 })) });
+    }
+    if (path === '/public/authoring/sources' && method === 'GET') {
+      return json(200, { personal: [{ sourceId: ownSourceId, text: OWN_WORDS[language], at: at() }], shared: [] });
+    }
+    if (path === '/public/authoring/drafts' && method === 'POST') {
+      const experienceId = uuid();
+      drafts.unshift({ experienceId, manifestId: null, lifecycle: 'DRAFT', approval: 'MISSING' });
+      return json(200, { outcome: 'CREATED', experienceId });
+    }
+    if (path === '/public/authoring/approvals' && method === 'GET') {
+      return json(200, { requests: drafts.filter((d) => d.manifestId !== null).map((d) => ({
+        manifestId: d.manifestId, state: 'CURRENT', lifecycle: d.lifecycle, publisher, itemCount: 1, ownItemCount: 1, requiredApprovals: 1,
+        effectiveApprovals: d.approval === 'EFFECTIVE' ? 1 : 0, ownApproval: d.approval, ownItems: [{ ordinal: 1, text: OWN_WORDS[language] }] })) });
+    }
+    const drafted = /^\/public\/authoring\/drafts\/([^/]+)\/(package|review|ready)$/u.exec(path);
+    if (drafted) {
+      const d = draft(drafted[1]);
+      if (!d) return drafted[2] === 'review' ? json(200, { state: 'UNAVAILABLE', lifecycle: null, publisher: null }) : json(200, { outcome: 'UNAVAILABLE' });
+      if (drafted[2] === 'review' && method === 'GET') return json(200, reviewOf(d));
+      if (drafted[2] === 'package' && method === 'POST') {
+        if (d.lifecycle !== 'DRAFT') return json(200, { outcome: 'NOT_DRAFT' });
+        d.manifestId = uuid();
+        d.approval = 'MISSING';
+        return json(200, { outcome: 'PREPARED' });
+      }
+      if (drafted[2] === 'ready' && method === 'POST') {
+        if (d.lifecycle === 'READY_FOR_REVIEW') return json(200, { outcome: 'ALREADY_READY' });
+        if (d.manifestId === null || d.approval !== 'EFFECTIVE') return json(200, { outcome: 'APPROVALS_INCOMPLETE' });
+        d.lifecycle = 'READY_FOR_REVIEW';
+        return json(200, { outcome: 'READY_FOR_REVIEW' });
+      }
+    }
+    const decided = /^\/public\/authoring\/approvals\/([^/]+)\/(approve|withdraw)$/u.exec(path);
+    if (decided && method === 'POST') {
+      const d = drafts.find((x) => x.manifestId === decided[1]);
+      if (!d) return json(200, { outcome: 'UNAVAILABLE' });
+      if (decided[2] === 'approve') {
+        if (d.approval !== 'MISSING') return json(200, { outcome: 'ALREADY_DECIDED' });
+        d.approval = 'EFFECTIVE';
+        return json(200, { outcome: 'APPROVED' });
+      }
+      if (d.approval !== 'EFFECTIVE') return json(200, { outcome: 'ALREADY_WITHDRAWN' });
+      d.approval = 'WITHDRAWN';
+      return json(200, { outcome: 'WITHDRAWN' });
+    }
+    return json(404, {});
+  }
+
   function newWorld(worldId: string, people: Person[] = ['SELF', 'PEER']): ProofWorld {
     return { worldId, current: true, people, name: null, description: null, topic: null, ended: false, entitled: false };
   }
@@ -433,6 +502,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       }
       return json(200, { mode: publicMode, label: publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId, realNameAvailable: true });
     }
+    if (path === '/public/authoring' || path.startsWith('/public/authoring/')) return authoring(path, method);
     if (path === '/shared' || path.startsWith('/shared/')) {
       return shared(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     }

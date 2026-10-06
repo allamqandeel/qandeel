@@ -375,7 +375,24 @@ async function verifyContinuingEligibility(f, seam) {
   // CE09 THE EXACT PACKAGE RULE: the immutable manifest is never shrunk and
   // never re-served as a smaller package under the old publication identity.
   const afterDeletion = await packageSnapshot(f.experience, f.manifest);
-  assert.deepEqual(afterDeletion, before, 'CE09 the immutable package is untouched: it fails closed, it does not shrink');
+  // RE-ANCHORED by S5-02 (validation only). This first asserted the WHOLE package byte for byte, bodies and digests
+  // included - the exact retention the Product Owner's ASSURE-F05 decision forbids: owner deletion now PHYSICALLY
+  // erases the source-content-bearing copy of the deleted material (its body and both content digests, migration 0143).
+  // The CE09 rule itself is unchanged and still proven: the manifest is never shrunk, every item, ordinal,
+  // classification, provenance identity, approval and transition survives, and nothing else moved.
+  const erased = before.provenance.find((p) => p.shared_material_id === f.hadirMaterial).package_item_id;
+  const erasedItem = afterDeletion.items.find((it) => it.package_item_id === erased);
+  const erasedProvenance = afterDeletion.provenance.find((p) => p.package_item_id === erased);
+  assert.equal(erasedItem.content_state, 'ERASED_BY_OWNER', 'CE09 the copied item records its erasure');
+  assert.ok(erasedItem.content_erased_at instanceof Date, 'CE09 at the canonical deletion instant');
+  assert.deepEqual(afterDeletion, {
+    ...before,
+    items: before.items.map((it) => (it.package_item_id === erased
+      ? { ...it, content_state: 'ERASED_BY_OWNER', public_body_digest: null, content_erased_at: erasedItem.content_erased_at } : it)),
+    bodies: before.bodies.filter((b) => b.package_item_id !== erased),
+    provenance: before.provenance.map((p) => (p.package_item_id === erased
+      ? { ...p, captured_source_digest: null, captured_digest_erased_at: erasedProvenance.captured_digest_erased_at } : p)),
+  }, 'CE09 the immutable package is not shrunk: only the deleted bytes and their two verifiers are gone');
   assert.equal(Number(afterDeletion.manifest.item_count), 3);
   assert.equal(afterDeletion.provenance.length, 3);
   // And the unrelated Experience, whose sources are all still available, is

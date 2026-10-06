@@ -11,6 +11,7 @@
  * or time) and nothing of the Shared area, and it writes nothing to either. S5-01's root is content-empty by truth —
  * the Public Experiences and their semantic field are S5-03's — so there is nothing else to hold.
  */
+import type { PublicAuthoringController } from '../public-authoring';
 import type { PublicEntryResult } from '../runtime-entry';
 
 export interface PublicWorldTransport {
@@ -26,17 +27,20 @@ export interface PublicWorldController {
   subscribe(listener: () => void): () => void;
   /** Resolve the entry verdict now (the switcher, a link, a retry). */
   enter(): void;
+  /** S5-02 — the authoring workspace drawn inside the Public World root; null where the host provides none. */
+  readonly authoring: PublicAuthoringController | null;
   retire(): void;
 }
 
 export interface PublicWorldControllerOptions {
   readonly transport: PublicWorldTransport;
   readonly isCurrent: () => boolean;
+  readonly authoring?: PublicAuthoringController | null;
 }
 
 const INITIAL: PublicAreaState = Object.freeze<PublicAreaState>({ entry: 'NONE' });
 
-export function createPublicWorldController({ transport, isCurrent }: PublicWorldControllerOptions): PublicWorldController {
+export function createPublicWorldController({ transport, isCurrent, authoring = null }: PublicWorldControllerOptions): PublicWorldController {
   const listeners = new Set<() => void>();
   let state: PublicAreaState = INITIAL;
   let retired = false;
@@ -70,9 +74,11 @@ export function createPublicWorldController({ transport, isCurrent }: PublicWorl
     enter() {
       void resolve();
     },
+    authoring,
     retire() {
       retired = true;
       listeners.clear();
+      authoring?.retire();
     },
   };
 }

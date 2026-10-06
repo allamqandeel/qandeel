@@ -156,7 +156,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `CLOSED — TOMBSTONE` |
@@ -479,6 +479,9 @@ This entry defines no density, no level-of-detail rule, no token and no world ch
 
 ### `QAN-BL-CW-01` — Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`)
 
+> **Historical pre-closure schema.** This block records the item as admitted and re-owned. It is not the current lifecycle
+> state; the current state is the `CLOSED — TOMBSTONE` record in §6 below (S5-02).
+
 - **Title / Finding:** owner deletion of Shared material never reaches the Public DRAFT derivative. Preparing a
   Public Experience manifest copies the author's Shared material into
   `public_experience_text_derivative_bodies` as a `SOURCE_CONTENT_BEARING_DERIVATIVE`. That row has no deleter
@@ -591,6 +594,15 @@ blocker it is. S5-01 provisions no I-05 Public Identity (the `public_identities`
 account), so no account becomes undeletable by opening Public World or choosing a Public display mode; the display choice
 row cascades with the account. S5-01 claims no production readiness for the Public World
 ([S5-01 record](e2e/QANDEEL_S5_01_PUBLIC_REACHABILITY_ENTRY_IDENTITY_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §6, §12).
+
+**Current-truth note (S5-02, 2026-10-06).** S5-02 creates a real Public authoring footprint, which makes this item MORE
+important and does not solve it. The first real authoring act provisions the ONE I-05 Public Identity (`ON DELETE
+RESTRICT` to the account), and a prepared package's sealed provenance references the author's Personal committed units
+(`RESTRICT`), so the governed Personal erasure (`0130`) truthfully answers BLOCKED for an account that has authored. The
+Public World is NOT production-launch-ready while this item is unresolved, and `CW2-08` stays closed: S5-02 ends at
+`READY_FOR_REVIEW`, which is not public. This item stays `HIGH`, `OPEN — UNASSIGNED`, unchanged in scope; S5-02 invents no
+Connected-Worlds account-deletion contract
+([S5-02 record](e2e/QANDEEL_S5_02_PUBLIC_PUBLISHING_RIGHTS_DRAFT_REVIEW_PRIVACY_CLOSURE_IMPLEMENTATION_RECORD_v1.md) §13).
 
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
@@ -1354,14 +1366,34 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 ---
 
+### `QAN-BL-CW-01` — Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`)
+
+- **Closing task:** `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure`
+- **PR / SHA:** the S5-02 Draft PR / the head recorded in the S5-02 record. The tombstone holds from that PR's merge, which
+  happens only after independent review on green CI and the Product Owner's decision on the S5-02 Product Copy Gate.
+- **Disposition:** completed, in the Product Owner's physical-erasure terms. Migration `0143` makes the canonical Shared
+  owner deletion (`delete_shared_world_owned_material_v1`, forward-replaced from `0122` with its lock order and semantics
+  unchanged) erase, in the SAME transaction at the SAME canonical instant, every `SOURCE_CONTENT_BEARING_DERIVATIVE` copy
+  of the deleted material: the public body row and both durable content verifiers (`public_body_digest`,
+  `captured_source_digest`); audit identity survives; a one-way, canonically-proven exception inside the unchanged `0092`
+  guard (plus a no-resurrection INSERT guard) is the only way in; already-unsafe rows are erased forward and contradictory
+  state refuses deployment; both review boundaries are dark for a package that is no longer whole and never present a
+  partial one; `ANALYTICAL_DERIVATIVE` items are not erased. Proven against real PostgreSQL by
+  `database/verify-migration-0143.mjs`: the erasure, a whole-database census that finds neither the bytes nor their
+  digest, the dark reviews, the reconciliation, one-way immutability, retry re-proof, and the delete-vs-prepare races on
+  two connections with no deadlock.
+- **Status:** `CLOSED — TOMBSTONE`
+
+---
+
 ## 7. Counts at this baseline
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 17 |
+| `DEFERRED — OWNED` | 16 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 9 |
-| `CLOSED — TOMBSTONE` | 17 |
+| `CLOSED — TOMBSTONE` | 18 |
 | **Total** | **43** |
 
 | Severity | Count |
@@ -1576,6 +1608,20 @@ Matrix is §13 of its [implementation record](e2e/QANDEEL_S5_01_PUBLIC_REACHABIL
 **Orphan gaps = 0**. The register still holds **43** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9
 `OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from
 the §4 index.
+
+**S5-02 reconciliation (2026-10-06; Draft PR, not merged).** S5-02 (Public Publishing, Rights, Draft / Review & Privacy
+Closure, migration `0143`) inherits `QAN-BL-CW-01` and tombstones it (§6; effective from its merge): the Product Owner's
+physical-erasure decision is implemented and proven against real PostgreSQL before any Draft / review path became
+application-reachable. It also closes the two Product Owner assignments recorded on its §9 row, which are not backlog
+items: `E2E-H-08` (CLOSED — the first real authorship provisions the ONE I-05 Public Identity from the S5-01 display
+choice) and the 64 → 80 Name reconciliation (DONE, no truncation). `QAN-BL-ACCT-01` stays `HIGH`, `OPEN — UNASSIGNED`, and
+gains a current-truth note (an author's Personal erasure is now truthfully BLOCKED; the Public World is not launch-ready).
+`QAN-BL-VOICE-01`, `QAN-BL-NAV-02` and every launch item are unchanged: no Public Voice, Replay, Activity or Launch path is
+opened. It admits nothing; its Gap Matrix is §14 of its
+[implementation record](e2e/QANDEEL_S5_02_PUBLIC_PUBLISHING_RIGHTS_DRAFT_REVIEW_PRIVACY_CLOSURE_IMPLEMENTATION_RECORD_v1.md):
+**Orphan gaps = 0**. The register still holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9
+`OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from
+the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1640,7 +1686,7 @@ Inherited after T-12 closure reconciliation:
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
 | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
-| `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
+| `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

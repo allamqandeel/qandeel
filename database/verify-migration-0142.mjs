@@ -14,8 +14,8 @@
 //      label bytes can be supplied; an invalid mode is 22023; REAL_NAME without a Name is UNAVAILABLE; switching edits
 //      neither the Public ID nor the Name; another reader's choice is untouched and unreadable;
 //   4. the I-05 bridge: with an I-05 Public Identity, the display row follows the mode, a Public ID change and a Name
-//      change (new label_revision, no stale label), touches no Experience / version / identity row; a label the frozen
-//      relation cannot hold is refused, never truncated; an account WITHOUT an identity gains none;
+//      change (new label_revision, no stale label), touches no Experience / version / identity row; every valid Name (up
+//      to 80, reconciled by S5-02 / 0143) is represented in full, never truncated; an account WITHOUT an identity gains none;
 //   5. erasure: the choice row cascades with the account (its foreign key rule; the governed erasure is 0130's).
 //
 // Everything runs inside one transaction that is rolled back.
@@ -321,13 +321,16 @@ async function verifyBridge(h) {
   const [ident1] = await rows('SELECT public_identity_ref, user_id, created_at FROM public.public_identities WHERE user_id = $1', [h.c]);
   assert.deepEqual(ident1, ident0, 'the stable internal ref never moves');
 
-  stage = 'bridge: an unrepresentable label is refused, never truncated';
+  // RE-ANCHORED by S5-02 (validation only). This first proved that a 70-character Name was REFUSED by the bridge,
+  // because the frozen I-05 label ceiling was 64. The Product Owner reconciled that ceiling with the valid 80-character
+  // account Name by a forward migration (0143), with no truncation. The rule still proven: the label is never truncated.
+  stage = 'bridge: every valid account Name is representable in full, never truncated';
   await actAs('authenticated', h.c);
   await setMode('REAL_NAME');
-  const long = 'L'.repeat(70);
-  await rejected(() => client.query('SELECT * FROM public.change_own_account_name_v1($1)', [long]), ['P0001']);
+  const long = 'L'.repeat(80);
+  assert.equal((await first('SELECT * FROM public.change_own_account_name_v1($1)', [long])).outcome, 'CHANGED');
   const r5 = await displayRow(h.c);
-  assert.equal(r5.display_label, 'Chadi Again', 'the display row keeps the last true label');
+  assert.equal(r5.display_label, long, 'the display row carries the full 80-character Name, byte for byte');
 }
 
 async function main() {
