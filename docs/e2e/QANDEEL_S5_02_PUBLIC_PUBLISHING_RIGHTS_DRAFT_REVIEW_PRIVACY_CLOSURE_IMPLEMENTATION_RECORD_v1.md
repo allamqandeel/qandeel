@@ -5,7 +5,7 @@ second Stage-5 task)
 **Task Contract:** the Product Owner's S5-02 Task Contract (2026-10-06)
 **Canonical baseline:** `8dfc7b38baa133c8cecbffea8c65ae17ddc245ff` (the merge of PR #314, S5-01)
 **Branch:** `feat/s5-02-public-publishing-rights-review-privacy`
-**Status:** **`S5-02 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-02 PRODUCT COPY GATE OPEN (rows PROPOSED) — NOT MERGED`**.
+**Status:** **`S5-02 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-02 PRODUCT COPY GATE CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06) — NOT MERGED`**.
 Claude does not merge it. **R1 (independent review, 2026-10-06) applied:** G16 corrected (MATERIAL_DEPENDENCY erasure
 propagates physical Public erasure; REASONING_DEPENDENCY does not), G17 wording corrected, the copy rows revised (§12, §18).
 
@@ -269,7 +269,7 @@ fail-closed; signed-out stays `UNRESOLVED` and unreached.
 | signed-out fail-closed | I05 (anon 42501) |
 | CW2-08 fail-closed | B10 / L01 |
 
-## 12. Product Copy Gate — **OPEN (rows PROPOSED for the Product Owner)**
+## 12. Product Copy Gate — **CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06)**
 
 Census: every S5-02 user-visible string is in `apps/mobile/src/public-authoring/copy.ts`.
 
@@ -279,38 +279,40 @@ Census: every S5-02 user-visible string is in `apps/mobile/src/public-authoring/
 | sharedWorld | CANON (G1.2 §3) | العالم المشترك | Shared World |
 | back / retry / actionUnavailable / you | REUSED (S4-01 gate) | رجوع / إعادة المحاولة / تعذّر ذلك الآن. / أنت | Back / Try again / That couldn't be done right now. / You |
 | shownAs | REUSED (S5-01 gate) | الظهور في العالم العام | Shown in Public World as |
-| entry | **PROPOSED** | مشاركة تجربة في العالم العام | Share an experience in Public World |
-| workspaceTitle | **PROPOSED** | مسوداتك في العالم العام | Your Public World drafts |
-| draftsHeading | **PROPOSED** | المسودات | Drafts |
-| noDrafts | **PROPOSED** | لا توجد مسودات بعد. | No drafts yet. |
-| startDraft | **PROPOSED** (R1 wording) | بدء مسودة من محتوى موجود | Start a draft from existing content |
-| draftState | **PROPOSED** (R1 wording) | مسودة. لم تُنشر بعد. | Draft. Not published yet. |
-| readyState | **PROPOSED** (R1 wording) | جاهزة للمراجعة. لم تُنشر بعد. | Ready for review. Not published yet. |
-| chooseHeading | **PROPOSED** | اختر ما سيصبح عامًا | Choose what would become public |
-| chooseHint | **PROPOSED** | من كلامك في قنديل، ومما تراه في عوالمك المشتركة. حتى 20 عنصرًا. | From your words in QANDEEL and what you can see in your Shared Worlds. Up to 20 items. |
-| noSources | **PROPOSED** (R1 wording) | لا يوجد محتوى يمكنك مشاركته بعد. | There is no content you can share yet. |
-| review | **PROPOSED** | مراجعة ما سيصبح عامًا | Review what would become public |
-| reviewHeading | **PROPOSED** | ما سيصبح عامًا | What would become public |
-| analysisItem | **PROPOSED** | تحليل قنديل | QANDEEL analysis |
-| approvals | **PROPOSED** | الموافقات: {0} من {1} | Approvals: {0} of {1} |
-| waiting | **PROPOSED** (R1 wording) | بانتظار الموافقات المطلوبة. | Waiting for the required approvals. |
-| approveShown (replaces `approveOwn`) | **PROPOSED** (R1 wording) | أوافق على أن يصبح المحتوى المعروض هنا عامًا | I approve making the content shown here public |
-| approvalScope (new, R1) | **PROPOSED** (R1 wording) | موافقتك تخص المحتوى المعروض هنا فقط، ولا تعني موافقتك على باقي محتوى التجربة. | Your approval applies only to the content shown here; it does not approve the rest of the experience. |
-| approved | **PROPOSED** | موافقتك مسجّلة. | Your agreement is recorded. |
-| withdraw | **PROPOSED** | سحب موافقتي | Withdraw my agreement |
-| withdrawn | **PROPOSED** | سُحبت موافقتك. | Your agreement was withdrawn. |
-| markReady | **PROPOSED** | تجهيز للمراجعة | Mark ready for review |
-| approvalsIncomplete | **PROPOSED** | لا تزال موافقات مطلوبة. | Approvals are still needed. |
-| notPublishable | **PROPOSED** | لا يمكن مشاركة هذا في العالم العام. | This can't be shared in Public World. |
-| noLongerAvailable | **PROPOSED** | لم تعد هذه المسودة متاحة كما أُعدّت. | This draft is no longer available as it was prepared. |
-| requestsHeading | **PROPOSED** (R1 wording) | طلبات تحتاج موافقتك | Requests needing your approval |
-| requestFrom | **PROPOSED** | طلب من {0} | Requested by {0} |
-| approvalContent (replaces `yourWords`) | **PROPOSED** (R1 wording) | المحتوى الذي يحتاج موافقتك | Content requiring your approval |
+| entry | **APPROVED** | مشاركة تجربة في العالم العام | Share an experience in Public World |
+| workspaceTitle | **APPROVED** | مسوداتك في العالم العام | Your Public World drafts |
+| draftsHeading | **APPROVED** | المسودات | Drafts |
+| noDrafts | **APPROVED** | لا توجد مسودات بعد. | No drafts yet. |
+| startDraft | **APPROVED** (R1 wording) | بدء مسودة من محتوى موجود | Start a draft from existing content |
+| draftState | **APPROVED** (R1 wording) | مسودة. لم تُنشر بعد. | Draft. Not published yet. |
+| readyState | **APPROVED** (R1 wording) | جاهزة للمراجعة. لم تُنشر بعد. | Ready for review. Not published yet. |
+| chooseHeading | **APPROVED** | اختر ما سيصبح عامًا | Choose what would become public |
+| chooseHint | **APPROVED** | من كلامك في قنديل، ومما تراه في عوالمك المشتركة. حتى 20 عنصرًا. | From your words in QANDEEL and what you can see in your Shared Worlds. Up to 20 items. |
+| noSources | **APPROVED** (R1 wording) | لا يوجد محتوى يمكنك مشاركته بعد. | There is no content you can share yet. |
+| review | **APPROVED** | مراجعة ما سيصبح عامًا | Review what would become public |
+| reviewHeading | **APPROVED** | ما سيصبح عامًا | What would become public |
+| analysisItem | **APPROVED** | تحليل قنديل | QANDEEL analysis |
+| approvals | **APPROVED** | الموافقات: {0} من {1} | Approvals: {0} of {1} |
+| waiting | **APPROVED** (R1 wording) | بانتظار الموافقات المطلوبة. | Waiting for the required approvals. |
+| approveShown (replaces `approveOwn`) | **APPROVED** (R1 wording) | أوافق على أن يصبح المحتوى المعروض هنا عامًا | I approve making the content shown here public |
+| approvalScope (new, R1) | **APPROVED** (R1 wording) | موافقتك تخص المحتوى المعروض هنا فقط، ولا تعني موافقتك على باقي محتوى التجربة. | Your approval applies only to the content shown here; it does not approve the rest of the experience. |
+| approved | **APPROVED** | موافقتك مسجّلة. | Your agreement is recorded. |
+| withdraw | **APPROVED** | سحب موافقتي | Withdraw my agreement |
+| withdrawn | **APPROVED** | سُحبت موافقتك. | Your agreement was withdrawn. |
+| markReady | **APPROVED** | تجهيز للمراجعة | Mark ready for review |
+| approvalsIncomplete | **APPROVED** | لا تزال موافقات مطلوبة. | Approvals are still needed. |
+| notPublishable | **APPROVED** | لا يمكن مشاركة هذا في العالم العام. | This can't be shared in Public World. |
+| noLongerAvailable | **APPROVED** | لم تعد هذه المسودة متاحة كما أُعدّت. | This draft is no longer available as it was prepared. |
+| requestsHeading | **APPROVED** (R1 wording) | طلبات تحتاج موافقتك | Requests needing your approval |
+| requestFrom | **APPROVED** | طلب من {0} | Requested by {0} |
+| approvalContent (replaces `yourWords`) | **APPROVED** (R1 wording) | المحتوى الذي يحتاج موافقتك | Content requiring your approval |
 
-27 rows PROPOSED, in the ONE S5-02 Product Copy Gate (no second gate). R1 revised nine rows to the independent review's
-wording and added `approvalScope`, drawn beside every approve action; "No one else can see it" is removed everywhere,
-because it is Product-false once a rightsholder inspects their bounded approval content. The PR is not Product-complete
-until the Product Owner decides them.
+**CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06)** — the Product Owner approved all 27 rows exactly as they appear in
+`apps/mobile/src/public-authoring/copy.ts` at `87e38b16acf65aff3c430e09cf75534112bf09e1`, the R1 corrections included, in
+the ONE S5-02 Product Copy Gate (no second gate). R1 had revised nine rows to the independent review's wording and added
+`approvalScope`, drawn beside every approve action; "No one else can see it" is removed everywhere, because it is
+Product-false once a rightsholder inspects their bounded approval content. The closure changed metadata only: no
+wording and no behaviour.
 
 ## 13. Backlog reconciliation (BG-05 / BG-08)
 
@@ -353,7 +355,7 @@ until the Product Owner decides them.
 | G17 | the approver's view described as "their own words" | 1 fixed here (R1) | privacy boundary approved by independent review; wording corrected to "the exact content requiring this human's approval" in code, record and copy (§8, §12) |
 | G18 | Export My Data does not include the Public authoring footprint | 3 existing owner | `E2E-D-16` (world-scoped export categories `NOT YET INCLUDED`) — observe / report only |
 | G19 | storage-level reclamation of erased tuples | 5 not an obligation | the database's own VACUUM, the `0090` standard |
-| G20 | the S5-02 Product Copy Gate | 1 current-task gate | §12 — Product Owner decision before merge (BG-01) |
+| G20 | the S5-02 Product Copy Gate | 1 current-task gate — CLOSED | §12 — CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06) (BG-01) |
 
 **Orphan gaps = 0** — every row has class 1–5 and a named owner or disposition.
 
@@ -398,7 +400,7 @@ Local real PostgreSQL: PostgreSQL **17.10** (the CI major), started in the sessi
 | F10 | `verify-0133` locally | C | it shells out to `psql`, absent here; CI has it |
 | F11 | `verify-0130` locally: `days <= 7` | C | reproduced on the base database WITHOUT `0143` (database vs Node clock skew on Windows); no change |
 | F12 | independent review R1: a `MATERIAL_DEPENDENCY` closure target's Public copy survived because it was labelled analytical (G16) | A — Product / Privacy | fixed in `0143` (§4.4); proven G01–G10, R03 |
-| F13 | independent review R1: "their own words" and "No one else can see it" were semantically / Product false (G17) | A — Product copy | wording corrected; copy rows revised, gate stays OPEN |
+| F13 | independent review R1: "their own words" and "No one else can see it" were semantically / Product false (G17) | A — Product copy | wording corrected; copy rows revised (the gate was later CLOSED, §12) |
 
 ## 17. Remaining Stage-5 ownership
 
@@ -421,7 +423,8 @@ Applied on the same PR on top of `d9152fee25ad5e954097a1c33f8eb3a88478f8b9` (API
 - **G17.** No behaviour change — the requests command already filters to the items whose required approvers include this
   human. Comments, record and copy now say "the exact content requiring this human's approval"; `approvalScope` is drawn
   beside every approve action.
-- **Copy.** §12 — nine rows revised, one added, one gate, all PROPOSED.
+- **Copy.** §12 — nine rows revised, one added, one gate, all PROPOSED at R1; then **CLOSED — 27 rows APPROVED (Product
+  Owner, 2026-10-06)** on head `87e38b16acf65aff3c430e09cf75534112bf09e1` — a metadata-only closure (no wording, no behaviour).
 - **Validation, proportional to the change.** The focused `0143` verifier and its neighbours on a fresh database; the S5-02
   static contract; the focused API and mobile tests. The S5-02 Android journey asserts test IDs, not copy, and its flow is
   unchanged, so it is not re-run beyond the normal CI run on push.

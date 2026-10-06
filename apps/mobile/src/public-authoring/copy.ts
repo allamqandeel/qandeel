@@ -8,10 +8,10 @@
  *   - REUSED: words other surfaces already froze for the same fact, read from their own modules: «رجوع» / Back,
  *     «إعادة المحاولة» / Try again, «تعذّر ذلك الآن.» / the neutral action refusal, «أنت» / You (S4-01 Product Copy
  *     Gate), and «الظهور في العالم العام» / Shown in Public World as (S5-01 Product Copy Gate);
- *   - PROPOSED — S5-02 PRODUCT COPY GATE: every genuinely new string below. No frozen record names a Public Experience,
- *     a Draft, a content approval or the review state in Arabic, so none is invented as canon. They are drawn in the
- *     frozen register (I-08A4 §11: calm, plain, no exclamation, no persuasion) and await the Product Owner. The PR is not
- *     Product-complete until they are decided.
+ *   - APPROVED — S5-02 PRODUCT COPY GATE, CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06): every genuinely new
+ *     string below. No frozen record named a Public Experience, a Draft, a content approval or the review state in Arabic, so none was invented as canon.
+ *     They are drawn in the frozen register (I-08A4 §11: calm, plain, no exclamation, no persuasion), including the R1
+ *     corrections, and the Product Owner approved all 27 exactly as they appear here.
  *
  * No string says "published" as an achieved state: S5-02 ends at READY_FOR_REVIEW, which is not public. No string says
  * "no one else can see it": a required approver inspects their bounded approval content, so that would be false.
@@ -23,16 +23,16 @@ import { fill, sharedCopy } from '../shared-world/copy';
 import { publicCopy } from '../public-world/copy';
 
 export const PUBLIC_AUTHORING_COPY_GATE = {
-  status: 'S5-02 PRODUCT COPY GATE — OPEN (rows PROPOSED for Product Owner review)',
+  status: 'S5-02 PRODUCT COPY GATE — CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06)',
   canon: ['qandeel', 'sharedWorld'],
   reused: ['back', 'retry', 'actionUnavailable', 'you', 'shownAs'],
-  approved: [],
-  proposed: [
+  approved: [
     'entry', 'workspaceTitle', 'draftsHeading', 'noDrafts', 'startDraft', 'draftState', 'readyState', 'chooseHeading',
     'chooseHint', 'noSources', 'review', 'reviewHeading', 'analysisItem', 'approvals', 'waiting', 'approveShown',
     'approvalScope', 'approved', 'withdraw', 'withdrawn', 'markReady', 'approvalsIncomplete', 'notPublishable',
     'noLongerAvailable', 'requestsHeading', 'requestFrom', 'approvalContent',
   ],
+  proposed: [],
 } as const;
 
 export interface PublicAuthoringCopy {
@@ -83,63 +83,63 @@ export interface PublicAuthoringCopy {
 }
 
 const AR = {
-  entry: 'مشاركة تجربة في العالم العام', // PROPOSED — S5-02 Product Copy Gate
-  workspaceTitle: 'مسوداتك في العالم العام', // PROPOSED — S5-02 Product Copy Gate
-  draftsHeading: 'المسودات', // PROPOSED — S5-02 Product Copy Gate
-  noDrafts: 'لا توجد مسودات بعد.', // PROPOSED — S5-02 Product Copy Gate
-  startDraft: 'بدء مسودة من محتوى موجود', // PROPOSED — S5-02 Product Copy Gate
-  draftState: 'مسودة. لم تُنشر بعد.', // PROPOSED — S5-02 Product Copy Gate
-  readyState: 'جاهزة للمراجعة. لم تُنشر بعد.', // PROPOSED — S5-02 Product Copy Gate
-  chooseHeading: 'اختر ما سيصبح عامًا', // PROPOSED — S5-02 Product Copy Gate
-  chooseHint: 'من كلامك في قنديل، ومما تراه في عوالمك المشتركة. حتى 20 عنصرًا.', // PROPOSED — S5-02 Product Copy Gate
-  noSources: 'لا يوجد محتوى يمكنك مشاركته بعد.', // PROPOSED — S5-02 Product Copy Gate
-  review: 'مراجعة ما سيصبح عامًا', // PROPOSED — S5-02 Product Copy Gate
-  reviewHeading: 'ما سيصبح عامًا', // PROPOSED — S5-02 Product Copy Gate
-  analysisItem: 'تحليل قنديل', // PROPOSED — S5-02 Product Copy Gate
-  approvals: 'الموافقات: {0} من {1}', // PROPOSED — S5-02 Product Copy Gate
-  waiting: 'بانتظار الموافقات المطلوبة.', // PROPOSED — S5-02 Product Copy Gate
-  approveShown: 'أوافق على أن يصبح المحتوى المعروض هنا عامًا', // PROPOSED — S5-02 Product Copy Gate
-  approvalScope: 'موافقتك تخص المحتوى المعروض هنا فقط، ولا تعني موافقتك على باقي محتوى التجربة.', // PROPOSED — S5-02 Product Copy Gate
-  approved: 'موافقتك مسجّلة.', // PROPOSED — S5-02 Product Copy Gate
-  withdraw: 'سحب موافقتي', // PROPOSED — S5-02 Product Copy Gate
-  withdrawn: 'سُحبت موافقتك.', // PROPOSED — S5-02 Product Copy Gate
-  markReady: 'تجهيز للمراجعة', // PROPOSED — S5-02 Product Copy Gate
-  approvalsIncomplete: 'لا تزال موافقات مطلوبة.', // PROPOSED — S5-02 Product Copy Gate
-  notPublishable: 'لا يمكن مشاركة هذا في العالم العام.', // PROPOSED — S5-02 Product Copy Gate
-  noLongerAvailable: 'لم تعد هذه المسودة متاحة كما أُعدّت.', // PROPOSED — S5-02 Product Copy Gate
-  requestsHeading: 'طلبات تحتاج موافقتك', // PROPOSED — S5-02 Product Copy Gate
-  requestFrom: 'طلب من {0}', // PROPOSED — S5-02 Product Copy Gate
-  approvalContent: 'المحتوى الذي يحتاج موافقتك', // PROPOSED — S5-02 Product Copy Gate
+  entry: 'مشاركة تجربة في العالم العام', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  workspaceTitle: 'مسوداتك في العالم العام', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  draftsHeading: 'المسودات', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  noDrafts: 'لا توجد مسودات بعد.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  startDraft: 'بدء مسودة من محتوى موجود', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  draftState: 'مسودة. لم تُنشر بعد.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  readyState: 'جاهزة للمراجعة. لم تُنشر بعد.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  chooseHeading: 'اختر ما سيصبح عامًا', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  chooseHint: 'من كلامك في قنديل، ومما تراه في عوالمك المشتركة. حتى 20 عنصرًا.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  noSources: 'لا يوجد محتوى يمكنك مشاركته بعد.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  review: 'مراجعة ما سيصبح عامًا', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  reviewHeading: 'ما سيصبح عامًا', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  analysisItem: 'تحليل قنديل', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvals: 'الموافقات: {0} من {1}', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  waiting: 'بانتظار الموافقات المطلوبة.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approveShown: 'أوافق على أن يصبح المحتوى المعروض هنا عامًا', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvalScope: 'موافقتك تخص المحتوى المعروض هنا فقط، ولا تعني موافقتك على باقي محتوى التجربة.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approved: 'موافقتك مسجّلة.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  withdraw: 'سحب موافقتي', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  withdrawn: 'سُحبت موافقتك.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  markReady: 'تجهيز للمراجعة', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvalsIncomplete: 'لا تزال موافقات مطلوبة.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  notPublishable: 'لا يمكن مشاركة هذا في العالم العام.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  noLongerAvailable: 'لم تعد هذه المسودة متاحة كما أُعدّت.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  requestsHeading: 'طلبات تحتاج موافقتك', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  requestFrom: 'طلب من {0}', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvalContent: 'المحتوى الذي يحتاج موافقتك', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
 } as const;
 
 const EN = {
-  entry: 'Share an experience in Public World', // PROPOSED — S5-02 Product Copy Gate
-  workspaceTitle: 'Your Public World drafts', // PROPOSED — S5-02 Product Copy Gate
-  draftsHeading: 'Drafts', // PROPOSED — S5-02 Product Copy Gate
-  noDrafts: 'No drafts yet.', // PROPOSED — S5-02 Product Copy Gate
-  startDraft: 'Start a draft from existing content', // PROPOSED — S5-02 Product Copy Gate
-  draftState: 'Draft. Not published yet.', // PROPOSED — S5-02 Product Copy Gate
-  readyState: 'Ready for review. Not published yet.', // PROPOSED — S5-02 Product Copy Gate
-  chooseHeading: 'Choose what would become public', // PROPOSED — S5-02 Product Copy Gate
-  chooseHint: 'From your words in QANDEEL and what you can see in your Shared Worlds. Up to 20 items.', // PROPOSED — S5-02 Product Copy Gate
-  noSources: 'There is no content you can share yet.', // PROPOSED — S5-02 Product Copy Gate
-  review: 'Review what would become public', // PROPOSED — S5-02 Product Copy Gate
-  reviewHeading: 'What would become public', // PROPOSED — S5-02 Product Copy Gate
-  analysisItem: 'QANDEEL analysis', // PROPOSED — S5-02 Product Copy Gate
-  approvals: 'Approvals: {0} of {1}', // PROPOSED — S5-02 Product Copy Gate
-  waiting: 'Waiting for the required approvals.', // PROPOSED — S5-02 Product Copy Gate
-  approveShown: 'I approve making the content shown here public', // PROPOSED — S5-02 Product Copy Gate
-  approvalScope: 'Your approval applies only to the content shown here; it does not approve the rest of the experience.', // PROPOSED — S5-02 Product Copy Gate
-  approved: 'Your agreement is recorded.', // PROPOSED — S5-02 Product Copy Gate
-  withdraw: 'Withdraw my agreement', // PROPOSED — S5-02 Product Copy Gate
-  withdrawn: 'Your agreement was withdrawn.', // PROPOSED — S5-02 Product Copy Gate
-  markReady: 'Mark ready for review', // PROPOSED — S5-02 Product Copy Gate
-  approvalsIncomplete: 'Approvals are still needed.', // PROPOSED — S5-02 Product Copy Gate
-  notPublishable: "This can't be shared in Public World.", // PROPOSED — S5-02 Product Copy Gate
-  noLongerAvailable: 'This draft is no longer available as it was prepared.', // PROPOSED — S5-02 Product Copy Gate
-  requestsHeading: 'Requests needing your approval', // PROPOSED — S5-02 Product Copy Gate
-  requestFrom: 'Requested by {0}', // PROPOSED — S5-02 Product Copy Gate
-  approvalContent: 'Content requiring your approval', // PROPOSED — S5-02 Product Copy Gate
+  entry: 'Share an experience in Public World', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  workspaceTitle: 'Your Public World drafts', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  draftsHeading: 'Drafts', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  noDrafts: 'No drafts yet.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  startDraft: 'Start a draft from existing content', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  draftState: 'Draft. Not published yet.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  readyState: 'Ready for review. Not published yet.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  chooseHeading: 'Choose what would become public', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  chooseHint: 'From your words in QANDEEL and what you can see in your Shared Worlds. Up to 20 items.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  noSources: 'There is no content you can share yet.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  review: 'Review what would become public', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  reviewHeading: 'What would become public', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  analysisItem: 'QANDEEL analysis', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvals: 'Approvals: {0} of {1}', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  waiting: 'Waiting for the required approvals.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approveShown: 'I approve making the content shown here public', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvalScope: 'Your approval applies only to the content shown here; it does not approve the rest of the experience.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approved: 'Your agreement is recorded.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  withdraw: 'Withdraw my agreement', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  withdrawn: 'Your agreement was withdrawn.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  markReady: 'Mark ready for review', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvalsIncomplete: 'Approvals are still needed.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  notPublishable: "This can't be shared in Public World.", // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  noLongerAvailable: 'This draft is no longer available as it was prepared.', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  requestsHeading: 'Requests needing your approval', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  requestFrom: 'Requested by {0}', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
+  approvalContent: 'Content requiring your approval', // APPROVED — S5-02 Product Copy Gate (Product Owner, 2026-10-06)
 } as const;
 
 export function publicAuthoringCopy(language: ChromeLanguage): PublicAuthoringCopy {

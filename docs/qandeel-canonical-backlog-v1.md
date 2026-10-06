@@ -1370,7 +1370,8 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure`
 - **PR / SHA:** the S5-02 Draft PR / the head recorded in the S5-02 record. The tombstone holds from that PR's merge, which
-  happens only after independent review on green CI and the Product Owner's decision on the S5-02 Product Copy Gate.
+  happens only after independent review on green CI and the Product Owner's merge instruction (the S5-02 Product Copy
+  Gate is CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06)).
 - **Disposition:** completed, in the Product Owner's physical-erasure terms. Migration `0143` makes the canonical Shared
   owner deletion (`delete_shared_world_owned_material_v1`, forward-replaced from `0122` with its lock order and semantics
   unchanged) erase, in the SAME transaction at the SAME canonical instant, every Public package copy of a Shared material

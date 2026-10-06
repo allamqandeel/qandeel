@@ -161,10 +161,12 @@ test('6 — mobile: existing material only, inside the Public root, never "publi
   }
 });
 
-test('7 — the S5-02 Product Copy Gate: one gate, every new row PROPOSED, frozen words reused byte-exact', () => {
+test('7 — the S5-02 Product Copy Gate: one gate, CLOSED, every new row APPROVED, frozen words reused byte-exact', () => {
   const copy = read(`${MOBILE}/public-authoring/copy.ts`);
-  assert.match(copy, /status: 'S5-02 PRODUCT COPY GATE — OPEN \(rows PROPOSED for Product Owner review\)'/u);
-  assert.equal((copy.match(/\/\/ PROPOSED — S5-02 Product Copy Gate/gu) ?? []).length, 54, '27 rows, Arabic and English');
+  assert.ok(copy.includes("status: 'S5-02 PRODUCT COPY GATE — CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06)'"), 'the gate is closed by the Product Owner');
+  assert.equal((copy.match(/\/\/ APPROVED — S5-02 Product Copy Gate \(Product Owner, 2026-10-06\)/gu) ?? []).length, 54, '27 rows, Arabic and English');
+  assert.doesNotMatch(copy, /\/\/ PROPOSED/u, 'no row is left PROPOSED');
+  assert.match(copy, /proposed: \[\],/u);
   // S5-02 R1 (G17): approval is over the exact content shown, never "my words", and nothing claims no one else can see it.
   assert.doesNotMatch(copy, /No one else can see|لا يراها أحد غيرك|yourWords|approveOwn/u, 'no Product-false or words-only approval copy');
   assert.ok(copy.includes("approvalScope: 'Your approval applies only to the content shown here; it does not approve the rest of the experience.'"));
@@ -182,7 +184,7 @@ test('7 — the S5-02 Product Copy Gate: one gate, every new row PROPOSED, froze
 test('8 — governance: the record, QAN-BL-CW-01 tombstoned, QAN-BL-ACCT-01 still a launch blocker, E2E-H-08 closed', () => {
   const record = read(RECORD);
   assert.match(record, /^# QANDEEL — S5-02 Public Publishing, Rights, Draft \/ Review & Privacy Closure — Implementation Record v1/u);
-  assert.match(record, /\*\*Status:\*\* \*\*`S5-02 IMPLEMENTED — REVIEW CANDIDATE \(Draft PR\) — S5-02 PRODUCT COPY GATE OPEN \(rows PROPOSED\) — NOT MERGED`\*\*/u);
+  assert.ok(record.includes('**Status:** **`S5-02 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-02 PRODUCT COPY GATE CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06) — NOT MERGED`**'));
   assert.match(record, /8dfc7b38baa133c8cecbffea8c65ae17ddc245ff/u);
   assert.match(record, /\*\*`E2E-H-08` — CLOSED \(S5-02\)\*\*/u);
   assert.match(record, /\*\*Orphan gaps = 0\*\*/u);

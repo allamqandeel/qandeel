@@ -246,16 +246,16 @@ describe('S5-02 client decoding', () => {
 });
 
 describe('S5-02 Product Copy Gate', () => {
-  it('names every new row PROPOSED and reuses frozen words byte-exact', () => {
-    expect(PUBLIC_AUTHORING_COPY_GATE.status).toMatch(/OPEN/u);
-    expect(PUBLIC_AUTHORING_COPY_GATE.approved).toEqual([]);
-    expect(PUBLIC_AUTHORING_COPY_GATE.proposed.length).toBeGreaterThan(0);
+  it('is CLOSED with every new row APPROVED and reuses frozen words byte-exact', () => {
+    expect(PUBLIC_AUTHORING_COPY_GATE.status).toBe('S5-02 PRODUCT COPY GATE — CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06)');
+    expect(PUBLIC_AUTHORING_COPY_GATE.approved).toHaveLength(27);
+    expect(PUBLIC_AUTHORING_COPY_GATE.proposed).toEqual([]);
     expect(publicAuthoringCopy('ar').back).toBe('رجوع');
     expect(publicAuthoringCopy('ar').shownAs).toBe('الظهور في العالم العام');
     expect(publicAuthoringCopy('en').qandeel).toBe('QANDEEL');
     for (const language of ['ar', 'en'] as const) {
       const words = publicAuthoringCopy(language);
-      for (const row of PUBLIC_AUTHORING_COPY_GATE.proposed) expect(typeof words[row]).toBe('string');
+      for (const row of PUBLIC_AUTHORING_COPY_GATE.approved) expect(typeof words[row]).toBe('string');
     }
   });
 });
