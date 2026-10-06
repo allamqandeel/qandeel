@@ -136,8 +136,8 @@ const closedMaterial = async (worldId, limit = 50) =>
 const formerMaterial = async (limit = 50) =>
   rows('SELECT * FROM public.list_own_former_shared_world_material_v1($1::timestamptz, $2::uuid, $3::integer)', [null, null, limit]);
 const leave = async (commandId, worldId, on = client) => (await first('SELECT * FROM public.leave_shared_world_v1($1::uuid, $2::uuid)', [commandId, worldId], on)).outcome;
-const proposeSettings = async (commandId, worldId, name, description = null, topic = null) =>
-  first('SELECT * FROM public.propose_shared_world_settings_v1($1::uuid, $2::uuid, $3::text, $4::text, $5::text)', [commandId, worldId, name, description, topic]);
+const proposeSettings = async (commandId, worldId, name, description = null, topic = null, on = client) =>
+  first('SELECT * FROM public.propose_shared_world_settings_v1($1::uuid, $2::uuid, $3::text, $4::text, $5::text)', [commandId, worldId, name, description, topic], on);
 const proposeRemoval = async (commandId, worldId, handle) =>
   first('SELECT * FROM public.propose_shared_world_member_removal_v1($1::uuid, $2::uuid, $3::uuid)', [commandId, worldId, handle]);
 const proposeEnd = async (commandId, worldId) => first('SELECT * FROM public.propose_shared_world_end_v1($1::uuid, $2::uuid)', [commandId, worldId]);
@@ -1061,12 +1061,12 @@ async function verifyConcurrency() {
     stage = 'concurrency: unrelated Worlds stay concurrent';
     await one.query('BEGIN');
     await actAs('authenticated', k2, one);
-    const held = await proposeSettings(randomUUID(), worldK, 'Holding World K');
+    const held = await proposeSettings(randomUUID(), worldK, 'Holding World K', null, null, one);
     assert.equal(held.outcome, 'PROPOSED');
     await two.query('BEGIN');
     await two.query("SET LOCAL statement_timeout = '5s'");
     await actAs('authenticated', l1, two);
-    const elsewhere = await proposeSettings(randomUUID(), worldL, 'World L is not blocked');
+    const elsewhere = await proposeSettings(randomUUID(), worldL, 'World L is not blocked', null, null, two);
     assert.equal(elsewhere.outcome, 'PROPOSED', 'World L proceeded while World K was held');
     await two.query('COMMIT');
     await one.query('COMMIT');
