@@ -6,7 +6,7 @@
 // I-05 display row; no Draft, publication, Experience, search, placement, discussion, Public QANDEEL, reaction, Replay
 // or Launch path is opened; signed-out viewing stays UNRESOLVED; the Global Switcher's third destination is the real
 // Public area with the frozen P2 navPublic; `qandeel://public` is exact and goes through the same entry controller;
-// the display choice lives in Account & Identity; the Copy Gate names its PROPOSED rows; QAN-BL-CW-01 is assigned to
+// the display choice lives in Account & Identity; the Copy Gate is closed; QAN-BL-CW-01 is assigned to
 // S5-02 and not implemented. Live behaviour is proven by database/verify-migration-0142.mjs, the API spec and the mobile
 // Jest suites; this file proves structure.
 import test from 'node:test';
@@ -135,7 +135,7 @@ test('5 — the third Global Area is real: navPublic from P2, the same entry con
   }
 });
 
-test('6 — the display choice is a MODE in Account & Identity; no Public Settings page; the Copy Gate names its PROPOSED rows', () => {
+test('6 — the display choice is a MODE in Account & Identity; no Public Settings page; the Copy Gate is closed', () => {
   const api = code(`${MOBILE}/runtime-entry/public-world-api.ts`);
   assert.match(api, /this\.exchange\('PUT', '\/public\/display', \{ mode \}\)/u, 'only the mode is sent');
   assert.doesNotMatch(api, /publicIdentityRef|public_identity_ref|userId/u);
@@ -151,27 +151,30 @@ test('6 — the display choice is a MODE in Account & Identity; no Public Settin
     assert.doesNotMatch(code(`${MOBILE}/${file}`), /['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u, `${file} carries no Arabic literal`);
   }
   const copy = read(`${MOBILE}/public-world/copy.ts`);
-  assert.match(copy, /status: 'S5-01 PRODUCT COPY GATE — OPEN \(2 rows PROPOSED for Product Owner approval\)'/u);
+  assert.match(copy, /status: 'S5-01 PRODUCT COPY GATE — CLOSED \(2026-10-06: every row CANON, REUSED or APPROVED; none PROPOSED\)'/u);
   for (const exact of [
     "publicWorld: 'العالم العام', // CANON — I-08A4 §8",
     "publicWorld: 'Public World', // CANON — I-08A4 §9",
-    "switcherLabel: 'التنقل بين قنديل والعالم المشترك والعالم العام', // PROPOSED — S5-01 Product Copy Gate — accessible name only",
-    "switcherLabel: 'Switch between QANDEEL, Shared World and Public World', // PROPOSED — S5-01 Product Copy Gate — accessible name only",
-    "displayHeading: 'الظهور في العالم العام', // PROPOSED — S5-01 Product Copy Gate",
-    "displayHeading: 'Shown in Public World as', // PROPOSED — S5-01 Product Copy Gate",
+    "switcherLabel: 'التنقل بين قنديل والعالم المشترك والعالم العام', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06) — accessible name only",
+    "switcherLabel: 'Switch between QANDEEL, Shared World and Public World', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06) — accessible name only",
+    "displayHeading: 'الظهور في العالم العام', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06)",
+    "displayHeading: 'Shown in Public World as', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06)",
   ]) assert.ok(copy.includes(exact), `copy carries ${exact}`);
-  assert.equal((copy.match(/\/\/ PROPOSED/gu) ?? []).length, 4, 'exactly the two PROPOSED rows, in both languages');
+  assert.equal((copy.match(/\/\/ PROPOSED/gu) ?? []).length, 0, 'no PROPOSED row remains');
 });
 
-test('7 — governance: the record, E2E-H-08, and QAN-BL-CW-01 assigned to S5-02 without being closed', () => {
+test('7 — governance: the record, E2E-H-08 and QAN-BL-CW-01 owned by S5-02 without being closed', () => {
   const record = read(RECORD);
   assert.match(record, /^# QANDEEL — S5-01 Public Reachability, Entry & Identity Foundation — Implementation Record v1/u);
-  assert.match(record, /\*\*Status:\*\* \*\*`S5-01 IMPLEMENTED — REVIEW CANDIDATE \(Draft PR\) — S5-01 PRODUCT COPY GATE OPEN \(2 rows PROPOSED\) — NOT MERGED`\*\*/u);
+  assert.match(record, /\*\*Status:\*\* \*\*`S5-01 IMPLEMENTED — REVIEW CANDIDATE \(Draft PR\) — S5-01 PRODUCT COPY GATE CLOSED — NOT MERGED`\*\*/u);
+  assert.match(record, /\*\*`E2E-H-08` — ADVANCED \/ S5-02 OWNED — NOT CLOSED\*\*/u, 'S5-01 advances E2E-H-08 and does not close it');
+  assert.doesNotMatch(record, /E2E-H-08[^\n]*closes on merge/u);
   assert.match(record, /Orphan gaps = 0/u);
   assert.match(record, /5cf98a267d9eed7e9019f0ca5ed93bd8884a1b36/u);
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /\| `QAN-BL-CW-01` \| Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative \(`ASSURE-F05`\) \| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
   assert.match(backlog, /\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `UNASSIGNED` \| `HIGH` \| `OPEN — UNASSIGNED` \|/u);
   assert.match(backlog, /physically erased/u, 'the Product Owner ASSURE-F05 decision is recorded');
+  assert.match(backlog, /\| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \|[^\n]*`E2E-H-08`[^\n]*80-character account Name by a reviewed forward migration/u, 'S5-02 owns the E2E-H-08 closure and the Name-length reconciliation');
   assert.doesNotMatch(sql(MIGRATION), /public_experience_text_derivative/u, 'ASSURE-F05 is not implemented here');
 });

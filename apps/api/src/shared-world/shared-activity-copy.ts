@@ -13,16 +13,18 @@ import { LOCK_SCREEN_COPY } from '../push/push-projection';
  *       the proposal rows, `proposedBy` and the two membership-request rows: the S4-03 Product Copy Gate
  *       (`shared-world/lifecycle-copy.ts`), the exact words Manage World and the Shared root already show for the
  *       same fact;
- *   - PROPOSED — the S4-04 Product Copy Gate (ONE bounded gate; implementation record §11): `joined`, the one fact no
- *     approved surface states (a person joined the World the reader is in).
+ *   - APPROVED — the S4-04 Product Copy Gate (ONE bounded gate; implementation record §11): `joined`, the one fact no
+ *     other approved surface states (a person joined the World the reader is in); approved by the Product Owner
+ *     (2026-10-06) and reconciled after merge in S5-01 R1 — copy governance only, the bytes and behaviour unchanged.
  */
 export interface Bilingual { readonly ar: string; readonly en: string }
 
 export const SHARED_ACTIVITY_COPY_GATE = {
-  status: 'S4-04 PRODUCT COPY GATE — OPEN — 1 row PROPOSED',
+  status: 'S4-04 PRODUCT COPY GATE — CLOSED — 1 row APPROVED',
   reused: ['ambient', 'someone', 'proposalSettings', 'proposalRemoval', 'proposalEnd', 'proposalAdd', 'proposalRejoin', 'proposedBy',
     'memberRequestAdd', 'memberRequestRejoin'],
-  proposed: ['joined'],
+  approved: ['joined'],
+  proposed: [],
 } as const;
 
 export const SHARED_ACTIVITY_COPY = Object.freeze({
@@ -46,7 +48,7 @@ export const SHARED_ACTIVITY_COPY = Object.freeze({
   memberRequestAdd: { ar: '{0} يقترح انضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.', en: '{0} proposed that you join a Shared World, and all its members approved.' },
   /** REUSED — S4-03 Product Copy Gate. */
   memberRequestRejoin: { ar: '{0} يقترح عودتك إلى عالم مشترك كنت فيه، وقد وافق عليها كل أعضائه.', en: '{0} proposed that you return to a Shared World you were in, and all its members approved.' },
-  /** PROPOSED — S4-04 Product Copy Gate. {0}: the person's own Name. */
+  /** APPROVED — S4-04 Product Copy Gate (Product Owner, 2026-10-06). {0}: the person's own Name. */
   joined: { ar: 'انضم {0} إلى هذا العالم.', en: '{0} joined this world.' },
 });
 

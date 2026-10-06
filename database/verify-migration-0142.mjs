@@ -102,8 +102,15 @@ async function verifyBoundary() {
     assert.equal(f.prosecdef, true, `${f.proname} is a definer`);
     assert.equal(f.owner, 'postgres');
     assert.deepEqual(f.proconfig, ['search_path=""'], `${f.proname} pins an empty search_path`);
-    assert.doesNotMatch(f.args, /user|account|actor|owner|ref|label_text|display_label|audience|authority|viewer/u, `${f.proname} accepts no trusted identity input`);
   }
+  // The application boundary: the three owner commands derive the human from auth.uid() and take only the mode.
+  const args = Object.fromEntries(fns.map((f) => [f.proname, f.args]));
+  assert.deepEqual(WRAPPERS.map((w) => args[w]), ['', '', 'p_label_mode text'], 'the owner commands accept no identity, ref, label, audience or authority input');
+  // The internal helpers MAY carry an internal user identity (supplied only by auth.uid() or the trigger); their
+  // unreachability is proven under "exact executable set" below. The trigger function takes no caller input.
+  assert.equal(args.derive_account_public_display_v1, 'p_user_id uuid');
+  assert.equal(args.sync_account_public_display_v1, 'p_user_id uuid');
+  assert.equal(args.sync_public_display_after_account_change_v1, '', 'the trigger function accepts no caller input');
   const wrappers = await rows(`SELECT p.proname, p.prosecdef, p.proconfig, pg_get_function_identity_arguments(p.oid) AS args
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = ANY($1::text[]) ORDER BY 1`, [WRAPPERS]);
   assert.equal(wrappers.length, 3);
@@ -129,6 +136,9 @@ async function verifyBoundary() {
     WHERE (n.nspname = 'public_world_private' OR (n.nspname = 'public' AND p.proname = ANY($1::text[])))
       AND EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE')`, [WRAPPERS]);
   assert.deepEqual(publicExec, [], 'no S5-01 function keeps PUBLIC EXECUTE');
+  for (const helper of INTERNAL) {
+    assert.equal(executable.some((e) => e.fn === `public_world_private.${helper}`), false, `${helper} (internal identity input) is unreachable to anon, authenticated and service_role`);
+  }
 
   stage = 'boundary: the one table is closed';
   const tables = await rows(`SELECT c.relname, c.relrowsecurity FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace

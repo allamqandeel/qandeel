@@ -1568,7 +1568,10 @@ Owner's answer to its open ruling (the derivative's retained content bytes must 
 `OPEN — UNASSIGNED` to `DEFERRED — OWNED`; nothing of it is implemented and its finding is unchanged. `QAN-BL-ACCT-01`'s
 reopen condition is observed and the item stays `OPEN — UNASSIGNED` (current-truth note). `QAN-BL-NOTIF-02` … `05`,
 `QAN-BL-PRIV-02`, `QAN-BL-NAV-02`, `QAN-BL-VOICE-01`, `QAN-BL-LAUNCH-01` … `03`, `QAN-BL-CI-01` and `QAN-BL-CW-02` are
-unchanged: no Public Activity producer, Public push, Replay, Voice or Launch path is opened. It admits nothing; its Gap
+unchanged: no Public Activity producer, Public push, Replay, Voice or Launch path is opened. At R1 the Product Owner
+assigned two further obligations to `S5-02`, recorded on its row in §9 (neither is a backlog item): the final closure of
+`E2E-H-08` — ADVANCED / S5-02 OWNED — NOT CLOSED (S5-01 establishes the display foundation and creates no I-05 Public Identity), and the Name-length
+reconciliation (when the real Public Identity creation path is opened, the old I-05 64-character display-label implementation ceiling is reconciled with the valid 80-character account Name by a reviewed forward migration, so REAL_NAME can represent the full canonical account Name; no silent truncation, and the account Name limit is not redefined). It admits nothing; its Gap
 Matrix is §13 of its [implementation record](e2e/QANDEEL_S5_01_PUBLIC_REACHABILITY_ENTRY_IDENTITY_FOUNDATION_IMPLEMENTATION_RECORD_v1.md):
 **Orphan gaps = 0**. The register still holds **43** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9
 `OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from
@@ -1637,7 +1640,7 @@ Inherited after T-12 closure reconciliation:
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
 | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
-| `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened |
+| `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

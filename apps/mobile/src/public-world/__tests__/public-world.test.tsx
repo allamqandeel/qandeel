@@ -121,7 +121,8 @@ describe('S5-01 Public World area', () => {
   });
 
   it('the copy gate names its PROPOSED rows; the area name is CANON', () => {
-    expect(PUBLIC_COPY_GATE.proposed).toEqual(['switcherLabel', 'displayHeading']);
+    expect(PUBLIC_COPY_GATE.approved).toEqual(['switcherLabel', 'displayHeading']);
+    expect(PUBLIC_COPY_GATE.proposed).toEqual([]);
     expect(publicCopy('ar').publicWorld).toBe('العالم العام');
     expect(publicCopy('en').publicWorld).toBe('Public World');
   });

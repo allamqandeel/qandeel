@@ -144,9 +144,10 @@ test('6 — the Shared Activity words: approved bytes reused from their sources;
   const [someoneAr, someoneEn] = pair('someone');
   assert.ok(shared.includes(`someone: '${someoneAr}', // APPROVED — S4-01 Product Copy Gate`) && shared.includes(`someone: '${someoneEn}', // APPROVED — S4-01 Product Copy Gate`));
   assert.match(api, /ambient: LOCK_SCREEN_COPY\.generic\.SHARED as Bilingual,/u, 'p3.generic.shared, imported not copied');
-  assert.match(api, /status: 'S4-04 PRODUCT COPY GATE — OPEN — 1 row PROPOSED',/u, 'the one gate states its status');
-  assert.match(api, /proposed: \['joined'\],/u);
-  assert.match(api, /\/\*\* PROPOSED — S4-04 Product Copy Gate\. \{0\}: the person's own Name\. \*\/\n  joined: \{/u);
+  // S5-01 R1 re-anchor: the Product Owner approved `joined` (2026-10-06); the bytes are unchanged.
+  assert.match(api, /status: 'S4-04 PRODUCT COPY GATE — CLOSED — 1 row APPROVED',/u, 'the one gate states its status');
+  assert.match(api, /approved: \['joined'\],\n  proposed: \[\],/u);
+  assert.match(api, /\/\*\* APPROVED — S4-04 Product Copy Gate \(Product Owner, 2026-10-06\)\. \{0\}: the person's own Name\. \*\/\n  joined: \{ ar: 'انضم \{0\} إلى هذا العالم\.', en: '\{0\} joined this world\.' \},/u);
   // The per-World row's state word is the approved p3.mutedWorld bytes.
   const registry = JSON.parse(read('docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/data/COPY_REGISTRY.json')).rows;
   const muted = registry.find((r) => r.k === 'p3.mutedWorld');

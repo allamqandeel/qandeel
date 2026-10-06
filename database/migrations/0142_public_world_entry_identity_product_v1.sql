@@ -36,11 +36,14 @@
 --
 -- ## Boundary
 --
---   - every privileged function lives in the new non-exposed `public_world_private` schema as a pinned SECURITY DEFINER
---     deriving the human from `auth.uid()`; the three `public` wrappers are SECURITY INVOKER one-liners executable by
---     `authenticated` only; the derivation, the sync and the trigger function are nobody's;
+--   - every privileged function lives in the new non-exposed `public_world_private` schema as a pinned SECURITY DEFINER;
+--     the three owner commands derive the human from `auth.uid()`; the three `public` wrappers are SECURITY INVOKER
+--     one-liners executable by `authenticated` only; the derivation, the sync and the trigger function are nobody's;
 --   - no table grant of any kind; the one table is RLS-enabled with zero policies;
---   - no function here returns, accepts or exposes `public_identity_ref`, `user_id`, a Login ID, an Email or a Shared ID;
+--   - no application boundary (owner command or wrapper) accepts, returns or exposes `public_identity_ref`, `user_id`,
+--     a Login ID, an Email or a Shared ID; the only application input is `p_label_mode`. The internal, non-executable
+--     derivation and sync helpers carry an internal user identity, supplied only by an owner command's `auth.uid()` or
+--     by the account trigger;
 --   - no frozen I-05 consequential primitive (identity creation, label update, Draft, manifest, approval, review, publish,
 --     placement, discussion, Public QANDEEL, vitality, disappearance) is granted, wrapped or called here; the only frozen
 --     I-05 function called is the read-only audience gate.

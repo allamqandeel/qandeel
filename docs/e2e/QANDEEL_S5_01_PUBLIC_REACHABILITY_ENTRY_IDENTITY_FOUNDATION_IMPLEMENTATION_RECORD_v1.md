@@ -5,7 +5,7 @@ Stage-5 task)
 **Task Contract:** the Product Owner's S5-01 Task Contract (2026-10-06)
 **Canonical baseline:** `5cf98a267d9eed7e9019f0ca5ed93bd8884a1b36` (the merge of PR #313, S4-04)
 **Branch:** `feat/s5-01-public-reachability-entry-identity`
-**Status:** **`S5-01 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-01 PRODUCT COPY GATE OPEN (2 rows PROPOSED) — NOT MERGED`**.
+**Status:** **`S5-01 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-01 PRODUCT COPY GATE CLOSED — NOT MERGED`**.
 Claude does not merge it.
 
 > Public World becomes the third real Global Switcher destination. Entering it asks the server, NOW, whether the
@@ -115,7 +115,7 @@ a second Public World and a resolved signed-out policy.
 | switching the mode edits neither the Public ID nor the Name | proven by the verifier (the account row before and after) |
 | no stale rendering | Settings re-reads on every draw; an existing I-05 display row is synchronized in the same transaction as the Public ID / Name / mode change |
 | alias change ≠ Experience change | the sync writes `public_identity_display_state` alone (no FK to any Experience, version or manifest) — proven by counts and the unchanged ref |
-| internal ref never leaves the database | no S5-01 function returns or accepts `public_identity_ref` or `user_id` |
+| internal ref never leaves the database | no application boundary (owner command or wrapper) accepts, returns or exposes `public_identity_ref` or `user_id`; the internal, non-executable derivation / sync helpers carry an internal user identity supplied only by `auth.uid()` or the account trigger |
 | no lookup / availability oracle; nobody else's state | every command is the caller's own; no parameter can name another account |
 | no DM / Shared route | nothing here reads or writes Shared or contact state |
 | no Public Settings page | one radio group inside the existing Account & Identity group |
@@ -126,8 +126,11 @@ for an account that has published nothing. The choice is therefore an account-sc
 account; the I-05 display row becomes its synchronized projection when an identity exists — the authorship path that
 creates one is S5-02's (§12).
 
-**`E2E-H-08` — IMPLEMENTED on the Draft PR; closes on merge.** The production path is complete: Settings → API → `0142` →
-the derivation, and the I-05 bridge proven against real PostgreSQL. Not closed now.
+**`E2E-H-08` — ADVANCED / S5-02 OWNED — NOT CLOSED** (Product Owner, R1, 2026-10-06). S5-01 establishes the canonical Public display choice, PSEUDONYM → the
+CURRENT Public ID, REAL_NAME → the CURRENT account Name, and stale-label synchronization once an I-05 identity exists
+(Settings → API → `0142` → the derivation → the I-05 bridge, proven against real PostgreSQL). Because S5-01 deliberately
+creates no I-05 Public Identity, the row's final closure belongs to `S5-02`, when the real authorship / Public-Identity
+creation path exists and consumes this foundation. S5-01 adds no identity auto-provisioning to close it.
 
 ## 7. Privacy / security proof (Task Contract §10)
 
@@ -150,7 +153,7 @@ the derivation, and the I-05 bridge proven against real PostgreSQL. Not closed n
 
 Nothing is logged in the API or the app (no Public ID, Name, mode or verdict).
 
-## 8. Copy census and Product Copy Gate — **OPEN — 2 rows PROPOSED**
+## 8. Copy census and Product Copy Gate — **CLOSED (Product Owner, 2026-10-06)**
 
 | Key | Surface | Arabic | English | Source | Status |
 |---|---|---|---|---|---|
@@ -162,14 +165,17 @@ Nothing is logged in the API or the app (no Public ID, Name, mode or verdict).
 | `pidTerm` | display option | «المعرّف العام» | Public ID | P4-C4 §5 | **APPROVED** (reused) |
 | `nameLabel` | display option | «الاسم» | Name | W1B-01 | **APPROVED** (reused) |
 | network | a choice that did not go through | «تعذّر الاتصال. حاول مرة أخرى.» | Couldn’t connect. Try again. | T-14 (as W3-02 reuses it) | **APPROVED** (reused) |
-| `switcherLabel` | the Global Switcher's accessible name (three destinations), accessible name only | «التنقل بين قنديل والعالم المشترك والعالم العام» | Switch between QANDEEL, Shared World and Public World | the S4-01 approved pattern, extended to the third name | **PROPOSED** |
-| `displayHeading` | Account & Identity: the heading of the Public display choice | «الظهور في العالم العام» | Shown in Public World as | new (P1 §6 names the control, not its words) | **PROPOSED** |
+| `switcherLabel` | the Global Switcher's accessible name (three destinations), accessible name only | «التنقل بين قنديل والعالم المشترك والعالم العام» | Switch between QANDEEL, Shared World and Public World | the S4-01 approved pattern, extended to the third name | **APPROVED** (Product Owner, 2026-10-06) |
+| `displayHeading` | Account & Identity: the heading of the Public display choice | «الظهور في العالم العام» | Shown in Public World as | new (P1 §6 names the control, not its words) | **APPROVED** (Product Owner, 2026-10-06) |
 
-Both PROPOSED rows live only in `apps/mobile/src/public-world/copy.ts`, each marked `// PROPOSED — S5-01 Product Copy
-Gate`, and are pinned by the S5-01 contract. The S4-01 two-destination `switcherLabel` row stays in the S4-01 copy module
-unchanged (its gate is CLOSED); once the S5-01 row is approved the switcher's accessible name is the S5-01 one. No other
-human-visible word is new. The UI slices that show the two rows are implemented and flagged; they are not mergeable until
-the Product Owner approves or amends them.
+Both new rows live only in `apps/mobile/src/public-world/copy.ts`, each marked `// APPROVED — S5-01 Product Copy Gate
+(Product Owner, 2026-10-06)`, and are pinned by the S5-01 contract; the Product Owner approved both exactly as proposed (R1).
+The S4-01 two-destination `switcherLabel` row stays in the S4-01 copy module unchanged (its gate is CLOSED); the
+switcher's accessible name is the S5-01 one. No other human-visible word is new. No row is PROPOSED.
+
+*S4-04 reconciliation (copy governance only):* the Product Owner also approved the merged S4-04 `joined` row —
+«انضم {0} إلى هذا العالم.» / "{0} joined this world." — exactly as merged; `shared-activity-copy.ts` and the S4-04 record now
+state that gate CLOSED. S4-04 behaviour and bytes are unchanged.
 
 ## 9. What is deliberately NOT implemented (explicit non-scope)
 
@@ -236,24 +242,26 @@ CI results for the exact head are added in the PR conversation.
 | Forward-safety mirror tests (`✖` while the pins above failed) | **B** | they re-run every contract in a mirror; green once the pins were re-anchored |
 | S5-01 contract §7 before this record existed | **B** | expected ordering; green once this record was written |
 | `0142` verifier: an erasure probe that swallowed an expected refusal | **B** (caught by the hazard lint before any run) | removed; the cascade is proven by its foreign-key rule instead |
+| API CI #918, Step 187 (`boundary: privileged functions are pinned private definers`): `derive_account_public_display_v1 accepts no trusted identity input` | **B — Validation / Proof** (independent review, R1) | the verifier applied the application-boundary "no identity argument" rule to the internal, non-executable helpers. Corrected in the verifier only: the owner commands and wrappers take only `p_label_mode`; the internal helpers may take `p_user_id` and are proven unreachable to PUBLIC / anon / authenticated / service_role; the trigger function takes no input. No Product code changed |
 
 No **A — Product / Security** and no **C — Infrastructure** failure was encountered locally. CI classifications are
 added in the PR conversation.
 
 ## 11. Residuals for the Product Owner (reported, not admitted)
 
-1. **Name length vs the frozen I-05 label ceiling.** A Name may be up to 80 characters (`0123`); an I-05 display label at
-   most 64 (`0091`). S5-01 shows any Name in Settings, and its I-05 bridge REFUSES (never truncates) a longer Name for an
-   account that HAS an I-05 identity in REAL_NAME mode. No identity exists before S5-02, so nothing is reachable today;
-   S5-02, which creates identities, needs the Product decision (for example: refuse REAL_NAME above 64, or a reviewed
-   change to the frozen ceiling). Proposed owner: `S5-02`.
+1. **Name length vs the frozen I-05 label ceiling — Product Owner decision recorded (R1, 2026-10-06), owner `S5-02`.**
+   A Name may be up to 80 characters (`0123`); an I-05 display label at most 64 (`0091`). S5-01 shows any Name in
+   Settings, and its I-05 bridge REFUSES (never truncates) a longer Name for an account that HAS an I-05 identity in
+   REAL_NAME mode; no identity exists before S5-02, so nothing is reachable today. Decision: when the real Public Identity creation path is opened, the old I-05 64-character display-label implementation ceiling is reconciled with the valid 80-character account Name by a reviewed forward migration, so REAL_NAME can represent the full canonical account Name; no silent truncation, and the account Name limit is not redefined. Not
+   implemented in S5-01; recorded on the S5-02 row of the backlog (§9).
 2. **Export My Data does not carry the Public display choice.** The precedent is `QAN-BL-PRIV-02`; the export's content is
    a Privacy & Data Product decision. Proposed owner: `PRIV-EXPORT-01`.
-3. **S4-04 merged with its Copy Gate open.** At the baseline, `shared-activity-copy.ts` and the S4-04 record still state the
-   one `joined` row PROPOSED. Recorded in the locators as repository truth; S5-01 does not decide it.
+3. **S4-04 merged with its Copy Gate open — RESOLVED (R1).** The Product Owner approved the `joined` row exactly as
+   merged; reconciled as copy governance only (§8).
 
-Neither 1 nor 2 is admitted to the backlog by S5-01 on its own authority (BG-06: admission needs a canonical deferral or
-an explicit designation); each needs the Product Owner's designation before S5-01 closes (BG-08).
+Item 1 is designated to S5-02 by the Product Owner. Item 2 is not admitted to the backlog by S5-01 on its own authority
+(BG-06: admission needs a canonical deferral or an explicit designation); it needs the Product Owner's designation before
+S5-01 closes (BG-08).
 
 ## 12. Backlog reconciliation (BG-05 / BG-08)
 
@@ -280,15 +288,15 @@ task · (6) not an obligation.
 | P-02 | Public entry from current audience truth; signed-out fail-closed | 2 | §4.1, §5 |
 | P-03 | Public root / controller, content-empty and truthful | 2 | §5 |
 | P-04 | `qandeel://public` Direct Entry | 2 | §5 |
-| P-05 | `E2E-H-08` — Public display choice bound to the Public ID / Name | 2 | §6; closes on merge |
+| P-05 | `E2E-H-08` — Public display choice bound to the Public ID / Name | 2 / 5 | §6; foundation implemented here; ADVANCED / S5-02 OWNED — NOT CLOSED |
 | P-06 | Draft / publication / rights / review; `ASSURE-F05` | 4 / 5 | `QAN-BL-CW-01` → S5-02 |
 | P-07 | Experiences, semantic field, search, lenses, vitality | 5 | S5-03 |
 | P-08 | Discussion, Public QANDEEL, reactions, Public Activity / push | 5 | S5-04 |
 | P-09 | CW2-08 Safety / Launch Gate, signed-out policy, Premium | 5 | `CW2-08` / `I-09`, Stage 9 |
 | P-10 | Account deletion across Connected Worlds | 4 | `QAN-BL-ACCT-01` |
-| P-11 | Name > 64 vs the I-05 label ceiling | 5 | reported (§11.1), proposed owner S5-02 |
+| P-11 | Name > 64 vs the I-05 label ceiling | 5 | Product Owner decision recorded (§11.1); owner S5-02 (reviewed forward migration, no truncation) |
 | P-12 | Export of the display choice | 5 | reported (§11.2), proposed owner PRIV-EXPORT-01 |
-| P-13 | The two PROPOSED copy rows | — | the Product Owner's, before merge (§8) |
+| P-13 | The two new copy rows | 1 | APPROVED by the Product Owner (§8) |
 | P-14 | iOS / physical-device Public journey | 5 | Release Hardening & Launch |
 
 **Orphan gaps = 0.**

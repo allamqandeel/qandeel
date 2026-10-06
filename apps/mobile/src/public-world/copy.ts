@@ -8,17 +8,18 @@
  *   - REUSED: words other surfaces already froze, read from their own modules rather than retyped — the Shared area's
  *     approved neutral shell words (`opening`, `worldUnavailable`, `retry`; S4-01 Product Copy Gate), the W3-02 Public ID
  *     term (`pidTerm`, P4-C4 §5) and the account Name term (W1B-01);
- *   - PROPOSED — S5-01 Product Copy Gate: the two genuinely new strings below. They are drawn in the frozen register
- *     (I-08A4 §11) and in the existing wording pattern, and they bind nothing until the Product Owner approves them.
+ *   - APPROVED — S5-01 Product Copy Gate: the two genuinely new strings below, drawn in the frozen register
+ *     (I-08A4 §11) and approved by the Product Owner when the gate closed (2026-10-06). No row is PROPOSED.
  */
 import type { ChromeLanguage } from '../orientation-chrome';
 import { sharedCopy } from '../shared-world/copy';
 
 export const PUBLIC_COPY_GATE = {
-  status: 'S5-01 PRODUCT COPY GATE — OPEN (2 rows PROPOSED for Product Owner approval)',
+  status: 'S5-01 PRODUCT COPY GATE — CLOSED (2026-10-06: every row CANON, REUSED or APPROVED; none PROPOSED)',
   canon: ['publicWorld'],
   reused: ['opening', 'worldUnavailable', 'retry'],
-  proposed: ['switcherLabel', 'displayHeading'],
+  approved: ['switcherLabel', 'displayHeading'],
+  proposed: [],
 } as const;
 
 export interface PublicCopy {
@@ -34,14 +35,14 @@ export interface PublicCopy {
 
 const AR = {
   publicWorld: 'العالم العام', // CANON — I-08A4 §8
-  switcherLabel: 'التنقل بين قنديل والعالم المشترك والعالم العام', // PROPOSED — S5-01 Product Copy Gate — accessible name only
-  displayHeading: 'الظهور في العالم العام', // PROPOSED — S5-01 Product Copy Gate
+  switcherLabel: 'التنقل بين قنديل والعالم المشترك والعالم العام', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06) — accessible name only
+  displayHeading: 'الظهور في العالم العام', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06)
 } as const;
 
 const EN = {
   publicWorld: 'Public World', // CANON — I-08A4 §9
-  switcherLabel: 'Switch between QANDEEL, Shared World and Public World', // PROPOSED — S5-01 Product Copy Gate — accessible name only
-  displayHeading: 'Shown in Public World as', // PROPOSED — S5-01 Product Copy Gate
+  switcherLabel: 'Switch between QANDEEL, Shared World and Public World', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06) — accessible name only
+  displayHeading: 'Shown in Public World as', // APPROVED — S5-01 Product Copy Gate (Product Owner, 2026-10-06)
 } as const;
 
 export function publicCopy(language: ChromeLanguage): PublicCopy {

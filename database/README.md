@@ -4020,12 +4020,14 @@ publication, serving, search, placement, discussion, Public QANDEEL or Launch st
   (`PSEUDONYM` / `REAL_NAME`) per account, never a label; no row is the default `PSEUDONYM`. The label is derived at every
   read by ONE function from the account row: the CURRENT Public ID (`0125`) or the CURRENT Name (`0123` / `0129`).
   `read_own_public_display_v1()` and `set_own_public_display_mode_v1(mode)` (UPDATED / UNCHANGED / UNAVAILABLE when there
-  is no Name) are the owner's own; nothing returns a `public_identity_ref` or a `user_id`.
+  is no Name) are the owner's own; no application boundary accepts, returns or exposes a `public_identity_ref` or a
+  `user_id` (the internal, non-executable derivation and sync helpers carry an internal user identity).
 - **The I-05 bridge.** S5-01 provisions NO I-05 Public Identity (an identity row is `ON DELETE RESTRICT` to the account and
   would block the governed Personal erasure); the choice row cascades with the account. When an identity exists (S5-02's
   authorship path), an `AFTER UPDATE OF public_id, name` trigger on `public.users` and the mode command synchronize its
   `public_identity_display_state` to the derivation with a new `label_revision`, so every frozen I-05 reader renders the
-  current pseudonym / Name. A label the frozen 64-character relation cannot hold is refused (P0001), never truncated.
+  current pseudonym / Name. A label the frozen 64-character relation cannot hold is refused (P0001), never truncated; reconciling that ceiling with
+  the 80-character Name by a reviewed forward migration is S5-02's (Product Owner decision).
 - Every privileged function is a pinned `SECURITY DEFINER` in `public_world_private`; the three `public` wrappers are
   `SECURITY INVOKER`, `authenticated` only; the derivation, sync and trigger function are nobody's; `service_role` and
   `anon` are granted nothing; no table grant. Deploy-time self-assertions refuse a client reach to the internal functions

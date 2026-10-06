@@ -5,7 +5,7 @@ Stage-4 task named by the S4-01 Task Contract)
 **Task Contract:** the Product Owner's S4-04 Task Contract (2026-10-06)
 **Canonical baseline:** `71015d0f031a3e161542d5aad7d5796230bdb353` (the merge of PR #312, S4-03)
 **Branch:** `feat/s4-04-shared-activity-notifications-direct-entry`
-**Status:** **`S4-04 IMPLEMENTED — REVIEW CANDIDATE (open PR) — S4-04 PRODUCT COPY GATE OPEN (1 row PROPOSED) — NOT MERGED`**.
+**Status:** **`S4-04 IMPLEMENTED — REVIEW CANDIDATE (open PR) — S4-04 PRODUCT COPY GATE CLOSED (1 row APPROVED — Product Owner, 2026-10-06, reconciled in S5-01 R1) — NOT MERGED`**.
 Claude does not merge it.
 
 > The real Shared World meets the already-merged Activity / Notifications / Push infrastructure: genuine Shared facts
@@ -136,7 +136,7 @@ consume without implementing Stage 7. Not absorbed.
 | Human message (`shared_world_materials`, HUMAN_TEXT) | `send` → COMMITTED | current members, not the author, who can see it | **4** ambient | p3.generic.shared «نشاط جديد في العالم المشترك» | `SHARED_WORLD` | `s4-04:human-text:<material>` |
 | Governance proposal — settings / removal / end / add / rejoin (`0084` + `0140` origin) | a propose route → PROPOSED (add / rejoin: SUBMITTED) | the people it waits on; never the proposer or removal target; only while current, actionable, uncommitted | **3** | the S4-03 proposal row / «اقتراح من {0}» | `SHARED_WORLD` | `s4-04:proposal:<command>` |
 | Add / rejoin request now waiting on its target | `approve` → INVITED | the target alone | **3** | S4-03 `memberRequestAdd` / `memberRequestRejoin` | `NONE`, no label | `s4-04:member-request:<proposal>` |
-| Member joined by add / rejoin (`0085` acceptance / rejoin command) | `acceptMembershipRequest` → JOINED (the joiner's own request item is withdrawn) | the other current members | **3** | «انضم {0} إلى هذا العالم.» (PROPOSED, §11) | `SHARED_WORLD` | `s4-04:joined:<command>` |
+| Member joined by add / rejoin (`0085` acceptance / rejoin command) | `acceptMembershipRequest` → JOINED (the joiner's own request item is withdrawn) | the other current members | **3** | «انضم {0} إلى هذا العالم.» (APPROVED, §11) | `SHARED_WORLD` | `s4-04:joined:<command>` |
 | World born (`0082` acceptance command) | `accept` → BORN | the inviter | **3** | as above | `SHARED_WORLD` | `s4-04:birth:<World>` |
 | Voluntary leave (`0083` leave command) | `leave` → LEFT | the remaining current members | **4** ambient | p3.generic.shared | `SHARED_WORLD` | `s4-04:left:<command>` |
 
@@ -194,7 +194,10 @@ a deletion (the ambient item carries no content, so nothing becomes ghost histor
 No device leg was added: every S4-04 law is deterministic at the integration level with test ports (no APNs / FCM
 hardware); the existing S4 device legs re-run on this branch's head through the S4 proof workflow.
 
-## 11. S4-04 Product Copy Gate — **OPEN — 1 row PROPOSED**
+## 11. S4-04 Product Copy Gate — **CLOSED — 1 row APPROVED**
+
+*Reconciliation (S5-01 R1, 2026-10-06):* S4-04 merged with this gate still open. The Product Owner has since approved
+`joined` exactly as below. This is copy governance only; S4-04 behaviour and bytes are unchanged.
 
 Every other word is reused byte-exact from an approved source (pinned by the S4-04 contract): p3.generic.shared, the
 S4-01 «شخص ما» / Someone, the S4-03 proposal rows, «اقتراح من {0}», the two membership-request rows, p3.on and
@@ -202,7 +205,7 @@ p3.mutedWorld («مكتوم» / Muted). The education sheet is A3-02's, unchange
 
 | Key | Surface | Arabic | English | Status |
 |---|---|---|---|---|
-| `joined` | Shared Activity row (a person joined the World the reader is in — governed add, rejoin, or the birth for the inviter) | «انضم {0} إلى هذا العالم.» | "{0} joined this world." | **PROPOSED** |
+| `joined` | Shared Activity row (a person joined the World the reader is in — governed add, rejoin, or the birth for the inviter) | «انضم {0} إلى هذا العالم.» | "{0} joined this world." | **APPROVED** (Product Owner, 2026-10-06) |
 
 `{0}` is the person's own Name («شخص ما» / Someone when unset).
 
@@ -244,7 +247,7 @@ Classes: (1) already closed · (2) implemented here · (3) in-scope gap fixed he
 | G-24 | Shared ID sealing key custody | 4 | `QAN-BL-LAUNCH-03` |
 | G-25 | World-Transition motion review | 1 | decided T-A (S4-03) |
 | G-26 | iOS / physical device journeys | 5 | Release Hardening & Launch; `QAN-BL-NOTIF-05` for Push |
-| G-27 | PROPOSED copy rows | — | S4-01 … S4-03 gates CLOSED; the S4-04 gate (1 row, §11) is the Product Owner's to decide before merge |
+| G-27 | PROPOSED copy rows | — | S4-01 … S4-04 gates CLOSED (the S4-04 row APPROVED after merge, reconciled in S5-01 R1) |
 | G-28 | Six host-locale mobile Jest tests | 6 | environment; identical on the baseline |
 | G-29 | iOS Maestro / XCTest driver readiness | 4 | `QAN-BL-CI-01` |
 | G-30 | Replay Direct Entry (A3-01 G-15 named it beside Shared) | 5 | Stage 7 (generic Replay Product integration; `QAN-BL-NAV-02`) — explicitly out of S4-04 by its Task Contract |
