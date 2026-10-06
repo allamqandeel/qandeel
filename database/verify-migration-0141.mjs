@@ -258,6 +258,7 @@ async function verifySources(h, w) {
   const nobody = randomUUID();
   assert.equal((await proposeMember(nobody, w.two, drawSharedId())).outcome, 'SUBMITTED');
   assert.deepEqual(await source('PROPOSAL', nobody), [], 'a request that opened nothing tells nobody');
+  await actAs('authenticated', h.d);
   const add = randomUUID();
   assert.equal((await proposeMember(add, w.two, idT)).outcome, 'SUBMITTED');
   assert.deepEqual(recipients(await source('PROPOSAL', add)), [h.e], 'the other current member; never the target');
