@@ -544,9 +544,10 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       sharedLinks,
       // S5-01: the Public World entry and the reader's Public display choice, on the Public transport bound to this identity.
       // S5-02: the Public authoring workspace, on the same identity-bound Public transport; drawn inside the Public root.
+      // S5-03A: its semantic review stage, on the same authoring client.
       publicWorld: createPublicWorldController({
         transport: publicTransport, isCurrent,
-        authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, isCurrent }),
+        authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, semantic: publicTransport.semantic ?? null, isCurrent }),
       }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,

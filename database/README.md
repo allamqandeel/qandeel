@@ -4087,3 +4087,44 @@ reconciliation of a reproduced pre-0143 deletion and the refusal of contradictor
 two connections with no deadlock; and launch closure. It also re-anchors three historical pins this decision moves:
 `verify-migration-0092.mjs` (the two digests nullable), `verify-migration-0098.mjs` CE09 (identity unchanged, only the
 deleted bytes and their digests gone) and `verify-migration-0142.mjs` (an 80-character Name is represented in full).
+
+## S5-03A - Public semantic interpretation and publisher review (migration 0144)
+
+`0144_public_semantic_interpretation_publisher_review_v1.sql` builds the semantic stage BEFORE publication on the frozen
+I-05 runtime, and replaces no frozen function. For a READY_FOR_REVIEW Experience: QANDEEL's structured proposal of the
+exact immutable package of the exact current version (meaning, 1-3 primary and 0-3 secondary themes, a publisher-facing
+explanation, and a lens key as the structured placement intent - never a coordinate); the exact controller's review;
+accept exactly the revision seen, or a truth-constrained correction of the MEANING that QANDEEL checks against the same
+package. Every committed interpretation is a revision of the frozen `0096` semantic placement, written only through
+`record_public_experience_semantic_placement_v1` under the human's own `auth.uid()`: revision 1 (`INITIAL_INTERPRETATION`)
+is QANDEEL's proposal, every later revision a `PUBLISHER_CORRECTION`. The lifecycle stays READY_FOR_REVIEW.
+
+The private schema `public_semantic_private` holds four append-only relations that reference no account or Public
+Identity: `semantic_work` (one requested proposal or correction, bound to the exact version and a server-derived package
+fingerprint - manifest, ordinals, classifications, public digests; NULL once an ASSURE-F05 erasure NULLs a digest),
+`semantic_work_outcomes` (the interpreter's answer: machine state, written by the server channel only),
+`semantic_interpretations` (the themes and explanation of one committed `0096` revision) and `semantic_reviews` (ACCEPTED
+for a QANDEEL proposal, CORRECTED for the publisher's own correction). `authenticated` executes five owner commands
+(review, request a proposal, request a correction, commit, accept); `service_role` executes two server commands - the
+ONE package-only input reader (its body reads the work, the Experience, the version, the package items and their public
+bodies, and nothing else: no provenance, Shared World, Personal conversation, account, identity or display label) and the
+interpreter's answer. A client can therefore never author what QANDEEL proposed. Meanings, themes and explanations are one
+line, bounded, name no identifier, and may not contain a 32-character run of the package text (an immutable `0096`
+revision must never be a copy that owner deletion could not erase). Semantic readiness
+(`derive_public_semantic_readiness_v1`, internal) is derived on every call: SEMANTICALLY_READY only for the reviewed CURRENT
+revision of the exact current version against its exact whole package, NOT_READY otherwise with one reason. Nothing here
+publishes: the CW2-08 seam still answers `NOT_EVALUATED` and no application role executes a frozen I-05 primitive.
+
+```sh
+npm run verify:public-semantic-interpretation-review:integration
+```
+
+`verify-migration-0144.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the boundary census
+(posture, the exact executable sets, the input census, no account edge, append-only relations, the package-only ban by
+source text); PUBLIC PACKAGE ONLY (the interpreter input is exactly the package items); the flow (DRAFT refused,
+non-controllers and guessed ids answered neutrally with nothing written, the proposal only through the server channel and
+the requester's own commit, malformed and copying answers refused, accept bound to the exact revision, NOT_SUPPORTED writing
+nothing, a CONSISTENT correction as the next revision with QANDEEL's lens key, retries, a stale revision refused); version
+binding (readiness for the exact revision, a raw frozen revision UNREVIEWED, a successor version carrying nothing over,
+nothing else moved); erasure mid-flight (review dark, readiness PACKAGE_UNAVAILABLE, no input / outcome / commit / accept);
+a concurrent correction race on two connections; and launch closure.

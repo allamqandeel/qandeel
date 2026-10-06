@@ -11,6 +11,7 @@
  */
 import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
 import { PublicAuthoringApiClient } from './public-authoring-api';
+import { PublicSemanticApiClient } from './public-semantic-api';
 
 export interface PublicWorldApiConfig {
   readonly baseUrl: string;
@@ -44,9 +45,12 @@ const labelOf = (value: unknown): string | null | undefined => (value === null ?
 export class PublicWorldApiClient {
   /** S5-02 — the Public authoring routes, on the same identity-bound transport. */
   readonly authoring: PublicAuthoringApiClient;
+  /** S5-03A — the semantic review routes, on the same identity-bound transport. */
+  readonly semantic: PublicSemanticApiClient;
 
   constructor(private readonly config: PublicWorldApiConfig) {
     this.authoring = new PublicAuthoringApiClient(config);
+    this.semantic = new PublicSemanticApiClient(config);
   }
 
   async entry(): Promise<PublicEntryResult> {

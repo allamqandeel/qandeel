@@ -137,7 +137,9 @@ test('5 — the API boundary: nine routes on the caller token, owner RPCs only',
     ['POST /public/authoring/approvals/:manifestId/withdraw', 'AUTHENTICATED']]) {
     assert.match(census, new RegExp(`'${route.replace(/\//gu, '\\/')}': '${cls}'`, 'u'));
   }
-  assert.match(code(`${API}/public-world.module.ts`), /controllers: \[PublicWorldController, PublicAuthoringController\]/u, 'one Public module, not a parallel one');
+  // RE-ANCHORED by S5-03A (validation only): the S5-03A semantic review controller joins the SAME Public module — still one
+  // Public module, not a parallel one. S5-03A's own contract pins its controller and routes.
+  assert.match(code(`${API}/public-world.module.ts`), /controllers: \[PublicWorldController, PublicAuthoringController(, PublicSemanticController)?\]/u, 'one Public module, not a parallel one');
 });
 
 test('6 — mobile: existing material only, inside the Public root, never "published", no Arabic literal in a surface', () => {
@@ -150,7 +152,9 @@ test('6 — mobile: existing material only, inside the Public root, never "publi
   assert.ok(area.indexOf("entry === 'NONE' || entry === 'RESOLVING'") < area.indexOf('qandeel-public-authoring-entry'), 'no authoring before ALLOW');
   assert.match(area, /<View testID="qandeel-public-field" style=\{\{ flex: 1 \}\} \/>/u, 'the field stays empty');
   assert.doesNotMatch(area, /BackHandler/u);
-  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /authoring: createPublicAuthoringController\(\{ transport: publicTransport\.authoring \?\? null, isCurrent \}\)/u);
+  // RE-ANCHORED by S5-03A (validation only): the authoring controller also receives the S5-03A semantic client, on the same
+  // identity-bound Public transport; the authoring transport itself is unchanged.
+  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /authoring: createPublicAuthoringController\(\{ transport: publicTransport\.authoring \?\? null, (semantic: publicTransport\.semantic \?\? null, )?isCurrent \}\)/u);
   const api = code(`${MOBILE}/runtime-entry/public-authoring-api.ts`);
   assert.doesNotMatch(api, /userId|publicIdentityRef|approver/u);
   // What the client SENDS: a command id, and for a package the chosen sources — never a label, a body or an audience.
@@ -201,9 +205,10 @@ test('8 — governance: the record, QAN-BL-CW-01 tombstoned, QAN-BL-ACCT-01 stil
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
     assert.match(state, /\| S5-01 — Public World Reachability, Entry & Identity Foundation \(migration `0142`\) \| \*\*`MERGED \/ CLOSED` through PR #314 at `8dfc7b38baa133c8cecbffea8c65ae17ddc245ff`\*\*/u);
-    assert.match(state, /\| S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure \(migration `0143`\) \| \*\*IMPLEMENTED — REVIEW CANDIDATE \(Draft PR\)/u);
+    // RE-ANCHORED by S5-03A (governance reconciliation, validation only): S5-02 merged through PR #315.
+    assert.match(state, /\| S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure \(migration `0143`\) \| \*\*`MERGED \/ CLOSED` through PR #315 at `1a10127672f8db7ff475bca4732635bf88536730`\*\*/u);
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
-    assert.match(read('QANDEEL_PROJECT_MAP.md'), /> \*\*CURRENT IMPLEMENTATION TASK: S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure/u);
+    assert.match(read('QANDEEL_PROJECT_MAP.md'), /\*\(Historical: S5-02 was the current task until PR #315 merged on 2026-10-06\.\)\*/u);
   }
 });

@@ -11,18 +11,23 @@
  *   - the review of exactly what would become public, the CURRENT public display, the approval progress, the reader's
  *     own approval, and "ready for review" once every approval is effective. A package that is no longer whole is one
  *     explicit stale line and nothing of it is drawn. Nothing here says "published", and nothing is placed in the
- *     Public World's field: that is S5-03's.
+ *     Public World's field;
+ *   - S5-03A, once the Experience is READY_FOR_REVIEW: QANDEEL's understanding — the meaning, the main and other
+ *     meanings, and why — with "accept" and "correct the understanding". A correction is the reader's own words for the
+ *     MEANING; there is no place, map, coordinate or neighbour anywhere here, and no internal term is shown.
  *
- * Every word is the S5-02 copy module's. The Personal world and the Shared area are never read.
+ * Every word is the S5-02 or S5-03A copy module's. The Personal world and the Shared area are never read.
  */
 import { useEffect, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, ScrollView, Text, View } from 'react-native';
 
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
-import type { PublicApprovalRequest, PublicAuthoringReview, PublicOwnApproval } from '../runtime-entry';
+import type { PublicApprovalRequest, PublicAuthoringReview, PublicOwnApproval, PublicSemanticReview } from '../runtime-entry';
 import { fill, publicAuthoringCopy, type PublicAuthoringCopy } from './copy';
 import { personalKey, sharedKey, type PublicAuthoringController, type PublicAuthoringNotice } from './public-authoring-controller';
+import { PublicSemanticReview as Understanding } from './PublicSemanticReview';
+import { publicSemanticCopy, type PublicSemanticCopy } from './semantic-copy';
 
 export const PUBLIC_AUTHORING_TEST_ID = 'qandeel-public-authoring';
 const ROW_START = 24;
@@ -31,8 +36,14 @@ const BUSY_OPACITY = 0.6;
 
 const fillTwo = (template: string, first: string, second: string): string => fill(template, first).replace('{1}', second);
 
-const noticeOf = (copy: PublicAuthoringCopy, notice: PublicAuthoringNotice): string | null => {
+const noticeOf = (copy: PublicAuthoringCopy, semantic: PublicSemanticCopy, notice: PublicAuthoringNotice): string | null => {
   switch (notice) {
+    case 'INTERPRETATION_UNAVAILABLE': return semantic.interpretationUnavailable;
+    case 'NOT_SUPPORTED': return semantic.notSupported;
+    case 'QUOTES_CONTENT': return semantic.quotesContent;
+    case 'UNCHANGED': return semantic.unchanged;
+    case 'CORRECTION_INVALID': return semantic.correctionInvalid;
+    case 'LIMITED': return semantic.limited;
     case 'APPROVED': return copy.approved;
     case 'WITHDRAWN': return copy.withdrawn;
     case 'APPROVALS_INCOMPLETE': return copy.approvalsIncomplete;
@@ -120,7 +131,10 @@ function Request({ request, s, busy, controller }: { readonly request: PublicApp
   );
 }
 
-function Review({ review, s, busy, controller }: { readonly review: PublicAuthoringReview; readonly s: Shared; readonly busy: boolean; readonly controller: PublicAuthoringController }) {
+function Review({ review, understanding, correcting, s, busy, controller }: {
+  readonly review: PublicAuthoringReview; readonly understanding: PublicSemanticReview | null; readonly correcting: boolean; readonly s: Shared;
+  readonly busy: boolean; readonly controller: PublicAuthoringController;
+}) {
   if (review.state !== 'CURRENT') {
     // Never a partial package: one explicit stale state, and nothing of it.
     return <Line text={s.copy.noLongerAvailable} s={s} role="body" testID="qandeel-public-authoring-review-unavailable" />;
@@ -144,6 +158,8 @@ function Review({ review, s, busy, controller }: { readonly review: PublicAuthor
         onApprove={controller.approve} onWithdraw={controller.withdraw} testPrefix="qandeel-public-authoring-own" />
       {review.lifecycle === 'DRAFT' && review.readyAllowed
         ? <Action label={s.copy.markReady} onPress={controller.markReady} s={s} busy={busy} emphasis testID="qandeel-public-authoring-mark-ready" /> : null}
+      {review.lifecycle === 'READY_FOR_REVIEW' && understanding !== null
+        ? <Understanding understanding={understanding} correcting={correcting} palette={s.palette} language={s.language} busy={busy} controller={controller} /> : null}
     </View>
   );
 }
@@ -158,9 +174,10 @@ export interface PublicAuthoringWorkspaceProps {
 export function PublicAuthoringWorkspace({ controller, language, palette, bottomInset }: PublicAuthoringWorkspaceProps) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const copy = publicAuthoringCopy(language);
+  const semantic = publicSemanticCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const s: Shared = { palette, language, copy, writing };
-  const said = noticeOf(copy, state.notice);
+  const said = noticeOf(copy, semantic, state.notice);
   useEffect(() => {
     if (said !== null) AccessibilityInfo.announceForAccessibility(said);
   }, [said]);
@@ -233,7 +250,7 @@ export function PublicAuthoringWorkspace({ controller, language, palette, bottom
               ? <Action label={copy.review} onPress={controller.prepare} s={s} busy={state.busy} emphasis testID="qandeel-public-authoring-prepare" /> : null}
           </View>
         ) : state.review !== null ? (
-          <Review review={state.review} s={s} busy={state.busy} controller={controller} />
+          <Review review={state.review} understanding={state.semantic} correcting={state.correcting} s={s} busy={state.busy} controller={controller} />
         ) : null}
       </ScrollView>
     </View>

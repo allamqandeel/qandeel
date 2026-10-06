@@ -604,6 +604,13 @@ Public World is NOT production-launch-ready while this item is unresolved, and `
 Connected-Worlds account-deletion contract
 ([S5-02 record](e2e/QANDEEL_S5_02_PUBLIC_PUBLISHING_RIGHTS_DRAFT_REVIEW_PRIVACY_CLOSURE_IMPLEMENTATION_RECORD_v1.md) §13).
 
+**Current-truth note (S5-03A, 2026-10-06).** S5-03A does not solve this item and does not make it harder by a new account
+edge: its four semantic relations reference only the exact Experience Version, its package-bound work and the frozen 0096
+placement revision — never an account or a Public Identity (a deploy-time assertion and the verifier prove it). The frozen
+0096 placement it writes through carries the controller's existing identity reference (`RESTRICT`), exactly as I-05 froze
+it; an author's governed Personal erasure was already BLOCKED (S5-02 note above) and still is. This item stays `HIGH`,
+`OPEN — UNASSIGNED`; the Public World is still not launch-ready ([S5-03A record](e2e/QANDEEL_S5_03A_PUBLIC_SEMANTIC_INTERPRETATION_PUBLISHER_REVIEW_IMPLEMENTATION_RECORD_v1.md) §15).
+
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
 - **Title / Finding:** the exceptional lantern gateway identity moment is frozen as **present in v1**, but it has no
@@ -1369,9 +1376,9 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 ### `QAN-BL-CW-01` — Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`)
 
 - **Closing task:** `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure`
-- **PR / SHA:** the S5-02 Draft PR / the head recorded in the S5-02 record. The tombstone holds from that PR's merge, which
-  happens only after independent review on green CI and the Product Owner's merge instruction (the S5-02 Product Copy
-  Gate is CLOSED — 27 rows APPROVED (Product Owner, 2026-10-06)).
+- **PR / SHA:** PR #315, merged as `1a10127672f8db7ff475bca4732635bf88536730` (the S5-02 Product Copy Gate CLOSED — 27 rows
+  APPROVED (Product Owner, 2026-10-06)). *(As first written, before the merge: "the S5-02 Draft PR / the head recorded in the
+  S5-02 record. The tombstone holds from that PR's merge"; the merge SHA was filled in by S5-03A's reconciliation.)*
 - **Disposition:** completed, in the Product Owner's physical-erasure terms. Migration `0143` makes the canonical Shared
   owner deletion (`delete_shared_world_owned_material_v1`, forward-replaced from `0122` with its lock order and semantics
   unchanged) erase, in the SAME transaction at the SAME canonical instant, every Public package copy of a Shared material
@@ -1624,6 +1631,19 @@ opened. It admits nothing; its Gap Matrix is §14 of its
 **Orphan gaps = 0**. The register still holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9
 `OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from
 the §4 index.
+
+**S5-03A reconciliation (2026-10-06; implementation candidate, not merged).** S5-02 is merged (PR #315 at
+`1a10127672f8db7ff475bca4732635bf88536730`): the `QAN-BL-CW-01` tombstone's PR / SHA is filled in (§6). S5-03A (Public
+Semantic Interpretation + Publisher Review, migration `0144`; the first of the Product Owner's three S5-03 tasks) inherits
+no item by owner and admits none. `QAN-BL-ACCT-01` stays `HIGH`, `OPEN — UNASSIGNED`, with a current-truth note (no new
+account edge). `QAN-BL-VOICE-01`, `QAN-BL-NAV-02` and every launch item are unchanged: no Public Voice, Replay, Activity or
+Launch path is opened, and the CW2-08 seam still answers `NOT_EVALUATED`. The production provider for the semantic
+interpreter is the Product Owner's Stage 8A (QANDEEL AI Brain / Production LLM Runtime) by the Task Contract; S5-03A
+records it in its Gap Matrix as a closure-time admission candidate whose owner task the Product Owner names within
+Stage 8A — no item is admitted before that designation (BG-02). Its Gap Matrix is §16 of its
+[implementation record](e2e/QANDEEL_S5_03A_PUBLIC_SEMANTIC_INTERPRETATION_PUBLISHER_REVIEW_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**. The register still holds **43** items: 16 `DEFERRED — OWNED`, 0
+`VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`,
+counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1689,6 +1709,7 @@ Inherited after T-12 closure reconciliation:
 | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
+| `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed and left unchanged (no new account edge); none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

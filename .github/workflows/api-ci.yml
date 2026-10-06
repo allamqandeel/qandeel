@@ -120,6 +120,7 @@ jobs:
       - {name: "Verify S4-04 Shared Activity, Notifications & Direct Entry static contract", run: npm run test:s4-04-shared-activity-notifications-direct-entry-contract}
       - {name: "Verify S5-01 Public Reachability, Entry & Identity static contract", run: npm run test:s5-01-public-reachability-entry-identity-contract}
       - {name: "Verify S5-02 Public Authoring, Rights, Draft / Review & Privacy static contract", run: npm run test:s5-02-public-authoring-rights-privacy-contract}
+      - {name: "Verify S5-03A Public Semantic Interpretation & Publisher Review static contract", run: npm run test:s5-03a-public-semantic-review-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -906,6 +907,13 @@ jobs:
       # approval, immediate withdrawal and READY_FOR_REVIEW only with current complete authority; nothing can publish.
       - name: Verify S5-02 Public authoring, rights and ASSURE-F05 privacy closure against real PostgreSQL
         run: npm run verify:public-authoring-rights-privacy:integration
+      # S5-03A: the semantic interpreter sees exactly the public package of the exact version and nothing else; QANDEEL's
+      # proposal enters only through the server channel and becomes revision 1 on the requester's own commit; accept binds
+      # the exact revision; a correction is the publisher's words, checked against the package, appended as the next
+      # revision; readiness is derived, exact-version-bound and fail-closed (erasure, raw revision, successor); a concurrent
+      # correction of a superseded revision is STALE; nothing can publish and the seam answers NOT_EVALUATED.
+      - name: Verify S5-03A Public semantic interpretation and publisher review against real PostgreSQL
+        run: npm run verify:public-semantic-interpretation-review:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

@@ -143,6 +143,13 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /public/authoring/approvals': 'AUTHENTICATED',
   'POST /public/authoring/approvals/:manifestId/approve': 'AUTHENTICATED',
   'POST /public/authoring/approvals/:manifestId/withdraw': 'AUTHENTICATED',
+  // S5-03A — the semantic review. Asking QANDEEL to propose, or to check a correction, can reach the semantic interpreter
+  // (a provider call once Stage 8A binds one), so those two take the strict class beside the database's own per-version
+  // work bound; reading and accepting are ordinary own acts. No new class.
+  'GET /public/authoring/drafts/:experienceId/semantic': 'AUTHENTICATED',
+  'POST /public/authoring/drafts/:experienceId/semantic/proposal': 'SECURITY_SENSITIVE',
+  'POST /public/authoring/drafts/:experienceId/semantic/accept': 'AUTHENTICATED',
+  'POST /public/authoring/drafts/:experienceId/semantic/correction': 'SECURITY_SENSITIVE',
 });
 
 const segments = (path: unknown): string[] =>
