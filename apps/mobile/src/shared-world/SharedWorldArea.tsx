@@ -14,6 +14,12 @@
  * S4-02: below them, the World's real conversation (`SharedWorldThread.tsx`) — read only after ALLOW, belonging to this
  * one World, with the reader's text input while ordinary sending is open.
  *
+ * S4-03: inside an ALLOWed World, ONE calm way into «إدارة العالم» / Manage World (`SharedManagePage.tsx`), the World's
+ * own management place — settings, the proposals that wait on the reader, removal, sharing earlier messages, leave and
+ * ending the World. Leaving returns to the root at once. A World's committed name becomes its label; until then the S4-01
+ * member-name label stays. The root lists the ended Worlds the reader may still read, each opening a separate read-only
+ * place (`SharedClosedWorld.tsx`) that is never an active World.
+ *
  * Nothing here reads the Personal world: no Session, camera, focus or time is passed in, so none can transfer.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
@@ -24,7 +30,10 @@ import { AppearanceStatusBar } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, useConversationTypeface, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { fill, sharedCopy, worldLabel, type SharedCopy } from './copy';
+import { sharedLifecycleCopy } from './lifecycle-copy';
 import type { SharedWorldController } from './shared-world-controller';
+import { SharedClosedWorld } from './SharedClosedWorld';
+import { SharedManagePage } from './SharedManagePage';
 import { SharedSendBar, SharedThread } from './SharedWorldThread';
 
 export const SHARED_AREA_TEST_ID = 'qandeel-shared-area';
@@ -50,6 +59,7 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = sharedCopy(language);
+  const lifecycle = sharedLifecycleCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const threadScroll = useRef<ScrollView | null>(null);
@@ -71,25 +81,27 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
 
   // Local Back: from a World to the area's root. At the root nothing is registered — Back is local-only and never
   // silently returns to the Personal world (I-08A4 §4).
-  const inWorld = state.place.kind === 'WORLD';
+  // S4-03: Back from Manage World returns to the World it manages; from an ended World, to the root.
+  const placeKind = state.place.kind;
   useEffect(() => {
-    if (!inWorld) return undefined;
+    if (placeKind === 'ROOT') return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      controller.toRoot();
+      if (placeKind === 'MANAGE') controller.closeManage();
+      else controller.toRoot();
       return true;
     });
     return () => subscription.remove();
-  }, [controller, inWorld]);
+  }, [controller, placeKind]);
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={SHARED_AREA_TEST_ID} />;
 
-  const header = (title: string | null, back: boolean) => (
+  const header = (title: string | null, back: boolean, onBack: () => void = () => controller.toRoot()) => (
     <View style={{
       paddingTop: insets.top, paddingStart: (writing === 'rtl' ? insets.right : insets.left) + 10, paddingEnd: (writing === 'rtl' ? insets.left : insets.right) + 10,
       minHeight: insets.top + HEADER_MIN_HEIGHT, flexDirection: 'row', alignItems: 'center', columnGap: 2,
     }}>
       {back ? (
-        <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={() => controller.toRoot()} testID="qandeel-shared-back" style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}>
+        <Control palette={palette} language={language} accessibilityLabel={copy.back} onPress={onBack} testID="qandeel-shared-back" style={{ width: MIN_TARGET, height: MIN_TARGET, alignItems: 'center' }}>
           <Glyph name="back" color={palette.restInk} direction={writing} />
         </Control>
       ) : activity !== undefined ? (
@@ -111,6 +123,33 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
     </View>
   );
 
+  if (state.place.kind === 'MANAGE') {
+    // «إدارة العالم» / Manage World: the World's own management place. Its fields stay above the keyboard on both
+    // platforms (the S4-02 rule: Android 15+ edge-to-edge does not resize for the keyboard).
+    return frame(
+      <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding" testID="qandeel-shared-manage-keyboard">
+        {header(lifecycle.manageWorld, true, () => controller.closeManage())}
+        <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingLeft: insets.left, paddingRight: insets.right }}>
+          <SharedManagePage controller={controller} language={language} palette={palette} bottomInset={insets.bottom} />
+        </ScrollView>
+      </KeyboardAvoidingView>,
+      'qandeel-shared-managing',
+    );
+  }
+
+  if (state.place.kind === 'CLOSED') {
+    const ended = state.closed.world;
+    return frame(
+      <>
+        {header(ended === null ? null : labelOfWorld(copy, ended), true)}
+        <ScrollView contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingLeft: insets.left, paddingRight: insets.right }}>
+          <SharedClosedWorld controller={controller} language={language} palette={palette} />
+        </ScrollView>
+      </>,
+      'qandeel-shared-ended-world',
+    );
+  }
+
   if (state.place.kind === 'WORLD') {
     if (state.entry.status === 'ALLOW' && state.entry.world !== null) {
       const world = state.entry.world;
@@ -118,7 +157,7 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
         // As in the Personal Conversation: `padding` on both platforms, because Android 15+ edge-to-edge no longer
         // resizes the window for the keyboard, and the composer and its Send must stay above it.
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          {header(worldLabel(copy, world.members), true)}
+          {header(labelOfWorld(copy, world), true)}
           <ScrollView ref={threadScroll} keyboardShouldPersistTaps="handled" onContentSizeChange={followNewest}
             contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>
             {/* QANDEEL's short, neutral welcome (S4-01 §1.6), then the World's real conversation (S4-02). */}
@@ -136,6 +175,13 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
                   </Text>
                 </View>
               ))}
+            </View>
+            {/* S4-03: the one way into the World's own management place. */}
+            <View style={{ paddingStart: ROW_START - 12, paddingTop: 6 }}>
+              <Control palette={palette} language={language} accessibilityLabel={lifecycle.manageWorld} onPress={() => controller.openManage()} testID="qandeel-shared-manage-open"
+                style={{ alignSelf: 'flex-start', minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center' }}>
+                <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{lifecycle.manageWorld}</Text>
+              </Control>
             </View>
             <SharedThread key={world.worldId} controller={controller} language={language} palette={palette} />
           </ScrollView>
@@ -194,8 +240,9 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const root = state.root.data;
   const [inviting, setInviting] = useState(false);
+  const lifecycle = sharedLifecycleCopy(language);
   const noticeText = state.notice === 'DECLINED' ? copy.declined : state.notice === 'NOT_OPEN' ? copy.notOpen
-    : state.notice === 'ACTION_UNAVAILABLE' ? copy.actionUnavailable : null;
+    : state.notice === 'ACTION_UNAVAILABLE' ? copy.actionUnavailable : state.notice === 'LEFT' ? lifecycle.left : null;
   useEffect(() => {
     if (noticeText !== null) AccessibilityInfo.announceForAccessibility(noticeText);
   }, [noticeText]);
@@ -236,7 +283,7 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
             </Text>
           )}
 
-          {root.invitations.length > 0 ? (
+          {root.invitations.length > 0 || root.memberRequests.length > 0 ? (
             <View testID="qandeel-shared-invitations">
               <SectionHeading text={copy.invitationsHeading} palette={palette} language={language} />
               {root.invitations.map((invitation) => {
@@ -260,6 +307,22 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
                   </View>
                 );
               })}
+              {/* S4-03: an add / rejoin waiting on the reader as its exact target: who proposed it, nothing of the World. There
+                  is no decline in canon: the reader simply does not accept. */}
+              {root.memberRequests.map((request) => {
+                const busy = state.busy === request.requestId;
+                const text = fill(request.kind === 'ADD' ? lifecycle.memberRequestAdd : lifecycle.memberRequestRejoin, request.proposerName ?? copy.someone);
+                return (
+                  <View key={request.requestId} testID={`qandeel-shared-member-request-${request.requestId}`} style={{ paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 8, rowGap: 8, opacity: busy ? BUSY_OPACITY : 1 }}>
+                    <Text style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{text}</Text>
+                    <Control palette={palette} language={language} accessibilityLabel={`${lifecycle.accept}, ${text}`} accessibilityState={{ busy, disabled: state.busy !== null }}
+                      onPress={() => void controller.acceptMembershipRequest(request.requestId)} testID="qandeel-shared-member-request-accept"
+                      style={{ alignSelf: 'flex-start', minHeight: MIN_TARGET, paddingHorizontal: 16, justifyContent: 'center', backgroundColor: palette.field }}>
+                      <Text style={{ ...typeStyle('action'), color: palette.primary }}>{lifecycle.accept}</Text>
+                    </Control>
+                  </View>
+                );
+              })}
             </View>
           ) : null}
 
@@ -270,7 +333,7 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
                 {copy.noWorlds}
               </Text>
             ) : root.worlds.map((world) => {
-              const label = worldLabel(copy, world.members);
+              const label = labelOfWorld(copy, world);
               return (
                 <Control key={world.worldId} palette={palette} language={language} accessibilityLabel={label} onPress={() => controller.openWorld(world.worldId)}
                   testID={`qandeel-shared-world-${world.worldId}`} style={{ minHeight: MIN_TARGET, paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 10, borderRadius: 0 }}>
@@ -279,6 +342,22 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
               );
             })}
           </View>
+
+          {/* S4-03: the ended Worlds the reader may still read — a separate, read-only place each. */}
+          {root.closedWorlds.length > 0 ? (
+            <View testID="qandeel-shared-ended-worlds">
+              <SectionHeading text={lifecycle.endedHeading} palette={palette} language={language} />
+              {root.closedWorlds.map((world) => {
+                const label = labelOfWorld(copy, world);
+                return (
+                  <Control key={world.worldId} palette={palette} language={language} accessibilityLabel={label} onPress={() => controller.openClosed(world.worldId)}
+                    testID={`qandeel-shared-ended-${world.worldId}`} style={{ minHeight: MIN_TARGET, paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 10, borderRadius: 0 }}>
+                    <Text style={{ ...typeStyle('body'), color: palette.secondary, writingDirection: writing }}>{label}</Text>
+                  </Control>
+                );
+              })}
+            </View>
+          ) : null}
         </>
       )}
     </ScrollView>
@@ -376,6 +455,11 @@ function InvitePanel({ controller, copy, language, palette, onClose }: {
       </View>
     </View>
   );
+}
+
+/** S4-03: a World's label — its committed name once one is committed; until then the S4-01 member-name label. */
+export function labelOfWorld(copy: SharedCopy, world: { readonly name: string | null; readonly members: readonly { readonly name: string | null; readonly self: boolean }[] }): string {
+  return world.name !== null && world.name.length > 0 ? world.name : worldLabel(copy, world.members);
 }
 
 /** A Shared ID as one isolated left-to-right run. */

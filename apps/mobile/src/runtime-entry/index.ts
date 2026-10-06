@@ -151,6 +151,10 @@ export { ActivityApiClient } from './activity-api';
 export type {
   SharedAcceptResult, SharedDeclineResult, SharedDeleteResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
   SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,
+  SharedApproveResult, SharedClosedWorld, SharedClosedWorldResult, SharedHistoryApproveResult, SharedHistoryCandidate, SharedHistoryCandidatesResult,
+  SharedHistoryRequest, SharedLeaveResult, SharedLifecycleMember, SharedManage, SharedManageResult, SharedOwnMaterial, SharedOwnMaterialResult,
+  SharedProposal, SharedProposeResult, SharedSettingsValues, SharedMemberRequest, SharedProposeMemberResult, SharedJoinResult,
+  SharedFormerHistoryRequest, SharedFormerHistoryResult,
 } from './shared-world-api';
 export { SharedWorldApiClient } from './shared-world-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';

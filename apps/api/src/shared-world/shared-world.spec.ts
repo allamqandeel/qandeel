@@ -3,6 +3,7 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import { DataApiError } from '../conversation/supabase-data-api.service';
 import { ROUTE_RATE_LIMIT_CENSUS } from '../http-security/route-rate-limit.census';
 import { drawSharedId, parseSealingKeys, SharedIdSealing, sharedIdLookupRef } from './shared-id-sealing';
+import type { SharedWorldLifecycleRepository } from './shared-world-lifecycle.repository';
 import { fromBytea, toBytea, type SharedIdRow, type SharedWorldRepository } from './shared-world.repository';
 import { SharedWorldService } from './shared-world.service';
 
@@ -29,6 +30,16 @@ function withKeys<T>(env: Record<string, string | undefined>, build: () => T): T
   }
 }
 const sealing = (active = '1') => withKeys({ keys: `1:${KEY_1},2:${KEY_2}`, active }, () => new SharedIdSealing());
+/** S4-03 (migration 0140): the committed World names and the reader's closed Worlds, as the root and the entry read them. */
+const CLOSED = '66666666-6666-4666-8666-666666666666';
+const REQUEST = '77777777-7777-4777-8777-777777777777';
+const JOINABLE = '88888888-8888-4888-8888-888888888888';
+const lifecycle = (named: string | null = null) => ({
+  worldNames: jest.fn(async () => (named === null ? [] : [{ world_id: WORLD, world_name: named }])),
+  closedWorlds: jest.fn(async () => [{ world_id: CLOSED, closed_at: '2026-10-05T00:00:00Z', world_name: null }]),
+  closedMembers: jest.fn(async () => [{ world_id: CLOSED, is_self: true, member_name: 'Amal' }, { world_id: CLOSED, is_self: false, member_name: 'Chadi' }]),
+  membershipRequests: jest.fn(async () => [{ request_id: REQUEST, world_id: JOINABLE, request_kind: 'ADD_MEMBER', proposer_name: 'Dalia', created_at: '2026-10-05T00:00:00Z' }]),
+}) as unknown as SharedWorldLifecycleRepository;
 
 /** An in-memory stand-in for migration 0138: one account's credential and sealed value. */
 function fakeDatabase(start: { state?: SharedIdRow['state']; provisioning?: boolean } = {}) {
@@ -126,7 +137,7 @@ describe('S4-01 Shared ID sealing', () => {
 describe('S4-01 Shared World Product boundary', () => {
   it('provisions a first Shared ID automatically, then reads the same value back', async () => {
     const db = fakeDatabase();
-    const service = new SharedWorldService(db.repository, sealing());
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle());
     const first = await service.identity(USER, 'token');
     expect(first.status).toBe('READY');
     if (first.status !== 'READY') return;
@@ -137,14 +148,14 @@ describe('S4-01 Shared World Product boundary', () => {
 
   it('provisions nothing while Shared is closed', async () => {
     const db = fakeDatabase({ provisioning: false });
-    const service = new SharedWorldService(db.repository, sealing());
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle());
     expect(await service.identity(USER, 'token')).toEqual({ status: 'UNAVAILABLE' });
     expect(db.raw.rotateSharedId).not.toHaveBeenCalled();
   });
 
   it('replaces an UNSEALED credential and regenerates on request with a new value', async () => {
     const db = fakeDatabase({ state: 'UNSEALED' });
-    const service = new SharedWorldService(db.repository, sealing());
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle());
     const first = await service.identity(USER, 'token');
     expect(first.status).toBe('READY');
     const regenerated = await service.regenerate(USER, 'token', { commandId: COMMAND });
@@ -157,7 +168,7 @@ describe('S4-01 Shared World Product boundary', () => {
 
   it('never shows a sealed value it cannot prove current, and never silently replaces it', async () => {
     const db = fakeDatabase();
-    const service = new SharedWorldService(db.repository, sealing());
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle());
     await service.identity(USER, 'token');
     db.tamper();
     await expect(service.identity(USER, 'token')).rejects.toBeInstanceOf(ServiceUnavailableException);
@@ -166,32 +177,43 @@ describe('S4-01 Shared World Product boundary', () => {
 
   it('fails the Shared ID routes closed without a key', async () => {
     const db = fakeDatabase();
-    const service = new SharedWorldService(db.repository, withKeys({}, () => new SharedIdSealing()));
+    const service = new SharedWorldService(db.repository, withKeys({}, () => new SharedIdSealing()), lifecycle());
     await expect(service.identity(USER, 'token')).rejects.toBeInstanceOf(ServiceUnavailableException);
     expect(db.raw.readSharedId).not.toHaveBeenCalled();
   });
 
   it('returns Product-safe root, invitation and entry answers', async () => {
     const db = fakeDatabase();
-    const service = new SharedWorldService(db.repository, sealing());
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle());
     expect(await service.root('token')).toEqual({
       capabilities: { invitation: true, birth: true },
-      worlds: [{ worldId: WORLD, members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] }],
+      worlds: [{ worldId: WORLD, name: null, members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] }],
       invitations: [{ invitationId: INVITATION, inviterName: 'Bassem' }],
+      closedWorlds: [{ worldId: CLOSED, name: null, members: [{ name: 'Amal', self: true }, { name: 'Chadi', self: false }] }],
+      // The target of an add sees who proposed it, and nothing of the World.
+      memberRequests: [{ requestId: REQUEST, worldId: JOINABLE, kind: 'ADD', proposerName: 'Dalia' }],
     });
     expect(await service.invite('token', { commandId: COMMAND, sharedId: 'k7qm 4xwd p9tr' })).toEqual({ outcome: 'SUBMITTED' });
     expect(await service.accept('token', INVITATION, { commandId: COMMAND })).toEqual({ outcome: 'BORN', worldId: WORLD });
     expect(await service.decline('token', INVITATION, { commandId: COMMAND })).toEqual({ outcome: 'DECLINED' });
     expect(await service.entry('token', WORLD)).toEqual({ outcome: 'ALLOW',
-      world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] } });
+      world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', name: null, members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] } });
     expect(await service.entry('token', OTHER)).toEqual({ outcome: 'UNAVAILABLE' });
     expect(await service.entry('token', 'not-a-world')).toEqual({ outcome: 'UNAVAILABLE' });
     expect(db.raw.resolveEntry).toHaveBeenCalledTimes(2);
   });
 
+  it('S4-03: a committed World name becomes the label in the root and the entry; before it, the S4-01 member-name label stays', async () => {
+    const db = fakeDatabase();
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle('Our Lantern'));
+    const root = await service.root('token');
+    expect(root.worlds).toEqual([{ worldId: WORLD, name: 'Our Lantern', members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] }]);
+    expect(await service.entry('token', WORLD)).toMatchObject({ outcome: 'ALLOW', world: { name: 'Our Lantern' } });
+  });
+
   it('takes no account, inviter or target from a request and refuses malformed commands', async () => {
     const db = fakeDatabase();
-    const service = new SharedWorldService(db.repository, sealing());
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle());
     await expect(service.invite('token', { commandId: COMMAND, sharedId: 'x', targetUserId: OTHER })).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.invite('token', { commandId: 'nope', sharedId: 'x' })).rejects.toBeInstanceOf(BadRequestException);
     await expect(service.accept('token', INVITATION, { commandId: COMMAND, worldId: WORLD })).rejects.toBeInstanceOf(BadRequestException);
@@ -202,7 +224,7 @@ describe('S4-01 Shared World Product boundary', () => {
   it('turns a transport failure into one neutral unavailability', async () => {
     const db = fakeDatabase();
     db.raw.submitInvitation.mockRejectedValueOnce(new DataApiError(500));
-    const service = new SharedWorldService(db.repository, sealing());
+    const service = new SharedWorldService(db.repository, sealing(), lifecycle());
     await expect(service.invite('token', { commandId: COMMAND, sharedId: 'K7QM-4XWD-P9TR' })).rejects.toBeInstanceOf(ServiceUnavailableException);
   });
 

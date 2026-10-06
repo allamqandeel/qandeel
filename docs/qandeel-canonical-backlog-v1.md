@@ -1500,7 +1500,7 @@ scope. The §7 table, which had not been moved for `QAN-BL-LAUNCH-03`, is correc
 **42** items: 15 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17 `CLOSED — TOMBSTONE`; by
 severity, 25 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 
-**S4-02 reconciliation (2026-10-05; review candidate, not merged).** S4-02 (Shared Conversation & Material, migration
+**S4-02 reconciliation (2026-10-05; merged through PR #311 at `5ea952027d8c230d5d22d82e206394a985954934`, recorded by S4-03).** S4-02 (Shared Conversation & Material, migration
 `0139`) inherits no item by owner. `QAN-BL-VOICE-01`'s reopen condition is not met — S4-02 claims no Voice Note
 persistence or playback, and Shared Voice Notes (`E2E-G-06`) stay blocked on it; it is unchanged. `QAN-BL-CW-01`,
 `QAN-BL-ACCT-01`, `QAN-BL-CI-01` and `QAN-BL-LAUNCH-03` are unchanged. The one S4-02-owned obligation it could not
@@ -1511,6 +1511,17 @@ then designated it: S4-02 admits `QAN-BL-CW-02` (`HIGH`, `DEFERRED — OWNED`, o
 portion of `G-08` is delivered; the private-context portion is not closed. Its Stage-4 Gap Matrix is §13 of the same
 record. The register now holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 17
 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**S4-03 reconciliation (2026-10-05; review candidate, not merged).** S4-03 (Shared Membership Lifecycle, Governance,
+Settings & Historical Access, migration `0140`) inherits no item by owner. `QAN-BL-ACCT-01`'s reopen condition is observed —
+S4-03 takes the Shared World further toward users — and the item stays `OPEN — UNASSIGNED`, unchanged in scope; both new
+launch scopes ship closed and claim no production readiness. `QAN-BL-VOICE-01` is not claimed (no S4-03 read carries a
+Voice Note) and is unchanged. `QAN-BL-CW-01`, `QAN-BL-CW-02`, `QAN-BL-CI-01` and `QAN-BL-LAUNCH-03` are unchanged. The two
+Product Owner gates its Task Contract names — governed add-member / rejoin target presentation and the birth /
+World-transition visuals — were current-task decisions (BG-01), not backlog residue: the Product Owner decided both at the
+pre-push checkpoint (add / rejoin by the target's CURRENT Shared ID, epoch-bound; T-A + B-A), and they are implemented /
+recorded in §4 of its [implementation record](e2e/QANDEEL_S4_03_SHARED_LIFECYCLE_GOVERNANCE_IMPLEMENTATION_RECORD_v1.md),
+whose §14 is its Stage-4 Gap Matrix. It admits nothing: the register still holds **43** items with the counts above.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1568,6 +1579,7 @@ Inherited after T-12 closure reconciliation:
 | `A3-01 — Activity & Attention Core + In-App Production Integration` | none — no item names it; admitted `QAN-BL-NOTIF-01` … `04` and `QAN-BL-PRIV-02` |
 | `A3-02 — Native Push, Permission & Platform Delivery Integration` | `QAN-BL-NOTIF-01` — delivered; tombstoned by itself under BG-08; admitted `QAN-BL-NOTIF-05` |
 | `S4-02 — Shared Conversation & Material Production Integration` | none — no item names it; `QAN-BL-VOICE-01` observed and left open; admitted `QAN-BL-CW-02` (designated by the Product Owner) |
+| `S4-03 — Shared Membership Lifecycle, Governance, Settings & Historical Access` | none — no item names it; `QAN-BL-ACCT-01` and `QAN-BL-VOICE-01` observed and left unchanged; none admitted |
 | `Release Hardening & Launch — physical iOS / Android device validation` | `QAN-BL-NOTIF-05` |
 | `PROACTIVE-EVT-01 — Proactive QANDEEL Gate & Event-Producer Integration` | `QAN-BL-NOTIF-02` |
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |

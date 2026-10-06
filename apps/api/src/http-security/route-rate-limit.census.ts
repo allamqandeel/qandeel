@@ -100,6 +100,28 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /shared/worlds/:worldId/materials/before/:materialId/:establishedAt': 'AUTHENTICATED',
   'POST /shared/worlds/:worldId/messages': 'SECURITY_SENSITIVE',
   'POST /shared/worlds/:worldId/materials/:materialId/delete': 'AUTHENTICATED',
+  // S4-03 — the Shared lifecycle. A proposal (settings, removal, World end, a history package) creates durable governance
+  // state other humans are asked to act on, so it is held to the strict class; reading, leaving (an exit right), approving
+  // and the owner's own deletion are ordinary authenticated acts. No new class.
+  'GET /shared/worlds/:worldId/manage': 'AUTHENTICATED',
+  'POST /shared/worlds/:worldId/leave': 'AUTHENTICATED',
+  'POST /shared/worlds/:worldId/proposals/settings': 'SECURITY_SENSITIVE',
+  'POST /shared/worlds/:worldId/proposals/removal': 'SECURITY_SENSITIVE',
+  'POST /shared/worlds/:worldId/proposals/end': 'SECURITY_SENSITIVE',
+  'POST /shared/worlds/:worldId/proposals/member': 'SECURITY_SENSITIVE',
+  'POST /shared/membership-requests/:worldId/:requestId/accept': 'AUTHENTICATED',
+  'POST /shared/worlds/:worldId/proposals/:proposalId/approve': 'AUTHENTICATED',
+  'GET /shared/worlds/:worldId/history-shares/candidates/:memberHandle': 'AUTHENTICATED',
+  'GET /shared/worlds/:worldId/history-shares/candidates/:memberHandle/before/:materialId/:establishedAt': 'AUTHENTICATED',
+  'POST /shared/worlds/:worldId/history-shares': 'SECURITY_SENSITIVE',
+  'POST /shared/worlds/:worldId/history-shares/:packageId/approve': 'AUTHENTICATED',
+  'GET /shared/closed/:worldId': 'AUTHENTICATED',
+  'GET /shared/closed/:worldId/before/:materialId/:establishedAt': 'AUTHENTICATED',
+  'GET /shared/own-material': 'AUTHENTICATED',
+  'GET /shared/own-material/history-shares': 'AUTHENTICATED',
+  'POST /shared/own-material/history-shares/:worldId/:packageId/approve': 'AUTHENTICATED',
+  'GET /shared/own-material/before/:materialId/:establishedAt': 'AUTHENTICATED',
+  'POST /shared/own-material/:worldId/:materialId/delete': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

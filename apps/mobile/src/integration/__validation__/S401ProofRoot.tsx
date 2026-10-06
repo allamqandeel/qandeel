@@ -19,6 +19,14 @@
  *
  *   qandeel://s401-proof/conversation/seed   the reader shares one World with a conversation already in it
  *   qandeel://s401-proof/conversation/peer   the other person speaks (proved visible only after the reader's refresh)
+ *
+ * S4-03 — the Shared lifecycle over the same production composition:
+ *
+ *   qandeel://s401-proof/lifecycle/seed      a World of the reader and one other person, governance and history open
+ *   qandeel://s401-proof/lifecycle/approve   every other required member approves every pending proposal / package
+ *   qandeel://s401-proof/history/seed        a World of three; the reader joined late; a newcomer joined after the reader
+ *   qandeel://s401-proof/history/grant       the other person's approved package shows the reader their earlier words
+ *   qandeel://s401-proof/history/delete      the other person deletes their own words (after the World ended)
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -32,7 +40,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation)\/(arrive|seed|allow|revoke|peer)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history)\/(arrive|seed|allow|revoke|peer|approve|grant|delete)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -60,6 +68,11 @@ export function S401ProofRoot() {
       if (match[1] === 'world' && match[2] === 'revoke') world.revoke();
       if (match[1] === 'conversation' && match[2] === 'seed') world.converse();
       if (match[1] === 'conversation' && match[2] === 'peer') world.peer();
+      if (match[1] === 'lifecycle' && match[2] === 'seed') world.lifecycle();
+      if (match[1] === 'lifecycle' && match[2] === 'approve') world.peerApprove();
+      if (match[1] === 'history' && match[2] === 'seed') world.history();
+      if (match[1] === 'history' && match[2] === 'grant') world.grant();
+      if (match[1] === 'history' && match[2] === 'delete') world.peerDelete();
     });
     return () => {
       subscription.remove();

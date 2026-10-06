@@ -116,6 +116,7 @@ jobs:
       - {name: "Verify A3-02 Native Push, Permission & Platform Delivery static contract", run: npm run test:a3-02-native-push-platform-delivery-contract}
       - {name: "Verify S4-01 Shared World Reachability, Invitation & Birth static contract", run: npm run test:s4-01-shared-world-reachability-contract}
       - {name: "Verify S4-02 Shared Conversation & Material static contract", run: npm run test:s4-02-shared-conversation-material-contract}
+      - {name: "Verify S4-03 Shared Lifecycle & Governance static contract", run: npm run test:s4-03-shared-lifecycle-governance-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -878,6 +879,11 @@ jobs:
       # owner deletion, former membership, closure and concurrency.
       - name: Verify S4-02 Shared conversation and material against real PostgreSQL
         run: npm run verify:shared-world-conversation-material:integration
+      # S4-03: the Shared lifecycle over the frozen I-04 runtime: the fail-closed governance / history scopes, ungated
+      # leave, unanimity, removal, staleness, settings, history widening, World end and closed viewing, former-member own
+      # material, the cross-World replay law, non-null booleans and concurrency.
+      - name: Verify S4-03 Shared lifecycle and governance against real PostgreSQL
+        run: npm run verify:shared-world-lifecycle-governance:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

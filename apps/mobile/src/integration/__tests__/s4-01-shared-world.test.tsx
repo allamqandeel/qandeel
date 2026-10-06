@@ -32,14 +32,14 @@ const INVITATION = '44444444-4444-4444-8444-444444444444';
 const style = (node: { props: { style?: unknown } }) => StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
 
 interface SharedServer {
-  root: { capabilities: { invitation: boolean; birth: boolean }; worlds: unknown[]; invitations: unknown[] };
+  root: { capabilities: { invitation: boolean; birth: boolean }; worlds: unknown[]; invitations: unknown[]; closedWorlds: unknown[]; memberRequests: unknown[] };
   entry: () => Promise<{ status: number; body: unknown }> | { status: number; body: unknown };
   invite: { outcome: string };
   accept: { outcome: string; worldId?: string };
   decline: { outcome: string };
 }
-const ALLOW = { outcome: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] } };
-const BORN_WORLD = { worldId: WORLD, members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] };
+const ALLOW = { outcome: 'ALLOW', world: { worldId: WORLD, bornAt: '2026-10-05T00:00:00Z', name: null, members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] } };
+const BORN_WORLD = { worldId: WORLD, name: null, members: [{ name: 'Amal Fixture', self: true }, { name: 'Bassem Fixture', self: false }] };
 
 function serve(h: IntegrationHarness, s: SharedServer) {
   h.http.on('/turns', (request) => (request.method === 'GET' ? { status: 200, body: historyBody([exchange('fixture: earlier words', { key: 'fixture-earlier' })]) } : { status: 500, body: {} }));
@@ -82,7 +82,7 @@ const personalLayer = (view: RenderResult) => view.getByTestId('qandeel-depth-co
 
 function baseServer(): SharedServer {
   return {
-    root: { capabilities: { invitation: true, birth: true }, worlds: [BORN_WORLD], invitations: [] },
+    root: { capabilities: { invitation: true, birth: true }, worlds: [BORN_WORLD], invitations: [], closedWorlds: [], memberRequests: [] },
     entry: () => ({ status: 200, body: ALLOW }),
     invite: { outcome: 'SUBMITTED' },
     accept: { outcome: 'BORN', worldId: WORLD },
@@ -205,7 +205,7 @@ describe('S4-01 Journey C — My World ↔ Shared World', () => {
 describe('S4-01 Journey A — invitation → accept → birth → immediate entry', () => {
   it('shows the inviter\'s Name in the approved meaning, accepts, and enters the real World shell at once', async () => {
     const s = baseServer();
-    s.root = { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [{ invitationId: INVITATION, inviterName: 'Bassem Fixture' }] };
+    s.root = { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [{ invitationId: INVITATION, inviterName: 'Bassem Fixture' }], closedWorlds: [], memberRequests: [] };
     const { h, view } = await world(s);
     await press(view, 'qandeel-switcher-shared_world');
     const card = within(view.getByTestId(`qandeel-shared-invitation-${INVITATION}`));
@@ -246,7 +246,7 @@ describe('S4-01 Journey B — invite without enumeration; decline creates nothin
 
   it('declines with no World and no entry', async () => {
     const s = baseServer();
-    s.root = { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [{ invitationId: INVITATION, inviterName: null }] };
+    s.root = { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [{ invitationId: INVITATION, inviterName: null }], closedWorlds: [], memberRequests: [] };
     const { h, view } = await world(s);
     await press(view, 'qandeel-switcher-shared_world');
     expect(view.getByText(fill(COPY.invitation, COPY.someone))).toBeTruthy();
@@ -260,7 +260,7 @@ describe('S4-01 Journey B — invite without enumeration; decline creates nothin
 
   it('shows no invite action while Shared is not open, and says so calmly', async () => {
     const s = baseServer();
-    s.root = { capabilities: { invitation: false, birth: false }, worlds: [], invitations: [] };
+    s.root = { capabilities: { invitation: false, birth: false }, worlds: [], invitations: [], closedWorlds: [], memberRequests: [] };
     const { h, view } = await world(s);
     await press(view, 'qandeel-switcher-shared_world');
     expect(view.queryByTestId('qandeel-shared-create')).toBeNull();

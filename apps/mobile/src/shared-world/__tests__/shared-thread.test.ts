@@ -6,9 +6,26 @@
 import { createManualForegroundSignal, type SharedEntryResult, type SharedMaterial, type SharedMaterialsResult } from '../../runtime-entry';
 import { createSharedWorldController, type SharedWorldTransport } from '../shared-world-controller';
 
+/** S4-03 — the lifecycle half of the transport, answering "no answer" (these suites do not exercise it). */
+const NO_LIFECYCLE = {
+  manage: async () => ({ kind: 'UNAVAILABLE' as const }),
+  leave: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeSettings: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeRemoval: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeEnd: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approve: async () => ({ kind: 'UNAVAILABLE' as const }),
+  historyCandidates: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  approveHistoryShare: async () => ({ kind: 'UNAVAILABLE' as const }),
+  closedWorld: async () => ({ kind: 'UNAVAILABLE' as const }),
+  proposeMember: async () => ({ kind: 'UNAVAILABLE' as const }),
+  acceptMembershipRequest: async () => ({ kind: 'UNAVAILABLE' as const }),
+};
+
+
 const A = '33333333-3333-4333-8333-33333333333a';
 const B = '33333333-3333-4333-8333-33333333333b';
-const allow = (worldId: string): SharedEntryResult => ({ kind: 'ALLOW', world: { worldId, bornAt: '2026-10-05T00:00:00Z', members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] } });
+const allow = (worldId: string): SharedEntryResult => ({ kind: 'ALLOW', world: { worldId, bornAt: '2026-10-05T00:00:00Z', name: null, members: [{ name: 'Amal', self: true }, { name: 'Bassem', self: false }] } });
 const material = (id: string, producer: SharedMaterial['producer'], text: string): SharedMaterial => ({
   materialId: id, producer, authorName: producer === 'HUMAN' ? 'Bassem' : null, text, establishedAt: '2026-10-05T10:00:00Z', canDelete: producer === 'SELF',
 });
@@ -25,7 +42,8 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 
 function transport(overrides: Partial<SharedWorldTransport> = {}): SharedWorldTransport {
   return {
-    root: jest.fn(async () => ({ kind: 'READ' as const, root: { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [] } })),
+    ...NO_LIFECYCLE,
+    root: jest.fn(async () => ({ kind: 'READ' as const, root: { capabilities: { invitation: true, birth: true }, worlds: [], invitations: [], closedWorlds: [], memberRequests: [] } })),
     invite: jest.fn(async () => ({ kind: 'SUBMITTED' as const })),
     accept: jest.fn(async () => ({ kind: 'NOT_ACCEPTABLE' as const })),
     decline: jest.fn(async () => ({ kind: 'DECLINED' as const })),

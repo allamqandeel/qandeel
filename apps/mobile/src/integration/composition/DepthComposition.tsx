@@ -505,7 +505,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} publicId={runtime.publicId} sharedId={runtime.sharedId} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} publicId={runtime.publicId} sharedId={runtime.sharedId} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (

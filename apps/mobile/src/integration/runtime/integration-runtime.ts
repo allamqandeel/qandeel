@@ -93,8 +93,10 @@ import { createAccountController, type AccountController } from '../../account';
 import {
   createAccountIdentityController,
   createPrivacyDataController,
+  createFormerSharedMaterialController,
   createPublicIdController,
   type AccountIdentityController,
+  type FormerSharedMaterialController,
   type PrivacyDataController,
   type PublicIdController,
 } from '../../settings';
@@ -240,6 +242,11 @@ export interface IntegrationSessionRuntime {
   readonly sharedWorld: SharedWorldController;
   /** S4-01 — the reader's own Shared ID, read only when its Settings page is opened; retired with the generation. */
   readonly sharedId: SharedIdController;
+  /**
+   * S4-03 — the reader's own words in Shared Worlds they no longer belong to (Privacy & Data), read only when its page is
+   * opened, on the Shared transport bound to this identity; retired with the generation.
+   */
+  readonly formerSharedMaterial: FormerSharedMaterialController;
 }
 
 /**
@@ -375,6 +382,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.push.retire();
     session.sharedWorld.retire();
     session.sharedId.retire();
+    session.formerSharedMaterial.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -487,6 +495,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       // S4-01: the Shared World area and the reader's Shared ID, on the Shared transport bound to this identity.
       sharedWorld: createSharedWorldController({ transport: shared, isCurrent, foreground: entry.foreground }),
       sharedId: createSharedIdController({ transport: shared, isCurrent }),
+      // S4-03: the reader's own former Shared words, through Privacy & Data — never through a World.
+      formerSharedMaterial: createFormerSharedMaterialController({ transport: shared, isCurrent }),
     };
     return built;
   }

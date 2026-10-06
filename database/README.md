@@ -3945,3 +3945,39 @@ QANDEEL material model exists: its only tables are the two content-free runtime 
 
 Verifier: `npm run verify:shared-world-conversation-material:integration` (`database/verify-migration-0139.mjs`).
 Record: [`docs/e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md`](../docs/e2e/QANDEEL_S4_02_SHARED_CONVERSATION_MATERIAL_IMPLEMENTATION_RECORD_v1.md).
+
+## S4-03 - Shared membership lifecycle, governance, settings and historical access (migration 0140)
+
+The Product execution boundary over the frozen I-04 lifecycle runtime (`0083` leave, `0084` governance, `0085` removal,
+`0086` settings, `0087` / `0119` historical access, `0088` closure), forward-only; migrations `0001`–`0139` are untouched.
+Its one table, `shared_private.shared_governance_proposal_origins` (RLS on, no policy, no application role), records the
+Product origin of a proposal — the proposer (shown by Name; no authority) and, for an add / rejoin, the target's Shared-ID
+credential epoch the proposal is bound to plus a digest proving a replay names the same Shared ID (the ID itself is never
+kept). It is no second membership, governance, settings, history, closure or authority model.
+
+- **Two more gate scopes.** `SHARED_GOVERNANCE` (settings change, member removal, World end, their approvals) and
+  `SHARED_HISTORY_ACCESS` (selective history sharing) are added to the S4-01 scope CHECK; both are closed until an operator
+  opens them. Leaving, the closed-view reads and the former member's own-material read are not gated.
+- **Human commands** (`authenticated`, the human from `auth.uid()`; `SECURITY INVOKER` one-liners over pinned `SECURITY
+  DEFINER` wrappers in `shared_private`): `leave_shared_world_v1`; `propose_shared_world_settings_v1`,
+  `propose_shared_world_member_removal_v1` (an opaque World-bound member handle, never a user id),
+  `propose_shared_world_end_v1`, `propose_shared_world_member_v1` (add / rejoin by the target's CURRENT Shared ID — one
+  answer for every well-formed ID, nothing about the target returned), `approve_shared_world_proposal_v1` (the frozen
+  approval; the satisfying approval commits the operation once — or dispatches the add's one invitation / proves the
+  rejoin — under identities derived from the proposal), `accept_shared_membership_request_v1` (the target's own
+  acceptance); `propose_shared_world_history_share_v1` / `approve_shared_world_history_share_v1` (1–20 exact candidates;
+  the approver is the exact required approver — current or former member; the completing approval commits the grant); and
+  the reads behind Manage World (proposer, own approval, neutral progress), the paged share candidates, the target's
+  requests, the ended World and the former-member page. Every persistence identity is derived server-side.
+- **Shared-ID epoch binding (P1 §5.2–§5.3).** Every approval, dispatch and acceptance of an add / rejoin re-reads the target's
+  credential row `FOR SHARE` and refuses unless its epoch is still the bound one: a rotation ends a not-yet-accepted request
+  for good. `0085` is consumed unchanged.
+- **Exact-World replay law.** Each mutation proves its command id belongs to the exact World, operation family and kind,
+  request and human before any replay is answered; anything else is one non-disclosing `UNAVAILABLE`.
+- **Lock order.** Gate row `FOR SHARE` → World `FOR UPDATE` → (add / rejoin) the target's credential row `FOR SHARE` →
+  proposal / invitation / manifest → items in UUID order / the target's episode — the 0138 / 0139 / 0083–0088 order, never
+  reversed (the 0081 rotation never takes a World row); no advisory lock.
+- Every Product-facing boolean is `COALESCE`d to a real boolean. `service_role` is granted nothing; no 0140 name starts
+  `commit_`; the frozen cores stay executable by no application role.
+
+Verifier: `npm run verify:shared-world-lifecycle-governance:integration` (`database/verify-migration-0140.mjs`).

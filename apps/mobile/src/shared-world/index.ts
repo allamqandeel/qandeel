@@ -13,6 +13,10 @@ export type {
 } from './shared-world-controller';
 export { SHARED_MESSAGE_MAX_LENGTH, createSharedWorldController, mintSharedCommandId } from './shared-world-controller';
 export type { SharedConversationCopy } from './conversation-copy';
+export type { SharedLifecycleCopy } from './lifecycle-copy';
+export { SHARED_LIFECYCLE_COPY_GATE, sharedLifecycleCopy } from './lifecycle-copy';
+export { labelOfWorld } from './SharedWorldArea';
+export type { SharedClosedState, SharedManageNotice, SharedManageState, SharedSettingsInput } from './shared-world-controller';
 export { SHARED_CONVERSATION_COPY_GATE, sharedConversationCopy } from './conversation-copy';
 export type { SharedIdController, SharedIdState, SharedIdTransport } from './shared-id-controller';
 export { createSharedIdController } from './shared-id-controller';

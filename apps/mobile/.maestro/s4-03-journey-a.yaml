@@ -1,0 +1,113 @@
+# S4-03 Journey A — Shared lifecycle and governance, on the production route. VALIDATION ONLY (S401ProofRoot.tsx).
+# A current World; Manage World from inside it; one governed settings change — proposed (never an approval), approved by
+# every other member (the proof world's deep link) and completed by the reader's own approval; voluntary leave straight
+# back to the Shared root with the World gone; the Personal world untouched; the reader's own former words reached through
+# General Settings → Privacy & Data with nothing else of the World. The settings field is typed with the keyboard open, and
+# Send is pressed with the keyboard still open (the S4-02 Android rule). Every state change is an explicit deep-link action
+# of the proof world — never a timed delay. Driven by scripts/phase-m/run-s401-proof-leg.sh, which passes PREFIX and LEFT.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+- openLink: "qandeel://s401-proof/lifecycle/seed"
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-world-5401.*"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-world-5401.*"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-manage-open"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-manage-open"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-manage"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-01-manage-world
+- tapOn:
+    id: "qandeel-shared-propose-settings"
+- tapOn:
+    id: "qandeel-shared-settings-name"
+- inputText: "Fixture Lantern"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-settings-send"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-settings-send"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-proposal-settings"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-proposed-awaiting-approval
+- openLink: "qandeel://s401-proof/lifecycle/approve"
+- tapOn:
+    id: "qandeel-shared-approve"
+- extendedWaitUntil:
+    notVisible:
+      id: "qandeel-shared-proposal-settings"
+    timeout: 30000
+- assertVisible:
+    text: "Fixture Lantern"
+- takeScreenshot: ${PREFIX}-03-settings-applied
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-leave"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-leave"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-leave-confirm"
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-04-leave-consequence-first
+- scrollUntilVisible:
+    element:
+      id: "qandeel-shared-leave-confirm-action"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-shared-leave-confirm-action"
+- extendedWaitUntil:
+    visible:
+      text: "${LEFT}"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-shared-world-5401.*"
+- assertNotVisible:
+    id: "qandeel-shared-manage"
+- takeScreenshot: ${PREFIX}-05-left-back-at-root
+- tapOn:
+    id: "qandeel-switcher-my_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-settings-entry"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-former-shared-material-row"
+    direction: DOWN
+    timeout: 30000
+- tapOn:
+    id: "qandeel-former-shared-material-row"
+- extendedWaitUntil:
+    visible:
+      text: ".*Fixture words I leave behind"
+    timeout: 30000
+- assertNotVisible:
+    text: ".*Fixture hello from the other side"
+- assertNotVisible:
+    text: "Fixture Lantern"
+- takeScreenshot: ${PREFIX}-06-own-former-words-only
