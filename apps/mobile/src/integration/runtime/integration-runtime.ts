@@ -550,7 +550,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         transport: publicTransport, isCurrent,
         authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, semantic: publicTransport.semantic ?? null, spatial: publicTransport.spatial ?? null, isCurrent }),
         // S5-03B — the Public semantic field: its own viewer state, on the same identity-bound transport.
-        field: createPublicFieldController({ transport: publicTransport.field ?? null, isCurrent }),
+        field: createPublicFieldController({ transport: publicTransport.field ?? null, isCurrent, foreground: entry.foreground }),
       }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,

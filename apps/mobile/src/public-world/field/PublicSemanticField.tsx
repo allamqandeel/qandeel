@@ -10,6 +10,10 @@
  *   NEAR  one Experience has focus; others that share its semantic region keep a quiet presence, the rest recede; the
  *         compact bottom panel discloses its public detail and a very small nearby context.
  *
+ * The field is painted in the frozen Living Analysis World language (`./PublicFieldWorld`: the Stage-2 ground, atmosphere,
+ * tone and veil, the field's mass and each Public Experience's own presence); this component is its accessible layer —
+ * what a reader presses and hears — and paints no world of its own.
+ *
  * Search sits at the top and stays inside the same World: results are places in the field, highlighted there, and a
  * result guides the camera to its place. Nothing here is a feed, a card wall, a category browser or a popularity map:
  * no rank, no view count, no relation line of any kind (explicit relations are S5-03C's), and an empty World is shown as
@@ -30,15 +34,15 @@ import { semanticListSeparator } from '../../public-authoring/semantic-copy';
 import type { PublicFieldEntry, PublicFieldExperience } from '../../runtime-entry';
 import { fillPublicFieldCopy, publicFieldCopy, type PublicFieldCopy } from './field-copy';
 import { projectToField, type PublicFieldSize } from './public-field-camera';
+import { PublicFieldWorld, fieldMassRadius, type PublicFieldWorldPlace, type PublicPresenceKind } from './PublicFieldWorld';
 import { PUBLIC_SEARCH_QUERY_MAX, type PublicFieldController } from './public-field-controller';
 
 export const PUBLIC_FIELD_TEST_ID = 'qandeel-public-field';
 /** A pinch asks for a step only once it travels at least the proportion a step is worth (the Map's own rule). */
 const PINCH_STEP = 1 + Number(SEMANTIC_ZOOM_REINFORCEMENT_NUMERATOR) / Number(SEMANTIC_ZOOM_REINFORCEMENT_DENOMINATOR);
 const MARGIN = 24;
-const FAR_MARK = 4;
-const MID_MARK = 9;
-const NEAR_MARK = 13;
+/** The accessible target of one place: the Map's own Home hit radius (13 points), so what is painted is what is pressed. */
+const TARGET = 26;
 const LABEL_WIDTH = 148;
 const SEARCH_ROW = 56;
 const PANEL_MAX = 0.46;
@@ -97,24 +101,38 @@ export function PublicSemanticField({ controller, language, palette, bottomInset
     return [...byId.values()];
   }, [state.entries, state.search.results]);
 
-  const marks = camera && size ? drawn.flatMap((entry) => {
+  // What is on the glass, and how each served place is present there. Disclosure alone decides it: FAR is the field's
+  // mass, MID a place each, NEAR one focused place with its semantic neighbourhood; a search result is a place at every rung.
+  const onGlass = (at: { x: number; y: number }, reach: number) =>
+    size !== null && at.x >= -reach && at.y >= -reach && at.x <= size.width + reach && at.y <= size.height + reach;
+  const presenceOf = (entry: PublicFieldEntry): PublicPresenceKind => {
+    if (highlighted.has(entry.id) || entry.id === focusId) return 'PLACE';
+    if (camera!.depth === 'FAR') return 'FIELD';
+    if (camera!.depth === 'MID') return 'PLACE';
+    return focusedRegion !== null && entry.region === focusedRegion ? 'NEIGHBOURHOOD' : 'RECEDED';
+  };
+  const projected = camera && size ? drawn.flatMap((entry) => {
     const at = projectToField(camera, size, entry.address);
-    if (!at || at.x < -MARGIN || at.y < -MARGIN || at.x > size.width + MARGIN || at.y > size.height + MARGIN) return [];
-    return [{ entry, at }];
+    return at ? [{ entry, at }] : [];
   }) : [];
+  const reach = camera && size ? fieldMassRadius(camera.depth, size) : 0;
+  const mass = projected.filter(({ at }) => onGlass(at, reach)).map(({ at }) => at);
+  const marks = projected.filter(({ at }) => onGlass(at, MARGIN)).map(({ entry, at }) => ({ entry, at, presence: presenceOf(entry) }));
+  const places: PublicFieldWorldPlace[] = marks.map(({ entry, at, presence }) => ({ id: entry.id, at, presence, selected: entry.id === focusId }));
 
   return (
     <View testID={PUBLIC_FIELD_TEST_ID} style={{ flex: 1 }} onLayout={onLayout}>
+      {camera && size ? <PublicFieldWorld size={size} camera={camera} mass={mass} places={places} drag={drag} /> : null}
       <GestureDetector gesture={gesture}>
         <View testID="qandeel-public-field-plane" accessible={camera?.depth === 'FAR'} accessibilityLabel={copy.fieldLabel}
           accessibilityLanguage={language} style={{ flex: 1, overflow: 'hidden' }}
           onStartShouldSetResponder={() => camera?.depth === 'FAR'}
           onResponderRelease={(event) => controller.tapField(event.nativeEvent.locationX, event.nativeEvent.locationY)}>
           <View style={{ flex: 1, transform: [{ translateX: drag.x }, { translateY: drag.y }] }} pointerEvents="box-none">
-            {marks.map(({ entry, at }) => (
-              <FieldMark key={entry.id} entry={entry} x={at.x} y={at.y} depth={camera!.depth} palette={palette} language={language}
-                focused={entry.id === focusId} sameRegion={focusedRegion !== null && entry.region === focusedRegion}
-                highlighted={highlighted.has(entry.id)} onFocus={() => controller.focus(entry.id)} />
+            {marks.filter(({ presence }) => presence !== 'FIELD').map(({ entry, at, presence }) => (
+              <FieldPlace key={entry.id} entry={entry} x={at.x} y={at.y} presence={presence} palette={palette} language={language}
+                focused={entry.id === focusId} labelled={camera!.depth === 'MID' || entry.id === focusId}
+                onFocus={() => controller.focus(entry.id)} />
             ))}
           </View>
         </View>
@@ -162,30 +180,24 @@ export function PublicSemanticField({ controller, language, palette, bottomInset
   );
 }
 
-function FieldMark({ entry, x, y, depth, palette, language, focused, sameRegion, highlighted, onFocus }: {
-  readonly entry: PublicFieldEntry; readonly x: number; readonly y: number; readonly depth: 'FAR' | 'MID' | 'NEAR';
-  readonly palette: ConversationPalette; readonly language: ChromeLanguage; readonly focused: boolean; readonly sameRegion: boolean;
-  readonly highlighted: boolean; readonly onFocus: () => void;
+/**
+ * The accessible layer of one place at MID / NEAR: what a reader presses and hears, exactly over the place the world paints
+ * (`PublicFieldWorld`). It paints no body of its own; its one visible part is the meaning in one line where disclosure
+ * says so. At FAR there is none: the field itself is the target, and no single Experience leads the reading.
+ */
+function FieldPlace({ entry, x, y, presence, palette, language, focused, labelled, onFocus }: {
+  readonly entry: PublicFieldEntry; readonly x: number; readonly y: number; readonly presence: PublicPresenceKind;
+  readonly palette: ConversationPalette; readonly language: ChromeLanguage; readonly focused: boolean; readonly labelled: boolean;
+  readonly onFocus: () => void;
 }) {
-  if (depth === 'FAR') {
-    // Mass, not objects: a quiet presence, no label, no individual target (the field itself is the FAR target).
-    return (
-      <View testID={`qandeel-public-mark-far-${entry.id}`} pointerEvents="none" accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
-        style={{ position: 'absolute', left: x - FAR_MARK / 2, top: y - FAR_MARK / 2, width: FAR_MARK, height: FAR_MARK, borderRadius: FAR_MARK / 2,
-          backgroundColor: highlighted ? palette.primary : palette.tertiary, opacity: highlighted ? 0.9 : 0.55 }} />
-    );
-  }
-  const mark = focused ? NEAR_MARK : MID_MARK;
-  const ink = focused || highlighted ? palette.selectedMarker : depth === 'NEAR' ? (sameRegion ? palette.secondary : palette.tertiary) : palette.restInk;
-  const presence = depth === 'NEAR' && !focused && !sameRegion && !highlighted ? 0.45 : 1;
   return (
     <Pressable testID={`qandeel-public-mark-${entry.id}`} onPress={onFocus} accessibilityRole="button" accessibilityLabel={entry.meaning}
-      accessibilityLanguage={language} accessibilityState={{ selected: focused }} hitSlop={12}
-      style={{ position: 'absolute', left: x - mark / 2, top: y - mark / 2, flexDirection: 'row', alignItems: 'center', opacity: presence }}>
-      <View style={{ width: mark, height: mark, borderRadius: mark / 2, backgroundColor: ink,
-        borderWidth: focused ? palette.markerThickness : 0, borderColor: palette.focusIndicator }} />
-      {depth === 'MID' || focused ? (
-        <Text numberOfLines={1} style={{ ...typeStyle('metadata'), color: focused ? palette.primary : palette.secondary, maxWidth: LABEL_WIDTH, marginStart: 6 }}>
+      accessibilityLanguage={language} accessibilityState={{ selected: focused }} hitSlop={4}
+      style={{ position: 'absolute', left: x - TARGET / 2, top: y - TARGET / 2, minHeight: TARGET, flexDirection: 'row', alignItems: 'center',
+        opacity: presence === 'RECEDED' ? 0.6 : 1 }}>
+      <View style={{ width: TARGET, height: TARGET }} />
+      {labelled ? (
+        <Text numberOfLines={1} style={{ ...typeStyle('metadata'), color: focused ? palette.primary : palette.secondary, maxWidth: LABEL_WIDTH }}>
           {entry.meaning}
         </Text>
       ) : null}

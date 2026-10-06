@@ -11,14 +11,17 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
+import { hsla } from '../../../map/visual';
+import { WORLD_VISUAL } from '../../../map/visual/world-visual.generated';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../../map/world';
+import { PUBLIC_FIELD_WORLD_TEST_ID } from '../PublicFieldWorld';
 import {
   createPublicAuthoringController, type PublicAuthoringTransport, type PublicSemanticTransport, type PublicSpatialTransport,
 } from '../../../public-authoring/public-authoring-controller';
 import { PublicPlacePreparation } from '../../../public-authoring/PublicPlacePreparation';
 import { CANONICAL_VISUAL } from '../../../conversation/visual/canonical-visual.generated';
 import type { PublicAuthoringAnswer, PublicFieldEntry, PublicFieldPanel } from '../../../runtime-entry';
-import { PublicWorldApiClient } from '../../../runtime-entry';
+import { PublicWorldApiClient, createManualForegroundSignal, type ForegroundSignal } from '../../../runtime-entry';
 import { PUBLIC_FIELD_COPY_GATE, publicFieldCopy } from '../field-copy';
 import { createPublicWorldController } from '../../public-world-controller';
 import { PublicWorldArea } from '../../PublicWorldArea';
@@ -181,6 +184,136 @@ describe('S5-03B — the Public field controller', () => {
   });
 });
 
+/**
+ * An honest server whose visibility can change between reads: it serves, inside a rectangle, exactly the Experiences
+ * that are publicly visible NOW; its search and panel answer from the same truth.
+ */
+function liveServer(initial: PublicFieldEntry[]) {
+  let visible = [...initial];
+  const inside = (r: { minX: bigint; minY: bigint; maxX: bigint; maxY: bigint }, e: PublicFieldEntry) =>
+    e.address.x >= r.minX && e.address.x <= r.maxX && e.address.y >= r.minY && e.address.y <= r.maxY;
+  const t = {
+    field: jest.fn(async (r: { minX: bigint; minY: bigint; maxX: bigint; maxY: bigint }) => yes(visible.filter((e) => inside(r, e)))),
+    search: jest.fn(async () => yes(visible.filter((e) => e.id === E3.id || e.id === E2.id))),
+    experience: jest.fn(async (experienceId: string): Promise<PublicAuthoringAnswer<PublicFieldPanel>> => {
+      const e = visible.find((x) => x.id === experienceId);
+      return e ? yes(served(e, visible.filter((x) => x.id !== e.id && x.region === e.region))) : yes({ kind: 'ABSENT' });
+    }),
+  };
+  return { t, stop: (gone: PublicFieldEntry) => { visible = visible.filter((e) => e.id !== gone.id); }, fail: () => { t.field.mockImplementation(async () => NO as never); } };
+}
+const ids = (entries: ReadonlyArray<PublicFieldEntry>) => entries.map((e) => e.id);
+
+describe('S5-03B R1 — no cache is a source of display: every transition that could show the World asks again', () => {
+  const start = async (entries = [E1, E2, E3]) => {
+    const server = liveServer(entries);
+    const c = createPublicFieldController({ transport: server.t as unknown as PublicFieldTransport, isCurrent: () => true });
+    c.setSize(SIZE.width, SIZE.height);
+    c.enter();
+    await flush();
+    expect(ids(c.getState().entries)).toEqual([E1.id, E2.id, E3.id]);
+    return { c, server };
+  };
+
+  it('the whole World is read again — never re-framed from what is held — and a withdrawn Experience is gone', async () => {
+    const { c, server } = await start();
+    c.focus(E1.id);
+    await flush();
+    server.stop(E2);
+    const reads = server.t.field.mock.calls.length;
+    c.wholeWorld();
+    // In flight: nothing held is on display.
+    expect(c.getState()).toMatchObject({ status: 'LOADING', entries: [], focus: null });
+    await flush();
+    expect(server.t.field.mock.calls.length).toBe(reads + 1);
+    expect(server.t.field).toHaveBeenLastCalledWith({ minX: -(2n ** 62n), minY: -(2n ** 62n), maxX: 2n ** 62n - 1n, maxY: 2n ** 62n - 1n });
+    expect(c.getState().status).toBe('READY');
+    expect(ids(c.getState().entries)).toEqual([E1.id, E3.id]);
+    expect(c.getState().camera).toEqual(fittedCamera([E1.address, E3.address], SIZE));
+  });
+
+  it('FAR navigation asks again and cannot bring a no-longer-served Experience back from an earlier read', async () => {
+    const { c, server } = await start();
+    expect(c.getState().camera?.depth).toBe('FAR');
+    server.stop(E3);
+    const reads = server.t.field.mock.calls.length;
+    c.pan(SIZE.width / 3, 0);
+    await flush();
+    expect(server.t.field.mock.calls.length).toBe(reads + 1);
+    expect(ids(c.getState().entries)).not.toContain(E3.id);
+    // Back to where E3 was drawn, and out to the whole World: it never returns, because nothing kept it.
+    c.pan(-SIZE.width / 3, 0);
+    await flush();
+    c.wholeWorld();
+    await flush();
+    expect(ids(c.getState().entries)).not.toContain(E3.id);
+    c.farther();
+    c.tapField(SIZE.width / 2, SIZE.height / 2);
+    await flush();
+    expect(ids(c.getState().entries)).not.toContain(E3.id);
+  });
+
+  it('a fresh read removes the Experience from the search results, the focused panel and the nearby context at once', async () => {
+    const { c, server } = await start();
+    c.openSearch();
+    c.search('hope');
+    await flush();
+    expect(ids(c.getState().search.results)).toEqual([E2.id, E3.id]);
+    c.focus(E1.id);
+    await flush();
+    const panel = c.getState().focus!.panel;
+    expect(panel.status === 'SERVED' && ids(panel.experience.nearby)).toEqual([E2.id]);
+    server.stop(E2);
+    c.farther();
+    await flush();
+    const after = c.getState();
+    expect(ids(after.entries)).not.toContain(E2.id);
+    expect(ids(after.search.results)).toEqual([E3.id]);
+    // Focus was released by the step out; focus again and the panel's nearby context is the server's, now.
+    c.focus(E1.id);
+    await flush();
+    const again = c.getState().focus!.panel;
+    expect(again.status === 'SERVED' && ids(again.experience.nearby)).toEqual([]);
+  });
+
+  it('the focused Experience itself, withdrawn while its panel is open, becomes ABSENT on the next read', async () => {
+    const { c, server } = await start();
+    c.focus(E1.id);
+    await flush();
+    server.stop(E1);
+    c.revalidate();
+    await flush();
+    expect(c.getState().focus).toMatchObject({ id: E1.id, panel: { status: 'ABSENT' } });
+    expect(ids(c.getState().entries)).not.toContain(E1.id);
+  });
+
+  it('a revalidation re-reads the glass, the open search and the focused panel', async () => {
+    const { c, server } = await start();
+    c.openSearch();
+    c.search('hope');
+    await flush();
+    server.stop(E3);
+    const [fields, searches] = [server.t.field.mock.calls.length, server.t.search.mock.calls.length];
+    c.revalidate();
+    await flush();
+    expect(server.t.field.mock.calls.length).toBe(fields + 1);
+    expect(server.t.search.mock.calls.length).toBe(searches + 1);
+    expect(ids(c.getState().entries)).not.toContain(E3.id);
+    expect(ids(c.getState().search.results)).toEqual([E2.id]);
+  });
+
+  it('a read that cannot be made fails closed: nothing held stays on display', async () => {
+    const { c, server } = await start();
+    c.openSearch();
+    c.search('hope');
+    await flush();
+    server.fail();
+    c.pan(40, 0);
+    await flush();
+    expect(c.getState()).toMatchObject({ status: 'UNAVAILABLE', entries: [], focus: null, search: { open: false, results: [] } });
+  });
+});
+
 const appearance = () => {
   const authority = createAppearanceAuthority({
     store: createEphemeralAppearancePreferenceStore({ reader: 'DARK' }),
@@ -191,9 +324,31 @@ const appearance = () => {
   return authority;
 };
 
-async function mountArea(language: 'ar' | 'en', entries: PublicFieldEntry[]) {
+/** Every Skia stand-in element of one kind in the rendered tree, with its props (the Map's own world-visual technique). */
+function skia(view: { toJSON: () => unknown }, kind: string): Record<string, unknown>[] {
+  const found: Record<string, unknown>[] = [];
+  const walk = (node: unknown): void => {
+    if (node === null || typeof node !== 'object') return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    const record = node as { props?: Record<string, unknown>; children?: unknown[] };
+    if (record.props?.skiaElement === kind) found.push(record.props);
+    for (const child of record.children ?? []) walk(child);
+  };
+  walk(view.toJSON());
+  return found;
+}
+const close = (a: unknown, b: number) => typeof a === 'number' && Math.abs(a - b) < 1e-6;
+/** The painted body of the place an Experience is drawn at, if any (a filled circle on its projected point). */
+function bodyOf(view: { toJSON: () => unknown }, field: { getState: () => { camera: ReturnType<typeof fittedCamera> | null } }, e: PublicFieldEntry) {
+  const at = projectToField(field.getState().camera!, SIZE, e.address)!;
+  const circles = skia(view, 'Circle').filter((c) => close(c.cx, at.x) && close(c.cy, at.y));
+  return { body: circles.find((c) => typeof c.color === 'string' && c.style !== 'stroke'), marker: circles.find((c) => c.style === 'stroke') };
+}
+const MASS_COLOURS = WORLD_VISUAL.worldAtmosphere.stops.map(([, s, l, a]) => hsla(WORLD_VISUAL.worldHue, s, l, a));
+
+async function mountArea(language: 'ar' | 'en', entries: PublicFieldEntry[], foreground?: ForegroundSignal) {
   const t = fieldTransport(entries);
-  const field = createPublicFieldController({ transport: t as unknown as PublicFieldTransport, isCurrent: () => true });
+  const field = createPublicFieldController({ transport: t as unknown as PublicFieldTransport, isCurrent: () => true, foreground });
   const controller = createPublicWorldController({ transport: { entry: jest.fn(async () => ({ kind: 'ALLOW' as const })) }, isCurrent: () => true, field });
   const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language={language} insets={INSETS} /></AppearanceProvider>);
   for (let n = 0; n < 4; n += 1) await flush();
@@ -209,9 +364,28 @@ describe('S5-03B — the Public field surface', () => {
     expect(view.queryByTestId(/qandeel-public-mark/u, { includeHiddenElements: true })).toBeNull();
   });
 
+  it('is painted in the frozen Living Analysis World: ground, atmosphere, tone and veil, with the field\'s mass from served places only', async () => {
+    const { view } = await mountArea('en', [E1, E2, E3]);
+    const world = view.getByTestId(PUBLIC_FIELD_WORLD_TEST_ID, { includeHiddenElements: true });
+    expect(world.props.pointerEvents).toBe('none');
+    // The Stage-2 owner's own strata, imported unchanged — never a second world style: the tone curve, the ground's
+    // gradient and floor, the recorded atmosphere strata, and the veil's grain.
+    expect(skia(view, 'RuntimeShader')).toHaveLength(1);
+    expect(skia(view, 'LinearGradient')).toHaveLength(1);
+    expect(skia(view, 'Picture').length).toBeGreaterThan(0);
+    expect(skia(view, 'FractalNoise')).toHaveLength(1);
+    // FAR: one world-colour mass per served place, identical for every place (no category, no weight).
+    const mass = skia(view, 'RadialGradient').filter((g) => JSON.stringify(g.colors) === JSON.stringify(MASS_COLOURS));
+    expect(mass).toHaveLength(3);
+    expect(new Set(mass.map((m) => m.r)).size).toBe(1);
+    // FAR is presence, not objects: no body is painted, and no line of any kind exists in the Public world.
+    expect(skia(view, 'Circle').filter((c) => typeof c.color === 'string')).toHaveLength(0);
+    expect([...skia(view, 'Path'), ...skia(view, 'Line')]).toHaveLength(0);
+  });
+
   it('FAR is mass (no label, no target); MID makes each Experience legible; NEAR opens the compact panel', async () => {
     const { view, field } = await mountArea('en', [E1, E2, E3]);
-    expect(view.getByTestId(`qandeel-public-mark-far-${E1.id}`, { includeHiddenElements: true })).toBeTruthy();
+    expect(bodyOf(view, field, E1).body).toBeUndefined();
     expect(view.queryByText('meaning 1')).toBeNull();
     expect(view.queryByTestId(`qandeel-public-mark-${E1.id}`)).toBeNull();
     const far = field.getState().camera!;
@@ -219,8 +393,15 @@ describe('S5-03B — the Public field surface', () => {
     await act(async () => { field.tapField(p.x, p.y); });
     await flush();
     expect(view.getByTestId(`qandeel-public-mark-${E1.id}`).props.accessibilityLabel).toBe('meaning 1');
+    // MID: a place each, at the major tier, in the canonical mark material.
+    expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6 });
+    expect(bodyOf(view, field, E1).marker).toBeUndefined();
     await fireEvent.press(view.getByTestId(`qandeel-public-mark-${E1.id}`));
     await flush();
+    // NEAR: the focused place is selected; its semantic neighbourhood stays quietly present.
+    expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6, color: WORLD_VISUAL.palettes.standard.selectedInk });
+    expect(bodyOf(view, field, E1).marker).toBeDefined();
+    expect(bodyOf(view, field, E2)).toMatchObject({ body: { r: 3.2 }, marker: undefined });
     const copy = publicFieldCopy('en');
     expect(view.getByTestId('qandeel-public-panel-meaning').props.children).toBe('meaning 1');
     expect(view.getByText('Shared by nightlamp27')).toBeTruthy();
@@ -232,6 +413,33 @@ describe('S5-03B — the Public field surface', () => {
     await fireEvent.press(view.getByTestId('qandeel-public-panel-back'));
     await flush();
     expect(view.queryByTestId('qandeel-public-panel')).toBeNull();
+  });
+
+  it('a return to the foreground reads again: an Experience withdrawn meanwhile is gone from the glass', async () => {
+    // The runtime entry's ONE foreground signal (T-12P §2.7), driven by hand.
+    const foreground = createManualForegroundSignal('ACTIVE');
+    const { view, field, t } = await mountArea('en', [E1, E2, E3], foreground);
+    const p = projectToField(field.getState().camera!, SIZE, E1.address)!;
+    await act(async () => { field.tapField(p.x, p.y); });
+    await flush();
+    // Before: both places are on the glass at MID.
+    expect(bodyOf(view, field, E2).body).toBeDefined();
+    await flush();
+    t.field.mockImplementation(async () => yes([E1, E3]));
+    t.search.mockImplementation(async () => yes([E3]));
+    await act(async () => { foreground.set('INACTIVE'); });
+    expect(field.getState().entries.map((e) => e.id)).toEqual([E1.id, E2.id, E3.id]);
+    await act(async () => { foreground.set('ACTIVE'); });
+    await flush();
+    expect(field.getState().entries.map((e) => e.id)).toEqual([E1.id, E3.id]);
+    expect(view.queryByTestId(`qandeel-public-mark-${E2.id}`)).toBeNull();
+    expect(bodyOf(view, field, E2).body).toBeUndefined();
+    expect(bodyOf(view, field, E1).body).toBeDefined();
+    // A retired controller no longer listens.
+    field.retire();
+    t.field.mockClear();
+    await act(async () => { foreground.set('INACTIVE'); foreground.set('ACTIVE'); });
+    expect(t.field).not.toHaveBeenCalled();
   });
 
   it('registers Back only while the panel or the search is open — never at the World\'s root', async () => {
@@ -363,6 +571,12 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
       for (const key of PUBLIC_FIELD_COPY_GATE.proposed) expect(copy[key].length).toBeGreaterThan(0);
       expect(JSON.stringify(copy)).not.toMatch(/coordinate|إحداثي|rank|popular|views|lens/iu);
     }
+    // R1: the two rows whose text the Product Owner revised — still PROPOSED until the Owner closes the gate.
+    expect(PUBLIC_FIELD_COPY_GATE.revisedByProductOwner).toEqual(['searchLabel', 'placeReady']);
+    expect(publicFieldCopy('ar').searchLabel).toBe('ابحث عن تجربة أو شعور أو معنى');
+    expect(publicFieldCopy('ar').placeReady).toBe('تم تحديد مكانها.');
+    expect(publicFieldCopy('en').searchLabel).toBe('Search for an experience, feeling, or meaning');
+    expect(publicFieldCopy('en').placeReady).toBe('Its place has been set.');
     expect(publicFieldCopy('ar').back).toBe('رجوع');
     expect(publicFieldCopy('en').analysisItem).toBe('QANDEEL analysis');
   });

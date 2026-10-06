@@ -24,7 +24,7 @@ const VIEWER = ['read_public_semantic_field_v1', 'search_public_semantic_field_v
   'read_public_semantic_experience_content_v1', 'read_public_semantic_nearby_v1'];
 const SERVER = ['read_public_spatial_placement_input_v1', 'commit_public_spatial_placement_v1'];
 const FIELD_FILES = ['public-world/field/public-field-camera.ts', 'public-world/field/public-field-controller.ts',
-  'public-world/field/PublicSemanticField.tsx', 'public-world/field/field-copy.ts', 'runtime-entry/public-field-api.ts',
+  'public-world/field/PublicSemanticField.tsx', 'public-world/field/PublicFieldWorld.tsx', 'public-world/field/field-copy.ts', 'runtime-entry/public-field-api.ts',
   'public-authoring/PublicPlacePreparation.tsx'];
 
 test('1 — registered in the toolchain and both CI workflows; one forward migration after 0144', () => {
@@ -146,7 +146,7 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   assert.match(camera, /from '\.\.\/\.\.\/map\/world'/u, 'the exact world primitives are reused');
   const area = code(`${MOBILE}/public-world/PublicWorldArea.tsx`);
   assert.match(area, /<PublicSemanticField controller=\{controller\.field\}/u);
-  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /field: createPublicFieldController\(\{ transport: publicTransport\.field \?\? null, isCurrent \}\)/u);
+  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /field: createPublicFieldController\(\{ transport: publicTransport\.field \?\? null, isCurrent, foreground: entry\.foreground \}\)/u);
   assert.match(code(`${MOBILE}/runtime-entry/public-world-api.ts`), /this\.field = new PublicFieldApiClient\(config\);/u, 'on the same identity-bound transport');
   assert.doesNotMatch(code(`${MOBILE}/runtime-entry/index.ts`), /export \{[^}]*PublicFieldApiClient/u, 'no new runtime-barrel value');
   const surface = code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`);
@@ -191,4 +191,28 @@ test('9 — governance: the record, the backlog and the locators tell the same t
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
     assert.match(read('QANDEEL_PROJECT_MAP.md'), /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime/u);
   }
+});
+
+test('10 — R1: the field is painted in the frozen Living Analysis World, and no client cache is a source of display', () => {
+  const world = code(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`);
+  // The Stage-2 VPORT-01 owner is imported, never copied or re-styled: its strata and its mark material.
+  assert.ok(world.includes("import { WorldAtmosphere, WorldGround, WorldPlaceAtmosphere, WorldTone, WorldVeil, scheduleAt, stratumDrift, useWorldResponse } from '../../map/visual';"));
+  for (const element of ['<WorldTone>', '<WorldGround ', '<WorldAtmosphere ', '<WorldVeil ', '<WorldPlaceAtmosphere ']) assert.ok(world.includes(element), element);
+  assert.ok(world.includes('markMaterial, mediumHue, worldPalette'), 'the canonical mark material and SELECTED tokens');
+  // A Public Experience is not a Personal Thread / Reading: no Personal morphology, no tether, no line.
+  assert.doesNotMatch(world, /WorldObject|WorldTether|RegisterMark|morphologyPath|<Path|<Line/u);
+  // No colour of its own: every value comes from the generated world tokens.
+  assert.doesNotMatch(world, /['"]#[0-9a-fA-F]{3,8}['"]|rgba?\(\d|hsla?\(\d/u);
+  // Distance is read from the Public depth (the authority), on the Map's own logarithmic footing.
+  assert.ok(world.includes('PUBLIC_FIELD_APPROACH: Readonly<Record<PublicFieldDepth, number>> = Object.freeze({ FAR: 0, MID: 0.5, NEAR: 1 })'));
+  const controller = code(`${MOBILE}/public-world/field/public-field-controller.ts`);
+  assert.equal(controller.includes('mergeServed'), false, 'a read replaces the field; nothing older is kept to be shown again');
+  assert.equal(controller.includes("state.camera.depth === 'FAR'"), false, 'FAR navigation is not exempt from reading again');
+  assert.match(controller, /wholeWorld\(\) \{[\s\S]*?void reloadWorld\(\);/u, 'the whole World is read again, never re-framed from what is held');
+  assert.ok(controller.includes("publish({ status: 'LOADING', entries: [] });"), 'nothing held is on display while the World is read');
+  assert.match(controller, /const failClosed = \(\) => \{[\s\S]*?entries: \[\], focus: null, search: NO_SEARCH/u, 'a read that cannot be made holds nothing');
+  // The foreground reads again — through the runtime entry's ONE foreground signal, never a second AppState listener.
+  assert.ok(controller.includes("foreground?.subscribe((next) => { if (next === 'ACTIVE') controller?.revalidate(); })"), 'the foreground reads again');
+  for (const file of FIELD_FILES) assert.equal(code(`${MOBILE}/${file}`).includes('AppState'), false, `${file} installs no second lifecycle listener`);
+  assert.ok(read(RECORD).includes("OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision"), 'scale is not self-assigned');
 });

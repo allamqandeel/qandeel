@@ -14,9 +14,16 @@
  *
  * Back is local: it closes the panel (releasing focus), then the search, before anything else — and at the World's
  * own root nothing is registered, so Back never silently leaves Public World (S5-01).
+ *
+ * No cache is a source of display (R1). The field shows exactly what the LATEST read served — never an older read kept
+ * for later — and every transition that could show a different part of the World asks again: any camera move at any
+ * rung (FAR included), the World as a whole (a fresh whole-World read, never a re-framing of what is held), a return to
+ * the foreground, and every entry. A read that answers removes, at once, every Experience it is authoritative for and no
+ * longer serves: from the field, the search results, the focused panel and its nearby context. A read that cannot be
+ * made fails closed: the field becomes the one honest unavailable state and holds nothing.
  */
 import type { CanonicalWorldAddress } from '../../map/world';
-import type { PublicAuthoringAnswer, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle } from '../../runtime-entry';
+import type { ForegroundSignal, PublicAuthoringAnswer, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle } from '../../runtime-entry';
 import {
   PUBLIC_FIELD_MAX_COORD, PUBLIC_FIELD_MIN_COORD, fieldFootprint, fittedCamera, focusField, isFieldSize, nearestTo, panField, projectToField, zoomField,
   type PublicFieldCamera, type PublicFieldSize,
@@ -63,8 +70,10 @@ export interface PublicFieldController {
   closer(): void;
   /** Semantic Zoom out: NEAR → MID (focus released) → FAR. */
   farther(): void;
-  /** Back to the World as a whole, at FAR, nothing focused. */
+  /** Back to the World as a whole, at FAR, nothing focused — read again from the server, never re-framed from what is held. */
   wholeWorld(): void;
+  /** Ask the server again for everything on display (the glass, the open search, the focused panel). */
+  revalidate(): void;
   /** A tap on the field at a screen point: at FAR it discloses that place at MID. */
   tapField(x: number, y: number): void;
   /** Focus one Experience the field (or search) showed: the camera lands on it at NEAR and the panel opens. */
@@ -80,16 +89,24 @@ export interface PublicFieldController {
 export interface PublicFieldControllerOptions {
   readonly transport: PublicFieldTransport | null;
   readonly isCurrent: () => boolean;
+  /** R1: the runtime entry's ONE foreground signal (T-12P §2.7); returning to the foreground reads again. */
+  readonly foreground?: ForegroundSignal;
 }
 
 const WHOLE_WORLD: PublicFieldRectangle = Object.freeze({ minX: PUBLIC_FIELD_MIN_COORD, minY: PUBLIC_FIELD_MIN_COORD, maxX: PUBLIC_FIELD_MAX_COORD, maxY: PUBLIC_FIELD_MAX_COORD });
 const NO_SEARCH: PublicFieldSearchState = Object.freeze({ open: false, status: 'IDLE', results: [] });
 const INITIAL: PublicFieldState = Object.freeze({ status: 'IDLE', entries: [], camera: null, focus: null, search: NO_SEARCH });
 export const PUBLIC_SEARCH_QUERY_MAX = 120;
+/**
+ * The server's bound on one field read (S5-03B v1, `LIMIT 400`). A read that returned fewer is COMPLETE for its
+ * rectangle, so its absences are authoritative there. A bounded v1, not the final whole-World behaviour at scale (open
+ * Product gap awaiting the Product Owner's ownership decision).
+ */
+export const PUBLIC_FIELD_READ_BOUND = 400;
 
 const within = (r: PublicFieldRectangle, a: CanonicalWorldAddress): boolean => a.x >= r.minX && a.x <= r.maxX && a.y >= r.minY && a.y <= r.maxY;
 
-export function createPublicFieldController({ transport, isCurrent }: PublicFieldControllerOptions): PublicFieldController {
+export function createPublicFieldController({ transport, isCurrent, foreground }: PublicFieldControllerOptions): PublicFieldController {
   const listeners = new Set<() => void>();
   let state: PublicFieldState = INITIAL;
   let size: PublicFieldSize | null = null;
@@ -105,19 +122,41 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
     for (const listener of Array.from(listeners)) listener();
   };
 
-  /** Replace what the server served inside a rectangle with exactly what it serves there now; keep the rest. */
-  const mergeServed = (rectangle: PublicFieldRectangle, served: ReadonlyArray<PublicFieldEntry>): ReadonlyArray<PublicFieldEntry> => {
-    const kept = state.entries.filter((entry) => !within(rectangle, entry.address));
-    const byId = new Map<string, PublicFieldEntry>(kept.map((entry) => [entry.id, entry]));
-    for (const entry of served) byId.set(entry.id, entry);
-    return [...byId.values()];
-  };
+  let lastQuery: string | null = null;
   const homeCamera = (): PublicFieldCamera | null => (isFieldSize(size) ? fittedCamera(state.entries.map((entry) => entry.address), size) : null);
   const forget = (experienceId: string) => {
     publish({
       entries: state.entries.filter((entry) => entry.id !== experienceId),
       search: { ...state.search, results: state.search.results.filter((entry) => entry.id !== experienceId) },
     });
+  };
+
+  /**
+   * A field read answered: the field becomes exactly what it served (nothing older is kept to be shown again), and where
+   * the read is complete, every Experience inside its rectangle that it no longer serves leaves the search results, the
+   * focused panel and the nearby context too.
+   */
+  const applyServed = (rectangle: PublicFieldRectangle, served: ReadonlyArray<PublicFieldEntry>, extra: Partial<PublicFieldState> = {}) => {
+    const ids = new Set(served.map((entry) => entry.id));
+    const complete = served.length < PUBLIC_FIELD_READ_BOUND;
+    const gone = (entry: PublicFieldEntry) => complete && within(rectangle, entry.address) && !ids.has(entry.id);
+    let focus = state.focus;
+    if (focus !== null && focus.panel.status === 'SERVED') {
+      const experience = focus.panel.experience;
+      if (gone(experience.entry)) {
+        panelTicket += 1;
+        focus = { id: focus.id, panel: { status: 'ABSENT' } };
+      } else if (experience.nearby.some(gone)) {
+        focus = { id: focus.id, panel: { status: 'SERVED', experience: { ...experience, nearby: experience.nearby.filter((near) => !gone(near)) } } };
+      }
+    }
+    publish({ ...extra, entries: served, focus, search: { ...state.search, results: state.search.results.filter((entry) => !gone(entry)) } });
+  };
+
+  /** A read that could not be made: the one honest unavailable state, holding nothing that could be shown again. */
+  const failClosed = () => {
+    panelTicket += 1; searchTicket += 1; viewportTicket += 1;
+    publish({ status: 'UNAVAILABLE', entries: [], focus: null, search: NO_SEARCH });
   };
 
   async function load(): Promise<void> {
@@ -131,14 +170,31 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
       camera: isFieldSize(size) ? fittedCamera(answer.value.map((entry) => entry.address), size) : null });
   }
 
-  /** At MID and NEAR, ask the server what it serves exactly inside the glass, so a dense World fills in where the reader is. */
-  async function refreshViewport(): Promise<void> {
-    if (!transport || !state.camera || state.camera.depth === 'FAR' || !isFieldSize(size)) return;
+  /** The World as a whole, read now: nothing is shown from what was held while the read is in flight. */
+  async function reloadWorld(): Promise<void> {
+    if (!transport) { failClosed(); return; }
     const mine = ++viewportTicket;
+    const ofVisit = visit;
+    publish({ status: 'LOADING', entries: [] });
+    const answer = await transport.field(WHOLE_WORLD).catch(() => ({ kind: 'NO_ANSWER' as const }));
+    if (mine !== viewportTicket || ofVisit !== visit) return;
+    if (answer.kind !== 'ANSWER') { failClosed(); return; }
+    applyServed(WHOLE_WORLD, answer.value, {
+      status: 'READY',
+      camera: isFieldSize(size) ? fittedCamera(answer.value.map((entry) => entry.address), size) : state.camera,
+    });
+  }
+
+  /** At every rung, ask the server what it serves exactly inside the glass; the field becomes that answer. */
+  async function refreshViewport(): Promise<void> {
+    if (!transport || !state.camera || !isFieldSize(size) || state.status !== 'READY') return;
+    const mine = ++viewportTicket;
+    const ofVisit = visit;
     const rectangle = fieldFootprint(state.camera, size);
     const answer = await transport.field(rectangle).catch(() => ({ kind: 'NO_ANSWER' as const }));
-    if (mine !== viewportTicket || answer.kind !== 'ANSWER') return;
-    publish({ entries: mergeServed(rectangle, answer.value) });
+    if (mine !== viewportTicket || ofVisit !== visit) return;
+    if (answer.kind !== 'ANSWER') { failClosed(); return; }
+    applyServed(rectangle, answer.value);
   }
 
   async function openPanel(experienceId: string): Promise<void> {
@@ -162,6 +218,18 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
     });
   }
 
+  /** One search read; its answer replaces the results outright (nothing from an earlier answer is kept). */
+  const runSearch = (q: string) => {
+    if (!transport) return;
+    const mine = ++searchTicket;
+    publish({ search: { open: true, status: 'SEARCHING', results: [] } });
+    void transport.search(q).catch(() => ({ kind: 'NO_ANSWER' as const })).then((answer) => {
+      if (mine !== searchTicket) return;
+      if (answer.kind !== 'ANSWER') { publish({ search: { open: true, status: 'UNAVAILABLE', results: [] } }); return; }
+      publish({ search: { open: true, status: answer.value.length === 0 ? 'NONE' : 'RESULTS', results: answer.value } });
+    });
+  };
+
   const setCamera = (camera: PublicFieldCamera) => {
     publish({ camera });
     void refreshViewport();
@@ -180,14 +248,17 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
     void openPanel(experienceId);
   };
 
-  return {
+  let controller: PublicFieldController | null = null;
+  const unsubscribeForeground = foreground?.subscribe((next) => { if (next === 'ACTIVE') controller?.revalidate(); });
+
+  controller = {
     getState: () => state,
     subscribe(listener) {
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
     enter() {
-      panelTicket += 1; searchTicket += 1; viewportTicket += 1;
+      panelTicket += 1; searchTicket += 1; viewportTicket += 1; lastQuery = null;
       void load();
     },
     setSize(width, height) {
@@ -225,9 +296,16 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
       setCamera(moved.camera);
     },
     wholeWorld() {
+      if (state.status === 'IDLE' || state.status === 'LOADING') return;
       releaseFocus();
-      const home = homeCamera();
-      if (home) publish({ camera: home });
+      void reloadWorld();
+    },
+    revalidate() {
+      if (state.status === 'IDLE' || state.status === 'LOADING') return;
+      if (state.status === 'UNAVAILABLE' || !state.camera || !isFieldSize(size)) { void load(); return; }
+      void refreshViewport();
+      if (state.focus !== null) void openPanel(state.focus.id);
+      if (state.search.open && lastQuery !== null) runSearch(lastQuery);
     },
     tapField(x, y) {
       const camera = state.camera;
@@ -247,16 +325,12 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
     search(query) {
       const q = query.replace(/\s+/gu, ' ').trim();
       if (q.length === 0 || q.length > PUBLIC_SEARCH_QUERY_MAX || !transport) return;
-      const mine = ++searchTicket;
-      publish({ search: { open: true, status: 'SEARCHING', results: [] } });
-      void transport.search(q).catch(() => ({ kind: 'NO_ANSWER' as const })).then((answer) => {
-        if (mine !== searchTicket) return;
-        if (answer.kind !== 'ANSWER') { publish({ search: { open: true, status: 'UNAVAILABLE', results: [] } }); return; }
-        publish({ search: { open: true, status: answer.value.length === 0 ? 'NONE' : 'RESULTS', results: answer.value } });
-      });
+      lastQuery = q;
+      runSearch(q);
     },
     closeSearch() {
       searchTicket += 1;
+      lastQuery = null;
       publish({ search: NO_SEARCH });
     },
     back() {
@@ -271,6 +345,7 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
       }
       if (state.search.open) {
         searchTicket += 1;
+        lastQuery = null;
         publish({ search: NO_SEARCH });
         return true;
       }
@@ -278,7 +353,9 @@ export function createPublicFieldController({ transport, isCurrent }: PublicFiel
     },
     retire() {
       retired = true;
+      unsubscribeForeground?.();
       listeners.clear();
     },
   };
+  return controller;
 }

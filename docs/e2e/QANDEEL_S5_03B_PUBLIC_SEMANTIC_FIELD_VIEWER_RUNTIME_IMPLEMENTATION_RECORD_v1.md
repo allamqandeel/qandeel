@@ -257,7 +257,7 @@ Nothing is self-approved.
 | fieldLabel | **PROPOSED** | حقل المعاني في العالم العام | Public World's field of meaning |
 | empty | **PROPOSED** | لا يوجد في العالم العام شيء بعد. | Nothing is in Public World yet. |
 | fieldUnavailable | **PROPOSED** | تعذّر عرض العالم العام الآن. | Public World can't be shown right now. |
-| searchLabel | **PROPOSED** | ابحث في العالم العام | Search Public World |
+| searchLabel | **PROPOSED** (text revised by the Product Owner, R1) | ابحث عن تجربة أو شعور أو معنى | Search for an experience, feeling, or meaning |
 | noResults | **PROPOSED** | لا شيء في العالم العام يطابق هذا البحث. | Nothing in Public World matches this search. |
 | closer | **PROPOSED** | اقترب | Closer |
 | farther | **PROPOSED** | ابتعد | Farther |
@@ -268,7 +268,7 @@ Nothing is self-approved.
 | placeHeading | **PROPOSED** | مكان التجربة في العالم العام | The experience's place in Public World |
 | placeExplain | **PROPOSED** | يحدد قنديل مكانها من معناها وحده، ولا يمكن اختيار المكان يدويًا. | QANDEEL places it by its meaning alone; the place can't be chosen by hand. |
 | placeAsk | **PROPOSED** | اطلب من قنديل تحديد مكانها | Ask QANDEEL to find its place |
-| placeReady | **PROPOSED** | مكانها جاهز. | Its place is ready. |
+| placeReady | **PROPOSED** (text revised by the Product Owner, R1) | تم تحديد مكانها. | Its place has been set. |
 | placeUnavailable | **PROPOSED** | تعذّر على قنديل تحديد مكانها الآن. | QANDEEL couldn't find its place right now. |
 
 Notes for the Product Owner: English follows S5-01 / S5-02's "Public World" without an article. The zoom controls show the
@@ -290,8 +290,8 @@ current-truth note. The Public World is not launch-ready; no Launch Readiness is
 | G01 | No production provider behind `PublicSpatialPlacer`: outside tests it refuses, so no real Experience is placed yet | 2 — closure-time backlog admission candidate | Stage 8A, beside the S5-03A interpreter (S5-03A G01); the Product Owner names the owner task within 8A, then it is admitted (BG-02 / BG-08) |
 | G02 | The placer's AI-COST-01 feature family / spend admission (today: one open request per revision + the strict rate class + 20 s bound) | 2 — same candidate as G01 | Stage 8A |
 | G03 | The production layout space must fit the Map's presentation band (≤ 2^40 world units / point at FAR) | 2 — same candidate as G01 | Stage 8A, with the provider |
-| G04 | Search and the field re-derive every candidate at read time (no index beyond the coordinate index; the search document is built per query) — correct and stale-proof, not tuned for a large World | 4 assigned | S5-04 (Final Public Integration) for Public performance at scale, or the Product Owner's re-designation |
-| G05 | A World denser than 400 places per rectangle shows the first 400 in spatial order; dense-field aggregation (FAR mass by region) is not built | 4 assigned | S5-04, with G04 |
+| G04 | Search and the field re-derive every candidate at read time (no index beyond the coordinate index; the search document is built per query) — correct and stale-proof, not tuned for a large World | **OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision** (R1: not self-assigned) | none named; the R0 self-assignment to S5-04 is withdrawn |
+| G05 | One field read is bounded at 400 places (`LIMIT 400`). That is a **bounded v1**, not the final "whole World" behaviour at scale: a World denser than 400 places per rectangle shows the first 400 in spatial order, and dense-field aggregation is not built (the R1 FAR mass is one canonical world-colour per served place, not an aggregate) | **OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision** (R1: not self-assigned) | none named, with G04 |
 | G06 | Exploration lenses (Now / New / Rising / Most Discussed / Most Viewed) | 3 existing owner | not frozen (CW2-04 §36); a later Product closure — no chip shipped |
 | G07 | Explicit Public relations, relation lines, integrity closure | 4 assigned | S5-03C |
 | G08 | Discussion, replies, Public QANDEEL, Public Activity / Push; rendering vitality counts and the published instant | 4 assigned | S5-04 |
@@ -302,7 +302,8 @@ current-truth note. The Public World is not launch-ready; no Launch Readiness is
 | G13 | Export My Data does not include the spatial footprint | 3 existing owner | `E2E-D-16` |
 | G14 | Public Voice, Replay | 3 existing items | `QAN-BL-VOICE-01` / Stage 8B; Stage 7 |
 
-**Orphan gaps = 0** — every row has class 1–5 and a named owner or disposition.
+**Orphan gaps = 0** — every row has class 1–5 and a named owner or disposition; G04 / G05 are dispositioned as OPEN PRODUCT
+GAPS awaiting the Product Owner's ownership decision (R1), not orphaned and not assigned by Engineering.
 
 ## 17. Validation
 
@@ -354,3 +355,63 @@ No Product, Security or Privacy defect was found in the frozen runtime or in S5-
 - **Stage 8A:** the production providers behind the S5-03A interpreter and the S5-03B placer (G01–G03).
 - **Stage 9 / CW2-08:** `PUBLISHED`, composing semantic readiness + spatial readiness + CW2-08 clearance.
 - **`QAN-BL-ACCT-01` remains HIGH / OPEN.**
+
+## 20. R1 — independent review corrections (2026-10-06)
+
+The Product Owner's independent review of Draft PR #317 accepted the DB / authority / visibility / stable-placement law
+and returned two class-A Product corrections, one ownership clarification and two Copy revisions. No migration, DB
+contract, API or controller architecture changed; the 0145 verifier was therefore not re-run (§17 stands).
+
+**A1 — the Public field is painted in the frozen Living Analysis World language.** R0 drew the field with plain views and
+small circles. R1 adds `apps/mobile/src/public-world/field/PublicFieldWorld.tsx`, a Skia canvas under the field's
+accessible layer that imports the Stage-2 VPORT-01 owner (`apps/mobile/src/map/visual`) **unchanged** (those files are
+byte-pinned by the VPORT-02 contract): `WorldTone` (the canonical tone curve), `WorldGround` (ground + floor),
+`WorldAtmosphere` (cloud / star / dust strata, world-anchored by the Public camera's own anchor and distance through
+`stratumDrift`), `WorldVeil` (vignette + grain), and `WorldPlaceAtmosphere` for the field's mass. A Public Experience
+does NOT borrow `WorldObject` (its morphologies are Personal Thread / Reading families); it has its own
+`PublicPresence`, built only from the canonical mark material (`markMaterial`, `falloff`, `mediumHue`,
+`SHADE_GRADIENT`, `MARK_RADIUS_POINTS`, the frozen `worldPalette` SELECTED ink and marker). The Map's presentation
+camera is reused held at rest (the Public field applies no canonical change to it), so nothing animates and reduced
+motion paints the same field. Distance: the Public rungs are exactly the Map's approach 0 / ½ / 1 (one ×8 step is
+`ln 8 / ln 64`), read from the Public depth, never from a magnitude.
+
+- **FAR** = the field's mass: one canonical world-colour atmosphere per served place, identical for every place and
+  world-anchored (it grows ×8 per rung with the camera), so places that are near in meaning overlap into one luminous
+  body and empty meaning stays dark; each place adds only the medium's soft light — no body, no label, no target.
+  Derived only from the served spatial data; no category, no boundary, no line, no popularity.
+- **MID** = each served place is a major-tier body with the cleared local ground and the medium's light; the meaning
+  in one line on the accessible layer.
+- **NEAR** = the focused place carries the frozen SELECTED ink and attached marker; places sharing its semantic
+  region are quiet minor-tier bodies; the rest recede (a minor-tier body at a constant reduced share).
+
+Every light, size and alpha is constant per tier (I-08B1 truth rule 2); the tier is disclosure only.
+
+**A2 — no client cache is a source of display.** The controller now shows exactly what the LATEST read served (a read
+replaces the field; R0 merged into a retained cache). Every transition that could show a different part of the World
+asks again: any camera move at every rung including FAR (R0 skipped FAR), `wholeWorld()` (a fresh whole-World read with
+nothing on display while it is in flight — R0 re-framed the cache), the app returning to the foreground
+(through the runtime entry's ONE foreground signal, T-12P §2.7, bound by the integration runtime exactly as the Shared
+World controller is — no second `AppState` listener: `ACTIVE` → `revalidate()`: glass, open search and focused panel), and every entry (unchanged). A complete answer
+(< the 400 bound) removes at once every Experience inside its rectangle that it no longer serves from the field, the
+search results, the focused panel (→ ABSENT) and the nearby context. A read that cannot be made fails closed: the one
+honest unavailable state, holding nothing. No polling and no realtime channel were added.
+
+**B — scale ownership.** G04 / G05 are no longer self-assigned to S5-04: they are OPEN PRODUCT GAPS awaiting the Product
+Owner's ownership decision (§16). `LIMIT 400` remains a bounded v1, not a claim about the whole World at scale.
+
+**Copy.** `searchLabel` and `placeReady` carry the Product Owner's revised text (AR «ابحث عن تجربة أو شعور أو معنى» /
+EN "Search for an experience, feeling, or meaning"; AR «تم تحديد مكانها.» / EN "Its place has been set."). The gate stays
+**OPEN — 16 rows PROPOSED**; the two rows are listed in `PUBLIC_FIELD_COPY_GATE.revisedByProductOwner` and nothing is
+self-approved.
+
+**R1 validation (proportional).** S5-03B focused mobile suite 31 / 31 (new: 6 stale-cache controller tests, a
+foreground-revalidation surface test through a manual foreground signal, a Living-Analysis paint test, MID / NEAR
+presence assertions, the revised Copy). Mutation checks: restoring the R0 FAR refresh skip fails 3 tests; restoring the R0
+cached `wholeWorld()` fails 1. Mobile `tsc` PASS. Public World / authoring / S5-01 integration / VPORT-01 world-visual
+Jest: all pass. `src/integration`: 259 / 265 — the same 6 pre-existing locale-baseline failures (`w2-account-access`,
+`depth`), none new. Static: the S5-03B contract 10 / 10 (new test 10 pins R1); S5-01, S5-02, S5-03A, VPORT-01, VPORT-02,
+Living Analysis Map runtime, canonical Home-placement engine and task-closure governance contracts pass, except the
+"no generated native project" assertions, which fail only in this workstation's checkout because of an ignored local
+`apps/mobile/android/` prebuild directory (2026-10-04, untracked, not part of the change); the same contract passes
+15 / 15 in a clean worktree of the changed tree. Not re-run (no migration / DB contract / API change): the 0145
+PostgreSQL verifier and the neighbouring DB verifiers (§17 stands).

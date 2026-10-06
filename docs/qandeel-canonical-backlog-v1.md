@@ -1662,7 +1662,10 @@ Experience Version / S5-03A interpretation `RESTRICT` dependents are recorded as
 `QAN-BL-NAV-02` and every launch item are unchanged: no Public Voice, Replay, Activity or Launch path is opened, and the
 CW2-08 seam still answers `NOT_EVALUATED`. The production provider behind the spatial placer is the Product Owner's
 Stage 8A, beside the S5-03A interpreter's; S5-03B records it as a closure-time admission candidate whose owner task the
-Product Owner names within Stage 8A — no item is admitted before that designation (BG-02). Its Gap Matrix is §16 of its
+Product Owner names within Stage 8A — no item is admitted before that designation (BG-02). R1 (independent review):
+Public field / search performance at scale and dense-field aggregation (record G04 / G05) are recorded as OPEN PRODUCT
+GAPS awaiting the Product Owner's ownership decision — not self-assigned to S5-04 and not admitted before that decision;
+the field read's `LIMIT 400` is a bounded v1, not the final whole-World behaviour at scale. Its Gap Matrix is §16 of its
 [implementation record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
 The register still holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
