@@ -152,9 +152,12 @@ async function verifyBoundary() {
       FROM unnest(ARRAY['SELECT','INSERT','UPDATE','DELETE','TRUNCATE','REFERENCES','TRIGGER']) x`, [role]);
     assert.equal(any, false, `${role} holds no privilege on the choice table`);
   }
-  const [fk] = await rows(`SELECT confdeltype, confrelid::regclass::text AS target FROM pg_constraint
-    WHERE conrelid = 'public_world_private.account_public_display_choices'::regclass AND contype = 'f'`);
-  assert.deepEqual(fk, { confdeltype: 'c', target: 'public.users' }, 'the choice cascades with the account');
+  // The referenced relation is resolved structurally (pg_class + pg_namespace), never by regclass text, whose schema
+  // qualification depends on name visibility.
+  const fks = await rows(`SELECT con.confdeltype, ns.nspname AS target_schema, rel.relname AS target_table
+    FROM pg_constraint con JOIN pg_class rel ON rel.oid = con.confrelid JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+    WHERE con.conrelid = 'public_world_private.account_public_display_choices'::regclass AND con.contype = 'f'`);
+  assert.deepEqual(fks, [{ confdeltype: 'c', target_schema: 'public', target_table: 'users' }], 'the choice cascades with the public.users account row');
 
   stage = 'boundary: no frozen I-05 consequential primitive became reachable';
   const reach = await rows(`SELECT r.rolname, p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
