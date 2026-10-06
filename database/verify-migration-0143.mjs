@@ -11,15 +11,17 @@
 //      REAL_NAME the CURRENT full 80-character Name through the controller review, with no stale label;
 //   3. rights: only a legal source prepares (one non-enumerating UNAVAILABLE for hidden, foreign or absent material);
 //      the exact rightsholders — and nobody else, not a non-rightsholder member, not the controller for another's item —
-//      approve; an approver sees only their own included bytes; READY needs every CURRENT effective approval; a
+//      approve; an approver sees only the exact included content requiring their approval; READY needs every CURRENT effective approval; a
 //      withdrawal is immediate and never resurrected (and the frozen READY commit, which ignores it, is unreachable);
 //      approval never grants control; source deletion before READY fails closed;
-//   4. privacy (ASSURE-F05): owner deletion — through the application path too — physically erases the
-//      source-content-bearing copy, its body and both digests, in the same transaction at the canonical instant, and a
-//      whole-database census finds neither the bytes nor their digest anywhere; audit identity survives; both review
-//      boundaries go dark and never present a partial package; analytical items are not erased; the transition is one-way
+//   4. privacy (ASSURE-F05): owner deletion — through the application path too — physically erases every Public copy
+//      of a Shared material it physically erases (the deleted source, and every target of its transitive
+//      MATERIAL_DEPENDENCY closure, whatever the item's ANALYTICAL label: S5-02 R1, G16), its body and both digests, in
+//      the same transaction at the canonical instant, and a whole-database census finds neither the bytes nor their
+//      digest anywhere; audit identity survives; both review boundaries go dark and never present a partial package; an
+//      equivalent REASONING_DEPENDENCY output, and an output unrelated to the deleted source, keep their bytes; the transition is one-way
 //      and every other package mutation is still refused; an equivalent retry re-proves the erasure; already-unsafe rows
-//      are reconciled forward and contradictory state refuses deployment;
+//      (closure targets included) are reconciled forward and contradictory state refuses deployment;
 //   5. concurrency, on real connections: delete-first leaves the preparation failing closed with nothing written;
 //      prepare-first is erased by the deletion it waited for; a burst of races produces no deadlock and no committed
 //      deletion beside surviving bytes;
@@ -514,12 +516,108 @@ async function verifyPrivacy(f, d, ready) {
   assert.equal((await reviewOwn(f.mohamed, ready.exp))[0].review_state, 'UNAVAILABLE');
 }
 
+// ------------------------------------------------------------------- 4a. MATERIAL vs REASONING dependency (S5-02 R1, G16)
+/** A Shared MATERIAL_DEPENDENCY edge (the source precedes the target) or a REASONING_DEPENDENCY edge (opaque context). */
+async function dependency(world, kind, target, source) {
+  await asRole('postgres');
+  await q(`INSERT INTO public.shared_world_material_dependencies
+             (id, world_id, dependency_kind, target_material_id, target_established_at,
+              source_material_id, source_established_at, source_context_ref)
+           SELECT $1, $2, $3, t.id, t.established_at, s.id, s.established_at, $6
+             FROM public.shared_world_materials t LEFT JOIN public.shared_world_materials s ON s.id = $5
+            WHERE t.id = $4`,
+  [randomUUID(), world, kind, target, kind === 'MATERIAL_DEPENDENCY' ? source : null,
+    kind === 'REASONING_DEPENDENCY' ? `ctx-${randomUUID()}` : null]);
+}
+
+async function verifyDependencyErasure(f) {
+  // G01 THE FIXTURE: Hadir's human sentence; a QANDEEL output that MATERIAL_DEPENDS on it; a second QANDEEL output that
+  // MATERIAL_DEPENDS on the first (the closure is transitive); and an equivalent QANDEEL output that only
+  // REASONING_DEPENDS. All three outputs are ANALYTICAL_DERIVATIVE in Public.
+  const human = randomUUID(); const humanText = `S5-02 G16 human source ${randomUUID()}`;
+  const target = randomUUID(); const targetText = `S5-02 G16 material target ${randomUUID()}`;
+  const hop = randomUUID(); const hopText = `S5-02 G16 transitive target ${randomUUID()}`;
+  const reasoning = randomUUID(); const reasoningText = `S5-02 G16 reasoning target ${randomUUID()}`;
+  await asRole('postgres');
+  await rt.commitMaterial(f.world, human, 'HUMAN_TEXT', f.hadir, humanText,
+    'EXACT_HUMAN_APPROVER_SET', 'RESOLVED_EXACT_HUMAN_REQUIREMENT', [f.hadir], f.mohamed);
+  for (const [id, text] of [[target, targetText], [hop, hopText], [reasoning, reasoningText]]) {
+    await rt.commitMaterial(f.world, id, 'QANDEEL_OUTPUT', null, text,
+      'NO_HUMAN_APPROVAL_REQUIRED', 'RESOLVED_NO_HUMAN_REQUIREMENT', [], f.mohamed);
+  }
+  await dependency(f.world, 'MATERIAL_DEPENDENCY', target, human);
+  await dependency(f.world, 'MATERIAL_DEPENDENCY', hop, target);
+  await dependency(f.world, 'REASONING_DEPENDENCY', reasoning, null);
+  // G02 PUBLIC SNAPSHOTS THE QANDEEL TARGETS: one package with all three outputs, and one with the reasoning output only.
+  const exp = (await startDraft(f.mohamed, randomUUID())).experience_id;
+  assert.equal((await prepareOwn(f.mohamed, randomUUID(), exp, NONE, [f.world, f.world, f.world], [target, hop, reasoning])).outcome, 'PREPARED');
+  const manifest = await manifestOf(exp);
+  const onlyReasoning = (await startDraft(f.mohamed, randomUUID())).experience_id;
+  assert.equal((await prepareOwn(f.mohamed, randomUUID(), onlyReasoning, NONE, [f.world], [reasoning])).outcome, 'PREPARED');
+  for (const [material, text] of [[target, targetText], [hop, hopText], [reasoning, reasoningText]]) {
+    const it = await itemFor(manifest, material);
+    assert.equal(it.derivative_classification, 'ANALYTICAL_DERIVATIVE', 'G02 the Public label says analytical');
+    assert.equal(await bodyOf(it.package_item_id), text, 'G02 the package holds the exact output bytes');
+    assert.equal(it.captured_source_digest, `sha256:${sha(text)}`);
+  }
+  // G03 THE HUMAN SOURCE OWNER DELETES THE SOURCE.
+  const command = randomUUID(); const event = randomUUID();
+  await asRole('postgres'); await actAs(f.hadir);
+  const [deleted] = await rt.deleteMaterial(command, f.world, human, event);
+  assert.equal(deleted.outcome, 'MATERIAL_DELETED');
+  assert.equal(deleted.invalidated_targets, 2, 'G03 the MATERIAL_DEPENDENCY closure is exactly the two outputs');
+  const [{ occurred_at: deletedAt }] = await own('SELECT occurred_at FROM public.shared_world_material_deleted_events WHERE id = $1', [event]);
+  // G04 SHARED: the material targets are UNAVAILABLE with their bodies gone; the reasoning target is untouched.
+  const state = async (material) => (await own(`SELECT i.availability_state s,
+      EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b WHERE b.material_id = m.id) body
+      FROM public.shared_world_materials m JOIN public.shared_world_history_items i ON i.id = m.history_item_id WHERE m.id = $1`, [material]))[0];
+  assert.deepEqual(await state(target), { s: 'UNAVAILABLE', body: false }, 'G04 the material target is UNAVAILABLE and its body gone');
+  assert.deepEqual(await state(hop), { s: 'UNAVAILABLE', body: false }, 'G04 and transitively');
+  assert.deepEqual(await state(reasoning), { s: 'AVAILABLE', body: true }, 'G04 the reasoning target is not erased by Shared');
+  // G05 PUBLIC: every derivative of a physically erased target loses its bytes and both verifiers — at the instant —
+  // although its label says ANALYTICAL_DERIVATIVE; the label itself survives as audit identity.
+  for (const [material, text] of [[target, targetText], [hop, hopText]]) {
+    const it = await itemFor(manifest, material);
+    assert.deepEqual([it.derivative_classification, it.content_state, it.public_body_digest, it.captured_source_digest, await bodyOf(it.package_item_id)],
+      ['ANALYTICAL_DERIVATIVE', 'ERASED_BY_OWNER', null, null, null], 'G05 MATERIAL_DEPENDENCY erasure propagates physical Public erasure');
+    assert.equal(it.content_erased_at.getTime(), deletedAt.getTime(), 'G05 at the canonical deletion instant');
+    assert.equal(it.captured_digest_erased_at.getTime(), deletedAt.getTime());
+    assert.deepEqual((await censusOf(text)).hits, [], 'G05 the whole-database census finds neither the bytes nor their digest');
+  }
+  assert.deepEqual((await censusOf(humanText)).hits, [], 'G05 nor anything of the human source');
+  // G06 REVIEW IS DARK, NEVER PARTIAL.
+  assert.deepEqual((await reviewOwn(f.mohamed, exp)).map((r) => [r.review_state, r.public_text_body]), [['UNAVAILABLE', null]], 'G06');
+  await asRole('service_role');
+  assert.deepEqual(await rt.review(exp, f.mohamed), [], 'G06 the frozen resolver serves nothing of it either');
+  // G07 REASONING_DEPENDENCY DOES NOT PROPAGATE: the equivalent analytical output keeps its bytes and digests, and its
+  // own package still reviews whole.
+  const kept = await itemFor(manifest, reasoning);
+  assert.deepEqual([kept.content_state, await bodyOf(kept.package_item_id), kept.captured_source_digest],
+    ['CONTENT_PRESENT', reasoningText, `sha256:${sha(reasoningText)}`], 'G07 a REASONING_DEPENDENCY target is not physically erased');
+  const intact = await reviewOwn(f.mohamed, onlyReasoning);
+  assert.deepEqual(intact.map((r) => [r.review_state, r.public_text_body]), [['CURRENT', reasoningText]], 'G07 its own package is intact');
+  // G08 THE GUARD STILL REFUSES IT BY HAND, at the deletion's own instant — the reasoning target is not in the closure.
+  await asRole('postgres');
+  await rejected(() => q(`UPDATE ${T.PROVENANCE} SET captured_source_digest = NULL, captured_digest_erased_at = $2 WHERE package_item_id = $1`,
+    [kept.package_item_id, deletedAt]), ['55000']);
+  // G09 ONE WAY, AND NO RESURRECTION, for an erased analytical item too.
+  const gone = await itemFor(manifest, target);
+  await rejected(() => q(`UPDATE ${T.ITEMS} SET content_state = 'CONTENT_PRESENT', public_body_digest = $2, content_erased_at = NULL WHERE package_item_id = $1`,
+    [gone.package_item_id, `sha256:${sha(targetText)}`]), ['55000']);
+  await rejected(() => q(`INSERT INTO ${T.BODIES} (package_item_id, public_body_form, public_text_body) VALUES ($1, 'PUBLIC_TEXT', $2)`,
+    [gone.package_item_id, targetText]), ['55000', '23505']);
+  // G10 THE COMMITTED RETRY RE-PROVES THE CLOSURE ERASURE.
+  await actAs(f.hadir);
+  assert.equal((await rt.deleteMaterial(command, f.world, human, event))[0].outcome, 'MATERIAL_DELETED', 'G10');
+  await asRole('postgres');
+}
+
 // ------------------------------------------------------------------------------------- 4b. reconciliation of old rows
 async function verifyReconciliation(f) {
   const migration = readFileSync(new URL('./migrations/0143_public_authoring_rights_privacy_v1.sql', import.meta.url), 'utf8');
   const start = migration.indexOf('-- A.6 RECONCILING');
   const block = migration.slice(migration.indexOf('DO $$', start), migration.indexOf('END$$;', start) + 'END$$;'.length);
-  assert.ok(block.startsWith('DO $$') && block.includes('S5-02: an owner-deleted source still survives'), 'the reconciliation block was read');
+  assert.ok(block.startsWith('DO $$') && block.includes('S5-02: a physically erased Shared source still survives'), 'the reconciliation block was read');
   const material = randomUUID();
   const text = `S5-02 pre-0143 deletion ${randomUUID()}`;
   await asRole('postgres');
@@ -548,6 +646,42 @@ async function verifyReconciliation(f) {
   await q(block);
   assert.equal((await itemFor(manifest, material)).content_state, 'ERASED_BY_OWNER', 'R01 the reconciliation is idempotent');
   await q('ROLLBACK TO SAVEPOINT old_rule'); await q('RELEASE SAVEPOINT old_rule');
+  // R03 A MATERIAL_DEPENDENCY TARGET LEFT UNSAFE BY THE OLD RULE is erased forward too, at the upstream deletion's
+  // instant, whatever its Public label; a REASONING_DEPENDENCY target is not.
+  await q('SAVEPOINT old_closure');
+  await asRole('postgres');
+  const human = randomUUID(); const target = randomUUID(); const reasoning = randomUUID();
+  const targetText = `S5-02 pre-0143 material target ${randomUUID()}`; const reasoningText = `S5-02 pre-0143 reasoning target ${randomUUID()}`;
+  await rt.commitMaterial(f.world, human, 'HUMAN_TEXT', f.hadir, `S5-02 pre-0143 human ${randomUUID()}`,
+    'EXACT_HUMAN_APPROVER_SET', 'RESOLVED_EXACT_HUMAN_REQUIREMENT', [f.hadir], f.mohamed);
+  await rt.commitMaterial(f.world, target, 'QANDEEL_OUTPUT', null, targetText, 'NO_HUMAN_APPROVAL_REQUIRED', 'RESOLVED_NO_HUMAN_REQUIREMENT', [], f.mohamed);
+  await rt.commitMaterial(f.world, reasoning, 'QANDEEL_OUTPUT', null, reasoningText, 'NO_HUMAN_APPROVAL_REQUIRED', 'RESOLVED_NO_HUMAN_REQUIREMENT', [], f.mohamed);
+  await dependency(f.world, 'MATERIAL_DEPENDENCY', target, human);
+  await dependency(f.world, 'REASONING_DEPENDENCY', reasoning, null);
+  const closureExp = (await startDraft(f.mohamed, randomUUID())).experience_id;
+  assert.equal((await prepareOwn(f.mohamed, randomUUID(), closureExp, NONE, [f.world, f.world], [target, reasoning])).outcome, 'PREPARED');
+  const closureManifest = await manifestOf(closureExp);
+  await asRole('postgres');
+  await q(`CREATE OR REPLACE FUNCTION public_authoring_private.erase_owner_deleted_public_derivatives_v1(p_material_id uuid, p_instant timestamptz)
+           RETURNS integer LANGUAGE sql SECURITY DEFINER SET search_path = '' AS $fn$ SELECT 0 $fn$`);
+  const closureEvent = randomUUID();
+  await actAs(f.hadir);
+  await rt.deleteMaterial(randomUUID(), f.world, human, closureEvent);
+  await asRole('postgres');
+  await q(def);
+  assert.equal(await bodyOf((await itemFor(closureManifest, target)).package_item_id), targetText, 'R03 the unsafe closure state exists');
+  await q(block);
+  const closureFixed = await itemFor(closureManifest, target);
+  assert.deepEqual([closureFixed.derivative_classification, closureFixed.content_state, closureFixed.public_body_digest,
+    closureFixed.captured_source_digest, await bodyOf(closureFixed.package_item_id)],
+  ['ANALYTICAL_DERIVATIVE', 'ERASED_BY_OWNER', null, null, null], 'R03 the reconciliation erases the closure target forward');
+  const [{ occurred_at: closureAt }] = await rows('SELECT occurred_at FROM public.shared_world_material_deleted_events WHERE id = $1', [closureEvent]);
+  assert.equal(closureFixed.content_erased_at.getTime(), closureAt.getTime(), 'R03 at the upstream deletion instant');
+  assert.deepEqual((await censusOf(targetText)).hits, [], 'R03 and nothing of it survives anywhere');
+  const closureKept = await itemFor(closureManifest, reasoning);
+  assert.deepEqual([closureKept.content_state, await bodyOf(closureKept.package_item_id)], ['CONTENT_PRESENT', reasoningText],
+    'R03 the reasoning target is not reconciled away');
+  await q('ROLLBACK TO SAVEPOINT old_closure'); await q('RELEASE SAVEPOINT old_closure');
   // R02 CONTRADICTORY STATE IS REFUSED, NOT NORMALIZED: a Shared body gone without an owner deletion.
   await q('SAVEPOINT contradiction');
   await asRole('postgres');
@@ -694,6 +828,8 @@ await runVerifier('0143', async (stage) => {
     const ready = await verifyRights(f, d);
     stage('privacy');
     await verifyPrivacy(f, d, ready);
+    stage('material vs reasoning');
+    await verifyDependencyErasure(f);
     stage('reconciliation');
     await verifyReconciliation(f);
     stage('launch closure');
@@ -703,5 +839,5 @@ await runVerifier('0143', async (stage) => {
   }
   stage('concurrency');
   await verifyConcurrency();
-  console.log('Verified migration 0143: ASSURE-F05 owner deletion physically erases the source-content-bearing Public copy (body and both digests) in the same transaction at the canonical instant, the whole-database census finds no byte or verifier of it, both reviews go dark and never partial, analytical items survive, the guard is one-way, retries re-prove it and old rows reconcile; delete-first fails the preparation closed and prepare-first is erased, with no deadlock; the first real authorship provisions one identity (also concurrently) rendering the current Public ID or full 80-character Name; only legal sources prepare, only the exact rightsholders approve, withdrawal is immediate and never resurrected, READY needs every current effective approval; nothing can publish and the seam answers NOT_EVALUATED.');
+  console.log('Verified migration 0143: ASSURE-F05 owner deletion physically erases every Public copy (body and both digests) of the deleted source and of its transitive MATERIAL_DEPENDENCY closure, whatever the Public label, in the same transaction at the canonical instant, the whole-database census finds no byte or verifier of it, both reviews go dark and never partial, a REASONING_DEPENDENCY output and an unrelated output keep their bytes, the guard is one-way, retries re-prove it and old rows reconcile; delete-first fails the preparation closed and prepare-first is erased, with no deadlock; the first real authorship provisions one identity (also concurrently) rendering the current Public ID or full 80-character Name; only legal sources prepare, only the exact rightsholders approve, withdrawal is immediate and never resurrected, READY needs every current effective approval; nothing can publish and the seam answers NOT_EVALUATED.');
 }, async () => { await rt.client.end().catch(() => undefined); });

@@ -1373,12 +1373,13 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   happens only after independent review on green CI and the Product Owner's decision on the S5-02 Product Copy Gate.
 - **Disposition:** completed, in the Product Owner's physical-erasure terms. Migration `0143` makes the canonical Shared
   owner deletion (`delete_shared_world_owned_material_v1`, forward-replaced from `0122` with its lock order and semantics
-  unchanged) erase, in the SAME transaction at the SAME canonical instant, every `SOURCE_CONTENT_BEARING_DERIVATIVE` copy
-  of the deleted material: the public body row and both durable content verifiers (`public_body_digest`,
+  unchanged) erase, in the SAME transaction at the SAME canonical instant, every Public package copy of a Shared material
+  that deletion physically erases — the deleted material and its transitive `MATERIAL_DEPENDENCY` closure, whatever the
+  item's historical classification (S5-02 R1): the public body row and both durable content verifiers (`public_body_digest`,
   `captured_source_digest`); audit identity survives; a one-way, canonically-proven exception inside the unchanged `0092`
   guard (plus a no-resurrection INSERT guard) is the only way in; already-unsafe rows are erased forward and contradictory
   state refuses deployment; both review boundaries are dark for a package that is no longer whole and never present a
-  partial one; `ANALYTICAL_DERIVATIVE` items are not erased. Proven against real PostgreSQL by
+  partial one; a `REASONING_DEPENDENCY` target's copy is not erased. Proven against real PostgreSQL by
   `database/verify-migration-0143.mjs`: the erasure, a whole-database census that finds neither the bytes nor their
   digest, the dark reviews, the reconciliation, one-way immutability, retry re-proof, and the delete-vs-prepare races on
   two connections with no deadlock.

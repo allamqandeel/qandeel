@@ -3,9 +3,13 @@
 -- Forward-only. No historical migration is edited. This migration does three things, in the order the Task Contract
 -- binds them, and nothing else:
 --
---   A. ASSURE-F05 / QAN-BL-CW-01 — PHYSICAL ERASURE. When canonical Shared owner deletion destroys a HUMAN source that a
---      Public package copied as a SOURCE_CONTENT_BEARING_DERIVATIVE, the package's retained copy of those bytes is
---      destroyed in the SAME transaction, at the SAME canonical deletion instant: the public body row, and both durable
+--   A. ASSURE-F05 / QAN-BL-CW-01 — PHYSICAL ERASURE. When canonical Shared owner deletion physically erases a Shared
+--      material — the deleted HUMAN source itself, or any target in its exact transitive MATERIAL_DEPENDENCY closure
+--      (CW2-02 §27; the 0090 / 0122 deletion already destroys those target bodies and makes them UNAVAILABLE) — every
+--      Public package item whose sealed provenance names that exact erased material loses its retained copy, whatever
+--      its historical derivative_classification says, in the SAME transaction, at the SAME canonical deletion instant
+--      (S5-02 R1, G16). A REASONING_DEPENDENCY target is not erased by Shared deletion, so its Public copy is not
+--      erased for that reason either. What goes: the public body row, and both durable
 --      content verifiers of it (`publication_package_manifest_items.public_body_digest` and
 --      `publication_package_item_provenance.captured_source_digest`, each an unsalted SHA-256 of the exact deleted bytes
 --      — the 0122 precedent: a digest of bytes that no longer exist is the last copy of the thing the owner deleted).
@@ -47,8 +51,10 @@
 --   this migration's own relations                                  none carries content         → n/a
 --
 -- Every kept value is built only from identifiers, vocabulary and counts the row already holds in plain form, so none
--- of them can confirm a guess about the deleted bytes. ANALYTICAL_DERIVATIVE items are not touched: CW2-02 §27 keeps
--- legitimate historical analysis, and their serving already fails closed on availability.
+-- of them can confirm a guess about the deleted bytes. THE RULE IS SHARED PHYSICAL ERASURE, NOT THE PUBLIC LABEL:
+-- MATERIAL_DEPENDENCY physical source erasure propagates physical Public erasure; REASONING_DEPENDENCY does not. An item
+-- whose source Shared deletion did not physically erase keeps its bytes (CW2-02 §27 keeps legitimate historical
+-- analysis), and its serving already fails closed on availability.
 --
 -- ## The one-way exception to the 0092 immutability guard
 --
@@ -59,9 +65,11 @@
 --   items       content_state  CONTENT_PRESENT → ERASED_BY_OWNER, public_body_digest → NULL (+ the same instant)
 --   bodies      DELETE of the body of an item already ERASED_BY_OWNER
 --
--- and only for a SHARED_WORLD SOURCE_CONTENT_BEARING_DERIVATIVE whose exact source history item is terminal
--- DELETED_BY_OWNER, whose Shared body is physically gone, and whose canonical MATERIAL_DELETED event carries that
--- exact instant. Every other UPDATE and every other DELETE of every package relation is refused, as before, for every
+-- and only for a SHARED_WORLD item whose exact source material Shared deletion physically erased at that exact instant,
+-- proven from canonical truth: its Shared body is gone AND EITHER its history item is terminal DELETED_BY_OWNER with
+-- its own MATERIAL_DELETED event at that instant, OR its history item is UNAVAILABLE and a MATERIAL_DELETED event at
+-- that instant names a material upstream of it through MATERIAL_DEPENDENCY edges only. Owner deletion is the only
+-- writer of UNAVAILABLE (0090 / 0122). Every other UPDATE and every other DELETE of every package relation is refused, as before, for every
 -- role including the table owner. There is no way back to CONTENT_PRESENT, no replacement digest, no tombstone text.
 --
 -- ## Lock order
@@ -297,13 +305,12 @@ ALTER TABLE public.publication_package_manifest_items
         CHECK (content_state IN ('CONTENT_PRESENT', 'ERASED_BY_OWNER')),
     ADD CONSTRAINT publication_package_manifest_items_content_shape_check
         CHECK ((content_state = 'CONTENT_PRESENT' AND public_body_digest IS NOT NULL AND content_erased_at IS NULL)
-            OR (content_state = 'ERASED_BY_OWNER' AND public_body_digest IS NULL AND content_erased_at IS NOT NULL
-                AND derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'));
+            OR (content_state = 'ERASED_BY_OWNER' AND public_body_digest IS NULL AND content_erased_at IS NOT NULL));
 
 COMMENT ON COLUMN public.publication_package_manifest_items.content_state IS
   'S5-02 / ASSURE-F05: CONTENT_PRESENT while the public bytes exist; ERASED_BY_OWNER once the canonical Shared owner '
-  'deletion destroyed the source this SOURCE_CONTENT_BEARING_DERIVATIVE copied, and with it the public body and both '
-  'content verifiers. One direction only. The item identity, ordinal and classification survive as audit identity.';
+  'deletion physically erased the Shared material this item copied (the deleted source, or a target in its '
+  'MATERIAL_DEPENDENCY closure), and with it the public body and both content verifiers. One direction only. The item identity, ordinal and classification survive as audit identity.';
 COMMENT ON COLUMN public.publication_package_manifest_items.content_erased_at IS
   'The exact canonical owner-deletion instant (the MATERIAL_DELETED event) at which the public bytes were destroyed. '
   'A time, not a verifier.';
@@ -326,7 +333,7 @@ CREATE INDEX publication_package_item_provenance_shared_material_idx
 
 COMMENT ON COLUMN public.publication_package_item_provenance.captured_source_digest IS
   'The captured digest of the exact source bytes, while they exist. DESTROYED by the canonical Shared owner deletion of '
-  'that source when the package item is SOURCE_CONTENT_BEARING (ASSURE-F05). The sealed source identity survives.';
+  'that source, or of a source upstream of it through MATERIAL_DEPENDENCY (ASSURE-F05). The sealed source identity survives.';
 COMMENT ON COLUMN public.publication_package_item_provenance.captured_digest_erased_at IS
   'The exact canonical owner-deletion instant at which the captured source digest was destroyed.';
 
@@ -348,18 +355,35 @@ BEGIN
        AND OLD.captured_digest_erased_at IS NULL AND NEW.captured_digest_erased_at IS NOT NULL
        AND NOT (prov_new IS DISTINCT FROM OLD)
        AND OLD.source_class = 'SHARED_WORLD'
-       AND EXISTS (SELECT 1 FROM public.publication_package_manifest_items it
-                    WHERE it.package_item_id = OLD.package_item_id
-                      AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE')
-       AND EXISTS (SELECT 1 FROM public.shared_world_history_items i
-                    WHERE i.id = OLD.shared_history_item_id AND i.world_id = OLD.shared_world_id
-                      AND i.availability_state = 'DELETED_BY_OWNER')
        AND NOT EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b WHERE b.material_id = OLD.shared_material_id)
        AND NOT EXISTS (SELECT 1 FROM public.shared_world_voice_note_material_bodies b WHERE b.material_id = OLD.shared_material_id)
-       AND EXISTS (SELECT 1 FROM public.shared_world_material_deleted_events ev
-                    WHERE ev.material_id = OLD.shared_material_id AND ev.world_id = OLD.shared_world_id
-                      AND ev.history_item_id = OLD.shared_history_item_id
-                      AND ev.occurred_at = NEW.captured_digest_erased_at) THEN
+       AND (
+         -- THE DELETED SOURCE ITSELF: terminal, with its own MATERIAL_DELETED fact at exactly this instant.
+         (EXISTS (SELECT 1 FROM public.shared_world_history_items i
+                   WHERE i.id = OLD.shared_history_item_id AND i.world_id = OLD.shared_world_id
+                     AND i.availability_state = 'DELETED_BY_OWNER')
+          AND EXISTS (SELECT 1 FROM public.shared_world_material_deleted_events ev
+                       WHERE ev.material_id = OLD.shared_material_id AND ev.world_id = OLD.shared_world_id
+                         AND ev.history_item_id = OLD.shared_history_item_id
+                         AND ev.occurred_at = NEW.captured_digest_erased_at))
+         -- OR A TARGET IN ITS MATERIAL_DEPENDENCY CLOSURE: UNAVAILABLE, and a MATERIAL_DELETED fact at exactly this
+         -- instant names a material upstream of it through MATERIAL_DEPENDENCY edges only. A REASONING_DEPENDENCY
+         -- edge is never followed, so a reasoning target can never qualify.
+         OR (EXISTS (SELECT 1 FROM public.shared_world_history_items i
+                      WHERE i.id = OLD.shared_history_item_id AND i.world_id = OLD.shared_world_id
+                        AND i.availability_state = 'UNAVAILABLE')
+             AND EXISTS (
+               WITH RECURSIVE upstream(material_id) AS (
+                 SELECT d.source_material_id FROM public.shared_world_material_dependencies d
+                  WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY' AND d.target_material_id = OLD.shared_material_id
+                 UNION
+                 SELECT d.source_material_id FROM public.shared_world_material_dependencies d
+                   JOIN upstream u ON d.target_material_id = u.material_id
+                  WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+               )
+               SELECT 1 FROM public.shared_world_material_deleted_events ev
+                 JOIN upstream u ON u.material_id = ev.material_id
+                WHERE ev.world_id = OLD.shared_world_id AND ev.occurred_at = NEW.captured_digest_erased_at))) THEN
       RETURN NEW;
     END IF;
   ELSIF TG_TABLE_SCHEMA = 'public' AND TG_TABLE_NAME = 'publication_package_manifest_items' AND TG_OP = 'UPDATE' THEN
@@ -371,15 +395,15 @@ BEGIN
        AND OLD.public_body_digest IS NOT NULL AND NEW.public_body_digest IS NULL
        AND OLD.content_erased_at IS NULL AND NEW.content_erased_at IS NOT NULL
        AND NOT (item_new IS DISTINCT FROM OLD)
-       AND OLD.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
-       -- The sealed provenance of THIS item already proved the owner deletion, at THIS instant.
+       -- The sealed provenance of THIS item already proved the physical Shared erasure, at THIS instant. The item's
+       -- historical classification is not consulted: Shared erasure, not the Public label, decides (S5-02 R1, G16).
        AND EXISTS (SELECT 1 FROM public.publication_package_item_provenance p
                      JOIN public.shared_world_history_items i
                        ON i.id = p.shared_history_item_id AND i.world_id = p.shared_world_id
                     WHERE p.package_item_id = OLD.package_item_id AND p.manifest_version_id = OLD.manifest_version_id
                       AND p.source_class = 'SHARED_WORLD' AND p.captured_source_digest IS NULL
                       AND p.captured_digest_erased_at = NEW.content_erased_at
-                      AND i.availability_state = 'DELETED_BY_OWNER') THEN
+                      AND i.availability_state IN ('DELETED_BY_OWNER', 'UNAVAILABLE')) THEN
       RETURN NEW;
     END IF;
   ELSIF TG_TABLE_SCHEMA = 'public' AND TG_TABLE_NAME = 'public_experience_text_derivative_bodies' AND TG_OP = 'DELETE' THEN
@@ -391,7 +415,7 @@ BEGIN
   END IF;
   RAISE EXCEPTION 'PUBLICATION_PACKAGE_IS_IMMUTABLE'
     USING ERRCODE='55000',
-          DETAIL='A publication package manifest, its items, its public bodies, its provenance, its authority resolution, its required approver set and its approvals are append-only: UPDATE and DELETE are refused for every role, including the table owner. A changed payload is a NEW manifest. The ONE exception (S5-02, ASSURE-F05) is the one-way erasure of an owner-deleted source-content-bearing derivative, proven from canonical truth.';
+          DETAIL='A publication package manifest, its items, its public bodies, its provenance, its authority resolution, its required approver set and its approvals are append-only: UPDATE and DELETE are refused for every role, including the table owner. A changed payload is a NEW manifest. The ONE exception (S5-02, ASSURE-F05) is the one-way erasure of a derivative whose Shared source owner deletion physically erased, proven from canonical truth.';
 END$$;
 
 ALTER FUNCTION public.reject_publication_package_mutation_v1() OWNER TO postgres;
@@ -407,45 +431,54 @@ CREATE SCHEMA public_authoring_private;
 ALTER SCHEMA public_authoring_private OWNER TO postgres;
 REVOKE ALL ON SCHEMA public_authoring_private FROM PUBLIC;
 
--- A.4 THE ONE ERASURE, called by owner deletion and by nothing else. It erases, for the exact deleted Shared material,
---     every SOURCE_CONTENT_BEARING package item that copied it: provenance digest first (it carries the canonical
---     proof), then the item digest, then the body — and then proves nothing of it survives. Analytical items are
---     never touched. Internal: executable by no application role.
+-- A.4 THE ONE ERASURE, called by owner deletion and by nothing else. The erased set is exactly what the deletion just
+--     physically erased in Shared: the deleted material and its transitive MATERIAL_DEPENDENCY closure (the same
+--     traversal the deletion runs; never a REASONING_DEPENDENCY edge). Every package item whose sealed provenance names
+--     a material of that set loses, whatever its historical classification: provenance digest first (it carries the
+--     canonical proof), then the item digest, then the body — and then the function proves nothing of it survives.
+--     The guard re-proves every row independently. Internal: executable by no application role.
 CREATE FUNCTION public_authoring_private.erase_owner_deleted_public_derivatives_v1(p_material_id uuid, p_instant timestamptz)
 RETURNS integer
 LANGUAGE plpgsql VOLATILE SECURITY DEFINER SET search_path = '' AS $$
 DECLARE
+  v_erased uuid[];
   v_items integer;
 BEGIN
   IF p_material_id IS NULL OR p_instant IS NULL THEN
     RAISE EXCEPTION 'PUBLIC_DERIVATIVE_ERASURE_INVALID' USING ERRCODE = '22023';
   END IF;
+  v_erased := ARRAY[p_material_id] || coalesce((
+    WITH RECURSIVE reachable(material_id) AS (
+      SELECT d.target_material_id FROM public.shared_world_material_dependencies d
+       WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY' AND d.source_material_id = p_material_id
+      UNION
+      SELECT d.target_material_id FROM public.shared_world_material_dependencies d
+        JOIN reachable step ON d.source_material_id = step.material_id
+       WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+    )
+    SELECT array_agg(r.material_id ORDER BY r.material_id) FROM reachable r
+  ), ARRAY[]::uuid[]);
   UPDATE public.publication_package_item_provenance p
      SET captured_source_digest = NULL, captured_digest_erased_at = p_instant
-    FROM public.publication_package_manifest_items it
-   WHERE it.package_item_id = p.package_item_id
-     AND p.source_class = 'SHARED_WORLD' AND p.shared_material_id = p_material_id
-     AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
+   WHERE p.source_class = 'SHARED_WORLD' AND p.shared_material_id = ANY(v_erased)
      AND p.captured_source_digest IS NOT NULL;
   UPDATE public.publication_package_manifest_items it
      SET content_state = 'ERASED_BY_OWNER', public_body_digest = NULL, content_erased_at = p_instant
     FROM public.publication_package_item_provenance p
    WHERE p.package_item_id = it.package_item_id
-     AND p.source_class = 'SHARED_WORLD' AND p.shared_material_id = p_material_id
-     AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
+     AND p.source_class = 'SHARED_WORLD' AND p.shared_material_id = ANY(v_erased)
      AND it.content_state = 'CONTENT_PRESENT';
   GET DIAGNOSTICS v_items = ROW_COUNT;
   DELETE FROM public.public_experience_text_derivative_bodies b
    USING public.publication_package_manifest_items it, public.publication_package_item_provenance p
    WHERE it.package_item_id = b.package_item_id AND p.package_item_id = b.package_item_id
-     AND p.source_class = 'SHARED_WORLD' AND p.shared_material_id = p_material_id
+     AND p.source_class = 'SHARED_WORLD' AND p.shared_material_id = ANY(v_erased)
      AND it.content_state = 'ERASED_BY_OWNER';
-  -- NOTHING OF THE DELETED BYTES SURVIVES IN ANY PACKAGE: no body, no digest, no present item.
+  -- NOTHING OF THE ERASED BYTES SURVIVES IN ANY PACKAGE: no body, no digest, no present item.
   IF EXISTS (
     SELECT 1 FROM public.publication_package_item_provenance p
       JOIN public.publication_package_manifest_items it ON it.package_item_id = p.package_item_id
-     WHERE p.source_class = 'SHARED_WORLD' AND p.shared_material_id = p_material_id
-       AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
+     WHERE p.source_class = 'SHARED_WORLD' AND p.shared_material_id = ANY(v_erased)
        AND (it.content_state <> 'ERASED_BY_OWNER' OR it.public_body_digest IS NOT NULL
             OR p.captured_source_digest IS NOT NULL
             OR EXISTS (SELECT 1 FROM public.public_experience_text_derivative_bodies b WHERE b.package_item_id = it.package_item_id))
@@ -542,11 +575,20 @@ BEGIN
            AND NOT EXISTS (SELECT 1 FROM public.introduction_disclosure_commands dc
                            WHERE dc.material_id = committed.material_id
                              AND (dc.payload_digest IS NOT NULL OR dc.request_ref IS NOT NULL))
-           -- ASSURE-F05 (S5-02): and no Public package retains a copy of it, or a digest of one.
+           -- ASSURE-F05 (S5-02): and no Public package retains a copy, or a digest of one, of it or of any target
+           -- in its MATERIAL_DEPENDENCY closure, whatever the item's historical classification.
            AND NOT EXISTS (SELECT 1 FROM public.publication_package_item_provenance pp
                              JOIN public.publication_package_manifest_items pit ON pit.package_item_id = pp.package_item_id
-                            WHERE pp.source_class = 'SHARED_WORLD' AND pp.shared_material_id = committed.material_id
-                              AND pit.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
+                            WHERE pp.source_class = 'SHARED_WORLD'
+                              AND pp.shared_material_id IN (
+                                WITH RECURSIVE reachable(material_id) AS (
+                                  SELECT committed.material_id
+                                  UNION
+                                  SELECT d.target_material_id FROM public.shared_world_material_dependencies d
+                                    JOIN reachable step ON d.source_material_id = step.material_id
+                                   WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+                                )
+                                SELECT r.material_id FROM reachable r)
                               AND (pit.content_state <> 'ERASED_BY_OWNER' OR pit.public_body_digest IS NOT NULL
                                    OR pp.captured_source_digest IS NOT NULL
                                    OR EXISTS (SELECT 1 FROM public.public_experience_text_derivative_bodies pb
@@ -796,8 +838,8 @@ BEGIN
     RAISE EXCEPTION 'SHARED_WORLD_MATERIAL_ID_CONFLICT' USING ERRCODE='23505';
   END;
 
-  -- ASSURE-F05 (S5-02): every source-content-bearing Public derivative of this exact material loses its bytes and both
-  -- content verifiers HERE - after the terminal DELETED_BY_OWNER transition and the MATERIAL_DELETED fact the guard
+  -- ASSURE-F05 (S5-02): every Public derivative of this exact material, and of every target in its MATERIAL_DEPENDENCY
+  -- closure the deletion just erased, loses its bytes and both content verifiers HERE - after the terminal DELETED_BY_OWNER transition and the MATERIAL_DELETED fact the guard
   -- reads as its proof, in the same transaction, at the same canonical instant. A failure rolls the whole deletion
   -- back: a committed deletion can never stand beside a surviving Public copy.
   PERFORM public_authoring_private.erase_owner_deleted_public_derivatives_v1(p_material_id, delete_instant);
@@ -806,66 +848,82 @@ BEGIN
                       owned.history_item_id, p_material_deleted_event_id, invalidated, delete_instant;
 END$$;
 
--- A.6 RECONCILING PACKAGES WHOSE SOURCE WAS DELETED UNDER THE OLD RULE. A package item qualifies only when canonical
---     truth proves all of it; the guard re-checks every condition independently. CONTRADICTORY STATE IS NOT
---     NORMALIZED: a source-content-bearing Shared source whose body is gone without an owner deletion, an owner deletion
---     with no canonical MATERIAL_DELETED event, or a DELETED_BY_OWNER source whose body somehow survives, each refuses
---     deployment rather than inventing a history that did not happen.
+-- A.6 RECONCILING PACKAGES WHOSE SOURCE WAS ERASED UNDER THE OLD RULE. A Shared material counts as physically erased
+--     only when canonical truth proves it: DELETED_BY_OWNER with its own MATERIAL_DELETED event (erased at that event),
+--     or UNAVAILABLE with a MATERIAL_DELETED event naming a material upstream of it through MATERIAL_DEPENDENCY edges
+--     (erased at the earliest such event), and in both cases its Shared body gone. Every package item whose provenance
+--     names such a material is erased, whatever its historical classification; the guard re-checks every condition
+--     independently. CONTRADICTORY STATE IS NOT NORMALIZED: a packaged Shared source whose body is gone with no proven
+--     erasure, a DELETED_BY_OWNER source with no canonical event, an UNAVAILABLE source with no upstream deletion, or an
+--     erased source whose body somehow survives, each refuses deployment rather than inventing a history.
 DO $$
 DECLARE
   v_contradictory integer;
   v_reconciled integer;
 BEGIN
-  SELECT count(*)::integer INTO v_contradictory
-    FROM public.publication_package_item_provenance p
-    JOIN public.publication_package_manifest_items it ON it.package_item_id = p.package_item_id
-    JOIN public.shared_world_history_items i ON i.id = p.shared_history_item_id
-   WHERE p.source_class = 'SHARED_WORLD' AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
-     AND (
-       (i.availability_state <> 'DELETED_BY_OWNER'
-          AND NOT EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b WHERE b.material_id = p.shared_material_id)
-          AND NOT EXISTS (SELECT 1 FROM public.shared_world_voice_note_material_bodies b WHERE b.material_id = p.shared_material_id))
-       OR (i.availability_state = 'DELETED_BY_OWNER'
-          AND (EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b WHERE b.material_id = p.shared_material_id)
-               OR NOT EXISTS (SELECT 1 FROM public.shared_world_material_deleted_events ev
-                               WHERE ev.material_id = p.shared_material_id AND ev.history_item_id = i.id))));
+  CREATE TEMP TABLE s502_packaged_source ON COMMIT DROP AS
+  WITH RECURSIVE upstream(target_id, source_id) AS (
+    SELECT d.target_material_id, d.source_material_id FROM public.shared_world_material_dependencies d
+     WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+    UNION
+    SELECT u.target_id, d.source_material_id FROM upstream u
+      JOIN public.shared_world_material_dependencies d ON d.target_material_id = u.source_id
+     WHERE d.dependency_kind = 'MATERIAL_DEPENDENCY'
+  ), packaged AS (
+    SELECT DISTINCT p.shared_material_id AS material_id, p.shared_world_id AS world_id, p.shared_history_item_id AS history_id
+      FROM public.publication_package_item_provenance p WHERE p.source_class = 'SHARED_WORLD'
+  )
+  SELECT k.material_id, k.world_id, i.availability_state, m.body_form,
+         (EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b WHERE b.material_id = k.material_id)
+          OR EXISTS (SELECT 1 FROM public.shared_world_voice_note_material_bodies b WHERE b.material_id = k.material_id)) AS has_body,
+         CASE i.availability_state
+           WHEN 'DELETED_BY_OWNER' THEN (SELECT ev.occurred_at FROM public.shared_world_material_deleted_events ev
+                                          WHERE ev.material_id = k.material_id AND ev.history_item_id = i.id
+                                            AND ev.world_id = k.world_id)
+           WHEN 'UNAVAILABLE' THEN (SELECT min(ev.occurred_at) FROM upstream u
+                                      JOIN public.shared_world_material_deleted_events ev ON ev.material_id = u.source_id
+                                     WHERE u.target_id = k.material_id AND ev.world_id = k.world_id)
+         END AS erased_at
+    FROM packaged k
+    JOIN public.shared_world_history_items i ON i.id = k.history_id
+    JOIN public.shared_world_materials m ON m.id = k.material_id;
+
+  SELECT count(*)::integer INTO v_contradictory FROM s502_packaged_source s
+   WHERE (s.availability_state NOT IN ('DELETED_BY_OWNER', 'UNAVAILABLE') AND NOT s.has_body AND s.body_form <> 'RESERVED')
+      OR (s.availability_state IN ('DELETED_BY_OWNER', 'UNAVAILABLE') AND (s.has_body OR s.erased_at IS NULL));
   IF v_contradictory <> 0 THEN
-    RAISE EXCEPTION 'S5-02: % source-content-bearing Public package item(s) sit beside contradictory Shared deletion state; refused, not normalized', v_contradictory
+    RAISE EXCEPTION 'S5-02: % packaged Shared source(s) sit beside contradictory Shared erasure state; refused, not normalized', v_contradictory
       USING ERRCODE = 'P0001';
   END IF;
 
   UPDATE public.publication_package_item_provenance p
-     SET captured_source_digest = NULL, captured_digest_erased_at = ev.occurred_at
-    FROM public.publication_package_manifest_items it, public.shared_world_history_items i,
-         public.shared_world_material_deleted_events ev
-   WHERE it.package_item_id = p.package_item_id AND i.id = p.shared_history_item_id
-     AND ev.material_id = p.shared_material_id AND ev.history_item_id = i.id
-     AND p.source_class = 'SHARED_WORLD' AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
-     AND i.availability_state = 'DELETED_BY_OWNER' AND p.captured_source_digest IS NOT NULL;
+     SET captured_source_digest = NULL, captured_digest_erased_at = s.erased_at
+    FROM s502_packaged_source s
+   WHERE p.source_class = 'SHARED_WORLD' AND p.shared_material_id = s.material_id
+     AND s.availability_state IN ('DELETED_BY_OWNER', 'UNAVAILABLE') AND p.captured_source_digest IS NOT NULL;
   UPDATE public.publication_package_manifest_items it
      SET content_state = 'ERASED_BY_OWNER', public_body_digest = NULL, content_erased_at = p.captured_digest_erased_at
     FROM public.publication_package_item_provenance p
    WHERE p.package_item_id = it.package_item_id AND p.source_class = 'SHARED_WORLD'
-     AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
      AND p.captured_source_digest IS NULL AND p.captured_digest_erased_at IS NOT NULL
      AND it.content_state = 'CONTENT_PRESENT';
   GET DIAGNOSTICS v_reconciled = ROW_COUNT;
   DELETE FROM public.public_experience_text_derivative_bodies b
    USING public.publication_package_manifest_items it
    WHERE it.package_item_id = b.package_item_id AND it.content_state = 'ERASED_BY_OWNER';
-  RAISE NOTICE 'S5-02: % already-deleted source-content-bearing Public derivative(s) erased.', v_reconciled;
+  RAISE NOTICE 'S5-02: % already-erased Public derivative(s) reconciled.', v_reconciled;
 
   IF EXISTS (
     SELECT 1 FROM public.publication_package_item_provenance p
       JOIN public.publication_package_manifest_items it ON it.package_item_id = p.package_item_id
-      JOIN public.shared_world_history_items i ON i.id = p.shared_history_item_id
-     WHERE p.source_class = 'SHARED_WORLD' AND it.derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'
-       AND i.availability_state = 'DELETED_BY_OWNER'
+      JOIN s502_packaged_source s ON s.material_id = p.shared_material_id
+     WHERE p.source_class = 'SHARED_WORLD' AND s.availability_state IN ('DELETED_BY_OWNER', 'UNAVAILABLE')
        AND (it.content_state <> 'ERASED_BY_OWNER' OR it.public_body_digest IS NOT NULL OR p.captured_source_digest IS NOT NULL
             OR EXISTS (SELECT 1 FROM public.public_experience_text_derivative_bodies b WHERE b.package_item_id = it.package_item_id))
   ) THEN
-    RAISE EXCEPTION 'S5-02: an owner-deleted source still survives in a Public package' USING ERRCODE = 'P0001';
+    RAISE EXCEPTION 'S5-02: a physically erased Shared source still survives in a Public package' USING ERRCODE = 'P0001';
   END IF;
+  DROP TABLE s502_packaged_source;
 END$$;
 
 -- A.7 IS THIS PACKAGE STILL WHOLE? 'INTACT' only when no item was erased, every item still has its body, and the ONE
@@ -1218,9 +1276,10 @@ END$$;
 
 -- C.10 THE APPROVER'S OWN REQUESTS. Every CURRENT package (the current version of a non-public Experience) that requires
 --      THIS human's content approval. An intact request shows the publisher's public display, the package size, bounded
---      progress, this human's own approval state, and ONLY this human's own included material — the exact bytes they are
---      asked to let become public. Nothing of any other rightsholder's material, any approver's identity, any World, any
---      Session or any provenance. A request whose package is no longer whole is UNAVAILABLE with no byte.
+--      progress, this human's own approval state, and ONLY the exact included items for which this human is a required
+--      approver — their own words, or QANDEEL-produced output over which they hold the exact publication authority. The
+--      approval is authority over those items only, never an endorsement of the rest of the Experience. Nothing of any
+--      other rightsholder's items, any approver's identity, any World, any Session, any hidden context or any provenance. A request whose package is no longer whole is UNAVAILABLE with no byte.
 CREATE FUNCTION public_authoring_private.list_own_public_approval_requests_v1()
 RETURNS TABLE (manifest_version_id uuid, request_state text, current_lifecycle text, publisher_label_mode text,
                publisher_display_label text, item_count integer, own_item_count integer, required_approver_count integer,

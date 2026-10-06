@@ -6,15 +6,18 @@ second Stage-5 task)
 **Canonical baseline:** `8dfc7b38baa133c8cecbffea8c65ae17ddc245ff` (the merge of PR #314, S5-01)
 **Branch:** `feat/s5-02-public-publishing-rights-review-privacy`
 **Status:** **`S5-02 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-02 PRODUCT COPY GATE OPEN (rows PROPOSED) — NOT MERGED`**.
-Claude does not merge it.
+Claude does not merge it. **R1 (independent review, 2026-10-06) applied:** G16 corrected (MATERIAL_DEPENDENCY erasure
+propagates physical Public erasure; REASONING_DEPENDENCY does not), G17 wording corrected, the copy rows revised (§12, §18).
 
 > Owner deletion now physically erases the Public copy of what the owner deleted. When a Shared human deletes their own
-> words, every Public package that copied them as a source-content-bearing derivative loses the bytes AND both digests of
-> them, in the same transaction, at the same canonical instant; the package keeps its audit identity and is never served
+> words, every Public package item that copied them — or copied a Shared output in their exact MATERIAL_DEPENDENCY
+> closure, which the same deletion physically erases — loses the bytes AND both digests of them, whatever its Public
+> label, in the same transaction, at the same canonical instant (a REASONING_DEPENDENCY output is not erased for that
+> reason); the package keeps its audit identity and is never served
 > as a smaller package (`ASSURE-F05` / `QAN-BL-CW-01`). On top of that closed gate, a real human can take their own
 > EXISTING QANDEEL material — their committed Personal words, or the Shared words they can see — into a Public DRAFT, see
 > exactly what would become public under their CURRENT public display, collect the exact content rightsholders' approvals
-> (each approver seeing only their own included words), withdraw an approval, and reach READY_FOR_REVIEW. Nothing is
+> (each approver seeing only the exact included content requiring their approval), withdraw an approval, and reach READY_FOR_REVIEW. Nothing is
 > published: READY_FOR_REVIEW is not public, and the CW2-08 prerequisites still answer `NOT_EVALUATED`.
 
 ---
@@ -65,7 +68,7 @@ schema `public_authoring_private` holds **no relation**; every row it writes is 
 | Fact | Owner | S5-02 |
 |---|---|---|
 | Owner-deleted content non-serving, non-reconstructable | CW2-02 §27 (B19/B20), CW2-03 §37 (C32), CW2-01 A18, CW2-08 §2 | consumed; physical erasure per the Product Owner's F05 decision |
-| Derivative classes | CW2-02 §27; the `0093` classification by material kind | preserved: only SOURCE_CONTENT_BEARING items are erased |
+| Derivative classes | CW2-02 §27; the `0093` classification by material kind | the label is kept as audit identity, but it does not decide erasure: Public erasure follows Shared PHYSICAL erasure — the deleted source and its exact transitive `MATERIAL_DEPENDENCY` closure; a `REASONING_DEPENDENCY` target is not erased (R1, G16) |
 | Experience control ≠ content rights | CW2-04 §7 / D8; `0091` / `0092` | consumed unchanged; proven both ways (§8) |
 | Rightsholder set | CW2-02 §38 / B27; the `0093` derivation | consumed; never supplied |
 | Lifecycle | CW2-04 §3; `0093` / `0121` | DRAFT → READY_FOR_REVIEW only |
@@ -78,16 +81,18 @@ schema `public_authoring_private` holds **no relation**; every row it writes is 
 
 - **State, structurally.** `publication_package_manifest_items` gains `content_state` (`CONTENT_PRESENT` |
   `ERASED_BY_OWNER`) and `content_erased_at`; `public_body_digest` becomes nullable, and a biconditional CHECK makes
-  `NULL` representable ONLY in `ERASED_BY_OWNER`, ONLY for a `SOURCE_CONTENT_BEARING_DERIVATIVE`.
+  `NULL` representable ONLY in `ERASED_BY_OWNER` (whatever the item's historical classification — R1).
   `publication_package_item_provenance` gains `captured_digest_erased_at`; `captured_source_digest` becomes nullable under
   its own biconditional CHECK, ONLY for a `SHARED_WORLD` source. The frozen `0092` digest shape CHECKs still bind every
   non-NULL value.
 - **The one-way exception (not a disabled trigger).** The `0092` guard keeps its NAME on all seven package relations; its
   body is forward-replaced with exactly three permitted operations, each re-proving canonical truth INSIDE the trigger:
   provenance digest `sha256:… → NULL`; item `CONTENT_PRESENT → ERASED_BY_OWNER` (digest → NULL); `DELETE` of the body of an
-  item already erased. Required: a `SHARED_WORLD` source, a `SOURCE_CONTENT_BEARING_DERIVATIVE`, the exact history item
-  terminal `DELETED_BY_OWNER`, the Shared body physically gone, and a canonical `MATERIAL_DELETED` event carrying the
-  exact erasure instant (the item's instant must equal its provenance's). Every other UPDATE / DELETE of every package
+  item already erased. Required: a `SHARED_WORLD` source whose Shared body is physically gone, and EITHER its exact history
+  item terminal `DELETED_BY_OWNER` with its own canonical `MATERIAL_DELETED` event at the exact erasure instant, OR its
+  history item `UNAVAILABLE` with a `MATERIAL_DELETED` event at that instant naming a material upstream of it through
+  `MATERIAL_DEPENDENCY` edges only (owner deletion is the only writer of `UNAVAILABLE`); the item's instant must equal
+  its provenance's. The item's classification is not consulted (R1, G16). Every other UPDATE / DELETE of every package
   relation is refused, as before, for every role including the table owner. A new `BEFORE INSERT` guard refuses
   inserting a body beside an erased item (no resurrection, even by the owner).
 - **Same transaction, same instant.** `delete_shared_world_owned_material_v1` is forward-replaced from `0122` with two
@@ -98,9 +103,10 @@ schema `public_authoring_private` holds **no relation**; every row it writes is 
   kind branches, transitive invalidation, events, commands, refusal classes and result columns are unchanged. Every
   application deletion path (`delete_own_shared_world_material_v1`, S4-02 / S4-03) reaches it. A partial index on
   `publication_package_item_provenance (shared_material_id)` keeps that lookup from scanning every package.
-- **Already-unsafe rows** are erased forward, at the instant the owner actually deleted (the canonical event). A
-  source-content-bearing Shared source whose body is gone without an owner deletion, an owner deletion with no canonical
-  event, or a `DELETED_BY_OWNER` source whose body survives, REFUSES deployment — never normalized.
+- **Already-unsafe rows** are erased forward, at the instant the owner actually deleted (the canonical event; for a
+  closure target, the earliest upstream deletion that reaches it), whatever the item's label. A packaged Shared source
+  whose body is gone with no proven erasure, a `DELETED_BY_OWNER` source with no canonical event, an `UNAVAILABLE`
+  source with no upstream deletion, or an erased source whose body survives, REFUSES deployment — never normalized.
 - **Audit identity survives:** manifest, Experience, version, every item / ordinal / classification, sealed provenance
   identity, per-item authority, required approvers, approvals, withdrawals, transitions, and the erasure fact and time.
 
@@ -137,10 +143,24 @@ body and the two digests; after deletion, nothing.
 The erasure touches only already-committed, immutable package rows that no Public primitive locks for update, so it adds
 no edge to the canonical Public order (singleton → Experience → manifest → Shared World → materials → history items).
 
-### 4.4 Analytical derivatives
+### 4.4 MATERIAL vs REASONING dependency (R1, G16)
 
-Not erased (P05): an `ANALYTICAL_DERIVATIVE` item in the same package keeps its bytes when another item's source is
-deleted; its package goes dark because it is no longer whole.
+**The rule is Shared physical erasure, not the Public label.** Canonical Shared owner deletion already treats the
+transitive `MATERIAL_DEPENDENCY` closure as source-content-bearing: it physically removes each dependent target's body and
+makes it `UNAVAILABLE` (`0090` / `0122`), while a `REASONING_DEPENDENCY` target is intentionally kept. Public erasure
+now follows exactly that: `erase_owner_deleted_public_derivatives_v1` computes the deleted material plus the same
+`MATERIAL_DEPENDENCY`-only closure the deletion traverses, and erases every package item whose sealed provenance names a
+material of that set — including an item the `0093` classification labelled `ANALYTICAL_DERIVATIVE` (a QANDEEL output).
+The guard re-proves each row from canonical truth (above). Proven by G01–G10 and R03 (§15):
+
+- human source → QANDEEL target (→ a second QANDEEL target, transitively) through `MATERIAL_DEPENDENCY`; a Public package
+  snapshots both targets (both `ANALYTICAL_DERIVATIVE`) and an equivalent `REASONING_DEPENDENCY` output;
+- the human owner deletes the source: both targets are `UNAVAILABLE` with their Shared bodies gone; their Public bytes and
+  both verifiers are physically gone at the deletion instant, and the whole-database census finds nothing of them;
+- the review is dark (Product and frozen resolver); the erased items stay one-way and non-resurrectable;
+- the `REASONING_DEPENDENCY` output keeps its bytes and digests, its own package still reviews `CURRENT`, and the guard
+  refuses erasing it by hand even at the deletion's own instant;
+- an unrelated analytical output in another package keeps its bytes (P05); the committed retry re-proves the closure.
 
 ### 4.5 The review boundaries (complete-dark census)
 
@@ -203,7 +223,10 @@ takes a user, a Public ref, a label, an approver, an authority, an audience, a b
 
 - The required set is the frozen derivation's (union of the exact included material's human authorities). A Shared
   member who is not a rightsholder, a stranger and the controller-for-another's-item are all `UNAVAILABLE` and record
-  nothing (R06). An approver sees only their OWN included bytes plus the publisher's public display and counts (R05).
+  nothing (R06). An approver sees only the exact included items for which they are a required approver — their words, or
+  QANDEEL output over which they hold the exact publication authority — plus the publisher's public display and counts
+  (R05); never another rightsholder's items, another approver, sealed provenance or hidden context. The approval is
+  authority over those displayed items only, not an endorsement of the rest of the Experience (R1, G17).
 - Approval binds the exact manifest, the CURRENT authority fingerprint and `PUBLISH_TO_PUBLIC_WORLD` (frozen `0093`).
 - Withdrawal is the frozen `0094` append-only event: effective immediately (R07); a withdrawn approval is never
   resurrected (the `0092` one-approval-per-manifest key; `ALREADY_DECIDED`); proceeding needs a new package.
@@ -260,18 +283,19 @@ Census: every S5-02 user-visible string is in `apps/mobile/src/public-authoring/
 | workspaceTitle | **PROPOSED** | مسوداتك في العالم العام | Your Public World drafts |
 | draftsHeading | **PROPOSED** | المسودات | Drafts |
 | noDrafts | **PROPOSED** | لا توجد مسودات بعد. | No drafts yet. |
-| startDraft | **PROPOSED** | بدء مسودة من كلام موجود | Start a draft from existing words |
-| draftState | **PROPOSED** | مسودة. لا يراها أحد غيرك. | Draft. No one else can see it. |
-| readyState | **PROPOSED** | جاهزة للمراجعة. لم تُنشر، ولا يراها أحد غيرك. | Ready for review. Not published, and no one else can see it. |
+| startDraft | **PROPOSED** (R1 wording) | بدء مسودة من محتوى موجود | Start a draft from existing content |
+| draftState | **PROPOSED** (R1 wording) | مسودة. لم تُنشر بعد. | Draft. Not published yet. |
+| readyState | **PROPOSED** (R1 wording) | جاهزة للمراجعة. لم تُنشر بعد. | Ready for review. Not published yet. |
 | chooseHeading | **PROPOSED** | اختر ما سيصبح عامًا | Choose what would become public |
 | chooseHint | **PROPOSED** | من كلامك في قنديل، ومما تراه في عوالمك المشتركة. حتى 20 عنصرًا. | From your words in QANDEEL and what you can see in your Shared Worlds. Up to 20 items. |
-| noSources | **PROPOSED** | لا يوجد كلام يمكن مشاركته بعد. | There is nothing you can share yet. |
+| noSources | **PROPOSED** (R1 wording) | لا يوجد محتوى يمكنك مشاركته بعد. | There is no content you can share yet. |
 | review | **PROPOSED** | مراجعة ما سيصبح عامًا | Review what would become public |
 | reviewHeading | **PROPOSED** | ما سيصبح عامًا | What would become public |
 | analysisItem | **PROPOSED** | تحليل قنديل | QANDEEL analysis |
 | approvals | **PROPOSED** | الموافقات: {0} من {1} | Approvals: {0} of {1} |
-| waiting | **PROPOSED** | بانتظار موافقة أصحاب الكلام المشمول. | Waiting for the people whose words are included. |
-| approveOwn | **PROPOSED** | أوافق على أن يصبح كلامي عامًا | I agree to make my words public |
+| waiting | **PROPOSED** (R1 wording) | بانتظار الموافقات المطلوبة. | Waiting for the required approvals. |
+| approveShown (replaces `approveOwn`) | **PROPOSED** (R1 wording) | أوافق على أن يصبح المحتوى المعروض هنا عامًا | I approve making the content shown here public |
+| approvalScope (new, R1) | **PROPOSED** (R1 wording) | موافقتك تخص المحتوى المعروض هنا فقط، ولا تعني موافقتك على باقي محتوى التجربة. | Your approval applies only to the content shown here; it does not approve the rest of the experience. |
 | approved | **PROPOSED** | موافقتك مسجّلة. | Your agreement is recorded. |
 | withdraw | **PROPOSED** | سحب موافقتي | Withdraw my agreement |
 | withdrawn | **PROPOSED** | سُحبت موافقتك. | Your agreement was withdrawn. |
@@ -279,11 +303,14 @@ Census: every S5-02 user-visible string is in `apps/mobile/src/public-authoring/
 | approvalsIncomplete | **PROPOSED** | لا تزال موافقات مطلوبة. | Approvals are still needed. |
 | notPublishable | **PROPOSED** | لا يمكن مشاركة هذا في العالم العام. | This can't be shared in Public World. |
 | noLongerAvailable | **PROPOSED** | لم تعد هذه المسودة متاحة كما أُعدّت. | This draft is no longer available as it was prepared. |
-| requestsHeading | **PROPOSED** | طلبات الموافقة على كلامك | Requests to make your words public |
+| requestsHeading | **PROPOSED** (R1 wording) | طلبات تحتاج موافقتك | Requests needing your approval |
 | requestFrom | **PROPOSED** | طلب من {0} | Requested by {0} |
-| yourWords | **PROPOSED** | كلامك المشمول | Your included words |
+| approvalContent (replaces `yourWords`) | **PROPOSED** (R1 wording) | المحتوى الذي يحتاج موافقتك | Content requiring your approval |
 
-26 rows PROPOSED. The PR is not Product-complete until the Product Owner decides them.
+27 rows PROPOSED, in the ONE S5-02 Product Copy Gate (no second gate). R1 revised nine rows to the independent review's
+wording and added `approvalScope`, drawn beside every approve action; "No one else can see it" is removed everywhere,
+because it is Product-false once a rightsholder inspects their bounded approval content. The PR is not Product-complete
+until the Product Owner decides them.
 
 ## 13. Backlog reconciliation (BG-05 / BG-08)
 
@@ -293,7 +320,8 @@ Census: every S5-02 user-visible string is in `apps/mobile/src/public-authoring/
   body and both verifiers (P02); no verifier anywhere (P03 census); controller review dark and never partial, the frozen
   resolver dark, every outward surface dark (P06); already-unsafe rows reconciled and contradictory state refused
   (reconciliation R01 / R02); delete-vs-prepare races safe and deadlock-free (C01–C03); ordinary immutability intact and
-  the transition one-way (P07); analytical derivatives not erased (P05); no new widening (B01–B10).
+  the transition one-way (P07); MATERIAL_DEPENDENCY closure targets erased whatever their label, REASONING_DEPENDENCY and
+  unrelated outputs kept (G01–G10, R03, P05; R1); no new widening (B01–B10).
 - **`E2E-H-08` — CLOSED** (§6). **64 → 80 — DONE** (§6).
 - **`QAN-BL-ACCT-01` — unchanged: `HIGH`, `OPEN — UNASSIGNED`.** S5-02 makes it more important and does not solve it: the
   first authoring act creates an I-05 Public Identity (`ON DELETE RESTRICT` to the account) and packages whose sealed
@@ -321,8 +349,8 @@ Census: every S5-02 user-visible string is in `apps/mobile/src/public-authoring/
 | G13 | Replay authoring / publication; Replay's own captured digests of Shared sources | 4 assigned | Stage 7 (consumes I-06 `0100`–`0107`, whose source-availability semantics are I-06's) |
 | G14 | CW2-08 Launch / Safety / entitlement; signed-out policy | 3 existing owner | `I-09` / `CW2-08` (frozen contract), unchanged |
 | G15 | a READY_FOR_REVIEW Experience whose approval is later withdrawn cannot return to DRAFT | 5 not an obligation now | frozen I-05A: no transition out of READY; publication revalidation (`0095`) refuses it — S5-03 owns what a publisher sees there |
-| G16 | an `ANALYTICAL_DERIVATIVE` copy of a Shared QANDEEL output that MATERIAL_DEPENDS on deleted human text keeps its bytes (dark, not erased) | 5 not an obligation under current authority | CW2-02 §27 + the `0093` classification + the PO decision's scope; unreachable in production today (S4-02 replies declare no material dependency). **Reported to the Product Owner** |
-| G17 | the approver sees only their own included words | 5 interpretation of §13 | **reported to the Product Owner for confirmation** |
+| G16 | an `ANALYTICAL_DERIVATIVE` copy of a Shared QANDEEL output that MATERIAL_DEPENDS on deleted human text kept its bytes | 1 fixed here (R1, A — Product / Privacy) | §4.4: Public erasure follows the Shared `MATERIAL_DEPENDENCY` closure; `REASONING_DEPENDENCY` does not propagate |
+| G17 | the approver's view described as "their own words" | 1 fixed here (R1) | privacy boundary approved by independent review; wording corrected to "the exact content requiring this human's approval" in code, record and copy (§8, §12) |
 | G18 | Export My Data does not include the Public authoring footprint | 3 existing owner | `E2E-D-16` (world-scoped export categories `NOT YET INCLUDED`) — observe / report only |
 | G19 | storage-level reclamation of erased tuples | 5 not an obligation | the database's own VACUUM, the `0090` standard |
 | G20 | the S5-02 Product Copy Gate | 1 current-task gate | §12 — Product Owner decision before merge (BG-01) |
@@ -350,6 +378,9 @@ Local real PostgreSQL: PostgreSQL **17.10** (the CI major), started in the sessi
 | mobile Jest focused (`src/public-authoring`, `src/public-world`) | PASS |
 | mobile Jest (full) | see the PR / completion report |
 | API CI, Mobile CI, S5 proof (`ar-s501-journey-a`, `ar-s502-journey-b`) | on the PR |
+| **R1:** `verify-migration-0143.mjs` with the new `material vs reasoning` stage (G01–G10) and R03, on a fresh from-zero database | PASS |
+| **R1:** the neighbouring verifiers `0089`, `0090`, `0092`, `0093`, `0094`, `0098`, `0115`, `0118`, `0119`, `0122`, `0139`, `0142` | PASS |
+| **R1:** directly affected static / API / mobile tests | see §18 |
 
 ## 16. Failure classification (A Product / Security · B Validation / Proof · C Infrastructure)
 
@@ -366,6 +397,8 @@ Local real PostgreSQL: PostgreSQL **17.10** (the CI major), started in the sessi
 | F09 | mobile tests: unsupported API, mount settle, an unawaited `cleanup`, a duplicated text | B | tests fixed |
 | F10 | `verify-0133` locally | C | it shells out to `psql`, absent here; CI has it |
 | F11 | `verify-0130` locally: `days <= 7` | C | reproduced on the base database WITHOUT `0143` (database vs Node clock skew on Windows); no change |
+| F12 | independent review R1: a `MATERIAL_DEPENDENCY` closure target's Public copy survived because it was labelled analytical (G16) | A — Product / Privacy | fixed in `0143` (§4.4); proven G01–G10, R03 |
+| F13 | independent review R1: "their own words" and "No one else can see it" were semantically / Product false (G17) | A — Product copy | wording corrected; copy rows revised, gate stays OPEN |
 
 ## 17. Remaining Stage-5 ownership
 
@@ -374,3 +407,21 @@ Local real PostgreSQL: PostgreSQL **17.10** (the CI major), started in the sessi
 - **S5-04 — Discussion + Public QANDEEL + Final Public Integration:** discussion, Public QANDEEL, Public Activity / Push
   (approval-request attention included).
 - Launch: `CW2-08` / `I-09`; `QAN-BL-ACCT-01` stays a Public / Connected-World launch blocker.
+
+## 18. R1 — the independent review correction
+
+Applied on the same PR on top of `d9152fee25ad5e954097a1c33f8eb3a88478f8b9` (API CI #922 green at that head):
+
+- **G16 (A).** `0143` part A: the erasure set is the deleted material plus its exact transitive `MATERIAL_DEPENDENCY`
+  closure (never a `REASONING_DEPENDENCY` edge); the classification gate is gone from the erasure, the guard, the shape
+  CHECK, the committed-answer retry proof and the reconciliation; the guard proves a closure target from canonical truth
+  (its own `UNAVAILABLE` state, its body gone, and a `MATERIAL_DELETED` event at the exact instant naming a material
+  upstream of it through `MATERIAL_DEPENDENCY` edges). Same owner-deletion transaction, same instant, one-way,
+  non-resurrectable, unreachable as a raw primitive (B08 and the application-role refusals unchanged).
+- **G17.** No behaviour change — the requests command already filters to the items whose required approvers include this
+  human. Comments, record and copy now say "the exact content requiring this human's approval"; `approvalScope` is drawn
+  beside every approve action.
+- **Copy.** §12 — nine rows revised, one added, one gate, all PROPOSED.
+- **Validation, proportional to the change.** The focused `0143` verifier and its neighbours on a fresh database; the S5-02
+  static contract; the focused API and mobile tests. The S5-02 Android journey asserts test IDs, not copy, and its flow is
+  unchanged, so it is not re-run beyond the normal CI run on push.

@@ -52,8 +52,8 @@ test('2 — ASSURE-F05: physical erasure inside canonical owner deletion, throug
     assert.match(sql, new RegExp(`TG_TABLE_NAME = '${relation}'`, 'u'));
   }
   // Canonical truth read inside the guard.
-  for (const needle of ["i.availability_state = 'DELETED_BY_OWNER'", 'shared_world_material_deleted_events ev', "derivative_classification = 'SOURCE_CONTENT_BEARING_DERIVATIVE'",
-    'NOT EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b']) {
+  for (const needle of ["i.availability_state = 'DELETED_BY_OWNER'", "i.availability_state = 'UNAVAILABLE'", 'shared_world_material_deleted_events ev',
+    'WITH RECURSIVE upstream(material_id)', 'NOT EXISTS (SELECT 1 FROM public.shared_world_text_material_bodies b']) {
     assert.ok(sql.includes(needle), `the guard proves ${needle}`);
   }
   // Structural one-way state; no replacement digest.
@@ -66,9 +66,16 @@ test('2 — ASSURE-F05: physical erasure inside canonical owner deletion, throug
   assert.equal((sql.match(/DELETE FROM public\.public_experience_text_derivative_bodies/gu) ?? []).length, 2,
     'bodies are deleted only by the ONE erasure and by the reconciliation of rows already deleted');
   // Reconciliation refuses contradictory state rather than normalizing it.
-  assert.match(sql, /contradictory Shared deletion state; refused, not normalized/u);
-  // Analytical derivatives are never erased by it.
-  assert.doesNotMatch(sql, /derivative_classification = 'ANALYTICAL_DERIVATIVE'[^;]*ERASED_BY_OWNER/u);
+  assert.match(sql, /contradictory Shared erasure state; refused, not normalized/u);
+  // S5-02 R1 (G16): Shared PHYSICAL erasure decides, not the Public label. The erasure, guard, retry proof and
+  // reconciliation never gate on a classification, and they follow MATERIAL_DEPENDENCY edges only — a
+  // REASONING_DEPENDENCY is never a reason to erase.
+  assert.doesNotMatch(sql, /derivative_classification = '(SOURCE_CONTENT_BEARING|ANALYTICAL)_DERIVATIVE'/u, 'no erasure path gates on the Public label');
+  assert.doesNotMatch(sql, /dependency_kind (=|IN) \(?'REASONING_DEPENDENCY'/u, 'no erasure path follows a REASONING_DEPENDENCY edge');
+  const erase = sql.slice(sql.indexOf('CREATE FUNCTION public_authoring_private.erase_owner_deleted_public_derivatives_v1'),
+    sql.indexOf('CREATE FUNCTION public_authoring_private.refuse_erased_body_resurrection_v1'));
+  assert.match(erase, /WITH RECURSIVE reachable\(material_id\)[\s\S]*dependency_kind = 'MATERIAL_DEPENDENCY'[\s\S]*shared_material_id = ANY\(v_erased\)/u,
+    'the erasure set is the deleted material plus its MATERIAL_DEPENDENCY closure');
   // The review boundaries are dark for a non-whole package.
   assert.match(sql, /CREATE OR REPLACE FUNCTION public\.resolve_public_experience_review_v1\(/u);
   assert.match(sql, /public_authoring_private\.public_package_state_v1\(v\.package_manifest_version_id\) = 'INTACT'/u);
@@ -157,7 +164,11 @@ test('6 — mobile: existing material only, inside the Public root, never "publi
 test('7 — the S5-02 Product Copy Gate: one gate, every new row PROPOSED, frozen words reused byte-exact', () => {
   const copy = read(`${MOBILE}/public-authoring/copy.ts`);
   assert.match(copy, /status: 'S5-02 PRODUCT COPY GATE — OPEN \(rows PROPOSED for Product Owner review\)'/u);
-  assert.equal((copy.match(/\/\/ PROPOSED — S5-02 Product Copy Gate/gu) ?? []).length, 52, '26 rows, Arabic and English');
+  assert.equal((copy.match(/\/\/ PROPOSED — S5-02 Product Copy Gate/gu) ?? []).length, 54, '27 rows, Arabic and English');
+  // S5-02 R1 (G17): approval is over the exact content shown, never "my words", and nothing claims no one else can see it.
+  assert.doesNotMatch(copy, /No one else can see|لا يراها أحد غيرك|yourWords|approveOwn/u, 'no Product-false or words-only approval copy');
+  assert.ok(copy.includes("approvalScope: 'Your approval applies only to the content shown here; it does not approve the rest of the experience.'"));
+  assert.ok(copy.includes("approvalScope: 'موافقتك تخص المحتوى المعروض هنا فقط، ولا تعني موافقتك على باقي محتوى التجربة.'"));
   for (const reuse of ['back: shared.back', 'retry: shared.retry', 'actionUnavailable: shared.actionUnavailable', 'you: shared.you',
     'shownAs: publicWorld.displayHeading', 'qandeel: shared.personalWorld', 'sharedWorld: shared.sharedWorld']) {
     assert.ok(copy.includes(reuse), `reused: ${reuse}`);

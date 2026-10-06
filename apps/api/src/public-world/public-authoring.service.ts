@@ -79,7 +79,10 @@ function commandOf(body: unknown, allowed: readonly string[]): Record<string, un
  *     of Worlds they currently belong to. There is no free-text composer: a Public Experience originates in QANDEEL;
  *   - prepare the exact immutable package from 1–20 of those sources;
  *   - the controller's truthful review of exactly what would become public, with bounded approval progress;
- *   - the content rightsholder's own approval requests, showing only their own included words; approve; withdraw;
+ *   - the content rightsholder's own approval requests, showing only the exact included content requiring this human's
+ *     approval (their words, or QANDEEL output over which they hold the exact publication authority) — never another
+ *     rightsholder's items, another approver, sealed provenance or hidden context; approve (authority over the content
+ *     shown, not an endorsement of the Experience); withdraw;
  *   - DRAFT → READY_FOR_REVIEW, only with every current approval effective.
  *
  * Nothing here publishes: READY_FOR_REVIEW is not public, and the CW2-08 prerequisites stay NOT_EVALUATED. Identity

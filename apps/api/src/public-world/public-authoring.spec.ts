@@ -108,8 +108,8 @@ describe('S5-02 controller review — exactly what would become public, whole or
   });
 });
 
-describe('S5-02 content approval — the exact human, their own words, their own decision', () => {
-  it('lists only the approver\'s own included words', async () => {
+describe('S5-02 content approval — the exact human, the exact content requiring their approval, their own decision', () => {
+  it('lists only the included content requiring this approver\'s approval', async () => {
     await expect(service().approvalRequests(TOKEN)).resolves.toEqual({ requests: [{
       manifestId: MANIFEST, state: 'CURRENT', lifecycle: 'DRAFT', publisher: { mode: 'PSEUDONYM', label: 'nightlamp27' }, itemCount: 3,
       ownItemCount: 1, requiredApprovals: 2, effectiveApprovals: 0, ownApproval: 'MISSING', ownItems: [{ ordinal: 2, text: 'her words' }],

@@ -129,7 +129,7 @@ describe.each(['ar', 'en'] as const)('S5-02 %s journey: existing material → re
     expect(view.queryByTestId('qandeel-public-authoring-mark-ready')).toBeNull();
   });
 
-  it('approves the reader\'s own words, withdraws immediately, and reaches READY_FOR_REVIEW — never "published"', async () => {
+  it('approves the content shown, withdraws immediately, and reaches READY_FOR_REVIEW — never "published"', async () => {
     const t = transport();
     t.setReview(reviewOf());
     const { view, authoring } = await mount(language, t);
@@ -167,8 +167,8 @@ describe.each(['ar', 'en'] as const)('S5-02 %s journey: existing material → re
   });
 });
 
-describe('S5-02 the approver sees only their own included words', () => {
-  it('lists a request with the publisher\'s public display, their own words, and approve', async () => {
+describe('S5-02 the approver sees only the exact content requiring their approval', () => {
+  it('lists a request with the publisher\'s public display, the content requiring approval, its scope, and approve', async () => {
     const t = transport();
     t.requests_.push({ manifestId: MANIFEST, state: 'CURRENT', lifecycle: 'DRAFT', publisher: { mode: 'REAL_NAME', label: 'Mohamed' },
       itemCount: 3, ownItemCount: 1, requiredApprovals: 2, effectiveApprovals: 1, ownApproval: 'MISSING', ownItems: [{ ordinal: 2, text: 'what Hadir wrote' }] });
@@ -181,6 +181,7 @@ describe('S5-02 the approver sees only their own included words', () => {
     expect(view.getAllByTestId('qandeel-public-authoring-request-word').map((w) => w.props.children)).toEqual(['what Hadir wrote']);
     expect(view.getAllByText('Requested by Mohamed')).toHaveLength(2);
     expect(view.getByTestId('qandeel-public-authoring-request-unavailable')).toBeTruthy();
+    expect(view.getByTestId('qandeel-public-authoring-request-scope').props.children).toBe(publicAuthoringCopy('en').approvalScope);
     await fireEvent.press(view.getByTestId('qandeel-public-authoring-request-approve'));
     await flush();
     expect(t.approve).toHaveBeenCalledWith(MANIFEST, expect.any(String));

@@ -2,8 +2,10 @@
  * S5-02 — the Public authoring workspace, drawn INSIDE the «العالم العام» / Public World root (no second navigation
  * system: its Back returns to the Public root; nothing is registered with the platform).
  *
- *   - the reader's own Drafts (each "no one else can see it") and the requests that wait on THEIR content approval —
- *     each showing only the reader's own included words and the publisher's PUBLIC display, never another approver;
+ *   - the reader's own Drafts (each "not published yet") and the requests that wait on THEIR content approval — each
+ *     showing only the exact included content requiring this human's approval (which may be QANDEEL-produced output,
+ *     not only their own words) and the publisher's PUBLIC display; never another rightsholder's items, another
+ *     approver, sealed provenance or hidden context. The approval covers the content shown, not the Experience;
  *   - choosing existing QANDEEL material for a Draft: the reader's own words in QANDEEL and what they can see in their
  *     Shared Worlds. There is no text field: nothing is composed here;
  *   - the review of exactly what would become public, the CURRENT public display, the approval progress, the reader's
@@ -73,13 +75,18 @@ function Action({ label, onPress, s, testID, busy, emphasis = false }: {
   );
 }
 
-/** The reader's own approval, wherever it is asked: approve, or the recorded state and withdrawal. */
+/** The reader's own approval, wherever it is asked: approve — scoped to the content shown — or the recorded state and withdrawal. */
 function OwnApproval({ state, manifestId, s, busy, onApprove, onWithdraw, testPrefix }: {
   readonly state: PublicOwnApproval | null; readonly manifestId: string; readonly s: Shared; readonly busy: boolean;
   readonly onApprove: (manifestId: string) => void; readonly onWithdraw: (manifestId: string) => void; readonly testPrefix: string;
 }) {
   if (state === 'MISSING') {
-    return <Action label={s.copy.approveOwn} onPress={() => onApprove(manifestId)} s={s} busy={busy} emphasis testID={`${testPrefix}-approve`} />;
+    return (
+      <>
+        <Line text={s.copy.approvalScope} s={s} testID={`${testPrefix}-scope`} />
+        <Action label={s.copy.approveShown} onPress={() => onApprove(manifestId)} s={s} busy={busy} emphasis testID={`${testPrefix}-approve`} />
+      </>
+    );
   }
   if (state === 'EFFECTIVE') {
     return (
@@ -101,7 +108,7 @@ function Request({ request, s, busy, controller }: { readonly request: PublicApp
         <Line text={s.copy.noLongerAvailable} s={s} testID="qandeel-public-authoring-request-unavailable" />
       ) : (
         <>
-          <Line text={s.copy.yourWords} s={s} />
+          <Line text={s.copy.approvalContent} s={s} />
           {request.ownItems.map((item) => <Line key={item.ordinal} text={item.text} s={s} role="body" color={s.palette.primary} testID="qandeel-public-authoring-request-word" />)}
           {request.requiredApprovals !== null && request.effectiveApprovals !== null
             ? <Line text={fillTwo(s.copy.approvals, String(request.effectiveApprovals), String(request.requiredApprovals))} s={s} /> : null}
