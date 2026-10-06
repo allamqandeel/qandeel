@@ -16,6 +16,7 @@
  *   increased contrast · reduced motion
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import type { ReactElement } from 'react';
 import { join } from 'node:path';
 
 import { act, cleanup, render } from '@testing-library/react-native';
@@ -26,7 +27,7 @@ import { address, contextOf, envelope } from '../__fixtures__/store';
 import { canvasProps } from '../../motion/__fixtures__/canvas';
 import { stubPresentationCamera } from '../../motion/__fixtures__/presentation-camera';
 import { createCanonicalStore, sessionPosition, type CanonicalStore, type SemanticDepth } from '../../state';
-import { DEFAULT_MAP_SCALE, WORLD_ORIGIN, decodeCameraIntent, envelopeCenter, initialCameraIntent, zoomSemanticStep, type MapCamera } from '../camera';
+import { DEFAULT_MAP_SCALE, decodeCameraIntent, envelopeCenter, initialCameraIntent, zoomSemanticStep, type MapCamera } from '../camera';
 import { MAP_ACTION_AUTHORITY, inspectObject } from '../inspection';
 import { MapCanvas, MapSurface, placeScene } from '../renderer';
 import { worldPresentation } from '../visual';
@@ -164,7 +165,7 @@ surface('reduced-motion', async () => {
 });
 
 /** The canvas under the stub camera: states a settled surface never holds still long enough to read. */
-const canvas = (name: string, build: () => { element: JSX.Element }) => {
+const canvas = (name: string, build: () => { element: ReactElement }) => {
   cases[`canvas:${name}`] = async () => serialise((await render(build().element)).toJSON());
 };
 const nearScene = () => {
