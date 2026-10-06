@@ -133,6 +133,10 @@ import {
   type SharedAlertsController, type SharedIdController, type SharedLinkInbox, type SharedLinkSource, type SharedWorldController,
 } from '../../shared-world';
 import { createLinkingSharedLinkSource } from '../../shared-world/linking-source';
+import {
+  createPublicLinkInbox, createPublicWorldController, isPublicWorldLink, type PublicLinkInbox, type PublicWorldController,
+} from '../../public-world';
+import { createPublicDisplayController, type PublicDisplayController } from '../../settings/public-display-controller';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
 import { deviceProductLanguage } from '../locale/device-locale';
@@ -258,6 +262,12 @@ export interface IntegrationSessionRuntime {
    * notification tap; never per identity, never held across accounts).
    */
   readonly sharedLinks: SharedLinkInbox;
+  /** S5-01 — the Public World area's ONE entry controller (the Global Switcher and the `qandeel://public` link alike). */
+  readonly publicWorld: PublicWorldController;
+  /** S5-01 — the reader's Public display choice (Account & Identity). */
+  readonly publicDisplay: PublicDisplayController;
+  /** S5-01 — the one pending Public World root link, held exactly like a Shared link. */
+  readonly publicLinks: PublicLinkInbox;
 }
 
 /**
@@ -367,10 +377,13 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
   // signed in; it is executed through the Shared entry authority, never trusted.
   const sharedLinkSource: SharedLinkSource = options.sharedLinks ?? createLinkingSharedLinkSource();
   const sharedLinks = createSharedLinkInbox();
+  // S5-01 — the Public World root link (`qandeel://public`, exactly) arrives through the same source and is held the same way.
+  const publicLinks = createPublicLinkInbox();
   const takeLink = (url: unknown) => {
     const worldId = sharedWorldOfLink(url);
     const kind = entry.auth.getState().kind;
     if (worldId !== null && !disposed && kind !== 'SIGNED_OUT' && kind !== 'ERROR') sharedLinks.put(worldId);
+    if (isPublicWorldLink(url) && !disposed && kind !== 'SIGNED_OUT' && kind !== 'ERROR') publicLinks.put();
   };
   unsubscribePush.push(sharedLinkSource.subscribe(takeLink));
   void sharedLinkSource.initial().then(takeLink).catch(() => undefined);
@@ -408,6 +421,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.sharedId.retire();
     session.formerSharedMaterial.retire();
     session.sharedAlerts.retire();
+    session.publicWorld.retire();
+    session.publicDisplay.retire();
     session.liveDriver.dispose();
     session.projection.retire();
     session.journey.retire();
@@ -458,6 +473,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
 
     const activity = entry.activityFor(bundle);
     const shared = entry.sharedWorldsFor(bundle);
+    const publicTransport = entry.publicWorldFor(bundle);
     const push = createPushController({
       port: pushPlatform, store: pushDeviceStore, transport: entry.pushFor(bundle), foreground: entry.foreground, isCurrent,
       language: deviceProductLanguage,
@@ -525,6 +541,10 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       // S4-04: the per-World Shared mutes, on the same Shared transport (the reader's CURRENT Worlds only).
       sharedAlerts: createSharedAlertsController({ transport: shared, isCurrent }),
       sharedLinks,
+      // S5-01: the Public World entry and the reader's Public display choice, on the Public transport bound to this identity.
+      publicWorld: createPublicWorldController({ transport: publicTransport, isCurrent }),
+      publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
+      publicLinks,
     };
     return built;
   }
@@ -584,6 +604,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     if (state.kind === 'SIGNED_OUT' || state.kind === 'ERROR') notificationEntries.drop();
     // S4-04: nor is a Shared World link.
     if (state.kind === 'SIGNED_OUT' || state.kind === 'ERROR') sharedLinks.drop();
+    // S5-01: nor is a Public World link.
+    if (state.kind === 'SIGNED_OUT' || state.kind === 'ERROR') publicLinks.drop();
     retireSession();
     publish(state.kind === 'SIGNED_OUT' ? { kind: 'SIGNED_OUT' } : state.kind === 'ERROR' ? { kind: 'AUTH_ERROR' } : { kind: 'RESTORING' });
   });

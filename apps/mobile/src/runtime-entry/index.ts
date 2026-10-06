@@ -157,6 +157,8 @@ export type {
   SharedFormerHistoryRequest, SharedFormerHistoryResult, SharedWorldAlert, SharedAlertsResult, SharedSetAlertsResult,
 } from './shared-world-api';
 export { SharedWorldApiClient } from './shared-world-api';
+export type { PublicDisplay, PublicDisplayMode, PublicDisplayResult, PublicEntryResult, PublicSetDisplayResult } from './public-world-api';
+export { PublicWorldApiClient } from './public-world-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
 export { PushApiClient } from './push-api';
 

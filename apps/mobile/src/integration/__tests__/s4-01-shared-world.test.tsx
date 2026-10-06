@@ -15,6 +15,7 @@ import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
 import { createEphemeralPushDeviceStore } from '../../push';
 import { fill, sharedCopy } from '../../shared-world';
+import { publicCopy } from '../../public-world';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
 import { harness, settle, type IntegrationHarness } from '../__fixtures__/integration';
@@ -94,18 +95,18 @@ function baseServer(): SharedServer {
 }
 
 describe('S4-01 — the first production Global Switcher', () => {
-  it('stands at the Personal Conversation with two destinations, the P2 glyph above each word, QANDEEL selected', async () => {
+  // S5-01 re-anchor: three destinations now; the Public area is read only once the reader goes there.
+  it('stands at the Personal Conversation with three destinations, the P2 glyph above each word, QANDEEL selected', async () => {
     const { h, view } = await world(baseServer());
     const switcher = within(view.getByTestId('qandeel-global-switcher'));
     const items = switcher.getAllByRole('radio');
-    expect(items.map((node) => node.props.accessibilityLabel)).toEqual([COPY.personalWorld, COPY.sharedWorld]);
-    expect(items.map((node) => node.props.accessibilityState.selected)).toEqual([true, false]);
+    expect(items.map((node) => node.props.accessibilityLabel)).toEqual([COPY.personalWorld, COPY.sharedWorld, publicCopy(LANGUAGE).publicWorld]);
+    expect(items.map((node) => node.props.accessibilityState.selected)).toEqual([true, false, false]);
     for (const node of items) expect(style(node).minHeight).toBeGreaterThanOrEqual(44);
     // The glyphs are decorative: the words name the controls.
     expect(view.getByTestId('qandeel-nav-glyph-navMine', { includeHiddenElements: true }).props.accessibilityElementsHidden).toBe(true);
     expect(view.getByTestId('qandeel-nav-glyph-navShared', { includeHiddenElements: true }).props.accessibilityElementsHidden).toBe(true);
-    // No Public World destination is exposed before its own stage.
-    expect(view.queryByTestId('qandeel-nav-glyph-navPublic')).toBeNull();
+    expect(view.getByTestId('qandeel-nav-glyph-navPublic', { includeHiddenElements: true }).props.accessibilityElementsHidden).toBe(true);
     // Nothing of Shared is read until the reader goes there.
     expect(sharedCalls(h, '/shared')).toHaveLength(0);
     h.dispose();

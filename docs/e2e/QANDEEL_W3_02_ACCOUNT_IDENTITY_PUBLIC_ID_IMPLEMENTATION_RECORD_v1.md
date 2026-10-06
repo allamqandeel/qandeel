@@ -252,6 +252,9 @@ holder.
 
 1. **`E2E-H-08` (Public World display choice) is not closed.** The I-05 `PSEUDONYM` display label is not yet bound to
    the canonical Public ID; that integration, and any Public-World surface, is later work.
+   *(Current truth, recorded by S5-01 without rewriting this residue: S5-01 implements the binding — PSEUDONYM =
+   the CURRENT Public ID, REAL_NAME = the CURRENT Name, migration `0142` — on its Draft PR; `E2E-H-08` closes on that
+   merge. See the [S5-01 record](QANDEEL_S5_01_PUBLIC_REACHABILITY_ENTRY_IDENTITY_FOUNDATION_IMPLEMENTATION_RECORD_v1.md).)*
 2. **No rate limit on change attempts** before the one change is used (a bounded pseudonym-probing surface; §10). The
    function is also reachable directly over the Data API with the reader's own token, which an API-edge limit would
    not cover; a rate limit (API and RPC) is a later hardening item, like W1B-01's Login-ID availability.

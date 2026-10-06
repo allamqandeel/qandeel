@@ -78,6 +78,8 @@ import { SharedIdPage, SharedIdRow } from './SharedIdSection';
 import { FormerSharedMaterialPage, FormerSharedMaterialRow } from './FormerSharedMaterialSection';
 import type { FormerSharedMaterialController } from './former-shared-material-controller';
 import type { SharedAlertsController, SharedIdController } from '../shared-world';
+import type { PublicDisplayController } from './public-display-controller';
+import { PublicDisplaySection } from './PublicDisplaySection';
 
 export const SETTINGS_SURFACE_TEST_ID = 'qandeel-settings';
 
@@ -94,6 +96,8 @@ export interface SettingsSurfaceProps {
   readonly publicId?: PublicIdController;
   /** S4-01 — the reader's own Shared ID; read only when its page is opened. */
   readonly sharedId?: SharedIdController;
+  /** S5-01 — the reader's Public display choice (Public ID or Name), in Account & Identity. Without it, it is not drawn. */
+  readonly publicDisplay?: PublicDisplayController;
   /** W3-MEGA-S: the reader's Privacy & Data state and requests for this runtime generation. Without it, that group is not drawn. */
   readonly privacy?: PrivacyDataController;
   /** S4-03: the reader's own words in Shared Worlds they no longer belong to; read only when its page is opened. */
@@ -215,7 +219,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, privacy, formerShared, sharedAlerts, notifications, push, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, sharedAlerts, notifications, push, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -511,6 +515,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
                     onOpen={() => openChange('PUBLIC_ID')}
                     rowRef={rowRef('PUBLIC_ID')}
                   />
+                ) : null}
+                {publicDisplay !== undefined ? (
+                  <PublicDisplaySection controller={publicDisplay} language={language} palette={palette}
+                    terms={{ publicId: copy.publicId.term, name: copy.identity.nameTerm, network: copy.publicId.network }} />
                 ) : null}
                 {sharedId !== undefined ? (
                   <SharedIdRow language={language} palette={palette} onOpen={() => openChange('SHARED_ID')} rowRef={rowRef('SHARED_ID')} />

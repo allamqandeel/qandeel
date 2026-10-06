@@ -94,6 +94,7 @@ import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface 
 import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
+import { PublicWorldArea } from '../../public-world';
 import type { DirectEntryDestination } from '../../runtime-entry';
 import type { ResponsiveInsets } from '../../responsive';
 import type { ProductLocale } from '../locale/product-locale';
@@ -160,7 +161,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   const [activityShown, setActivityShown] = useState(false);
   const [returnedFromActivity, setReturnedFromActivity] = useState(false);
   const [settingsPage, setSettingsPage] = useState<'NOTIFICATIONS' | undefined>(undefined);
-  // S4-01 — the area in front: the Personal world or the Shared area. A local presentation choice; never persisted.
+  // S4-01 — the area in front: the Personal world, the Shared area or (S5-01) the Public area. A local presentation
+  // choice; never persisted, so a restart always lands on the Personal world and no restored value is ever authority.
   const [area, setArea] = useState<WorldArea>('MY_WORLD');
   const [bandHeight, setBandHeight] = useState(edges.top + ANALYSIS_RETURN_BAR_MIN_HEIGHT);
   const reduceMotion = useReduceMotion();
@@ -347,7 +349,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // The surface truth the attention law reads: the composition's own state, never a second navigation state.
   const surface: ProductSurface = depth === 'ANALYSIS' ? 'ANALYSIS'
-    : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : activityShown ? 'ACTIVITY' : area === 'SHARED_WORLD' ? 'SHARED_WORLD' : 'CONVERSATION';
+    : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : activityShown ? 'ACTIVITY' : area === 'SHARED_WORLD' ? 'SHARED_WORLD' : area === 'PUBLIC_WORLD' ? 'PUBLIC_WORLD' : 'CONVERSATION';
   const attention = runtime.attention;
   useEffect(() => {
     attention.start();
@@ -395,6 +397,30 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     void Promise.resolve().then(consume);
     return links.subscribe(consume);
   }, [links, enter, onSignOut]);
+  // S5-01 — a `qandeel://public` link waits here the same way, then enters through the SAME Public entry controller as the
+  // switcher, ONCE: the area's mount (or, already in it, a fresh enter) resolves the entry verdict NOW. The link is never
+  // authority, and nothing of the Personal world or the Shared area is touched.
+  const publicLinks = runtime.publicLinks;
+  const areaRef = useRef(area);
+  useEffect(() => {
+    areaRef.current = area;
+  }, [area]);
+  const publicWorld = runtime.publicWorld;
+  useEffect(() => {
+    if (onSignOut === undefined) return undefined;
+    const consume = () => {
+      if (!publicLinks.take()) return;
+      setActivityShown(false);
+      setReturnedFromActivity(false);
+      setSettingsShown(false);
+      setUnderstandingShown(false);
+      cross('CONVERSATION');
+      if (areaRef.current === 'PUBLIC_WORLD') publicWorld.enter();
+      setArea('PUBLIC_WORLD');
+    };
+    void Promise.resolve().then(consume);
+    return publicLinks.subscribe(consume);
+  }, [publicLinks, publicWorld, cross, onSignOut]);
   const push = runtime.push;
   const { education, permission } = useSyncExternalStore(push.subscribe, push.getState);
   // S4-04 — P3 §11 / A3-02 G-12: the first LEGITIMATE Shared entry (a World's entry verdict is ALLOW, the reader is in
@@ -521,6 +547,25 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             />
           </View>
         ) : null}
+        {/*
+          S5-01 — the Public area, the same way: over the still-mounted Personal world, handed nothing of it or of the
+          Shared area. Its root is drawn only after its own entry verdict says ALLOW.
+        */}
+        {area === 'PUBLIC_WORLD' && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <View
+            style={[styles.sharedArea, { bottom: edges.bottom + switcherBand }]}
+            pointerEvents={settingsShown || understandingShown || activityShown ? 'none' : 'auto'}
+            importantForAccessibility={settingsShown || understandingShown || activityShown ? 'no-hide-descendants' : 'auto'}
+            accessibilityElementsHidden={settingsShown || understandingShown || activityShown}
+          >
+            <PublicWorldArea
+              controller={runtime.publicWorld}
+              language={locale.language}
+              insets={{ ...edges, bottom: 0 }}
+              activity={{ controller: runtime.attention, onOpen: openActivity, focus: returnedFromActivity && !activityShown }}
+            />
+          </View>
+        ) : null}
         {depth === 'CONVERSATION' && leaving === null && onSignOut !== undefined && !settingsShown && !understandingShown && !activityShown ? (
           <View style={styles.switcher}>
             <GlobalSwitcher area={area} language={locale.language} bottomInset={edges.bottom} onSelect={setArea} />
@@ -538,7 +583,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {settingsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} publicId={runtime.publicId} sharedId={runtime.sharedId} />
+            <SettingsSurface language={locale.language} insets={edges} onBack={closeSettings} onSignOut={onSignOut} notifications={runtime.activityPreferences} push={runtime.push} sharedAlerts={runtime.sharedAlerts} initialPage={settingsPage} identity={runtime.identity} privacy={runtime.privacy} formerShared={runtime.formerSharedMaterial} publicId={runtime.publicId} sharedId={runtime.sharedId} publicDisplay={runtime.publicDisplay} />
           </View>
         ) : null}
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (

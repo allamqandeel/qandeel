@@ -1,0 +1,126 @@
+# S5-01 Journey A — the Public World on the production route. VALIDATION ONLY (S401ProofRoot.tsx, S5-01 hook).
+# Authenticated Personal root → three destinations → Public World through the real entry verdict (the neutral
+# pre-authority shell until ALLOW, then the root and nothing else) → Shared and back (entry resolved again) →
+# qandeel://public through the same entry controller → the Public display choice in General Settings → Account & Identity.
+# The proof world HOLDS every Public entry before its ALLOW answer until public/allow releases it (s401-proof-world.ts), so
+# the shell is asserted deterministically, never against a timed delay. Driven by scripts/phase-m/run-s501-proof-leg.sh.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+# 1–2. The authenticated Personal root, and the three-destination switcher with QANDEEL selected.
+- assertVisible:
+    id: "qandeel-switcher-my_world"
+    selected: true
+- assertVisible:
+    id: "qandeel-switcher-shared_world"
+    selected: false
+- assertVisible:
+    id: "qandeel-switcher-public_world"
+    selected: false
+- takeScreenshot: ${PREFIX}-01-three-destinations
+# 3–4. Public World: before ALLOW only the neutral shell — no title, no field.
+- tapOn:
+    id: "qandeel-switcher-public_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-transition"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-title"
+- assertNotVisible:
+    id: "qandeel-public-field"
+- assertVisible:
+    id: "qandeel-switcher-public_world"
+    selected: true
+- takeScreenshot: ${PREFIX}-02-public-pre-authority-shell
+- openLink: "qandeel://s401-proof/public/allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-root"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-public-title"
+- takeScreenshot: ${PREFIX}-03-public-root
+# 5. Shared and back: the Shared area is its own; returning to Public World asks the entry verdict again.
+- tapOn:
+    id: "qandeel-switcher-shared_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-shared-root"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-area"
+- tapOn:
+    id: "qandeel-switcher-public_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-transition"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-title"
+- openLink: "qandeel://s401-proof/public/allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-root"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-public-again-after-shared
+# Back to QANDEEL: the same Conversation, reachable again.
+- tapOn:
+    id: "qandeel-switcher-my_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-area"
+# 6. The PRODUCTION link qandeel://public enters through the same controller: the shell, then the root on ALLOW.
+- openLink: "qandeel://public"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-transition"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-title"
+- openLink: "qandeel://s401-proof/public/allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-root"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-switcher-public_world"
+    selected: true
+- takeScreenshot: ${PREFIX}-05-public-by-link
+# 7. The Public display choice lives in the ONE General Settings destination, in Account & Identity.
+- tapOn:
+    id: "qandeel-switcher-my_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-settings-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-settings-group-account"
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "qandeel-public-display-pseudonym"
+    direction: DOWN
+    timeout: 20000
+- assertVisible:
+    id: "qandeel-public-display-pseudonym-selected"
+- takeScreenshot: ${PREFIX}-06-display-public-id
+- tapOn:
+    id: "qandeel-public-display-real_name"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-display-real_name-selected"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-display-pseudonym-selected"
+- takeScreenshot: ${PREFIX}-07-display-name

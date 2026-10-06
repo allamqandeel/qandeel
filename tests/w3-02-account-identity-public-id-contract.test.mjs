@@ -314,7 +314,8 @@ test('one General Settings destination: no second Public Settings destination, n
   const section = code(read(SECTION)) + code(read(SETTINGS));
   assert.doesNotMatch(section, /expo-router|router\.(?:push|navigate|replace)|useRouter|<Stack\b|Alert\.alert/u);
   // S4-01 re-anchor: the same ONE destination also receives the Shared ID (E2E-D-08), after the Public ID.
-  assert.match(code(read(`${SRC}/integration/composition/DepthComposition.tsx`)), /<SettingsSurface [^>]*publicId=\{runtime\.publicId\}(?: sharedId=\{runtime\.sharedId\})? \/>/u);
+  // S5-01 re-anchor: and the Public display choice (E2E-H-08), inside the same Account & Identity group.
+  assert.match(code(read(`${SRC}/integration/composition/DepthComposition.tsx`)), /<SettingsSurface [^>]*publicId=\{runtime\.publicId\}(?: sharedId=\{runtime\.sharedId\})?(?: publicDisplay=\{runtime\.publicDisplay\})? \/>/u);
 });
 
 // Re-anchored by W3-MEGA-A: Account & Identity now also holds the REAL Name, Login ID and Email rows (E2E-D-03 / D-05 /

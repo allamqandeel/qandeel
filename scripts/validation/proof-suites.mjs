@@ -45,4 +45,15 @@ export const PROOF_SUITES = Object.freeze({
     }),
     physicalDeviceFacts: Object.freeze([]),
   }),
+  // Stage 5 (S5-01): the ONE bounded Public World journey on the production route — three destinations, the Public entry
+  // verdict (pre-authority shell, then the root), Shared and back, qandeel://public, the Public display choice. One
+  // Android leg over the S4 proof binary; the database facts are the real-PostgreSQL verifier's (migration 0142).
+  s5: Object.freeze({
+    workflow: '.github/workflows/s5-proof.yml',
+    recipe: 's4-shared-world-proof',
+    platforms: Object.freeze({
+      android: Object.freeze({ runner: 'scripts/phase-m/run-s501-proof-leg.sh', producer: 'build-android', consumer: 'android-leg' }),
+    }),
+    physicalDeviceFacts: Object.freeze([]),
+  }),
 });

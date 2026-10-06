@@ -61,11 +61,13 @@ test('3 — the Shared ID key material is server configuration: never in the rep
   assert.doesNotMatch(read('database/migrations/0138_shared_world_reachability_invitation_birth_v1.sql'), /pgp_sym|encrypt\(|decrypt\(/u, 'the database never holds or uses the key');
 });
 
-test('4 — the Global Switcher has exactly the two S4-01 destinations; the Shared area is handed nothing of the Personal world', () => {
+// S5-01 re-anchor: the Public World is now the third REAL destination (its own entry controller, P2 navPublic); the
+// S4-01 laws for the Shared area and the Personal world below are unchanged.
+test('4 — the Global Switcher carries the S4-01 destinations (and, since S5-01, the real Public World); the Shared area is handed nothing of the Personal world', () => {
   const switcher = code(`${MOBILE}/shared-world/GlobalSwitcher.tsx`);
-  assert.match(switcher, /export type WorldArea = 'MY_WORLD' \| 'SHARED_WORLD';/u);
+  assert.match(switcher, /export type WorldArea = 'MY_WORLD' \| 'SHARED_WORLD' \| 'PUBLIC_WORLD';/u);
   assert.match(switcher, /<NavGlyph name=\{item\.glyph\}/u);
-  assert.doesNotMatch(switcher, /navPublic|PUBLIC_WORLD/u, 'no inert Public destination');
+  assert.match(switcher, /\{ key: 'PUBLIC_WORLD', word: publicWords\.publicWorld, glyph: 'navPublic' \}/u, 'the Public destination is the real S5-01 area, not an inert cell');
   const depth = code(`${MOBILE}/integration/composition/DepthComposition.tsx`);
   const area = depth.slice(depth.indexOf('<SharedWorldArea'), depth.indexOf('/>', depth.indexOf('<SharedWorldArea')));
   const props = [...area.matchAll(/^\s+(\w+)=/gmu)].map((m) => m[1]);
