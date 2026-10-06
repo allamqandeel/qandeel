@@ -1,0 +1,107 @@
+# S5-02 Journey B — Public authoring on the production route, publisher-facing. VALIDATION ONLY (S401ProofRoot.tsx; the
+# S5-02 routes of s401-proof-world.ts). Public entry through the real entry verdict (held until public/allow) → the
+# authoring workspace inside the Public root → start a Draft → choose the reader's own EXISTING words (no text field) →
+# the review of exactly what would become public, with the CURRENT public display → the reader's own approval → READY
+# FOR REVIEW, which is NOT public → back to the Public root, whose field is still empty. Multi-human authority is the
+# real-PostgreSQL verifier's (database/verify-migration-0143.mjs). Driven by scripts/phase-m/run-s501-proof-leg.sh.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+# 1. Public World through the real entry verdict: nothing of authoring before ALLOW.
+- tapOn:
+    id: "qandeel-switcher-public_world"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-transition"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-authoring-entry"
+- openLink: "qandeel://s401-proof/public/allow"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-root"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-public-field"
+- takeScreenshot: ${PREFIX}-01-public-root-with-authoring-entry
+# 2. The authoring workspace, inside the Public root.
+- tapOn:
+    id: "qandeel-public-authoring-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-authoring-workspace"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-public-authoring-no-drafts"
+- takeScreenshot: ${PREFIX}-02-workspace
+# 3. Start a Draft from EXISTING material: the chooser offers the reader's own words, and no text field.
+- tapOn:
+    id: "qandeel-public-authoring-start"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-authoring-choose"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-authoring-prepare"
+- tapOn:
+    id: "qandeel-public-authoring-source"
+# The review action is offered only once existing material is chosen.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-authoring-prepare"
+    timeout: 10000
+- takeScreenshot: ${PREFIX}-03-existing-source-chosen
+# 4. The review: exactly what would become public, the CURRENT public display, the approval progress — a Draft.
+- tapOn:
+    id: "qandeel-public-authoring-prepare"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-authoring-review-current"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-public-authoring-draft"
+- assertVisible:
+    id: "qandeel-public-authoring-shown-as"
+- assertVisible:
+    id: "qandeel-public-authoring-review-item"
+- assertVisible:
+    id: "qandeel-public-authoring-progress"
+- assertNotVisible:
+    id: "qandeel-public-authoring-mark-ready"
+- takeScreenshot: ${PREFIX}-04-draft-review
+# 5. The reader's own approval, then READY FOR REVIEW — and nothing public.
+- tapOn:
+    id: "qandeel-public-authoring-own-approve"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-authoring-own-approved"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-public-authoring-mark-ready"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-authoring-ready"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-authoring-draft"
+- takeScreenshot: ${PREFIX}-05-ready-for-review-not-public
+# 6. Back to the workspace (the Draft is listed), and back to the Public root: its field is still empty.
+- tapOn:
+    id: "qandeel-public-authoring-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-authoring-draft-row"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-public-authoring-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-public-field"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-public-authoring-workspace"
+- takeScreenshot: ${PREFIX}-06-public-root-field-still-empty

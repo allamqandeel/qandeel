@@ -5,8 +5,10 @@ Stage-5 task)
 **Task Contract:** the Product Owner's S5-01 Task Contract (2026-10-06)
 **Canonical baseline:** `5cf98a267d9eed7e9019f0ca5ed93bd8884a1b36` (the merge of PR #313, S4-04)
 **Branch:** `feat/s5-01-public-reachability-entry-identity`
-**Status:** **`S5-01 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-01 PRODUCT COPY GATE CLOSED — NOT MERGED`**.
-Claude does not merge it.
+**Status:** **`S5-01 — MERGED / CLOSED — PR #314 at 8dfc7b38baa133c8cecbffea8c65ae17ddc245ff — S5-01 PRODUCT COPY GATE CLOSED`**
+(governance reconciliation by S5-02, 2026-10-06: the Product behaviour recorded below is unchanged). At review time it read
+`S5-01 IMPLEMENTED — REVIEW CANDIDATE (Draft PR) — S5-01 PRODUCT COPY GATE CLOSED — NOT MERGED`; Claude did not merge it.
+`E2E-H-08` and the Name-length reconciliation are since closed by S5-02.
 
 > Public World becomes the third real Global Switcher destination. Entering it asks the server, NOW, whether the
 > authenticated reader may enter under the CURRENT Public audience policy — the neutral pre-authority shell until ALLOW,

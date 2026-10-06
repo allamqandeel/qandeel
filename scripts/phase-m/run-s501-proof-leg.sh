@@ -12,6 +12,9 @@
 #   ar-s501-journey-a  Arabic RTL — three destinations; the Public entry verdict (pre-authority shell, then the root);
 #                      Shared and back; qandeel://public through the same controller; the Public display choice in
 #                      General Settings → Account & Identity                                     s5-01-journey-a.yaml
+#   ar-s502-journey-b  Arabic RTL — S5-02 Public authoring: the workspace inside the Public root, a Draft from the reader's
+#                      own existing words (no text field), the review with the current public display, the reader's own
+#                      approval, READY FOR REVIEW (not public), back to the still-empty field   s5-02-journey-b.yaml
 #
 # Exit status: 0 only if the leg passed. Its one result line is written to <out-dir>/result.txt.
 set -u
@@ -25,7 +28,7 @@ FLOWS="$REPO/apps/mobile/.maestro"
 PKG="com.qandeel.mobile"
 
 case "$LEG" in
-  ar-s501-journey-a) ;;
+  ar-s501-journey-a|ar-s502-journey-b) ;;
   *) echo "run-s501-proof-leg: unknown leg '$LEG' — refusing"; exit 2 ;;
 esac
 
@@ -93,6 +96,7 @@ adb logcat -c || true
 # The flow asserts no Product sentence: every check is by test id, selected state and the reader's own synthetic values.
 case "$LEG" in
   ar-s501-journey-a) maestro_flow s5-01-journey-a.yaml leg || fail "s5-01-journey-a.yaml" ;;
+  ar-s502-journey-b) maestro_flow s5-02-journey-b.yaml leg || fail "s5-02-journey-b.yaml" ;;
 esac
 
 capture

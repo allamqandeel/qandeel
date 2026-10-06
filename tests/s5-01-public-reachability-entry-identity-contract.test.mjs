@@ -92,7 +92,10 @@ test('4 — the API consumes 0142 on the caller\'s own token only: three routes,
   const calls = [...repository.matchAll(/'([a-z_]+_v1)'/gu)].map((m) => m[1]).sort();
   assert.deepEqual(calls, [...OWNER_WRAPPERS].sort());
   assert.doesNotMatch(repository, /ServiceRole|service_role|serviceApi|p_user|p_public_identity|p_display_label|p_audience/u);
-  for (const file of readdirSync(new URL(`${API}/`, root)).filter((f) => f.endsWith('.ts') && !f.endsWith('.spec.ts'))) {
+  // RE-ANCHORED by S5-02 (validation only). This first swept EVERY file of the directory, when S5-01's were the only
+  // ones. S5-02 legitimately adds the Public authoring boundary beside them (`public-authoring.*`, pinned by its own
+  // contract); S5-01's own four files still open nothing inside Public World.
+  for (const file of ['public-world.controller.ts', 'public-world.module.ts', 'public-world.repository.ts', 'public-world.service.ts']) {
     const text = code(`${API}/${file}`);
     assert.doesNotMatch(text, /console\.|logger\.|Logger\b/u, `${file} logs nothing`);
     assert.doesNotMatch(text, /experience|draft|publication|publish_|discussion|reaction|replay|search|lens|placement/iu, `${file} opens nothing inside Public World`);
@@ -166,13 +169,17 @@ test('6 — the display choice is a MODE in Account & Identity; no Public Settin
 test('7 — governance: the record, E2E-H-08 and QAN-BL-CW-01 owned by S5-02 without being closed', () => {
   const record = read(RECORD);
   assert.match(record, /^# QANDEEL — S5-01 Public Reachability, Entry & Identity Foundation — Implementation Record v1/u);
-  assert.match(record, /\*\*Status:\*\* \*\*`S5-01 IMPLEMENTED — REVIEW CANDIDATE \(Draft PR\) — S5-01 PRODUCT COPY GATE CLOSED — NOT MERGED`\*\*/u);
+  // RE-ANCHORED by S5-02 (governance reconciliation, validation only): S5-01 merged through PR #314; its banner now records
+  // that truth and keeps the review-time banner as history.
+  assert.match(record, /\*\*Status:\*\* \*\*`S5-01 — MERGED \/ CLOSED — PR #314 at 8dfc7b38baa133c8cecbffea8c65ae17ddc245ff — S5-01 PRODUCT COPY GATE CLOSED`\*\*/u);
+  assert.match(record, /`S5-01 IMPLEMENTED — REVIEW CANDIDATE \(Draft PR\) — S5-01 PRODUCT COPY GATE CLOSED — NOT MERGED`; Claude did not merge it\./u);
   assert.match(record, /\*\*`E2E-H-08` — ADVANCED \/ S5-02 OWNED — NOT CLOSED\*\*/u, 'S5-01 advances E2E-H-08 and does not close it');
   assert.doesNotMatch(record, /E2E-H-08[^\n]*closes on merge/u);
   assert.match(record, /Orphan gaps = 0/u);
   assert.match(record, /5cf98a267d9eed7e9019f0ca5ed93bd8884a1b36/u);
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
-  assert.match(backlog, /\| `QAN-BL-CW-01` \| Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative \(`ASSURE-F05`\) \| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
+  assert.match(backlog, /\| `QAN-BL-CW-01` \| Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative \(`ASSURE-F05`\) \| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \| `HIGH` \| `CLOSED — TOMBSTONE` \|/u,
+    'RE-ANCHORED by S5-02: the owner S5-01 designated closed the item (tombstone effective from the S5-02 merge)');
   assert.match(backlog, /\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `UNASSIGNED` \| `HIGH` \| `OPEN — UNASSIGNED` \|/u);
   assert.match(backlog, /physically erased/u, 'the Product Owner ASSURE-F05 decision is recorded');
   assert.match(backlog, /\| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \|[^\n]*`E2E-H-08`[^\n]*80-character account Name by a reviewed forward migration/u, 'S5-02 owns the E2E-H-08 closure and the Name-length reconciliation');

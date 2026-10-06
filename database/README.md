@@ -4035,3 +4035,55 @@ publication, serving, search, placement, discussion, Public QANDEEL or Launch st
   policy.
 
 Verifier: `npm run verify:public-world-entry-identity:integration` (`database/verify-migration-0142.mjs`).
+
+## S5-02 - Public authoring, rights, review and ASSURE-F05 physical erasure (migration 0143)
+
+`0143_public_authoring_rights_privacy_v1.sql` is a forward correction of the frozen I-05 runtime and the Product
+boundary above it. It closes `ASSURE-F05` (`QAN-BL-CW-01`) FIRST, in the Product Owner's terms: when the canonical Shared
+owner deletion destroys a HUMAN source that a Public package copied as a `SOURCE_CONTENT_BEARING_DERIVATIVE`, the package's
+copy of those bytes is physically erased in the SAME transaction at the SAME canonical instant - the public body row,
+`publication_package_manifest_items.public_body_digest` and `publication_package_item_provenance.captured_source_digest`
+(both unsalted SHA-256 of the exact bytes: the `0122` reasoning, a digest of deleted content is the last copy of it). Audit
+identity survives: the manifest, Experience, version, every item and its ordinal and classification, the sealed provenance
+identity, the per-item authority, the required approvers, approvals, withdrawals and transitions, and the erasure state
+and instant (`content_state`, `content_erased_at`, `captured_digest_erased_at`, each pinned by a biconditional CHECK).
+
+The `0092` append-only guard keeps its NAME on all seven package relations; its body is forward-replaced with exactly
+three permitted operations - the provenance digest erased, the item `CONTENT_PRESENT -> ERASED_BY_OWNER`, and the body of
+an erased item deleted - each proven from canonical truth inside the trigger (a `SHARED_WORLD` source whose Shared body is
+physically gone, and either its history item terminal `DELETED_BY_OWNER` with its own `MATERIAL_DELETED` event at the
+exact instant, or its history item `UNAVAILABLE` with a `MATERIAL_DELETED` event at that instant naming a material upstream
+of it through `MATERIAL_DEPENDENCY` edges only). Everything else is refused for every role, the owner included; a `BEFORE INSERT` guard refuses any body
+beside an erased item. `delete_shared_world_owned_material_v1` is forward-replaced from `0122` with two changes only: it
+erases after its terminal transition and `MATERIAL_DELETED` fact, and its committed-answer retry also proves no Public
+copy survives. Already-unsafe rows are reconciled at the instant the owner actually deleted; contradictory state refuses
+deployment. `resolve_public_experience_review_v1` (service_role) is forward-replaced dark for any package that is no
+longer whole, so no review can serve deleted bytes or a silently SMALLER package. The erased set is what Shared deletion
+physically erased - the deleted material and its transitive `MATERIAL_DEPENDENCY` closure - whatever the item's
+historical classification (S5-02 R1, G16); a `REASONING_DEPENDENCY` target is not erased (CW2-02 §27).
+
+It then opens the S5-02 authoring boundary in the non-exposed schema `public_authoring_private` (no relation; nine owner
+commands for `authenticated` through `public` INVOKER wrappers, every helper nobody's). The first real authoring act
+provisions the ONE I-05 Public Identity (ref random server-side; mode and label from the ONE S5-01 derivation, under the
+account row); preparation supplies only the chosen existing sources; approval, withdrawal and READY_FOR_REVIEW compose
+the frozen `0093` / `0094` / `0119` / `0121` primitives as their owner, READY gated on every required approval
+`EFFECTIVE` under the canonical Public locks (the frozen commit counts rows and ignores withdrawals). The label ceiling
+moves from 64 to 80 (display state, identity-command answer, both identity primitives, the S5-01 bridge). Nothing here
+publishes: the CW2-08 seam still answers `NOT_EVALUATED` and no application role executes a frozen I-05 primitive.
+
+```sh
+npm run verify:public-authoring-rights-privacy:integration
+```
+
+`verify-migration-0143.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the boundary census;
+identity (none by viewing, one at first authorship, concurrently too, the full 80-character Name rendered); rights (legal
+sources only, non-enumerating refusals, exact rightsholders only, approval requests showing only the content requiring that approval, immediate
+non-resurrectable withdrawal, READY only with current complete authority, the raw READY gap); privacy (the erasure at the
+canonical instant, a whole-database census that finds neither the bytes nor their digest, audit identity unchanged, both
+reviews dark, one-way immutability, retry re-proof, the application deletion path); MATERIAL vs REASONING dependency (a
+transitive `MATERIAL_DEPENDENCY` QANDEEL target's analytical Public copy erased, an equivalent `REASONING_DEPENDENCY` one
+kept and its package intact); the
+reconciliation of a reproduced pre-0143 deletion and the refusal of contradictory state; the delete-vs-prepare races on
+two connections with no deadlock; and launch closure. It also re-anchors three historical pins this decision moves:
+`verify-migration-0092.mjs` (the two digests nullable), `verify-migration-0098.mjs` CE09 (identity unchanged, only the
+deleted bytes and their digests gone) and `verify-migration-0142.mjs` (an 80-character Name is represented in full).

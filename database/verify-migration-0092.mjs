@@ -97,7 +97,10 @@ const OWNED_COLUMNS = {
   [ITEMS]: [['manifest_version_id', 'uuid', false], ['experience_id', 'uuid', false],
     ['package_item_id', 'uuid', false], ['item_ordinal', 'integer', false],
     ['derivative_classification', 'text', false], ['public_body_form', 'text', false],
-    ['public_body_digest', 'text', false]],
+    // RE-ANCHORED by S5-02 (validation only): nullable since migration 0143, the Product Owner's ASSURE-F05
+    // physical-erasure decision. The 0092 shape CHECK still binds every non-NULL value, and 0143's biconditional
+    // CHECK makes NULL representable ONLY in the one-way ERASED_BY_OWNER state.
+    ['public_body_digest', 'text', true]],
   [BODIES]: [['package_item_id', 'uuid', false], ['public_body_form', 'text', false],
     ['public_text_body', 'text', false]],
   [PROVENANCE]: [['package_item_id', 'uuid', false], ['manifest_version_id', 'uuid', false],
@@ -105,7 +108,9 @@ const OWNED_COLUMNS = {
     ['personal_owner_user_id', 'uuid', true], ['shared_world_id', 'uuid', true],
     ['shared_material_id', 'uuid', true], ['shared_history_item_id', 'uuid', true],
     ['captured_availability_state', 'text', false], ['captured_availability_revision', 'bigint', true],
-    ['captured_source_digest', 'text', false]],
+    // RE-ANCHORED by S5-02 (validation only): nullable since 0143 for the same reason, and only for an erased
+    // SHARED_WORLD source (0143's biconditional erasure CHECK).
+    ['captured_source_digest', 'text', true]],
   [ITEM_AUTHORITY]: [['package_item_id', 'uuid', false], ['manifest_version_id', 'uuid', false],
     ['resolution_state', 'text', false], ['required_approver_count', 'integer', false]],
   [REQUIRED]: [['manifest_version_id', 'uuid', false], ['approver_user_id', 'uuid', false]],

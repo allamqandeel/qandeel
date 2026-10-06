@@ -119,6 +119,7 @@ jobs:
       - {name: "Verify S4-03 Shared Lifecycle & Governance static contract", run: npm run test:s4-03-shared-lifecycle-governance-contract}
       - {name: "Verify S4-04 Shared Activity, Notifications & Direct Entry static contract", run: npm run test:s4-04-shared-activity-notifications-direct-entry-contract}
       - {name: "Verify S5-01 Public Reachability, Entry & Identity static contract", run: npm run test:s5-01-public-reachability-entry-identity-contract}
+      - {name: "Verify S5-02 Public Authoring, Rights, Draft / Review & Privacy static contract", run: npm run test:s5-02-public-authoring-rights-privacy-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -898,6 +899,13 @@ jobs:
       # consequential primitive reachable by any application role.
       - name: Verify S5-01 Public World entry and Public display identity against real PostgreSQL
         run: npm run verify:public-world-entry-identity:integration
+      # S5-02: ASSURE-F05 - Shared owner deletion physically erases the source-content-bearing Public copy (body and both
+      # digests) in the same transaction at the canonical instant, proven by a whole-database census, one-way, reconciled
+      # forward, with both reviews dark; the real delete-vs-prepare races on two connections; the ONE Public Identity at
+      # first authorship (concurrently too) rendering the current Public ID or full 80-character Name; exact rightsholder
+      # approval, immediate withdrawal and READY_FOR_REVIEW only with current complete authority; nothing can publish.
+      - name: Verify S5-02 Public authoring, rights and ASSURE-F05 privacy closure against real PostgreSQL
+        run: npm run verify:public-authoring-rights-privacy:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

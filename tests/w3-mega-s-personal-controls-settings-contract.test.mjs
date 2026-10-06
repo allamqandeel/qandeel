@@ -275,5 +275,10 @@ test('the record states exactly the D-17 truth, never a wider claim, and the bac
   assert.match(backlog, /\| `QAN-BL-ACCT-01` \|[^\n]*\| `OPEN — UNASSIGNED` \|/u, 'QAN-BL-ACCT-01 stays OPEN — UNASSIGNED');
   // S5-01 re-anchor: the Product Owner assigned QAN-BL-CW-01 to S5-02 (DEFERRED — OWNED). It is still an OPEN blocker of
   // full account deletion — owned, never tombstoned by assignment.
-  assert.match(backlog, /\| `QAN-BL-CW-01` \|[^\n]*\| `(?:OPEN — UNASSIGNED|DEFERRED — OWNED)` \|/u, 'QAN-BL-CW-01 stays open (unassigned or owned), never closed');
+  // RE-ANCHORED by S5-02 (validation only): its owner S5-02 then CLOSED it by implementation (the Product Owner's physical
+  // erasure, migration 0143) — not by assignment. Full account deletion stays blocked, by QAN-BL-ACCT-01 above.
+  assert.match(backlog, /\| `QAN-BL-CW-01` \|[^\n]*\| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \| `HIGH` \| `(?:DEFERRED — OWNED|CLOSED — TOMBSTONE)` \|/u,
+    'QAN-BL-CW-01 is open, or closed only by its owner S5-02');
+  assert.match(backlog, /### `QAN-BL-CW-01` — [^\n]*\n\n- \*\*Closing task:\*\* `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure`/u,
+    'and a closure carries its S5-02 tombstone');
 });

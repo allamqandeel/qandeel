@@ -1,0 +1,262 @@
+/**
+ * S5-02 — the Public authoring controller: the controlled publication workspace inside «العالم العام» / Public World.
+ *
+ *   WORKSPACE  the reader's own non-public Drafts, and the requests that wait on THEIR content approval
+ *   CHOOSE     choose existing QANDEEL material for one Draft — never free text: a Public Experience originates in QANDEEL
+ *   REVIEW     exactly what would become public, the CURRENT public display, bounded approval progress, the reader's own
+ *              approval, and DRAFT → READY_FOR_REVIEW when every current approval is effective
+ *
+ * Nothing here is authority: every screen asks the server again, and every act is decided by the database from the
+ * reader's own token. A package that is no longer whole is one explicit stale state and is never drawn partially. The
+ * lifecycle ends at READY_FOR_REVIEW, which is not public: no state here can say "published".
+ *
+ * Its state is viewer-local and its own: nothing of the Personal world or the Shared area is held or written.
+ */
+import type {
+  PublicAuthoringAnswer, PublicApprovalRequest, PublicApproveOutcome, PublicAuthoringDraft, PublicAuthoringReview, PublicAuthoringSources,
+  PublicPackageOutcome, PublicReadyOutcome, PublicWithdrawOutcome,
+} from '../runtime-entry';
+
+export interface PublicAuthoringTransport {
+  drafts(): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicAuthoringDraft>>>;
+  sources(): Promise<PublicAuthoringAnswer<PublicAuthoringSources>>;
+  startDraft(commandId: string): Promise<PublicAuthoringAnswer<{ readonly outcome: 'CREATED' | 'ALREADY_CREATED'; readonly experienceId: string }>>;
+  preparePackage(experienceId: string, commandId: string, personal: readonly string[],
+    shared: ReadonlyArray<{ readonly worldId: string; readonly materialId: string }>): Promise<PublicAuthoringAnswer<PublicPackageOutcome>>;
+  review(experienceId: string): Promise<PublicAuthoringAnswer<PublicAuthoringReview>>;
+  approvalRequests(): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicApprovalRequest>>>;
+  approve(manifestId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicApproveOutcome>>;
+  withdraw(manifestId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicWithdrawOutcome>>;
+  ready(experienceId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicReadyOutcome>>;
+}
+
+export type PublicAuthoringScreen = 'CLOSED' | 'WORKSPACE' | 'CHOOSE' | 'REVIEW';
+export type PublicAuthoringNotice = 'NONE' | 'ACTION_UNAVAILABLE' | 'NOT_PUBLISHABLE' | 'APPROVALS_INCOMPLETE' | 'APPROVED' | 'WITHDRAWN';
+
+export interface PublicAuthoringState {
+  readonly screen: PublicAuthoringScreen;
+  /** Whether the current screen's data has arrived: LOADING until it has, UNAVAILABLE if it could not. */
+  readonly status: 'LOADING' | 'READY' | 'UNAVAILABLE';
+  readonly drafts: ReadonlyArray<PublicAuthoringDraft>;
+  readonly requests: ReadonlyArray<PublicApprovalRequest>;
+  readonly sources: PublicAuthoringSources | null;
+  /** Selected sources, by key: `P:<unit>` or `S:<world>:<material>`. */
+  readonly selected: ReadonlyArray<string>;
+  readonly experienceId: string | null;
+  readonly review: PublicAuthoringReview | null;
+  readonly busy: boolean;
+  readonly notice: PublicAuthoringNotice;
+}
+
+export interface PublicAuthoringController {
+  getState(): PublicAuthoringState;
+  subscribe(listener: () => void): () => void;
+  open(): void;
+  close(): void;
+  back(): void;
+  /** Ask the current screen's data again. */
+  refresh(): void;
+  startDraft(): void;
+  openDraft(experienceId: string): void;
+  toggle(key: string): void;
+  prepare(): void;
+  approve(manifestId: string): void;
+  withdraw(manifestId: string): void;
+  markReady(): void;
+  retire(): void;
+}
+
+export interface PublicAuthoringControllerOptions {
+  readonly transport: PublicAuthoringTransport | null;
+  readonly isCurrent: () => boolean;
+  readonly newCommandId?: () => string;
+}
+
+/** One package: the 0143 bound (1–20 exact sources). */
+export const PUBLIC_PACKAGE_MAX_SOURCES = 20;
+
+export const personalKey = (sourceId: string): string => `P:${sourceId}`;
+export const sharedKey = (worldId: string, materialId: string): string => `S:${worldId}:${materialId}`;
+
+export function mintPublicCommandId(): string {
+  const hex = () => Math.floor(Math.random() * 16).toString(16);
+  const block = (n: number) => Array.from({ length: n }, hex).join('');
+  return `${block(8)}-${block(4)}-4${block(3)}-${'89ab'[Math.floor(Math.random() * 4)]}${block(3)}-${block(12)}`;
+}
+
+const CLOSED: PublicAuthoringState = Object.freeze<PublicAuthoringState>({
+  screen: 'CLOSED', status: 'READY', drafts: [], requests: [], sources: null, selected: [], experienceId: null, review: null,
+  busy: false, notice: 'NONE',
+});
+
+export function createPublicAuthoringController({ transport, isCurrent, newCommandId = mintPublicCommandId }: PublicAuthoringControllerOptions): PublicAuthoringController {
+  const listeners = new Set<() => void>();
+  let state: PublicAuthoringState = CLOSED;
+  let retired = false;
+  let ticket = 0;
+  // One command per act and target until a definite answer: a retry after a lost answer is the SAME command.
+  const commands = new Map<string, string>();
+  const commandFor = (act: string) => {
+    const existing = commands.get(act);
+    if (existing) return existing;
+    const fresh = newCommandId();
+    commands.set(act, fresh);
+    return fresh;
+  };
+  const settle = (act: string) => { commands.delete(act); };
+
+  const live = () => !retired && isCurrent();
+  const publish = (next: Partial<PublicAuthoringState>) => {
+    if (!live()) return;
+    state = Object.freeze({ ...state, ...next });
+    for (const listener of Array.from(listeners)) listener();
+  };
+
+  async function loadWorkspace(): Promise<void> {
+    const mine = ++ticket;
+    publish({ screen: 'WORKSPACE', status: 'LOADING', experienceId: null, review: null, sources: null, selected: [] });
+    if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
+    const [drafts, requests] = await Promise.all([transport.drafts(), transport.approvalRequests()]);
+    if (mine !== ticket) return;
+    if (drafts.kind !== 'ANSWER' || requests.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
+    publish({ status: 'READY', drafts: drafts.value, requests: requests.value });
+  }
+
+  async function loadSources(experienceId: string): Promise<void> {
+    const mine = ++ticket;
+    publish({ screen: 'CHOOSE', status: 'LOADING', experienceId, review: null, selected: [] });
+    if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
+    const sources = await transport.sources();
+    if (mine !== ticket) return;
+    if (sources.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
+    publish({ status: 'READY', sources: sources.value });
+  }
+
+  async function loadReview(experienceId: string): Promise<void> {
+    const mine = ++ticket;
+    publish({ screen: 'REVIEW', status: 'LOADING', experienceId });
+    if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
+    const review = await transport.review(experienceId);
+    if (mine !== ticket) return;
+    if (review.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
+    // A Draft that has no package yet goes straight to choosing its material.
+    if (review.value.state === 'NO_PACKAGE' && review.value.lifecycle === 'DRAFT') { await loadSources(experienceId); return; }
+    publish({ status: 'READY', review: review.value });
+  }
+
+  async function act(work: () => Promise<void>): Promise<void> {
+    if (state.busy || !transport) return;
+    publish({ busy: true, notice: 'NONE' });
+    try {
+      await work();
+    } finally {
+      publish({ busy: false });
+    }
+  }
+
+  const reloadCurrent = () => {
+    if (state.screen === 'REVIEW' && state.experienceId) return loadReview(state.experienceId);
+    if (state.screen === 'CHOOSE' && state.experienceId) return loadSources(state.experienceId);
+    return loadWorkspace();
+  };
+
+  return {
+    getState: () => state,
+    subscribe(listener) {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    open() { void loadWorkspace(); },
+    close() { ticket += 1; publish({ ...CLOSED }); },
+    back() {
+      if (state.screen === 'WORKSPACE') { ticket += 1; publish({ ...CLOSED }); return; }
+      void loadWorkspace();
+    },
+    refresh() { void reloadCurrent(); },
+    startDraft() {
+      void act(async () => {
+        const key = 'START';
+        const answer = await transport!.startDraft(commandFor(key));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        settle(key);
+        await loadSources(answer.value.experienceId);
+      });
+    },
+    openDraft(experienceId) { void loadReview(experienceId); },
+    toggle(key) {
+      if (state.screen !== 'CHOOSE' || state.busy) return;
+      const has = state.selected.includes(key);
+      if (!has && state.selected.length >= PUBLIC_PACKAGE_MAX_SOURCES) return;
+      publish({ selected: has ? state.selected.filter((k) => k !== key) : [...state.selected, key], notice: 'NONE' });
+    },
+    prepare() {
+      const experienceId = state.experienceId;
+      if (state.screen !== 'CHOOSE' || !experienceId || state.selected.length === 0) return;
+      const selected = [...state.selected];
+      void act(async () => {
+        const personal = selected.filter((k) => k.startsWith('P:')).map((k) => k.slice(2));
+        const shared = selected.filter((k) => k.startsWith('S:')).map((k) => {
+          const [, worldId, materialId] = k.split(':');
+          return { worldId, materialId };
+        });
+        const key = `PREPARE:${experienceId}:${selected.slice().sort().join(',')}`;
+        const answer = await transport!.preparePackage(experienceId, commandFor(key), personal, shared);
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        settle(key);
+        switch (answer.value) {
+          case 'PREPARED':
+          case 'ALREADY_PREPARED':
+          case 'NOT_DRAFT':
+            await loadReview(experienceId);
+            return;
+          case 'NOT_PUBLISHABLE':
+            publish({ notice: 'NOT_PUBLISHABLE' });
+            return;
+          default:
+            // UNAVAILABLE / STALE: what was chosen is no longer there to choose. Ask again.
+            await loadSources(experienceId);
+            publish({ notice: 'ACTION_UNAVAILABLE' });
+        }
+      });
+    },
+    approve(manifestId) {
+      void act(async () => {
+        const key = `APPROVE:${manifestId}`;
+        const answer = await transport!.approve(manifestId, commandFor(key));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        settle(key);
+        await reloadCurrent();
+        publish({ notice: answer.value === 'APPROVED' ? 'APPROVED' : answer.value === 'ALREADY_DECIDED' ? 'NONE' : 'ACTION_UNAVAILABLE' });
+      });
+    },
+    withdraw(manifestId) {
+      void act(async () => {
+        const key = `WITHDRAW:${manifestId}`;
+        const answer = await transport!.withdraw(manifestId, commandFor(key));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        settle(key);
+        await reloadCurrent();
+        publish({ notice: answer.value === 'UNAVAILABLE' ? 'ACTION_UNAVAILABLE' : 'WITHDRAWN' });
+      });
+    },
+    markReady() {
+      const experienceId = state.experienceId;
+      if (state.screen !== 'REVIEW' || !experienceId) return;
+      void act(async () => {
+        const key = `READY:${experienceId}`;
+        const answer = await transport!.ready(experienceId, commandFor(key));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        settle(key);
+        await loadReview(experienceId);
+        publish({
+          notice: answer.value === 'READY_FOR_REVIEW' || answer.value === 'ALREADY_READY' ? 'NONE'
+            : answer.value === 'APPROVALS_INCOMPLETE' ? 'APPROVALS_INCOMPLETE' : 'ACTION_UNAVAILABLE',
+        });
+      });
+    },
+    retire() {
+      retired = true;
+      listeners.clear();
+    },
+  };
+}
