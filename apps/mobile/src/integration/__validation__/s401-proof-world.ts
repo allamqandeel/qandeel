@@ -68,6 +68,7 @@
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { MobilePublicConfig, RuntimeHttpFetch, SupabaseAuthPort } from '../../runtime-entry';
 import { S401_ACCOUNT_IDENTITY, S401_ACCOUNT_PUBLIC_ID } from '../__fixtures__/s401-account-identity';
+import { fixtureExperience, fixtureField, fixtureSearch } from './s503b-visual-field';
 import { createVport01ProofWorld } from './vport01-proof-world';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
@@ -156,6 +157,8 @@ export interface S401ProofWorld {
   peerDelete(): void;
   /** S5-01: releases the Public World entries held at this moment (each answers ALLOW). */
   publicAllow(): void;
+  /** S5-03B: the Public field answers from the SYNTHETIC visual-review fixture (`s503b-visual-field.ts`). */
+  publicSeed(): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
@@ -165,6 +168,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   // S5-01: the held Public World entries, and the reader's Public display mode.
   let publicReleases: (() => void)[] = [];
   let publicMode: 'PSEUDONYM' | 'REAL_NAME' = 'PSEUDONYM';
+  // S5-03B: off until public/seed, so every earlier leg meets the field exactly as before.
+  let publicField = false;
   // S5-02: the reader's Drafts — the chosen source, the reader's own approval, the lifecycle (never past READY_FOR_REVIEW).
   const drafts: { experienceId: string; manifestId: string | null; lifecycle: 'DRAFT' | 'READY_FOR_REVIEW'; approval: 'MISSING' | 'EFFECTIVE' | 'WITHDRAWN' }[] = [];
   const ownSourceId = '54020000-0000-4000-8000-000000000001';
@@ -503,6 +508,13 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       return json(200, { mode: publicMode, label: publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId, realNameAvailable: true });
     }
     if (path === '/public/authoring' || path.startsWith('/public/authoring/')) return authoring(path, method);
+    if (publicField && method === 'GET' && (path === '/public/field' || path.startsWith('/public/field/'))) {
+      const query = input.includes('?') ? input.slice(input.indexOf('?') + 1) : '';
+      if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, answer) : json(400, {}); }
+      if (path === '/public/field/search') return json(200, fixtureSearch(decodeURIComponent((/(?:^|&)q=([^&]*)/u.exec(query)?.[1] ?? '').replace(/\+/gu, ' '))));
+      const panel = /^\/public\/field\/experiences\/([^/]+)$/u.exec(path);
+      if (panel) return json(200, fixtureExperience(decodeURIComponent(panel[1])));
+    }
     if (path === '/shared' || path.startsWith('/shared/')) {
       return shared(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     }
@@ -525,6 +537,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       for (const release of pending) release();
     },
     revoke: () => { for (const world of worlds) world.current = false; },
+    publicSeed: () => { publicField = true; },
     publicAllow: () => {
       const pending = publicReleases;
       publicReleases = [];
