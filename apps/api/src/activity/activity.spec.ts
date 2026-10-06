@@ -90,7 +90,8 @@ describe('A3-01 ActivityService — the feed', () => {
     const { items } = await new ActivityService(repo).page(USER, TOKEN, {});
     expect(items[0]).toMatchObject({ waiting: true, stale: false, mark: true, entry: 'AVAILABLE' });
     expect(items[1]).toMatchObject({ stale: true, mark: false, entry: 'UNAVAILABLE' });
-    expect(items[2]).toMatchObject({ muted: true, mark: false, entry: 'UNAVAILABLE' });
+    // S4-04: a Shared World row is a Direct Entry (re-authorized at open); muting silences it and changes nothing else.
+    expect(items[2]).toMatchObject({ muted: true, mark: false, entry: 'AVAILABLE' });
     expect(JSON.stringify(items)).not.toMatch(/context_ref|w1|entry_ref|source|candidate|member/u);
   });
 
@@ -155,8 +156,8 @@ describe('A3-01 ActivityService — attention state never resolves anything; Dir
     await expect(open(opened('GENERAL_SETTINGS', 'SECURITY', 'ACCOUNT'))).resolves.toEqual({ outcome: 'ENTER', destination: { kind: 'GENERAL_SETTINGS', section: 'SECURITY' } });
   });
 
-  it('Stage 4–8 destinations stay typed but fail closed', async () => {
-    for (const destination of ['SHARED_WORLD', 'PUBLIC_WORLD', 'INTRODUCTIONS', 'REPLAY']) {
+  it('Stage 5–8 destinations (and Replay, Stage 7) stay typed but fail closed', async () => {
+    for (const destination of ['PUBLIC_WORLD', 'INTRODUCTIONS', 'REPLAY']) {
       await expect(open(opened(destination, 'ref', 'SHARED_WORLD'))).resolves.toEqual({ outcome: 'UNAVAILABLE', fallback: null });
     }
   });

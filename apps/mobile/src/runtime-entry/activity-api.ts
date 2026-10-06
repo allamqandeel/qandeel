@@ -72,7 +72,9 @@ export interface ActivityAttentionSnapshot extends ActivityIndicators {
 export type DirectEntryDestination =
   | { readonly kind: 'PERSONAL_CONVERSATION' }
   | { readonly kind: 'QANDEEL_UNDERSTANDING' }
-  | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection };
+  | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection }
+  /** S4-04: the exact Shared World, already re-authorized at open; the device opens it through the Shared entry authority. */
+  | { readonly kind: 'SHARED_WORLD'; readonly worldId: string };
 
 export type ActivityOpenOutcome =
   | { readonly kind: 'ENTER'; readonly destination: DirectEntryDestination }
@@ -185,6 +187,9 @@ function decodeDestination(value: unknown): DirectEntryDestination | null | unde
   if (value === null) return null;
   if (!isRecord(value)) return undefined;
   if (value.kind === 'PERSONAL_CONVERSATION' || value.kind === 'QANDEEL_UNDERSTANDING') return hasExactly(value, ['kind']) ? { kind: value.kind } : undefined;
+  if (value.kind === 'SHARED_WORLD' && hasExactly(value, ['kind', 'worldId']) && typeof value.worldId === 'string' && UUID.test(value.worldId)) {
+    return { kind: 'SHARED_WORLD', worldId: value.worldId };
+  }
   if (value.kind === 'GENERAL_SETTINGS' && hasExactly(value, ['kind', 'section']) && ['SECURITY', 'ACCOUNT', 'NOTIFICATIONS'].includes(value.section as string)) {
     return { kind: 'GENERAL_SETTINGS', section: value.section as SettingsSection };
   }

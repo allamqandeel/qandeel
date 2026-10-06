@@ -30,6 +30,7 @@ import {
 import { createManualForegroundSignal, type ForegroundState, type ManualForegroundSignal } from '../../runtime-entry';
 import { createEphemeralProductRecoveryStorage, type ProductRecoveryStorage } from '../../recovery';
 import { createEphemeralPushDeviceStore, createInertPushPlatformPort, type PushDeviceStore, type PushPlatformPort } from '../../push';
+import { NO_SHARED_LINKS, type SharedLinkSource } from '../../shared-world';
 import {
   createEphemeralAppearancePreferenceStore,
   type AppearancePreferenceStore,
@@ -86,6 +87,8 @@ export interface HarnessOptions {
   readonly nativeAppearance?: NativeAppearanceSink;
   readonly pushPlatform?: PushPlatformPort;
   readonly pushDeviceStore?: PushDeviceStore;
+  /** S4-04: where QANDEEL links arrive from; none unless a test brings its own. */
+  readonly sharedLinks?: SharedLinkSource;
 }
 
 /**
@@ -119,6 +122,7 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
     // A3-02: no notification system and an in-memory installation, unless a test brings its own.
     pushPlatform: options.pushPlatform ?? createInertPushPlatformPort(),
     pushDeviceStore: options.pushDeviceStore ?? createEphemeralPushDeviceStore(),
+    sharedLinks: options.sharedLinks ?? NO_SHARED_LINKS,
   });
   if (!built.ok) throw new Error(`the harness could not build a runtime: ${built.phase.detail}`);
   const runtime = built.runtime;

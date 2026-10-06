@@ -13,6 +13,7 @@ import { BackHandler, StyleSheet } from 'react-native';
 import { SafeAreaProvider, type Metrics } from 'react-native-safe-area-context';
 
 import { exchange, historyBody } from '../../conversation/__fixtures__/conversation';
+import { createEphemeralPushDeviceStore } from '../../push';
 import { fill, sharedCopy } from '../../shared-world';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
 import { deviceProductLocale } from '../locale/device-locale';
@@ -52,7 +53,9 @@ function serve(h: IntegrationHarness, s: SharedServer) {
 }
 
 async function world(s: SharedServer): Promise<{ h: IntegrationHarness; view: RenderResult }> {
-  const h = await harness({ initialSession: { userId: 'amal', accessToken: 'token-a' } });
+  // S4-04: entering a World is a legitimate moment for the notification education; these journeys are about navigation,
+  // so "Not now" was already chosen on this device (the education itself is proven by the S4-04 suite).
+  const h = await harness({ initialSession: { userId: 'amal', accessToken: 'token-a' }, pushDeviceStore: createEphemeralPushDeviceStore({ declined: true }) });
   serve(h, s);
   const view = await render(
     <SafeAreaProvider initialMetrics={METRICS}>

@@ -20,3 +20,7 @@ export type { SharedClosedState, SharedManageNotice, SharedManageState, SharedSe
 export { SHARED_CONVERSATION_COPY_GATE, sharedConversationCopy } from './conversation-copy';
 export type { SharedIdController, SharedIdState, SharedIdTransport } from './shared-id-controller';
 export { createSharedIdController } from './shared-id-controller';
+export type { SharedAlertsController, SharedAlertsState, SharedAlertsTransport } from './shared-alerts-controller';
+export { createSharedAlertsController } from './shared-alerts-controller';
+export type { SharedLinkInbox, SharedLinkSource } from './shared-link';
+export { NO_SHARED_LINKS, createSharedLinkInbox, sharedWorldOfLink } from './shared-link';

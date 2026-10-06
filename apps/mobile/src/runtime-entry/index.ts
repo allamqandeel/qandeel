@@ -154,7 +154,7 @@ export type {
   SharedApproveResult, SharedClosedWorld, SharedClosedWorldResult, SharedHistoryApproveResult, SharedHistoryCandidate, SharedHistoryCandidatesResult,
   SharedHistoryRequest, SharedLeaveResult, SharedLifecycleMember, SharedManage, SharedManageResult, SharedOwnMaterial, SharedOwnMaterialResult,
   SharedProposal, SharedProposeResult, SharedSettingsValues, SharedMemberRequest, SharedProposeMemberResult, SharedJoinResult,
-  SharedFormerHistoryRequest, SharedFormerHistoryResult,
+  SharedFormerHistoryRequest, SharedFormerHistoryResult, SharedWorldAlert, SharedAlertsResult, SharedSetAlertsResult,
 } from './shared-world-api';
 export { SharedWorldApiClient } from './shared-world-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';

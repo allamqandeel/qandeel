@@ -23,7 +23,7 @@ name: S4 proof — Shared World reachability, invitation and birth
 # Scoped to the S4-01 branch and manual dispatch: it proves those heads and is inert everywhere else.
 on:
   push:
-    branches: ['feat/s4-01-shared-world-reachability-invitation-birth', 'feat/s4-02-shared-conversation-material', 'feat/s4-03-shared-lifecycle-governance']
+    branches: ['feat/s4-01-shared-world-reachability-invitation-birth', 'feat/s4-02-shared-conversation-material', 'feat/s4-03-shared-lifecycle-governance', 'feat/s4-04-shared-activity-notifications-direct-entry']
     paths:
       - 'apps/mobile/**'
       - 'scripts/phase-m/**'

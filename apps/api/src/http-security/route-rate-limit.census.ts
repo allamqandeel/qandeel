@@ -122,6 +122,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /shared/own-material/history-shares/:worldId/:packageId/approve': 'AUTHENTICATED',
   'GET /shared/own-material/before/:materialId/:establishedAt': 'AUTHENTICATED',
   'POST /shared/own-material/:worldId/:materialId/delete': 'AUTHENTICATED',
+  // S4-04 — the per-World Shared alerts (0141): the reader's own mute rows; no content, no fan-out.
+  'GET /shared/alerts': 'AUTHENTICATED',
+  'PUT /shared/worlds/:worldId/alerts': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

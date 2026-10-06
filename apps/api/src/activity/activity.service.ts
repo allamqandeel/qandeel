@@ -154,8 +154,19 @@ export class ActivityService {
         if (!(SETTINGS_SECTIONS as readonly string[]).includes(row.entry_ref ?? '')) throw new Error('ACTIVITY_OPEN_MALFORMED');
         return { outcome: 'ENTER', destination: { kind: 'GENERAL_SETTINGS', section: row.entry_ref as SettingsSection } };
       }
-      // Typed future destinations (Shared / Public / Introductions / Replay): no production surface and no authority seam
-      // exists yet, so they fail closed. Their Stage owns opening them.
+      // S4-04 — the exact Shared World, never a guessed one (D39): it opens only when the Shared domain's own entry
+      // verdict, asked NOW on the caller's token, is ALLOW for exactly this World (D38). Otherwise — left, removed,
+      // ended, never theirs — it fails closed with no fallback and no detail. The device then opens it through the same
+      // Shared entry authority, which resolves it again before anything of the World is drawn.
+      if (destination === 'SHARED_WORLD') {
+        const worldId = row.entry_ref;
+        if (row.context_kind !== 'SHARED_WORLD' || worldId === null || worldId !== row.context_ref || !UUID.test(worldId)) throw new Error('ACTIVITY_OPEN_MALFORMED');
+        const [verdict] = await this.repository.sharedEntry(token, worldId);
+        if (verdict?.outcome === 'ALLOW' && verdict.world_id === worldId) return { outcome: 'ENTER', destination: { kind: 'SHARED_WORLD', worldId } };
+        return { outcome: 'UNAVAILABLE', fallback: null };
+      }
+      // Typed future destinations (Public / Introductions / Replay): no production surface and no authority seam exists
+      // yet, so they fail closed. Their Stage owns opening them (Replay: Stage 7).
       return { outcome: 'UNAVAILABLE', fallback: null };
     });
   }

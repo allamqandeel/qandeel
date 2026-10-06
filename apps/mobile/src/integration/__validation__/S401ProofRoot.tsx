@@ -33,6 +33,7 @@ import { Linking, StyleSheet, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 
+import { createEphemeralPushDeviceStore, createInertPushPlatformPort } from '../../push';
 import { createEphemeralProductRecoveryStorage } from '../../recovery';
 import { createManualForegroundSignal } from '../../runtime-entry';
 import { PRODUCT_ROOT_TEST_ID, RuntimePhaseSurface } from '../composition/ProductRoot';
@@ -49,6 +50,11 @@ function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
     httpFetch: world.fetch,
     foreground: createManualForegroundSignal('INACTIVE'),
     recoveryStorage: createEphemeralProductRecoveryStorage(),
+    // S4-04: the first legitimate Shared entry offers the notification education (proven deterministically in Jest). These
+    // journeys prove Shared navigation, conversation and lifecycle, so the device's notification system is the inert one
+    // and "Not now" was already chosen on this proof installation: the education never covers a World here.
+    pushPlatform: createInertPushPlatformPort(),
+    pushDeviceStore: createEphemeralPushDeviceStore({ declined: true }),
   });
   if (!built.ok) throw new Error(`the S4-01 proof runtime could not be built: ${built.phase.detail}`);
   return built.runtime;
