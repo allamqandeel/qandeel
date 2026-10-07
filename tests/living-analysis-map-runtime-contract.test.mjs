@@ -46,9 +46,13 @@ const PRODUCTION_FILES = [
   'projection/map-scene.ts',
   'renderer/MapCanvas.tsx',
   'renderer/MapSurface.tsx',
+  // S5-03B Phase 1: the generic Living Analysis World seam, extracted verbatim from MapCanvas / MapSurface (the
+  // Personal golden equivalence suite proves the Personal Map paints and behaves exactly as before).
+  'renderer/WorldCanvas.tsx',
   'renderer/index.ts',
   'renderer/map-geometry.ts',
   'renderer/render-style.ts',
+  'renderer/useWorldSurface.ts',
   // VPORT-01: the final world's EXPRESSION — material, morphology, distance response and the two
   // generated modules it reads. Paint only: none of these files is an input to scene membership,
   // placement, hit testing, accessibility or any act (asserted by the VPORT-01 contract).

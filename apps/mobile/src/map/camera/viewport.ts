@@ -99,12 +99,12 @@ export function exactPoints(points: number): bigint {
 }
 
 /** Exact world distance covered by `points` presentation points at this scale. */
-export function worldDeltaForPoints(camera: MapCamera, points: number): bigint {
+export function worldDeltaForPoints(camera: ViewScale, points: number): bigint {
   return roundDiv(exactPoints(points) * camera.scale.numerator, POINT_SUBDIVISION * camera.scale.denominator);
 }
 
 /** Finite presentation distance covered by an exact world delta, or `null` when unrepresentable. */
-export function pointsForWorldDelta(camera: MapCamera, delta: bigint): number | null {
+export function pointsForWorldDelta(camera: ViewScale, delta: bigint): number | null {
   return ratioToFinite(delta * camera.scale.denominator, camera.scale.numerator, FINITE_PROJECTION_LIMIT_POINTS);
 }
 
@@ -113,7 +113,7 @@ export function pointsForWorldDelta(camera: MapCamera, delta: bigint): number | 
  * delta from the anchor is divided by the exact scale, and only then becomes a `number`.
  * `null` means "not finitely representable from this camera", never "at the edge".
  */
-export function projectAddress(camera: MapCamera, envelope: ViewportEnvelope, address: CanonicalWorldAddress): ScreenPoint | null {
+export function projectAddress(camera: ViewAnchorScale, envelope: ViewportEnvelope, address: CanonicalWorldAddress): ScreenPoint | null {
   const dx = pointsForWorldDelta(camera, address.x - camera.anchor.x);
   const dy = pointsForWorldDelta(camera, address.y - camera.anchor.y);
   if (dx === null || dy === null) return null;
@@ -126,7 +126,7 @@ export function projectAddress(camera: MapCamera, envelope: ViewportEnvelope, ad
  * The inverse transform. Fails closed outside the canonical coordinate bound: a screen point
  * that would name a non-canonical coordinate is not an address, and is never clamped into one.
  */
-export function unprojectPoint(camera: MapCamera, envelope: ViewportEnvelope, point: ScreenPoint): CanonicalWorldAddress | null {
+export function unprojectPoint(camera: ViewAnchorScale, envelope: ViewportEnvelope, point: ScreenPoint): CanonicalWorldAddress | null {
   if (!Number.isFinite(point.x) || !Number.isFinite(point.y)) return null;
   const center = envelopeCenter(envelope);
   const x = camera.anchor.x + worldDeltaForPoints(camera, point.x - center.x);
@@ -140,7 +140,7 @@ export function unprojectPoint(camera: MapCamera, envelope: ViewportEnvelope, po
  * it is clamped to the canonical coordinate bound so that it stays representable, and clamping
  * it changes nothing canonical — no Home, no anchor, no scale, no depth, no RH.
  */
-export function visibleFootprint(camera: MapCamera, envelope: ViewportEnvelope): WorldFootprint {
+export function visibleFootprint(camera: ViewAnchorScale, envelope: ViewportEnvelope): WorldFootprint {
   const halfWidth = worldDeltaForPoints(camera, safeAreaWidth(envelope) / 2);
   const halfHeight = worldDeltaForPoints(camera, safeAreaHeight(envelope) / 2);
   return Object.freeze({
@@ -176,13 +176,22 @@ export function footprintEquals(a: WorldFootprint, b: WorldFootprint): boolean {
  * keep and nothing to resolve. A depth-only change is exactly that case: the rung is disclosure,
  * and disclosure is not a camera move.
  */
+/**
+ * S5-03B Phase 1 — what the projection reads of a camera: where it looks, how far, and (for a transition) which rung it
+ * is on. `MapCamera` is one; any world surface camera with the same three facts projects through the same math.
+ */
+export type WorldViewCamera = Pick<MapCamera, 'anchor' | 'scale'> & { readonly depth: string };
+/** The two facts a point-to-world conversion reads. */
+type ViewScale = Pick<MapCamera, 'scale'>;
+type ViewAnchorScale = Pick<MapCamera, 'anchor' | 'scale'>;
+
 export interface CanonicalCameraTransition {
   readonly k: number;
   readonly destination: ScreenPoint | null;
   readonly depthChanged: boolean;
 }
 
-export function cameraTransition(before: MapCamera, after: MapCamera, envelope: ViewportEnvelope): CanonicalCameraTransition | null {
+export function cameraTransition(before: WorldViewCamera, after: WorldViewCamera, envelope: ViewportEnvelope): CanonicalCameraTransition | null {
   if (worldAddressEquals(before.anchor, after.anchor) && mapScaleEquals(before.scale, after.scale)) return null;
   const kNumerator = Number(after.scale.denominator * before.scale.numerator);
   const kDenominator = Number(after.scale.numerator * before.scale.denominator);

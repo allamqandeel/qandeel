@@ -29,8 +29,14 @@ const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorld
 
 const visual = Object.fromEntries([...GENERATED, ...HAND_WRITTEN].map((file) => [file, read(`${VISUAL_DIR}/${file}`)]));
 const visualCode = Object.fromEntries(HAND_WRITTEN.map((file) => [file, stripComments(visual[file])]));
-const canvas = stripComments(read('apps/mobile/src/map/renderer/MapCanvas.tsx'));
-const surface = stripComments(read('apps/mobile/src/map/renderer/MapSurface.tsx'));
+// S5-03B Phase 1 (controlled re-anchor, after the Personal golden equivalence proof): MapCanvas remains the Personal
+// owner of the Map's paint and delegates, verbatim, to the generic world composition in WorldCanvas.tsx; MapSurface
+// delegates its presentation mechanics to useWorldSurface.ts. The world's rules are asserted on the owner TOGETHER WITH
+// the seam its code now lives in; none is weakened.
+const personalCanvasOwner = stripComments(read('apps/mobile/src/map/renderer/MapCanvas.tsx'));
+const worldCanvas = stripComments(read('apps/mobile/src/map/renderer/WorldCanvas.tsx'));
+const canvas = `${personalCanvasOwner}\n${worldCanvas}`;
+const surface = stripComments(read('apps/mobile/src/map/renderer/MapSurface.tsx')) + '\n' + stripComments(read('apps/mobile/src/map/renderer/useWorldSurface.ts'));
 
 test('the closed I-08B1 source is untouched, and the generated world is current and reproducible', () => {
   const sha = createHash('sha256').update(readFileSync(new URL(I08B1, root))).digest('hex');
@@ -113,8 +119,14 @@ test('the world is derived from the presented scene, and the only relation drawn
   assert.equal((canvas.match(/<WorldObject\b/gu) ?? []).length, 1);
   assert.equal((canvas.match(/<RegisterMark\b/gu) ?? []).length, 1);
   assert.equal((canvas.match(/<WorldTether\b/gu) ?? []).length, 1);
-  assert.match(canvas, /planeNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?<WorldObject/u);
-  assert.match(canvas, /registerNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?<RegisterMark/u);
+  // S5-03B Phase 1: the generic canvas maps every presented plane node to ONE object and every register node to ONE
+  // register entry; the Personal owner says what each is: a WorldObject, a RegisterMark.
+  assert.match(worldCanvas, /planeNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?\{renderObject\(node, frame\)\}/u);
+  assert.match(worldCanvas, /registerNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?\{renderRegister\?\.\(node, frame\)\}/u);
+  assert.match(personalCanvasOwner, /renderObject=\{\(node, \{ S, response \}\) => \(\s*\n\s*<WorldObject/u);
+  assert.match(personalCanvasOwner, /renderRegister=\{\(node, \{ S \}\) => \(\s*\n\s*<RegisterMark/u);
+  // The generic canvas paints no object of its own: what an object IS stays the projection's.
+  assert.equal(/<WorldObject|<RegisterMark|<WorldTether|<WorldMark\b/u.test(worldCanvas), false, 'the generic canvas names no object family');
   // The tether is drawn only for a contextual appearance, only from the Home that hosts it in THIS placement.
   const tetherBlock = canvas.slice(canvas.indexOf("node.locus?.kind === 'CONTEXTUAL_APPEARANCE'"), canvas.indexOf('<WorldTether'));
   assert.match(tetherBlock, /const host = hostOf\(node, placed\);\s*\n\s*if \(host === undefined\) return null;/u);

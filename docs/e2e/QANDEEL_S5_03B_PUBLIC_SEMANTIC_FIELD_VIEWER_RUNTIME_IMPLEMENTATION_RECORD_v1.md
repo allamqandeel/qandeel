@@ -436,3 +436,51 @@ the search; pan and Semantic Zoom each re-run it and drop a withdrawn result; a 
 on a pan; on the surface, a withdrawn search result is neither drawn — no row, no mark, no body — nor focusable after the
 whole World). Mutation check: against the R1 controller, 4 of the 5 new tests fail. S5-03B static contract 10 / 10
 (test 10 pins R2). Mobile `tsc` PASS. Not re-run: the 0145 PostgreSQL verifier and the DB loops (no DB change).
+
+## 22. Product Visual Review → architectural unification, Phase 1 (2026-10-07)
+
+**Product Owner decision.** After the device renders (§21 head `1fa7556`), the Product Owner stopped visual polish on
+`PublicFieldWorld` and decided that Public World has no visual world of its own: it uses the SAME Stage-2 Living
+Analysis renderer, world surface, camera physics, pan, Semantic Zoom and FAR / MID / NEAR grammar, fed by a
+Public-specific projection. Approved: **D1** the same world-unit presentation scale and `DEFAULT_MAP_SCALE` for Public
+(1,000,000 units is a presentation spacing convention, NOT a semantic truth unit — semantic similarity stays the
+`PublicSpatialPlacer`'s); **D2** a neutral circle, for now, inside the shared material (no new token family); **D3** MID
+labels stay a Public RN overlay (no text in the canonical renderer); **D4** a controlled VPORT-02 re-anchor only after
+golden equivalence. Two phases; Phase 2 (Public adoption, deleting `PublicFieldWorld` and the duplicate camera math)
+waits for the Product Owner's approval of Phase 1.
+
+**Phase 1 — generic extraction only (no Public adoption, no Personal change).**
+
+- *Golden equivalence first* (`apps/mobile/src/map/__tests__/golden-equivalence.test.tsx`, committed in `7fbc93f`
+  BEFORE any source change): the production `MapSurface` over a real canonical store and `MapCanvas` under the
+  presentation-camera stub, across FAR / MID / NEAR, Homes, contextual appearances and tethers, the register,
+  selection (Home, identity everywhere, named appearance), an arrival (surface and canvas, from-host and local, reduced
+  motion), a travel in progress, the empty world, a stale context, increased contrast and reduced motion — 14 cases,
+  every Skia stand-in element in order with every prop, pinned in `__golden__/personal-map.golden.json`. Each
+  case was checked to differ from its baseline (contrast changes the material, reduced motion holds the strata).
+- *The seam* (moved verbatim; comments travel with the code):
+  - `map/renderer/WorldCanvas.tsx` — the world composition (tone, ground, strata, plane, one atmosphere per PLACE,
+    arrivals, counter-scale, `PresentationCameraRebase` as the last plane child, veil, register). What a node IS is
+    the projection's: `isPlace`, `hostOf`, `renderConnections`, `renderObject`, `renderRegister`.
+  - `map/renderer/useWorldSurface.ts` — `useWorldMotion` (presentation camera, travel / drag corridor) and
+    `useWorldFrame` (camera commit and rebase, presentation culling, the membership record, the residual-true
+    `nodeAt`), called at the two places `MapSurface` always did that work so every effect keeps its order. The
+    authority is any identity (`owner`); the Personal owner passes its store.
+  - `map/visual/WorldMarks.tsx` — `WorldMark`: the world's mark MATERIAL (tier ground, light, NEAR limb and core,
+    SELECTED marker) apart from its SHAPE; `WorldObject` supplies a family's morphology.
+  - Type-only: `map/camera/viewport.ts` reads a structural `WorldViewCamera` (anchor, scale, depth);
+    `hitTest` is generic over `{ x, y, radius }`.
+- *Personal owners unchanged in role and signature:* `MapCanvas` (Personal paint: Thread Home = place, Reading
+  appearance tethered to its Home, family morphologies) and `MapSurface` (store, the ONE freshness rule, gestures,
+  inspection, accessible Map). `LivingAnalysisMap` untouched. The generic files import no `state`, `CanonicalStore`,
+  `projection`, `inspection` or accessibility (S5-03B contract test 11).
+- *Controlled re-anchors* (no invariant weakened; each now asserted on the owner together with the seam its code moved
+  to): VPORT-02 byte pins (MapCanvas, MapSurface, WorldMarks, visual barrel; WorldCanvas and useWorldSurface added),
+  VPORT-01 canvas assertions, T-10 (11 assertions), T-11 (1), the Living Analysis Map authorized file list (+2 files).
+
+**Phase 1 validation.** Golden equivalence 16 / 16 (mutation: moving the tethers fails 11 cases, swapping one halo profile
+fails 12). Map + motion Jest 27 suites / 268 tests; full mobile Jest 2249 / 2255 — the 6 failures are the pre-existing
+ar-EG host-locale baseline (`w2-account-access`, `depth`). Mobile `tsc` PASS; eslint clean on the changed files.
+Contracts: VPORT-01 9 / 9, VPORT-02 9 / 9, T-10 31 / 31, T-11 27 / 27, T-12 6 / 6, T-12P 23 / 23, S5-03B 11 / 11, Living
+Analysis Map runtime 15 / 15 (with this workstation's ignored `apps/mobile/android/` prebuild moved aside; with it in
+place the one "no generated native project" check fails, as before), task-closure governance 24 / 24. No DB, API, migration, copy or Public change; the 0145 verifier and DB loops were not re-run.

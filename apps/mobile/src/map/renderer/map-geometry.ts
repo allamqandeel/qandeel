@@ -181,8 +181,11 @@ export function placeScene(scene: MapScene, camera: MapCamera, envelope: Viewpor
  * can be hit: a future, off-depth or unavailable identity is not in the scene at all, so it is
  * unreachable by a tap exactly as it is unreachable by the eye.
  */
-export function hitTest(placed: PlacedScene, point: ScreenPoint): PlacedNode | null {
-  let best: PlacedNode | null = null;
+export function hitTest<N extends { readonly x: number; readonly y: number; readonly radius: number } = PlacedNode>(
+  placed: { readonly visibleNodes: readonly N[] },
+  point: ScreenPoint,
+): N | null {
+  let best: N | null = null;
   let bestDistance = Number.POSITIVE_INFINITY;
   for (const node of placed.visibleNodes) {
     const dx = point.x - node.x;

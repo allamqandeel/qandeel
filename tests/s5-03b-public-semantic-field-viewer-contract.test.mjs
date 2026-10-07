@@ -228,3 +228,34 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
   for (const file of FIELD_FILES) assert.equal(code(`${MOBILE}/${file}`).includes('AppState'), false, `${file} installs no second lifecycle listener`);
   assert.ok(read(RECORD).includes("OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision"), 'scale is not self-assigned');
 });
+
+test('11 — Phase 1: ONE generic Living Analysis World seam, extracted from Stage 2; the Personal Map is unchanged and Public has not adopted it yet', () => {
+  const RENDERER = `${MOBILE}/map/renderer`;
+  const worldCanvas = code(`${RENDERER}/WorldCanvas.tsx`);
+  const worldSurface = code(`${RENDERER}/useWorldSurface.ts`);
+  // The generic layer reads no Personal truth: no canonical store, no Personal state, no disclosure, no inspection,
+  // no accessible Map, and it dispatches nothing.
+  for (const [file, text] of [['WorldCanvas.tsx', worldCanvas], ['useWorldSurface.ts', worldSurface]]) {
+    assert.doesNotMatch(text, /from '\.\.\/\.\.\/state'|from '\.\.\/projection'|from '\.\.\/inspection'|from '\.\.\/accessibility'|CanonicalStore|useSyncExternalStore|dispatch\(|MapScene|InspectionRef|THREAD|READING|EMERGING_FOCUS/u, `${file} reads no Personal truth`);
+  }
+  // The rebase is still issued from INSIDE the Skia root, as the LAST child of the plane, after the positions.
+  assert.match(worldCanvas, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*\n\s*<\/Group>\s*\n\s*<\/Group>\s*\n\s*<\/WorldTone>/u);
+  // The element keys the arrival registry is keyed by are unchanged.
+  assert.ok(worldCanvas.includes('<WorldPlaceAtmosphere key={`atmosphere:${node.key}`}'), 'place atmosphere keys');
+  assert.ok(worldCanvas.includes('<DisclosureArrival key={node.key} nodeKey={node.key} plan={arrivalOf(node)}'), 'arrival keys');
+  const personalCanvas = code(`${RENDERER}/MapCanvas.tsx`);
+  assert.ok(personalCanvas.includes('key={`tether:${node.key}`}'), 'tether keys');
+  assert.ok(personalCanvas.includes("isPlace={(node) => node.locus?.kind === 'THREAD_HOME'}"), 'a Thread Home is the Personal place');
+  // MapSurface stays the Personal owner: the store, the ONE freshness rule, the gestures, inspection, accessibility.
+  const personalSurface = code(`${RENDERER}/MapSurface.tsx`);
+  for (const owned of ['useSyncExternalStore(store.subscribe, store.getState)', 'mapContextFreshness(state, context)', 'useMapPanGesture(store,', 'useMapSemanticZoomGesture(store,', 'inspectObject(store, context,', '<MapAccessibilityLayer', 'owner: store,']) {
+    assert.ok(personalSurface.includes(owned), `MapSurface still owns ${owned}`);
+  }
+  // The Personal golden equivalence is recorded and enforced (never regenerated in CI).
+  const golden = read(`${MOBILE}/map/__tests__/golden-equivalence.test.tsx`);
+  assert.match(golden, /expect\(produced\[name\]\)\.toEqual\(recorded\[name\]\)/u);
+  assert.ok(existsSync(new URL(`${MOBILE}/map/__tests__/__golden__/personal-map.golden.json`, root)), 'the golden is committed');
+  // No Public adoption in Phase 1: the Public field still paints through its own module, which still exists.
+  assert.ok(existsSync(new URL(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`, root)), 'PublicFieldWorld is not deleted in Phase 1');
+  for (const file of FIELD_FILES) assert.doesNotMatch(code(`${MOBILE}/${file}`), /WorldCanvas|useWorldMotion|useWorldFrame|WorldMark\b/u, `${file} has not adopted the seam yet (Phase 2)`);
+});

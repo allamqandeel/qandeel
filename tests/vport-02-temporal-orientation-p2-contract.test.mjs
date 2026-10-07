@@ -129,12 +129,19 @@ test('the Call Rail is the frozen Keyed Seam, truth-safe, and mounted on no Prod
 });
 
 test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped', () => {
+  // S5-03B Phase 1 — CONTROLLED RE-ANCHOR (Product Owner decision D4, after the Personal golden equivalence proof in
+  // apps/mobile/src/map/__tests__/golden-equivalence.test.tsx, recorded before the extraction): MapCanvas, MapSurface,
+  // WorldMarks and the visual barrel now delegate to the generic Living Analysis World seam, and the two seam files
+  // (WorldCanvas, useWorldSurface) are pinned beside them so the moved code stays frozen too. Previous pins:
+  // MapCanvas 2738a72f, MapSurface 8f90bd39, WorldMarks fd4c9110, visual/index d65150b2.
   for (const [path, blob] of [
-    ['apps/mobile/src/map/renderer/MapCanvas.tsx', '2738a72fe275773e0fca7132cd8b0a2d7809a958'],
-    ['apps/mobile/src/map/renderer/MapSurface.tsx', '8f90bd39915db89af3e0c1c7bd97e26ee9c38d0d'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', 'fd4c91104ef3e589120ef3087c0a6de4a76cf5c3'],
+    ['apps/mobile/src/map/renderer/MapCanvas.tsx', '974f515d0e2fedca69bb74150959c52850a67f1a'],
+    ['apps/mobile/src/map/renderer/MapSurface.tsx', '19440a92db18966f2e35f696c4fccc58fce348e6'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'b3036bfc0290d81e669d23733e3b61a3184ed7ba'],
+    ['apps/mobile/src/map/renderer/useWorldSurface.ts', '40d181413bf76141fe41ff31c78a61bc13ed1b90'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd50652c2eccc6158809916369e66ff111eec1b7b'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', 'bce9df4ab738bc090bb9247dbd5b5a445ca70ad9'],
-    ['apps/mobile/src/map/visual/index.ts', 'd65150b253b7caef81c2314795847d50f251fdc8'],
+    ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],
     ['apps/mobile/src/map/visual/useWorldResponse.ts', '2640e891cfeff3645d9f155f9e888b41d58f3748'],
     ['apps/mobile/src/map/visual/world-field.generated.ts', '1eab16b0c6ec722eacf96c7179c0034bdd10c7af'],
     ['apps/mobile/src/map/visual/world-presentation.ts', 'ca529b14eda1002ac10753ec7196b703d02ad126'],

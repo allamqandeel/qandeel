@@ -14,7 +14,7 @@ export {
   initialCameraIntent,
 } from './camera';
 
-export type { CanonicalCameraTransition, ScreenPoint, ViewportEnvelope, ViewportInsets, WorldFootprint } from './viewport';
+export type { CanonicalCameraTransition, ScreenPoint, ViewportEnvelope, ViewportInsets, WorldFootprint, WorldViewCamera } from './viewport';
 export {
   FINITE_PROJECTION_LIMIT_POINTS,
   POINT_SUBDIVISION,

@@ -41,39 +41,33 @@
  * This component is a truthful mechanics substrate. It is deliberately not mounted in the app
  * shell: the technical container is T-01's and stays byte-identical, and where the Map appears in
  * the Product is a later task's decision.
+ *
+ * S5-03B Phase 1 — the presentation mechanics this surface always ran (one presentation camera, the travel and
+ * drag corridor, the rebase, presentation culling, the membership record and the residual-true pointer) now live
+ * in the generic `useWorldMotion` / `useWorldFrame` (`./useWorldSurface`), called at exactly the two places this
+ * surface performed that work, so every effect still runs in the order it did. This file remains the Personal
+ * owner: the canonical store, the ONE freshness rule, the disclosed scene, the gestures that dispatch into the
+ * store, inspection and the accessible Map are all here and nowhere else. The golden equivalence suite proves the
+ * Personal Map paints exactly what it did.
  */
-import { useCallback, useLayoutEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useMemo, useSyncExternalStore } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import {
-  RESIDUAL_ENVELOPE_AT_REST,
-  createArrivalRegistry,
-  createBox,
-  envelopeHull,
-  expandedEnvelope,
-  isPresentedWithinEnvelope,
-  newlyDisclosedKeys,
-  rebasedEnvelope,
-  residualEnvelope,
-  useAuthorityGeneration,
-  usePresentationCamera,
-  type PresentationCameraBinding,
-  type PresentationMotionCause,
-  type PresentationResidualEnvelope,
-} from '../../motion';
+import { useAuthorityGeneration, type PresentationMotionCause } from '../../motion';
 import type { AnalysisLanguage } from '../../analysis-language';
 import type { CameraIntent, CanonicalStore } from '../../state';
-import { cameraTransition, decodeCameraIntent, envelopeCenter, useMapPanGesture, useMapSemanticZoomGesture, type MapCamera, type ViewportEnvelope } from '../camera';
+import { decodeCameraIntent, useMapPanGesture, useMapSemanticZoomGesture, type MapCamera, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import { mapContextFreshness } from '../projection';
 import { useIncreasedContrast } from '../../conversation/visual/theme';
 import { worldPresentation } from '../visual';
 import type { MapActionOutcome } from '../outcome';
-import { MapCanvas, type CanonicalCameraCommit } from './MapCanvas';
-import { CULL_MARGIN_POINTS, hitTest, placeScene, sceneMembershipKeys, type PlacedNode, type PlacedScene } from './map-geometry';
+import { MapCanvas } from './MapCanvas';
+import { placeScene, sceneMembershipKeys, type PlacedNode } from './map-geometry';
 import { DEFAULT_RENDER_STYLE, type RenderStyle } from './render-style';
+import { useWorldFrame, useWorldMotion } from './useWorldSurface';
 
 export const MAP_SURFACE_TEST_ID = 'qandeel-map-surface';
 export const MAP_SURFACE_PLANE_TEST_ID = 'qandeel-map-surface-plane';
@@ -98,12 +92,6 @@ export interface MapSurfaceProps {
   readonly language?: AnalysisLanguage;
 }
 
-/** Which authority and which canonical camera the last accepted commit was drawn under. */
-interface CameraHistory {
-  readonly owner: CanonicalStore;
-  readonly camera: MapCamera;
-}
-
 export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_STYLE, onOutcome, spatialCause, language = 'en' }: MapSurfaceProps) {
   // Canonical state is READ, never held beside the store: the whole state, because the projection
   // tuple is Session + effective TC + `MC.depth`, and the camera alone cannot tell us whether the
@@ -119,79 +107,9 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     [usable, context.scene, camera, envelope],
   );
 
-  const center = useMemo(() => envelopeCenter(envelope), [envelope]);
-  const diagonalPoints = useMemo(() => Math.hypot(envelope.width, envelope.height), [envelope.width, envelope.height]);
-
-  // Three records with deliberately different lifetimes, held in boxes rather than state: none is
-  // rendering input in its own right, and flipping state from an effect would cost a cascading
-  // render per commit to say something that changes nothing about what is drawn.
-  const [cameraHistory] = useState(() => createBox<CameraHistory | null>(null));
-  const [disclosureHistory] = useState(() => createBox<ReadonlySet<string> | null>(null));
-  const [cameraBox] = useState(() => createBox<PresentationCameraBinding | null>(null));
-  const [arrivals] = useState(() => createArrivalRegistry());
-  // The corridor IS rendering input — it decides what is painted — so unlike the two records above
-  // it is state. Every writer returns the current value unchanged when nothing moved, so React bails
-  // out and an idle world costs no render at all.
-  const [corridor, setCorridor] = useState<PresentationResidualEnvelope>(RESIDUAL_ENVELOPE_AT_REST);
-
-  // R3-02a — the corridor retires when the presentation actually stops.
-  //
-  // Without this the widened candidate set of the LAST movement stays alive for as long as the
-  // surface does: the documented travel is ≤540 ms, but nothing ever narrowed the corridor again, so
-  // an idle world went on paying for a journey it finished long ago. This is Class D and nothing
-  // else — it dispatches nothing, writes no canonical state, names no target, and cannot change what
-  // exists or where the camera is. It only says: the extra candidates are no longer needed.
-  const retireTravelCorridor = useCallback(
-    (restEpoch: number) => {
-      const binding = cameraBox.get();
-      // A notification that lost a race to a newer motion is discarded rather than applied: the
-      // plane it described is not the plane on the glass.
-      if (binding === null || restEpoch !== binding.epoch.get()) return;
-      setCorridor((current) => (envelopesEqual(current, RESIDUAL_ENVELOPE_AT_REST) ? current : RESIDUAL_ENVELOPE_AT_REST));
-    },
-    [cameraBox],
-  );
-
-  // R4 — a DRAG opens a corridor too, and this is the half that was missing.
-  //
-  // A travel declares its whole path when it is authorized, so `commitCamera` below can open a
-  // corridor that already contains every frame of it. A drag declares nothing: no canonical camera
-  // changes until the finger lifts, so nothing widened the corridor and `presented` went on being
-  // computed against the RESTING viewport for the entire gesture. Measured on a device: the leading
-  // edge of the glass was blank while the reader dragged — two whole slices of the world at zero ink —
-  // and every object the drag had brought on screen appeared at once at the moment of release.
-  //
-  // The plane now reports where it has got to, once per cull margin of travel, and the corridor is
-  // hulled with a band around that position. Painting a margin ahead of the hand is the same idea the
-  // cull margin already expresses; it simply has to follow the hand instead of the resting viewport.
-  // It is state, like the travel corridor, and it retires with it at rest, so an idle world is
-  // unchanged and the cost is bounded by how far the reader actually dragged.
-  const advancePresentation = useCallback(
-    (tx: number, ty: number, residualZoom: number, padPlaneUnits: number, advanceEpoch: number) => {
-      const binding = cameraBox.get();
-      // A report that lost a race to a newer motion describes a plane that is no longer on the glass.
-      if (binding === null || advanceEpoch !== binding.epoch.get()) return;
-      const reached = expandedEnvelope(residualEnvelope({ tx, ty, zoom: residualZoom }), padPlaneUnits);
-      setCorridor((current) => {
-        const next = envelopeHull(current, reached);
-        return envelopesEqual(current, next) ? current : next;
-      });
-    },
-    [cameraBox],
-  );
-
-  const motion = usePresentationCamera({
-    center,
-    diagonalPoints,
-    onTravelCorridorRetired: retireTravelCorridor,
-    onPresentationAdvanced: advancePresentation,
-    // The renderer's own margin, so the plane reports exactly as often as the painted band allows and
-    // there is no second number to keep in step with this one.
-    advancePoints: CULL_MARGIN_POINTS,
-  });
-  useLayoutEffect(() => {
-    cameraBox.set(motion);
-  }, [cameraBox, motion]);
+  // The presentation camera, and the travel / drag corridor it reports into (the generic world surface).
+  const worldMotion = useWorldMotion<MapCamera>(envelope);
+  const { motion } = worldMotion;
   // VPORT-01: the facts the world's EXPRESSION reads, gathered once per commit. The camera's distance
   // and anchor, the device's reduced-motion answer, the platform contrast setting and the current
   // inspection — none of which reaches placement, hit testing, membership or the accessible tree.
@@ -217,70 +135,6 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
   // already claimed the plane.
   const gesture = useMemo(() => Gesture.Simultaneous(panGesture, zoomGesture), [panGesture, zoomGesture]);
 
-  // What this commit does about the canonical camera, and what the presented viewport is while it
-  // does it. Read during render because the presented set is rendering input; applied inside the
-  // Skia root, after the positions it preserves.
-  const history = cameraHistory.get();
-  const authorityReplaced = history !== null && history.owner !== store;
-  const cameraChanged = history !== null && !authorityReplaced && history.camera !== camera && camera !== null;
-  const transition = cameraChanged && history !== null && camera !== null ? cameraTransition(history.camera, camera, envelope) : null;
-
-  // R3-02b — the corridor is REBASED, exactly as the camera rebases the residual it is showing.
-  //
-  // The previous version rebased `RESIDUAL_AT_REST` through the new transition, which assumes the
-  // plane was already home. Mid-flight it is not, and the camera itself rebases from the live
-  // residual — so paint motion and culling continuity started from two different frames, and the
-  // renderer could cull an object that was on the glass at the exact retarget commit.
-  //
-  // Carrying an envelope rather than one residual removes the disagreement without reading a shared
-  // value during render and without a per-frame bridge: whatever the plane is actually showing lies
-  // inside the corridor by construction, the rebase is affine so it maps the corridor exactly, and
-  // the destination — always rest — is added to it. One presentation state, two readers.
-  const travelCorridor: PresentationResidualEnvelope =
-    authorityReplaced || camera === null
-      ? RESIDUAL_ENVELOPE_AT_REST
-      : transition === null
-        ? corridor
-        : envelopeHull(
-            transition.destination === null
-              ? RESIDUAL_ENVELOPE_AT_REST
-              : rebasedEnvelope(corridor, transition.k, transition.destination),
-            RESIDUAL_ENVELOPE_AT_REST,
-          );
-
-  const commitCamera = useCallback(() => {
-    const previous = cameraHistory.get();
-    if (previous === null || previous.owner !== store || previous.camera !== camera) {
-      if (camera !== null) cameraHistory.set({ owner: store, camera });
-    }
-    // The corridor of the motion that is ACTUALLY running, read once here — after the change has
-    // been applied — rather than predicted from the last one.
-    //
-    // The render above had to be conservative: it could only widen the previous corridor through
-    // this transition, because a travel that finished long ago and a travel still in flight look
-    // identical from render. Here they do not: the plane's own residual says where it is, so the
-    // corridor becomes exactly "from here to rest" and inherits nothing from a journey already made.
-    // It narrows on every commit as a travel proceeds, and it is a bounded read at a commit
-    // boundary — never during render, never per frame.
-    const exact = envelopeHull(residualEnvelope(motion.readResidual()), RESIDUAL_ENVELOPE_AT_REST);
-    // R4 — while a FINGER owns the plane, a commit may widen this corridor and may not narrow it.
-    //
-    // Narrowing to "from here to rest" is right for a travel: the path is known, the plane is on its
-    // way home, and everything behind it is finished with. A drag is the opposite case. It is going
-    // somewhere nobody knows yet, the band the advance opened AHEAD of the hand is the entire reason
-    // the leading edge is painted at all, and this read happens on the very next commit — so without
-    // this distinction a canonical commit would take that band away again a frame after it was
-    // granted, and the blank edge would come straight back. `dragging` is one bounded read at the
-    // same boundary as the residual beside it, never during render and never per frame.
-    const held = motion.dragging.get() === 1;
-    // Only a corridor that actually differs costs a second pass; the frame already painted was a
-    // superset of this one, so nothing was ever wrongly culled while the two disagreed.
-    setCorridor((current) => {
-      const next = held ? envelopeHull(current, exact) : exact;
-      return envelopesEqual(current, next) ? current : next;
-    });
-  }, [camera, cameraHistory, motion, store]);
-
   /**
    * The cause of the transition being applied, asked for at APPLY time and never during render.
    *
@@ -293,58 +147,17 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     () => (spatialCause === undefined || camera === null ? null : spatialCause(state.camera)),
     [camera, spatialCause, state.camera],
   );
-
-  const cameraCommit: CanonicalCameraCommit = useMemo(
-    () => ({ transition, reset: authorityReplaced, commit: commitCamera, cause: causeOfTransition }),
-    [authorityReplaced, causeOfTransition, commitCamera, transition],
-  );
-
-  // Presentation culling: what the motion could still put on the glass. At rest the corridor is the
-  // degenerate envelope and this is exactly the resting viewport test, so a still world paints what
-  // it always painted.
-  const presented: readonly PlacedNode[] = useMemo(
-    () =>
-      placed === null
-        ? EMPTY_NODES
-        : placed.nodes.filter((node) =>
-            isPresentedWithinEnvelope(
-              { x: node.x, y: node.y, radius: node.radius },
-              // R3-02 — the screen-space register is not camera-transformed, so a world travel must
-              // not widen its culling. It is tested against the resting viewport, always.
-              node.region === 'UNGEOGRAPHIC_REGISTER' ? RESIDUAL_ENVELOPE_AT_REST : travelCorridor,
-              center,
-              envelope,
-              CULL_MARGIN_POINTS,
-            ),
-          ),
-    [center, envelope, placed, travelCorridor],
-  );
-  // Which loci BECAME part of the accepted current `V` in this commit (R3-01).
-  //
-  // Membership is asked of the SCENE, never of a placement. A placement omits a locus that is not
-  // finitely representable from the current camera, so a set built from placements would call that
-  // locus new the moment the camera made it representable again — presentation answering a question
-  // only the record may answer.
-  //
-  // And it survives a projection handoff. A canonical temporal or depth change makes the old context
-  // stale before the fresh one arrives; erasing the record in that gap meant the real Product path
-  // for Semantic Zoom, a committed temporal move and every Return that changes `TC` or depth
-  // compared the new world against nothing and disclosed nothing. What is preserved is EVIDENCE and
-  // not a world: a set of identities, no geometry, no pixels, no entitlement, never painted, and
-  // kept only long enough to be compared with the next accepted `V`.
-  //
-  // A REPLACED authority is the one thing that does erase it, for the same reason the drag and its
-  // residual are dropped: the record belongs to the store it was taken under.
+  // Which loci are part of the accepted current `V` (R3-01): asked of the SCENE, never of a placement, and
+  // only of a scene that is still this Map. A technical stale gap passes none, so the record survives it.
   const accepted = useMemo(() => (usable ? sceneMembershipKeys(context.scene) : null), [context.scene, usable]);
-  const newlyDisclosed = useMemo(
-    () => (accepted === null ? EMPTY_KEYS : newlyDisclosedKeys(authorityReplaced ? null : disclosureHistory.get(), [...accepted])),
-    [accepted, authorityReplaced, disclosureHistory],
-  );
-  useLayoutEffect(() => {
-    // Only an ACCEPTED scene updates the record. A technical stale gap leaves it exactly as it was —
-    // that is the whole fix — and only a replaced authority discards it.
-    if (accepted !== null) disclosureHistory.set(accepted);
-    else if (authorityReplaced) disclosureHistory.set(null);
+  // The STORE is this surface's authority: a replaced store drops the residual, the drag and the record.
+  const { cameraCommit, presented, newlyDisclosed, nodeAt } = useWorldFrame<MapCamera, PlacedNode>(worldMotion, {
+    owner: store,
+    camera,
+    envelope,
+    placed,
+    membership: accepted,
+    cause: causeOfTransition,
   });
 
   // The act runs first and the observer is notified afterwards: an optional call would not
@@ -355,21 +168,13 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
       // Through the SAME residual the frame was painted with, and the SAME arrival progress each
       // object is drawn at: paint, pointer and act agree while the plane travels AND while an
       // object is still resolving out from its host. Nothing waits for an animation to finish.
-      const point = motion.canonicalPointAt({ x, y });
-      const drawn: PlacedScene = {
-        ...placed,
-        visibleNodes: presented.map((node) => {
-          const shown = arrivals.presentationOf(node.key);
-          return shown === null ? node : { ...node, x: node.x + shown.dx, y: node.y + shown.dy, radius: node.radius * shown.scale };
-        }),
-      };
-      const node = hitTest(drawn, point);
+      const node = nodeAt(x, y);
       if (node === null) return;
       if (node.family !== 'THREAD' && node.family !== 'READING' && node.family !== 'EMERGING_FOCUS') return;
       const outcome = inspectObject(store, context, { family: node.family, id: node.id });
       onOutcome?.(outcome);
     },
-    [arrivals, context, motion, onOutcome, placed, presented, store],
+    [context, nodeAt, onOutcome, placed, store],
   );
 
   // An undecodable camera, or a projection that is no longer this Map's, renders an empty surface
@@ -401,7 +206,7 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
             placed={placed}
             presented={presented}
             newlyDisclosed={newlyDisclosed}
-            arrivals={arrivals}
+            arrivals={worldMotion.arrivals}
             cameraCommit={cameraCommit}
             style={style}
             world={world}
@@ -410,16 +215,6 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
       </GestureDetector>
       <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} language={language} />
     </View>
-  );
-}
-
-const EMPTY_NODES: readonly PlacedNode[] = Object.freeze([]);
-const EMPTY_KEYS: ReadonlySet<string> = Object.freeze(new Set<string>());
-
-/** Component-wise, because a corridor is six numbers and a new object with the same six is the same. */
-function envelopesEqual(a: PresentationResidualEnvelope, b: PresentationResidualEnvelope): boolean {
-  return (
-    a.txMin === b.txMin && a.txMax === b.txMax && a.tyMin === b.tyMin && a.tyMax === b.tyMax && a.zoomMin === b.zoomMin && a.zoomMax === b.zoomMax
   );
 }
 

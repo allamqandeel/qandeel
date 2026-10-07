@@ -72,6 +72,12 @@ const chromeText = Object.values(chromeCode).join('\n');
 const mapFiles = production(MAP_DIR);
 const mapCode = Object.fromEntries(mapFiles.map((file) => [file, stripComments(read(`${MAP_DIR}/${file}`))]));
 const mapText = Object.values(mapCode).join('\n');
+// S5-03B Phase 1 (controlled re-anchor, after the Personal golden equivalence proof): MapCanvas and MapSurface remain the
+// Personal owners and delegate, verbatim, to the generic Living Analysis World seam: the canvas composition in
+// renderer/WorldCanvas.tsx and the surface mechanics in renderer/useWorldSurface.ts. Every invariant below is asserted
+// on the owner TOGETHER WITH the seam its code now lives in; none is weakened.
+const personalCanvas = `${mapCode['renderer/MapCanvas.tsx']}\n${mapCode['renderer/WorldCanvas.tsx']}`;
+const personalSurface = `${mapCode['renderer/MapSurface.tsx']}\n${mapCode['renderer/useWorldSurface.ts']}`;
 
 const scrubCode = stripComments(read('apps/mobile/src/temporal-navigation/timeline-integration/useTemporalScrub.ts'));
 
@@ -508,8 +514,8 @@ test('nothing is keyed by a width, a height or a band, so no measurement can rem
 });
 
 test('a travel in flight is neither re-issued nor re-culled by a geometry change', () => {
-  const surface = mapCode['renderer/MapSurface.tsx'];
-  const rebase = mapCode['renderer/MapCanvas.tsx'];
+  const surface = personalSurface;
+  const rebase = personalCanvas;
   // The rebase runs only for a canonical camera CHANGE. A resize produces no transition, so a
   // travel already scheduled keeps its targets and its durations: nothing restarts, nothing snaps.
   assert.match(rebase, /if \(reset\) motion\.reset\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition, cause\(\)\);/u, 'the rebase is driven by a canonical transition');

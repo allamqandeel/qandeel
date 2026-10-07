@@ -42,6 +42,7 @@ import {
   worldPalette,
   type WorldContrast,
   type WorldPlacement,
+  type WorldTier,
   type WorldSchedule,
 } from './world-resolver';
 
@@ -65,9 +66,24 @@ export function markerRadius(placement: WorldPlacement, thickness: number): numb
   return Math.min(MARK_RADIUS_POINTS[placement] * 1.42 + 2, HIT_RADIUS[placement] - thickness / 2);
 }
 
-function SelectedMarker({ x, y, placement, contrast }: { x: number; y: number; placement: WorldPlacement; contrast: WorldContrast }) {
+function SelectedMarker({ x, y, r, contrast }: { x: number; y: number; r: number; contrast: WorldContrast }) {
   const palette = worldPalette(contrast);
-  return <Circle cx={x} cy={y} r={markerRadius(placement, palette.markerThickness)} style="stroke" strokeWidth={palette.markerThickness} color={palette.selectedMarker} />;
+  return <Circle cx={x} cy={y} r={r} style="stroke" strokeWidth={palette.markerThickness} color={palette.selectedMarker} />;
+}
+
+/** The body of a mark: its shape, filled, or stroked for the open slot. */
+function MarkBody({ x, y, r, path, stroked, ink }: { x: number; y: number; r: number; path: string; stroked: boolean; ink: string }) {
+  // The mark's ANCHOR: a group carrying only its origin, so what a reader of the paint can locate is
+  // the object's own placed point, never a centre reconstructed from a drawn outline.
+  return (
+    <Group origin={vec(x, y)}>
+      {stroked ? (
+        <Path path={path} style="stroke" strokeWidth={Math.max(1, r * 0.42)} strokeCap="round" color={ink} />
+      ) : (
+        <Path path={path} color={ink} />
+      )}
+    </Group>
+  );
 }
 
 /** The mark itself: the family's canonical morphology, filled, or stroked for the open slot. */
@@ -97,18 +113,7 @@ function Mark({
   const path = morphologyPath(family, x, y, r, presentationRotation(nodeKey));
   // SELECTED: the frozen selected ink. REST: the world's own material.
   const ink = selected ? palette.selectedInk : material.fill;
-  const stroked = V.shapes[family].stroked;
-  // The mark's ANCHOR: a group carrying only its origin, so what a reader of the paint can locate is
-  // the object's own placed point, never a centre reconstructed from a drawn outline.
-  return (
-    <Group origin={vec(x, y)}>
-      {stroked ? (
-        <Path path={path} style="stroke" strokeWidth={Math.max(1, r * 0.42)} strokeCap="round" color={ink} />
-      ) : (
-        <Path path={path} color={ink} />
-      )}
-    </Group>
-  );
+  return <MarkBody x={x} y={y} r={r} path={path} stroked={V.shapes[family].stroked} ink={ink} />;
 }
 
 export interface WorldObjectProps {
@@ -135,20 +140,69 @@ function Light({ x, y, r, profile, hue, lightness, opacity }: { x: number; y: nu
   );
 }
 
+/**
+ * S5-03B Phase 1 — the SHAPE a mark is drawn in, kept apart from its MATERIAL. A family's morphology is one
+ * shape; the material around it (the tier's ground, light, NEAR limb and core, and the attached SELECTED marker)
+ * is the world's own and is the same for every shape. `path` is the body and the NEAR limb; `stroked` draws the
+ * open slot; `limbAngle` is the presentation angle the lit limb faces.
+ */
+export interface WorldMarkShape {
+  readonly path: string;
+  readonly stroked: boolean;
+  readonly limbAngle: number;
+}
+
+export interface WorldMarkProps {
+  readonly x: number;
+  readonly y: number;
+  /** The mark radius, in points (constant per tier). */
+  readonly r: number;
+  readonly tier: WorldTier;
+  /** The radius of the attached SELECTED marker, inside the hit radius of the same placement. */
+  readonly markerRadius: number;
+  readonly shape: WorldMarkShape;
+  readonly S: WorldSchedule;
+  readonly response: WorldResponse;
+  readonly contrast: WorldContrast;
+  readonly selected: boolean;
+}
+
+/** One placed locus of the Personal world: its family's morphology, in the world's material. */
 export function WorldObject({ family, nodeKey, x, y, placement, S, response, contrast, selected }: WorldObjectProps) {
   const r = MARK_RADIUS_POINTS[placement];
-  const tier = tierOf(placement);
+  const rotation = presentationRotation(nodeKey);
+  const shape: WorldMarkShape = {
+    path: morphologyPath(family, x, y, r, rotation),
+    stroked: V.shapes[family].stroked,
+    limbAngle: rotation * V.shapes[family].rotation,
+  };
+  return (
+    <WorldMark
+      x={x}
+      y={y}
+      r={r}
+      tier={tierOf(placement)}
+      markerRadius={markerRadius(placement, worldPalette(contrast).markerThickness)}
+      shape={shape}
+      S={S}
+      response={response}
+      contrast={contrast}
+      selected={selected}
+    />
+  );
+}
+
+/** One mark in the world's material, in any shape: constant per tier, nothing about it varies per object. */
+export function WorldMark({ x, y, r, tier, markerRadius: marker, shape, S, response, contrast, selected }: WorldMarkProps) {
   const m = V.mark[tier];
   const material = markMaterial(tier, S, contrast === 'increased');
+  const palette = worldPalette(contrast);
   const hue = mediumHue(S.lod);
-  const rotation = presentationRotation(nodeKey);
-  const limbAngle = rotation * V.shapes[family].rotation;
-  const lx = Math.cos(limbAngle);
-  const ly = Math.sin(limbAngle);
-  const limbPath = morphologyPath(family, x, y, r, rotation);
+  const lx = Math.cos(shape.limbAngle);
+  const ly = Math.sin(shape.limbAngle);
   return (
     <>
-      {/* The place the world makes for a Home: a subtractive local ground, major tier only (§14). */}
+      {/* The place the world makes for a place: a subtractive local ground, major tier only (§14). */}
       {tier === 'major' ? (
         <Group opacity={response.groundMajor}>
           <Circle cx={x} cy={y} r={r * V.material.objGnd.r}>
@@ -159,12 +213,12 @@ export function WorldObject({ family, nodeKey, x, y, placement, S, response, con
       {/* The medium's light around the body, and at NEAR its wider atmosphere. Constant per tier. */}
       <Light x={x} y={y} r={r * m.halo} profile="wide" hue={hue} lightness={V.mark.haloLight} opacity={tier === 'major' ? response.haloMajor : response.haloMinor} />
       <Light x={x} y={y} r={r * m.haloWide} profile="soft" hue={hue} lightness={V.mark.haloWideLight} opacity={tier === 'major' ? response.haloWideMajor : response.haloWideMinor} />
-      <Mark family={family} nodeKey={nodeKey} x={x} y={y} placement={placement} S={S} contrast={contrast} selected={selected} />
+      <MarkBody x={x} y={y} r={r} path={shape.path} stroked={shape.stroked} ink={selected ? palette.selectedInk : material.fill} />
       {/* NEAR: a lit limb and a luminous interior, so the shape bounds a body (§14, WS7R-V §V4b). With no
           runtime focus to face, the limb faces the mark's own presentation angle, as the canonical
           painter does when there is no focus. */}
       <Group opacity={response.near}>
-        <Path path={limbPath} style="stroke" strokeWidth={r * V.mark.limbWidth}>
+        <Path path={shape.path} style="stroke" strokeWidth={r * V.mark.limbWidth}>
           <LinearGradient
             start={vec(x + lx * r * 1.15, y + ly * r * 1.15)}
             end={vec(x - lx * r * 1.15, y - ly * r * 1.15)}
@@ -178,7 +232,7 @@ export function WorldObject({ family, nodeKey, x, y, placement, S, response, con
         </Path>
         <Light x={x} y={y} r={r * m.core} profile="core" hue={V.worldHue} lightness={Math.min(90, material.light + 2)} opacity={material.alpha * m.coreAlpha} />
       </Group>
-      {selected ? <SelectedMarker x={x} y={y} placement={placement} contrast={contrast} /> : null}
+      {selected ? <SelectedMarker x={x} y={y} r={marker} contrast={contrast} /> : null}
     </>
   );
 }
@@ -291,7 +345,7 @@ export function RegisterMark({ family, nodeKey, x, y, S, contrast, selected }: R
   return (
     <>
       <Mark family={family} nodeKey={nodeKey} x={x} y={y} placement="UNGEOGRAPHIC" S={S} contrast={contrast} selected={selected} />
-      {selected ? <SelectedMarker x={x} y={y} placement="UNGEOGRAPHIC" contrast={contrast} /> : null}
+      {selected ? <SelectedMarker x={x} y={y} r={markerRadius('UNGEOGRAPHIC', worldPalette(contrast).markerThickness)} contrast={contrast} /> : null}
     </>
   );
 }
