@@ -355,12 +355,16 @@ integrity.
   - Stage 3 (Activity & Notifications Production) is **DONE / MERGED**: `A3-01` through PR #307 at
     `a2ec76507e43c82dcabf4194053e318c2fb9d509` and `A3-02` through PR #308 at `06a960848faaccc6e294d38fbde2918b10ed1d74`;
   - Stage 4 (Shared World Product Integration) is **DONE / MERGED** for S4-01 … S4-04. One later corrective gap is now recorded: `QAN-BL-CW-03 / SHARED-VIS-01` (Shared Living Analysis Map / semantic geography), **DEFERRED — OWNED** and explicitly blocked from starting until Stage 5 / Public World is fully DONE / MERGED;
-  - Stage 5 (Public World Product Integration) is **ACTIVE**: `S5-01 — Public World Reachability, Entry & Identity Foundation`
+  - Stage 5 (Public World Product Integration) is **ACTIVE — PRODUCT OWNER PAUSE CHECKPOINT (2026-10-07)**: `S5-01 — Public World Reachability, Entry & Identity Foundation`
     is MERGED (PR #314 at `8dfc7b38baa133c8cecbffea8c65ae17ddc245ff`); `S5-02 — Publishing + Rights + Draft/Review + Privacy
     Closure` is MERGED (PR #315 at `1a10127672f8db7ff475bca4732635bf88536730`); `S5-03A — Public Semantic Interpretation +
-    Publisher Review` is MERGED (PR #316 at `c9338af9ecbfcecccc281f96f52fab335ad9bc7b`); `S5-03B — Public Semantic Field + Viewer Runtime` is ACTIVE (not merged);
-    `S5-03C — Explicit Relations + Integrity Closure` and `S5-04 — Discussion + Public QANDEEL + Final Public Integration`
-    are LATER;
+    Publisher Review` is MERGED (PR #316 at `c9338af9ecbfcecccc281f96f52fab335ad9bc7b`); `S5-03B — Public Semantic Field + Viewer Runtime`
+    is implemented on draft PR #317 at pause head `430118ae2d27c2d9d686a1edb0ee26ed433eb16d`, **NOT MERGED and NOT visually accepted by the Product Owner**.
+    R1/R2 established one shared Analysis composition (`LivingAnalysisSurface → WorldViewSurface → WorldCanvas`) used by Personal and Public,
+    but the current visual production quality remains materially below the Product Owner's intended North Star. The project is intentionally paused
+    here before further visual redesign, Copy Gate approval, merge, S5-03C or S5-04. `S5-03C — Explicit Relations + Integrity Closure` and
+    `S5-04 — Discussion + Public QANDEEL + Final Public Integration` remain LATER;
+  - **Living Analysis visual redesign rule after the pause:** do not create three renderers or redesign Personal / Public / Shared separately. Future visual work should be developed in an isolated visual branch / proof harness against the shared `LivingAnalysisSurface / WorldViewSurface / WorldCanvas` stack, then land once in that shared stack. Shared mechanics such as camera/pan/semantic-step, world framing, ground, atmosphere, lighting/material, motion and responsive composition therefore serve Personal and Public together. World-specific projection/chrome remains world-owned. Shared will consume the same stack later through `QAN-BL-CW-03 / SHARED-VIS-01`, still blocked until Stage 5 is fully DONE / MERGED.
   - Stages 6–9 are **LATER**: 6 Matching / Introductions, 7 Replay, **8A QANDEEL AI Brain / Production LLM Runtime** (before
     Voice), 8B Voice Runtime, 9 Economy + Launch Closure.
   `PROD-AUTH-01` and `PROD-DATA-01` stay `DEFERRED — OWNED` and are not promoted ahead of it.
