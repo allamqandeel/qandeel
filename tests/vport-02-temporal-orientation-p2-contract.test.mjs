@@ -155,7 +155,7 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '28dcc706633a8c59eb61b95cc8e3d43322ba31c9'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', '0d694dc33e0cec948074cdca8cae53ac02c30595'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', 'cd2edea2f18e1e18be64b6471b113b7330bdaa6c'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', '03dd3f65ba7f040ab9d99e29b85e30a7d4cf173b'],
     ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],
     ['apps/mobile/src/map/visual/useWorldResponse.ts', '2640e891cfeff3645d9f155f9e888b41d58f3748'],

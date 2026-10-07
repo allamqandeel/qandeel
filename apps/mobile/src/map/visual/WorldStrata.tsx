@@ -90,8 +90,11 @@ function strataPictures(): StrataPictures {
     }, Skia.XYWHRect(0, 0, WORLD_STARS.tile, WORLD_STARS.tile)),
   );
   const T = WORLD_NEBULA.tile;
+  // The tile is painted with a margin of its own wrapped neighbourhood (the clouds are repeated across the edges and the
+  // noises are stitched to the tile), so sampling it back never meets an edge: no seam where two tiles touch.
+  const M = NEBULA.margin;
   const cloudPass = (stops: readonly (readonly number[])[], pass: number) =>
-    rasterTile(T, NEBULA.raster, (canvas) => {
+    rasterTile(T, M, NEBULA.raster, (canvas) => {
       // The canonical clouds, each broken into a few overlapping lobes so no cloud reads as a disc; then the whole
       // tile is carved by a STITCHED fractal noise, so the clouds become filaments and haze with dark lanes between
       // them. Every cloud, hue and weight is the generated one; the lobes and the carving only shape them.
@@ -103,7 +106,7 @@ function strataPictures(): StrataPictures {
             const x = cloud.x + ox;
             const y = cloud.y + oy;
             // A cloud near a tile edge is drawn again across it, so the tile is seamless.
-            if (x + reach < 0 || y + reach < 0 || x - reach > T || y - reach > T) continue;
+            if (x + reach < -M || y + reach < -M || x - reach > T + M || y - reach > T + M) continue;
             for (const lobe of cloudLobes(cloud)) {
               const paint = Skia.Paint();
               paint.setAntiAlias(true);
@@ -125,7 +128,7 @@ function strataPictures(): StrataPictures {
       carve.setShader(Skia.Shader.MakeFractalNoise(NEBULA.noise / T, NEBULA.noise / T, NEBULA.octaves, NEBULA.seed + pass, T, T));
       carve.setColorFilter(Skia.ColorFilter.MakeMatrix(noiseToAlpha(NEBULA.carveGain, NEBULA.carveFloor)));
       carve.setBlendMode(BlendMode.DstIn);
-      canvas.drawRect(Skia.XYWHRect(0, 0, T, T), carve);
+      canvas.drawRect(Skia.XYWHRect(-M, -M, T + 2 * M, T + 2 * M), carve);
       // Filaments: the creases of a stitched turbulence, lit only where the clouds already are (SrcATop), so the sky
       // gains fine luminous veins. They are texture of the atmosphere: they start and end nowhere, and join nothing.
       const [vr, vg, vb] = Skia.Color(hsla(WORLD_VISUAL.worldHue, WORLD_VISUAL.mark.haloSat, WORLD_VISUAL.mark.haloLight, 1));
@@ -133,7 +136,7 @@ function strataPictures(): StrataPictures {
       veins.setShader(Skia.Shader.MakeTurbulence(NEBULA.veins / T, NEBULA.veins / T, 2, NEBULA.seed + 7 + pass, T, T));
       veins.setColorFilter(Skia.ColorFilter.MakeMatrix([0, 0, 0, 0, vr, 0, 0, 0, 0, vg, 0, 0, 0, 0, vb, -NEBULA.veinSharpness, 0, 0, 0, NEBULA.veinAlpha]));
       veins.setBlendMode(BlendMode.SrcATop);
-      canvas.drawRect(Skia.XYWHRect(0, 0, T, T), veins);
+      canvas.drawRect(Skia.XYWHRect(-M, -M, T + 2 * M, T + 2 * M), veins);
       canvas.restore();
     });
   pictures = {
@@ -155,6 +158,8 @@ function strataPictures(): StrataPictures {
 const NEBULA = Object.freeze({
   /** The tile is painted once into an image at this share of its size; nebula light has no fine detail to lose. */
   raster: 0.7,
+  /** The wrapped margin painted around the tile, in tile units, so the image is sampled away from its edges. */
+  margin: 16,
   /** How far a cloud's lobes reach, as a share of its radius. */
   reach: 1.35,
   /** Noise cycles across one tile, its octaves and its seed. */
@@ -221,11 +226,11 @@ function cloudLobes(cloud: { readonly x: number; readonly y: number; readonly r:
  * Paints a square tile ONCE into a raster image and returns a picture that draws that image back at full size. A
  * fractal noise over a whole tile is too costly to evaluate again on every frame; an image is one textured quad.
  */
-function rasterTile(size: number, share: number, draw: (canvas: SkCanvas) => void): SkPicture {
+function rasterTile(size: number, margin: number, share: number, draw: (canvas: SkCanvas) => void): SkPicture {
   const bounds = Skia.XYWHRect(0, 0, size, size);
   // Everything happens while the picture records (once), so nothing here runs where no picture is recorded.
   return createPicture((target) => {
-    const pixels = Math.round(size * share);
+    const pixels = Math.round((size + 2 * margin) * share);
     const surface = Skia.Surface.Make(pixels, pixels) ?? Skia.Surface.MakeOffscreen(pixels, pixels);
     if (surface === null) {
       draw(target);
@@ -233,11 +238,12 @@ function rasterTile(size: number, share: number, draw: (canvas: SkCanvas) => voi
     }
     const canvas = surface.getCanvas();
     canvas.scale(share, share);
+    canvas.translate(margin, margin);
     draw(canvas);
     surface.flush();
     const snapshot = surface.makeImageSnapshot();
     const image = snapshot.makeNonTextureImage?.() ?? snapshot;
-    target.drawImageRectOptions(image, Skia.XYWHRect(0, 0, pixels, pixels), bounds, FilterMode.Linear, MipmapMode.None, Skia.Paint());
+    target.drawImageRectOptions(image, Skia.XYWHRect(margin * share, margin * share, size * share, size * share), bounds, FilterMode.Linear, MipmapMode.None, Skia.Paint());
   }, bounds);
 }
 
