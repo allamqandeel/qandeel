@@ -138,9 +138,13 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // useWorldSurface gains the additive Class-D `atRest` fact (useWorldMotion), and worldPresentation reads its camera
   // as `Pick<MapCamera, 'anchor' | 'scale'>` so the Public world camera reads the same expression. Previous pins:
   // useWorldSurface 40d18141, world-presentation ca529b14.
+  // S5-03B R1 — CONTROLLED RE-ANCHOR (Task Contract amendment 2026-10-07; after the Personal Map golden, 16 / 16, AND the
+  // Living Analysis screen golden recorded before the extraction): MapSurface calls the one Living Analysis world view
+  // (`useWorldView` / `WorldViewSurface`) in place, and that seam is pinned beside it. Previous pin: MapSurface 19440a92.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', '974f515d0e2fedca69bb74150959c52850a67f1a'],
-    ['apps/mobile/src/map/renderer/MapSurface.tsx', '19440a92db18966f2e35f696c4fccc58fce348e6'],
+    ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
+    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', '50786b8e2ffc375bbab416492a8aa21e2fe270a1'],
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'b3036bfc0290d81e669d23733e3b61a3184ed7ba'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd50652c2eccc6158809916369e66ff111eec1b7b'],
@@ -189,11 +193,16 @@ test('QAN-BL-A11Y-01: the T-10 camera and temporal motion read the ONE live Redu
 });
 
 test('the frozen G3 composition and the dark Analysis ground are wired on the production route', () => {
-  assert.match(composition, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis paints its own dark ground');
-  assert.match(composition, /line=\{<TemporalOrientationLine store=\{store\} language=\{locale\.language\} preview=\{preview\} \/>\}/u);
+  // S5-03B R1 — CONTROLLED RE-ANCHOR (after the Living Analysis screen golden, recorded before the extraction): the
+  // screen — the dark ground, the Timeline row that says the line, the chrome band that yields its room — is the one
+  // Living Analysis surface's; the Personal Analysis hands it the line, the Timeline and the chrome. Both are asserted.
+  const screen = code(`${MOBILE}/living-analysis/LivingAnalysisSurface.tsx`);
+  assert.match(screen, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis paints its own dark ground');
+  assert.match(composition, /line: <TemporalOrientationLine store=\{store\} language=\{locale\.language\} preview=\{preview\} \/>,/u);
+  assert.match(screen, /line=\{timeline\.line\}/u, 'the line is said in the Timeline row');
   assert.match(composition, /temporalLine="WITH_TIMELINE"/u);
   assert.match(composition, /returnLiveHome="LIVE_EDGE"/u);
-  assert.match(composition, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\}>/u, 'OrientationChrome yields the line\'s room');
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

@@ -49,6 +49,9 @@ const PRODUCTION_FILES = [
   // S5-03B Phase 1: the generic Living Analysis World seam, extracted verbatim from MapCanvas / MapSurface (the
   // Personal golden equivalence suite proves the Personal Map paints and behaves exactly as before).
   'renderer/WorldCanvas.tsx',
+  // S5-03B R1: the world VIEW of the one Living Analysis surface (`useWorldView` + `WorldViewSurface`), extracted from
+  // MapSurface in the order it always ran (the Map golden and the Living Analysis screen golden prove no change).
+  'renderer/WorldViewSurface.tsx',
   'renderer/index.ts',
   'renderer/map-geometry.ts',
   'renderer/render-style.ts',

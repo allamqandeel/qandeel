@@ -36,7 +36,9 @@ const visualCode = Object.fromEntries(HAND_WRITTEN.map((file) => [file, stripCom
 const personalCanvasOwner = stripComments(read('apps/mobile/src/map/renderer/MapCanvas.tsx'));
 const worldCanvas = stripComments(read('apps/mobile/src/map/renderer/WorldCanvas.tsx'));
 const canvas = `${personalCanvasOwner}\n${worldCanvas}`;
-const surface = stripComments(read('apps/mobile/src/map/renderer/MapSurface.tsx')) + '\n' + stripComments(read('apps/mobile/src/map/renderer/useWorldSurface.ts'));
+// S5-03B R1 (controlled re-anchor): the world's expression is gathered by the one Living Analysis world view
+// (`useWorldView` in WorldViewSurface.tsx, called in place by MapSurface), so it is asserted there too.
+const surface = stripComments(read('apps/mobile/src/map/renderer/MapSurface.tsx')) + '\n' + stripComments(read('apps/mobile/src/map/renderer/WorldViewSurface.tsx')) + '\n' + stripComments(read('apps/mobile/src/map/renderer/useWorldSurface.ts'));
 
 test('the closed I-08B1 source is untouched, and the generated world is current and reproducible', () => {
   const sha = createHash('sha256').update(readFileSync(new URL(I08B1, root))).digest('hex');

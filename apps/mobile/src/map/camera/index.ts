@@ -56,7 +56,12 @@ export {
 
 export { currentCamera, exploreViewport, panByTranslation, zoomSemanticStep } from './map-camera-actions';
 
-export type { MapPanGestureBinding, MapPanGestureOptions } from './useMapPanGesture';
-export { useMapPanGesture } from './useMapPanGesture';
-export type { MapSemanticZoomGestureBinding, MapSemanticZoomGestureOptions } from './useMapSemanticZoomGesture';
-export { SEMANTIC_ZOOM_GESTURE_THRESHOLD, semanticZoomDirectionFor, useMapSemanticZoomGesture } from './useMapSemanticZoomGesture';
+export type { MapPanGestureBinding, MapPanGestureOptions, WorldGestureOutcome, WorldPanGestureOptions } from './useMapPanGesture';
+export { useMapPanGesture, useWorldPanGesture } from './useMapPanGesture';
+export type { MapSemanticZoomGestureBinding, MapSemanticZoomGestureOptions, WorldSemanticStepGestureOptions } from './useMapSemanticZoomGesture';
+export {
+  SEMANTIC_ZOOM_GESTURE_THRESHOLD,
+  semanticZoomDirectionFor,
+  useMapSemanticZoomGesture,
+  useWorldSemanticStepGesture,
+} from './useMapSemanticZoomGesture';

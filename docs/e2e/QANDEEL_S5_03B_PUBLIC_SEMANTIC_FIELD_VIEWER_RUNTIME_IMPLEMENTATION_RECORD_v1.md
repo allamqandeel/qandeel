@@ -554,3 +554,91 @@ contract 1208 / 1208 (with this workstation's ignored `apps/mobile/android/` mov
 (tests 7, 10 and 11 re-anchored to Phase 2), VPORT-02 9 / 9 (re-pinned: useWorldSurface, world-presentation), T-10 31 / 31
 (the `panFromTranslation` signature re-anchored to its structural camera), VPORT-01, T-11, T-12, T-12P, Living Analysis
 Map runtime and task-closure governance. verify-0071 on real PostgreSQL as above; no other DB verifier was re-run.
+
+## 24. Task Contract amendment and R1 — ONE Living Analysis SCREEN, Personal-only extraction (2026-10-07)
+
+**Product Owner decision (after the architecture study of Phase 2).** Phase 2 is NOT accepted as S5-03B's closure: Public
+shared the Living Analysis renderer (`WorldCanvas`) but not the Living Analysis SCREEN — its own full-screen composition,
+own world view, own overlay layout, the reader's appearance instead of the Analysis place. The approved direction is ONE
+Living Analysis Surface at screen / composition level: `LivingAnalysisSurface` → `WorldViewSurface` → `WorldCanvas`,
+with Personal and Public (and, later, Shared — `QAN-BL-CW-03` / `SHARED-VIS-01` stays DEFERRED until Stage 5 closes) each
+bringing only a projection and capabilities. Decisions: **D1** Public runs inside the same always-dark Analysis scope;
+**D2** the Public Experience panel moves into the chrome / support band (no 46 % overlay); **D3** the visible `+` / `−` /
+`○` controls are removed (the non-gesture accessible semantic step stays, from the same generic surface) and the copy
+rows `closer`, `farther`, `wholeWorld` are retired — with the controls, in R2; the Copy Gate is not approved until it is
+re-censused after R2; **D4** Public title / Activity entry / authoring entry / Search are Public content in the same
+top-band slot (no separate header, no fixed `SEARCH_ROW` arithmetic on the world viewport); **D5** the gesture / commit
+core is generalised cleanly, Personal hooks, wrappers, testIDs and behaviour kept, no Public duplicate wrappers;
+**D6** the S5-03B Task Contract is amended.
+
+**Task Contract amendment (D6, 2026-10-07).** The S5-03B Task Contract additionally authorizes, within S5-03B and as no
+new roadmap task (Stage 5 stays ACTIVE; S5-03C stays unopened): the extraction of `LivingAnalysisSurface` and
+`WorldViewSurface`; controlled T-11 / T-12 / VPORT re-anchors (no invariant weakened); no Product redesign; Personal
+golden equivalence (the existing Map golden AND a new screen golden recorded before the extraction); and Public adoption
+of the same screen (R2, only after the Product Owner approves R1).
+
+**R1 — Personal-only screen extraction.**
+
+- *Screen golden first* (`351653f`, BEFORE any source change): `integration/__tests__/living-analysis-screen-golden.test.tsx`
+  renders the real `LivingAnalysisMap` over the real bootstrapped runtime (the integration harness gains an optional
+  projection route, registered before the bootstrap fetches; default unchanged) and pins every host element in order with
+  every prop (type, testID, accessibility, resolved style; functions by name, animated handles by value) in
+  `__golden__/living-analysis-screen.golden.json`: EN, AR-RTL, compact, expansive (EN / AR), short landscape, 200 % text
+  (EN / AR), following live, previewing, Return offered after a pan, historical with Go Live offered, inspection, stale
+  projection, increased contrast — 13 cases, each asserted distinct. It is never regenerated to match the refactor.
+- *`living-analysis/LivingAnalysisSurface.tsx`* — the screen: the Analysis place (`AnalysisAppearanceScope`), the Analysis
+  ground, the top-band slot (read first; its measured height replaces the top inset), T-11's responsive column, the
+  measured world frame (`world(envelope)`), ONE support band with the `timeline` capability (line + layer, or `null`) and
+  the `chrome` slot, and an `after` observer slot. It imports only React, RN, the Analysis ink, the appearance scope, the
+  camera's `viewportEnvelope` and the responsive owner — no store, projection, inspection, time or world.
+- *`map/renderer/WorldViewSurface.tsx`* — the world view: `useWorldView` (presentation camera and corridor, contrast, the
+  world's expression, authority generation, the ONE drag and the ONE semantic step composed `Simultaneous`, then the
+  camera commit / culling / membership — exactly the order `MapSurface` ran them, as a hook the owner calls in place) and
+  `WorldViewSurface` (surface, gesture plane, tap route, accessibility slot).
+- *Generic gesture core (D5)*: `useWorldPanGesture` (in `useMapPanGesture.ts`) and `useWorldSemanticStepGesture` (in
+  `useMapSemanticZoomGesture.ts`) are the unchanged bodies with the act injected (`commit` / `step`, read when the crossing
+  arrives); `useMapPanGesture(store, …)` / `useMapSemanticZoomGesture(store, …)` keep their names, signatures and
+  behaviour as the Personal bindings to `PAN` / `ZOOM_SEMANTIC`.
+- *Responsive capability*: `recompositionPlan(…, { support })` — `TIMELINE_AND_CHROME` (default; asking for it or for
+  nothing is the frozen plan, value for value) or `CHROME_ONLY` (no instrument: the band keeps the same room, so the world
+  frame is identical for every world; the chrome takes the whole band, with no row-to-chrome gap).
+- *Personal consumer*: `LivingAnalysisMap` is now the Personal world ON the surface — `MapSurface` in `world`, the
+  Timeline + temporal orientation line in `timeline`, `OrientationChrome` (Return / Live) in `chrome`, `ComposedMark` in
+  `after`; the store, cache, journey, spatial cause and every Personal derivation unchanged. `DepthComposition` hands
+  `AnalysisReturnBar` to the surface's top band (same element order and style). `MapSurface` calls `useWorldView` and
+  renders `WorldViewSurface` with the same testIDs and API; it still owns the store, the freshness rule, the scene, the
+  two acts, inspection, `MapCanvas` and `MapAccessibilityLayer`.
+- *No Public change in R1.* `PublicSemanticField` and every Public file are untouched (contract test 12 asserts it).
+
+**Controlled re-anchors (no invariant weakened; each asserted on the owner together with the seam its code moved to).**
+Living Analysis Map runtime — the authorized T-04 file list + `renderer/WorldViewSurface.tsx`. T-10 — the surface set now
+includes `WorldViewSurface`; Q1 asserts the Personal binding `panByTranslation(store, …)` and the crossing's
+`current.commit(…)` (still exactly one `panByTranslation(` in the file); R1-01 asserts staleness is decided before
+`current.commit(`; the owner hand-off is `useWorldView<…>({ owner: store, … })` → `useWorldFrame<C, N>(worldMotion, { owner, … })`;
+R1-04's slice ends at `<WorldViewSurface`. T-11 — `let timelineWidthPoints`, plus: exactly two assignments, the frozen
+rule and `0` only under `CHROME_ONLY`. VPORT-01 — the surface set includes `WorldViewSurface`. VPORT-02 — MapSurface
+re-pinned (previous pin `19440a92`) and `WorldViewSurface` pinned; the G3 composition is asserted on the surface (ground,
+line in the Timeline row, the chrome band's yield) together with `LivingAnalysisMap` (the line it hands in, WITH_TIMELINE,
+LIVE_EDGE). S5-03B test 11 — the generic layer includes `WorldViewSurface`; MapSurface owns `panByTranslation(store,` /
+`zoomSemanticStep(store,`. New S5-03B test 12 — the screen seam, the Personal bindings, the Personal world composed on
+the surface and building no screen, the top band, the frozen responsive default, the enforced screen golden, and no
+Public adoption. `depth-band.test` (W1A-01) — its `LivingAnalysisMap` stand-in now mounts the top band and records the
+inset the surface composes the world with (`{ ...insets, top: top.height }`, proven on the real surface): the band's
+measured height still reaches the world.
+
+**R1 validation.** Personal Map golden 16 / 16 with `personal-map.golden.json` unchanged; Living Analysis screen golden
+15 / 15 (13 cases + coverage + distinctness) with `living-analysis-screen.golden.json` unchanged since `351653f`.
+Mutations: a changed ground fails 13 screen cases; a keyed support band (remount on band change) fails the continuity
+proof; a removed line-height yield fails the surface test (the test renderer fires no layout for the temporal line, so the
+screen golden cannot see that yield — disclosed; the surface test covers it). New: `living-analysis-surface.test`
+(8: Analysis place dark, top band first and paid as top inset, device insets without one, Timeline row present with a
+track, `CHROME_ONLY` with the same band and world envelope, the line yield, the observer slot, imports nothing of a world),
+`support-capability.test` (4: default ≡ frozen plan across 90 surfaces × 3 bands; `CHROME_ONLY` keeps the frame and band),
+`living-analysis-screen-continuity.test` (the Map surface and plane, the Timeline layer and row, the chrome band and the
+chrome are the SAME instances across a preview, a band-changing resize and back, an inspection and a language change;
+the preview survives). Full mobile Jest 2285 / 2291 — the same 6 ar-EG host-locale baseline failures, identical by name
+before and after R1 (`w2-account-access`, `depth`). Mobile `tsc` PASS; eslint 0 errors (warnings only in untouched
+files). Every root static contract 1209 / 1209 (with this workstation's ignored `apps/mobile/android/` moved aside).
+No DB, migration, API, copy or Public change; no DB verifier was run. The Copy Gate stays OPEN (16 rows PROPOSED; D3's
+three retirements land with R2). CW2-08 NOT_EVALUATED; PUBLISHED closed; S5-03C not started. R2 waits for the Product
+Owner's approval of R1.

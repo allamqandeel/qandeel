@@ -46,7 +46,7 @@
 import { useCallback, useMemo, useState } from 'react';
 import type { LayoutChangeEvent } from 'react-native';
 
-import { bandFor, recompositionPlan, type PresentationBand, type RecompositionPlan } from './plan';
+import { bandFor, recompositionPlan, type PresentationBand, type RecompositionPlan, type SupportCapability } from './plan';
 import { presentationSurface, quantizeFontScale, quantizePoints, type PresentationSurface } from './surface';
 
 export interface ResponsiveInsets {
@@ -78,6 +78,8 @@ export interface ResponsiveSurfaceOptions {
    * before it no longer describes anything — and never a substitute for what the container reports.
    */
   readonly envelope?: { readonly width: number; readonly height: number } | null;
+  /** S5-03B R1 — the support regions the world drawn here has. Absent, the frozen `TIMELINE_AND_CHROME` composition. */
+  readonly support?: SupportCapability;
 }
 
 export interface MeasuredSurfaceBinding {
@@ -108,7 +110,7 @@ interface Settled {
 }
 
 export function useResponsiveSurface(options: ResponsiveSurfaceOptions = {}): MeasuredSurfaceBinding {
-  const { insets, fontScale, envelope } = options;
+  const { insets, fontScale, envelope, support } = options;
   const top = quantizePoints(insets?.top ?? 0);
   const right = quantizePoints(insets?.right ?? 0);
   const bottom = quantizePoints(insets?.bottom ?? 0);
@@ -194,7 +196,7 @@ export function useResponsiveSurface(options: ResponsiveSurfaceOptions = {}): Me
 
   // Memoized on the surface and the settled band, both of which are stable when the numbers are, so
   // the plan object is stable exactly when the composition is.
-  const plan = useMemo(() => (surface === null ? null : recompositionPlan(surface, { band })), [band, surface]);
+  const plan = useMemo(() => (surface === null ? null : recompositionPlan(surface, { band, support })), [band, support, surface]);
 
   return useMemo(() => ({ onLayout, plan, surface }), [onLayout, plan, surface]);
 }

@@ -31,6 +31,14 @@
  * constant: the gesture must be at least as large as the change it asks for. Below it the pinch is
  * finger noise on a drag and is refused, which is what keeps an ordinary Pan from ever becoming a
  * depth change.
+ *
+ * ## S5-03B R1 — one semantic-step mechanic, whatever ladder it climbs
+ *
+ * The recogniser, the threshold, the authority stamp and the single crossing on END are the Living Analysis
+ * surface's, not the Personal store's. `useWorldSemanticStepGesture` is that mechanic, given the ONE step a finished
+ * pinch asks for (`step`). Which rungs exist, and what a step discloses, stays the world's own: the Personal Map binds
+ * it to `zoomSemanticStep` over its frozen lineage through `useMapSemanticZoomGesture`, unchanged in name, signature
+ * and behaviour.
  */
 import { useCallback, useMemo } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
@@ -38,8 +46,9 @@ import { Gesture } from 'react-native-gesture-handler';
 import { handoffToProduct, type AuthorityGeneration } from '../../motion';
 import type { CanonicalStore } from '../../state';
 import type { MapActionOutcome } from '../outcome';
+import type { WorldGestureOutcome } from './useMapPanGesture';
 import { zoomSemanticStep } from './map-camera-actions';
-import { SEMANTIC_ZOOM_REINFORCEMENT_DENOMINATOR, SEMANTIC_ZOOM_REINFORCEMENT_NUMERATOR } from './zoom';
+import { SEMANTIC_ZOOM_REINFORCEMENT_DENOMINATOR, SEMANTIC_ZOOM_REINFORCEMENT_NUMERATOR, type SemanticZoomDirection } from './zoom';
 
 /**
  * The neutral band around scale 1, derived from the frozen reinforcement rather than chosen.
@@ -58,6 +67,16 @@ export interface MapSemanticZoomGestureOptions {
   readonly onSettled?: (outcome: MapActionOutcome) => void;
 }
 
+export interface WorldSemanticStepGestureOptions<O extends WorldGestureOutcome> {
+  /** False while the surface cannot be composed, exactly as the pan is disabled. */
+  readonly enabled: boolean;
+  /** The same generation stamp the pan uses, so a replaced authority cannot be written by a stale end. */
+  readonly authority: AuthorityGeneration;
+  /** The ONE step a finished pinch asked for, along the world's own ladder, on the Product runtime. */
+  readonly step: (direction: SemanticZoomDirection) => O;
+  readonly onSettled?: (outcome: O) => void;
+}
+
 export interface MapSemanticZoomGestureBinding {
   readonly gesture: ReturnType<typeof Gesture.Pinch>;
 }
@@ -70,8 +89,14 @@ export function semanticZoomDirectionFor(scale: number): 'IN' | 'OUT' | null {
   return null;
 }
 
+/** The Personal Map's pinch: the world's one semantic-step mechanic, bound to the canonical `ZOOM_SEMANTIC` of this store. */
 export function useMapSemanticZoomGesture(store: CanonicalStore, options: MapSemanticZoomGestureOptions): MapSemanticZoomGestureBinding {
-  const { enabled, authority, onSettled } = options;
+  const step = useCallback((direction: SemanticZoomDirection) => zoomSemanticStep(store, direction), [store]);
+  return useWorldSemanticStepGesture<MapActionOutcome>({ ...options, step });
+}
+
+export function useWorldSemanticStepGesture<O extends WorldGestureOutcome>(options: WorldSemanticStepGestureOptions<O>): MapSemanticZoomGestureBinding {
+  const { enabled, authority, step, onSettled } = options;
 
   // The ONE crossing into Product truth, on the JS runtime, from a finished gesture.
   const commit = useCallback(
@@ -81,9 +106,9 @@ export function useMapSemanticZoomGesture(store: CanonicalStore, options: MapSem
       if (generation !== authority.current()) return;
       const direction = semanticZoomDirectionFor(scale);
       if (direction === null) return;
-      onSettled?.(zoomSemanticStep(store, direction));
+      onSettled?.(step(direction));
     },
-    [authority, onSettled, store],
+    [authority, onSettled, step],
   );
 
   const gesture = useMemo(

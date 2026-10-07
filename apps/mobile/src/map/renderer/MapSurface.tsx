@@ -49,25 +49,28 @@
  * owner: the canonical store, the ONE freshness rule, the disclosed scene, the gestures that dispatch into the
  * store, inspection and the accessible Map are all here and nowhere else. The golden equivalence suite proves the
  * Personal Map paints exactly what it did.
+ *
+ * S5-03B R1 — the world VIEW is now the Living Analysis surface's own (`./WorldViewSurface`): `useWorldView` runs the
+ * mechanics above in the order this surface always ran them, and `WorldViewSurface` composes the surface, the
+ * gesture plane, the tap route and the accessible layer. This file is still the Personal owner and nothing of its
+ * role moved: the store, the freshness rule, the disclosed scene, the two acts a drag and a pinch become (`PAN`,
+ * `ZOOM_SEMANTIC`), inspection, the Personal paint and the accessible Map. The screen golden and the Map golden
+ * prove the Personal Map is unchanged.
  */
 import { useCallback, useMemo, useSyncExternalStore } from 'react';
-import { StyleSheet, View } from 'react-native';
-import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
-import { useAuthorityGeneration, type PresentationMotionCause } from '../../motion';
+import type { PresentationMotionCause } from '../../motion';
 import type { AnalysisLanguage } from '../../analysis-language';
 import type { CameraIntent, CanonicalStore } from '../../state';
-import { decodeCameraIntent, useMapPanGesture, useMapSemanticZoomGesture, type MapCamera, type ViewportEnvelope } from '../camera';
+import { decodeCameraIntent, panByTranslation, zoomSemanticStep, type MapCamera, type SemanticZoomDirection, type ViewportEnvelope } from '../camera';
 import { MapAccessibilityLayer } from '../accessibility';
 import { inspectObject, type DirectJumpOutcome, type MapInspectionContext } from '../inspection';
 import { mapContextFreshness } from '../projection';
-import { useIncreasedContrast } from '../../conversation/visual/theme';
-import { worldPresentation } from '../visual';
 import type { MapActionOutcome } from '../outcome';
 import { MapCanvas } from './MapCanvas';
 import { placeScene, sceneMembershipKeys, type PlacedNode } from './map-geometry';
 import { DEFAULT_RENDER_STYLE, type RenderStyle } from './render-style';
-import { useWorldFrame, useWorldMotion } from './useWorldSurface';
+import { WorldViewSurface, useWorldView } from './WorldViewSurface';
 
 export const MAP_SURFACE_TEST_ID = 'qandeel-map-surface';
 export const MAP_SURFACE_PLANE_TEST_ID = 'qandeel-map-surface-plane';
@@ -107,34 +110,6 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
     [usable, context.scene, camera, envelope],
   );
 
-  // The presentation camera, and the travel / drag corridor it reports into (the generic world surface).
-  const worldMotion = useWorldMotion<MapCamera>(envelope);
-  const { motion } = worldMotion;
-  // VPORT-01: the facts the world's EXPRESSION reads, gathered once per commit. The camera's distance
-  // and anchor, the device's reduced-motion answer, the platform contrast setting and the current
-  // inspection — none of which reaches placement, hit testing, membership or the accessible tree.
-  const increasedContrast = useIncreasedContrast();
-  const world = useMemo(
-    () =>
-      camera === null
-        ? undefined
-        : worldPresentation(camera, {
-            reducedMotion: motion.reducedMotion,
-            contrast: increasedContrast ? 'increased' : 'standard',
-            inspection: state.inspection,
-          }),
-    [camera, increasedContrast, motion.reducedMotion, state.inspection],
-  );
-  const authority = useAuthorityGeneration(store);
-  const { gesture: panGesture } = useMapPanGesture(store, { enabled: usable, camera: motion, authority, onSettled: onOutcome });
-  const { gesture: zoomGesture } = useMapSemanticZoomGesture(store, { enabled: usable, authority, onSettled: onOutcome });
-  // Simultaneous, not exclusive. The two recognisers are already separated by pointer count — the pan
-  // takes one finger and the pinch takes two — so neither has to lose a race, and racing them would
-  // make the winner depend on which recogniser happened to activate first. What this composition
-  // guarantees is that a second finger reaches the pinch instead of being swallowed by a pan that has
-  // already claimed the plane.
-  const gesture = useMemo(() => Gesture.Simultaneous(panGesture, zoomGesture), [panGesture, zoomGesture]);
-
   /**
    * The cause of the transition being applied, asked for at APPLY time and never during render.
    *
@@ -150,14 +125,26 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
   // Which loci are part of the accepted current `V` (R3-01): asked of the SCENE, never of a placement, and
   // only of a scene that is still this Map. A technical stale gap passes none, so the record survives it.
   const accepted = useMemo(() => (usable ? sceneMembershipKeys(context.scene) : null), [context.scene, usable]);
-  // The STORE is this surface's authority: a replaced store drops the residual, the drag and the record.
-  const { cameraCommit, presented, newlyDisclosed, nodeAt } = useWorldFrame<MapCamera, PlacedNode>(worldMotion, {
+  // The Personal Map's two camera acts: one completed drag is one `PAN`, and one finished pinch is one `ZOOM_SEMANTIC`
+  // along the frozen lineage — each dispatched into THIS store, the authority the view draws under.
+  const pan = useCallback((translationX: number, translationY: number) => panByTranslation(store, translationX, translationY), [store]);
+  const step = useCallback((direction: SemanticZoomDirection) => zoomSemanticStep(store, direction), [store]);
+  // S5-03B R1 — the world view of the one Living Analysis surface: the presentation camera and its corridor, the
+  // world's expression, the drag and the step, then the camera commit, culling and membership, in the order this
+  // surface always ran them. The STORE is this surface's authority: a replaced store drops the residual, the drag
+  // and the record.
+  const { worldMotion, world, gesture, cameraCommit, presented, newlyDisclosed, nodeAt } = useWorldView<MapCamera, PlacedNode, MapActionOutcome>({
     owner: store,
-    camera,
     envelope,
+    camera,
     placed,
     membership: accepted,
     cause: causeOfTransition,
+    enabled: usable,
+    inspection: state.inspection,
+    pan,
+    step,
+    onSettled: onOutcome,
   });
 
   // The act runs first and the observer is notified afterwards: an optional call would not
@@ -181,28 +168,18 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
   // rather than a plausible wrong Map. The accessible layer is still mounted when a camera exists:
   // it enforces the same freshness rule itself, so it exposes no object of the old scene, while
   // the viewport routes that could bring the camera back to a matching depth stay reachable.
-  if (camera === null || placed === null) {
-    return (
-      <View testID={MAP_SURFACE_TEST_ID} style={styles.surface}>
-        {camera === null ? null : (
-          <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} language={language} />
-        )}
-      </View>
-    );
-  }
-
   return (
-    <View testID={MAP_SURFACE_TEST_ID} style={styles.surface}>
-      <GestureDetector gesture={gesture}>
-        <View
-          testID={MAP_SURFACE_PLANE_TEST_ID}
-          style={StyleSheet.absoluteFill}
-          onStartShouldSetResponder={() => true}
-          onResponderRelease={(event) => onTap(event.nativeEvent.locationX, event.nativeEvent.locationY)}
-        >
+    <WorldViewSurface
+      testID={MAP_SURFACE_TEST_ID}
+      planeTestID={MAP_SURFACE_PLANE_TEST_ID}
+      composed={camera !== null && placed !== null}
+      gesture={gesture}
+      onTap={onTap}
+      canvas={
+        placed === null ? null : (
           <MapCanvas
             envelope={envelope}
-            motion={motion}
+            motion={worldMotion.motion}
             placed={placed}
             presented={presented}
             newlyDisclosed={newlyDisclosed}
@@ -211,13 +188,13 @@ export function MapSurface({ store, context, envelope, style = DEFAULT_RENDER_ST
             style={style}
             world={world}
           />
-        </View>
-      </GestureDetector>
-      <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} language={language} />
-    </View>
+        )
+      }
+      accessibility={
+        camera === null ? null : (
+          <MapAccessibilityLayer store={store} context={context} camera={camera} envelope={envelope} onOutcome={onOutcome} language={language} />
+        )
+      }
+    />
   );
 }
-
-const styles = StyleSheet.create({
-  surface: { flex: 1 },
-});

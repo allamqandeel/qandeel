@@ -315,7 +315,11 @@ test('the world is sized first, and the support around it yields', () => {
   // are clamped — unchanged. The one reduction is the short-height arrangement where the instrument
   // and the orientation sit across each other inside the same band, and there its half IS its whole
   // available width. The clamp is still the chrome's alone, which is the rule this defends.
-  assert.match(plan, /const timelineWidthPoints = support\.arrangement === 'SIDE_BY_SIDE'/u, 'the only width reduction is the across arrangement');
+  // S5-03B R1 (controlled re-anchor): `let`, because a world with NO temporal track (`CHROME_ONLY`) composes no
+  // instrument at all (width 0). For every world that has one, the rule is unchanged and is the only width reduction.
+  assert.match(plan, /let timelineWidthPoints = support\.arrangement === 'SIDE_BY_SIDE'/u, 'the only width reduction is the across arrangement');
+  assert.equal((plan.match(/timelineWidthPoints = /gu) ?? []).length, 2, 'the frozen rule, and the no-instrument capability');
+  assert.match(plan, /if \(options\.support === 'CHROME_ONLY'\) \{[\s\S]*?timelineWidthPoints = 0;/u, 'only a world with no track has no instrument');
   assert.match(plan, /\n\s*: available;/u, 'stacked, the Timeline still gets the whole available width');
   assert.doesNotMatch(plan, /timelineWidthPoints = Math\.min\(available, CHROME_MAX_MEASURE_POINTS/u, 'the Timeline is never clamped to a reading measure');
   assert.match(plan, /const measurePoints = Math\.min\(available, CHROME_MAX_MEASURE_POINTS \+ 2 \* CHROME_OWN_HORIZONTAL_PADDING\);/u, 'only the chrome is clamped');

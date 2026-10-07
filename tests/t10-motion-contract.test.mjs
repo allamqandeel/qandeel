@@ -65,7 +65,10 @@ const mapText = Object.values(mapCode).join('\n');
 // renderer/WorldCanvas.tsx and the surface mechanics in renderer/useWorldSurface.ts. Every invariant below is asserted
 // on the owner TOGETHER WITH the seam its code now lives in; none is weakened.
 const personalCanvas = `${mapCode['renderer/MapCanvas.tsx']}\n${mapCode['renderer/WorldCanvas.tsx']}`;
-const personalSurface = `${mapCode['renderer/MapSurface.tsx']}\n${mapCode['renderer/useWorldSurface.ts']}`;
+// S5-03B R1 (controlled re-anchor, after the Personal Map golden AND the Living Analysis screen golden): the world VIEW
+// (`useWorldView` — presentation camera, expression, drag, semantic step, frame — and `WorldViewSurface`) is the one
+// Living Analysis surface's, in renderer/WorldViewSurface.tsx. The Personal owner is asserted together with it.
+const personalSurface = `${mapCode['renderer/MapSurface.tsx']}\n${mapCode['renderer/WorldViewSurface.tsx']}\n${mapCode['renderer/useWorldSurface.ts']}`;
 
 const temporalMotion = stripComments(read('apps/mobile/src/temporal-navigation/motion/temporal-motion.ts'));
 const temporalBinding = stripComments(read('apps/mobile/src/temporal-navigation/motion/useTemporalMotion.ts'));
@@ -240,7 +243,10 @@ test('Q1 — one completed drag is one PAN, from the finger, with no momentum an
   assert.match(mapCode['camera/pan.ts'], /type PannedCamera = Pick<MapCamera, 'anchor' \| 'scale'>;/u);
   assert.match(mapCode['camera/pan.ts'], /export function panFromTranslation\(camera: PannedCamera, translationX: number, translationY: number\): PanResolution \{/u);
   assert.equal((gesture.match(/panByTranslation\(/gu) ?? []).length, 1, 'exactly one place commits a drag');
-  assert.match(gesture, /const outcome = panByTranslation\(current\.store, translationX, translationY\);/u);
+  // S5-03B R1 — CONTROLLED RE-ANCHOR: the drag mechanic is the world view's ONE `useWorldPanGesture`; the Personal
+  // `useMapPanGesture` binds it to this store's `PAN`, and the crossing reaches exactly that act.
+  assert.match(gesture, /const commit = useCallback\(\(translationX: number, translationY: number\) => panByTranslation\(store, translationX, translationY\), \[store\]\);/u);
+  assert.match(gesture, /const outcome = current\.commit\(translationX, translationY\);/u);
   // ...and it is reached ONLY from a successful gesture end, with the finger's own translation AND
   // the authority generation the drag began under (R1-01 re-anchor).
   assert.match(gesture, /if \(success\) handoffToProduct\(settle, event\.translationX, event\.translationY, authority\.captured\.get\(\)\);/u);
@@ -368,7 +374,8 @@ test('R1-01 — an in-flight drag cannot be re-routed into a replacement store',
   assert.ok(settle.length > 0, 'the completion path exists');
   // The refusal comes BEFORE the only dispatch in the file, so no ordering can put an act first.
   assert.ok(
-    settle.indexOf('authority.current()') < settle.indexOf('panByTranslation('),
+    // S5-03B R1: the only dispatch is the bound act, reached as `current.commit(`.
+    settle.indexOf('authority.current()') >= 0 && settle.indexOf('authority.current()') < settle.indexOf('current.commit('),
     'staleness is decided before anything is dispatched',
   );
   assert.match(settle, /camera\.reset\(\);\s*\n\s*return;/u, 'a stale drag drops its residual and returns');
@@ -376,7 +383,9 @@ test('R1-01 — an in-flight drag cannot be re-routed into a replacement store',
   // preserve, so the camera is reset rather than rebased across two unrelated worlds.
   // S5-03B Phase 1: the generic surface compares the authority it was handed, and the Personal owner hands it the STORE.
   assert.match(personalSurface, /const authorityReplaced = history !== null && history\.owner !== owner;/u);
-  assert.match(mapCode['renderer/MapSurface.tsx'], /useWorldFrame<MapCamera, PlacedNode>\(worldMotion, \{\s*owner: store,/u);
+  // S5-03B R1: the world view hands `useWorldFrame` the owner it was given, and the Personal owner gives it the STORE.
+  assert.match(mapCode['renderer/WorldViewSurface.tsx'], /useWorldFrame<C, N>\(worldMotion, \{ owner, camera, envelope, placed, membership, cause \}\)/u);
+  assert.match(mapCode['renderer/MapSurface.tsx'], /useWorldView<MapCamera, PlacedNode, MapActionOutcome>\(\{\s*owner: store,/u);
   assert.match(
     personalCanvas,
     /if \(reset\) motion\.reset\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition, cause\(\)\);/u,
@@ -433,7 +442,8 @@ test('R1-04 — pointer parity covers the object-local motion, not only the plan
   // S5-03B Phase 1: the Personal tap asks the generic surface which drawn node is under the finger (nodeAt), and only
   // then decides the act. Both transforms live in that one place.
   const owner = mapCode['renderer/MapSurface.tsx'];
-  assert.match(owner.slice(owner.indexOf('const onTap = useCallback('), owner.indexOf('if (camera === null || placed === null)')), /const node = nodeAt\(x, y\);/u);
+  // S5-03B R1: the composed view routes the tap to the owner, which still decides it.
+  assert.match(owner.slice(owner.indexOf('const onTap = useCallback('), owner.indexOf('<WorldViewSurface')), /const node = nodeAt\(x, y\);/u);
   assert.equal(surface.length > 0, true);
   const seam = mapCode['renderer/useWorldSurface.ts'];
   const tap = seam.slice(seam.indexOf('const nodeAt = useCallback('), seam.indexOf('return { cameraCommit, presented, newlyDisclosed, nodeAt };'));

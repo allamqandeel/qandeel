@@ -247,9 +247,11 @@ test('11 — Phase 1 + 2: ONE generic Living Analysis World seam, extracted from
   const RENDERER = `${MOBILE}/map/renderer`;
   const worldCanvas = code(`${RENDERER}/WorldCanvas.tsx`);
   const worldSurface = code(`${RENDERER}/useWorldSurface.ts`);
+  // R1 (S5-03B Task Contract amendment, 2026-10-07): the world VIEW joined the generic layer.
+  const worldView = code(`${RENDERER}/WorldViewSurface.tsx`);
   // The generic layer reads no Personal truth: no canonical store, no Personal state, no disclosure, no inspection,
   // no accessible Map, and it dispatches nothing.
-  for (const [file, text] of [['WorldCanvas.tsx', worldCanvas], ['useWorldSurface.ts', worldSurface]]) {
+  for (const [file, text] of [['WorldCanvas.tsx', worldCanvas], ['useWorldSurface.ts', worldSurface], ['WorldViewSurface.tsx', worldView]]) {
     assert.doesNotMatch(text, /from '\.\.\/\.\.\/state'|from '\.\.\/projection'|from '\.\.\/inspection'|from '\.\.\/accessibility'|CanonicalStore|useSyncExternalStore|dispatch\(|MapScene|InspectionRef|THREAD|READING|EMERGING_FOCUS/u, `${file} reads no Personal truth`);
   }
   // The rebase is still issued from INSIDE the Skia root, as the LAST child of the plane, after the positions.
@@ -260,9 +262,12 @@ test('11 — Phase 1 + 2: ONE generic Living Analysis World seam, extracted from
   const personalCanvas = code(`${RENDERER}/MapCanvas.tsx`);
   assert.ok(personalCanvas.includes('key={`tether:${node.key}`}'), 'tether keys');
   assert.ok(personalCanvas.includes("isPlace={(node) => node.locus?.kind === 'THREAD_HOME'}"), 'a Thread Home is the Personal place');
-  // MapSurface stays the Personal owner: the store, the ONE freshness rule, the gestures, inspection, accessibility.
+  // MapSurface stays the Personal owner: the store, the ONE freshness rule, the acts its gestures become, inspection,
+  // accessibility. R1 (controlled re-anchor): the drag and the pinch are the world view's ONE mechanic
+  // (`useWorldPanGesture` / `useWorldSemanticStepGesture`, the bodies of the unchanged `useMapPanGesture` /
+  // `useMapSemanticZoomGesture`), so what MapSurface owns is the act each becomes in THIS store: `PAN` and `ZOOM_SEMANTIC`.
   const personalSurface = code(`${RENDERER}/MapSurface.tsx`);
-  for (const owned of ['useSyncExternalStore(store.subscribe, store.getState)', 'mapContextFreshness(state, context)', 'useMapPanGesture(store,', 'useMapSemanticZoomGesture(store,', 'inspectObject(store, context,', '<MapAccessibilityLayer', 'owner: store,']) {
+  for (const owned of ['useSyncExternalStore(store.subscribe, store.getState)', 'mapContextFreshness(state, context)', 'panByTranslation(store,', 'zoomSemanticStep(store,', 'inspectObject(store, context,', '<MapAccessibilityLayer', 'owner: store,']) {
     assert.ok(personalSurface.includes(owned), `MapSurface still owns ${owned}`);
   }
   // The Personal golden equivalence is recorded and enforced (never regenerated in CI).
@@ -275,4 +280,47 @@ test('11 — Phase 1 + 2: ONE generic Living Analysis World seam, extracted from
   for (const seam of [/\bWorldCanvas\b/u, /\buseWorldMotion\b/u, /\buseWorldFrame\b/u]) assert.match(field, seam, `the Public field paints through ${seam}`);
   // The Public field takes nothing of the Personal owner: no store, no freshness rule, no Personal gestures or inspection.
   assert.doesNotMatch(field, /MapCanvas|MapSurface|mapContextFreshness|inspectObject|MapAccessibilityLayer|useMapPanGesture|useMapSemanticZoomGesture/u);
+});
+
+test('12 — R1: ONE Living Analysis SCREEN (not only one renderer); the Personal Analysis is its first consumer, unchanged', () => {
+  // The screen is the surface's own: the Analysis place, the top band, T-11's responsive column, the measured world
+  // frame and ONE support band — and it holds nothing of any world.
+  const screen = code(`${MOBILE}/living-analysis/LivingAnalysisSurface.tsx`);
+  assert.match(screen, /<AnalysisAppearanceScope>/u, 'the surface is the Analysis place, dark under every preference');
+  for (const owner of ['<ResponsiveSurface', '<ResponsiveMapFrame', '<ResponsiveSupportBand', '<ResponsiveTimelineRow', '<ResponsiveChromeBand']) {
+    assert.ok(screen.includes(owner), `the surface composes ${owner}`);
+  }
+  assert.match(screen, /support=\{timeline === null \? 'CHROME_ONLY' : 'TIMELINE_AND_CHROME'\}/u, 'no temporal track is a capability, never an empty instrument');
+  assert.match(screen, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis ground');
+  const specifiers = [...screen.matchAll(/from '([^']+)'/gu)].map((match) => match[1]);
+  assert.deepEqual(specifiers, ['react', 'react-native', '../analysis-visual', '../appearance', '../map/camera', '../responsive'], 'the screen imports no world');
+  // The world view is the surface's too: one presentation camera, one drag, one semantic step, for every world.
+  const worldView = code(`${MOBILE}/map/renderer/WorldViewSurface.tsx`);
+  for (const seam of ['useWorldMotion<C>(envelope)', 'useAuthorityGeneration(owner)', 'useWorldPanGesture<O>(', 'useWorldSemanticStepGesture<O>(', 'Gesture.Simultaneous(panGesture, zoomGesture)', 'useWorldFrame<C, N>(']) {
+    assert.ok(worldView.includes(seam), `the world view owns ${seam}`);
+  }
+  // The Personal hooks keep their names and signatures, and are bindings of the one mechanic to the Personal store.
+  const pan = code(`${MOBILE}/map/camera/useMapPanGesture.ts`);
+  assert.match(pan, /export function useMapPanGesture\(store: CanonicalStore, options: MapPanGestureOptions\): MapPanGestureBinding \{\n\s*const commit = useCallback\(\(translationX: number, translationY: number\) => panByTranslation\(store, translationX, translationY\), \[store\]\);\n\s*return useWorldPanGesture<MapActionOutcome>\(\{ \.\.\.options, commit \}\);/u);
+  const pinch = code(`${MOBILE}/map/camera/useMapSemanticZoomGesture.ts`);
+  assert.match(pinch, /export function useMapSemanticZoomGesture\(store: CanonicalStore, options: MapSemanticZoomGestureOptions\): MapSemanticZoomGestureBinding \{\n\s*const step = useCallback\(\(direction: SemanticZoomDirection\) => zoomSemanticStep\(store, direction\), \[store\]\);\n\s*return useWorldSemanticStepGesture<MapActionOutcome>\(\{ \.\.\.options, step \}\);/u);
+  // The Personal Analysis is composed ON the surface, with its own projection and capabilities and nothing else.
+  const personal = code(`${MOBILE}/integration/composition/LivingAnalysisMap.tsx`);
+  assert.match(personal, /<LivingAnalysisSurface\b/u);
+  for (const capability of ['<MapSurface', '<TemporalOrientationLine', '<TemporalTargetLayer', '<OrientationChrome']) {
+    assert.ok(personal.includes(capability), `the Personal world brings ${capability}`);
+  }
+  assert.doesNotMatch(personal, /<Responsive(Surface|MapFrame|SupportBand|TimelineRow|ChromeBand)\b/u, 'the Personal world builds no screen of its own');
+  const depth = code(`${MOBILE}/integration/composition/DepthComposition.tsx`);
+  assert.match(depth, /top=\{\{\s*content: \(\s*<AnalysisReturnBar/u, 'the way back to the Conversation stands in the surface top band');
+  // The responsive default is the frozen composition.
+  const plan = code(`${MOBILE}/responsive/plan.ts`);
+  assert.match(plan, /export const SUPPORT_CAPABILITIES = Object\.freeze\(\['TIMELINE_AND_CHROME', 'CHROME_ONLY'\] as const\);/u);
+  assert.match(plan, /if \(options\.support === 'CHROME_ONLY'\) \{/u, 'the default path is the frozen one; only CHROME_ONLY branches');
+  // The screen golden was recorded BEFORE the extraction and is enforced, never regenerated in CI.
+  const screenGolden = read(`${MOBILE}/integration/__tests__/living-analysis-screen-golden.test.tsx`);
+  assert.match(screenGolden, /expect\(produced\[name\]\)\.toEqual\(recorded\[name\]\)/u);
+  assert.ok(existsSync(new URL(`${MOBILE}/integration/__tests__/__golden__/living-analysis-screen.golden.json`, root)), 'the screen golden is committed');
+  // R1 adopts nothing for Public: its field is untouched until the Product Owner approves R1.
+  assert.doesNotMatch(code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`), /LivingAnalysisSurface|WorldViewSurface|useWorldView/u);
 });

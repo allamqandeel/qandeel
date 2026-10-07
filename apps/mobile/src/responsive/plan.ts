@@ -266,6 +266,17 @@ export interface RecompositionPlan {
   readonly geometry: number;
 }
 
+/**
+ * S5-03B R1 — which support regions the world drawn in this surface has.
+ *
+ * `TIMELINE_AND_CHROME` is the Living Analysis Map's frozen composition and the default: the disclosed temporal track
+ * and the orientation chrome share the band. `CHROME_ONLY` is a world with no temporal track at all — no Session, no
+ * effective TC, no Live — which must not be given an empty instrument to fill: the band is the SAME room (so the world
+ * above it is framed exactly as it is for every world), and all of it belongs to that world's chrome.
+ */
+export const SUPPORT_CAPABILITIES = Object.freeze(['TIMELINE_AND_CHROME', 'CHROME_ONLY'] as const);
+export type SupportCapability = (typeof SUPPORT_CAPABILITIES)[number];
+
 export interface RecompositionOptions {
   /**
    * The band already settled on screen, when there is one.
@@ -275,6 +286,8 @@ export interface RecompositionOptions {
    * plan, and there is no history for a caller to get wrong.
    */
   readonly band?: PresentationBand | null;
+  /** S5-03B R1 — the support regions this world has. Absent, the frozen `TIMELINE_AND_CHROME` composition. */
+  readonly support?: SupportCapability;
 }
 
 /**
@@ -342,9 +355,27 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
 
   // Across, the instrument is composed in its own half of the band rather than the whole width, and
   // that is a coordinate quantity: T-05 maps a scrub through it, so it feeds the mapping identity.
-  const timelineWidthPoints = support.arrangement === 'SIDE_BY_SIDE'
+  let timelineWidthPoints = support.arrangement === 'SIDE_BY_SIDE'
     ? Math.max(0, Math.round((available - PAIRED_COLUMN_GAP_POINTS) / 2))
     : available;
+
+  // S5-03B R1 — a world with no temporal track. The band keeps EXACTLY the room computed above, so the world's frame
+  // is the same as it is for every world in this surface; the chrome alone takes all of it, stacked, across the whole
+  // available width. There is no Timeline row, so there is no gap between it and the chrome, and no instrument feeds
+  // the mapping identity.
+  let chromeGapPoints = gapPoints;
+  if (options.support === 'CHROME_ONLY') {
+    support = {
+      arrangement: 'STACKED',
+      bandPoints: support.bandPoints,
+      timelinePoints: 0,
+      chromePoints: support.bandPoints,
+      gapPoints: support.gapPoints,
+      chromeWidthPoints: available,
+    };
+    timelineWidthPoints = 0;
+    chromeGapPoints = 0;
+  }
 
   return Object.freeze({
     surface,
@@ -364,7 +395,7 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
       arrangement,
       measurePoints,
       paddingHorizontal,
-      gapPoints,
+      gapPoints: chromeGapPoints,
       bottomInset: surface.insetBottom,
     }),
     support: Object.freeze(support),
