@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import { isCanonicalCoordinateText } from './public-spatial-placer';
-import type { PublicFieldContentRow, PublicFieldEntryRow, PublicFieldExperienceRow } from './public-field.repository';
+import type { PublicFieldContentRow, PublicFieldEntryRow, PublicFieldExperienceRow, PublicFieldRelationRow } from './public-field.repository';
 import { PublicFieldRepository } from './public-field.repository';
 
 /** One Experience in the field: its place (exact integer text), its reviewed meaning and its semantic region. */
@@ -18,6 +18,11 @@ export type PublicFieldExperienceView =
     };
     readonly content: ReadonlyArray<{ readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string }>;
     readonly nearby: ReadonlyArray<PublicFieldEntryView>;
+    /**
+     * S5-03C: the Experience's ACTIVE explicit relations, each the OTHER endpoint's served entry and the relation's id.
+     * Only relations whose two bound endpoints are both served now; empty when there are none. Similarity adds nothing.
+     */
+    readonly relations: ReadonlyArray<{ readonly relationId: string; readonly other: PublicFieldEntryView }>;
   };
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -25,6 +30,8 @@ const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 export const PUBLIC_FIELD_MAX = 400;
 export const PUBLIC_SEARCH_MAX = 20;
 export const PUBLIC_NEARBY_MAX = 3;
+/** S5-03C: at most 24 explicit relations of one Experience per read. */
+export const PUBLIC_RELATIONS_PER_EXPERIENCE_MAX = 24;
 export const PUBLIC_SEARCH_QUERY_MAX = 120;
 
 const invalid = (): never => { throw new BadRequestException({ outcome: 'INVALID_REQUEST' }); };
@@ -50,7 +57,8 @@ function entriesOf(rows: readonly PublicFieldEntryRow[], max: number): PublicFie
  * Every answer is decided by the database for the viewer's own token: admission, canonical visibility, the exact visible
  * version, its reviewed S5-03A meaning and its current place. An Experience that is not served — hidden, stale, guessed,
  * or a viewer not admitted — is one neutral absence, never a reason. Nothing here ranks by popularity or views, invents
- * a count, draws a relation, or publishes; nothing is logged.
+ * a count or publishes; nothing is logged. The only relation it serves is an EXPLICIT one (S5-03C): an accepted human
+ * relation whose two bound endpoints the database serves now — never a similarity, a proximity or a shared region.
  */
 @Injectable()
 export class PublicFieldService {
@@ -91,19 +99,21 @@ export class PublicFieldService {
       const rows = await this.repository.experience(token, experienceId);
       if (!Array.isArray(rows) || rows.length > 1) return unavailable();
       if (rows.length === 0) return { state: 'UNAVAILABLE' as const };
-      const [content, nearby] = await Promise.all([this.repository.content(token, experienceId), this.repository.nearby(token, experienceId)]);
-      return servedOf(rows[0], content, nearby);
+      const [content, nearby, relations] = await Promise.all([this.repository.content(token, experienceId),
+        this.repository.nearby(token, experienceId), this.repository.relations(token, experienceId)]);
+      return servedOf(rows[0], content, nearby, relations);
     });
   }
 }
 
-function servedOf(row: PublicFieldExperienceRow, content: readonly PublicFieldContentRow[], nearby: readonly PublicFieldEntryRow[]): PublicFieldExperienceView {
+function servedOf(row: PublicFieldExperienceRow, content: readonly PublicFieldContentRow[], nearby: readonly PublicFieldEntryRow[],
+  relations: readonly PublicFieldRelationRow[]): PublicFieldExperienceView {
   const entry = entryOf(row);
   if (!isTextList(row.primary_themes) || !isTextList(row.secondary_themes)
     || (row.publisher_label_mode !== 'PSEUDONYM' && row.publisher_label_mode !== 'REAL_NAME')
     || (row.publisher_display_label !== null && typeof row.publisher_display_label !== 'string')
     || typeof row.published_at !== 'string' || !isCount(row.discussion_post_count) || !isCount(row.qandeel_response_count)
-    || !Array.isArray(content)) return unavailable();
+    || !Array.isArray(content) || !Array.isArray(relations) || relations.length > PUBLIC_RELATIONS_PER_EXPERIENCE_MAX) return unavailable();
   // The Experience went dark between the reads: one neutral absence, never a partial panel.
   if (content.length === 0) return { state: 'UNAVAILABLE' };
   const items = content.map((item) => {
@@ -121,5 +131,7 @@ function servedOf(row: PublicFieldExperienceRow, content: readonly PublicFieldCo
     },
     content: items,
     nearby: entriesOf(nearby, PUBLIC_NEARBY_MAX).filter((near) => near.id !== entry.id),
+    relations: relations.map((relation) => (isUuid(relation?.relation_id) ? { relationId: relation.relation_id, other: entryOf(relation) } : unavailable()))
+      .filter((relation) => relation.other.id !== entry.id),
   };
 }

@@ -140,7 +140,13 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   for (const file of FIELD_FILES) {
     const text = code(`${MOBILE}/${file}`);
     assert.doesNotMatch(text, /from '\.\.\/\.\.\/state'|CanonicalStore|SemanticDepth|useMapPanGesture|useMapSemanticZoomGesture|integration\//u, `${file} holds no Personal Map state`);
-    assert.doesNotMatch(text, /relation|<Line|<Path|<Svg|viewCount|view_count|\brank\b|popular|trending/iu, `${file} draws no relation and ranks nothing`);
+    assert.doesNotMatch(text, /<Line|<Path|<Svg|viewCount|view_count|\brank\b|popular|trending|similar|proxim/iu, `${file} draws nothing inferred and ranks nothing`);
+    // RE-ANCHORED by S5-03C (validation only): the field now carries the EXPLICIT relations the server serves — through
+    // the panel read (client, controller) into the view's connection slot. Every other S5-03B field file still names no
+    // relation at all; S5-03C's own contract pins that the relation comes from the server's explicit read alone.
+    if (!['public-world/field/public-field-controller.ts', 'public-world/field/PublicFieldView.tsx', 'runtime-entry/public-field-api.ts'].includes(file)) {
+      assert.doesNotMatch(text, /relation/iu, `${file} names no relation`);
+    }
     if (!file.endsWith('field-copy.ts')) assert.doesNotMatch(text, /['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u, `${file} carries no Arabic literal`);
     assert.doesNotMatch(text, /publish_|'PUBLISHED'|"PUBLISHED"|s5-03a\.private|S5-03A_PRIVATE/u, `${file} names no publication and no placeholder`);
   }
@@ -205,13 +211,22 @@ test('9 — governance: the record, the backlog and the locators tell the same t
   assert.match(backlog, /\*\*Current-truth note \(S5-03B, 2026-10-06\)\.\*\*/u);
   assert.match(backlog, /\*\*S5-03B reconciliation \(2026-10-06; not merged\)\.\*\*/u);
   assert.match(backlog, /\| `S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime` \| none — no item names it;/u);
+  // RE-ANCHORED by S5-03C (validation only): PR #317 is merged. The record and the backlog keep their pre-merge evidence
+  // (the "(2026-10-06; not merged)" reconciliation heading above is history, not current truth); the locators now say
+  // S5-03B is DONE / MERGED, S5-03C is ACTIVE and the current implementation task.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
-    assert.match(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*ACTIVE/u);
+    assert.match(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
+    assert.doesNotMatch(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*ACTIVE/u, 'S5-03B is no longer ACTIVE');
+    assert.match(state, /\| S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*(ACTIVE|`?CLOSED)/u, 'S5-03C is the current Stage-5 task');
     assert.match(state, /\| S5-03A — [^\n]*\*\*`MERGED \/ CLOSED` through PR #316 at `c9338af9ecbfcecccc281f96f52fab335ad9bc7b`\*\*/u);
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
-    assert.match(read('QANDEEL_PROJECT_MAP.md'), /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime/u);
+    const map = read('QANDEEL_PROJECT_MAP.md');
+    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03C — Public Explicit Relations \+ Integrity Closure\*\*/u);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B/u, 'S5-03B is no longer the current task');
+    assert.match(map, /`S5-03B — Public Semantic Field \+ Viewer Runtime` = \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
+    assert.match(map, /\*\(Historical: S5-03B was the current task until PR #317 merged as `afd5e8caecc06884b5adfdb381eef8e650e03c1f`/u);
   }
 });
 
@@ -231,7 +246,14 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
   // A Public Experience is not a Personal Thread / Reading: no Personal morphology, no tether, no line, no colour of its own.
   for (const file of ['PublicLivingAnalysis.tsx', 'PublicFieldView.tsx', 'PublicExperienceMark.tsx', 'public-field-projection.ts']) {
     const text = code(`${MOBILE}/public-world/field/${file}`);
-    assert.doesNotMatch(text, /WorldObject|WorldTether|RegisterMark|morphologyPath|renderConnections|<Path|<Line/u, `${file}: no Personal morphology and no line`);
+    // RE-ANCHORED by S5-03C (validation only): PublicFieldView may fill the renderer's optional connection slot, and only
+    // with the S5-03C explicit relation lines (`PublicRelationLines`); it still draws no tether, Path or Line itself.
+    assert.doesNotMatch(text, /WorldObject|WorldTether|RegisterMark|morphologyPath|<Path|<Line/u, `${file}: no Personal morphology and no line of its own`);
+    if (file === 'PublicFieldView.tsx') {
+      assert.match(text, /renderConnections=\{\(_plane, \{ S, response \}\) => \(\n\s+<PublicRelationLines segments=\{segments\}/u, 'the only connection is the explicit relation line');
+    } else {
+      assert.doesNotMatch(text, /renderConnections/u, `${file}: no connection`);
+    }
     assert.doesNotMatch(text, /['"]#[0-9a-fA-F]{3,8}['"]|rgba?\(\d|hsla?\(\d/u, `${file}: no colour of its own`);
   }
   const controller = code(`${MOBILE}/public-world/field/public-field-controller.ts`);

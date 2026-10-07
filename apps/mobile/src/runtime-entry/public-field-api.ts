@@ -5,7 +5,9 @@
  *
  *   GET  /public/field?minX&minY&maxX&maxY        the Experiences placed inside one world rectangle
  *   GET  /public/field/search?q                   search over the same field; each result carries its place
- *   GET  /public/field/experiences/:id            the contextual panel of one Experience the field showed
+ *   GET  /public/field/experiences/:id            the contextual panel of one Experience the field showed, with its explicit
+ *                                                 relations (S5-03C): the other endpoint of each ACTIVE relation the server
+ *                                                 serves now — never a similarity
  *   GET  /public/authoring/drafts/:id/place       whether the reader's own Experience has its place (never where)
  *   POST /public/authoring/drafts/:id/place       { commandId } → ask QANDEEL to prepare it
  *
@@ -32,7 +34,15 @@ export interface PublicFieldExperience {
   readonly publisher: { readonly mode: 'PSEUDONYM' | 'REAL_NAME'; readonly label: string | null };
   readonly content: ReadonlyArray<{ readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string }>;
   readonly nearby: ReadonlyArray<PublicFieldEntry>;
+  /**
+   * S5-03C: the Experience's ACTIVE explicit relations whose two bound endpoints the server serves now — each the OTHER
+   * endpoint's served entry and the relation's identity. Empty when there is none: proximity and a shared region are
+   * not relations.
+   */
+  readonly relations: ReadonlyArray<PublicFieldRelation>;
 }
+/** S5-03C: one explicit relation as the field draws it — its identity and the other endpoint's served place. */
+export interface PublicFieldRelation { readonly relationId: string; readonly other: PublicFieldEntry }
 /** SERVED, or one neutral absence: hidden, stale, gone or never there — the field never learns why. */
 export type PublicFieldPanel = { readonly kind: 'SERVED'; readonly experience: PublicFieldExperience } | { readonly kind: 'ABSENT' };
 export type PublicSpatialPreparation = 'NOT_SEMANTICALLY_READY' | 'NOT_PLACED' | 'PLACED' | 'UNAVAILABLE';
@@ -56,6 +66,8 @@ const yes = <T>(value: T): PublicAuthoringAnswer<T> => ({ kind: 'ANSWER', value 
 export const PUBLIC_FIELD_MAX = 400;
 export const PUBLIC_SEARCH_MAX = 20;
 export const PUBLIC_NEARBY_MAX = 3;
+/** S5-03C: at most 24 explicit relations of one Experience per read. */
+export const PUBLIC_RELATIONS_PER_EXPERIENCE_MAX = 24;
 
 function addressOf(x: unknown, y: unknown): CanonicalWorldAddress | null {
   if (!isCanonicalCoordinateText(x) || !isCanonicalCoordinateText(y)) return null;
@@ -77,6 +89,17 @@ function entriesOf(value: unknown, max: number): PublicFieldEntry[] | null {
   if (!Array.isArray(value) || value.length > max) return null;
   const entries = value.map(entryOf);
   return entries.every((entry): entry is PublicFieldEntry => entry !== null) ? entries : null;
+}
+
+/** S5-03C: the explicit relations of a served panel, strictly: { relationId, other: entry }, at most 24. */
+function relationsOf(value: unknown): PublicFieldRelation[] | null {
+  if (!Array.isArray(value) || value.length > PUBLIC_RELATIONS_PER_EXPERIENCE_MAX) return null;
+  const relations = value.map((item) => {
+    if (!isRecord(item) || !hasExactly(item, ['relationId', 'other']) || !isUuid(item.relationId)) return null;
+    const other = entryOf(item.other);
+    return other ? Object.freeze({ relationId: item.relationId, other }) : null;
+  });
+  return relations.every((relation): relation is PublicFieldRelation => relation !== null) ? relations : null;
 }
 
 export class PublicFieldApiClient {
@@ -102,16 +125,18 @@ export class PublicFieldApiClient {
     if (answer.kind !== 'OK' || !isRecord(answer.body)) return NO;
     const b = answer.body;
     if (b.state === 'UNAVAILABLE' && hasExactly(b, ['state'])) return yes({ kind: 'ABSENT' });
-    if (b.state !== 'SERVED' || !hasExactly(b, ['state', 'experience', 'content', 'nearby']) || !isRecord(b.experience)) return NO;
+    if (b.state !== 'SERVED' || !hasExactly(b, ['state', 'experience', 'content', 'nearby', 'relations']) || !isRecord(b.experience)) return NO;
     const e = b.experience;
     const entry = entryOf({ id: e.id, x: e.x, y: e.y, meaning: e.meaning, region: e.region });
     const publisher = isRecord(e.publisher) && hasExactly(e.publisher, ['mode', 'label'])
       && (e.publisher.mode === 'PSEUDONYM' || e.publisher.mode === 'REAL_NAME')
       && (e.publisher.label === null || typeof e.publisher.label === 'string') ? e.publisher : null;
     const nearby = entriesOf(b.nearby, PUBLIC_NEARBY_MAX);
+    const relations = relationsOf(b.relations);
     if (!entry || !publisher || !isTextList(e.primaryThemes) || !isTextList(e.secondaryThemes) || nearby === null
       || !hasExactly(e, ['id', 'x', 'y', 'meaning', 'region', 'primaryThemes', 'secondaryThemes', 'publisher', 'publishedAt', 'discussionCount', 'qandeelResponseCount'])
-      || typeof e.publishedAt !== 'string' || !isCount(e.discussionCount) || !isCount(e.qandeelResponseCount) || !Array.isArray(b.content)) return NO;
+      || typeof e.publishedAt !== 'string' || !isCount(e.discussionCount) || !isCount(e.qandeelResponseCount) || !Array.isArray(b.content)
+      || relations === null) return NO;
     const content = b.content.map((item) => (isRecord(item) && hasExactly(item, ['ordinal', 'kind', 'text']) && isCount(item.ordinal)
       && (item.kind === 'SOURCE_CONTENT' || item.kind === 'ANALYSIS') && typeof item.text === 'string'
       ? { ordinal: item.ordinal, kind: item.kind as 'SOURCE_CONTENT' | 'ANALYSIS', text: item.text } : null));
@@ -120,6 +145,7 @@ export class PublicFieldApiClient {
       entry, primaryThemes: [...e.primaryThemes], secondaryThemes: [...e.secondaryThemes],
       publisher: { mode: publisher.mode as 'PSEUDONYM' | 'REAL_NAME', label: publisher.label as string | null },
       content: content as PublicFieldExperience['content'], nearby: nearby.filter((near) => near.id !== entry.id),
+      relations: relations.filter((relation) => relation.other.id !== entry.id),
     } });
   }
 

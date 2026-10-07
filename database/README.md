@@ -4183,3 +4183,47 @@ panel / content / nearby bounded, one neutral absence for a guessed / stale / hi
 change and a vitality recompute moving nothing); disappearance (a withdrawn approval, an ASSURE-F05 erasure and a successor
 version each make the Experience absent everywhere at once, the erasure also failing spatial readiness closed); and launch
 closure. Publication exists only through the simulated CW2-08 seam inside the verifier's rolled-back transaction.
+
+## S5-03C - Public explicit relations and integrity closure (migration 0146)
+
+`0146_public_explicit_relations_integrity_v1.sql` adds, additively and replacing no frozen function, the
+`EXPLICIT_PUBLIC_RELATION` authority CW2-04 §16 / D18 / D19 / §30 / D31 require and no earlier migration held - with the
+Product Owner's S5-03C decision (R+) as its whole semantics: one explicit, mutual, undirected relation type; a controller of
+the SOURCE Experience requests, a controller of the TARGET must explicitly accept before any relation exists; a pending
+request is cancelled by its initiating side or declined by the target side; either side removes an ACTIVE one; QANDEEL
+creates none; similarity, proximity, a shared region or any score create nothing. The private schema
+`public_relation_private` holds two append-only relations (no direct account or Public Identity reference; their Experience
+Version and S5-03A interpretation bindings are `ON DELETE RESTRICT` and part of `QAN-BL-ACCT-01`): `explicit_relations`
+(one request, bound to BOTH exact Experience Versions and BOTH exact reviewed S5-03A revisions; type `EXPLICIT_PUBLIC_RELATION`)
+and `explicit_relation_acts` (ACCEPT / DECLINE by the target side, CANCEL by the source side, REMOVE by either; one acceptance
+and one ending at most; a trigger admits only a legal transition). No free text, no evidence text, no strength, no
+coordinate.
+
+A relation is servable only while it is ACTIVE and BOTH bound endpoints answer, at read time, from the ONE S5-03B
+visible-entry derivation with exactly the bound version and reviewed revision - derived on every read and stored nowhere.
+Every input of that derivation is monotonic in the frozen runtime, and the bindings are immutable, so a relation that
+stopped matching (a new revision, a successor version, a withdrawal, an ASSURE-F05 erasure, a disappearance) can never
+match again: nothing carries forward, and a new current pair needs a new explicit relation. `authenticated` executes two
+owner reads (the caller's own served Experiences; their current relations from the caller's side - ACTIVE, REQUEST_SENT,
+REQUEST_RECEIVED - the other endpoint named by its reviewed meaning only), the request and the four acts (idempotent per
+actor and command; lock order: both Experience rows `FOR UPDATE` ascending, then both current packages' items `FOR SHARE`),
+and one viewer read (`read_public_semantic_relations_v1`: the OTHER endpoint's served entry of each ACTIVE current relation
+of a served Experience, at most 24, ordered by place). `service_role` executes NOTHING here: a relation is a human act. No
+function reads a distance, a region comparison or a theme, and none writes a coordinate (a relation is not geography).
+Nothing here publishes: the CW2-08 seam still answers `NOT_EVALUATED`.
+
+```sh
+npm run verify:public-explicit-relations-integrity:integration
+```
+
+`verify-migration-0146.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the boundary census
+(posture, exact executable sets with no server-channel grant, an input census with no side / type / strength / text, no text
+column beyond three closed vocabularies, the RESTRICT edges pinned, exactly one writer of a relation and one of an act in the
+whole database, no geography or similarity in any body); similarity is not a relation (two Experiences side by side in the
+same region relate to nothing); the lifecycle (source-only request, target-only accept / decline, source-only cancel, either
+side remove, idempotent retries, one current relation per pair in either direction, illegal transitions and direct mutations
+refused by the database, a removed / declined / cancelled relation never revived); the viewer (a line only for an ACTIVE
+relation between two served endpoints, from both endpoints, to an admitted viewer; nothing for a pending request, a guessed id
+or an unadmitted viewer; no coordinate moved and the field unchanged); integrity (a new current revision, a successor version,
+a withdrawn approval, an ASSURE-F05 erasure and an owner's disappearance each end the relation everywhere at once - lines,
+management rows and acts - never disclosing the invisible endpoint, with no write of S5-03C's own); and launch closure.

@@ -627,6 +627,14 @@ Those dependencies — Experience Version, S5-03A interpretation, `ON DELETE RES
 blocker and are not resolved by S5-03B. This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged; the Public World
 is still not launch-ready ([S5-03B record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md) §15).
 
+**Current-truth note (S5-03C, 2026-10-07).** S5-03C does not solve this item, and it adds to the footprint the item covers.
+No S5-03C column names an account and no foreign key reaches one directly, but every explicit Public relation
+(`public_relation_private.explicit_relations`) binds TWO Experience Versions and TWO S5-03A semantic interpretations
+`ON DELETE RESTRICT`, and its authority acts (`explicit_relation_acts`) bind the relation `RESTRICT`; those interpretations
+bind their `0096` placements, which bind their recorders' accounts. Those dependencies are recorded here as part of this
+blocker and are not resolved by S5-03C. This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged; the Public World is
+still not launch-ready ([S5-03C record](e2e/QANDEEL_S5_03C_PUBLIC_EXPLICIT_RELATIONS_INTEGRITY_CLOSURE_IMPLEMENTATION_RECORD_v1.md) §14).
+
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
 - **Title / Finding:** the exceptional lantern gateway identity moment is frozen as **present in v1**, but it has no
@@ -1738,6 +1746,23 @@ Product Owner's reference is semantic density, which BG-06 does not admit; it ma
 other item is unchanged. The register still holds **44** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9
 `OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the
 §4 index.
+
+**S5-03C reconciliation (2026-10-07; closed, not merged).** S5-03B is merged (PR #317 at
+`afd5e8caecc06884b5adfdb381eef8e650e03c1f`; its Product Copy Gate CLOSED, 13 / 13 APPROVED). S5-03C (Public Explicit Relations +
+Integrity Closure, migration `0146`; the third of the Product Owner's three S5-03 tasks, under the Product Owner's R+ decision;
+its Product Copy Gate CLOSED, 13 / 13 APPROVED; CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION on Draft PR #318)
+inherits no item by owner (BG-05: no item names it; S5-03B's Gap-Matrix row G07 is delivered by it) and admits none (BG-08).
+`QAN-BL-ACCT-01` stays `HIGH`, `OPEN — UNASSIGNED`, with a current-truth note (no direct account foreign key; its new
+relation `RESTRICT` dependents are recorded as part of the blocker). `QAN-BL-VIS-01` stays `OPEN — UNASSIGNED`: S5-03C does not
+close it, and relation density at real scale / on a real phone joins what it must one day prove, without a duplicate item.
+`QAN-BL-CW-03 / SHARED-VIS-01` stays `DEFERRED — OWNED`, unchanged and still blocked until Stage 5 is fully `DONE / MERGED`:
+Shared is untouched. S5-03B's G04 / G05 (scale, dense aggregation) stay OPEN PRODUCT GAPS awaiting the Product Owner's
+ownership decision — not self-assigned to S5-03C and not admitted before that decision; S5-03C's own read bounds are recorded in
+the same bounded-v1 family. Relation-request notifications are S5-04's by the Product Owner's decision; the export footprint is
+`E2E-D-16`'s. Its Gap Matrix is §16 of its
+[implementation record](e2e/QANDEEL_S5_03C_PUBLIC_EXPLICIT_RELATIONS_INTEGRITY_CLOSURE_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
+The register still holds **44** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1806,6 +1831,7 @@ Inherited after T-12 closure reconciliation:
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 | `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / Semantic Placement `RESTRICT` dependents recorded; none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
 | `S5-03B — Public Semantic Field + Stable Spatial Placement + Viewer Runtime` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / S5-03A interpretation `RESTRICT` dependents recorded; none admitted; the Stage-8A spatial-placer provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
+| `S5-03C — Public Explicit Relations + Integrity Closure` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new relation `RESTRICT` dependents recorded; `QAN-BL-VIS-01` and `QAN-BL-CW-03` observed and left unchanged; none admitted |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.

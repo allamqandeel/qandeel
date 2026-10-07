@@ -17,12 +17,24 @@
  * S5-03B adds, once that understanding is ready, the stable place: whether QANDEEL has prepared the Experience's place
  * in the Public field, and the request to prepare it. The reader can never choose, see or move the place itself.
  *
+ * S5-03C adds explicit relations, managed here and nowhere else (no second destination, no graph screen):
+ *
+ *   WORKSPACE  also the reader's own Experiences that are in Public World now, and the relation requests that wait on
+ *              THEIR acceptance (accept / decline)
+ *   RELATIONS  one own served Experience: its current relations (remove), its own waiting requests (cancel), requests
+ *              received for it (accept / decline), and asking for a relation to another Experience found by the SAME
+ *              Public search. A relation exists only once the other side accepts it; nothing here suggests one.
+ *
+ * Every relation state is re-read from the server after every act and on every screen: nothing is kept to be shown again.
+ *
  * Its state is viewer-local and its own: nothing of the Personal world or the Shared area is held or written.
  */
 import type {
   PublicAuthoringAnswer, PublicApprovalRequest, PublicApproveOutcome, PublicAuthoringDraft, PublicAuthoringReview, PublicAuthoringSources,
   PublicPackageOutcome, PublicReadyOutcome, PublicSemanticAcceptOutcome, PublicSemanticCorrectionInput, PublicSemanticCorrectionOutcome,
   PublicSemanticProposalOutcome, PublicSemanticReview, PublicSpatialPreparation, PublicSpatialPrepareOutcome, PublicWithdrawOutcome,
+  PublicFieldEntry, PublicRelation, PublicRelationAct, PublicRelationActOutcome, PublicRelationExperience, PublicRelationRequestOutcome,
+  PublicRelations,
 } from '../runtime-entry';
 
 export interface PublicAuthoringTransport {
@@ -53,7 +65,24 @@ export interface PublicSpatialTransport {
   prepare(experienceId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicSpatialPrepareOutcome>>;
 }
 
-export type PublicAuthoringScreen = 'CLOSED' | 'WORKSPACE' | 'CHOOSE' | 'REVIEW';
+/** S5-03C — explicit relations of the reader's own served Experiences (the same Public client implements it). */
+export interface PublicRelationTransport {
+  relations(): Promise<PublicAuthoringAnswer<PublicRelations>>;
+  request(experienceId: string, otherExperienceId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicRelationRequestOutcome>>;
+  act(act: PublicRelationAct, relationId: string, commandId: string): Promise<PublicAuthoringAnswer<PublicRelationActOutcome>>;
+}
+
+/** S5-03C — finding the other Experience: the SAME Public field search (S5-03B), nothing of its own. */
+export interface PublicRelationSearchTransport {
+  search(query: string): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>>;
+}
+
+export interface PublicRelationSearchState {
+  readonly status: 'IDLE' | 'SEARCHING' | 'RESULTS' | 'NONE' | 'UNAVAILABLE';
+  readonly results: ReadonlyArray<PublicFieldEntry>;
+}
+
+export type PublicAuthoringScreen = 'CLOSED' | 'WORKSPACE' | 'CHOOSE' | 'REVIEW' | 'RELATIONS';
 export type PublicAuthoringNotice = 'NONE' | 'ACTION_UNAVAILABLE' | 'NOT_PUBLISHABLE' | 'APPROVALS_INCOMPLETE' | 'APPROVED' | 'WITHDRAWN'
   // S5-03A
   | 'INTERPRETATION_UNAVAILABLE' | 'NOT_SUPPORTED' | 'UNCHANGED' | 'CORRECTION_INVALID' | 'LIMITED'
@@ -77,6 +106,12 @@ export interface PublicAuthoringState {
   readonly correcting: boolean;
   /** S5-03B: whether the stable place exists — only once the understanding is ready; never where it is. */
   readonly place: PublicSpatialPreparation | null;
+  /** S5-03C: the reader's own Experiences in Public World now — exactly what the server served on the last read. */
+  readonly relationExperiences: ReadonlyArray<PublicRelationExperience>;
+  /** S5-03C: every current relation from the reader's side — exactly what the server served on the last read. */
+  readonly relations: ReadonlyArray<PublicRelation>;
+  /** S5-03C: the search for another Experience to relate to, on the RELATIONS screen. */
+  readonly relationSearch: PublicRelationSearchState;
   readonly busy: boolean;
   readonly notice: PublicAuthoringNotice;
 }
@@ -106,6 +141,17 @@ export interface PublicAuthoringController {
   submitCorrection(meaning: string, primaryThemes: string, secondaryThemes: string): void;
   /** S5-03B: ask QANDEEL to prepare the Experience's stable place in the Public field, from its meaning alone. */
   preparePlace(): void;
+  /** S5-03C: open the relations of one of the reader's own served Experiences. */
+  openRelations(experienceId: string): void;
+  /** S5-03C: search the Public World for the other Experience (the same search as the field). */
+  searchRelation(query: string): void;
+  /** S5-03C: ask for a relation from the open Experience to one the search found. */
+  requestRelation(otherExperienceId: string): void;
+  /** S5-03C: the four acts, each allowed by the server only to its side. */
+  acceptRelation(relationId: string): void;
+  declineRelation(relationId: string): void;
+  cancelRelation(relationId: string): void;
+  removeRelation(relationId: string): void;
   retire(): void;
 }
 
@@ -115,6 +161,10 @@ export interface PublicAuthoringControllerOptions {
   readonly semantic?: PublicSemanticTransport | null;
   /** S5-03B: the place-preparation transport; without it the place stage is not drawn. */
   readonly spatial?: PublicSpatialTransport | null;
+  /** S5-03C: the relation transport; without it no relation is drawn or asked for. */
+  readonly relation?: PublicRelationTransport | null;
+  /** S5-03C: the Public field search, to find the other Experience. */
+  readonly relationSearch?: PublicRelationSearchTransport | null;
   readonly isCurrent: () => boolean;
   readonly newCommandId?: () => string;
 }
@@ -124,6 +174,9 @@ export const PUBLIC_PACKAGE_MAX_SOURCES = 20;
 
 export const personalKey = (sourceId: string): string => `P:${sourceId}`;
 export const sharedKey = (worldId: string, materialId: string): string => `S:${worldId}:${materialId}`;
+
+/** S5-03C: the search query bound — exactly the field search's. */
+export const PUBLIC_RELATION_SEARCH_MAX = 120;
 
 /** S5-03A: the semantic bounds — exactly the server's (one line of meaning ≤ 120; 1–3 main and 0–3 other meanings ≤ 40). */
 export const SEMANTIC_MEANING_MAX = 120;
@@ -150,16 +203,24 @@ export function mintPublicCommandId(): string {
   return `${block(8)}-${block(4)}-4${block(3)}-${'89ab'[Math.floor(Math.random() * 4)]}${block(3)}-${block(12)}`;
 }
 
+const NO_RELATION_SEARCH: PublicRelationSearchState = Object.freeze({ status: 'IDLE', results: [] });
 const CLOSED: PublicAuthoringState = Object.freeze<PublicAuthoringState>({
   screen: 'CLOSED', status: 'READY', drafts: [], requests: [], sources: null, selected: [], experienceId: null, review: null,
-  semantic: null, correcting: false, place: null, busy: false, notice: 'NONE',
+  semantic: null, correcting: false, place: null, relationExperiences: [], relations: [], relationSearch: NO_RELATION_SEARCH,
+  busy: false, notice: 'NONE',
+});
+const DONE: Readonly<Record<PublicRelationAct, PublicRelationActOutcome>> = Object.freeze({
+  accept: 'ACCEPTED', decline: 'DECLINED', cancel: 'CANCELLED', remove: 'REMOVED',
 });
 
-export function createPublicAuthoringController({ transport, semantic = null, spatial = null, isCurrent, newCommandId = mintPublicCommandId }: PublicAuthoringControllerOptions): PublicAuthoringController {
+export function createPublicAuthoringController({
+  transport, semantic = null, spatial = null, relation = null, relationSearch = null, isCurrent, newCommandId = mintPublicCommandId,
+}: PublicAuthoringControllerOptions): PublicAuthoringController {
   const listeners = new Set<() => void>();
   let state: PublicAuthoringState = CLOSED;
   let retired = false;
   let ticket = 0;
+  let searchTicket = 0;
   // One command per act and target until a definite answer: a retry after a lost answer is the SAME command.
   const commands = new Map<string, string>();
   const commandFor = (act: string) => {
@@ -178,14 +239,40 @@ export function createPublicAuthoringController({ transport, semantic = null, sp
     for (const listener of Array.from(listeners)) listener();
   };
 
+  /** S5-03C: the relation truth now, or nothing — a read that could not be made never leaves an older answer showing. */
+  async function readRelations(): Promise<PublicRelations | null> {
+    if (!relation) return { experiences: [], relations: [] };
+    const answer = await relation.relations().catch(() => ({ kind: 'NO_ANSWER' as const }));
+    return answer.kind === 'ANSWER' ? answer.value : null;
+  }
+
   async function loadWorkspace(): Promise<void> {
     const mine = ++ticket;
-    publish({ screen: 'WORKSPACE', status: 'LOADING', experienceId: null, review: null, semantic: null, correcting: false, place: null, sources: null, selected: [] });
+    publish({ screen: 'WORKSPACE', status: 'LOADING', experienceId: null, review: null, semantic: null, correcting: false, place: null, sources: null, selected: [],
+      relationExperiences: [], relations: [], relationSearch: NO_RELATION_SEARCH });
     if (!transport) { publish({ status: 'UNAVAILABLE' }); return; }
-    const [drafts, requests] = await Promise.all([transport.drafts(), transport.approvalRequests()]);
+    const [drafts, requests, relations] = await Promise.all([transport.drafts(), transport.approvalRequests(), readRelations()]);
     if (mine !== ticket) return;
     if (drafts.kind !== 'ANSWER' || requests.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
-    publish({ status: 'READY', drafts: drafts.value, requests: requests.value });
+    // A relation read that failed shows no relation section (fail closed) and leaves the rest of the workspace usable.
+    publish({ status: 'READY', drafts: drafts.value, requests: requests.value,
+      relationExperiences: relations?.experiences ?? [], relations: relations?.relations ?? [] });
+  }
+
+  /** S5-03C: one own served Experience's relations, re-read now. It must still be one the server serves. */
+  async function loadRelations(experienceId: string): Promise<void> {
+    const mine = ++ticket;
+    searchTicket += 1;
+    publish({ screen: 'RELATIONS', status: 'LOADING', experienceId, review: null, semantic: null, correcting: false, place: null, sources: null, selected: [],
+      relationSearch: NO_RELATION_SEARCH });
+    if (!relation) { publish({ status: 'UNAVAILABLE' }); return; }
+    const relations = await readRelations();
+    if (mine !== ticket) return;
+    if (relations === null || !relations.experiences.some((e) => e.id === experienceId)) {
+      publish({ status: 'UNAVAILABLE', relationExperiences: relations?.experiences ?? [], relations: relations?.relations ?? [] });
+      return;
+    }
+    publish({ status: 'READY', relationExperiences: relations.experiences, relations: relations.relations });
   }
 
   async function loadSources(experienceId: string): Promise<void> {
@@ -235,10 +322,25 @@ export function createPublicAuthoringController({ transport, semantic = null, sp
   }
 
   const reloadCurrent = () => {
+    if (state.screen === 'RELATIONS' && state.experienceId) return loadRelations(state.experienceId);
     if (state.screen === 'REVIEW' && state.experienceId) return loadReview(state.experienceId);
     if (state.screen === 'CHOOSE' && state.experienceId) return loadSources(state.experienceId);
     return loadWorkspace();
   };
+
+  /** S5-03C: one act on a relation the reader can see now; the server decides whether their side may make it. */
+  function relationAct(kind: PublicRelationAct, relationId: string): void {
+    if ((state.screen !== 'WORKSPACE' && state.screen !== 'RELATIONS') || !relation || !state.relations.some((r) => r.relationId === relationId)) return;
+    const transportOfRelations = relation;
+    void act(async () => {
+      const key = `RELATION_${kind}:${relationId}`;
+      const answer = await transportOfRelations.act(kind, relationId, commandFor(key));
+      if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+      settle(key);
+      await reloadCurrent();
+      publish({ notice: answer.value === DONE[kind] ? 'NONE' : 'ACTION_UNAVAILABLE' });
+    });
+  }
 
   return {
     getState: () => state,
@@ -416,6 +518,38 @@ export function createPublicAuthoringController({ transport, semantic = null, sp
         });
       });
     },
+    openRelations(experienceId) { if (relation) void loadRelations(experienceId); },
+    searchRelation(query) {
+      const experienceId = state.experienceId;
+      const q = oneLine(query);
+      if (state.screen !== 'RELATIONS' || !experienceId || !relationSearch || q.length === 0 || q.length > PUBLIC_RELATION_SEARCH_MAX) return;
+      const mine = ++searchTicket;
+      publish({ relationSearch: { status: 'SEARCHING', results: [] }, notice: 'NONE' });
+      void relationSearch.search(q).catch(() => ({ kind: 'NO_ANSWER' as const })).then((answer) => {
+        if (mine !== searchTicket || state.screen !== 'RELATIONS' || state.experienceId !== experienceId) return;
+        if (answer.kind !== 'ANSWER') { publish({ relationSearch: { status: 'UNAVAILABLE', results: [] } }); return; }
+        // The open Experience cannot be related to itself; everything else the search served may be asked for.
+        const results = answer.value.filter((entry) => entry.id !== experienceId);
+        publish({ relationSearch: { status: results.length === 0 ? 'NONE' : 'RESULTS', results } });
+      });
+    },
+    requestRelation(otherExperienceId) {
+      const experienceId = state.experienceId;
+      if (state.screen !== 'RELATIONS' || !experienceId || !relation || !state.relationSearch.results.some((entry) => entry.id === otherExperienceId)) return;
+      const transportOfRelations = relation;
+      void act(async () => {
+        const key = `RELATION_REQUEST:${experienceId}:${otherExperienceId}`;
+        const answer = await transportOfRelations.request(experienceId, otherExperienceId, commandFor(key));
+        if (answer.kind !== 'ANSWER') { publish({ notice: 'ACTION_UNAVAILABLE' }); return; }
+        settle(key);
+        await loadRelations(experienceId);
+        publish({ notice: answer.value === 'UNAVAILABLE' ? 'ACTION_UNAVAILABLE' : 'NONE' });
+      });
+    },
+    acceptRelation(relationId) { relationAct('accept', relationId); },
+    declineRelation(relationId) { relationAct('decline', relationId); },
+    cancelRelation(relationId) { relationAct('cancel', relationId); },
+    removeRelation(relationId) { relationAct('remove', relationId); },
     retire() {
       retired = true;
       listeners.clear();

@@ -358,7 +358,10 @@ No Product, Security or Privacy defect was found in the frozen runtime or in S5-
 - **S5-03C — Explicit Relations + Integrity Closure:** `EXPLICIT_PUBLIC_RELATION`, evidence, endpoint / version validity,
   relation cleanup, focus-revealed true relation lines.
 - **S5-04 — Discussion + Public QANDEEL + Final Public Integration:** discussion, replies, Public QANDEEL, Public Activity,
-  vitality / instant rendering, Public performance at scale (G04, G05).
+  vitality / instant rendering.
+- **G04 / G05 (Public performance at scale, dense-field aggregation):** OPEN PRODUCT GAPS awaiting the Product Owner's
+  ownership decision, owned by no task (R1 withdrew the R0 self-assignment to S5-04, §16). *(Docs drift corrected by S5-03C,
+  2026-10-07, at the Product Owner's instruction: this line previously still listed them under S5-04.)*
 - **Stage 8A:** the production providers behind the S5-03A interpreter and the S5-03B placer (G01–G03).
 - **Stage 9 / CW2-08:** `PUBLISHED`, composing semantic readiness + spatial readiness + CW2-08 clearance.
 - **`QAN-BL-ACCT-01` remains HIGH / OPEN.**

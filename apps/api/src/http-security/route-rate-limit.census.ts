@@ -158,6 +158,15 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /public/field': 'AUTHENTICATED',
   'GET /public/field/search': 'AUTHENTICATED',
   'GET /public/field/experiences/:experienceId': 'AUTHENTICATED',
+  // S5-03C — explicit Public relations. Asking for a relation creates durable state another human is asked to accept, so
+  // it takes the strict class, as preparing a package does; reading one's own relations and the four acts on them
+  // (accept, decline, cancel, remove) are ordinary own acts the database bounds itself. No new class.
+  'GET /public/authoring/relations': 'AUTHENTICATED',
+  'POST /public/authoring/relations': 'SECURITY_SENSITIVE',
+  'POST /public/authoring/relations/:relationId/accept': 'AUTHENTICATED',
+  'POST /public/authoring/relations/:relationId/decline': 'AUTHENTICATED',
+  'POST /public/authoring/relations/:relationId/cancel': 'AUTHENTICATED',
+  'POST /public/authoring/relations/:relationId/remove': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

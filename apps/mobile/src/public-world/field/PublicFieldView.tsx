@@ -12,6 +12,9 @@
  *                            at FAR discloses that part of the field at MID and at MID / NEAR focuses the place;
  *   its overlay            — the one-line meanings at MID and the accessible targets, laid over the world inside the
  *                            world frame (no word is painted into the world itself);
+ *   its explicit relations — S5-03C: at NEAR, the selected Experience's ACTIVE explicit relations the server served,
+ *                            supplied to the renderer's optional connection slot (`./PublicRelationLines`), each with one
+ *                            accessible name; nothing else ever joins two places;
  *   its accessible name    — the field's name, with the surface's own semantic step as its two actions.
  *
  * Nothing here animates, recognises a gesture or composes a screen.
@@ -24,7 +27,9 @@ import type { SemanticZoomDirection, ViewportEnvelope } from '../../map/camera';
 import { WorldCanvas, WorldViewSurface, useWorldView } from '../../map/renderer';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { PublicFieldCopy } from './field-copy';
+import { publicRelationCopy } from '../../public-authoring/relation-copy';
 import { PublicExperienceMark } from './PublicExperienceMark';
+import { PublicRelationLines, PublicRelationTargets, explicitRelationSegments } from './PublicRelationLines';
 import type { PublicFieldCamera } from './public-field-camera';
 import type { PublicFieldController, PublicFieldOutcome, PublicFieldState } from './public-field-controller';
 import { placePublicField, type PublicWorldNode } from './public-field-projection';
@@ -77,6 +82,12 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
     step,
   });
   const { worldMotion, presented, nodeAt } = view;
+  // S5-03C: the selected Experience's explicit relations, exactly as its latest panel read served them; none otherwise.
+  const served = state.focus?.panel.status === 'SERVED' ? state.focus.panel.experience.relations : null;
+  const segments = useMemo(
+    () => explicitRelationSegments(camera, placed?.nodes ?? [], focusId, served ?? []),
+    [camera, placed, focusId, served],
+  );
 
   // A tap reads the glass through the SAME residual the frame is painted with: FAR discloses that part of the field at
   // MID; at MID / NEAR it focuses the place under the finger.
@@ -126,8 +137,12 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
               isPlace={() => true}
               // LA-VIS-01: the place's own served address, read only to colour the world around it (presentation).
               worldAddressOf={(node) => node.entry.address}
-              // A Public Experience is hosted by nothing: nothing travels from anywhere, and nothing joins two of them.
+              // A Public Experience is hosted by nothing: nothing travels from anywhere.
               hostOf={() => undefined}
+              // S5-03C: the only thing that joins two places is an explicit relation the server served (NEAR, selected).
+              renderConnections={(_plane, { S, response }) => (
+                <PublicRelationLines segments={segments} S={S} response={response} contrast={contrast} strokeScale={worldMotion.motion.objectScale} />
+              )}
               renderObject={(node, { S, response }) => (
                 <PublicExperienceMark x={node.x} y={node.y} presence={node.presence} selected={node.selected} S={S} response={response} contrast={contrast} />
               )}
@@ -149,6 +164,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
               style={{ position: 'absolute', left: node.x - TARGET / 2, top: node.y - TARGET / 2, width: TARGET, height: TARGET }}
             />
           ))}
+          {worldMotion.atRest ? <PublicRelationTargets segments={segments} relationWith={publicRelationCopy(language).relationWith} language={language} /> : null}
           {labelled.map((node) => {
             const label = labels.get(node.key);
             if (label === undefined) return null;

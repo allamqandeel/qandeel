@@ -50,6 +50,8 @@ function fieldRepository(overrides: Partial<Record<keyof PublicFieldRepository, 
     experience: jest.fn(async () => [PANEL]),
     content: jest.fn(async () => [{ item_ordinal: 1, item_kind: 'SOURCE_CONTENT', item_text: 'the public words' }]),
     nearby: jest.fn(async () => [entry(5)]),
+    // S5-03C (re-anchor): the panel read also asks for the Experience's explicit relations; none by default.
+    relations: jest.fn(async () => []),
     ...overrides,
   };
 }
@@ -177,7 +179,7 @@ describe('S5-03B — the semantic field, search and panel over the same World', 
       id: id(2), x: '2000', y: '-2000', meaning: 'meaning 2', region: 'region.2', primaryThemes: ['fear'], secondaryThemes: [],
       publisher: { mode: 'PSEUDONYM', label: 'the publisher' }, publishedAt: '2026-10-06T10:00:00Z', discussionCount: 0, qandeelResponseCount: 0 },
     content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }],
-    nearby: [{ id: id(5), x: '5000', y: '-5000', meaning: 'meaning 5', region: 'region.5' }] });
+    nearby: [{ id: id(5), x: '5000', y: '-5000', meaning: 'meaning 5', region: 'region.5' }], relations: [] });
     expect(JSON.stringify(served)).not.toMatch(/view|rank|score|importance|user_id|public_identity_ref/iu);
     await expect(fieldService().experience(TOKEN, 'guess')).resolves.toEqual({ state: 'UNAVAILABLE' });
     await expect(fieldService(fieldRepository({ experience: jest.fn(async () => []) })).experience(TOKEN, id(2))).resolves.toEqual({ state: 'UNAVAILABLE' });
@@ -192,6 +194,9 @@ describe('S5-03B — the static boundary of the API', () => {
   const source = (file: string) => readFileSync(join(dir, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '').replace(/(^|[^:])\/\/.*$/gmu, '$1');
   const FILES = ['public-spatial-placer.ts', 'public-spatial.repository.ts', 'public-spatial.service.ts', 'public-spatial.controller.ts',
     'public-field.repository.ts', 'public-field.service.ts', 'public-field.controller.ts'];
+  // S5-03C (controlled re-anchor): the field's panel read now carries the EXPLICIT relations served by migration 0146's
+  // one viewer read. The geography files still name no relation at all; the field files name only that explicit read.
+  const GEOGRAPHY = ['public-spatial-placer.ts', 'public-spatial.repository.ts', 'public-spatial.service.ts', 'public-spatial.controller.ts'];
 
   it('holds no private context, logs nothing, binds no provider, publishes nothing and never reads the 0096 descriptor', () => {
     for (const file of FILES) {
@@ -200,7 +205,8 @@ describe('S5-03B — the static boundary of the API', () => {
       expect(text).not.toMatch(/openai|anthropic|gemini|qwen|deepseek|claude|kimi|glm|gpt-/iu);
       expect(text).not.toMatch(/publish_|PUBLISHED|prerequisite|clearance|CLEARED/u);
       expect(text).not.toMatch(/semantic_label|s5-03a\.private|S5-03A_PRIVATE|search_public_experiences_v1|resolve_public_lens_v1|resolve_public_panel_v1|resolve_public_experience_semantic_placement_v1/u);
-      expect(text).not.toMatch(/relation|edge|view_count|viewCount|popular/iu);
+      expect(text).not.toMatch(/edge|view_count|viewCount|popular|similar|proxim/iu);
+      if (GEOGRAPHY.includes(file)) expect(text).not.toMatch(/relation/iu);
     }
     expect(source('public-spatial-placer.ts')).toMatch(/if \(environment\.NODE_ENV === 'test'\) return new FakePublicSpatialPlacer\(\);\n\s+return new UnconfiguredPublicSpatialPlacer\(\);/u);
   });
@@ -212,7 +218,7 @@ describe('S5-03B — the static boundary of the API', () => {
     expect(server).toEqual(['commit_public_spatial_placement_v1', 'read_public_spatial_placement_input_v1']);
     const viewer = [...source('public-field.repository.ts').matchAll(/this\.rpc<[A-Za-z]+>\(token, '([a-z_]+_v1)'/gu)].map((m) => m[1]).sort();
     expect(viewer).toEqual(['read_public_semantic_experience_content_v1', 'read_public_semantic_experience_v1', 'read_public_semantic_field_v1',
-      'read_public_semantic_nearby_v1', 'search_public_semantic_field_v1']);
+      'read_public_semantic_nearby_v1', 'read_public_semantic_relations_v1', 'search_public_semantic_field_v1']);
     expect(source('public-field.repository.ts')).not.toMatch(/server|p_viewer|p_user/u);
   });
 

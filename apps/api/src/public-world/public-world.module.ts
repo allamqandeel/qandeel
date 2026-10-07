@@ -13,6 +13,9 @@ import { PublicSemanticService } from './public-semantic.service';
 import { PublicFieldController } from './public-field.controller';
 import { PublicFieldRepository } from './public-field.repository';
 import { PublicFieldService } from './public-field.service';
+import { PublicRelationController } from './public-relation.controller';
+import { PublicRelationRepository } from './public-relation.repository';
+import { PublicRelationService } from './public-relation.service';
 import { PUBLIC_SPATIAL_PLACER, createConfiguredPublicSpatialPlacer } from './public-spatial-placer';
 import { PublicSpatialController } from './public-spatial.controller';
 import { PublicSpatialRepository } from './public-spatial.repository';
@@ -29,14 +32,17 @@ import { PublicWorldService } from './public-world.service';
  * channel — with the provider-neutral semantic interpreter, which binds no production provider until Stage 8A; and
  * through migration 0145 (S5-03B: the semantic field) — two owner commands and five viewer reads on the caller's own
  * token, two server commands on the server channel — with the provider-neutral spatial placer, which likewise binds no
- * production provider until Stage 8A.
+ * production provider until Stage 8A; and through migration 0146 (S5-03C: explicit relations) — two owner reads, the
+ * request and four acts, and one viewer read (joined into the field's panel), all on the caller's own token, and nothing
+ * on the server channel.
  */
 @Module({
-  controllers: [PublicWorldController, PublicAuthoringController, PublicSemanticController, PublicSpatialController, PublicFieldController],
+  controllers: [PublicWorldController, PublicAuthoringController, PublicSemanticController, PublicSpatialController, PublicFieldController,
+    PublicRelationController],
   providers: [SupabaseAuthService, SupabaseAuthGuard, SupabaseDataApiService, SupabaseServiceRoleApiService, PublicWorldRepository,
     PublicWorldService, PublicAuthoringRepository, PublicAuthoringService, PublicSemanticRepository, PublicSemanticService,
     { provide: PUBLIC_SEMANTIC_INTERPRETER, useFactory: () => createConfiguredPublicSemanticInterpreter(process.env) },
-    PublicSpatialRepository, PublicSpatialService, PublicFieldRepository, PublicFieldService,
+    PublicSpatialRepository, PublicSpatialService, PublicFieldRepository, PublicFieldService, PublicRelationRepository, PublicRelationService,
     { provide: PUBLIC_SPATIAL_PLACER, useFactory: () => createConfiguredPublicSpatialPlacer(process.env) }],
 })
 export class PublicWorldModule {}

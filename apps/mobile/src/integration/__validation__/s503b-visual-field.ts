@@ -76,8 +76,20 @@ export function fixtureSearch(q: string): { results: FixtureEntry[] } {
   return { results: EXPERIENCES.filter((e) => e.meaning.includes(needle) || e.themes.some((t) => t.includes(needle))).slice(0, 20).map(entryOf) };
 }
 
-/** `GET /public/field/experiences/:id`: the contextual panel, with at most three nearby Experiences of the same region. */
-export function fixtureExperience(id: string): unknown {
+/** S5-03C smoke: one synthetic served Experience by id (the fixture World's own entries, nothing invented). */
+export function fixtureEntry(id: string): FixtureEntry | null {
+  const e = EXPERIENCES.find((x) => x.id === id);
+  return e ? entryOf(e) : null;
+}
+
+/** S5-03C smoke: the reader's OWN served Experience in the synthetic World (the first fixture Experience). */
+export const FIXTURE_OWN_EXPERIENCE_ID = EXPERIENCES[0].id;
+
+/**
+ * `GET /public/field/experiences/:id`: the contextual panel, with at most three nearby Experiences of the same region, and
+ * the explicit relations the proof world holds as ACTIVE (S5-03C) — never one derived from a shared region.
+ */
+export function fixtureExperience(id: string, relations: ReadonlyArray<{ readonly relationId: string; readonly otherId: string }> = []): unknown {
   const e = EXPERIENCES.find((x) => x.id === id);
   if (!e) return { state: 'UNAVAILABLE' };
   return {
@@ -89,5 +101,8 @@ export function fixtureExperience(id: string): unknown {
       { ordinal: 2, kind: 'ANALYSIS', text: 'قراءة اختبارية من قنديل لهذه التجربة.' },
     ],
     nearby: EXPERIENCES.filter((x) => x.region === e.region && x.id !== e.id).slice(0, 3).map(entryOf),
+    // S5-03C: only the explicit relations the proof world holds (requested by the reader, accepted by the synthetic other
+    // side). None is fabricated from its regions — sharing a region is similarity, never a relation.
+    relations: relations.flatMap((r) => { const other = EXPERIENCES.find((x) => x.id === r.otherId); return other ? [{ relationId: r.relationId, other: entryOf(other) }] : []; }),
   };
 }

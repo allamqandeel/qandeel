@@ -171,6 +171,12 @@ export { PublicAuthoringApiClient } from './public-authoring-api';
 export type {
   PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle, PublicSpatialPreparation, PublicSpatialPrepareOutcome,
 } from './public-field-api';
+export type {
+  PublicFieldRelation,
+} from './public-field-api';
+export type {
+  PublicRelation, PublicRelationAct, PublicRelationActOutcome, PublicRelationExperience, PublicRelationRequestOutcome, PublicRelations,
+} from './public-relation-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
 export { PushApiClient } from './push-api';
 

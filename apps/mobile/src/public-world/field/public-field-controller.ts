@@ -9,8 +9,9 @@
  *
  * Nothing here is authority. Every Experience on the glass was served by the server for this viewer, now; a focused
  * Experience the server no longer serves is removed from the field at once, without a tombstone; a search result is
- * a place in the same field the camera is guided to, never a separate feed. Nothing ranks, counts views, draws a
- * relation or publishes.
+ * a place in the same field the camera is guided to, never a separate feed. Nothing ranks, counts views or publishes. The
+ * only relation it holds is what the focused panel's latest read served (S5-03C: explicit, accepted, both endpoints
+ * served now); it infers none and keeps none from an older read.
  *
  * Back is local: it closes the panel (releasing focus), then the search, before anything else — and at the World's
  * own root nothing is registered, so Back never silently leaves Public World (S5-01).
@@ -158,8 +159,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       if (gone(experience.entry)) {
         panelTicket += 1;
         focus = { id: focus.id, panel: { status: 'ABSENT' } };
-      } else if (experience.nearby.some(gone)) {
-        focus = { id: focus.id, panel: { status: 'SERVED', experience: { ...experience, nearby: experience.nearby.filter((near) => !gone(near)) } } };
+      } else if (experience.nearby.some(gone) || experience.relations.some((relation) => gone(relation.other))) {
+        // S5-03C: an endpoint a complete read no longer serves takes its relation line with it, at once.
+        focus = { id: focus.id, panel: { status: 'SERVED', experience: { ...experience, nearby: experience.nearby.filter((near) => !gone(near)),
+          relations: experience.relations.filter((relation) => !gone(relation.other)) } } };
       }
     }
     publish({ ...extra, entries: served, focus, search: { ...state.search, results: state.search.results.filter((entry) => !gone(entry)) } });
@@ -206,10 +209,12 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       return;
     }
     const served = answer.value.experience;
-    // The panel's nearby context is served too: let the field show it.
+    // The panel's nearby context and its explicit relations' other endpoints are served too: let the field show them.
     const known = new Set(state.entries.map((entry) => entry.id));
+    const added = new Map<string, PublicFieldEntry>();
+    for (const entry of [...served.nearby, ...served.relations.map((relation) => relation.other)]) if (!known.has(entry.id)) added.set(entry.id, entry);
     publish({
-      entries: [...state.entries.filter((entry) => entry.id !== served.entry.id), served.entry, ...served.nearby.filter((near) => !known.has(near.id))],
+      entries: [...state.entries.filter((entry) => entry.id !== served.entry.id), served.entry, ...added.values()],
       focus: { id: experienceId, panel: { status: 'SERVED', experience: served } },
     });
   }

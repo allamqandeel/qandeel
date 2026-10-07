@@ -122,6 +122,7 @@ jobs:
       - {name: "Verify S5-02 Public Authoring, Rights, Draft / Review & Privacy static contract", run: npm run test:s5-02-public-authoring-rights-privacy-contract}
       - {name: "Verify S5-03A Public Semantic Interpretation & Publisher Review static contract", run: npm run test:s5-03a-public-semantic-review-contract}
       - {name: "Verify S5-03B Public Semantic Field, Stable Spatial Placement & Viewer Runtime static contract", run: npm run test:s5-03b-public-semantic-field-viewer-contract}
+      - {name: "Verify S5-03C Public Explicit Relations + Integrity Closure static contract", run: npm run test:s5-03c-public-explicit-relations-integrity-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -922,6 +923,13 @@ jobs:
       # constants; a withdrawal, an ASSURE-F05 erasure and a successor version make the Experience absent everywhere.
       - name: Verify S5-03B Public semantic field, stable spatial placement and viewer runtime against real PostgreSQL
         run: npm run verify:public-semantic-field-placement-viewer:integration
+      # S5-03C: an explicit Public relation exists only through a human request by the source's controller and an explicit
+      # acceptance by the target's controller, bound to both exact versions and reviewed revisions; similarity creates
+      # nothing; a line is served only while both bound endpoints are served now, never disclosing an invisible endpoint; a
+      # new revision, a successor version, a withdrawal, an ASSURE-F05 erasure and a disappearance each end it at once with
+      # no write of its own; relations move no coordinate; the server channel holds nothing; nothing publishes.
+      - name: Verify S5-03C Public explicit relations and integrity closure against real PostgreSQL
+        run: npm run verify:public-explicit-relations-integrity:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
