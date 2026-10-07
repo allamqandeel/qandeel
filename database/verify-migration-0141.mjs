@@ -188,9 +188,15 @@ async function verifyBoundary() {
     WHERE n.nspname = 'shared_private' AND has_function_privilege('service_role', p.oid, 'EXECUTE') ORDER BY 1`);
   assert.deepEqual(serverReach.map((r) => r.proname),
     ['begin_shared_qandeel_reply_work_v1', 'complete_shared_world_qandeel_reply_v1', 'end_shared_qandeel_reply_work_v1']);
-  const committing = await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  // S5-03B proof-scope correction (no DB authority changed): local to S4-04, not a repository-wide ceiling — a later,
+  // separately owned server command (S5-03B's `commit_public_spatial_placement_v1`, verify-migration-0145) is outside it.
+  assert.ok([...HUMAN, 'shared_activity_world_name_v1'].every((name) => !name.startsWith('commit_')), 'S4-04 owns no `commit_%` command');
+  const committing = await rows(`SELECT p.proname, p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname LIKE 'commit\\_%' AND has_function_privilege('service_role', p.oid, 'EXECUTE') ORDER BY 1`);
-  assert.deepEqual(committing.map((r) => r.proname), ['commit_finalized_exchange_with_full_semantic_chain_v1']);
+  assert.deepEqual(committing.filter((f) => /\bshared_private\./u.test(f.prosrc)).map((f) => f.proname), [],
+    'no service_role `commit_%` endpoint reaches the Shared shared_private surface');
+  assert.ok(committing.some((f) => f.proname === 'commit_finalized_exchange_with_full_semantic_chain_v1'),
+    'the historical T-03D FINAL coordinator keeps its service_role authority');
 
   stage = 'boundary: an unknown source kind is refused; a client cannot run the server pass';
   await actAs('service_role');

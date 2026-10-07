@@ -216,10 +216,18 @@ async function verifyBoundary() {
     assert.equal(allowed, false, `${role} must not execute the internal work policy`);
   }
   // The T-03D single-committing-authority census (verify-migration-0071) is untouched: S4-02 adds no public `commit_%`
-  // function the server channel can execute.
-  const committing = await rows(`SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+  // function the server channel can execute, and the historical FINAL coordinator keeps its authority.
+  //
+  // S5-03B proof-scope correction (no DB authority changed): this proof is LOCAL to S4-02, not a repository-wide ceiling.
+  // A later, separately owned and reviewed server command (S5-03B's `commit_public_spatial_placement_v1`, proven by
+  // verify-migration-0145) is outside the S4-02 surface and outside this assertion.
+  assert.ok(S402_DEFINERS.every((name) => !name.startsWith('commit_')), 'S4-02 owns no `commit_%` command');
+  const committing = await rows(`SELECT p.proname, p.prosrc FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     WHERE n.nspname = 'public' AND p.proname LIKE 'commit\\_%' AND has_function_privilege('service_role', p.oid, 'EXECUTE') ORDER BY 1`);
-  assert.deepEqual(committing.map((r) => r.proname), ['commit_finalized_exchange_with_full_semantic_chain_v1']);
+  assert.deepEqual(committing.filter((f) => /\bshared_private\./u.test(f.prosrc)).map((f) => f.proname), [],
+    'no service_role `commit_%` endpoint reaches the S4-02 shared_private surface');
+  assert.ok(committing.some((f) => f.proname === 'commit_finalized_exchange_with_full_semantic_chain_v1'),
+    'the historical T-03D FINAL coordinator keeps its service_role authority');
 
   stage = 'boundary: no application role reaches a shared_private table; the server channel reaches no 0138 human command';
   for (const table of ['shared_id_sealed_values', 'shared_launch_capability_states', 'shared_launch_capability_events',
