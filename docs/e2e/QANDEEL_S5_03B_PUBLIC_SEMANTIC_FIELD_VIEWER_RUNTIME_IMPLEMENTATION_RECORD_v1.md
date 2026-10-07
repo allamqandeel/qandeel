@@ -720,3 +720,22 @@ changed: S5-03B 13 / 13, VPORT-02 9 / 9, VPORT-01 9 / 9, T-10 31 / 31, T-11 27 /
 the Living Analysis Map runtime contract passes except its "no generated native project" check, which fails only on
 this workstation's ignored `apps/mobile/android/` (unchanged from R1). No DB, migration or API change; no DB verifier run.
 CW2-08 NOT_EVALUATED; PUBLISHED closed; S5-03C not started; `QAN-BL-CW-03` / `SHARED-VIS-01` DEFERRED.
+
+**R2 device proof (2026-10-07).** Build of `ab9a7fe` (`assembleRelease`, x86_64) with the S4-01 proof entry selected
+(`S401_SHARED_PROOF=1 select-s401-proof-entry.mjs --apply`; restored afterwards, the tree clean); Android emulator AVD
+`QANDEEL_API36` (Pixel 7 profile, Android 16 / API 36, 1080 × 2400, 420 dpi, `-gpu swiftshader_indirect`), device
+language English. Fixture: `integration/__validation__/s503b-visual-field.ts` (SYNTHETIC, validation only, reachable only
+through `qandeel://s401-proof/public/seed` in the proof build; never a Product module), entered through the Public tab and
+`qandeel://s401-proof/public/allow`. The Personal control uses the same build's proof world (VPORT-01 data). Screenshots
+(not committed, `.s503b-visual/r2/`): A Personal Analysis control, B Public FAR, C Public MID, D Public NEAR / focus with
+the panel in the chrome band, E Public SEARCH (query in the top band, results in the chrome band), E2 a chosen result
+(list folded, place focused). The device view hierarchy (`uiautomator`, testIDs as resource-ids) shows the SAME
+composition for both worlds: `qandeel-responsive-surface` → `qandeel-responsive-map-frame` (full-bleed, the top band
+over it as its top inset: `qandeel-analysis-return-bar` 0–262 px for Personal, `qandeel-public-band` 0–544 px for
+Public) → `qandeel-responsive-support-band`, which holds `qandeel-responsive-timeline-row` + `qandeel-responsive-chrome-band`
+for Personal and `qandeel-responsive-chrome-band` alone for Public (CHROME_ONLY); world frame 1362 px (Personal) and
+1349 px (Public). Observed for the Product Owner: (1) with nothing focused and no search open, the Public chrome band is
+empty — the CHROME_ONLY plan keeps the band's room by design (R1), so the lower part of the Public screen is the
+Analysis ground; (2) under software GL the app raised Android "not responding" dialogs on input while the world was
+painting; the stack is the main thread inside Skia's `notifyTaskReadyNative`, the same signature this emulator recorded
+on 2026-10-04 before R2, so it is classified as the emulator's software rendering, not R2 — it is not proven on hardware.
