@@ -123,7 +123,13 @@ describe('S5-01 A — the third Global Area', () => {
     expect(within(view.getByTestId('qandeel-public-root')).getByTestId('qandeel-public-title').props.children).toBe(WORDS.publicWorld);
     // Content-empty by truth (re-anchored by S5-03B): the field is the semantic field, and an empty World is drawn as
     // empty — no Experience, feed, list, count or control stands in for content that does not exist.
-    expect(within(view.getByTestId('qandeel-public-field')).queryAllByRole('button')).toHaveLength(0);
+    // RE-ANCHORED by S5-03B R2 (validation only): the field is analysed on the ONE Living Analysis surface, whose top band
+    // carries the root's own heading — the Activity entry and the way into authoring. The field itself, the world frame
+    // and the chrome band, holds no button.
+    const field = within(view.getByTestId('qandeel-public-field'));
+    expect(within(field.getByTestId('qandeel-responsive-map-frame')).queryAllByRole('button')).toHaveLength(0);
+    expect(within(field.getByTestId('qandeel-responsive-chrome-band')).queryAllByRole('button')).toHaveLength(0);
+    expect(field.queryAllByRole('button').map((button) => button.props.testID)).toEqual(['qandeel-activity-entry', 'qandeel-public-authoring-entry']);
     expect(view.getByTestId('qandeel-public-field-empty')).toBeTruthy();
     // The Personal world is untouched and still mounted beneath; only the Public routes were asked, on the reader's token.
     expect(runtime.store.getState()).toBe(storeBefore);

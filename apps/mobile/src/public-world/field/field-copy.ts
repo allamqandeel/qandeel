@@ -6,28 +6,37 @@
  *
  *   - REUSED, read from their own modules: «رجوع» / Back, «إلغاء» / Cancel, «إعادة المحاولة» / Try again (S4-01 Product
  *     Copy Gate, through the Shared copy module); «تحليل قنديل» / QANDEEL analysis (S5-02); «المعاني الأساسية» / Main
- *     meanings and «معانٍ أخرى» / Other meanings (S5-03A);
+ *     meanings and «معانٍ أخرى» / Other meanings (S5-03A); «إظهار تفاصيل أكثر» / Show more detail and «إظهار تفاصيل أقل» /
+ *     Show less detail (the Living Analysis's own accessible semantic step, W1A-01) — S5-03B R2: the Public field is
+ *     stepped through the same Living Analysis surface, so it says the step in the surface's words;
  *   - PROPOSED — S5-03B PRODUCT COPY GATE, OPEN: every genuinely new string below. No frozen record names the Public
- *     field's search, its empty state, its zoom controls, its nearby context or the preparation of a place in Arabic, so
+ *     field's search, its empty state, its nearby context or the preparation of a place in Arabic, so
  *     none is invented as canon. They are drawn in the frozen register (I-08A4 §11: calm, plain, no exclamation, no
  *     persuasion) and wait for the Product Owner's decision. Nothing here is self-approved.
+ *
+ *   - RETIRED — S5-03B R2 (Product Owner decision D3, 2026-10-07): `closer`, `farther`, `wholeWorld`. The visible
+ *     + / − / ○ controls they named are removed; the semantic step is the shared surface's (pinch, or the accessible
+ *     actions above). Retired rows are not approved, not proposed and not drawn: they leave the gate.
  *
  * No string names a coordinate, a model, a lens, a rank, a view count, popularity or a relation, says an Experience can
  * be moved by hand, or says the reader's own Experience is published.
  */
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { publicAuthoringCopy } from '../../public-authoring/copy';
+import { analysisCopy } from '../../analysis-language';
 import { publicSemanticCopy } from '../../public-authoring/semantic-copy';
 import { sharedCopy } from '../../shared-world/copy';
 
 export const PUBLIC_FIELD_COPY_GATE = {
-  status: 'S5-03B PRODUCT COPY GATE — OPEN — 16 rows PROPOSED',
-  reused: ['back', 'cancel', 'retry', 'analysisItem', 'primaryHeading', 'secondaryHeading'],
+  status: 'S5-03B PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (R2 census; 3 rows RETIRED)',
+  reused: ['back', 'cancel', 'retry', 'analysisItem', 'primaryHeading', 'secondaryHeading', 'moreDetail', 'lessDetail'],
   approved: [],
   proposed: [
-    'fieldLabel', 'empty', 'fieldUnavailable', 'searchLabel', 'noResults', 'closer', 'farther', 'wholeWorld', 'nearHeading',
+    'fieldLabel', 'empty', 'fieldUnavailable', 'searchLabel', 'noResults', 'nearHeading',
     'sharedBy', 'placeHeading', 'placeExplain', 'placeAsk', 'placeReady', 'placeUnavailable', 'experienceUnavailable',
   ],
+  /** R2 (Product Owner decision D3): rows whose controls were removed. Never drawn; not part of the decision any more. */
+  retired: ['closer', 'farther', 'wholeWorld'],
   /** R1: rows whose TEXT the Product Owner revised in review. Still PROPOSED: the gate closes only by the Owner's approval. */
   revisedByProductOwner: ['searchLabel', 'placeReady'],
 } as const;
@@ -41,12 +50,6 @@ export interface PublicFieldCopy {
   /** The search field's label and placeholder. */
   readonly searchLabel: string;
   readonly noResults: string;
-  /** Semantic Zoom: disclose more of the same place. */
-  readonly closer: string;
-  /** Semantic Zoom: disclose less of the same place. */
-  readonly farther: string;
-  /** Back to the World as a whole. */
-  readonly wholeWorld: string;
   /** The panel's very small nearby context: proximity in the field is similarity of meaning. */
   readonly nearHeading: string;
   /** "Shared by {0}" — the publisher's CURRENT public display only. */
@@ -65,6 +68,10 @@ export interface PublicFieldCopy {
   readonly analysisItem: string;
   readonly primaryHeading: string;
   readonly secondaryHeading: string;
+  /** The accessible semantic step: disclose more of the same place. */
+  readonly moreDetail: string;
+  /** The accessible semantic step: disclose less of the same place. */
+  readonly lessDetail: string;
 }
 
 const AR = {
@@ -73,9 +80,6 @@ const AR = {
   fieldUnavailable: 'تعذّر عرض العالم العام الآن.', // PROPOSED — S5-03B Product Copy Gate
   searchLabel: 'ابحث عن تجربة أو شعور أو معنى', // PROPOSED — S5-03B Product Copy Gate (text as revised by the Product Owner, R1)
   noResults: 'لا شيء في العالم العام يطابق هذا البحث.', // PROPOSED — S5-03B Product Copy Gate
-  closer: 'اقترب', // PROPOSED — S5-03B Product Copy Gate
-  farther: 'ابتعد', // PROPOSED — S5-03B Product Copy Gate
-  wholeWorld: 'العالم كله', // PROPOSED — S5-03B Product Copy Gate
   nearHeading: 'قريب في المعنى', // PROPOSED — S5-03B Product Copy Gate
   sharedBy: 'شاركها {0}', // PROPOSED — S5-03B Product Copy Gate
   experienceUnavailable: 'لم تعد هذه التجربة في العالم العام.', // PROPOSED — S5-03B Product Copy Gate
@@ -92,9 +96,6 @@ const EN = {
   fieldUnavailable: "Public World can't be shown right now.", // PROPOSED — S5-03B Product Copy Gate
   searchLabel: 'Search for an experience, feeling, or meaning', // PROPOSED — S5-03B Product Copy Gate (text as revised by the Product Owner, R1)
   noResults: 'Nothing in Public World matches this search.', // PROPOSED — S5-03B Product Copy Gate
-  closer: 'Closer', // PROPOSED — S5-03B Product Copy Gate
-  farther: 'Farther', // PROPOSED — S5-03B Product Copy Gate
-  wholeWorld: 'The whole World', // PROPOSED — S5-03B Product Copy Gate
   nearHeading: 'Near in meaning', // PROPOSED — S5-03B Product Copy Gate
   sharedBy: 'Shared by {0}', // PROPOSED — S5-03B Product Copy Gate
   experienceUnavailable: 'This experience is no longer in Public World.', // PROPOSED — S5-03B Product Copy Gate
@@ -109,6 +110,7 @@ export function publicFieldCopy(language: ChromeLanguage): PublicFieldCopy {
   const shared = sharedCopy(language);
   const authoring = publicAuthoringCopy(language);
   const semantic = publicSemanticCopy(language);
+  const analysis = analysisCopy(language);
   const own = language === 'ar' ? AR : EN;
   return Object.freeze({
     ...own,
@@ -118,6 +120,8 @@ export function publicFieldCopy(language: ChromeLanguage): PublicFieldCopy {
     analysisItem: authoring.analysisItem, // REUSED — S5-02 Product Copy Gate
     primaryHeading: semantic.primaryHeading, // REUSED — S5-03A Product Copy Gate
     secondaryHeading: semantic.secondaryHeading, // REUSED — S5-03A Product Copy Gate
+    moreDetail: analysis.moreDetail, // REUSED — the Living Analysis accessible step (W1A-01)
+    lessDetail: analysis.lessDetail, // REUSED — the Living Analysis accessible step (W1A-01)
   });
 }
 

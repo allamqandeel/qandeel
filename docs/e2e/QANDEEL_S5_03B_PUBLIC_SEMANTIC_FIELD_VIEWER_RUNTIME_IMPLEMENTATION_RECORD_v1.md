@@ -5,7 +5,7 @@ Integration; the second of the Product Owner's three S5-03 tasks)
 **Task Contract:** the Product Owner's S5-03B Task Contract (2026-10-06)
 **Canonical baseline:** `c9338af9ecbfcecccc281f96f52fab335ad9bc7b` (the merge of PR #316, S5-03A)
 **Branch:** `feat/s5-03b-public-semantic-field-viewer`
-**Status:** **`S5-03B IMPLEMENTED — NOT MERGED — S5-03B PRODUCT COPY GATE OPEN (16 rows PROPOSED)`**.
+**Status:** **`S5-03B IMPLEMENTED — NOT MERGED — S5-03B PRODUCT COPY GATE OPEN (13 rows PROPOSED after the R2 census; 3 rows RETIRED)`**.
 Claude does not merge it. It waits for the Product Owner's Copy Gate decision and independent review. S5-03C is not started.
 
 > Public World becomes a World. Every reviewed meaning of a semantically ready Experience Version receives ONE stable
@@ -242,7 +242,7 @@ removing the admission gate → V07 fails.
 3. API spec + static contract 3: the API repositories call only the 0145 RPCs and never the frozen readers.
 4. Mobile isolation test + static contract 7: no field file names the constants.
 
-## 14. Product Copy Gate — **S5-03B PRODUCT COPY GATE — OPEN — 16 rows PROPOSED**
+## 14. Product Copy Gate — **S5-03B PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (R2 census, §25; 3 rows RETIRED)**
 
 Census: every S5-03B user-visible string is in `apps/mobile/src/public-world/field/field-copy.ts`. No frozen string was changed.
 Nothing is self-approved.
@@ -254,14 +254,15 @@ Nothing is self-approved.
 | retry | REUSED (S4-01) | إعادة المحاولة | Try again |
 | analysisItem | REUSED (S5-02) | تحليل قنديل | QANDEEL analysis |
 | primaryHeading / secondaryHeading | REUSED (S5-03A) | المعاني الأساسية / معانٍ أخرى | Main meanings / Other meanings |
+| moreDetail / lessDetail | REUSED (Living Analysis accessible step, W1A-01; added in R2) | إظهار تفاصيل أكثر / إظهار تفاصيل أقل | Show more detail / Show less detail |
 | fieldLabel | **PROPOSED** | حقل المعاني في العالم العام | Public World's field of meaning |
 | empty | **PROPOSED** | لا يوجد في العالم العام شيء بعد. | Nothing is in Public World yet. |
 | fieldUnavailable | **PROPOSED** | تعذّر عرض العالم العام الآن. | Public World can't be shown right now. |
 | searchLabel | **PROPOSED** (text revised by the Product Owner, R1) | ابحث عن تجربة أو شعور أو معنى | Search for an experience, feeling, or meaning |
 | noResults | **PROPOSED** | لا شيء في العالم العام يطابق هذا البحث. | Nothing in Public World matches this search. |
-| closer | **PROPOSED** | اقترب | Closer |
-| farther | **PROPOSED** | ابتعد | Farther |
-| wholeWorld | **PROPOSED** | العالم كله | The whole World |
+| closer | ~~PROPOSED~~ **RETIRED (R2, D3)** — control removed, row deleted | ~~اقترب~~ | ~~Closer~~ |
+| farther | ~~PROPOSED~~ **RETIRED (R2, D3)** — control removed, row deleted | ~~ابتعد~~ | ~~Farther~~ |
+| wholeWorld | ~~PROPOSED~~ **RETIRED (R2, D3)** — control removed, row deleted | ~~العالم كله~~ | ~~The whole World~~ |
 | nearHeading | **PROPOSED** | قريب في المعنى | Near in meaning |
 | sharedBy | **PROPOSED** | شاركها {0} | Shared by {0} |
 | experienceUnavailable | **PROPOSED** | لم تعد هذه التجربة في العالم العام. | This experience is no longer in Public World. |
@@ -271,7 +272,7 @@ Nothing is self-approved.
 | placeReady | **PROPOSED** (text revised by the Product Owner, R1) | تم تحديد مكانها. | Its place has been set. |
 | placeUnavailable | **PROPOSED** | تعذّر على قنديل تحديد مكانها الآن. | QANDEEL couldn't find its place right now. |
 
-Notes for the Product Owner: English follows S5-01 / S5-02's "Public World" without an article. The zoom controls show the
+(R2: the zoom controls and their three rows are removed — see §25.) Notes for the Product Owner: English follows S5-01 / S5-02's "Public World" without an article. The zoom controls show the
 glyphs `+` / `−` / `○` with these rows as their accessible names. «شاركها» is used for a published Experience; the reader's
 own Experience is never called published.
 
@@ -297,7 +298,7 @@ current-truth note. The Public World is not launch-ready; no Launch Readiness is
 | G08 | Discussion, replies, Public QANDEEL, Public Activity / Push; rendering vitality counts and the published instant | 4 assigned | S5-04 |
 | G09 | `PUBLISHED`, CW2-08, Safety / moderation, entitlement, signed-out viewing; Stage 9 must compose spatial readiness | 3 existing owner | `CW2-08` / Stage 9 — unchanged |
 | G10 | Account deletion across Connected Worlds — new Version / interpretation RESTRICT dependents | 3 existing item | `QAN-BL-ACCT-01` — HIGH / OPEN (§15) |
-| G11 | The S5-03B Product Copy Gate | 1 — this task, before merge | §14 — 16 rows PROPOSED for the Product Owner |
+| G11 | The S5-03B Product Copy Gate | 1 — this task, before merge | §14 — 13 rows PROPOSED for the Product Owner (R2 census; 3 retired) |
 | G12 | No native device leg for the field (an empty World in production; Jest covers both languages, FAR / MID / NEAR, search, panel, Back) | 5 — observe / report | §17: native proof was not run in this delivery; the Product Owner decides whether one bounded smoke is required before merge |
 | G13 | Export My Data does not include the spatial footprint | 3 existing owner | `E2E-D-16` |
 | G14 | Public Voice, Replay | 3 existing items | `QAN-BL-VOICE-01` / Stage 8B; Stage 7 |
@@ -642,3 +643,80 @@ files). Every root static contract 1209 / 1209 (with this workstation's ignored 
 No DB, migration, API, copy or Public change; no DB verifier was run. The Copy Gate stays OPEN (16 rows PROPOSED; D3's
 three retirements land with R2). CW2-08 NOT_EVALUATED; PUBLISHED closed; S5-03C not started. R2 waits for the Product
 Owner's approval of R1.
+
+## 25. R2 — Public adoption of the ONE Living Analysis surface (2026-10-07)
+
+**Product Owner decision.** R1 APPROVED at `405821c` (independent review): `LivingAnalysisSurface` is the one Analysis
+screen, `WorldViewSurface` the one world view, the Personal Analysis its first consumer with both goldens unchanged. R2 —
+Public adoption only — was authorised.
+
+**What Public is now.** `PublicWorldArea` keeps only what is Public's to decide: the entry verdict, its RESOLVING /
+DENIED states, the authoring workspace routing, and the Public-local ownership of its controllers. On ALLOW, with no
+authoring workspace open, it mounts `PublicLivingAnalysis` and hands it its heading. The component path is:
+
+`PublicWorldArea` → `PublicLivingAnalysis` → `LivingAnalysisSurface` → [top band: Public heading + search] ·
+[world: `PublicFieldView` → `useWorldView` + `WorldViewSurface` → `WorldCanvas`] · [`timeline={null}` → `CHROME_ONLY`] ·
+[chrome band: the field's panel / results / state].
+
+- *The Analysis place (D1).* The surface's own `AnalysisAppearanceScope`: dark under every reader preference; the area's
+  status bar is decided for that ground.
+- *Top band (D4).* The Public World's name, the Activity entry and the way into authoring (`PublicHeading`, painting in
+  the place it is drawn in), then the search. The band is measured and its height is the world's top inset. There is no
+  `SEARCH_ROW`; the pre-measurement seed is only the rows' minimum heights, exactly as the Personal return bar seeds its own.
+- *World.* `PublicFieldView` calls `useWorldView` with the Public field controller as the owner, the Public camera, the
+  Public projection (`placePublicField`, unchanged), `membership: null`, no cause, `inspection: null`, and the Public acts
+  (`controller.pan`, `controller.step`). It renders `WorldViewSurface` with the generic gesture plane; the canvas slot holds
+  `WorldCanvas` + `PublicExperienceMark` (neutral circle, unchanged), the MID labels and the accessible targets — the Public
+  overlay inside the world frame. The labels are laid out against the measured envelope's own insets.
+- *No temporal track.* `timeline={null}`: no Timeline, no Live, no Return-to-Live, no Personal temporal semantics; the
+  plan composes `CHROME_ONLY`, so the world frame is the one every world gets.
+- *Chrome band (D2).* One thing at a time: the focused Experience's panel (with its nearby context); else the open
+  search's results (folded once a result is chosen, Back returns to them); else the field's empty / unavailable state. The
+  band's own scroller holds it; `PANEL_MAX`, the 46 % overlay and every absolutely positioned screen piece are gone.
+- *Deleted.* `PublicSemanticField.tsx` — the Public field's own full-screen composition, its own `useWorldMotion` /
+  `useWorldFrame` / `worldPresentation` calls, its own `Gesture.Simultaneous`, pan worklet, pinch recogniser and
+  `PINCH_STEP`, and its own tap plane. Its remaining pieces moved to their homes (`PublicLivingAnalysis.tsx`,
+  `PublicFieldView.tsx`).
+- *Camera / acts.* The shared drag and semantic step commit into the Public controller: `pan(…)` and `step(direction)` now
+  return a `PublicFieldOutcome` (`APPLIED` or why not), which is all the generic mechanic reads. `closer()` / `farther()`
+  became the one `step(direction)` along the Public ladder (NEAR still focuses the place nearest the centre, OUT of NEAR
+  still releases focus); `setSize` became `setEnvelope` (the measured envelope, with its insets, is what the controller
+  reads the server for). `public-field-camera.ts` is unchanged: rungs, bounds, whole-World start, focus, nearest, ladder
+  boundary; no Personal `CameraIntent` or store semantics.
+- *D3.* The visible `+` / `−` / `○` are removed. The non-gesture route is the generic surface's: `useWorldView` returns
+  `semanticStep` (the SAME step the pinch commits, under the same enablement and observer) and `WorldViewSurface` offers it,
+  when a world asks (`semanticStep` prop), as the `zoom-in` / `zoom-out` accessible actions of the world's container,
+  labelled with the field's name. The Personal Map does not pass it (its `MapAccessibilityLayer` already offers the step),
+  so its tree is unchanged. With the ○ control gone, the controller's `wholeWorld()` act (and its private `reloadWorld`)
+  is removed: the World as a whole is where every entry starts, read fresh.
+
+**Copy Gate census after R2 (fresh; not approved).** `closer`, `farther`, `wholeWorld` — RETIRED (rows deleted in both
+languages, listed in `PUBLIC_FIELD_COPY_GATE.retired`). `moreDetail` / `lessDetail` — REUSED byte-exact from the Living
+Analysis copy (W1A-01) for the accessible step. **13 rows PROPOSED**, 8 REUSED, 0 APPROVED. The gate stays OPEN for the
+Product Owner.
+
+**Controlled re-anchors (validation only).** VPORT-02 — `WorldViewSurface` re-pinned (previous pin `50786b8e`; the change
+is additive). S5-03B contract — `FIELD_FILES` names the two new files instead of the deleted one; test 7's root mount and
+Back registration read `PublicLivingAnalysis`; test 8 is the R2 census; test 10's seams read `PublicFieldView`
+(`useWorldView<…>` instead of the field's own `useWorldMotion` / `useWorldFrame` / `worldPresentation`) and the whole-World
+act assertions are replaced by "no such act; an entry reads the whole World with nothing held on display"; test 11 reads
+`PublicFieldView`. New test 13 — Public consumes the surface and the world view, builds no screen or mechanics of its own,
+has no fixed geometry or floating panel, no Personal camera semantics, no visible zoom control, and its accessible step is
+the generic one. `s5-01-public-world.test` (integration) — the surface's top band now carries the root's own heading, so
+"no button in the field" is asserted on the world frame and the chrome band, and the field's buttons are exactly the
+Activity entry and the way into authoring. `public-field.test` — the controller API (`setEnvelope`, `step`), the label
+layout against envelope insets, the mount through the measured surface, and the whole-World tests rewritten as entry /
+pan tests.
+
+**R2 validation (proportional).** Personal Map golden 16 / 16 and Living Analysis screen golden 15 / 15, both files
+unchanged; R1 continuity proof, the surface tests and every responsive test pass (170 / 170 across 17 suites incl.
+`depth-band` and the authoring suites). Public suites 59 / 59, including new R2 proofs: the shared surface composed (top
+band, world frame, CHROME_ONLY support band, no temporal row) in AR and EN; dark under a LIGHT reader preference; the
+authoring entry in the top band and its workspace in place of the surface; no visible zoom control and the accessible
+step FAR → MID → FAR, then MID → NEAR (focus) → MID; panel / results in the chrome band with the world frame unchanged;
+the same surface, plane and band instances across FAR → MID → NEAR and search. Full mobile Jest 2291 / 2297 — the same 6
+ar-EG host-locale baseline failures (`w2-account-access`, `depth`). `tsc` PASS; eslint 0 errors. Root contracts run where
+changed: S5-03B 13 / 13, VPORT-02 9 / 9, VPORT-01 9 / 9, T-10 31 / 31, T-11 27 / 27, S5-01 7 / 7, S5-02 8 / 8, S5-03A 10 / 10;
+the Living Analysis Map runtime contract passes except its "no generated native project" check, which fails only on
+this workstation's ignored `apps/mobile/android/` (unchanged from R1). No DB, migration or API change; no DB verifier run.
+CW2-08 NOT_EVALUATED; PUBLISHED closed; S5-03C not started; `QAN-BL-CW-03` / `SHARED-VIS-01` DEFERRED.

@@ -35,5 +35,5 @@ export { WorldCanvas } from './WorldCanvas';
 export type { WorldFrame, WorldFrameInput, WorldMotion, WorldSurfaceNode } from './useWorldSurface';
 export { useWorldFrame, useWorldMotion } from './useWorldSurface';
 // S5-03B R1 — the world view of the one Living Analysis surface: the mechanics (`useWorldView`) and the composed view.
-export type { WorldView, WorldViewInput, WorldViewInspection, WorldViewSurfaceProps } from './WorldViewSurface';
-export { WorldViewSurface, useWorldView } from './WorldViewSurface';
+export type { WorldView, WorldViewInput, WorldViewInspection, WorldViewSemanticStep, WorldViewSurfaceProps } from './WorldViewSurface';
+export { WORLD_VIEW_STEP_TEST_ID_SUFFIX, WorldViewSurface, useWorldView } from './WorldViewSurface';

@@ -23,8 +23,11 @@ const OWNER = ['read_own_public_spatial_preparation_v1', 'request_own_public_spa
 const VIEWER = ['read_public_semantic_field_v1', 'search_public_semantic_field_v1', 'read_public_semantic_experience_v1',
   'read_public_semantic_experience_content_v1', 'read_public_semantic_nearby_v1'];
 const SERVER = ['read_public_spatial_placement_input_v1', 'commit_public_spatial_placement_v1'];
+// R2 (controlled re-anchor): `PublicSemanticField.tsx` — the Public field's own full-screen composition — is deleted; the
+// field is `PublicLivingAnalysis.tsx` (its consumption of the ONE Living Analysis surface) and `PublicFieldView.tsx` (its
+// world in the surface's world view).
 const FIELD_FILES = ['public-world/field/public-field-camera.ts', 'public-world/field/public-field-controller.ts',
-  'public-world/field/PublicSemanticField.tsx', 'public-world/field/public-field-projection.ts', 'public-world/field/PublicExperienceMark.tsx',
+  'public-world/field/PublicLivingAnalysis.tsx', 'public-world/field/PublicFieldView.tsx', 'public-world/field/public-field-projection.ts', 'public-world/field/PublicExperienceMark.tsx',
   'public-world/field/field-copy.ts', 'runtime-entry/public-field-api.ts',
   'public-authoring/PublicPlacePreparation.tsx'];
 
@@ -152,15 +155,17 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   assert.doesNotMatch(camera, /fittedCamera|ratioToFinite|roundDiv|clampBigInt|POINT_SUBDIVISION|scaleBy|canonicalWorldAddress\(/u, 'no second projection, footprint, pan or zoom math');
   assert.doesNotMatch(code(`${MOBILE}/public-world/field/public-field-controller.ts`), /fittedCamera|ratioToFinite|roundDiv/u, 'no camera fitted to what the World holds');
   const area = code(`${MOBILE}/public-world/PublicWorldArea.tsx`);
-  assert.match(area, /<PublicSemanticField controller=\{controller\.field\}/u);
+  assert.match(area, /<PublicLivingAnalysis controller=\{controller\.field\}/u);
   assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /field: createPublicFieldController\(\{ transport: publicTransport\.field \?\? null, isCurrent, foreground: entry\.foreground \}\)/u);
   assert.match(code(`${MOBILE}/runtime-entry/public-world-api.ts`), /this\.field = new PublicFieldApiClient\(config\);/u, 'on the same identity-bound transport');
   assert.doesNotMatch(code(`${MOBILE}/runtime-entry/index.ts`), /export \{[^}]*PublicFieldApiClient/u, 'no new runtime-barrel value');
-  const surface = code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`);
+  const surface = code(`${MOBILE}/public-world/field/PublicLivingAnalysis.tsx`);
   assert.match(surface, /if \(!local\) return undefined;\n\s+const subscription = BackHandler\.addEventListener/u, 'Back is registered only for the panel or the search');
   // Phase 2: the field declares no animation of its own; any travel is the shared presentation camera's, which honours
   // reduced motion exactly as it does for the Personal Map.
-  assert.doesNotMatch(surface, /withTiming|withSpring|withDecay|Animated\./u, 'no animation of its own');
+  for (const file of ['PublicLivingAnalysis.tsx', 'PublicFieldView.tsx']) {
+    assert.doesNotMatch(code(`${MOBILE}/public-world/field/${file}`), /withTiming|withSpring|withDecay|Animated\./u, `${file}: no animation of its own`);
+  }
   const client = code(`${MOBILE}/runtime-entry/public-field-api.ts`);
   const posts = [...client.matchAll(/this\.exchange\('POST', [^\n]*?, (\{[^{}]*\})\);/gu)].map((m) => m[1]);
   assert.deepEqual(posts, ['{ commandId }'], 'one POST, carrying a command id only');
@@ -168,8 +173,12 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
 
 test('8 — the S5-03B Product Copy Gate: one gate, OPEN, every new row PROPOSED, frozen words reused', () => {
   const copy = read(`${MOBILE}/public-world/field/field-copy.ts`);
-  assert.ok(copy.includes("status: 'S5-03B PRODUCT COPY GATE — OPEN — 16 rows PROPOSED'"));
-  assert.equal((copy.match(/\/\/ PROPOSED — S5-03B Product Copy Gate/gu) ?? []).length, 32, '16 rows, Arabic and English');
+  // R2 census (Product Owner decision D3): the rows of the removed + / − / ○ controls are RETIRED, not approved.
+  assert.ok(copy.includes("status: 'S5-03B PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (R2 census; 3 rows RETIRED)'"));
+  assert.equal((copy.match(/\/\/ PROPOSED — S5-03B Product Copy Gate/gu) ?? []).length, 26, '13 rows, Arabic and English');
+  assert.ok(copy.includes("retired: ['closer', 'farther', 'wholeWorld'],"), 'the three control rows are retired');
+  assert.doesNotMatch(copy, /^\s+(closer|farther|wholeWorld):/mu, 'a retired row has no text in either language');
+  for (const reused of ['moreDetail: analysis.moreDetail', 'lessDetail: analysis.lessDetail']) assert.ok(copy.includes(reused), `the accessible step reuses ${reused}`);
   assert.doesNotMatch(copy, /\/\/ APPROVED — S5-03B/u, 'nothing self-approved');
   for (const reused of ['back: shared.back', 'cancel: shared.cancel', 'retry: shared.retry', 'analysisItem: authoring.analysisItem',
     'primaryHeading: semantic.primaryHeading', 'secondaryHeading: semantic.secondaryHeading']) assert.ok(copy.includes(reused), reused);
@@ -206,15 +215,17 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
   // Phase 2: the field is painted by the ONE generic Living Analysis World renderer the Personal Map paints through, and
   // its distance is read from its camera on the Map's own footing (FAR 0, MID ½, NEAR 1 at the Map's own metric).
   assert.equal(existsSync(new URL(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`, root)), false, 'no parallel world module');
-  const surface = code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`);
-  for (const seam of ['<WorldCanvas<PublicWorldNode>', 'useWorldMotion<PublicFieldCamera>(envelope)', 'useWorldFrame<PublicFieldCamera, PublicWorldNode>(worldMotion, {',
-    'worldPresentation(camera, {', 'membership: null,', 'hostOf={() => undefined}']) assert.ok(surface.includes(seam), seam);
+  // R2 (controlled re-anchor): the presentation camera, the frame and the world's expression are no longer the field's
+  // own calls — they are the ONE Living Analysis world view's (`useWorldView`), which the field consumes.
+  const surface = code(`${MOBILE}/public-world/field/PublicFieldView.tsx`);
+  for (const seam of ['<WorldCanvas<PublicWorldNode>', 'useWorldView<PublicFieldCamera, PublicWorldNode, PublicFieldOutcome>({', 'inspection: null,',
+    'membership: null,', 'hostOf={() => undefined}']) assert.ok(surface.includes(seam), seam);
   const mark = code(`${MOBILE}/public-world/field/PublicExperienceMark.tsx`);
   assert.ok(mark.includes('<WorldMark'), 'a Public Experience is made of the world material');
   assert.ok(mark.includes('shape={{ path: neutralCircle(x, y, r), stroked: false, limbAngle: 0 }}'), 'in a neutral circle (D2)');
   assert.ok(code(`${MOBILE}/public-world/field/public-field-projection.ts`).includes('projectAddress(camera, envelope, entry.address)'), 'the Map projection');
   // A Public Experience is not a Personal Thread / Reading: no Personal morphology, no tether, no line, no colour of its own.
-  for (const file of ['PublicSemanticField.tsx', 'PublicExperienceMark.tsx', 'public-field-projection.ts']) {
+  for (const file of ['PublicLivingAnalysis.tsx', 'PublicFieldView.tsx', 'PublicExperienceMark.tsx', 'public-field-projection.ts']) {
     const text = code(`${MOBILE}/public-world/field/${file}`);
     assert.doesNotMatch(text, /WorldObject|WorldTether|RegisterMark|morphologyPath|renderConnections|<Path|<Line/u, `${file}: no Personal morphology and no line`);
     assert.doesNotMatch(text, /['"]#[0-9a-fA-F]{3,8}['"]|rgba?\(\d|hsla?\(\d/u, `${file}: no colour of its own`);
@@ -222,8 +233,11 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
   const controller = code(`${MOBILE}/public-world/field/public-field-controller.ts`);
   assert.equal(controller.includes('mergeServed'), false, 'a read replaces the field; nothing older is kept to be shown again');
   assert.equal(controller.includes("state.camera.depth === 'FAR'"), false, 'FAR navigation is not exempt from reading again');
-  assert.match(controller, /wholeWorld\(\) \{[\s\S]*?void reloadWorld\(\);/u, 'the whole World is read again, never re-framed from what is held');
-  assert.ok(controller.includes("publish({ status: 'LOADING', entries: [], search: state.search.open ? { open: true, status: 'IDLE', results: [] } : NO_SEARCH });"), 'nothing held — no field place, no search result — is on display while the World is read');
+  // R2 (Product Owner decision D3): the ○ control and its act are removed. The World as a whole is where every ENTRY
+  // starts, read fresh, with nothing held — no field place, no focus, no search result — on display while it is read.
+  assert.doesNotMatch(controller, /\bwholeWorld\(|reloadWorld/u, 'no whole-World act without its control');
+  assert.ok(controller.includes("publish({ ...INITIAL, status: 'LOADING' });"), 'an entry shows nothing held while the World is read');
+  assert.ok(controller.includes('const answer = await transport.field(WHOLE_WORLD)'), 'an entry reads the whole World');
   // R2: every navigation asks again for everything on display — the glass, the open search, the focused panel.
   assert.ok(controller.includes(`  const revalidateShown = () => {
     void refreshViewport();
@@ -234,8 +248,7 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
     publish({ camera });
     revalidateShown();
   };`), 'every camera move revalidates everything shown');
-  assert.ok(controller.includes(`      void reloadWorld();
-      if (state.search.open && lastQuery !== null) runSearch(lastQuery);`), 'the whole World re-runs the open search');
+  // R2: the whole-World act (and its re-run of the open search) left with the ○ control; see the assertions above.
   assert.match(controller, /const failClosed = \(\) => \{[\s\S]*?entries: \[\], focus: null, search: NO_SEARCH/u, 'a read that cannot be made holds nothing');
   // The foreground reads again — through the runtime entry's ONE foreground signal, never a second AppState listener.
   assert.ok(controller.includes("foreground?.subscribe((next) => { if (next === 'ACTIVE') controller?.revalidate(); })"), 'the foreground reads again');
@@ -276,8 +289,9 @@ test('11 — Phase 1 + 2: ONE generic Living Analysis World seam, extracted from
   assert.ok(existsSync(new URL(`${MOBILE}/map/__tests__/__golden__/personal-map.golden.json`, root)), 'the golden is committed');
   // Phase 2: the Public field adopted the seam and its parallel world module is gone.
   assert.equal(existsSync(new URL(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`, root)), false, 'PublicFieldWorld is deleted in Phase 2');
-  const field = code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`);
-  for (const seam of [/\bWorldCanvas\b/u, /\buseWorldMotion\b/u, /\buseWorldFrame\b/u]) assert.match(field, seam, `the Public field paints through ${seam}`);
+  // R2 (controlled re-anchor): the field paints through the generic renderer inside the generic world view.
+  const field = code(`${MOBILE}/public-world/field/PublicFieldView.tsx`);
+  for (const seam of [/\bWorldCanvas\b/u, /\buseWorldView\b/u, /<WorldViewSurface\b/u]) assert.match(field, seam, `the Public field paints through ${seam}`);
   // The Public field takes nothing of the Personal owner: no store, no freshness rule, no Personal gestures or inspection.
   assert.doesNotMatch(field, /MapCanvas|MapSurface|mapContextFreshness|inspectObject|MapAccessibilityLayer|useMapPanGesture|useMapSemanticZoomGesture/u);
 });
@@ -321,6 +335,52 @@ test('12 — R1: ONE Living Analysis SCREEN (not only one renderer); the Persona
   const screenGolden = read(`${MOBILE}/integration/__tests__/living-analysis-screen-golden.test.tsx`);
   assert.match(screenGolden, /expect\(produced\[name\]\)\.toEqual\(recorded\[name\]\)/u);
   assert.ok(existsSync(new URL(`${MOBILE}/integration/__tests__/__golden__/living-analysis-screen.golden.json`, root)), 'the screen golden is committed');
-  // R1 adopts nothing for Public: its field is untouched until the Product Owner approves R1.
-  assert.doesNotMatch(code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`), /LivingAnalysisSurface|WorldViewSurface|useWorldView/u);
+  // R1 adopted nothing for Public; R2 (after the Product Owner approved R1) is test 13.
+});
+
+test('13 — R2: Public is a consumer of the ONE Living Analysis surface — no second screen, no second world view', () => {
+  const FIELD = `${MOBILE}/public-world/field`;
+  // The Public field's own full-screen composition is gone.
+  assert.equal(existsSync(new URL(`${FIELD}/PublicSemanticField.tsx`, root)), false, 'no second screen implementation');
+  // The root keeps the entry verdict, its states and authoring routing, and hands its field to the shared surface.
+  const area = code(`${MOBILE}/public-world/PublicWorldArea.tsx`);
+  assert.match(area, /<PublicLivingAnalysis controller=\{controller\.field\} language=\{language\} insets=\{insets\} heading=\{heading\} \/>/u);
+  assert.match(area, /<AnalysisAppearanceScope><AppearanceStatusBar \/><\/AnalysisAppearanceScope>/u, 'the status bar is decided for the Analysis ground (D1)');
+  // The Public screen IS the Living Analysis surface, with Public capabilities: no temporal track (CHROME_ONLY), the
+  // heading and search in the top band (D4), the field's panel / results / state in the chrome band (D2).
+  const screen = code(`${FIELD}/PublicLivingAnalysis.tsx`);
+  assert.match(screen, /<LivingAnalysisSurface\b/u);
+  assert.ok(screen.includes('timeline={null}'), 'no Timeline, no Live, no Return-to-Live');
+  assert.match(screen, /top=\{\{\s*content: \(\s*<PublicBand\b[\s\S]*?<SearchRow\b/u, 'the heading and the search stand in the top band');
+  assert.match(screen, /chrome=\{\(composition\) => <FieldChrome\b/u, 'the field speaks in the chrome band');
+  assert.match(screen, /world=\{\(envelope\) => <PublicFieldView\b/u, 'the field is the world in the measured frame');
+  assert.doesNotMatch(screen, /<Responsive(Surface|MapFrame|SupportBand|TimelineRow|ChromeBand)\b|AnalysisAppearanceScope/u, 'Public builds no screen of its own');
+  assert.doesNotMatch(screen, /PANEL_MAX|SEARCH_ROW|RESULTS_MAX|position: 'absolute'|maxHeight/u, 'no fixed full-screen geometry, no floating overlay panel');
+  // The world view is the shared one: no recogniser, presentation camera or frame of Public's own.
+  const world = code(`${FIELD}/PublicFieldView.tsx`);
+  assert.match(world, /useWorldView<PublicFieldCamera, PublicWorldNode, PublicFieldOutcome>\(\{\s*owner: controller,/u, 'the Public controller is the authority the world view draws under');
+  assert.match(world, /<WorldViewSurface\b/u);
+  for (const file of FIELD_FILES.filter((path) => path.startsWith('public-world/field/'))) {
+    assert.doesNotMatch(code(`${MOBILE}/${file}`), /GestureDetector|Gesture\.(Pan|Pinch|Simultaneous)|useWorldMotion|useWorldFrame|worldPresentation\(|PINCH_STEP|SEMANTIC_ZOOM_REINFORCEMENT/u, `${file} has no world-view mechanics of its own`);
+    assert.doesNotMatch(code(`${MOBILE}/${file}`), /CameraIntent|decodeCameraIntent|panByTranslation|zoomSemanticStep|from '\.\.\/\.\.\/state'/u, `${file} takes no Personal camera semantics`);
+  }
+  // The acts the shared drag and step become are the Public controller's own, along the Public ladder.
+  const controller = code(`${FIELD}/public-field-controller.ts`);
+  assert.match(controller, /step\(direction: SemanticZoomDirection\): PublicFieldOutcome;/u);
+  assert.match(controller, /pan\(translationX: number, translationY: number\): PublicFieldOutcome;/u);
+  assert.doesNotMatch(controller, /closer\(|farther\(|wholeWorld\(/u);
+  // D3: no visible + / − / ○; the non-gesture semantic step is the generic surface's accessible route.
+  for (const file of ['PublicLivingAnalysis.tsx', 'PublicFieldView.tsx']) {
+    const text = code(`${FIELD}/${file}`);
+    assert.doesNotMatch(text, /\{'\+'\}|\{'−'\}|\{'○'\}|copy\.(closer|farther|wholeWorld)/u, `${file} draws no zoom control`);
+  }
+  assert.match(world, /semanticStep=\{\{ label: copy\.fieldLabel, language, moreDetail: copy\.moreDetail, lessDetail: copy\.lessDetail, onStep: view\.semanticStep \}\}/u);
+  const worldView = code(`${MOBILE}/map/renderer/WorldViewSurface.tsx`);
+  assert.match(worldView, /const semanticStep = useCallback\(\s*\(direction: SemanticZoomDirection\) => \{\s*if \(!enabled\) return;\s*const outcome = step\(direction\);/u, 'the accessible step is the same step the pinch commits');
+  // The Personal Map does not use it (its own accessible layer already offers the step), so its tree is unchanged.
+  assert.doesNotMatch(code(`${MOBILE}/map/renderer/MapSurface.tsx`), /semanticStep=/u);
+  // Public's content stays Public's: the projection, the neutral mark, the MID labels inside the world frame.
+  assert.ok(world.includes('placePublicField({ camera, envelope,'), 'the Public projection');
+  assert.ok(world.includes('<PublicExperienceMark'), 'the neutral Public Experience shape');
+  assert.ok(world.includes('layoutFieldLabels(labelled, presented, envelope, language)'), 'the MID labels, inside the world frame');
 });

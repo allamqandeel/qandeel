@@ -141,10 +141,13 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // S5-03B R1 — CONTROLLED RE-ANCHOR (Task Contract amendment 2026-10-07; after the Personal Map golden, 16 / 16, AND the
   // Living Analysis screen golden recorded before the extraction): MapSurface calls the one Living Analysis world view
   // (`useWorldView` / `WorldViewSurface`) in place, and that seam is pinned beside it. Previous pin: MapSurface 19440a92.
+  // S5-03B R2 — CONTROLLED RE-ANCHOR (Public adoption, after both goldens unchanged): the world view gains the accessible
+  // semantic step a world without its own accessible layer asks for (`semanticStep`, additive; the Personal Map passes
+  // nothing, so its tree is unchanged). Previous pin: WorldViewSurface 50786b8e.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', '974f515d0e2fedca69bb74150959c52850a67f1a'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
-    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', '50786b8e2ffc375bbab416492a8aa21e2fe270a1'],
+    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'b3036bfc0290d81e669d23733e3b61a3184ed7ba'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd50652c2eccc6158809916369e66ff111eec1b7b'],

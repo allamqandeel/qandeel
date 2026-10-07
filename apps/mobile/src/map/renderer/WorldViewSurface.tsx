@@ -17,9 +17,14 @@
  * What a world IS stays its owner's: its authority and freshness, its placement, the act a drag and a step become, what
  * a tap selects, how each object is painted and what the accessible layer says. The Personal Map passes its store, its
  * disclosed scene, `PAN` / `ZOOM_SEMANTIC`, inspection and `MapAccessibilityLayer`; nothing here knows any of them.
+ *
+ * S5-03B R2 — the semantic step without a gesture. A world whose accessible layer does not already offer the step (the
+ * Personal Map's does, through `MapAccessibilityLayer`, and passes nothing here) asks the surface for it: the view's
+ * `semanticStep` is the SAME step the pinch commits, under the same enablement and observer, and `WorldViewSurface`
+ * offers it as the two accessible actions of the world's container, in the world's own words.
  */
-import { useMemo, type ReactNode } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { useCallback, useMemo, type ReactNode } from 'react';
+import { StyleSheet, View, type AccessibilityActionEvent } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 
 import { useAuthorityGeneration, type PresentationMotionCause } from '../../motion';
@@ -66,6 +71,8 @@ export interface WorldView<C extends WorldViewCamera, N extends WorldSurfaceNode
   readonly world: WorldPresentation | undefined;
   /** The drag and the semantic step, composed for one `GestureDetector`. */
   readonly gesture: ReturnType<typeof Gesture.Simultaneous>;
+  /** The same semantic step without a gesture (the accessible route): nothing while the world may not be acted on. */
+  readonly semanticStep: (direction: SemanticZoomDirection) => void;
 }
 
 export function useWorldView<C extends WorldViewCamera, N extends WorldSurfaceNode, O extends WorldGestureOutcome>(
@@ -100,7 +107,15 @@ export function useWorldView<C extends WorldViewCamera, N extends WorldSurfaceNo
   // already claimed the plane.
   const gesture = useMemo(() => Gesture.Simultaneous(panGesture, zoomGesture), [panGesture, zoomGesture]);
   const frame = useWorldFrame<C, N>(worldMotion, { owner, camera, envelope, placed, membership, cause });
-  return { ...frame, worldMotion, world, gesture };
+  const semanticStep = useCallback(
+    (direction: SemanticZoomDirection) => {
+      if (!enabled) return;
+      const outcome = step(direction);
+      onSettled?.(outcome);
+    },
+    [enabled, onSettled, step],
+  );
+  return { ...frame, worldMotion, world, gesture, semanticStep };
 }
 
 export interface WorldViewSurfaceProps {
@@ -115,9 +130,47 @@ export interface WorldViewSurfaceProps {
   readonly canvas: ReactNode;
   /** The world's accessible layer, mounted beside the plane. */
   readonly accessibility?: ReactNode;
+  /** The accessible semantic step, for a world whose own layer does not offer it. Absent, nothing is added. */
+  readonly semanticStep?: WorldViewSemanticStep | null;
 }
 
-export function WorldViewSurface({ testID, planeTestID, composed, gesture, onTap, canvas, accessibility = null }: WorldViewSurfaceProps) {
+/** The world's container as assistive technology reads it, with the semantic step as its two actions. */
+export interface WorldViewSemanticStep {
+  /** The world's own neutral name. */
+  readonly label: string;
+  readonly language: string;
+  readonly moreDetail: string;
+  readonly lessDetail: string;
+  readonly onStep: (direction: SemanticZoomDirection) => void;
+}
+
+export const WORLD_VIEW_STEP_TEST_ID_SUFFIX = ':semantic-step';
+
+export function WorldViewSurface({ testID, planeTestID, composed, gesture, onTap, canvas, accessibility: layer = null, semanticStep = null }: WorldViewSurfaceProps) {
+  // Like the Personal accessible layer, the container covers the plane and never takes a touch from it.
+  const accessibility =
+    semanticStep === null ? (
+      layer
+    ) : (
+      <View
+        testID={`${testID}${WORLD_VIEW_STEP_TEST_ID_SUFFIX}`}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="box-none"
+        accessibilityLabel={semanticStep.label}
+        accessibilityLanguage={semanticStep.language}
+        accessibilityActions={[
+          { name: 'zoom-in', label: semanticStep.moreDetail },
+          { name: 'zoom-out', label: semanticStep.lessDetail },
+        ]}
+        onAccessibilityAction={(event: AccessibilityActionEvent) => {
+          const action = event.nativeEvent.actionName;
+          if (action === 'zoom-in') semanticStep.onStep('IN');
+          else if (action === 'zoom-out') semanticStep.onStep('OUT');
+        }}
+      >
+        {layer}
+      </View>
+    );
   // A world that cannot be composed renders an empty surface rather than a plausible wrong world. Its
   // accessible layer may still be mounted: it keeps the routes that could bring the camera back.
   if (!composed) {

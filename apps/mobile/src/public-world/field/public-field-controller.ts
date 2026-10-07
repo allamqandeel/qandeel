@@ -17,13 +17,12 @@
  *
  * No cache is a source of display (R1). The field shows exactly what the LATEST read served — never an older read kept
  * for later — and every transition that could show a different part of the World asks again for EVERYTHING on display
- * (R2): the glass, the open search and the focused panel, on any camera move at any rung (FAR included), the World as a
- * whole (a fresh whole-World read, never a re-framing of what is held, with no held search result shown meanwhile), a
- * return to the foreground, and every entry. A read that answers removes, at once, every Experience it is authoritative for and no
+ * (R2): the glass, the open search and the focused panel, on any camera move at any rung (FAR included), a return to
+ * the foreground, and every entry (the World as a whole, read fresh). A read that answers removes, at once, every Experience it is authoritative for and no
  * longer serves: from the field, the search results, the focused panel and its nearby context. A read that cannot be
  * made fails closed: the field becomes the one honest unavailable state and holds nothing.
  */
-import { envelopeCenter, projectAddress, viewportEnvelope, visibleFootprint, type ViewportEnvelope } from '../../map/camera';
+import { envelopeCenter, projectAddress, visibleFootprint, type SemanticZoomDirection, type ViewportEnvelope } from '../../map/camera';
 import type { CanonicalWorldAddress } from '../../map/world';
 import type { ForegroundSignal, PublicAuthoringAnswer, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle } from '../../runtime-entry';
 import {
@@ -58,21 +57,32 @@ export interface PublicFieldState {
   readonly search: PublicFieldSearchState;
 }
 
+/**
+ * What one act on the Public camera did (S5-03B R2). The shared world view reads only whether it was `APPLIED`: any
+ * other outcome brings the presentation home, exactly as a Personal act that moved nothing does.
+ */
+export interface PublicFieldOutcome {
+  readonly outcome: 'APPLIED' | 'NO_MOVEMENT' | 'AT_BOUNDARY' | 'BEYOND_CANONICAL_BOUND' | 'INVALID_INPUT' | 'NOT_READY';
+}
+
 export interface PublicFieldController {
   getState(): PublicFieldState;
   subscribe(listener: () => void): () => void;
   /** Enter the field: the World as a whole, fetched now. Nothing is carried over from a previous visit. */
   enter(): void;
-  /** The field's presentation size (Class D). It frames nothing: the World has one metric whatever its size. */
-  setSize(width: number, height: number): void;
-  /** One completed drag, in points of content translation. */
-  pan(translationX: number, translationY: number): void;
-  /** Semantic Zoom in: FAR → MID → NEAR (NEAR focuses the place nearest the centre of the glass). */
-  closer(): void;
-  /** Semantic Zoom out: NEAR → MID (focus released) → FAR. */
-  farther(): void;
-  /** Back to the World as a whole, at FAR, nothing focused — read again from the server, never re-framed from what is held. */
-  wholeWorld(): void;
+  /**
+   * The envelope the shared Living Analysis surface measured for the world (Class D), with its insets. It frames
+   * nothing: the World has one metric whatever its size.
+   */
+  setEnvelope(envelope: ViewportEnvelope): void;
+  /** One completed drag, in points of content translation (the shared world view's ONE drag). */
+  pan(translationX: number, translationY: number): PublicFieldOutcome;
+  /**
+   * One Semantic Zoom step along the Public ladder (the shared world view's ONE semantic step, by pinch or by the
+   * accessible route): IN is FAR → MID → NEAR (NEAR focuses the place nearest the centre of the glass); OUT is NEAR →
+   * MID (focus released) → FAR.
+   */
+  step(direction: SemanticZoomDirection): PublicFieldOutcome;
   /** Ask the server again for everything on display (the glass, the open search, the focused panel). */
   revalidate(): void;
   /** A tap on the field at a screen point: at FAR it discloses that place at MID. */
@@ -97,6 +107,8 @@ export interface PublicFieldControllerOptions {
 const WHOLE_WORLD: PublicFieldRectangle = Object.freeze({ minX: PUBLIC_FIELD_MIN_COORD, minY: PUBLIC_FIELD_MIN_COORD, maxX: PUBLIC_FIELD_MAX_COORD, maxY: PUBLIC_FIELD_MAX_COORD });
 const NO_SEARCH: PublicFieldSearchState = Object.freeze({ open: false, status: 'IDLE', results: [] });
 const INITIAL: PublicFieldState = Object.freeze({ status: 'IDLE', entries: [], camera: null, focus: null, search: NO_SEARCH });
+const APPLIED: PublicFieldOutcome = Object.freeze({ outcome: 'APPLIED' });
+const NOT_READY: PublicFieldOutcome = Object.freeze({ outcome: 'NOT_READY' });
 export const PUBLIC_SEARCH_QUERY_MAX = 120;
 /**
  * The server's bound on one field read (S5-03B v1, `LIMIT 400`). A read that returned fewer is COMPLETE for its
@@ -167,18 +179,6 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     if (mine !== visit) return;
     if (answer.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
     publish({ status: 'READY', entries: answer.value, camera: wholeWorldCamera() });
-  }
-
-  /** The World as a whole, read now: nothing is shown from what was held while the read is in flight. */
-  async function reloadWorld(): Promise<void> {
-    if (!transport) { failClosed(); return; }
-    const mine = ++viewportTicket;
-    const ofVisit = visit;
-    publish({ status: 'LOADING', entries: [], search: state.search.open ? { open: true, status: 'IDLE', results: [] } : NO_SEARCH });
-    const answer = await transport.field(WHOLE_WORLD).catch(() => ({ kind: 'NO_ANSWER' as const }));
-    if (mine !== viewportTicket || ofVisit !== visit) return;
-    if (answer.kind !== 'ANSWER') { failClosed(); return; }
-    applyServed(WHOLE_WORLD, answer.value, { status: 'READY', camera: wholeWorldCamera() });
   }
 
   /** At every rung, ask the server what it serves exactly inside the glass; the field becomes that answer. */
@@ -265,43 +265,34 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       panelTicket += 1; searchTicket += 1; viewportTicket += 1; lastQuery = null;
       void load();
     },
-    setSize(width, height) {
-      const next = viewportEnvelope(width, height);
-      if (next !== null) envelope = next;
+    setEnvelope(next) {
+      envelope = next;
     },
     pan(translationX, translationY) {
-      if (!state.camera) return;
+      if (!state.camera || state.status !== 'READY') return NOT_READY;
       const moved = panField(state.camera, translationX, translationY);
-      if (moved.outcome === 'MOVED') setCamera(moved.camera);
+      if (moved.outcome !== 'MOVED') return { outcome: moved.outcome };
+      setCamera(moved.camera);
+      return APPLIED;
     },
-    closer() {
+    step(direction) {
       const camera = state.camera;
-      if (!camera || envelope === null) return;
-      if (camera.depth === 'MID') {
+      if (!camera || state.status !== 'READY' || envelope === null) return NOT_READY;
+      if (direction === 'IN' && camera.depth === 'MID') {
         // NEAR is focus: the place nearest the centre of the glass, among those the field shows there.
         const glass = envelope;
         const footprint = visibleFootprint(camera, glass);
         const shown = state.entries.filter((entry) => within(footprint, entry.address) && projectAddress(camera, glass, entry.address) !== null);
         const nearest = nearestTo(camera.anchor, shown);
-        if (nearest !== null) focusOn(nearest);
-        return;
+        if (nearest === null) return { outcome: 'AT_BOUNDARY' };
+        focusOn(nearest);
+        return APPLIED;
       }
-      const moved = zoomField(camera, 'IN');
-      if (moved.outcome === 'MOVED') setCamera(moved.camera);
-    },
-    farther() {
-      const camera = state.camera;
-      if (!camera) return;
-      const moved = zoomField(camera, 'OUT');
-      if (moved.outcome !== 'MOVED') return;
+      const moved = zoomField(camera, direction);
+      if (moved.outcome !== 'MOVED') return { outcome: moved.outcome };
       if (camera.depth === 'NEAR') releaseFocus();
       setCamera(moved.camera);
-    },
-    wholeWorld() {
-      if (state.status === 'IDLE' || state.status === 'LOADING') return;
-      releaseFocus();
-      void reloadWorld();
-      if (state.search.open && lastQuery !== null) runSearch(lastQuery);
+      return APPLIED;
     },
     revalidate() {
       if (state.status === 'IDLE' || state.status === 'LOADING') return;
