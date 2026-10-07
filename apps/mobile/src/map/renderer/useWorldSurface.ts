@@ -62,6 +62,11 @@ export interface WorldMotion<C extends WorldViewCamera> {
   readonly motion: PresentationCameraBinding;
   readonly center: { readonly x: number; readonly y: number };
   readonly arrivals: ArrivalRegistry;
+  /**
+   * S5-03B Phase 2 — whether the plane is at rest: no travel and no drag holds a corridor open. Class D, read from
+   * the corridor itself, so an owner's screen-space chrome laid over the plane can wait for the world to settle.
+   */
+  readonly atRest: boolean;
   /** @internal the records `useWorldFrame` reads and writes. */
   readonly records: {
     readonly cameraHistory: RecordBox<CameraHistory<C> | null>;
@@ -147,7 +152,13 @@ export function useWorldMotion<C extends WorldViewCamera>(envelope: ViewportEnve
     cameraBox.set(motion);
   }, [cameraBox, motion]);
 
-  return { motion, center, arrivals, records: { cameraHistory, disclosureHistory, corridor, setCorridor } };
+  return {
+    motion,
+    center,
+    arrivals,
+    atRest: envelopesEqual(corridor, RESIDUAL_ENVELOPE_AT_REST),
+    records: { cameraHistory, disclosureHistory, corridor, setCorridor },
+  };
 }
 
 export interface WorldFrameInput<C extends WorldViewCamera, N extends WorldSurfaceNode> {

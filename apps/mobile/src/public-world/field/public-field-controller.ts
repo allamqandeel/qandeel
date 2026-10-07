@@ -23,11 +23,11 @@
  * longer serves: from the field, the search results, the focused panel and its nearby context. A read that cannot be
  * made fails closed: the field becomes the one honest unavailable state and holds nothing.
  */
+import { envelopeCenter, projectAddress, viewportEnvelope, visibleFootprint, type ViewportEnvelope } from '../../map/camera';
 import type { CanonicalWorldAddress } from '../../map/world';
 import type { ForegroundSignal, PublicAuthoringAnswer, PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle } from '../../runtime-entry';
 import {
-  PUBLIC_FIELD_MAX_COORD, PUBLIC_FIELD_MIN_COORD, fieldFootprint, fittedCamera, focusField, isFieldSize, nearestTo, panField, projectToField, zoomField,
-  type PublicFieldCamera, type PublicFieldSize,
+  PUBLIC_FIELD_MAX_COORD, PUBLIC_FIELD_MIN_COORD, focusField, nearestTo, panField, wholeWorldCamera, zoomField, type PublicFieldCamera,
 } from './public-field-camera';
 
 export interface PublicFieldTransport {
@@ -63,7 +63,7 @@ export interface PublicFieldController {
   subscribe(listener: () => void): () => void;
   /** Enter the field: the World as a whole, fetched now. Nothing is carried over from a previous visit. */
   enter(): void;
-  /** The field's presentation size (Class D). The first one frames the World. */
+  /** The field's presentation size (Class D). It frames nothing: the World has one metric whatever its size. */
   setSize(width: number, height: number): void;
   /** One completed drag, in points of content translation. */
   pan(translationX: number, translationY: number): void;
@@ -110,7 +110,7 @@ const within = (r: PublicFieldRectangle, a: CanonicalWorldAddress): boolean => a
 export function createPublicFieldController({ transport, isCurrent, foreground }: PublicFieldControllerOptions): PublicFieldController {
   const listeners = new Set<() => void>();
   let state: PublicFieldState = INITIAL;
-  let size: PublicFieldSize | null = null;
+  let envelope: ViewportEnvelope | null = null;
   let retired = false;
   let visit = 0;
   let searchTicket = 0;
@@ -124,7 +124,6 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
   };
 
   let lastQuery: string | null = null;
-  const homeCamera = (): PublicFieldCamera | null => (isFieldSize(size) ? fittedCamera(state.entries.map((entry) => entry.address), size) : null);
   const forget = (experienceId: string) => {
     publish({
       entries: state.entries.filter((entry) => entry.id !== experienceId),
@@ -167,8 +166,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     const answer = await transport.field(WHOLE_WORLD).catch(() => ({ kind: 'NO_ANSWER' as const }));
     if (mine !== visit) return;
     if (answer.kind !== 'ANSWER') { publish({ status: 'UNAVAILABLE' }); return; }
-    publish({ status: 'READY', entries: answer.value,
-      camera: isFieldSize(size) ? fittedCamera(answer.value.map((entry) => entry.address), size) : null });
+    publish({ status: 'READY', entries: answer.value, camera: wholeWorldCamera() });
   }
 
   /** The World as a whole, read now: nothing is shown from what was held while the read is in flight. */
@@ -180,18 +178,15 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     const answer = await transport.field(WHOLE_WORLD).catch(() => ({ kind: 'NO_ANSWER' as const }));
     if (mine !== viewportTicket || ofVisit !== visit) return;
     if (answer.kind !== 'ANSWER') { failClosed(); return; }
-    applyServed(WHOLE_WORLD, answer.value, {
-      status: 'READY',
-      camera: isFieldSize(size) ? fittedCamera(answer.value.map((entry) => entry.address), size) : state.camera,
-    });
+    applyServed(WHOLE_WORLD, answer.value, { status: 'READY', camera: wholeWorldCamera() });
   }
 
   /** At every rung, ask the server what it serves exactly inside the glass; the field becomes that answer. */
   async function refreshViewport(): Promise<void> {
-    if (!transport || !state.camera || !isFieldSize(size) || state.status !== 'READY') return;
+    if (!transport || !state.camera || envelope === null || state.status !== 'READY') return;
     const mine = ++viewportTicket;
     const ofVisit = visit;
-    const rectangle = fieldFootprint(state.camera, size);
+    const rectangle = visibleFootprint(state.camera, envelope);
     const answer = await transport.field(rectangle).catch(() => ({ kind: 'NO_ANSWER' as const }));
     if (mine !== viewportTicket || ofVisit !== visit) return;
     if (answer.kind !== 'ANSWER') { failClosed(); return; }
@@ -254,7 +249,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     if (!target || !camera) return;
     // The new focus is set with the camera, so the one navigation read opens its panel (and nothing older's).
     publish({ focus: { id: experienceId, panel: { status: 'LOADING' } } });
-    setCamera(focusField(camera, target.address));
+    setCamera(focusField(target.address));
   };
 
   let controller: PublicFieldController | null = null;
@@ -271,11 +266,8 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       void load();
     },
     setSize(width, height) {
-      const next = { width, height };
-      if (!isFieldSize(next)) return;
-      const first = !isFieldSize(size);
-      size = next;
-      if (first && state.status === 'READY') publish({ camera: homeCamera() });
+      const next = viewportEnvelope(width, height);
+      if (next !== null) envelope = next;
     },
     pan(translationX, translationY) {
       if (!state.camera) return;
@@ -284,11 +276,12 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     },
     closer() {
       const camera = state.camera;
-      if (!camera || !isFieldSize(size)) return;
+      if (!camera || envelope === null) return;
       if (camera.depth === 'MID') {
         // NEAR is focus: the place nearest the centre of the glass, among those the field shows there.
-        const footprint = fieldFootprint(camera, size);
-        const shown = state.entries.filter((entry) => within(footprint, entry.address) && projectToField(camera, size!, entry.address) !== null);
+        const glass = envelope;
+        const footprint = visibleFootprint(camera, glass);
+        const shown = state.entries.filter((entry) => within(footprint, entry.address) && projectAddress(camera, glass, entry.address) !== null);
         const nearest = nearestTo(camera.anchor, shown);
         if (nearest !== null) focusOn(nearest);
         return;
@@ -312,14 +305,14 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     },
     revalidate() {
       if (state.status === 'IDLE' || state.status === 'LOADING') return;
-      if (state.status === 'UNAVAILABLE' || !state.camera || !isFieldSize(size)) { void load(); return; }
+      if (state.status === 'UNAVAILABLE' || !state.camera || envelope === null) { void load(); return; }
       revalidateShown();
     },
     tapField(x, y) {
       const camera = state.camera;
-      if (!camera || camera.depth !== 'FAR' || !isFieldSize(size)) return;
-      const halfWidth = size.width / 2; const halfHeight = size.height / 2;
-      const recentred = panField(camera, halfWidth - x, halfHeight - y);
+      if (!camera || camera.depth !== 'FAR' || envelope === null) return;
+      const center = envelopeCenter(envelope);
+      const recentred = panField(camera, center.x - x, center.y - y);
       const base = recentred.outcome === 'MOVED' ? recentred.camera : camera;
       const moved = zoomField(base, 'IN');
       if (moved.outcome === 'MOVED') setCamera(moved.camera);

@@ -235,7 +235,10 @@ test('T-10 adds no canonical field, no Product act and no temporal mode', () => 
 test('Q1 — one completed drag is one PAN, from the finger, with no momentum anywhere', () => {
   const gesture = mapCode['camera/useMapPanGesture.ts'];
   // `panFromTranslation` remains the authority, reached through the one executor, once.
-  assert.match(mapCode['camera/pan.ts'], /export function panFromTranslation\(camera: MapCamera, translationX: number, translationY: number\): PanResolution \{/u);
+  // S5-03B Phase 2 — CONTROLLED RE-ANCHOR: the ONE pan reads only a camera's anchor and scale, so the Public field's
+  // world camera pans through this same function (no second pan math). The Map's drag still reaches it only as below.
+  assert.match(mapCode['camera/pan.ts'], /type PannedCamera = Pick<MapCamera, 'anchor' \| 'scale'>;/u);
+  assert.match(mapCode['camera/pan.ts'], /export function panFromTranslation\(camera: PannedCamera, translationX: number, translationY: number\): PanResolution \{/u);
   assert.equal((gesture.match(/panByTranslation\(/gu) ?? []).length, 1, 'exactly one place commits a drag');
   assert.match(gesture, /const outcome = panByTranslation\(current\.store, translationX, translationY\);/u);
   // ...and it is reached ONLY from a successful gesture end, with the finger's own translation AND

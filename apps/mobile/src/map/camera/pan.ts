@@ -23,6 +23,9 @@ import { canonicalWorldAddress, worldAnchorRef, type CanonicalWorldAddress } fro
 import type { MapCamera } from './camera';
 import { safeAreaHeight, safeAreaWidth, worldDeltaForPoints, type ViewportEnvelope } from './viewport';
 
+/** S5-03B Phase 2 — what a drag reads of a camera: where it looks and how far. Any world surface camera pans the same. */
+type PannedCamera = Pick<MapCamera, 'anchor' | 'scale'>;
+
 /** The four non-drag viewport exploration directions. They move the camera, nothing else. */
 export const VIEWPORT_EXPLORATION_DIRECTIONS = Object.freeze(['LEFT', 'RIGHT', 'UP', 'DOWN'] as const);
 export type ViewportExplorationDirection = (typeof VIEWPORT_EXPLORATION_DIRECTIONS)[number];
@@ -37,7 +40,7 @@ export type PanResolution =
   | { readonly outcome: 'BEYOND_CANONICAL_BOUND' }
   | { readonly outcome: 'INVALID_INPUT' };
 
-function resolve(camera: MapCamera, deltaX: bigint, deltaY: bigint): PanResolution {
+function resolve(camera: PannedCamera, deltaX: bigint, deltaY: bigint): PanResolution {
   if (deltaX === 0n && deltaY === 0n) return { outcome: 'NO_MOVEMENT' };
   const moved = canonicalWorldAddress(camera.anchor.x + deltaX, camera.anchor.y + deltaY);
   if (!moved.ok) return { outcome: 'BEYOND_CANONICAL_BOUND' };
@@ -50,7 +53,7 @@ function resolve(camera: MapCamera, deltaX: bigint, deltaY: bigint): PanResoluti
  * Interprets a completed drag. `translationX` / `translationY` are the total displacement of the
  * *content* in presentation points, as the gesture reports it; the camera moves against it.
  */
-export function panFromTranslation(camera: MapCamera, translationX: number, translationY: number): PanResolution {
+export function panFromTranslation(camera: PannedCamera, translationX: number, translationY: number): PanResolution {
   if (!Number.isFinite(translationX) || !Number.isFinite(translationY)) return { outcome: 'INVALID_INPUT' };
   const deltaX = -worldDeltaForPoints(camera, translationX);
   // The canonical orientation is world `+y` up: content dragged down moves the camera up.

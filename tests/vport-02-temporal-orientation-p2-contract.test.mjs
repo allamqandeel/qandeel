@@ -134,17 +134,21 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // WorldMarks and the visual barrel now delegate to the generic Living Analysis World seam, and the two seam files
   // (WorldCanvas, useWorldSurface) are pinned beside them so the moved code stays frozen too. Previous pins:
   // MapCanvas 2738a72f, MapSurface 8f90bd39, WorldMarks fd4c9110, visual/index d65150b2.
+  // S5-03B Phase 2 — CONTROLLED RE-ANCHOR (Public adoption, Personal golden still 16/16 with the golden file unchanged):
+  // useWorldSurface gains the additive Class-D `atRest` fact (useWorldMotion), and worldPresentation reads its camera
+  // as `Pick<MapCamera, 'anchor' | 'scale'>` so the Public world camera reads the same expression. Previous pins:
+  // useWorldSurface 40d18141, world-presentation ca529b14.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', '974f515d0e2fedca69bb74150959c52850a67f1a'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '19440a92db18966f2e35f696c4fccc58fce348e6'],
     ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'b3036bfc0290d81e669d23733e3b61a3184ed7ba'],
-    ['apps/mobile/src/map/renderer/useWorldSurface.ts', '40d181413bf76141fe41ff31c78a61bc13ed1b90'],
+    ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd50652c2eccc6158809916369e66ff111eec1b7b'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', 'bce9df4ab738bc090bb9247dbd5b5a445ca70ad9'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],
     ['apps/mobile/src/map/visual/useWorldResponse.ts', '2640e891cfeff3645d9f155f9e888b41d58f3748'],
     ['apps/mobile/src/map/visual/world-field.generated.ts', '1eab16b0c6ec722eacf96c7179c0034bdd10c7af'],
-    ['apps/mobile/src/map/visual/world-presentation.ts', 'ca529b14eda1002ac10753ec7196b703d02ad126'],
+    ['apps/mobile/src/map/visual/world-presentation.ts', 'f0c3ec437b5e8ef582ade76ba65417ec82265bc0'],
     ['apps/mobile/src/map/visual/world-resolver.ts', 'ffe05a27613634cec00a3c5c5519afb0777c35bc'],
     ['apps/mobile/src/map/visual/world-visual.generated.ts', '172863d5b90e43ec0a6f299551296f410cf95f6a'],
   ]) {

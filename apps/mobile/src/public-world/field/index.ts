@@ -2,8 +2,10 @@
  * S5-03B — the «العالم العام» / Public World semantic field: its own camera, its own viewer-local controller and its
  * surface. Nothing here is shared with the Personal Map's state.
  */
-export type { PublicFieldCamera, PublicFieldDepth, PublicFieldSize } from './public-field-camera';
-export { PUBLIC_FIELD_DEPTHS, fittedCamera, focusField, panField, projectToField, zoomField } from './public-field-camera';
+export type { PublicFieldCamera, PublicFieldDepth } from './public-field-camera';
+export { PUBLIC_FIELD_DEPTHS, focusField, panField, wholeWorldCamera, zoomField } from './public-field-camera';
+export type { PublicPresenceKind, PublicWorldNode } from './public-field-projection';
+export { placePublicField } from './public-field-projection';
 export type {
   PublicFieldController, PublicFieldControllerOptions, PublicFieldPanelState, PublicFieldSearchState, PublicFieldState, PublicFieldTransport,
 } from './public-field-controller';

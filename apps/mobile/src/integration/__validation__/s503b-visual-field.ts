@@ -11,7 +11,7 @@
  * Every meaning, theme, pseudonym and line below is SYNTHETIC validation text — never Product copy, never a real person.
  */
 
-/** One synthetic semantic region: its centre (in field units of 2^28) and its Experiences' meanings. */
+/** One synthetic semantic region: its centre (in REGION_UNIT world units) and its Experiences' meanings. */
 interface FixtureRegion {
   readonly region: string;
   readonly cx: number;
@@ -20,7 +20,14 @@ interface FixtureRegion {
   readonly meanings: readonly string[];
 }
 
-const UNIT = 2n ** 28n;
+/**
+ * S5-03B Phase 2 — the fixture at the World's own presentation convention (D1): the Public field is seen at the Map's
+ * default scale, where the canonical step of 1,000,000 world units is about 122 points. Regions sit 1.2–1.6 million
+ * units apart and an Experience's neighbours 25–110 thousand units from it, so the synthetic field has a shape at FAR,
+ * MID and NEAR. A presentation spacing for validation only — semantic nearness is the placer's, never this file's.
+ */
+const REGION_UNIT = 45_000;
+const OFFSET_UNIT = 12_500;
 
 const REGIONS: readonly FixtureRegion[] = [
   { region: 'family.fear', cx: -22, cy: 30, themes: ['الخوف', 'العائلة'], meanings: [
@@ -38,15 +45,15 @@ const REGIONS: readonly FixtureRegion[] = [
 ];
 
 /** A deterministic scatter inside a region (no randomness: the same field on every run). */
-const OFFSETS: ReadonlyArray<readonly [number, number]> = [[0, 0], [3.1, 1.4], [-2.6, 2.2], [1.2, -3.0], [-3.4, -1.1], [2.4, 3.6]];
+const OFFSETS: ReadonlyArray<readonly [number, number]> = [[0, 0], [1.6, 2.0], [-6.4, 3.4], [5.2, -5.6], [-4.0, -7.2], [7.6, 4.4]];
 
 export interface FixtureEntry { readonly id: string; readonly x: string; readonly y: string; readonly meaning: string; readonly region: string }
 interface FixtureExperience extends FixtureEntry { readonly themes: readonly [string, string]; readonly pseudonym: string }
 
 const EXPERIENCES: readonly FixtureExperience[] = REGIONS.flatMap((r, ri) => r.meanings.map((meaning, mi) => {
   const [dx, dy] = OFFSETS[mi % OFFSETS.length];
-  const x = BigInt(Math.round((r.cx + dx) * 1000)) * UNIT / 1000n;
-  const y = BigInt(Math.round((r.cy + dy) * 1000)) * UNIT / 1000n;
+  const x = BigInt(Math.round(r.cx * REGION_UNIT + dx * OFFSET_UNIT));
+  const y = BigInt(Math.round(r.cy * REGION_UNIT + dy * OFFSET_UNIT));
   const n = ri * 10 + mi + 1;
   return { id: `5503b000-0000-4000-8000-${String(n).padStart(12, '0')}`, x: x.toString(), y: y.toString(), meaning, region: r.region,
     themes: r.themes, pseudonym: `fixture-lamp-${String(n).padStart(2, '0')}` };

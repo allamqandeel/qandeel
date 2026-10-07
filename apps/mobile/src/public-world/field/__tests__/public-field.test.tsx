@@ -11,10 +11,12 @@ import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
 import { BackHandler } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
-import { hsla } from '../../../map/visual';
+import { DEFAULT_MAP_SCALE, projectAddress, viewportEnvelope } from '../../../map/camera';
+import { approachOf, hsla } from '../../../map/visual';
 import { WORLD_VISUAL } from '../../../map/visual/world-visual.generated';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../../map/world';
-import { PUBLIC_FIELD_WORLD_TEST_ID } from '../PublicFieldWorld';
+import { PUBLIC_FIELD_WORLD_TEST_ID, layoutFieldLabels } from '../PublicSemanticField';
+import { neutralCircle } from '../PublicExperienceMark';
 import {
   createPublicAuthoringController, type PublicAuthoringTransport, type PublicSemanticTransport, type PublicSpatialTransport,
 } from '../../../public-authoring/public-authoring-controller';
@@ -25,13 +27,17 @@ import { PublicWorldApiClient, createManualForegroundSignal, type ForegroundSign
 import { PUBLIC_FIELD_COPY_GATE, publicFieldCopy } from '../field-copy';
 import { createPublicWorldController } from '../../public-world-controller';
 import { PublicWorldArea } from '../../PublicWorldArea';
-import { fittedCamera, focusField, panField, projectToField, zoomField } from '../public-field-camera';
+import { focusField, panField, wholeWorldCamera, zoomField, type PublicFieldCamera } from '../public-field-camera';
+import { placePublicField } from '../public-field-projection';
 import { createPublicFieldController, type PublicFieldTransport } from '../public-field-controller';
 
 jest.mock('expo-status-bar', () => ({ StatusBar: () => null }));
 
 const INSETS = { top: 44, right: 0, bottom: 0, left: 0 };
 const SIZE = { width: 400, height: 800 };
+const GLASS = viewportEnvelope(SIZE.width, SIZE.height)!;
+/** Where an address is drawn: the Map's own projection, at the field's own glass. */
+const projectToField = (camera: PublicFieldCamera, _size: typeof SIZE, address: CanonicalWorldAddress) => projectAddress(camera, GLASS, address);
 const flush = () => act(async () => { await new Promise((resolve) => setImmediate(resolve)); });
 const id = (n: number) => `00000000-0000-4000-8000-${n.toString().padStart(12, '0')}`;
 const yes = <T,>(value: T): PublicAuthoringAnswer<T> => ({ kind: 'ANSWER', value });
@@ -43,9 +49,9 @@ const at = (x: bigint, y: bigint): CanonicalWorldAddress => {
 };
 const entry = (n: number, x: bigint, y: bigint, region = 'family.fear'): PublicFieldEntry =>
   ({ id: id(n), address: at(x, y), meaning: `meaning ${n}`, region });
-const E1 = entry(1, 1_000_000n, 2_000_000n);
-const E2 = entry(2, 1_200_000n, 2_100_000n);
-const E3 = entry(3, -40_000_000n, 9_000_000n, 'hope.waiting');
+const E1 = entry(1, 300_000n, 600_000n);
+const E2 = entry(2, 315_000n, 608_000n);
+const E3 = entry(3, -1_000_000n, -1_500_000n, 'hope.waiting');
 const served = (e: PublicFieldEntry, nearby: PublicFieldEntry[] = []): PublicFieldPanel => ({ kind: 'SERVED', experience: {
   entry: e, primaryThemes: ['fear'], secondaryThemes: ['work'], publisher: { mode: 'PSEUDONYM', label: 'nightlamp27' },
   content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }, { ordinal: 2, kind: 'ANALYSIS', text: 'what QANDEEL read' }], nearby,
@@ -65,20 +71,28 @@ const controllerOf = (t = fieldTransport()) => {
 
 afterEach(cleanup);
 
-describe('S5-03B — the Public camera: exact world primitives, Public disclosure only', () => {
-  it('frames the World from the places alone, at FAR, and projects with the Map orientation (+y up)', () => {
-    const camera = fittedCamera([E1.address, E2.address, E3.address], SIZE);
-    expect(camera.depth).toBe('FAR');
+describe('S5-03B — the Public camera: the Map metric and math, Public disclosure only', () => {
+  it('sees the World as a whole from one viewpoint at the Map default scale — never fitted to what it holds — with +y up', () => {
+    const camera = wholeWorldCamera();
+    expect(camera).toEqual({ anchor: at(0n, 0n), scale: DEFAULT_MAP_SCALE, depth: 'FAR' });
+    // The same physics with none, five or five thousand Experiences: nothing about the content enters the camera.
+    expect(wholeWorldCamera()).toEqual(camera);
     for (const e of [E1, E2, E3]) {
       const p = projectToField(camera, SIZE, e.address)!;
       expect(p.x).toBeGreaterThanOrEqual(0); expect(p.x).toBeLessThanOrEqual(SIZE.width);
       expect(p.y).toBeGreaterThanOrEqual(0); expect(p.y).toBeLessThanOrEqual(SIZE.height);
     }
-    expect(projectToField(camera, SIZE, E3.address)!.y).toBeLessThan(projectToField(camera, SIZE, E1.address)!.y);
+    expect(projectToField(camera, SIZE, E3.address)!.y).toBeGreaterThan(projectToField(camera, SIZE, E1.address)!.y);
+    // The rungs read the world's material exactly as the Personal Map's: FAR 0, MID ½, NEAR 1.
+    const mid = zoomField(camera, 'IN');
+    if (mid.outcome !== 'MOVED') throw new Error('FAR steps in');
+    const near = zoomField(mid.camera, 'IN', E1.address);
+    if (near.outcome !== 'MOVED') throw new Error('MID steps in onto a place');
+    expect([camera, mid.camera, near.camera].map((c) => approachOf(c.scale))).toEqual([0, 0.5, 1]);
   });
 
   it('steps FAR → MID → NEAR by the frozen ×8 reinforcement; NEAR is focus; OUT releases it; boundaries are no act', () => {
-    const far = fittedCamera([E1.address, E3.address], SIZE);
+    const far = wholeWorldCamera();
     const mid = zoomField(far, 'IN');
     expect(mid.outcome).toBe('MOVED');
     if (mid.outcome !== 'MOVED') return;
@@ -88,15 +102,80 @@ describe('S5-03B — the Public camera: exact world primitives, Public disclosur
     const near = zoomField(mid.camera, 'IN', E1.address);
     expect(near.outcome === 'MOVED' && near.camera.depth === 'NEAR' && near.camera.anchor === E1.address).toBe(true);
     expect(zoomField(far, 'OUT').outcome).toBe('AT_BOUNDARY');
-    expect(focusField(far, E3.address)).toMatchObject({ depth: 'NEAR', anchor: E3.address });
+    expect(focusField(E3.address)).toMatchObject({ depth: 'NEAR', anchor: E3.address });
   });
 
   it('pans against the content and refuses the canonical bound; a jitter is no movement', () => {
-    const far = fittedCamera([E1.address], SIZE);
+    const far = wholeWorldCamera();
     const moved = panField(far, 100, 0);
     expect(moved.outcome === 'MOVED' && moved.camera.anchor.x < far.anchor.x).toBe(true);
     expect(panField(far, 0.00001, 0).outcome).toBe('NO_MOVEMENT');
     expect(panField(far, Number.NaN, 0).outcome).toBe('INVALID_INPUT');
+  });
+});
+
+describe('S5-03B Phase 2 — the Public projection: served Experiences → nodes of the one Living Analysis World', () => {
+  const project = (camera: PublicFieldCamera, entries: PublicFieldEntry[], results: PublicFieldEntry[] = [], focusId: string | null = null) =>
+    placePublicField({ camera, envelope: GLASS, entries, results, focusId }).nodes;
+  const near = focusField(E1.address);
+
+  it('an empty World projects to no node at all: nothing stands in for it', () => {
+    expect(project(wholeWorldCamera(), [])).toEqual([]);
+  });
+
+  it('one node per served Experience, on the world plane, at the Map projection of its exact place', () => {
+    const nodes = project(wholeWorldCamera(), [E1, E2], [E2, E3]);
+    expect(nodes.map((n) => n.entry.id)).toEqual([E1.id, E2.id, E3.id]);
+    for (const node of nodes) {
+      expect(node).toMatchObject({ key: `public:${node.entry.id}`, region: 'WORLD_PLANE', radius: 13 });
+      expect({ x: node.x, y: node.y }).toEqual(projectAddress(wholeWorldCamera(), GLASS, node.entry.address));
+    }
+  });
+
+  it('presence is disclosure alone: FAR mass, MID places, NEAR focus with its semantic neighbourhood; results and focus are places', () => {
+    expect(project(wholeWorldCamera(), [E1, E2, E3], [E3]).map((n) => n.presence)).toEqual(['FIELD', 'FIELD', 'PLACE']);
+    const mid = zoomField(wholeWorldCamera(), 'IN');
+    if (mid.outcome !== 'MOVED') throw new Error('FAR steps in');
+    expect(project(mid.camera, [E1, E2, E3]).map((n) => n.presence)).toEqual(['PLACE', 'PLACE', 'PLACE']);
+    const focused = project(near, [E1, E2, E3, entry(4, 0n, 0n, 'work.pressure')], [], E1.id);
+    expect(focused.map((n) => [n.presence, n.selected])).toEqual([['PLACE', true], ['NEIGHBOURHOOD', false], ['RECEDED', false], ['RECEDED', false]]);
+  });
+
+  it('a place not finitely representable from this camera is omitted — a fact about the projection, never about the World', () => {
+    const far = entry(9, 2n ** 62n - 1n, 0n);
+    expect(project(near, [E1, far]).map((n) => n.entry.id)).toEqual([E1.id]);
+  });
+});
+
+describe('S5-03B Phase 2 — MID meanings: Public chrome over the world, never overlapping and never cut', () => {
+  const node = (n: number, x: number, y: number, selected = false) => ({ key: `public:${id(n)}`, x, y, radius: 13, region: 'WORLD_PLANE' as const,
+    entry: { ...entry(n, 0n, 0n), meaning: 'a meaning of some length' }, presence: 'PLACE' as const, selected });
+  const CLEAR = { top: 56, bottom: 0 };
+
+  it('places a label on its reading side, and on the other side when the glass would cut it', () => {
+    const labels = layoutFieldLabels([node(1, 100, 300), node(2, 380, 500)], [], GLASS, 'en', CLEAR);
+    expect(labels.get(`public:${id(1)}`)?.side).toBe('RIGHT');
+    expect(labels.get(`public:${id(2)}`)?.side).toBe('LEFT');
+    // Never touching its own place: clear of the 13-point hit radius the SELECTED marker sits inside.
+    expect(labels.get(`public:${id(1)}`)!.offset).toBeGreaterThan(100 + 13);
+    expect(SIZE.width - labels.get(`public:${id(2)}`)!.offset).toBeLessThan(380 - 13);
+    expect(layoutFieldLabels([node(1, 300, 300)], [], GLASS, 'ar', CLEAR).get(`public:${id(1)}`)?.side).toBe('LEFT');
+  });
+
+  it('never lets two labels overlap or a label cover another place; the focused place is labelled first', () => {
+    const a = node(1, 100, 300); const b = node(2, 104, 304, true); const c = node(3, 160, 300);
+    const labels = layoutFieldLabels([a, b, c], [a, b, c], GLASS, 'en', CLEAR);
+    expect(labels.has(b.key)).toBe(true);
+    const boxes = [...labels.values()].map((l) => ({ left: l.side === 'RIGHT' ? l.offset : SIZE.width - l.offset - l.width, top: l.top, width: l.width }));
+    for (let i = 0; i < boxes.length; i += 1) for (let j = i + 1; j < boxes.length; j += 1) {
+      const [p, q] = [boxes[i], boxes[j]];
+      expect(p.left < q.left + q.width && q.left < p.left + p.width && Math.abs(p.top - q.top) < 1).toBe(false);
+    }
+  });
+
+  it('a label under the search or the panel is not drawn', () => {
+    expect(layoutFieldLabels([node(1, 100, 40)], [], GLASS, 'en', CLEAR).size).toBe(0);
+    expect(layoutFieldLabels([node(1, 100, 700)], [], GLASS, 'en', { top: 56, bottom: 368 }).size).toBe(0);
   });
 });
 
@@ -229,7 +308,7 @@ describe('S5-03B R1 — no cache is a source of display: every transition that c
     expect(server.t.field).toHaveBeenLastCalledWith({ minX: -(2n ** 62n), minY: -(2n ** 62n), maxX: 2n ** 62n - 1n, maxY: 2n ** 62n - 1n });
     expect(c.getState().status).toBe('READY');
     expect(ids(c.getState().entries)).toEqual([E1.id, E3.id]);
-    expect(c.getState().camera).toEqual(fittedCamera([E1.address, E3.address], SIZE));
+    expect(c.getState().camera).toEqual(wholeWorldCamera());
   });
 
   it('FAR navigation asks again and cannot bring a no-longer-served Experience back from an earlier read', async () => {
@@ -421,10 +500,13 @@ function skia(view: { toJSON: () => unknown }, kind: string): Record<string, unk
 }
 const close = (a: unknown, b: number) => typeof a === 'number' && Math.abs(a - b) < 1e-6;
 /** The painted body of the place an Experience is drawn at, if any (a filled circle on its projected point). */
-function bodyOf(view: { toJSON: () => unknown }, field: { getState: () => { camera: ReturnType<typeof fittedCamera> | null } }, e: PublicFieldEntry) {
-  const at = projectToField(field.getState().camera!, SIZE, e.address)!;
-  const circles = skia(view, 'Circle').filter((c) => close(c.cx, at.x) && close(c.cy, at.y));
-  return { body: circles.find((c) => typeof c.color === 'string' && c.style !== 'stroke'), marker: circles.find((c) => c.style === 'stroke') };
+function bodyOf(view: { toJSON: () => unknown }, field: { getState: () => { camera: PublicFieldCamera | null } }, e: PublicFieldEntry) {
+  const p = projectToField(field.getState().camera!, SIZE, e.address)!;
+  // The world's own mark material in the neutral Public shape: a filled circle on the projected point, at its tier's radius.
+  const body = [6, 3.2].flatMap((r) => skia(view, 'Path').filter((x) => x.path === neutralCircle(p.x, p.y, r) && x.style !== 'stroke')
+    .map((x) => ({ r, color: x.color })))[0];
+  const marker = skia(view, 'Circle').find((c) => close(c.cx, p.x) && close(c.cy, p.y) && c.style === 'stroke');
+  return { body, marker };
 }
 const MASS_COLOURS = WORLD_VISUAL.worldAtmosphere.stops.map(([, s, l, a]) => hsla(WORLD_VISUAL.worldHue, s, l, a));
 
@@ -446,28 +528,30 @@ describe('S5-03B — the Public field surface', () => {
     expect(view.queryByTestId(/qandeel-public-mark/u, { includeHiddenElements: true })).toBeNull();
   });
 
-  it('is painted in the frozen Living Analysis World: ground, atmosphere, tone and veil, with the field\'s mass from served places only', async () => {
+  it('is painted by the ONE Living Analysis World renderer: ground, atmosphere, tone and veil, the place colour of served places only', async () => {
     const { view } = await mountArea('en', [E1, E2, E3]);
     const world = view.getByTestId(PUBLIC_FIELD_WORLD_TEST_ID, { includeHiddenElements: true });
     expect(world.props.pointerEvents).toBe('none');
-    // The Stage-2 owner's own strata, imported unchanged — never a second world style: the tone curve, the ground's
-    // gradient and floor, the recorded atmosphere strata, and the veil's grain.
+    // The generic world canvas the Personal Map paints through — never a second world style: the tone curve, the
+    // recorded atmosphere strata and the veil's grain.
+    expect(view.getByTestId('qandeel-public-field-canvas', { includeHiddenElements: true })).toBeTruthy();
     expect(skia(view, 'RuntimeShader')).toHaveLength(1);
-    expect(skia(view, 'LinearGradient')).toHaveLength(1);
     expect(skia(view, 'Picture').length).toBeGreaterThan(0);
     expect(skia(view, 'FractalNoise')).toHaveLength(1);
-    // FAR: one world-colour mass per served place, identical for every place (no category, no weight).
+    // FAR: one world-colour place atmosphere per served place, identical for every place (no category, no weight), at
+    // the Map's own world-anchored radius.
     const mass = skia(view, 'RadialGradient').filter((g) => JSON.stringify(g.colors) === JSON.stringify(MASS_COLOURS));
     expect(mass).toHaveLength(3);
-    expect(new Set(mass.map((m) => m.r)).size).toBe(1);
-    // FAR is presence, not objects: no body is painted, and no line of any kind exists in the Public world.
-    expect(skia(view, 'Circle').filter((c) => typeof c.color === 'string')).toHaveLength(0);
-    expect([...skia(view, 'Path'), ...skia(view, 'Line')]).toHaveLength(0);
+    expect(new Set(mass.map((m) => m.r))).toEqual(new Set([750_000 / 8192]));
+    // Every body is the neutral Public circle in the world's material: no Personal morphology, no line of any kind.
+    for (const path of skia(view, 'Path')) expect(path.path).toMatch(/^M -?[\d.e-]+ -?[\d.e-]+ A /u);
+    expect(skia(view, 'Line')).toHaveLength(0);
   });
 
-  it('FAR is mass (no label, no target); MID makes each Experience legible; NEAR opens the compact panel', async () => {
+  it('FAR is mass (quiet bodies, no label, no target); MID makes each Experience legible; NEAR opens the compact panel', async () => {
     const { view, field } = await mountArea('en', [E1, E2, E3]);
-    expect(bodyOf(view, field, E1).body).toBeUndefined();
+    // FAR: a quiet minor-tier body inside the field's mass; nothing leads the reading.
+    expect(bodyOf(view, field, E1).body).toMatchObject({ r: 3.2 });
     expect(view.queryByText('meaning 1')).toBeNull();
     expect(view.queryByTestId(`qandeel-public-mark-${E1.id}`)).toBeNull();
     const far = field.getState().camera!;
@@ -475,6 +559,8 @@ describe('S5-03B — the Public field surface', () => {
     await act(async () => { field.tapField(p.x, p.y); });
     await flush();
     expect(view.getByTestId(`qandeel-public-mark-${E1.id}`).props.accessibilityLabel).toBe('meaning 1');
+    // MID: the meaning in one line, as Public chrome beside the place (never painted into the world).
+    expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.children).toBe('meaning 1');
     // MID: a place each, at the major tier, in the canonical mark material.
     expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6 });
     expect(bodyOf(view, field, E1).marker).toBeUndefined();
@@ -546,6 +632,29 @@ describe('S5-03B — the Public field surface', () => {
     await flush();
     expect(view.getByTestId(`qandeel-public-mark-${E3.id}`).props.accessibilityState).toEqual({ selected: true });
     expect(view.getByTestId('qandeel-public-panel-meaning').props.children).toBe('meaning 3');
+  });
+
+  it('a chosen result folds the list away from the panel; Back returns to it; closing the search leaves no query behind', async () => {
+    const { view, field } = await mountArea('en', [E1, E2]);
+    await fireEvent(view.getByTestId('qandeel-public-search'), 'focus');
+    await fireEvent.changeText(view.getByTestId('qandeel-public-search'), 'hope');
+    await fireEvent(view.getByTestId('qandeel-public-search'), 'submitEditing');
+    await flush();
+    await fireEvent.press(view.getByTestId(`qandeel-public-search-result-${E3.id}`));
+    await flush();
+    // The panel is open and nothing covers it: the list is folded, the search itself is still open.
+    expect(view.getByTestId('qandeel-public-panel')).toBeTruthy();
+    expect(view.queryByTestId('qandeel-public-search-results')).toBeNull();
+    expect(field.getState().search.open).toBe(true);
+    // Back closes the panel and returns to the results; Back again closes the search, and its query with it.
+    await act(async () => { field.back(); });
+    await flush();
+    expect(view.getByTestId('qandeel-public-search-results')).toBeTruthy();
+    await act(async () => { field.back(); });
+    await flush();
+    expect(view.getByTestId('qandeel-public-search').props.value).toBe('');
+    await fireEvent(view.getByTestId('qandeel-public-search'), 'focus');
+    expect(view.getByTestId('qandeel-public-search').props.value).toBe('');
   });
 });
 

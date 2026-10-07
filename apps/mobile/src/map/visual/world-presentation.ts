@@ -72,7 +72,8 @@ export function isSelectedNode(selection: WorldSelection | null, node: PlacedNod
  * in the world itself (the canonical painter tiles it "in WORLD space under the map's own transform").
  */
 export function worldPresentation(
-  camera: MapCamera,
+  // S5-03B Phase 2 — the expression reads where the camera looks and how far, and nothing else of it.
+  camera: Pick<MapCamera, 'anchor' | 'scale'>,
   options: { readonly reducedMotion: boolean; readonly contrast: WorldContrast; readonly inspection: InspectionRef | null },
 ): WorldPresentation {
   const { reducedMotion, contrast, inspection } = options;

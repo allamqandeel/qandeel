@@ -24,7 +24,8 @@ const VIEWER = ['read_public_semantic_field_v1', 'search_public_semantic_field_v
   'read_public_semantic_experience_content_v1', 'read_public_semantic_nearby_v1'];
 const SERVER = ['read_public_spatial_placement_input_v1', 'commit_public_spatial_placement_v1'];
 const FIELD_FILES = ['public-world/field/public-field-camera.ts', 'public-world/field/public-field-controller.ts',
-  'public-world/field/PublicSemanticField.tsx', 'public-world/field/PublicFieldWorld.tsx', 'public-world/field/field-copy.ts', 'runtime-entry/public-field-api.ts',
+  'public-world/field/PublicSemanticField.tsx', 'public-world/field/public-field-projection.ts', 'public-world/field/PublicExperienceMark.tsx',
+  'public-world/field/field-copy.ts', 'runtime-entry/public-field-api.ts',
   'public-authoring/PublicPlacePreparation.tsx'];
 
 test('1 — registered in the toolchain and both CI workflows; one forward migration after 0144', () => {
@@ -142,8 +143,14 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   }
   const camera = code(`${MOBILE}/public-world/field/public-field-camera.ts`);
   assert.match(camera, /PUBLIC_FIELD_DEPTHS = Object\.freeze\(\['FAR', 'MID', 'NEAR'\] as const\)/u);
-  assert.match(camera, /SEMANTIC_ZOOM_REINFORCEMENT_DENOMINATOR/u, 'the frozen ×8 reinforcement is reused');
+  // Phase 2: the Map's own metric and math. FAR is DEFAULT_MAP_SCALE, each rung one frozen ×8 reinforcement, the pan is
+  // the Map's pan; no camera is fitted to the content, and no projection / footprint / pan arithmetic of its own remains.
+  assert.match(camera, /FAR: DEFAULT_MAP_SCALE,/u, 'FAR is the Map default scale');
+  assert.match(camera, /reinforcedScale\(DEFAULT_MAP_SCALE, 'IN'\)/u, 'the frozen ×8 reinforcement is reused');
+  assert.match(camera, /panFromTranslation\(camera, translationX, translationY\)/u, 'the Map pan is reused');
   assert.match(camera, /from '\.\.\/\.\.\/map\/world'/u, 'the exact world primitives are reused');
+  assert.doesNotMatch(camera, /fittedCamera|ratioToFinite|roundDiv|clampBigInt|POINT_SUBDIVISION|scaleBy|canonicalWorldAddress\(/u, 'no second projection, footprint, pan or zoom math');
+  assert.doesNotMatch(code(`${MOBILE}/public-world/field/public-field-controller.ts`), /fittedCamera|ratioToFinite|roundDiv/u, 'no camera fitted to what the World holds');
   const area = code(`${MOBILE}/public-world/PublicWorldArea.tsx`);
   assert.match(area, /<PublicSemanticField controller=\{controller\.field\}/u);
   assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /field: createPublicFieldController\(\{ transport: publicTransport\.field \?\? null, isCurrent, foreground: entry\.foreground \}\)/u);
@@ -151,7 +158,9 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   assert.doesNotMatch(code(`${MOBILE}/runtime-entry/index.ts`), /export \{[^}]*PublicFieldApiClient/u, 'no new runtime-barrel value');
   const surface = code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`);
   assert.match(surface, /if \(!local\) return undefined;\n\s+const subscription = BackHandler\.addEventListener/u, 'Back is registered only for the panel or the search');
-  assert.doesNotMatch(surface, /withTiming|withSpring|Animated\./u, 'nothing animates: reduced-motion parity by construction');
+  // Phase 2: the field declares no animation of its own; any travel is the shared presentation camera's, which honours
+  // reduced motion exactly as it does for the Personal Map.
+  assert.doesNotMatch(surface, /withTiming|withSpring|withDecay|Animated\./u, 'no animation of its own');
   const client = code(`${MOBILE}/runtime-entry/public-field-api.ts`);
   const posts = [...client.matchAll(/this\.exchange\('POST', [^\n]*?, (\{[^{}]*\})\);/gu)].map((m) => m[1]);
   assert.deepEqual(posts, ['{ commandId }'], 'one POST, carrying a command id only');
@@ -194,17 +203,22 @@ test('9 — governance: the record, the backlog and the locators tell the same t
 });
 
 test('10 — R1/R2: the field is painted in the frozen Living Analysis World, and no client cache is a source of display', () => {
-  const world = code(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`);
-  // The Stage-2 VPORT-01 owner is imported, never copied or re-styled: its strata and its mark material.
-  assert.ok(world.includes("import { WorldAtmosphere, WorldGround, WorldPlaceAtmosphere, WorldTone, WorldVeil, scheduleAt, stratumDrift, useWorldResponse } from '../../map/visual';"));
-  for (const element of ['<WorldTone>', '<WorldGround ', '<WorldAtmosphere ', '<WorldVeil ', '<WorldPlaceAtmosphere ']) assert.ok(world.includes(element), element);
-  assert.ok(world.includes('markMaterial, mediumHue, worldPalette'), 'the canonical mark material and SELECTED tokens');
-  // A Public Experience is not a Personal Thread / Reading: no Personal morphology, no tether, no line.
-  assert.doesNotMatch(world, /WorldObject|WorldTether|RegisterMark|morphologyPath|<Path|<Line/u);
-  // No colour of its own: every value comes from the generated world tokens.
-  assert.doesNotMatch(world, /['"]#[0-9a-fA-F]{3,8}['"]|rgba?\(\d|hsla?\(\d/u);
-  // Distance is read from the Public depth (the authority), on the Map's own logarithmic footing.
-  assert.ok(world.includes('PUBLIC_FIELD_APPROACH: Readonly<Record<PublicFieldDepth, number>> = Object.freeze({ FAR: 0, MID: 0.5, NEAR: 1 })'));
+  // Phase 2: the field is painted by the ONE generic Living Analysis World renderer the Personal Map paints through, and
+  // its distance is read from its camera on the Map's own footing (FAR 0, MID ½, NEAR 1 at the Map's own metric).
+  assert.equal(existsSync(new URL(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`, root)), false, 'no parallel world module');
+  const surface = code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`);
+  for (const seam of ['<WorldCanvas<PublicWorldNode>', 'useWorldMotion<PublicFieldCamera>(envelope)', 'useWorldFrame<PublicFieldCamera, PublicWorldNode>(worldMotion, {',
+    'worldPresentation(camera, {', 'membership: null,', 'hostOf={() => undefined}']) assert.ok(surface.includes(seam), seam);
+  const mark = code(`${MOBILE}/public-world/field/PublicExperienceMark.tsx`);
+  assert.ok(mark.includes('<WorldMark'), 'a Public Experience is made of the world material');
+  assert.ok(mark.includes('shape={{ path: neutralCircle(x, y, r), stroked: false, limbAngle: 0 }}'), 'in a neutral circle (D2)');
+  assert.ok(code(`${MOBILE}/public-world/field/public-field-projection.ts`).includes('projectAddress(camera, envelope, entry.address)'), 'the Map projection');
+  // A Public Experience is not a Personal Thread / Reading: no Personal morphology, no tether, no line, no colour of its own.
+  for (const file of ['PublicSemanticField.tsx', 'PublicExperienceMark.tsx', 'public-field-projection.ts']) {
+    const text = code(`${MOBILE}/public-world/field/${file}`);
+    assert.doesNotMatch(text, /WorldObject|WorldTether|RegisterMark|morphologyPath|renderConnections|<Path|<Line/u, `${file}: no Personal morphology and no line`);
+    assert.doesNotMatch(text, /['"]#[0-9a-fA-F]{3,8}['"]|rgba?\(\d|hsla?\(\d/u, `${file}: no colour of its own`);
+  }
   const controller = code(`${MOBILE}/public-world/field/public-field-controller.ts`);
   assert.equal(controller.includes('mergeServed'), false, 'a read replaces the field; nothing older is kept to be shown again');
   assert.equal(controller.includes("state.camera.depth === 'FAR'"), false, 'FAR navigation is not exempt from reading again');
@@ -229,7 +243,7 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
   assert.ok(read(RECORD).includes("OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision"), 'scale is not self-assigned');
 });
 
-test('11 — Phase 1: ONE generic Living Analysis World seam, extracted from Stage 2; the Personal Map is unchanged and Public has not adopted it yet', () => {
+test('11 — Phase 1 + 2: ONE generic Living Analysis World seam, extracted from Stage 2; the Personal Map is unchanged and Public paints through it', () => {
   const RENDERER = `${MOBILE}/map/renderer`;
   const worldCanvas = code(`${RENDERER}/WorldCanvas.tsx`);
   const worldSurface = code(`${RENDERER}/useWorldSurface.ts`);
@@ -255,7 +269,10 @@ test('11 — Phase 1: ONE generic Living Analysis World seam, extracted from Sta
   const golden = read(`${MOBILE}/map/__tests__/golden-equivalence.test.tsx`);
   assert.match(golden, /expect\(produced\[name\]\)\.toEqual\(recorded\[name\]\)/u);
   assert.ok(existsSync(new URL(`${MOBILE}/map/__tests__/__golden__/personal-map.golden.json`, root)), 'the golden is committed');
-  // No Public adoption in Phase 1: the Public field still paints through its own module, which still exists.
-  assert.ok(existsSync(new URL(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`, root)), 'PublicFieldWorld is not deleted in Phase 1');
-  for (const file of FIELD_FILES) assert.doesNotMatch(code(`${MOBILE}/${file}`), /WorldCanvas|useWorldMotion|useWorldFrame|WorldMark\b/u, `${file} has not adopted the seam yet (Phase 2)`);
+  // Phase 2: the Public field adopted the seam and its parallel world module is gone.
+  assert.equal(existsSync(new URL(`${MOBILE}/public-world/field/PublicFieldWorld.tsx`, root)), false, 'PublicFieldWorld is deleted in Phase 2');
+  const field = code(`${MOBILE}/public-world/field/PublicSemanticField.tsx`);
+  for (const seam of [/\bWorldCanvas\b/u, /\buseWorldMotion\b/u, /\buseWorldFrame\b/u]) assert.match(field, seam, `the Public field paints through ${seam}`);
+  // The Public field takes nothing of the Personal owner: no store, no freshness rule, no Personal gestures or inspection.
+  assert.doesNotMatch(field, /MapCanvas|MapSurface|mapContextFreshness|inspectObject|MapAccessibilityLayer|useMapPanGesture|useMapSemanticZoomGesture/u);
 });

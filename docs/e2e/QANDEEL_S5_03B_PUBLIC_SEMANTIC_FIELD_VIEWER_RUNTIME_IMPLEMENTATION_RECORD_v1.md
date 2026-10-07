@@ -484,3 +484,73 @@ ar-EG host-locale baseline (`w2-account-access`, `depth`). Mobile `tsc` PASS; es
 Contracts: VPORT-01 9 / 9, VPORT-02 9 / 9, T-10 31 / 31, T-11 27 / 27, T-12 6 / 6, T-12P 23 / 23, S5-03B 11 / 11, Living
 Analysis Map runtime 15 / 15 (with this workstation's ignored `apps/mobile/android/` prebuild moved aside; with it in
 place the one "no generated native project" check fails, as before), task-closure governance 24 / 24. No DB, API, migration, copy or Public change; the 0145 verifier and DB loops were not re-run.
+
+## 23. Phase 2 — Public adoption of the one Living Analysis World (2026-10-07)
+
+The Product Owner approved Phase 1 at `c3bdfcf` (golden equivalence, mutation proof and the targeted Stage-2 validation
+suffice; no separate device proof) and approved Phase 2, with one bounded proof correction first.
+
+**B — verify-0071 scope correction (`cf93d69`).** `database/verify-migration-0071.mjs` asserted that exactly one
+function of ALL `public.commit_*` is executable by `service_role`. 0145's `public.commit_public_spatial_placement_v1` is
+legitimately a second one, owned and proven by `verify-migration-0145`, not by T-03D — so API CI failed from R0 on. The
+census now selects the conversation commit family T-03D owns by its two name stems (`commit_conversation_units*`,
+`commit_finalized_exchange*`), pins that family to exactly the legacy, focus, Thread, lifecycle and FINAL committers, and
+asserts that within it only the FINAL coordinator is executable by `service_role`. No name whitelist, no migration and no
+DB authority changed. Real PostgreSQL (local, every migration through 0145): the previous verifier fails at the census
+exactly as CI did; the corrected one passes (827 assertions); a re-granted legacy committer is still caught. The related
+static contracts (T-03D cutover, canonical Home placement engine, Thread establishment evaluator) pass 34 / 34.
+Disclosed, not changed: verifiers 0139 / 0140 / 0141 carry the same whole-`commit_%` census (S4 focused verifiers, not run
+by API CI); they will report the same drift whenever they run against a database that includes 0145.
+
+**The Public field is the Living Analysis World.**
+
+- *Projection* (`public-world/field/public-field-projection.ts`): served Experiences → generic world nodes, one per
+  Experience at the Map's `projectAddress` of its exact place, every node on the world plane with the Map's Home hit radius.
+  Presence is disclosure alone (FAR mass, MID place, NEAR focus + semantic neighbourhood / receded; a search result or the
+  focus is a place at every rung). An empty World projects to no node.
+- *Renderer*: `PublicSemanticField` paints through `WorldCanvas` under `useWorldMotion` / `useWorldFrame` — the same
+  tone, ground, strata, place atmosphere (`750,000` world units, so a region of places reads as one luminous body), veil,
+  presentation camera, travel, drag corridor, rebase and residual-true hit test as the Personal Map. Every served place
+  is a place (`isPlace`), nothing is hosted (`hostOf` → none), nothing is joined (no `renderConnections`), and the field
+  keeps no disclosure record (`membership: null`): a served Experience coming onto the glass because the glass moved is
+  navigation, never an arrival.
+- *Mark* (`PublicExperienceMark.tsx`, D2): the world's own `WorldMark` material in a neutral circle — no Personal
+  morphology, no token family of its own; tier constant per presence, the frozen SELECTED ink and marker for focus.
+- *Camera policy only* (`public-field-camera.ts`): the three rungs, the whole-World viewpoint, focus and nearest place.
+  FAR is `DEFAULT_MAP_SCALE`, MID / NEAR one and two frozen ×8 reinforcements (`reinforcedScale`), so the material reads
+  approach 0 / ½ / 1 exactly as the Personal Map's. The pan is the Map's `panFromTranslation`; projection and footprint are the Map's
+  (`projectAddress`, `visibleFootprint`), and a tap is read through the presentation camera's residual. No
+  camera is fitted to the content (`fittedCamera` is gone): the World has the same physics with 0, 5 or 5,000
+  Experiences, and the whole World is FAR from the World's origin. World units are a presentation spacing convention only.
+- *Drag*: the Map's grammar — the plane follows the hand on the UI runtime (`grab` / `dragBy` / `release`), ONE crossing at
+  the end of a completed drag hands the finger's own translation to the controller's one pan, and a pan that moved nothing
+  brings the presentation home.
+- *Deleted*: `PublicFieldWorld.tsx` (the parallel world module and its screen-relative mass radius).
+- *Shared code touched, type-level or additive only*: `map/camera/pan.ts` and `map/visual/world-presentation.ts` read a
+  camera as `Pick<MapCamera, 'anchor' | 'scale'>`; `useWorldMotion` exposes the Class-D `atRest` fact (no travel or drag
+  corridor open). The Personal golden stays 16 / 16 with the golden file unchanged.
+
+**Public chrome fixes (from the Product Visual Review).** MID meanings stay a screen-space RN overlay (D3) laid out by
+`layoutFieldLabels`: deterministic and meaning-free (the focused place first, then top to bottom), each label on its
+reading side or the other, never overlapping another label or covering another place (only the focused meaning may lie
+over a neighbour), never cut by the glass, the search or the panel; a label that cannot be placed is not drawn (the place
+is still focusable and announced by its meaning). Labels and targets wait for the world to come to rest. A chosen search
+result folds the list away so it never covers the panel (Back returns to it); a closed search — by its control or by Back
+— shows no query, and reopening starts empty; the keyboard is dismissed on a choice.
+
+**Unchanged.** Every R1 / R2 protection (reads replace the field, every navigation re-reads the glass, the open search
+and the focused panel, the whole World is a fresh read with nothing held on display, the ONE foreground signal, fail
+closed), exact Public authority and visibility, PUBLISHED closed, CW2-08 NOT_EVALUATED, no S5-03C relation, the Copy Gate
+(OPEN, 16 rows PROPOSED). The validation-only visual fixture is recalibrated to the World's presentation convention
+(regions 1.2–1.6 million units apart, neighbours 25–110 thousand units) and is still reachable only from the S4-01 proof world.
+
+**Phase 2 validation.** Personal golden equivalence 16 / 16 with `__golden__/personal-map.golden.json` unchanged. Public
+field Jest 44 / 44 (new: the projection adapter — empty World, one node per served Experience at the Map projection,
+presence by disclosure, unrepresentable places omitted; the MID label layout — reading side, glass, no overlap, clear of
+its own SELECTED marker, search / panel clearance; the search fold and query clearing; the existing R1 / R2 stale-cache
+tests unchanged in substance). Map + motion Jest 28 suites / 269. Full mobile Jest 2257 / 2263 — the same 6 ar-EG
+host-locale baseline failures (`w2-account-access`, `depth`). Mobile `tsc` PASS; eslint 0 errors. Every root static
+contract 1208 / 1208 (with this workstation's ignored `apps/mobile/android/` moved aside), including S5-03B 11 / 11
+(tests 7, 10 and 11 re-anchored to Phase 2), VPORT-02 9 / 9 (re-pinned: useWorldSurface, world-presentation), T-10 31 / 31
+(the `panFromTranslation` signature re-anchored to its structural camera), VPORT-01, T-11, T-12, T-12P, Living Analysis
+Map runtime and task-closure governance. verify-0071 on real PostgreSQL as above; no other DB verifier was re-run.
