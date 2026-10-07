@@ -176,8 +176,14 @@ const NEBULA = Object.freeze({
   /** Filament cycles across one tile, how thin a crease must be to light, and its peak weight. */
   veins: 18,
   veinSharpness: 16,
-  veinAlpha: 0.75,
+  veinAlpha: 0.3,
 });
+
+/**
+ * How much of the uniform sky survives under the masses: the stars and dust are the same everywhere, so they are kept
+ * quiet and the richness lives in the places' own material; the deep gaps stay dark.
+ */
+const QUIET = Object.freeze({ stars: 0.42, dust: 0.2, nebula: 0.72 });
 
 /** The colour matrix that turns fractal noise into a mask: its red channel becomes alpha, with contrast. */
 function noiseToAlpha(gain: number, floor: number): number[] {
@@ -264,6 +270,63 @@ function bloomOf(bucket: Bucket): Bucket {
   const alpha = alphaOf(bucket.colour);
   const colour = `${bucket.colour.slice(0, bucket.colour.lastIndexOf(','))},${Math.round(alpha * BLOOM.share * 1000) / 1000})`;
   return { colour, width: bucket.width * BLOOM.width, soft: true, points: bucket.points };
+}
+
+// ------------------------------------------------------------------------------------- a faded picture
+
+/** A fully opaque ink, used only as a coverage mask: dstIn reads its alpha alone, so its (generated) colour never reaches the glass. */
+const MASK_INK = hsla(WORLD_VISUAL.worldHue, WORLD_VISUAL.mark.haloSat, WORLD_VISUAL.mark.haloLight, 1);
+const MASK_PAD = 4;
+
+/**
+ * LA-VIS-01 — a picture at a weight. A picture is replayed WITHOUT the group's paint, so a group's opacity never reaches
+ * it; it is drawn in its own layer instead and that layer is kept at the weight by a coverage mask over its bounds.
+ */
+export function FadedPicture({
+  picture,
+  opacity,
+  x,
+  y,
+  width,
+  height,
+}: {
+  readonly picture: SkPicture;
+  readonly opacity: DerivedValue<number> | number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+}) {
+  return (
+    <FadedLayer opacity={opacity} x={x} y={y} width={width} height={height}>
+      <Picture picture={picture} />
+    </FadedLayer>
+  );
+}
+
+/** Any content kept at a weight by a coverage mask over the given bounds, in one layer. */
+export function FadedLayer({
+  opacity,
+  x,
+  y,
+  width,
+  height,
+  children,
+}: {
+  readonly opacity: DerivedValue<number> | number;
+  readonly x: number;
+  readonly y: number;
+  readonly width: number;
+  readonly height: number;
+  readonly children: React.ReactNode;
+}) {
+  return (
+    <Group layer>
+      {children}
+      {/* Padded past the bounds, so the mask's anti-aliased edge never dims the content's own edge (no seam between tiles). */}
+      <Rect x={x - MASK_PAD} y={y - MASK_PAD} width={width + MASK_PAD * 2} height={height + MASK_PAD * 2} color={MASK_INK} opacity={opacity} blendMode="dstIn" />
+    </Group>
+  );
 }
 
 // ------------------------------------------------------------------------------------- one stratum
@@ -401,35 +464,31 @@ export function WorldAtmosphere({
   const p = strataPictures();
   return (
     <>
-      <Group opacity={Math.min(1, ambient * 2)}>
+      <Group opacity={Math.min(1, ambient * 2) * QUIET.nebula}>
         <Stratum motion={motion} drift={drift.nebula} tile={WORLD_NEBULA.tile} envelope={envelope} opacity={1}>
           {() => (
             <>
-              <Group opacity={response.nebulaBase}>
-                <Picture picture={p.nebulaBase} />
-              </Group>
-              <Group opacity={response.nebulaFar}>
-                <Picture picture={p.nebulaFar} />
-              </Group>
-              <Group opacity={response.nebulaMap}>
-                <Picture picture={p.nebulaMap} />
-              </Group>
+              <FadedPicture picture={p.nebulaBase} opacity={response.nebulaBase} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
+              <FadedPicture picture={p.nebulaFar} opacity={response.nebulaFar} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
+              <FadedPicture picture={p.nebulaMap} opacity={response.nebulaMap} x={0} y={0} width={WORLD_NEBULA.tile} height={WORLD_NEBULA.tile} />
             </>
           )}
         </Stratum>
       </Group>
-      <Group opacity={Math.min(1, emptySpace * 2)}>
+      <Group opacity={Math.min(1, emptySpace * 2) * QUIET.stars}>
         <Stratum motion={motion} drift={drift.stars} tile={WORLD_STARS.tile} envelope={envelope} opacity={1}>
           {() =>
             p.stars.map((picture, index) => (
-              <Group key={index} opacity={response.starBands[index]}>
-                <Picture picture={picture} />
-              </Group>
+              <FadedPicture key={index} picture={picture} opacity={response.starBands[index]} x={0} y={0} width={WORLD_STARS.tile} height={WORLD_STARS.tile} />
             ))
           }
         </Stratum>
         <Stratum motion={motion} drift={drift.dust} tile={WORLD_DUST.tile} envelope={envelope} opacity={response.dust}>
-          {() => <Picture picture={p.dust} />}
+          {() => (
+            <Group opacity={QUIET.dust / QUIET.stars}>
+              <FadedPicture picture={p.dust} opacity={1} x={0} y={0} width={WORLD_DUST.tile} height={WORLD_DUST.tile} />
+            </Group>
+          )}
         </Stratum>
       </Group>
     </>

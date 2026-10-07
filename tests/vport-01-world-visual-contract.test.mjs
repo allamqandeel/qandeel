@@ -26,7 +26,8 @@ const I08B1_SHA256 = '4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb320
 const VISUAL_DIR = 'apps/mobile/src/map/visual';
 const GENERATED = ['world-visual.generated.ts', 'world-field.generated.ts'];
 // LA-VIS-01 (controlled re-anchor): the declared presentation palette joins the hand-written owner, under every rule below.
-const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts', 'world-chroma.ts'];
+// LA-VIS-01 (final closure re-anchor): the mass material `world-mass.ts` joins it too, under every rule below.
+const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts', 'world-chroma.ts', 'world-mass.ts'];
 
 const visual = Object.fromEntries([...GENERATED, ...HAND_WRITTEN].map((file) => [file, read(`${VISUAL_DIR}/${file}`)]));
 const visualCode = Object.fromEntries(HAND_WRITTEN.map((file) => [file, stripComments(visual[file])]));
@@ -220,5 +221,24 @@ test('LA-VIS-01: the one declared chroma palette is exactly the six authorized f
   // Nothing that decides membership, placement, hit testing or accessibility reads it.
   for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
     assert.equal(read(file).includes('world-chroma'), false, `${file} must not read the chroma field`);
+  }
+});
+
+test('LA-VIS-01: a place mass is pure paint — one picture per meaning-free variant and chroma, read by nothing that decides', () => {
+  // Product Owner task LA-VIS-01 (closure re-anchor): the mass material is recorded once per shape variant and colour.
+  // It imports Skia, the declared chroma type and the resolver's paint helpers, and nothing else: no camera, store,
+  // projection, scene or time.
+  const mass = visualCode['world-mass.ts'];
+  const imports = [...mass.matchAll(/^import [^;]*? from '([^']+)';/gmu)].map((m) => m[1]);
+  assert.deepEqual(imports, ['@shopify/react-native-skia', './world-chroma', './world-resolver']);
+  assert.match(mass, /export function massPicture\(seed: string, chroma: ChromaFamily\): SkPicture/u);
+  for (const forbidden of ['camera', 'envelope', 'Date', 'Math.random', 'useState', "'../../state", "'../projection", "'../camera"]) {
+    assert.equal(mass.includes(forbidden), false, `the mass material must not read ${forbidden}`);
+  }
+  // It is worn only by the world around a place, through the one owner of that paint.
+  const readers = HAND_WRITTEN.filter((file) => file !== 'world-mass.ts' && visualCode[file].includes("'./world-mass'"));
+  assert.deepEqual(readers, ['WorldMarks.tsx']);
+  for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
+    assert.equal(read(file).includes('world-mass'), false, `${file} must not read the mass material`);
   }
 });

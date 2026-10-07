@@ -555,9 +555,17 @@ describe('S5-03B — the Public field surface', () => {
     expect(noise.filter((n) => n.freqX === 0.9)).toHaveLength(1);
     expect((noise.length - 1) % 3).toBe(0);
     // FAR: one world-colour place atmosphere per served place, identical for every place (no category, no weight), at
-    // the Map's own world-anchored radius: the mass's outer body is the canonical radius, in the world's hue ladder.
+    // the Map's own world-anchored radius. LA-VIS-01 (closure re-anchor of the paint structure): the mass's material is a
+    // recorded picture, and its one plain-paint body is the calm wash about the place — the same share of the canonical
+    // radius for every place.
     const radius = 750_000 / 8192;
-    const mass = skia(view, 'RadialGradient').filter((g) => g.r === radius);
+    const washes = skia(view, 'Circle').filter((c) => c.blendMode === 'screen');
+    expect(washes).toHaveLength(3);
+    const share = (washes[0].r as number) / radius;
+    expect(share).toBeGreaterThan(0);
+    expect(share).toBeLessThanOrEqual(1);
+    for (const wash of washes) expect(wash.r).toBe(washes[0].r);
+    const mass = skia(view, 'RadialGradient').filter((g) => g.r === washes[0].r);
     expect(mass).toHaveLength(3);
     // LA-VIS-01: a mass's colour is the world-space chroma at the served address and nothing else, so two places
     // have different colours only where the field differs between their addresses (never by category or weight).

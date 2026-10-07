@@ -21,15 +21,16 @@
  * Nothing here varies per object except what the object IS (family, placement) and whether it is the
  * one being inspected. Every light, size and alpha is constant per tier.
  */
-import { BlurMask, Circle, FractalNoise, Group, LinearGradient, Path, RadialGradient, Rect, vec } from '@shopify/react-native-skia';
+import { BlurMask, Circle, Group, LinearGradient, Path, Picture, RadialGradient, vec } from '@shopify/react-native-skia';
 import { useReadingOf, type DerivedValue } from '../../motion';
 
 import type { MapObjectFamily } from '../projection';
 import { APPEARANCE_RADIUS_POINTS, HOME_RADIUS_POINTS, REGISTER_RADIUS_POINTS } from '../renderer/map-geometry';
 import type { WorldResponse } from './useWorldResponse';
 import { WORLD_VISUAL } from './world-visual.generated';
-import { ladderHue } from './WorldStrata';
+import { FadedLayer, ladderHue } from './WorldStrata';
 import type { ChromaFamily } from './world-chroma';
+import { MASS_EXTENT, MASS_UNIT, massPicture } from './world-mass';
 import {
   MARK_RADIUS_POINTS,
   SHADE_GRADIENT,
@@ -74,15 +75,23 @@ function SelectedMarker({ x, y, r, contrast }: { x: number; y: number; r: number
 }
 
 /** The body of a mark: its shape, filled, or stroked for the open slot. */
-function MarkBody({ x, y, r, path, stroked, ink }: { x: number; y: number; r: number; path: string; stroked: boolean; ink: string }) {
+function MarkBody({ x, y, r, path, stroked, ink, scale = 1, opacity = 1 }: { x: number; y: number; r: number; path: string; stroked: boolean; ink: string; scale?: number; opacity?: number }) {
   // The mark's ANCHOR: a group carrying only its origin, so what a reader of the paint can locate is
-  // the object's own placed point, never a centre reconstructed from a drawn outline.
+  // the object's own placed point, never a centre reconstructed from a drawn outline. LA-VIS-01: the body may be
+  // PAINTED smaller about that anchor, inside it; the anchor itself, its placement, mark radius and hit radius are unchanged.
+  const body = stroked ? (
+    <Path path={path} style="stroke" strokeWidth={Math.max(1, r * 0.42)} strokeCap="round" color={ink} />
+  ) : (
+    <Path path={path} color={ink} />
+  );
   return (
     <Group origin={vec(x, y)}>
-      {stroked ? (
-        <Path path={path} style="stroke" strokeWidth={Math.max(1, r * 0.42)} strokeCap="round" color={ink} />
+      {scale === 1 && opacity === 1 ? (
+        body
       ) : (
-        <Path path={path} color={ink} />
+        <Group transform={paintedAbout(x, y, scale)} opacity={opacity}>
+          {body}
+        </Group>
       )}
     </Group>
   );
@@ -131,8 +140,8 @@ export interface WorldObjectProps {
 }
 
 /** A light around a body: one canonical falloff, one tier weight. */
-function Light({ x, y, r, profile, hue, lightness, opacity }: { x: number; y: number; r: number; profile: 'wide' | 'soft' | 'core' | 'point'; hue: number; lightness: number; opacity: DerivedValue<number> | number }) {
-  const f = falloff(profile, hue, profile === 'core' ? V.mark.haloSat * V.mark.coreSatShare : V.mark.haloSat, lightness);
+function Light({ x, y, r, profile, hue, lightness, opacity, saturation }: { x: number; y: number; r: number; profile: 'wide' | 'soft' | 'core' | 'point'; hue: number; lightness: number; opacity: DerivedValue<number> | number; saturation?: number }) {
+  const f = falloff(profile, hue, saturation ?? (profile === 'core' ? V.mark.haloSat * V.mark.coreSatShare : V.mark.haloSat), lightness);
   return (
     <Group opacity={opacity}>
       <Circle cx={x} cy={y} r={r}>
@@ -218,13 +227,16 @@ export function WorldMark({ x, y, r, tier, markerRadius: marker, shape, S, respo
       <Light x={x} y={y} r={r * m.halo} profile="wide" hue={hue} lightness={V.mark.haloLight} opacity={tier === 'major' ? response.haloMajor : response.haloMinor} />
       <Light x={x} y={y} r={r * m.haloWide} profile="soft" hue={hue} lightness={V.mark.haloWideLight} opacity={tier === 'major' ? response.haloWideMajor : response.haloWideMinor} />
       {/* LA-VIS-01: the tier's own bloom and hot centre — a hub is a source of light, a minor body a smaller one. */}
+      {BLOOM[tier].wide > 0 ? <Light x={x} y={y} r={r * BLOOM[tier].wide} profile="soft" hue={hue} lightness={BLOOM.wideLight} opacity={BLOOM[tier].wideAlpha} /> : null}
       <Light x={x} y={y} r={r * BLOOM[tier].r} profile="point" hue={hue} lightness={BLOOM.light} opacity={BLOOM[tier].alpha} />
       <Light x={x} y={y} r={r * BLOOM[tier].hot} profile="point" hue={hue} lightness={BLOOM.hotLight} opacity={BLOOM[tier].hotAlpha} />
-      <MarkBody x={x} y={y} r={r} path={shape.path} stroked={shape.stroked} ink={selected ? palette.selectedInk : material.fill} />
+      <MarkBody x={x} y={y} r={r} path={shape.path} stroked={shape.stroked} ink={selected ? palette.selectedInk : material.fill} scale={selected ? 1 : BLOOM[tier].body} opacity={selected ? 1 : BLOOM[tier].bodyAlpha} />
+      {/* The hub's compact near-white core: a precise point of light on the place, not a glowing capsule. */}
+      <Light x={x} y={y} r={r * BLOOM[tier].white} profile="point" hue={hue} lightness={BLOOM.whiteLight} saturation={BLOOM.whiteSat} opacity={BLOOM[tier].whiteAlpha} />
       {/* NEAR: a lit limb and a luminous interior, so the shape bounds a body (§14, WS7R-V §V4b). With no
           runtime focus to face, the limb faces the mark's own presentation angle, as the canonical
           painter does when there is no focus. */}
-      <Group opacity={response.near}>
+      <Group opacity={response.near} transform={selected ? undefined : paintedAbout(x, y, BLOOM[tier].body)}>
         <Path path={shape.path} style="stroke" strokeWidth={r * V.mark.limbWidth}>
           <LinearGradient
             start={vec(x + lx * r * 1.15, y + ly * r * 1.15)}
@@ -267,103 +279,104 @@ export function WorldPlaceAtmosphere({
   /** LA-VIS-01: the world's chroma at this place's address (`./world-chroma`): where it is, never what it is. */
   chroma?: ChromaFamily;
 }) {
-  // LA-VIS-01: close in, a place's light is the air the reader is inside, not a glare over everything; it thins with the
-  // PRESENTED distance, on the plane's own frames, so a travel resolves it continuously.
-  const closeShare = useReadingOf(response.approach, (A) => {
+  // LA-VIS-01: close in, a place's light is the air the reader is inside, not a glare over everything. The mass is drawn
+  // at three WORLD sizes — its body, and sub-masses at one and two rungs finer — each weighted by the PRESENTED approach
+  // (on the plane's own frames, so a travel resolves it continuously). At every distance the glass therefore holds the
+  // material at the size it has at FAR: entering a place is entering its atmosphere, never a blur of one big body.
+  const weights = MASS.levels.map((level) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- a fixed count of levels, the same on every render
+    useReadingOf(response.approach, (A) => {
+      'worklet';
+      const [a0, a1, a2] = level.at;
+      const [w0, w1, w2] = level.weight;
+      if (A <= a1) {
+        const t = Math.min(1, Math.max(0, (A - a0) / (a1 - a0)));
+        return w0 + (w1 - w0) * t * t * (3 - 2 * t);
+      }
+      const t = Math.min(1, Math.max(0, (A - a1) / (a2 - a1)));
+      return w1 + (w2 - w1) * t * t * (3 - 2 * t);
+    }),
+  );
+  // A size whose weight is exactly zero contributes nothing, so it is not drawn: an empty clip lets the canvas skip its
+  // layer and its copies (pixel-identical — a zero-weight layer is wholly masked away). Any non-zero weight opens an
+  // unbounded clip, so a drawn size is never cut. Read on the UI runtime on the plane's own frames: no crossing.
+  const clips = weights.map((weight) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- a fixed count of levels, the same on every render
+    useReadingOf(weight, (w) => {
+      'worklet';
+      return w > 0 ? MASS_OPEN : MASS_CLOSED;
+    }),
+  );
+  const washShare = useReadingOf(response.approach, (A) => {
     'worklet';
-    const t = Math.min(1, Math.max(0, (A - MASS.thinFrom) / (MASS.thinTo - MASS.thinFrom)));
-    return 1 - MASS.thinBy * t * t * (3 - 2 * t);
+    const t = Math.min(1, Math.max(0, (A - MASS.washFrom) / (MASS.washTo - MASS.washFrom)));
+    return t * t * (3 - 2 * t);
   });
   if (!(radius > 0)) return null;
   const stops = V.worldAtmosphere.stops;
-  const [, s0, l0, a0] = stops[0];
-  const [, s1, l1, a1] = stops[1];
-  const deep = ladderHue(1);
+  const [, s0, l0] = stops[0];
+  const [, s1, l1] = stops[1];
   const tone = massTone(chroma, s0, l0, s1, l1);
-  const reach = radius * MASS.haze;
-  const textured = radius <= MASS.textureUntil;
-  const gain = textured ? MASS.carveGain : 1;
-  const embers = emberPoints(seed, x, y, radius);
-  const body = (
-    <>
-      {massLobes(seed).map((lobe, index) => {
-        const cx = x + Math.cos(lobe.angle) * radius * lobe.distance;
-        const cy = y + Math.sin(lobe.angle) * radius * lobe.distance;
-        const r = radius * lobe.r;
-        const hue = tone.lobeHue(lobe.rung);
-        return (
-          <Circle key={index} cx={cx} cy={cy} r={r} blendMode="screen">
-            <RadialGradient
-              c={vec(cx, cy)}
-              r={r}
-              colors={[hsla(hue, tone.sat, tone.light + MASS.lobeLift, a1 * lobe.alpha * gain), hsla(hue, tone.sat, tone.light + MASS.lobeLift * 0.6, a1 * lobe.alpha * gain * 0.42), hsla(hue, tone.sat, tone.light, 0)]}
-              positions={[0, 0.48, 1]}
-            />
-          </Circle>
-        );
-      })}
-      {/* The heart: the world's own hue, brightest where the place is. */}
-      <Circle cx={x} cy={y} r={radius * MASS.heart} blendMode="screen">
-        <RadialGradient
-          c={vec(x, y)}
-          r={radius * MASS.heart}
-          colors={[hsla(tone.heartHue, tone.heartSat, tone.heartLight + MASS.heartLift, a0 * MASS.heartAlpha * gain), hsla(tone.heartHue, tone.heartSat, tone.heartLight + MASS.heartLift * 0.5, a0 * MASS.heartAlpha * gain * 0.35), hsla(tone.heartHue, tone.heartSat, tone.heartLight, 0)]}
-          positions={[0, 0.4, 1]}
-        />
-      </Circle>
-    </>
-  );
-  // The texture: the mass is carved by a noise anchored to the place itself (so it never slides under it) and sized by
-  // it (so it zooms with it). Only while the mass is a body on the glass; close in it is the air, and needs none.
-  const seedNumber = Math.floor((presentationRotation(seed) / (Math.PI * 2)) * 997);
+  const family: ChromaFamily = chroma ?? { hue: V.worldHue, saturation: s0, lightness: l0 + MASS.canonicalLift };
+  const picture = massPicture(seed, family);
   return (
     <Group opacity={response.placeAtmosphere}>
-      {/* LA-VIS-01 — a semantic MASS rather than a disc. Every place carries the same light, in the same amounts; its
-          shape alone is varied, by its key, so nothing about it is said by it. Light accumulates where places are
-          many: the territories the eye reads are the real density of real places, and nothing else. */}
-      <Group opacity={closeShare}>
-        {/* The glow the mass casts into the world around it: wide, faint, the same for every place. */}
-        <Circle cx={x} cy={y} r={reach * MASS.glow} blendMode="screen">
+      {/* LA-VIS-01 — a semantic MASS rather than a disc: an irregular, volumetric body with its own internal material
+          (./world-mass). Every place carries the same material in the same amounts; its shape variant alone is chosen by
+          its key, and its colour by the world at its address, so nothing about it is said by it. Light accumulates where
+          places are many: the territories the eye reads are the real density of real places, and nothing else. */}
+      <Group opacity={washShare}>
+        {/* Close in, a calm wash of the place's colour: the world never falls back to bare space. */}
+        <Circle cx={x} cy={y} r={radius * MASS.wash} blendMode="screen">
           <RadialGradient
             c={vec(x, y)}
-            r={reach * MASS.glow}
-            colors={[hsla(tone.hazeHue ?? deep, tone.sat, tone.light, a1 * MASS.glowAlpha), hsla(tone.hazeHue ?? deep, tone.sat, tone.light - 6, a1 * MASS.glowAlpha * 0.35), hsla(tone.hazeHue ?? deep, tone.sat, tone.light - 10, 0)]}
-            positions={[0, 0.45, 1]}
+            r={radius * MASS.wash}
+            colors={[hsla(tone.heartHue, tone.sat, tone.light, MASS.washAlpha), hsla(tone.hazeHue ?? tone.heartHue, tone.sat, tone.light - 4, MASS.washAlpha * 0.5), hsla(tone.hazeHue ?? tone.heartHue, tone.sat, tone.light - 8, 0)]}
+            positions={[0, 0.55, 1]}
           />
         </Circle>
-        <Circle cx={x} cy={y} r={reach} blendMode="screen">
-          <RadialGradient
-            c={vec(x, y)}
-            r={reach}
-            colors={[hsla(tone.hazeHue ?? deep, tone.sat, tone.light - 8, a1 * MASS.hazeAlpha), hsla(tone.hazeHue ?? deep, tone.sat, tone.light - 12, a1 * MASS.hazeAlpha * 0.4), hsla(tone.hazeHue ?? deep, tone.sat, tone.light - 14, 0)]}
-            positions={[0, 0.5, 1]}
-          />
-        </Circle>
-        {textured ? (
-          <Group>
-            <Group layer>
-              {body}
-              <Group transform={[{ translateX: x }, { translateY: y }]}>
-                {MASS.grains.map((grain, index) => (
-                  <Rect key={index} x={-reach * MASS.cover} y={-reach * MASS.cover} width={reach * MASS.cover * 2} height={reach * MASS.cover * 2} blendMode="dstIn">
-                    <FractalNoise freqX={grain / reach} freqY={grain / reach} octaves={MASS.octaves} seed={seedNumber + index} />
-                  </Rect>
-                ))}
-              </Group>
-            </Group>
-          </Group>
-        ) : (
-          body
-        )}
-        {/* Micro-light inside the mass: the same count, sizes and weights for every place, scattered by its key. It
-            is the mass's own light, finer than any mark, and it is never a mark: nothing is placed, hit or read here. */}
-        <Path path={embers.fine} color={hsla(tone.heartHue, tone.heartSat, EMBERS.light, EMBERS.fineAlpha)} />
-        <Path path={embers.soft} color={hsla(tone.lobeHue(0.5), tone.sat, EMBERS.light, EMBERS.softAlpha)}>
-          <BlurMask blur={EMBERS.soft / 3} style="normal" />
-        </Path>
       </Group>
+      {MASS.levels.map((level, depth) => {
+        // The bounds every copy of this level can reach: the mask covers them, and nothing else.
+        const cover = radius * (level.reach[1] + level.size * 1.3 * MASS_EXTENT);
+        return (
+          <Group key={depth} clip={clips[depth]}>
+            <FadedLayer opacity={weights[depth]} x={x - cover} y={y - cover} width={cover * 2} height={cover * 2}>
+              {massCopies(seed, depth, level).map((copy, index) => (
+                <Group key={index} transform={[{ translateX: x + copy.dx * radius }, { translateY: y + copy.dy * radius }, { rotate: copy.rotate }, { scale: (radius * copy.size) / MASS_UNIT }]}>
+                  <Picture picture={picture} />
+                </Group>
+              ))}
+            </FadedLayer>
+          </Group>
+        );
+      })}
     </Group>
   );
+}
+
+/**
+ * A paint scale about a mark's own point, as a plain transform (no origin), so the only groups that carry an origin
+ * remain a mark's anchor and an arrival — the signatures a reader of the paint locates them by.
+ */
+function paintedAbout(x: number, y: number, scale: number) {
+  return [{ translateX: x }, { translateY: y }, { scale }, { translateX: -x }, { translateY: -y }];
+}
+
+/** The clip of a mass size that is drawn (unbounded) and of one at zero weight (empty: nothing of it is drawn). */
+const MASS_OPEN = Object.freeze({ x: -1e7, y: -1e7, width: 2e7, height: 2e7 });
+const MASS_CLOSED = Object.freeze({ x: 0, y: 0, width: 0, height: 0 });
+
+/** Where a mass's copies sit at one level, in radii of the place: the body itself, or sub-masses around the place. */
+function massCopies(seed: string, depth: number, level: (typeof MASS.levels)[number]) {
+  if (level.copies === 1) return [{ dx: 0, dy: 0, size: level.size, rotate: presentationRotation(seed) }];
+  return Array.from({ length: level.copies }, (_, index) => {
+    const angle = presentationRotation(`${index}:sa${depth}:${seed}`);
+    const share = presentationRotation(`${index}:sd${depth}:${seed}`) / (Math.PI * 2);
+    // The first copy sits on the place itself: close in, the reader is inside the place's own mass.
+    const distance = index === 0 ? 0 : level.reach[0] + (level.reach[1] - level.reach[0]) * Math.sqrt(share);
+    return { dx: Math.cos(angle) * distance, dy: Math.sin(angle) * distance, size: level.size * (0.7 + 0.6 * share), rotate: presentationRotation(`${index}:sr${depth}:${seed}`) };
+  });
 }
 
 /**
@@ -389,92 +402,48 @@ function massTone(chroma: ChromaFamily | undefined, s0: number, l0: number, s1: 
 /** How a chroma is worn by a mass: lobe spread and haze lean (degrees), and lightness lifts (percent). */
 const CHROMA = Object.freeze({ lobeSpread: 26, hazeShift: 14, lift: -24, saturation: 0.86, heartSat: 0.55, heartLift: -6 });
 
-/** A place's micro-light: its count, sizes (points) and weights. Constant for every place. */
-const EMBERS = Object.freeze({ count: 22, softCount: 8, fine: 1.3, soft: 3.6, light: 84, fineAlpha: 0.75, softAlpha: 0.32 });
-
-/** Where a place's micro-lights sit, in the mass's own frame: denser toward the heart, by its key. */
-function emberPoints(seed: string, x: number, y: number, radius: number) {
-  // One path of small discs per size: one draw, whatever the count.
-  const discs = (from: number, count: number, r: number) => {
-    let path = '';
-    for (let index = from; index < from + count; index += 1) {
-      const angle = presentationRotation(`${index}:e:${seed}`);
-      const share = presentationRotation(`${index}:d:${seed}`) / (Math.PI * 2);
-      const distance = radius * MASS.haze * 0.8 * share * share;
-      const cx = x + Math.cos(angle) * distance;
-      const cy = y + Math.sin(angle) * distance;
-      path += `M ${cx - r} ${cy} a ${r} ${r} 0 1 0 ${r * 2} 0 a ${r} ${r} 0 1 0 ${-r * 2} 0 Z `;
-    }
-    return path;
-  };
-  return { fine: discs(0, EMBERS.count, EMBERS.fine / 2), soft: discs(EMBERS.count, EMBERS.softCount, EMBERS.soft / 2) };
-}
-
 /**
  * LA-VIS-01 — the presentation shares of a place's mass, of a mark's light and of the tether's glow. Sizes, weights and
  * offsets only: every hue, saturation and lightness is generated (the world hue, the cloud ladder, the atmosphere stops).
  */
 const MASS = Object.freeze({
-  haze: 1,
-  glow: 1.9,
-  glowAlpha: 0.3,
-  /** How far past the haze the texture reaches, so the outermost lobes are carved too. */
-  cover: 1.25,
-  hazeAlpha: 0.32,
-  heart: 0.55,
-  heartLift: 34,
-  heartAlpha: 0.7,
-  lobes: 6,
-  lobeLift: 20,
-  /** The approach over which a place's light thins to the air around the reader, and by how much. */
-  thinFrom: 0.15,
-  thinTo: 0.5,
-  thinBy: 0.9,
-  /** Textured while the mass is a body on the glass (its radius in points); the noise scales, cycles per radius. */
-  textureUntil: 320,
-  grains: [2.6, 5.5],
-  octaves: 3,
-  /** The carving takes light; the lobes carry this much more so the lit wisps keep the mass's weight. */
-  carveGain: 2.8,
+  /** The calm wash of the mass's colour close in, as a share of its radius, its weight, and the approach it fades in over. */
+  wash: 0.55,
+  washAlpha: 0.07,
+  washFrom: 0.2,
+  washTo: 0.6,
+  /** Without a chroma, the canonical world's mass is lifted this much so its material reads after the tone curve. */
+  canonicalLift: 18,
+  /**
+   * The mass at three world sizes (a share of its radius; one rung of the ladder is ×8): how many copies, how far from the
+   * place they sit (radii), and the weight at approach [from, peak, to].
+   */
+  levels: [
+    { size: 1, copies: 1, reach: [0, 0], at: [0, 0.4, 1], weight: [1, 0, 0] },
+    { size: 1 / 6, copies: 5, reach: [0.12, 0.85], at: [0.12, 0.5, 0.85], weight: [0, 0.85, 0] },
+    { size: 1 / 36, copies: 5, reach: [0.015, 0.11], at: [0.55, 1, 1.01], weight: [0, 0.9, 0.9] },
+  ],
 });
 
 /** Each tier's own luminous bloom (radius as a multiple of the mark radius, and weight): the hub reads as the hub. */
 const BLOOM = Object.freeze({
-  major: { r: 4.4, alpha: 0.85, hot: 1.7, hotAlpha: 0.9 },
-  minor: { r: 2.6, alpha: 0.5, hot: 1.25, hotAlpha: 0.55 },
-  light: 76,
-  hotLight: 94,
+  /**
+   * `body` is the PAINTED share of the mark's body (the mark radius, the selected marker and the hit radius are
+   * untouched; a selected mark is painted whole), `white` the compact near-white core, `r`/`hot` the coloured bloom.
+   */
+  major: { r: 3.6, alpha: 0.62, hot: 0.95, hotAlpha: 0.85, wide: 8.5, wideAlpha: 0.2, body: 0.5, bodyAlpha: 0.85, white: 0.62, whiteAlpha: 1 },
+  minor: { r: 1.6, alpha: 0.2, hot: 0.6, hotAlpha: 0.32, wide: 0, wideAlpha: 0, body: 0.42, bodyAlpha: 0.55, white: 0.34, whiteAlpha: 0.55 },
+  light: 70,
+  hotLight: 92,
+  wideLight: 56,
+  whiteLight: 99,
+  whiteSat: 12,
   /** How much of the canonical cleared ground stays: the world clears a place, but no longer swallows its light. */
   clearing: 0.45,
 });
 
 /** The tether's glow: a soft wide light under a finer core. */
 const TETHER = Object.freeze({ core: 0.62, glow: 5.2, glowAlpha: 0.34, blur: 2.4 });
-
-interface MassLobe {
-  readonly angle: number;
-  readonly distance: number;
-  readonly r: number;
-  readonly rung: number;
-  readonly alpha: number;
-}
-
-/** A place's lobes: the same count, sizes and weights for every place, arranged by its key. */
-function massLobes(seed: string): readonly MassLobe[] {
-  const lobes: MassLobe[] = [];
-  for (let index = 0; index < MASS.lobes; index += 1) {
-    const turn = presentationRotation(`${index}:t:${seed}`) / (Math.PI * 2);
-    lobes.push({
-      angle: presentationRotation(`${index}:a:${seed}`),
-      distance: 0.18 + 0.34 * turn,
-      r: 0.5 + 0.12 * ((index * 0.37) % 1),
-      // Inner lobes keep the world's hue; outer ones lean into the cooler ladder, as depth does.
-      rung: 0.15 + 0.6 * turn,
-      alpha: 0.62 - 0.08 * index,
-    });
-  }
-  return lobes;
-}
 
 export interface WorldTetherProps {
   readonly fromX: number;

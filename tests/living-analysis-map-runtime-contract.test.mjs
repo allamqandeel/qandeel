@@ -67,6 +67,9 @@ const PRODUCTION_FILES = [
   // Paint only, pinned by VPORT-01 and VPORT-02; it reads a world address and nothing else.
   'visual/world-chroma.ts',
   'visual/world-field.generated.ts',
+  // LA-VIS-01 (Product Owner task, 2026-10-07): the material of a place's mass, recorded once per shape variant and colour.
+  // Paint only, pinned by VPORT-01 and VPORT-02; it reads a meaning-free variant and a chroma family, nothing else.
+  'visual/world-mass.ts',
   'visual/world-presentation.ts',
   'visual/world-resolver.ts',
   'visual/world-visual.generated.ts',
