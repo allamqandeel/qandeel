@@ -1,6 +1,6 @@
 # QANDEEL — S5-03C Public Explicit Relations + Integrity Closure — Implementation Record v1
 
-**Status:** `ACTIVE — IMPLEMENTED ON DRAFT PR — S5-03C PRODUCT COPY GATE OPEN (13 rows PROPOSED, awaiting the Product Owner) — NOT CLOSED — NOT MERGED`
+**Status:** `CLOSED — READY FOR PRODUCT OWNER MERGE DECISION — S5-03C PRODUCT COPY GATE CLOSED (13 / 13 APPROVED, Product Owner, 2026-10-07) — NOT MERGED (Draft PR #318)`
 
 | | |
 |---|---|
@@ -205,10 +205,10 @@ state another human is asked to accept, as preparing a package does).
 - **Renderer law:** no fork; `WorldCanvas` decides nothing; the Public World owns the relation semantics; Personal is
   visually and behaviourally unchanged (no Map file changed; the VPORT-02 pins and the Personal golden are untouched).
 
-## 13. S5-03C Product Copy Gate — OPEN
+## 13. S5-03C Product Copy Gate — CLOSED (13 / 13 APPROVED)
 
 Copy census first. **Reused** (byte-exact, from their own modules): Back, Try again, the neutral action refusal and Cancel
-(S4-01 gate); the search label and the no-match line (S5-03B gate). **New — 13 rows, PROPOSED, not approved**
+(S4-01 gate); the search label and the no-match line (S5-03B gate). **New — 13 rows, APPROVED by the Product Owner exactly as proposed (2026-10-07)**
 (`apps/mobile/src/public-authoring/relation-copy.ts`):
 
 | Key | Arabic | English | Context | Accessibility use |
@@ -227,8 +227,8 @@ Copy census first. **Reused** (byte-exact, from their own modules): Back, Try ag
 | `remove` | إزالة العلاقة | Remove relation | button on a current relation | button label |
 | `relationWith` | علاقة مع {0} | Relation with {0} | none visible — the line is unlabelled | the accessible name of one relation line; {0} = the other Experience's reviewed meaning |
 
-No row speaks of nearness, similarity, strength, a count, a type or QANDEEL finding a relation. **The gate stays OPEN until
-the Product Owner decides;** S5-03C cannot close before that (Task Contract §11).
+No row speaks of nearness, similarity, strength, a count, a type or QANDEEL finding a relation. **The gate is CLOSED: the
+Product Owner approved all 13 rows exactly as proposed (2026-10-07);** no row was revised or retired.
 
 ## 14. MATERIAL / REASONING and `QAN-BL-ACCT-01`
 
@@ -255,7 +255,7 @@ solves nothing of it. The Public World is not launch-ready.
 | # | Gap / observation | Class | Owner / disposition |
 |---|---|---|---|
 | G01 | Explicit relations, lines, integrity closure (S5-03B G07) | 1 — this task | **delivered** (§6–§12) |
-| G02 | The S5-03C Product Copy Gate (13 rows) | 1 — this task, before closure | §13 — PROPOSED, awaiting the Product Owner |
+| G02 | The S5-03C Product Copy Gate (13 rows) | 1 — this task, before closure | §13 — **CLOSED, 13 / 13 APPROVED** (Product Owner, 2026-10-07) |
 | G03 | Activity / Push / notification for a relation request or acceptance | 4 assigned | S5-04 (Product Owner decision R+); the management surface is sufficient when reached directly |
 | G04 | Inherited S5-03B G04: field / search read-time derivation at scale | **OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision** | none named; not self-assigned |
 | G05 | Inherited S5-03B G05: `LIMIT 400` field read, no dense aggregation — and, in the same bounded-v1 family, S5-03C's own read bounds (≤ 24 lines per Experience, ≤ 100 own Experiences, ≤ 200 own relations per management read) | **OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision** | none named; not self-assigned |
@@ -264,7 +264,7 @@ solves nothing of it. The Public World is not launch-ready.
 | G08 | Account deletion — new relation `RESTRICT` dependents | 3 existing item | `QAN-BL-ACCT-01` — HIGH / OPEN (§14) |
 | G09 | Export My Data does not include relations | 3 existing owner | `E2E-D-16` |
 | G10 | Relation density at real scale / on a real phone | 3 existing item | `QAN-BL-VIS-01` — OPEN / UNASSIGNED |
-| G11 | No native device leg for the relation surfaces (production World is empty; Jest covers both languages' copy, field, workspace) | 5 — observe / report | the Product Owner decides whether one bounded smoke is required before merge |
+| G11 | No native device leg for the relation surfaces (production World is empty; Jest covers both languages' copy, field, workspace) | 5 — observe / report | the Product Owner required ONE bounded Android-emulator smoke once CI is green; its result is reported on Draft PR #318 |
 
 **Orphan gaps = 0.**
 
@@ -305,12 +305,13 @@ Local real PostgreSQL 17 on `localhost:55432` (embedded binaries; never the host
 | F09 | `verify-migration-0133` locally | C | `psql` absent locally (known); CI is the proof |
 | F10 | `s5-03b-visual-fixture` (the proof world's synthetic panel) answered without `relations`, so the strict client refused it | B (fixture drift) | the fixture answers the current panel contract with `relations: []`; no relation is fabricated from its regions |
 | F11 | mobile Jest `w2-account-access` / `depth` (6 tests) | B — Validation / Baseline | the recorded local-locale baseline (S5-03A F13, S5-03B F05); untouched by S5-03C |
+| F12 | API CI + Mobile CI on `ff2e590`: S5-03B static contract test 9 still required S5-03B to be ACTIVE and the current task. My local 79 / 79 run of that contract predates the locator reconciliation in the same commit, so it did not catch it | B — Validation / Proof drift | test 9 re-anchored to current truth (S5-03B DONE / MERGED via PR #317 at `afd5e8c…`, S5-03C current); the record's and backlog's pre-merge evidence assertions kept; no Product code changed |
 
 No Product, Security or Privacy defect was found in the frozen runtime, S5-03A or S5-03B.
 
 ## 19. Remaining Stage-5 ownership
 
-- **S5-03C:** closes after the Product Owner decides the Copy Gate (§13) and reviews the Draft PR.
+- **S5-03C:** CLOSED / READY FOR PRODUCT OWNER MERGE DECISION (Copy Gate CLOSED, 13 / 13). Merge only on the Product Owner's «ادمج».
 - **S5-04 — Discussion + Public QANDEEL + Final Public Integration:** discussion, replies, Public QANDEEL, Public Activity /
   Push (including relation notifications), vitality / instant rendering. Not started.
 - **G04 / G05:** OPEN PRODUCT GAPS awaiting the Product Owner's ownership decision.

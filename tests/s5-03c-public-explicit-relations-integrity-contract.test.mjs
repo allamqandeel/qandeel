@@ -141,11 +141,12 @@ test('6 — mobile: the shared renderer stays generic and unchanged; the Public 
   assert.deepEqual(posts, ['{ commandId, experienceId, otherExperienceId }', '{ commandId }']);
 });
 
-test('7 — the S5-03C Product Copy Gate: one gate, OPEN, every new row PROPOSED in both languages, frozen words reused', () => {
+test('7 — the S5-03C Product Copy Gate: one gate, CLOSED by the Product Owner, every new row APPROVED, frozen words reused', () => {
   const copy = read(`${MOBILE}/public-authoring/relation-copy.ts`);
-  assert.ok(copy.includes("status: 'S5-03C PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (awaiting the Product Owner)'"));
-  assert.equal((copy.match(/\/\/ PROPOSED — S5-03C Product Copy Gate/gu) ?? []).length, 26, '13 rows, Arabic and English');
-  assert.ok(copy.includes('  approved: [],'), 'nothing approved silently');
+  assert.ok(copy.includes("status: 'S5-03C PRODUCT COPY GATE — CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07)'"));
+  assert.equal((copy.match(/\/\/ APPROVED — S5-03C Product Copy Gate \(Product Owner, 2026-10-07\)/gu) ?? []).length, 26, '13 rows, Arabic and English');
+  assert.ok(copy.includes('  proposed: [],'), 'no row is left PROPOSED');
+  assert.doesNotMatch(copy, /PROPOSED — S5-03C/u);
   for (const reused of ['back: shared.back', 'retry: shared.retry', 'actionUnavailable: shared.actionUnavailable', 'cancel: shared.cancel',
     'searchLabel: field.searchLabel', 'noResults: field.noResults']) assert.ok(copy.includes(reused), reused);
   assert.ok(copy.includes("relationWith: 'علاقة مع {0}'") && copy.includes("relationWith: 'Relation with {0}'"), 'the line names the other endpoint');
@@ -160,7 +161,7 @@ test('7 — the S5-03C Product Copy Gate: one gate, OPEN, every new row PROPOSED
 test('8 — governance: the record, the backlog and the locators tell the same truth', () => {
   const record = read(RECORD);
   assert.match(record, /^# QANDEEL — S5-03C Public Explicit Relations \+ Integrity Closure — Implementation Record v1/u);
-  assert.match(record, /\*\*Status:\*\* `ACTIVE — IMPLEMENTED ON DRAFT PR — S5-03C PRODUCT COPY GATE OPEN/u, 'not closed before the Copy Gate is decided');
+  assert.match(record, /\*\*Status:\*\* `CLOSED — READY FOR PRODUCT OWNER MERGE DECISION — S5-03C PRODUCT COPY GATE CLOSED \(13 \/ 13 APPROVED/u, 'closed only with its Copy Gate decided (BG-09)');
   assert.match(record, /afd5e8caecc06884b5adfdb381eef8e650e03c1f/u);
   assert.match(record, /\*\*SIMILARITY IS NOT A RELATION\.\*\*/u);
   assert.match(record, /\*\*`QAN-BL-ACCT-01 — HIGH \/ OPEN`:\*\*/u);
@@ -172,7 +173,7 @@ test('8 — governance: the record, the backlog and the locators tell the same t
   assert.match(record, /G05[^\n]*OPEN PRODUCT GAP — awaiting the Product Owner's ownership decision/u, 'G05 is not self-assigned');
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /\*\*Current-truth note \(S5-03C, 2026-10-07\)\.\*\*/u);
-  assert.match(backlog, /\*\*S5-03C reconciliation \(2026-10-07; Draft PR, not merged, not closed\)\.\*\*/u);
+  assert.match(backlog, /\*\*S5-03C reconciliation \(2026-10-07; closed, not merged\)\.\*\*/u);
   assert.match(backlog, /\| `S5-03C — Public Explicit Relations \+ Integrity Closure` \| none — no item names it;/u);
   assert.match(backlog, /\| `QAN-BL-VIS-01` \| [^\n]*\| `OPEN — UNASSIGNED` \|/u);
   assert.match(backlog, /\| `QAN-BL-CW-03` \| [^\n]*\| `DEFERRED — OWNED` \|/u);
@@ -181,7 +182,7 @@ test('8 — governance: the record, the backlog and the locators tell the same t
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
     assert.match(state, /S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
-    assert.match(state, /S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*ACTIVE — IMPLEMENTED/u);
+    assert.match(state, /S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*`CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION`/u);
     assert.doesNotMatch(state, /Stage 5 \(Public World Product Integration\) is \*\*DONE/u, 'Stage 5 is not DONE before S5-04');
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {

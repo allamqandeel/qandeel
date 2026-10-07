@@ -353,17 +353,17 @@ describe('S5-03C — explicit relation lines in the ONE Public field', () => {
 });
 
 // ---------------------------------------------------------------------------------------------- the Copy Gate census
-describe('S5-03C — one Product Copy Gate, OPEN until the Product Owner decides', () => {
-  it('lists every new row PROPOSED in both languages, approves none silently, and reuses frozen words byte-exact', () => {
-    expect(PUBLIC_RELATION_COPY_GATE.status).toBe('S5-03C PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (awaiting the Product Owner)');
-    expect(PUBLIC_RELATION_COPY_GATE.approved).toEqual([]);
-    expect(PUBLIC_RELATION_COPY_GATE.proposed).toHaveLength(13);
+describe('S5-03C — one Product Copy Gate, CLOSED by the Product Owner', () => {
+  it('every new row APPROVED in both languages exactly as proposed; none left PROPOSED; frozen words reused byte-exact', () => {
+    expect(PUBLIC_RELATION_COPY_GATE.status).toBe('S5-03C PRODUCT COPY GATE — CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07)');
+    expect(PUBLIC_RELATION_COPY_GATE.approved).toHaveLength(13);
+    expect(PUBLIC_RELATION_COPY_GATE.proposed).toEqual([]);
     const source = readFileSync(join(__dirname, '..', 'relation-copy.ts'), 'utf8');
-    expect(source.match(/\/\/ PROPOSED — S5-03C Product Copy Gate/gu)).toHaveLength(26);
-    expect(source).not.toMatch(/APPROVED — S5-03C/u);
+    expect(source.match(/\/\/ APPROVED — S5-03C Product Copy Gate \(Product Owner, 2026-10-07\)/gu)).toHaveLength(26);
+    expect(source).not.toMatch(/PROPOSED — S5-03C/u);
     for (const language of ['ar', 'en'] as const) {
       const copy = publicRelationCopy(language);
-      for (const key of PUBLIC_RELATION_COPY_GATE.proposed) expect(copy[key].length).toBeGreaterThan(0);
+      for (const key of PUBLIC_RELATION_COPY_GATE.approved) expect(copy[key].length).toBeGreaterThan(0);
       expect(copy.relationWith).toContain('{0}');
       expect(copy.withYours).toContain('{0}');
       expect(copy.searchLabel).toBe(publicFieldCopy(language).searchLabel);

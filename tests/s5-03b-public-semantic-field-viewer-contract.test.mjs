@@ -211,13 +211,22 @@ test('9 — governance: the record, the backlog and the locators tell the same t
   assert.match(backlog, /\*\*Current-truth note \(S5-03B, 2026-10-06\)\.\*\*/u);
   assert.match(backlog, /\*\*S5-03B reconciliation \(2026-10-06; not merged\)\.\*\*/u);
   assert.match(backlog, /\| `S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime` \| none — no item names it;/u);
+  // RE-ANCHORED by S5-03C (validation only): PR #317 is merged. The record and the backlog keep their pre-merge evidence
+  // (the "(2026-10-06; not merged)" reconciliation heading above is history, not current truth); the locators now say
+  // S5-03B is DONE / MERGED, S5-03C is ACTIVE and the current implementation task.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
-    assert.match(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*ACTIVE/u);
+    assert.match(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
+    assert.doesNotMatch(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*ACTIVE/u, 'S5-03B is no longer ACTIVE');
+    assert.match(state, /\| S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*(ACTIVE|`?CLOSED)/u, 'S5-03C is the current Stage-5 task');
     assert.match(state, /\| S5-03A — [^\n]*\*\*`MERGED \/ CLOSED` through PR #316 at `c9338af9ecbfcecccc281f96f52fab335ad9bc7b`\*\*/u);
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
-    assert.match(read('QANDEEL_PROJECT_MAP.md'), /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime/u);
+    const map = read('QANDEEL_PROJECT_MAP.md');
+    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03C — Public Explicit Relations \+ Integrity Closure\*\*/u);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B/u, 'S5-03B is no longer the current task');
+    assert.match(map, /`S5-03B — Public Semantic Field \+ Viewer Runtime` = \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
+    assert.match(map, /\*\(Historical: S5-03B was the current task until PR #317 merged as `afd5e8caecc06884b5adfdb381eef8e650e03c1f`/u);
   }
 });
 

@@ -1747,9 +1747,10 @@ other item is unchanged. The register still holds **44** items: 17 `DEFERRED —
 `OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the
 §4 index.
 
-**S5-03C reconciliation (2026-10-07; Draft PR, not merged, not closed).** S5-03B is merged (PR #317 at
+**S5-03C reconciliation (2026-10-07; closed, not merged).** S5-03B is merged (PR #317 at
 `afd5e8caecc06884b5adfdb381eef8e650e03c1f`; its Product Copy Gate CLOSED, 13 / 13 APPROVED). S5-03C (Public Explicit Relations +
-Integrity Closure, migration `0146`; the third of the Product Owner's three S5-03 tasks, under the Product Owner's R+ decision)
+Integrity Closure, migration `0146`; the third of the Product Owner's three S5-03 tasks, under the Product Owner's R+ decision;
+its Product Copy Gate CLOSED, 13 / 13 APPROVED; CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION on Draft PR #318)
 inherits no item by owner (BG-05: no item names it; S5-03B's Gap-Matrix row G07 is delivered by it) and admits none (BG-08).
 `QAN-BL-ACCT-01` stays `HIGH`, `OPEN — UNASSIGNED`, with a current-truth note (no direct account foreign key; its new
 relation `RESTRICT` dependents are recorded as part of the blocker). `QAN-BL-VIS-01` stays `OPEN — UNASSIGNED`: S5-03C does not

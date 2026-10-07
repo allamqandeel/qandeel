@@ -8,9 +8,10 @@
  *     «إعادة المحاولة» / Try again, «تعذّر ذلك الآن.» / the neutral action refusal and «إلغاء» / Cancel (S4-01 Product Copy
  *     Gate); the search field's label and its no-match line (S5-03B Product Copy Gate) — a relation is asked for an
  *     Experience found by the SAME Public search;
- *   - PROPOSED — S5-03C PRODUCT COPY GATE, OPEN: every genuinely new string below, awaiting the Product Owner. No frozen
- *     record names an explicit Public relation, its request or its acts in either language, so none was invented as canon.
- *     They are drawn in the frozen register (I-08A4 §11: calm, plain, no exclamation, no persuasion).
+ *   - APPROVED — S5-03C PRODUCT COPY GATE, CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07): every genuinely new
+ *     string below, approved exactly as proposed. No frozen record named an explicit Public relation, its request or its
+ *     acts in either language, so none was invented as canon. They are drawn in the frozen register (I-08A4 §11: calm,
+ *     plain, no exclamation, no persuasion).
  *
  * No string says that QANDEEL found, suggested or measured a relation, names a strength, a type, a count or a score, or
  * calls nearness a relation: a relation is an explicit act of two humans (S5-03C, the Product Owner's R+ decision). The
@@ -21,13 +22,13 @@ import { publicFieldCopy } from '../public-world/field/field-copy';
 import { fill, sharedCopy } from '../shared-world/copy';
 
 export const PUBLIC_RELATION_COPY_GATE = {
-  status: 'S5-03C PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (awaiting the Product Owner)',
+  status: 'S5-03C PRODUCT COPY GATE — CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07)',
   reused: ['back', 'retry', 'actionUnavailable', 'cancel', 'searchLabel', 'noResults'],
-  approved: [],
-  proposed: [
+  approved: [
     'relationsHeading', 'relationsTitle', 'receivedHeading', 'withYours', 'activeHeading', 'sentHeading', 'requestHeading',
     'requestHint', 'requestAction', 'accept', 'decline', 'remove', 'relationWith',
   ],
+  proposed: [],
 } as const;
 
 export interface PublicRelationCopy {
@@ -62,35 +63,35 @@ export interface PublicRelationCopy {
 }
 
 const AR = {
-  relationsHeading: 'تجاربك في العالم العام', // PROPOSED — S5-03C Product Copy Gate
-  relationsTitle: 'العلاقات', // PROPOSED — S5-03C Product Copy Gate
-  receivedHeading: 'طلبات علاقة', // PROPOSED — S5-03C Product Copy Gate
-  withYours: 'مع تجربتك: {0}', // PROPOSED — S5-03C Product Copy Gate
-  activeHeading: 'علاقات قائمة', // PROPOSED — S5-03C Product Copy Gate
-  sentHeading: 'بانتظار القبول', // PROPOSED — S5-03C Product Copy Gate
-  requestHeading: 'ربطها بتجربة أخرى', // PROPOSED — S5-03C Product Copy Gate
-  requestHint: 'لا تظهر العلاقة إلا بعد أن يقبلها صاحب التجربة الأخرى، ويمكن لأي منكما إزالتها.', // PROPOSED — S5-03C Product Copy Gate
-  requestAction: 'طلب علاقة', // PROPOSED — S5-03C Product Copy Gate
-  accept: 'قبول', // PROPOSED — S5-03C Product Copy Gate
-  decline: 'رفض', // PROPOSED — S5-03C Product Copy Gate
-  remove: 'إزالة العلاقة', // PROPOSED — S5-03C Product Copy Gate
-  relationWith: 'علاقة مع {0}', // PROPOSED — S5-03C Product Copy Gate
+  relationsHeading: 'تجاربك في العالم العام', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  relationsTitle: 'العلاقات', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  receivedHeading: 'طلبات علاقة', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  withYours: 'مع تجربتك: {0}', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  activeHeading: 'علاقات قائمة', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  sentHeading: 'بانتظار القبول', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  requestHeading: 'ربطها بتجربة أخرى', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  requestHint: 'لا تظهر العلاقة إلا بعد أن يقبلها صاحب التجربة الأخرى، ويمكن لأي منكما إزالتها.', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  requestAction: 'طلب علاقة', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  accept: 'قبول', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  decline: 'رفض', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  remove: 'إزالة العلاقة', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  relationWith: 'علاقة مع {0}', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
 } as const;
 
 const EN = {
-  relationsHeading: 'Your experiences in Public World', // PROPOSED — S5-03C Product Copy Gate
-  relationsTitle: 'Relations', // PROPOSED — S5-03C Product Copy Gate
-  receivedHeading: 'Relation requests', // PROPOSED — S5-03C Product Copy Gate
-  withYours: 'With your experience: {0}', // PROPOSED — S5-03C Product Copy Gate
-  activeHeading: 'Current relations', // PROPOSED — S5-03C Product Copy Gate
-  sentHeading: 'Waiting for acceptance', // PROPOSED — S5-03C Product Copy Gate
-  requestHeading: 'Relate it to another experience', // PROPOSED — S5-03C Product Copy Gate
-  requestHint: "A relation appears only once the other experience's owner accepts it, and either of you can remove it.", // PROPOSED — S5-03C Product Copy Gate
-  requestAction: 'Request a relation', // PROPOSED — S5-03C Product Copy Gate
-  accept: 'Accept', // PROPOSED — S5-03C Product Copy Gate
-  decline: 'Decline', // PROPOSED — S5-03C Product Copy Gate
-  remove: 'Remove relation', // PROPOSED — S5-03C Product Copy Gate
-  relationWith: 'Relation with {0}', // PROPOSED — S5-03C Product Copy Gate
+  relationsHeading: 'Your experiences in Public World', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  relationsTitle: 'Relations', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  receivedHeading: 'Relation requests', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  withYours: 'With your experience: {0}', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  activeHeading: 'Current relations', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  sentHeading: 'Waiting for acceptance', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  requestHeading: 'Relate it to another experience', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  requestHint: "A relation appears only once the other experience's owner accepts it, and either of you can remove it.", // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  requestAction: 'Request a relation', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  accept: 'Accept', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  decline: 'Decline', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  remove: 'Remove relation', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
+  relationWith: 'Relation with {0}', // APPROVED — S5-03C Product Copy Gate (Product Owner, 2026-10-07)
 } as const;
 
 export function publicRelationCopy(language: ChromeLanguage): PublicRelationCopy {
