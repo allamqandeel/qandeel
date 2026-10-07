@@ -23,9 +23,11 @@ import { AccessibilityInfo, ScrollView, Text, View } from 'react-native';
 
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
-import type { PublicApprovalRequest, PublicAuthoringReview, PublicOwnApproval, PublicSemanticReview } from '../runtime-entry';
+import type { PublicApprovalRequest, PublicAuthoringReview, PublicOwnApproval, PublicSemanticReview, PublicSpatialPreparation } from '../runtime-entry';
+import { publicFieldCopy } from '../public-world/field/field-copy';
 import { fill, publicAuthoringCopy, type PublicAuthoringCopy } from './copy';
 import { personalKey, sharedKey, type PublicAuthoringController, type PublicAuthoringNotice } from './public-authoring-controller';
+import { PublicPlacePreparation } from './PublicPlacePreparation';
 import { PublicSemanticReview as Understanding } from './PublicSemanticReview';
 import { publicSemanticCopy, type PublicSemanticCopy } from './semantic-copy';
 
@@ -36,8 +38,9 @@ const BUSY_OPACITY = 0.6;
 
 const fillTwo = (template: string, first: string, second: string): string => fill(template, first).replace('{1}', second);
 
-const noticeOf = (copy: PublicAuthoringCopy, semantic: PublicSemanticCopy, notice: PublicAuthoringNotice): string | null => {
+const noticeOf = (copy: PublicAuthoringCopy, semantic: PublicSemanticCopy, notice: PublicAuthoringNotice, placeUnavailable: string): string | null => {
   switch (notice) {
+    case 'PLACE_UNAVAILABLE': return placeUnavailable;
     case 'INTERPRETATION_UNAVAILABLE': return semantic.interpretationUnavailable;
     case 'NOT_SUPPORTED': return semantic.notSupported;
     case 'UNCHANGED': return semantic.unchanged;
@@ -130,8 +133,9 @@ function Request({ request, s, busy, controller }: { readonly request: PublicApp
   );
 }
 
-function Review({ review, understanding, correcting, s, busy, controller }: {
-  readonly review: PublicAuthoringReview; readonly understanding: PublicSemanticReview | null; readonly correcting: boolean; readonly s: Shared;
+function Review({ review, understanding, place, correcting, s, busy, controller }: {
+  readonly review: PublicAuthoringReview; readonly understanding: PublicSemanticReview | null; readonly place: PublicSpatialPreparation | null;
+  readonly correcting: boolean; readonly s: Shared;
   readonly busy: boolean; readonly controller: PublicAuthoringController;
 }) {
   if (review.state !== 'CURRENT') {
@@ -159,6 +163,8 @@ function Review({ review, understanding, correcting, s, busy, controller }: {
         ? <Action label={s.copy.markReady} onPress={controller.markReady} s={s} busy={busy} emphasis testID="qandeel-public-authoring-mark-ready" /> : null}
       {review.lifecycle === 'READY_FOR_REVIEW' && understanding !== null
         ? <Understanding understanding={understanding} correcting={correcting} palette={s.palette} language={s.language} busy={busy} controller={controller} /> : null}
+      {review.lifecycle === 'READY_FOR_REVIEW' && place !== null
+        ? <PublicPlacePreparation place={place} palette={s.palette} language={s.language} busy={busy} onPrepare={controller.preparePlace} /> : null}
     </View>
   );
 }
@@ -176,7 +182,7 @@ export function PublicAuthoringWorkspace({ controller, language, palette, bottom
   const semantic = publicSemanticCopy(language);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const s: Shared = { palette, language, copy, writing };
-  const said = noticeOf(copy, semantic, state.notice);
+  const said = noticeOf(copy, semantic, state.notice, publicFieldCopy(language).placeUnavailable);
   useEffect(() => {
     if (said !== null) AccessibilityInfo.announceForAccessibility(said);
   }, [said]);
@@ -249,7 +255,7 @@ export function PublicAuthoringWorkspace({ controller, language, palette, bottom
               ? <Action label={copy.review} onPress={controller.prepare} s={s} busy={state.busy} emphasis testID="qandeel-public-authoring-prepare" /> : null}
           </View>
         ) : state.review !== null ? (
-          <Review review={state.review} understanding={state.semantic} correcting={state.correcting} s={s} busy={state.busy} controller={controller} />
+          <Review review={state.review} understanding={state.semantic} place={state.place} correcting={state.correcting} s={s} busy={state.busy} controller={controller} />
         ) : null}
       </ScrollView>
     </View>

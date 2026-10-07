@@ -150,6 +150,14 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /public/authoring/drafts/:experienceId/semantic/proposal': 'SECURITY_SENSITIVE',
   'POST /public/authoring/drafts/:experienceId/semantic/accept': 'AUTHENTICATED',
   'POST /public/authoring/drafts/:experienceId/semantic/correction': 'SECURITY_SENSITIVE',
+  // S5-03B — the stable Public location and the semantic field. Asking QANDEEL to prepare the place can reach the spatial
+  // placer (a provider call once Stage 8A binds one), so it takes the strict class; reading the preparation state and
+  // viewing the field, search and panel are ordinary authenticated reads the database bounds itself. No new class.
+  'GET /public/authoring/drafts/:experienceId/place': 'AUTHENTICATED',
+  'POST /public/authoring/drafts/:experienceId/place': 'SECURITY_SENSITIVE',
+  'GET /public/field': 'AUTHENTICATED',
+  'GET /public/field/search': 'AUTHENTICATED',
+  'GET /public/field/experiences/:experienceId': 'AUTHENTICATED',
 });
 
 const segments = (path: unknown): string[] =>

@@ -32,6 +32,10 @@
  * link, taken by the production Linking source — never this hook):
  *
  *   qandeel://s401-proof/public/allow        releases the held Public World entry (the pre-authority shell, then the root)
+ *
+ * S5-03B — the Product Visual Review of the Public semantic field (off until this link; every earlier leg is unchanged):
+ *
+ *   qandeel://s401-proof/public/seed         the field answers from the SYNTHETIC fixture `s503b-visual-field.ts`
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -85,6 +89,7 @@ export function S401ProofRoot() {
       if (match[1] === 'history' && match[2] === 'grant') world.grant();
       if (match[1] === 'history' && match[2] === 'delete') world.peerDelete();
       if (match[1] === 'public' && match[2] === 'allow') world.publicAllow();
+      if (match[1] === 'public' && match[2] === 'seed') world.publicSeed();
     });
     return () => {
       subscription.remove();

@@ -25,12 +25,22 @@ const I08B1 = 'docs/design/canonical-artifacts/living-analysis/i-08b1/wf-living-
 const I08B1_SHA256 = '4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413';
 const VISUAL_DIR = 'apps/mobile/src/map/visual';
 const GENERATED = ['world-visual.generated.ts', 'world-field.generated.ts'];
-const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts'];
+// LA-VIS-01 (controlled re-anchor): the declared presentation palette joins the hand-written owner, under every rule below.
+// LA-VIS-01 (final closure re-anchor): the mass material `world-mass.ts` joins it too, under every rule below.
+const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts', 'world-chroma.ts', 'world-mass.ts'];
 
 const visual = Object.fromEntries([...GENERATED, ...HAND_WRITTEN].map((file) => [file, read(`${VISUAL_DIR}/${file}`)]));
 const visualCode = Object.fromEntries(HAND_WRITTEN.map((file) => [file, stripComments(visual[file])]));
-const canvas = stripComments(read('apps/mobile/src/map/renderer/MapCanvas.tsx'));
-const surface = stripComments(read('apps/mobile/src/map/renderer/MapSurface.tsx'));
+// S5-03B Phase 1 (controlled re-anchor, after the Personal golden equivalence proof): MapCanvas remains the Personal
+// owner of the Map's paint and delegates, verbatim, to the generic world composition in WorldCanvas.tsx; MapSurface
+// delegates its presentation mechanics to useWorldSurface.ts. The world's rules are asserted on the owner TOGETHER WITH
+// the seam its code now lives in; none is weakened.
+const personalCanvasOwner = stripComments(read('apps/mobile/src/map/renderer/MapCanvas.tsx'));
+const worldCanvas = stripComments(read('apps/mobile/src/map/renderer/WorldCanvas.tsx'));
+const canvas = `${personalCanvasOwner}\n${worldCanvas}`;
+// S5-03B R1 (controlled re-anchor): the world's expression is gathered by the one Living Analysis world view
+// (`useWorldView` in WorldViewSurface.tsx, called in place by MapSurface), so it is asserted there too.
+const surface = stripComments(read('apps/mobile/src/map/renderer/MapSurface.tsx')) + '\n' + stripComments(read('apps/mobile/src/map/renderer/WorldViewSurface.tsx')) + '\n' + stripComments(read('apps/mobile/src/map/renderer/useWorldSurface.ts'));
 
 test('the closed I-08B1 source is untouched, and the generated world is current and reproducible', () => {
   const sha = createHash('sha256').update(readFileSync(new URL(I08B1, root))).digest('hex');
@@ -113,8 +123,14 @@ test('the world is derived from the presented scene, and the only relation drawn
   assert.equal((canvas.match(/<WorldObject\b/gu) ?? []).length, 1);
   assert.equal((canvas.match(/<RegisterMark\b/gu) ?? []).length, 1);
   assert.equal((canvas.match(/<WorldTether\b/gu) ?? []).length, 1);
-  assert.match(canvas, /planeNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?<WorldObject/u);
-  assert.match(canvas, /registerNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?<RegisterMark/u);
+  // S5-03B Phase 1: the generic canvas maps every presented plane node to ONE object and every register node to ONE
+  // register entry; the Personal owner says what each is: a WorldObject, a RegisterMark.
+  assert.match(worldCanvas, /planeNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?\{renderObject\(node, frame\)\}/u);
+  assert.match(worldCanvas, /registerNodes\.map\(\(node\) => \(\s*\n?[\s\S]*?\{renderRegister\?\.\(node, frame\)\}/u);
+  assert.match(personalCanvasOwner, /renderObject=\{\(node, \{ S, response \}\) => \(\s*\n\s*<WorldObject/u);
+  assert.match(personalCanvasOwner, /renderRegister=\{\(node, \{ S \}\) => \(\s*\n\s*<RegisterMark/u);
+  // The generic canvas paints no object of its own: what an object IS stays the projection's.
+  assert.equal(/<WorldObject|<RegisterMark|<WorldTether|<WorldMark\b/u.test(worldCanvas), false, 'the generic canvas names no object family');
   // The tether is drawn only for a contextual appearance, only from the Home that hosts it in THIS placement.
   const tetherBlock = canvas.slice(canvas.indexOf("node.locus?.kind === 'CONTEXTUAL_APPEARANCE'"), canvas.indexOf('<WorldTether'));
   assert.match(tetherBlock, /const host = hostOf\(node, placed\);\s*\n\s*if \(host === undefined\) return null;/u);
@@ -183,5 +199,46 @@ test('motion stays T-10\'s: the world reads the residual through the motion owne
   assert.equal((reading.match(/useDerivedValue\(/gu) ?? []).length, 2, 'the reading seam is two derivations and nothing else');
   for (const forbidden of ['withTiming', 'withSpring', 'cancelAnimation', 'useSharedValue', 'scheduleOnRN', '.set(']) {
     assert.equal(reading.includes(forbidden), false, `the reading seam must not use ${forbidden}`);
+  }
+});
+
+test('LA-VIS-01: the one declared chroma palette is exactly the six authorized families, and its field reads a world address only', () => {
+  // Product Owner authorization (2026-10-07): a PRESENTATION-ONLY palette extension, declared in one module, never an
+  // open exception. Its families are pinned here exactly; any change to them is a new decision, not a tuning.
+  const chroma = visualCode['world-chroma.ts'];
+  const families = [...chroma.matchAll(/Object\.freeze\(\{ hue: (\d+), saturation: (\d+), lightness: (\d+) \}\)/gu)].map((f) => f.slice(1).map(Number));
+  assert.deepEqual(families, [[186, 78, 50], [218, 82, 52], [268, 72, 58], [328, 74, 56], [34, 92, 52], [152, 66, 46]], 'teal, deep blue, violet, magenta, amber, emerald');
+  // The field is a function of a canonical world address and nothing else: no camera, screen, identity, store or time.
+  assert.match(chroma, /export function worldChroma\(address: CanonicalWorldAddress\): ChromaFamily/u);
+  assert.match(chroma, /export function chromaPhase\(address: CanonicalWorldAddress\): number/u);
+  for (const forbidden of ['camera', 'scale', 'envelope', 'key', 'region', 'Date', 'random', 'useState', "'../../state", "'../camera"]) {
+    assert.equal(chroma.includes(forbidden), false, `the chroma field must not read ${forbidden}`);
+  }
+  // It is worn only by the world around a place: the generic canvas reads the owner's address for that, and only that.
+  assert.match(worldCanvas, /chroma=\{chromaAt\(worldAddressOf\?\.\(node\)\)\}/u);
+  assert.equal((worldCanvas.match(/worldAddressOf/gu) ?? []).length, 3, 'declared, destructured, read once');
+  assert.match(personalCanvasOwner, /worldAddressOf=\{\(node\) => \(node\.locus\?\.kind === 'THREAD_HOME' \? node\.locus\.address : undefined\)\}/u);
+  // Nothing that decides membership, placement, hit testing or accessibility reads it.
+  for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
+    assert.equal(read(file).includes('world-chroma'), false, `${file} must not read the chroma field`);
+  }
+});
+
+test('LA-VIS-01: a place mass is pure paint — one picture per meaning-free variant and chroma, read by nothing that decides', () => {
+  // Product Owner task LA-VIS-01 (closure re-anchor): the mass material is recorded once per shape variant and colour.
+  // It imports Skia, the declared chroma type and the resolver's paint helpers, and nothing else: no camera, store,
+  // projection, scene or time.
+  const mass = visualCode['world-mass.ts'];
+  const imports = [...mass.matchAll(/^import [^;]*? from '([^']+)';/gmu)].map((m) => m[1]);
+  assert.deepEqual(imports, ['@shopify/react-native-skia', './world-chroma', './world-resolver']);
+  assert.match(mass, /export function massPicture\(seed: string, chroma: ChromaFamily\): SkPicture/u);
+  for (const forbidden of ['camera', 'envelope', 'Date', 'Math.random', 'useState', "'../../state", "'../projection", "'../camera"]) {
+    assert.equal(mass.includes(forbidden), false, `the mass material must not read ${forbidden}`);
+  }
+  // It is worn only by the world around a place, through the one owner of that paint.
+  const readers = HAND_WRITTEN.filter((file) => file !== 'world-mass.ts' && visualCode[file].includes("'./world-mass'"));
+  assert.deepEqual(readers, ['WorldMarks.tsx']);
+  for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
+    assert.equal(read(file).includes('world-mass'), false, `${file} must not read the mass material`);
   }
 });

@@ -188,9 +188,14 @@ describe('the world expresses only what the Map holds', () => {
     expect(elements(json, 'RuntimeShader')).toHaveLength(1);
     expect(elements(json, 'RuntimeShader')[0].uniforms).toEqual({ a: WORLD_VISUAL.tone.a });
     const homes = placed.visibleNodes.filter((node) => node.locus?.kind === 'THREAD_HOME');
-    const atmospheres = elements(json, 'Circle').filter((c) => c.r === world.placeAtmosphere);
+    // LA-VIS-01 (closure re-anchor of the paint structure): a place's mass is a recorded picture, and its one plain-paint
+    // body is the calm wash about the place, at the same share of the place-atmosphere radius for every Home.
+    const atmospheres = elements(json, 'Circle').filter((c) => c.blendMode === 'screen');
     expect(atmospheres).toHaveLength(homes.length);
     for (const home of homes) expect(atmospheres.some((c) => c.cx === home.x && c.cy === home.y)).toBe(true);
+    for (const atmosphere of atmospheres) expect(atmosphere.r).toBe(atmospheres[0].r);
+    expect((atmospheres[0].r as number) / world.placeAtmosphere).toBeGreaterThan(0);
+    expect((atmospheres[0].r as number) / world.placeAtmosphere).toBeLessThanOrEqual(1);
     // Three quarters of the canonical Home step, at this distance.
     expect(world.placeAtmosphere).toBeCloseTo(750_000 / 8192, 6);
   });

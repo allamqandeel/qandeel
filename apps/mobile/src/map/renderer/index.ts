@@ -27,3 +27,13 @@ export { MAP_CANVAS_TEST_ID, MapCanvas } from './MapCanvas';
 
 export type { MapSurfaceProps } from './MapSurface';
 export { MAP_SURFACE_PLANE_TEST_ID, MAP_SURFACE_TEST_ID, MapSurface } from './MapSurface';
+
+// S5-03B Phase 1 — the generic Living Analysis World seam: the canvas composition and the surface mechanics,
+// extracted from MapCanvas / MapSurface without changing what the Personal Map paints or does.
+export type { WorldCanvasNode, WorldCanvasPresentation, WorldCanvasProps, WorldNodeRegion, WorldPaintFrame } from './WorldCanvas';
+export { WorldCanvas } from './WorldCanvas';
+export type { WorldFrame, WorldFrameInput, WorldMotion, WorldSurfaceNode } from './useWorldSurface';
+export { useWorldFrame, useWorldMotion } from './useWorldSurface';
+// S5-03B R1 — the world view of the one Living Analysis surface: the mechanics (`useWorldView`) and the composed view.
+export type { WorldView, WorldViewInput, WorldViewInspection, WorldViewSemanticStep, WorldViewSurfaceProps } from './WorldViewSurface';
+export { WORLD_VIEW_STEP_TEST_ID_SUFFIX, WorldViewSurface, useWorldView } from './WorldViewSurface';

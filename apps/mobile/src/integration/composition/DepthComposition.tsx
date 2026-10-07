@@ -434,7 +434,6 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     push.offer('SHARED_FIRST_ENTRY');
   }, [area, sharedEntry, permission, push, onSignOut]);
 
-  const analysisInsets = useMemo(() => ({ ...edges, top: bandHeight }), [edges, bandHeight]);
   // S4-01 — the switcher's band is reserved at the Conversation depth whenever the world can switch, so opening and
   // closing an overlay never re-lays the Conversation out.
   const switcherBand = onSignOut === undefined ? 0 : GLOBAL_SWITCHER_HEIGHT + 1;
@@ -464,26 +463,29 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       <AnalysisAppearanceScope>
         <View style={styles.fill}>
           {/*
-            The band comes FIRST, so it is read first, and it is drawn above the world. The world treats
-            it exactly as it treats the status bar: the band's measured height is the world's top inset,
-            so T-11 keeps everything the reader must see out from under it.
+            S5-03B R1 — the band is the Living Analysis surface's top band: drawn FIRST, so it is read first, and
+            above the world, whose top inset is the band's measured height (T-11 keeps everything the reader must
+            see out from under it). The way back to the Conversation is what the Personal Analysis puts there.
           */}
-          <View style={styles.band}>
-            <AnalysisReturnBar
-              language={locale.language}
-              insets={edges}
-              onReturnToConversation={() => cross('CONVERSATION')}
-              onHeight={setBandHeight}
-              focusControl={crossed && current}
-            />
-          </View>
           <LivingAnalysisMap
             runtime={runtime}
             locale={locale}
-            insets={analysisInsets}
+            insets={edges}
             fontScale={fontScale}
             envelope={envelope}
             onComposed={current ? beginFade : undefined}
+            top={{
+              content: (
+                <AnalysisReturnBar
+                  language={locale.language}
+                  insets={edges}
+                  onReturnToConversation={() => cross('CONVERSATION')}
+                  onHeight={setBandHeight}
+                  focusControl={crossed && current}
+                />
+              ),
+              height: bandHeight,
+            }}
           />
         </View>
       </AnalysisAppearanceScope>
@@ -620,7 +622,6 @@ const CHROME_MIN_HEIGHT = 48;
 
 const styles = StyleSheet.create({
   fill: { flex: 1 },
-  band: { position: 'absolute', top: 0, left: 0, right: 0, zIndex: 1 },
   sharedArea: { position: 'absolute', top: 0, left: 0, right: 0 },
   switcher: { position: 'absolute', left: 0, right: 0, bottom: 0 },
 });

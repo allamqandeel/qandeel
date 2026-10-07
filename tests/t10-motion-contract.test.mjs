@@ -60,6 +60,15 @@ const mapProduction = listFiles(mapAbsolute)
   .sort();
 const mapCode = Object.fromEntries(mapProduction.map((file) => [file, stripComments(read(`${MAP_DIR}/${file}`))]));
 const mapText = Object.values(mapCode).join('\n');
+// S5-03B Phase 1 (controlled re-anchor, after the Personal golden equivalence proof): MapCanvas and MapSurface remain the
+// Personal owners and delegate, verbatim, to the generic Living Analysis World seam: the canvas composition in
+// renderer/WorldCanvas.tsx and the surface mechanics in renderer/useWorldSurface.ts. Every invariant below is asserted
+// on the owner TOGETHER WITH the seam its code now lives in; none is weakened.
+const personalCanvas = `${mapCode['renderer/MapCanvas.tsx']}\n${mapCode['renderer/WorldCanvas.tsx']}`;
+// S5-03B R1 (controlled re-anchor, after the Personal Map golden AND the Living Analysis screen golden): the world VIEW
+// (`useWorldView` — presentation camera, expression, drag, semantic step, frame — and `WorldViewSurface`) is the one
+// Living Analysis surface's, in renderer/WorldViewSurface.tsx. The Personal owner is asserted together with it.
+const personalSurface = `${mapCode['renderer/MapSurface.tsx']}\n${mapCode['renderer/WorldViewSurface.tsx']}\n${mapCode['renderer/useWorldSurface.ts']}`;
 
 const temporalMotion = stripComments(read('apps/mobile/src/temporal-navigation/motion/temporal-motion.ts'));
 const temporalBinding = stripComments(read('apps/mobile/src/temporal-navigation/motion/useTemporalMotion.ts'));
@@ -229,9 +238,15 @@ test('T-10 adds no canonical field, no Product act and no temporal mode', () => 
 test('Q1 — one completed drag is one PAN, from the finger, with no momentum anywhere', () => {
   const gesture = mapCode['camera/useMapPanGesture.ts'];
   // `panFromTranslation` remains the authority, reached through the one executor, once.
-  assert.match(mapCode['camera/pan.ts'], /export function panFromTranslation\(camera: MapCamera, translationX: number, translationY: number\): PanResolution \{/u);
+  // S5-03B Phase 2 — CONTROLLED RE-ANCHOR: the ONE pan reads only a camera's anchor and scale, so the Public field's
+  // world camera pans through this same function (no second pan math). The Map's drag still reaches it only as below.
+  assert.match(mapCode['camera/pan.ts'], /type PannedCamera = Pick<MapCamera, 'anchor' \| 'scale'>;/u);
+  assert.match(mapCode['camera/pan.ts'], /export function panFromTranslation\(camera: PannedCamera, translationX: number, translationY: number\): PanResolution \{/u);
   assert.equal((gesture.match(/panByTranslation\(/gu) ?? []).length, 1, 'exactly one place commits a drag');
-  assert.match(gesture, /const outcome = panByTranslation\(current\.store, translationX, translationY\);/u);
+  // S5-03B R1 — CONTROLLED RE-ANCHOR: the drag mechanic is the world view's ONE `useWorldPanGesture`; the Personal
+  // `useMapPanGesture` binds it to this store's `PAN`, and the crossing reaches exactly that act.
+  assert.match(gesture, /const commit = useCallback\(\(translationX: number, translationY: number\) => panByTranslation\(store, translationX, translationY\), \[store\]\);/u);
+  assert.match(gesture, /const outcome = current\.commit\(translationX, translationY\);/u);
   // ...and it is reached ONLY from a successful gesture end, with the finger's own translation AND
   // the authority generation the drag began under (R1-01 re-anchor).
   assert.match(gesture, /if \(success\) handoffToProduct\(settle, event\.translationX, event\.translationY, authority\.captured\.get\(\)\);/u);
@@ -290,14 +305,14 @@ test('§6.1 — nothing in production can keep an object the current V no longer
   // contained it — culling wearing the clothes of semantic absence. The decision moved to the
   // surface, which makes it against the PRESENTED viewport; the renderer now has no culling
   // vocabulary at all, which is the strongest form of "it cannot confuse the two".
-  const canvas = mapCode['renderer/MapCanvas.tsx'];
+  const canvas = personalCanvas;
   assert.equal(canvas.includes('visibleNodes'), false, 'the renderer holds no culling decision of its own');
   assert.equal(canvas.includes('withinViewport'), false, 'the renderer holds no culling decision of its own');
   assert.match(canvas, /const planeNodes = presented\.filter\(\(node\) => node\.region === 'WORLD_PLANE'\);/u);
   assert.match(canvas, /const registerNodes = presented\.filter\(\(node\) => node\.region === 'UNGEOGRAPHIC_REGISTER'\);/u);
   // And the surface derives it from the FULL placement through the presentation-aware test, so an
   // object leaves the paint set only when the motion can no longer put it on the glass.
-  const surface = mapCode['renderer/MapSurface.tsx'];
+  const surface = personalSurface;
   assert.match(surface, /placed\.nodes\.filter\(\(node\) =>\s*\n?\s*isPresentedWithinEnvelope\(/u);
   assert.match(motionCode['presentation-camera/culling.ts'], /export function isPresentedWithinEnvelope\(/u);
   // R3-02c re-anchor: the endpoint box is gone. An endpoint box is not a bound for a screen position
@@ -307,13 +322,13 @@ test('§6.1 — nothing in production can keep an object the current V no longer
   assert.match(motionCode['presentation-camera/culling.ts'], /function intervalProduct\(aMin: number, aMax: number, bMin: number, bMax: number\)/u);
   assert.match(motionCode['presentation-camera/culling.ts'], /const corners = \[aMin \* bMin, aMin \* bMax, aMax \* bMin, aMax \* bMax\];/u);
   // The one shared freshness rule is unweakened.
-  assert.match(mapCode['renderer/MapSurface.tsx'], /const usable = camera !== null && freshness\.fresh;/u);
-  assert.match(mapCode['renderer/MapSurface.tsx'], /usable && camera !== null \? placeScene\(/u);
-  assert.match(mapCode['renderer/MapSurface.tsx'], /useSyncExternalStore\(store\.subscribe, store\.getState\)/u);
+  assert.match(personalSurface, /const usable = camera !== null && freshness\.fresh;/u);
+  assert.match(personalSurface, /usable && camera !== null \? placeScene\(/u);
+  assert.match(personalSurface, /useSyncExternalStore\(store\.subscribe, store\.getState\)/u);
 });
 
 test('§13 — the rebase is issued from inside the Skia root, after the positions it assumes', () => {
-  const canvas = mapCode['renderer/MapCanvas.tsx'];
+  const canvas = personalCanvas;
   // The component exists, renders nothing, and is the ONLY caller of the rebase.
   assert.match(canvas, /function PresentationCameraRebase\(/u);
   assert.equal((canvas.match(/motion\.applyCanonicalChange\(/gu) ?? []).length, 1, 'exactly one place rebases');
@@ -359,15 +374,20 @@ test('R1-01 — an in-flight drag cannot be re-routed into a replacement store',
   assert.ok(settle.length > 0, 'the completion path exists');
   // The refusal comes BEFORE the only dispatch in the file, so no ordering can put an act first.
   assert.ok(
-    settle.indexOf('authority.current()') < settle.indexOf('panByTranslation('),
+    // S5-03B R1: the only dispatch is the bound act, reached as `current.commit(`.
+    settle.indexOf('authority.current()') >= 0 && settle.indexOf('authority.current()') < settle.indexOf('current.commit('),
     'staleness is decided before anything is dispatched',
   );
   assert.match(settle, /camera\.reset\(\);\s*\n\s*return;/u, 'a stale drag drops its residual and returns');
   // And the presentation makes the same distinction: a replaced authority has no continuity to
   // preserve, so the camera is reset rather than rebased across two unrelated worlds.
-  assert.match(mapCode['renderer/MapSurface.tsx'], /const authorityReplaced = history !== null && history\.owner !== store;/u);
+  // S5-03B Phase 1: the generic surface compares the authority it was handed, and the Personal owner hands it the STORE.
+  assert.match(personalSurface, /const authorityReplaced = history !== null && history\.owner !== owner;/u);
+  // S5-03B R1: the world view hands `useWorldFrame` the owner it was given, and the Personal owner gives it the STORE.
+  assert.match(mapCode['renderer/WorldViewSurface.tsx'], /useWorldFrame<C, N>\(worldMotion, \{ owner, camera, envelope, placed, membership, cause \}\)/u);
+  assert.match(mapCode['renderer/MapSurface.tsx'], /useWorldView<MapCamera, PlacedNode, MapActionOutcome>\(\{\s*owner: store,/u);
   assert.match(
-    mapCode['renderer/MapCanvas.tsx'],
+    personalCanvas,
     /if \(reset\) motion\.reset\(\);\s*\n(?:\s*\/\/[^\n]*\n)*\s*else if \(transition !== null\) motion\.applyCanonicalChange\(transition, cause\(\)\);/u,
   );
   assert.match(motionCode['runtime/authority.ts'], /export function useAuthorityGeneration\(owner: unknown\): AuthorityGeneration \{/u);
@@ -387,11 +407,13 @@ test('R1-03 — semantic arrival can never be derived from culling or from a mou
     arrival,
     /export function newlyDisclosedKeys\(previous: ReadonlySet<string> \| null, currentKeys: readonly string\[\]\): ReadonlySet<string>/u,
   );
-  const surface = mapCode['renderer/MapSurface.tsx'];
+  const surface = personalSurface;
   // R3-01 re-anchor. Membership comes from the SCENE, never from a placement: a placement omits a
   // locus the current camera cannot finitely project, so a placement-derived record would call that
   // locus new the moment the camera made it representable again.
-  assert.match(surface, /newlyDisclosedKeys\(authorityReplaced \? null : disclosureHistory\.get\(\), \[\.\.\.accepted\]\)/u);
+  // S5-03B Phase 1: the generic surface diffs the membership it was handed; the Personal owner hands it `accepted`.
+  assert.match(surface, /newlyDisclosedKeys\(authorityReplaced \? null : disclosureHistory\.get\(\), \[\.\.\.membership\]\)/u);
+  assert.match(mapCode['renderer/MapSurface.tsx'], /membership: accepted,/u);
   assert.match(surface, /const accepted = useMemo\(\(\) => \(usable \? sceneMembershipKeys\(context\.scene\) : null\)/u);
   for (const forbidden of ['placed.nodes.map((node) => node.key)', 'placed.visibleNodes.map((node) => node.key)']) {
     assert.equal(surface.includes(forbidden), false, `disclosure must not be derived from a placement: ${forbidden}`);
@@ -408,15 +430,23 @@ test('R1-03 — semantic arrival can never be derived from culling or from a mou
   assert.match(surface, /newlyDisclosedKeys\(authorityReplaced \? null :/u);
   // And a TECHNICAL stale gap preserves it. Only an accepted scene writes, only a replaced authority
   // erases — without which every real canonical handoff compared the new world against nothing.
-  assert.match(surface, /if \(accepted !== null\) disclosureHistory\.set\(accepted\);\s*\n\s*else if \(authorityReplaced\) disclosureHistory\.set\(null\);/u);
+  // S5-03B Phase 1: the record is kept by the generic surface over the membership the Personal owner hands it.
+  assert.match(surface, /if \(membership !== null\) disclosureHistory\.set\(membership\);\s*\n\s*else if \(authorityReplaced\) disclosureHistory\.set\(null\);/u);
   assert.equal(surface.includes('disclosureHistory.set(placed === null ? null'), false, 'a projection gap must not erase the record');
   // And the renderer asks the set, never the tree it happens to be rendering.
-  assert.match(mapCode['renderer/MapCanvas.tsx'], /newlyDisclosed: newlyDisclosed\.has\(node\.key\),/u);
+  assert.match(personalCanvas, /newlyDisclosed: newlyDisclosed\.has\(node\.key\),/u);
 });
 
 test('R1-04 — pointer parity covers the object-local motion, not only the plane residual', () => {
-  const surface = mapCode['renderer/MapSurface.tsx'];
-  const tap = surface.slice(surface.indexOf('const onTap = useCallback('), surface.indexOf('if (camera === null || placed === null)'));
+  const surface = personalSurface;
+  // S5-03B Phase 1: the Personal tap asks the generic surface which drawn node is under the finger (nodeAt), and only
+  // then decides the act. Both transforms live in that one place.
+  const owner = mapCode['renderer/MapSurface.tsx'];
+  // S5-03B R1: the composed view routes the tap to the owner, which still decides it.
+  assert.match(owner.slice(owner.indexOf('const onTap = useCallback('), owner.indexOf('<WorldViewSurface')), /const node = nodeAt\(x, y\);/u);
+  assert.equal(surface.length > 0, true);
+  const seam = mapCode['renderer/useWorldSurface.ts'];
+  const tap = seam.slice(seam.indexOf('const nodeAt = useCallback('), seam.indexOf('return { cameraCommit, presented, newlyDisclosed, nodeAt };'));
   assert.ok(tap.length > 0, 'the pointer route exists');
   // BOTH transforms, in the one place a touch becomes an act.
   assert.match(tap, /motion\.canonicalPointAt\(\{ x, y \}\)/u, 'the plane residual is undone');
@@ -470,11 +500,11 @@ test('R1-05, R3-04 — the composite beat is armed by a binding, and a mailbox r
   assert.equal(camera.includes('readonly cause'), false, 'the binding is not a property of the hook');
   assert.doesNotMatch(camera, /useSharedValue<[^>]*Cause|causeRef|lastCause|storedCause/u, 'no cause is retained between calls');
   // The surface carries the QUESTION, never an answer it kept. It resolves at apply time only.
-  const surface = mapCode['renderer/MapSurface.tsx'];
+  const surface = personalSurface;
   assert.match(surface, /readonly spatialCause\?: \(destination: CameraIntent\) => PresentationMotionCause \| null;/u,
     'the surface takes a resolver keyed to the destination, not a value');
   assert.doesNotMatch(surface, /useState<[^>]*Cause|useRef<[^>]*Cause/u, 'the surface stores no cause');
-  assert.match(mapCode['renderer/MapCanvas.tsx'], /readonly cause: \(\) => PresentationMotionCause \| null;/u,
+  assert.match(personalCanvas, /readonly cause: \(\) => PresentationMotionCause \| null;/u,
     'the renderer receives the question and hands the answer straight on');
   // The deferral is discharged in writing, in the production document, where the reader of this
   // task's decisions looks — and the integration document records how.
@@ -502,7 +532,7 @@ test('R3-01 — a projection gap preserves the record; only a replaced authority
 });
 
 test('R3-02 — the travel corridor starts where the camera starts, and retires when the plane stops', () => {
-  const surface = mapCode['renderer/MapSurface.tsx'];
+  const surface = personalSurface;
   const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
   // R3-02b — one presentation state, two readers. The corridor is REBASED exactly as the residual
   // is, so whatever the plane is showing is inside it without anyone reading a shared value during
@@ -532,7 +562,7 @@ test('R3-02 — the travel corridor starts where the camera starts, and retires 
 });
 
 test('R4-01 — a DRAG opens a corridor too, and the rule that decides when is not inside the reaction', () => {
-  const surface = mapCode['renderer/MapSurface.tsx'];
+  const surface = personalSurface;
   const camera = motionCode['presentation-camera/usePresentationCamera.ts'];
   const culling = motionCode['presentation-camera/culling.ts'];
 
@@ -602,7 +632,7 @@ test('R3-03 — an unrepresentable transition is a cut, and its cut is never unc
 });
 
 test('R1-06 — camera opacity reaches the world plane and nothing else', () => {
-  const canvas = mapCode['renderer/MapCanvas.tsx'];
+  const canvas = personalCanvas;
   // The plane's opacity group opens, contains the plane, and CLOSES before the register is painted.
   const opacityGroup = canvas.indexOf('<Group opacity={motion.planeOpacity}>');
   assert.ok(opacityGroup >= 0, 'the plane carries the camera opacity');
@@ -845,7 +875,7 @@ test('the world is a world, not reading-order content: no motion knows a directi
 });
 
 test('the static visual language was not redesigned by T-10', () => {
-  const canvas = mapCode['renderer/MapCanvas.tsx'];
+  const canvas = personalCanvas;
   // VPORT-01 re-anchor, as this test always said would happen ("a later visual task re-anchors this
   // test; T-10 does not"). The neutral placeholder palette is GONE, replaced by the final world, and it
   // was replaced by the visual owner — not by the motion owner, which still paints no colour (below).

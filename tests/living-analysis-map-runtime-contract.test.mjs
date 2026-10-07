@@ -46,9 +46,16 @@ const PRODUCTION_FILES = [
   'projection/map-scene.ts',
   'renderer/MapCanvas.tsx',
   'renderer/MapSurface.tsx',
+  // S5-03B Phase 1: the generic Living Analysis World seam, extracted verbatim from MapCanvas / MapSurface (the
+  // Personal golden equivalence suite proves the Personal Map paints and behaves exactly as before).
+  'renderer/WorldCanvas.tsx',
+  // S5-03B R1: the world VIEW of the one Living Analysis surface (`useWorldView` + `WorldViewSurface`), extracted from
+  // MapSurface in the order it always ran (the Map golden and the Living Analysis screen golden prove no change).
+  'renderer/WorldViewSurface.tsx',
   'renderer/index.ts',
   'renderer/map-geometry.ts',
   'renderer/render-style.ts',
+  'renderer/useWorldSurface.ts',
   // VPORT-01: the final world's EXPRESSION — material, morphology, distance response and the two
   // generated modules it reads. Paint only: none of these files is an input to scene membership,
   // placement, hit testing, accessibility or any act (asserted by the VPORT-01 contract).
@@ -56,7 +63,13 @@ const PRODUCTION_FILES = [
   'visual/WorldStrata.tsx',
   'visual/index.ts',
   'visual/useWorldResponse.ts',
+  // LA-VIS-01 (Product Owner authorization, 2026-10-07): the one declared PRESENTATION palette and its world-space field.
+  // Paint only, pinned by VPORT-01 and VPORT-02; it reads a world address and nothing else.
+  'visual/world-chroma.ts',
   'visual/world-field.generated.ts',
+  // LA-VIS-01 (Product Owner task, 2026-10-07): the material of a place's mass, recorded once per shape variant and colour.
+  // Paint only, pinned by VPORT-01 and VPORT-02; it reads a meaning-free variant and a chroma family, nothing else.
+  'visual/world-mass.ts',
   'visual/world-presentation.ts',
   'visual/world-resolver.ts',
   'visual/world-visual.generated.ts',

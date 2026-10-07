@@ -34,4 +34,13 @@ export {
 } from './world-presentation';
 export { useWorldResponse, type WorldResponse } from './useWorldResponse';
 export { WorldAtmosphere, WorldGround, WorldTone, WorldVeil, type WorldStrataDrift } from './WorldStrata';
-export { RegisterMark, WorldObject, WorldPlaceAtmosphere, WorldTether, markerRadius } from './WorldMarks';
+export {
+  RegisterMark,
+  WorldMark,
+  WorldObject,
+  WorldPlaceAtmosphere,
+  WorldTether,
+  markerRadius,
+  type WorldMarkProps,
+  type WorldMarkShape,
+} from './WorldMarks';

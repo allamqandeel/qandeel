@@ -48,6 +48,7 @@ export type {
   RecompositionOptions,
   RecompositionPlan,
   SupportArrangement,
+  SupportCapability,
   SupportComposition,
 } from './plan';
 export {
@@ -68,6 +69,7 @@ export {
   recompositionPlan,
   SHORT_BAND_GAP_POINTS,
   SHORT_HEIGHT_POINTS,
+  SUPPORT_CAPABILITIES,
   TIMELINE_ROW_POINTS,
 } from './plan';
 

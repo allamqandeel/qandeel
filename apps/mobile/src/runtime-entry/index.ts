@@ -168,6 +168,9 @@ export type {
   PublicSemanticAcceptOutcome, PublicSemanticCorrectionInput, PublicSemanticCorrectionOutcome, PublicSemanticProposalOutcome, PublicSemanticReview,
 } from './public-semantic-api';
 export { PublicAuthoringApiClient } from './public-authoring-api';
+export type {
+  PublicFieldEntry, PublicFieldExperience, PublicFieldPanel, PublicFieldRectangle, PublicSpatialPreparation, PublicSpatialPrepareOutcome,
+} from './public-field-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
 export { PushApiClient } from './push-api';
 

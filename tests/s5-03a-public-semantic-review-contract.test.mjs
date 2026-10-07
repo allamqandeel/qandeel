@@ -204,12 +204,14 @@ test('10 — governance: the record, the backlog and the locators tell the same 
   // which carries only the source trees.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
-    assert.match(state, /\| S5-03A — Public Semantic Interpretation \+ Publisher Review \(migration `0144`\) \| \*\*IMPLEMENTED — DRAFT PR #316 — NOT MERGED/u);
+    // Re-anchored by S5-03B (B): S5-03A merged through PR #316; its record keeps its own pre-merge banner.
+    assert.match(state, /\| S5-03A — Public Semantic Interpretation \+ Publisher Review \(migration `0144`\) \| \*\*`MERGED \/ CLOSED` through PR #316 at `c9338af9ecbfcecccc281f96f52fab335ad9bc7b`\*\*/u);
     assert.match(state, /\*\*8A QANDEEL AI Brain \/ Production LLM Runtime\*\* \(before\s+Voice\)/u);
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
     const map = read('QANDEEL_PROJECT_MAP.md');
-    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03A — Public Semantic Interpretation \+ Publisher Review/u);
+    // Re-anchored by S5-03B (B): the current task moved on; S5-03A is merged.
+    assert.match(map, /`S5-03A — Public Semantic Interpretation \+ Publisher Review` = \*\*`MERGED \/ CLOSED` through PR #316 at `c9338af9ecbfcecccc281f96f52fab335ad9bc7b`\*\*/u);
     assert.ok(map.indexOf('| **8A — QANDEEL AI Brain / Production LLM Runtime** |') < map.indexOf('| **8B — Voice Runtime** |'), '8A before Voice');
     assert.ok(map.indexOf('| **7 — Replay Product Integration** |') < map.indexOf('| **8A — QANDEEL AI Brain / Production LLM Runtime** |'), 'the order is unchanged');
   }

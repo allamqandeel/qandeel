@@ -4137,3 +4137,49 @@ binding (readiness for the exact revision, a raw frozen revision UNREVIEWED, a s
 nothing else moved); erasure mid-flight (review dark, readiness PACKAGE_UNAVAILABLE, no input / outcome / commit / accept), every content byte
 erased at the deletion instant with audit identity kept, an unerased package untouched, no way back; a concurrent
 correction race and a semantic-write-versus-deletion race on two connections; and launch closure.
+
+## S5-03B - Public semantic field, stable spatial placement and viewer runtime (migration 0145)
+
+`0145_public_semantic_field_location_viewer_v1.sql` adds, additively and replacing no frozen function, the two
+things Public World still lacked before it could be a World: a STABLE SPATIAL PLACEMENT and the Public viewer read
+boundary over the semantic field. The private schema `public_spatial_private` holds two append-only relations (no
+direct account or Public Identity reference; their Experience Version and S5-03A interpretation bindings are `ON DELETE
+RESTRICT` and part of `QAN-BL-ACCT-01`): `spatial_requests` (the exact controller's request to prepare the place of ONE
+exact version under ONE exact reviewed S5-03A revision - identities and an instant only) and `spatial_placements`
+(the Public field's own canonical integer coordinates - scheme `QANDEEL_PUBLIC_FIELD_V1`, the Map's exact-integer bound,
+never the Personal Home scheme - the spatial contract and the layout version of exactly that version and revision,
+`UNIQUE (experience_version_id, interpretation_id)`, committed once and never moved). Neither copies meaning, themes, the
+lens key, a label or package text: those are joined from the reviewed S5-03A row at read time. Coordinates are geometry -
+reasoning state, not content-bearing material - so no erasure path is needed: when ASSURE-F05 erases a package item,
+S5-03A erases the interpretation's content and every derivation here fails closed at that instant.
+
+`authenticated` executes two owner commands (the preparation state - NOT_SEMANTICALLY_READY | NOT_PLACED | PLACED, never
+where - and the request, admitted only while `derive_public_semantic_readiness_v1` answers SEMANTICALLY_READY) and five
+viewer reads (the field inside a bounded world rectangle, at most 400; search over the same field, at most 20; the panel
+of one served Experience; its public content through the ONE `0095` serving resolver; at most 3 nearby by exact spatial
+distance). `service_role` executes the placer's meaning-only input reader (the reviewed meaning, themes, semantic region
+and revision identity - no package text, identity, alias or vitality) and the commit; a later answer for a placed revision,
+from any model, reads ALREADY_PLACED and moves nothing. Every viewer read derives the viewer from `auth.uid()`, admits them
+through the frozen audience gate as REGISTERED, and re-derives per Experience: PUBLICLY_VISIBLE (`0098`), the visible
+version, a whole package, its CURRENT `0096` revision IDENTITY (never its descriptor), that revision's unerased reviewed
+S5-03A content bound to the package fingerprint, and the placement of exactly that version and revision. The frozen I-05
+readers that serve the `0096` descriptor (`0097` search / lens / panel, the `0096` placement resolver) are left untouched
+and unused: their descriptor is S5-03A's content-free constant. Spatial readiness (`derive_public_spatial_readiness_v1`,
+internal) is derived for the future Stage-9 publication path. Nothing here publishes: the CW2-08 seam still answers
+`NOT_EVALUATED`.
+
+```sh
+npm run verify:public-semantic-field-placement-viewer:integration
+```
+
+`verify-migration-0145.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the boundary census
+(posture, exact executable sets, input census, no text column beyond three names, the Public field coordinate space, the RESTRICT edges pinned, the commit as
+the ONE coordinate writer in the whole database, no 0096 descriptor read); stable placement (no readiness no place,
+controller only, the meaning-only placer input, no client coordinate, malformed answers refused, exact version + revision
+binding, idempotent retry, a model upgrade moving nothing, append-only for every role, a correction leaving the old place
+stale and unserved, a superseded request STALE); the viewer (READY_FOR_REVIEW invisible even placed, only PUBLICLY_VISIBLE +
+admitted, the reviewed meaning and region served and the 0096 constants never, search inside the same visible field, the
+panel / content / nearby bounded, one neutral absence for a guessed / stale / hidden id or an unadmitted viewer, an alias
+change and a vitality recompute moving nothing); disappearance (a withdrawn approval, an ASSURE-F05 erasure and a successor
+version each make the Experience absent everywhere at once, the erasure also failing spatial readiness closed); and launch
+closure. Publication exists only through the simulated CW2-08 seam inside the verifier's rolled-back transaction.

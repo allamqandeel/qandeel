@@ -5,6 +5,12 @@
  * must treat it exactly as it treats the status bar: its measured height is the world's top inset,
  * so T-11 keeps every part of the world a reader must see out from under it. This proves the value
  * the composition actually hands the (unchanged) Map composition.
+ *
+ * S5-03B R1 (controlled re-anchor): the band is now the ONE Living Analysis surface's top band. The depth hands the
+ * Map composition the band itself and its measured height, and the surface composes the world with the device's
+ * edges and the band's height as the top inset (`{ ...insets, top: top.height }`, proven against the real surface in
+ * `living-analysis/__tests__/living-analysis-surface.test.tsx`). The stand-in below mounts the band where the surface
+ * does and records exactly that inset, so the claim is unchanged: the band's measured height reaches the world.
  */
 import { act, fireEvent, render } from '@testing-library/react-native';
 
@@ -15,9 +21,10 @@ import { exchange, historyBody } from '../../conversation/__fixtures__/conversat
 
 const mockReceived: { insets: Record<string, number> }[] = [];
 jest.mock('../composition/LivingAnalysisMap', () => ({
-  LivingAnalysisMap: (props: { insets: Record<string, number> }) => {
-    mockReceived.push({ insets: props.insets });
-    return null;
+  LivingAnalysisMap: (props: { insets: Record<string, number>; top?: { content: unknown; height: number } | null }) => {
+    const top = props.top ?? null;
+    mockReceived.push({ insets: top === null ? props.insets : { ...props.insets, top: top.height } });
+    return top === null ? null : top.content;
   },
 }));
 

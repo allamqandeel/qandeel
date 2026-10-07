@@ -26,6 +26,7 @@ import {
   SESSION_B,
   type AuthPortDouble,
   type HttpDouble,
+  type Responder,
 } from '../../runtime-entry/__fixtures__/runtime-entry';
 import { createManualForegroundSignal, type ForegroundState, type ManualForegroundSignal } from '../../runtime-entry';
 import { createEphemeralProductRecoveryStorage, type ProductRecoveryStorage } from '../../recovery';
@@ -89,6 +90,8 @@ export interface HarnessOptions {
   readonly pushDeviceStore?: PushDeviceStore;
   /** S4-04: where QANDEEL links arrive from; none unless a test brings its own. */
   readonly sharedLinks?: SharedLinkSource;
+  /** S5-03B R1: the projection route, registered before the bootstrap fetches anything; the happy path otherwise. */
+  readonly projection?: Responder;
 }
 
 /**
@@ -106,6 +109,7 @@ export async function harness(options: HarnessOptions = {}): Promise<Integration
       snapshot: snapshot({ sessionId, liveHead: options.liveHead === undefined ? 1 : options.liveHead }),
     });
   }
+  if (options.projection !== undefined) http.on('/historical-projection', options.projection);
   const auth = authPortDouble(options.initialSession === undefined ? { userId: 'user-1', accessToken: 'token-1' } : options.initialSession);
   const foreground = createManualForegroundSignal(options.foreground ?? 'INACTIVE');
   const recoveryStorage = options.recoveryStorage ?? createEphemeralProductRecoveryStorage();

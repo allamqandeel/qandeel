@@ -34,6 +34,14 @@
  * performed there. It is now DROPPED — no `PAN` in the store the drag began under, none in the
  * replacement, and no outcome claiming an act happened. The presentation is reconciled under the
  * new owner instead.
+ *
+ * ## S5-03B R1 — one drag mechanic, whatever world it moves
+ *
+ * The mechanic above belongs to the Living Analysis surface and not to the Personal store: the residual, the one
+ * crossing, the authority stamp, the silent release and the drop of a stale drag are the same for any world drawn
+ * in it. `useWorldPanGesture` is that mechanic, given the ONE act a completed drag becomes (`commit`). The Personal
+ * Map binds it to its store through `useMapPanGesture`, unchanged in name, signature and behaviour; another world
+ * binds it to its own act and never gets a drag mechanic of its own.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from 'react';
 import { Gesture } from 'react-native-gesture-handler';
@@ -42,6 +50,11 @@ import { createBox, handoffToProduct, type AuthorityGeneration, type Presentatio
 import type { CanonicalStore } from '../../state';
 import type { MapActionOutcome } from '../outcome';
 import { panByTranslation } from './map-camera-actions';
+
+/** Any act a completed drag becomes: what matters to the mechanic is only whether it changed the camera. */
+export interface WorldGestureOutcome {
+  readonly outcome: string;
+}
 
 export interface MapPanGestureBinding {
   /** Compose into a `GestureDetector`. */
@@ -63,22 +76,44 @@ export interface MapPanGestureOptions {
   readonly onSettled?: (outcome: MapActionOutcome) => void;
 }
 
+export interface WorldPanGestureOptions<O extends WorldGestureOutcome> {
+  readonly enabled?: boolean;
+  /** The presentation residual the drag writes. Class D: never canonical, discarded on cancel. */
+  readonly camera: PresentationCameraBinding;
+  /** Which authority this surface is bound to (see `MapPanGestureOptions.authority`). */
+  readonly authority: AuthorityGeneration;
+  /**
+   * The ONE act a completed drag becomes, with the finger's own total translation, on the Product runtime. Read when
+   * the crossing ARRIVES, never when the gesture was built. `APPLIED` is the only outcome that moved the camera.
+   */
+  readonly commit: (translationX: number, translationY: number) => O;
+  /** Observes the single outcome of a completed drag; purely informational. */
+  readonly onSettled?: (outcome: O) => void;
+}
+
+/** The Personal Map's drag: the world's one drag mechanic, bound to the canonical `PAN` of this store. */
 export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOptions): MapPanGestureBinding {
-  const { enabled = true, camera, authority, onSettled } = options;
+  const commit = useCallback((translationX: number, translationY: number) => panByTranslation(store, translationX, translationY), [store]);
+  return useWorldPanGesture<MapActionOutcome>({ ...options, commit });
+}
+
+export function useWorldPanGesture<O extends WorldGestureOutcome>(options: WorldPanGestureOptions<O>): MapPanGestureBinding {
+  const { enabled = true, camera, authority, commit, onSettled } = options;
 
   // What the crossing must reach when it ARRIVES, not what was current when the gesture was built.
   //
   // A changing observer would otherwise rebuild the gesture on every render, re-attaching the
   // recognizer and risking a completion arriving twice; reading at call time is why the gesture
   // below depends on nothing that changes per render. The STORE is read here too, but only to
-  // dispatch a drag that is still its own — the generation check above decides that first.
+  // dispatch a drag that is still its own — the generation check above decides that first. (S5-03B R1: what is
+  // read is the act bound to that store, `commit`, which closes over exactly the store it was built with.)
   //
   // A box rather than a ref, because these functions are handed to gesture callbacks and the React
   // Compiler's rules — correctly — refuse a ref that crosses that boundary.
-  const [latest] = useState(() => createBox({ store, onSettled, mounted: true }));
+  const [latest] = useState(() => createBox({ commit, onSettled, mounted: true }));
   useLayoutEffect(() => {
-    latest.set({ store, onSettled, mounted: true });
-  }, [latest, onSettled, store]);
+    latest.set({ commit, onSettled, mounted: true });
+  }, [commit, latest, onSettled]);
   // An unmount between the gesture ending on the UI runtime and the crossing arriving on the
   // Product runtime must dispatch nothing: a surface that is gone has no reader to have panned.
   useEffect(
@@ -100,7 +135,7 @@ export function useMapPanGesture(store: CanonicalStore, options: MapPanGestureOp
         camera.reset();
         return;
       }
-      const outcome = panByTranslation(current.store, translationX, translationY);
+      const outcome = current.commit(translationX, translationY);
       // An act that changed no canonical camera leaves the plane displaced from the truth it is
       // supposed to be showing, so the presentation comes home. An APPLIED act needs nothing here:
       // the rebase that observes the new canonical camera resolves the residual by itself.

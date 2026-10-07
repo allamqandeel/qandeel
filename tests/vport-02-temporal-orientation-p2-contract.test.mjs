@@ -129,15 +129,43 @@ test('the Call Rail is the frozen Keyed Seam, truth-safe, and mounted on no Prod
 });
 
 test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped', () => {
+  // S5-03B Phase 1 — CONTROLLED RE-ANCHOR (Product Owner decision D4, after the Personal golden equivalence proof in
+  // apps/mobile/src/map/__tests__/golden-equivalence.test.tsx, recorded before the extraction): MapCanvas, MapSurface,
+  // WorldMarks and the visual barrel now delegate to the generic Living Analysis World seam, and the two seam files
+  // (WorldCanvas, useWorldSurface) are pinned beside them so the moved code stays frozen too. Previous pins:
+  // MapCanvas 2738a72f, MapSurface 8f90bd39, WorldMarks fd4c9110, visual/index d65150b2.
+  // S5-03B Phase 2 — CONTROLLED RE-ANCHOR (Public adoption, Personal golden still 16/16 with the golden file unchanged):
+  // useWorldSurface gains the additive Class-D `atRest` fact (useWorldMotion), and worldPresentation reads its camera
+  // as `Pick<MapCamera, 'anchor' | 'scale'>` so the Public world camera reads the same expression. Previous pins:
+  // useWorldSurface 40d18141, world-presentation ca529b14.
+  // S5-03B R1 — CONTROLLED RE-ANCHOR (Task Contract amendment 2026-10-07; after the Personal Map golden, 16 / 16, AND the
+  // Living Analysis screen golden recorded before the extraction): MapSurface calls the one Living Analysis world view
+  // (`useWorldView` / `WorldViewSurface`) in place, and that seam is pinned beside it. Previous pin: MapSurface 19440a92.
+  // S5-03B R2 — CONTROLLED RE-ANCHOR (Public adoption, after both goldens unchanged): the world view gains the accessible
+  // semantic step a world without its own accessible layer asks for (`semanticStep`, additive; the Personal Map passes
+  // nothing, so its tree is unchanged). Previous pin: WorldViewSurface 50786b8e.
+  // LA-VIS-01 — CONTROLLED RE-ANCHOR (Product Owner task LA-VIS-01, 2026-10-07: graphics-only fidelity upgrade of the shared
+  // world material, and the PO-authorized presentation palette `world-chroma.ts`, pinned here and in VPORT-01). Both goldens
+  // were re-recorded after a structural diff proved every case differs in Skia paint only (host tree and mark anchors
+  // identical). Previous pins: MapCanvas 974f515d, WorldCanvas b3036bfc, WorldMarks d50652c2, WorldStrata bce9df4a.
+  // LA-VIS-01 — CLOSURE RE-ANCHOR (PO: visual direction accepted, 2026-10-07): the correction and final-tuning passes add
+  // the mass material `world-mass.ts` (pinned here and declared in VPORT-01 and the Map census) and skip a mass size whose
+  // weight is zero. Both goldens were re-recorded after the structural diff again proved paint-only change (host tree and
+  // every mark anchor identical). Previous pins: WorldMarks 0d694dc3, WorldStrata 03dd3f65.
   for (const [path, blob] of [
-    ['apps/mobile/src/map/renderer/MapCanvas.tsx', '2738a72fe275773e0fca7132cd8b0a2d7809a958'],
-    ['apps/mobile/src/map/renderer/MapSurface.tsx', '8f90bd39915db89af3e0c1c7bd97e26ee9c38d0d'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', 'fd4c91104ef3e589120ef3087c0a6de4a76cf5c3'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', 'bce9df4ab738bc090bb9247dbd5b5a445ca70ad9'],
-    ['apps/mobile/src/map/visual/index.ts', 'd65150b253b7caef81c2314795847d50f251fdc8'],
+    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'a82f761fa4eaede3db08c55f25ceb7da7cff595e'],
+    ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
+    ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '28dcc706633a8c59eb61b95cc8e3d43322ba31c9'],
+    ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', '8b81a4e4c6fb002e3e9c5088a316d5844723638b'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', '366f7d15dec55fa90fec9d525a4794303d2d303f'],
+    ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
+    ['apps/mobile/src/map/visual/world-mass.ts', '0bfb6e921b53d4e94155877a45600b6697e7e4c8'],
+    ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],
     ['apps/mobile/src/map/visual/useWorldResponse.ts', '2640e891cfeff3645d9f155f9e888b41d58f3748'],
     ['apps/mobile/src/map/visual/world-field.generated.ts', '1eab16b0c6ec722eacf96c7179c0034bdd10c7af'],
-    ['apps/mobile/src/map/visual/world-presentation.ts', 'ca529b14eda1002ac10753ec7196b703d02ad126'],
+    ['apps/mobile/src/map/visual/world-presentation.ts', 'f0c3ec437b5e8ef582ade76ba65417ec82265bc0'],
     ['apps/mobile/src/map/visual/world-resolver.ts', 'ffe05a27613634cec00a3c5c5519afb0777c35bc'],
     ['apps/mobile/src/map/visual/world-visual.generated.ts', '172863d5b90e43ec0a6f299551296f410cf95f6a'],
   ]) {
@@ -178,11 +206,16 @@ test('QAN-BL-A11Y-01: the T-10 camera and temporal motion read the ONE live Redu
 });
 
 test('the frozen G3 composition and the dark Analysis ground are wired on the production route', () => {
-  assert.match(composition, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis paints its own dark ground');
-  assert.match(composition, /line=\{<TemporalOrientationLine store=\{store\} language=\{locale\.language\} preview=\{preview\} \/>\}/u);
+  // S5-03B R1 — CONTROLLED RE-ANCHOR (after the Living Analysis screen golden, recorded before the extraction): the
+  // screen — the dark ground, the Timeline row that says the line, the chrome band that yields its room — is the one
+  // Living Analysis surface's; the Personal Analysis hands it the line, the Timeline and the chrome. Both are asserted.
+  const screen = code(`${MOBILE}/living-analysis/LivingAnalysisSurface.tsx`);
+  assert.match(screen, /style=\{\{ backgroundColor: ink\.world \}\}/u, 'the Analysis paints its own dark ground');
+  assert.match(composition, /line: <TemporalOrientationLine store=\{store\} language=\{locale\.language\} preview=\{preview\} \/>,/u);
+  assert.match(screen, /line=\{timeline\.line\}/u, 'the line is said in the Timeline row');
   assert.match(composition, /temporalLine="WITH_TIMELINE"/u);
   assert.match(composition, /returnLiveHome="LIVE_EDGE"/u);
-  assert.match(composition, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\}>/u, 'OrientationChrome yields the line\'s room');
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

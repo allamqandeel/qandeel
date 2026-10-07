@@ -28,23 +28,23 @@
  * presentation camera and arrival belongs to the disclosure registry, both already frozen. The one
  * motion fact this layer contributes is the composite spatial CAUSE — which is not new motion at all,
  * only the evidence that lets T-10's existing plan hold its already-frozen beat.
+ *
+ * ## S5-03B R1 — the Personal world on the ONE Living Analysis surface
+ *
+ * The screen itself — the Analysis place, the top band, T-11's responsive column, the measured world frame and the one
+ * support band — is now `LivingAnalysisSurface`'s, so every world is analysed on the same screen. This file is the
+ * Personal world's use of it, and everything it ever owned stays here: the store and the one projection cache, the
+ * Map (`MapSurface`), the Timeline (T-05 / T-06) with its temporal orientation line, the chrome (T-08) with Return and
+ * Live, the journey and the composite spatial cause. The element tree is unchanged, and the screen golden proves it.
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from 'react';
 
-import { useAnalysisInk } from '../../analysis-visual';
-
-import { MapSurface, mapInspectionContext, mapProjectionRequest, viewportEnvelope, type MapActionOutcome } from '../../map';
+import { LivingAnalysisSurface, type LivingAnalysisTopBand } from '../../living-analysis';
+import { MapSurface, mapInspectionContext, mapProjectionRequest, type MapActionOutcome } from '../../map';
 import { OrientationChrome, TemporalOrientationLine, chromeProjection } from '../../orientation-chrome';
 import { returnMapContext } from '../../return-navigation';
-import {
-  ResponsiveChromeBand,
-  ResponsiveMapFrame,
-  ResponsiveSupportBand,
-  ResponsiveSurface,
-  ResponsiveTimelineRow,
-  type ResponsiveInsets,
-} from '../../responsive';
+import type { ResponsiveInsets } from '../../responsive';
 import { TemporalTargetLayer } from '../../temporal-navigation';
 import type { IntegrationSessionRuntime } from '../runtime/integration-runtime';
 import type { ProductLocale } from '../locale/product-locale';
@@ -65,6 +65,8 @@ export interface LivingAnalysisMapProps {
    * fade into an unrendered surface is exactly the cut it exists to prevent.
    */
   readonly onComposed?: () => void;
+  /** S5-03B R1 — the Analysis top band (the way back to the Conversation), drawn by the surface above the world. */
+  readonly top?: LivingAnalysisTopBand | null;
 }
 
 /** Reports its own first commit. It renders nothing; it only marks where the Map was composed. */
@@ -75,18 +77,13 @@ function ComposedMark({ onComposed }: { readonly onComposed: () => void }) {
   return null;
 }
 
-export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed }: LivingAnalysisMapProps) {
+export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope: surfaceEnvelope, onComposed, top = null }: LivingAnalysisMapProps) {
   const { store, projection, journey, spatialCause, witness, preview, presentation, returnSurface, bundle } = runtime;
 
   // The two subscriptions this composition reads from, and there are only two: the canonical store,
   // and the moments the one projection cache's contents changed. Everything else below is derived.
   const state = useSyncExternalStore(store.subscribe, store.getState);
   useSyncExternalStore(projection.subscribe, projection.revision);
-  // VPORT-02: the Analysis's own ground, under the world and the support alike. The Analysis is one dark place under
-  // every appearance preference (G3 Decision A); the support band painted nothing and showed the window behind it.
-  const ink = useAnalysisInk();
-  // VPORT-02 (G3 Decision B): the temporal orientation line's measured height, paid for by OrientationChrome.
-  const [lineHeight, setLineHeight] = useState(0);
 
   /** The viewpoint the Map is entitled to ask for, from canonical state alone. */
   const request = useMemo(() => mapProjectionRequest(state), [state]);
@@ -196,86 +193,54 @@ export function LivingAnalysisMap({ runtime, locale, insets, fontScale, envelope
     request === null || (entry !== null && entry.status !== 'NOT_FETCHED' && (mapContext === null || !mapContext.ok));
 
   return (
-    // T-11's own surface identity is kept: the responsive container belongs to that owner, and
-    // overriding its test id would make the composition unrecognizable to the owner's own tooling.
-    // The integration root's stable identity is PRODUCT_ROOT_TEST_ID, one level up.
-    <ResponsiveSurface insets={insets} fontScale={fontScale} envelope={surfaceEnvelope} style={{ backgroundColor: ink.world }}>
-      {(plan) => {
-        // Stacked, the line's room comes out of OrientationChrome's share and never out of the world's (amendment §3
-        // rules 1 and 3); across, the line sits inside the instrument's own column and takes nothing from the chrome.
-        const linePoints = plan.support.arrangement === 'STACKED' ? Math.min(lineHeight, plan.support.chromePoints) : 0;
-        return (
-        <>
-          <ResponsiveMapFrame frame={plan.mapFrame}>
-            {(rect) => {
-              const envelope = viewportEnvelope(rect.width, rect.height, {
-                top: rect.insetTop,
-                right: rect.insetRight,
-                bottom: rect.insetBottom,
-                left: rect.insetLeft,
-              });
-              // A surface that cannot be composed renders nothing rather than a guess. T-11 refuses
-              // the same rects T-04's validator refuses, so this is null only when there is no rect.
-              if (envelope === null || mapContext === null || !mapContext.ok) return null;
-              return (
-                <>
-                  <MapSurface
-                    store={store}
-                    context={mapContext.context}
-                    envelope={envelope}
-                    spatialCause={takeSpatialCause}
-                    onOutcome={observeMapOutcome}
-                    language={locale.language}
-                  />
-                  {onComposed === undefined ? null : <ComposedMark onComposed={onComposed} />}
-                </>
-              );
-            }}
-          </ResponsiveMapFrame>
-
-          {/*
-            The two support regions share ONE band, and it is mounted unconditionally so that a
-            measurement threshold changes a style and never an element type — a remount here would
-            clear local state that a resize must not touch. Which way they sit inside it is the
-            plan's decision, never this composition's.
-          */}
-          <ResponsiveSupportBand support={plan.support}>
-            <ResponsiveTimelineRow
-              widthPoints={plan.timelineWidthPoints}
-              paddingHorizontal={plan.chrome.paddingHorizontal}
-              support={plan.support}
-              line={<TemporalOrientationLine store={store} language={locale.language} preview={preview} />}
-              onLineHeight={setLineHeight}
-              linePoints={linePoints}
-            >
-              <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} />
-            </ResponsiveTimelineRow>
-
-            <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints}>
-              {chrome === null ? null : (
-                <OrientationChrome
-                  surface={returnSurface}
-                  language={locale.language}
-                  projection={chrome}
-                  exactReturnOrigin={journey.origin()}
-                  preview={preview}
-                  liveContext={liveContext}
-                  onMapOutcome={observeMapOutcome}
-                  onReturnOutcome={observeReturnOutcome}
-                  bottomInset={plan.chrome.bottomInset}
-                  returnArrangement={plan.chrome.arrangement}
-                  // VPORT-02: the frozen production composition — the temporal line is said once, beside the Timeline;
-                  // Return Live has one home, the Timeline's Live edge (G3 amendment §2; P2 §7).
-                  temporalLine="WITH_TIMELINE"
-                  returnLiveHome="LIVE_EDGE"
-                />
-              )}
-            </ResponsiveChromeBand>
-          </ResponsiveSupportBand>
-          {onComposed !== undefined && settledWithoutMap ? <ComposedMark onComposed={onComposed} /> : null}
-        </>
-        );
+    // The ONE Living Analysis surface, with the Personal world's projection and capabilities: the Map in the measured
+    // frame, the disclosed Timeline with its orientation line, and the T-08 chrome with Return and Live.
+    <LivingAnalysisSurface
+      insets={insets}
+      fontScale={fontScale}
+      envelope={surfaceEnvelope}
+      top={top}
+      world={(envelope) =>
+        // The Map is drawn only from T-04's own context; none is invented when it refuses.
+        mapContext === null || !mapContext.ok ? null : (
+          <>
+            <MapSurface
+              store={store}
+              context={mapContext.context}
+              envelope={envelope}
+              spatialCause={takeSpatialCause}
+              onOutcome={observeMapOutcome}
+              language={locale.language}
+            />
+            {onComposed === undefined ? null : <ComposedMark onComposed={onComposed} />}
+          </>
+        )
+      }
+      timeline={{
+        line: <TemporalOrientationLine store={store} language={locale.language} preview={preview} />,
+        layer: <TemporalTargetLayer store={store} preview={preview} presentation={presentation} language={locale.language} />,
       }}
-    </ResponsiveSurface>
+      chrome={(composition) =>
+        chrome === null ? null : (
+          <OrientationChrome
+            surface={returnSurface}
+            language={locale.language}
+            projection={chrome}
+            exactReturnOrigin={journey.origin()}
+            preview={preview}
+            liveContext={liveContext}
+            onMapOutcome={observeMapOutcome}
+            onReturnOutcome={observeReturnOutcome}
+            bottomInset={composition.bottomInset}
+            returnArrangement={composition.arrangement}
+            // VPORT-02: the frozen production composition — the temporal line is said once, beside the Timeline;
+            // Return Live has one home, the Timeline's Live edge (G3 amendment §2; P2 §7).
+            temporalLine="WITH_TIMELINE"
+            returnLiveHome="LIVE_EDGE"
+          />
+        )
+      }
+      after={onComposed !== undefined && settledWithoutMap ? <ComposedMark onComposed={onComposed} /> : null}
+    />
   );
 }

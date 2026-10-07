@@ -50,6 +50,9 @@ function serve(h: IntegrationHarness, s: Server) {
   h.http.on('/shared', () => ({ status: 200, body: { capabilities: { invitation: true, birth: true }, invitations: [], closedWorlds: [], memberRequests: [], worlds: [] } }));
   h.http.on('/account/public-id', () => ({ status: 200, body: { publicId: HANDLE, changeAvailable: true } }));
   h.http.on('/public/entry', () => s.entry());
+  // S5-03B — the semantic field reads the World after ALLOW. Nothing is public yet (PUBLISHED is unreachable): the honest
+  // answer is an empty World.
+  h.http.on('/public/field', () => ({ status: 200, body: { experiences: [] } }));
   h.http.on('/public/display', (request) => {
     if (request.method === 'PUT') {
       const { mode } = JSON.parse(request.body ?? '{}') as { mode: 'PSEUDONYM' | 'REAL_NAME' };
@@ -118,13 +121,23 @@ describe('S5-01 A — the third Global Area', () => {
     await act(async () => { release?.(); await settle(); });
     expect(view.getByTestId('qandeel-public-root')).toBeTruthy();
     expect(within(view.getByTestId('qandeel-public-root')).getByTestId('qandeel-public-title').props.children).toBe(WORDS.publicWorld);
-    // Content-empty by truth: no Experience, feed, list or count stands in for S5-03's field.
-    expect(within(view.getByTestId('qandeel-public-field')).queryAllByRole('button')).toHaveLength(0);
+    // Content-empty by truth (re-anchored by S5-03B): the field is the semantic field, and an empty World is drawn as
+    // empty — no Experience, feed, list, count or control stands in for content that does not exist.
+    // RE-ANCHORED by S5-03B R2 (validation only): the field is analysed on the ONE Living Analysis surface, whose top band
+    // carries the root's own heading — the Activity entry and the way into authoring. The field itself, the world frame
+    // and the chrome band, holds no button.
+    const field = within(view.getByTestId('qandeel-public-field'));
+    expect(within(field.getByTestId('qandeel-responsive-map-frame')).queryAllByRole('button')).toHaveLength(0);
+    expect(within(field.getByTestId('qandeel-responsive-chrome-band')).queryAllByRole('button')).toHaveLength(0);
+    expect(field.queryAllByRole('button').map((button) => button.props.testID)).toEqual(['qandeel-activity-entry', 'qandeel-public-authoring-entry']);
+    expect(view.getByTestId('qandeel-public-field-empty')).toBeTruthy();
     // The Personal world is untouched and still mounted beneath; only the Public routes were asked, on the reader's token.
     expect(runtime.store.getState()).toBe(storeBefore);
     expect(view.getByTestId('qandeel-conversation', { includeHiddenElements: true })).toBeTruthy();
     for (const call of publicReads(h)) expect(call.authorization).toBe('Bearer token-a');
-    expect(publicReads(h).every((c) => c.url.endsWith('/public/entry'))).toBe(true);
+    // S5-03B (re-anchored): after ALLOW the field reads the whole World once; nothing else of Public is asked.
+    expect(publicReads(h).every((c) => c.url.endsWith('/public/entry') || /\/public\/field\?minX=-?\d+&minY=-?\d+&maxX=\d+&maxY=\d+$/u.test(c.url))).toBe(true);
+    expect(publicReads(h).filter((c) => c.url.includes('/public/field'))).toHaveLength(1);
     h.dispose();
   });
 
