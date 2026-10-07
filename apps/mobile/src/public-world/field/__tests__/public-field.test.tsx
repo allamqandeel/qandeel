@@ -27,6 +27,7 @@ import {
 import { resize, subtree } from '../../../responsive/__fixtures__/composition';
 import { approachOf, hsla } from '../../../map/visual';
 import { WORLD_VISUAL } from '../../../map/visual/world-visual.generated';
+import { worldChroma } from '../../../map/visual/world-chroma';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../../map/world';
 import { PUBLIC_FIELD_PLANE_TEST_ID, PUBLIC_FIELD_SURFACE_TEST_ID, PUBLIC_FIELD_WORLD_TEST_ID, layoutFieldLabels } from '../PublicFieldView';
 import { PUBLIC_BAND_TEST_ID } from '../PublicLivingAnalysis';
@@ -548,14 +549,24 @@ describe('S5-03B — the Public field surface', () => {
     expect(view.getByTestId('qandeel-public-field-canvas', { includeHiddenElements: true })).toBeTruthy();
     expect(skia(view, 'RuntimeShader')).toHaveLength(1);
     expect(skia(view, 'Picture').length).toBeGreaterThan(0);
-    expect(skia(view, 'FractalNoise')).toHaveLength(1);
+    // LA-VIS-01 (controlled re-anchor of the paint structure): the veil's grain once, and each place's mass carries the
+    // same texture passes as every other place (no category, no weight).
+    const noise = skia(view, 'FractalNoise');
+    expect(noise.filter((n) => n.freqX === 0.9)).toHaveLength(1);
+    expect((noise.length - 1) % 3).toBe(0);
     // FAR: one world-colour place atmosphere per served place, identical for every place (no category, no weight), at
-    // the Map's own world-anchored radius.
-    const mass = skia(view, 'RadialGradient').filter((g) => JSON.stringify(g.colors) === JSON.stringify(MASS_COLOURS));
+    // the Map's own world-anchored radius: the mass's outer body is the canonical radius, in the world's hue ladder.
+    const radius = 750_000 / 8192;
+    const mass = skia(view, 'RadialGradient').filter((g) => g.r === radius);
     expect(mass).toHaveLength(3);
-    expect(new Set(mass.map((m) => m.r))).toEqual(new Set([750_000 / 8192]));
-    // Every body is the neutral Public circle in the world's material: no Personal morphology, no line of any kind.
-    for (const path of skia(view, 'Path')) expect(path.path).toMatch(/^M -?[\d.e-]+ -?[\d.e-]+ A /u);
+    // LA-VIS-01: a mass's colour is the world-space chroma at the served address and nothing else, so two places
+    // have different colours only where the field differs between their addresses (never by category or weight).
+    const chromaKeys = new Set([E1, E2, E3].map((e) => JSON.stringify(worldChroma(e.address))));
+    expect(new Set(mass.map((m) => JSON.stringify(m.colors))).size).toBe(chromaKeys.size);
+    expect(MASS_COLOURS).toHaveLength(WORLD_VISUAL.worldAtmosphere.stops.length);
+    // Every body is the neutral Public circle in the world's material, and a mass's micro-light is small discs: no
+    // Personal morphology, no line of any kind.
+    for (const path of skia(view, 'Path')) expect(path.path).toMatch(/^M -?[\d.e-]+ -?[\d.e-]+ (A |a [\d.e-]+ [\d.e-]+ 0 1 0 )/u);
     expect(skia(view, 'Line')).toHaveLength(0);
   });
 

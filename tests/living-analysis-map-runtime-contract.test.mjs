@@ -63,6 +63,9 @@ const PRODUCTION_FILES = [
   'visual/WorldStrata.tsx',
   'visual/index.ts',
   'visual/useWorldResponse.ts',
+  // LA-VIS-01 (Product Owner authorization, 2026-10-07): the one declared PRESENTATION palette and its world-space field.
+  // Paint only, pinned by VPORT-01 and VPORT-02; it reads a world address and nothing else.
+  'visual/world-chroma.ts',
   'visual/world-field.generated.ts',
   'visual/world-presentation.ts',
   'visual/world-resolver.ts',

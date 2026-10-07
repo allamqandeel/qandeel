@@ -119,6 +119,8 @@ export function MapCanvas({
       world={world}
       // A Thread's Home is the Personal world's place: the world makes its colour around each one.
       isPlace={(node) => node.locus?.kind === 'THREAD_HOME'}
+      // LA-VIS-01: a Home's own canonical address, read only to colour the world around it (presentation).
+      worldAddressOf={(node) => (node.locus?.kind === 'THREAD_HOME' ? node.locus.address : undefined)}
       // A contextual appearance arrives out from the Home that hosts it — the very tether drawn beside it.
       hostOf={(node) => hostOf(node, placed)}
       renderConnections={(planeNodes, { S, response }) =>

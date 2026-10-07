@@ -39,6 +39,8 @@ import { WorldPlaceAtmosphere } from '../visual/WorldMarks';
 import { WorldAtmosphere, WorldGround, WorldTone, WorldVeil, type WorldStrataDrift } from '../visual/WorldStrata';
 import type { WorldSchedule } from '../visual/world-visual.generated';
 import { scheduleAt } from '../visual/world-resolver';
+import { worldChroma } from '../visual/world-chroma';
+import type { CanonicalWorldAddress } from '../world';
 import { DEFAULT_RENDER_STYLE, type RenderStyle } from './render-style';
 
 /**
@@ -102,6 +104,11 @@ export interface WorldCanvasProps<N extends WorldCanvasNode> {
   readonly world: WorldCanvasPresentation;
   /** Whether the world makes its colour around this node: a place. */
   readonly isPlace: (node: N) => boolean;
+  /**
+   * LA-VIS-01: a place's canonical world address, read ONLY to colour the world around it by the world-space chroma
+   * field (`../visual/world-chroma`). Where it is, never what it is; omitted, the world keeps its canonical hue.
+   */
+  readonly worldAddressOf?: (node: N) => CanonicalWorldAddress | undefined;
   /** The node this one resolves out from when it arrives, in the same placement, or `undefined`. */
   readonly hostOf: (node: N) => { readonly x: number; readonly y: number } | undefined;
   /** The projection's own relations on the plane, drawn between the places and the objects; none by default. */
@@ -149,6 +156,9 @@ function PresentationCameraRebase({
   return null;
 }
 
+/** The world-space chroma at an address, or none (the canonical hue). */
+const chromaAt = (address: CanonicalWorldAddress | undefined) => (address === undefined ? undefined : worldChroma(address));
+
 export function WorldCanvas<N extends WorldCanvasNode>({
   testID,
   envelope,
@@ -161,6 +171,7 @@ export function WorldCanvas<N extends WorldCanvasNode>({
   world,
   isPlace,
   hostOf,
+  worldAddressOf,
   renderConnections,
   renderObject,
   renderRegister,
@@ -214,7 +225,7 @@ export function WorldCanvas<N extends WorldCanvasNode>({
           {planeNodes
             .filter((node) => isPlace(node))
             .map((node) => (
-              <WorldPlaceAtmosphere key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} response={response} />
+              <WorldPlaceAtmosphere key={`atmosphere:${node.key}`} x={node.x} y={node.y} radius={world.placeAtmosphere} response={response} seed={node.key} chroma={chromaAt(worldAddressOf?.(node))} />
             ))}
           {renderConnections?.(planeNodes, frame)}
           {planeNodes.map((node) => (

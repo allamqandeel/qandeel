@@ -14,6 +14,11 @@
  *   FAR / MID / NEAR · Home · contextual appearance · tether · register · selection (identity and named
  *   appearance) · arrival in progress (surface and canvas) · travel in progress · empty world · stale context ·
  *   increased contrast · reduced motion
+ *
+ * LA-VIS-01 — CONTROLLED RE-ANCHOR (2026-10-07, graphics-only fidelity upgrade of the shared world material, not a
+ * refactor): the golden was regenerated ONCE because the paint itself was intentionally changed. Before it was rewritten,
+ * a structural diff of the old and new golden proved that every case differs in Skia paint ONLY — the host tree (views,
+ * testIDs, handlers, accessibility) and every mark anchor (origin, order, count) are identical in every case.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import type { ReactElement } from 'react';

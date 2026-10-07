@@ -144,14 +144,19 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // S5-03B R2 — CONTROLLED RE-ANCHOR (Public adoption, after both goldens unchanged): the world view gains the accessible
   // semantic step a world without its own accessible layer asks for (`semanticStep`, additive; the Personal Map passes
   // nothing, so its tree is unchanged). Previous pin: WorldViewSurface 50786b8e.
+  // LA-VIS-01 — CONTROLLED RE-ANCHOR (Product Owner task LA-VIS-01, 2026-10-07: graphics-only fidelity upgrade of the shared
+  // world material, and the PO-authorized presentation palette `world-chroma.ts`, pinned here and in VPORT-01). Both goldens
+  // were re-recorded after a structural diff proved every case differs in Skia paint only (host tree and mark anchors
+  // identical). Previous pins: MapCanvas 974f515d, WorldCanvas b3036bfc, WorldMarks d50652c2, WorldStrata bce9df4a.
   for (const [path, blob] of [
-    ['apps/mobile/src/map/renderer/MapCanvas.tsx', '974f515d0e2fedca69bb74150959c52850a67f1a'],
+    ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'a82f761fa4eaede3db08c55f25ceb7da7cff595e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'b3036bfc0290d81e669d23733e3b61a3184ed7ba'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '28dcc706633a8c59eb61b95cc8e3d43322ba31c9'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
-    ['apps/mobile/src/map/visual/WorldMarks.tsx', 'd50652c2eccc6158809916369e66ff111eec1b7b'],
-    ['apps/mobile/src/map/visual/WorldStrata.tsx', 'bce9df4ab738bc090bb9247dbd5b5a445ca70ad9'],
+    ['apps/mobile/src/map/visual/WorldMarks.tsx', '0d694dc33e0cec948074cdca8cae53ac02c30595'],
+    ['apps/mobile/src/map/visual/WorldStrata.tsx', 'cd2edea2f18e1e18be64b6471b113b7330bdaa6c'],
+    ['apps/mobile/src/map/visual/world-chroma.ts', 'd9a798fdcf72888309ae1393b85857fdb2f24a5f'],
     ['apps/mobile/src/map/visual/index.ts', '64e1bc4a276b046d70ac0818a08c6b3c120c5907'],
     ['apps/mobile/src/map/visual/useWorldResponse.ts', '2640e891cfeff3645d9f155f9e888b41d58f3748'],
     ['apps/mobile/src/map/visual/world-field.generated.ts', '1eab16b0c6ec722eacf96c7179c0034bdd10c7af'],

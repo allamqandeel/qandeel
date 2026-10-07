@@ -25,7 +25,8 @@ const I08B1 = 'docs/design/canonical-artifacts/living-analysis/i-08b1/wf-living-
 const I08B1_SHA256 = '4dfd9d27d752c3a445168c0cc7067d71df4ada84bc61b806d12c8bb3202bc413';
 const VISUAL_DIR = 'apps/mobile/src/map/visual';
 const GENERATED = ['world-visual.generated.ts', 'world-field.generated.ts'];
-const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts'];
+// LA-VIS-01 (controlled re-anchor): the declared presentation palette joins the hand-written owner, under every rule below.
+const HAND_WRITTEN = ['WorldMarks.tsx', 'WorldStrata.tsx', 'index.ts', 'useWorldResponse.ts', 'world-presentation.ts', 'world-resolver.ts', 'world-chroma.ts'];
 
 const visual = Object.fromEntries([...GENERATED, ...HAND_WRITTEN].map((file) => [file, read(`${VISUAL_DIR}/${file}`)]));
 const visualCode = Object.fromEntries(HAND_WRITTEN.map((file) => [file, stripComments(visual[file])]));
@@ -197,5 +198,27 @@ test('motion stays T-10\'s: the world reads the residual through the motion owne
   assert.equal((reading.match(/useDerivedValue\(/gu) ?? []).length, 2, 'the reading seam is two derivations and nothing else');
   for (const forbidden of ['withTiming', 'withSpring', 'cancelAnimation', 'useSharedValue', 'scheduleOnRN', '.set(']) {
     assert.equal(reading.includes(forbidden), false, `the reading seam must not use ${forbidden}`);
+  }
+});
+
+test('LA-VIS-01: the one declared chroma palette is exactly the six authorized families, and its field reads a world address only', () => {
+  // Product Owner authorization (2026-10-07): a PRESENTATION-ONLY palette extension, declared in one module, never an
+  // open exception. Its families are pinned here exactly; any change to them is a new decision, not a tuning.
+  const chroma = visualCode['world-chroma.ts'];
+  const families = [...chroma.matchAll(/Object\.freeze\(\{ hue: (\d+), saturation: (\d+), lightness: (\d+) \}\)/gu)].map((f) => f.slice(1).map(Number));
+  assert.deepEqual(families, [[186, 78, 50], [218, 82, 52], [268, 72, 58], [328, 74, 56], [34, 92, 52], [152, 66, 46]], 'teal, deep blue, violet, magenta, amber, emerald');
+  // The field is a function of a canonical world address and nothing else: no camera, screen, identity, store or time.
+  assert.match(chroma, /export function worldChroma\(address: CanonicalWorldAddress\): ChromaFamily/u);
+  assert.match(chroma, /export function chromaPhase\(address: CanonicalWorldAddress\): number/u);
+  for (const forbidden of ['camera', 'scale', 'envelope', 'key', 'region', 'Date', 'random', 'useState', "'../../state", "'../camera"]) {
+    assert.equal(chroma.includes(forbidden), false, `the chroma field must not read ${forbidden}`);
+  }
+  // It is worn only by the world around a place: the generic canvas reads the owner's address for that, and only that.
+  assert.match(worldCanvas, /chroma=\{chromaAt\(worldAddressOf\?\.\(node\)\)\}/u);
+  assert.equal((worldCanvas.match(/worldAddressOf/gu) ?? []).length, 3, 'declared, destructured, read once');
+  assert.match(personalCanvasOwner, /worldAddressOf=\{\(node\) => \(node\.locus\?\.kind === 'THREAD_HOME' \? node\.locus\.address : undefined\)\}/u);
+  // Nothing that decides membership, placement, hit testing or accessibility reads it.
+  for (const file of ['apps/mobile/src/map/renderer/map-geometry.ts', 'apps/mobile/src/map/projection/map-scene.ts', 'apps/mobile/src/map/accessibility/map-accessibility.ts', 'apps/mobile/src/map/camera/camera.ts']) {
+    assert.equal(read(file).includes('world-chroma'), false, `${file} must not read the chroma field`);
   }
 });

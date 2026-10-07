@@ -124,6 +124,8 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
               world={view.world}
               // Every served Experience is a place: the world makes its colour around each one, identical for all.
               isPlace={() => true}
+              // LA-VIS-01: the place's own served address, read only to colour the world around it (presentation).
+              worldAddressOf={(node) => node.entry.address}
               // A Public Experience is hosted by nothing: nothing travels from anywhere, and nothing joins two of them.
               hostOf={() => undefined}
               renderObject={(node, { S, response }) => (
