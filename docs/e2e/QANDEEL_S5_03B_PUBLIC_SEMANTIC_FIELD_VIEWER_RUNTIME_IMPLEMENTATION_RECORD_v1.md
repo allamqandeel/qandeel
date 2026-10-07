@@ -5,7 +5,7 @@ Integration; the second of the Product Owner's three S5-03 tasks)
 **Task Contract:** the Product Owner's S5-03B Task Contract (2026-10-06)
 **Canonical baseline:** `c9338af9ecbfcecccc281f96f52fab335ad9bc7b` (the merge of PR #316, S5-03A)
 **Branch:** `feat/s5-03b-public-semantic-field-viewer`
-**Status:** **`S5-03B IMPLEMENTED ARCHITECTURALLY — PRODUCT OWNER PAUSED — VISUAL ACCEPTANCE NOT GRANTED — NOT MERGED — PRODUCT COPY GATE OPEN (13 rows PROPOSED after the R2 census; 3 rows RETIRED)`**.
+**Status:** **`S5-03B IMPLEMENTED ARCHITECTURALLY — PRODUCT OWNER PAUSED — NOT MERGED — PRODUCT COPY GATE OPEN (13 rows PROPOSED after the R2 census; 3 rows RETIRED)`**. The shared Living Analysis visual redesign (`LA-VIS-01`) is IMPLEMENTED and PRODUCT VISUALLY ACCEPTED, not merged (§27); S5-03B itself is not closed.
 Pause head: `430118ae2d27c2d9d686a1edb0ee26ed433eb16d` on draft PR #317 (2026-10-07). Claude does not merge it. No Copy Gate decision is made, S5-03C is not started, and no further Product work is authorized during the pause.
 
 > Public World becomes a World. Every reviewed meaning of a semantically ready Experience Version receives ONE stable
@@ -750,3 +750,49 @@ The Product Owner pauses the project at PR #317 head `430118ae2d27c2d9d686a1edb0
 **Shared World.** Shared is not yet a consumer of this surface in production. Its existing Stage-4 runtime stays closed/merged, and `QAN-BL-CW-03 / SHARED-VIS-01` remains `DEFERRED — OWNED` until Stage 5 / Public World is fully DONE / MERGED. When that correction is opened, Shared must adopt this same Analysis surface with Shared-specific projection/state rather than create another renderer.
 
 **Resume point.** On resume, first review whether to open a dedicated Living Analysis visual-redesign workstream/proof branch; do not resume from S5-03C. S5-03B remains unmerged, its Copy Gate remains open, and the Public visual proof is evidence of architecture/function only, not final visual acceptance.
+
+## 27. LA-VIS-01 closure — shared Living Analysis visual redesign (2026-10-07)
+
+**Workstream:** `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade`, opened by the Product Owner at the §26 resume
+point as the dedicated visual-redesign workstream. **Status: `LA-VIS-01 CLOSED — IMPLEMENTED / PRODUCT VISUALLY ACCEPTED /
+VALIDATED ON THE ANDROID EMULATOR — NOT MERGED`.** This closes the LA-VIS-01 visual-redesign workstream only. **S5-03B itself is
+NOT closed and NOT merged**: PR #317 stays unmerged (pause head `430118a`, then the pause record `dd88b94`), the S5-03B Product Copy Gate stays OPEN, and
+§26's "visual acceptance not granted" is superseded for the shared Living Analysis graphics only — not for S5-03B's other gates.
+
+- **Acceptance.** The Product Owner accepted the graphics-only Living Analysis redesign after the final-tuning visual proof and
+  the Android emulator proof (2026-10-07), and closed the visual phase to further aesthetic iteration.
+- **Where it lives.** Local branch `feat/la-vis-01-living-analysis-graphics`, stacked on PR #317's pause record `dd88b94`; not pushed and
+  not merged. **Final implementation SHA: `550ce07`** (after `3c87510` and `9fc92d9`). The governance commit that records this
+  closure changes no Product code.
+- **One shared implementation.** It lands once in the shared stack (`apps/mobile/src/map/visual/` — `WorldMarks.tsx`,
+  `WorldStrata.tsx`, the declared presentation palette `world-chroma.ts` and the mass material `world-mass.ts`), so Personal and
+  Public receive it from the same code, as the §26 rule requires. **Shared World** is not a consumer yet; it will consume this
+  same stack later through `QAN-BL-CW-03 / SHARED-VIS-01`, which stays `DEFERRED — OWNED` and blocked until Stage 5 is fully
+  DONE / MERGED.
+- **Graphics / presentation only.** No camera, pan, semantic-zoom, motion, projection, placement, hit-testing, accessibility,
+  Public-law, shared-runtime or relation-truth change. No semantic place, mass or relation is fabricated, and no popularity,
+  activity, recency or other non-semantic signal reaches geography. Mark anchors, mark radius and hit radius are unchanged. The
+  one performance change skips a mass size whose weight is exactly zero (pixel-identical; at rest 1 picture copy in 1 layer at
+  FAR and 5 in 1 layer at MID / NEAR per visible place, instead of 11 in 3).
+- **Controlled re-anchors.** The living-analysis Map census and VPORT-01 declare `world-mass.ts` (plus one assertion that it is pure
+  paint, read by nothing that decides placement, hits or accessibility); the VPORT-02 pins; both goldens, re-recorded only after
+  the structural diff proved paint-only change (host tree and every mark anchor identical); two Jest paint-structure observations
+  (a place's mass is found by its wash, not the old single disc).
+- **Final focused validation (on `550ce07`).** VPORT-01 11 / 11, VPORT-02 9 / 9, T-10 31 / 31, T-11 27 / 27, living-analysis Map
+  runtime contract 15 / 15; typecheck clean; lint on touched files 0 errors; Jest over map / living-analysis / public-world /
+  integration / motion / analysis-visual 611 passed, 6 failed. Broad CI was not run.
+- **Failure classification.** The 6 Jest failures (`integration/__tests__/depth.test.tsx`,
+  `integration/__tests__/w2-account-access.test.tsx`) are the exact same 6 tests that fail at the pre-LA-VIS-01 HEAD — **pre-existing
+  baseline failures, outside LA-VIS-01 scope**; no infrastructure evidence is claimed for them. The S5-03B viewer contract's test
+  9 failure (the Project Map no longer carried the `CURRENT IMPLEMENTATION TASK: S5-03B` locator after the §26 pause edit) is
+  **B — Validation / Docs drift**; the Project Map reconciliation in the same governance change restores that locator.
+- **Android emulator proof.** Release APK of the final renderer on the `QANDEEL_API36` emulator (1080 × 2400, software GPU):
+  Personal FAR, Public FAR / MID / NEAR, each drawing its own mass size, so the zero-weight skip is proven in native Skia.
+  Personal MID / NEAR are harness-only (adb cannot pinch). Evidence is kept locally in `.la-vis01-visual/` (not committed). The
+  emulator proves the look, not speed.
+- **Remaining gap versus the reference.** Semantic / world density: the reference shows many more real regions and places, while
+  the fixtures are sparse. The Product Owner forbids fabricating places, masses or relations to fill the frame.
+- **Backlog.** `QAN-BL-VIS-01` (heavy-history density + LOD stress proof) stays `OPEN — UNASSIGNED`; LA-VIS-01 does not close it,
+  and real-phone performance and heavy-history / scale stress remain unproved under it. `QAN-BL-CW-03 / SHARED-VIS-01` stays
+  `DEFERRED — OWNED`, unchanged. LA-VIS-01 inherits no item and admits none.
+- **Not performed.** No S5-03C or S5-04 work, no Copy Gate decision, no merge, no push.

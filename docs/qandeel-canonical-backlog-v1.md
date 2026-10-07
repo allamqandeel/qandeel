@@ -478,6 +478,12 @@ This entry freezes **no algorithm**. It does not choose embeddings, scores, thre
 
 This entry defines no density, no level-of-detail rule, no token and no world change. Any change to the world still passes through I-08B1's own reopen rule. The Product Owner's ruling that the F1 / F2 North Star spectacle requirement is met (G3 closure §E) is a separate, fully dispositioned obligation and does not answer this G2 heavy-history stress item.
 
+**Current-truth note (LA-VIS-01, 2026-10-07).** `LA-VIS-01`, the Product Owner's graphics-only Living Analysis redesign
+(implementation `550ce07`, not merged; [S5-03B record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md)
+§27), was accepted on sparse fixtures and proved on an Android emulator only. It does **not** close this item: real-phone
+performance and heavy-history / world-scale density and level-of-detail stress remain unproved, and they stay here rather than
+in a duplicate item. This note changes none of this item's fields: `UNASSIGNED`, `HIGH`, `OPEN — UNASSIGNED`.
+
 ### `QAN-BL-CW-01` — Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`)
 
 > **Historical pre-closure schema.** This block records the item as admitted and re-owned. It is not the current lifecycle
@@ -972,6 +978,11 @@ of S4-02's scope, and nothing here authorizes implementation (BG-07).
 
 Admitted by explicit Product Owner decision on 2026-10-07. This admission records sequencing and ownership only; it does
 not reopen Stage 4 now and does not authorize implementation before Public World is complete (BG-07).
+
+**Current-truth note (LA-VIS-01, 2026-10-07).** The accepted `LA-VIS-01` graphics land once in the shared Living Analysis stack
+and serve Personal and Public. Shared World is still not integrated into that surface; when this item opens, Shared consumes
+the same stack. This note changes none of this item's fields: `SHARED-VIS-01`, `HIGH`, `DEFERRED — OWNED`, and its
+sequencing gate (only after Stage 5 is fully `DONE / MERGED`) is unchanged.
 
 ---
 
@@ -1714,6 +1725,19 @@ as `HIGH`, `DEFERRED — OWNED`, owner `SHARED-VIS-01`, with an explicit sequenc
 World is fully `DONE / MERGED`. This does not reopen Stage 4 now and does not interrupt S5-03B / S5-03C / S5-04.
 The register now holds **44** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**LA-VIS-01 reconciliation (2026-10-07; graphics-only, not merged).** `LA-VIS-01` is the Product Owner's graphics-only Living
+Analysis visual-redesign workstream, opened at the S5-03B pause checkpoint and closed on Product Owner visual acceptance
+(implementation `550ce07`; primary record:
+[S5-03B record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md) §27). It is not a phase and
+not S5-03B's closure. It inherits no item by owner and admits none. `QAN-BL-VIS-01` stays `OPEN — UNASSIGNED`: LA-VIS-01 does
+not close it, and real-phone performance and heavy-history / scale stress remain unproved under it, so no duplicate item is
+admitted for them (current-truth note in §5). `QAN-BL-CW-03 / SHARED-VIS-01` stays `DEFERRED — OWNED`, unchanged: Shared World is
+still not integrated into the shared Living Analysis surface (current-truth note in §5). The remaining gap against the
+Product Owner's reference is semantic density, which BG-06 does not admit; it may not be filled by fabricated places. Every
+other item is unchanged. The register still holds **44** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9
+`OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the
+§4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1782,6 +1806,7 @@ Inherited after T-12 closure reconciliation:
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 | `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / Semantic Placement `RESTRICT` dependents recorded; none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
 | `S5-03B — Public Semantic Field + Stable Spatial Placement + Viewer Runtime` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / S5-03A interpretation `RESTRICT` dependents recorded; none admitted; the Stage-8A spatial-placer provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
+| `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
