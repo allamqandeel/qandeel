@@ -9,10 +9,11 @@
  *     meanings and «معانٍ أخرى» / Other meanings (S5-03A); «إظهار تفاصيل أكثر» / Show more detail and «إظهار تفاصيل أقل» /
  *     Show less detail (the Living Analysis's own accessible semantic step, W1A-01) — S5-03B R2: the Public field is
  *     stepped through the same Living Analysis surface, so it says the step in the surface's words;
- *   - PROPOSED — S5-03B PRODUCT COPY GATE, OPEN: every genuinely new string below. No frozen record names the Public
- *     field's search, its empty state, its nearby context or the preparation of a place in Arabic, so
- *     none is invented as canon. They are drawn in the frozen register (I-08A4 §11: calm, plain, no exclamation, no
- *     persuasion) and wait for the Product Owner's decision. Nothing here is self-approved.
+ *   - APPROVED — S5-03B PRODUCT COPY GATE, CLOSED: every genuinely new string below. No frozen record names the Public
+ *     field's search, its empty state, its nearby context or the preparation of a place in Arabic, so none was invented
+ *     as canon. They are drawn in the frozen register (I-08A4 §11: calm, plain, no exclamation, no persuasion) and were
+ *     approved by the Product Owner on 2026-10-07: 13 / 13, eleven exactly as proposed and two (`fieldLabel`, `empty`)
+ *     with the Owner's own Arabic wording; their English is unchanged.
  *
  *   - RETIRED — S5-03B R2 (Product Owner decision D3, 2026-10-07): `closer`, `farther`, `wholeWorld`. The visible
  *     + / − / ○ controls they named are removed; the semantic step is the shared surface's (pinch, or the accessible
@@ -28,17 +29,17 @@ import { publicSemanticCopy } from '../../public-authoring/semantic-copy';
 import { sharedCopy } from '../../shared-world/copy';
 
 export const PUBLIC_FIELD_COPY_GATE = {
-  status: 'S5-03B PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (R2 census; 3 rows RETIRED)',
+  status: 'S5-03B PRODUCT COPY GATE — CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07; 3 rows RETIRED)',
   reused: ['back', 'cancel', 'retry', 'analysisItem', 'primaryHeading', 'secondaryHeading', 'moreDetail', 'lessDetail'],
-  approved: [],
-  proposed: [
+  approved: [
     'fieldLabel', 'empty', 'fieldUnavailable', 'searchLabel', 'noResults', 'nearHeading',
     'sharedBy', 'placeHeading', 'placeExplain', 'placeAsk', 'placeReady', 'placeUnavailable', 'experienceUnavailable',
   ],
+  proposed: [],
   /** R2 (Product Owner decision D3): rows whose controls were removed. Never drawn; not part of the decision any more. */
   retired: ['closer', 'farther', 'wholeWorld'],
-  /** R1: rows whose TEXT the Product Owner revised in review. Still PROPOSED: the gate closes only by the Owner's approval. */
-  revisedByProductOwner: ['searchLabel', 'placeReady'],
+  /** Rows whose TEXT the Product Owner revised: R1 in review, and the Arabic of two rows at the gate's closure (2026-10-07). */
+  revisedByProductOwner: ['searchLabel', 'placeReady', 'fieldLabel', 'empty'],
 } as const;
 
 export interface PublicFieldCopy {
@@ -75,35 +76,35 @@ export interface PublicFieldCopy {
 }
 
 const AR = {
-  fieldLabel: 'حقل المعاني في العالم العام', // PROPOSED — S5-03B Product Copy Gate
-  empty: 'لا يوجد في العالم العام شيء بعد.', // PROPOSED — S5-03B Product Copy Gate
-  fieldUnavailable: 'تعذّر عرض العالم العام الآن.', // PROPOSED — S5-03B Product Copy Gate
-  searchLabel: 'ابحث عن تجربة أو شعور أو معنى', // PROPOSED — S5-03B Product Copy Gate (text as revised by the Product Owner, R1)
-  noResults: 'لا شيء في العالم العام يطابق هذا البحث.', // PROPOSED — S5-03B Product Copy Gate
-  nearHeading: 'قريب في المعنى', // PROPOSED — S5-03B Product Copy Gate
-  sharedBy: 'شاركها {0}', // PROPOSED — S5-03B Product Copy Gate
-  experienceUnavailable: 'لم تعد هذه التجربة في العالم العام.', // PROPOSED — S5-03B Product Copy Gate
-  placeHeading: 'مكان التجربة في العالم العام', // PROPOSED — S5-03B Product Copy Gate
-  placeExplain: 'يحدد قنديل مكانها من معناها وحده، ولا يمكن اختيار المكان يدويًا.', // PROPOSED — S5-03B Product Copy Gate
-  placeAsk: 'اطلب من قنديل تحديد مكانها', // PROPOSED — S5-03B Product Copy Gate
-  placeReady: 'تم تحديد مكانها.', // PROPOSED — S5-03B Product Copy Gate (text as revised by the Product Owner, R1)
-  placeUnavailable: 'تعذّر على قنديل تحديد مكانها الآن.', // PROPOSED — S5-03B Product Copy Gate
+  fieldLabel: 'خريطة المعاني في العالم العام', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07; Arabic as revised by the Owner)
+  empty: 'لا يوجد شيء في العالم العام بعد.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07; Arabic as revised by the Owner)
+  fieldUnavailable: 'تعذّر عرض العالم العام الآن.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  searchLabel: 'ابحث عن تجربة أو شعور أو معنى', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07; text as revised by the Owner, R1)
+  noResults: 'لا شيء في العالم العام يطابق هذا البحث.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  nearHeading: 'قريب في المعنى', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  sharedBy: 'شاركها {0}', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  experienceUnavailable: 'لم تعد هذه التجربة في العالم العام.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeHeading: 'مكان التجربة في العالم العام', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeExplain: 'يحدد قنديل مكانها من معناها وحده، ولا يمكن اختيار المكان يدويًا.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeAsk: 'اطلب من قنديل تحديد مكانها', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeReady: 'تم تحديد مكانها.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07; text as revised by the Owner, R1)
+  placeUnavailable: 'تعذّر على قنديل تحديد مكانها الآن.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
 } as const;
 
 const EN = {
-  fieldLabel: "Public World's field of meaning", // PROPOSED — S5-03B Product Copy Gate
-  empty: 'Nothing is in Public World yet.', // PROPOSED — S5-03B Product Copy Gate
-  fieldUnavailable: "Public World can't be shown right now.", // PROPOSED — S5-03B Product Copy Gate
-  searchLabel: 'Search for an experience, feeling, or meaning', // PROPOSED — S5-03B Product Copy Gate (text as revised by the Product Owner, R1)
-  noResults: 'Nothing in Public World matches this search.', // PROPOSED — S5-03B Product Copy Gate
-  nearHeading: 'Near in meaning', // PROPOSED — S5-03B Product Copy Gate
-  sharedBy: 'Shared by {0}', // PROPOSED — S5-03B Product Copy Gate
-  experienceUnavailable: 'This experience is no longer in Public World.', // PROPOSED — S5-03B Product Copy Gate
-  placeHeading: "The experience's place in Public World", // PROPOSED — S5-03B Product Copy Gate
-  placeExplain: "QANDEEL places it by its meaning alone; the place can't be chosen by hand.", // PROPOSED — S5-03B Product Copy Gate
-  placeAsk: 'Ask QANDEEL to find its place', // PROPOSED — S5-03B Product Copy Gate
-  placeReady: 'Its place has been set.', // PROPOSED — S5-03B Product Copy Gate (text as revised by the Product Owner, R1)
-  placeUnavailable: "QANDEEL couldn't find its place right now.", // PROPOSED — S5-03B Product Copy Gate
+  fieldLabel: "Public World's field of meaning", // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  empty: 'Nothing is in Public World yet.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  fieldUnavailable: "Public World can't be shown right now.", // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  searchLabel: 'Search for an experience, feeling, or meaning', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07; text as revised by the Owner, R1)
+  noResults: 'Nothing in Public World matches this search.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  nearHeading: 'Near in meaning', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  sharedBy: 'Shared by {0}', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  experienceUnavailable: 'This experience is no longer in Public World.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeHeading: "The experience's place in Public World", // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeExplain: "QANDEEL places it by its meaning alone; the place can't be chosen by hand.", // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeAsk: 'Ask QANDEEL to find its place', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
+  placeReady: 'Its place has been set.', // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07; text as revised by the Owner, R1)
+  placeUnavailable: "QANDEEL couldn't find its place right now.", // APPROVED — S5-03B Product Copy Gate (Product Owner, 2026-10-07)
 } as const;
 
 export function publicFieldCopy(language: ChromeLanguage): PublicFieldCopy {

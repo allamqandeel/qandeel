@@ -171,15 +171,19 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   assert.deepEqual(posts, ['{ commandId }'], 'one POST, carrying a command id only');
 });
 
-test('8 — the S5-03B Product Copy Gate: one gate, OPEN, every new row PROPOSED, frozen words reused', () => {
+test('8 — the S5-03B Product Copy Gate: one gate, CLOSED by the Product Owner, every new row APPROVED, frozen words reused', () => {
   const copy = read(`${MOBILE}/public-world/field/field-copy.ts`);
   // R2 census (Product Owner decision D3): the rows of the removed + / − / ○ controls are RETIRED, not approved.
-  assert.ok(copy.includes("status: 'S5-03B PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (R2 census; 3 rows RETIRED)'"));
-  assert.equal((copy.match(/\/\/ PROPOSED — S5-03B Product Copy Gate/gu) ?? []).length, 26, '13 rows, Arabic and English');
+  assert.ok(copy.includes("status: 'S5-03B PRODUCT COPY GATE — CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07; 3 rows RETIRED)'"));
+  assert.equal((copy.match(/\/\/ APPROVED — S5-03B Product Copy Gate \(Product Owner, 2026-10-07/gu) ?? []).length, 26, '13 rows, Arabic and English');
+  assert.ok(copy.includes('  proposed: [],'), 'no row is left PROPOSED');
+  assert.doesNotMatch(copy, /PROPOSED — S5-03B/u, 'no row is left PROPOSED');
+  for (const approved of ["fieldLabel: 'خريطة المعاني في العالم العام'", "empty: 'لا يوجد شيء في العالم العام بعد.'"]) {
+    assert.ok(copy.includes(approved), `the Product Owner's Arabic wording: ${approved}`);
+  }
   assert.ok(copy.includes("retired: ['closer', 'farther', 'wholeWorld'],"), 'the three control rows are retired');
   assert.doesNotMatch(copy, /^\s+(closer|farther|wholeWorld):/mu, 'a retired row has no text in either language');
   for (const reused of ['moreDetail: analysis.moreDetail', 'lessDetail: analysis.lessDetail']) assert.ok(copy.includes(reused), `the accessible step reuses ${reused}`);
-  assert.doesNotMatch(copy, /\/\/ APPROVED — S5-03B/u, 'nothing self-approved');
   for (const reused of ['back: shared.back', 'cancel: shared.cancel', 'retry: shared.retry', 'analysisItem: authoring.analysisItem',
     'primaryHeading: semantic.primaryHeading', 'secondaryHeading: semantic.secondaryHeading']) assert.ok(copy.includes(reused), reused);
   assert.doesNotMatch(code(`${MOBILE}/public-world/field/field-copy.ts`), /coordinate|إحداثي|\brank\b|popular|views|lens|PUBLISHED/u);

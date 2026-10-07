@@ -5,8 +5,8 @@ Integration; the second of the Product Owner's three S5-03 tasks)
 **Task Contract:** the Product Owner's S5-03B Task Contract (2026-10-06)
 **Canonical baseline:** `c9338af9ecbfcecccc281f96f52fab335ad9bc7b` (the merge of PR #316, S5-03A)
 **Branch:** `feat/s5-03b-public-semantic-field-viewer`
-**Status:** **`S5-03B IMPLEMENTED ARCHITECTURALLY — PRODUCT OWNER PAUSED — NOT MERGED — PRODUCT COPY GATE OPEN (13 rows PROPOSED after the R2 census; 3 rows RETIRED)`**. The shared Living Analysis visual redesign (`LA-VIS-01`) is IMPLEMENTED and PRODUCT VISUALLY ACCEPTED, not merged (§27); S5-03B itself is not closed.
-Pause head: `430118ae2d27c2d9d686a1edb0ee26ed433eb16d` on draft PR #317 (2026-10-07). Claude does not merge it. No Copy Gate decision is made, S5-03C is not started, and no further Product work is authorized during the pause.
+**Status:** **`S5-03B IMPLEMENTED ARCHITECTURALLY — NOT MERGED — S5-03B PRODUCT COPY GATE CLOSED (13 / 13 APPROVED, Product Owner, 2026-10-07; 3 rows RETIRED)`**. The shared Living Analysis visual redesign (`LA-VIS-01`) is IMPLEMENTED, PRODUCT VISUALLY ACCEPTED and integrated into draft PR #317 (§27); S5-03B itself is not closed and not merged.
+Pause head: `430118ae2d27c2d9d686a1edb0ee26ed433eb16d` on draft PR #317 (2026-10-07); PR #317 head before the Copy Gate closure: `fe294fb4bdeb7ce5d2f3c424dd06caf322b591b1`. Claude does not merge it. S5-03C and S5-04 are not started.
 
 > Public World becomes a World. Every reviewed meaning of a semantically ready Experience Version receives ONE stable
 > place in the ONE Public semantic field — canonical world coordinates, bound to that exact version and that exact
@@ -242,10 +242,16 @@ removing the admission gate → V07 fails.
 3. API spec + static contract 3: the API repositories call only the 0145 RPCs and never the frozen readers.
 4. Mobile isolation test + static contract 7: no field file names the constants.
 
-## 14. Product Copy Gate — **S5-03B PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (R2 census, §25; 3 rows RETIRED)**
+## 14. Product Copy Gate — **S5-03B PRODUCT COPY GATE — CLOSED — 13 / 13 APPROVED; 3 rows RETIRED**
+
+**Product Owner approval date: 2026-10-07.** The Product Owner approved all 13 rows of the R2 census (§25): eleven exactly as
+proposed, and two with the Owner's own Arabic wording. `fieldLabel` is now «خريطة المعاني في العالم العام» (was «حقل المعاني في العالم العام») and
+`empty` is now «لا يوجد شيء في العالم العام بعد.» (was «لا يوجد في العالم العام شيء بعد.»). Their English is unchanged. The 3 RETIRED rows stay RETIRED.
+The gate is closed in `field-copy.ts` (status `S5-03B PRODUCT COPY GATE — CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07; 3
+rows RETIRED)`, `proposed: []`), and the public-field Jest census and the S5-03B static contract (test 8) are re-anchored to it.
+No other Product wording changed.
 
 Census: every S5-03B user-visible string is in `apps/mobile/src/public-world/field/field-copy.ts`. No frozen string was changed.
-Nothing is self-approved.
 
 | Key | Class | العربية | English |
 |---|---|---|---|
@@ -255,22 +261,22 @@ Nothing is self-approved.
 | analysisItem | REUSED (S5-02) | تحليل قنديل | QANDEEL analysis |
 | primaryHeading / secondaryHeading | REUSED (S5-03A) | المعاني الأساسية / معانٍ أخرى | Main meanings / Other meanings |
 | moreDetail / lessDetail | REUSED (Living Analysis accessible step, W1A-01; added in R2) | إظهار تفاصيل أكثر / إظهار تفاصيل أقل | Show more detail / Show less detail |
-| fieldLabel | **PROPOSED** | حقل المعاني في العالم العام | Public World's field of meaning |
-| empty | **PROPOSED** | لا يوجد في العالم العام شيء بعد. | Nothing is in Public World yet. |
-| fieldUnavailable | **PROPOSED** | تعذّر عرض العالم العام الآن. | Public World can't be shown right now. |
-| searchLabel | **PROPOSED** (text revised by the Product Owner, R1) | ابحث عن تجربة أو شعور أو معنى | Search for an experience, feeling, or meaning |
-| noResults | **PROPOSED** | لا شيء في العالم العام يطابق هذا البحث. | Nothing in Public World matches this search. |
+| fieldLabel | **APPROVED** (Arabic revised by the Product Owner, 2026-10-07) | خريطة المعاني في العالم العام | Public World's field of meaning |
+| empty | **APPROVED** (Arabic revised by the Product Owner, 2026-10-07) | لا يوجد شيء في العالم العام بعد. | Nothing is in Public World yet. |
+| fieldUnavailable | **APPROVED** | تعذّر عرض العالم العام الآن. | Public World can't be shown right now. |
+| searchLabel | **APPROVED** (text revised by the Product Owner, R1) | ابحث عن تجربة أو شعور أو معنى | Search for an experience, feeling, or meaning |
+| noResults | **APPROVED** | لا شيء في العالم العام يطابق هذا البحث. | Nothing in Public World matches this search. |
 | closer | ~~PROPOSED~~ **RETIRED (R2, D3)** — control removed, row deleted | ~~اقترب~~ | ~~Closer~~ |
 | farther | ~~PROPOSED~~ **RETIRED (R2, D3)** — control removed, row deleted | ~~ابتعد~~ | ~~Farther~~ |
 | wholeWorld | ~~PROPOSED~~ **RETIRED (R2, D3)** — control removed, row deleted | ~~العالم كله~~ | ~~The whole World~~ |
-| nearHeading | **PROPOSED** | قريب في المعنى | Near in meaning |
-| sharedBy | **PROPOSED** | شاركها {0} | Shared by {0} |
-| experienceUnavailable | **PROPOSED** | لم تعد هذه التجربة في العالم العام. | This experience is no longer in Public World. |
-| placeHeading | **PROPOSED** | مكان التجربة في العالم العام | The experience's place in Public World |
-| placeExplain | **PROPOSED** | يحدد قنديل مكانها من معناها وحده، ولا يمكن اختيار المكان يدويًا. | QANDEEL places it by its meaning alone; the place can't be chosen by hand. |
-| placeAsk | **PROPOSED** | اطلب من قنديل تحديد مكانها | Ask QANDEEL to find its place |
-| placeReady | **PROPOSED** (text revised by the Product Owner, R1) | تم تحديد مكانها. | Its place has been set. |
-| placeUnavailable | **PROPOSED** | تعذّر على قنديل تحديد مكانها الآن. | QANDEEL couldn't find its place right now. |
+| nearHeading | **APPROVED** | قريب في المعنى | Near in meaning |
+| sharedBy | **APPROVED** | شاركها {0} | Shared by {0} |
+| experienceUnavailable | **APPROVED** | لم تعد هذه التجربة في العالم العام. | This experience is no longer in Public World. |
+| placeHeading | **APPROVED** | مكان التجربة في العالم العام | The experience's place in Public World |
+| placeExplain | **APPROVED** | يحدد قنديل مكانها من معناها وحده، ولا يمكن اختيار المكان يدويًا. | QANDEEL places it by its meaning alone; the place can't be chosen by hand. |
+| placeAsk | **APPROVED** | اطلب من قنديل تحديد مكانها | Ask QANDEEL to find its place |
+| placeReady | **APPROVED** (text revised by the Product Owner, R1) | تم تحديد مكانها. | Its place has been set. |
+| placeUnavailable | **APPROVED** | تعذّر على قنديل تحديد مكانها الآن. | QANDEEL couldn't find its place right now. |
 
 (R2: the zoom controls and their three rows are removed — see §25.) Notes for the Product Owner: English follows S5-01 / S5-02's "Public World" without an article. The zoom controls show the
 glyphs `+` / `−` / `○` with these rows as their accessible names. «شاركها» is used for a published Experience; the reader's
@@ -755,15 +761,16 @@ The Product Owner pauses the project at PR #317 head `430118ae2d27c2d9d686a1edb0
 
 **Workstream:** `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade`, opened by the Product Owner at the §26 resume
 point as the dedicated visual-redesign workstream. **Status: `LA-VIS-01 CLOSED — IMPLEMENTED / PRODUCT VISUALLY ACCEPTED /
-VALIDATED ON THE ANDROID EMULATOR — NOT MERGED`.** This closes the LA-VIS-01 visual-redesign workstream only. **S5-03B itself is
-NOT closed and NOT merged**: PR #317 stays unmerged (pause head `430118a`, then the pause record `dd88b94`), the S5-03B Product Copy Gate stays OPEN, and
+VALIDATED ON THE ANDROID EMULATOR — INTEGRATED INTO DRAFT PR #317 — NOT MERGED`.** This closes the LA-VIS-01 visual-redesign workstream only. **S5-03B itself is
+NOT closed and NOT merged**: PR #317 stays unmerged (pause head `430118a`, then the pause record `dd88b94`), and
 §26's "visual acceptance not granted" is superseded for the shared Living Analysis graphics only — not for S5-03B's other gates.
 
 - **Acceptance.** The Product Owner accepted the graphics-only Living Analysis redesign after the final-tuning visual proof and
   the Android emulator proof (2026-10-07), and closed the visual phase to further aesthetic iteration.
-- **Where it lives.** Local branch `feat/la-vis-01-living-analysis-graphics`, stacked on PR #317's pause record `dd88b94`; not pushed and
-  not merged. **Final implementation SHA: `550ce07`** (after `3c87510` and `9fc92d9`). The governance commit that records this
-  closure changes no Product code.
+- **Where it lives.** Integrated into PR #317. The PR branch `feat/s5-03b-public-semantic-field-viewer` was fast-forwarded
+  from `dd88b94` to `fe294fb4bdeb7ce5d2f3c424dd06caf322b591b1` and pushed: no merge commit, rebase or cherry-pick, and the tree is identical to the
+  LA-VIS-01 closure head. That was PR #317's head before the S5-03B Copy Gate closure (§14). PR #317 stays Draft and **NOT MERGED**.
+  **Final implementation SHA: `550ce07`** (after `3c87510` and `9fc92d9`). The governance commit `fe294fb` changes no Product code.
 - **One shared implementation.** It lands once in the shared stack (`apps/mobile/src/map/visual/` — `WorldMarks.tsx`,
   `WorldStrata.tsx`, the declared presentation palette `world-chroma.ts` and the mass material `world-mass.ts`), so Personal and
   Public receive it from the same code, as the §26 rule requires. **Shared World** is not a consumer yet; it will consume this
@@ -795,4 +802,5 @@ NOT closed and NOT merged**: PR #317 stays unmerged (pause head `430118a`, then 
 - **Backlog.** `QAN-BL-VIS-01` (heavy-history density + LOD stress proof) stays `OPEN — UNASSIGNED`; LA-VIS-01 does not close it,
   and real-phone performance and heavy-history / scale stress remain unproved under it. `QAN-BL-CW-03 / SHARED-VIS-01` stays
   `DEFERRED — OWNED`, unchanged. LA-VIS-01 inherits no item and admits none.
-- **Not performed.** No S5-03C or S5-04 work, no Copy Gate decision, no merge, no push.
+- **Not performed.** No S5-03C or S5-04 work, no Shared visual integration and no merge. The S5-03B Copy Gate was closed afterwards, by the Product
+  Owner's own decision (§14), not by LA-VIS-01.

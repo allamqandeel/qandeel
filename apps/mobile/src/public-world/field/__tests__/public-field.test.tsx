@@ -911,15 +911,16 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
     }
   });
 
-  it('one S5-03B gate, OPEN: every new row PROPOSED in both languages; frozen words reused byte-exact', () => {
-    expect(PUBLIC_FIELD_COPY_GATE.status).toBe('S5-03B PRODUCT COPY GATE — OPEN — 13 rows PROPOSED (R2 census; 3 rows RETIRED)');
-    expect(PUBLIC_FIELD_COPY_GATE.proposed).toHaveLength(13);
-    expect(PUBLIC_FIELD_COPY_GATE.approved).toEqual([]);
+  it('one S5-03B gate, CLOSED by Product Owner approval: every new row APPROVED in both languages; frozen words reused byte-exact', () => {
+    expect(PUBLIC_FIELD_COPY_GATE.status).toBe('S5-03B PRODUCT COPY GATE — CLOSED — 13 rows APPROVED (Product Owner, 2026-10-07; 3 rows RETIRED)');
+    expect(PUBLIC_FIELD_COPY_GATE.approved).toHaveLength(13);
+    expect(PUBLIC_FIELD_COPY_GATE.proposed).toEqual([]);
     // R2 (D3): the rows of the removed + / − / ○ controls are retired — not proposed, not drawn, not in either language.
     expect(PUBLIC_FIELD_COPY_GATE.retired).toEqual(['closer', 'farther', 'wholeWorld']);
-    for (const key of PUBLIC_FIELD_COPY_GATE.retired) expect(PUBLIC_FIELD_COPY_GATE.proposed).not.toContain(key);
+    for (const key of PUBLIC_FIELD_COPY_GATE.retired) expect(PUBLIC_FIELD_COPY_GATE.approved).not.toContain(key);
     const source = readFileSync(join(dir, 'field-copy.ts'), 'utf8');
-    expect(source.match(/\/\/ PROPOSED — S5-03B Product Copy Gate/gu)).toHaveLength(26);
+    expect(source.match(/\/\/ APPROVED — S5-03B Product Copy Gate \(Product Owner, 2026-10-07/gu)).toHaveLength(26);
+    expect(source).not.toMatch(/PROPOSED — S5-03B/u);
     expect(source).not.toMatch(/^\s+(closer|farther|wholeWorld):/mu);
     // The accessible step is said in the Living Analysis's own words, reused byte-exact.
     for (const language of ['ar', 'en'] as const) {
@@ -928,11 +929,15 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
     }
     for (const language of ['ar', 'en'] as const) {
       const copy = publicFieldCopy(language);
-      for (const key of PUBLIC_FIELD_COPY_GATE.proposed) expect(copy[key].length).toBeGreaterThan(0);
+      for (const key of PUBLIC_FIELD_COPY_GATE.approved) expect(copy[key].length).toBeGreaterThan(0);
       expect(JSON.stringify(copy)).not.toMatch(/coordinate|إحداثي|rank|popular|views|lens/iu);
     }
-    // R1: the two rows whose text the Product Owner revised — still PROPOSED until the Owner closes the gate.
-    expect(PUBLIC_FIELD_COPY_GATE.revisedByProductOwner).toEqual(['searchLabel', 'placeReady']);
+    // The rows whose text the Product Owner revised: R1, and the Arabic of two rows at the gate's closure (English unchanged).
+    expect(PUBLIC_FIELD_COPY_GATE.revisedByProductOwner).toEqual(['searchLabel', 'placeReady', 'fieldLabel', 'empty']);
+    expect(publicFieldCopy('ar').fieldLabel).toBe('خريطة المعاني في العالم العام');
+    expect(publicFieldCopy('ar').empty).toBe('لا يوجد شيء في العالم العام بعد.');
+    expect(publicFieldCopy('en').fieldLabel).toBe("Public World's field of meaning");
+    expect(publicFieldCopy('en').empty).toBe('Nothing is in Public World yet.');
     expect(publicFieldCopy('ar').searchLabel).toBe('ابحث عن تجربة أو شعور أو معنى');
     expect(publicFieldCopy('ar').placeReady).toBe('تم تحديد مكانها.');
     expect(publicFieldCopy('en').searchLabel).toBe('Search for an experience, feeling, or meaning');
