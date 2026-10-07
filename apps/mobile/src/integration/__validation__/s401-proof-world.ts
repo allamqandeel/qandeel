@@ -68,7 +68,7 @@
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { MobilePublicConfig, RuntimeHttpFetch, SupabaseAuthPort } from '../../runtime-entry';
 import { S401_ACCOUNT_IDENTITY, S401_ACCOUNT_PUBLIC_ID } from '../__fixtures__/s401-account-identity';
-import { fixtureExperience, fixtureField, fixtureSearch } from './s503b-visual-field';
+import { FIXTURE_OWN_EXPERIENCE_ID, fixtureEntry, fixtureExperience, fixtureField, fixtureSearch } from './s503b-visual-field';
 import { createVport01ProofWorld } from './vport01-proof-world';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
@@ -159,6 +159,8 @@ export interface S401ProofWorld {
   publicAllow(): void;
   /** S5-03B: the Public field answers from the SYNTHETIC visual-review fixture (`s503b-visual-field.ts`). */
   publicSeed(): void;
+  /** S5-03C smoke: the synthetic other side accepts every relation the reader requested. */
+  relationAccept(): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
@@ -170,6 +172,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   let publicMode: 'PSEUDONYM' | 'REAL_NAME' = 'PSEUDONYM';
   // S5-03B: off until public/seed, so every earlier leg meets the field exactly as before.
   let publicField = false;
+  // S5-03C smoke: explicit relations the reader requested from their own fixture Experience (and their synthetic acceptance).
+  let relations: { relationId: string; own: string; other: string; state: 'REQUEST_SENT' | 'ACTIVE' }[] = [];
   // S5-02: the reader's Drafts — the chosen source, the reader's own approval, the lifecycle (never past READY_FOR_REVIEW).
   const drafts: { experienceId: string; manifestId: string | null; lifecycle: 'DRAFT' | 'READY_FOR_REVIEW'; approval: 'MISSING' | 'EFFECTIVE' | 'WITHDRAWN' }[] = [];
   const ownSourceId = '54020000-0000-4000-8000-000000000001';
@@ -507,13 +511,44 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       }
       return json(200, { mode: publicMode, label: publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId, realNameAvailable: true });
     }
+    if (publicField && (path === '/public/authoring/relations' || path.startsWith('/public/authoring/relations/'))) {
+      if (path === '/public/authoring/relations' && method === 'GET') {
+        const own = fixtureEntry(FIXTURE_OWN_EXPERIENCE_ID)!;
+        return json(200, { experiences: [{ id: own.id, meaning: own.meaning }], relations: relations.map((r) => ({
+          relationId: r.relationId, experienceId: r.own, other: { id: r.other, meaning: fixtureEntry(r.other)!.meaning }, state: r.state })) });
+      }
+      if (path === '/public/authoring/relations' && method === 'POST') {
+        const body = JSON.parse(init?.body ?? '{}') as { experienceId?: string; otherExperienceId?: string };
+        if (body.experienceId !== FIXTURE_OWN_EXPERIENCE_ID || !body.otherExperienceId || body.otherExperienceId === body.experienceId
+          || !fixtureEntry(body.otherExperienceId)) return json(200, { outcome: 'UNAVAILABLE' });
+        const existing = relations.find((r) => r.other === body.otherExperienceId);
+        if (existing) return json(200, { outcome: existing.state === 'ACTIVE' ? 'ALREADY_RELATED' : 'ALREADY_PENDING' });
+        relations.push({ relationId: uuid(), own: body.experienceId, other: body.otherExperienceId, state: 'REQUEST_SENT' });
+        return json(200, { outcome: 'REQUESTED' });
+      }
+      const acted = /^\/public\/authoring\/relations\/([^/]+)\/(accept|decline|cancel|remove)$/u.exec(path);
+      if (acted && method === 'POST') {
+        const r = relations.find((x) => x.relationId === acted[1]);
+        // The reader is only ever the requesting side here: accept / decline belong to the synthetic other side.
+        if (!r || acted[2] === 'accept' || acted[2] === 'decline') return json(200, { outcome: 'UNAVAILABLE' });
+        if (acted[2] === 'cancel' && r.state !== 'REQUEST_SENT') return json(200, { outcome: 'NOT_PENDING' });
+        if (acted[2] === 'remove' && r.state !== 'ACTIVE') return json(200, { outcome: 'NOT_ACTIVE' });
+        relations = relations.filter((x) => x !== r);
+        return json(200, { outcome: acted[2] === 'cancel' ? 'CANCELLED' : 'REMOVED' });
+      }
+    }
     if (path === '/public/authoring' || path.startsWith('/public/authoring/')) return authoring(path, method);
     if (publicField && method === 'GET' && (path === '/public/field' || path.startsWith('/public/field/'))) {
       const query = input.includes('?') ? input.slice(input.indexOf('?') + 1) : '';
       if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, answer) : json(400, {}); }
       if (path === '/public/field/search') return json(200, fixtureSearch(decodeURIComponent((/(?:^|&)q=([^&]*)/u.exec(query)?.[1] ?? '').replace(/\+/gu, ' '))));
       const panel = /^\/public\/field\/experiences\/([^/]+)$/u.exec(path);
-      if (panel) return json(200, fixtureExperience(decodeURIComponent(panel[1])));
+      if (panel) {
+        const id = decodeURIComponent(panel[1]);
+        const active = relations.filter((r) => r.state === 'ACTIVE' && (r.own === id || r.other === id))
+          .map((r) => ({ relationId: r.relationId, otherId: r.own === id ? r.other : r.own }));
+        return json(200, fixtureExperience(id, active));
+      }
     }
     if (path === '/shared' || path.startsWith('/shared/')) {
       return shared(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
@@ -538,6 +573,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     },
     revoke: () => { for (const world of worlds) world.current = false; },
     publicSeed: () => { publicField = true; },
+    relationAccept: () => { relations = relations.map((r) => ({ ...r, state: 'ACTIVE' as const })); },
     publicAllow: () => {
       const pending = publicReleases;
       publicReleases = [];

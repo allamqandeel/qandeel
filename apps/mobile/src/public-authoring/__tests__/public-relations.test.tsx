@@ -16,7 +16,7 @@ import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearanc
 import { viewportEnvelope } from '../../map/camera';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../map/world';
 import { resize } from '../../responsive/__fixtures__/composition';
-import type { PublicAuthoringAnswer, PublicFieldEntry, PublicFieldPanel, PublicRelation, PublicRelations } from '../../runtime-entry';
+import type { PublicAuthoringAnswer, PublicFieldEntry, PublicFieldPanel, PublicRelation, PublicRelationActOutcome, PublicRelations } from '../../runtime-entry';
 import { PublicWorldApiClient } from '../../runtime-entry';
 import { createPublicWorldController } from '../../public-world/public-world-controller';
 import { PublicWorldArea } from '../../public-world/PublicWorldArea';
@@ -135,7 +135,7 @@ function relationServer(initial: PublicRelation[] = []) {
       truth = [...truth, { relationId: id(77), experienceId: E1.id, other: { id: to, meaning: `meaning ${Number(to.slice(-2))}` }, state: 'REQUEST_SENT' }];
       return yes('REQUESTED' as const);
     }),
-    act: jest.fn(async (kind: string, relationId: string) => {
+    act: jest.fn(async (kind: string, relationId: string): Promise<PublicAuthoringAnswer<PublicRelationActOutcome>> => {
       const found = truth.find((r) => r.relationId === relationId);
       if (!found) return yes('UNAVAILABLE' as const);
       if (kind === 'accept') { truth = truth.map((r) => (r.relationId === relationId ? { ...r, state: 'ACTIVE' as const } : r)); return yes('ACCEPTED' as const); }
