@@ -209,12 +209,12 @@ a summary, not a second backlog. Read the backlog itself for sources, reopen con
 | `DEFERRED — OWNED` | 17 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 9 |
-| `CLOSED — TOMBSTONE` | 17 |
-| **Total** | **43** |
+| `CLOSED — TOMBSTONE` | 18 |
+| **Total** | **44** |
 
-| Severity (all 43) | Count |
+| Severity (all 44) | Count |
 |---|---:|
-| `HIGH` | 26 |
+| `HIGH` | 27 |
 | `MEDIUM` | 16 |
 | `LOW` | 1 |
 
@@ -226,7 +226,7 @@ holds 39 items, 13 / 0 / 10 / 16 by status and 24 / 14 / 1 by severity, recounte
 `QAN-BL-NOTIF-01` and admitted `QAN-BL-NOTIF-05`: **40** items, 13 / 0 / 10 / 17 by status and 25 / 14 / 1 by severity.
 S4-01 (merged, PR #310) admitted `QAN-BL-LAUNCH-03` and `QAN-BL-CI-01`: **42** items, 15 / 0 / 10 / 17 by status and 25 / 16 / 1 by
 severity. S4-02 (merged, PR #311) admitted `QAN-BL-CW-02` (designated by the Product Owner): **43** items, 16 / 0 / 10 / 17 by status and
-26 / 16 / 1 by severity, recounted mechanically. S4-03 (merged, PR #312) and S4-04 (merged, PR #313) admit nothing; the counts are unchanged. S5-01 (merged, PR #314) re-owned `QAN-BL-CW-01` to S5-02 (Product Owner designation): 17 / 0 / 9 / 17 by status. S5-02 (merged, PR #315) tombstoned `QAN-BL-CW-01` and admitted nothing: **16 / 0 / 9 / 18** by status, 26 / 16 / 1 by severity, recounted mechanically. S5-03A (merged, PR #316) inherits nothing and admits nothing; the counts are unchanged. S5-03B (implementation candidate, not merged) inherits nothing and admits nothing; the counts are unchanged. The 25 active items, in the backlog's own index order:
+26 / 16 / 1 by severity, recounted mechanically. S4-03 (merged, PR #312) and S4-04 (merged, PR #313) admitted nothing at closure. S5-01 (merged, PR #314) re-owned `QAN-BL-CW-01` to S5-02 (Product Owner designation): 17 / 0 / 9 / 17 by status. S5-02 (merged, PR #315) tombstoned `QAN-BL-CW-01` and admitted nothing: **16 / 0 / 9 / 18** by status, 26 / 16 / 1 by severity. S5-03A (merged, PR #316) inherits nothing and admits nothing. During S5-03B Product review, the Product Owner separately admits `QAN-BL-CW-03` (`HIGH`, `DEFERRED — OWNED`, owner `SHARED-VIS-01`) and freezes its sequencing until Stage 5 / Public World is fully DONE / MERGED. Current register: **44** items, 17 / 0 / 9 / 18 by status and 27 / 16 / 1 by severity. The 26 active items, in the backlog's own index order:
 
 | ID | Title | Owner | Severity | Status |
 |---|---|---|---|---|
@@ -255,6 +255,7 @@ severity. S4-02 (merged, PR #311) admitted `QAN-BL-CW-02` (designated by the Pro
 | `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-03` | Shared World Living Analysis Map / Semantic Geography Product Integration | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `HIGH` | `DEFERRED — OWNED` |
 
 Severity states the consequence *if an item is reopened*. It is not a priority or a schedule (backlog §2).
 An entry authorizes no implementation (BG-07).
@@ -353,8 +354,7 @@ integrity.
     `34ea439b98eecd5f22628f41749245f81bb2b9f8`);
   - Stage 3 (Activity & Notifications Production) is **DONE / MERGED**: `A3-01` through PR #307 at
     `a2ec76507e43c82dcabf4194053e318c2fb9d509` and `A3-02` through PR #308 at `06a960848faaccc6e294d38fbde2918b10ed1d74`;
-  - Stage 4 (Shared World Product Integration) is **DONE / MERGED**: `S4-01` (PR #310), `S4-02` (PR #311), `S4-03` (PR #312) and
-    `S4-04` (PR #313 at `5cf98a267d9eed7e9019f0ca5ed93bd8884a1b36`);
+  - Stage 4 (Shared World Product Integration) is **DONE / MERGED** for S4-01 … S4-04. One later corrective gap is now recorded: `QAN-BL-CW-03 / SHARED-VIS-01` (Shared Living Analysis Map / semantic geography), **DEFERRED — OWNED** and explicitly blocked from starting until Stage 5 / Public World is fully DONE / MERGED;
   - Stage 5 (Public World Product Integration) is **ACTIVE**: `S5-01 — Public World Reachability, Entry & Identity Foundation`
     is MERGED (PR #314 at `8dfc7b38baa133c8cecbffea8c65ae17ddc245ff`); `S5-02 — Publishing + Rights + Draft/Review + Privacy
     Closure` is MERGED (PR #315 at `1a10127672f8db7ff475bca4732635bf88536730`); `S5-03A — Public Semantic Interpretation +
@@ -529,7 +529,8 @@ create an implementation task:
 | `A3-02 — Native Push, Permission & Platform Delivery Integration` | `QAN-BL-NOTIF-01`, merged through PR #308 and tombstoned. Stage 3 is DONE | [A3-02 record](docs/e2e/QANDEEL_A3_02_NATIVE_PUSH_PLATFORM_DELIVERY_IMPLEMENTATION_RECORD_v1.md) |
 | `Release Hardening & Launch — physical iOS / Android device validation` | `QAN-BL-NOTIF-05`: the native-Push physical-device Exit Gates PD-01 … PD-09 (real FCM / APNs receipt, Lock Screen, tray taps, prompts, badge absence, assistive technology, credentials provisioning) | [A3-02 record §20](docs/e2e/QANDEEL_A3_02_NATIVE_PUSH_PLATFORM_DELIVERY_IMPLEMENTATION_RECORD_v1.md); [roadmap §5](QANDEEL_PRODUCT_ROADMAP.md) |
 | `PROACTIVE-EVT-01`; `REMINDER-EVT-01`; `ACCOUNT-SEC-EVT-01` | `QAN-BL-NOTIF-02` (the Proactive Gate + producer), `QAN-BL-NOTIF-03` (the requested-reminder runtime + producer), `QAN-BL-NOTIF-04` (the security / sign-in event source): each publishes through the A3-01 boundary | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
-| `S4-02`; `S4-03`; `S4-04` (Stage 4, named by the S4-01 Task Contract) | S4-02: Shared conversation and material (human text / voice notes / QANDEEL participation, attribution, own-material deletion). S4-03: membership lifecycle and governance UI (leave, add / remove / rejoin, settings, history sharing, closure, the birth-scene and World-Transition motion review). S4-04: Shared Activity producers, per-World mutes, first-Shared-entry permission education and Direct Entry into a Shared World | [record](docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md) §17 |
+| `S4-02`; `S4-03`; `S4-04` (Stage 4, named by the S4-01 Task Contract) | S4-02: Shared conversation and material. S4-03: membership lifecycle and governance UI. S4-04: Shared Activity, per-World mutes, education and Direct Entry. All remain merged and closed for their delivered scope. | [record](docs/e2e/QANDEEL_S4_01_SHARED_WORLD_REACHABILITY_INVITATION_BIRTH_IMPLEMENTATION_RECORD_v1.md) §17 |
+| `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `QAN-BL-CW-03`: reuse the common Living Analysis renderer with Shared-specific semantic projection / viewer-local state so Shared becomes the canonical "world, not chat" experience; **do not start until Stage 5 / Public World is fully DONE / MERGED** | [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` (named by the S5-01 Task Contract) | `QAN-BL-CW-01` (`ASSURE-F05`): the Product Owner's physical-erasure decision, closed before any application-reachable Draft / review creation path opens — **delivered by S5-02 (merged through PR #315; migration `0143`)** | [S5-01 record](docs/e2e/QANDEEL_S5_01_PUBLIC_REACHABILITY_ENTRY_IDENTITY_FOUNDATION_IMPLEMENTATION_RECORD_v1.md) §12–§13; [backlog §5](docs/qandeel-canonical-backlog-v1.md) |
 | `S5-03B — Public Semantic Field + Viewer Runtime`; `S5-03C — Explicit Relations + Integrity Closure`; `S5-04 — Discussion + Public QANDEEL + Final Public Integration` (named by the S5-03A Task Contract) | S5-03B: the reviewed interpretation → a stable spatial placement in the Public semantic field (it consumes S5-03A's semantic readiness), FAR / MID / NEAR, the Public viewer, camera, search / lens / panel surfaces. S5-03C: explicit Public relations and the integrity closure. S5-04: discussion, Public QANDEEL, Public Activity / Push and the final Public integration. The `PUBLISHED` path stays the CW2-08 / Stage-9 seam's | [S5-03A record](docs/e2e/QANDEEL_S5_03A_PUBLIC_SEMANTIC_INTERPRETATION_PUBLISHER_REVIEW_IMPLEMENTATION_RECORD_v1.md) §17 |
 | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` (named by the S5-03A Task Contract) | the production provider behind S5-03A's provider-neutral `PublicSemanticInterpreter` (it refuses until bound), with its AI-COST-01 feature family and spend admission | [S5-03A record](docs/e2e/QANDEEL_S5_03A_PUBLIC_SEMANTIC_INTERPRETATION_PUBLISHER_REVIEW_IMPLEMENTATION_RECORD_v1.md) §6, §17 |

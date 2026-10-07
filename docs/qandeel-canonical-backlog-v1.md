@@ -177,6 +177,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-03` | Shared World Living Analysis Map / Semantic Geography Product Integration | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -934,6 +935,46 @@ of S4-02's scope, and nothing here authorizes implementation (BG-07).
 
 ---
 
+### `QAN-BL-CW-03` — Shared World Living Analysis Map / Semantic Geography Product Integration
+
+- **Title / Finding:** the Stage-4 Shared World runtime, authority, conversation, governance, history, Activity and Direct
+  Entry are delivered, but the production mobile World surface is still conversation-centric (`SharedWorldArea` +
+  `SharedWorldThread`) rather than the Living Analysis semantic World described by the Shared Product North Star. It does
+  not consume the Living Analysis Map renderer, shared semantic world surface, FAR / MID / NEAR visual physics, or a
+  Shared-specific semantic projection. The current Product therefore delivers the Shared conversation and World shell,
+  but not the full "world, not chat" spatial realization.
+- **Source:** `QANDEEL_SHARED_WORLD_PRODUCT_DEFINITION_v1.md` §7, §8, §24 and §26 (live space, shared visual family,
+  semantic zoom / pan / stable geography / Timeline, "world, not chat"); `QANDEEL_CW2-07_CROSS_WORLD_NAVIGATION_VISUAL_INTEGRATION_v1.0_FROZEN.md`
+  §5, §21 and §47 (independent World-local camera / focus / semantic geography); current production mobile truth in
+  `apps/mobile/src/shared-world/SharedWorldArea.tsx` / `SharedWorldThread.tsx`. Discovered during the S5-03B Product review
+  on 2026-10-07 and explicitly designated by the Product Owner as a deferred gap.
+- **Current truth:** Stage 4 remains `DONE / MERGED` for the work it actually delivered. No Shared authority, membership,
+  material, governance, history, notification or Direct-Entry runtime is reopened. The missing piece is the Shared semantic
+  projection / Living Analysis Product realization only. The generic Living Analysis renderer seam being extracted in
+  S5-03B may later be consumed, but this item authorizes no implementation while Stage 5 is active.
+- **Why deferred:** the Product Owner explicitly preserves the execution map: finish Public World / Stage 5 completely
+  first, then return to this Shared visual-semantic correction. Starting it during S5-03B / S5-03C / S5-04 would fragment
+  the active Public World stage and duplicate renderer work before the Public adoption settles.
+- **Owner task:** `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration`
+- **Scope:** after Stage 5 is `DONE / MERGED`, consume the common Living Analysis renderer / world physics with a
+  Shared-specific projection and independent viewer-local camera / focus / time state; preserve the existing Shared
+  conversation, membership, governance, history, Activity and authority surfaces as the Shared World's own Product chrome
+  and controls; do not map Shared truth into fake Personal Threads / Readings / Sessions and do not rebuild I-04.
+- **Severity:** `HIGH` — without it, Shared World remains materially more like a shared conversation surface than the
+  canonical semantic World experience promised by its Product North Star.
+- **Reopen condition:** **only after Stage 5 — Public World Product Integration is fully `DONE / MERGED`**, and before the
+  execution sequence proceeds past this owned correction unless the Product Owner explicitly changes sequencing.
+- **Required future properties:** one Living Analysis renderer family across Personal / Shared / Public; exact-World
+  semantic geography; no Personal camera / focus / timeline leakage; Shared viewer state remains independent; the World
+  grows from Shared-native truth over time; no invented cross-World coordinate alignment; existing Shared authority and
+  privacy laws remain unchanged; targeted non-regression proof for the already-merged Stage-4 journeys.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by explicit Product Owner decision on 2026-10-07. This admission records sequencing and ownership only; it does
+not reopen Stage 4 now and does not authorize implementation before Public World is complete (BG-07).
+
+---
+
 ### `QAN-BL-PRIV-01` — Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item
 
 - **Title / Finding:** W3-CORR-U (migration `0134`) lets the reader resolve their own disagreement explicitly («أوافق
@@ -1408,15 +1449,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 16 |
+| `DEFERRED — OWNED` | 17 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **43** |
+| **Total** | **44** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 26 |
+| `HIGH` | 27 |
 | `MEDIUM` | 16 |
 | `LOW` | 1 |
 
@@ -1667,8 +1708,12 @@ Public field / search performance at scale and dense-field aggregation (record G
 GAPS awaiting the Product Owner's ownership decision — not self-assigned to S5-04 and not admitted before that decision;
 the field read's `LIMIT 400` is a bounded v1, not the final whole-World behaviour at scale. Its Gap Matrix is §16 of its
 [implementation record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
-The register still holds **43** items: 16 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18
-`CLOSED — TOMBSTONE`; by severity, 26 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+The S5-03B task itself still admits no implementation-owned backlog item. During its Product review on 2026-10-07, the
+Product Owner separately designates `QAN-BL-CW-03 — Shared World Living Analysis Map / Semantic Geography Product Integration`
+as `HIGH`, `DEFERRED — OWNED`, owner `SHARED-VIS-01`, with an explicit sequencing gate: do not start it until Stage 5 / Public
+World is fully `DONE / MERGED`. This does not reopen Stage 4 now and does not interrupt S5-03B / S5-03C / S5-04.
+The register now holds **44** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1732,6 +1777,7 @@ Inherited after T-12 closure reconciliation:
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
 | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
+| `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `QAN-BL-CW-03` — deferred until Stage 5 / Public World is fully DONE / MERGED |
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 | `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / Semantic Placement `RESTRICT` dependents recorded; none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
