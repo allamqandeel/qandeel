@@ -12,6 +12,8 @@ export interface PublicFieldExperienceRow {
   readonly qandeel_response_count: number; readonly world_x: string; readonly world_y: string;
 }
 export interface PublicFieldContentRow { readonly item_ordinal: number; readonly item_kind: string; readonly item_text: string }
+/** S5-03C (migration 0146): one explicit relation of a served Experience — the OTHER endpoint's served entry and the id. */
+export interface PublicFieldRelationRow extends PublicFieldEntryRow { readonly relation_id: string }
 
 /**
  * S5-03B — the Public semantic field's only transport. Every call runs on the VIEWER's own token, so the database
@@ -45,5 +47,10 @@ export class PublicFieldRepository {
 
   nearby(token: string, experienceId: string): Promise<PublicFieldEntryRow[]> {
     return this.rpc<PublicFieldEntryRow>(token, 'read_public_semantic_nearby_v1', { p_experience_id: experienceId });
+  }
+
+  /** S5-03C: the ACTIVE explicit relations of a served Experience whose two bound endpoints are both served now. */
+  relations(token: string, experienceId: string): Promise<PublicFieldRelationRow[]> {
+    return this.rpc<PublicFieldRelationRow>(token, 'read_public_semantic_relations_v1', { p_experience_id: experienceId });
   }
 }

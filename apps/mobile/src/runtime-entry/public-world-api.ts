@@ -12,6 +12,7 @@
 import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
 import { PublicAuthoringApiClient } from './public-authoring-api';
 import { PublicFieldApiClient, PublicSpatialApiClient } from './public-field-api';
+import { PublicRelationApiClient } from './public-relation-api';
 import { PublicSemanticApiClient } from './public-semantic-api';
 
 export interface PublicWorldApiConfig {
@@ -52,12 +53,15 @@ export class PublicWorldApiClient {
   readonly field: PublicFieldApiClient;
   /** S5-03B — preparing the stable place of the reader's own Experience, on the same identity-bound transport. */
   readonly spatial: PublicSpatialApiClient;
+  /** S5-03C — explicit Public relations of the reader's own served Experiences, on the same identity-bound transport. */
+  readonly relation: PublicRelationApiClient;
 
   constructor(private readonly config: PublicWorldApiConfig) {
     this.authoring = new PublicAuthoringApiClient(config);
     this.semantic = new PublicSemanticApiClient(config);
     this.field = new PublicFieldApiClient(config);
     this.spatial = new PublicSpatialApiClient(config);
+    this.relation = new PublicRelationApiClient(config);
   }
 
   async entry(): Promise<PublicEntryResult> {

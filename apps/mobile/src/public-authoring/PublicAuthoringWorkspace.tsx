@@ -14,9 +14,11 @@
  *     Public World's field;
  *   - S5-03A, once the Experience is READY_FOR_REVIEW: QANDEEL's understanding — the meaning, the main and other
  *     meanings, and why — with "accept" and "correct the understanding". A correction is the reader's own words for the
- *     MEANING; there is no place, map, coordinate or neighbour anywhere here, and no internal term is shown.
+ *     MEANING; there is no place, map, coordinate or neighbour anywhere here, and no internal term is shown;
+ *   - S5-03C: explicit relations (`./PublicRelations`) — the requests waiting on the reader's acceptance and their own
+ *     Experiences in Public World on the workspace, and one Experience's relations on its own screen. No graph, no map.
  *
- * Every word is the S5-02 or S5-03A copy module's. The Personal world and the Shared area are never read.
+ * Every word is the S5-02, S5-03A or S5-03C copy module's. The Personal world and the Shared area are never read.
  */
 import { useEffect, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, ScrollView, Text, View } from 'react-native';
@@ -28,6 +30,8 @@ import { publicFieldCopy } from '../public-world/field/field-copy';
 import { fill, publicAuthoringCopy, type PublicAuthoringCopy } from './copy';
 import { personalKey, sharedKey, type PublicAuthoringController, type PublicAuthoringNotice } from './public-authoring-controller';
 import { PublicPlacePreparation } from './PublicPlacePreparation';
+import { PublicRelationsScreen, PublicRelationsSection } from './PublicRelations';
+import { publicRelationCopy } from './relation-copy';
 import { PublicSemanticReview as Understanding } from './PublicSemanticReview';
 import { publicSemanticCopy, type PublicSemanticCopy } from './semantic-copy';
 
@@ -187,7 +191,8 @@ export function PublicAuthoringWorkspace({ controller, language, palette, bottom
     if (said !== null) AccessibilityInfo.announceForAccessibility(said);
   }, [said]);
 
-  const title = state.screen === 'CHOOSE' ? copy.chooseHeading : state.screen === 'REVIEW' ? copy.review : copy.workspaceTitle;
+  const title = state.screen === 'CHOOSE' ? copy.chooseHeading : state.screen === 'REVIEW' ? copy.review
+    : state.screen === 'RELATIONS' ? publicRelationCopy(language).relationsTitle : copy.workspaceTitle;
 
   return (
     <View testID={PUBLIC_AUTHORING_TEST_ID} accessibilityLanguage={language} style={{ flex: 1, direction: writing }}>
@@ -218,7 +223,10 @@ export function PublicAuthoringWorkspace({ controller, language, palette, bottom
             ))}
             {state.requests.length > 0 ? <Heading text={copy.requestsHeading} s={s} testID="qandeel-public-authoring-requests" /> : null}
             {state.requests.map((request) => <Request key={request.manifestId} request={request} s={s} busy={state.busy} controller={controller} />)}
+            <PublicRelationsSection state={state} controller={controller} language={language} palette={palette} />
           </View>
+        ) : state.screen === 'RELATIONS' ? (
+          <PublicRelationsScreen key={state.experienceId ?? 'none'} state={state} controller={controller} language={language} palette={palette} />
         ) : state.screen === 'CHOOSE' ? (
           <View testID="qandeel-public-authoring-choose">
             <Line text={copy.chooseHint} s={s} />

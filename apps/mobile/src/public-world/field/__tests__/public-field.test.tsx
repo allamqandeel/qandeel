@@ -76,6 +76,8 @@ const E3 = entry(3, -1_000_000n, -1_500_000n, 'hope.waiting');
 const served = (e: PublicFieldEntry, nearby: PublicFieldEntry[] = []): PublicFieldPanel => ({ kind: 'SERVED', experience: {
   entry: e, primaryThemes: ['fear'], secondaryThemes: ['work'], publisher: { mode: 'PSEUDONYM', label: 'nightlamp27' },
   content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }, { ordinal: 2, kind: 'ANALYSIS', text: 'what QANDEEL read' }], nearby,
+  // S5-03C (re-anchor): a served panel carries its explicit relations; these S5-03B fixtures hold none.
+  relations: [],
 } });
 
 function fieldTransport(entries: PublicFieldEntry[] = [E1, E2, E3], panel: (experienceId: string) => PublicFieldPanel = (x) => served([E1, E2, E3].find((e) => e.id === x)!, [E2])) {
@@ -899,12 +901,17 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
   const code = (file: string) => readFileSync(join(dir, file), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '').replace(/(^|[^:])\/\/.*$/gmu, '$1');
   const files = readdirSync(dir).filter((f) => /\.tsx?$/u.test(f));
 
-  it('holds nothing of the Personal or Shared world, draws no relation line, ranks nothing, and carries no Arabic literal', () => {
+  // S5-03C (controlled re-anchor): an EXPLICIT relation the server served may now be drawn at NEAR. It reaches the field
+  // only through these three files (the panel read the controller holds, the view's connection slot, and the S5-03C
+  // line module); every other field file still names no relation at all, and none draws an edge, a Line or a Path.
+  const EXPLICIT_RELATION_FILES = ['PublicFieldView.tsx', 'public-field-controller.ts', 'PublicRelationLines.tsx'];
+  it('holds nothing of the Personal or Shared world, draws no inferred relation, ranks nothing, and carries no Arabic literal', () => {
     expect(code('PublicLivingAnalysis.tsx')).toContain('timeline={null}');
     for (const file of files) {
       const text = code(file).replace('timeline={null}', '');
       expect(text).not.toMatch(/from '\.\.\/\.\.\/state'|CanonicalStore|SemanticDepth|Session|Thread|EMERGING_FOCUS|READING|temporal|shared-world\/(?!copy)|useMapPanGesture|useMapSemanticZoomGesture/u);
-      expect(text).not.toMatch(/relation|edge|Line\b|<Path|Svg|viewCount|rank|popular|trending/iu);
+      expect(text).not.toMatch(/edge|Line\b|<Path|Svg|viewCount|rank|popular|trending|similar|proxim/iu);
+      if (!EXPLICIT_RELATION_FILES.includes(file)) expect(text).not.toMatch(/relation/iu);
       expect(text).not.toMatch(/withTiming|withSpring|Animated\./u);
       if (file !== 'field-copy.ts') expect(text).not.toMatch(/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u);
       expect(text).not.toMatch(/publish_|'PUBLISHED'|s5-03a\.private|S5-03A_PRIVATE/u);

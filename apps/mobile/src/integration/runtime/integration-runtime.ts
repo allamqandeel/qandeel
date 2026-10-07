@@ -548,7 +548,9 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       // S5-03A: its semantic review stage, on the same authoring client.
       publicWorld: createPublicWorldController({
         transport: publicTransport, isCurrent,
-        authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, semantic: publicTransport.semantic ?? null, spatial: publicTransport.spatial ?? null, isCurrent }),
+        // S5-03C: explicit relations in the same workspace; the other Experience is found by the SAME field search.
+        authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, semantic: publicTransport.semantic ?? null, spatial: publicTransport.spatial ?? null,
+          relation: publicTransport.relation ?? null, relationSearch: publicTransport.field ?? null, isCurrent }),
         // S5-03B — the Public semantic field: its own viewer state, on the same identity-bound transport.
         field: createPublicFieldController({ transport: publicTransport.field ?? null, isCurrent, foreground: entry.foreground }),
       }),

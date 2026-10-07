@@ -89,5 +89,8 @@ export function fixtureExperience(id: string): unknown {
       { ordinal: 2, kind: 'ANALYSIS', text: 'قراءة اختبارية من قنديل لهذه التجربة.' },
     ],
     nearby: EXPERIENCES.filter((x) => x.region === e.region && x.id !== e.id).slice(0, 3).map(entryOf),
+    // S5-03C (re-anchor to the current panel contract): this synthetic World holds no explicit relation. None is
+    // fabricated from its regions — sharing a region is similarity, never a relation.
+    relations: [],
   };
 }

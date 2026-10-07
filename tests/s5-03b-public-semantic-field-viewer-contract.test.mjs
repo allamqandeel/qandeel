@@ -140,7 +140,13 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   for (const file of FIELD_FILES) {
     const text = code(`${MOBILE}/${file}`);
     assert.doesNotMatch(text, /from '\.\.\/\.\.\/state'|CanonicalStore|SemanticDepth|useMapPanGesture|useMapSemanticZoomGesture|integration\//u, `${file} holds no Personal Map state`);
-    assert.doesNotMatch(text, /relation|<Line|<Path|<Svg|viewCount|view_count|\brank\b|popular|trending/iu, `${file} draws no relation and ranks nothing`);
+    assert.doesNotMatch(text, /<Line|<Path|<Svg|viewCount|view_count|\brank\b|popular|trending|similar|proxim/iu, `${file} draws nothing inferred and ranks nothing`);
+    // RE-ANCHORED by S5-03C (validation only): the field now carries the EXPLICIT relations the server serves — through
+    // the panel read (client, controller) into the view's connection slot. Every other S5-03B field file still names no
+    // relation at all; S5-03C's own contract pins that the relation comes from the server's explicit read alone.
+    if (!['public-world/field/public-field-controller.ts', 'public-world/field/PublicFieldView.tsx', 'runtime-entry/public-field-api.ts'].includes(file)) {
+      assert.doesNotMatch(text, /relation/iu, `${file} names no relation`);
+    }
     if (!file.endsWith('field-copy.ts')) assert.doesNotMatch(text, /['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u, `${file} carries no Arabic literal`);
     assert.doesNotMatch(text, /publish_|'PUBLISHED'|"PUBLISHED"|s5-03a\.private|S5-03A_PRIVATE/u, `${file} names no publication and no placeholder`);
   }
@@ -231,7 +237,14 @@ test('10 — R1/R2: the field is painted in the frozen Living Analysis World, an
   // A Public Experience is not a Personal Thread / Reading: no Personal morphology, no tether, no line, no colour of its own.
   for (const file of ['PublicLivingAnalysis.tsx', 'PublicFieldView.tsx', 'PublicExperienceMark.tsx', 'public-field-projection.ts']) {
     const text = code(`${MOBILE}/public-world/field/${file}`);
-    assert.doesNotMatch(text, /WorldObject|WorldTether|RegisterMark|morphologyPath|renderConnections|<Path|<Line/u, `${file}: no Personal morphology and no line`);
+    // RE-ANCHORED by S5-03C (validation only): PublicFieldView may fill the renderer's optional connection slot, and only
+    // with the S5-03C explicit relation lines (`PublicRelationLines`); it still draws no tether, Path or Line itself.
+    assert.doesNotMatch(text, /WorldObject|WorldTether|RegisterMark|morphologyPath|<Path|<Line/u, `${file}: no Personal morphology and no line of its own`);
+    if (file === 'PublicFieldView.tsx') {
+      assert.match(text, /renderConnections=\{\(_plane, \{ S, response \}\) => \(\n\s+<PublicRelationLines segments=\{segments\}/u, 'the only connection is the explicit relation line');
+    } else {
+      assert.doesNotMatch(text, /renderConnections/u, `${file}: no connection`);
+    }
     assert.doesNotMatch(text, /['"]#[0-9a-fA-F]{3,8}['"]|rgba?\(\d|hsla?\(\d/u, `${file}: no colour of its own`);
   }
   const controller = code(`${MOBILE}/public-world/field/public-field-controller.ts`);
