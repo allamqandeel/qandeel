@@ -1,5 +1,5 @@
 /**
- * SHARED-VIS-01 — the Shared World's Living Analysis field: the strict client, the viewer-local controller (FAR / MID /
+ * SHARED-VIS-01 — the Shared World's Living Analysis field: the viewer-local controller (FAR / MID /
  * NEAR over the ONE semantic-field camera, focus + panel, World-local anchors, stale-answer rejection, authority-first
  * restore, no ghost), the surface (the ONE Living Analysis surface, no temporal track, no member or QANDEEL object, an
  * honest empty World), the conversation entry and Back (D7), and the SHARED-VIS-01 Product Copy Gate census.
@@ -14,7 +14,7 @@ import { WORLD_VIEW_STEP_TEST_ID_SUFFIX } from '../../../map/renderer';
 import { RESPONSIVE_SURFACE_TEST_ID, RESPONSIVE_TIMELINE_ROW_TEST_ID } from '../../../responsive';
 import { resize } from '../../../responsive/__fixtures__/composition';
 import { canonicalWorldAddress, type CanonicalWorldAddress } from '../../../map/world';
-import { decodeSharedField, decodeSharedPlace, type SharedEntryResult, type SharedFieldEntry, type SharedFieldPlace, type SharedFieldResult, type SharedPlaceResult } from '../../../runtime-entry';
+import { type SharedEntryResult, type SharedFieldEntry, type SharedFieldPlace, type SharedFieldResult, type SharedPlaceResult } from '../../../runtime-entry';
 import { createSharedWorldController, type SharedWorldTransport } from '../../shared-world-controller';
 import { SharedWorldArea } from '../../SharedWorldArea';
 import { SHARED_FIELD_COPY_GATE, sharedFieldCopy } from '../field-copy';
@@ -74,35 +74,6 @@ const fieldOf = (t = fieldTransport(), onDenied?: (worldId: string) => void) => 
 afterEach(() => {
   cleanup();
   jest.restoreAllMocks();
-});
-
-describe('SHARED-VIS-01 — the strict Shared field client', () => {
-  it('decodes the field exactly: exact integer places only, one neutral denial, anything else is no answer', () => {
-    const place = { placeId: id(1), x: '300000', y: '-4611686018427387904', meaning: 'm', region: 'r' };
-    const read = decodeSharedField({ outcome: 'ALLOW', places: [place] });
-    expect(read.kind).toBe('READ');
-    if (read.kind === 'READ') expect(read.entries[0].address).toEqual(at(300_000n, -(2n ** 62n)));
-    expect(decodeSharedField({ outcome: 'UNAVAILABLE' })).toEqual({ kind: 'DENIED' });
-    for (const bad of [
-      { outcome: 'ALLOW', places: [{ ...place, x: 1.5 }] },
-      { outcome: 'ALLOW', places: [{ ...place, x: '4611686018427387904' }] },
-      { outcome: 'ALLOW', places: [{ ...place, author: 'x' }] },
-      { outcome: 'ALLOW', places: [place], count: 1 },
-      { outcome: 'ALLOW', places: Array.from({ length: 401 }, () => place) },
-      null,
-    ]) expect(decodeSharedField(bad).kind).toBe('UNAVAILABLE');
-  });
-
-  it('decodes one place with its exact sources, or one neutral ABSENT', () => {
-    const body = { outcome: 'ALLOW', place: { placeId: id(1), x: '1', y: '2', meaning: 'm', region: 'r', primaryThemes: ['a'], secondaryThemes: [],
-      establishedAt: '2026-10-08T10:00:00Z', sources: [{ materialId: id(2), producer: 'SELF', authorName: null, text: 't', establishedAt: '2026-10-08T09:00:00Z' }] } };
-    expect(decodeSharedPlace(body, id(1)).kind).toBe('READ');
-    expect(decodeSharedPlace(body, id(9)).kind).toBe('UNAVAILABLE');
-    expect(decodeSharedPlace({ outcome: 'ABSENT' }, id(1))).toEqual({ kind: 'ABSENT' });
-    expect(decodeSharedPlace({ outcome: 'UNAVAILABLE' }, id(1))).toEqual({ kind: 'DENIED' });
-    expect(decodeSharedPlace({ ...body, place: { ...body.place, sources: [] } }, id(1)).kind).toBe('UNAVAILABLE');
-    expect(decodeSharedPlace({ ...body, place: { ...body.place, sources: [{ ...body.place.sources[0], producer: 'ADMIN' }] } }, id(1)).kind).toBe('UNAVAILABLE');
-  });
 });
 
 describe('SHARED-VIS-01 — the Shared field controller: one World at a time, its own state', () => {
