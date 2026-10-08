@@ -328,6 +328,16 @@ post → reply → @qandeel → response → Back → Activity Direct Entry). Th
 needs the validation-only fixture path; the emulator's known Skia / swiftshader stall (S5-03C) allows one bounded
 infrastructure attempt only, then **NOT PROVEN (C)**. Physical-phone performance remains `QAN-BL-VIS-01` / release evidence.
 
+**Native proof fixture (B, Product Owner authorized, 2026-10-08).** The existing S4-01 proof world had no discussion, `@qandeel`
+or `/activity/*` answers, so the journey could not run on a device. `apps/mobile/src/integration/__validation__/s401-proof-world.ts`
+now answers them after `qandeel://s401-proof/public/seed` only (the discussion as 0147 / the API do, one visible depth,
+idempotent; `@qandeel` by 0147's detector, mirrored, with a VALIDATION-ONLY deterministic response; the fixture stands in for
+an entitled reader and never touches the production NOT_EVALUATED seam), and `qandeel://s401-proof/public/peer-reply` makes a
+synthetic other person reply to the reader's latest own post, producing the Class 3 PUBLIC item whose open answers
+`PUBLIC_WORLD` → `DISCUSSION` of exactly that Experience. Guarded by `src/integration/__tests__/s5-04-proof-fixture.test.ts`
+through the production strict clients. No Product code, migration, API or runtime changed. The device result is reported on
+the Draft PR.
+
 ## 20. Closure governance
 
 AGENTS.md §10 followed: the backlog read in full at kickoff and closure; every inherited / observed item reconciled (§15); new
