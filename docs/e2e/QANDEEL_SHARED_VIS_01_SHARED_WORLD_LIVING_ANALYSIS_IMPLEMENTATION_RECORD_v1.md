@@ -148,9 +148,10 @@ again at the same camera and focus. Hardware Back releases a focused place first
 | API specs `src/shared-world`, `src/connected-worlds/material-commit`, `src/http-security` | jest | PASS |
 | Mobile `src/shared-world`, `src/public-world`, `src/living-analysis`, `src/integration/__tests__/s4-0*`, `shared-vis-01-proof-field` | jest | PASS |
 | Typecheck (API, mobile); focused mobile lint | tsc / eslint | PASS |
-| Repository contracts | `node --test tests/*.test.mjs` | see the PR; CI is authoritative |
-| API CI / Mobile CI | GitHub | pending on the exact head |
-| Native proof | Android emulator, S4 proof build | §11 |
+| Repository contracts | `node --test tests/*.test.mjs` (local, serial) | PASS — 1236 / 1236 |
+| API CI | GitHub, head `71579cb` (incl. the real-PostgreSQL verifiers) | PASS |
+| Mobile CI | GitHub, head `71579cb` | 1 failure (B): the runtime-entry barrel census — fixed in `9e61e93`; rerun on the PR |
+| Native proof | Android emulator, S4 proof build | §11 — 13 / 13 steps PASS |
 
 ## 8. Deliberately not implemented
 
@@ -180,11 +181,32 @@ change to Personal, Public, the common renderer, the I-04 runtime or Stage-4 gov
 
 ## 11. Native proof (Android)
 
-`qandeel://s401-proof/shared-field/seed` seeds two synthetic Worlds (VALIDATION ONLY, `shared-vis-proof-field.ts`).
-Journey: Shared → World A → authority-first shell → field FAR → MID → NEAR focus → panel with sources → Conversation →
-Back to the same field → World B (its own places, FAR, no focus) → Activity Direct Entry → denied / ended → Personal and
-Public non-regression. Evidence and the screenshots presented for the Product Owner's visual acceptance are recorded in
-the PR. **Product visual acceptance: PENDING.**
+One bounded attempt, 2026-10-08, on the Android emulator (AVD `QANDEEL_API36`, cold boot `-gpu swiftshader_indirect
+-no-snapshot-load -memory 4096`) with the x86_64 release proof build of head `71579cb` (sha256
+`d51c25e26379702eb5b9c069e185ef409addb9639ec7965c01de3711a2230f55`; the S4-01 proof entry selected by
+`select-s401-proof-entry.mjs --apply` and restored after the build). `qandeel://s401-proof/shared-field/seed` seeds two
+synthetic Worlds (VALIDATION ONLY, `shared-vis-proof-field.ts`). Evidence: untracked `.shared-vis-native-proof/` (PNG + UI
+dumps).
+
+| # | Step | Result |
+|---|---|---|
+| 1 | Shared root lists the seeded Worlds | PASS (`01`) |
+| 2 | Authority first: a held entry shows only the neutral shell; after release, the World | PASS (`15`, `16`) |
+| 3 | World A opens on its field at FAR: four semantic regions as mass, the LA-VIS-01 material | PASS (`02b`) |
+| 4 | MID: one region's three places with their one-line meanings | PASS (`03b`) |
+| 5 | NEAR: one place selected; panel with meaning, themes and exact sources ("You: …") | PASS (`04`) |
+| 6 | Conversation: the unchanged S4-02 screen; the line the reader cannot see is absent | PASS (`05`) |
+| 7 | Back returns to the same World, same NEAR camera and focus (D7) | PASS (`06`) |
+| 8 | World B: its own regions, fresh FAR, no focus of A | PASS (`07`) |
+| 9 | Back to World A: A's own anchor restored after a fresh read | PASS (`08`) |
+| 10 | Shared Direct Entry (`qandeel://shared/world/<id>`) from Public opens exactly World B's field | PASS (`12`) |
+| 11 | Revoked membership: one neutral "not available", nothing of the World | PASS (`14`) |
+| 12 | An empty World: the honest empty state (the production truth until Stage 8A) | PASS (`16`) |
+| 13 | Personal Analysis and Public field unchanged | PASS (`10`, `11`) |
+
+Not run on the device: the ended World (its v2 read is proven by `verify-migration-0148.mjs` and the S4-03 Jest journeys)
+and a pinch (adb cannot pinch; FAR → MID by tap and the accessible semantic step are proven, MID → NEAR by tapping a place).
+A boot-time "System UI isn't responding" dialog was dismissed with Wait (C, benign). **Product visual acceptance: PENDING.**
 
 ## 12. SHARED-VIS-01 Product Copy Gate — `OPEN — 6 rows PROPOSED`
 
