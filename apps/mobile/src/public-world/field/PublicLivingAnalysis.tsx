@@ -21,6 +21,10 @@
  *
  * Back is local (see the controller): it is registered only while the panel or the search is open; at the World's
  * root nothing is registered.
+ *
+ * S5-04: the panel carries the Experience's publication date and its ONE dependent Discussion entry («النقاش · n» — the
+ * human discussion count only; never QANDEEL's, never a ranking). Opening it draws the discussion in the same chrome band,
+ * over the same panel; Back returns to the panel, then the field. Counts never move anything in the field.
  */
 import { useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { BackHandler, Keyboard, Pressable, Text, TextInput, View, useWindowDimensions } from 'react-native';
@@ -29,8 +33,11 @@ import { Control, typeStyle, usePalette, type ConversationPalette } from '../../
 import { LivingAnalysisSurface } from '../../living-analysis';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import { semanticListSeparator } from '../../public-authoring/semantic-copy';
+import { formatDay } from '../../settings/PrivacyDataSection';
 import type { PublicFieldExperience } from '../../runtime-entry';
+import { fillDiscussionCopy, publicDiscussionCopy } from './discussion-copy';
 import { fillPublicFieldCopy, publicFieldCopy, type PublicFieldCopy } from './field-copy';
+import { PublicDiscussion } from './PublicDiscussion';
 import { PUBLIC_SEARCH_QUERY_MAX, type PublicFieldController, type PublicFieldPanelState, type PublicFieldState } from './public-field-controller';
 import { PublicFieldView } from './PublicFieldView';
 
@@ -144,8 +151,11 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
   const { search } = state;
   const resultsShown = search.open && state.focus === null && (search.status === 'RESULTS' || search.status === 'NONE' || search.status === 'UNAVAILABLE');
   let content: ReactNode = null;
-  if (state.focus !== null) {
-    content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} onFocus={(id) => controller.focus(id)} />;
+  if (state.focus !== null && state.focus.discussion === true && controller.discussion !== null) {
+    content = <PublicDiscussion controller={controller.discussion} language={language} onBack={() => controller.closeDiscussion()} />;
+  } else if (state.focus !== null) {
+    content = <Panel copy={copy} palette={palette} language={language} panel={state.focus.panel} onBack={() => controller.back()} onFocus={(id) => controller.focus(id)}
+      onDiscussion={controller.discussion !== null ? () => controller.openDiscussion() : null} />;
   } else if (resultsShown) {
     content = (
       <View testID="qandeel-public-search-results" style={{ backgroundColor: palette.field, borderRadius: 16, paddingVertical: 4 }}>
@@ -184,9 +194,10 @@ function FieldChrome({ controller, state, copy, language, bottomInset }: {
   return <View style={{ paddingHorizontal: 12, paddingTop: 8, paddingBottom: bottomInset + 8 }}>{content}</View>;
 }
 
-function Panel({ copy, palette, language, panel, onBack, onFocus }: {
+function Panel({ copy, palette, language, panel, onBack, onFocus, onDiscussion }: {
   readonly copy: PublicFieldCopy; readonly palette: ConversationPalette; readonly language: ChromeLanguage;
   readonly panel: PublicFieldPanelState; readonly onBack: () => void; readonly onFocus: (id: string) => void;
+  readonly onDiscussion: (() => void) | null;
 }) {
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const text = (role: 'body' | 'supporting' | 'metadata' | 'statement' | 'action', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
@@ -199,7 +210,7 @@ function Panel({ copy, palette, language, panel, onBack, onFocus }: {
       </View>
       <View style={{ paddingHorizontal: 20, rowGap: 10 }}>
         {panel.status === 'SERVED' ? (
-          <ServedPanel experience={panel.experience} copy={copy} palette={palette} language={language} onFocus={onFocus} />
+          <ServedPanel experience={panel.experience} copy={copy} palette={palette} language={language} onFocus={onFocus} onDiscussion={onDiscussion} />
         ) : panel.status === 'LOADING' ? (
           <View accessible accessibilityState={{ busy: true }} style={{ minHeight: 48 }} />
         ) : (
@@ -212,10 +223,13 @@ function Panel({ copy, palette, language, panel, onBack, onFocus }: {
   );
 }
 
-function ServedPanel({ experience, copy, palette, language, onFocus }: {
+function ServedPanel({ experience, copy, palette, language, onFocus, onDiscussion }: {
   readonly experience: PublicFieldExperience; readonly copy: PublicFieldCopy; readonly palette: ConversationPalette;
-  readonly language: ChromeLanguage; readonly onFocus: (id: string) => void;
+  readonly language: ChromeLanguage; readonly onFocus: (id: string) => void; readonly onDiscussion: (() => void) | null;
 }) {
+  const discussionCopy = publicDiscussionCopy(language);
+  const discussionLabel = experience.discussionCount > 0
+    ? fillDiscussionCopy(discussionCopy.discussionWithCount, String(experience.discussionCount)) : discussionCopy.discussion;
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const text = (role: 'body' | 'supporting' | 'metadata' | 'statement', color: string) => ({ ...typeStyle(role), color, writingDirection: writing as 'rtl' | 'ltr' });
   return (
@@ -223,6 +237,15 @@ function ServedPanel({ experience, copy, palette, language, onFocus }: {
       <Text testID="qandeel-public-panel-meaning" accessibilityRole="header" style={text('statement', palette.primary)}>{experience.entry.meaning}</Text>
       {experience.publisher.label !== null ? (
         <Text style={text('metadata', palette.secondary)}>{fillPublicFieldCopy(copy.sharedBy, experience.publisher.label)}</Text>
+      ) : null}
+      <Text testID="qandeel-public-panel-published" style={text('metadata', palette.tertiary)}>
+        {fillDiscussionCopy(discussionCopy.publishedOn, formatDay(experience.publishedAt, language))}
+      </Text>
+      {onDiscussion !== null ? (
+        <Control palette={palette} language={language} accessibilityLabel={discussionLabel} onPress={onDiscussion} testID="qandeel-public-panel-discussion"
+          style={{ alignSelf: 'flex-start' }}>
+          <Text style={{ ...typeStyle('action'), color: palette.primary, writingDirection: writing }}>{discussionLabel}</Text>
+        </Control>
       ) : null}
       <Themes heading={copy.primaryHeading} themes={experience.primaryThemes} palette={palette} language={language} />
       <Themes heading={copy.secondaryHeading} themes={experience.secondaryThemes} palette={palette} language={language} />

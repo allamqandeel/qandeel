@@ -176,8 +176,8 @@ export interface ActivityAttentionView extends ActivityIndicatorsView {
   readonly interruptions: readonly InterruptionCandidateView[];
 }
 
-/** S5-04 — the exact Public context a Public item opens: one Experience's discussion, or the reader's relation management. */
-export type PublicEntryTarget = { readonly kind: 'DISCUSSION'; readonly experienceId: string } | { readonly kind: 'RELATIONS'; readonly relationId: string };
+/** S5-04 — the exact Public context a Public item opens: one Experience's discussion, or the reader's relation management of their own Experience. */
+export type PublicEntryTarget = { readonly kind: 'DISCUSSION'; readonly experienceId: string } | { readonly kind: 'RELATIONS'; readonly experienceId: string };
 
 export type ActivityOpenView =
   | { readonly outcome: 'ENTER'; readonly destination: { readonly kind: 'PERSONAL_CONVERSATION' | 'QANDEEL_UNDERSTANDING' } | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection } | { readonly kind: 'SHARED_WORLD'; readonly worldId: string } | { readonly kind: 'PUBLIC_WORLD'; readonly target: PublicEntryTarget } }

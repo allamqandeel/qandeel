@@ -1,0 +1,120 @@
+/**
+ * S5-04 — the copy of the dependent Public discussion, the Experience panel's Discussion entry and publication date.
+ *
+ * Every string carries its source, as the other surfaces' copy modules do:
+ *
+ *   - CANON: «قنديل» / QANDEEL (I-08A4 §8–§9), the attribution of a Public QANDEEL response — truthful, and never a
+ *     human Public identity;
+ *   - REUSED: words other surfaces already froze for the same fact, read from their own modules: the composer
+ *     placeholder, Send, «قنديل: …» / "QANDEEL: …" (the accessible form of a QANDEEL turn), waiting for QANDEEL's reply,
+ *     QANDEEL's reply could not be completed, the send could not be confirmed / was refused (W1A-01 Product Copy Gate);
+ *     Back, Cancel, Try again and «شخص ما» / Someone (S4-01 Product Copy Gate); the no-longer-in-Public-World line
+ *     and the cannot-be-shown-right-now line (S5-03B Product Copy Gate);
+ *   - PROPOSED — the S5-04 PRODUCT COPY GATE (ONE bounded gate for the whole task; implementation record §14): every
+ *     genuinely new string below. Nothing is approved here until the Product Owner says so.
+ *
+ * No string counts popularity, ranks, names a like, a follower, a contact or a private message, calls a count importance
+ * or truth, or says why something is unavailable.
+ */
+import type { ChromeLanguage } from '../../orientation-chrome';
+import { conversationCopy } from '../../conversation';
+import { sharedCopy } from '../../shared-world/copy';
+import { publicFieldCopy } from './field-copy';
+
+export const PUBLIC_DISCUSSION_COPY_GATE = {
+  status: 'S5-04 PRODUCT COPY GATE — OPEN — 9 rows PROPOSED (with the 3 Public Activity rows: 12)',
+  canon: ['qandeel'],
+  reused: ['composerPlaceholder', 'send', 'qandeelSays', 'qandeelPending', 'qandeelUnavailable', 'sendUnconfirmed', 'sendRefused', 'back',
+    'cancel', 'retry', 'someone', 'experienceUnavailable', 'unavailable'],
+  approved: [],
+  proposed: ['discussion', 'discussionWithCount', 'noPosts', 'composerName', 'reply', 'replyingTo', 'invokeHint', 'publishedOn', 'morePosts'],
+} as const;
+
+export interface PublicDiscussionCopy {
+  /** The Discussion entry in the panel (no posts yet) and the discussion's heading. */
+  readonly discussion: string;
+  /** "Discussion · {0}" — the entry with the human discussion count; never a QANDEEL count, never a ranking. */
+  readonly discussionWithCount: string;
+  readonly noPosts: string;
+  /** The composer's accessible name. */
+  readonly composerName: string;
+  readonly reply: string;
+  /** "Replying to {0}" — {0}: the post author's Public display, or «شخص ما» / Someone. */
+  readonly replyingTo: string;
+  /** How to ask QANDEEL here, and that its answer is public. */
+  readonly invokeHint: string;
+  /** "Published {0}" — {0}: the publication date. */
+  readonly publishedOn: string;
+  readonly morePosts: string;
+  readonly qandeel: string;
+  readonly qandeelSays: (text: string) => string;
+  readonly qandeelPending: string;
+  readonly qandeelUnavailable: string;
+  readonly composerPlaceholder: string;
+  readonly send: string;
+  readonly sendUnconfirmed: string;
+  readonly sendRefused: string;
+  readonly back: string;
+  readonly cancel: string;
+  readonly retry: string;
+  readonly someone: string;
+  readonly experienceUnavailable: string;
+  /** The discussion could not be read now. */
+  readonly unavailable: string;
+}
+
+const AR = {
+  discussion: 'النقاش', // PROPOSED — S5-04 Product Copy Gate
+  discussionWithCount: 'النقاش · {0}', // PROPOSED — S5-04 Product Copy Gate
+  noPosts: 'لا مشاركات بعد.', // PROPOSED — S5-04 Product Copy Gate
+  composerName: 'مشاركتك في هذا النقاش', // PROPOSED — S5-04 Product Copy Gate
+  reply: 'ردّ', // PROPOSED — S5-04 Product Copy Gate
+  replyingTo: 'ردّ على {0}', // PROPOSED — S5-04 Product Copy Gate
+  invokeHint: 'اكتب ‎@qandeel لتسأل قنديل هنا، وردّه يظهر للجميع.', // PROPOSED — S5-04 Product Copy Gate
+  publishedOn: 'نُشرت في {0}', // PROPOSED — S5-04 Product Copy Gate
+  morePosts: 'عرض المزيد من المشاركات', // PROPOSED — S5-04 Product Copy Gate
+} as const;
+
+const EN = {
+  discussion: 'Discussion', // PROPOSED — S5-04 Product Copy Gate
+  discussionWithCount: 'Discussion · {0}', // PROPOSED — S5-04 Product Copy Gate
+  noPosts: 'No posts yet.', // PROPOSED — S5-04 Product Copy Gate
+  composerName: 'Your post in this discussion', // PROPOSED — S5-04 Product Copy Gate
+  reply: 'Reply', // PROPOSED — S5-04 Product Copy Gate
+  replyingTo: 'Replying to {0}', // PROPOSED — S5-04 Product Copy Gate
+  invokeHint: 'Write @qandeel to ask QANDEEL here. Its answer is visible to everyone.', // PROPOSED — S5-04 Product Copy Gate
+  publishedOn: 'Published {0}', // PROPOSED — S5-04 Product Copy Gate
+  morePosts: 'Show more posts', // PROPOSED — S5-04 Product Copy Gate
+} as const;
+
+function build(language: ChromeLanguage): PublicDiscussionCopy {
+  const conversation = conversationCopy(language); // REUSED — W1A-01 Product Copy Gate
+  const shared = sharedCopy(language); // REUSED — S4-01 Product Copy Gate
+  const field = publicFieldCopy(language); // REUSED — S5-03B Product Copy Gate
+  return Object.freeze({
+    ...(language === 'ar' ? AR : EN),
+    qandeel: conversation.product, // CANON — I-08A4 §8 / §9
+    qandeelSays: conversation.replyTurnName, // REUSED — W1A-01
+    qandeelPending: conversation.waitingForReply, // REUSED — W1A-01
+    qandeelUnavailable: conversation.replyFailed, // REUSED — W1A-01
+    composerPlaceholder: conversation.composerPlaceholder, // REUSED — W1A-01
+    send: conversation.sendName, // REUSED — W1A-01
+    sendUnconfirmed: conversation.sendUnconfirmed, // REUSED — W1A-01
+    sendRefused: conversation.sendRefused, // REUSED — W1A-01
+    back: shared.back, // REUSED — S4-01
+    cancel: shared.cancel, // REUSED — S4-01
+    retry: shared.retry, // REUSED — S4-01
+    someone: shared.someone, // REUSED — S4-01
+    experienceUnavailable: field.experienceUnavailable, // REUSED — S5-03B
+    unavailable: field.fieldUnavailable, // REUSED — S5-03B
+  });
+}
+
+const BUILT = { ar: build('ar'), en: build('en') } as const;
+
+export function publicDiscussionCopy(language: ChromeLanguage): PublicDiscussionCopy {
+  return BUILT[language];
+}
+
+/** "{0}" substitution, the same convention the other Public copy uses. */
+export const fillDiscussionCopy = (template: string, value: string): string => template.replace('{0}', value);

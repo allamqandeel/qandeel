@@ -141,6 +141,7 @@ export type {
   ActivityPreferencesOutcome,
   BilingualText,
   DirectEntryDestination,
+  PublicEntryTarget,
   DisclosureLevel,
   InterruptionCandidate,
   LockSubject,
@@ -177,6 +178,9 @@ export type {
 export type {
   PublicRelation, PublicRelationAct, PublicRelationActOutcome, PublicRelationExperience, PublicRelationRequestOutcome, PublicRelations,
 } from './public-relation-api';
+export type {
+  PublicDiscussionPage, PublicDiscussionPost, PublicDiscussionPostOutcome, PublicQandeelState,
+} from './public-discussion-api';
 export type { OsPermission, PushDeviceSync, PushPlatform } from './push-api';
 export { PushApiClient } from './push-api';
 

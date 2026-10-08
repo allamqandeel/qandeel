@@ -285,7 +285,7 @@ describe('S5-04 — Public Direct Entry revalidates NOW on the caller\'s token',
     [{ outcome: 'OPENED', category: 'PUBLIC', context_kind: context, context_ref: EXPERIENCE, entry_destination: 'PUBLIC_WORLD', entry_ref: ref }];
   const activity = (open: unknown, extra: Record<string, jest.Mock> = {}) => new ActivityService({
     open: jest.fn(async () => open), publicExperienceServed: jest.fn(async () => [{ experience_id: EXPERIENCE }]),
-    ownPublicRelations: jest.fn(async () => [{ relation_id: RELATION, relation_state: 'REQUEST_RECEIVED' }]), ...extra,
+    ownPublicRelations: jest.fn(async () => [{ relation_id: RELATION, experience_id: EXPERIENCE, relation_state: 'REQUEST_RECEIVED' }]), ...extra,
   } as unknown as ActivityRepository);
 
   it('PUBLIC_WORLD is executable now', () => {
@@ -305,8 +305,8 @@ describe('S5-04 — Public Direct Entry revalidates NOW on the caller\'s token',
 
   it('opens relation management only for one of the reader\'s own current relations', async () => {
     await expect(activity(opened(`relations:${RELATION}`)).open(TOKEN, id(30)))
-      .resolves.toEqual({ outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'RELATIONS', relationId: RELATION } } });
-    for (const relations of [[], [{ relation_id: RELATION, relation_state: 'REQUEST_SENT' }], [{ relation_id: id(98), relation_state: 'ACTIVE' }]]) {
+      .resolves.toEqual({ outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'RELATIONS', experienceId: EXPERIENCE } } });
+    for (const relations of [[], [{ relation_id: RELATION, experience_id: EXPERIENCE, relation_state: 'REQUEST_SENT' }], [{ relation_id: id(98), experience_id: EXPERIENCE, relation_state: 'ACTIVE' }]]) {
       await expect(activity(opened(`relations:${RELATION}`), { ownPublicRelations: jest.fn(async () => relations) }).open(TOKEN, id(30)))
         .resolves.toEqual({ outcome: 'UNAVAILABLE', fallback: null });
     }

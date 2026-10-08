@@ -183,8 +183,11 @@ export class ActivityService {
           return { outcome: 'UNAVAILABLE', fallback: null };
         }
         const relations = await this.repository.ownPublicRelations(token);
-        if (Array.isArray(relations) && relations.some((r) => r?.relation_id === id && (r.relation_state === 'REQUEST_RECEIVED' || r.relation_state === 'ACTIVE'))) {
-          return { outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'RELATIONS', relationId: id } } };
+        const current = Array.isArray(relations)
+          ? relations.find((r) => r?.relation_id === id && (r.relation_state === 'REQUEST_RECEIVED' || r.relation_state === 'ACTIVE')) : undefined;
+        // The reader's OWN Experience in that relation: its relation management (S5-03C) is where the acts live.
+        if (current !== undefined && UUID.test(current.experience_id)) {
+          return { outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'RELATIONS', experienceId: current.experience_id } } };
         }
         return { outcome: 'UNAVAILABLE', fallback: null };
       }

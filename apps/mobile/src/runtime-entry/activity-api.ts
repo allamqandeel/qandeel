@@ -74,7 +74,15 @@ export type DirectEntryDestination =
   | { readonly kind: 'QANDEEL_UNDERSTANDING' }
   | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection }
   /** S4-04: the exact Shared World, already re-authorized at open; the device opens it through the Shared entry authority. */
-  | { readonly kind: 'SHARED_WORLD'; readonly worldId: string };
+  | { readonly kind: 'SHARED_WORLD'; readonly worldId: string }
+  /**
+   * S5-04: the exact Public context, already re-authorized at open — one Experience's discussion, or the relation
+   * management of the reader's own Experience. The device opens it through the Public entry authority.
+   */
+  | { readonly kind: 'PUBLIC_WORLD'; readonly target: PublicEntryTarget };
+
+/** S5-04 — what a Public item opens. */
+export type PublicEntryTarget = { readonly kind: 'DISCUSSION' | 'RELATIONS'; readonly experienceId: string };
 
 export type ActivityOpenOutcome =
   | { readonly kind: 'ENTER'; readonly destination: DirectEntryDestination }
@@ -189,6 +197,10 @@ function decodeDestination(value: unknown): DirectEntryDestination | null | unde
   if (value.kind === 'PERSONAL_CONVERSATION' || value.kind === 'QANDEEL_UNDERSTANDING') return hasExactly(value, ['kind']) ? { kind: value.kind } : undefined;
   if (value.kind === 'SHARED_WORLD' && hasExactly(value, ['kind', 'worldId']) && typeof value.worldId === 'string' && UUID.test(value.worldId)) {
     return { kind: 'SHARED_WORLD', worldId: value.worldId };
+  }
+  if (value.kind === 'PUBLIC_WORLD' && hasExactly(value, ['kind', 'target']) && isRecord(value.target) && hasExactly(value.target, ['kind', 'experienceId'])
+    && (value.target.kind === 'DISCUSSION' || value.target.kind === 'RELATIONS') && typeof value.target.experienceId === 'string' && UUID.test(value.target.experienceId)) {
+    return { kind: 'PUBLIC_WORLD', target: { kind: value.target.kind, experienceId: value.target.experienceId } };
   }
   if (value.kind === 'GENERAL_SETTINGS' && hasExactly(value, ['kind', 'section']) && ['SECURITY', 'ACCOUNT', 'NOTIFICATIONS'].includes(value.section as string)) {
     return { kind: 'GENERAL_SETTINGS', section: value.section as SettingsSection };

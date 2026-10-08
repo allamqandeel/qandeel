@@ -13,7 +13,7 @@
  */
 import type { PublicAuthoringController } from '../public-authoring';
 import type { PublicFieldController } from './field/public-field-controller';
-import type { PublicEntryResult } from '../runtime-entry';
+import type { PublicEntryResult, PublicEntryTarget } from '../runtime-entry';
 
 export interface PublicWorldTransport {
   entry(): Promise<PublicEntryResult>;
@@ -28,6 +28,12 @@ export interface PublicWorldController {
   subscribe(listener: () => void): () => void;
   /** Resolve the entry verdict now (the switcher, a link, a retry). */
   enter(): void;
+  /**
+   * S5-04 — Direct Entry: resolve the entry verdict now and, only on ALLOW, open EXACTLY this Public context — one
+   * Experience's discussion in the SAME field, or the relation management of the reader's own Experience in the SAME
+   * authoring workspace. A refusal opens nothing; the target is never kept past one verdict.
+   */
+  enterAt(target: PublicEntryTarget): void;
   /** S5-02 — the authoring workspace drawn inside the Public World root; null where the host provides none. */
   readonly authoring: PublicAuthoringController | null;
   /** S5-03B — the Public semantic field; null where the host provides none (the root then stays content-empty). */
@@ -49,6 +55,7 @@ export function createPublicWorldController({ transport, isCurrent, authoring = 
   let state: PublicAreaState = INITIAL;
   let retired = false;
   let ticket = 0;
+  let pending: PublicEntryTarget | null = null;
   const live = () => !retired && isCurrent();
   const publish = (next: PublicAreaState) => {
     if (!live()) return;
@@ -66,7 +73,14 @@ export function createPublicWorldController({ transport, isCurrent, authoring = 
       result = { kind: 'UNAVAILABLE' };
     }
     if (mine !== ticket) return;
+    const target = pending;
+    pending = null;
+    if (result.kind === 'ALLOW' && target !== null) {
+      // Before the root draws, so the field's own entry opens exactly this Experience (and nothing else first).
+      if (target.kind === 'DISCUSSION') field?.target(target.experienceId, 'DISCUSSION');
+    }
     publish({ entry: result.kind === 'ALLOW' ? 'ALLOW' : 'DENIED' });
+    if (result.kind === 'ALLOW' && target?.kind === 'RELATIONS') authoring?.openRelations(target.experienceId);
   }
 
   return {
@@ -76,6 +90,10 @@ export function createPublicWorldController({ transport, isCurrent, authoring = 
       return () => listeners.delete(listener);
     },
     enter() {
+      void resolve();
+    },
+    enterAt(target) {
+      pending = target;
       void resolve();
     },
     authoring,
