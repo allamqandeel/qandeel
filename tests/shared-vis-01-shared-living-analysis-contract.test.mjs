@@ -89,12 +89,13 @@ test('5 — ONE renderer family: the Shared World consumes the common surface an
   }
 });
 
-test('6 — the Copy Gate: reused words exactly; every new row PROPOSED until the Product Owner decides', () => {
+test('6 — the Copy Gate: reused words exactly; CLOSED — 6 / 6 APPROVED by the Product Owner', () => {
   const copy = read(`${FIELD}/field-copy.ts`);
-  assert.match(copy, /status: 'SHARED-VIS-01 PRODUCT COPY GATE — (OPEN — 6 rows PROPOSED, awaiting the Product Owner|CLOSED[^']*)'/u);
+  assert.match(copy, /status: 'SHARED-VIS-01 PRODUCT COPY GATE — CLOSED — 6 \/ 6 APPROVED[^']*'/u);
   const proposed = [...copy.matchAll(/\/\/ PROPOSED — SHARED-VIS-01 Product Copy Gate/gu)].length;
   const approved = [...copy.matchAll(/\/\/ APPROVED — SHARED-VIS-01 Product Copy Gate/gu)].length;
-  assert.equal(proposed + approved, 12, 'six rows, in Arabic and English');
+  assert.equal(proposed, 0, 'nothing is left PROPOSED');
+  assert.equal(approved, 12, 'six rows, in Arabic and English, approved');
 });
 
 test('7 — lifecycle and backlog truth: Stage 5 DONE / MERGED; SHARED-VIS-01 the current task, not merged; Stage 6 not started', () => {

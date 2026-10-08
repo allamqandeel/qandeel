@@ -2,9 +2,10 @@
 
 **Status:** `ACTIVE — IMPLEMENTED ON feat/shared-vis-01-shared-living-analysis — NOT MERGED; NOT CLOSED`
 
-Closure waits on three things, in this order: the Product Owner's visual acceptance of the native screenshots (§11), the
-SHARED-VIS-01 Product Copy Gate (§12, `OPEN — 6 rows PROPOSED`), and green CI on the exact head. Merge waits on the
-Product Owner's «ادمج». Stage 6 is not started.
+**SHARED-VIS-01 PRODUCT COPY GATE:** `CLOSED — 6 / 6 APPROVED` (Product Owner, 2026-10-08; four rows as revised by the Owner; §12).
+
+Closure waits on: the Product Owner's visual acceptance of the native screenshots (§11 — **not granted yet**) and green CI
+on the exact final head. Merge waits on the Product Owner's «ادمج». Stage 6 is not started.
 
 | | |
 |---|---|
@@ -172,9 +173,11 @@ change to Personal, Public, the common renderer, the I-04 runtime or Stage-4 gov
 
 - `QAN-BL-CW-03` — owned by this task; it stays `DEFERRED — OWNED` with an ACTIVE note until this task's closing change
   tombstones it.
-- Admitted (Product Owner decision needed, not this task's to decide): `QAN-BL-CW-05` (QANDEEL conversational output as a
-  Shared semantic source — a controlled change of the frozen I-04G core), `QAN-BL-CW-06` (the ended World's read-only
-  Living Analysis view, CW2-07 §22), `QAN-BL-CW-07` (Shared temporal navigation, D5).
+- Admitted, then dispositioned by the Product Owner (2026-10-08, deferred without implementation): `QAN-BL-CW-05`
+  (QANDEEL conversational output as a Shared semantic source — deferred to the Stage 8A authority / source review, so owned
+  by Stage 8A, `DEFERRED — OWNED`); `QAN-BL-CW-06` (the ended World's read-only Living Analysis view — deferred; the existing
+  historical reading stays unchanged) and `QAN-BL-CW-07` (Shared temporal navigation — deferred pending a dedicated Product
+  decision), both with no named owner, so `OPEN — UNASSIGNED` (BG-02). Register: 48 items, 20 / 0 / 10 / 18.
 - Observed, unchanged: `QAN-BL-VIS-01` → `LA-SCALE-01` (Shared density at scale is included in its scope as observed);
   Stage 8A (now also owns the production binding of the two Shared ports); `QAN-BL-ACCT-01` (no new account edge: 0148
   references no account); `QAN-BL-VOICE-01` (voice notes are not projected, so never a place source).
@@ -208,16 +211,16 @@ Not run on the device: the ended World (its v2 read is proven by `verify-migrati
 and a pinch (adb cannot pinch; FAR → MID by tap and the accessible semantic step are proven, MID → NEAR by tapping a place).
 A boot-time "System UI isn't responding" dialog was dismissed with Wait (C, benign). **Product visual acceptance: PENDING.**
 
-## 12. SHARED-VIS-01 Product Copy Gate — `OPEN — 6 rows PROPOSED`
+## 12. SHARED-VIS-01 Product Copy Gate — `CLOSED — 6 / 6 APPROVED` (Product Owner, 2026-10-08)
 
 | Key | Arabic | English | Status |
 |---|---|---|---|
-| `fieldLabel` | خريطة المعاني في هذا العالم المشترك | This Shared World's field of meaning | PROPOSED |
-| `empty` | لم يتكوّن شيء في خريطة هذا العالم بعد. | Nothing has formed on this World's map yet. | PROPOSED |
-| `fieldUnavailable` | تعذّر عرض هذا العالم المشترك الآن. | This Shared World can't be shown right now. | PROPOSED |
-| `conversation` | المحادثة | Conversation | PROPOSED |
-| `placeUnavailable` | لم يعد هذا المكان في هذا العالم المشترك. | This place is no longer in this Shared World. | PROPOSED |
-| `sourcesHeading` | قرأه قنديل من | QANDEEL read it from | PROPOSED |
+| `fieldLabel` (the map's accessible name) | خريطة المعاني في العالم المشترك | Shared World meaning map | APPROVED (revised by the Owner) |
+| `empty` | لم تتشكل معالم هذا العالم بعد. | This world's map is still taking shape. | APPROVED (revised by the Owner) |
+| `fieldUnavailable` | تعذّر عرض هذا العالم المشترك الآن. | This Shared World can't be shown right now. | APPROVED |
+| `conversation` | المحادثة | Conversation | APPROVED |
+| `placeUnavailable` | لم يعد هذا المكان متاحًا في العالم المشترك. | This place is no longer available in this Shared World. | APPROVED (revised by the Owner) |
+| `sourcesHeading` | مصادر هذا المعنى | Sources of this meaning | APPROVED (revised by the Owner) |
 
 Every other word is REUSED from its approved owner (Back, Retry, You, Someone, the S5-03A theme headings, the Living
-Analysis accessible step) or CANON (Manage World, QANDEEL).
+Analysis accessible step) or CANON (Manage World, QANDEEL). The proposed wording was replaced exactly by the Owner's.

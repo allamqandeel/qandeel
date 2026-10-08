@@ -320,13 +320,18 @@ describe('SHARED-VIS-01 — the Shared World on the ONE Living Analysis surface'
   });
 });
 
-describe('SHARED-VIS-01 — the Product Copy Gate', () => {
-  it('reuses every existing word exactly, and keeps every new row PROPOSED until the Product Owner decides', () => {
-    expect(SHARED_FIELD_COPY_GATE.proposed).toEqual(['fieldLabel', 'empty', 'fieldUnavailable', 'conversation', 'placeUnavailable', 'sourcesHeading']);
-    expect(SHARED_FIELD_COPY_GATE.approved).toEqual([]);
+describe('SHARED-VIS-01 — the Product Copy Gate (CLOSED — 6 / 6 APPROVED)', () => {
+  it('reuses every existing word exactly; the six new rows are the Product Owner's approved wording (CLOSED — 6 / 6)', () => {
+    expect(SHARED_FIELD_COPY_GATE.approved).toEqual(['fieldLabel', 'empty', 'fieldUnavailable', 'conversation', 'placeUnavailable', 'sourcesHeading']);
+    expect(SHARED_FIELD_COPY_GATE.proposed).toEqual([]);
+    expect(sharedFieldCopy('ar')).toMatchObject({ fieldLabel: 'خريطة المعاني في العالم المشترك', empty: 'لم تتشكل معالم هذا العالم بعد.',
+      fieldUnavailable: 'تعذّر عرض هذا العالم المشترك الآن.', conversation: 'المحادثة', placeUnavailable: 'لم يعد هذا المكان متاحًا في العالم المشترك.',
+      sourcesHeading: 'مصادر هذا المعنى' });
+    expect(sharedFieldCopy('en')).toMatchObject({ fieldLabel: 'Shared World meaning map', empty: "This world's map is still taking shape.",
+      fieldUnavailable: "This Shared World can't be shown right now.", conversation: 'Conversation',
+      placeUnavailable: 'This place is no longer available in this Shared World.', sourcesHeading: 'Sources of this meaning' });
     for (const language of ['ar', 'en'] as const) {
       const copy = sharedFieldCopy(language);
-      for (const key of SHARED_FIELD_COPY_GATE.proposed) expect(copy[key].length).toBeGreaterThan(0);
       expect(copy.moreDetail).toBe(analysisCopy(language).moreDetail);
     }
   });
