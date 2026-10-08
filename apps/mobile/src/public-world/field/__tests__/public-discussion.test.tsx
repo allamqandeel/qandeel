@@ -268,6 +268,107 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
   });
 });
 
+describe('S5-04 — returning from the discussion reads the same panel again', () => {
+  /** A field focused on E1 whose panel answers come from `experience`; returns the controller and its transport. */
+  async function focused(experience: jest.Mock) {
+    const t = { ...fieldTransport(), experience };
+    const field = createPublicFieldController({ transport: t as unknown as PublicFieldTransport, isCurrent: () => true, discussion: discussionOf() });
+    field.enter();
+    await flush();
+    field.setEnvelope(viewportEnvelope(400, 800)!);
+    field.focus(E1.id);
+    for (let n = 0; n < 3; n += 1) await flush();
+    field.openDiscussion();
+    await flush();
+    return { field, t };
+  }
+  const leave = { 'the discussion Back': (f: ReturnType<typeof createPublicFieldController>) => f.closeDiscussion(),
+    'the hardware Back': (f: ReturnType<typeof createPublicFieldController>) => { expect(f.back()).toBe(true); } };
+
+  it.each(Object.keys(leave) as Array<keyof typeof leave>)('%s: the panel shows the count read now — same Experience, same camera, no field read', async (way) => {
+    let count = 0;
+    const { field, t } = await focused(jest.fn(async () => yes(served(count))));
+    const camera = field.getState().camera;
+    const fieldReads = t.field.mock.calls.length;
+    count = 2;
+    await act(async () => { leave[way](field); });
+    await flush();
+    expect(field.getState().focus).toMatchObject({ id: E1.id, discussion: false, panel: { status: 'SERVED', experience: { discussionCount: 2 } } });
+    expect(field.getState().camera).toBe(camera);
+    expect(t.field.mock.calls.length).toBe(fieldReads);
+    expect(t.experience).toHaveBeenLastCalledWith(E1.id);
+  });
+
+  it('the count is the human count the server serves; its QANDEEL response count never reaches the panel', async () => {
+    let wire = { discussionCount: 0, qandeelResponseCount: 0 };
+    const body = () => ({ state: 'SERVED', experience: { id: E1.id, x: '300000', y: '600000', meaning: E1.meaning, region: E1.region, primaryThemes: ['fear'],
+      secondaryThemes: [], publisher: { mode: 'PSEUDONYM', label: 'nightlamp27' }, publishedAt: PUBLISHED, ...wire },
+      content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }], nearby: [], relations: [] });
+    const strict = new PublicWorldApiClient({ baseUrl: 'https://api', fetch: jest.fn(async () => ({ ok: true, status: 200, json: async () => body() })) } as never).field;
+    const { field } = await focused(jest.fn((experienceId: string) => strict.experience(experienceId)));
+    expect(field.getState().focus).toMatchObject({ panel: { status: 'SERVED', experience: { discussionCount: 0 } } });
+    wire = { discussionCount: 3, qandeelResponseCount: 1 };
+    await act(async () => { field.closeDiscussion(); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    const panel = field.getState().focus?.panel;
+    expect(panel).toMatchObject({ status: 'SERVED', experience: { discussionCount: 3 } });
+    expect(Object.keys(panel?.status === 'SERVED' ? panel.experience : {})).not.toContain('qandeelResponseCount');
+  });
+
+  it('an older answer never overwrites a newer one', async () => {
+    const pending: Array<(count: number) => void> = [];
+    const experience = jest.fn(async () => yes(served(0)));
+    const { field } = await focused(experience);
+    experience.mockImplementation(() => new Promise((resolve) => { pending.push((count) => resolve(yes(served(count)))); }));
+    await act(async () => { field.closeDiscussion(); });
+    field.openDiscussion();
+    await act(async () => { field.closeDiscussion(); });
+    expect(pending).toHaveLength(2);
+    await act(async () => { pending[1](5); });
+    await act(async () => { pending[0](4); });
+    await flush();
+    expect(field.getState().focus).toMatchObject({ discussion: false, panel: { status: 'SERVED', experience: { discussionCount: 5 } } });
+  });
+
+  it('no longer served: the neutral absence, gone from the field; no answer: unavailable, never a kept or invented count', async () => {
+    let answer: PublicAuthoringAnswer<PublicFieldPanel> = yes(served(1));
+    const { field } = await focused(jest.fn(async () => answer));
+    answer = yes({ kind: 'ABSENT' });
+    await act(async () => { field.closeDiscussion(); });
+    await flush();
+    expect(field.getState().focus).toEqual({ id: E1.id, panel: { status: 'ABSENT' } });
+    expect(field.getState().entries.map((entry) => entry.id)).not.toContain(E1.id);
+
+    answer = yes(served(1));
+    const failing = await focused(jest.fn(async () => answer));
+    answer = NO;
+    await act(async () => { failing.field.closeDiscussion(); });
+    await flush();
+    expect(failing.field.getState().focus).toEqual({ id: E1.id, panel: { status: 'UNAVAILABLE' } });
+    expect(failing.field.discussion?.getState().status).toBe('CLOSED');
+  });
+
+  it.each(['ar', 'en'] as const)('the surface: Back from the discussion shows «Discussion · n» with the new count (%s)', async (language) => {
+    const copy = publicDiscussionCopy(language);
+    let count = 0;
+    const d = discussionOf();
+    const field = createPublicFieldController({ transport: fieldTransport(() => served(count)) as unknown as PublicFieldTransport, isCurrent: () => true, discussion: d });
+    const controller = createPublicWorldController({ transport: { entry: jest.fn(async () => ({ kind: 'ALLOW' as const })) }, isCurrent: () => true, field });
+    const view = await render(<AppearanceProvider authority={appearance()}><PublicWorldArea controller={controller} language={language} insets={INSETS} /></AppearanceProvider>);
+    for (let n = 0; n < 4; n += 1) await flush();
+    field.setEnvelope(viewportEnvelope(400, 800)!);
+    await act(async () => { field.focus(E1.id); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    expect(view.getByTestId('qandeel-public-panel-discussion').props.accessibilityLabel).toBe(copy.discussion);
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-panel-discussion')); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    count = 2;
+    await act(async () => { fireEvent.press(view.getByTestId('qandeel-public-discussion-back')); });
+    for (let n = 0; n < 3; n += 1) await flush();
+    expect(view.getByTestId('qandeel-public-panel-discussion').props.accessibilityLabel).toBe(copy.discussionWithCount.replace('{0}', '2'));
+  });
+});
+
 describe('S5-04 — the Product Copy Gate', () => {
   it('ONE bounded gate, CLOSED: every new row APPROVED in both languages; frozen words reused byte-exact', () => {
     expect(PUBLIC_DISCUSSION_COPY_GATE.proposed).toEqual([]);
