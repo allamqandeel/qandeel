@@ -94,7 +94,8 @@ test('3 — ONE publishing boundary: the Shared producer publishes through Activ
 
 test('4 — Direct Entry: SHARED_WORLD opens on a CURRENT entry verdict only; Replay stays closed (Stage 7)', () => {
   const types = code('apps/api/src/activity/activity.types.ts');
-  assert.match(types, /new Set\(\['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD'\]\)/u);
+  // S5-04 re-anchor (validation only): PUBLIC_WORLD joined the executable set at Stage 5; Shared's own entry is unchanged.
+  assert.match(types, /new Set\(\['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD'\]\)/u);
   const service = code('apps/api/src/activity/activity.service.ts');
   assert.match(service, /if \(verdict\?\.outcome === 'ALLOW' && verdict\.world_id === worldId\) return \{ outcome: 'ENTER', destination: \{ kind: 'SHARED_WORLD', worldId \} \};/u);
   assert.match(service, /worldId !== row\.context_ref/u, 'never a World other than the item\'s own');

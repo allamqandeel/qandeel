@@ -4227,3 +4227,45 @@ relation between two served endpoints, from both endpoints, to an admitted viewe
 or an unadmitted viewer; no coordinate moved and the field unchanged); integrity (a new current revision, a successor version,
 a withdrawn approval, an ASSURE-F05 erasure and an owner's disappearance each end the relation everywhere at once - lines,
 management rows and acts - never disclosing the invisible endpoint, with no write of S5-03C's own); and launch closure.
+
+## S5-04 - Public discussion, @qandeel and Public Activity integration (migration 0147)
+
+`0147_public_discussion_qandeel_activity_integration_v1.sql` is the one additive application boundary over the frozen I-05
+discussion / Public QANDEEL runtime (`0096`) and vitality runtime (`0097`); it replaces, alters or grants nothing frozen and
+builds no second discussion, reply, response, vitality or stale-content runtime. The private schema `public_discussion_private`
+holds three runtime tables with no text column: `qandeel_invocations` (one row per committed human post holding the standalone,
+case-insensitive `@qandeel` token; the ONE Public QANDEEL response is linked at most once - `UNIQUE (response_id)` - and a
+guard trigger admits nothing else), `qandeel_work_leases` and `qandeel_work_grants` (a per-human generation lease: two in
+flight, 20 per rolling 10 minutes, 200 per rolling 24 hours). `resolve_public_discussion_entitlement_v1` is the discussion
+entitlement seam (CW2-04 D22; CW2-08 §21): it answers `NOT_EVALUATED`, executable by no role, so human contribution fails
+closed in production until the Stage-9 / CW2-08 slice replaces its body.
+
+`authenticated` executes `post_own_public_discussion_v1` (the author is `auth.uid()`, admitted by the frozen gate; the target is
+the Experience's CURRENT served field entry; contribution needs an exact `ENTITLED`; a reply to a reply joins its thread root,
+one visible depth, without changing `0096` storage; the S5-02 Public Identity provisioning; then the frozen
+`post_public_discussion_v1`; then the frozen `recompute_public_experience_vitality_v1`, which nothing called before),
+`read_public_discussion_posts_v1` (the served version's posts through the frozen resolvers, Public display joined now, the
+reader's own flag, each post's one QANDEEL response state; at most 100 per page) and `read_public_discussion_capability_v1`.
+`service_role` executes the QANDEEL work - `begin_public_qandeel_work_v1`, `read_public_qandeel_context_v1` (public-visible
+truth only, under the live lease: the served version's reviewed meaning, themes and public package, its served discussion up
+to the invoking post, earlier responses, and the reviewed meaning of each CURRENT explicit related Experience),
+`complete_public_qandeel_work_v1` (revalidated, through the frozen `record_public_qandeel_response_v1`) and
+`end_public_qandeel_work_v1` - and `server_read_public_activity_source_v1` (Activity recipients derived from Public truth: the
+parent author of a reply, the controllers of an Experience for a top-level post, the target controllers of a relation
+request, the requesting controllers of an acceptance; never the actor; only admitted humans; nothing once not served). No
+`commit_%`, `resolve_public_` or `search_public_` name is added. Deploy-time assertions K1-K6 hold the boundary.
+
+```sh
+npm run verify:public-discussion-qandeel-activity:integration
+```
+
+`verify-migration-0147.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the boundary census
+(posture, exact executable sets, no authority input, the frozen primitives still unreachable, RLS and no text column, the
+context firewall); the fail-closed entitlement seam (only a simulated `ENTITLED`, inside the rolled-back transaction, opens
+contribution); discussion (served version only, verbatim words, idempotent retries and command conflicts, one visible depth,
+neutral refusals, Public display only, paging, vitality current and no coordinate moved); `@qandeel` (case-insensitive,
+standalone, one invocation per post, from a reply too); the work (author-only, one live lease, the public context only - no
+private, unpublished or identity text - a stale completion discarded and marked unanswered, one response bound to the
+invoking post and the exact version, the in-flight bound, the invocation guard); the Activity source (never the actor; the
+relation lifecycle); disappearance (every S5-04 read, command and source goes dark while 0099 keeps the internal history);
+and launch closure (both CW2-08 seams answer `NOT_EVALUATED`).

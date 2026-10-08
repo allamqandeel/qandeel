@@ -95,7 +95,9 @@ test('4 — the API consumes 0142 on the caller\'s own token only: three routes,
   // RE-ANCHORED by S5-02 (validation only). This first swept EVERY file of the directory, when S5-01's were the only
   // ones. S5-02 legitimately adds the Public authoring boundary beside them (`public-authoring.*`, pinned by its own
   // contract); S5-01's own four files still open nothing inside Public World.
-  for (const file of ['public-world.controller.ts', 'public-world.module.ts', 'public-world.repository.ts', 'public-world.service.ts']) {
+  // RE-ANCHORED by S5-04 (validation only): `public-world.module.ts` is the Stage-5 composition root, and S5-04 composes the
+  // dependent discussion there (its own contract pins that wiring). S5-01's own three files still open nothing.
+  for (const file of ['public-world.controller.ts', 'public-world.repository.ts', 'public-world.service.ts']) {
     const text = code(`${API}/${file}`);
     assert.doesNotMatch(text, /console\.|logger\.|Logger\b/u, `${file} logs nothing`);
     assert.doesNotMatch(text, /experience|draft|publication|publish_|discussion|reaction|replay|search|lens|placement/iu, `${file} opens nothing inside Public World`);
@@ -132,7 +134,11 @@ test('5 — the third Global Area is real: navPublic from P2, the same entry con
   assert.ok(surface.indexOf("entry === 'NONE' || entry === 'RESOLVING'") < surface.indexOf('qandeel-public-title'), 'no destination detail before ALLOW');
   assert.doesNotMatch(surface, /BackHandler/u, 'Back at the root is local-only: nothing is registered');
   for (const file of readdirSync(new URL(`${MOBILE}/public-world/`, root)).filter((f) => /\.(ts|tsx)$/u.test(f))) {
-    const text = code(`${MOBILE}/public-world/${file}`);
+    // RE-ANCHORED by S5-04 (validation only): the entry controller now carries ONE Direct Entry target (an Experience id,
+    // DISCUSSION or RELATIONS) to the field or the workspace on ALLOW. It still holds and fakes no Public content.
+    const text = file === 'public-world-controller.ts'
+      ? code(`${MOBILE}/public-world/${file}`).replace(/experienceId|'DISCUSSION'|'RELATIONS'/gu, '')
+      : code(`${MOBILE}/public-world/${file}`);
     assert.doesNotMatch(text, /experience|draft|publication|publish_|discussion|reaction|replay|search|lens|placement|trending|popular/iu, `${file} fakes no Public content`);
     assert.doesNotMatch(text, /useCanonicalStore|conversationController|sharedWorld\b|__validation__/u, `${file} reads nothing of the Personal world or the Shared area`);
   }

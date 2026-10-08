@@ -61,6 +61,9 @@ export interface PublicDiscussionControllerOptions {
   readonly newId: () => string;
 }
 
+/** The server's bound on one post (the 0147 bound), held here so the surface never reaches past the runtime barrel. */
+export const PUBLIC_DISCUSSION_TEXT_MAX = 4000;
+
 const CLOSED: PublicDiscussionState = Object.freeze({
   experienceId: null, status: 'CLOSED', canContribute: false, threads: [], hasMore: false, replyTo: null, send: 'IDLE',
 });

@@ -162,7 +162,9 @@ test('7 — mobile: one Public field with its own camera and state; FAR / MID / 
   assert.doesNotMatch(code(`${MOBILE}/public-world/field/public-field-controller.ts`), /fittedCamera|ratioToFinite|roundDiv/u, 'no camera fitted to what the World holds');
   const area = code(`${MOBILE}/public-world/PublicWorldArea.tsx`);
   assert.match(area, /<PublicLivingAnalysis controller=\{controller\.field\}/u);
-  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /field: createPublicFieldController\(\{ transport: publicTransport\.field \?\? null, isCurrent, foreground: entry\.foreground \}\)/u);
+  // S5-04 re-anchor (validation only): the field now also carries the focused Experience's dependent discussion, on the
+  // same identity-bound Public transport; the field itself is still created once, on the field transport, here.
+  assert.match(code(`${MOBILE}/integration/runtime/integration-runtime.ts`), /field: createPublicFieldController\(\{ transport: publicTransport\.field \?\? null, isCurrent, foreground: entry\.foreground,?\s*(discussion: createPublicDiscussionController\(\{ transport: publicTransport\.discussion \?\? null, isCurrent, foreground: entry\.foreground,\s*newId: mintPublicCommandId \}\) )?\}\)/u);
   assert.match(code(`${MOBILE}/runtime-entry/public-world-api.ts`), /this\.field = new PublicFieldApiClient\(config\);/u, 'on the same identity-bound transport');
   assert.doesNotMatch(code(`${MOBILE}/runtime-entry/index.ts`), /export \{[^}]*PublicFieldApiClient/u, 'no new runtime-barrel value');
   const surface = code(`${MOBILE}/public-world/field/PublicLivingAnalysis.tsx`);
@@ -218,12 +220,13 @@ test('9 — governance: the record, the backlog and the locators tell the same t
     const state = read('QANDEEL_CURRENT_STATE.md');
     assert.match(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
     assert.doesNotMatch(state, /\| S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*ACTIVE/u, 'S5-03B is no longer ACTIVE');
-    assert.match(state, /\| S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*(ACTIVE|`?CLOSED)/u, 'S5-03C is the current Stage-5 task');
+    // RE-ANCHORED by S5-04 (validation only): PR #318 merged; S5-03C is DONE / MERGED and S5-04 is the current task.
+    assert.match(state, /\| S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*(ACTIVE|`?CLOSED|`DONE \/ MERGED`)/u, 'S5-03C followed S5-03B');
     assert.match(state, /\| S5-03A — [^\n]*\*\*`MERGED \/ CLOSED` through PR #316 at `c9338af9ecbfcecccc281f96f52fab335ad9bc7b`\*\*/u);
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
     const map = read('QANDEEL_PROJECT_MAP.md');
-    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03C — Public Explicit Relations \+ Integrity Closure\*\*/u);
+    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-0(3C|4) — /u, 'a later Stage-5 task is current (RE-ANCHORED by S5-04, validation only)');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B/u, 'S5-03B is no longer the current task');
     assert.match(map, /`S5-03B — Public Semantic Field \+ Viewer Runtime` = \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
     assert.match(map, /\*\(Historical: S5-03B was the current task until PR #317 merged as `afd5e8caecc06884b5adfdb381eef8e650e03c1f`/u);

@@ -17,9 +17,8 @@ import { ActivityIndicator, Pressable, ScrollView, Text, TextInput, View, useWin
 import { Control, typeStyle, usePalette, type ConversationPalette } from '../../conversation';
 import type { ChromeLanguage } from '../../orientation-chrome';
 import type { PublicDiscussionPost } from '../../runtime-entry';
-import { PUBLIC_DISCUSSION_TEXT_MAX } from '../../runtime-entry/public-discussion-api';
 import { fillDiscussionCopy, publicDiscussionCopy, type PublicDiscussionCopy } from './discussion-copy';
-import type { PublicDiscussionController } from './public-discussion-controller';
+import { PUBLIC_DISCUSSION_TEXT_MAX, type PublicDiscussionController } from './public-discussion-controller';
 
 export const PUBLIC_DISCUSSION_TEST_ID = 'qandeel-public-discussion';
 

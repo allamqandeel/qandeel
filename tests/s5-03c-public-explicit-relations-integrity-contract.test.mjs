@@ -97,7 +97,8 @@ test('4 — the boundary: authenticated only, the server channel holds nothing, 
 
 test('5 — API: one controller in the SAME Public module, the caller token only, the census classes', () => {
   const module = code(`${API}/public-world.module.ts`);
-  assert.match(module, /PublicFieldController,\s+PublicRelationController\]/u, 'the same Public module, not a parallel one');
+  // S5-04 re-anchor (validation only): the discussion controller joins the SAME Public module after this one.
+  assert.match(module, /PublicFieldController,\s+PublicRelationController(, PublicDiscussionController)?\]/u, 'the same Public module, not a parallel one');
   const repo = code(`${API}/public-relation.repository.ts`);
   assert.doesNotMatch(repo, /SupabaseServiceRoleApiService|server\.rpc/u, 'no server channel');
   const controller = code(`${API}/public-relation.controller.ts`);
@@ -109,7 +110,13 @@ test('5 — API: one controller in the SAME Public module, the caller token only
   const field = code(`${API}/public-field.repository.ts`);
   assert.match(field, /'read_public_semantic_relations_v1'/u, 'the panel reads the explicit relations from the database');
   for (const file of ['public-relation.repository.ts', 'public-relation.service.ts', 'public-relation.controller.ts']) {
-    assert.doesNotMatch(code(`${API}/${file}`), /similar|proxim|nearby|distance|world_x|coordinate|strength|score|rank|console\.|Logger|notif|push|activity|publish_/iu, file);
+    // S5-04 re-anchor (validation only): relation-request notifications were S5-04's by the Product Owner's decision. The
+    // service now projects a committed act through the S5-04 Public producer (`this.activity.relation…`) and nothing else:
+    // no recipient, no Activity table, no Push, no write of relation truth.
+    const text = file === 'public-relation.service.ts'
+      ? code(`${API}/${file}`).replace(/this\.activity\.relation(Requested|Accepted|Ended)|private readonly activity: PublicActivityProducer|import \{ PublicActivityProducer \} from '\.\/public-activity\.producer';/gu, '')
+      : code(`${API}/${file}`);
+    assert.doesNotMatch(text, /similar|proxim|nearby|distance|world_x|coordinate|strength|score|rank|console\.|Logger|notif|push|activity|publish_/iu, file);
   }
 });
 
@@ -175,20 +182,23 @@ test('8 — governance: the record, the backlog and the locators tell the same t
   assert.match(backlog, /\*\*Current-truth note \(S5-03C, 2026-10-07\)\.\*\*/u);
   assert.match(backlog, /\*\*S5-03C reconciliation \(2026-10-07; closed, not merged\)\.\*\*/u);
   assert.match(backlog, /\| `S5-03C — Public Explicit Relations \+ Integrity Closure` \| none — no item names it;/u);
-  assert.match(backlog, /\| `QAN-BL-VIS-01` \| [^\n]*\| `OPEN — UNASSIGNED` \|/u);
+  // RE-ANCHORED by S5-04 (validation only): the Product Owner re-owned QAN-BL-VIS-01 to LA-SCALE-01 (S5-04 D6).
+  assert.match(backlog, /\| `QAN-BL-VIS-01` \| [^\n]*\| `(OPEN — UNASSIGNED|DEFERRED — OWNED)` \|/u);
   assert.match(backlog, /\| `QAN-BL-CW-03` \| [^\n]*\| `DEFERRED — OWNED` \|/u);
   assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]*\| `OPEN — UNASSIGNED` \|/u);
   // The locators are not mirrored by the forward-safety gate; read them only where they exist.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
     assert.match(state, /S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
-    assert.match(state, /S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*`CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION`/u);
+    // RE-ANCHORED by S5-04 (validation only): PR #318 merged as 729fe4d.
+    assert.match(state, /S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*`(CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION|DONE \/ MERGED)`/u);
     assert.doesNotMatch(state, /Stage 5 \(Public World Product Integration\) is \*\*DONE/u, 'Stage 5 is not DONE before S5-04');
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
     const map = read('QANDEEL_PROJECT_MAP.md');
-    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03C — Public Explicit Relations \+ Integrity Closure\*\*/u);
-    assert.match(map, /`S5-04 — Discussion \+ Public QANDEEL \+ Final Public Integration` = \*\*NEXT \/ NOT STARTED\*\*/u);
+    // RE-ANCHORED by S5-04 (validation only): S5-03C merged; S5-04 is the current (closed, unmerged) task.
+    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-0(3C — Public Explicit Relations \+ Integrity Closure|4 — )/u);
+    assert.match(map, /\*\*NEXT \/ NOT STARTED\*\*|S5-04[^\n]*CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION/u);
   }
   const s503b = read('docs/e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md');
   assert.doesNotMatch(s503b, /Public performance at scale \(G04, G05\)/u, 'the S5-03B §19 drift is corrected: G04 / G05 are not S5-04\'s');

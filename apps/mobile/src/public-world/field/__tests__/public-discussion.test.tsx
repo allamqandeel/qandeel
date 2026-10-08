@@ -14,8 +14,7 @@ import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearanc
 import { viewportEnvelope } from '../../../map/camera';
 import { canonicalWorldAddress } from '../../../map/world';
 import type { PublicAuthoringAnswer, PublicDiscussionPage, PublicDiscussionPost, PublicFieldEntry, PublicFieldPanel } from '../../../runtime-entry';
-import { PublicDiscussionApiClient } from '../../../runtime-entry/public-discussion-api';
-import { decodeOpen } from '../../../runtime-entry/activity-api';
+import { ActivityApiClient, PublicWorldApiClient } from '../../../runtime-entry';
 import { createPublicWorldController } from '../../public-world-controller';
 import { PublicWorldArea } from '../../PublicWorldArea';
 import { PUBLIC_DISCUSSION_COPY_GATE, publicDiscussionCopy } from '../discussion-copy';
@@ -75,9 +74,9 @@ const appearance = () => {
 afterEach(cleanup);
 
 describe('S5-04 — the strict discussion client', () => {
-  const client = (body: unknown, ok = true) => new PublicDiscussionApiClient({
+  const client = (body: unknown, ok = true) => new PublicWorldApiClient({
     baseUrl: 'https://api', fetch: jest.fn(async () => ({ ok, status: ok ? 200 : 503, json: async () => body })) as never,
-  } as never);
+  } as never).discussion;
 
   it('decodes exactly the served page; anything more (a like, a rank, an account) is no answer', async () => {
     const wire = { id: ROOT.id, threadRootId: ROOT.id, ordinal: 1, author: { mode: 'PSEUDONYM', label: 'walker1' }, text: 'post 1', postedAt: PUBLISHED,
@@ -93,7 +92,7 @@ describe('S5-04 — the strict discussion client', () => {
 
   it('posts send only { commandId, text, replyTo }; outcomes are decoded strictly', async () => {
     const fetch = jest.fn(async () => ({ ok: true, status: 200, json: async () => ({ outcome: 'NOT_ENTITLED' }) }));
-    const c = new PublicDiscussionApiClient({ baseUrl: 'https://api', fetch } as never);
+    const c = new PublicWorldApiClient({ baseUrl: 'https://api', fetch } as never).discussion;
     await expect(c.post(E1.id, id(5), '@qandeel?', ROOT.id)).resolves.toEqual(yes({ kind: 'NOT_ENTITLED' }));
     expect(JSON.parse((fetch.mock.calls[0] as unknown as [string, { body: string }])[1].body)).toEqual({ commandId: id(5), text: '@qandeel?', replyTo: ROOT.id });
   });
@@ -204,13 +203,15 @@ describe('S5-04 — the field: Back order and exact Direct Entry', () => {
     expect(field.target).not.toHaveBeenCalled();
   });
 
-  it('Activity decodes the executable Public destination strictly', () => {
-    expect(decodeOpen({ outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'DISCUSSION', experienceId: E1.id } } }))
+  it('Activity decodes the executable Public destination strictly', async () => {
+    const decodeOpen = (body: unknown) => new ActivityApiClient({ baseUrl: 'https://api',
+      fetch: jest.fn(async () => ({ ok: true, status: 200, json: async () => body })) } as never).open(id(900));
+    expect(await decodeOpen({ outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'DISCUSSION', experienceId: E1.id } } }))
       .toEqual({ kind: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'DISCUSSION', experienceId: E1.id } } });
-    expect(decodeOpen({ outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'RELATIONS', experienceId: E1.id } } }).kind).toBe('ENTER');
+    expect((await decodeOpen({ outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'RELATIONS', experienceId: E1.id } } })).kind).toBe('ENTER');
     for (const destination of [{ kind: 'PUBLIC_WORLD', target: { kind: 'FEED', experienceId: E1.id } }, { kind: 'PUBLIC_WORLD', target: { kind: 'DISCUSSION', experienceId: 'x' } },
       { kind: 'PUBLIC_WORLD', target: { kind: 'DISCUSSION', experienceId: E1.id, rank: 1 } }, { kind: 'PUBLIC_WORLD' }]) {
-      expect(decodeOpen({ outcome: 'ENTER', destination })).toEqual({ kind: 'FAILED' });
+      expect(await decodeOpen({ outcome: 'ENTER', destination })).toEqual({ kind: 'FAILED' });
     }
   });
 });
