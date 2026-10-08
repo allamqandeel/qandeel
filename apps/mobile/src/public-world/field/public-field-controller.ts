@@ -284,6 +284,19 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
     setCamera(focusField(target.address));
   };
 
+  /**
+   * S5-04 — leaving the discussion returns to the SAME panel, read again (R1): what it served before the discussion
+   * opened (its human discussion count above all) is never shown as current. Only the panel is asked — the glass is not
+   * read, the camera does not move — and an older answer never overwrites a newer one (the panel ticket).
+   */
+  const leaveDiscussion = () => {
+    const focus = state.focus;
+    discussion?.close();
+    if (focus === null || focus.discussion !== true) return;
+    publish({ focus: { ...focus, discussion: false } });
+    if (focus.panel.status === 'SERVED') void openPanel(focus.id);
+  };
+
   let controller: PublicFieldController | null = null;
   const unsubscribeForeground = foreground?.subscribe((next) => { if (next === 'ACTIVE') controller?.revalidate(); });
 
@@ -338,9 +351,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
       discussion.open(focus.id);
     },
     closeDiscussion() {
-      const focus = state.focus;
-      discussion?.close();
-      if (focus !== null && focus.discussion) publish({ focus: { ...focus, discussion: false } });
+      leaveDiscussion();
     },
     discussion,
     setEnvelope(next) {
@@ -405,8 +416,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground, 
     },
     back() {
       if (state.focus !== null && state.focus.discussion === true) {
-        discussion?.close();
-        publish({ focus: { ...state.focus, discussion: false } });
+        leaveDiscussion();
         return true;
       }
       if (state.focus !== null) {
