@@ -30,14 +30,16 @@ export const CATEGORY_CONTEXT: Readonly<Record<ActivityCategory, ActivityContext
  * D38–D43 — the ONE typed Direct Entry descriptor. Every destination is typed now; only the ones a production surface
  * exists for execute. The rest fail closed (UNAVAILABLE) until their Stage owns a surface — nothing here builds one.
  * S4-04 (Stage 4) makes SHARED_WORLD executable: the exact World, re-authorized by the Shared entry verdict at open.
- * REPLAY stays closed (generic Replay Product integration is Stage 7), as do Public (5) and Introductions (6).
+ * S5-04 (Stage 5) makes PUBLIC_WORLD executable: the exact Public Experience discussion or relation context, re-authorized
+ * by the Public domain's own reads at open. REPLAY stays closed (generic Replay Product integration is Stage 7), as do
+ * Introductions (6).
  */
 export const ENTRY_DESTINATIONS = [
   'NONE', 'PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD',
   'INTRODUCTIONS', 'REPLAY',
 ] as const;
 export type EntryDestination = (typeof ENTRY_DESTINATIONS)[number];
-export const EXECUTABLE_DESTINATIONS: ReadonlySet<EntryDestination> = new Set(['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD']);
+export const EXECUTABLE_DESTINATIONS: ReadonlySet<EntryDestination> = new Set(['PERSONAL_CONVERSATION', 'QANDEEL_UNDERSTANDING', 'GENERAL_SETTINGS', 'SHARED_WORLD', 'PUBLIC_WORLD']);
 export const SETTINGS_SECTIONS = ['SECURITY', 'ACCOUNT', 'NOTIFICATIONS'] as const;
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
@@ -174,8 +176,11 @@ export interface ActivityAttentionView extends ActivityIndicatorsView {
   readonly interruptions: readonly InterruptionCandidateView[];
 }
 
+/** S5-04 — the exact Public context a Public item opens: one Experience's discussion, or the reader's relation management. */
+export type PublicEntryTarget = { readonly kind: 'DISCUSSION'; readonly experienceId: string } | { readonly kind: 'RELATIONS'; readonly relationId: string };
+
 export type ActivityOpenView =
-  | { readonly outcome: 'ENTER'; readonly destination: { readonly kind: 'PERSONAL_CONVERSATION' | 'QANDEEL_UNDERSTANDING' } | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection } | { readonly kind: 'SHARED_WORLD'; readonly worldId: string } }
+  | { readonly outcome: 'ENTER'; readonly destination: { readonly kind: 'PERSONAL_CONVERSATION' | 'QANDEEL_UNDERSTANDING' } | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection } | { readonly kind: 'SHARED_WORLD'; readonly worldId: string } | { readonly kind: 'PUBLIC_WORLD'; readonly target: PublicEntryTarget } }
   | { readonly outcome: 'STALE' | 'UNAVAILABLE' | 'NO_ENTRY'; readonly fallback: { readonly kind: 'PERSONAL_CONVERSATION' } | { readonly kind: 'GENERAL_SETTINGS'; readonly section: SettingsSection } | null };
 
 export interface ActivityPreferencesView {

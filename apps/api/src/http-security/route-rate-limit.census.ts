@@ -167,6 +167,13 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /public/authoring/relations/:relationId/decline': 'AUTHENTICATED',
   'POST /public/authoring/relations/:relationId/cancel': 'AUTHENTICATED',
   'POST /public/authoring/relations/:relationId/remove': 'AUTHENTICATED',
+  // S5-04 — the dependent Public discussion. A post or reply is durable public state other humans read, and an @qandeel
+  // post or a request for its one response can reach the Model Router (a provider call), so both take the strict class,
+  // as the Shared send does, beside the database's own per-human QANDEEL work bound; reading the discussion is an
+  // ordinary authenticated read the database bounds itself (100 per page). No new class.
+  'GET /public/field/experiences/:experienceId/discussion': 'AUTHENTICATED',
+  'POST /public/field/experiences/:experienceId/discussion': 'SECURITY_SENSITIVE',
+  'POST /public/field/experiences/:experienceId/discussion/:postId/qandeel': 'SECURITY_SENSITIVE',
 });
 
 const segments = (path: unknown): string[] =>

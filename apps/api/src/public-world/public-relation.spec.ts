@@ -4,6 +4,7 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import { ROUTE_RATE_LIMIT_CENSUS } from '../http-security/route-rate-limit.census';
 import type { PublicFieldRepository } from './public-field.repository';
 import { PublicFieldService } from './public-field.service';
+import type { PublicActivityProducer } from './public-activity.producer';
 import type { PublicRelationRepository } from './public-relation.repository';
 import { PublicRelationService } from './public-relation.service';
 
@@ -24,7 +25,9 @@ function relationRepository(overrides: Partial<Record<keyof PublicRelationReposi
     ...overrides,
   };
 }
-const service = (repo = relationRepository()) => new PublicRelationService(repo as unknown as PublicRelationRepository);
+// S5-04 re-anchor (validation only): the service now also projects committed facts to Activity through the S5-04 producer.
+const activity = { relationRequested: jest.fn(async () => undefined), relationAccepted: jest.fn(async () => undefined), relationEnded: jest.fn(async () => undefined) };
+const service = (repo = relationRepository()) => new PublicRelationService(repo as unknown as PublicRelationRepository, activity as unknown as PublicActivityProducer);
 
 describe('S5-03C — explicit Public relations, managed by their controllers', () => {
   it('reads the reader\'s own served Experiences and current relations from their side — meanings only, nothing else', async () => {
@@ -115,7 +118,14 @@ describe('S5-03C — the static boundary of the API', () => {
       expect(text).not.toMatch(/memory|humanIntelligence|hypothes|SharedWorld|shared_world|provenance|matching|ModelRouter|console\.|Logger/iu);
       expect(text).not.toMatch(/ServiceRole|server\.rpc|service_role/u);
       expect(text).not.toMatch(/similar|proxim|nearby|distance|region|theme|world_x|world_y|coordinate|placement|strength|score|rank|popular/iu);
-      expect(text).not.toMatch(/publish_|PUBLISHED|prerequisite|CLEARED|notif|push|activity/iu);
+      expect(text).not.toMatch(/publish_|PUBLISHED|prerequisite|CLEARED|notif|push/iu);
+      // S5-04 re-anchor (validation only): S5-03C published nothing to Activity (relation notifications were S5-04's by the
+      // Product Owner's decision). S5-04 adds exactly one projection, after a committed act, through its Public producer —
+      // never a recipient, never an Activity table, never a write of relation truth.
+      const reach = text.match(/activity[A-Za-z.]*/giu) ?? [];
+      expect(reach.every((r) => ['activity', 'activity.relationRequested', 'activity.relationAccepted', 'activity.relationEnded', 'ActivityProducer',
+        'activity.producer'].includes(r))).toBe(true);
+      expect(text).not.toMatch(/ActivityPublisher|recipient|activity_items/iu);
     }
   });
 

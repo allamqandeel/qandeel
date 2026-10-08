@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
 import type { PublicRelationAct, PublicRelationExperienceRow, PublicRelationRow } from './public-relation.repository';
 import { PublicRelationRepository } from './public-relation.repository';
+import { PublicActivityProducer } from './public-activity.producer';
 
 /** One of the reader's own Experiences served in the Public World now, named by its reviewed meaning. */
 export interface PublicRelationExperienceView { readonly id: string; readonly meaning: string }
@@ -60,7 +61,7 @@ function commandBody(body: unknown, keys: readonly string[]): Record<string, str
  */
 @Injectable()
 export class PublicRelationService {
-  constructor(private readonly repository: PublicRelationRepository) {}
+  constructor(private readonly repository: PublicRelationRepository, private readonly activity: PublicActivityProducer) {}
 
   private async guard<T>(work: () => Promise<T>): Promise<T> {
     try {
@@ -85,6 +86,8 @@ export class PublicRelationService {
     return this.guard(async () => {
       const rows = await this.repository.request(token, value.commandId, value.experienceId, value.otherExperienceId);
       if (!Array.isArray(rows) || rows.length !== 1 || !REQUEST_OUTCOMES.includes(rows[0].outcome)) return unavailable();
+      // S5-04: a committed request is projected to the target side's Activity (recipients derived by the database).
+      if (rows[0].outcome === 'REQUESTED' && isUuid(rows[0].relation_id)) await this.activity.relationRequested(rows[0].relation_id).catch(() => undefined);
       return { outcome: rows[0].outcome as PublicRelationRequestView['outcome'] };
     });
   }
@@ -98,6 +101,10 @@ export class PublicRelationService {
       if (!Array.isArray(rows) || rows.length !== 1) return unavailable();
       const { outcome } = rows[0];
       if (outcome !== DONE[act] && outcome !== OTHER[act] && outcome !== 'UNAVAILABLE') return unavailable();
+      // S5-04: Activity is a projection only — an acceptance tells the requester; every ending withdraws the request item.
+      if (outcome === DONE[act]) {
+        await (act === 'accept' ? this.activity.relationAccepted(relationId) : this.activity.relationEnded(relationId)).catch(() => undefined);
+      }
       return { outcome: outcome as PublicRelationActView['outcome'] };
     });
   }

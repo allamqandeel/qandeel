@@ -156,8 +156,8 @@ describe('A3-01 ActivityService — attention state never resolves anything; Dir
     await expect(open(opened('GENERAL_SETTINGS', 'SECURITY', 'ACCOUNT'))).resolves.toEqual({ outcome: 'ENTER', destination: { kind: 'GENERAL_SETTINGS', section: 'SECURITY' } });
   });
 
-  it('Stage 5–8 destinations (and Replay, Stage 7) stay typed but fail closed', async () => {
-    for (const destination of ['PUBLIC_WORLD', 'INTRODUCTIONS', 'REPLAY']) {
+  it('Stage 6–8 destinations (and Replay, Stage 7) stay typed but fail closed', async () => {
+    for (const destination of ['INTRODUCTIONS', 'REPLAY']) {
       await expect(open(opened(destination, 'ref', 'SHARED_WORLD'))).resolves.toEqual({ outcome: 'UNAVAILABLE', fallback: null });
     }
   });
