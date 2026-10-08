@@ -321,7 +321,7 @@ describe('SHARED-VIS-01 — the Shared World on the ONE Living Analysis surface'
 });
 
 describe('SHARED-VIS-01 — the Product Copy Gate (CLOSED — 6 / 6 APPROVED)', () => {
-  it('reuses every existing word exactly; the six new rows are the Product Owner's approved wording (CLOSED — 6 / 6)', () => {
+  it("reuses every existing word exactly; the six new rows are the Product Owner's approved wording (CLOSED — 6 / 6)", () => {
     expect(SHARED_FIELD_COPY_GATE.approved).toEqual(['fieldLabel', 'empty', 'fieldUnavailable', 'conversation', 'placeUnavailable', 'sourcesHeading']);
     expect(SHARED_FIELD_COPY_GATE.proposed).toEqual([]);
     expect(sharedFieldCopy('ar')).toMatchObject({ fieldLabel: 'خريطة المعاني في العالم المشترك', empty: 'لم تتشكل معالم هذا العالم بعد.',
