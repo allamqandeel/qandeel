@@ -209,7 +209,14 @@ dumps).
 
 Not run on the device: the ended World (its v2 read is proven by `verify-migration-0148.mjs` and the S4-03 Jest journeys)
 and a pinch (adb cannot pinch; FAR → MID by tap and the accessible semantic step are proven, MID → NEAR by tapping a place).
-A boot-time "System UI isn't responding" dialog was dismissed with Wait (C, benign). **Product visual acceptance: PENDING.**
+A boot-time "System UI isn't responding" dialog was dismissed with Wait (C, benign).
+
+**Final-candidate re-capture (after the Copy Gate closed):** the proof build of `aa5780e` (sha256
+`8a50b4ac4ec6abf0313fd022d82058adebf35e15b92cea3ed4e2d55ab32ece77`), same emulator, evidence in
+`.shared-vis-native-proof/final/`: FAR (`f02`), MID (`f03`), NEAR with the focused panel (`f04`) and its sources under
+«مصادر هذا المعنى» / "Sources of this meaning" (`f05`), the held authority shell (`f06`) and the empty World "This world's
+map is still taking shape." (`f07`); the map's accessible name reads "Shared World meaning map". Every view is identical
+to the first attempt apart from the approved wording. **Product visual acceptance: PENDING — not granted.**
 
 ## 12. SHARED-VIS-01 Product Copy Gate — `CLOSED — 6 / 6 APPROVED` (Product Owner, 2026-10-08)
 
