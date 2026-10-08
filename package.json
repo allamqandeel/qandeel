@@ -244,6 +244,7 @@
     "verify:public-semantic-field-placement-viewer:integration": "node --env-file-if-exists=.env database/verify-migration-0145.mjs",
     "verify:public-explicit-relations-integrity:integration": "node --env-file-if-exists=.env database/verify-migration-0146.mjs",
     "verify:public-discussion-qandeel-activity:integration": "node --env-file-if-exists=.env database/verify-migration-0147.mjs",
+    "verify:shared-semantic-field:integration": "node --env-file-if-exists=.env database/verify-migration-0148.mjs",
     "test:a3-01-activity-attention-inapp-contract": "node --test tests/a3-01-activity-attention-inapp-contract.test.mjs",
     "test:a3-02-native-push-platform-delivery-contract": "node --test tests/a3-02-native-push-platform-delivery-contract.test.mjs",
     "test:s4-01-shared-world-reachability-contract": "node --test tests/s4-01-shared-world-reachability-contract.test.mjs",

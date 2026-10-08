@@ -11,6 +11,10 @@ import { SharedActivityProducer } from './shared-activity.producer';
 import { SharedActivityRepository } from './shared-activity.repository';
 import { SharedConversationReplyGenerator } from './shared-conversation-reply.generator';
 import { SharedIdSealing } from './shared-id-sealing';
+import { SharedSemanticFieldService } from './shared-semantic-field.service';
+import { SHARED_SEMANTIC_INTERPRETER, createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter';
+import { SharedSemanticPlaceService } from './shared-semantic-place.service';
+import { SHARED_SPATIAL_PLACER, createConfiguredSharedSpatialPlacer } from './shared-spatial-placer';
 import { SharedWorldAlertsRepository } from './shared-world-alerts.repository';
 import { SharedWorldAlertsService } from './shared-world-alerts.service';
 import { SharedWorldConversationRepository } from './shared-world-conversation.repository';
@@ -37,6 +41,11 @@ import { SharedWorldService } from './shared-world.service';
  * S4-04 — Shared Activity: the producer hands each committed Shared fact's identity to ONE 0141 server pass, which
  * derives the recipients from durable Shared truth, and publishes through the ONE A3-01 boundary, `ActivityPublisher`
  * (imported from `ActivityModule`, never re-provided). The per-World alert rows run on the caller's own token (0141).
+ *
+ * SHARED-VIS-01 — the Shared World's Living Analysis geography: the member's field and place reads over migration 0148 on
+ * the caller's own token, and QANDEEL's semantic places, produced by the server through the same frozen I-03 / I-04G
+ * chain as the reply and committed through 0148's server-owned pass commands. The interpreter and the placer are
+ * provider-neutral ports that refuse until Stage 8A binds a provider.
  */
 @Module({
   imports: [ModelRouterModule, ActivityModule],
@@ -48,6 +57,9 @@ import { SharedWorldService } from './shared-world.service';
     SharedActivityRepository, SharedActivityProducer, SharedWorldAlertsRepository, SharedWorldAlertsService,
     ...SHARED_QANDEEL_REPLY_PROVIDERS,
     { provide: SHARED_QANDEEL_REPLY_GENERATOR, useClass: SharedConversationReplyGenerator },
+    SharedSemanticFieldService, SharedSemanticPlaceService,
+    { provide: SHARED_SEMANTIC_INTERPRETER, useFactory: () => createConfiguredSharedSemanticInterpreter() },
+    { provide: SHARED_SPATIAL_PLACER, useFactory: () => createConfiguredSharedSpatialPlacer() },
   ],
 })
 export class SharedWorldModule {}

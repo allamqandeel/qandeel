@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, ServiceUnavailableException } from '@n
 import type { SharedConversationMaterial } from '../connected-worlds/material-commit/shared-qandeel-reply.types';
 import { SharedQandeelReplyService } from '../connected-worlds/material-commit/shared-qandeel-reply.service';
 import { DataApiError } from '../conversation/supabase-data-api.service';
+import { SharedSemanticPlaceService } from './shared-semantic-place.service';
 import { SHARED_MATERIAL_PAGE, SharedWorldConversationRepository, type SharedMaterialCursor, type SharedMaterialRow } from './shared-world-conversation.repository';
 import { SharedWorldRepository } from './shared-world.repository';
 
@@ -56,6 +57,12 @@ function commandOf(body: unknown, allowed: readonly string[]): Record<string, un
   return value;
 }
 
+/**
+ * SHARED-VIS-01: a semantic place (QANDEEL_ANALYSIS, migration 0148) is drawn in the World's Living Analysis geography, never
+ * as a message. The conversation is exactly what it was in S4-02: the humans' words and QANDEEL's replies.
+ */
+const isConversation = (row: SharedMaterialRow): boolean => row.material_kind !== 'QANDEEL_ANALYSIS';
+
 /** Exactly what the reader may see of one row, or nothing when the row is not the 0139 shape. */
 function viewOf(row: SharedMaterialRow): SharedMaterialView | null {
   if (typeof row.material_id !== 'string' || !UUID.test(row.material_id) || typeof row.text_body !== 'string' || typeof row.established_at !== 'string') return null;
@@ -82,6 +89,7 @@ export class SharedWorldConversationService {
     private readonly shared: SharedWorldRepository,
     private readonly conversation: SharedWorldConversationRepository,
     private readonly replies: SharedQandeelReplyService,
+    private readonly places: SharedSemanticPlaceService,
   ) {}
 
   private async guard<T>(work: () => Promise<T>): Promise<T> {
@@ -119,7 +127,7 @@ export class SharedWorldConversationService {
       if (verdict?.outcome !== 'ALLOW' || verdict.world_id !== worldId) return { outcome: 'UNAVAILABLE' };
       // One row beyond the page says whether older material exists, without counting anything.
       const [rows, [capability]] = await Promise.all([this.conversation.material(token, worldId, before, SHARED_MATERIAL_PAGE + 1), this.conversation.capability(token)]);
-      const materials = rows.slice(0, SHARED_MATERIAL_PAGE).map(viewOf);
+      const materials = rows.slice(0, SHARED_MATERIAL_PAGE).filter(isConversation).map(viewOf);
       if (materials.some((m) => m === null) || capability === undefined) return unavailable();
       // Canonical order for reading: oldest first.
       return {
@@ -142,6 +150,9 @@ export class SharedWorldConversationService {
       if (typeof sent.qandeel_reply_material_id === 'string') return { outcome: 'COMMITTED', materialId: sent.material_id, qandeel: 'COMMITTED' };
       // The human's words are committed. QANDEEL's reply is a separate outcome and never undoes them.
       const qandeel = await this.reply(userId, token, worldId, commandId, sent.material_id);
+      // SHARED-VIS-01: QANDEEL then reads the World's semantic places, after the answer is decided and without delaying it.
+      // It never changes this answer, and it does nothing at all while no provider is bound (Stage 8A).
+      void this.places.weave({ worldId, humanCommandId: commandId }).catch(() => undefined);
       return { outcome: 'COMMITTED', materialId: sent.material_id, qandeel };
     });
   }
@@ -160,7 +171,7 @@ export class SharedWorldConversationService {
     try {
       const rows = await this.conversation.material(token, worldId);
       const requesterView: SharedConversationMaterial[] = [];
-      for (const row of rows) {
+      for (const row of rows.filter(isConversation)) {
         if (typeof row.text_body !== 'string' || typeof row.material_id !== 'string' || typeof row.established_at !== 'string') return 'UNAVAILABLE';
         requesterView.push({
           materialId: row.material_id, producer: row.producer_kind === 'QANDEEL' ? 'QANDEEL' : 'HUMAN',

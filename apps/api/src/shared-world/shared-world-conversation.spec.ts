@@ -10,6 +10,7 @@ import type { ModelRouter, ModelRouterRequest } from '../model-router/model-rout
 import { SharedConversationReplyGenerator } from './shared-conversation-reply.generator';
 import { SHARED_CONVERSATION_FRAME, UNNAMED_PARTICIPANT, assembleSharedConversationRequest } from './shared-conversation-model-input';
 import type { SharedMaterialRow, SharedWorldConversationRepository } from './shared-world-conversation.repository';
+import type { SharedSemanticPlaceService } from './shared-semantic-place.service';
 import { SharedWorldConversationService } from './shared-world-conversation.service';
 import type { SharedWorldRepository } from './shared-world.repository';
 
@@ -44,8 +45,9 @@ function fakes(options: { entry?: 'ALLOW' | 'UNAVAILABLE'; send?: unknown; reply
       : options.reply === 'IN_PROGRESS' ? { state: 'UNAVAILABLE', reason: 'WORK_IN_PROGRESS' }
       : options.reply === 'LIMITED' ? { state: 'UNAVAILABLE', reason: 'WORK_LIMITED' } : { state: 'COMMITTED', materialId: QANDEEL })),
   };
-  const service = new SharedWorldConversationService(shared as unknown as SharedWorldRepository, conversation as unknown as SharedWorldConversationRepository, replies as unknown as SharedQandeelReplyService);
-  return { service, shared, conversation, replies };
+  const places = { weave: jest.fn(async () => ({ state: 'NOT_RUN', reason: 'NO_PROVIDER' })) };
+  const service = new SharedWorldConversationService(shared as unknown as SharedWorldRepository, conversation as unknown as SharedWorldConversationRepository, replies as unknown as SharedQandeelReplyService, places as unknown as SharedSemanticPlaceService);
+  return { service, shared, conversation, replies, places };
 }
 
 describe('S4-02 Shared conversation Product boundary', () => {
@@ -100,6 +102,19 @@ describe('S4-02 Shared conversation Product boundary', () => {
     expect(await f.service.send(USER, 'token', WORLD, { commandId: COMMAND, content: 'مرحبا' })).toEqual({ outcome: 'COMMITTED', materialId: MINE, qandeel: 'COMMITTED' });
     expect(f.conversation.sendText).toHaveBeenCalledWith('token', COMMAND, WORLD, 'مرحبا');
     expect(f.replies.reply).toHaveBeenCalledWith(expect.objectContaining({ worldId: WORLD, humanCommandId: COMMAND, humanMaterialId: MINE, requesterUserId: USER }));
+    // SHARED-VIS-01: QANDEEL's semantic pass rides on the same committed message, after the answer is decided.
+    expect(f.places.weave).toHaveBeenCalledWith({ worldId: WORLD, humanCommandId: COMMAND });
+  });
+
+  it('SHARED-VIS-01: a semantic place is never a message — not in the conversation, not in what the reply reads', async () => {
+    const place: SharedMaterialRow = { material_id: '66666666-6666-4666-8666-666666666669', material_kind: 'QANDEEL_ANALYSIS', producer_kind: 'QANDEEL',
+      established_at: '2026-10-05T10:03:00Z', is_self: false, author_name: null, text_body: 'A meaning of the World', can_delete: false };
+    const f = fakes({ page: [place, ...rows] });
+    const view = await f.service.materials('token', WORLD);
+    expect(view.outcome === 'ALLOW' && view.materials.map((m) => m.materialId)).toEqual([MINE, THEIRS, QANDEEL]);
+    await f.service.send(USER, 'token', WORLD, { commandId: COMMAND, content: 'مرحبا' });
+    const asked = (f.replies.reply.mock.calls as unknown as [{ requesterView: { materialId: string }[] }][])[0][0];
+    expect(asked.requesterView.map((m) => m.materialId)).not.toContain(place.material_id);
   });
 
   it('a provider failure never undoes the committed human words', async () => {

@@ -96,6 +96,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // S4-02 — the Shared conversation. A message can start one provider generation (QANDEEL's reply), and no database work
   // lease bounds Shared generation (0131 is keyed on Personal turns), so the send is held to the strict class; reading and
   // the owner's own deletion are ordinary authenticated acts.
+  // SHARED-VIS-01: the Shared World's Living Analysis geography (migration 0148), reads only.
+  'GET /shared/worlds/:worldId/field': 'AUTHENTICATED',
+  'GET /shared/worlds/:worldId/field/places/:placeId': 'AUTHENTICATED',
   'GET /shared/worlds/:worldId/materials': 'AUTHENTICATED',
   'GET /shared/worlds/:worldId/materials/before/:materialId/:establishedAt': 'AUTHENTICATED',
   'POST /shared/worlds/:worldId/messages': 'SECURITY_SENSITIVE',
