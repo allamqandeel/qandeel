@@ -87,15 +87,17 @@ export const FIXTURE_OWN_EXPERIENCE_ID = EXPERIENCES[0].id;
 
 /**
  * `GET /public/field/experiences/:id`: the contextual panel, with at most three nearby Experiences of the same region, and
- * the explicit relations the proof world holds as ACTIVE (S5-03C) — never one derived from a shared region.
+ * the explicit relations the proof world holds as ACTIVE (S5-03C) — never one derived from a shared region — and the
+ * human discussion count of the posts the proof world holds for it (S5-04 D7; never a QANDEEL count).
  */
-export function fixtureExperience(id: string, relations: ReadonlyArray<{ readonly relationId: string; readonly otherId: string }> = []): unknown {
+export function fixtureExperience(id: string, relations: ReadonlyArray<{ readonly relationId: string; readonly otherId: string }> = [],
+  discussionCount = 0): unknown {
   const e = EXPERIENCES.find((x) => x.id === id);
   if (!e) return { state: 'UNAVAILABLE' };
   return {
     state: 'SERVED',
     experience: { id: e.id, x: e.x, y: e.y, meaning: e.meaning, region: e.region, primaryThemes: [e.themes[0]], secondaryThemes: [e.themes[1]],
-      publisher: { mode: 'PSEUDONYM', label: e.pseudonym }, publishedAt: '2026-10-01T12:00:00.000Z', discussionCount: 0, qandeelResponseCount: 0 },
+      publisher: { mode: 'PSEUDONYM', label: e.pseudonym }, publishedAt: '2026-10-01T12:00:00.000Z', discussionCount, qandeelResponseCount: 0 },
     content: [
       { ordinal: 1, kind: 'SOURCE_CONTENT', text: `نص اختباري للتجربة: ${e.meaning}.` },
       { ordinal: 2, kind: 'ANALYSIS', text: 'قراءة اختبارية من قنديل لهذه التجربة.' },

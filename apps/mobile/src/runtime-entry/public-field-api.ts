@@ -32,6 +32,13 @@ export interface PublicFieldExperience {
   readonly primaryThemes: ReadonlyArray<string>;
   readonly secondaryThemes: ReadonlyArray<string>;
   readonly publisher: { readonly mode: 'PSEUDONYM' | 'REAL_NAME'; readonly label: string | null };
+  /** S5-04 (D7): the publication instant, shown as a date in the panel. */
+  readonly publishedAt: string;
+  /**
+   * S5-04 (D7): the human discussion count of the served version, shown ONLY inside the Discussion entry. The Public
+   * QANDEEL response count is decoded and dropped: it is never a social metric. Neither moves anything in the field.
+   */
+  readonly discussionCount: number;
   readonly content: ReadonlyArray<{ readonly ordinal: number; readonly kind: 'SOURCE_CONTENT' | 'ANALYSIS'; readonly text: string }>;
   readonly nearby: ReadonlyArray<PublicFieldEntry>;
   /**
@@ -135,7 +142,7 @@ export class PublicFieldApiClient {
     const relations = relationsOf(b.relations);
     if (!entry || !publisher || !isTextList(e.primaryThemes) || !isTextList(e.secondaryThemes) || nearby === null
       || !hasExactly(e, ['id', 'x', 'y', 'meaning', 'region', 'primaryThemes', 'secondaryThemes', 'publisher', 'publishedAt', 'discussionCount', 'qandeelResponseCount'])
-      || typeof e.publishedAt !== 'string' || !isCount(e.discussionCount) || !isCount(e.qandeelResponseCount) || !Array.isArray(b.content)
+      || typeof e.publishedAt !== 'string' || !Number.isFinite(Date.parse(e.publishedAt)) || !isCount(e.discussionCount) || !isCount(e.qandeelResponseCount) || !Array.isArray(b.content)
       || relations === null) return NO;
     const content = b.content.map((item) => (isRecord(item) && hasExactly(item, ['ordinal', 'kind', 'text']) && isCount(item.ordinal)
       && (item.kind === 'SOURCE_CONTENT' || item.kind === 'ANALYSIS') && typeof item.text === 'string'
@@ -144,6 +151,7 @@ export class PublicFieldApiClient {
     return yes({ kind: 'SERVED', experience: {
       entry, primaryThemes: [...e.primaryThemes], secondaryThemes: [...e.secondaryThemes],
       publisher: { mode: publisher.mode as 'PSEUDONYM' | 'REAL_NAME', label: publisher.label as string | null },
+      publishedAt: e.publishedAt as string, discussionCount: e.discussionCount as number,
       content: content as PublicFieldExperience['content'], nearby: nearby.filter((near) => near.id !== entry.id),
       relations: relations.filter((relation) => relation.other.id !== entry.id),
     } });

@@ -144,6 +144,24 @@ export class ActivityRepository {
     });
   }
 
+  /**
+   * S5-04 — is ONE Public Experience served to the caller NOW? The existing S5-03B viewer read (migration 0145), on the
+   * CALLER'S token: one row only while the reader is admitted and the Experience is canonically visible at its exact
+   * served version. Activity reads no Public table.
+   */
+  publicExperienceServed(token: string, experienceId: string): Promise<{ readonly experience_id: string }[]> {
+    return this.dataApi.request<{ readonly experience_id: string }[]>(token, 'rpc/read_public_semantic_experience_v1', {
+      method: 'POST', body: JSON.stringify({ p_experience_id: experienceId }),
+    });
+  }
+
+  /** S5-04 — the caller's own current Public relations (migration 0146 owner read), on the CALLER'S token. */
+  ownPublicRelations(token: string): Promise<{ readonly relation_id: string; readonly experience_id: string; readonly relation_state: string }[]> {
+    return this.dataApi.request<{ readonly relation_id: string; readonly experience_id: string; readonly relation_state: string }[]>(token, 'rpc/read_own_public_relations_v1', {
+      method: 'POST', body: JSON.stringify({}),
+    });
+  }
+
   setMute(token: string, contextRef: string, muted: boolean): Promise<{ readonly outcome: string }[]> {
     return this.dataApi.request<{ readonly outcome: string }[]>(token, 'rpc/set_own_activity_context_mute_v1', {
       method: 'POST', body: JSON.stringify({ p_context_ref: contextRef, p_muted: muted }),

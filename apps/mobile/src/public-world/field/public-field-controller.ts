@@ -29,6 +29,7 @@ import type { ForegroundSignal, PublicAuthoringAnswer, PublicFieldEntry, PublicF
 import {
   PUBLIC_FIELD_MAX_COORD, PUBLIC_FIELD_MIN_COORD, focusField, nearestTo, panField, wholeWorldCamera, zoomField, type PublicFieldCamera,
 } from './public-field-camera';
+import type { PublicDiscussionController } from './public-discussion-controller';
 
 export interface PublicFieldTransport {
   field(rectangle: PublicFieldRectangle): Promise<PublicAuthoringAnswer<ReadonlyArray<PublicFieldEntry>>>;
@@ -53,8 +54,11 @@ export interface PublicFieldState {
   /** Every Experience currently served in the field, by id. */
   readonly entries: ReadonlyArray<PublicFieldEntry>;
   readonly camera: PublicFieldCamera | null;
-  /** The focused Experience (NEAR) and its panel, or null. */
-  readonly focus: { readonly id: string; readonly panel: PublicFieldPanelState } | null;
+  /**
+   * The focused Experience (NEAR) and its panel, or null. S5-04: `discussion` is true while its dependent discussion is
+   * open over the panel — the same Experience, the same field; Back closes it first.
+   */
+  readonly focus: { readonly id: string; readonly panel: PublicFieldPanelState; readonly discussion?: boolean } | null;
   readonly search: PublicFieldSearchState;
 }
 
@@ -93,6 +97,19 @@ export interface PublicFieldController {
   openSearch(): void;
   search(query: string): void;
   closeSearch(): void;
+  /** S5-04 — open the focused Experience's dependent discussion (only while its panel is served). */
+  openDiscussion(): void;
+  /** S5-04 — close the discussion: the same panel, in the same field. */
+  closeDiscussion(): void;
+  /**
+   * S5-04 — Direct Entry: enter the field (the World as a whole, fetched now) and focus EXACTLY this Experience at NEAR,
+   * its panel or its discussion, only if the server serves it now. Otherwise one neutral absence; never a substitute.
+   */
+  enterAt(experienceId: string, view: 'PANEL' | 'DISCUSSION'): void;
+  /** S5-04 — remember ONE exact target for the field's next entry (the Public entry verdict sets it before the root draws). */
+  target(experienceId: string, view: 'PANEL' | 'DISCUSSION'): void;
+  /** S5-04 — the dependent discussion of the focused Experience; null where the host provides none. */
+  readonly discussion: PublicDiscussionController | null;
   /** Local Back. True when it did something inside Public World; false at the root. */
   back(): boolean;
   retire(): void;
@@ -103,6 +120,8 @@ export interface PublicFieldControllerOptions {
   readonly isCurrent: () => boolean;
   /** R1: the runtime entry's ONE foreground signal (T-12P §2.7); returning to the foreground reads again. */
   readonly foreground?: ForegroundSignal;
+  /** S5-04: the dependent discussion, on the same identity-bound transport. */
+  readonly discussion?: PublicDiscussionController | null;
 }
 
 const WHOLE_WORLD: PublicFieldRectangle = Object.freeze({ minX: PUBLIC_FIELD_MIN_COORD, minY: PUBLIC_FIELD_MIN_COORD, maxX: PUBLIC_FIELD_MAX_COORD, maxY: PUBLIC_FIELD_MAX_COORD });
@@ -120,7 +139,7 @@ export const PUBLIC_FIELD_READ_BOUND = 400;
 
 const within = (r: PublicFieldRectangle, a: CanonicalWorldAddress): boolean => a.x >= r.minX && a.x <= r.maxX && a.y >= r.minY && a.y <= r.maxY;
 
-export function createPublicFieldController({ transport, isCurrent, foreground }: PublicFieldControllerOptions): PublicFieldController {
+export function createPublicFieldController({ transport, isCurrent, foreground, discussion = null }: PublicFieldControllerOptions): PublicFieldController {
   const listeners = new Set<() => void>();
   let state: PublicFieldState = INITIAL;
   let envelope: ViewportEnvelope | null = null;
@@ -137,6 +156,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
   };
 
   let lastQuery: string | null = null;
+  let pendingTarget: { readonly experienceId: string; readonly view: 'PANEL' | 'DISCUSSION' } | null = null;
   const forget = (experienceId: string) => {
     publish({
       entries: state.entries.filter((entry) => entry.id !== experienceId),
@@ -158,10 +178,11 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       const experience = focus.panel.experience;
       if (gone(experience.entry)) {
         panelTicket += 1;
+        discussion?.close();
         focus = { id: focus.id, panel: { status: 'ABSENT' } };
       } else if (experience.nearby.some(gone) || experience.relations.some((relation) => gone(relation.other))) {
         // S5-03C: an endpoint a complete read no longer serves takes its relation line with it, at once.
-        focus = { id: focus.id, panel: { status: 'SERVED', experience: { ...experience, nearby: experience.nearby.filter((near) => !gone(near)),
+        focus = { id: focus.id, discussion: focus.discussion, panel: { status: 'SERVED', experience: { ...experience, nearby: experience.nearby.filter((near) => !gone(near)),
           relations: experience.relations.filter((relation) => !gone(relation.other)) } } };
       }
     }
@@ -171,6 +192,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
   /** A read that could not be made: the one honest unavailable state, holding nothing that could be shown again. */
   const failClosed = () => {
     panelTicket += 1; searchTicket += 1; viewportTicket += 1;
+    discussion?.close();
     publish({ status: 'UNAVAILABLE', entries: [], focus: null, search: NO_SEARCH });
   };
 
@@ -201,9 +223,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     if (!transport) { publish({ focus: { id: experienceId, panel: { status: 'UNAVAILABLE' } } }); return; }
     const answer = await transport.experience(experienceId).catch(() => ({ kind: 'NO_ANSWER' as const }));
     if (mine !== panelTicket || state.focus?.id !== experienceId) return;
-    if (answer.kind !== 'ANSWER') { publish({ focus: { id: experienceId, panel: { status: 'UNAVAILABLE' } } }); return; }
+    if (answer.kind !== 'ANSWER') { discussion?.close(); publish({ focus: { id: experienceId, panel: { status: 'UNAVAILABLE' } } }); return; }
     if (answer.value.kind === 'ABSENT') {
-      // No longer served: gone from the field at once — no tombstone, no reason.
+      // No longer served: gone from the field at once — no tombstone, no reason; its discussion goes with it.
+      discussion?.close();
       forget(experienceId);
       publish({ focus: { id: experienceId, panel: { status: 'ABSENT' } } });
       return;
@@ -215,8 +238,10 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     for (const entry of [...served.nearby, ...served.relations.map((relation) => relation.other)]) if (!known.has(entry.id)) added.set(entry.id, entry);
     publish({
       entries: [...state.entries.filter((entry) => entry.id !== served.entry.id), served.entry, ...added.values()],
-      focus: { id: experienceId, panel: { status: 'SERVED', experience: served } },
+      focus: { id: experienceId, discussion: state.focus?.discussion === true, panel: { status: 'SERVED', experience: served } },
     });
+    // S5-04: an open discussion is read again with its panel — never kept from an older read.
+    if (state.focus?.discussion === true) discussion?.refresh();
   }
 
   /** One search read; its answer replaces the results outright (nothing from an earlier answer is kept). */
@@ -245,6 +270,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
 
   const releaseFocus = () => {
     panelTicket += 1;
+    discussion?.close();
     publish({ focus: null });
   };
 
@@ -253,6 +279,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     const camera = state.camera;
     if (!target || !camera) return;
     // The new focus is set with the camera, so the one navigation read opens its panel (and nothing older's).
+    if (state.focus?.id !== experienceId) discussion?.close();
     publish({ focus: { id: experienceId, panel: { status: 'LOADING' } } });
     setCamera(focusField(target.address));
   };
@@ -267,9 +294,55 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       return () => listeners.delete(listener);
     },
     enter() {
+      if (pendingTarget !== null) {
+        const target = pendingTarget;
+        pendingTarget = null;
+        controller?.enterAt(target.experienceId, target.view);
+        return;
+      }
       panelTicket += 1; searchTicket += 1; viewportTicket += 1; lastQuery = null;
+      discussion?.close();
       void load();
     },
+    target(experienceId, view) {
+      pendingTarget = { experienceId, view };
+    },
+    enterAt(experienceId, view) {
+      panelTicket += 1; searchTicket += 1; viewportTicket += 1; lastQuery = null;
+      discussion?.close();
+      void load().then(async () => {
+        if (state.status !== 'READY' || !transport) return;
+        const mine = ++panelTicket;
+        const answer = await transport.experience(experienceId).catch(() => ({ kind: 'NO_ANSWER' as const }));
+        if (mine !== panelTicket) return;
+        if (answer.kind !== 'ANSWER' || answer.value.kind !== 'SERVED') {
+          // Stale, hidden or gone: no content, no reason, no substitute Experience — the one neutral absence only.
+          if (answer.kind === 'ANSWER') forget(experienceId);
+          publish({ focus: { id: experienceId, panel: { status: answer.kind === 'ANSWER' ? 'ABSENT' : 'UNAVAILABLE' } } });
+          return;
+        }
+        const served = answer.value.experience;
+        publish({
+          entries: [...state.entries.filter((entry) => entry.id !== served.entry.id), served.entry],
+          camera: focusField(served.entry.address),
+          focus: { id: experienceId, discussion: view === 'DISCUSSION', panel: { status: 'SERVED', experience: served } },
+        });
+        if (view === 'DISCUSSION') discussion?.open(experienceId);
+        void refreshViewport();
+      });
+    },
+    openDiscussion() {
+      const focus = state.focus;
+      if (focus === null || focus.panel.status !== 'SERVED' || !discussion) return;
+      publish({ focus: { ...focus, discussion: true } });
+      discussion.open(focus.id);
+    },
+    closeDiscussion() {
+      const focus = state.focus;
+      discussion?.close();
+      if (focus !== null && focus.discussion) publish({ focus: { ...focus, discussion: false } });
+    },
+    discussion,
     setEnvelope(next) {
       envelope = next;
     },
@@ -331,6 +404,11 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
       publish({ search: NO_SEARCH });
     },
     back() {
+      if (state.focus !== null && state.focus.discussion === true) {
+        discussion?.close();
+        publish({ focus: { ...state.focus, discussion: false } });
+        return true;
+      }
       if (state.focus !== null) {
         releaseFocus();
         const camera = state.camera;
@@ -351,6 +429,7 @@ export function createPublicFieldController({ transport, isCurrent, foreground }
     retire() {
       retired = true;
       unsubscribeForeground?.();
+      discussion?.retire();
       listeners.clear();
     },
   };

@@ -51,6 +51,7 @@ const E3 = entry(3, 360_000n, 560_000n, 'hope.waiting');
 const RELATION = id(40);
 const panelOf = (e: PublicFieldEntry, relations: { relationId: string; other: PublicFieldEntry }[] = [], nearby: PublicFieldEntry[] = []): PublicFieldPanel => ({
   kind: 'SERVED', experience: { entry: e, primaryThemes: ['fear'], secondaryThemes: [], publisher: { mode: 'PSEUDONYM', label: 'nightlamp27' },
+    publishedAt: '2026-10-07T10:00:00.000Z', discussionCount: 0, // S5-04 re-anchor (validation only): the panel's D7 fields
     content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }], nearby, relations },
 });
 

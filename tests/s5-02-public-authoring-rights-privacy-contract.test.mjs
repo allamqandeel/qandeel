@@ -140,7 +140,8 @@ test('5 — the API boundary: nine routes on the caller token, owner RPCs only',
   // RE-ANCHORED by S5-03A (validation only): the S5-03A semantic review controller joins the SAME Public module — still one
   // Public module, not a parallel one. S5-03A's own contract pins its controller and routes.
   // RE-ANCHORED by S5-03C (validation only): the explicit-relation controller joins the SAME Public module.
-  assert.match(code(`${API}/public-world.module.ts`), /controllers: \[PublicWorldController, PublicAuthoringController(, PublicSemanticController(, PublicSpatialController, PublicFieldController(,\s+PublicRelationController)?)?)?\]/u, 'one Public module, not a parallel one');
+  // RE-ANCHORED by S5-04 (validation only): the discussion controller joins the SAME Public module.
+  assert.match(code(`${API}/public-world.module.ts`), /controllers: \[PublicWorldController, PublicAuthoringController(, PublicSemanticController(, PublicSpatialController, PublicFieldController(,\s+PublicRelationController(, PublicDiscussionController)?)?)?)?\]/u, 'one Public module, not a parallel one');
   // RE-ANCHORED by S5-03B (validation only): the S5-03B spatial and field controllers join the SAME module; S5-03B's own
   // contract pins them.
 });

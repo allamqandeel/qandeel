@@ -62,6 +62,22 @@
  * (never anything public). Multi-human authority — other rightsholders, members who are not, withdrawal under races — is
  * the real-PostgreSQL verifier's (database/verify-migration-0143.mjs), not this fixture's.
  *
+ * S5-04 — the dependent discussion, `@qandeel` and the Public Activity item, answered as migration 0147 and
+ * `apps/api/src/public-world/public-discussion.*` / `public-activity.producer.ts` / `apps/api/src/activity` do, only after
+ * `publicSeed()` (every earlier leg meets exactly the answers it met before):
+ *
+ *   - `/public/field/experiences/:id/discussion` — the posts of a fixture Experience in ordinal order, at most 100 per page,
+ *     one visible depth (a reply to a reply joins its root), Public display only, idempotent per command. The reader may
+ *     contribute HERE because this proof world stands in for an entitled reader; the production entitlement seam (0147,
+ *     NOT_EVALUATED) is untouched and nothing here reaches it;
+ *   - `@qandeel` — the standalone, case-insensitive token (0147's detector, mirrored) invokes at most ONE Public QANDEEL
+ *     response per post, answered from the VALIDATION-ONLY deterministic provider seam below (no provider exists until
+ *     Stage 8A);
+ *   - `peerReply()` — a synthetic other person replies to the reader's latest own post, and the Public producer's
+ *     REPLY_TO_OWN_POST item (Class 3, PUBLIC, never naming who acted) appears in `/activity/*`; opening it revalidates
+ *     and answers `PUBLIC_WORLD` Direct Entry into the DISCUSSION of exactly that Experience, or UNAVAILABLE with no
+ *     fallback when it is no longer served.
+ *
  * Every Name, Login ID, Email, Public ID and conversation line here is SYNTHETIC test text, never Product copy and never
  * a real account.
  */
@@ -96,6 +112,36 @@ export const S403_PROOF_LINES = Object.freeze({
   mineBeforeNewcomer: 'Fixture words before Rana joined',
   peerToDelete: 'Fixture peer words deleted after the end',
 });
+
+/** S5-04 — SYNTHETIC discussion lines, the other person's Public display and the Activity body. Validation text, not copy. */
+export const S504_PROOF_LINES = Object.freeze({
+  peerPublicId: 's504.proof.peer',
+  peerReply: { ar: 'رد اختباري من شخص آخر على مشاركتك', en: 'Fixture reply from another person' },
+  qandeel: { ar: 'رد اختباري ثابت من قنديل في النقاش العام', en: 'Fixture deterministic Public QANDEEL response' },
+  activity: { ar: 'عنصر نشاط اختباري: رد على مشاركتك', en: 'Fixture Activity item: a reply to your post' },
+});
+/** 0147's `invokes_qandeel_v1`, mirrored: the standalone token, case-insensitive; `@qandeel.com` is an address. */
+const INVOKES_QANDEEL = /(^|[^\p{L}\p{N}_@.])@qandeel($|[^\p{L}\p{N}_@.]|\.($|[^\p{L}\p{N}_@]))/iu;
+
+interface ProofPublicPost {
+  id: string;
+  experienceId: string;
+  threadRootId: string;
+  ordinal: number;
+  author: 'SELF' | 'PEER';
+  text: string;
+  postedAt: string;
+  commandId: string | null;
+  invoked: boolean;
+  response: { text: string; respondedAt: string } | null;
+}
+interface ProofActivityItem {
+  item: {
+    id: string; category: 'PUBLIC'; speaker: 'PRODUCT'; at: string; context: null; body: { ar: string; en: string }; secondary: null;
+    attention: 'NEW' | 'SEEN' | 'OPENED'; actionable: false; waiting: false; stale: false; muted: false; mark: boolean; entry: 'AVAILABLE';
+  };
+  experienceId: string;
+}
 
 type Person = 'SELF' | 'PEER' | 'NEWCOMER';
 interface ProofMaterial {
@@ -161,6 +207,8 @@ export interface S401ProofWorld {
   publicSeed(): void;
   /** S5-03C smoke: the synthetic other side accepts every relation the reader requested. */
   relationAccept(): void;
+  /** S5-04 smoke: a synthetic other person replies to the reader's latest own post; its Public Activity item appears. */
+  peerReply(): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
@@ -174,6 +222,10 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   let publicField = false;
   // S5-03C smoke: explicit relations the reader requested from their own fixture Experience (and their synthetic acceptance).
   let relations: { relationId: string; own: string; other: string; state: 'REQUEST_SENT' | 'ACTIVE' }[] = [];
+  // S5-04 smoke: every fixture Experience's discussion posts, and the reader's Public Activity items (newest first).
+  const posts: ProofPublicPost[] = [];
+  const activityItems: ProofActivityItem[] = [];
+  const settledStrip = new Set<string>();
   // S5-02: the reader's Drafts — the chosen source, the reader's own approval, the lifecycle (never past READY_FOR_REVIEW).
   const drafts: { experienceId: string; manifestId: string | null; lifecycle: 'DRAFT' | 'READY_FOR_REVIEW'; approval: 'MISSING' | 'EFFECTIVE' | 'WITHDRAWN' }[] = [];
   const ownSourceId = '54020000-0000-4000-8000-000000000001';
@@ -485,6 +537,91 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     return json(404, {});
   }
 
+  // S5-04 — the discussion of one fixture Experience (0147 / `PublicDiscussionService`).
+  const publicLabel = () => (publicMode === 'REAL_NAME' ? SELF[language] : S401_ACCOUNT_PUBLIC_ID.publicId);
+  const discussionOf = (experienceId: string) => posts.filter((p) => p.experienceId === experienceId).sort((a, b) => a.ordinal - b.ordinal);
+  const addPost = (experienceId: string, author: ProofPublicPost['author'], text: string, parent: ProofPublicPost | null, commandId: string | null) => {
+    const id = uuid();
+    // One visible depth (D2): a reply to a reply joins the same root.
+    const post: ProofPublicPost = { id, experienceId, threadRootId: parent === null ? id : parent.threadRootId, ordinal: discussionOf(experienceId).length + 1,
+      author, text, postedAt: at(), commandId, invoked: author === 'SELF' && INVOKES_QANDEEL.test(text), response: null };
+    // VALIDATION-ONLY deterministic provider seam: the ONE Public QANDEEL response of an invoking post.
+    if (post.invoked) post.response = { text: S504_PROOF_LINES.qandeel[language], respondedAt: at() };
+    posts.push(post);
+    return post;
+  };
+  const postView = (p: ProofPublicPost) => ({
+    id: p.id, threadRootId: p.threadRootId, ordinal: p.ordinal,
+    author: p.author === 'SELF' ? { mode: publicMode, label: publicLabel() } : { mode: 'PSEUDONYM', label: S504_PROOF_LINES.peerPublicId },
+    text: p.text, postedAt: p.postedAt, own: p.author === 'SELF',
+    qandeel: !p.invoked ? { state: 'NONE' } : p.response === null ? { state: 'PENDING' } : { state: 'RESPONDED', text: p.response.text, respondedAt: p.response.respondedAt },
+  });
+  function discussion(experienceId: string, retry: string | null, method: string, input: string, raw: string | undefined) {
+    const served = fixtureEntry(experienceId) !== null;
+    if (retry !== null) {
+      if (method !== 'POST') return json(404, {});
+      const own = posts.find((p) => p.id === retry && p.experienceId === experienceId && p.author === 'SELF' && p.invoked);
+      return json(200, { qandeel: served && own?.response ? 'RESPONDED' : 'UNAVAILABLE' });
+    }
+    if (method === 'GET') {
+      if (!served) return json(200, { state: 'UNAVAILABLE' });
+      const after = Number(/(?:^|[?&])after=(\d+)/u.exec(input)?.[1] ?? '0');
+      const page = discussionOf(experienceId).filter((p) => p.ordinal > after).slice(0, 100);
+      return json(200, { state: 'SERVED', canContribute: true, posts: page.map(postView), nextAfter: page.length === 100 ? page[99].ordinal : null });
+    }
+    if (method !== 'POST') return json(404, {});
+    const body = JSON.parse(raw ?? '{}') as { commandId?: unknown; text?: unknown; replyTo?: unknown };
+    if (typeof body.commandId !== 'string' || typeof body.text !== 'string' || body.text.trim().length === 0 || body.text.length > 4000
+      || (body.replyTo !== null && typeof body.replyTo !== 'string')) return json(400, { outcome: 'INVALID_REQUEST' });
+    if (!served) return json(200, { outcome: 'UNAVAILABLE' });
+    const already = posts.find((p) => p.commandId === body.commandId);
+    if (already) {
+      return json(200, { outcome: 'COMMITTED', postId: already.id, threadRootId: already.threadRootId, qandeel: already.invoked ? 'RESPONDED' : 'NONE' });
+    }
+    const parent = body.replyTo === null ? null : posts.find((p) => p.id === body.replyTo && p.experienceId === experienceId) ?? undefined;
+    if (parent === undefined) return json(200, { outcome: 'UNAVAILABLE' });
+    const post = addPost(experienceId, 'SELF', body.text, parent, body.commandId);
+    return json(200, { outcome: 'COMMITTED', postId: post.id, threadRootId: post.threadRootId, qandeel: post.invoked ? 'RESPONDED' : 'NONE' });
+  }
+
+  // S5-04 — the reader's `/activity/*` (A3-01), holding only the Public items the S5-04 producer projects for them.
+  function activity(path: string, method: string, raw: string | undefined) {
+    const items = () => activityItems.map((a) => a.item);
+    if (path === '/activity/attention' && method === 'GET') {
+      const marked = items().filter((i) => i.mark);
+      return json(200, {
+        present: marked.length > 0,
+        categories: { QANDEEL: { present: false }, SHARED: { present: false, count: null }, PUBLIC: { present: marked.length > 0 },
+          INTRODUCTIONS: { present: false }, SYSTEM: { present: false, count: null } },
+        interruptions: items().filter((i) => i.attention === 'NEW' && !settledStrip.has(i.id))
+          .map((item) => ({ item, interruptionClass: 3, contextKind: 'PUBLIC_WORLD', callSafe: false })),
+      });
+    }
+    if (path === '/activity/items' && method === 'GET') {
+      return json(200, { items: items().sort((a, b) => (a.at === b.at ? b.id.localeCompare(a.id) : b.at.localeCompare(a.at))), before: null });
+    }
+    if (path === '/activity/items/seen' && method === 'POST') {
+      const ids = (JSON.parse(raw ?? '{}') as { itemIds?: string[] }).itemIds ?? [];
+      for (const item of items()) if (ids.includes(item.id) && item.attention === 'NEW') Object.assign(item, { attention: 'SEEN', mark: false });
+      return json(204, {});
+    }
+    if (path === '/activity/strip' && method === 'POST') {
+      const { presentedItemId, settledItemIds } = JSON.parse(raw ?? '{}') as { presentedItemId?: string | null; settledItemIds?: string[] };
+      for (const id of [presentedItemId ?? null, ...(settledItemIds ?? [])]) if (id !== null) settledStrip.add(id);
+      return json(204, {});
+    }
+    const open = /^\/activity\/items\/([0-9a-f-]+)\/open$/u.exec(path);
+    if (open !== null && method === 'POST') {
+      const found = activityItems.find((a) => a.item.id === open[1]);
+      if (found === undefined) return json(404, {});
+      Object.assign(found.item, { attention: 'OPENED', mark: false });
+      // Revalidated at open: exactly this Experience's discussion while it is served; otherwise nothing in its place.
+      return json(200, fixtureEntry(found.experienceId) === null ? { outcome: 'UNAVAILABLE', fallback: null }
+        : { outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'DISCUSSION', experienceId: found.experienceId } } });
+    }
+    return null;
+  }
+
   function newWorld(worldId: string, people: Person[] = ['SELF', 'PEER']): ProofWorld {
     return { worldId, current: true, people, name: null, description: null, topic: null, ended: false, entitled: false };
   }
@@ -538,6 +675,14 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       }
     }
     if (path === '/public/authoring' || path.startsWith('/public/authoring/')) return authoring(path, method);
+    const discussed = /^\/public\/field\/experiences\/([^/]+)\/discussion(?:\/([^/]+)\/qandeel)?$/u.exec(path);
+    if (publicField && discussed) {
+      return discussion(decodeURIComponent(discussed[1]), discussed[2] === undefined ? null : decodeURIComponent(discussed[2]), method, input, init?.body);
+    }
+    if (publicField && (path === '/activity' || path.startsWith('/activity/'))) {
+      const answered = activity(path, method, init?.body);
+      if (answered !== null) return answered;
+    }
     if (publicField && method === 'GET' && (path === '/public/field' || path.startsWith('/public/field/'))) {
       const query = input.includes('?') ? input.slice(input.indexOf('?') + 1) : '';
       if (path === '/public/field') { const answer = fixtureField(query); return answer ? json(200, answer) : json(400, {}); }
@@ -547,7 +692,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
         const id = decodeURIComponent(panel[1]);
         const active = relations.filter((r) => r.state === 'ACTIVE' && (r.own === id || r.other === id))
           .map((r) => ({ relationId: r.relationId, otherId: r.own === id ? r.other : r.own }));
-        return json(200, fixtureExperience(id, active));
+        return json(200, fixtureExperience(id, active, discussionOf(id).length));
       }
     }
     if (path === '/shared' || path.startsWith('/shared/')) {
@@ -574,6 +719,15 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
     revoke: () => { for (const world of worlds) world.current = false; },
     publicSeed: () => { publicField = true; },
     relationAccept: () => { relations = relations.map((r) => ({ ...r, state: 'ACTIVE' as const })); },
+    peerReply: () => {
+      const mine = posts.filter((p) => p.author === 'SELF').slice(-1)[0] as ProofPublicPost | undefined;
+      if (mine === undefined) return;
+      const reply = addPost(mine.experienceId, 'PEER', S504_PROOF_LINES.peerReply[language], mine, null);
+      // The S5-04 producer's REPLY_TO_OWN_POST projection for its one recipient, the reader (never the actor).
+      activityItems.unshift({ experienceId: mine.experienceId, item: {
+        id: uuid(), category: 'PUBLIC', speaker: 'PRODUCT', at: reply.postedAt, context: null, body: { ...S504_PROOF_LINES.activity }, secondary: null,
+        attention: 'NEW', actionable: false, waiting: false, stale: false, muted: false, mark: true, entry: 'AVAILABLE' } });
+    },
     publicAllow: () => {
       const pending = publicReleases;
       publicReleases = [];

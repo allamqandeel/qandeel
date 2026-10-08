@@ -75,6 +75,7 @@ const E2 = entry(2, 315_000n, 608_000n);
 const E3 = entry(3, -1_000_000n, -1_500_000n, 'hope.waiting');
 const served = (e: PublicFieldEntry, nearby: PublicFieldEntry[] = []): PublicFieldPanel => ({ kind: 'SERVED', experience: {
   entry: e, primaryThemes: ['fear'], secondaryThemes: ['work'], publisher: { mode: 'PSEUDONYM', label: 'nightlamp27' },
+  publishedAt: '2026-10-07T10:00:00.000Z', discussionCount: 0, // S5-04 re-anchor (validation only): the panel's D7 fields
   content: [{ ordinal: 1, kind: 'SOURCE_CONTENT', text: 'the public words' }, { ordinal: 2, kind: 'ANALYSIS', text: 'what QANDEEL read' }], nearby,
   // S5-03C (re-anchor): a served panel carries its explicit relations; these S5-03B fixtures hold none.
   relations: [],
@@ -908,12 +909,14 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
   it('holds nothing of the Personal or Shared world, draws no inferred relation, ranks nothing, and carries no Arabic literal', () => {
     expect(code('PublicLivingAnalysis.tsx')).toContain('timeline={null}');
     for (const file of files) {
-      const text = code(file).replace('timeline={null}', '');
+      // S5-04 (controlled re-anchor, validation only): a TextInput's `multiline` prop is not a drawn line, and the S5-04
+      // discussion copy module is, like field-copy.ts, the one place its own Arabic words live.
+      const text = code(file).replace('timeline={null}', '').replace(/\bmultiline\b/gu, '');
       expect(text).not.toMatch(/from '\.\.\/\.\.\/state'|CanonicalStore|SemanticDepth|Session|Thread|EMERGING_FOCUS|READING|temporal|shared-world\/(?!copy)|useMapPanGesture|useMapSemanticZoomGesture/u);
       expect(text).not.toMatch(/edge|Line\b|<Path|Svg|viewCount|rank|popular|trending|similar|proxim/iu);
       if (!EXPLICIT_RELATION_FILES.includes(file)) expect(text).not.toMatch(/relation/iu);
       expect(text).not.toMatch(/withTiming|withSpring|Animated\./u);
-      if (file !== 'field-copy.ts') expect(text).not.toMatch(/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u);
+      if (file !== 'field-copy.ts' && file !== 'discussion-copy.ts') expect(text).not.toMatch(/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u);
       expect(text).not.toMatch(/publish_|'PUBLISHED'|s5-03a\.private|S5-03A_PRIVATE/u);
     }
   });

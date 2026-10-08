@@ -10,6 +10,14 @@ export type {
   PublicFieldController, PublicFieldControllerOptions, PublicFieldOutcome, PublicFieldPanelState, PublicFieldSearchState, PublicFieldState, PublicFieldTransport,
 } from './public-field-controller';
 export { createPublicFieldController } from './public-field-controller';
+export type {
+  PublicDiscussionController, PublicDiscussionControllerOptions, PublicDiscussionState, PublicDiscussionGroup, PublicDiscussionTransport,
+} from './public-discussion-controller';
+export { createPublicDiscussionController, threadsOf } from './public-discussion-controller';
+export type { PublicDiscussionCopy } from './discussion-copy';
+export { PUBLIC_DISCUSSION_COPY_GATE, publicDiscussionCopy } from './discussion-copy';
+export type { PublicDiscussionProps } from './PublicDiscussion';
+export { PUBLIC_DISCUSSION_TEST_ID, PublicDiscussion } from './PublicDiscussion';
 export type { PublicFieldCopy } from './field-copy';
 export { PUBLIC_FIELD_COPY_GATE, publicFieldCopy } from './field-copy';
 export type { PublicLivingAnalysisProps } from './PublicLivingAnalysis';

@@ -371,9 +371,16 @@ export function createMatchRuntime(databaseUrl) {
    * another connection because the one being watched is busy. A race whose
    * interleaving is not pinned is not a proof: whichever side happens to arrive
    * first decides the outcome and the scenario reports a pass it did not earn.
+   *
+   * The watcher is usually the primary connection INSIDE its open transaction,
+   * where PostgreSQL serves pg_stat_activity from a snapshot taken at the first
+   * read and kept until the transaction ends. Without discarding it, a first
+   * poll that lands before the competitor blocks freezes "not waiting" for
+   * every later poll, and a correctly blocked competitor is never observed.
    */
   async function waitForLockWait(watcher, pid) {
     for (let attempt = 0; attempt < 400; attempt += 1) {
+      await watcher('SELECT pg_stat_clear_snapshot()');
       const { rows: [{ waiting }] } = await watcher(
         `SELECT count(*)::int waiting FROM pg_stat_activity
           WHERE pid = $1 AND state = 'active' AND wait_event_type = 'Lock'`, [pid]);

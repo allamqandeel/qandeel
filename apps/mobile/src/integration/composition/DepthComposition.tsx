@@ -330,6 +330,18 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       setArea('SHARED_WORLD');
       return;
     }
+    if (destination.kind === 'PUBLIC_WORLD') {
+      // S5-04 — the exact Public context, never a guessed one: the Public area opens it through its OWN entry authority,
+      // which resolves the verdict again now; the field then asks the server for exactly this Experience (or the
+      // workspace for the reader's own Experience's relations). A refusal or a stale target opens nothing in its place.
+      // The Personal world is not touched; Back inside the area is the Public local law (discussion → panel → field).
+      setSettingsShown(false);
+      setUnderstandingShown(false);
+      cross('CONVERSATION');
+      runtime.publicWorld.enterAt(destination.target);
+      setArea('PUBLIC_WORLD');
+      return;
+    }
     setArea('MY_WORLD');
     if (destination.kind === 'PERSONAL_CONVERSATION') {
       setSettingsShown(false);
@@ -345,7 +357,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
       setSettingsPage(destination.section === 'NOTIFICATIONS' ? 'NOTIFICATIONS' : undefined);
       setSettingsShown(true);
     }
-  }, [cross, runtime.sharedWorld]);
+  }, [cross, runtime.sharedWorld, runtime.publicWorld]);
 
   // The surface truth the attention law reads: the composition's own state, never a second navigation state.
   const surface: ProductSurface = depth === 'ANALYSIS' ? 'ANALYSIS'

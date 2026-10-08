@@ -154,7 +154,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-NAV-02` | Analysis Replay | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-VOICE-01` | Personal Voice / Live Call Runtime + Durable Audio Source | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
 | `QAN-BL-AUTH-01` | Mobile Product Sign-In Gateway | `T-14 — Mobile Product Sign-In Gateway v1` | `HIGH` | `CLOSED — TOMBSTONE` |
-| `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-VIS-01` | Heavy-History / Long-Term Living Analysis World Density + LOD Stress Proof | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
@@ -178,6 +178,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-03` | Shared World Living Analysis Map / Semantic Geography Product Integration | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-04` | Public Lightweight Reactions Runtime (PG-07) | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -470,11 +471,11 @@ This entry freezes **no algorithm**. It does not choose embeddings, scores, thre
 - **Why deferred:** G3 was forbidden to redesign I-08B1, and its fixture world stays canonical. A stress proof needs
   heavy-history material and may need a reconciliation with the frozen D-track contract. Parent G closes without it and
   can no longer hold it.
-- **Owner task:** `UNASSIGNED`
+- **Owner task:** `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` (Product Owner designation, S5-04 Decision Gate D6, 2026-10-08; previously `UNASSIGNED`)
 - **Severity:** `HIGH`, because if reopened it can affect an already-frozen capability, the I-08B1 world.
 - **Reopen condition:** Architecture or Product opens a world-scale density / level-of-detail proof task; or a production
   port, or real long-term history, shows the frozen world losing legibility, semantic truth or performance at scale.
-- **Status:** `OPEN — UNASSIGNED`
+- **Status:** `DEFERRED — OWNED` (from S5-04, at the Product Owner's D6 decision; previously `OPEN — UNASSIGNED`)
 
 This entry defines no density, no level-of-detail rule, no token and no world change. Any change to the world still passes through I-08B1's own reopen rule. The Product Owner's ruling that the F1 / F2 North Star spectacle requirement is met (G3 closure §E) is a separate, fully dispositioned obligation and does not answer this G2 heavy-history stress item.
 
@@ -482,7 +483,19 @@ This entry defines no density, no level-of-detail rule, no token and no world ch
 (implementation `550ce07`, not merged; [S5-03B record](e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md)
 §27), was accepted on sparse fixtures and proved on an Android emulator only. It does **not** close this item: real-phone
 performance and heavy-history / world-scale density and level-of-detail stress remain unproved, and they stay here rather than
-in a duplicate item. This note changes none of this item's fields: `UNASSIGNED`, `HIGH`, `OPEN — UNASSIGNED`.
+in a duplicate item. This note changes none of this item's fields: `UNASSIGNED`, `HIGH`, `OPEN — UNASSIGNED`. *(At the time; the
+fields were changed by the S5-04 reconciliation below, at the Product Owner's decision.)*
+
+**Re-ownership and family reconciliation (S5-04, Product Owner Decision Gate D6, 2026-10-08).** The Product Owner assigns
+this item ONE future owner, `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof`, and reconciles under it — with NO duplicate item — the whole bounded-v1 scale family that
+Stage 5 recorded as OPEN PRODUCT GAPS: S5-03B's **G04** (the Public field and search re-derive every candidate at read time —
+correct and stale-proof, not tuned for a large World) and **G05** (the field read's `LIMIT 400` and the absence of dense-field
+aggregation), together with S5-03C's own read bounds in the same family (≤ 24 relation lines per Experience, ≤ 100 own
+Experiences and ≤ 200 own relations per management read). The owner covers: `LIMIT 400` / dense-world behaviour, dense
+aggregation, Public field / read / search performance at world scale, heavy-history density, level of detail and legibility,
+and real-device scale / performance proof. The decision is ownership and reconciliation, not scope: S5-04 solved none of it,
+and nothing here defines a density, a level-of-detail rule, an index or a world change. Severity stays `HIGH`; the reopen
+condition is unchanged.
 
 ### `QAN-BL-CW-01` — Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`)
 
@@ -634,6 +647,15 @@ No S5-03C column names an account and no foreign key reaches one directly, but e
 bind their `0096` placements, which bind their recorders' accounts. Those dependencies are recorded here as part of this
 blocker and are not resolved by S5-03C. This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged; the Public World is
 still not launch-ready ([S5-03C record](e2e/QANDEEL_S5_03C_PUBLIC_EXPLICIT_RELATIONS_INTEGRITY_CLOSURE_IMPLEMENTATION_RECORD_v1.md) §14).
+
+**Current-truth note (S5-04, 2026-10-08).** S5-04 does not solve this item. Its human discussion posts and Public QANDEEL
+responses are rows of the frozen `0096` tables, whose author foreign keys (`public_discussion_posts` → `public_identities` /
+`users`, `RESTRICT`) were already part of this blocker; S5-04 makes them application-reachable for the first time (behind the
+fail-closed entitlement seam). Its own `public_discussion_private.qandeel_invocations` binds the invoking post and the one
+response `RESTRICT` and names no account; its per-human work lease and grant rows reference `public.users` `ON DELETE CASCADE`.
+A discussion post provisions the ONE Public Identity exactly as S5-02 does. These dependencies are recorded here as part of
+this blocker. This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged
+([S5-04 record](e2e/QANDEEL_S5_04_PUBLIC_DISCUSSION_QANDEEL_FINAL_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §15).
 
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
@@ -991,6 +1013,33 @@ not reopen Stage 4 now and does not authorize implementation before Public World
 and serve Personal and Public. Shared World is still not integrated into that surface; when this item opens, Shared consumes
 the same stack. This note changes none of this item's fields: `SHARED-VIS-01`, `HIGH`, `DEFERRED — OWNED`, and its
 sequencing gate (only after Stage 5 is fully `DONE / MERGED`) is unchanged.
+
+### `QAN-BL-CW-04` — Public Lightweight Reactions Runtime (PG-07)
+
+- **Title / Finding:** the Public World has no reaction runtime. The previously approved Product direction allows
+  lightweight Public reactions on Experiences and on individual replies; nothing in the frozen runtime (0091–0099) or in
+  Stage 5 (0142–0147) implements one, and no reaction appears on any Public surface.
+- **Source:** [I-08A4](canonical-authority/final-product-experience/i-08a/QANDEEL_I-08A4_CLOSURE_SYNTHESIS_CANONICAL_PRODUCT_SHELL_IA_NAMING_DECISION_RECORD.md)
+  §8 / §9 (the label «التفاعلات» / Reactions) and its preserved gap `PG-07 — Public Social Reaction Runtime` ("The Product must
+  not pretend these gaps are implemented until they actually are"); the Public World Product Definition §20 (reactions not
+  decided in detail); [E2E-01 gap matrix](e2e/QANDEEL_E2E01_GAP_MATRIX_v1.md) `E2E-H-06`; I-08N-01 D25 ("generic reactions"
+  are usually Activity / Badge). Designated by the Product Owner in the S5-04 Decision Gate (D3, 2026-10-08), which also
+  corrected the S5-04 First Report: the Product **direction** is decided (lightweight reactions on Experiences and on
+  individual replies are allowed); what remains undecided is the exact reaction vocabulary / types, the UI, count
+  visibility, any ranking effect and negative reactions.
+- **Current truth:** not implemented anywhere; S5-04 implements no reaction, describes none as rejected or "out of v1",
+  and shows no reaction count. `PG-07` had no representation in this register before, so it is admitted here exactly once.
+- **Why deferred:** the Product Owner placed it outside S5-04; its open details (vocabulary, UI, count visibility, ranking
+  effect, negative reactions) need their own Product decision before any runtime.
+- **Owner task:** `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime`
+- **Severity:** `MEDIUM` — the Public discussion, Activity and Direct Entry are complete without it; its absence removes an
+  approved lightweight interaction, not a safety or privacy guarantee.
+- **Reopen condition:** the Product Owner opens `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` with the remaining details decided; Product-safe reactions then
+  compose over the canonical Public visibility exactly as discussion does (disappearance darkens them; vitality never moves
+  geography; any Activity follows I-08N-01 D25).
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by S5-04 at the Product Owner's explicit D3 designation (2026-10-08). Admission authorizes no implementation (BG-07).
 
 ---
 
@@ -1468,16 +1517,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 17 |
+| `DEFERRED — OWNED` | 19 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 9 |
+| `OPEN — UNASSIGNED` | 8 |
 | `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **44** |
+| **Total** | **45** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 27 |
-| `MEDIUM` | 16 |
+| `MEDIUM` | 17 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -1763,6 +1812,25 @@ the same bounded-v1 family. Relation-request notifications are S5-04's by the Pr
 [implementation record](e2e/QANDEEL_S5_03C_PUBLIC_EXPLICIT_RELATIONS_INTEGRITY_CLOSURE_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
 The register still holds **44** items: 17 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 9 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 16 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**S5-04 reconciliation (2026-10-08; closed, not merged).** S5-03C is merged (PR #318 at
+`729fe4d8b5afa15d2b0c6ae3eba627b25450132f`). S5-04 (Public Discussion + @qandeel + Public Activity / Direct Entry + Final
+Public Integration, migration `0147`; the final Stage-5 task; CLOSED / READY FOR THE PRODUCT OWNER'S MERGE DECISION) inherits
+no item by owner (BG-05: no item names it; S5-03C's G03 relation-request notifications and S5-03B's G08 are delivered by it).
+At the Product Owner's Decision Gate (2026-10-08): **D6** — `QAN-BL-VIS-01` is re-owned to
+`LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` and becomes `DEFERRED — OWNED`, and S5-03B's G04 /
+G05 (with S5-03C's read bounds) are reconciled under it with no duplicate item — so no Stage-5 scale gap remains an orphan;
+**D3** — `QAN-BL-CW-04` (Public Lightweight Reactions Runtime, `PG-07`; owner `PUBLIC-REACTIONS-01`, `MEDIUM`,
+`DEFERRED — OWNED`) is admitted exactly once, as approved Product direction with its details undecided. `QAN-BL-VOICE-01` is
+observed and left unchanged (it owns Public `VOICE_REPLY`; no duplicate). `QAN-BL-ACCT-01` stays `HIGH`, `OPEN — UNASSIGNED`
+with a current-truth note (S5-04's invocation / work tables add no direct account edge beyond the frozen 0096 posts and
+the per-human lease / grant rows, which cascade with the account). `QAN-BL-CW-03 / SHARED-VIS-01` stays `DEFERRED — OWNED` and
+becomes NEXT only after S5-04 merges (not started here). `QAN-BL-NOTIF-02` … `05` are unchanged: S5-04 adds the Public source
+producer only, through the ONE A3-01 boundary. The CW2-08 seams (publication, and the new discussion entitlement seam) answer
+`NOT_EVALUATED`. Its Gap Matrix is §16 of its
+[implementation record](e2e/QANDEEL_S5_04_PUBLIC_DISCUSSION_QANDEEL_FINAL_INTEGRATION_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
+The register now holds **45** items: 19 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 8 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 17 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1832,6 +1900,9 @@ Inherited after T-12 closure reconciliation:
 | `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / Semantic Placement `RESTRICT` dependents recorded; none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
 | `S5-03B — Public Semantic Field + Stable Spatial Placement + Viewer Runtime` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / S5-03A interpretation `RESTRICT` dependents recorded; none admitted; the Stage-8A spatial-placer provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
 | `S5-03C — Public Explicit Relations + Integrity Closure` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new relation `RESTRICT` dependents recorded; `QAN-BL-VIS-01` and `QAN-BL-CW-03` observed and left unchanged; none admitted |
+| `S5-04 — Public Discussion + @qandeel + Public Activity / Direct Entry + Final Public Integration` | none — no item names it; `QAN-BL-VIS-01` re-owned to `LA-SCALE-01` (Product Owner D6; S5-03B G04 / G05 and S5-03C's read bounds reconciled under it); `QAN-BL-CW-04` admitted (Product Owner D3); `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01`, `QAN-BL-CW-03` and `QAN-BL-NOTIF-02` … `05` observed and left unchanged |
+| `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
+| `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.

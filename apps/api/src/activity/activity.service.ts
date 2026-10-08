@@ -165,8 +165,34 @@ export class ActivityService {
         if (verdict?.outcome === 'ALLOW' && verdict.world_id === worldId) return { outcome: 'ENTER', destination: { kind: 'SHARED_WORLD', worldId } };
         return { outcome: 'UNAVAILABLE', fallback: null };
       }
-      // Typed future destinations (Public / Introductions / Replay): no production surface and no authority seam exists
-      // yet, so they fail closed. Their Stage owns opening them (Replay: Stage 7).
+      // S5-04 — the exact Public context, never a guessed one (D39): an Experience's discussion opens only while the Public
+      // domain's own viewer read, asked NOW on the caller's token, still serves exactly that Experience (admission,
+      // canonical visibility, the exact served version); a relation opens the reader's relation management only while that
+      // exact relation is still one of the reader's own current relations. Otherwise — hidden, stale, removed, never theirs
+      // — it fails closed: no fallback, no reason, no tombstone, no substitute Experience. The device then opens the SAME
+      // Public field through the Public entry verdict, which resolves it again before anything is drawn.
+      if (destination === 'PUBLIC_WORLD') {
+        const match = /^(discussion|relations):([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/u.exec(row.entry_ref ?? '');
+        if (row.context_kind !== 'PUBLIC_WORLD' || match === null) throw new Error('ACTIVITY_OPEN_MALFORMED');
+        const [, kind, id] = match;
+        if (kind === 'discussion') {
+          const served = await this.repository.publicExperienceServed(token, id);
+          if (Array.isArray(served) && served.length === 1 && served[0]?.experience_id === id) {
+            return { outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'DISCUSSION', experienceId: id } } };
+          }
+          return { outcome: 'UNAVAILABLE', fallback: null };
+        }
+        const relations = await this.repository.ownPublicRelations(token);
+        const current = Array.isArray(relations)
+          ? relations.find((r) => r?.relation_id === id && (r.relation_state === 'REQUEST_RECEIVED' || r.relation_state === 'ACTIVE')) : undefined;
+        // The reader's OWN Experience in that relation: its relation management (S5-03C) is where the acts live.
+        if (current !== undefined && UUID.test(current.experience_id)) {
+          return { outcome: 'ENTER', destination: { kind: 'PUBLIC_WORLD', target: { kind: 'RELATIONS', experienceId: current.experience_id } } };
+        }
+        return { outcome: 'UNAVAILABLE', fallback: null };
+      }
+      // Typed future destinations (Introductions / Replay): no production surface and no authority seam exists yet, so
+      // they fail closed. Their Stage owns opening them (Replay: Stage 7).
       return { outcome: 'UNAVAILABLE', fallback: null };
     });
   }

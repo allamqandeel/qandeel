@@ -980,7 +980,17 @@ async function verifyRaces(report, humans) {
       await change(f);
       await actAsX(two);
       const inFlight = outcomeOf(commitX(ids, f.proposal, f.secondView));
-      assert.equal(await waitExtra(), true, `${label} the Match reached the serialization point and is waiting on the lock T2 holds`);
+      try {
+        assert.equal(await waitExtra(), true, `${label} the Match reached the serialization point and is waiting on the lock T2 holds`);
+      } catch (error) {
+        // A failed barrier must not leak T2's open transaction (and its uncommitted
+        // change) into the next scenario: end it, let the Match settle, clean up.
+        await q('ROLLBACK');
+        await inFlight;
+        await asRole('postgres');
+        await rt.cleanupRace([one, two]);
+        throw error;
+      }
       await q('COMMIT');
       const outcome = await inFlight;
       noDeadlock(outcome, label);

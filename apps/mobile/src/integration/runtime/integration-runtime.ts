@@ -137,8 +137,8 @@ import {
   createPublicLinkInbox, createPublicWorldController, isPublicWorldLink, type PublicLinkInbox, type PublicWorldController,
 } from '../../public-world';
 import { createPublicDisplayController, type PublicDisplayController } from '../../settings/public-display-controller';
-import { createPublicAuthoringController } from '../../public-authoring';
-import { createPublicFieldController } from '../../public-world/field';
+import { createPublicAuthoringController, mintPublicCommandId } from '../../public-authoring';
+import { createPublicDiscussionController, createPublicFieldController } from '../../public-world/field';
 import { createExpoPushPlatformPort } from '../../push/expo-push-platform';
 import type { AccountIdentityTransport } from '../../settings/account-identity-controller';
 import { deviceProductLanguage } from '../locale/device-locale';
@@ -552,7 +552,10 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
         authoring: createPublicAuthoringController({ transport: publicTransport.authoring ?? null, semantic: publicTransport.semantic ?? null, spatial: publicTransport.spatial ?? null,
           relation: publicTransport.relation ?? null, relationSearch: publicTransport.field ?? null, isCurrent }),
         // S5-03B — the Public semantic field: its own viewer state, on the same identity-bound transport.
-        field: createPublicFieldController({ transport: publicTransport.field ?? null, isCurrent, foreground: entry.foreground }),
+        field: createPublicFieldController({ transport: publicTransport.field ?? null, isCurrent, foreground: entry.foreground,
+          // S5-04 — the focused Experience's dependent discussion, on the same identity-bound transport.
+          discussion: createPublicDiscussionController({ transport: publicTransport.discussion ?? null, isCurrent, foreground: entry.foreground,
+            newId: mintPublicCommandId }) }),
       }),
       publicDisplay: createPublicDisplayController({ transport: publicTransport, isCurrent }),
       publicLinks,
