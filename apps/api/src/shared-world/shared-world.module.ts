@@ -13,7 +13,7 @@ import { SharedConversationReplyGenerator } from './shared-conversation-reply.ge
 import { SharedIdSealing } from './shared-id-sealing';
 import { SharedSemanticFieldService } from './shared-semantic-field.service';
 import { SHARED_SEMANTIC_INTERPRETER, createConfiguredSharedSemanticInterpreter } from './shared-semantic-interpreter';
-import { SharedSemanticPlaceService } from './shared-semantic-place.service';
+import { SharedSemanticPlaceService } from '../connected-worlds/material-commit/shared-semantic-place.service';
 import { SHARED_SPATIAL_PLACER, createConfiguredSharedSpatialPlacer } from './shared-spatial-placer';
 import { SharedWorldAlertsRepository } from './shared-world-alerts.repository';
 import { SharedWorldAlertsService } from './shared-world-alerts.service';

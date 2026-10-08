@@ -179,6 +179,9 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-03` | Shared World Living Analysis Map / Semantic Geography Product Integration | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-04` | Public Lightweight Reactions Runtime (PG-07) | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-05` | QANDEEL Conversational Output Cannot Be a Shared Semantic-Place Source | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CW-06` | The Ended Shared World Has No Read-Only Living Analysis View | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-CW-07` | Shared World Temporal Navigation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 
 ---
 
@@ -1009,6 +1012,11 @@ of S4-02's scope, and nothing here authorizes implementation (BG-07).
 Admitted by explicit Product Owner decision on 2026-10-07. This admission records sequencing and ownership only; it does
 not reopen Stage 4 now and does not authorize implementation before Public World is complete (BG-07).
 
+**Current truth (SHARED-VIS-01, 2026-10-08):** Stage 5 is DONE / MERGED (PR #319, PR #320), and the owner task is **ACTIVE**
+under the Product Owner's Decision Gate (Option A, D1–D7) on `feat/shared-vis-01-shared-living-analysis` — not merged, not
+closed ([record](e2e/QANDEEL_SHARED_VIS_01_SHARED_WORLD_LIVING_ANALYSIS_IMPLEMENTATION_RECORD_v1.md)). This item stays
+`DEFERRED — OWNED` until that task's closing change tombstones it (BG-08).
+
 **Current-truth note (LA-VIS-01, 2026-10-07).** The accepted `LA-VIS-01` graphics land once in the shared Living Analysis stack
 and serve Personal and Public. Shared World is still not integrated into that surface; when this item opens, Shared consumes
 the same stack. This note changes none of this item's fields: `SHARED-VIS-01`, `HIGH`, `DEFERRED — OWNED`, and its
@@ -1040,6 +1048,69 @@ sequencing gate (only after Stage 5 is fully `DONE / MERGED`) is unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by S5-04 at the Product Owner's explicit D3 designation (2026-10-08). Admission authorizes no implementation (BG-07).
+
+---
+
+### `QAN-BL-CW-05` — QANDEEL Conversational Output Cannot Be a Shared Semantic-Place Source
+
+- **Title / Finding:** a Shared semantic place (SHARED-VIS-01) is read only from the World's `HUMAN_TEXT`. QANDEEL's own
+  conversational output (`QANDEEL_OUTPUT`) cannot be one of its sources: the frozen I-04G QANDEEL commit core, as 0119
+  remediated it, records that output's additional human requirement as `UNRESOLVED_ADDITIONAL_HUMAN_REQUIREMENT` (an
+  `EXACT_HUMAN_APPROVER_SET` with no approver), and the same core's source-metadata check refuses exactly that shape as a
+  `MATERIAL_DEPENDENCY` source (`SHARED_WORLD_MATERIAL_CONTRADICTORY_STATE`), although 0119 also carries an
+  unresolved-source arm that would propagate it. The Product Owner's D2 named "eligible human and QANDEEL contributions".
+- **Source:** SHARED-VIS-01 Decision Gate D2 (2026-10-08);
+  [SHARED-VIS-01 record](e2e/QANDEEL_SHARED_VIS_01_SHARED_WORLD_LIVING_ANALYSIS_IMPLEMENTATION_RECORD_v1.md) §3.1; migrations
+  `0090` (the metadata check) and `0119` (QAN-CW-REM-01); proven by `database/verify-migration-0148.mjs`.
+- **Current truth:** fail-closed, as frozen. A place never rests on QANDEEL's words; QANDEEL's replies stay historical
+  discussion in the conversation; no unproven influence is recorded.
+- **Why deferred:** admitting QANDEEL output as a source changes frozen I-04G authority semantics (controlled change), and
+  whether a place may rest on QANDEEL's own words at all is a Product decision.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `MEDIUM` — places are complete and truthful without it; it narrows what a place may be read from.
+- **Reopen condition:** a Product Owner decision that QANDEEL's conversational output may ground a place, and a controlled
+  change of the I-04G core that resolves the unresolved-source shape without weakening the fail-closed widening rules.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by SHARED-VIS-01 (2026-10-08). Admission authorizes no implementation (BG-07).
+
+---
+
+### `QAN-BL-CW-06` — The Ended Shared World Has No Read-Only Living Analysis View
+
+- **Title / Finding:** an ACTIVE Shared World opens on its Living Analysis field (SHARED-VIS-01); an ended World is still the
+  S4-03 read-only conversation (its read now excludes semantic places), with no read-only semantic geography.
+- **Source:** CW2-07 §22 (`READ_ONLY_HISTORICAL_VIEW`, bounded by the closed-view entitlement and later deletions);
+  Shared World Product Definition §20 (an ended World stays viewable as history); the
+  [SHARED-VIS-01 record](e2e/QANDEEL_SHARED_VIS_01_SHARED_WORLD_LIVING_ANALYSIS_IMPLEMENTATION_RECORD_v1.md) §8.
+- **Current truth:** the 0148 member reads serve CURRENT members of ACTIVE Worlds only; an ended World serves no place.
+- **Why deferred:** outside the SHARED-VIS-01 Decision Gate; a closed-view field needs the closed-view entitlement applied to
+  places and a Product decision on what an ended World's geography shows.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `MEDIUM`
+- **Reopen condition:** a Product Owner decision on the ended World's read-only semantic view.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by SHARED-VIS-01 (2026-10-08). Admission authorizes no implementation (BG-07).
+
+---
+
+### `QAN-BL-CW-07` — Shared World Temporal Navigation
+
+- **Title / Finding:** the Shared World has no Timeline or temporal navigation. SHARED-VIS-01 keeps durable chronology and
+  stable geography and composes the surface `CHROME_ONLY` (no temporal track); CW2-07 §6 defines FOLLOW_LIVE / PINNED(t) /
+  Exact Return for MY_WORLD only.
+- **Source:** SHARED-VIS-01 Decision Gate D5 (2026-10-08: "Future Shared temporal navigation remains a separate Product
+  decision"); Shared World Product Definition §8 ("Timeline يحترم الحقيقة الزمنية"); CW2-07 §6, §45.
+- **Current truth:** no Shared temporal UI; no Personal Timeline semantics are borrowed.
+- **Why deferred:** by the Product Owner's D5; the Shared time rules (membership episodes, FROM_JOIN_FORWARD, grants) are
+  undecided as navigation.
+- **Owner task:** `UNASSIGNED`
+- **Severity:** `MEDIUM`
+- **Reopen condition:** a Product decision defining Shared temporal navigation.
+- **Status:** `OPEN — UNASSIGNED`
+
+Admitted by SHARED-VIS-01 at the Product Owner's D5 (2026-10-08). Admission authorizes no implementation (BG-07).
 
 ---
 
@@ -1519,14 +1590,14 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | --- | ---: |
 | `DEFERRED — OWNED` | 19 |
 | `VALIDATION — OPEN` | 0 |
-| `OPEN — UNASSIGNED` | 8 |
+| `OPEN — UNASSIGNED` | 11 |
 | `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **45** |
+| **Total** | **48** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 27 |
-| `MEDIUM` | 17 |
+| `MEDIUM` | 20 |
 | `LOW` | 1 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -1829,8 +1900,15 @@ becomes NEXT only after S5-04 merges (not started here). `QAN-BL-NOTIF-02` … `
 producer only, through the ONE A3-01 boundary. The CW2-08 seams (publication, and the new discussion entitlement seam) answer
 `NOT_EVALUATED`. Its Gap Matrix is §16 of its
 [implementation record](e2e/QANDEEL_S5_04_PUBLIC_DISCUSSION_QANDEEL_FINAL_INTEGRATION_IMPLEMENTATION_RECORD_v1.md): **Orphan gaps = 0**.
-The register now holds **45** items: 19 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 8 `OPEN — UNASSIGNED` and 18
-`CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 17 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+*(At S5-04:)* the register then held **45** items: 19 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 8 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 17 `MEDIUM` and 1 `LOW`.
+
+SHARED-VIS-01 (ACTIVE, not merged; 2026-10-08) owns `QAN-BL-CW-03`, which stays `DEFERRED — OWNED` until its closing change
+tombstones it, and admits three `OPEN — UNASSIGNED`, `MEDIUM` items, each awaiting a Product Owner decision: `QAN-BL-CW-05`
+(QANDEEL conversational output cannot ground a Shared semantic place under the frozen I-04G core), `QAN-BL-CW-06` (the ended
+Shared World's read-only Living Analysis view) and `QAN-BL-CW-07` (Shared temporal navigation, D5). The register now holds
+**48** items: 19 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 11 `OPEN — UNASSIGNED` and 18 `CLOSED — TOMBSTONE`; by
+severity, 27 `HIGH`, 20 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -1894,7 +1972,7 @@ Inherited after T-12 closure reconciliation:
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
 | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
-| `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `QAN-BL-CW-03` — deferred until Stage 5 / Public World is fully DONE / MERGED |
+| `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `QAN-BL-CW-03` — ACTIVE since 2026-10-08 (Stage 5 DONE / MERGED); stays `DEFERRED — OWNED` until this task's closing change tombstones it; admitted `QAN-BL-CW-05`, `QAN-BL-CW-06`, `QAN-BL-CW-07`; `QAN-BL-VIS-01` (Shared density at scale observed within `LA-SCALE-01`), `QAN-BL-ACCT-01` (0148 references no account) and `QAN-BL-VOICE-01` observed and left unchanged; the Stage-8A binding of the two Shared ports recorded |
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 | `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / Semantic Placement `RESTRICT` dependents recorded; none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |

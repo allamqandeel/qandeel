@@ -35,8 +35,15 @@ test('1 — the contract registers itself in the toolchain and both CI workflows
 test('2 — the API consumes 0140 on the caller\'s own token only: no server channel, no identity, no frozen core, nothing logged', () => {
   const repository = code(`${API}/shared-world-lifecycle.repository.ts`);
   const migration = read(MIGRATION);
-  const calls = [...repository.matchAll(/'([a-z_]+_v1)'/gu)].map((m) => m[1]);
+  // RE-ANCHORED by SHARED-VIS-01 (validation only): the ended World's read moved to the 0148 v2 read — the 0140 read
+  // without semantic places (QANDEEL_ANALYSIS); the 0140 function itself is unchanged.
+  const calls = [...repository.matchAll(/'([a-z_]+_v[12])'/gu)].map((m) => m[1]);
   for (const name of calls) {
+    if (name === 'list_own_closed_shared_world_material_v2') {
+      assert.match(read('database/migrations/0148_shared_semantic_field_living_analysis_v1.sql'), /CREATE FUNCTION public\.list_own_closed_shared_world_material_v2\(/u,
+        'the ended World\'s conversation is the 0148 v2 read, without semantic places');
+      continue;
+    }
     if (name === 'delete_own_shared_world_material_v1') {
       assert.match(read('database/migrations/0139_shared_world_conversation_material_v1.sql'), /CREATE FUNCTION public\.delete_own_shared_world_material_v1\(/u,
         'the former-member deletion is S4-02\'s ungated owner wrapper, consumed unchanged');

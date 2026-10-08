@@ -10,7 +10,7 @@ import type { ModelRouter, ModelRouterRequest } from '../model-router/model-rout
 import { SharedConversationReplyGenerator } from './shared-conversation-reply.generator';
 import { SHARED_CONVERSATION_FRAME, UNNAMED_PARTICIPANT, assembleSharedConversationRequest } from './shared-conversation-model-input';
 import type { SharedMaterialRow, SharedWorldConversationRepository } from './shared-world-conversation.repository';
-import type { SharedSemanticPlaceService } from './shared-semantic-place.service';
+import type { SharedSemanticPlaceService } from '../connected-worlds/material-commit/shared-semantic-place.service';
 import { SharedWorldConversationService } from './shared-world-conversation.service';
 import type { SharedWorldRepository } from './shared-world.repository';
 

@@ -20,18 +20,25 @@
  * member-name label stays. The root lists the ended Worlds the reader may still read, each opening a separate read-only
  * place (`SharedClosedWorld.tsx`) that is never an active World.
  *
+ * SHARED-VIS-01: an ALLOWed World's main experience is its Living Analysis field (`./field`) on the ONE Living Analysis
+ * surface — the World's semantic places under FAR / MID / NEAR — with the World's own chrome in the surface's top band:
+ * the way back, the World's label, ONE entry into the World's conversation and Manage World. The conversation is the
+ * S4-01 / S4-02 World screen above, unchanged; its Back returns to the same World's field. Back inside the field first
+ * releases a focused place.
+ *
  * Nothing here reads the Personal world: no Session, camera, focus or time is passed in, so none can transfer.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo, BackHandler, KeyboardAvoidingView, ScrollView, Text, TextInput, View, findNodeHandle } from 'react-native';
 
 import { ActivityEntry, type ActivityAttentionController } from '../activity';
-import { AppearanceStatusBar } from '../appearance';
+import { AnalysisAppearanceScope, AppearanceStatusBar } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, useConversationTypeface, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import { fill, sharedCopy, worldLabel, type SharedCopy } from './copy';
 import { sharedLifecycleCopy } from './lifecycle-copy';
 import type { SharedWorldController } from './shared-world-controller';
+import { SharedLivingAnalysis } from './field/SharedLivingAnalysis';
 import { SharedClosedWorld } from './SharedClosedWorld';
 import { SharedManagePage } from './SharedManagePage';
 import { SharedSendBar, SharedThread } from './SharedWorldThread';
@@ -82,16 +89,21 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
   // Local Back: from a World to the area's root. At the root nothing is registered — Back is local-only and never
   // silently returns to the Personal world (I-08A4 §4).
   // S4-03: Back from Manage World returns to the World it manages; from an ended World, to the root.
+  // SHARED-VIS-01: from the conversation, Back returns to the same World's field; inside the field, it first releases a
+  // focused place; from the field's root, to the Shared root.
   const placeKind = state.place.kind;
+  const worldView = state.worldView;
   useEffect(() => {
     if (placeKind === 'ROOT') return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
       if (placeKind === 'MANAGE') controller.closeManage();
+      else if (placeKind === 'WORLD' && controller.field !== null && worldView === 'CONVERSATION') controller.closeConversation();
+      else if (placeKind === 'WORLD' && controller.field !== null && controller.field.back()) return true;
       else controller.toRoot();
       return true;
     });
     return () => subscription.remove();
-  }, [controller, placeKind]);
+  }, [controller, placeKind, worldView]);
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={SHARED_AREA_TEST_ID} />;
 
@@ -116,9 +128,11 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
     </View>
   );
 
-  const frame = (children: ReactNode, testID: string) => (
+  // `analysis`: the World's field is the Living Analysis surface, whose place is dark under every preference, so the status
+  // bar is decided for that ground.
+  const frame = (children: ReactNode, testID: string, analysis = false) => (
     <View testID={SHARED_AREA_TEST_ID} accessibilityLanguage={language} style={{ flex: 1, backgroundColor: palette.world, direction: writing }}>
-      <AppearanceStatusBar />
+      {analysis ? <AnalysisAppearanceScope><AppearanceStatusBar /></AnalysisAppearanceScope> : <AppearanceStatusBar />}
       <View testID={testID} style={{ flex: 1 }}>{children}</View>
     </View>
   );
@@ -151,13 +165,25 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
   }
 
   if (state.place.kind === 'WORLD') {
+    if (state.entry.status === 'ALLOW' && state.entry.world !== null && controller.field !== null && state.worldView === 'MAP') {
+      // SHARED-VIS-01: the World's main experience — its Living Analysis field, with the World's own chrome.
+      const world = state.entry.world;
+      return frame(
+        <SharedLivingAnalysis controller={controller.field} language={language} insets={insets} title={labelOfWorld(copy, world)}
+          onBack={() => controller.toRoot()} onConversation={() => controller.openConversation()} onManage={() => controller.openManage()} />,
+        'qandeel-shared-world-field',
+        true,
+      );
+    }
     if (state.entry.status === 'ALLOW' && state.entry.world !== null) {
       const world = state.entry.world;
+      // The World's conversation (S4-01 / S4-02, unchanged). With a field, its Back returns to the same World's field.
+      const fromConversation = controller.field !== null ? () => controller.closeConversation() : undefined;
       return frame(
         // As in the Personal Conversation: `padding` on both platforms, because Android 15+ edge-to-edge no longer
         // resizes the window for the keyboard, and the composer and its Send must stay above it.
         <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-          {header(labelOfWorld(copy, world), true)}
+          {header(labelOfWorld(copy, world), true, fromConversation)}
           <ScrollView ref={threadScroll} keyboardShouldPersistTaps="handled" onContentSizeChange={followNewest}
             contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>
             {/* QANDEEL's short, neutral welcome (S4-01 §1.6), then the World's real conversation (S4-02). */}

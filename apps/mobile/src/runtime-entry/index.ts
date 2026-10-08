@@ -158,6 +158,8 @@ export type {
   SharedFormerHistoryRequest, SharedFormerHistoryResult, SharedWorldAlert, SharedAlertsResult, SharedSetAlertsResult,
 } from './shared-world-api';
 export { SharedWorldApiClient } from './shared-world-api';
+export type { SharedFieldEntry, SharedFieldPlace, SharedFieldResult, SharedPlaceResult, SharedPlaceSource } from './shared-field-api';
+export { decodeSharedField, decodeSharedPlace } from './shared-field-api';
 export type { PublicDisplay, PublicDisplayMode, PublicDisplayResult, PublicEntryResult, PublicSetDisplayResult } from './public-world-api';
 export { PublicWorldApiClient } from './public-world-api';
 export type {

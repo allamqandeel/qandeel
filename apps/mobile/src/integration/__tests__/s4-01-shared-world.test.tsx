@@ -48,6 +48,8 @@ function serve(h: IntegrationHarness, s: SharedServer) {
   h.http.on('/activity/attention', () => ({ status: 200, body: { present: false, categories: { QANDEEL: { present: false }, SHARED: { present: false, count: null }, PUBLIC: { present: false }, INTRODUCTIONS: { present: false }, SYSTEM: { present: false, count: null } }, interruptions: [] } }));
   h.http.on('/shared', () => ({ status: 200, body: s.root }));
   h.http.on('/shared/worlds/', () => s.entry());
+  // SHARED-VIS-01: the World's Living Analysis field (empty here: no place has formed).
+  h.http.on('/field', () => ({ status: 200, body: { outcome: 'ALLOW', places: [] } }));
   h.http.on('/shared/invitations', () => ({ status: 200, body: s.invite }));
   h.http.on('/accept', () => ({ status: 200, body: s.accept }));
   h.http.on('/decline', () => ({ status: 200, body: s.decline }));
@@ -141,6 +143,9 @@ describe('S4-01 Journey C — My World ↔ Shared World', () => {
       releaseEntry?.();
       await settle();
     });
+    // SHARED-VIS-01 re-anchor: the World opens on its Living Analysis field; its conversation is one entry away.
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+    await press(view, 'qandeel-shared-conversation-open');
     expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
     expect(view.getByTestId('qandeel-shared-welcome').props.accessibilityLabel).toBe(`${COPY.personalWorld}: ${COPY.welcome}`);
 
@@ -219,6 +224,9 @@ describe('S4-01 Journey A — invitation → accept → birth → immediate entr
     const accepts = sharedCalls(h, '/accept');
     expect(accepts).toHaveLength(1);
     expect(Object.keys(JSON.parse(accepts[0].body ?? '{}'))).toEqual(['commandId']);
+    // SHARED-VIS-01 re-anchor: the new World opens on its field; its members are where they were, in its conversation.
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+    await press(view, 'qandeel-shared-conversation-open');
     expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
     const members = within(view.getByTestId('qandeel-shared-members'));
     expect(members.getByText(COPY.you)).toBeTruthy();

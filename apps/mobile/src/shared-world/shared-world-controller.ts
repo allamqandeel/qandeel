@@ -25,6 +25,12 @@
  * read-only place reached only through the reader's closed-view entitlement, never through the active World's entry.
  * An add / rejoin is proposed by the target's CURRENT Shared ID (the one answer reveals nothing about them); the target
  * accepts from the Shared root and is then entered through the same authority-first entry as any World.
+ *
+ * SHARED-VIS-01 — the World's main experience is its Living Analysis field (`./field`), owned here so that it follows the
+ * area's authority exactly: it is opened only once the World's entry verdict is ALLOW, closed (its anchor kept) when the
+ * reader goes to the root, Manage World or an ended World, and forgotten when the World is no longer the reader's (a
+ * denial, a leave, a removal). The World's existing conversation stays exactly what it was, reached by ONE entry in the
+ * World's chrome (`worldView`); returning from it shows the same field, read again, at the same camera and focus.
  */
 import type {
   ForegroundSignal,
@@ -33,6 +39,7 @@ import type {
   SharedApproveResult, SharedClosedWorld, SharedClosedWorldResult, SharedHistoryApproveResult, SharedHistoryCandidate, SharedHistoryCandidatesResult,
   SharedLeaveResult, SharedManage, SharedManageResult, SharedProposeResult, SharedProposeMemberResult, SharedJoinResult,
 } from '../runtime-entry';
+import { createSharedFieldController, type SharedFieldController, type SharedFieldTransport } from './field/shared-field-controller';
 
 export interface SharedWorldTransport {
   root(): Promise<SharedRootResult>;
@@ -134,6 +141,8 @@ export interface SharedAreaState {
   readonly manage: SharedManageState;
   /** S4-03: the ended World in `place` (CLOSED only). */
   readonly closed: SharedClosedState;
+  /** SHARED-VIS-01: inside an ALLOWed World, its Living Analysis field (MAP) or its existing conversation (CONVERSATION). */
+  readonly worldView: 'MAP' | 'CONVERSATION';
 }
 
 export interface SharedWorldController {
@@ -181,6 +190,12 @@ export interface SharedWorldController {
   openClosed(worldId: string): void;
   /** S4-03: read one page older than the oldest material held of the ended World. */
   loadOlderClosed(): void;
+  /** SHARED-VIS-01: the open World's Living Analysis field; null where the host provides no field transport. */
+  readonly field: SharedFieldController | null;
+  /** SHARED-VIS-01: the World's existing conversation, from the World's chrome (D7). */
+  openConversation(): void;
+  /** SHARED-VIS-01: back from the conversation to the same World's field, read again at the same camera and focus. */
+  closeConversation(): void;
   retire(): void;
 }
 
@@ -190,6 +205,8 @@ export interface SharedWorldControllerOptions {
   readonly newCommandId?: () => string;
   /** S4-02: returning to the foreground re-reads the open World's conversation. */
   readonly foreground?: ForegroundSignal;
+  /** SHARED-VIS-01: the Shared field reads (`/shared/worlds/:worldId/field`); without it no field is drawn. */
+  readonly fieldTransport?: SharedFieldTransport | null;
 }
 
 /** A v4-shaped command identity. */
@@ -230,6 +247,7 @@ const INITIAL: SharedAreaState = Object.freeze<SharedAreaState>({
   thread: NO_THREAD,
   manage: NO_MANAGE,
   closed: NO_CLOSED,
+  worldView: 'MAP',
 });
 
 export function createSharedWorldController(options: SharedWorldControllerOptions): SharedWorldController {
@@ -255,6 +273,11 @@ export function createSharedWorldController(options: SharedWorldControllerOption
   let closedRead = 0;
 
   const live = () => !retired && isCurrent();
+  // SHARED-VIS-01: the field of the open World. Its own read denial is this area's denial of that exact World.
+  const field: SharedFieldController | null = options.fieldTransport
+    ? createSharedFieldController({ transport: options.fieldTransport, isCurrent, foreground: options.foreground,
+      onDenied: (worldId) => { if (openWorldId() === worldId) denied(worldId); } })
+    : null;
   const publish = (next: SharedAreaState) => {
     if (!live()) return;
     state = next;
@@ -299,6 +322,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
 
   /** Authority was lost since entry: nothing of the World stays on screen. */
   function denied(worldId: string): void {
+    field?.forget(worldId);
     entryRead += 1;
     olderRead += 1;
     sendCommand = null;
@@ -334,10 +358,17 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     const ticket = ++entryRead;
     threadRead += 1;
     olderRead += 1;
-    publish({ ...state, place: { kind: 'WORLD', worldId }, entry: { status: 'RESOLVING', world: null }, thread: { ...NO_THREAD, worldId } });
+    // The same World re-resolved (the area re-entered) keeps the view the reader was in; any other entry opens the field.
+    const worldView = state.place.kind === 'WORLD' && state.place.worldId === worldId ? state.worldView : 'MAP';
+    // Nothing of another World's field stays while this one resolves (its anchor is kept for a later return).
+    if (field !== null && field.getState().worldId !== worldId) field.close();
+    publish({ ...state, place: { kind: 'WORLD', worldId }, entry: { status: 'RESOLVING', world: null }, thread: { ...NO_THREAD, worldId }, worldView });
     const result = await transport.entry(worldId);
     if (ticket !== entryRead || state.place.kind !== 'WORLD' || state.place.worldId !== worldId) return;
     publish({ ...state, entry: result.kind === 'ALLOW' ? { status: 'ALLOW', world: result.world } : { status: 'DENIED', world: null } });
+    // The field is read only once the World's authority is ALLOW (CW2-07 §19, §43); a denial forgets its anchor.
+    if (result.kind === 'ALLOW') field?.open(worldId);
+    else if (result.kind === 'DENIED') field?.forget(worldId);
     // The conversation is read only once the World's authority is ALLOW (CW2-07 §19).
     if (result.kind === 'ALLOW') await readThread(worldId);
   }
@@ -350,14 +381,18 @@ export function createSharedWorldController(options: SharedWorldControllerOption
   };
 
   /** Back to the Shared root with the reader's own notice: the World is no longer theirs to browse. */
-  function returnToRoot(notice: SharedNotice): void {
+  function returnToRoot(notice: SharedNotice, lost = false): void {
+    // SHARED-VIS-01: Back keeps the World's field anchor for a later return; a World that is no longer the reader's forgets it.
+    const leaving = state.place.kind === 'ROOT' ? null : state.place.worldId;
+    if (leaving !== null && (lost || notice === 'LEFT')) field?.forget(leaving);
+    else field?.close();
     entryRead += 1;
     threadRead += 1;
     olderRead += 1;
     manageRead += 1;
     closedRead += 1;
     sendCommand = null;
-    publish({ ...state, place: { kind: 'ROOT' }, entry: { status: 'NONE', world: null }, thread: NO_THREAD, manage: NO_MANAGE, closed: NO_CLOSED, notice });
+    publish({ ...state, place: { kind: 'ROOT' }, entry: { status: 'NONE', world: null }, thread: NO_THREAD, manage: NO_MANAGE, closed: NO_CLOSED, notice, worldView: 'MAP' });
     void readRoot();
   }
 
@@ -372,7 +407,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     }
     // The World is no longer the reader's to manage (left, removed, or ended): nothing of it stays on screen.
     if (result.kind === 'DENIED') {
-      returnToRoot(null);
+      returnToRoot(null, true);
       return;
     }
     publishManage(worldId, { status: state.manage.status === 'READY' ? 'READY' : 'UNAVAILABLE' });
@@ -422,7 +457,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
     const held = state.manage.candidates;
     if (state.manage.worldId !== worldId || held?.memberHandle !== memberHandle) return;
     if (result.kind === 'DENIED') {
-      returnToRoot(null);
+      returnToRoot(null, true);
       return;
     }
     if (result.kind !== 'READ') {
@@ -559,7 +594,8 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       threadRead += 1;
       olderRead += 1;
       sendCommand = null;
-      publish({ ...state, place: { kind: 'MANAGE', worldId }, thread: NO_THREAD, manage: { ...NO_MANAGE, worldId, status: 'LOADING' } });
+      field?.close();
+    publish({ ...state, place: { kind: 'MANAGE', worldId }, thread: NO_THREAD, manage: { ...NO_MANAGE, worldId, status: 'LOADING' }, worldView: 'MAP' });
       void readManage(worldId);
     },
     refreshManage() {
@@ -657,6 +693,7 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       olderRead += 1;
       manageRead += 1;
       sendCommand = null;
+      field?.close();
       publish({ ...state, place: { kind: 'CLOSED', worldId }, entry: { status: 'NONE', world: null }, thread: NO_THREAD, manage: NO_MANAGE,
         closed: { ...NO_CLOSED, worldId, status: 'LOADING' }, notice: null });
       void readClosed(worldId, null);
@@ -667,9 +704,23 @@ export function createSharedWorldController(options: SharedWorldControllerOption
       if (state.place.kind !== 'CLOSED' || world === null || oldest === undefined || !world.hasOlder || state.closed.loadingOlder) return;
       void readClosed(state.place.worldId, { materialId: oldest.materialId, establishedAt: oldest.establishedAt });
     },
+    field,
+    openConversation() {
+      const worldId = openWorldId();
+      if (worldId === null) return;
+      publish({ ...state, worldView: 'CONVERSATION' });
+      // The conversation is read again on the way in: nothing older is shown as current.
+      void readThread(worldId);
+    },
+    closeConversation() {
+      if (openWorldId() === null || state.worldView !== 'CONVERSATION') return;
+      publish({ ...state, worldView: 'MAP' });
+      field?.revalidate();
+    },
     retire() {
       retired = true;
       unsubscribeForeground?.();
+      field?.retire();
       listeners.clear();
     },
   };

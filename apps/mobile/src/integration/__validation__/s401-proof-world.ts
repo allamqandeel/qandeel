@@ -78,6 +78,15 @@
  *     and answers `PUBLIC_WORLD` Direct Entry into the DISCUSSION of exactly that Experience, or UNAVAILABLE with no
  *     fallback when it is no longer served.
  *
+ * SHARED-VIS-01 — the Shared World's Living Analysis field, answered as migration 0148 and `apps/api/src/shared-world` do,
+ * only after `sharedField()` (every earlier leg meets exactly the answers it met before — an empty field):
+ *
+ *   - `sharedField()` seeds two Worlds of the reader from the SYNTHETIC fixture `shared-vis-proof-field.ts`: their lines
+ *     and the places a VALIDATION-ONLY reading of them produced (no provider exists until Stage 8A);
+ *   - `/shared/worlds/:id/field` answers a current member only, with every place whose EVERY source line exists and is
+ *     visible to the reader; `/field/places/:id` answers one such place with its exact sources, or one neutral ABSENT. A
+ *     deletion of the reader's own line removes every place read from it at once.
+ *
  * Every Name, Login ID, Email, Public ID and conversation line here is SYNTHETIC test text, never Product copy and never
  * a real account.
  */
@@ -85,6 +94,7 @@ import type { ChromeLanguage } from '../../orientation-chrome';
 import type { MobilePublicConfig, RuntimeHttpFetch, SupabaseAuthPort } from '../../runtime-entry';
 import { S401_ACCOUNT_IDENTITY, S401_ACCOUNT_PUBLIC_ID } from '../__fixtures__/s401-account-identity';
 import { FIXTURE_OWN_EXPERIENCE_ID, fixtureEntry, fixtureExperience, fixtureField, fixtureSearch } from './s503b-visual-field';
+import { SHARED_VIS_WORLD_A, SHARED_VIS_WORLD_B, pick, type SharedVisFixtureWorld } from './shared-vis-proof-field';
 import { createVport01ProofWorld } from './vport01-proof-world';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
@@ -163,6 +173,18 @@ interface ProofWorld {
   ended: boolean;
   entitled: boolean;
 }
+/** SHARED-VIS-01: one fixture place — its meaning, themes, region, World-local place and exact source lines. */
+interface ProofPlace {
+  placeId: string;
+  worldId: string;
+  meaning: string;
+  region: string;
+  primary: string[];
+  secondary: string[];
+  x: number;
+  y: number;
+  sources: string[];
+}
 interface ProofProposal {
   proposalId: string;
   worldId: string;
@@ -209,6 +231,8 @@ export interface S401ProofWorld {
   relationAccept(): void;
   /** S5-04 smoke: a synthetic other person replies to the reader's latest own post; its Public Activity item appears. */
   peerReply(): void;
+  /** SHARED-VIS-01: two Worlds of the reader with their places, from the SYNTHETIC fixture `shared-vis-proof-field.ts`. */
+  sharedField(): void;
 }
 
 export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
@@ -243,6 +267,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const sent = new Map<string, string>();
   // S4-03: proposals and history packages.
   const proposals: ProofProposal[] = [];
+  // SHARED-VIS-01: the fixture places, off until sharedField().
+  const places: ProofPlace[] = [];
   const packages: ProofPackage[] = [];
   let clock = 0;
   const at = () => new Date(Date.UTC(2026, 9, 5, 10, 0, clock++)).toISOString();
@@ -431,7 +457,34 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   }
   const wellFormed = (value: string) => COMPACT.test(value.toUpperCase().replace(/[\s-]/gu, '').replace(/O/gu, '0').replace(/[IL]/gu, '1'));
 
+  /** SHARED-VIS-01: a place is served only while EVERY line it was read from exists and the reader may see it (D3, D4). */
+  const servedPlaces = (worldId: string) => {
+    const seen = new Set(readerSees(worldId).map((line) => line.materialId));
+    return places.filter((p) => p.worldId === worldId && p.sources.every((id) => seen.has(id)));
+  };
+  const placeEntry = (p: ProofPlace) => ({ placeId: p.placeId, x: String(p.x), y: String(p.y), meaning: p.meaning, region: p.region });
+  function fieldRoutes(path: string, method: string) {
+    if (method !== 'GET') return null;
+    const all = /^\/shared\/worlds\/([0-9a-f-]+)\/field$/u.exec(path);
+    if (all !== null) {
+      if (!isCurrent(all[1])) return json(200, { outcome: 'UNAVAILABLE' });
+      return json(200, { outcome: 'ALLOW', places: servedPlaces(all[1]).map(placeEntry) });
+    }
+    const one = /^\/shared\/worlds\/([0-9a-f-]+)\/field\/places\/([0-9a-f-]+)$/u.exec(path);
+    if (one !== null) {
+      if (!isCurrent(one[1])) return json(200, { outcome: 'UNAVAILABLE' });
+      const p = servedPlaces(one[1]).find((place) => place.placeId === one[2]);
+      if (p === undefined) return json(200, { outcome: 'ABSENT' });
+      const lines = readerSees(one[1]).filter((line) => p.sources.includes(line.materialId));
+      return json(200, { outcome: 'ALLOW', place: { ...placeEntry(p), primaryThemes: p.primary, secondaryThemes: p.secondary, establishedAt: at(),
+        sources: lines.map((line) => { const v = view(line); return { materialId: v.materialId, producer: v.producer, authorName: v.authorName, text: v.text, establishedAt: v.establishedAt }; }) } });
+    }
+    return null;
+  }
+
   async function shared(path: string, method: string, body: Record<string, unknown> | undefined) {
+    const fieldAnswer = fieldRoutes(path, method);
+    if (fieldAnswer !== null) return fieldAnswer;
     const lifecycleAnswer = await lifecycleRoutes(path, method, body);
     if (lifecycleAnswer !== null) return lifecycleAnswer;
     const answered = await conversation(path, method, body);
@@ -740,6 +793,23 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       say(worldId, 'HUMAN', S402_PROOF_LINES.peerOpening);
       say(worldId, 'QANDEEL', S402_PROOF_LINES.qandeelOpening);
       say(worldId, 'SELF', S402_PROOF_LINES.mine);
+    },
+    sharedField: () => {
+      const seedWorld = (fixture: SharedVisFixtureWorld) => {
+        const worldId = uuid();
+        worlds.push({ ...newWorld(worldId), name: pick(fixture.name, language) });
+        threads.set(worldId, []);
+        const ids = fixture.lines.map((line) => (line.speaker === 'SELF'
+          ? say(worldId, 'SELF', pick(line.text, language))
+          : say(worldId, 'HUMAN', pick(line.text, language), 'PEER', line.speaker === 'PEER_HIDDEN' ? ['PEER'] : undefined)).materialId);
+        for (const place of fixture.places) {
+          places.push({ placeId: uuid(), worldId, meaning: pick(place.meaning, language), region: place.region,
+            primary: [pick(place.themes[0], language)], secondary: [pick(place.themes[1], language)], x: place.x, y: place.y,
+            sources: place.sources.map((index) => ids[index]) });
+        }
+      };
+      seedWorld(SHARED_VIS_WORLD_A);
+      seedWorld(SHARED_VIS_WORLD_B);
     },
     peer: () => { for (const worldId of threads.keys()) if (isCurrent(worldId)) say(worldId, 'HUMAN', S402_PROOF_LINES.peerLater); },
     lifecycle: () => {

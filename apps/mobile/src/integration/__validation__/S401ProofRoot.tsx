@@ -39,6 +39,11 @@
  *   qandeel://s401-proof/public/relation-accept   S5-03C smoke: the synthetic other side accepts the reader's relation requests
  *   qandeel://s401-proof/public/peer-reply        S5-04 smoke: a synthetic other person replies to the reader's latest own
  *                                                 discussion post, and its Public Activity item appears for the reader
+ *
+ * SHARED-VIS-01 — the Product Visual Review of the Shared World's Living Analysis field:
+ *
+ *   qandeel://s401-proof/shared-field/seed   two Worlds of the reader with the places of the SYNTHETIC fixture
+ *                                            `shared-vis-proof-field.ts`
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -53,7 +58,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -95,6 +100,7 @@ export function S401ProofRoot() {
       if (match[1] === 'public' && match[2] === 'seed') world.publicSeed();
       if (match[1] === 'public' && match[2] === 'relation-accept') world.relationAccept();
       if (match[1] === 'public' && match[2] === 'peer-reply') world.peerReply();
+      if (match[1] === 'shared-field' && match[2] === 'seed') world.sharedField();
     });
     return () => {
       subscription.remove();

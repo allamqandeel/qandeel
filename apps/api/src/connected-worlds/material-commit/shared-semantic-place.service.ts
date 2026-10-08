@@ -21,20 +21,20 @@
 // no spend. No content, provider output or private context is logged, persisted or returned outside the canonical body.
 
 import { Inject, Injectable } from '@nestjs/common';
-import { SharedHumanAudienceResolverService } from '../connected-worlds/audience/shared-human-audience-resolver.service';
-import { SharedDeliveryAuthorityRevalidatorService } from '../connected-worlds/delivery-authority/shared-delivery-authority-revalidator.service';
-import { SharedEffectiveContextService } from '../connected-worlds/effective-context/shared-effective-context.service';
-import type { SharedWorldId } from '../connected-worlds/kernel/world.types';
-import { bindSharedQandeelMaterialCommit } from '../connected-worlds/material-commit/shared-qandeel-material-commit-binding';
-import { SharedPrivacyAuthorityDeliveryReadinessService } from '../connected-worlds/source-disclosure/shared-privacy-authority-delivery-readiness.service';
-import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
+import { SharedHumanAudienceResolverService } from '../audience/shared-human-audience-resolver.service';
+import { SharedDeliveryAuthorityRevalidatorService } from '../delivery-authority/shared-delivery-authority-revalidator.service';
+import { SharedEffectiveContextService } from '../effective-context/shared-effective-context.service';
+import type { SharedWorldId } from '../kernel/world.types';
+import { bindSharedQandeelMaterialCommit } from './shared-qandeel-material-commit-binding';
+import { SharedPrivacyAuthorityDeliveryReadinessService } from '../source-disclosure/shared-privacy-authority-delivery-readiness.service';
+import { SupabaseServiceRoleApiService } from '../../conversation/supabase-service-role-api.service';
 import {
   SHARED_SEMANTIC_CONTRIBUTIONS_MAX, SHARED_SEMANTIC_INTERPRETATION_CONTRACT, SHARED_SEMANTIC_INTERPRETER, UnconfiguredSharedSemanticInterpreter,
   decodeSharedSemanticReading, type SharedSemanticInput, type SharedSemanticInterpreter,
-} from './shared-semantic-interpreter';
+} from '../../shared-world/shared-semantic-interpreter';
 import {
   SHARED_SPATIAL_PLACEMENT_CONTRACT, SHARED_SPATIAL_PLACER, UnconfiguredSharedSpatialPlacer, decodeSharedSpatialPlacement, type SharedSpatialPlacer,
-} from './shared-spatial-placer';
+} from '../../shared-world/shared-spatial-placer';
 
 export const SHARED_SEMANTIC_WORK_BEGIN_RPC = 'begin_shared_semantic_work_v1' as const;
 export const SHARED_SEMANTIC_CONTEXT_RPC = 'read_shared_semantic_context_v1' as const;

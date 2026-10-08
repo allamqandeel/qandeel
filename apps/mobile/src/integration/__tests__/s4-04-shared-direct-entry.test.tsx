@@ -74,6 +74,8 @@ function serve(h: IntegrationHarness, s: Server) {
   } }));
   h.http.on('/shared/worlds/', (request) => s.entry(request.url.includes(WORLD_B) ? WORLD_B : WORLD_A));
   h.http.on('/materials', () => ({ status: 200, body: { outcome: 'ALLOW', conversation: true, materials: [], hasOlder: false } }));
+  // SHARED-VIS-01: the World's Living Analysis field (empty here: no place has formed).
+  h.http.on('/field', () => ({ status: 200, body: { outcome: 'ALLOW', places: [] } }));
   const list = () => ({ status: 200, body: { worlds: [
     { worldId: WORLD_A, name: null, members: MEMBERS_A, muted: s.muted[WORLD_A] === true },
     { worldId: WORLD_B, name: null, members: MEMBERS_B, muted: s.muted[WORLD_B] === true },
@@ -135,6 +137,8 @@ afterEach(() => {
   jest.restoreAllMocks();
 });
 
+// SHARED-VIS-01 re-anchor: an entered World opens on its Living Analysis field (`qandeel-shared-world-field`), its main
+// experience; every assertion below that the exact World is shown reads that field and its band (the World's label).
 describe('S4-04 B — Direct Entry into the exact Shared World', () => {
   it('a notification tap: Activity revalidates, the Shared area opens the exact World through its entry authority — the neutral shell until ALLOW, then the World', async () => {
     let release: (() => void) | null = null;
@@ -157,8 +161,8 @@ describe('S4-04 B — Direct Entry into the exact Shared World', () => {
     expect(view.queryByTestId('qandeel-shared-welcome')).toBeNull();
 
     await act(async () => { release?.(); await settle(); });
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
-    expect(within(view.getByTestId('qandeel-shared-world')).getAllByText(/Bassem Fixture/u).length).toBeGreaterThan(0);
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+    expect(within(view.getByTestId('qandeel-shared-world-field')).getAllByText(/Bassem Fixture/u).length).toBeGreaterThan(0);
     // The Personal world is untouched and still mounted beneath.
     expect(runtime.store.getState()).toBe(storeBefore);
     expect(view.getByTestId('qandeel-conversation', { includeHiddenElements: true })).toBeTruthy();
@@ -177,7 +181,7 @@ describe('S4-04 B — Direct Entry into the exact Shared World', () => {
     const t = testPort({ permission: 'GRANTED', canAskAgain: false });
     const { h, view } = await world({ port: t.port });
     await deliver(() => t.tap(ITEM_A));
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     const live = handlers.filter((x) => !x.removed);
     await act(async () => { live[live.length - 1].handler({ type: 'hardwareBackPress', timeStamp: 0 } as never); await settle(); });
     expect(view.getByTestId('qandeel-shared-root')).toBeTruthy();
@@ -227,8 +231,8 @@ describe('S4-04 B — Direct Entry into the exact Shared World', () => {
     await deliver(() => links.open(`qandeel://shared/world/${WORLD_B}`));
     expect(entries(h, WORLD_B).length).toBeGreaterThanOrEqual(1);
     expect(entries(h, WORLD_A)).toHaveLength(0);
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
-    expect(within(view.getByTestId('qandeel-shared-world')).getAllByText(/Dina Fixture/u).length).toBeGreaterThan(0);
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+    expect(within(view.getByTestId('qandeel-shared-world-field')).getAllByText(/Dina Fixture/u).length).toBeGreaterThan(0);
     h.dispose();
 
     const signedOut = testLinks(`qandeel://shared/world/${WORLD_A}`);
@@ -241,7 +245,7 @@ describe('S4-04 B — Direct Entry into the exact Shared World', () => {
   it('a link that launched the app waits for the reader\'s world, then is taken once', async () => {
     const links = testLinks(`qandeel://shared/world/${WORLD_A}`);
     const { h, view } = await world({ links: links.source });
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     expect(h.ready().sharedLinks.take()).toBeNull();
     h.dispose();
   });
@@ -287,7 +291,7 @@ describe('S4-04 D — permission education at the first legitimate Shared entry'
     expect(view.queryByTestId('qandeel-push-education')).toBeNull();
 
     await press(view, `qandeel-shared-world-${WORLD_A}`);
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     const sheet = within(view.getByTestId('qandeel-push-education'));
     expect(sheet.getByText(PUSH_WORDS.eduTitle)).toBeTruthy();
     expect(sheet.getByText(PUSH_WORDS.eduBody)).toBeTruthy();
@@ -295,13 +299,13 @@ describe('S4-04 D — permission education at the first legitimate Shared entry'
 
     await press(view, 'qandeel-push-education-not-now');
     expect(view.queryByTestId('qandeel-push-education')).toBeNull();
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     expect(t.requests).toHaveLength(0);
     expect(store.educationDeclined()).toBe(true);
     // Back to the root and into another World: no pressure, no repeated automatic ask.
     await press(view, 'qandeel-shared-back');
     await press(view, `qandeel-shared-world-${WORLD_B}`);
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     expect(view.queryByTestId('qandeel-push-education')).toBeNull();
     h.dispose();
 
@@ -332,7 +336,7 @@ describe('S4-04 D — permission education at the first legitimate Shared entry'
     await press(view, 'qandeel-push-education-allow');
     expect(t.requests).toHaveLength(1);
     expect(view.queryByTestId('qandeel-push-education')).toBeNull();
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     expect(h.ready().push.getState().permission).toBe('GRANTED');
     h.dispose();
   });
@@ -341,7 +345,7 @@ describe('S4-04 D — permission education at the first legitimate Shared entry'
     const granted = testPort({ permission: 'GRANTED', canAskAgain: false });
     const { h, view } = await world({ port: granted.port });
     await deliver(() => granted.tap(ITEM_A));
-    expect(view.getByTestId('qandeel-shared-world')).toBeTruthy();
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
     expect(view.queryByTestId('qandeel-push-education')).toBeNull();
     expect(granted.requests).toHaveLength(0);
     h.dispose();

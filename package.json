@@ -257,6 +257,7 @@
     "test:s5-03b-public-semantic-field-viewer-contract": "node --test tests/s5-03b-public-semantic-field-viewer-contract.test.mjs",
     "test:s5-03c-public-explicit-relations-integrity-contract": "node --test tests/s5-03c-public-explicit-relations-integrity-contract.test.mjs",
     "test:s5-04-public-discussion-qandeel-final-integration-contract": "node --test tests/s5-04-public-discussion-qandeel-final-integration-contract.test.mjs",
+    "test:shared-vis-01-shared-living-analysis-contract": "node --test tests/shared-vis-01-shared-living-analysis-contract.test.mjs",
     "test:a3-proof-leg-isolation-contract": "node --test tests/a3-proof-leg-isolation-contract.test.mjs",
     "test:ai-cost-01-provider-neutral-cost-credit-ledger-contract": "node --test tests/ai-cost-01-provider-neutral-cost-credit-ledger-contract.test.mjs",
     "simulate:ai-cost": "node scripts/ai-cost-simulate.mjs",

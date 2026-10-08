@@ -2,7 +2,7 @@ import { BadRequestException, Injectable, ServiceUnavailableException } from '@n
 import type { SharedConversationMaterial } from '../connected-worlds/material-commit/shared-qandeel-reply.types';
 import { SharedQandeelReplyService } from '../connected-worlds/material-commit/shared-qandeel-reply.service';
 import { DataApiError } from '../conversation/supabase-data-api.service';
-import { SharedSemanticPlaceService } from './shared-semantic-place.service';
+import { SharedSemanticPlaceService } from '../connected-worlds/material-commit/shared-semantic-place.service';
 import { SHARED_MATERIAL_PAGE, SharedWorldConversationRepository, type SharedMaterialCursor, type SharedMaterialRow } from './shared-world-conversation.repository';
 import { SharedWorldRepository } from './shared-world.repository';
 

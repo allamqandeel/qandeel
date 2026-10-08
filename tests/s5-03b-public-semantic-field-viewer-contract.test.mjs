@@ -226,7 +226,8 @@ test('9 — governance: the record, the backlog and the locators tell the same t
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
     const map = read('QANDEEL_PROJECT_MAP.md');
-    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-0(3C|4) — /u, 'a later Stage-5 task is current (RE-ANCHORED by S5-04, validation only)');
+    // RE-ANCHORED by SHARED-VIS-01 (validation only): after Stage 5, SHARED-VIS-01 is the current task.
+    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0(3C|4)|SHARED-VIS-01) — /u, 'a later task is current (RE-ANCHORED by S5-04 and SHARED-VIS-01, validation only)');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B/u, 'S5-03B is no longer the current task');
     assert.match(map, /`S5-03B — Public Semantic Field \+ Viewer Runtime` = \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
     assert.match(map, /\*\(Historical: S5-03B was the current task until PR #317 merged as `afd5e8caecc06884b5adfdb381eef8e650e03c1f`/u);
