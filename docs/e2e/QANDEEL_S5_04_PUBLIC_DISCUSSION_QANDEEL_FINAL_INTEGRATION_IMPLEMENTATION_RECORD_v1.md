@@ -5,7 +5,7 @@
 **Stage 5:** `ACTIVE` pending S5-04's merge. **ON MERGE OF S5-04: Stage 5 becomes DONE / MERGED.** By the Product Owner's
 sequencing, **QAN-BL-CW-03 / SHARED-VIS-01 becomes NEXT** after that merge. It is not started here. Stages 6–9 are not opened.
 
-**S5-04 PRODUCT COPY GATE:** `OPEN — 12 rows PROPOSED` (§14). Merge waits for the Product Owner's copy decision and «ادمج».
+**S5-04 PRODUCT COPY GATE:** `CLOSED — 12 / 12 APPROVED` (Product Owner, 2026-10-08; row 11 Arabic as revised by the Owner; §14). Merge waits only for the Product Owner's «ادمج».
 
 | | |
 |---|---|
@@ -93,7 +93,7 @@ SECURITY INVOKER one-liners. Deploy-time self-assertions K1–K6 fail the migrat
 |---|---|---|
 | `resolve_public_discussion_entitlement_v1(uuid)` | the entitlement seam: `NOT_EVALUATED` | nobody |
 | `qandeel_invocations` (post, Experience, instant, the ONE response, last-unavailable instant) | D1 invocation record; guarded: response linked once, nothing deleted | nobody |
-| `qandeel_work_leases`, `qandeel_work_grants`, `qandeel_work_policy_v1()` (2 in flight; 20 / 10 min; 200 / 24 h) | the generation-work lease and bound | nobody |
+| `qandeel_work_leases`, `qandeel_work_grants`, `qandeel_work_policy_v1()` (2 in flight; 20 / 10 min; 200 / 24 h — **implementation safety policy — NOT frozen Product law**; tunable later by replacing the function, without a Product-semantic migration) | the generation-work lease and bound | nobody |
 | `invokes_qandeel_v1`, `is_entitled_v1`, `is_admitted_v1`, `served_version_v1`, `guard_invocation_v1` | derivations | nobody |
 | `post_own_public_discussion_v1(commandId, experienceId, replyToPostId, body)` | the human post / reply | `authenticated` |
 | `read_public_discussion_posts_v1(experienceId, afterOrdinal)`, `read_public_discussion_capability_v1(experienceId)` | the viewer reads (≤ 100 posts per page) | `authenticated` |
@@ -116,8 +116,11 @@ transaction (verifier E01–E02, X01). This changes nothing about publication: `
 ## 7. @qandeel — trigger and response journey
 
 1. A human commits a post or reply. 0147 detects the standalone, case-insensitive `@qandeel` token
-   (`(^|[^[:alnum:]_@.])@qandeel($|[^[:alnum:]_@])`) and writes ONE invocation row; the words are stored verbatim by the frozen
-   writer. `mail@qandeel.com`, `@qandeelish`, `@@qandeel` invoke nothing; two tokens make one invocation (verifier Q01–Q03).
+   (`(^|[^[:alnum:]_@.])@qandeel($|[^[:alnum:]_@.]|[.]($|[^[:alnum:]_@]))`) and writes ONE invocation row; the words are stored
+   verbatim by the frozen writer. `mail@qandeel.com`, `@qandeel.com`, `qandeel.com`, `@qandeelish`, `@@qandeel` invoke nothing;
+   ordinary punctuation still invokes (`@qandeel,`, sentence-final `@qandeel.`, `(@qandeel)`, `@qandeel؟`, `@qandeel،`); two
+   tokens make one invocation (verifier Q01–Q03, Q02b). A full stop followed by anything word-like makes the token part of an
+   address, not an invocation (independent-review correction, Product class A, fixed before merge).
 2. The API asks for the one response: `begin` (GRANTED / IN_PROGRESS / LIMITED / ALREADY_COMMITTED / UNAVAILABLE — only the
    invoking author, only while the post's Experience is served at that version, the author admitted and entitled).
 3. Under the live lease, the PUBLIC context is read NOW (§8). Nothing is readable without the lease (W03).
@@ -206,12 +209,13 @@ S5-04). The mobile discussion empties on an `ABSENT` read and the field forgets 
   thread order; QANDEEL's block is distinguished by a text label, not colour; no decorative Living Analysis element is
   announced; Reduced Motion is untouched (no new motion). An unavailable Experience leaks nothing through accessibility text.
 
-## 14. S5-04 PRODUCT COPY GATE — OPEN (12 rows PROPOSED)
+## 14. S5-04 PRODUCT COPY GATE — CLOSED (12 / 12 APPROVED)
 
 Census first: reused byte-exact — «قنديل» / QANDEEL (CANON, I-08A4); composer placeholder, Send, «قنديل: …», waiting for
 QANDEEL's reply, QANDEEL's reply could not be completed, send unconfirmed / refused (W1A-01); Back, Cancel, Try again, «شخص ما»
 (S4-01); the no-longer-in-Public-World and cannot-be-shown lines (S5-03B); the generic Public Lock Screen line (A3-02,
-p3.generic.public) for the ambient post item. Genuinely new rows, each awaiting the Product Owner:
+p3.generic.public) for the ambient post item. Genuinely new rows — the Product Owner approved rows 1–10 and 12 exactly as
+proposed and revised ONLY row 11's Arabic (from «طلب علاقة جديد مع إحدى تجاربك في العالم العام.»); English unchanged (2026-10-08):
 
 | # | Key | Arabic | English | Context | Accessibility use |
 |---|---|---|---|---|---|
@@ -225,11 +229,11 @@ p3.generic.public) for the ambient post item. Genuinely new rows, each awaiting 
 | 8 | `publishedOn` | نُشرت في {0} | Published {0} | panel; {0} = the publication date (Gregorian, Product locale) | read as text |
 | 9 | `morePosts` | عرض المزيد من المشاركات | Show more posts | after a full page | button name |
 | 10 | `replyToOwnPost` (server) | ردّ أحدهم على مشاركتك في النقاش. | Someone replied to your post in the discussion. | Activity body, Class 3 | Activity row / Lock Screen at L2 |
-| 11 | `relationRequest` (server) | طلب علاقة جديد مع إحدى تجاربك في العالم العام. | A new relation request for one of your Experiences in the Public World. | Activity body, Class 3, actionable | Activity row / Lock Screen at L2 |
+| 11 | `relationRequest` (server) | هناك طلب علاقة جديد لإحدى تجاربك في العالم العام. | A new relation request for one of your Experiences in the Public World. | Activity body, Class 3, actionable | Activity row / Lock Screen at L2 |
 | 12 | `relationAccepted` (server) | قُبل طلب العلاقة الذي أرسلته. | Your relation request was accepted. | Activity body, Class 3 | Activity row / Lock Screen at L2 |
 
 Rows 1–9 live in `apps/mobile/src/public-world/field/discussion-copy.ts`; rows 10–12 in
-`apps/api/src/public-world/public-activity-copy.ts`. Both gates read OPEN; nothing is marked APPROVED (contract 8).
+`apps/api/src/public-world/public-activity-copy.ts`. Both gates read CLOSED; every row is marked APPROVED and none PROPOSED (contract 8).
 
 ## 15. Backlog reconciliation (BG-05 at kickoff, BG-08 at closure)
 
@@ -270,7 +274,7 @@ Classes: 1 prior S5 task (consume) · 2 S5-04 · 3 existing backlog owner · 4 l
 | Deletion / disappearance; source loss | 1 | I-05 (0098 / 0099), S5-02 (ASSURE-F05), S5-03A–C integrity; S5-04 composes it (§12) |
 | Account deletion across Connected Worlds | 3 | `QAN-BL-ACCT-01` |
 | Accessibility | 2 (own surfaces) / 1 | §13; earlier surfaces by their tasks |
-| Bilingual Product copy | 2 | §14 Copy Gate (OPEN) |
+| Bilingual Product copy | 2 | §14 Copy Gate (CLOSED 12 / 12) |
 | Native Push physical-device proof | 3 | `QAN-BL-NOTIF-05` |
 | Shared semantic World | 3 | `QAN-BL-CW-03` / SHARED-VIS-01 (NEXT after merge) |
 
@@ -307,8 +311,14 @@ The broad integration proof is GitHub CI on the one pushed head; its result is r
 | F9 | the discussion surface deep-imported a runtime-entry submodule (T-12P barrel rule) | A (structural) | fixed in Product code: the bound lives in the discussion controller; tests reach the transport through the barrel |
 | F10 | the S5-04 contract read the root locators in the forward-safety mirror, which carries only source trees | B | guarded with `existsSync`, as the S5 contracts do |
 | F11 | forward-safety mirror: expo-doctor leg | C | reproduces on `origin/main` without S5-04; not touched |
+| F12 | independent review: the `@qandeel` detector accepted a domain-like token (`@qandeel.com`) because `.` satisfied the right boundary | A | fixed narrowly in `invokes_qandeel_v1` (a full stop ends the token only when nothing word-like follows); verifier Q02 / Q02b cover the address, handle and punctuation cases; no mention-parser redesign |
 
 No Product, Security or Privacy defect was found in the frozen runtime or in S5-01 … S5-03C.
+
+**Independent-review corrections (2026-10-08).** F12 above; the Product Copy Gate closed 12 / 12 (row 11 Arabic revised by
+the Owner, §14); the @qandeel numeric work bounds are recorded as an implementation safety policy — NOT frozen Product law
+(§6). Re-validated locally only on the affected scope: the 0147 verifier on real PostgreSQL, the S5-04 API spec, the S5-04
+mobile discussion test and the S5-04 contract; GitHub CI on the corrected head is the broad proof.
 
 ## 19. Native proof
 

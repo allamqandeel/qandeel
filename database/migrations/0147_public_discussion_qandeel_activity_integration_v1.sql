@@ -101,8 +101,10 @@ CREATE FUNCTION public_discussion_private.qandeel_work_policy_v1(
   OUT long_window interval,
   OUT long_window_limit integer
 ) LANGUAGE sql IMMUTABLE PARALLEL SAFE SECURITY DEFINER SET search_path = '' AS $$
-  -- Explicit public invocations are rarer than conversation turns: two in flight, 20 per rolling 10 minutes and 200 per
-  -- rolling 24 hours per human (CW2-08 lists @qandeel among the rate-limited actions).
+  -- IMPLEMENTATION SAFETY POLICY — NOT frozen Product law (Product Owner, S5-04 review). Explicit public invocations are
+  -- rarer than conversation turns: two in flight, 20 per rolling 10 minutes and 200 per rolling 24 hours per human
+  -- (CW2-08 lists @qandeel among the rate-limited actions). Tunable later by replacing this function; no Product-semantic
+  -- migration is required.
   SELECT 2, interval '10 minutes', 20, interval '24 hours', 200
 $$;
 
@@ -134,11 +136,13 @@ CREATE INDEX qandeel_work_grants_user_idx ON public_discussion_private.qandeel_w
 -- =====================================================================================================================
 
 -- D.1 Does this text hold the standalone, case-insensitive `@qandeel` token (Product Owner D1)? A token is the exact
---     word: not part of a longer word, a handle or an address on either side.
+--     word: not part of a longer word, a handle or an address on either side. A following full stop ends a sentence
+--     (`@qandeel.`) only when nothing word-like follows it, so `@qandeel.com` is an address, not an invocation, while
+--     ordinary punctuation (`@qandeel,` `(@qandeel)` `@qandeel؟`) still invokes.
 CREATE FUNCTION public_discussion_private.invokes_qandeel_v1(p_text text)
 RETURNS boolean
 LANGUAGE sql IMMUTABLE STRICT SECURITY DEFINER SET search_path = '' AS $$
-  SELECT p_text ~* '(^|[^[:alnum:]_@.])@qandeel($|[^[:alnum:]_@])';
+  SELECT p_text ~* '(^|[^[:alnum:]_@.])@qandeel($|[^[:alnum:]_@.]|[.]($|[^[:alnum:]_@]))';
 $$;
 
 -- D.2 Is this human entitled to contribute NOW? Only an exact ENTITLED from the seam.

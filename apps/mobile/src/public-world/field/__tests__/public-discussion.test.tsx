@@ -269,16 +269,17 @@ describe('S5-04 — the panel entry and the discussion surface', () => {
 });
 
 describe('S5-04 — the Product Copy Gate', () => {
-  it('ONE bounded gate: every new row PROPOSED in both languages, nothing silently approved; frozen words reused byte-exact', () => {
-    expect(PUBLIC_DISCUSSION_COPY_GATE.approved).toEqual([]);
-    expect(PUBLIC_DISCUSSION_COPY_GATE.proposed).toHaveLength(9);
+  it('ONE bounded gate, CLOSED: every new row APPROVED in both languages; frozen words reused byte-exact', () => {
+    expect(PUBLIC_DISCUSSION_COPY_GATE.proposed).toEqual([]);
+    expect(PUBLIC_DISCUSSION_COPY_GATE.approved).toHaveLength(9);
     for (const language of ['ar', 'en'] as const) {
       const copy = publicDiscussionCopy(language) as unknown as Record<string, unknown>;
-      for (const key of PUBLIC_DISCUSSION_COPY_GATE.proposed) expect(typeof copy[key]).toBe('string');
+      for (const key of PUBLIC_DISCUSSION_COPY_GATE.approved) expect(typeof copy[key]).toBe('string');
     }
     expect(publicDiscussionCopy('ar').qandeel).toBe('قنديل');
     expect(publicDiscussionCopy('en').qandeel).toBe('QANDEEL');
     const source = readFileSync(join(__dirname, '..', 'discussion-copy.ts'), 'utf8');
-    expect(source.match(/PROPOSED — S5-04 Product Copy Gate/gu)).toHaveLength(18);
+    expect(source.match(/APPROVED — S5-04 Product Copy Gate/gu)).toHaveLength(18);
+    expect(source).not.toMatch(/PROPOSED — S5-04/u);
   });
 });

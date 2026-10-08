@@ -10,8 +10,8 @@
  *     QANDEEL's reply could not be completed, the send could not be confirmed / was refused (W1A-01 Product Copy Gate);
  *     Back, Cancel, Try again and «شخص ما» / Someone (S4-01 Product Copy Gate); the no-longer-in-Public-World line
  *     and the cannot-be-shown-right-now line (S5-03B Product Copy Gate);
- *   - PROPOSED — the S5-04 PRODUCT COPY GATE (ONE bounded gate for the whole task; implementation record §14): every
- *     genuinely new string below. Nothing is approved here until the Product Owner says so.
+ *   - APPROVED — the S5-04 PRODUCT COPY GATE, CLOSED (ONE bounded gate for the whole task; implementation record §14):
+ *     every genuinely new string below, approved by the Product Owner (2026-10-08) exactly as proposed.
  *
  * No string counts popularity, ranks, names a like, a follower, a contact or a private message, calls a count importance
  * or truth, or says why something is unavailable.
@@ -22,12 +22,12 @@ import { sharedCopy } from '../../shared-world/copy';
 import { publicFieldCopy } from './field-copy';
 
 export const PUBLIC_DISCUSSION_COPY_GATE = {
-  status: 'S5-04 PRODUCT COPY GATE — OPEN — 9 rows PROPOSED (with the 3 Public Activity rows: 12)',
+  status: 'S5-04 PRODUCT COPY GATE — CLOSED — 9 rows APPROVED (Product Owner, 2026-10-08; with the 3 Public Activity rows: 12 / 12)',
   canon: ['qandeel'],
   reused: ['composerPlaceholder', 'send', 'qandeelSays', 'qandeelPending', 'qandeelUnavailable', 'sendUnconfirmed', 'sendRefused', 'back',
     'cancel', 'retry', 'someone', 'experienceUnavailable', 'unavailable'],
-  approved: [],
-  proposed: ['discussion', 'discussionWithCount', 'noPosts', 'composerName', 'reply', 'replyingTo', 'invokeHint', 'publishedOn', 'morePosts'],
+  approved: ['discussion', 'discussionWithCount', 'noPosts', 'composerName', 'reply', 'replyingTo', 'invokeHint', 'publishedOn', 'morePosts'],
+  proposed: [],
 } as const;
 
 export interface PublicDiscussionCopy {
@@ -64,27 +64,27 @@ export interface PublicDiscussionCopy {
 }
 
 const AR = {
-  discussion: 'النقاش', // PROPOSED — S5-04 Product Copy Gate
-  discussionWithCount: 'النقاش · {0}', // PROPOSED — S5-04 Product Copy Gate
-  noPosts: 'لا مشاركات بعد.', // PROPOSED — S5-04 Product Copy Gate
-  composerName: 'مشاركتك في هذا النقاش', // PROPOSED — S5-04 Product Copy Gate
-  reply: 'ردّ', // PROPOSED — S5-04 Product Copy Gate
-  replyingTo: 'ردّ على {0}', // PROPOSED — S5-04 Product Copy Gate
-  invokeHint: 'اكتب ‎@qandeel لتسأل قنديل هنا، وردّه يظهر للجميع.', // PROPOSED — S5-04 Product Copy Gate
-  publishedOn: 'نُشرت في {0}', // PROPOSED — S5-04 Product Copy Gate
-  morePosts: 'عرض المزيد من المشاركات', // PROPOSED — S5-04 Product Copy Gate
+  discussion: 'النقاش', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  discussionWithCount: 'النقاش · {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  noPosts: 'لا مشاركات بعد.', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  composerName: 'مشاركتك في هذا النقاش', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  reply: 'ردّ', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  replyingTo: 'ردّ على {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  invokeHint: 'اكتب ‎@qandeel لتسأل قنديل هنا، وردّه يظهر للجميع.', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  publishedOn: 'نُشرت في {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  morePosts: 'عرض المزيد من المشاركات', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
 } as const;
 
 const EN = {
-  discussion: 'Discussion', // PROPOSED — S5-04 Product Copy Gate
-  discussionWithCount: 'Discussion · {0}', // PROPOSED — S5-04 Product Copy Gate
-  noPosts: 'No posts yet.', // PROPOSED — S5-04 Product Copy Gate
-  composerName: 'Your post in this discussion', // PROPOSED — S5-04 Product Copy Gate
-  reply: 'Reply', // PROPOSED — S5-04 Product Copy Gate
-  replyingTo: 'Replying to {0}', // PROPOSED — S5-04 Product Copy Gate
-  invokeHint: 'Write @qandeel to ask QANDEEL here. Its answer is visible to everyone.', // PROPOSED — S5-04 Product Copy Gate
-  publishedOn: 'Published {0}', // PROPOSED — S5-04 Product Copy Gate
-  morePosts: 'Show more posts', // PROPOSED — S5-04 Product Copy Gate
+  discussion: 'Discussion', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  discussionWithCount: 'Discussion · {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  noPosts: 'No posts yet.', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  composerName: 'Your post in this discussion', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  reply: 'Reply', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  replyingTo: 'Replying to {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  invokeHint: 'Write @qandeel to ask QANDEEL here. Its answer is visible to everyone.', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  publishedOn: 'Published {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  morePosts: 'Show more posts', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
 } as const;
 
 function build(language: ChromeLanguage): PublicDiscussionCopy {

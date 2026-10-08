@@ -273,9 +273,11 @@ describe('S5-04 — the Public Activity producer (D25; Product Owner D5)', () =>
     expect(published).toEqual([]);
   });
 
-  it('copy: one REUSED line and three PROPOSED rows in ONE gate, nothing silently approved', () => {
-    expect(PUBLIC_ACTIVITY_COPY_GATE.approved).toEqual([]);
-    expect([...PUBLIC_ACTIVITY_COPY_GATE.proposed].sort()).toEqual(['relationAccepted', 'relationRequest', 'replyToOwnPost']);
+  it('copy: one REUSED line and three APPROVED rows in ONE closed gate, byte-exact', () => {
+    expect(PUBLIC_ACTIVITY_COPY_GATE.proposed).toEqual([]);
+    expect([...PUBLIC_ACTIVITY_COPY_GATE.approved].sort()).toEqual(['relationAccepted', 'relationRequest', 'replyToOwnPost']);
+    expect(PUBLIC_ACTIVITY_COPY.relationRequest).toEqual({
+      ar: 'هناك طلب علاقة جديد لإحدى تجاربك في العالم العام.', en: 'A new relation request for one of your Experiences in the Public World.' });
     expect(PUBLIC_ACTIVITY_COPY.ambient).toEqual({ ar: 'نشاط جديد في العالم العام', en: 'New activity in the Public World' });
   });
 });

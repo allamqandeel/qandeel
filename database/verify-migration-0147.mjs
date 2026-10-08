@@ -271,8 +271,17 @@ async function verifyDiscussion(f) {
   assert.equal((await invocations(q1.post_id)).length, 1, 'Q01 two tokens, one invocation');
   assert.equal((await own(`SELECT post_body FROM ${T.POSTS} WHERE id = $1`, [q1.post_id]))[0].post_body,
     'What do you see here, @QANDEEL? and again @qandeel', 'Q01 the mention is kept verbatim');
-  for (const body of ['write to mail@qandeel.com', 'not @qandeelish', 'the @@qandeel', 'qandeel alone']) {
+  for (const body of ['write to mail@qandeel.com', 'not @qandeelish', 'the @@qandeel', 'qandeel alone', 'visit qandeel.com',
+    'visit @qandeel.com', 'see @qandeel.ar/x', 'the @qandeel_bot']) {
     assert.equal((await post(f.reader, f.a.experience, body)).qandeel_invoked, false, `Q02 "${body}" is not an invocation`);
+  }
+  // Q02b ordinary punctuation around the standalone token still invokes (the regex is a pure function: no post needed).
+  for (const body of ['@qandeel, what is this?', 'tell me, @qandeel.', '(@qandeel)', 'ما رأيك @qandeel؟', 'يا @qandeel، انظر',
+    '@qandeel.\nnext line', 'hi @qandeel!', '@qandeel']) {
+    assert.equal((await own('SELECT public_discussion_private.invokes_qandeel_v1($1) AS v', [body]))[0].v, true, `Q02b "${body}" invokes`);
+  }
+  for (const body of ['visit @qandeel.com', 'mail@qandeel.com', '@qandeelish', '@@qandeel', 'qandeel.com']) {
+    assert.equal((await own('SELECT public_discussion_private.invokes_qandeel_v1($1) AS v', [body]))[0].v, false, `Q02b "${body}" does not invoke`);
   }
   const q2 = await post(f.stranger, f.a.experience, '@qandeel what does this reply mean?', p1.post_id);
   assert.deepEqual([q2.outcome, q2.qandeel_invoked], ['REPLIED', true], 'Q03 a reply may invoke too');

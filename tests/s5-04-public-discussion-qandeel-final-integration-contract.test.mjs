@@ -64,7 +64,7 @@ test('2 — no second discussion runtime: 0147 consumes the frozen 0096 writers 
   // The human command derives everything: the caller supplies only words, the Experience and the post it answers.
   assert.match(sql, /CREATE FUNCTION public\.post_own_public_discussion_v1\(p_command_id uuid, p_experience_id uuid, p_reply_to_post_id uuid, p_body text\)/u);
   assert.match(fn(sql, 'post_own_public_discussion_v1'), /v_root := coalesce\(v_parent\.parent_post_id, v_parent\.id\);/u, 'one visible depth (D2)');
-  assert.match(fn(sql, 'invokes_qandeel_v1'), /~\* '\(\^\|\[\^\[:alnum:\]_@\.\]\)@qandeel\(\$\|\[\^\[:alnum:\]_@\]\)'/u, 'standalone, case-insensitive (D1)');
+  assert.match(fn(sql, 'invokes_qandeel_v1'), /~\* '\(\^\|\[\^\[:alnum:\]_@\.\]\)@qandeel\(\$\|\[\^\[:alnum:\]_@\.\]\|\[\.\]\(\$\|\[\^\[:alnum:\]_@\]\)\)'/u, 'standalone, case-insensitive (D1)');
   assert.match(sql, /CONSTRAINT qandeel_invocations_one_response UNIQUE \(response_id\)/u, 'at most one response per invoking post (D1)');
 });
 
@@ -147,15 +147,18 @@ test('7 — mobile: one dependent discussion, no social affordance, QANDEEL trut
   assert.doesNotMatch(code(`${MOBILE}/runtime-entry/index.ts`), /export \{[^}]*PublicDiscussionApiClient/u, 'no new runtime-barrel value');
 });
 
-test('8 — ONE S5-04 Product Copy Gate, both languages, nothing silently approved', () => {
+test('8 — ONE S5-04 Product Copy Gate, both languages, CLOSED 12 / 12 by the Product Owner', () => {
   const mobile = read(`${MOBILE}/public-world/field/discussion-copy.ts`);
   const server = read(`${API}/public-activity-copy.ts`);
   for (const source of [mobile, server]) {
     assert.match(source, /S5-04 PRODUCT COPY GATE/u);
-    assert.doesNotMatch(source, /APPROVED — S5-04/u);
+    assert.match(source, /S5-04 PRODUCT COPY GATE — CLOSED/u);
+    assert.doesNotMatch(source, /PROPOSED — S5-04/u);
   }
-  assert.equal((mobile.match(/PROPOSED — S5-04 Product Copy Gate/gu) ?? []).length, 18, '9 rows × 2 languages');
-  assert.equal((server.match(/PROPOSED — S5-04 Product Copy Gate/gu) ?? []).length, 3, '3 Activity rows (bilingual objects)');
+  assert.equal((mobile.match(/APPROVED — S5-04 Product Copy Gate/gu) ?? []).length, 18, '9 rows × 2 languages');
+  assert.equal((server.match(/APPROVED — S5-04 Product Copy Gate/gu) ?? []).length, 3, '3 Activity rows (bilingual objects)');
+  assert.ok(server.includes('هناك طلب علاقة جديد لإحدى تجاربك في العالم العام.'), 'row 11 Arabic as revised by the Product Owner');
+  assert.ok(!server.includes('طلب علاقة جديد مع إحدى تجاربك في العالم العام.'), 'the superseded row 11 Arabic is gone');
 });
 
 test('9 — governance: the record, the backlog and the locators tell the same Stage-5 truth', () => {

@@ -4236,7 +4236,8 @@ builds no second discussion, reply, response, vitality or stale-content runtime.
 holds three runtime tables with no text column: `qandeel_invocations` (one row per committed human post holding the standalone,
 case-insensitive `@qandeel` token; the ONE Public QANDEEL response is linked at most once - `UNIQUE (response_id)` - and a
 guard trigger admits nothing else), `qandeel_work_leases` and `qandeel_work_grants` (a per-human generation lease: two in
-flight, 20 per rolling 10 minutes, 200 per rolling 24 hours). `resolve_public_discussion_entitlement_v1` is the discussion
+flight, 20 per rolling 10 minutes, 200 per rolling 24 hours - an implementation safety policy, NOT frozen Product law, tunable
+by replacing `qandeel_work_policy_v1` without a Product-semantic migration). `resolve_public_discussion_entitlement_v1` is the discussion
 entitlement seam (CW2-04 D22; CW2-08 §21): it answers `NOT_EVALUATED`, executable by no role, so human contribution fails
 closed in production until the Stage-9 / CW2-08 slice replaces its body.
 
