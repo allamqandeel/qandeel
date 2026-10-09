@@ -80,6 +80,8 @@ export interface ResponsiveSurfaceOptions {
   readonly envelope?: { readonly width: number; readonly height: number } | null;
   /** S5-03B R1 — the support regions the world drawn here has. Absent, the frozen `TIMELINE_AND_CHROME` composition. */
   readonly support?: SupportCapability;
+  /** SHARED-VIS-01 — the chrome's measured natural height; read by the plan only under `CHROME_ONLY`. */
+  readonly chromeContentPoints?: number | null;
 }
 
 export interface MeasuredSurfaceBinding {
@@ -110,7 +112,7 @@ interface Settled {
 }
 
 export function useResponsiveSurface(options: ResponsiveSurfaceOptions = {}): MeasuredSurfaceBinding {
-  const { insets, fontScale, envelope, support } = options;
+  const { insets, fontScale, envelope, support, chromeContentPoints = null } = options;
   const top = quantizePoints(insets?.top ?? 0);
   const right = quantizePoints(insets?.right ?? 0);
   const bottom = quantizePoints(insets?.bottom ?? 0);
@@ -196,7 +198,7 @@ export function useResponsiveSurface(options: ResponsiveSurfaceOptions = {}): Me
 
   // Memoized on the surface and the settled band, both of which are stable when the numbers are, so
   // the plan object is stable exactly when the composition is.
-  const plan = useMemo(() => (surface === null ? null : recompositionPlan(surface, { band, support })), [band, support, surface]);
+  const plan = useMemo(() => (surface === null ? null : recompositionPlan(surface, { band, support, chromeContentPoints })), [band, chromeContentPoints, support, surface]);
 
   return useMemo(() => ({ onLayout, plan, surface }), [onLayout, plan, surface]);
 }

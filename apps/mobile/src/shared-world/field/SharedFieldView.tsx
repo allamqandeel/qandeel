@@ -149,7 +149,7 @@ export function SharedFieldView({ controller, state, envelope, copy, language }:
                 key={`label:${node.key}`}
                 testID={`qandeel-shared-label-${node.entry.id}`}
                 pointerEvents="none"
-                numberOfLines={1}
+                numberOfLines={label.lines}
                 accessible={false}
                 importantForAccessibility="no"
                 style={{
@@ -157,7 +157,9 @@ export function SharedFieldView({ controller, state, envelope, copy, language }:
                   position: 'absolute',
                   top: label.top,
                   ...(label.side === 'RIGHT' ? { left: label.offset } : { right: label.offset }),
-                  maxWidth: label.width,
+                  // Two lines need a definite width: under a maxWidth alone, Android measures the one-line height and
+                  // clips the second line (seen on the SHARED-VIS-01 device pass).
+                  ...(label.lines === 2 ? { width: label.width } : { maxWidth: label.width }),
                   color: node.selected ? palette.primary : palette.secondary,
                   writingDirection: language === 'ar' ? 'rtl' : 'ltr',
                   textAlign: label.side === 'RIGHT' ? 'left' : 'right',

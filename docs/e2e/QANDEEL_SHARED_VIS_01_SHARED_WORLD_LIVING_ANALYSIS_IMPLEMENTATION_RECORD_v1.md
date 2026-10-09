@@ -4,7 +4,7 @@
 
 **SHARED-VIS-01 PRODUCT COPY GATE:** `CLOSED — 6 / 6 APPROVED` (Product Owner, 2026-10-08; four rows as revised by the Owner; §12).
 
-Closure waits on: the Product Owner's visual acceptance of the native screenshots (§11 — **not granted yet**) and green CI
+Closure waits on: the Product Owner's visual acceptance of the corrected native screenshots (§11, §13 — **not granted yet**) and green CI
 on the exact final head. Merge waits on the Product Owner's «ادمج». Stage 6 is not started.
 
 | | |
@@ -14,7 +14,7 @@ on the exact final head. Merge waits on the Product Owner's «ادمج». Stage 
 | Branch | `feat/shared-vis-01-shared-living-analysis` |
 | Migration | `0148_shared_semantic_field_living_analysis_v1.sql` (one, additive, its own schema `shared_semantic_private`) |
 | Product Owner decisions | Option A and D1–D7 of the SHARED-VIS-01 Product Decision Gate (2026-10-08), §3 |
-| Does not touch | Personal or Public semantics, the common renderer, Matching (Stage 6), Replay (Stage 7), provider binding (Stage 8A), Voice (8B), economy (9), reactions, heavy-history scale (`LA-SCALE-01`), any I-04 runtime |
+| Does not touch | Personal or Public semantics, the common renderer (the common screen COMPOSITION is corrected once, by the Product Owner's Visual Layout Correction, §13; one line of the frozen `WorldCanvas` is amended under the Product Owner's Controlled Frozen Map Correction, §14), Matching (Stage 6), Replay (Stage 7), provider binding (Stage 8A), Voice (8B), economy (9), reactions, heavy-history scale (`LA-SCALE-01`), any I-04 runtime |
 
 ---
 
@@ -231,3 +231,141 @@ to the first attempt apart from the approved wording. **Product visual acceptanc
 
 Every other word is REUSED from its approved owner (Back, Retry, You, Someone, the S5-03A theme headings, the Living
 Analysis accessible step) or CANON (Manage World, QANDEEL). The proposed wording was replaced exactly by the Owner's.
+
+## 13. Visual Layout Correction (Product Owner, 2026-10-08) — Option 1, a content-sized support band, and two-line MID meanings
+
+**Why.** The Product Owner's review of §11 did not grant visual acceptance: at FAR and MID (and on the empty World) the map
+held only the upper half of the screen above a blank band. Research (no code) found the cause in the common composition,
+not in Shared: S5-03B R1 made a world without a temporal track (`CHROME_ONLY`) keep the WHOLE band every world has, so an
+empty chrome still held half the screen. The Public World showed the same blank band (`.shared-vis-native-proof/11`;
+S5-03B record §24, "by design (R1)"), which was never visually accepted. T-11's own rule — the world's half is a FLOOR and
+"the world grows into whatever the support does not need" — and the LA-VIS-01 rule that composition changes land once in
+the shared stack both point to correcting the common plan.
+
+**Product Owner decision.** Option 1 — content-sized support band — within SHARED-VIS-01, explicitly including its effect
+on the merged Public World; no Shared renderer, no new engine, no other task. D1 composition, D2 focus and motion
+stability, D3 one bounded label improvement (up to two lines), D4 strict exclusions, D5 proportional validation, D6
+visual acceptance only on the Owner's explicit approval.
+
+**What changed (the common stack only).**
+
+- `responsive/plan.ts` — `RecompositionOptions.chromeContentPoints` (the chrome's measured natural height), read ONLY
+  under `CHROME_ONLY`: the band is `min(room, max(ceil(content), bottom safe area))`, where `room` is exactly the band every
+  world had; an empty chrome keeps no gap. The world's basis (half) and floor are unchanged; its ceiling follows from the
+  same numbers, so it only grows and never falls under the half. Unmeasured, the composition is the R1 one.
+  `TIMELINE_AND_CHROME` ignores the measurement: Personal is value-for-value unchanged.
+- `ResponsiveChromeBand` — `onContentHeight`: the natural height of what it holds (a scroller reports none), measured
+  only when its owner asks; `useResponsiveSurface` / `ResponsiveSurface` carry it to the plan.
+- `LivingAnalysisSurface` — measures the chrome only for a world with no temporal track, in whole points.
+- `public-world/field/PublicFieldView.tsx` — `layoutFieldLabels` (consumed by Shared): a meaning wider than the
+  unchanged 148-point label takes a second line (`LABEL_MAX_LINES = 2`), never a wider label; the collision box is the
+  box the lines occupy, centred on the place; a label the frame would cut is still not drawn; ordering, placement, touch
+  targets and the full accessible label (on the place's target) are unchanged. `PublicFieldView` and `SharedFieldView`
+  draw `numberOfLines={label.lines}`.
+
+**D2 — focus and motion.** The camera is World-local and centre-based; a band change resizes the measured world frame
+only, which re-projects the same camera around the new centre (exactly as a window resize always did): the selected
+place, the camera identity and the depth are kept, nothing resets, and the mapping identity (`geometry`) does not change
+with the band. No animation was added; Reduced Motion is untouched. The band height is a number with no World data in it.
+
+**Untouched (D4).** Personal layout and Timeline; backend and migration 0148; Shared sources and permissions; Public
+semantic authority; Conversation, Activity, Direct Entry; the approved copy; world materials, lighting, camera physics,
+motion; the NEAR panel's typography.
+
+**Validation.** Mobile typecheck clean. Focused Jest: `support-capability.test` (+4: a measurement never moves the frozen
+composition across 90 surfaces × 3 bands; unmeasured ≡ R1; empty / small / capped bands with the world's ceiling;
+non-height refused), `living-analysis-surface.test` (+3: an empty chrome holds only the bottom safe area and no gap; content
+is given exactly its band, grows, and is capped; a world with a temporal track never measures), `public-field.test` (+3
+and one assertion: one line for a short meaning, two at the same width for a long one, collision against both lines, a cut
+second line is not drawn). Responsive 105 / 105, Public + Shared 180 / 180, the Personal screen golden and the full mobile
+suite 2356 / 2362 — the 6 failures (`depth`, `w2-account-access`) fail identically with this change stashed and passed in
+CI at `ef917e8` (local environment, C). Static contracts 1237 / 1237, after two controlled re-anchors: T-11 test 6 (the chrome
+band joins the measuring files, pinned to measuring only its content height when asked) and VPORT-02 test 7 (the chrome
+band's new prop); the SHARED-VIS-01 contract gains test 5b. No PostgreSQL rerun (no database change).
+
+
+### 13.1 Device pass of the layout correction (2026-10-09)
+
+- **D3 on Android.** A two-line label under `maxWidth` alone was measured at one line's height and its second line was
+  clipped; two-line labels now carry a definite `width` (one-line labels keep `maxWidth`). Pinned in SHARED-VIS-01 5b.
+- **Composition.** The empty band no longer holds half the screen (Shared FAR / MID / NEAR / sources, the empty World,
+  Public FAR / MID / NEAR — `.shared-vis-native-proof/final-correction/`).
+- **Defect found.** About one time in four, "scroll the place's panel, then Back" left the world without labels and
+  targets until the reader dragged it (`final-correction/g06-stuck-4.png`). An interim mitigation — resizing the band
+  only while the world rests — reduced it and did not remove it; it was never pushed and is withdrawn (§14).
+
+## 14. Controlled Frozen Map Correction (Product Owner, 2026-10-09)
+
+**Authorization.** The Product Owner authorized Option 1: a narrowly scoped correction to the frozen shared-map runtime,
+solely to eliminate the loss of visible / interactable places after map-frame resizing; root cause proven first; no
+redesign, polling, delays, repeated resets or second renderer; the affected frozen contract amended without rewriting its
+history.
+
+**Root cause (proven).** `WorldCanvas`'s `PresentationCameraRebase` reset the presentation plane in the cleanup of an
+effect keyed on the presentation camera **binding**. The binding's identity follows the frame's centre and diagonal
+(`usePresentationCamera` memoizes over them), so every frame resize — not only an unmount — ran `motion.reset()`. Two
+consequences, both reproduced:
+
+1. The running travel was cut short: the plane jumped to rest (a camera jump on resize).
+2. Reanimated 4 posts a React-runtime write to the UI runtime (`scheduleOnUI`) while a React-runtime read is a
+   synchronous read of the UI value (`getSync`). When Back's camera change and the band's resize land as two React tasks
+   before the UI runtime draws a frame, the commit after the resize read the residual that the queued reset was about to
+   discard (zoom ×8) and opened a culling corridor from it; the reset then landed before any frame showed motion, so the
+   rest reaction never saw a rising edge, no rest notification was sent, and the corridor was never retired. `atRest`
+   stayed false: no labels, no targets, until a drag. On the device this was the intermittent case (the earlier device
+   diagnostics showed exactly this: a binding change with residual zoom 8, a commit opening zoom 1–8, then no advance and
+   no retire). The suite-wide Reanimated stand-in runs both runtimes as one, so no existing test could see it. It is a
+   presentation-state defect (rendering / culling), not a gesture or hit-test defect: `nodeAt` and the drawn targets read
+   the same `presented` set.
+
+**Before / after proof.** `apps/mobile/src/map/__tests__/world-resize-race.test.tsx` runs the REAL presentation camera,
+world surface and `WorldCanvas` against `motion/__fixtures__/ui-runtime-model.ts` — a model of exactly the two-runtime
+ordering above (posted writes, synchronous reads, frames that advance animations and run reactions, a queue back to
+React) — over the Public field camera and placement. Twelve cases: the device interleaving; Back and resize in one
+commit; resize 1 / 3 / 8 / 15 frames into the travel; no jump on resize; resize one frame before, at, and after rest;
+the panel opening (MID → NEAR) with the frame shrinking; Reduced Motion (a cut); resize at rest; unmount still resets.
+Each asserts the plane at rest, `atRest`, the presented set equal to a world drawn at rest there, and every presented
+place selected by a touch at its centre. **Before the fix: 3 failed, 9 passed** (the device interleaving, the jump, the
+opening case); **after: 12 / 12** (`.shared-vis-native-proof/frozen-fix/race-test-{BEFORE,AFTER}-fix.txt`).
+
+**The fix (one effect in one frozen file).** `WorldCanvas.tsx` resets the plane on **unmount only**: the latest binding
+is held in a ref (written in a layout effect) and the reset effect has no dependencies. The binding's shared values live
+as long as the surface, so a running travel simply continues in the new frame and comes to rest as every travel does.
+Unchanged: motion durations, easing, springs, the travel plan, Reduced Motion, the corridor rules, `useWorldSurface`,
+`usePresentationCamera`, all paint. Both goldens unchanged. The interim chrome-resize gate is removed
+(`living-analysis/chrome-resize-gate.ts` and its wiring in the surface, both field views and both screens): the band
+follows the chrome at once.
+
+**Frozen contract amendments (history kept).** VPORT-02 hash pin of `WorldCanvas.tsx` (`28dcc706` → `e0ddba00`) and T-10
+§13 (`() => motion.reset(), [motion]` → reset on unmount only, plus a guard that the binding-keyed reset never returns),
+each with a dated note naming this authorization; SHARED-VIS-01 5b re-pinned to the fix and to the gate's absence.
+
+**Verification.** Mobile typecheck clean; lint clean on the changed files. Focused Jest (map, motion, living-analysis,
+responsive, shared-world, public-world, temporal-navigation, integration): 1081 passed, 6 failed — the known `depth` and
+`w2-account-access` baseline failures, unchanged. Static contracts 1237 / 1237. No database, API, migration or copy
+change; no PostgreSQL rerun.
+
+**Native (Android emulator, swiftshader; corrected APK `69662ebb…`, plus one diagnostic APK `6064a680…` with temporary
+logging that was never committed).**
+
+- Shared FAR / MID / NEAR / sources / after Back and Public FAR / MID / NEAR / after Back:
+  `.shared-vis-native-proof/frozen-fix/h02…h11`.
+- **Stability: 12 / 12 "open the place, scroll its panel, Back" cycles PASS** (`frozen-fix/stability/`), with rest read from
+  the screen's pixels — both MID labels drawn, in two screenshots 4 s apart — and every cycle's resting screenshot kept.
+- **The four quick "open, then Back while the camera travels" cycles did not complete: FAIL / inconclusive.** The Back
+  key of quick-1 was not delivered in time (the screenshot shows the place still open); during quick-2 Android raised
+  "QANDEEL isn't responding". The ANR trace shows the main thread inside Skia's frame present (`eglSwapBuffers`)
+  blocked on the emulator's software-GPU pipe (`qemu_pipe_read`) with the device near its memory limit — the emulator
+  class seen in S5-03C, not an app deadlock. The larger frame (D1) makes each software-rendered frame costlier. Only a
+  real-device pass can close this.
+- **Harness defect found and corrected, not a product defect.** Two earlier runs failed on a lost first tap. A
+  diagnostic build proved that `uiautomator`'s accessibility snapshot still held the target's previous position after the
+  frame resized; taps sent there landed on empty map, while the app had the target at its true position and opened the
+  place on every tap that reached it (`frozen-fix/tapdiag/controlled.txt`). Hence the pixel oracle above. **Observation
+  for the Product Owner:** TalkBack reads the same Android accessibility snapshot, so after a resize its explore-by-touch
+  rectangles may briefly lag the targets' new positions (activation by double-tap is unaffected).
+- **Public NEAR label (§13 observation).** After the world settles, the selected place's label is drawn
+  (`frozen-fix/h10b-public-near-later.png`, and in the tree). Labels are drawn only at rest by design, so the earlier
+  missing label was captured before rest; it is not a rendering defect.
+
+**Product visual acceptance: PENDING — not granted.** PR #321 stays open; no merge; Stage 6 unopened.

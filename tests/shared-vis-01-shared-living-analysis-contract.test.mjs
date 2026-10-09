@@ -89,6 +89,34 @@ test('5 — ONE renderer family: the Shared World consumes the common surface an
   }
 });
 
+test('5b — the Product Owner\'s visual correction lands ONCE, in the common stack: a content-sized band and two-line MID meanings', () => {
+  const plan = code('apps/mobile/src/responsive/plan.ts');
+  assert.match(plan, /readonly chromeContentPoints\?: number \| null;/u);
+  assert.match(plan, /const bandPoints = content === null \? cap : Math\.min\(cap, Math\.max\(content, surface\.insetBottom\)\);/u, 'capped at the room every world has');
+  const surface = code('apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx');
+  assert.match(surface, /chromeContentPoints=\{chromeOnly \? chromeContent : null\}/u, 'only a world with no temporal track is measured');
+  // The label layout is Public's, consumed by Shared: one rule, both worlds, never a Shared copy of it.
+  assert.match(code('apps/mobile/src/public-world/field/PublicFieldView.tsx'), /const LABEL_MAX_LINES = 2 as const;/u);
+  for (const view of ['apps/mobile/src/public-world/field/PublicFieldView.tsx', `${FIELD}/SharedFieldView.tsx`]) {
+    assert.match(code(view), /numberOfLines=\{label\.lines\}/u, `${view} draws the lines the layout reserved`);
+    assert.match(code(view), /\.\.\.\(label\.lines === 2 \? \{ width: label\.width \} : \{ maxWidth: label\.width \}\)/u, `${view} gives two lines a definite width`);
+  }
+  assert.doesNotMatch(code(`${FIELD}/SharedFieldView.tsx`), /function layoutFieldLabels|LABEL_MAX_WIDTH/u);
+  // D2 — the band follows the chrome at once; what made a resize mid-travel unsafe was fixed where it lived (the
+  // Product Owner's controlled amendment to the frozen WorldCanvas: the plane is reset on UNMOUNT only, never because
+  // the binding's identity changed with the frame), proven by map/__tests__/world-resize-race.test.tsx. No gate, no
+  // deferral and no second motion path anywhere.
+  const canvas = code('apps/mobile/src/map/renderer/WorldCanvas.tsx');
+  assert.match(canvas, /useLayoutEffect\(\(\) => \(\) => latestMotion\.current\.reset\(\), \[\]\);/u, 'the plane is reset when the world leaves, only');
+  assert.doesNotMatch(canvas, /\(\) => motion\.reset\(\), \[motion\]/u, 'a resized frame no longer resets the plane');
+  assert.ok(existsSync(new URL('apps/mobile/src/map/__tests__/world-resize-race.test.tsx', root)), 'the race is proven against both runtimes');
+  for (const file of [
+    'apps/mobile/src/living-analysis/LivingAnalysisSurface.tsx', `${FIELD}/SharedLivingAnalysis.tsx`, `${FIELD}/SharedFieldView.tsx`,
+    'apps/mobile/src/public-world/field/PublicLivingAnalysis.tsx', 'apps/mobile/src/public-world/field/PublicFieldView.tsx',
+  ]) assert.doesNotMatch(code(file), /chromeGate|ChromeResizeGate|reportWorldMotion/u, `${file} defers nothing`);
+  assert.ok(!existsSync(new URL('apps/mobile/src/living-analysis/chrome-resize-gate.ts', root)), 'the interim gate is gone');
+});
+
 test('6 — the Copy Gate: reused words exactly; CLOSED — 6 / 6 APPROVED by the Product Owner', () => {
   const copy = read(`${FIELD}/field-copy.ts`);
   assert.match(copy, /status: 'SHARED-VIS-01 PRODUCT COPY GATE — CLOSED — 6 \/ 6 APPROVED[^']*'/u);
