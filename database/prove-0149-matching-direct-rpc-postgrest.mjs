@@ -35,12 +35,24 @@ function jwt(claims) {
   return `${unsigned}.${createHmac('sha256', secret).update(unsigned).digest('base64url')}`;
 }
 
-/** One RPC, sent the way the Supabase client libraries send it. */
+/**
+ * One RPC, sent the way the Supabase client libraries send it.
+ *
+ * PostgREST before v16 runs every request through hasql-transaction, which re-runs the whole transaction, without bound,
+ * whenever it fails with SQLSTATE 40001. A request whose answer is deterministically 40001 (MATCHING_STALE_STATE) is
+ * therefore never answered on v12 / v13 / v14. This proof sends no such request - verify-migration-0149.mjs proves the
+ * 40001 refusals under SET ROLE - and a request left unanswered fails here within RPC_TIMEOUT_MS, naming the boundary,
+ * instead of hanging until the HTTP client gives up.
+ */
+const RPC_TIMEOUT_MS = 30_000;
 async function rpc(token, name, body) {
   const response = await fetch(`${postgrestUrl}/rpc/${name}`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
+    signal: AbortSignal.timeout(RPC_TIMEOUT_MS),
+  }).then((answered) => answered, (error) => {
+    throw new Error(`POST /rpc/${name} was not answered (${error?.name ?? 'Error'}: ${error?.message ?? error})`, { cause: error });
   });
   const text = await response.text();
   return { status: response.status, body: text.length > 0 ? JSON.parse(text) : null };
@@ -56,8 +68,10 @@ const ARGUMENTS = {
   set_introduction_profile_v1: (s) => ({ p_command_id: randomUUID(), p_field_keys: ['life_stage'], p_field_values: ['settled and ready'], p_expected_current_version_id: s?.profile ?? null }),
   set_matching_requirements_v1: (s) => ({ p_command_id: randomUUID(), p_requirement_keys: ['faith_practice_level'], p_requirement_strengths: ['HARD_DEALBREAKER'], p_requirement_values: ['practising'], p_expected_current_version_id: s?.requirements ?? null }),
   grant_pre_match_disclosure_authority_v1: (s) => ({ p_command_id: randomUUID(), p_new_authority_id: randomUUID(), p_profile_version_id: s?.profile ?? randomUUID(), p_approved_field_keys: ['life_stage'], p_expected_active_authority_id: s?.authority ?? null }),
-  pause_matching_participation_v1: (s) => ({ p_command_id: randomUUID(), p_expected_current_event_id: s?.act ?? randomUUID() }),
-  turn_off_matching_participation_v1: (s) => ({ p_command_id: randomUUID(), p_expected_current_event_id: s?.act ?? randomUUID() }),
+  // Without a setup there is no current act to name: a null expectation is refused 22023 before any write, where any
+  // other id would be the 40001 stale-state refusal that PostgREST < v16 never answers (see rpc).
+  pause_matching_participation_v1: (s) => ({ p_command_id: randomUUID(), p_expected_current_event_id: s?.act ?? null }),
+  turn_off_matching_participation_v1: (s) => ({ p_command_id: randomUUID(), p_expected_current_event_id: s?.act ?? null }),
   revoke_matching_context_v1: (s) => ({ p_command_id: randomUUID(), p_expected_active_grant_id: s?.grant ?? randomUUID() }),
   revoke_pre_match_disclosure_authority_v1: (s) => ({ p_command_id: randomUUID(), p_expected_active_authority_id: s?.authority ?? randomUUID() }),
   get_my_matching_setup_v1: () => ({}),
@@ -93,6 +107,7 @@ async function main() {
   const [fresh, existing, other] = [randomUUID(), randomUUID(), randomUUID()];
   const humans = [fresh, existing, other];
   const outcomes = new Set();
+  let failure = null;
   try {
     stage = 'the request shapes are the live signatures';
     for (const fn of [...SEC_MATCH_00_SUSPENDED, ...SEC_MATCH_00_RETAINED]) {
@@ -139,7 +154,7 @@ async function main() {
         assert.equal(answer.body[0].participation_state, 'OFF');
       } else {
         assert.ok(answer.status >= 400, `${fn} commits nothing for a fresh account (${answer.status})`);
-        assert.ok(['40001', 'P0002'].includes(answer.body?.code), `${fn} is refused by its own bounded rule, not by privilege (${JSON.stringify(answer.body)})`);
+        assert.ok(['22023', 'P0002'].includes(answer.body?.code), `${fn} is refused by its own bounded rule, not by privilege (${JSON.stringify(answer.body)})`);
       }
     }
     assert.equal(await matchingRows(fresh), 0, 'the fresh account has no Matching row at all');
@@ -181,10 +196,24 @@ async function main() {
     }
 
     console.log(`Verified SEC-MATCH-00 through live PostgREST ${version}: the six suspended Matching setup commands are not callable by an authenticated, anon or service-role token (${[...outcomes].sort().join(' / ')}), a fresh account that tried all eleven has no Matching row, and an existing account still inspects its setup, revokes both authorities, pauses and turns participation off under its own token while another token moves nothing.`);
-  } finally {
-    stage = 'fixture removal';
-    await removeFixtures(humans).finally(() => rt.client.end());
+  } catch (error) {
+    failure = { stage, error };
   }
+  // The fixtures are removed whatever happened above. A failure above keeps the stage it happened at, and a removal
+  // failure is reported together with it - never instead of it.
+  stage = 'fixture removal';
+  const removal = await removeFixtures(humans).then(() => null, (error) => error ?? new Error('fixture removal failed'))
+    .finally(() => rt.client.end());
+  if (failure && removal) {
+    stage = failure.stage;
+    throw new AggregateError([failure.error, removal],
+      `${failure.error?.message ?? failure.error}; the fixture removal that followed ALSO failed: ${removal?.message ?? removal}`);
+  }
+  if (failure) {
+    stage = failure.stage;
+    throw failure.error;
+  }
+  if (removal) throw removal;
 }
 
 try {

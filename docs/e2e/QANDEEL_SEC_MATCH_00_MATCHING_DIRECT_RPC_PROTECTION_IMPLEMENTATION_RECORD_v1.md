@@ -186,6 +186,25 @@ exercised end to end against a scratch stand-in. The stand-in models one transac
 from the token, claims as a transaction GUC and PostgREST's `42501` mapping; it is **not** PostgREST, and this record
 does not claim a live PostgREST result until CI reports it.
 
+**First exact-head CI (`d8afff6`): the wire proof failed on `v12.2.9`, and the proof was corrected.**
+- Every other API CI step passed, including `verify-0149` and the forward-safety gate.
+- The proof sent the fresh account's pause and turn-off a random expected act id. The answer to that is
+  deterministically `40001 MATCHING_STALE_STATE`.
+- PostgREST before `v16.0` re-runs a transaction that fails with `40001` without bound (§11.6). The request was
+  never answered, and the HTTP client gave up after 300 s.
+- The failure was reproduced locally with a stand-in that adds PostgREST's retry rule: the same request was
+  re-run about 2,000 times a second.
+
+The corrected proof:
+- sends those two calls a null expectation, refused `22023` before any write;
+- bounds every request at 30 s and names the boundary that went unanswered;
+- reports a failure at the stage where it happened;
+- always removes its fixtures, and reports a removal failure together with any earlier failure, never instead of
+  it.
+
+The `40001` refusals themselves are unchanged and stay proven on real PostgreSQL by `verify-0149`: a fresh and an
+existing human, and the `X01` race. A green wire proof says nothing about the hosted project's PostgREST (§11.6).
+
 **Static, local:**
 
 | Check | Result |
@@ -254,6 +273,26 @@ C2 is not a deployment. A future deployment is its own Product Owner approval. W
    - whether any distributed mobile build points at the project.
 5. The hosted project is 74 migrations behind `main`. That catch-up is a separate, planned deployment; `0149` does
    not change its other risks.
+6. **Blocking condition: unbounded `40001` retry.**
+   - **The risk.** PostgREST before `v16.0` runs every request through `hasql-transaction`. That library re-runs the
+     whole transaction, without any bound, whenever it fails with `40001` (`serialization_failure`). It does the same
+     for `40P01` from `hasql-transaction` 1.1. PostgREST `v16.0` stopped this (PostgREST #3673).
+   - **Why Matching is affected.** The four retained Matching mutations (pause, turn off and the two revocations)
+     answer a stale expectation with a deterministic `40001 MATCHING_STALE_STATE`. Revoking an already-revoked grant
+     is one example.
+   - **The effect.** Through such a PostgREST, one such request from any signed-in user is never answered. It keeps
+     a pool connection re-running the transaction. This was shown in API CI against `v12.2.9` (§9).
+   - **The rule.** No deployment may expose `0109` through the Data API while the hosted project's PostgREST would
+     re-run a `40001` transaction. Before such a deployment, one of these must hold:
+     - **(a)** the hosted project's PostgREST is `v16.0` or later. This must be verified on the hosted project itself,
+       never inferred from the upstream release.
+     - **(b)** a separately approved forward migration answers the stale-state refusal with a SQLSTATE that is never
+       re-run. That migration must keep the compare-and-swap, the refusal to write over a stale state, the semantic
+       `MATCHING_STALE_STATE` message, and every security guarantee, and it must not change user data.
+   - **Rejected.** Moving these commands off the Data API is rejected for now.
+   - **What CI proves.** A green API CI run proves the repository's behaviour on CI's PostgREST lines. It is **not**
+     evidence that this operational risk is handled on the hosted project. That needs its own evidence-based closure
+     decision.
 
 ## 12. Known limitations and residuals
 
@@ -268,6 +307,11 @@ C2 is not a deployment. A future deployment is its own Product Owner approval. W
   toggle to race, which is why §11.2 keeps the window closed.
 - **Stage 6 work.** Restoring enrollment, correction and resume is Stage 6 work (`QAN-BL-MATCH-01`). Until then,
   Matching cannot launch.
+- **The `40001` retry hazard is wider than Matching.** Other functions an `authenticated` token can execute also
+  answer `40001`, including two that predate the hosted schema's `0074`. SEC-MATCH-00 neither creates nor closes this
+  hazard; `0149` narrows it by closing six of the ten Matching commands that raise it. Assessing it is a separate
+  report the Product Owner requested. The hazard needs a backlog disposition (BG-08) no later than the change that
+  closes SEC-MATCH-00.
 
 ## 13. Files changed
 

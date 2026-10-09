@@ -4346,7 +4346,9 @@ first creation), until a reviewed Stage 6 launch path exists (`QAN-BL-MATCH-01`,
 already committed command of the six now answers 42501. No Matching row is touched, and `QAN-BL-ACCT-01` stays OPEN.
 
 **Deployment rule.** Never expose 0108 / 0109 to live signed-in users without 0149 taking effect in the same controlled
-deployment window. Keep the Data API closed to signed-in use until the effective privileges are verified.
+deployment window. Keep the Data API closed to signed-in use until the effective privileges are verified. Never expose
+0109 through a hosted PostgREST that re-runs a 40001 transaction (every line before v16.0): the retained commands'
+stale-state refusal would never be answered (implementation record §11.6).
 
 ```sh
 npm run verify:matching-setup-direct-rpc-narrowing:integration

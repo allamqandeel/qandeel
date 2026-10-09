@@ -1442,7 +1442,9 @@ What the amendment changes, and what it leaves frozen:
 
 **Deployment requirement.** Never expose `0108` / `0109` to live signed-in users without `0149` taking effect in the
 same controlled deployment window. Keep the Data API closed to signed-in use until the effective privileges are
-verified.
+verified. Never expose `0109` through a hosted PostgREST that re-runs a `40001` transaction (every line before
+`v16.0`). The retained commands' stale-state refusal would never be answered. This is a deployment condition, not a
+change to the `I-07A` refusal contract; see the SEC-MATCH-00 implementation record §11.6.
 
 **Verification.** `verify-migration-0149.mjs` proves this on real PostgreSQL: 20 independent scenarios under real
 `SET ROLE` sessions, including the hosted default-privilege posture and three refused weakenings.
