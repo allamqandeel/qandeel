@@ -3,6 +3,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import YAML from 'yaml';
 
 const root = new URL('../', import.meta.url);
 const packageJson = JSON.parse(await readFile(new URL('package.json', root), 'utf8'));
@@ -91,8 +92,9 @@ test('keeps preflight and diagnostics privacy-safe', () => {
 });
 
 test('keeps API CI aligned with the complete safe PostgreSQL 17 baseline', () => {
-  assert.match(apiCi, /image: postgres:17/u);
-  assert.match(apiCi, /image: redis:7/u);
+  const services = YAML.parse(apiCi).jobs['verify-api'].services;
+  assert.match(services.postgres.image, /^public\.ecr\.aws\/docker\/library\/postgres:17@sha256:[0-9a-f]{64}$/u);
+  assert.match(services.redis.image, /^public\.ecr\.aws\/docker\/library\/redis:7@sha256:[0-9a-f]{64}$/u);
   assert.match(apiCi, /run: npm run test:toolchain/u);
   assert.match(apiCi, /paths: \[[^\n]*'tests\/\*\*'[^\n]*'package-lock\.json'/u);
   for (const command of [

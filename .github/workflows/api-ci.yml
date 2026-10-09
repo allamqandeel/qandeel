@@ -46,16 +46,19 @@ jobs:
     needs: [plan]
     if: ${{ !cancelled() && needs.plan.outputs.api_heavy != 'CARRY_FORWARD' }}
     runs-on: ubuntu-latest
+    # The service images are the Docker Official Images served by Amazon ECR Public, pinned by digest (the same
+    # digests Docker Hub serves): Docker Hub's anonymous pull limit, shared by every job on the runner's address,
+    # refused postgres:17 before any step ran. PostgreSQL 17.11 and Redis 7.4.11; a newer image is a deliberate edit.
     services:
       postgres:
-        image: postgres:17
+        image: public.ecr.aws/docker/library/postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
         env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: qandeel_test}
         ports: ['5432:5432']
         options: >-
           --health-cmd="pg_isready -U postgres -d qandeel_test"
           --health-interval=5s --health-timeout=5s --health-retries=12
       redis:
-        image: redis:7
+        image: public.ecr.aws/docker/library/redis:7@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
         ports: ['6379:6379']
         options: >-
           --health-cmd="redis-cli ping"
@@ -984,6 +987,9 @@ jobs:
             echo "${release_sha256[$version]}  $asset" | sha256sum --check --strict
             xz --decompress --stdout "$asset" > "${asset%.xz}"
             docker import --change 'USER 1000' --change 'CMD ["/postgrest"]' "${asset%.xz}" "postgrest-release:$version" >/dev/null
+            settings="$(docker image inspect --format '{{.Config.User}} {{json .Config.Cmd}}' "postgrest-release:$version")"
+            echo "postgrest-release:$version user and command: $settings"
+            [ "$settings" = '1000 ["/postgrest"]' ] || { echo "::error::postgrest-release:$version does not run /postgrest as user 1000"; exit 1; }
             docker run -d --rm --name "postgrest-$version" --network host \
               -e PGRST_DB_URI="postgresql://authenticator:authenticator@localhost:5432/qandeel_test" \
               -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon \
