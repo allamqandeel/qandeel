@@ -49,7 +49,10 @@
 //       or pair identifier exists anywhere in the authority substrate
 //
 //   G01 every boundary is executable by `authenticated` and by nobody else, and
-//       no application role reaches a table directly
+//       no application role reaches a table directly. Since the SEC-MATCH-00
+//       controlled forward amendment (migration 0149) the six widening
+//       commands are executable by NO application role until a reviewed Stage 6
+//       launch path exists; the other five keep exactly this grant
 //   G02 a service credential can manufacture no human Matching consent
 //
 //   X01 two concurrent first activations serialize on the caller's own lock row,
@@ -68,7 +71,7 @@ import { createScenarioReport } from './verifier-scenarios.mjs';
 import {
   createMatchingRuntime, M, MFN, MATCHING_TABLES, MATCHING_COMMANDS, RESERVED_PAUSE_REASONS,
   ENTRY_CHANNELS, MATCHING_DISCLOSURE_BAN, LATER_SLICE_LIFECYCLE_RELATIONS, MATCHING_LIFECYCLE_WORDS,
-  runVerifier, APP_ROLES,
+  SEC_MATCH_00_SUSPENDED, runVerifier, APP_ROLES,
 } from './matching-setup-verifier-support.mjs';
 
 const rt = createMatchingRuntime(process.env.DATABASE_URL);
@@ -97,7 +100,11 @@ async function verifyCatalog() {
     for (const role of ['public', 'anon', 'service_role']) {
       assert.equal(await rt.canExecute(role, fn), false, `G02 ${role} must not execute ${fn}`);
     }
-    assert.equal(await rt.canExecute('authenticated', fn), true, `G01 authenticated executes ${fn}`);
+    // 0109 granted all eleven to authenticated. The SEC-MATCH-00 controlled forward amendment (migration 0149)
+    // withdrew the six widening commands from every application role; the I-07A contract asserted above - owner,
+    // definer, pinned path, auth.uid(), no system credential - is unchanged, and the five keep this grant.
+    assert.equal(await rt.canExecute('authenticated', fn), !SEC_MATCH_00_SUSPENDED.includes(fn),
+      SEC_MATCH_00_SUSPENDED.includes(fn) ? `G01 since 0149 authenticated no longer executes ${fn}` : `G01 authenticated executes ${fn}`);
     // No boundary accepts an identity, a state, a reason or a timestamp: the
     // human is auth.uid() and every state literal is the function's own identity.
     const parameters = await rt.inputParameters(fn);
@@ -788,12 +795,18 @@ async function verifyAccess(report, humans) {
       await asRole('authenticated', one);
       const [current] = await rt.setup();
       assert.equal(current.participation_state, 'OFF', 'G01 a real authenticated session reaches the projection');
+      // Since 0149 (SEC-MATCH-00) activation is not client-executable, so the participation a retained command acts
+      // on is reached as the owner with the human's own claims - state committed before 0149.
+      await rejected(() => rt.activate(randomUUID(), 'MANUAL_MY_WORLD_ENTRY'), ['42501'], /permission denied/iu);
+      await actAs(one);
       const [activated] = await rt.activate(randomUUID(), 'MANUAL_MY_WORLD_ENTRY');
-      assert.equal(activated.participation_state, 'ACTIVE', 'G01 and reaches a command');
+      await asRole('authenticated', one);
+      const [paused] = await rt.pause(randomUUID(), activated.participation_event_id);
+      assert.equal(paused.participation_state, 'PAUSED', 'G01 and reaches a command it still holds');
       // An authenticated session with no subject claim has no identity at all.
       await asRole('authenticated', null);
       await rejected(() => rt.setup(), ['42501'], /MATCHING_AUTHENTICATION_REQUIRED/u);
-      await rejected(() => rt.activate(randomUUID(), 'MANUAL_MY_WORLD_ENTRY'),
+      await rejected(() => rt.pause(randomUUID(), activated.participation_event_id),
         ['42501'], /MATCHING_AUTHENTICATION_REQUIRED/u);
     });
 

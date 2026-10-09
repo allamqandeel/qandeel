@@ -125,6 +125,7 @@ jobs:
       - {name: "Verify S5-03C Public Explicit Relations + Integrity Closure static contract", run: npm run test:s5-03c-public-explicit-relations-integrity-contract}
       - {name: "Verify S5-04 Public Discussion + @qandeel + Final Public Integration static contract", run: npm run test:s5-04-public-discussion-qandeel-final-integration-contract}
       - {name: "Verify SHARED-VIS-01 Shared World Living Analysis static contract", run: npm run test:shared-vis-01-shared-living-analysis-contract}
+      - {name: "Verify SEC-MATCH-00 Matching direct-RPC protection static contract", run: npm run test:sec-match-00-matching-direct-rpc-protection-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -944,6 +945,14 @@ jobs:
       # by the frozen owner-deletion closure; the ended World's conversation carries no place.
       - name: Verify SHARED-VIS-01 Shared semantic places and the member field read against real PostgreSQL
         run: npm run verify:shared-semantic-field:integration
+      # SEC-MATCH-00: the controlled forward amendment to the frozen I-07A surface. The six widening Matching setup
+      # commands are executable by no application role (PUBLIC, anon, authenticated, service_role, inheritance included)
+      # and every real call is 42501; a fresh human commits no Matching row; an existing human still pauses, turns off,
+      # revokes both authorities and inspects their own setup; retries, ownership and lock-row serialization are intact;
+      # no other client route reaches a Matching write; re-applied over the hosted default-privilege posture it closes
+      # all six and touches no row; and a reopened grant or a client wrapper is refused by the regression checks.
+      - name: Verify SEC-MATCH-00 Matching setup pre-launch direct-execute narrowing against real PostgreSQL
+        run: npm run verify:matching-setup-direct-rpc-narrowing:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
@@ -953,7 +962,7 @@ jobs:
       # and proves the bounded admission is HTTP 429 {code PT429, message TURN_ADMISSION_LIMITED}, the replay stays
       # 409, and the work commands answer the row shapes the API reads. It runs last because it adds the standard
       # PostgREST login role, which it drops again. The JWT secret signs tokens for this throwaway container only.
-      - name: Prove PROD-SEC-02 refusal contract and PROD-OPS-01 readiness through live PostgREST
+      - name: Prove PROD-SEC-02 refusal contract, PROD-OPS-01 readiness and SEC-MATCH-00 direct-RPC refusal through live PostgREST
         env:
           POSTGREST_URL: http://localhost:3001
           POSTGREST_JWT_SECRET: ci-only-throwaway-postgrest-signing-secret-prod-sec-02
@@ -975,6 +984,8 @@ jobs:
             POSTGREST_VERSION="$version" npm run --silent prove:turn-admission-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
             # PROD-OPS-01: the API's own compiled readiness probe and summary repository against the same live engine.
             POSTGREST_VERSION="$version" npm run --silent prove:operational-readiness:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # SEC-MATCH-00: the six suspended Matching setup commands refuse every token on the wire; the five retained work.
+            POSTGREST_VERSION="$version" npm run --silent prove:matching-direct-rpc-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"
