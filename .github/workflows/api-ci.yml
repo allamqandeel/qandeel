@@ -962,18 +962,33 @@ jobs:
       # and proves the bounded admission is HTTP 429 {code PT429, message TURN_ADMISSION_LIMITED}, the replay stays
       # 409, and the work commands answer the row shapes the API reads. It runs last because it adds the standard
       # PostgREST login role, which it drops again. The JWT secret signs tokens for this throwaway container only.
+      # The engines are not pulled from Docker Hub, whose anonymous pull limit is shared by every job on the runner's
+      # address and refused v13.0.8 mid-step. Each is imported locally from PostgREST's own release asset, which holds,
+      # byte for byte, the executable the postgrest/postgrest image of that tag runs; an asset whose sha256 is not the
+      # one pinned here stops the step before anything runs.
       - name: Prove PROD-SEC-02 refusal contract, PROD-OPS-01 readiness and SEC-MATCH-00 direct-RPC refusal through live PostgREST
         env:
           POSTGREST_URL: http://localhost:3001
           POSTGREST_JWT_SECRET: ci-only-throwaway-postgrest-signing-secret-prod-sec-02
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticator LOGIN PASSWORD 'authenticator' NOINHERIT" -c "GRANT anon, authenticated, service_role TO authenticator"
+          declare -A release_sha256=(
+            [v12.2.9]=cfed98394d6f81a96a37225fe0792a6b0094c62dcde04009e6c5c9d2fddfb0bc
+            [v13.0.8]=eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279
+            [v14.18]=98de1c0be7787aea5f5e11a25f303ea0077634d6fc1000b687bfa825fd27d299
+            [v16.4]=b47ecc82fce1dcebbbc4183d839e52f07f7630c9d7ad0f54db753d1939299354
+          )
           for version in v12.2.9 v13.0.8 v14.18 v16.4; do
+            asset="$RUNNER_TEMP/postgrest-$version-linux-static-x86-64.tar.xz"
+            curl -fsSL --retry 3 -o "$asset" "https://github.com/PostgREST/postgrest/releases/download/$version/postgrest-$version-linux-static-x86-64.tar.xz"
+            echo "${release_sha256[$version]}  $asset" | sha256sum --check --strict
+            xz --decompress --stdout "$asset" > "${asset%.xz}"
+            docker import --change 'USER 1000' --change 'CMD ["/postgrest"]' "${asset%.xz}" "postgrest-release:$version" >/dev/null
             docker run -d --rm --name "postgrest-$version" --network host \
               -e PGRST_DB_URI="postgresql://authenticator:authenticator@localhost:5432/qandeel_test" \
               -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon \
               -e PGRST_JWT_SECRET="$POSTGREST_JWT_SECRET" -e PGRST_SERVER_PORT=3001 \
-              "postgrest/postgrest:$version" >/dev/null
+              "postgrest-release:$version" >/dev/null
             ready=""
             for attempt in $(seq 1 60); do
               status=$(curl -s -o /dev/null -w '%{http_code}' "$POSTGREST_URL/" || true)
