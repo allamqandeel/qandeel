@@ -182,6 +182,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-05` | QANDEEL Conversational Output Cannot Be a Shared Semantic-Place Source | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-06` | The Ended Shared World Has No Read-Only Living Analysis View | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CW-07` | Shared World Temporal Navigation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
+| `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-01 — Intelligent Matching Onboarding` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -660,6 +661,23 @@ A discussion post provisions the ONE Public Identity exactly as S5-02 does. Thes
 this blocker. This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged
 ([S5-04 record](e2e/QANDEEL_S5_04_PUBLIC_DISCUSSION_QANDEEL_FINAL_INTEGRATION_IMPLEMENTATION_RECORD_v1.md) §15).
 
+**Current-truth note (SEC-MATCH-00, 2026-10-09; implemented, not merged).** SEC-MATCH-00 protects this item. It does
+not solve it.
+
+- **The proven risk (C0).** Any signed-in account could call four direct `0109` commands with no Matching history and
+  commit a `matching_setup_locks` row (`ON DELETE RESTRICT` to the account). Every `0108` relation refuses `DELETE`,
+  so the governed Personal erasure (`0130`) then answers `BLOCKED` with no governed recovery.
+- **The protection.** Migration `0149` makes the six widening commands executable by no application role. An account
+  that never had a Matching footprint can no longer acquire one through any client route; this is proven by real
+  PostgreSQL and live PostgREST.
+- **What it does not do.** It erases nothing. An account that already holds a Matching footprint keeps it, and its
+  erasure stays truthfully `BLOCKED`, never relabeled as deleted. Every Matching `RESTRICT` reference to the account
+  is unchanged.
+- **The hosted environment** is `NOT_DEPLOYED` (C1, metadata only), so no production footprint can exist today.
+
+This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged
+([SEC-MATCH-00 record](e2e/QANDEEL_SEC_MATCH_00_MATCHING_DIRECT_RPC_PROTECTION_IMPLEMENTATION_RECORD_v1.md) §7).
+
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
 - **Title / Finding:** the exceptional lantern gateway identity moment is frozen as **present in v1**, but it has no
@@ -1116,6 +1134,36 @@ Admitted by SHARED-VIS-01 (2026-10-08). Admission authorizes no implementation (
 - **Status:** `OPEN — UNASSIGNED`
 
 Admitted by SHARED-VIS-01 at the Product Owner's D5 (2026-10-08). Admission authorizes no implementation (BG-07).
+
+### `QAN-BL-MATCH-01` — Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00)
+
+- **Title / Finding:** migration `0149` (SEC-MATCH-00) withdraws direct `EXECUTE` from every application role on six
+  `0109` Matching setup boundaries: `activate_matching_participation_v1`, `resume_matching_participation_v1`,
+  `grant_matching_context_v1`, `set_introduction_profile_v1`, `set_matching_requirements_v1` and
+  `grant_pre_match_disclosure_authority_v1`. Until a reviewed launch path exists, nobody can newly enroll in Matching,
+  resume a pause, correct an Introduction Profile or requirement set, or grant or reconfirm either authority. Pause,
+  turn off, both revocations and self-inspection stay available to every existing human.
+- **Source:** [SEC-MATCH-00 implementation record](e2e/QANDEEL_SEC_MATCH_00_MATCHING_DIRECT_RPC_PROTECTION_IMPLEMENTATION_RECORD_v1.md)
+  §5 and §8, and [Matching / Introduction Runtime §47](matching-introduction-runtime-v1.md). These record the Product
+  Owner's decision `APPROVE_C2_PATCH_B` (2026-10-09): corrections and resume are suspended before launch, and C2
+  invents no correction or enrollment wrapper.
+- **Current truth:** the six are executable only by their owner. The I-07A bodies, the lock order and the authority
+  independence are unchanged. No API route or mobile surface calls any Matching setup command.
+- **Why deferred:** Matching is not launched and the `CW2-08` launch gates are closed. Reopening enrollment needs a
+  reviewed, launch-gated, owner-authorized path. That path must not commit a deletion-blocking footprint for an
+  account that has not truly enrolled (`QAN-BL-ACCT-01`). This is Stage 6 Product work, not a security hot-fix.
+- **Owner task:** `S6-01 — Intelligent Matching Onboarding`
+- **Severity:** `HIGH`. Matching cannot launch to users while enrollment and correction are closed. Reopening them
+  carelessly would bring back the deletion-blocking exposure SEC-MATCH-00 closed.
+- **Reopen condition:** automatic when S6-01 resumes, or when any task takes Matching toward users.
+- **Required future property:** no application role regains direct `EXECUTE` on the six through a plain grant, a
+  default privilege, a re-created function or a client-executable wrapper. Any reopening runs behind a reviewed,
+  fail-closed, server-canonical launch path that the Product Owner approves. The deployment rule stays: `0108` /
+  `0109` never reach live signed-in users without `0149` in the same controlled window.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by SEC-MATCH-00 under BG-08 / BG-06: it is a canonical record's explicit deferral to a named future task. The
+entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes implementation (BG-07).
 
 ---
 
@@ -1593,15 +1641,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 20 |
+| `DEFERRED — OWNED` | 21 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **48** |
+| **Total** | **49** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 27 |
+| `HIGH` | 28 |
 | `MEDIUM` | 20 |
 | `LOW` | 1 |
 
@@ -1916,6 +1964,22 @@ Shared World's read-only Living Analysis view) and `QAN-BL-CW-07` (Shared tempor
 review; `DEFERRED — OWNED`), while `QAN-BL-CW-06` and `QAN-BL-CW-07` are deferred with no named owner and stay
 `OPEN — UNASSIGNED`. Counts: 20 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`; by severity, 27 `HIGH`, 20 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**SEC-MATCH-00 reconciliation (2026-10-09; implemented, not merged).** SEC-MATCH-00 is the P0 Matching direct-RPC
+and account-deletion protection, migration `0149`. It is a cross-cutting security checkpoint ahead of CI-01, not a
+Product stage.
+
+- **Inherited items (BG-05):** none by owner.
+- **Admitted:** `QAN-BL-MATCH-01` (`HIGH`, `DEFERRED — OWNED`, owner `S6-01`). The Product Owner's decision suspends
+  enrollment, correction and resume before launch; restoring them through a reviewed, launch-gated path is Stage 6
+  work and must not survive only in a record.
+- **`QAN-BL-ACCT-01`:** stays `HIGH`, `OPEN — UNASSIGNED`, with a current-truth note. `0149` stops new Matching
+  footprints and erases nothing.
+- **`QAN-BL-SEC-01`:** unchanged.
+
+The register now holds **49** items: 21 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`. By severity: 28 `HIGH`, 20 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
 ---
 
 ## 8. What is deliberately not in this backlog

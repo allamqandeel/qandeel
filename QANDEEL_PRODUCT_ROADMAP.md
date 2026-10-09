@@ -241,3 +241,19 @@ This is a controlled sequencing / status reconciliation. It rewrites no P1–P4 
   Contract and the Product Owner's Decision Gate (Option A, D1–D7) — ACTIVE, not merged
   ([record](docs/e2e/QANDEEL_SHARED_VIS_01_SHARED_WORLD_LIVING_ANALYSIS_IMPLEMENTATION_RECORD_v1.md)).
 - **Not started:** Stage 6 Matching, Stage 7 Replay, Stage 8A AI Brain, Stage 8B Voice, Stage 9 Economy / Launch.
+
+### 6.3 Execution note — 2026-10-09 (SEC-MATCH-00)
+**Recorded:** 2026-10-09 by SEC-MATCH-00. This is a status note only: it rewrites no earlier section and authorizes
+nothing.
+- **Inserted ahead of CI-01: SEC-MATCH-00 — Matching Direct-RPC Exposure & Account-Deletion Protection.** It is a P0
+  cross-cutting security checkpoint, not a Product stage, and runs under its own Task Contract and the Product
+  Owner's C0 / C1 / C2 gates.
+  - C1 classified the hosted environment as `NOT_DEPLOYED`.
+  - C2 (`APPROVE_C2_PATCH_B`, migration `0149`) is implemented and not merged; it is awaiting independent review and
+    the Product Owner's merge decision
+    ([record](docs/e2e/QANDEEL_SEC_MATCH_00_MATCHING_DIRECT_RPC_PROTECTION_IMPLEMENTATION_RECORD_v1.md)).
+  - Deploying it is a separate approval.
+- **Next after SEC-MATCH-00 closes: CI-01 — Shared Intelligence Learning Evidence & Baseline.** It has not started.
+- **Paused:** S6-01 (Stage 6, Intelligent Matching Onboarding) stays at its decision checkpoint. It now owns
+  `QAN-BL-MATCH-01`: Matching enrollment, correction and resume stay suspended until a reviewed Stage 6 launch path
+  exists.

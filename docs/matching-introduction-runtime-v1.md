@@ -191,6 +191,9 @@ arguments; the same id carrying a different request fails closed with `23505`, a
 covers the whole immutable request including the exact committed field or key set. Every consequential
 command names the exact current identity it expects, and any other current state is a bounded `40001`.
 
+> **Forward amendment — `SEC-MATCH-00`, migration `0149` (§47).** Six of these boundaries are currently
+> executable by no application role. The paragraphs above remain the frozen `I-07A` record.
+
 ## 8. No oracle
 
 No command takes a human identifier, so a caller cannot even phrase a question about someone else, and
@@ -1390,3 +1393,63 @@ Exact-head `API CI #745` and `Mobile CI #314` were also green. Historical migrat
 **BG-08 / BG-09:** no new backlog obligation is admitted and no phase status changes. `I-07A`,
 `I-07B`, `I-07C`, `I-07D` and parent `I-07` remain **CLOSED / FROZEN**; this section records a
 forward correctness remediation to those frozen semantics, not a reopening of Product scope.
+
+## 47. `SEC-MATCH-00` — controlled forward amendment to the `I-07A` direct-execute surface
+
+**Lifecycle:** implemented on `sec/sec-match-00-direct-rpc-protection`; awaiting independent review and the Product
+Owner's merge decision. Not deployed. Record:
+[SEC-MATCH-00 implementation record](e2e/QANDEEL_SEC_MATCH_00_MATCHING_DIRECT_RPC_PROTECTION_IMPLEMENTATION_RECORD_v1.md).
+
+`I-07A` froze eleven boundaries executable by `authenticated` (§7). Matching is not launched: Stage 6 has not started
+and the `CW2-08` launch gates are closed. A hidden mobile surface is not an access control, and the SEC-MATCH-00 C0
+investigation proved that any signed-in account could call four of the commands directly with no Matching history and
+commit a footprint: `activate_matching_participation_v1`, `grant_matching_context_v1`, `set_introduction_profile_v1`
+and `set_matching_requirements_v1`. Each one writes the caller's `matching_setup_locks` row (`ON DELETE RESTRICT` to the
+account), every `0108` relation refuses `DELETE`, and so the governed Personal erasure (`0130`) then truthfully
+answers `BLOCKED` for that account (`QAN-BL-ACCT-01`). The C1 inspection classified the hosted environment as
+`NOT_DEPLOYED`: none of `0075`–`0148` is applied there.
+
+The Product Owner approved `APPROVE_C2_PATCH_B` (2026-10-09). Forward migration
+`0149_matching_setup_pre_launch_direct_execute_narrowing_v1.sql` withdraws `EXECUTE` from every application role on
+exactly six boundaries:
+
+```text
+suspended   activate_matching_participation_v1        resume_matching_participation_v1
+            grant_matching_context_v1                 set_introduction_profile_v1
+            set_matching_requirements_v1              grant_pre_match_disclosure_authority_v1
+retained    pause_matching_participation_v1           turn_off_matching_participation_v1
+            revoke_matching_context_v1                revoke_pre_match_disclosure_authority_v1
+            get_my_matching_setup_v1
+```
+
+What the amendment changes, and what it leaves frozen:
+
+- **Who may call, nothing else.** `PUBLIC`, `anon`, `authenticated`, `service_role` and any other non-owner grantee
+  lose the six. The terminal assertions judge effective privilege, inheritance included, so a hosted project's
+  default privileges cannot leave one executable. Every body, signature, owner, lock order, idempotency rule,
+  stale-state rule and the independence of the three authorities (§2) is byte-identical. The `I-07B`–`I-07D` cores
+  stay executable by no application role.
+- **The five reducing and reading operations stay.** They keep exactly the §7 grant. A human never loses pause,
+  opt-out, revocation of either authority, or self-inspection. None of the five can commit anything for a human with
+  no Matching history.
+- **Suspended, by Product Owner decision:** resume, and any correction of an Introduction Profile or requirement set.
+  Correction is the same function as first creation, so it is suspended with it. No correction or enrollment wrapper
+  is introduced. Restoring them through a reviewed, launch-gated path is `QAN-BL-MATCH-01` (owner `S6-01`).
+- **The retry law, amended.** A replay of an already committed command of the six now answers `42501` instead of
+  its committed result. Retries of the five are unchanged.
+- **Not erasure.** No Matching row is touched. An account that already holds a footprint stays `BLOCKED`, and
+  `QAN-BL-ACCT-01` stays `OPEN — UNASSIGNED`.
+
+**Deployment requirement.** Never expose `0108` / `0109` to live signed-in users without `0149` taking effect in the
+same controlled deployment window. Keep the Data API closed to signed-in use until the effective privileges are
+verified.
+
+**Verification.** `verify-migration-0149.mjs` proves this on real PostgreSQL: 20 independent scenarios under real
+`SET ROLE` sessions, including the hosted default-privilege posture and three refused weakenings.
+`prove-0149-matching-direct-rpc-postgrest.mjs` proves it through live PostgREST. `verify-migration-0109.mjs` is
+re-anchored only where it asserted the current `authenticated` grant; its historical `I-07A` contract checks are
+unchanged.
+
+**BG-08 / BG-09.** SEC-MATCH-00 admits `QAN-BL-MATCH-01` to the canonical backlog and records a `QAN-BL-ACCT-01`
+current-truth note there. It changes no phase status: `I-07A`, `I-07B`, `I-07C`, `I-07D` and parent `I-07` remain **CLOSED / FROZEN**. This is a controlled
+privilege amendment to their frozen surface, not a reopening of Product scope.
