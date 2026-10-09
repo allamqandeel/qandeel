@@ -26,10 +26,16 @@
  *   GET  /shared/closed/:worldId                                         — an ended World, read-only, by entitlement
  *   GET  /shared/own-material; POST /shared/own-material/:worldId/:materialId/delete — the reader's own former words
  *
+ * SHARED-VIS-01 — the Shared World's Living Analysis geography (decoders in `./shared-field-api`):
+ *
+ *   GET  /shared/worlds/:worldId/field                                   — the entry verdict, then the World's places
+ *   GET  /shared/worlds/:worldId/field/places/:placeId                   — the entry verdict, then one place and its sources
+ *
  * A transport and nothing else, exactly like the Activity client: no credential of its own (the request-time seam its
  * caller hands it), no user id, no retry, no meaning. Every answer is decoded strictly; anything else is no answer.
  */
 import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
+import { decodeSharedField, decodeSharedPlace, type SharedFieldResult, type SharedPlaceResult } from './shared-field-api';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const SHARED_ID = /^[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/u;
@@ -402,6 +408,17 @@ export class SharedWorldApiClient {
     const page = before === null ? '' : `/before/${encodeURIComponent(before.materialId)}/${encodeURIComponent(before.establishedAt)}`;
     const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/materials${page}`);
     return answer.kind === 'OK' ? decodeSharedMaterials(answer.body) : { kind: 'UNAVAILABLE' };
+  }
+
+  // --- SHARED-VIS-01 --------------------------------------------------------------------------------------------------
+  async field(worldId: string): Promise<SharedFieldResult> {
+    const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/field`);
+    return answer.kind === 'OK' ? decodeSharedField(answer.body) : { kind: 'UNAVAILABLE' };
+  }
+
+  async place(worldId: string, placeId: string): Promise<SharedPlaceResult> {
+    const answer = await this.exchange('GET', `/shared/worlds/${encodeURIComponent(worldId)}/field/places/${encodeURIComponent(placeId)}`);
+    return answer.kind === 'OK' ? decodeSharedPlace(answer.body, placeId) : { kind: 'UNAVAILABLE' };
   }
 
   async send(worldId: string, commandId: string, content: string): Promise<SharedSendResult> {

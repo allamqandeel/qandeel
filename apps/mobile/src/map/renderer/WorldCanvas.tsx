@@ -23,7 +23,7 @@
  * The screen-space register sits OUTSIDE the plane entirely. It does not translate with the camera, does not
  * scale with it, and does not dim when it moves (R1-06).
  */
-import { useLayoutEffect, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Canvas, Group, vec } from '@shopify/react-native-skia';
 
 import {
@@ -151,7 +151,18 @@ function PresentationCameraRebase({
   }, [cause, commit, motion, reset, transition]);
 
   // A surface that stops painting this world leaves no residual behind for the next one to inherit.
-  useLayoutEffect(() => () => motion.reset(), [motion]);
+  //
+  // SHARED-VIS-01 (controlled amendment, Product Owner authorized) — on UNMOUNT only. This was keyed on the binding,
+  // whose identity also changes whenever the frame is resized (its centre and diagonal are inputs), so a resize
+  // mid-travel reset the plane by fiat: the travel jumped to its end, and because the reset is a write POSTED to the
+  // UI runtime, the commit above it read the residual it was about to discard and opened a corridor that no rest
+  // could retire whenever the UI runtime drew no frame in between (no labels, no targets, until the next drag). The
+  // binding's shared values live as long as the surface, so the running travel simply continues in the new frame.
+  const latestMotion = useRef(motion);
+  useLayoutEffect(() => {
+    latestMotion.current = motion;
+  }, [motion]);
+  useLayoutEffect(() => () => latestMotion.current.reset(), []);
 
   return null;
 }

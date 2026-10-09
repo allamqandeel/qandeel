@@ -104,7 +104,8 @@ export class SharedWorldLifecycleRepository {
   closedWorlds(token: string) { return this.rpc<SharedClosedWorldRow>(token, 'list_own_closed_shared_worlds_v1'); }
   closedMembers(token: string) { return this.rpc<SharedClosedMemberRow>(token, 'list_own_closed_shared_world_members_v1'); }
   closedMaterial(token: string, worldId: string, before: SharedLifecycleCursor | null, limit: number) {
-    return this.rpc<SharedClosedMaterialRow>(token, 'list_own_closed_shared_world_material_v1', {
+    // SHARED-VIS-01: the 0148 v2 read — the 0140 read without semantic places (a place lives in the Living Analysis World).
+    return this.rpc<SharedClosedMaterialRow>(token, 'list_own_closed_shared_world_material_v2', {
       p_world_id: worldId, p_before_established_at: before?.establishedAt ?? null, p_before_material_id: before?.materialId ?? null, p_limit: limit,
     });
   }

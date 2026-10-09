@@ -17,14 +17,15 @@
  *   `world`    — what is drawn in the measured envelope (a `WorldViewSurface` over the world's own projection);
  *   `top`      — what stands in the top band (the Personal Analysis: the way back to the Conversation);
  *   `timeline` — the disclosed temporal track and its orientation line, or `null` for a world that has no time to
- *                navigate. `null` is a capability, not an empty instrument: the plan composes `CHROME_ONLY`, the band
- *                keeps the same room and the world above it is framed exactly as it is for every world;
+ *                navigate. `null` is a capability, not an empty instrument: the plan composes `CHROME_ONLY`, and the band
+ *                is what the chrome measures (SHARED-VIS-01, capped at the room every world's band has), so the
+ *                world grows into whatever the chrome does not need;
  *   `chrome`   — what the world says about where the reader is, in the chrome band.
  *
  * It holds no store, no projection, no camera, no time and no words of its own. Nothing here animates: motion is the
  * world view's, entirely.
  */
-import { useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { StyleSheet, View } from 'react-native';
 
 import { useAnalysisInk } from '../analysis-visual';
@@ -83,6 +84,16 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
   const ink = useAnalysisInk();
   // VPORT-02 (G3 Decision B): the temporal orientation line's measured height, paid for by the chrome band.
   const [lineHeight, setLineHeight] = useState(0);
+  // SHARED-VIS-01 (Product Owner, Option 1): a world with no temporal track is given the band its chrome measures, so an
+  // empty chrome holds no room and the world grows into it. Whole points only, so sub-point noise is never a relayout.
+  const [chromeContent, setChromeContent] = useState<number | null>(null);
+  // A frame resized while the camera travels is safe: the world view keeps the running travel in the new frame
+  // (SHARED-VIS-01 controlled amendment to WorldCanvas), so the band follows the chrome at once.
+  const onChromeContent = useCallback((height: number) => {
+    const points = Math.ceil(Math.max(0, height));
+    setChromeContent((current) => (current === points ? current : points));
+  }, []);
+  const chromeOnly = timeline === null;
   const topHeight = top === null ? null : top.height;
   const surfaceInsets = useMemo(() => (topHeight === null ? insets : { ...insets, top: topHeight }), [insets, topHeight]);
 
@@ -94,6 +105,7 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
       fontScale={fontScale}
       envelope={surfaceEnvelope}
       support={timeline === null ? 'CHROME_ONLY' : 'TIMELINE_AND_CHROME'}
+      chromeContentPoints={chromeOnly ? chromeContent : null}
       style={{ backgroundColor: ink.world }}
     >
       {(plan) => {
@@ -136,7 +148,7 @@ function LivingAnalysisComposition({ insets, fontScale, envelope: surfaceEnvelop
                 </ResponsiveTimelineRow>
               )}
 
-              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints}>
+              <ResponsiveChromeBand chrome={plan.chrome} support={plan.support} yieldPoints={linePoints} onContentHeight={chromeOnly ? onChromeContent : undefined}>
                 {chrome(plan.chrome)}
               </ResponsiveChromeBand>
             </ResponsiveSupportBand>

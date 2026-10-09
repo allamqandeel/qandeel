@@ -192,12 +192,16 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     assert.match(state, /S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime \(migration `0145`\) \| \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
     // RE-ANCHORED by S5-04 (validation only): PR #318 merged as 729fe4d.
     assert.match(state, /S5-03C — Public Explicit Relations \+ Integrity Closure \(migration `0146`\) \| \*\*`(CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION|DONE \/ MERGED)`/u);
-    assert.doesNotMatch(state, /Stage 5 \(Public World Product Integration\) is \*\*DONE/u, 'Stage 5 is not DONE before S5-04');
+    // RE-ANCHORED by SHARED-VIS-01 (validation only): Stage 5 may be DONE only once S5-04 is recorded merged (PR #319).
+    if (!/S5-04 — [^\n]*`DONE \/ MERGED` through PR #319/u.test(state)) {
+      assert.doesNotMatch(state, /Stage 5 \(Public World Product Integration\) is \*\*DONE/u, 'Stage 5 is not DONE before S5-04');
+    }
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
     const map = read('QANDEEL_PROJECT_MAP.md');
     // RE-ANCHORED by S5-04 (validation only): S5-03C merged; S5-04 is the current (closed, unmerged) task.
-    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-0(3C — Public Explicit Relations \+ Integrity Closure|4 — )/u);
+    // RE-ANCHORED by SHARED-VIS-01 (validation only): after Stage 5, SHARED-VIS-01 is the current task.
+    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0(3C — Public Explicit Relations \+ Integrity Closure|4 — )|SHARED-VIS-01 — )/u);
     assert.match(map, /\*\*NEXT \/ NOT STARTED\*\*|S5-04[^\n]*CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION/u);
   }
   const s503b = read('docs/e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md');

@@ -72,6 +72,9 @@ async function enterConversation(): Promise<{ world: S401ProofWorld; view: Rende
   const view = await proofApp(world);
   await press(view, 'qandeel-switcher-shared_world');
   await press(view, /^qandeel-shared-world-5401/u);
+  // SHARED-VIS-01 re-anchor: the World opens on its Living Analysis field; its conversation is one entry away.
+  expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+  await press(view, 'qandeel-shared-conversation-open');
   return { world, view };
 }
 

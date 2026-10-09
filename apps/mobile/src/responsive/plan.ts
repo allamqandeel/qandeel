@@ -271,8 +271,9 @@ export interface RecompositionPlan {
  *
  * `TIMELINE_AND_CHROME` is the Living Analysis Map's frozen composition and the default: the disclosed temporal track
  * and the orientation chrome share the band. `CHROME_ONLY` is a world with no temporal track at all — no Session, no
- * effective TC, no Live — which must not be given an empty instrument to fill: the band is the SAME room (so the world
- * above it is framed exactly as it is for every world), and all of it belongs to that world's chrome.
+ * effective TC, no Live — which must not be given an empty instrument to fill: all of the band belongs to that world's
+ * chrome. SHARED-VIS-01 (Product Owner, Option 1): the room every world's band has is its CAP, and with the chrome
+ * measured (`chromeContentPoints`) the band is what the chrome needs, so the world grows into the rest.
  */
 export const SUPPORT_CAPABILITIES = Object.freeze(['TIMELINE_AND_CHROME', 'CHROME_ONLY'] as const);
 export type SupportCapability = (typeof SUPPORT_CAPABILITIES)[number];
@@ -288,6 +289,15 @@ export interface RecompositionOptions {
   readonly band?: PresentationBand | null;
   /** S5-03B R1 — the support regions this world has. Absent, the frozen `TIMELINE_AND_CHROME` composition. */
   readonly support?: SupportCapability;
+  /**
+   * SHARED-VIS-01 (Product Owner, Option 1) — the chrome's MEASURED natural height, read only under `CHROME_ONLY`.
+   *
+   * A world with no temporal track has nothing to put in the band but its chrome, and an empty chrome must not hold half
+   * the screen. Measured, the band is exactly what the chrome says — capped at the room computed for every world, so the
+   * world never falls under its half — and the world grows into the rest. Unmeasured (`null` / absent), the band keeps
+   * that room, which is the S5-03B R1 composition. Ignored under `TIMELINE_AND_CHROME`: Personal is unchanged.
+   */
+  readonly chromeContentPoints?: number | null;
 }
 
 /**
@@ -363,14 +373,23 @@ export function recompositionPlan(surface: PresentationSurface, options: Recompo
   // is the same as it is for every world in this surface; the chrome alone takes all of it, stacked, across the whole
   // available width. There is no Timeline row, so there is no gap between it and the chrome, and no instrument feeds
   // the mapping identity.
+  //
+  // SHARED-VIS-01 (Product Owner, Option 1): that room is now the band's CAP, not its size. With the chrome measured,
+  // the band is what the chrome needs — never less than the bottom safe area it sits on, never more than the cap — and an
+  // empty chrome keeps no gap, so the world reaches the band. The world's ceiling below follows from the same numbers,
+  // so it can never fall under the half every world is given.
   let chromeGapPoints = gapPoints;
   if (options.support === 'CHROME_ONLY') {
+    const cap = support.bandPoints;
+    const measured = options.chromeContentPoints;
+    const content = measured === undefined || measured === null || !Number.isFinite(measured) ? null : Math.max(0, Math.ceil(measured));
+    const bandPoints = content === null ? cap : Math.min(cap, Math.max(content, surface.insetBottom));
     support = {
       arrangement: 'STACKED',
-      bandPoints: support.bandPoints,
+      bandPoints,
       timelinePoints: 0,
-      chromePoints: support.bandPoints,
-      gapPoints: support.gapPoints,
+      chromePoints: bandPoints,
+      gapPoints: content === null || content > 0 ? support.gapPoints : 0,
       chromeWidthPoints: available,
     };
     timelineWidthPoints = 0;

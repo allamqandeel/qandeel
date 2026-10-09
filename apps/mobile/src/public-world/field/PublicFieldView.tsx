@@ -173,7 +173,7 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
                 key={`label:${node.key}`}
                 testID={`qandeel-public-label-${node.entry.id}`}
                 pointerEvents="none"
-                numberOfLines={1}
+                numberOfLines={label.lines}
                 accessible={false}
                 importantForAccessibility="no"
                 style={{
@@ -181,7 +181,9 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
                   position: 'absolute',
                   top: label.top,
                   ...(label.side === 'RIGHT' ? { left: label.offset } : { right: label.offset }),
-                  maxWidth: label.width,
+                  // Two lines need a definite width: under a maxWidth alone, Android measures the one-line height and
+                  // clips the second line (seen on the SHARED-VIS-01 device pass).
+                  ...(label.lines === 2 ? { width: label.width } : { maxWidth: label.width }),
                   color: node.selected ? palette.primary : palette.secondary,
                   writingDirection: language === 'ar' ? 'rtl' : 'ltr',
                   textAlign: label.side === 'RIGHT' ? 'left' : 'right',
@@ -199,16 +201,20 @@ export function PublicFieldView({ controller, state, envelope, copy, language }:
   );
 }
 
-/** Where one place's one-line meaning sits: beside the place, on one side, inside the glass. */
+/** Where one place's meaning sits: beside the place, on one side, inside the glass. */
 export interface FieldLabel {
   readonly side: 'LEFT' | 'RIGHT';
   /** The distance from the glass side it is anchored to (left for RIGHT, right for LEFT), in points. */
   readonly offset: number;
   readonly top: number;
   readonly width: number;
+  /** SHARED-VIS-01 (Product Owner, D3) — one line, or two for a meaning that does not fit one; never more. */
+  readonly lines: 1 | 2;
 }
 
 const LABEL_MAX_WIDTH = 148;
+/** SHARED-VIS-01 (D3): the most lines a MID label may take. The width stays capped; only the height grows. */
+const LABEL_MAX_LINES = 2 as const;
 /** Clear of the place's own hit radius (13 points), so a label never touches its mark or its SELECTED marker. */
 const LABEL_GAP = 17;
 const LABEL_MARGIN = 8;
@@ -236,9 +242,13 @@ export function layoutFieldLabels(
   const out = new Map<string, FieldLabel>();
   const sides: readonly ('LEFT' | 'RIGHT')[] = language === 'ar' ? ['LEFT', 'RIGHT'] : ['RIGHT', 'LEFT'];
   for (const node of ordered) {
-    const width = Math.min(LABEL_MAX_WIDTH, Math.ceil(node.entry.meaning.length * type.fontSize * 0.62) + 4);
-    const top = node.y - lineHeight / 2;
-    const bottom = top + lineHeight;
+    const natural = Math.ceil(node.entry.meaning.length * type.fontSize * 0.62) + 4;
+    const width = Math.min(LABEL_MAX_WIDTH, natural);
+    // A meaning wider than one capped line takes a second one rather than being cut after a few words; the box the
+    // collision rules test is the box the words occupy, centred on the place as before.
+    const lines = natural > LABEL_MAX_WIDTH ? LABEL_MAX_LINES : 1;
+    const top = node.y - (lines * lineHeight) / 2;
+    const bottom = top + lines * lineHeight;
     if (top < envelope.insetTop || bottom > envelope.height - envelope.insetBottom) continue;
     for (const side of sides) {
       const left = side === 'RIGHT' ? node.x + LABEL_GAP : node.x - LABEL_GAP - width;
@@ -252,7 +262,7 @@ export function layoutFieldLabels(
         && other.x + PLACE_CLEARANCE > left && other.x - PLACE_CLEARANCE < right && other.y + PLACE_CLEARANCE > top && other.y - PLACE_CLEARANCE < bottom);
       if (coversPlace) continue;
       taken.push(box);
-      out.set(node.key, { side, offset: side === 'RIGHT' ? left : envelope.width - right, top, width });
+      out.set(node.key, { side, offset: side === 'RIGHT' ? left : envelope.width - right, top, width, lines });
       break;
     }
   }

@@ -152,11 +152,17 @@ test('the VPORT-01 Living Analysis World is byte-for-byte what VPORT-01 shipped'
   // the mass material `world-mass.ts` (pinned here and declared in VPORT-01 and the Map census) and skip a mass size whose
   // weight is zero. Both goldens were re-recorded after the structural diff again proved paint-only change (host tree and
   // every mark anchor identical). Previous pins: WorldMarks 0d694dc3, WorldStrata 03dd3f65.
+  // SHARED-VIS-01 — CONTROLLED AMENDMENT (Product Owner authorization "Controlled Frozen Map Correction", 2026-10-09):
+  // WorldCanvas resets the presentation plane on UNMOUNT only. Keyed on the binding, it also reset whenever the frame was
+  // resized mid-travel (the binding's identity follows the frame's centre and diagonal), which cut the travel short and,
+  // in one runtime interleaving, left the world never coming to rest (proven before and after by
+  // apps/mobile/src/map/__tests__/world-resize-race.test.tsx). Nothing painted changes; both goldens unchanged. Previous
+  // pin: WorldCanvas 28dcc706.
   for (const [path, blob] of [
     ['apps/mobile/src/map/renderer/MapCanvas.tsx', 'a82f761fa4eaede3db08c55f25ceb7da7cff595e'],
     ['apps/mobile/src/map/renderer/MapSurface.tsx', '680b2a42ceaff81a79e17ae9aae2557c6da6c68f'],
     ['apps/mobile/src/map/renderer/WorldViewSurface.tsx', 'aff512d968104c429afe6a0f8ed90c574963ef84'],
-    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', '28dcc706633a8c59eb61b95cc8e3d43322ba31c9'],
+    ['apps/mobile/src/map/renderer/WorldCanvas.tsx', 'e0ddba0057a6506cc5b68454a7a41b8f923bbb5f'],
     ['apps/mobile/src/map/renderer/useWorldSurface.ts', 'ed4f83bade4ffa4af906f54cadb644febc19eee8'],
     ['apps/mobile/src/map/visual/WorldMarks.tsx', '8b81a4e4c6fb002e3e9c5088a316d5844723638b'],
     ['apps/mobile/src/map/visual/WorldStrata.tsx', '366f7d15dec55fa90fec9d525a4794303d2d303f'],
@@ -215,7 +221,8 @@ test('the frozen G3 composition and the dark Analysis ground are wired on the pr
   assert.match(screen, /line=\{timeline\.line\}/u, 'the line is said in the Timeline row');
   assert.match(composition, /temporalLine="WITH_TIMELINE"/u);
   assert.match(composition, /returnLiveHome="LIVE_EDGE"/u);
-  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\}>/u, 'OrientationChrome yields the line\'s room');
+  // SHARED-VIS-01 controlled re-anchor: the band also reports its content height, but only for a world with no track.
+  assert.match(screen, /<ResponsiveChromeBand chrome=\{plan\.chrome\} support=\{plan\.support\} yieldPoints=\{linePoints\} onContentHeight=\{chromeOnly \? onChromeContent : undefined\}>/u, 'OrientationChrome yields the line\'s room');
   // Every Analysis chrome owner paints with the Analysis ink.
   for (const path of [
     `${MOBILE}/orientation-chrome/OrientationChrome.tsx`,

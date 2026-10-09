@@ -4270,3 +4270,40 @@ private, unpublished or identity text - a stale completion discarded and marked 
 invoking post and the exact version, the in-flight bound, the invocation guard); the Activity source (never the actor; the
 relation lifecycle); disappearance (every S5-04 read, command and source goes dark while 0099 keeps the internal history);
 and launch closure (both CW2-08 seams answer `NOT_EVALUATED`).
+
+## SHARED-VIS-01 - Shared semantic places and the member field read (migration 0148)
+
+`0148_shared_semantic_field_living_analysis_v1.sql` gives the Shared World its Living Analysis geography from the frozen
+I-04G vocabulary instead of beside it, in its own schema `shared_semantic_private` (the S4-01 ... S4-04 `shared_private`
+surface gains nothing). A Shared semantic place is ONE `QANDEEL_ANALYSIS` material committed through the frozen 0090
+QANDEEL core - which derives its audience, its required approvers (the union of its sources' human authorities) and its
+history item, and refuses stale or forged I-03 evidence - with one `MATERIAL_DEPENDENCY` edge per exact source, plus one
+append-only row in `semantic_places` holding its themes, semantic region and World-local coordinates
+(`QANDEEL_SHARED_FIELD_V1`, exact integers within +-2^62). That row is bound to the place's meaning body `ON DELETE CASCADE`,
+so the frozen owner-deletion closure, which physically removes the body of every source-content-bearing derivative,
+removes the whole place in the same statement. Sources are the World's `HUMAN_TEXT` only: the frozen core refuses
+QANDEEL's conversational output (UNRESOLVED since 0119) as a dependency source (`QAN-BL-CW-05`).
+
+`service_role` executes the pass: `begin_shared_semantic_work_v1` (one live pass per World under the `SHARED_CONVERSATION`
+capability, a rolling per-World budget - an implementation policy, `semantic_work_policy_v1`), `read_shared_semantic_context_v1`
+(the World's whole places and their sources, under the live lease), `complete_shared_semantic_place_v1` (one place per pass
+and ordinal, identities derived from the pass command) and `end_shared_semantic_work_v1` (a completed pass is recorded once
+in `semantic_passes`). `authenticated` executes `list_own_shared_semantic_field_v1`, `read_own_shared_semantic_place_v1` and
+`list_own_shared_semantic_place_sources_v1` - a CURRENT member of an ACTIVE World only, and a place only when the frozen 0089
+resolver serves the reader its meaning AND every source - and `list_own_closed_shared_world_material_v2`, the 0140 ended-World
+read without semantic places (the 0140 function is unchanged). No `commit_%` name is added. Deploy-time assertions G1-G6 hold
+the boundary.
+
+```sh
+npm run verify:shared-semantic-field:integration
+```
+
+`verify-migration-0148.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. Inside one rolled-back transaction it
+proves the boundary (pinned definers, INVOKER wrappers, exact executable sets, unreachable RLS relations, the frozen core
+and resolver ACL unchanged, `shared_private` unchanged); the place (a closed capability starts nothing; one live pass per
+World; the API's shape rules; this World's human text only; the lease holder commits one `QANDEEL_ANALYSIS` with exact
+dependencies and source-author approvers; idempotent retries; no meaning of a meaning; a stale audience is STALE; a completed
+pass starts nothing again; append-only history); visibility (current members who see every source read it; a non-member,
+another World and a member who left read nothing; a newcomer who cannot see one source does not read it until a history
+grant lets them see that source); deletion (any source's owner deletion removes meaning, themes, region and coordinates for
+every reader and from the interpreter's context; QANDEEL's reply stays; nothing regenerates); and the ended World's v2 read.

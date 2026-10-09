@@ -536,7 +536,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       push,
       notificationEntries,
       // S4-01: the Shared World area and the reader's Shared ID, on the Shared transport bound to this identity.
-      sharedWorld: createSharedWorldController({ transport: shared, isCurrent, foreground: entry.foreground }),
+      // SHARED-VIS-01: the same identity-bound Shared transport carries the World's Living Analysis field reads.
+      sharedWorld: createSharedWorldController({ transport: shared, isCurrent, foreground: entry.foreground, fieldTransport: shared }),
       sharedId: createSharedIdController({ transport: shared, isCurrent }),
       // S4-03: the reader's own former Shared words, through Privacy & Data — never through a World.
       formerSharedMaterial: createFormerSharedMaterialController({ transport: shared, isCurrent }),

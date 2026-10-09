@@ -157,6 +157,9 @@ describe('S4-01 proof world — the pre-authority seam is held, never timed', ()
       world.allow();
       await settle();
     });
+    // SHARED-VIS-01 re-anchor: the World opens on its Living Analysis field; its conversation is one entry away.
+    expect(view.getByTestId('qandeel-shared-world-field')).toBeTruthy();
+    await press(view, 'qandeel-shared-conversation-open');
     expect(view.getByTestId('qandeel-shared-welcome')).toBeTruthy();
     expect(view.getByTestId('qandeel-shared-members')).toBeTruthy();
     expect(view.queryByTestId('qandeel-shared-transition')).toBeNull();

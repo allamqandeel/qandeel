@@ -2,8 +2,9 @@
  * S5-03B R1 — the support capability of the one Living Analysis surface.
  *
  * `TIMELINE_AND_CHROME` is the Living Analysis Map's frozen composition and the default: asking for it, or asking for
- * nothing, is EXACTLY the plan T-11 always produced. `CHROME_ONLY` is a world with no temporal track: the band keeps the
- * same room, so the world above it is framed exactly as it is for every world, and the chrome alone takes it.
+ * nothing, is EXACTLY the plan T-11 always produced. `CHROME_ONLY` is a world with no temporal track: unmeasured, the band
+ * keeps the same room and the chrome alone takes it. SHARED-VIS-01 (Product Owner, Option 1): measured, the band is what
+ * the chrome needs, capped at that room, and the world grows into the rest — never under its half.
  */
 import { SUPPORT_CAPABILITIES, bandFor, recompositionPlan, type PresentationBand } from '../plan';
 import { presentationSurface, usableWidth } from '../surface';
@@ -84,5 +85,61 @@ describe('S5-03B R1 — CHROME_ONLY: the same room, the same world frame, no ins
       // Never less room than the frozen composition gave the chrome: the instrument's room is the chrome's now.
       expect(plan.support.chromePoints).toBeGreaterThanOrEqual(recompositionPlan(surface).support.chromePoints);
     }
+  });
+});
+
+describe('SHARED-VIS-01 — CHROME_ONLY with the chrome measured: the band is what the chrome needs, capped at the room', () => {
+  const CONTENT = [0, 1, 20.4, 72, 159, 300, 640, 5000] as const;
+
+  it('never moves the frozen composition: a measurement is ignored under TIMELINE_AND_CHROME', () => {
+    for (const surface of surfaces()) {
+      for (const band of BANDS) {
+        const frozen = recompositionPlan(surface, { band });
+        for (const content of CONTENT) {
+          expect(recompositionPlan(surface, { band, chromeContentPoints: content })).toEqual(frozen);
+          expect(recompositionPlan(surface, { band, support: 'TIMELINE_AND_CHROME', chromeContentPoints: content })).toEqual(frozen);
+        }
+      }
+    }
+  });
+
+  it('unmeasured (null) is the unmeasured composition', () => {
+    for (const surface of surfaces()) {
+      expect(recompositionPlan(surface, { support: 'CHROME_ONLY', chromeContentPoints: null })).toEqual(recompositionPlan(surface, { support: 'CHROME_ONLY' }));
+    }
+  });
+
+  it('gives the band exactly the measured content (whole points, at least the bottom safe area), never more than the room', () => {
+    for (const surface of surfaces()) {
+      const band = bandFor(usableWidth(surface));
+      const room = recompositionPlan(surface, { band, support: 'CHROME_ONLY' });
+      for (const content of CONTENT) {
+        const plan = recompositionPlan(surface, { band, support: 'CHROME_ONLY', chromeContentPoints: content });
+        const expected = Math.min(room.support.bandPoints, Math.max(Math.ceil(content), surface.insetBottom));
+        expect(plan.support.bandPoints).toBe(expected);
+        expect(plan.support.chromePoints).toBe(expected);
+        expect(plan.support.timelinePoints).toBe(0);
+        expect(plan.support.arrangement).toBe('STACKED');
+        // An empty chrome keeps no gap from the world; any content keeps the rhythm every world has.
+        expect(plan.support.gapPoints).toBe(content === 0 ? 0 : room.support.gapPoints);
+        // The world: the same basis and floor, a ceiling that only grows, and never under the floor every world keeps.
+        expect(plan.mapFrame.basisPoints).toBe(room.mapFrame.basisPoints);
+        expect(plan.mapFrame.minHeightPoints).toBe(room.mapFrame.minHeightPoints);
+        expect(plan.mapFrame.ceilingPoints).toBe(Math.max(room.mapFrame.minHeightPoints, surface.height - plan.support.bandPoints - plan.support.gapPoints));
+        expect(plan.mapFrame.ceilingPoints).toBeGreaterThanOrEqual(room.mapFrame.ceilingPoints);
+        // Nothing a coordinate is mapped through changes with what the chrome says.
+        expect(plan.geometry).toBe(room.geometry);
+        expect(plan.chrome).toEqual(room.chrome);
+      }
+    }
+  });
+
+  it('refuses a measurement that is not a height', () => {
+    const surface = surfaces()[0]!;
+    const room = recompositionPlan(surface, { support: 'CHROME_ONLY' });
+    for (const bad of [Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(recompositionPlan(surface, { support: 'CHROME_ONLY', chromeContentPoints: bad })).toEqual(room);
+    }
+    expect(recompositionPlan(surface, { support: 'CHROME_ONLY', chromeContentPoints: -12 }).support.bandPoints).toBe(Math.min(room.support.bandPoints, surface.insetBottom));
   });
 });

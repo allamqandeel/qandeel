@@ -173,7 +173,7 @@ describe('S4-04 — the controller hands Activity only committed facts, and neve
   const request = { headers: {}, authenticatedUser: { userId: READER, accessToken: TOKEN } } as never;
   const build = (overrides: Record<string, unknown>) => {
     const producer = { humanText: jest.fn(), proposal: jest.fn(), memberRequest: jest.fn(), joined: jest.fn(), birth: jest.fn(), left: jest.fn() };
-    const controller = new SharedWorldController(overrides as never, overrides as never, overrides as never, producer as never, {} as never);
+    const controller = new SharedWorldController(overrides as never, overrides as never, overrides as never, producer as never, {} as never, {} as never);
     return { controller, producer };
   };
   it('publishes after COMMITTED / PROPOSED / SUBMITTED / INVITED / JOINED / BORN / LEFT only', async () => {

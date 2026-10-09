@@ -45,7 +45,7 @@
  * resize read as navigation, and a window is not a destination.
  */
 import type { ReactNode } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View, type LayoutChangeEvent } from 'react-native';
 
 import { CHROME_FLOOR_POINTS, type ChromeComposition, type SupportComposition } from './plan';
 
@@ -71,9 +71,15 @@ export interface ResponsiveChromeBandProps {
    * this band's scroller, exactly as before.
    */
   readonly yieldPoints?: number;
+  /**
+   * SHARED-VIS-01 — reports the chrome's natural height (the words inside the scroller, which a scroller never reports
+   * to its parent), so a world with no temporal track can be given exactly the band its chrome needs. Absent, nothing
+   * is measured and the band is unchanged.
+   */
+  readonly onContentHeight?: (height: number) => void;
 }
 
-export function ResponsiveChromeBand({ chrome, support, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID, yieldPoints = 0 }: ResponsiveChromeBandProps) {
+export function ResponsiveChromeBand({ chrome, support, children, testID = RESPONSIVE_CHROME_BAND_TEST_ID, yieldPoints = 0, onContentHeight }: ResponsiveChromeBandProps) {
   const across = support.arrangement === 'SIDE_BY_SIDE';
   // The line is paid for out of this band's allocation and nothing else; never more than the band holds.
   const yielded = across ? 0 : Math.min(Math.max(0, yieldPoints), support.chromePoints);
@@ -117,7 +123,12 @@ export function ResponsiveChromeBand({ chrome, support, children, testID = RESPO
         // traversing into.
         accessibilityRole="none"
       >
-        <View testID={RESPONSIVE_CHROME_MEASURE_TEST_ID} style={[styles.measure, { maxWidth: chrome.measurePoints }]} pointerEvents="box-none">
+        <View
+          testID={RESPONSIVE_CHROME_MEASURE_TEST_ID}
+          style={[styles.measure, { maxWidth: chrome.measurePoints }]}
+          pointerEvents="box-none"
+          {...(onContentHeight === undefined ? null : { onLayout: (event: LayoutChangeEvent) => onContentHeight(event.nativeEvent.layout.height) })}
+        >
           {children}
         </View>
       </ScrollView>

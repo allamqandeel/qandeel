@@ -229,7 +229,16 @@ test('no reusable surface takes the display as its authority', () => {
   // needs the line's height, which only its own layout knows. So the row measures exactly that one child it places —
   // never the display, never a width, never a breakpoint — and the measurement still lives inside the responsive
   // owner. Everything else this test protects is unchanged and still asserted.
-  assert.deepEqual(measuring, ['ResponsiveMapFrame.tsx', 'ResponsiveSurface.tsx', 'ResponsiveTimelineRow.tsx', 'useResponsiveSurface.ts'], 'measurement lives in one owner');
+  // SHARED-VIS-01 controlled re-anchor (Product Owner, Option 1 — content-sized support band). A world with no temporal
+  // track is given the band its chrome needs, and only the chrome's own layout knows that height (a scroller reports
+  // none). So the chrome band measures exactly that one thing — the natural height of what it holds, and only when its
+  // owner asks — never the display, never a width, never a breakpoint; the measurement still lives in the owner.
+  assert.deepEqual(measuring, ['ResponsiveChromeBand.tsx', 'ResponsiveMapFrame.tsx', 'ResponsiveSurface.tsx', 'ResponsiveTimelineRow.tsx', 'useResponsiveSurface.ts'], 'measurement lives in one owner');
+  assert.match(
+    responsiveCode['ResponsiveChromeBand.tsx'],
+    /\{\.\.\.\(onContentHeight === undefined \? null : \{ onLayout: \(event: LayoutChangeEvent\) => onContentHeight\(event\.nativeEvent\.layout\.height\) \}\)\}/u,
+    'the chrome band measures only the height of what it holds, and only when asked',
+  );
   assert.match(
     responsiveCode['ResponsiveTimelineRow.tsx'],
     /onLayout=\{\(event: LayoutChangeEvent\) => onLineHeight\?\.\(Math\.ceil\(event\.nativeEvent\.layout\.height\)\)\}/u,

@@ -340,7 +340,12 @@ test('§13 — the rebase is issued from inside the Skia root, after the positio
   assert.match(plane, /<PresentationCameraRebase motion=\{motion\} cameraCommit=\{cameraCommit\} \/>\s*$/u);
   assert.match(canvas, /useLayoutEffect\(/u, 'the rebase is issued in a layout effect, not a passive one');
   // And it drops the residual outright when the surface stops painting this world.
-  assert.match(canvas, /useLayoutEffect\(\(\) => \(\) => motion\.reset\(\), \[motion\]\);/u);
+  // SHARED-VIS-01 — CONTROLLED AMENDMENT (Product Owner, 2026-10-09): on unmount ONLY. It was keyed on the binding,
+  // whose identity also follows the frame's size, so a frame resized mid-travel reset the plane by fiat (the travel was
+  // cut short and, in one runtime interleaving, never retired its corridor). Proven before and after by
+  // apps/mobile/src/map/__tests__/world-resize-race.test.tsx. Previous pin: `() => motion.reset(), [motion]`.
+  assert.match(canvas, /useLayoutEffect\(\(\) => \(\) => latestMotion\.current\.reset\(\), \[\]\);/u);
+  assert.doesNotMatch(canvas, /\(\) => motion\.reset\(\), \[motion\]/u, 'a resized frame never resets the plane');
 
   // A preserved frame keeps its SIZES too. An object's radius and a tether's stroke are screen
   // quantities at every rung, so the plane's residual zoom is undone per object and per stroke —

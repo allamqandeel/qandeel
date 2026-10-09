@@ -2,6 +2,7 @@ import { Body, Controller, Get, HttpCode, Param, Post, Put, Req, UseGuards } fro
 import type { AuthenticatedRequest } from '../auth/authenticated-request';
 import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SharedActivityProducer } from './shared-activity.producer';
+import { SharedSemanticFieldService } from './shared-semantic-field.service';
 import { SharedWorldAlertsService } from './shared-world-alerts.service';
 import { SharedWorldConversationService } from './shared-world-conversation.service';
 import { SharedWorldLifecycleService } from './shared-world-lifecycle.service';
@@ -54,6 +55,13 @@ import { SharedWorldService } from './shared-world.service';
  *   (the material, the command, the proposal, the World — nothing else). It never changes the command's answer, which is
  *   already decided, and it is never told who the recipients are: the database derives them (0141).
  *
+ * SHARED-VIS-01 — the Shared World's Living Analysis geography over migration 0148:
+ *
+ *   GET  /shared/worlds/:worldId/field                                   — the entry verdict, then the places of this World the
+ *                                                                          reader may see (each: exact integer place, meaning, region)
+ *   GET  /shared/worlds/:worldId/field/places/:placeId                   — the entry verdict, then one place with its themes and
+ *                                                                          its exact sources, or one neutral ABSENT
+ *
  * No route takes a user id, an inviter, a target, an author, a viewer or member list, an audience, a material kind, an
  * approver, an approval rule, a membership snapshot or a World authority.
  */
@@ -66,6 +74,7 @@ export class SharedWorldController {
     private readonly lifecycle: SharedWorldLifecycleService,
     private readonly activity: SharedActivityProducer,
     private readonly alerts: SharedWorldAlertsService,
+    private readonly field: SharedSemanticFieldService,
   ) {}
 
   @Get()
@@ -109,6 +118,16 @@ export class SharedWorldController {
   @Get('worlds/:worldId')
   entry(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string) {
     return this.shared.entry(request.authenticatedUser.accessToken, worldId);
+  }
+
+  @Get('worlds/:worldId/field')
+  semanticField(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string) {
+    return this.field.field(request.authenticatedUser.accessToken, worldId);
+  }
+
+  @Get('worlds/:worldId/field/places/:placeId')
+  semanticPlace(@Req() request: AuthenticatedRequest, @Param('worldId') worldId: string, @Param('placeId') placeId: string) {
+    return this.field.place(request.authenticatedUser.accessToken, worldId, placeId);
   }
 
   @Get('worlds/:worldId/materials')

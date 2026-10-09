@@ -124,6 +124,7 @@ jobs:
       - {name: "Verify S5-03B Public Semantic Field, Stable Spatial Placement & Viewer Runtime static contract", run: npm run test:s5-03b-public-semantic-field-viewer-contract}
       - {name: "Verify S5-03C Public Explicit Relations + Integrity Closure static contract", run: npm run test:s5-03c-public-explicit-relations-integrity-contract}
       - {name: "Verify S5-04 Public Discussion + @qandeel + Final Public Integration static contract", run: npm run test:s5-04-public-discussion-qandeel-final-integration-contract}
+      - {name: "Verify SHARED-VIS-01 Shared World Living Analysis static contract", run: npm run test:shared-vis-01-shared-living-analysis-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -937,6 +938,12 @@ jobs:
       # recipients derived from Public truth, never the actor; disappearance darkens every read, command and source.
       - name: Verify S5-04 Public discussion, @qandeel and Public Activity integration against real PostgreSQL
         run: npm run verify:public-discussion-qandeel-activity:integration
+      # SHARED-VIS-01: a Shared semantic place is ONE QANDEEL_ANALYSIS material committed through the frozen I-04G core with
+      # exact MATERIAL_DEPENDENCY provenance on human text, plus its append-only World-local placement; one live pass per World
+      # under the conversation capability; served only to current members who may see every source; erased with its meaning
+      # by the frozen owner-deletion closure; the ended World's conversation carries no place.
+      - name: Verify SHARED-VIS-01 Shared semantic places and the member field read against real PostgreSQL
+        run: npm run verify:shared-semantic-field:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

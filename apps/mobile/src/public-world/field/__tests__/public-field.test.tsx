@@ -15,6 +15,7 @@ import { BackHandler } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../../appearance';
 import { analysisCopy } from '../../../analysis-language';
+import { typeStyle } from '../../../conversation';
 import { DEFAULT_MAP_SCALE, projectAddress, viewportEnvelope, type ViewportEnvelope } from '../../../map/camera';
 import { WORLD_VIEW_STEP_TEST_ID_SUFFIX } from '../../../map/renderer';
 import {
@@ -204,6 +205,41 @@ describe('S5-03B Phase 2 — MID meanings: Public chrome over the world, never o
     expect(layoutFieldLabels([node(1, 100, 40)], [], BANDED, 'en').size).toBe(0);
     expect(layoutFieldLabels([node(1, 100, 700)], [], viewportEnvelope(SIZE.width, SIZE.height, { top: 56, bottom: 368 })!, 'en').size).toBe(0);
     expect(layoutFieldLabels([node(1, 100, 300)], [], BANDED, 'en').size).toBe(1);
+  });
+});
+
+describe('SHARED-VIS-01 (Product Owner, D3) — a MID meaning takes up to two lines, never a wider label', () => {
+  const LINE = typeStyle('metadata').lineHeight;
+  const node = (n: number, x: number, y: number, meaning: string) => ({ key: `public:${id(n)}`, x, y, radius: 13, region: 'WORLD_PLANE' as const,
+    entry: { ...entry(n, 0n, 0n), meaning }, presence: 'PLACE' as const, selected: false });
+  const BANDED = viewportEnvelope(SIZE.width, SIZE.height, { top: 56 })!;
+  const LONG = 'Postponing the talk about moving';
+
+  it('a short meaning keeps one line at its own width; a long one takes a second line at the same capped width', () => {
+    const short = layoutFieldLabels([node(1, 100, 300, 'home')], [], BANDED, 'en').get(`public:${id(1)}`)!;
+    expect(short.lines).toBe(1);
+    expect(short.width).toBeLessThan(148);
+    expect(short.top).toBe(300 - LINE / 2);
+    const long = layoutFieldLabels([node(1, 100, 300, LONG)], [], BANDED, 'en').get(`public:${id(1)}`)!;
+    expect(long.lines).toBe(2);
+    expect(long.width).toBe(148);
+    // Centred on its place, as one line was.
+    expect(long.top).toBe(300 - LINE);
+  });
+
+  it('collision is tested against both lines: a neighbour a single line clear of it is no longer clear', () => {
+    const a = node(1, 100, 300, LONG); const b = node(2, 100, 300 + LINE + 1, LONG);
+    expect(layoutFieldLabels([node(1, 100, 300, 'home'), node(2, 100, 300 + LINE + 1, 'work')], [], BANDED, 'en').size).toBe(2);
+    const labels = layoutFieldLabels([a, b], [], BANDED, 'en');
+    // The second label tries both sides; on each it would lie over the first one's two lines, so it is not drawn.
+    expect([...labels.keys()]).toEqual([a.key]);
+  });
+
+  it('a second line that the bottom of the world frame would cut is not drawn', () => {
+    const edge = viewportEnvelope(SIZE.width, SIZE.height, { top: 56, bottom: 0 })!;
+    const y = SIZE.height - LINE * 0.75;
+    expect(layoutFieldLabels([node(1, 100, y, 'home')], [], edge, 'en').size).toBe(1);
+    expect(layoutFieldLabels([node(1, 100, y, LONG)], [], edge, 'en').size).toBe(0);
   });
 });
 
@@ -594,6 +630,7 @@ describe('S5-03B — the Public field surface', () => {
     expect(view.getByTestId(`qandeel-public-mark-${E1.id}`).props.accessibilityLabel).toBe('meaning 1');
     // MID: the meaning in one line, as Public chrome beside the place (never painted into the world).
     expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.children).toBe('meaning 1');
+    expect(view.getByTestId(`qandeel-public-label-${E1.id}`).props.numberOfLines).toBe(1);
     // MID: a place each, at the major tier, in the canonical mark material.
     expect(bodyOf(view, field, E1).body).toMatchObject({ r: 6 });
     expect(bodyOf(view, field, E1).marker).toBeUndefined();

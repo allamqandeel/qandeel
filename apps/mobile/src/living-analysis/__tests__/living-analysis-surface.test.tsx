@@ -3,7 +3,9 @@
  *
  * What the screen guarantees every world, whatever it draws: the Analysis place (dark under every preference), the top
  * band read first and paid for as the world's top inset, the measured world frame, and one support band whose
- * temporal row exists only for a world that has a temporal track — without changing the room the world is given.
+ * temporal row exists only for a world that has a temporal track. SHARED-VIS-01 (Product Owner, Option 1): a world with
+ * no temporal track is given the band its chrome MEASURES — none when the chrome is empty — capped at the room every
+ * world's band has, and the world grows into the rest; a world with a temporal track is composed exactly as before.
  */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -15,6 +17,8 @@ import { useSurfaceAppearance } from '../../appearance';
 import type { ViewportEnvelope } from '../../map/camera';
 import {
   RESPONSIVE_CHROME_BAND_TEST_ID,
+  RESPONSIVE_CHROME_MEASURE_TEST_ID,
+  RESPONSIVE_MAP_FRAME_TEST_ID,
   RESPONSIVE_SUPPORT_BAND_TEST_ID,
   RESPONSIVE_TIMELINE_ROW_TEST_ID,
   type ChromeComposition,
@@ -60,6 +64,8 @@ const styleOf = (node: { props: { style?: unknown } }): Record<string, unknown> 
   return (Array.isArray(raw) ? Object.assign({}, ...raw.flat(4).filter(Boolean)) : (raw ?? {})) as Record<string, unknown>;
 };
 
+const layout = (height: number) => ({ nativeEvent: { layout: { x: 0, y: 0, width: 390, height } } });
+
 afterEach(() => {
   cleanup();
   seen.envelopes.length = 0;
@@ -101,7 +107,7 @@ describe('S5-03B R1 — the Living Analysis surface', () => {
     expect(seen.chrome.at(-1)?.gapPoints).toBeGreaterThan(0);
   });
 
-  it('a world with no temporal track gets no instrument, and the SAME room for the world and the band', async () => {
+  it('a world with no temporal track gets no instrument; until its chrome is measured, the SAME room for the world and the band', async () => {
     const withTrack = await composed(surface());
     const bandWith = styleOf(withTrack.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height;
     const worldWith = seen.envelopes.at(-1);
@@ -125,6 +131,58 @@ describe('S5-03B R1 — the Living Analysis surface', () => {
     });
     expect(styleOf(view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID)).height).toBe(chromeBefore - 40);
     expect(seen.envelopes.at(-1)).toEqual(worldBefore);
+  });
+
+  it('SHARED-VIS-01 — an empty chrome holds no room: the band is only the bottom safe area, no gap, and the world reaches it', async () => {
+    const view = await composed(surface({ timeline: null }));
+    const half = styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height as number;
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(0)); });
+    const band = styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID));
+    expect(band.height).toBe(34);
+    expect(band.marginTop).toBe(0);
+    expect(styleOf(view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID)).height).toBe(34);
+    // The world's ceiling is the whole column above the safe area; its basis (half) and floor are unchanged.
+    const frame = styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID));
+    expect(frame.maxHeight).toBe(844 - 34);
+    expect(frame.maxHeight as number).toBeGreaterThan(844 - half);
+    expect(frame.flexBasis).toBe(Math.round((844 - 44 - 34) / 2));
+  });
+
+  it('SHARED-VIS-01 — content is given exactly the band it measures, grows with it, and is capped at the room every world has', async () => {
+    const view = await composed(surface({ timeline: null }));
+    const cap = styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height as number;
+    const gap = styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).marginTop as number;
+    // The empty-World sentence: a short band, the world above it, the sentence still mounted and still read.
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(71.4)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(72);
+    expect(styleOf(view.getByTestId(RESPONSIVE_CHROME_BAND_TEST_ID)).height).toBe(72);
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(844 - 72 - gap);
+    expect(view.getByTestId('probe-chrome')).toBeTruthy();
+    // A panel opening: the band grows with what it holds, and the world gives back exactly that much.
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(300)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(300);
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(844 - 300 - gap);
+    // More than the room: capped, the rest reachable inside the band's scroller; the world keeps its half.
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(2000)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(cap);
+    expect(styleOf(view.getByTestId(RESPONSIVE_MAP_FRAME_TEST_ID)).maxHeight).toBe(844 - cap - gap);
+  });
+
+  it('SHARED-VIS-01 — a world with a temporal track never measures its chrome: Personal is composed exactly as before', async () => {
+    const view = await composed(surface());
+    // Nothing is measured, so nothing the chrome says can move the band (the plan ignores a measurement here as well).
+    expect(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID).props.onLayout).toBeUndefined();
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).marginTop).toBeGreaterThan(0);
+  });
+
+  it('SHARED-VIS-01 D2 — the panel closing gives its room back at once: the world view keeps any running travel', async () => {
+    const view = await composed(surface({ timeline: null }));
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(300)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(300);
+    // Back closes the panel in the same moment the camera steps out. The band follows the chrome without waiting: a
+    // frame resized mid-travel no longer strands the world (`map/__tests__/world-resize-race.test.tsx`).
+    await act(async () => { fireEvent(view.getByTestId(RESPONSIVE_CHROME_MEASURE_TEST_ID), 'layout', layout(0)); });
+    expect(styleOf(view.getByTestId(RESPONSIVE_SUPPORT_BAND_TEST_ID)).height).toBe(34);
   });
 
   it('mounts the composition observer after the band, outside the layout', async () => {
