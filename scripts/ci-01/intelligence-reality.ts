@@ -171,7 +171,9 @@ class AutoCommitDb {
 const READABLE_TABLES = new Set(['conversation_sessions', 'conversation_turns', 'memories', 'hypotheses', 'confidence_evaluations', 'memory_control_commands']);
 const AUTHENTICATED_RPC_ALLOWLIST = new Set(['pending_memory_clarification_v1', 'create_conversation_session_v1', 'create_user_conversation_turn',
   'read_him_intelligence_snapshot_v1', 'read_him_contextual_current_intelligence_batch_v1', 'read_him_session_cross_context_foreground_v3',
-  'read_him_brain_context_for_turn_v1', 'set_him_session_context_binding_v1']);
+  'read_him_brain_context_for_turn_v1', 'set_him_session_context_binding_v1',
+  // INTEL-TM-01 (migration 0151): the reasoning context's evidence-reliance read, issued after the active-Hypothesis list.
+  'hypothesis_evidence_reliance_v1']);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set(['server_finalize_memory_control_turn_v1', 'claim_conversation_turn', 'finalize_conversation_turn_v2',
   'fail_conversation_turn', 'select_formal_question_opportunity_v1']);
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/u;
