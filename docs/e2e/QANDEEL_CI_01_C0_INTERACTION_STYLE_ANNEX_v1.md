@@ -1,6 +1,6 @@
 # CI-01 / C0 — Annex: Adaptive Conversational Presence & Interaction Style
 
-**Phase:** C0 — RESEARCH / DESIGN ONLY · **Status:** `C0 ANNEX — PRODUCT DECISIONS APPROVED WITH CONTROLLED AMENDMENTS (P1–P9; Product Owner, 2026-10-10) · C1 NOT AUTHORIZED — pending C1 Task Contract approval` · **Date:** 2026-10-10
+**Phase:** C0 — RESEARCH / DESIGN ONLY · **Status:** `C0 ANNEX — PRODUCT DECISIONS APPROVED WITH CONTROLLED AMENDMENTS (P1–P9; Product Owner, 2026-10-10) · C1 TASK CONTRACT APPROVED WITH MANDATORY AMENDMENTS (2026-10-10) · C1-A DELIVERED LOCALLY (design record `docs/conversational-personality-v1.md`) · C1-B NOT AUTHORIZED` · **Date:** 2026-10-10
 **Governing principle (Product Owner, 2026-10-10):** **ONE QANDEEL PERSONALITY — ADAPTIVE NATURAL EXPRESSION.** QANDEEL has a distinctive, stable identity. It is not a mirror that imitates the user, yet it adapts strongly to the person, the situation and the channel.
 **Parent:** [CI-01 C0 Decision Report](QANDEEL_CI_01_C0_DECISION_REPORT_v1.md). Same baseline (`origin/main` = `6a5fa42`, migrations `0001`–`0150`), same evidence rule, same branch.
 **Added scope (Product Owner, 2026-10-10):** make QANDEEL's way of interacting natural and distinctive — one personality, stable in principle, flexible in expression (warm, serious, playful, empathetic, direct, able to disagree respectfully) according to the conversation and the user's preferences; never a generic chatbot, a report or a lecture.
@@ -221,4 +221,4 @@ Scoring stays blinded human 1–5 per rubric item plus overall preference, with 
 
 ---
 
-**C0 Annex gate: PASSED — P1–P9 APPROVED WITH CONTROLLED AMENDMENTS (Product Owner, 2026-10-10). C1 is NOT AUTHORIZED; see the [C1 Task Contract draft](QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md).**
+**C0 Annex gate: PASSED — P1–P9 APPROVED WITH CONTROLLED AMENDMENTS (Product Owner, 2026-10-10). The [C1 Task Contract](QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) was approved with mandatory amendments; this annex is carried into the canonical design record [`docs/conversational-personality-v1.md`](../conversational-personality-v1.md) by C1-A; C1-B is NOT AUTHORIZED until the Product Owner approves it explicitly.**
