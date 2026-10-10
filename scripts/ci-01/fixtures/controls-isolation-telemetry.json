@@ -6,6 +6,7 @@
   "isolation": {
     "probeUser": "ISOLATION_PROBE",
     "targetUser": "K1",
+    "hypothesisTargetUser": "F1",
     "retrievalQuery": "فاكر لما قلتلك إني بحب الهدوء؟"
   },
   "contentLeakScan": {

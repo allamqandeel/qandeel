@@ -155,6 +155,24 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
+### CI-01 local-closure checkpoint — 2026-10-10 (not merged)
+
+This is a **locator note, not a new Product authority**. It records local branch truth only.
+
+- `main` is `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24`, the merge of PR #324 (PROD-RETRY-01, migration `0150`, not deployed).
+- **CI-01 — Shared Intelligence Learning Evidence & Baseline** is a cross-cutting baseline task, not a Product stage.
+  - C0 Product decisions: APPROVED (D1–D10, P1–P9, with controlled amendments).
+  - C1-A (Canonical Evidence and Personality Baseline) and C1-B (Synthetic Intelligence Baseline): delivered locally.
+  - The C1 closing change: prepared locally on `ci/ci-01-c1-intelligence-personality-baseline`; not pushed, not verified
+    on GitHub, not merged. CI-01 is not `CLOSED` or `MERGED` on `main`.
+- Where to look: the [C1 Task Contract](docs/e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) (lifecycle, gates, results), the
+  [Intelligence Evidence Baseline v1](docs/intelligence-evidence-baseline-v1.md) (census, rules `CI-01-L1` … `L8`, measured
+  limits), the [Conversational Personality v1](docs/conversational-personality-v1.md) design (OPEN COPY), and
+  [`scripts/ci-01/`](scripts/ci-01/README.md) (the dev-only harness and its recorded results; never a CI step).
+- Backlog: `QAN-BL-INTEL-01` (PG-02, `HIGH`, `DEFERRED — OWNED`, owner `INTEL-TM-01`), `QAN-BL-INTEL-02` and
+  `QAN-BL-CI-02` (`VALIDATION — OPEN`). C2 and Stage 8A / 8B are not started. SHARED-VIS-01's stale banners are an
+  independent governance gap and are not touched here.
+
 ### Execution reconciliation checkpoint — 2026-10-04 (ROADMAP-REC-01, through PR #305)
 
 This is a **locator note, not a new Product authority**. It records GitHub truth on

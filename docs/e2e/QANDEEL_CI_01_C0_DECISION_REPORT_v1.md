@@ -1,6 +1,6 @@
 # CI-01 / C0 — Shared Intelligence Learning Evidence & Baseline: Research, Repo Truth & Product Decision Gate
 
-**Phase:** C0 — RESEARCH / REPO TRUTH / DECISION GATE · **Status:** `C0 DECISION REPORT — PRODUCT DECISIONS APPROVED WITH CONTROLLED AMENDMENTS (D1–D10, P1–P9; Product Owner, 2026-10-10) · C1 TASK CONTRACT APPROVED WITH MANDATORY AMENDMENTS (2026-10-10) · C1-A DELIVERED LOCALLY · C1-B NOT AUTHORIZED` · **Date:** 2026-10-10 (research and decisions the same day)
+**Phase:** C0 — RESEARCH / REPO TRUTH / DECISION GATE · **Status:** `C0 DECISION REPORT — PRODUCT DECISIONS APPROVED WITH CONTROLLED AMENDMENTS (D1–D10, P1–P9; Product Owner, 2026-10-10) · C1 TASK CONTRACT APPROVED WITH MANDATORY AMENDMENTS (2026-10-10) · C1-A DELIVERED LOCALLY · C1-B DELIVERED LOCALLY · C1 LOCAL CLOSURE PREPARED (2026-10-10) — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED` · **Date:** 2026-10-10 (research and decisions the same day)
 **C1 Task Contract:** [DRAFT — CI-01 / C1 — Intelligence Evidence & Conversational Personality Baseline](QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) — a proposal only; implementation of C1 begins only on the Product Owner's explicit approval of that contract.
 **Baseline:** `origin/main` = `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24` (merge of PR #324, PROD-RETRY-01). Migrations `0001`–`0150`. Migration `0150` is complete in the repository and **NOT DEPLOYED**.
 **Branch:** `ci/ci-01-c0-decision-report` (documentation only; nothing else is written).

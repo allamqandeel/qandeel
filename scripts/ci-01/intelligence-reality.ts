@@ -613,19 +613,64 @@ async function main(): Promise<void> {
 
   // ---- controls -----------------------------------------------------------------------------------------
   if (controlsFixture && (!only || only === 'CONTROLS')) {
+    // Isolation (CI-01-L1), two-sided and non-vacuous: for each target, the OWNER reads its own rows through the
+    // production RLS path (authenticated role + its own claims) and must see exactly the ground truth (observer count,
+    // > 0); a NON-OWNER reads through the same path by user_id, by the target's row ids and unfiltered, and must see
+    // nothing. Retrieval is measured the same way on both sides. A zero for the non-owner only counts when the owner
+    // positively sees the same rows.
     const iso = controlsFixture.isolation;
-    const targetId = users.get(iso.targetUser);
-    if (targetId) {
+    const targetLabels = [iso.targetUser, iso.hypothesisTargetUser].filter(Boolean) as string[];
+    if (targetLabels.every((label) => users.has(label))) {
       const probeId = await user(iso.probeUser);
+      const pairs: Json[] = [];
+      for (const label of targetLabels) {
+        const targetId = users.get(label)!;
+        const truthMem = await db.observer<Json>('SELECT id, content FROM public.memories WHERE user_id = $1 ORDER BY id', [targetId]);
+        const truthHyp = await db.observer<Json>('SELECT id FROM public.hypotheses WHERE user_id = $1 ORDER BY id', [targetId]);
+        await db.setAuthenticatedClaims(targetId);
+        const ownMem = await db.asRole<Json>('authenticated', 'SELECT id, content FROM public.memories WHERE user_id = $1 ORDER BY id', [targetId]);
+        const ownHyp = await db.asRole<Json>('authenticated', 'SELECT id FROM public.hypotheses WHERE user_id = $1 ORDER BY id', [targetId]);
+        const ownRetrieved = label === iso.targetUser ? (await memoryRetriever.retrieve(targetId, TOKEN, iso.retrievalQuery)).length : null;
+        await db.clearAuthenticatedClaims();
+        await db.setAuthenticatedClaims(probeId);
+        const otherMem = await db.asRole<Json>('authenticated', 'SELECT content FROM public.memories WHERE user_id = $1', [targetId]);
+        const otherHyp = await db.asRole<Json>('authenticated', 'SELECT statement FROM public.hypotheses WHERE user_id = $1', [targetId]);
+        const otherMemById = await db.asRole<Json>('authenticated', 'SELECT content FROM public.memories WHERE id = ANY($1::uuid[])', [truthMem.map((r: Json) => r.id)]);
+        const otherHypById = await db.asRole<Json>('authenticated', 'SELECT statement FROM public.hypotheses WHERE id = ANY($1::uuid[])', [truthHyp.map((r: Json) => r.id)]);
+        const otherRetrieved = label === iso.targetUser ? (await memoryRetriever.retrieve(probeId, TOKEN, iso.retrievalQuery)).length : null;
+        await db.clearAuthenticatedClaims();
+        const sameIds = (a: Json[], b: Json[]) => a.length === b.length && a.every((r, i) => r.id === b[i].id);
+        pairs.push({
+          target: label,
+          groundTruthViaObserver: { memories: truthMem.length, hypotheses: truthHyp.length },
+          ownerViaRls: { memories: ownMem.length, hypotheses: ownHyp.length, memoryRowsIdenticalToGroundTruth: sameIds(ownMem, truthMem) && ownMem.every((r: Json, i: number) => r.content === truthMem[i].content),
+            hypothesisRowsIdenticalToGroundTruth: sameIds(ownHyp, truthHyp), retrievedItems: ownRetrieved },
+          nonOwnerViaRls: { memoriesByUserId: otherMem.length, hypothesesByUserId: otherHyp.length, memoriesByRowId: otherMemById.length, hypothesesByRowId: otherHypById.length, retrievedItems: otherRetrieved },
+        });
+      }
       await db.setAuthenticatedClaims(probeId);
-      const leaked = await db.asRole<Json>('authenticated', 'SELECT count(*)::int AS n FROM public.memories WHERE user_id = $1', [targetId]);
-      const leakedHyp = await db.asRole<Json>('authenticated', 'SELECT count(*)::int AS n FROM public.hypotheses WHERE user_id = $1', [targetId]);
-      const retrieved = await memoryRetriever.retrieve(probeId, TOKEN, iso.retrievalQuery);
+      const [probeTotal] = await db.asRole<Json>('authenticated', 'SELECT (SELECT count(*)::int FROM public.memories) AS memories, (SELECT count(*)::int FROM public.hypotheses) AS hypotheses');
       await db.clearAuthenticatedClaims();
-      const targetMemories = (await memories(targetId)).length;
-      out.controls.isolation = { targetUser: iso.targetUser, targetUserMemoriesAsOwner: targetMemories, probeUserSeesTargetMemoriesViaRls: leaked[0].n,
-        probeUserSeesTargetHypothesesViaRls: leakedHyp[0].n, probeUserRetrievedItems: retrieved.length, holds: leaked[0].n === 0 && leakedHyp[0].n === 0 && retrieved.length === 0 };
-    } else out.controls.isolation = { skipped: `target user ${iso.targetUser} did not run` };
+      const [allRows] = await db.observer<Json>('SELECT (SELECT count(*)::int FROM public.memories) AS memories, (SELECT count(*)::int FROM public.hypotheses) AS hypotheses, (SELECT count(DISTINCT user_id)::int FROM public.memories) AS memory_owners');
+      const [probeOwn] = await db.observer<Json>('SELECT (SELECT count(*)::int FROM public.memories WHERE user_id = $1) AS memories, (SELECT count(*)::int FROM public.hypotheses WHERE user_id = $1) AS hypotheses', [probeId]);
+      const nonVacuous = {
+        ownerMemoriesSeen: pairs.some((x) => x.groundTruthViaObserver.memories > 0 && x.ownerViaRls.memories > 0),
+        ownerHypothesesSeen: pairs.some((x) => x.groundTruthViaObserver.hypotheses > 0 && x.ownerViaRls.hypotheses > 0),
+        ownerRetrievalReturnedItems: pairs.some((x) => (x.ownerViaRls.retrievedItems ?? 0) > 0),
+        otherUsersHoldRows: allRows.memories - probeOwn.memories > 0 && allRows.hypotheses - probeOwn.hypotheses > 0,
+      };
+      const positiveOwnership = pairs.every((x) => x.ownerViaRls.memories === x.groundTruthViaObserver.memories && x.ownerViaRls.hypotheses === x.groundTruthViaObserver.hypotheses
+        && x.ownerViaRls.memoryRowsIdenticalToGroundTruth && x.ownerViaRls.hypothesisRowsIdenticalToGroundTruth);
+      const negativeCrossUser = pairs.every((x) => x.nonOwnerViaRls.memoriesByUserId === 0 && x.nonOwnerViaRls.hypothesesByUserId === 0
+        && x.nonOwnerViaRls.memoriesByRowId === 0 && x.nonOwnerViaRls.hypothesesByRowId === 0 && (x.nonOwnerViaRls.retrievedItems ?? 0) === 0)
+        && probeTotal.memories === probeOwn.memories && probeTotal.hypotheses === probeOwn.hypotheses;
+      out.controls.isolation = {
+        method: 'owner reads its own rows through RLS (authenticated + its own JWT claims) and must equal the observer ground truth; the non-owner probe reads the same rows by user_id, by row id and unfiltered through the same RLS path and must get nothing; retrieval measured on both sides. holds only when every non-vacuity flag is true.',
+        probeUser: iso.probeUser, probeUserOwnRows: probeOwn, probeUserTotalVisibleViaRls: probeTotal, allUsersRowsViaObserver: allRows,
+        pairs, nonVacuous, positiveOwnership, negativeCrossUser,
+        holds: positiveOwnership && negativeCrossUser && Object.values(nonVacuous).every(Boolean),
+      };
+    } else out.controls.isolation = { skipped: `targets ${targetLabels.join(', ')} did not all run`, holds: false };
 
     // content corpus: every fixture turn text + every stored Memory content + every hypothesis statement
     const corpus = new Set<string>();

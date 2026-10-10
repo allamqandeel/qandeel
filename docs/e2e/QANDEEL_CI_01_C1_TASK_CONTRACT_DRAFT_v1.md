@@ -1,12 +1,12 @@
 # CI-01 / C1 — Intelligence Evidence & Conversational Personality Baseline — TASK CONTRACT
 
-**Phase:** C1 — BASELINE RECORDS, STATIC CONTRACT, SYNTHETIC RECIPE · **Status:** `TASK CONTRACT — APPROVED WITH MANDATORY AMENDMENTS (Product Owner, 2026-10-10) · C1-A CONDITIONALLY ACCEPTED · C1-B AUTHORIZED (2026-10-10) AND DELIVERED LOCALLY · AT C1-B REVIEW GATE · CLOSING CHANGE NOT AUTHORIZED` · **Date:** 2026-10-10
+**Phase:** C1 — BASELINE RECORDS, STATIC CONTRACT, SYNTHETIC RECIPE · **Status:** `TASK CONTRACT — APPROVED WITH MANDATORY AMENDMENTS (Product Owner, 2026-10-10) · C1-A CONDITIONALLY ACCEPTED · C1-B ACCEPTED FOR LOCAL BASELINE DELIVERY · C1 CLOSING CHANGE AUTHORIZED LOCAL ONLY AND PREPARED LOCALLY (2026-10-10) · NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED · AT LOCAL C1 CLOSURE REVIEW GATE` · **Date:** 2026-10-10
 **Parent:** [CI-01 C0 Decision Report](QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) (D1–D10 approved with controlled amendments, 2026-10-10) and its [Interaction Style annex](QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) (P1–P9).
 **Task name (D2):** `CI-01 — Shared Intelligence Learning Evidence & Baseline`. Not `QAN-BL-CI-01` (iOS CI).
 **Delivers (C1-A):** [`docs/intelligence-evidence-baseline-v1.md`](../intelligence-evidence-baseline-v1.md) · [`docs/conversational-personality-v1.md`](../conversational-personality-v1.md) · `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs` · backlog item `QAN-BL-INTEL-01`.
 **Delivers (C1-B):** [`scripts/ci-01/`](../../scripts/ci-01/README.md) — `local-db.mjs`, `network-guard.cjs`, `intelligence-reality.ts`, `fixtures/*.json`, `results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json`, `README.md` · `npm run verify:ci-01:intelligence-reality:local` · four C1-B authority pins in the static contract.
 
-> **Approval scope.** The Product Owner approved this contract on 2026-10-10 as *one* contract with two ordered slices and authorized **C1-A only**; after the C1-A Review Gate (same day) C1-A was **conditionally accepted** and **C1-B authorized** with the scope and limits recorded in §0.5. Both slices are now delivered locally; the closing change (§13, locators, `api-ci.yml` step, final banners) waits for the C1-B Review Gate. The file keeps its historical name (`…_DRAFT_v1.md`) because the Product Owner named it when approving; the banner, not the file name, states the lifecycle. D1–D10 and P1–P9 are inherited unchanged and are not reopened here.
+> **Approval scope.** The Product Owner approved this contract on 2026-10-10 as *one* contract with two ordered slices and authorized **C1-A only**; after the C1-A Review Gate (same day) C1-A was **conditionally accepted** and **C1-B authorized** with the scope and limits recorded in §0.5. Both slices are delivered locally. After the C1-B Review Gate the Product Owner authorized the closing change **locally only** (§0.6); it is prepared on this branch and is not pushed, not verified on GitHub and not merged. Four lifecycle states stay apart: C0 Product decisions approved; C1 implementation delivered locally; C1 verified on GitHub (not yet); C1 merged into `main` (not yet). The file keeps its historical name (`…_DRAFT_v1.md`) because the Product Owner named it when approving; the banner, not the file name, states the lifecycle. D1–D10 and P1–P9 are inherited unchanged and are not reopened here.
 
 ---
 
@@ -82,6 +82,16 @@ A3 uses **narrow semantic assertions** on single facts, never broad regexes or w
 | 8 | ten-item report, then **STOP AT C1-B REVIEW GATE** | delivered with the local commit |
 
 ---
+
+### 0.6 Closing change (Product Owner, 2026-10-10, after the C1-B Review Gate — "CLOSING CHANGE AUTHORIZED — LOCAL ONLY")
+
+| Decision | Ruling | Where it is executed |
+|---|---|---|
+| 1 — Network guard | `scripts/ci-01/network-guard.cjs` is accepted as part of C1-B: the guard must load before production modules and ts-node. No new transport, no parallel test structure | §4.2; [`scripts/ci-01/README.md`](../../scripts/ci-01/README.md) §4 |
+| 2 — `0029` / `0033` durable result content | record a data-retention review, not a production fix; distinguish historical authorized storage from a current unauthorized use; no change to `0029`, `0033` or `0130` | baseline §5.3 / §6; backlog `QAN-BL-INTEL-02` (`VALIDATION — OPEN`); §16 |
+| 3 — `QAN-INF-03` follow-up | keep both forward-safety results (25 / 35 at C1-A, 35 / 35 at C1-B); the later pass proves no cause and no fix; link to an existing owner or admit one item, no duplicate; no change to Mobile dependencies, Expo Doctor or the `QAN-INF-03` contract | backlog `QAN-BL-CI-02` (`VALIDATION — OPEN`); §16 |
+| 4 — Closing-change scope | documentation, the `api-ci.yml` registration of the static contract and the locators; no production change | §16 |
+| RLS evidence clarification | prove owner-can-read **and** non-owner-cannot-read on synthetic data; a zero from a case with nothing readable is not isolation; one focused check inside the existing harness if missing; no RLS policy or migration change | §16.1 |
 
 ## 1. Objective / user value
 
@@ -305,15 +315,15 @@ Slice 5 of D6 (relevance retrieval review) is folded into the Stage 8A / `QAN-CT
 
 - **BG-05 at kickoff (done in C1-A):** backlog read in full; no item names CI-01 as owner; referenced items `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02` are cited in A1's gap register, none re-owned.
 - **Admission in C1-A (decision 3):** `QAN-BL-INTEL-01 — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)`, `HIGH`, `DEFERRED — OWNED`, owner `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` (the first C2 slice of §12). Admission authorizes no implementation (BG-07).
-- **BG-08 at closure:** reconcile each referenced item (stays with its owner); admit new qualifying residue if any.
-- **BG-09:** this contract's banner and the two C0 documents' banners reach their final lifecycle state in the closing change.
+- **BG-08 at closure — done in the local closing change (2026-10-10):** every referenced item stays with its owner, unchanged; `QAN-BL-INTEL-01` unchanged; admitted `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (`VALIDATION — OPEN`, Product Owner closing decisions 2 and 3); the register holds 54 items (backlog §7, "CI-01 C1 closure reconciliation").
+- **BG-09 — done for the local state:** this contract, the two C0 documents, both C1-A records and the harness README now read `C1 LOCAL CLOSURE PREPARED — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED`. `CLOSED` and `MERGED` are not used before a verified GitHub run and the actual merge (Product Owner closing instruction §5).
 - **AGENTS.md §10.7:** `npm run test:task-closure-governance-contract` in the closing change (and already in C1-A, because the backlog and top-level docs changed).
 - **No `### I-0N closure record`**: CI-01 is a task, not a Connected Worlds phase.
-- **Locators (decision 6):** closing change only; status and sequencing wording.
+- **Locators (decision 6) — done:** Current State (§1, §3.7 row, §4, §5 mirror recounted to 54, §7), Project Map (§5 checkpoint note) and Product Roadmap (§6.5), status and sequencing wording only.
 
 ---
 
-**Follow-up path for the forward-safety failure (Product Owner, C1-B term 5).** The 10 failing children of `test:forward-safety-contract` seen at C1-A were one assertion of `qan-inf-03-deterministic-expo-dependency-validation-contract` (`npm explain` of three Expo packages under `doctor:mobile`) that failed identically on the real tree that day and **passed 35 / 35 and 6 / 6 at C1-B without any change to its inputs** (§8.2): an environment-dependent, non-deterministic failure of a contract whose claim is determinism — an `apps/mobile` tooling / local `node_modules` matter outside CI-01's census. At the closing change CI-01 records it in the backlog under its existing owner line (`QAN-INF-03`) as a validation finding with the evidence from §8.1 / §8.2, or re-owns it to the mobile-infrastructure task the Product Owner names; CI-01 itself does not touch `apps/mobile`, QAN-INF-03 or the forward-safety contract.
+**Follow-up path for the forward-safety failure (Product Owner, C1-B term 5).** The 10 failing children of `test:forward-safety-contract` seen at C1-A were one assertion of `qan-inf-03-deterministic-expo-dependency-validation-contract` (`npm explain` of three Expo packages under `doctor:mobile`) that failed identically on the real tree that day and **passed 35 / 35 and 6 / 6 at C1-B without any change to its inputs** (§8.2): an environment-dependent, non-deterministic failure of a contract whose claim is determinism — an `apps/mobile` tooling / local `node_modules` matter outside CI-01's census. At the closing change CI-01 records it in the backlog under its existing owner line (`QAN-INF-03`) as a validation finding with the evidence from §8.1 / §8.2, or re-owns it to the mobile-infrastructure task the Product Owner names; CI-01 itself does not touch `apps/mobile`, QAN-INF-03 or the forward-safety contract. **Executed at the closing change:** `QAN-INF-03` has no backlog item and no active owner, so the follow-up is admitted as `QAN-BL-CI-02` (`VALIDATION — OPEN`, proposed owner `QAN-INF-06`). The §8.1 and §8.2 results both stay as written.
 
 ## 14. Stop conditions
 
@@ -325,13 +335,88 @@ Slice 5 of D6 (relevance retrieval review) is folded into the Stage 8A / `QAN-CT
 6. **Any pin in A3 would freeze a §0.4 item or require enumerating a migration band or a workflow's job count** → redesign the pin; never weaken the forward-safety scan.
 7. **Any need to read `.env`, a hosted host, a provider key or real user rows** → stop; that is outside C1 by construction.
 8. **A Product-contract gap appears** (e.g. the subject-marker question, the Interaction Preferences field list) → record it as a decision for the owning slice; do not resolve it in C1.
-9. **End of C1-A** → C1-A Review Gate (passed 2026-10-10, conditional acceptance); **end of C1-B** → C1-B Review Gate: the Product Owner reviews before the closing change.
+9. **End of C1-A** → C1-A Review Gate (passed 2026-10-10, conditional acceptance); **end of C1-B** → C1-B Review Gate (passed 2026-10-10; closing change authorized local only); **end of the closing change** → Local C1 Closure Review Gate: the Product Owner reviews before any push, PR or merge.
 10. **Push, PR, CI, merge** → only on the Product Owner's explicit instruction.
 
 ---
 
 ## 15. Decisions (closed 2026-10-10)
 
-The six decisions of the draft are closed in §0.1. C1-B received its go on 2026-10-10 (§0.5) and is delivered (§8.2). Open for the Product Owner at the C1-B Review Gate: (a) the retention question on the 0029 / 0033 durable ledger content (documentary; no decision needed to close C1); (b) the owner line for the forward-safety follow-up (§13); (c) confirmation of the closing-change scope (§13, locators, `api-ci.yml` step, final banners).
+The six decisions of the draft are closed in §0.1. C1-B received its go on 2026-10-10 (§0.5) and is delivered (§8.2). The three items left open at the C1-B Review Gate were decided on 2026-10-10 (§0.6): (a) the `0029` / `0033` retention question is recorded as `QAN-BL-INTEL-02`; (b) the forward-safety follow-up is `QAN-BL-CI-02`; (c) the closing-change scope is §16. Open for the Product Owner at the Local C1 Closure Review Gate: the two proposed owner names (`INTEL-RET-01`, `QAN-INF-06`), and the push / PR decision.
 
-**STOP AT C1-B REVIEW GATE.** No closing change, no production code, no migration, no Push, no PR, no GitHub CI, no Hosted Supabase, until the Product Owner reviews the C1-B report and issues new instructions.
+---
+
+## 16. Closing change — local (2026-10-10, same branch, on top of `0e49622`)
+
+Authorized by the Product Owner after the C1-B Review Gate, **local only** (§0.6). It changes no file under `apps/`,
+`database/` or `packages/` and no migration.
+
+### 16.1 RLS evidence — what "0 / 0" meant, and the two-sided proof
+
+The C1-B control reported the non-owner side only. Its "owner" count was read through the observer connection, which
+bypasses RLS, so it did not prove that the owner can read its rows **through RLS**. Its hypothesis zero was vacuous:
+the target K1 owned no hypothesis. The closing change replaced that control with one focused, two-sided check inside the
+same harness and the same isolated PostgreSQL mechanism. The fixture names a second target (`hypothesisTargetUser: "F1"`),
+because F1 owns the only hypotheses; no RLS policy or migration changed.
+
+| Check (synthetic users, through the production RLS path: role `authenticated` + the reader's own JWT claims) | K1 | F1 |
+|---|---:|---:|
+| ground truth via observer: memories / hypotheses | 3 / 0 | 2 / 1 |
+| **owner** reads own memories / hypotheses through RLS (rows identical to ground truth) | **3 / 0** ✓ | **2 / 1** ✓ |
+| **owner** retrieval for the K1 query | **2 items** | — |
+| **non-owner** reads by `user_id`: memories / hypotheses | **0 / 0** | **0 / 0** |
+| **non-owner** reads by the target's row ids: memories / hypotheses | **0 / 0** | **0 / 0** |
+| **non-owner** retrieval for the same query | **0** | — |
+
+The non-owner also reads **0 / 0 unfiltered**, while 13 memories and 2 hypotheses exist for 6 other users. `holds`
+now requires `positiveOwnership`, `negativeCrossUser` and four non-vacuity flags: owner memories seen, owner hypotheses
+seen, owner retrieval non-empty, other users hold rows. All are `true`. The static contract pins those fields (no yield is
+pinned).
+
+**Why one full harness run.** A fresh process-owned cluster needs all 150 migrations; the positive control needs K1's and
+F1's data, which their scenarios create; and the results file locks the SHA-256 of the driver and fixtures, so it must be
+regenerated from the edited harness. The run on `127.0.0.1:54526` passed every identity proof, applied 150 migrations
+in 5.0 s, blocked 14 / 14 guard probes, made 0 outbound attempts, and removed its cluster (15 s in all). Every scenario
+summary and every other control is byte-identical to the C1-B run.
+
+### 16.2 Data-retention review of the `0029` / `0033` ledger content (decision 2)
+
+| Question | Finding at `6a5fa42` |
+|---|---|
+| what is stored | `INTENT_PROVIDER` `result_payload.problem.text` (span of the user's own turn, `0029`); `CANDIDATE_PROVIDER` candidate plan (`0033`) |
+| who can read it | `service_role` only (RLS on; revoked from `anon` / `authenticated`, `0022`) |
+| who does read it | the dispatcher's durable-result readers, to recover the **same** execution of the same source turn; no other reader in `apps/api/src` |
+| telemetry / AI-COST-01 | not telemetry and not `ai_provider_calls`; C1-B found 0 content hits in telemetry, outbox and executions |
+| deletion | Personal erasure (`0130`) deletes it; `0128` forget / do-not-rely does not; export omits it |
+| classification (D4) | (a) technically stored by design; (b) usable only for its own execution recovery; (c) undecided |
+
+No violation is established. The undecided part, whether such text may stay or be read again after a forget /
+do-not-rely and under which provenance, retention and deletion rules, is `QAN-BL-INTEL-02` (`HIGH`, `VALIDATION — OPEN`,
+proposed owner `INTEL-RET-01`). No migration changes.
+
+### 16.3 Files changed by the closing change
+
+| File | Change |
+|---|---|
+| `scripts/ci-01/intelligence-reality.ts`, `scripts/ci-01/fixtures/controls-isolation-telemetry.json` | the two-sided, non-vacuous isolation control (§16.1) |
+| `scripts/ci-01/results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json` | regenerated once by the run above |
+| `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs` | pins the two-sided isolation fields; pins one `api-ci.yml` step before forward-safety (17 tests) |
+| `.github/workflows/api-ci.yml` | one step in the existing static-contract list: `npm run test:ci-01-intelligence-evidence-baseline-contract`; no job, condition or dependency changed; the harness is not added |
+| `docs/qandeel-canonical-backlog-v1.md` | `QAN-BL-INTEL-02`, `QAN-BL-CI-02`, §7 counts and reconciliation, §9 rows |
+| `QANDEEL_CURRENT_STATE.md`, `QANDEEL_PROJECT_MAP.md`, `QANDEEL_PRODUCT_ROADMAP.md` | locator status / sequencing; mirror recounted to 54; PROD-RETRY-01 recorded as merged (`6a5fa42`) |
+| this contract, both C0 documents, both C1-A records, `scripts/ci-01/README.md` | banners and the closing record |
+
+### 16.4 Gates (proportional to the files above)
+
+| Gate | Result |
+|---|---|
+| harness run (once, fresh isolated cluster) | `RUN_COMPLETE`; controls hold; isolation two-sided and non-vacuous (§16.1) |
+| `test:ci-01-intelligence-evidence-baseline-contract` | **17 / 17 PASS** |
+| `test:task-closure-governance-contract` | **24 / 24 PASS** |
+| every static contract that reads a changed file (71 files: the backlog, the three locators, `api-ci.yml`, `scripts/ci-01` or the CI-01 records), forward-safety excluded | **934 / 934 PASS** |
+| `test:forward-safety-contract` (its inputs changed: `api-ci.yml`, `tests/`, the backlog) | **25 / 35 — FAIL (not a pass).** All 10 failures are one child in every mutation: the `QAN-INF-03` leg "expo install --check and expo-doctor both pass deterministically, offline". No CI-01 child failed in the mirror. Run directly on the real tree, `qan-inf-03-deterministic-expo-dependency-validation-contract` passes 6 / 6, and nothing under `apps/mobile` or `node_modules` changed. This is the intermittent local failure recorded as `QAN-BL-CI-02` (25 / 35 at C1-A, 35 / 35 at C1-B, 25 / 35 now). It was not re-run for reassurance. API CI on the pushed head is the authority |
+| backlog recount | §4 index 54 rows = §7 (24 / 2 / 10 / 18; 31 / 21 / 2); the Current State's 36 active rows equal the index rows one for one |
+| `git diff --check`; secret scan; path scan | clean; no secret-shaped string added; no path under `apps/`, `database/` or `packages/` |
+| not run | Jest API, database verifiers, `brain-eval`, Mobile, GitHub CI — no file in their census changed; the full harness was not re-run beyond §16.1 |
+
+**STOP AT LOCAL C1 CLOSURE REVIEW GATE.** No push, no PR, no merge and no C2 until the Product Owner reviews this closure and issues new instructions.

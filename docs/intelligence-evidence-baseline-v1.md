@@ -1,6 +1,6 @@
 # QANDEEL — Intelligence Evidence Baseline v1
 
-**Status:** `CANONICAL BASELINE RECORD — C1-A DELIVERED LOCALLY · CI-01 OPEN (C1-B and closing change pending)` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` · **Date:** 2026-10-10
+**Status:** `CANONICAL BASELINE RECORD — C1-A AND C1-B DELIVERED LOCALLY · C1 LOCAL CLOSURE PREPARED (2026-10-10) — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` · **Date:** 2026-10-10
 **Baseline SHA:** `main` `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24` (merge of PR #324; migrations `0001`–`0150`; `0150` NOT DEPLOYED) · **Census version:** `census-v1 @ 6a5fa42`
 **Authority:** [CI-01 C0 Decision Report](e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) (D1–D10, Product Owner 2026-10-10) · [C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) (approved with mandatory amendments, 2026-10-10) · **Static contract:** `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs`
 **Companion:** [QANDEEL Conversational Personality & Interaction Adaptation v1](conversational-personality-v1.md)
@@ -66,7 +66,7 @@ Legend: **ACTIVE** = implemented and runs on `main` without a provider; **PROVID
 | C-31 | Behavioural guidance text | `BehavioralResponsePolicyService.buildTextGuidance()` returns one static string (8 lines) rendered by `composeServerGuidance` | ACTIVE (policy text, not a runtime; **not pinned**) | `apps/api/src/conversation/behavioral-response-policy.service.ts`; `apps/api/src/model-router/model-router.types.ts` |
 | C-32 | Any cross-user, aggregate, training, fine-tuning, reward or outcome-feedback mechanism | none; every "cross-user" mention in code or docs is a prohibition | **ABSENT** (and forbidden without consent by L1 / L2) | comment-stripped sweep of `apps/api/src` for fine-tuning / training-job / reward-model identifiers: 0 hits at the baseline |
 
-### 2.1 Synthetic reality findings carried from C0 (2026-10-09, `main` `5973123`; synthetic accounts only; not repository authority until C1-B re-runs them)
+### 2.1 Synthetic reality findings carried from C0 (2026-10-09, `main` `5973123`; synthetic accounts only; superseded as evidence by the C1-B re-run in §2.2, kept as history)
 
 | Scenario | Observed (synthetic) | Census rows affected |
 |---|---|---|
@@ -80,6 +80,30 @@ Legend: **ACTIVE** = implemented and runs on `main` without a provider; **PROVID
 | Controls | the other synthetic user sees 0 memories via RLS; 0 cross-user retrieval; 46 router calls, 0 external HTTP | C-01, C-08, C-20, C-27 — the authorities hold |
 
 Migrations `0149` / `0150` touch Matching privileges and stale-state SQLSTATEs only; the citations above were re-checked on `6a5fa42`. C1-B re-measures these on a process-owned disposable PostgreSQL under the C1 contract §0.3 isolation rules; any divergence is recorded as a finding.
+
+### 2.2 C1-B repository-resident re-measurement (`main` `6a5fa42`; synthetic accounts only; structural counts, not a quality score)
+
+Source: [`scripts/ci-01/results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json`](../scripts/ci-01/results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json),
+produced by `npm run verify:ci-01:intelligence-reality:local` through the real orchestrator and post-response dispatcher,
+with deterministic doubles for the providers, Redis and PostgREST ([`scripts/ci-01/README.md`](../scripts/ci-01/README.md)).
+Every scenario reproduced the C0 observation of 2026-10-09; nothing in §2.1 diverged.
+
+| Scenario | Measured on `6a5fa42` (synthetic) | Census rows |
+|---|---|---|
+| N1 natural self-description | value statements captured 0 / 4; the anchored location fact captured 1 / 1 with «ساكنة» stored as «ساكن»; recall 0 / 2 in a new session | C-02, C-04 |
+| K1 preferences / goals / decisions | captured 3 / 6 (anchored forms only); recall 1 / 4 (exact token only) | C-02, C-04 |
+| C1 reversal → restatement → correction | the natural reversal stored nothing; stale preference served 2 / 3; 1 duplicate `ACTIVE` pair after the explicit correction | C-05 |
+| P1 third-party separation | 1 / 3 third-party statements stored as the user's `PERSONAL_FACT` (explicit remember) | C-02, C-05 |
+| F1 forget / do-not-rely | forgotten content served 0 / 2; the derived hypothesis stayed `ACTIVE` and was injected 2 / 2 in a new session (PG-02) | **C-16** |
+| H1 HIM | organic: `EMPTY`; seeded measurement: `PARTIAL`, 3 instructions in its own session only | C-17 |
+| M1 / X1 triggers | «ليه أنا دايما…» → `GENERIC_QUESTION` (dead); «عايز… بس خايف» fires; «بسهر» also fires; without the semantic chain → `SKIPPED / NOT_ELIGIBLE` | C-11 |
+| Controls — isolation (two-sided, non-vacuous) | owner reads its own rows through RLS and they equal the ground truth: K1 3 memories, F1 2 memories + 1 hypothesis, owner retrieval 2 items; a non-owner reads 0 by user id, 0 by row id and 0 unfiltered (13 memories and 2 hypotheses exist for other users), and retrieves 0 | C-01, C-08 |
+| Controls — content | telemetry 2 596 records / 12 214 strings, 0 content hits; outbox 47 rows, `contains_content` 0; executions 0 hits; `ai_provider_calls` 0 rows; 0 outbound network attempts | C-25, C-27 |
+| Durable ledger content | `post_response_intelligence_effects.result_payload`: 2 `INTENT_PROVIDER` rows (`0029`, span of the user's own turn) and 2 `CANDIDATE_PROVIDER` rows (`0033`, candidate plan) hold user-derived text by design — see §5.3 | §5.3, `QAN-BL-INTEL-02` |
+
+Known limits of this measurement: the hypothesis providers and the conversational router are doubles, so nothing here
+measures what a real model would do (D7); the fixtures are fixed synthetic Egyptian Arabic and few; the counts are
+structural yields of deterministic code, not a capability pass.
 
 ---
 
@@ -148,6 +172,7 @@ Each rule restates an existing authority or, where none existed by name, the Pro
 | A Public reviewed meaning after F05 lineage erasure | **(c)** by a frozen Product decision | S5-02 / S5-03A |
 | Historical evidence participation events (`0072`) | (a) and (b) as immutable history, by the frozen Living Analysis design | `0072` |
 | Confidence evaluations of a hypothesis whose evidence was forgotten | (a); the next evaluation is the re-evaluation PG-02 owes | `QAN-BL-INTEL-01` |
+| `0029` intent span and `0033` candidate plan in `post_response_intelligence_effects.result_payload` | **(a)** by design (historical, authorized storage on a service-role-only ledger); **(b)** only to recover the same execution of the same source turn — no other reader exists in `apps/api/src` at the baseline; **(c)** undecided: no frozen rule says whether it may stay or be read again after a forget / do-not-rely of a Memory derived from the same turn. `0128` does not touch it; Personal erasure (`0130`) deletes it; export omits it. No violation is established | `QAN-BL-INTEL-02` (`VALIDATION — OPEN`); `0022`, `0029`, `0033`, `0130` |
 
 Each system's own approved deletion and history behaviour governs. **CI-01 invents no unified deletion rule.**
 
@@ -167,6 +192,7 @@ Each system's own approved deletion and history behaviour governs. **CI-01 inven
 | Auto SUPPORTED / WEAK / REJECTED / RETIRED; evidence weights | deferred, no owner (lifecycle doc §8–§9) | calibrated Confidence | documented only |
 | ABS Part 9 experiment framework / outcome attribution / learning feedback | none (`docs/reasoning-recommendation-integration-v1.md`) | L2 consent design; Stage 8A | documented only; **forbidden without L2 consent** |
 | Conversational language / dialect signal (`locale: 'und'`) | proposed C2 slice 4 (*Adaptive Conversational Expression*) | the companion record; QIR-004 byte accounting | documented; not pinned |
+| Retention and reuse of the `0029` / `0033` ledger content after forget / do-not-rely | **`QAN-BL-INTEL-02`** → proposed owner `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` (admitted by the closing change, `HIGH`, `VALIDATION — OPEN`) | a Product decision on provenance, retention and deletion of derived copies; `INTEL-TM-01` (same forget authority) | admitted; no migration change |
 
 ---
 
@@ -192,4 +218,4 @@ Each system's own approved deletion and history behaviour governs. **CI-01 inven
 - **Census rows (§2, §2.1, §3 "missing capability")** are a versioned baseline. The task that repairs a row updates it, cites the repair, and bumps `census-v1` to the next version in the same change. The static contract does **not** fail on such a repair.
 - **Rules (§4) and classes (§5)** change only by Controlled Change with the Product Owner's decision; the static contract pins their cited enforcement and this record's presence.
 - **Gap register (§6)** moves with the backlog: an admission, re-ownership or tombstone is recorded here in the same change that records it in the backlog.
-- **C1-B** appends the first repository-resident measurement (`scripts/ci-01/results/<sha>.json`) and replaces §2.1's "carried from C0" provenance with the re-run on the then-current `main`.
+- **C1-B** appended the first repository-resident measurement (`scripts/ci-01/results/<sha>.json`, §2.2); §2.1 stays as history. A repair re-runs the harness on its own `main` and adds a new results file and a new §2.x row set; it never edits an older one.

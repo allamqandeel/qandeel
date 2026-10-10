@@ -186,6 +186,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation) | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-07` | Post-v16 PostgREST: Race-Converging `40001` Paths and Genuine Deadlocks Lose the Server-Side Re-run | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `LOW` | `DEFERRED — OWNED` |
 | `QAN-BL-INTEL-01` | Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02) | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-INTEL-02` | Post-Response Intelligence Ledger Content (`0029` Intent Span, `0033` Candidate Plan): Retention and Reuse After Forget / Do-Not-Rely | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `HIGH` | `VALIDATION — OPEN` |
+| `QAN-BL-CI-02` | Forward-Safety Mirror: the `QAN-INF-03` Expo Dependency-Validation Leg Fails Intermittently on Some Local Hosts | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `MEDIUM` | `VALIDATION — OPEN` |
 
 ---
 
@@ -1343,6 +1345,87 @@ demoted or re-supported; that is the re-evaluation's job under its own Task Cont
 
 ---
 
+### `QAN-BL-INTEL-02` — Post-Response Intelligence Ledger Content (`0029` Intent Span, `0033` Candidate Plan): Retention and Reuse After Forget / Do-Not-Rely
+
+- **Title / Finding:** `public.post_response_intelligence_effects.result_payload` durably keeps user-derived text. The
+  `INTENT_PROVIDER` effect stores `problem.text`, an extractive span of the user's own current turn (migration `0029`,
+  durable intent provider result). The `CANDIDATE_PROVIDER` effect stores the validated candidate plan, whose statements
+  are derived from the user's turn (migration `0033`). The CI-01 C1-B harness measured both on synthetic accounts (2 + 2
+  rows on `main` `6a5fa42`). What is established at that baseline:
+  - **stored by design and access-restricted.** The table has RLS enabled and is revoked from `anon` and `authenticated`
+    (`0022`); only `service_role` reaches it, through `list_post_response_intelligence_effects_v1(execution_id)`.
+  - **not telemetry and not the AI usage ledger.** It is not `AI-COST-01`'s `ai_provider_calls` and not an operational
+    signal. C1-B measured 0 content hits in 2 596 telemetry records, 0 in the outbox and 0 in the executions table.
+  - **currently read only to recover its own execution.** In `apps/api/src` at the baseline, the payload is read only by
+    the dispatcher's durable-result readers (`durable-intent-provider-result.ts`, `durable-generation-result.ts`) for the
+    same execution of the same source turn. No cross-turn, cross-session, export, evaluation or training reader was found.
+  - **erased with the account, not with a forget.** The governed Personal erasure (`0130`) deletes every effect and
+    execution of the user. The `0128` forget / do-not-rely commands do not touch this table. The Personal export (`0130`)
+    does not include it.
+
+  No violation is established. Stored text is state (a) "technically stored" under the D4 distinction, not proof of a
+  current unauthorized use. What is **not decided** is whether these spans and derived statements may stay, or be read
+  again, after the user forgets or stops relying on a Memory derived from the same turn, and under which provenance,
+  retention and deletion rules.
+- **Source:** the [CI-01 C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) §8.2 and §16; the
+  [Intelligence Evidence Baseline v1](intelligence-evidence-baseline-v1.md) §5.3 and §6; the C1-B results
+  `scripts/ci-01/results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json` (`controls.durableLedgerContent`). Admitted at the
+  Product Owner's C1 closing decision 2 (2026-10-10).
+- **Anti-duplication:** `QAN-BL-INTEL-01` owns the re-evaluation of derived hypotheses, Confidence and Understanding after
+  evidence loss; its phased scope leaves export and erasure paths unchanged and does not cover ledger copies.
+  `QAN-BL-PRIV-01` / `02` are export completeness of named facts. `QAN-BL-ACCT-01` is Connected Worlds account deletion.
+  `AI-COST-01` holds no content. No item covers the retention of post-response ledger content.
+- **Why deferred:** CI-01 changes no runtime and no migration. A rule here needs a Product decision on provenance,
+  retention and deletion of derived copies (D4: CI-01 invents no unified deletion rule).
+- **Owner task:** `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review`. The owner name is
+  CI-01's proposal at the Product Owner's request; the Product Owner may rename it or re-own the item. No ownership of any
+  existing item moves.
+- **Severity:** `HIGH` — if reopened, it touches the user's frozen authority over forget / do-not-rely.
+- **Reopen condition:** any of:
+  1. a code path reads an `INTENT_PROVIDER` or `CANDIDATE_PROVIDER` `result_payload` other than to recover its own
+     execution: cross-turn, cross-session, export, evaluation, analytics or training;
+  2. a Product surface or record claims that forgetting a Memory, or deleting a turn, removes every derived copy;
+  3. `INTEL-TM-01` opens, or a turn-level deletion feature is designed;
+  4. Stage 8A binds a real intent or candidate provider, so the stored spans become real-model output.
+- **Required future property:** a forgotten or disabled source is never re-served through a ledger copy; any retention
+  beyond the recovery of its own execution is decided explicitly, with provenance; nothing here weakens forget.
+- **Status:** `VALIDATION — OPEN`
+
+This entry decides no retention period and no deletion mechanism, and authorizes no change to `0029`, `0033` or `0130`
+(BG-07).
+
+---
+
+### `QAN-BL-CI-02` — Forward-Safety Mirror: the `QAN-INF-03` Expo Dependency-Validation Leg Fails Intermittently on Some Local Hosts
+
+- **Title / Finding:** On some local Windows runs, `test:forward-safety-contract` reports 25 / 35. All ten failures are the
+  mirror's replay of one leg of `qan-inf-03-deterministic-expo-dependency-validation-contract`: the offline
+  `expo install --check` / `expo-doctor` / `npm explain` check under `doctor:mobile`. On other local runs and in API CI the
+  same gate passes 35 / 35, and the contract passes 6 / 6 when run directly on the real tree. CI-01 observed both results
+  on the same host on 2026-10-10, with no change to `apps/mobile`, `node_modules` or that contract between them: 25 / 35 at
+  C1-A, then 35 / 35 at C1-B. Both results are kept. The later pass does not identify or fix the cause.
+- **Source:** the S5-04 record (finding F11, forward-safety 25 / 35); the SEC-MATCH-00 record (forward-safety 25 / 35); the
+  PROD-RETRY-01 record (10 / 35 failing locally, CI 35 / 35); the
+  [CI-01 C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) §8.1, §8.2 and §13. Admitted at the Product
+  Owner's C1 closing decision 3 (2026-10-10).
+- **Anti-duplication:** `QAN-INF-03` is a completed infrastructure contract with no backlog item and no active owner.
+  `QAN-BL-CI-01` is iOS Maestro / XCTest startup in Mobile CI. No item covers the local mirror replay.
+- **Why deferred:** no hosted CI run has failed on it, and the contract under replay passes on the real tree. It is a
+  validation-reliability question in mobile tooling, outside CI-01's census. CI-01 does not touch `apps/mobile`, Expo
+  Doctor or the `QAN-INF-03` contract.
+- **Owner task:** `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism`. The owner name is CI-01's proposal;
+  the Product Owner may rename it or re-own the item.
+- **Severity:** `MEDIUM` — if reopened, a gate could report a failure unrelated to the change under review, or hide one.
+- **Reopen condition:** any of:
+  1. the leg fails in hosted API CI on any head;
+  2. it is reproduced on a clean checkout after `npm ci` on a stated host, so the cause can be identified;
+  3. a merge decision would have to rely on a local forward-safety result.
+- **Required future property:** the mirror's replay of `QAN-INF-03` gives the same verdict as the contract on the real
+  tree, or the gate states the host conditions it requires.
+- **Status:** `VALIDATION — OPEN`
+
+---
+
 ### `QAN-BL-PRIV-01` — Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item
 
 - **Title / Finding:** W3-CORR-U (migration `0134`) lets the reader resolve their own disagreement explicitly («أوافق
@@ -1818,15 +1901,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | Status | Count |
 | --- | ---: |
 | `DEFERRED — OWNED` | 24 |
-| `VALIDATION — OPEN` | 0 |
+| `VALIDATION — OPEN` | 2 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **52** |
+| **Total** | **54** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 30 |
-| `MEDIUM` | 20 |
+| `HIGH` | 31 |
+| `MEDIUM` | 21 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -2225,6 +2308,28 @@ only.
 The register now holds **52** items: 24 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`. By severity: 30 `HIGH`, 20 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
 
+**CI-01 C1 closure reconciliation (2026-10-10; local closure prepared, not pushed, not verified on GitHub, not merged).**
+The Product Owner reviewed the C1-B report and authorized a local closing change ("CLOSING CHANGE AUTHORIZED — LOCAL ONLY").
+This is the BG-08 half of that change. It is documentation, one CI step and one harness control; it changes no runtime and
+no migration.
+
+- **Inherited items (BG-05):** none by owner. `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01` and
+  `QAN-BL-PRIV-02` stay cited in the baseline's gap register, each unchanged and none re-owned.
+- **`QAN-BL-INTEL-01`:** unchanged: `HIGH`, `DEFERRED — OWNED`, owner `INTEL-TM-01`. C1-B re-measured it on `6a5fa42`
+  (one hypothesis `ACTIVE` over `DELETED` / `DISABLED` evidence, injected in 2 / 2 new-session turns).
+- **Admitted — `QAN-BL-INTEL-02`** (`HIGH`, `VALIDATION — OPEN`, proposed owner `INTEL-RET-01`): the retention and reuse
+  question for the `0029` / `0033` ledger content, at the Product Owner's closing decision 2, after the anti-duplication
+  check recorded on the item. No violation is established; no migration changes.
+- **Admitted — `QAN-BL-CI-02`** (`MEDIUM`, `VALIDATION — OPEN`, proposed owner `QAN-INF-06`): the intermittent local
+  failure of the forward-safety mirror's `QAN-INF-03` leg, at the Product Owner's closing decision 3. `QAN-INF-03` had no
+  backlog item and no active owner; S5-04, SEC-MATCH-00 and PROD-RETRY-01 recorded the same failure only in their records.
+- **Not admitted (BG-06):** the Memory correction / Arabic acquisition defects, the subject marker, trigger precision and
+  the `locale: 'und'` signal remain proposed C2 slices in the C1 contract §12, not designated by a canonical document. The
+  SHARED-VIS-01 stale banners remain an independent governance gap (D10).
+
+The register now holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`. By severity: 31 `HIGH`, 21 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
+
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -2302,6 +2407,10 @@ Inherited after T-12 closure reconciliation:
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
 | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `QAN-BL-PROD-07` |
+| `CI-01 — Shared Intelligence Learning Evidence & Baseline` | none — no item names it; admitted `QAN-BL-INTEL-01` (C1-A, Product Owner decision 3), `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (closing change, Product Owner closing decisions 2 and 3); `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01` and `QAN-BL-PRIV-02` cited and left unchanged |
+| `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` |
+| `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (proposed owner name) |
+| `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (proposed owner name) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

@@ -1,6 +1,6 @@
 # CI-01 C1-B — Synthetic Intelligence Reality Baseline (dev-only harness)
 
-**Status:** `C1-B DELIVERED LOCALLY · results recorded for main 6a5fa42 · CI-01 OPEN (closing change pending)`
+**Status:** `C1-B DELIVERED LOCALLY · results recorded for main 6a5fa42 · C1 LOCAL CLOSURE PREPARED (2026-10-10) — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED`
 **Owner task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline`, C1 Task Contract
 ([docs/e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md](../../docs/e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md)) §4.2 and §0.3.
 **Never a CI step.** Nothing here runs in any GitHub workflow, touches hosted Supabase, reads `.env`, or calls a provider.
@@ -29,7 +29,7 @@ means the harness executed; it is **not** a capability PASS. Defects are **recor
 | File | Role |
 |---|---|
 | `local-db.mjs` | cluster lifecycle: `run-baseline` (start → prove → migrate → drive → stop, cleanup always), `start`, `prove <state>`, `stop <state>`, `drive <state> [results]` |
-| `network-guard.cjs` | **preload** (`node --require`) that scrubs inherited env and makes every outbound transport throw; exposes `selfTest()` |
+| `network-guard.cjs` | **preload** (`node --require`) that scrubs inherited env and makes every outbound transport throw; exposes `selfTest()`. Accepted by the Product Owner as part of C1-B (closing decision 1): it must load before ts-node and every production module, which a file inside the driver cannot guarantee. It adds no transport and no parallel test structure |
 | `intelligence-reality.ts` | the driver: production composition + doubles + fixture execution + yields + controls |
 | `fixtures/*.json` | one file per scenario (N1, K1, C1, P1, F1, H1, M1, X1) + `controls-isolation-telemetry.json`; synthetic texts, measurement definitions, no expected values |
 | `results/<baseline-sha>.json` | the recorded run for that `main` SHA, with the isolation proofs, guard self-test, tool versions and file hashes |
@@ -62,6 +62,7 @@ The results file carries the SHA-256 of every harness file and fixture that prod
 | no DROP | the harness never issues `DROP DATABASE`; cleanup is `pg_ctl stop` + removal of the `mkdtemp` directory, and only after the file-level ownership proof (marker nonce, `PG_VERSION = 17`, directory under temp with the harness prefix) and, when reachable, the live proof |
 | external calls | `fetch`, `http`/`https` request+get, `http2.connect`, `tls.connect`, `dgram`, `dns.*` (except `localhost`), and `net.Socket.prototype.connect` to any non-loopback host **or any port other than the harness port** all throw `QANDEEL_CI01_NETWORK_FORBIDDEN`; the driver runs `selfTest()` (14 probes) and **stops unless all are blocked**; attempts during the run are counted |
 | failure | any failed proof → `QANDEEL_CI01_STOP`, exit 3, cluster torn down; **no alternative connection is ever tried** |
+| guard limits | the guard covers Node's own transports in the driver process and its children inherit the scrubbed environment; it does not police native addons or separate processes. `selfTest()` proves each covered transport is blocked before any production module loads |
 | data | synthetic accounts created by the driver in `auth.users`; every text comes from `fixtures/`; the results contain fixture texts and the Memory rows derived from them — synthetic by construction |
 
 ## 5. Doubles (verification-side; prove nothing about a real model)
@@ -77,7 +78,7 @@ that "no content in telemetry" is **measured**). `service_role` receives `BYPASS
 
 Production tree (`apps/`, `database/`, `packages/`) byte-identical to the baseline when run. Harness: `RUN_COMPLETE`,
 8 scenarios + controls, 10 synthetic users, 15 sessions, 47 user turns, 43 conversational router calls, 2 intent + 2 candidate
-double calls, 0 external attempts; cluster lifetime 18 s including 150 migrations (5.2 s). Controls **hold**.
+double calls, 0 external attempts; cluster lifetime 18 s including 150 migrations (5.2 s). Controls **hold**. The closing change regenerated this file once (cluster on `127.0.0.1:54526`, 150 migrations in 5.0 s, 15 s in all) after adding the two-sided isolation control; every scenario summary and every other control was byte-identical to the C1-B run.
 
 | Scenario | Measured (synthetic) | Same as 2026-10-09? |
 |---|---|---|
@@ -89,15 +90,17 @@ double calls, 0 external attempts; cluster lifetime 18 s including 150 migration
 | H1 HIM coverage | organic stressed-day turns: `EMPTY`, 0 known metrics, 0 instructions; seeded canonical `hse.stress=HIGH`: `PARTIAL`, 1 known, 3 behavioural instruction IDs **in that session only**; next session `EMPTY` again | yes |
 | M1 Arabic triggers | compound anecdote captured 0 (`AMBIGUOUS_OR_SPECULATIVE`), anchored compound captured as one Memory, hedged «يمكن…» correctly not stored, «ليه أنا دايما…» → `GENERIC_QUESTION` (recurring-pattern trigger does not fire), «عايز… بس خايف» → `INTERNAL_CONTRADICTION` → generation completed (+1 synthetic hypothesis); «بسهر» in F1.2 also fires the contradiction trigger | yes |
 | X1 semantic-chain dependency | contradiction trigger without the semantic chain → `SKIPPED/NOT_ELIGIBLE` (no hang this time because no eligible Memory existed); with the chain but no Memory → `SKIPPED/NOT_ELIGIBLE` | consistent |
-| Controls | probe user sees **0** of K1's memories/hypotheses via RLS, retrieves **0**; telemetry: 2 596 records, 12 214 strings, **0** content hits, **0** Arabic strings; outbox 47 rows, `contains_content` **0**; executions 47 rows, **0** hits; `ai_provider_calls` 0 rows; **0** network attempts | yes |
+| Controls — isolation | **two-sided and non-vacuous** (closing change): each owner reads its own rows through RLS (authenticated role + its own claims) and gets exactly the ground truth — K1 3 / 3 memories, F1 2 / 2 memories and 1 / 1 hypothesis — and owner retrieval returns 2 items; the non-owner probe reads **0** by user id, **0** by row id, **0** unfiltered (while 13 memories and 2 hypotheses exist for 6 other users) and retrieves **0**. `holds` requires every non-vacuity flag | stronger than 2026-10-09 (which measured the non-owner side only) |
+| Controls — content | telemetry: 2 596 records, 12 214 strings, **0** content hits, **0** Arabic strings; outbox 47 rows, `contains_content` **0**; executions 47 rows, **0** hits; `ai_provider_calls` 0 rows; **0** network attempts | yes |
 
 **New documentary finding (not a defect pin, not repaired):** `post_response_intelligence_effects.result_payload`
 (migration **0029**, durable intent-provider result) stores `problem.text`, an extractive span of the user's **own**
 current turn, on the `INTENT_PROVIDER` effect — 2 rows in this run (the two generation turns); 2 further `CANDIDATE_PROVIDER`
 rows hold the (synthetic) candidate statements (migration 0033). The table is RLS-enabled
 and `REVOKE`d from `anon`/`authenticated` (0022), service-role only. This is a **durable ledger**, not telemetry, and is
-reported separately as `controls.durableLedgerContent`; its retention is a question for the ledger's owner and is listed
-in the C1 contract §8.1 for the closing change. (The intent double here returns the whole turn; a production provider
+reported separately as `controls.durableLedgerContent`; its retention is recorded as a data-retention review in the baseline §5.3 and as
+backlog `QAN-BL-INTEL-02` (`VALIDATION — OPEN`): storage is historical and authorized, the only reader recovers its own
+execution, and no violation is established; what may stay after a forget is undecided. (The intent double here returns the whole turn; a production provider
 returns a span of it — the column holds user content either way.)
 
 Every number above is read from `results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json`; the per-turn records there

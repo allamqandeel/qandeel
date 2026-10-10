@@ -254,6 +254,11 @@ test('C1-B: the committed results for the baseline SHA record a passed proof, a 
   assert.equal(results.cluster.proofs.database.passed, true);
   assert.equal(results.networkGuard.selfTest.allBlocked, true);
   assert.equal(results.controls.isolation.holds, true, 'cross-user RLS and retrieval isolation (CI-01-L1)');
+  assert.equal(results.controls.isolation.positiveOwnership, true, 'the owner reads exactly its own rows through RLS');
+  assert.equal(results.controls.isolation.negativeCrossUser, true, 'the non-owner reads none of them through RLS or retrieval');
+  for (const [flag, value] of Object.entries(results.controls.isolation.nonVacuous)) assert.equal(value, true, `isolation is non-vacuous: ${flag}`);
+  assert.ok(results.controls.isolation.pairs.some((pair) => pair.ownerViaRls.memories > 0) && results.controls.isolation.pairs.some((pair) => pair.ownerViaRls.hypotheses > 0),
+    'a zero for the non-owner only counts when the owner positively sees memories and hypotheses');
   assert.equal(results.controls.telemetry.contentLeaks, 0, 'no fixture or stored content reached any telemetry attribute (CI-01-L7)');
   assert.equal(results.controls.outbox.with_content, 0);
   assert.equal(results.census.networkAttemptsBlockedDuringRun, 0, 'production code attempted no outbound call during the run');
@@ -261,10 +266,18 @@ test('C1-B: the committed results for the baseline SHA record a passed proof, a 
 });
 
 // ---------------------------------------------------------------------------------------------
-// Registration. The api-ci.yml step is added by the closing change (C1 contract decision 6).
+// Registration. The closing change registers this contract as one API CI step (C1 contract §0.6, decision 4).
 // ---------------------------------------------------------------------------------------------
 
 test('this contract is registered as a root script', () => {
   assert.equal(packageJson.scripts['test:ci-01-intelligence-evidence-baseline-contract'],
     'node --test tests/ci-01-intelligence-evidence-baseline-contract.test.mjs');
+});
+
+test('this contract runs once in API CI, among the static contracts and before the forward-safety gate', async () => {
+  const apiCi = await read('.github/workflows/api-ci.yml');
+  const step = 'run: npm run test:ci-01-intelligence-evidence-baseline-contract}';
+  assert.equal(apiCi.split(step).length - 1, 1, 'exactly one api-ci step runs this contract');
+  assert.ok(apiCi.indexOf('run: npm run test:ci-01-intelligence-evidence-baseline-contract}') < apiCi.indexOf('run: npm run test:forward-safety-contract}'),
+    'it runs before the forward-safety gate, which re-runs every contract above it');
 });
