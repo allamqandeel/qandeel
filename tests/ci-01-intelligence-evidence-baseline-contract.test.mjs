@@ -200,6 +200,67 @@ test('PG-02 is tracked in the canonical backlog as QAN-BL-INTEL-01 with a full i
 });
 
 // ---------------------------------------------------------------------------------------------
+// C1-B — the Synthetic Intelligence Reality Baseline harness (C1 contract §0.3). Pinned: the isolation
+// AUTHORITIES the harness must keep — a preloaded network guard that scrubs inherited database /
+// provider environment and throws on every outbound transport, a positive cluster identity proof
+// before any read or write, explicit loopback connection parameters, no `.env`, no CI workflow — and
+// the fact that the committed results file for the baseline SHA records a passed proof, a fully
+// blocked guard self-test and intact user isolation. NOT pinned: any yield, count, defect or
+// classifier outcome in the results — those are the versioned baseline the next repair changes.
+// ---------------------------------------------------------------------------------------------
+
+const localDb = await read('scripts/ci-01/local-db.mjs');
+const driver = await read('scripts/ci-01/intelligence-reality.ts');
+const networkGuard = await read('scripts/ci-01/network-guard.cjs');
+
+test('C1-B: the harness is one dev-only root script, never a CI step, and never reads a dotenv file', async () => {
+  assert.equal(packageJson.scripts['verify:ci-01:intelligence-reality:local'], 'node scripts/ci-01/local-db.mjs run-baseline');
+  assert.doesNotMatch(packageJson.scripts['verify:ci-01:intelligence-reality:local'], /env-file/u);
+  const workflows = await readdir(new URL('.github/workflows/', root));
+  for (const file of workflows) {
+    assert.doesNotMatch(await read(`.github/workflows/${file}`), /scripts\/ci-01|verify:ci-01/u, `${file} must not run the C1-B harness`);
+  }
+  for (const text of [localDb, driver, networkGuard]) assert.doesNotMatch(text, /env-file|dotenv/u);
+});
+
+test('C1-B: the network guard scrubs inherited database / provider variables and is preloaded before the driver', () => {
+  assert.match(networkGuard, /PG\[A-Z0-9_\]\*\|DATABASE_URL\|SUPABASE_\[A-Z0-9_\]\*/u, 'the scrub pattern names PG*, DATABASE_URL and SUPABASE_*');
+  assert.match(networkGuard, /delete process\.env\[name\]/u);
+  assert.match(networkGuard, /net\.Socket\.prototype\.connect = function guardedConnect/u, 'every TCP connect passes the loopback + harness-port check');
+  assert.match(networkGuard, /globalThis\.fetch = \(\) => forbid\('fetch'\)/u);
+  assert.match(localDb, /'--require', join\(HERE, 'network-guard\.cjs'\)/u, 'the parent preloads the guard into the driver process');
+  assert.match(driver, /__QANDEEL_CI01_NETWORK_GUARD__/u);
+  assert.match(driver, /if \(!selfTest\.allBlocked\) throw new StopError/u, 'the driver stops unless every transport probe was blocked');
+});
+
+test('C1-B: a positive cluster identity proof guards every read, write and removal; connections are explicit loopback parameters', () => {
+  for (const text of [localDb, driver]) {
+    assert.match(text, /pg_read_file\(\$2\) AS marker/u, 'the server must read the harness marker back from ITS OWN data directory');
+    assert.match(text, /current_setting\('data_directory'\)/u);
+    assert.match(text, /host: '127\.0\.0\.1'/u, 'host is a literal loopback parameter, never a connection string from the environment');
+    assert.doesNotMatch(text, /connectionString/u);
+  }
+  assert.match(localDb, /const ownership = proveFileOwnership\(state\);/u, 'stop() proves file-level ownership before pg_ctl stop or removal');
+  assert.doesNotMatch(localDb, /DROP DATABASE/u, 'the harness never drops a database; the whole process-owned cluster is removed instead');
+  assert.match(driver, /const driverProof = await proveClusterIdentity\(db, expected\);/u, 'the driver re-proves identity before composing production services');
+});
+
+test('C1-B: the committed results for the baseline SHA record a passed proof, a blocked guard and intact isolation', async () => {
+  const [, baselineSha] = baseline.match(/\*\*Baseline SHA:\*\* `main` `([0-9a-f]{40})`/u);
+  const results = JSON.parse(await read(`scripts/ci-01/results/${baselineSha}.json`));
+  assert.equal(results.repository.baselineMainSha, baselineSha, 'the results file is named after the baseline it measured');
+  assert.equal(results.repository.productionTreeIdenticalToBaseline, true, 'apps/, database/ and packages/ were byte-identical to the baseline when it ran');
+  assert.equal(results.driverIdentityProof.passed, true);
+  assert.equal(results.cluster.proofs.database.passed, true);
+  assert.equal(results.networkGuard.selfTest.allBlocked, true);
+  assert.equal(results.controls.isolation.holds, true, 'cross-user RLS and retrieval isolation (CI-01-L1)');
+  assert.equal(results.controls.telemetry.contentLeaks, 0, 'no fixture or stored content reached any telemetry attribute (CI-01-L7)');
+  assert.equal(results.controls.outbox.with_content, 0);
+  assert.equal(results.census.networkAttemptsBlockedDuringRun, 0, 'production code attempted no outbound call during the run');
+  assert.ok(results.readThisFirst.some((line) => /NOT a capability pass/u.test(line)), 'the file says what its numbers are not (D7)');
+});
+
+// ---------------------------------------------------------------------------------------------
 // Registration. The api-ci.yml step is added by the closing change (C1 contract decision 6).
 // ---------------------------------------------------------------------------------------------
 

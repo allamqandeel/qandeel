@@ -1,0 +1,12 @@
+{
+  "scenario": "X1",
+  "title": "Dependency control: a trigger turn without the semantic establishment phase",
+  "purpose": "What the background pipeline does with a contradiction trigger when the CU / Focus / Thread semantic chain of the exchange was never established (provider absent or failed).",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check",
+  "steps": [
+    { "id": "X1.s1", "kind": "session", "user": "X1", "session": "s1" },
+    { "id": "X1.1", "kind": "turn", "user": "X1", "session": "s1", "text": "أنا عايز أتجوز بس خايف من المسؤولية", "semantic": false, "measure": { "triggerProbe": "contradiction trigger, semantic chain ABSENT" } },
+    { "id": "X1.2", "kind": "turn", "user": "X1", "session": "s1", "text": "أنا عايزة أتجوز بس مش لاقية حد مناسب", "measure": { "triggerProbe": "contradiction trigger, semantic chain present, no eligible Memory" } }
+  ]
+}

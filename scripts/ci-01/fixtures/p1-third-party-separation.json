@@ -1,0 +1,15 @@
+{
+  "scenario": "P1",
+  "title": "Separating the user's own information from information about other people",
+  "purpose": "Which third-party statements become the USER's Memory, under which type, including through the explicit remember path.",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check",
+  "steps": [
+    { "id": "P1.s1", "kind": "session", "user": "P1", "session": "s1" },
+    { "id": "P1.1", "kind": "turn", "user": "P1", "session": "s1", "text": "أختي بتحب السفر وعايزة تتجوز واحد غني", "measure": { "thirdParty": true }, "note": "about the sister" },
+    { "id": "P1.2", "kind": "turn", "user": "P1", "session": "s1", "text": "صاحبي أحمد بيقول إن الجواز بدري غلط", "measure": { "thirdParty": true }, "note": "reported speech of a friend" },
+    { "id": "P1.3", "kind": "turn", "user": "P1", "session": "s1", "text": "أحمد صاحبي", "measure": { "selfRelation": true }, "note": "relationship fact about the user" },
+    { "id": "P1.4", "kind": "turn", "user": "P1", "session": "s1", "text": "أنا بحب الطريقة اللي أخويا بيعامل بيها مراته", "measure": { "selfPreferenceMentioningOther": true }, "note": "the user's own preference, mentions the brother" },
+    { "id": "P1.5", "kind": "turn", "user": "P1", "session": "s1", "text": "افتكر إن أختي مش بتحب الأطفال", "measure": { "thirdParty": true, "explicitRemember": true }, "note": "explicit remember of a fact about the sister" }
+  ]
+}

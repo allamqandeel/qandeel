@@ -1,0 +1,21 @@
+{
+  "scenario": "K1",
+  "title": "Preferences, goals and decisions stated in ordinary turns, recalled in a new session",
+  "purpose": "Capture yield of six genuine value statements without any 'remember' command; exact-token versus paraphrased recall.",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check",
+  "steps": [
+    { "id": "K1.s1", "kind": "session", "user": "K1", "session": "s1" },
+    { "id": "K1.1", "kind": "turn", "user": "K1", "session": "s1", "text": "أنا بحب الهدوء والبيت المستقر أكتر من الخروج كتير", "measure": { "valueStatement": true }, "note": "anchored «أنا بحب»" },
+    { "id": "K1.2", "kind": "turn", "user": "K1", "session": "s1", "text": "الدين بالنسبالي حاجة أساسية ومش هقدر أتنازل عنها", "measure": { "valueStatement": true }, "note": "unanchored core value" },
+    { "id": "K1.3", "kind": "turn", "user": "K1", "session": "s1", "text": "نفسي أعيش قريب من أهلي بعد الجواز", "measure": { "valueStatement": true }, "note": "unanchored wish («نفسي»)" },
+    { "id": "K1.4", "kind": "turn", "user": "K1", "session": "s1", "text": "بحب السفر جدا وعايز شريكة حياة تحب تكتشف أماكن جديدة", "measure": { "valueStatement": true }, "note": "«بحب» without the pronoun" },
+    { "id": "K1.5", "kind": "turn", "user": "K1", "session": "s1", "text": "هدفي أكون أسرة صغيرة خلال سنتين", "measure": { "valueStatement": true }, "note": "anchored «هدفي»" },
+    { "id": "K1.6", "kind": "turn", "user": "K1", "session": "s1", "text": "قررت إني مش هتجوز حد بيدخن", "measure": { "valueStatement": true }, "note": "anchored «قررت»" },
+    { "id": "K1.s2", "kind": "session", "user": "K1", "session": "s2" },
+    { "id": "K1.7", "kind": "turn", "user": "K1", "session": "s2", "text": "تفتكر إيه أهم حاجة عندي في الجواز؟", "measure": { "recallProbe": { "anyOf": ["الهدوء", "الدين", "أهلي", "السفر", "أسرة", "بيدخن"] } }, "note": "open paraphrased probe" },
+    { "id": "K1.8", "kind": "turn", "user": "K1", "session": "s2", "text": "بالنسبة للهدوء اللي بحبه، ده هيأثر على اختياري؟", "measure": { "recallProbe": { "anyOf": ["الهدوء"] } }, "note": "inflected token «للهدوء»" },
+    { "id": "K1.9", "kind": "turn", "user": "K1", "session": "s2", "text": "فاكر لما قلتلك إني بحب الهدوء؟", "measure": { "recallProbe": { "anyOf": ["الهدوء"] } }, "note": "exact token «الهدوء»" },
+    { "id": "K1.10", "kind": "turn", "user": "K1", "session": "s2", "text": "فاكر قلتلك إيه عن التدخين؟", "measure": { "recallProbe": { "anyOf": ["بيدخن", "التدخين"] } }, "note": "paraphrase: «التدخين» vs stored «بيدخن»" }
+  ]
+}

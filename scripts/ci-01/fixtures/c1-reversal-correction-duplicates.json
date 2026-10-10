@@ -1,0 +1,20 @@
+{
+  "scenario": "C1",
+  "title": "Change of mind: natural reversal, restatement, explicit correction",
+  "purpose": "Truth maintenance: is a stale preference still served after a natural reversal; does a restatement create a duplicate; does an explicit correction supersede every earlier copy.",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check",
+  "steps": [
+    { "id": "C1.s1", "kind": "session", "user": "C1", "session": "s1" },
+    { "id": "C1.1", "kind": "turn", "user": "C1", "session": "s1", "text": "أنا بفضل أعيش في القاهرة بعد الجواز", "measure": { "valueStatement": true }, "note": "original preference (Cairo)" },
+    { "id": "C1.s2", "kind": "session", "user": "C1", "session": "s2" },
+    { "id": "C1.2", "kind": "turn", "user": "C1", "session": "s2", "text": "غيرت رأيي وبقيت عايز أعيش في إسكندرية بعد الجواز", "measure": { "valueStatement": true, "reversalOf": "C1.1" }, "note": "natural reversal (Alexandria), no anchored pattern" },
+    { "id": "C1.3", "kind": "turn", "user": "C1", "session": "s2", "text": "فاكر أنا بفضل أعيش فين بعد الجواز؟", "measure": { "recallProbe": { "anyOf": ["إسكندرية"] }, "staleProbe": { "staleTokens": ["القاهرة"] } }, "note": "after the reversal: Cairo served = stale" },
+    { "id": "C1.4", "kind": "turn", "user": "C1", "session": "s2", "text": "أنا بفضل أعيش في إسكندرية بعد الجواز", "measure": { "valueStatement": true }, "note": "anchored restatement of the new preference" },
+    { "id": "C1.5", "kind": "turn", "user": "C1", "session": "s2", "text": "فاكر أنا بفضل أعيش فين بعد الجواز؟", "measure": { "recallProbe": { "anyOf": ["إسكندرية"] }, "staleProbe": { "staleTokens": ["القاهرة"] } }, "note": "after the restatement: both served = stale + duplicate" },
+    { "id": "C1.s3", "kind": "session", "user": "C1", "session": "s3" },
+    { "id": "C1.6", "kind": "turn", "user": "C1", "session": "s3", "text": "أنا مبقتش بفضل أعيش في القاهرة بعد الجواز، أنا بفضل أعيش في إسكندرية بعد الجواز", "measure": { "valueStatement": true, "explicitCorrection": true }, "note": "explicit correction pattern" },
+    { "id": "C1.7", "kind": "turn", "user": "C1", "session": "s3", "text": "فاكر أنا بفضل أعيش فين بعد الجواز؟", "measure": { "recallProbe": { "anyOf": ["إسكندرية"] }, "staleProbe": { "staleTokens": ["القاهرة"] } }, "note": "after the correction" }
+  ],
+  "finalStateMeasures": { "duplicateActiveMemories": true }
+}

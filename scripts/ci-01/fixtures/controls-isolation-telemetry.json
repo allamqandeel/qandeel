@@ -1,0 +1,20 @@
+{
+  "scenario": "CONTROLS",
+  "title": "Mandatory controls: user isolation, no cross-user transfer, no content in telemetry or ledgers",
+  "purpose": "Authority controls that must hold regardless of capability: a second synthetic user cannot read or retrieve the first user's knowledge; no fixture text or stored Memory / hypothesis content appears in any telemetry attribute, span, outbox payload or post-response ledger row; no external HTTP happened.",
+  "synthetic": true,
+  "isolation": {
+    "probeUser": "ISOLATION_PROBE",
+    "targetUser": "K1",
+    "retrievalQuery": "فاكر لما قلتلك إني بحب الهدوء؟"
+  },
+  "contentLeakScan": {
+    "minimumFragmentLength": 10,
+    "databaseSurfaces": [
+      { "name": "runtime_event_outbox", "sql": "SELECT row_to_json(o)::text AS t FROM public.runtime_event_outbox o" },
+      { "name": "post_response_intelligence_executions", "sql": "SELECT row_to_json(x)::text AS t FROM public.post_response_intelligence_executions x" },
+      { "name": "post_response_intelligence_effects", "sql": "SELECT e.effect_key AS k, row_to_json(e)::text AS t FROM public.post_response_intelligence_effects e", "verbatimContentByDesign": "migration 0029 (durable intent provider result) stores result_payload.problem.text — an extractive span of the user's OWN current turn — on the INTENT_PROVIDER effect; the table is RLS-enabled and REVOKEd from anon/authenticated (0022), service_role only. Reported as durable-ledger content, not as telemetry; a Product decision about its retention belongs to the owner of the ledger, not to this baseline." },
+      { "name": "ai_provider_calls", "sql": "SELECT row_to_json(c)::text AS t FROM public.ai_provider_calls c" }
+    ]
+  }
+}

@@ -1,0 +1,18 @@
+{
+  "scenario": "N1",
+  "title": "Natural self-description by a new user (Egyptian Arabic)",
+  "purpose": "Capture yield of ordinary, unanchored value statements and one anchored location fact; recall of the fact in a new session.",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check (session scratchpad rc/s601-reality.ts)",
+  "steps": [
+    { "id": "N1.s1", "kind": "session", "user": "N1", "session": "s1" },
+    { "id": "N1.1", "kind": "turn", "user": "N1", "session": "s1", "text": "اسمي سارة وعندي ٢٩ سنة وبشتغل مهندسة برمجيات", "measure": { "valueStatement": true }, "note": "name + age + profession in one natural sentence" },
+    { "id": "N1.2", "kind": "turn", "user": "N1", "session": "s1", "text": "بصراحة الجواز مهم عندي بس مش مستعجلة", "measure": { "valueStatement": true }, "note": "priority + pace, hedged" },
+    { "id": "N1.3", "kind": "turn", "user": "N1", "session": "s1", "text": "عايزة حد محترم وبيصلي وبيحترم شغلي", "measure": { "valueStatement": true }, "note": "partner values, feminine form" },
+    { "id": "N1.4", "kind": "turn", "user": "N1", "session": "s1", "text": "أهلي عايزيني أتجوز قريب بس أنا شايفة إن التفاهم أهم من السرعة", "measure": { "valueStatement": true }, "note": "family pressure vs own value" },
+    { "id": "N1.5", "kind": "turn", "user": "N1", "session": "s1", "text": "انا ساكنة في مدينة نصر", "measure": { "factStatement": true, "gramForm": "feminine" }, "note": "anchored location pattern in the feminine form" },
+    { "id": "N1.s2", "kind": "session", "user": "N1", "session": "s2" },
+    { "id": "N1.6", "kind": "turn", "user": "N1", "session": "s2", "text": "فاكر أنا ساكنة فين؟", "measure": { "recallProbe": { "anyOf": ["ساكن"] } }, "note": "asks the stored fact back with the feminine token" },
+    { "id": "N1.7", "kind": "turn", "user": "N1", "session": "s2", "text": "تفتكر أنا محتاجة إيه في شريك حياتي؟", "measure": { "recallProbe": { "anyOf": ["محترم", "بيصلي", "التفاهم", "الجواز"] } }, "note": "asks back the value statements" }
+  ]
+}

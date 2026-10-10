@@ -1,11 +1,12 @@
 # CI-01 / C1 — Intelligence Evidence & Conversational Personality Baseline — TASK CONTRACT
 
-**Phase:** C1 — BASELINE RECORDS, STATIC CONTRACT, SYNTHETIC RECIPE · **Status:** `TASK CONTRACT — APPROVED WITH MANDATORY AMENDMENTS (Product Owner, 2026-10-10) · C1-A AUTHORIZED AND DELIVERED LOCALLY · C1-B NOT AUTHORIZED (separate gate)` · **Date:** 2026-10-10
+**Phase:** C1 — BASELINE RECORDS, STATIC CONTRACT, SYNTHETIC RECIPE · **Status:** `TASK CONTRACT — APPROVED WITH MANDATORY AMENDMENTS (Product Owner, 2026-10-10) · C1-A CONDITIONALLY ACCEPTED · C1-B AUTHORIZED (2026-10-10) AND DELIVERED LOCALLY · AT C1-B REVIEW GATE · CLOSING CHANGE NOT AUTHORIZED` · **Date:** 2026-10-10
 **Parent:** [CI-01 C0 Decision Report](QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) (D1–D10 approved with controlled amendments, 2026-10-10) and its [Interaction Style annex](QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) (P1–P9).
 **Task name (D2):** `CI-01 — Shared Intelligence Learning Evidence & Baseline`. Not `QAN-BL-CI-01` (iOS CI).
 **Delivers (C1-A):** [`docs/intelligence-evidence-baseline-v1.md`](../intelligence-evidence-baseline-v1.md) · [`docs/conversational-personality-v1.md`](../conversational-personality-v1.md) · `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs` · backlog item `QAN-BL-INTEL-01`.
+**Delivers (C1-B):** [`scripts/ci-01/`](../../scripts/ci-01/README.md) — `local-db.mjs`, `network-guard.cjs`, `intelligence-reality.ts`, `fixtures/*.json`, `results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json`, `README.md` · `npm run verify:ci-01:intelligence-reality:local` · four C1-B authority pins in the static contract.
 
-> **Approval scope.** The Product Owner approved this contract on 2026-10-10 as *one* contract with two ordered slices and authorized **C1-A only**. C1-B (§4.2) starts only on a further explicit approval after the C1-A Review Gate. The file keeps its historical name (`…_DRAFT_v1.md`) because the Product Owner named it when approving; the banner, not the file name, states the lifecycle. D1–D10 and P1–P9 are inherited unchanged and are not reopened here.
+> **Approval scope.** The Product Owner approved this contract on 2026-10-10 as *one* contract with two ordered slices and authorized **C1-A only**; after the C1-A Review Gate (same day) C1-A was **conditionally accepted** and **C1-B authorized** with the scope and limits recorded in §0.5. Both slices are now delivered locally; the closing change (§13, locators, `api-ci.yml` step, final banners) waits for the C1-B Review Gate. The file keeps its historical name (`…_DRAFT_v1.md`) because the Product Owner named it when approving; the banner, not the file name, states the lifecycle. D1–D10 and P1–P9 are inherited unchanged and are not reopened here.
 
 ---
 
@@ -35,7 +36,7 @@ The draft proposed a C1 branch from `origin/main`, which does not contain the lo
 
 Result recorded in §2.
 
-### 0.3 Mandatory Correction 2 — Local database isolation (binding on C1-B; designed now, executed later)
+### 0.3 Mandatory Correction 2 — Local database isolation (binding on C1-B; designed in C1-A, executed and proven in C1-B — §8.2)
 
 Accepting `localhost` is **not sufficient**: port forwarding or a misleading local configuration can place a hosted or shared database behind a local port. The C1-B scripts must therefore satisfy all of the following, and the C1-B kickoff may not begin until the design shows each one:
 
@@ -64,6 +65,21 @@ A static contract may freeze **approved rules that must not be crossed** — Own
 - the regex-only Memory capture, the exact-token retrieval, the eight static lines of `BehavioralResponsePolicyService.buildTextGuidance`, the PG-02 behaviour itself.
 
 A3 uses **narrow semantic assertions** on single facts, never broad regexes or whole-file hashes, and strips comments before any negative sweep so that prose about a forbidden thing is not a false positive. The Capability Census in A1 carries a **baseline SHA** and a version; when an authorized repair lands, the repairing task updates the census row, and A3 does not stand in its way.
+
+### 0.5 C1-B authorization (Product Owner, 2026-10-10, after the C1-A Review Gate)
+
+**Decision:** C1-A CONDITIONALLY ACCEPTED; C1-B AUTHORIZED NOW; Push / PR / Merge NOT AUTHORIZED. Binding terms, all met by the delivery recorded in §8.2:
+
+| # | Term | How C1-B met it |
+|---|---|---|
+| 1 | verify Git status and the C0 / C1-A commit chain first; do not re-execute or reopen C1-A | chain `6a5fa42 → 8d78384 → d42995b → 4bf2e68` verified, tree clean, `origin/main` unchanged; no C1-A file re-opened (the static contract gained four C1-B pins only) |
+| 2 | exactly the §4.2 outputs; reuse the 2026-10-09 recipe; real production services with deterministic doubles; no production / router / Memory / HIM / Confidence / migration change | B1–B5 delivered plus one preload file the guard needs (`network-guard.cjs`, listed in §4.2); `apps/`, `database/`, `packages/` untouched (recorded in the results as `productionTreeIdenticalToBaseline`) |
+| 3 | PostgreSQL isolation as §0.3, with a **positive** identity proof, a dedicated port, no inherited env, no real data or keys, cleanup only of harness-created resources, external calls blocked **by code**, STOP on any failure | implemented in `local-db.mjs` + `network-guard.cjs` + the driver's own re-proof; details in [`scripts/ci-01/README.md`](../../scripts/ci-01/README.md) §4 and the recorded proofs in the results file |
+| 4 | re-measure N1, K1, C1, P1, F1, H1, M1 / X1 and the controls; record real results even when bad; **no repair during measurement**; no fixture tuning; separate run success from capability from defects from deferred gaps | §8.2 and README §6; fixtures carry the 2026-10-09 texts verbatim and define measurements, never expected values |
+| 5 | keep the forward-safety failure record; separate environment failure from CI-01 changes; name a follow-up path at C1 closing; no gratuitous re-run; treat a new C1-B-related failure in scope | §8.2 row for `test:forward-safety-contract`; follow-up path recorded in §13 |
+| 6 | Validation Impact Census before running; proportional validation; no Full API / Mobile / Hosted CI | §8 (C1-B column) and §8.2 |
+| 7 | nothing from the forbidden list (Memory / PG-02 repair, HIM / Confidence, Behavioral Runtime, Interaction Preferences UI / DB, brain-eval, LLM choice, hosted Supabase, locators describing C1 as complete, Push / PR / Merge) | none touched; locators unchanged |
+| 8 | ten-item report, then **STOP AT C1-B REVIEW GATE** | delivered with the local commit |
 
 ---
 
@@ -119,9 +135,9 @@ A3 uses **narrow semantic assertions** on single facts, never broad regexes or w
 | A4 | **Backlog admission `QAN-BL-INTEL-01`** | *Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)*, `HIGH`, `DEFERRED — OWNED`, owner the first C2 slice (§12 item 1), full §2 schema, anti-duplication check recorded, phased scope and dependencies stated; the §4 index, the §7 counts and a dated reconciliation paragraph | edit to `docs/qandeel-canonical-backlog-v1.md`; documentation only (BG-07) |
 | A5 | **Locator updates** (closing change only, decision 6) | one row in `QANDEEL_CURRENT_STATE.md`, one pointer in `QANDEEL_PROJECT_MAP.md`, one execution note in `QANDEEL_PRODUCT_ROADMAP.md` recording that CI-01 C0 / C1 exist and what they do **not** authorize; the backlog mirror table in Current State gains the `QAN-BL-INTEL-01` row | status and sequencing only; no Product semantics; no Release Gate declared closed; SHARED-VIS-01 banners untouched |
 
-### 4.2 C1-B — Synthetic Intelligence Reality Baseline (local, synthetic, provider-free) — NOT AUTHORIZED YET
+### 4.2 C1-B — Synthetic Intelligence Reality Baseline (local, synthetic, provider-free) — AUTHORIZED 2026-10-10 · DELIVERED LOCALLY
 
-Design approved (decision 2); execution waits for the Product Owner's approval after the C1-A Review Gate. Every item below is additionally bound by §0.3.
+Design approved (decision 2); execution authorized by the Product Owner after the C1-A Review Gate (§0.5) and delivered the same day (§8.2). Every item below is additionally bound by §0.3. One file was added to the list below because the guard cannot be installed from inside the driver: **`scripts/ci-01/network-guard.cjs`**, the `node --require` preload that scrubs inherited environment and replaces every outbound transport with a thrower before ts-node or any production module loads (§0.3 "by code, not by agreement").
 
 | # | Deliverable | Content | Form |
 |---|---|---|---|
@@ -195,6 +211,8 @@ The rule: a gate runs only when a file in its census changed. Census re-checked 
 | GitHub CI | PR only | — | — | not run (no PR) |
 | C1-B recipe | its own scripts + local PostgreSQL 17 | not in C1-A | — | not run |
 
+**C1-B census (2026-10-10).** Files touched by C1-B: `scripts/ci-01/**` (new), `package.json` (one script), `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs` (four pins), this contract. Therefore: the CI-01 contract **runs**; `test:forward-safety-contract` **runs** (its census includes every `tests/*.test.mjs`, `package.json` and the mirrored `scripts/`); the harness itself **runs once** on a fresh process-owned cluster through the one npm script; `git diff --check` and the secret / unintended-change scan **run**. Not affected, not run: `test:task-closure-governance-contract` (its census — top-level `docs/*.md`, the backlog, `AGENTS.md` — did not change in C1-B), `test:prod-retry-01-…` (backlog unchanged), Jest API, database verifiers, `brain-eval`, Mobile, GitHub CI.
+
 ### 8.1 Results — C1-A (2026-10-10, branch `ci/ci-01-c1-intelligence-personality-baseline`, tested on the working tree that became the C1-A commit)
 
 | Gate | Result |
@@ -206,6 +224,30 @@ The rule: a gate runs only when a file in its census changed. Census re-checked 
 | `git diff --check` | clean |
 | secret scan of the diff | no secret-shaped string |
 | not run | Jest API, database verifiers, `brain-eval`, Mobile Jest / native CI, GitHub CI, C1-B recipe — no file in their census changed |
+
+### 8.2 Results — C1-B (2026-10-10, same branch, tested on the working tree that became the C1-B commit)
+
+**Harness run** (`npm run verify:ci-01:intelligence-reality:local`, `QANDEEL_CI01_PG_BIN` → PostgreSQL 17.10 binaries): `RUN_COMPLETE`; fresh cluster on `127.0.0.1:53586` → identity proof passed in the parent (9 checks) and again in the driver (8 checks); 150 migrations applied from zero in 5.2 s; 8 scenarios, 10 synthetic users, 15 sessions, 47 user turns, 43 router-double calls, 2 intent + 2 candidate double calls; network-guard self-test 14 / 14 probes blocked, 0 outbound attempts during the run; cluster stopped and its `mkdtemp` directory removed; total 18 s. Results: `scripts/ci-01/results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json` (`productionTreeIdenticalToBaseline: true`). The run was executed three times while the harness was being finished (two development iterations against a started cluster, then the recorded baseline, then one regeneration after the ledger surface was given a per-effect-key breakdown); every scenario summary was identical across the three. Inherited variables the harness deleted before running (names only): `ANTHROPIC_BASE_URL`, `npm_config_noproxy`.
+
+**Separation the Product Owner required:**
+
+| Layer | Result |
+|---|---|
+| run success | the harness executed every fixture step and every control without a harness failure |
+| capabilities that worked | anchored Memory capture (`أنا بحب` / `هدفي` / `قررت` / `أنا بفضل` / `انا ساكن…`) and the explicit-remember path; exact-token recall; explicit correction superseding v1; FORGET → `DELETED` and DO-NOT-RELY → `DISABLED` honoured at retrieval (0 / 2 forgotten items served); contradiction trigger → background generation completed when the semantic chain exists; HIM seeded measurement consumed within its session (`PARTIAL`, 3 instruction IDs); RLS + retriever isolation (0 / 0 / 0); telemetry content-free (0 / 12 214 strings); outbox `contains_content` 0 / 47 |
+| defects the test proved (recorded, not repaired) | N1 natural value statements 0 / 4 captured; feminine «ساكنة» stored as masculine «ساكن»; recall misses on inflection / paraphrase (K1 1 / 4, N1 0 / 2); natural reversal leaves the stale preference served (2 / 3 probes) and a restatement leaves 1 duplicate ACTIVE pair after the explicit correction; a third-party fact becomes the user's `PERSONAL_FACT` through explicit remember (no subject marker); **PG-02** — 1 hypothesis stays `ACTIVE` over `DELETED` / `DISABLED` evidence and is injected in 2 / 2 new-session turns; HIM organically `EMPTY` and the seeded value does not reach the next session; «ليه أنا دايما…» classified `GENERIC_QUESTION` (recurring-pattern trigger does not fire); «بسهر» fires the contradiction trigger |
+| deferred to C2 / other owners | PG-02 → `QAN-BL-INTEL-01` / `INTEL-TM-01` (admitted in C1-A); Memory correction & Arabic acquisition, subject marker, trigger precision → proposed C2 slices (§12); HIM capture surface → HIM owners; **new documentary item** — `post_response_intelligence_effects.result_payload` (0029 / 0033) durably stores an extractive span of the user's own turn and the candidate statements on the service-role-only ledger (2 + 2 rows here): not telemetry, not a defect pin, a retention question for the ledger's owner, to be added to the baseline census at the closing change |
+
+**Gates:**
+
+| Gate | Result |
+|---|---|
+| `test:ci-01-intelligence-evidence-baseline-contract` | **16 / 16 PASS** (12 C1-A + 4 C1-B authority pins: dev-only script never in a workflow and never a dotenv read; guard scrubs + preload; positive proof before read / write / removal, no `DROP DATABASE`, explicit loopback parameters; the committed results record passed proofs, a fully blocked guard and intact isolation — no yield is pinned) |
+| `test:forward-safety-contract` | **35 / 35 PASS** on the final C1-B tree (every `tests/*.test.mjs` executed inside the mirror under every mutation, the CI-01 contract among them). The 10 `qan-inf-03` / expo-doctor child failures recorded in §8.1 **did not reproduce**: run directly, `qan-inf-03-deterministic-expo-dependency-validation-contract` now passes 6 / 6. CI-01 changed nothing under `apps/mobile`, `node_modules` or that contract between the two runs, so the §8.1 failure was environment-dependent (non-deterministic `npm explain` under `doctor:mobile`); cause not identified. The §8.1 record stays as written; the non-reproduction is itself the evidence for the §13 follow-up. |
+| `git diff --check` | clean (staged C1-B diff: 17 files, +4 849 / −8, only `scripts/ci-01/**`, `package.json`, the CI-01 contract test and this contract) |
+| secret scan of the diff | no secret-shaped string (key / token / JWT / connection-URL / private-key patterns) in any added line; the only password in the harness is the per-run random one written inside the process-owned temp directory and removed with it |
+| harness self-controls | isolation holds; telemetry 0 content hits; outbox 0; executions 0; `ai_provider_calls` 0 rows; ledger content reported separately (above) |
+| not run | `test:task-closure-governance-contract` (census unchanged), `test:prod-retry-01-…` (backlog unchanged), Jest API, database verifiers, `brain-eval`, Mobile, GitHub CI — no file in their census changed |
 
 ---
 
@@ -271,6 +313,8 @@ Slice 5 of D6 (relevance retrieval review) is folded into the Stage 8A / `QAN-CT
 
 ---
 
+**Follow-up path for the forward-safety failure (Product Owner, C1-B term 5).** The 10 failing children of `test:forward-safety-contract` seen at C1-A were one assertion of `qan-inf-03-deterministic-expo-dependency-validation-contract` (`npm explain` of three Expo packages under `doctor:mobile`) that failed identically on the real tree that day and **passed 35 / 35 and 6 / 6 at C1-B without any change to its inputs** (§8.2): an environment-dependent, non-deterministic failure of a contract whose claim is determinism — an `apps/mobile` tooling / local `node_modules` matter outside CI-01's census. At the closing change CI-01 records it in the backlog under its existing owner line (`QAN-INF-03`) as a validation finding with the evidence from §8.1 / §8.2, or re-owns it to the mobile-infrastructure task the Product Owner names; CI-01 itself does not touch `apps/mobile`, QAN-INF-03 or the forward-safety contract.
+
 ## 14. Stop conditions
 
 1. **Before any C1-B file:** the Product Owner has not approved C1-B explicitly → nothing under `scripts/ci-01/` is written.
@@ -281,13 +325,13 @@ Slice 5 of D6 (relevance retrieval review) is folded into the Stage 8A / `QAN-CT
 6. **Any pin in A3 would freeze a §0.4 item or require enumerating a migration band or a workflow's job count** → redesign the pin; never weaken the forward-safety scan.
 7. **Any need to read `.env`, a hosted host, a provider key or real user rows** → stop; that is outside C1 by construction.
 8. **A Product-contract gap appears** (e.g. the subject-marker question, the Interaction Preferences field list) → record it as a decision for the owning slice; do not resolve it in C1.
-9. **End of C1-A** → C1-A Review Gate: the Product Owner reviews before C1-B.
+9. **End of C1-A** → C1-A Review Gate (passed 2026-10-10, conditional acceptance); **end of C1-B** → C1-B Review Gate: the Product Owner reviews before the closing change.
 10. **Push, PR, CI, merge** → only on the Product Owner's explicit instruction.
 
 ---
 
 ## 15. Decisions (closed 2026-10-10)
 
-The six decisions of the draft are closed in §0.1. No decision blocks C1-A. **C1-B** waits for one decision only: the Product Owner's explicit go after the C1-A Review Gate, with §0.3 as its acceptance basis.
+The six decisions of the draft are closed in §0.1. C1-B received its go on 2026-10-10 (§0.5) and is delivered (§8.2). Open for the Product Owner at the C1-B Review Gate: (a) the retention question on the 0029 / 0033 durable ledger content (documentary; no decision needed to close C1); (b) the owner line for the forward-safety follow-up (§13); (c) confirmation of the closing-change scope (§13, locators, `api-ci.yml` step, final banners).
 
-**STOP AT C1-A REVIEW GATE.** C1-B does not start, no production code, no migration, no PR, no GitHub CI, no Hosted Supabase, until the Product Owner reviews C1-A and approves C1-B explicitly.
+**STOP AT C1-B REVIEW GATE.** No closing change, no production code, no migration, no Push, no PR, no GitHub CI, no Hosted Supabase, until the Product Owner reviews the C1-B report and issues new instructions.

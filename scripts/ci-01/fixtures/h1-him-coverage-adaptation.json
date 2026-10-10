@@ -1,0 +1,17 @@
+{
+  "scenario": "H1",
+  "title": "HIM coverage from ordinary conversation versus a canonical seeded measurement",
+  "purpose": "Does a stressed-day conversation produce any HIM knowledge organically; what changes in the request to the model when a canonical structured measurement exists for the session; does it persist to a new session.",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check",
+  "steps": [
+    { "id": "H1.organic.s1", "kind": "session", "user": "H1_organic", "session": "s1" },
+    { "id": "H1.organic.1", "kind": "turn", "user": "H1_organic", "session": "s1", "text": "النهارده كان يوم صعب جدا في الشغل وأنا مضغوط ومش قادر أركز", "measure": { "himProbe": true } },
+    { "id": "H1.organic.2", "kind": "turn", "user": "H1_organic", "session": "s1", "text": "حاسس إني تعبان ومش لاقي طاقة لأي حاجة", "measure": { "himProbe": true } },
+    { "id": "H1.seeded.s1", "kind": "session", "user": "H1_seeded", "session": "s1" },
+    { "id": "H1.seeded.seed", "kind": "him_seed", "user": "H1_seeded", "session": "s1", "metric": "hse.stress", "responseCode": "HIGH", "note": "canonical authenticated self-report through create_hse_stress_measurement + calculate_hse_stress_measurement (0016)" },
+    { "id": "H1.seeded.1", "kind": "turn", "user": "H1_seeded", "session": "s1", "text": "النهارده كان يوم صعب جدا في الشغل وأنا مضغوط ومش قادر أركز", "measure": { "himProbe": true } },
+    { "id": "H1.seeded.s2", "kind": "session", "user": "H1_seeded", "session": "s2" },
+    { "id": "H1.seeded.2", "kind": "turn", "user": "H1_seeded", "session": "s2", "text": "النهارده كان يوم عادي", "measure": { "himProbe": true }, "note": "new session: does the seeded measurement carry over" }
+  ]
+}
