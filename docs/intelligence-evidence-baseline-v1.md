@@ -182,7 +182,8 @@ Each system's own approved deletion and history behaviour governs. **CI-01 inven
 
 | Gap | Current owner | Dependencies | Disposition in CI-01 |
 |---|---|---|---|
-| **PG-02** — Personal Evidence Invalidation → Derived Understanding Re-evaluation | **`QAN-BL-INTEL-01`** → owner task `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` (admitted by C1-A, `HIGH`, `DEFERRED — OWNED`) | existing Confidence core and transition functions (`0006`, `0035`, `0036`); the `0128` effect ledger as the invalidation signal; L5 (no invented Confidence); L6 (strengthens forget); a Product decision on what the user sees for a "pending re-evaluation" item | documented; **not repaired** |
+| **PG-02** — Personal Evidence Invalidation → Derived Understanding Re-evaluation | **`QAN-BL-INTEL-01`** → `INTEL-TM-01` (`HIGH`, `CLOSED — TOMBSTONE` after PR #326 / `995d5ae9bf2530ac8e655b870526e0976be7cbf4`, migration `0151` merged, not deployed) | existing `0006`, `0035`, `0036`, `0128`; INTEL-TM-01 CC-1 … CC-4 | implemented and merged; historical C1 defect measurements retained |
+| General Question Bind-Time Version / Lifecycle R3-G | `QAN-BL-QIR-01` → `QIR-006-R1` (`MEDIUM`, `DEFERRED — OWNED`) | separate from `0151` reliance race; requires QIR-006 commit-point policy + concurrency proof | admitted at INTEL-TM-01 post-merge closure; not implementation-authorized |
 | Memory correction & Arabic acquisition (duplicate supersession, natural reversal, feminine form, Unicode `\b`, third-party statements) | no backlog item; proposed C2 slice 2 of the C1 contract §12 | a Product decision on the subject marker (own vs other); `0128` command path; L1 | documented; proposed slice; no admission (BG-06: not yet designated) |
 | `PG-04` — Selective Understanding Sharing | none (P1 §11.7 names the gap) | Shared Standing Context (`QAN-BL-CW-02`) | documented only |
 | Runtime-backed Conversational Relevance | `QAN-BL-CTX-01` → `QAN-CTX-01` | — | referenced; unchanged |
