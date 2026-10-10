@@ -1,30 +1,49 @@
 # CI-01 / C0 — Shared Intelligence Learning Evidence & Baseline: Research, Repo Truth & Product Decision Gate
 
-**Phase:** C0 — RESEARCH / REPO TRUTH / DECISION GATE · **Status:** `C0 DECISION REPORT — AWAITING PRODUCT OWNER DECISIONS (D1–D10)` · **Date:** 2026-10-10
+**Phase:** C0 — RESEARCH / REPO TRUTH / DECISION GATE · **Status:** `C0 DECISION REPORT — PRODUCT DECISIONS APPROVED WITH CONTROLLED AMENDMENTS (D1–D10, P1–P9; Product Owner, 2026-10-10) · C1 NOT AUTHORIZED — pending C1 Task Contract approval` · **Date:** 2026-10-10 (research and decisions the same day)
+**C1 Task Contract:** [DRAFT — CI-01 / C1 — Intelligence Evidence & Conversational Personality Baseline](QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) — a proposal only; implementation of C1 begins only on the Product Owner's explicit approval of that contract.
 **Baseline:** `origin/main` = `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24` (merge of PR #324, PROD-RETRY-01). Migrations `0001`–`0150`. Migration `0150` is complete in the repository and **NOT DEPLOYED**.
 **Branch:** `ci/ci-01-c0-decision-report` (documentation only; nothing else is written).
 **Annex (added scope, Product Owner 2026-10-10):** [Adaptive Conversational Presence & Interaction Style](QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) — the Interaction Style Capability Gap Matrix, the proposed Conversational Personality v1, the Golden Conversation suite and decisions P1–P9.
 **Evidence rule:** every statement below is either cited to a repository file (path and line) or to a prior-session synthetic harness run whose provenance is stated in §4.4. No SQL, API, mobile, migration, provider binding, hosted connection, real user data or GitHub CI was touched or run.
 
-> This document is research evidence and a decision request. It creates no Product or runtime semantics, opens no implementation, and binds nothing. The frozen records cited below remain the authority (AGENTS.md §2, backlog BG-07).
+> This document is research evidence and, since 2026-10-10, the record of the Product Owner's C0 decisions (§0). It creates no runtime semantics, opens no implementation, and widens no permission: the decisions reopen no frozen contract, and the frozen records cited below remain the authority (AGENTS.md §2, backlog BG-07). Where a C0 recommendation differed from the decision, the decision is binding and the affected section carries the amendment (§0.2).
 
 ---
 
-## 0. Decisions requested at this gate
+## 0. Product Owner decisions (2026-10-10) — APPROVED WITH CONTROLLED AMENDMENTS
 
-| # | Decision | Recommendation |
-|---|---|---|
-| D1 | **What "Shared Intelligence Learning" means for CI-01.** Choose the governing reading (§2): A (Personal learning from the user's own evidence), B (Shared-World authorized knowledge), C (aggregate quality improvement), D (Evidence & Evaluation Baseline only) | **D now, with A as the only learning direction CI-01 may design for** (§6) |
-| D2 | **Rename or disambiguate.** The task name collides with the backlog item `QAN-BL-CI-01` (iOS CI driver reliability, owner `CI-IOS-01`). Keep the roadmap name and use the prefix `CI-01 —` only with its full title, or rename the task (for example `INTEL-BASE-01`) | **Keep the roadmap name; never abbreviate; record the collision in the Task Contract** |
-| D3 | **Admit the learning prohibitions as a named Product rule.** The eight limits in §5.1 exist today only as scattered frozen clauses plus this report; no single record states "no cross-user transfer, no training on conversations, no telemetry content" as one rule | **Approve** a one-page controlled record in C1 (documentation only) |
-| D4 | **Define "readable / learnable / retainable" evidence classes** (§5.2) as the CI-01 vocabulary | **Approve** the three-class vocabulary as written, or amend |
-| D5 | **Scope of the v1 baseline (C1).** Documentation-and-static-check only: the Evidence Baseline matrix (§4) becomes a canonical record with a static contract test pinning the capability census, plus a repeatable **synthetic** intelligence-reality harness recipe (no provider, no user data) | **Approve** |
-| D6 | **Whether C2 (first code slice) is opened by CI-01 at all** (§7). Options: C2-a *Personal Understanding Acquisition v1* (deterministic truth maintenance: PG-02 propagation, correction of the stale-duplicate defect, Arabic capture repairs); C2-b nothing — hand the slice to Stage 8A | **C2-a as a separately contracted slice**, only after C1 is accepted |
-| D7 | **Quality baseline without a provider.** Accept that no conversation-quality number can be produced before Stage 8A, and that the only honest baselines today are structural (capture yield, recall, truth-maintenance) on synthetic Arabic fixtures | **Approve** |
-| D8 | **Shared World learning (B) is deferred to `SHARED-CTX-01`** (`QAN-BL-CW-02`) and the Stage-8A binding; CI-01 adds no Shared learning path | **Approve** |
-| D9 | **Aggregate quality learning (C) and any training / fine-tuning** is **not** opened by CI-01 and requires its own Product consent record first | **Approve** (CLOSED for CI-01) |
-| P1–P9 | **Interaction style** decisions are in the [annex](QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) §0 | see annex |
-| D10 | **Documentary note:** the SHARED-VIS-01 banners are stale (merged as PR #321 → `5973123`, closing change never landed). Record as a note only; repair belongs to a governance-reconciliation task, not CI-01 | **Acknowledge** |
+The decisions below are recorded in substance as the Product Owner stated them. "C0 recommendation" is what this report proposed; "Decision" is what binds CI-01 from here on.
+
+| # | Decision asked | C0 recommendation | Decision (Product Owner, 2026-10-10) |
+|---|---|---|---|
+| D1 | What "Shared Intelligence Learning" means for CI-01 (§2: A / B / C / D) | D now, A as the only learning direction | **APPROVED.** CI-01 v1 starts with Direction **D — Evidence & Evaluation Baseline**. Direction **A** — improving QANDEEL's understanding of the user from the user's own authorized evidence — is the **only** learning direction this programme may design for at present. The approval authorizes **no new Learning Runtime and no model training**. |
+| D2 | Rename or disambiguate (collision with `QAN-BL-CI-01`) | keep the roadmap name, never abbreviate | **APPROVED.** The full name `CI-01 — Shared Intelligence Learning Evidence & Baseline` is kept. It must never be confused with `QAN-BL-CI-01` (iOS CI). |
+| D3 | Admit the learning prohibitions as a named Product rule | one-page controlled record in C1 | **APPROVED.** The eight privacy-and-learning limits of §5.1 are adopted as a clear Product rule, including: no transfer of personal data between users; no training on private content without explicit authority and explicit consent; no leakage of content into Telemetry. The existing canonical rules are preserved; the new record is **not** a source of widened permissions. |
+| D4 | Define readable / learnable / retainable evidence classes (§4.2) | approve as written | **APPROVED WITH AMENDMENT.** The three classes are adopted, with a mandatory further distinction between (i) a result that is **still technically stored**, (ii) a result that **may currently be used**, and (iii) a result that **may legitimately be kept**, as Product and as law, after its source has disappeared. The existence of a derivative in the database after its evidence was deleted is **not** a permission to keep relying on it. The deletion and history behaviours actually approved in each system are followed; **no unified deletion rule may be invented** that contradicts the frozen contracts. §4.2 is amended accordingly. |
+| D5 | Scope of the v1 baseline (C1) | documentation + static checks + synthetic recipe | **APPROVED WITH SCOPE SPLIT.** C1 is organised internally as **C1-A — Canonical Evidence Baseline**, the privacy rules and the evidence classification, with the appropriate documentary and static tests; and **C1-B — Synthetic Intelligence Reality Baseline**, a reproducible test recipe on **local PostgreSQL with synthetic data only**. The split is organisational, **not an implementation authorization**. No production change in either; no external run; no user data. §6 and §7 are amended accordingly. |
+| D6 | Whether CI-01 opens C2 at all (§7) | C2-a as one separately contracted slice | **APPROVED WITH CONTROLLED DECOMPOSITION.** Direction C2-a is approved for treating the personal-understanding shortfall **after C1 is accepted**, but never as one large task. Its scope is cut into bounded slices, for example: (1) PG-02 — propagation of evidence withdrawal and re-evaluation of derivatives; (2) correction and duplicate repair in Memory; (3) Arabic capture improvement that preserves the user's meaning and wording; (4) the confusion between the user's information and other people's; (5) review of relevant-information retrieval under existing authorities, without duplicating `QAN-BL-CTX-01`. These are examples of the cut, **not** approval of any contract change. **The disappearance of evidence does not automatically make a hypothesis false**: it must be re-evaluated according to its state, the remaining evidence and the approved rules, without inventing Confidence or a new truth. Any change to frozen semantics requires Controlled Change and a separate decision. §7 is amended accordingly. |
+| D7 | Quality baseline without a provider (§4.3) | structural yields on synthetic fixtures only | **APPROVED.** Before Stage 8A, structural capabilities are measured on synthetic data — capture yield, recall, truth maintenance, privacy isolation. **No number may claim to measure natural conversation quality or QANDEEL's real intelligence without an actual LLM test.** |
+| D8 | Shared World learning (B) | defer to `SHARED-CTX-01` | **APPROVED.** Learning or use of personal context inside the Shared World is deferred to the competent authority, notably `SHARED-CTX-01`. No new Shared learning path opens in CI-01. |
+| D9 | Aggregate learning (C), training, fine-tuning | CLOSED for CI-01 | **APPROVED.** No general cross-user learning, no fine-tuning, no collection of private content for training or evaluation. Any future programme needs its own independent Product Consent and Privacy Authority. **Evaluation with synthetic cases is authorized within the current limits.** |
+| P1–P9 | Interaction style (annex §0) | see annex | **APPROVED WITH CONTROLLED AMENDMENTS** under the principle **ONE QANDEEL PERSONALITY — ADAPTIVE NATURAL EXPRESSION**; recorded in the [annex](QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) §0. Approval of the personality design is **not** evidence that any LLM will reach the required quality; that proof is Stage 8A. |
+| D10 | Documentary note: stale SHARED-VIS-01 banners (§11.1) | acknowledge | **ACKNOWLEDGED.** Recorded as an independent documentation gap. PR #321 is merged, but the old records need Governance Reconciliation. It is **not** repaired within CI-01, and neither Issue #322 nor any Release Gate is considered closed. |
+
+### 0.1 Non-negotiable execution rules (Product Owner, 2026-10-10)
+These decisions reopen no frozen contract. **No change** to: User Ownership · Consent / Privacy · Safety Authority · Evidence Provenance · Memory / HIM scientific boundaries · Confidence semantics · Conversation Orchestrator authority · Shared / Public audience constraints · Model Router authority · AI-COST-01 · Matching · Hosted Deployment. The coding agent does **not** choose an LLM. **No real user data** may be used in C1 tests. Rule: *QUALITY COMPLETE, VALIDATION PROPORTIONAL TO CHANGE* — no broad or repeated test cycles for reassurance when the systems under test are unaffected.
+
+### 0.2 Reconciliation of C0 recommendations with the decisions
+| Decision | What changed in this report / the annex |
+|---|---|
+| D4 | §4.2 class 3 now separates *technically stored* / *currently usable* / *legitimately retainable*; the PG-02 derivative is classified as stored-but-not-usable-as-is, to be re-evaluated (D6), never silently relied on and never auto-falsified |
+| D5 | §6 is split into C1-A and C1-B; §8 gives each its own proportional validation; the C1 Task Contract draft names what enters each |
+| D6 | §7 replaces the single C2-a slice with the decomposed candidate slices, each its own bounded Task Contract, and states the "evidence loss ≠ falsity" rule |
+| D10 | §11.1 records the gap as independent, with Issue #322 and the Release Gates explicitly open |
+| P3 / P5 | annex §3.3: the compiler emits **constraints, permissions and declared preferences**, never a tone; the C0 candidates `SERIOUS_REGISTER` and `LIGHT_REGISTER_PERMITTED` are withdrawn; register choice stays with the model's contextual understanding inside the one generation |
+| P4 | annex §4: C0's "(a) now, (b) later" is replaced by the approved design of canonical, user-owned Interaction Preferences (§4.2) with the precedence rule "explicit current request > durable preference"; no table, UI or save path is authorized now |
+| P6 | annex §0, §3.2, §5: C0's "only when the user initiated lightness" is replaced by QANDEEL's own, bounded humour initiative |
+| P8 | annex §6: the twelve measurement items, negative controls, a multi-turn tone-shift case, and the structural constraint of the existing validator (20–30 cases per suite) |
+| §1.4 | the four "still undefined" questions are marked resolved against D1, D4 and D7 |
 
 ---
 
@@ -69,6 +88,8 @@ The repository contains **no learning runtime and no decision to build one**. It
 2. Whether "evidence" in the title means *user evidence* (Memory/Evidence layer) or *evaluation evidence* (quality baselines). Today both words are used; the repo's `Evidence` layer is the former.
 3. Whether any derived artefact may be retained from a learning step (§5.2 class 3).
 4. Whether a quality baseline is allowed to exist before a provider is chosen (D7).
+
+*Resolved 2026-10-10:* 1 → D1 (D now, A the only learning direction); 2 → both readings are in scope — the baseline measures *evaluation evidence* (D), and the only learnable *user evidence* is the user's own (A); 3 → D4 amendment: a retained derivative is at most *technically stored* until its own system's approved rules say it is usable or retainable; 4 → D7: yes, but structural and synthetic only.
 
 ---
 
@@ -184,7 +205,14 @@ Columns requested by the Product Owner: Source · Ownership / authorized audienc
 ### 4.2 Three classes of evidence (proposed vocabulary, D4)
 1. **Readable** — may be read to answer the current turn under existing authority (Memory retrieval, HIM lanes, Shared/Public context). Everything in §4.1 that has an "existing consumer".
 2. **Learnable** — may change a durable *per-user* derived state (hypothesis status, Confidence, Memory supersession). Today: only the user's own explicit acts and the post-response pipeline on the user's own turns. **No cross-user source is learnable.**
-3. **Retainable** — a derived result may be kept after the source is gone. Today the only retained derivatives are hypotheses that outlive a forgotten Memory (PG-02) and Public reviewed meanings after F05 erasure of their lineage. The first is a defect; the second is a frozen Product decision (S5-02/S5-03A).
+3. **Retainable** — a derived result may legitimately be kept after its source is gone.
+
+**D4 amendment (binding).** Inside "retained" three states are kept apart and never collapsed:
+- **(a) technically stored** — the row still exists in the database;
+- **(b) currently usable** — existing authority permits reading or relying on it now;
+- **(c) legitimately retainable** — Product and law permit keeping it after the source has gone.
+
+Presence in the database after the evidence was deleted is state (a) only; it is **not** a permission for (b) or (c). Today: a hypothesis that outlives a forgotten or disabled Memory is (a) **without** (b) — the PG-02 defect, whose correct handling is **re-evaluation according to its state and the remaining evidence**, not automatic falsification and not silent reliance (D6); Memory content in `DELETED` status is (a) by the frozen 0128 design ("content kept, status only") and is excluded from (b) at read time; a Public reviewed meaning after F05 lineage erasure is (c) by a frozen Product decision (S5-02 / S5-03A). Each system's own approved deletion and history behaviour governs; CI-01 invents **no unified deletion rule**.
 
 ### 4.3 What a baseline can honestly measure before Stage 8A
 Only **structural** yields on **synthetic Arabic/English fixtures** through the real orchestrator with deterministic provider doubles:
@@ -244,13 +272,18 @@ No conversational-quality score, naturalness, "next-turn value" or calibration f
 
 ## 6. Recommended narrow v1 scope
 
-**CI-01 v1 = Direction D, written so that Direction A is the only learning path later tasks may design against.**
+**CI-01 v1 = Direction D, written so that Direction A is the only learning path later tasks may design against** (D1, APPROVED).
 
-In scope (C1, documentation + static checks):
-1. A canonical record `QANDEEL — Intelligence Evidence Baseline v1` holding §3.1 and §4.1 as the census of record, each row cited, with a static contract test that fails when a cited capability's state changes without the record (same pattern as `tests/*-contract.test.mjs`).
-2. The eight limits of §5.1 as one named rule set (D3), and the three evidence classes of §4.2 (D4).
-3. A repository-resident, provider-free **synthetic intelligence-reality recipe** (fixtures + driver + local PostgreSQL bootstrap, no Redis/Docker requirement) that reproduces §4.4 and reports the structural yields of §4.3. Results are evidence files, never a score in a Product surface.
-4. The gap register for A, each gap mapped to its owner: PG-02 (unowned → CI-01 C2-a or Stage 8A), capture/recall repairs (Memory Runtime change control), `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01/02`.
+**D5 split — organisational, not an implementation authorization.** Neither sub-slice changes production runtime behaviour, runs anything outside the local machine, or touches user data. The [C1 Task Contract draft](QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) states exactly what enters each and recommends the delivery form.
+
+**C1-A — Canonical Evidence Baseline** (documentation + static checks):
+1. A canonical record `QANDEEL — Intelligence Evidence Baseline v1` holding §3.1 and §4.1 as the census of record, each row cited, with a static contract test that fails when a cited capability's state changes without the record (same pattern as `tests/*-contract.test.mjs`; file reads only, no database).
+2. The eight limits of §5.1 as one named rule set (D3), and the three evidence classes of §4.2 **with the D4 three-state distinction** (stored / usable / retainable).
+3. The gap register for A, each gap with its **current** owner, unchanged: PG-02 (no backlog item; named in I-08A4 §18 and W3-MEGA-U §5 — admission is a Product Owner decision, see the contract), capture/recall repairs (Memory Runtime change control), `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01/02`. **CI-01 transfers no ownership implicitly.**
+4. The Conversational Personality v1 design, the three-source separation and precedence rule, the Interaction Preferences design and the Golden Conversation suite design of the annex, as a design record with every conversational text marked OPEN COPY (P1, P9).
+
+**C1-B — Synthetic Intelligence Reality Baseline:**
+5. A repository-resident, provider-free **synthetic intelligence-reality recipe** (fixtures + driver + local PostgreSQL bootstrap; deterministic doubles for the Model Router, the hypothesis providers and Redis; zero external HTTP asserted) that reproduces §4.4 and reports **only** the structural yields of §4.3 (D7). Synthetic accounts only. Results are evidence files pinned to a `main` SHA, never a score in a Product surface.
 
 Out of scope (closed by this report unless the Product Owner reopens): B, C, any provider selection or binding, any new memory source type writer, any Shared store, any feedback UI, any confidence number, any hosted or CI run.
 
@@ -260,9 +293,10 @@ Out of scope (closed by this report unless the Product Owner reopens): B, C, any
 
 | Slice | Content | Gate | Pre-8A? |
 |---|---|---|---|
-| **C1 — Evidence Baseline record + static contract + synthetic recipe** | items 1–4 of §6; no runtime change; no migration | Product Owner accepts D1, D3–D5, D7 | yes |
-| **C2-a — Personal Understanding Acquisition v1** (separate Task Contract, only if D6 = C2-a) | deterministic truth maintenance inside existing engines: (i) PG-02 minimal propagation — a hypothesis whose supporting evidence all leaves `ACTIVE` is re-evaluated and marked through the existing Confidence/transition cores; (ii) CORRECT supersedes every exact duplicate, not one; (iii) Arabic capture repairs (feminine form preserved, Unicode-aware trigger boundaries); (iv) explicit-remember third-party screen or a subject marker — **Product decision required**; one forward migration at most | C1 accepted; controlled-change notes for Memory Runtime and Hypothesis lifecycle; no provider | yes |
-| **C2-b — Golden Conversation suite extension** (optional, Stage 8A dependent for a paid run) | extend `brain-eval` suite with QANDEEL behavioural rubric cases (concision, question discipline, hypothesis restraint, non-steering) as **synthetic** fixtures; `validate`/`dry-run` only before 8A | D7 | validate only |
+| **C1 = C1-A + C1-B** (D5) | items 1–5 of §6; no runtime change; no migration; no provider | the Product Owner approves the **C1 Task Contract** (D1, D3–D5, D7 approved 2026-10-10; the contract itself is still a draft) | yes |
+| **C2-a — Personal Understanding Acquisition** (D6: APPROVED as a direction, **decomposed**; each slice its own bounded Task Contract, only after C1 is accepted) | candidate slices, in the proposed order: **(1) Personal Evidence Truth Maintenance / PG-02** — when supporting evidence leaves `ACTIVE`, the hypothesis is **re-evaluated** through the existing Confidence / transition cores according to its state and the remaining evidence; evidence loss never means "false", no Confidence value is invented, no new truth is created; **(2) Memory correction & duplicates** — CORRECT supersedes every exact duplicate, natural-reversal handling, under Memory Runtime change control; **(3) Arabic acquisition** — capture repairs that preserve the user's meaning and wording (feminine form kept, Unicode-aware boundaries); **(4) user-vs-others confusion** — third-party statements (subject marker or explicit-remember screen; **Product decision required**); **(5) relevance retrieval review** under existing authorities, without duplicating `QAN-BL-CTX-01`. One forward migration at most per slice, only where that slice proves the need | C1 accepted; a controlled-change note for Memory Runtime / Hypothesis lifecycle per slice; **any frozen-semantics change = Controlled Change + separate decision**; no provider | yes |
+| **C2-b — Golden Conversation suite extension** (P8: extends `brain-eval`, never a parallel harness) | synthetic cases and the added rubric items of the annex §6; **structural `validate` / `dry-run` only before Stage 8A**; the paid blinded run and model comparison are Stage 8A | D7, P8 | validate only |
+| **C2-c — Interaction Preferences** and **C2-d — Adaptive Conversational Expression** (P3–P6) | separate slices owned by the annex design; ordering proposal in the C1 contract §12 | separate Task Contracts after C1 | design yes; proof 8A |
 
 Not proposed: any Shared learning slice (D8), any aggregate slice (D9).
 
@@ -273,7 +307,9 @@ Not proposed: any Shared learning slice (D8), any aggregate slice (D9).
 Rule: *QUALITY COMPLETE, VALIDATION PROPORTIONAL TO CHANGE.*
 
 - **C0 (this report):** documentation only. Validation = the repository's own gates that read `docs/`: `npm run test:task-closure-governance-contract` and `npm run test:forward-safety-contract` (run locally; results in §10). No CI, no database, no provider.
-- **C1:** the new static contract test + the two governance gates; the synthetic recipe run once on a disposable local PostgreSQL with doubles (zero external HTTP, asserted by a fetch guard as in the prior run); `git diff --check`; credential scan. No hosted connection.
+- **C1-A:** the new static contract test; `test:task-closure-governance-contract` (its census includes every top-level `docs/*.md`, which the new record joins) and `test:forward-safety-contract` (its census includes every `tests/*.test.mjs`, which the new contract test joins); `git diff --check`; credential scan. No database, no provider.
+- **C1-B:** the synthetic recipe run once on a disposable local PostgreSQL 17 with deterministic doubles (zero external HTTP, asserted by a fetch guard as in the prior run); synthetic accounts only; results committed as evidence files. No hosted connection, no Redis requirement, no provider key.
+- **Rule (Product Owner):** a gate runs only when a file in its census changed; no broad or repeated cycles for reassurance.
 - **C2-a:** real-PostgreSQL verifier for the one migration (if any) via the focused-verification runner; Jest for touched services; the synthetic recipe re-run showing the defect rows of §4.4 flipped; Understanding and Memory-control contract tests green; one exact-head API CI cycle only when the Product Owner authorizes the PR.
 
 ---
@@ -304,11 +340,20 @@ See §10.1 after the gates were run (filled in the same change).
 | Database, API, mobile, migrations, provider, hosted project, GitHub CI | **not touched, not run** (C0 scope) |
 | Prior-session synthetic harness | **not re-run**; its 2026-10-09 results are cited as evidence with their baseline stated (§4.4) |
 
+### 10.2 Validation performed for the decision update (2026-10-10, same day)
+Documentation change only, in `docs/e2e/` (outside every gate's census: the governance gate scans top-level `docs/*.md` and the backlog; forward-safety scans `tests/`). Results are recorded exactly as run:
+
+| Check | Result |
+|---|---|
+| `git diff --check` | clean |
+| `npm run test:task-closure-governance-contract` (run once as the AGENTS.md §10.7 gate, although no governed file changed) | **24 / 24 PASS** (local, 2026-10-10, after the decision update) |
+| `test:forward-safety-contract`, Jest, database verifiers, brain-eval, mobile, GitHub CI, hosted project | **not run** — no file in their census changed |
+
 ---
 
 ## 11. Documentary notes (no action in CI-01)
 
-1. **Stale SHARED-VIS-01 banners.** PR #321 merged as `5973123` ("Merge PR #321: SHARED-VIS-01 Living Analysis Shared World") but its closing change never landed: `QANDEEL_PROJECT_MAP.md` §5.1 still reads "CURRENT IMPLEMENTATION TASK: SHARED-VIS-01 … NOT MERGED, NOT CLOSED"; `QANDEEL_CURRENT_STATE.md:140,167` still says ACTIVE / NOT MERGED; the record banner is `ACTIVE — … NOT MERGED; NOT CLOSED`; `QAN-BL-CW-03` is still `DEFERRED — OWNED`. Repair is a governance-reconciliation task under AGENTS.md §10.6 / BG-09, not part of CI-01. Issue #322 (physical-device stress proof) stays an open pre-launch blocker and is not in the backlog.
+1. **Stale SHARED-VIS-01 banners.** PR #321 merged as `5973123` ("Merge PR #321: SHARED-VIS-01 Living Analysis Shared World") but its closing change never landed: `QANDEEL_PROJECT_MAP.md` §5.1 still reads "CURRENT IMPLEMENTATION TASK: SHARED-VIS-01 … NOT MERGED, NOT CLOSED"; `QANDEEL_CURRENT_STATE.md:140,167` still says ACTIVE / NOT MERGED; the record banner is `ACTIVE — … NOT MERGED; NOT CLOSED`; `QAN-BL-CW-03` is still `DEFERRED — OWNED`. Repair is a governance-reconciliation task under AGENTS.md §10.6 / BG-09, not part of CI-01. Issue #322 (physical-device stress proof) stays an open pre-launch blocker and is not in the backlog. **D10 (ACKNOWLEDGED, 2026-10-10):** an independent documentation gap needing Governance Reconciliation; not repaired in CI-01; Issue #322 and every Release Gate remain open.
 2. **Two stale docs** predate the association wiring: `docs/fresh-evidence-hypothesis-association-authority-foundation-v1.md:15` ("no production adapter") and `docs/hypothesis-evidence-association-provider-binding-v1.md:19` ("no dispatcher integration"). The dispatcher does run the Gemini-bound association today.
 3. **Name collision** `CI-01` vs `QAN-BL-CI-01` (D2).
 4. **Doc divergence on leaving a Shared World.** Migration `0083` and `database/README.md:878-892` keep a Standing Context Grant alive after the grantor leaves ("Membership loss and grant revocation are separate canonical truths"); the Shared World Product Definition (`product-vision/QANDEEL_SHARED_WORLD_PRODUCT_DEFINITION_v1.md:391`) says the permission stops on exit. The database is the implemented authority; the divergence matters only if `SHARED-CTX-01` ever admits a private candidate. Recorded for that task, not for CI-01.
@@ -334,4 +379,4 @@ Readiness is stated per capability with its evidence; the aggregate is a reading
 
 Reading: the **foundation** (storage, authority, correction, privacy) is complete and proven; the **acquisition** layer (capture, recall, truth maintenance) is partial-to-defective on the deterministic path; the **model-assisted** and **evaluation** layers wait for Stage 8A. Roughly: foundation 3/3 complete, acquisition 1/3, model/evaluation 0/3 — stated as counts of capabilities with cited evidence, not as a percentage of "intelligence".
 
-**Stop here. C0 Decision Gate. Nothing is implemented until the Product Owner decides D1–D10 and the annex's P1–P9.**
+**C0 Decision Gate: PASSED — D1–D10 and P1–P9 APPROVED WITH CONTROLLED AMENDMENTS (Product Owner, 2026-10-10). C1 is NOT AUTHORIZED. The next gate is the Product Owner's explicit approval of the [C1 Task Contract draft](QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md); nothing is implemented before it.**
