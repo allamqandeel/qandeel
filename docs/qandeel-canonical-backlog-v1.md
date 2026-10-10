@@ -183,6 +183,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-06` | The Ended Shared World Has No Read-Only Living Analysis View | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CW-07` | Shared World Temporal Navigation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-01 — Intelligent Matching Onboarding` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching) | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1167,6 +1168,64 @@ entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes impl
 
 ---
 
+### `QAN-BL-PROD-06` — Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching)
+
+- **Title / Finding:** PostgREST before `v16.0` runs every request through `hasql-transaction`, which re-runs the whole
+  transaction without any bound when it fails with `40001` (`serialization_failure`), and from `hasql-transaction` 1.1
+  also with `40P01`. PostgREST `v16.0` stopped this (PostgREST #3673). Several QANDEEL functions answer a stale
+  expectation with a **deterministic** `40001` by design, so through such a PostgREST one such request is never
+  answered, and it keeps a pool connection re-running the transaction. QANDEEL's API reaches every function through the
+  Data API (`rest/v1/rpc/...`, 5 s client timeout), so the hazard is **not Matching only**:
+  - **Core conversation:** `commit_finalized_exchange_with_full_semantic_chain_v1` (`0071`) and
+    `get_conversation_thread_identity_dossier_page_v1` (`0070`), service role, inside the API's normal turn flow. A
+    designed stale outcome becomes a 5 s API failure instead of the handled stale state.
+  - **Hypothesis:** `transition_hypothesis_v2` (`0036`) and `apply_hypothesis_evidence_update`, callable by a signed-in
+    account that owns a hypothesis, which can send a stale version on purpose; and, through the service role,
+    `background_apply_hypothesis_evidence_update_v1`, `persist_post_response_hypothesis_generation_v1` and
+    `execute_post_response_hypothesis_update_batch_v1`.
+  - **Shared Standing Context:** the `0078` grant / revoke commands.
+  - **Matching:** the four `0109` commands `0149` retains (pause, turn off, both revocations).
+- **Source:** [SEC-MATCH-00 implementation record](e2e/QANDEEL_SEC_MATCH_00_MATCHING_DIRECT_RPC_PROTECTION_IMPLEMENTATION_RECORD_v1.md)
+  §9, §11.6 (blocking deployment condition) and §12; the
+  [40001 retry risk report](e2e/QANDEEL_SEC_MATCH_00_40001_RETRY_HAZARD_RISK_REPORT_v1.md), which the Product Owner
+  requested; and the Product Owner's designation at the SEC-MATCH-00 governance review (2026-10-10). Observed in API CI
+  run `37971820700` (`d8afff6`): a request answered with a deterministic `40001` went unanswered for 300 s on `v12.2.9`.
+- **Current truth:** the hosted project's PostgREST version is **unverified**. Supabase has publicly announced a move
+  to PostgREST v14 and no move to v16; neither fact is evidence about the project itself. C1 (metadata only) puts the
+  hosted schema at `0074`, so the core-conversation and Hypothesis entry points are probably present there, and the
+  Shared Standing Context and Matching ones are not. Whether the API serves real traffic there is unknown. PR #323's
+  CI is green on `v12.2.9`, `v13.0.8`, `v14.18` and `v16.4`, but its proofs deliberately send no deterministic `40001`,
+  so CI is **not** evidence that this hazard is handled.
+- **Why deferred:** closing it is either an infrastructure fact on the hosted project or a cross-domain forward
+  migration that amends frozen refusal contracts (conversation focus and thread, Hypothesis, Shared Standing Context,
+  I-07A). Neither is SEC-MATCH-00's scope, which protects Matching before launch and rebuilds no I-07A contract.
+- **Owner task:** `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure`
+- **Severity:** `HIGH`. A signed-in user, or an ordinary concurrent turn, can make a Data API request that never
+  completes and holds a pool connection, and the API's designed stale-state handling never runs. At the Product Owner's
+  direction this is a **launch and deployment gate**, not a schedule (§2): see the required future property.
+- **Reopen condition:** automatic, and in any case before the first of: a deployment that exposes any affected function
+  through the hosted Data API (including the `0075`+ catch-up, and every deployment that reaches `0109`); exposing the
+  hosted API to real signed-in users; or Matching / Shared World launch.
+- **Required future property:** no affected function is reachable through a Data API whose PostgREST re-runs a `40001`
+  transaction. One of these must hold first, and the choice is the Product Owner's:
+  - **(a)** the hosted project runs PostgREST `v16.0` or later, verified on the project itself and never inferred from
+    an upstream release or a changelog; or
+  - **(b)** a separately approved forward migration answers each stale-state refusal with a SQLSTATE PostgREST never
+    re-runs (`PT409` is the report's recommendation). It must keep the compare-and-swap, the refusal to write over a
+    stale state and every semantic message, change no privilege and no user data, and carry the API's stale-state
+    recognition with it.
+
+  Moving these commands off the Data API is rejected for now. A green CI run is not closure evidence. The hazard must
+  never be reproduced on the hosted environment. If `S6-01` restores the six suspended Matching commands
+  (`QAN-BL-MATCH-01`), they carry the same rule.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by SEC-MATCH-00 under BG-08 / BG-06: Architecture and the Product Owner explicitly designated it at the
+SEC-MATCH-00 governance review, and the record defers it to a named future task. It chooses neither (a) nor (b), and
+nothing here authorizes implementation, an upgrade or a migration (BG-07).
+
+---
+
 ### `QAN-BL-PRIV-01` — Export My Data Omits the Reader's Later Explicit Agreement with a Disagreed Understanding Item
 
 - **Title / Finding:** W3-CORR-U (migration `0134`) lets the reader resolve their own disagreement explicitly («أوافق
@@ -1641,15 +1700,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 21 |
+| `DEFERRED — OWNED` | 22 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **49** |
+| **Total** | **50** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 28 |
+| `HIGH` | 29 |
 | `MEDIUM` | 20 |
 | `LOW` | 1 |
 
@@ -1979,6 +2038,22 @@ Product stage.
 
 The register now holds **49** items: 21 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`. By severity: 28 `HIGH`, 20 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**SEC-MATCH-00 closure reconciliation (2026-10-10; CLOSED / READY FOR PO MERGE DECISION, not merged, not deployed).**
+The independent review of PR #323 at `a0290f84c5e40b5bcde4944eb23d648fc337a078` passed technically; API CI
+`37994876559` and Mobile CI `37994876560` are green on that head. This is the BG-08 half of the closing change.
+
+- **Inherited items (BG-05):** none by owner.
+- **Admitted:** `QAN-BL-PROD-06` (`HIGH`, `DEFERRED — OWNED`, owner `PROD-RETRY-01`), the Data API unbounded `40001`
+  retry. Anti-duplication: no existing item covered it. `QAN-BL-PROD-01` … `05`, `QAN-BL-LAUNCH-01` and
+  `QAN-BL-MATCH-01` name neither `40001` nor PostgREST's retry. It reaches core conversation and Hypothesis, not
+  Matching alone, and it is a launch and deployment gate.
+- **`QAN-BL-MATCH-01`:** unchanged; owner `S6-01`, `DEFERRED — OWNED`.
+- **`QAN-BL-ACCT-01`:** unchanged; `HIGH`, `OPEN — UNASSIGNED`. `0149` stops new Matching footprints and erases nothing.
+- **`QAN-BL-SEC-01`:** unchanged.
+
+The register now holds **50** items: 22 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`. By severity: 29 `HIGH`, 20 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
 
 ---
 

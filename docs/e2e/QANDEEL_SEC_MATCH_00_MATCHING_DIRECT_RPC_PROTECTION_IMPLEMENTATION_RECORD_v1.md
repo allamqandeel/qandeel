@@ -1,10 +1,12 @@
 # QANDEEL — SEC-MATCH-00 — Matching Direct-RPC Exposure & Account-Deletion Protection — Implementation Record v1
 
-**Status:** `SEC-MATCH-00` — **IMPLEMENTED — AWAITING INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION (`ادمج`)**.
-Not merged, not deployed, not `CLOSED / FROZEN`.
+**Status:** `SEC-MATCH-00` — **`CLOSED / READY FOR PO MERGE DECISION` — NOT MERGED; NOT DEPLOYED.** The independent
+review passed technically (2026-10-10). Merging needs the Product Owner's explicit `ادمج`; any deployment needs its own
+approval and is gated by §11, including §11.6 (`QAN-BL-PROD-06`).
 **Workstream:** P0 cross-cutting security checkpoint ahead of CI-01 — not a Product stage.
 **Baseline:** `main = 5973123153e26494d702a4a859a79631ede225cd` (merge of PR #321).
-**Branch:** `sec/sec-match-00-direct-rpc-protection`. The final head is stated in the PR.
+**Branch:** `sec/sec-match-00-direct-rpc-protection` (PR #323). Verified exact head:
+`a0290f84c5e40b5bcde4944eb23d648fc337a078` (§9). The closing change on top of it is documentation only.
 **Authority:** the SEC-MATCH-00 Task Contract v1 (2026-10-09), and the Product Owner's gates in order:
 - C0 accepted;
 - `AUTHORIZE_C1_READ_ONLY_METADATA` for the QANDEEL APP hosted environment;
@@ -205,6 +207,30 @@ The corrected proof:
 The `40001` refusals themselves are unchanged and stay proven on real PostgreSQL by `verify-0149`: a fresh and an
 existing human, and the `X01` race. A green wire proof says nothing about the hosted project's PostgREST (§11.6).
 
+**Exact-head CI history.** Every earlier failure is recorded; none was retried blindly.
+
+| Head | API CI run | Result | Cause and correction |
+|---|---|---|---|
+| `d8afff6` | `37971820700` | failure | the wire proof sent a request whose answer is a deterministic `40001`, which PostgREST `v12.2.9` never answers; corrected in `1e0da87` (above) |
+| `1e0da87` | `37987328255` | failure (environmental) | `v12.2.9` passed all three proofs; Docker Hub then refused the anonymous pull of `postgrest/postgrest:v13.0.8` (`toomanyrequests`). Corrected in `c0b9f5c`: each engine is imported from PostgREST's own release asset pinned by sha256, an executable byte-identical to the image's `/bin/postgrest` |
+| `c0b9f5c` | `37991618390` | failure (environmental) | Docker Hub refused the `postgres:17` service image in "Initialize containers", before any step ran. Corrected in `a0290f8` (PO-approved): both service images come from Amazon ECR Public pinned by the same digests Docker Hub serves, and the imported PostgREST images are asserted to run `/postgrest` as user `1000` |
+| **`a0290f8`** | **`37994876559`** | **success** | — |
+
+**Final exact-head CI (`a0290f84c5e40b5bcde4944eb23d648fc337a078`):**
+
+| Check | Result |
+|---|---|
+| API CI `37994876559` | SUCCESS; `verify-api` 210 / 210 steps; VAL-01 evidence recorded |
+| Mobile CI `37994876560` | SUCCESS (fast contract gate; native legs not required by the plan) |
+| SEC-MATCH-00 static contract | 9 / 9 |
+| `verify-migration-0149.mjs` (CI) | 20 / 20 scenarios |
+| Live PostgREST proofs (PROD-SEC-02, PROD-OPS-01, SEC-MATCH-00) on `v12.2.9`, `v13.0.8`, `v14.18`, `v16.4` | 12 / 12 |
+| PostgREST release assets: pinned sha256 / imported image `user 1000`, `["/postgrest"]` | 4 / 4 and 4 / 4 |
+| Service images pulled by digest | `postgres:17@sha256:2d2b8998…` (17.11), `redis:7@sha256:4fa24486…` (7.4.11) |
+
+This green run proves the repository's behaviour on CI's four PostgREST lines. It is **not** evidence about the hosted
+project's PostgREST, and it does not close the `40001` hazard (§11.6, `QAN-BL-PROD-06`).
+
 **Static, local:**
 
 | Check | Result |
@@ -293,6 +319,8 @@ C2 is not a deployment. A future deployment is its own Product Owner approval. W
    - **What CI proves.** A green API CI run proves the repository's behaviour on CI's PostgREST lines. It is **not**
      evidence that this operational risk is handled on the hosted project. That needs its own evidence-based closure
      decision.
+   - **Registered** as `QAN-BL-PROD-06` (owner `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure`). The hazard
+     reaches core conversation and Hypothesis too, so the gate covers every affected function, not `0109` alone.
 
 ## 12. Known limitations and residuals
 
@@ -309,9 +337,14 @@ C2 is not a deployment. A future deployment is its own Product Owner approval. W
   Matching cannot launch.
 - **The `40001` retry hazard is wider than Matching.** Other functions an `authenticated` token can execute also
   answer `40001`, including two that predate the hosted schema's `0074`. SEC-MATCH-00 neither creates nor closes this
-  hazard; `0149` narrows it by closing six of the ten Matching commands that raise it. Assessing it is a separate
-  report the Product Owner requested. The hazard needs a backlog disposition (BG-08) no later than the change that
-  closes SEC-MATCH-00.
+  hazard; `0149` narrows it by closing six of the ten Matching commands that raise it. It reaches core conversation
+  and Hypothesis, not Matching alone. The Product Owner's requested assessment is the
+  [40001 retry risk report](QANDEEL_SEC_MATCH_00_40001_RETRY_HAZARD_RISK_REPORT_v1.md), and the hazard is registered
+  as `QAN-BL-PROD-06` (owner `PROD-RETRY-01`, a launch and deployment gate). The hosted PostgREST version is
+  unverified.
+- **CI infrastructure.** The two environmental corrections (§9) change only where CI obtains its images: PostgREST from
+  pinned release assets, PostgreSQL and Redis from ECR Public by digest. Other workflows (`focused-database-verification`,
+  `s4-proof`, `s5-proof`, `a3-proof` and others) still pull from Docker Hub. They are outside this PR.
 
 ## 13. Files changed
 
@@ -323,7 +356,11 @@ C2 is not a deployment. A future deployment is its own Product Owner approval. W
 - `tests/sec-match-00-matching-direct-rpc-protection-contract.test.mjs` (new)
 - `package.json`: three scripts
 - `.github/workflows/api-ci.yml`: the static contract step, the integration step, and the wire proof in the live
-  PostgREST loop
+  PostgREST loop. Later CI-only corrections: PostgREST engines from pinned release assets with an imported-image
+  check, and the service images from ECR Public by digest (§9)
+- `tests/toolchain.test.mjs`: reads each service's parsed `image` field (PO-approved re-anchor; same major versions,
+  full digest required)
+- `docs/e2e/QANDEEL_SEC_MATCH_00_40001_RETRY_HAZARD_RISK_REPORT_v1.md` (new; evidence, not authority)
 - `database/README.md`
 - `docs/matching-introduction-runtime-v1.md`: a §7 pointer and §47
 - `docs/qandeel-canonical-backlog-v1.md`
@@ -334,16 +371,27 @@ C2 is not a deployment. A future deployment is its own Product Owner approval. W
 ## 14. Governance reconciliation (BG-05 / BG-08 / BG-09)
 
 - **BG-05:** SEC-MATCH-00 inherited no item by owner.
-- **BG-08, admitted:** `QAN-BL-MATCH-01`. It is a canonical record's explicit deferral to a named future task.
-- **`QAN-BL-ACCT-01`:** stays `OPEN — UNASSIGNED`, with a current-truth note.
+- **BG-08, admitted:** `QAN-BL-MATCH-01` (owner `S6-01`, `DEFERRED — OWNED`), a canonical record's explicit deferral
+  to a named future task; and, in the closing change, `QAN-BL-PROD-06` (owner `PROD-RETRY-01`, `HIGH`,
+  `DEFERRED — OWNED`), the Data API unbounded `40001` retry designated at the governance review. An anti-duplication
+  check found no existing item covering it.
+- **`QAN-BL-ACCT-01`:** stays `HIGH`, `OPEN — UNASSIGNED`, with its current-truth note.
 - **`QAN-BL-SEC-01`:** unchanged.
-- **Register:** 49 items; 21 / 0 / 10 / 18 by status and 28 / 20 / 1 by severity, counted mechanically.
+- **Register:** 50 items; 22 / 0 / 10 / 18 by status and 29 / 20 / 1 by severity, counted mechanically from the §4
+  index.
 - **Phase status:** unchanged. `I-07` and its slices remain `CLOSED / FROZEN`; §47 records a controlled privilege
   amendment, not a reopening.
-- **BG-09:** this record's banner moves to its final lifecycle state in the change that closes SEC-MATCH-00.
+- **BG-09:** done in the closing change. This record's banner is `CLOSED / READY FOR PO MERGE DECISION`; the
+  backlog's SEC-MATCH-00 closure reconciliation and `QANDEEL_CURRENT_STATE.md` say the same. Neither claims a merge or
+  a deployment.
 
 ## 15. Merge statement
 
-Ready for independent review. Nothing is merged or deployed. The next steps are the Product Owner's: review, then
-`ادمج`, then a separate deployment approval. After SEC-MATCH-00 closes, the next roadmap workstream is
-**CI-01 — Shared Intelligence Learning Evidence & Baseline**, which has not started.
+SEC-MATCH-00 is closed and ready for the Product Owner's merge decision. Technical review passed on
+`a0290f84c5e40b5bcde4944eb23d648fc337a078`, and API CI and Mobile CI are green there (§9). Nothing is merged or
+deployed. The next steps are the Product Owner's:
+1. `ادمج`;
+2. then a separate deployment approval, gated by §11 and by `QAN-BL-PROD-06`.
+
+After SEC-MATCH-00 merges, the next roadmap workstream is **CI-01 — Shared Intelligence Learning Evidence & Baseline**,
+which has not started.
