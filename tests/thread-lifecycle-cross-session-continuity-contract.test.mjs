@@ -423,10 +423,11 @@ test('stale recovery is bounded to ONE shared semantic retry, checks the databas
   assert.match(service, /SEGMENTATION_FRONTIER_MOVED/u, 'a moved frontier refuses segmentation reuse');
   assert.ok(service.indexOf('context = await this.repository.readRuntimeContext(', loop) > loop, 'the retry re-reads the context (and, through it, the identity version and the dossiers)');
   // Both exact stale identities: the Session one is REUSED from T-03B1b2, the identity one is exact (code AND message).
-  assert.match(repository, /import \{ isStaleConversationalFocusContext \} from '\.\.\/conversational-focus\/conversation-focus-runtime\.repository';/u);
-  assert.match(repository, /export const STALE_THREAD_IDENTITY_CONTEXT_SQLSTATE = '40001';/u);
+  // RE-ANCHORED by PROD-RETRY-01 (migration 0150): the identity code rule is the ONE T-03B1b2 rule too - PT409 (0150) or
+  // 40001, by equality - so both codes are a single fact in the codebase.
+  assert.match(repository, /import \{ isStaleContextSqlstate, isStaleConversationalFocusContext \} from '\.\.\/conversational-focus\/conversation-focus-runtime\.repository';/u);
   assert.match(repository, /export const STALE_THREAD_IDENTITY_CONTEXT_TOKEN = 'STALE_THREAD_IDENTITY_CONTEXT';/u);
-  assert.match(repository, /databaseCode === STALE_THREAD_IDENTITY_CONTEXT_SQLSTATE && databaseMessage === STALE_THREAD_IDENTITY_CONTEXT_TOKEN/u, 'exact equality, never a substring');
+  assert.match(repository, /isStaleContextSqlstate\(databaseCode\) && databaseMessage === STALE_THREAD_IDENTITY_CONTEXT_TOKEN/u, 'exact equality, never a substring');
   assert.doesNotMatch(repository, /\.includes\(|new RegExp|startsWith\(/u);
   for (const reason of ['INVALID_FINALIZED_EXCHANGE_RELATION', 'PARTIAL_INTEGRATED_EXCHANGE', 'INCOMPLETE_THREAD_LIFECYCLE_CAPTURE', 'INVALID_INTEGRATED_SNAPSHOT',
     'INVALID_THREAD_LIFECYCLE_CONTEXT', 'INCOMPLETE_PRIOR_THREAD_HISTORY', 'LIFECYCLE_CONTEXT_NOT_CLOSED', 'INVALID_LIFECYCLE_CHAIN', 'INVALID_THREAD_IDENTITY_DOSSIER',

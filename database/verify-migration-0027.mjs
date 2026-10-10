@@ -496,7 +496,7 @@ async function verifyExistingRuntimeRegression(owner, other, evidenceMemory, ine
   await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 2, 'CANDIDATE']), ['22023']);
   await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 2, 'REOPENED']), ['22023']);
   // A stale expected version fails closed instead of transitioning the newer row.
-  await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 1, 'SUPPORTED']), ['40001']);
+  await rejected(() => q(TRANSITION_V2_CALL, [lifecycle, 1, 'SUPPORTED']), ['PT409']);
   const [supported] = await rows(TRANSITION_V2_CALL, [lifecycle, 2, 'SUPPORTED']);
   assert.equal(supported.status, 'SUPPORTED');
   assert.equal(supported.version, 3);
@@ -551,7 +551,7 @@ async function verifyExistingRuntimeRegression(owner, other, evidenceMemory, ine
   assert.equal(applied.update.before_version, 1);
   assert.equal(applied.update.after_version, 2);
   assert.deepEqual(applied.hypothesis.supporting_evidence_ids, [`memory:${evidenceMemory}`]);
-  await rejected(() => q(UPDATE_LOOP_CALL, [randomUUID(), updateTarget, 1, `memory:${evidenceMemory}`, 'SUPPORTING']), ['40001']);
+  await rejected(() => q(UPDATE_LOOP_CALL, [randomUUID(), updateTarget, 1, `memory:${evidenceMemory}`, 'SUPPORTING']), ['PT409']);
 
   // 46/47. The migration-0021 background creation path still works and still
   // produces canonical SYSTEM_GENERATED / CANDIDATE rows.

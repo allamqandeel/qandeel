@@ -390,7 +390,8 @@ test('the 0078 verifier proves schema, both ACLs, every command behaviour, the r
     '/STANDING_CONTEXT_AUTHENTICATION_REQUIRED/u',
     "assert.equal(fn.provolatile, 'v'",
     "u uuid := auth\\.uid\\(\\);",
-    "['42501']", "['22023']", "['P0002']", "['40001']", "['23505']", "['55000']",
+    // PROD-RETRY-01 (0150): the stale-state refusal is PT409, which PostgREST never re-runs.
+    "['42501']", "['22023']", "['P0002']", "['PT409']", "['23505']", "['55000']",
     "event_type: 'GRANTED', grant_id: grantA, prior_grant_id: null, grant_status: 'ACTIVE'",
     'the ceiling is a proper subset of membership, never auto-filled',
     '/STANDING_CONTEXT_AUDIENCE_NOT_CURRENT_MEMBER/u',
@@ -413,7 +414,7 @@ test('the 0078 verifier proves schema, both ACLs, every command behaviour, the r
     'revocation survives World closure',
     'the event log itself is append-only under every application role',
     'the second first-grant command blocks on the locked World row instead of racing',
-    "assert.equal(stale.code, '40001')",
+    "assert.equal(stale.code, 'PT409')",
     'never two ACTIVE grants, never an orphan event',
     'the resolver returns only the replacement ACTIVE grant',
     'no fixture row remains after completion',

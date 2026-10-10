@@ -243,8 +243,13 @@ test('stale retry is bounded to one, segmentation is reused, and only the exact 
   // FIX-T03B1B2-01: the repository maps ONLY 40001 whose message EQUALS the
   // token. Containment, regex, case folding or normalization would read a
   // negation, a longer token or a wrapped relay as the stale condition.
-  assert.match(repository, /return databaseCode === STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE\s*&& databaseMessage === STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN;/u);
-  assert.match(repository, /export const STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE = '40001';/u);
+  // RE-ANCHORED by PROD-RETRY-01 (migration 0150): the code is PT409 (0150's answer, which PostgREST never re-runs) or
+  // 40001 (a coordinator 0150 does not change, or a database before it) - exactly those two, by equality. The message
+  // rule is unchanged.
+  assert.match(repository, /return isStaleContextSqlstate\(databaseCode\)\s*&& databaseMessage === STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN;/u);
+  assert.match(repository, /export const STALE_CONTEXT_SQLSTATE = 'PT409';/u);
+  assert.match(repository, /export const STALE_CONTEXT_LEGACY_SQLSTATE = '40001';/u);
+  assert.match(repository, /export const isStaleContextSqlstate = \(code: string \| undefined\): boolean => code === STALE_CONTEXT_SQLSTATE \|\| code === STALE_CONTEXT_LEGACY_SQLSTATE;/u);
   assert.match(repository, /export const STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN = 'STALE_CONVERSATIONAL_FOCUS_CONTEXT';/u);
   assert.doesNotMatch(repository, /databaseMessage\.(?:includes|startsWith|endsWith|match|indexOf|search|toLowerCase|toUpperCase|trim|normalize)\(/u,
     'the stale message is compared by equality alone, never by containment or normalization');
@@ -313,7 +318,8 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   // refusal, PT429 TURN_ADMISSION_LIMITED, and answer the bounded 429, under the same rule.
   // RE-ANCHORED by S4-01 (migration 0138): the Shared World service reads it to recognise exactly two typed refusals of
   // the frozen 0081 rotation — 23505 SHARED_INVITE_CREDENTIAL_REF_UNAVAILABLE (draw another Shared ID) and 40001 (another
-  // request rotated first: read the current value) — under the same rule.
+  // request rotated first: read the current value) — under the same rule. (PROD-RETRY-01: that stale-state refusal is
+  // PT409 from migration 0150 on; the service accepts both codes with the exact message.)
   // The list stays exact: any further production reader fails here.)
   assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
   const account = stripComments(read('apps/api/src/account/account.service.ts'));

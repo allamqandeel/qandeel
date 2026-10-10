@@ -499,10 +499,10 @@ async function verifyRegression() {
   assert.equal(applied.update.source, 'QANDEEL_HYPOTHESIS_UPDATE_LOOP');
   assert.equal(applied.update.evidence_role, 'CONTRADICTING');
   assert.deepEqual(applied.hypothesis.contradicting_evidence_ids, [evidence(second)]);
-  await rejected(() => q(UPDATE_LOOP_CALL, [randomUUID(), target, 2, evidence(member), 'SUPPORTING']), ['40001']);
+  await rejected(() => q(UPDATE_LOOP_CALL, [randomUUID(), target, 2, evidence(member), 'SUPPORTING']), ['PT409']);
   // A stale version with Evidence that is ALSO non-canonical still fails as
-  // 40001, so migration 0028 did not reorder the Update Loop's guards.
-  await rejected(() => q(UPDATE_LOOP_CALL, [randomUUID(), target, 99, `memory:${randomUUID()}`, 'SUPPORTING']), ['40001']);
+  // the stale refusal (PT409 since 0150), so migration 0028 did not reorder the Update Loop's guards.
+  await rejected(() => q(UPDATE_LOOP_CALL, [randomUUID(), target, 99, `memory:${randomUUID()}`, 'SUPPORTING']), ['PT409']);
   await rejected(() => q(UPDATE_LOOP_CALL, [randomUUID(), target, 0, evidence(member), 'SUPPORTING']), ['22023']);
   const [{ audits }] = await rows('SELECT count(*)::int audits FROM public.hypothesis_updates WHERE hypothesis_id=$1', [target]);
   assert.equal(audits, 1, 'exactly one immutable audit row was written');

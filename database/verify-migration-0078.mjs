@@ -111,7 +111,8 @@ const RESOLVER_FN = 'public.resolve_shared_world_standing_context_grant_v1(uuid,
 const INSUFFICIENT_PRIVILEGE = ['42501'];
 const INVALID_PARAMETER = ['22023'];
 const NO_DATA = ['P0002'];
-const STALE = ['40001'];
+// PROD-RETRY-01 (0150): the stale-state refusal is answered with PT409, which PostgREST never re-runs.
+const STALE = ['PT409'];
 const CONFLICT = ['23505'];
 const NOT_ACTIVE = ['55000'];
 
@@ -298,7 +299,7 @@ async function verifyCatalog() {
     assert.match(fn.prosrc, /u uuid := auth\.uid\(\);/u, `${name} derives the grantor from auth.uid()`);
     assert.doesNotMatch(fn.args, /grantor|status|purpose|source|event_type|timestamp|_at\b|material|provenance|audience_ceiling_override/iu, `${name} accepts no grantor / status / purpose / timestamp parameter`);
     assert.match(fn.prosrc, /FROM public\.shared_worlds w WHERE w\.id = p_world_id FOR UPDATE/u, `${name} serializes on the exact World row`);
-    assert.match(fn.prosrc, /STANDING_CONTEXT_STALE_STATE' USING ERRCODE='40001'/u);
+    assert.match(fn.prosrc, /STANDING_CONTEXT_STALE_STATE' USING ERRCODE='PT409'/u);
     assert.match(fn.prosrc, /STANDING_CONTEXT_COMMAND_ID_CONFLICT' USING ERRCODE='23505'/u);
     assert.doesNotMatch(fn.prosrc, /UPDATE public\.shared_world_standing_context_consent_events|UPDATE public\.shared_world_standing_context_grant_audience|DELETE FROM|TRUNCATE|conversation|memor|model|provider/iu, `${name} never rewrites history or reads Personal context`);
   }
@@ -637,7 +638,7 @@ async function verifyConcurrency(f) {
     let stale;
     try { await pending; } catch (error) { stale = error; }
     assert.ok(stale, 'the loser did not silently establish a second consent state');
-    assert.equal(stale.code, '40001');
+    assert.equal(stale.code, 'PT409');
     assert.match(stale.message, /STANDING_CONTEXT_STALE_STATE/u);
     await clientB.query('ROLLBACK');
     const counts = await snapshot([f.world]);

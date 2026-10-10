@@ -390,8 +390,8 @@ async function verifyExactVersion() {
   await identity('authenticated', userId);
   // A wrong expected version - lower, higher, zero, negative or NULL - fails
   // closed. Zero/negative/NULL are rejected as invalid input before any lock.
-  await rejected(() => q(V2_CALL, [fixture.id, 2, 'ACTIVE']), ['40001']);
-  await rejected(() => q(V2_CALL, [fixture.id, 99, 'ACTIVE']), ['40001']);
+  await rejected(() => q(V2_CALL, [fixture.id, 2, 'ACTIVE']), ['PT409']);
+  await rejected(() => q(V2_CALL, [fixture.id, 99, 'ACTIVE']), ['PT409']);
   await rejected(() => q(V2_CALL, [fixture.id, 0, 'ACTIVE']), ['22023']);
   await rejected(() => q(V2_CALL, [fixture.id, -1, 'ACTIVE']), ['22023']);
   await rejected(() => q(V2_CALL, [fixture.id, null, 'ACTIVE']), ['22023']);
@@ -408,7 +408,7 @@ async function verifyExactVersion() {
   // The now-stale expected version cannot transition the NEWER row: the caller
   // that read version 1 gets a stale-version failure rather than silently
   // moving a version-2 Hypothesis it never saw.
-  await rejected(() => q(V2_CALL, [fixture.id, 1, 'SUPPORTED']), ['40001']);
+  await rejected(() => q(V2_CALL, [fixture.id, 1, 'SUPPORTED']), ['PT409']);
   await identity('postgres');
   const afterStale = await one(HYPOTHESIS, [fixture.id]);
   assert.equal(afterStale.status, 'ACTIVE', 'the newer row was not transitioned by the stale caller');
@@ -422,7 +422,7 @@ async function verifyExactVersion() {
   const readVersion = raced.version;
   const [attached] = await rows(ATTACH_CALL, [raced.id, evidence.first, 'SUPPORTING']);
   assert.equal(attached.version, readVersion + 1, 'a concurrent canonical Evidence attachment advanced the version');
-  await rejected(() => q(V2_CALL, [raced.id, readVersion, 'ACTIVE']), ['40001']);
+  await rejected(() => q(V2_CALL, [raced.id, readVersion, 'ACTIVE']), ['PT409']);
   await identity('postgres');
   assert.equal((await one(HYPOTHESIS, [raced.id])).status, 'CANDIDATE', 'the raced Hypothesis was not transitioned');
   assert.equal((await rows(AUDIT, [raced.id])).length, 0);
@@ -808,6 +808,7 @@ async function verifyPre0036DefectsAndUpgrade() {
   stage = 'pre-0036 reproduction and upgrade';
   await identity('authenticated', userId);
   await rejected(() => q(LEGACY_CALL, [strandedId, 'ACTIVE']), ['42501']);
+  // 0036 was just re-applied over the reconstruction, so this is 0036's own core (40001), not 0150's (PT409).
   await rejected(() => q(V2_CALL, [strandedId, 1, 'ACTIVE']), ['40001']);
   await identity('postgres');
   const { version: current } = await one('SELECT version FROM public.hypotheses WHERE id=$1', [strandedId]);
