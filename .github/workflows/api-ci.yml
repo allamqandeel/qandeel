@@ -129,6 +129,7 @@ jobs:
       - {name: "Verify S5-04 Public Discussion + @qandeel + Final Public Integration static contract", run: npm run test:s5-04-public-discussion-qandeel-final-integration-contract}
       - {name: "Verify SHARED-VIS-01 Shared World Living Analysis static contract", run: npm run test:shared-vis-01-shared-living-analysis-contract}
       - {name: "Verify SEC-MATCH-00 Matching direct-RPC protection static contract", run: npm run test:sec-match-00-matching-direct-rpc-protection-contract}
+      - {name: "Verify PROD-RETRY-01 Data API stale-state SQLSTATE static contract", run: npm run test:prod-retry-01-data-api-stale-state-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -956,6 +957,14 @@ jobs:
       # all six and touches no row; and a reopened grant or a client wrapper is refused by the regression checks.
       - name: Verify SEC-MATCH-00 Matching setup pre-launch direct-execute narrowing against real PostgreSQL
         run: npm run verify:matching-setup-direct-rpc-narrowing:integration
+      # PROD-RETRY-01 (QAN-BL-PROD-06): migration 0150 answers the twelve deterministic stale-state refusals with PT409,
+      # which PostgREST never re-runs, instead of 40001, which PostgREST before v16 re-runs without bound. Each body is its
+      # defining body with exactly that substitution and an unchanged posture; the self-check refuses six weakenings; the
+      # cross-schema guard proves no Data API entry point lets a deterministic 40001 escape, discharges every retained
+      # 40001 (race-converging or replay-guarded) and refuses five weakenings; stale requests are PT409 and write nothing;
+      # Shared ID rotation races keep one current state.
+      - name: Verify PROD-RETRY-01 non-retryable stale-state SQLSTATE against real PostgreSQL
+        run: npm run verify:data-api-stale-state-non-retryable:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
@@ -969,12 +978,14 @@ jobs:
       # address and refused v13.0.8 mid-step. Each is imported locally from PostgREST's own release asset, which holds,
       # byte for byte, the executable the postgrest/postgrest image of that tag runs; an asset whose sha256 is not the
       # one pinned here stops the step before anything runs.
-      - name: Prove PROD-SEC-02 refusal contract, PROD-OPS-01 readiness and SEC-MATCH-00 direct-RPC refusal through live PostgREST
+      - name: Prove PROD-SEC-02 refusal contract, PROD-OPS-01 readiness, SEC-MATCH-00 direct-RPC refusal and PROD-RETRY-01 stale refusal through live PostgREST
         env:
           POSTGREST_URL: http://localhost:3001
           POSTGREST_JWT_SECRET: ci-only-throwaway-postgrest-signing-secret-prod-sec-02
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticator LOGIN PASSWORD 'authenticator' NOINHERIT" -c "GRANT anon, authenticated, service_role TO authenticator"
+          # PROD-RETRY-01: whatever happens, no engine container outlives this step.
+          trap 'docker ps -q --filter "name=postgrest-v" | xargs -r docker stop >/dev/null 2>&1 || true' EXIT
           declare -A release_sha256=(
             [v12.2.9]=cfed98394d6f81a96a37225fe0792a6b0094c62dcde04009e6c5c9d2fddfb0bc
             [v13.0.8]=eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279
@@ -1007,6 +1018,9 @@ jobs:
             POSTGREST_VERSION="$version" npm run --silent prove:operational-readiness:postgrest || { docker logs "postgrest-$version"; exit 1; }
             # SEC-MATCH-00: the six suspended Matching setup commands refuse every token on the wire; the five retained work.
             POSTGREST_VERSION="$version" npm run --silent prove:matching-direct-rpc-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # PROD-RETRY-01: every deterministic stale-state refusal is answered at once (HTTP 409 {code PT409}) on every line,
+            # each request bounded; a PT409 runs once; on v16+ a 40001 is HTTP 500 after one run (never sent before v16).
+            POSTGREST_VERSION="$version" npm run --silent prove:data-api-stale-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"
