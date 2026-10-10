@@ -17,7 +17,7 @@ export class ModelAssistedHypothesisAssociationService {
 
   async prepare(context: BackgroundIntelligenceExecutionContext, freshEvidenceId: string): Promise<HypothesisEvidenceAssociationPreparation> {
     const [evidence, hypotheses] = await Promise.all([
-      this.enrichment.listEligibleEvidence(context), this.enrichment.listActiveHypotheses(context),
+      this.enrichment.listEligibleEvidence(context), this.enrichment.listReliableActiveHypotheses(context),
     ]);
     return this.associationAuthority.prepareFromCanonicalState(context.userId, context.sessionId, freshEvidenceId, evidence, hypotheses);
   }
@@ -27,7 +27,7 @@ export class ModelAssistedHypothesisAssociationService {
     const reread = await this.backgroundAuthority.authorize(event);
     if (reread.outcome !== 'AUTHORIZED' || !reread.context || !sameAuthority(original, reread.context)) throw new Error('ASSOCIATION_CANONICAL_AUTHORITY_CHANGED');
     const [evidence, hypotheses] = await Promise.all([
-      this.enrichment.listEligibleEvidence(reread.context), this.enrichment.listActiveHypotheses(reread.context),
+      this.enrichment.listEligibleEvidence(reread.context), this.enrichment.listReliableActiveHypotheses(reread.context),
     ]);
     return this.associationAuthority.authorizeFromCanonicalState(reread.context.userId, reread.context.sessionId, snapshot, proposals, evidence, hypotheses);
   }

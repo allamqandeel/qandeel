@@ -17,7 +17,7 @@ const recently = () => new Date(Date.now() - 60_000).toISOString();
 describe('HypothesisReasoningContextService — U2 discussion focus', () => {
   let hypotheses: jest.Mocked<HypothesisService>, signals: jest.Mocked<HypothesisUserSignalRepository>, service: HypothesisReasoningContextService;
   beforeEach(() => {
-    hypotheses = { listActiveForUser: jest.fn().mockResolvedValue([hypothesis('a'), hypothesis('b'), hypothesis('c')]) } as unknown as jest.Mocked<HypothesisService>;
+    hypotheses = { readEvidenceReliance: jest.fn(async (_token: string, items: readonly HypothesisRecord[]) => new Map(items.map(({ id }) => [id, 'NONE']))), listActiveForUser: jest.fn().mockResolvedValue([hypothesis('a'), hypothesis('b'), hypothesis('c')]) } as unknown as jest.Mocked<HypothesisService>;
     const evidence = { listEligibleForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<EvidenceService>;
     const confidence = { listExactVersionsForTargets: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<ConfidenceRepository>;
     signals = { readOpenDiscussionFocus: jest.fn().mockResolvedValue(null), listUnderReview: jest.fn().mockResolvedValue(new Set()) } as unknown as jest.Mocked<HypothesisUserSignalRepository>;
@@ -120,7 +120,7 @@ describe('HypothesisReasoningContextService — W3-CORR-U focus + UNDER_REVIEW p
   let hypotheses: jest.Mocked<HypothesisService>, signals: jest.Mocked<HypothesisUserSignalRepository>, service: HypothesisReasoningContextService;
   const at = (id: string, version = 2, status: HypothesisRecord['status'] = 'ACTIVE') => ({ ...hypothesis(id), version, status });
   beforeEach(() => {
-    hypotheses = { listActiveForUser: jest.fn().mockResolvedValue(TEN.map((id) => at(id))) } as unknown as jest.Mocked<HypothesisService>;
+    hypotheses = { readEvidenceReliance: jest.fn(async (_token: string, items: readonly HypothesisRecord[]) => new Map(items.map(({ id }) => [id, 'NONE']))), listActiveForUser: jest.fn().mockResolvedValue(TEN.map((id) => at(id))) } as unknown as jest.Mocked<HypothesisService>;
     const evidence = { listEligibleForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<EvidenceService>;
     const confidence = { listExactVersionsForTargets: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<ConfidenceRepository>;
     signals = { readOpenDiscussionFocus: jest.fn().mockResolvedValue(null), listUnderReview: jest.fn().mockResolvedValue(new Set()) } as unknown as jest.Mocked<HypothesisUserSignalRepository>;

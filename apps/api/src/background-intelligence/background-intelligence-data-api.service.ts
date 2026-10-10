@@ -6,6 +6,7 @@ import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../me
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
+import type { HypothesisEvidenceRelianceRow } from '../hypothesis/hypothesis-evidence-reliance';
 import {
   type BackgroundIntelligenceEventContext,
   isBackgroundIntelligenceEventContext,
@@ -98,6 +99,21 @@ export class BackgroundIntelligenceDataApiService {
     this.assertExecutionContext(context);
     const query=new URLSearchParams({select:HYPOTHESIS_FIELDS,user_id:`eq.${context.userId}`,status:'in.(CANDIDATE,ACTIVE,SUPPORTED,MIXED,WEAK,REOPENED)',order:'updated_at.desc,id.asc',limit:String(limit)});
     return this.request<HypothesisRecord[]>(`hypotheses?${query}`);
+  }
+
+  // INTEL-TM-01 (migration 0151): the reliance of these owned Hypotheses, through the service twin whose owner is the
+  // authority-issued execution context's. Validation and version pinning are the caller's (projectEvidenceReliance).
+  async readHypothesisEvidenceReliance(context:BackgroundIntelligenceExecutionContext,hypothesisIds:readonly string[]):Promise<HypothesisEvidenceRelianceRow[]>{
+    this.assertExecutionContext(context);
+    return this.request<HypothesisEvidenceRelianceRow[]>('rpc/background_hypothesis_evidence_reliance_v1',{method:'POST',body:JSON.stringify({p_user_id:context.userId,p_hypothesis_ids:hypothesisIds})});
+  }
+
+  // INTEL-TM-01 (CC-4): the bounded housekeeping. The database derives the pending work itself (links naming a Memory
+  // the reader forgot or disabled), detaches them with an immutable record, one version step and the same-transaction
+  // exact-version Confidence, and answers how many Hypotheses it re-evaluated. It decides no reliance.
+  async reevaluateWithdrawnHypothesisEvidence(context:BackgroundIntelligenceExecutionContext,limit:number):Promise<unknown>{
+    this.assertExecutionContext(context);
+    return this.request<unknown>('rpc/background_reevaluate_withdrawn_hypothesis_evidence_v1',{method:'POST',body:JSON.stringify({p_user_id:context.userId,p_limit:limit})});
   }
 
   async findHypothesis(context:BackgroundIntelligenceExecutionContext,id:string):Promise<HypothesisRecord|undefined>{

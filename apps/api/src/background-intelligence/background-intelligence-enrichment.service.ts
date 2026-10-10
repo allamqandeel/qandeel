@@ -23,6 +23,7 @@ import type { HypothesisGenerationEligibilityAssessment } from '../hypothesis/hy
 import { MAX_ACTIVE_HYPOTHESES, type HypothesisRecord } from '../hypothesis/hypothesis.types';
 import { MAX_GENERATED_HYPOTHESIS_CANDIDATES, type HypothesisCandidateGenerator, type HypothesisGenerationInput, type HypothesisGenerationRequest } from '../hypothesis/hypothesis-generation.types';
 import { hypothesisCollisionKey, normalizeGenerationInput, validateGenerationEvidenceIds, validateHypothesisCandidate } from '../hypothesis/hypothesis-generation.policy';
+import { PERSONAL_EVIDENCE_REEVALUATION_LIMIT, projectEvidenceReliance, reliableOnly } from '../hypothesis/hypothesis-evidence-reliance';
 import { authorizeSubjectGroundingHandles } from '../hypothesis/hypothesis-subject-grounding.authority';
 import type { AuthorizedSubjectGroundingUniverse, DurableSubjectGroundingSelection } from '../hypothesis/hypothesis-subject-grounding.types';
 import type { DurableCandidateProviderResult, DurableGenerationCandidate } from '../post-response-intelligence/durable-generation-result';
@@ -121,7 +122,24 @@ export class BackgroundIntelligenceEnrichmentService {
 
  async listEligibleEvidence(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<ReadonlyArray<EvidenceItem>>{this.assert(context);return projectEligibleEvidence(context.userId,await this.data.listActiveMemories(context,EVIDENCE_CANDIDATE_LIMIT,now),now).slice(0,MAX_ELIGIBLE_EVIDENCE);}
 
- async listActiveHypotheses(context:BackgroundIntelligenceExecutionContext):Promise<ReadonlyArray<HypothesisRecord>>{this.assert(context);return this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES);}
+ // INTEL-TM-01 (PG-02): the ONE background list of current Hypotheses, and it holds only those QANDEEL may rely on.
+ // Association and generation read nothing else, so an item linked to forgotten, disabled or corrected information,
+ // or left with no eligible support, is never offered to a provider, never a collision key and never a target. The
+ // reliance read follows the list read and is pinned to its versions; a malformed answer throws (fail closed).
+ async listReliableActiveHypotheses(context:BackgroundIntelligenceExecutionContext):Promise<ReadonlyArray<HypothesisRecord>>{
+  this.assert(context);const active=await this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES);
+  if(!Array.isArray(active))throw new Error('BACKGROUND_HYPOTHESIS_LIST_INTEGRITY');if(active.length===0)return active;
+  return reliableOnly(active,projectEvidenceReliance(active,await this.data.readHypothesisEvidenceReliance(context,active.map(item=>item.id))));
+ }
+
+ // INTEL-TM-01 (CC-4): the bounded withdrawal housekeeping for this execution's reader. It runs no provider and owns no
+ // retry: the database derives what is pending, and a later execution derives it again. It answers the number of
+ // Hypotheses re-evaluated, and anything else is an integrity failure for the caller's fail-soft handling.
+ async reevaluateWithdrawnHypothesisEvidence(context:BackgroundIntelligenceExecutionContext):Promise<number>{
+  this.assert(context);const count=await this.data.reevaluateWithdrawnHypothesisEvidence(context,PERSONAL_EVIDENCE_REEVALUATION_LIMIT);
+  if(typeof count!=='number'||!Number.isSafeInteger(count)||count<0||count>PERSONAL_EVIDENCE_REEVALUATION_LIMIT)throw new Error('PERSONAL_EVIDENCE_REEVALUATION_INTEGRITY');
+  return count;
+ }
 
  async evaluateGenerationEligibility(context:BackgroundIntelligenceExecutionContext,text:string,safetyDisposition:SafetyDisposition):Promise<HypothesisGenerationEligibilityAssessment>{
   // W3-MEGA-M: an explicit Memory command is never a generation trigger - "forget that I …" must not seed a new
@@ -153,7 +171,7 @@ export class BackgroundIntelligenceEnrichmentService {
  // universe no grounding is admissible at all.
  async generateHypothesisCandidatePlan(context:BackgroundIntelligenceExecutionContext,input:HypothesisGenerationInput,generator:HypothesisCandidateGenerator,himContext?:HimHypothesisGenerationContext,subjectGroundingUniverse?:AuthorizedSubjectGroundingUniverse):Promise<DurableCandidateProviderResult>{
   this.assert(context);const {problem,domain,scope}=normalizeGenerationInput(input);validateGenerationEvidenceIds(input.evidenceIds);const eligible=await this.listEligibleEvidence(context),eligibleById=new Map(eligible.map(item=>[item.evidenceId,item])),requested=input.evidenceIds.map(id=>eligibleById.get(id));if(requested.some(item=>!item))throw new BadRequestException('Generation evidence is not currently eligible.');
-  const request:HypothesisGenerationRequest={userId:context.userId,problem,domain,scope,eligibleEvidence:requested as EvidenceItem[],existingActiveHypotheses:await this.data.listActiveHypotheses(context,MAX_ACTIVE_HYPOTHESES),maxCandidateCount:MAX_GENERATED_HYPOTHESIS_CANDIDATES,...(himContext?{himContext}:{}),...(subjectGroundingUniverse?{eligibleSubjectGroundings:subjectGroundingUniverse.entries}:{})};const proposals=await generator.generate(request);if(!Array.isArray(proposals))throw new BadRequestException('Generator returned an invalid candidate batch.');
+  const request:HypothesisGenerationRequest={userId:context.userId,problem,domain,scope,eligibleEvidence:requested as EvidenceItem[],existingActiveHypotheses:await this.listReliableActiveHypotheses(context),maxCandidateCount:MAX_GENERATED_HYPOTHESIS_CANDIDATES,...(himContext?{himContext}:{}),...(subjectGroundingUniverse?{eligibleSubjectGroundings:subjectGroundingUniverse.entries}:{})};const proposals=await generator.generate(request);if(!Array.isArray(proposals))throw new BadRequestException('Generator returned an invalid candidate batch.');
   const accepted:DurableGenerationCandidate[]=[],subjectGroundings:DurableSubjectGroundingSelection[]=[],seen=new Set<string>(),active=new Set(request.existingActiveHypotheses.map(item=>hypothesisCollisionKey(item.statement,item.scope)));
   for(let index=0;index<proposals.length;index++){if(index>=request.maxCandidateCount)continue;const reason=validateHypothesisCandidate(proposals[index],request,seen,active);if(reason)continue;const proposal=proposals[index];
    const grounding=authorizeSubjectGroundingHandles(proposal.subjectGroundingHandles,request.eligibleSubjectGroundings);if(grounding.status!=='AUTHORIZED')continue;

@@ -131,6 +131,7 @@ jobs:
       - {name: "Verify SEC-MATCH-00 Matching direct-RPC protection static contract", run: npm run test:sec-match-00-matching-direct-rpc-protection-contract}
       - {name: "Verify PROD-RETRY-01 Data API stale-state SQLSTATE static contract", run: npm run test:prod-retry-01-data-api-stale-state-contract}
       - {name: "Verify CI-01 Intelligence Evidence Baseline static contract (records, isolation authorities, recorded synthetic proofs)", run: npm run test:ci-01-intelligence-evidence-baseline-contract}
+      - {name: "Verify INTEL-TM-01 Personal Evidence Truth Maintenance static contract (reliance guards, withheld Understanding shape, records)", run: npm run test:intel-tm-01-personal-evidence-truth-maintenance-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -966,6 +967,13 @@ jobs:
       # Shared ID rotation races keep one current state.
       - name: Verify PROD-RETRY-01 non-retryable stale-state SQLSTATE against real PostgreSQL
         run: npm run verify:data-api-stale-state-non-retryable:integration
+      # INTEL-TM-01 (QAN-BL-INTEL-01, PG-02): migration 0151 withholds reliance on a Hypothesis known to depend on forgotten,
+      # disabled or corrected Memory - derived from committed facts, identical before and after the fail-soft housekeeping,
+      # permanent in V1 - while L2 Evidence and Confidence stay unchanged; a link leaves only with an immutable record; the
+      # selector and the bind-time guard fail closed under two-connection races without deadlock; owner-only; erased with
+      # the account. Its committed race fixtures are removed and the removal is checked.
+      - name: Verify INTEL-TM-01 Personal Evidence Truth Maintenance against real PostgreSQL
+        run: npm run verify:personal-evidence-truth-maintenance:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

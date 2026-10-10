@@ -54,13 +54,25 @@ export const UNDERSTANDING_EVOLUTION_KINDS = [
 ] as const;
 export type UnderstandingEvolutionKind = (typeof UNDERSTANDING_EVOLUTION_KINDS)[number];
 
+/**
+ * INTEL-TM-01 (PG-02, CC-2) — whether information this understanding relied on changed. NONE is the only state in which
+ * QANDEEL relies on it and shows its statement. REVIEW_PENDING: it was linked to information the reader forgot,
+ * disabled or corrected. NO_REMAINING_SUPPORT: none of the information that supported it is currently eligible. Both
+ * are stable states, never a process in progress.
+ */
+export const UNDERSTANDING_EVIDENCE_CHANGES = ['NONE', 'REVIEW_PENDING', 'NO_REMAINING_SUPPORT'] as const;
+export type UnderstandingEvidenceChange = (typeof UNDERSTANDING_EVIDENCE_CHANGES)[number];
+
 export interface UnderstandingItemSummary {
   /** Opaque, stable per item and reader; not reversible to any identifier. */
   readonly ref: string;
   /** Opaque token for the exact interpretation the reader is looking at. */
   readonly revision: string;
   readonly theme: UnderstandingTheme;
-  readonly summary: string;
+  /** The statement — or null exactly when `evidenceChange` is not NONE: a withheld statement is never shown automatically. */
+  readonly summary: string | null;
+  /** INTEL-TM-01: always present. */
+  readonly evidenceChange: UnderstandingEvidenceChange;
   readonly confidence: UnderstandingConfidenceState;
   /** U3 (PG-01): the reader explicitly disagreed and the item is Contested / Under Review. */
   readonly underReview: boolean;
@@ -76,6 +88,7 @@ export interface UnderstandingItemDetail extends UnderstandingItemSummary {
   readonly evidence: readonly string[];
   /** The reader's own contradictory context. */
   readonly contradictions: readonly string[];
+  /** INTEL-TM-01: never names an item that is itself withheld. All four text lists are empty for a withheld item. */
   readonly alternatives: readonly string[];
   readonly unresolved: readonly string[];
   /** Newest first. */

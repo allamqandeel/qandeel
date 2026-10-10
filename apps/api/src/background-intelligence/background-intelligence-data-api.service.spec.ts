@@ -66,4 +66,13 @@ describe('BackgroundIntelligenceDataApiService',()=>{
   expect(fetch).not.toHaveBeenCalled();
  });
  it('keeps service-role credentials internal and failures sanitized',async()=>{const service=new BackgroundIntelligenceDataApiService();(fetch as jest.Mock).mockRejectedValueOnce(new Error('raw secret'));await expect(service.findSession(ownership)).rejects.toThrow('BACKGROUND_INTELLIGENCE_DATABASE_UNAVAILABLE');expect(JSON.stringify(ownership)).not.toContain('SENTINEL_SERVICE_ROLE');});
+
+ // INTEL-TM-01: both server reads send only the authority-issued owner, never a credential or a client value.
+ it('INTEL-TM-01 sends the reliance read and the housekeeping with the execution owner only',async()=>{const service=new BackgroundIntelligenceDataApiService(),context=await authorize();
+  await service.readHypothesisEvidenceReliance(context,['h-1','h-2']);(fetch as jest.Mock).mockResolvedValueOnce({ok:true,status:200,json:async()=>3}as Response);
+  await expect(service.reevaluateWithdrawnHypothesisEvidence(context,32)).resolves.toBe(3);
+  const [[relianceUrl,relianceInit],[housekeepingUrl,housekeepingInit]]=(fetch as jest.Mock).mock.calls;
+  expect(new URL(relianceUrl).pathname).toMatch(/\/rpc\/background_hypothesis_evidence_reliance_v1$/u);expect(JSON.parse(relianceInit.body)).toEqual({p_user_id:context.userId,p_hypothesis_ids:['h-1','h-2']});
+  expect(new URL(housekeepingUrl).pathname).toMatch(/\/rpc\/background_reevaluate_withdrawn_hypothesis_evidence_v1$/u);expect(JSON.parse(housekeepingInit.body)).toEqual({p_user_id:context.userId,p_limit:32});
+  await expect(service.readHypothesisEvidenceReliance({...context},['h-1'])).rejects.toThrow();});
 });

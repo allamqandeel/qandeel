@@ -35,7 +35,7 @@ const REV_1 = 'rrrrrrrrrrrrrrrrrrrrr1';
 const REV_2 = 'rrrrrrrrrrrrrrrrrrrrr2';
 
 const item = (ref: string, overrides: Partial<UnderstandingItemView> = {}): UnderstandingItemView => ({
-  ref, revision: REV_1, theme: 'WORK', summary: 'You prepare well before big deadlines.', confidence: 'TAKING_SHAPE', underReview: false, ...overrides,
+  ref, revision: REV_1, theme: 'WORK', summary: 'You prepare well before big deadlines.', evidenceChange: 'NONE', confidence: 'TAKING_SHAPE', underReview: false, ...overrides,
 });
 const detailOf = (base: UnderstandingItemView, overrides: Partial<UnderstandingDetailView> = {}): UnderstandingDetailView => ({
   ...base, evidence: ['I plan my week on Sunday.'], contradictions: [], alternatives: ['You prepare early only for others.'],
@@ -441,5 +441,68 @@ describe.each(['ar', 'en'] as const)('%s — QANDEEL Understanding', (language) 
     expect(onTalk).not.toHaveBeenCalled();
     await press(view, 'qandeel-understanding-talk');
     expect(onTalk).toHaveBeenCalledTimes(1);
+  });
+});
+
+// INTEL-TM-01 (PG-02, CC-2): a withheld understanding is visible to its owner, but never its statement — not on screen,
+// not to a screen reader — and it offers no way to bring it into the Conversation.
+describe.each(['ar', 'en'] as const)('%s — INTEL-TM-01 withheld understanding', (language) => {
+  const copy = understandingCopy(language);
+  const pending = item(REF_A, { summary: null, evidenceChange: 'REVIEW_PENDING', confidence: 'NEEDS_MORE' });
+  const unsupported = item(REF_B, { summary: null, evidenceChange: 'NO_REMAINING_SUPPORT', theme: 'GOALS', confidence: 'MIXED', underReview: true });
+  const withheldDetail = (base: UnderstandingItemView) => detailOf(base, { evidence: [], contradictions: [], alternatives: [], unresolved: [] });
+
+  it('the approved lines, exactly', () => {
+    expect(copy.evidenceChange).toEqual(language === 'ar'
+      ? {
+        REVIEW_PENDING: 'هذا الاستنتاج يحتاج إلى مراجعة بعد تغيير معلومات كان يعتمد عليها.',
+        NO_REMAINING_SUPPORT: 'لا توجد حاليًا معلومات مؤهلة تدعم هذا الاستنتاج، ولذلك لن يعتمد عليه قنديل.',
+      }
+      : {
+        REVIEW_PENDING: 'This conclusion needs review after a change to information it relied on.',
+        NO_REMAINING_SUPPORT: "No eligible information currently supports this conclusion, so QANDEEL won't rely on it.",
+      });
+  });
+
+  it('the first view shows the evidence-change line in the statement place, and the screen reader hears only that', async () => {
+    const { view } = await surface(language, server({ list: { kind: 'READ', items: [pending, unsupported] } }));
+    expect(words(view)).toEqual([
+      copy.name,
+      copy.theme.WORK, copy.evidenceChange.REVIEW_PENDING, copy.confidenceName(copy.confidence.NEEDS_MORE),
+      copy.theme.GOALS, copy.evidenceChange.NO_REMAINING_SUPPORT, copy.confidenceName(copy.confidence.MIXED), copy.underReview,
+    ]);
+    expect(view.getByTestId(`qandeel-understanding-item-${REF_A}`).props.accessibilityLabel)
+      .toBe(`${copy.theme.WORK}, ${copy.evidenceChange.REVIEW_PENDING}, ${copy.confidenceName(copy.confidence.NEEDS_MORE)}`);
+    expect(view.getByTestId(`qandeel-understanding-item-${REF_B}`).props.accessibilityLabel)
+      .toBe(`${copy.theme.GOALS}, ${copy.evidenceChange.NO_REMAINING_SUPPORT}, ${copy.confidenceName(copy.confidence.MIXED)}, ${copy.underReview}`);
+    expect(view.getByTestId(`qandeel-understanding-item-${REF_A}-evidence-change`)).toBeTruthy();
+    expect(JSON.stringify(view.toJSON())).not.toContain('null');
+  });
+
+  it('the detail shows the line, the confidence, the review note and the evolution — and no talk', async () => {
+    const fake = server({ list: { kind: 'READ', items: [unsupported] }, detail: { kind: 'READ', view: withheldDetail(unsupported) } });
+    const { view, controller } = await surface(language, fake);
+    await press(view, `qandeel-understanding-item-${REF_B}`);
+    expect(view.getByTestId('qandeel-understanding-detail-evidence-change').props.children).toBe(copy.evidenceChange.NO_REMAINING_SUPPORT);
+    expect(view.getByTestId('qandeel-understanding-detail-under-review')).toBeTruthy();
+    expect(view.getByTestId('qandeel-understanding-detail-evolution')).toBeTruthy();
+    for (const absent of ['qandeel-understanding-talk', 'qandeel-understanding-detail-evidence', 'qandeel-understanding-detail-alternatives']) {
+      expect(view.queryByTestId(absent)).toBeNull();
+    }
+    // Nothing can open a discussion of it, even by a direct call.
+    await act(async () => { await expect(controller.talk()).resolves.toBeNull(); });
+    expect(fake.discussions).toEqual([]);
+  });
+
+  it('a discussion whose item turns out withheld on a re-read ends, and its statement is never shown again', async () => {
+    const fake = server();
+    const { view, controller } = await surface(language, fake);
+    await press(view, `qandeel-understanding-item-${REF_A}`);
+    await act(async () => { await controller.talk(); });
+    expect(controller.getState().discussion).not.toBeNull();
+    fake.verdict({ kind: 'CHANGED' });
+    fake.setDetail({ kind: 'READ', view: withheldDetail(pending) });
+    await act(async () => { await expect(controller.disagree()).resolves.toBe('CHANGED'); });
+    expect(controller.getState().discussion).toBeNull();
   });
 });

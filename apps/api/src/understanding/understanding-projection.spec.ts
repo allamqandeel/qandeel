@@ -7,7 +7,7 @@ import { UnderstandingProjectionInvariantError } from './understanding.types';
 const UNCALIBRATED = ['CONFIDENCE_MODEL_UNCALIBRATED'] as const;
 const facts = (overrides: Partial<UnderstandingConfidenceFacts> = {}): UnderstandingConfidenceFacts => ({
   status: 'ACTIVE', eligibleSupporting: 1, eligibleContradicting: 0,
-  exactVersionMissingInformation: UNCALIBRATED, contested: false, ...overrides,
+  exactVersionMissingInformation: UNCALIBRATED, contested: false, withheld: false, ...overrides,
 });
 
 describe('projectUnderstandingConfidence — qualitative, conservative, never calibrated', () => {
@@ -25,12 +25,18 @@ describe('projectUnderstandingConfidence — qualitative, conservative, never ca
     ['ACTIVE with support is still taking shape, never Clear', facts(), 'TAKING_SHAPE'],
     ['an empty (malformed) record never grounds Clear', facts({ status: 'SUPPORTED', exactVersionMissingInformation: [] }), 'TAKING_SHAPE'],
     ['an unknown status defaults conservatively', facts({ status: 'REOPENED' }), 'NEEDS_MORE'],
+    // INTEL-TM-01: a withheld item keeps rules 1-2 and is otherwise NEEDS_MORE, whatever its stored record says.
+    ['withheld SUPPORTED with no structural gap is never Clear', facts({ status: 'SUPPORTED', withheld: true }), 'NEEDS_MORE'],
+    ['withheld ACTIVE with support is never Taking shape', facts({ withheld: true }), 'NEEDS_MORE'],
+    ['withheld with current support and contradiction is not Mixed by rule 3', facts({ eligibleContradicting: 1, withheld: true }), 'NEEDS_MORE'],
+    ['a withheld contested item stays Mixed', facts({ status: 'SUPPORTED', contested: true, withheld: true }), 'MIXED'],
+    ['a withheld MIXED item stays Mixed', facts({ status: 'MIXED', withheld: true }), 'MIXED'],
   ] as const)('%s', (_name, input, expected) => {
     expect(projectUnderstandingConfidence(input)).toBe(expected);
   });
 
   it('has no input through which a score, band, weight or extraction confidence could arrive', () => {
-    expect(Object.keys(facts()).sort()).toEqual(['contested', 'eligibleContradicting', 'eligibleSupporting', 'exactVersionMissingInformation', 'status']);
+    expect(Object.keys(facts()).sort()).toEqual(['contested', 'eligibleContradicting', 'eligibleSupporting', 'exactVersionMissingInformation', 'status', 'withheld']);
   });
 });
 
@@ -51,14 +57,21 @@ describe('opaque item tokens', () => {
 });
 
 describe('outbound audit — planted defects fail closed', () => {
+  const detailEvolution = [{ kind: 'FIRST_SEEN', at: '2026-09-30T10:00:00.000+00:00' }];
   const ref = understandingItemRef('user-a', 'h1');
-  const summary = { ref, revision: understandingRevision('user-a', 'h1', 1), theme: 'WORK', summary: 'You prepare early.', confidence: 'TAKING_SHAPE', underReview: false };
-  const detail = { ...summary, evidence: ['I plan ahead'], contradictions: [], alternatives: [], unresolved: [], evolution: [{ kind: 'FIRST_SEEN', at: '2026-09-30T10:00:00.000+00:00' }] };
+  const summary = { ref, revision: understandingRevision('user-a', 'h1', 1), theme: 'WORK', summary: 'You prepare early.', evidenceChange: 'NONE', confidence: 'TAKING_SHAPE', underReview: false };
+  // INTEL-TM-01: the two withheld shapes — no statement, no text, never Clear or Taking shape.
+  const withheld = { ...summary, summary: null, evidenceChange: 'REVIEW_PENDING', confidence: 'NEEDS_MORE' };
+  const withheldDetail = { ...withheld, evidence: [], contradictions: [], alternatives: [], unresolved: [], evolution: detailEvolution };
+  const detail = { ...summary, evidence: ['I plan ahead'], contradictions: [], alternatives: [], unresolved: [], evolution: detailEvolution };
 
   it('accepts the exact Product shapes', () => {
     expect(() => auditUnderstandingList({ items: [summary] })).not.toThrow();
     expect(() => auditUnderstandingList({ items: [] })).not.toThrow();
     expect(() => auditUnderstandingDetail(detail)).not.toThrow();
+    expect(() => auditUnderstandingList({ items: [withheld, { ...withheld, ref: understandingItemRef('user-a', 'h2'), evidenceChange: 'NO_REMAINING_SUPPORT' }] })).not.toThrow();
+    expect(() => auditUnderstandingList({ items: [{ ...withheld, confidence: 'MIXED', underReview: true }] })).not.toThrow();
+    expect(() => auditUnderstandingDetail(withheldDetail)).not.toThrow();
   });
 
   it.each([
@@ -79,6 +92,12 @@ describe('outbound audit — planted defects fail closed', () => {
     ['a duplicated item', { items: [summary, summary] }],
     ['an item under review not shown as Mixed', { items: [{ ...summary, underReview: true }] }],
     ['a missing under-review flag', { items: [{ ref: summary.ref, revision: summary.revision, theme: 'WORK', summary: 'x', confidence: 'MIXED' }] }],
+    ['a missing evidence change', { items: [{ ref: summary.ref, revision: summary.revision, theme: 'WORK', summary: 'x', confidence: 'MIXED', underReview: false }] }],
+    ['an invented evidence change', { items: [{ ...summary, evidenceChange: 'RESTORED' }] }],
+    ['a relied-on item without a statement', { items: [{ ...summary, summary: null }] }],
+    ['a withheld statement shown', { items: [{ ...withheld, summary: 'You prepare early.' }] }],
+    ['a withheld item shown as Clear', { items: [{ ...withheld, confidence: 'CLEAR' }] }],
+    ['a withheld item shown as Taking shape', { items: [{ ...withheld, confidence: 'TAKING_SHAPE' }] }],
   ])('list: %s', (_name, payload) => {
     expect(() => auditUnderstandingList(payload)).toThrow(UnderstandingProjectionInvariantError);
   });
@@ -90,6 +109,11 @@ describe('outbound audit — planted defects fail closed', () => {
     ['an internal id in evolution', { ...detail, evolution: [{ kind: 'FIRST_SEEN', at: detail.evolution[0].at, id: 'x' }] }],
     ['a hidden rationale field', { ...detail, rationale: 'the model thought' }],
     ['an unbounded context list', { ...detail, evidence: Array.from({ length: 9 }, (_, index) => `item ${index}`) }],
+    ['a withheld item with supporting context', { ...withheldDetail, evidence: ['I plan ahead'] }],
+    ['a withheld item with contradictory context', { ...withheldDetail, contradictions: ['I left it late'] }],
+    ['a withheld item with alternatives', { ...withheldDetail, alternatives: ['You work best under pressure.'] }],
+    ['a withheld item with unresolved points', { ...withheldDetail, unresolved: ['Deadlines matter to you.'] }],
+    ['a withheld statement in the detail', { ...withheldDetail, summary: 'You prepare early.' }],
   ])('detail: %s', (_name, payload) => {
     expect(() => auditUnderstandingDetail(payload)).toThrow(UnderstandingProjectionInvariantError);
   });

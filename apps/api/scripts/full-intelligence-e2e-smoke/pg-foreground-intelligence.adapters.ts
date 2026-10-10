@@ -76,6 +76,9 @@ const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   // leaving them off is what makes "the activation entry is a separate
   // one-shot product command, not a per-turn foreground request" checkable.
   'set_him_session_context_binding_v1',
+  // INTEL-TM-01 (migration 0151): the owner's evidence-reliance read. The production Hypothesis reasoning context reads
+  // it after the active list, pinned to its versions, so a turn with current Hypotheses issues exactly this request.
+  'hypothesis_evidence_reliance_v1',
 ]);
 const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
   'claim_conversation_turn',

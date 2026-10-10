@@ -24,7 +24,7 @@ const evaluation = (target: HypothesisRecord, id = 'evaluation'): ConfidenceEval
 describe('HypothesisReasoningContextService', () => {
   let hypotheses: jest.Mocked<HypothesisService>, evidence: jest.Mocked<EvidenceService>, confidence: jest.Mocked<ConfidenceRepository>, service: HypothesisReasoningContextService;
   beforeEach(() => {
-    hypotheses = { listActiveForUser: jest.fn() } as unknown as jest.Mocked<HypothesisService>;
+    hypotheses = { readEvidenceReliance: jest.fn(async (_token: string, items: readonly HypothesisRecord[]) => new Map(items.map(({ id }) => [id, 'NONE']))), listActiveForUser: jest.fn() } as unknown as jest.Mocked<HypothesisService>;
     evidence = { listEligibleForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<EvidenceService>;
     confidence = { listExactVersionsForTargets: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<ConfidenceRepository>;
     service = new HypothesisReasoningContextService(hypotheses, evidence, confidence);
@@ -85,5 +85,50 @@ describe('HypothesisReasoningContextService', () => {
   ])('rejects duplicate or cross-role canonical Evidence links', async (target, corrupt) => {
     corrupt(target); hypotheses.listActiveForUser.mockResolvedValue([target]);
     await expect(service.build('user', 'token')).rejects.toBeInstanceOf(HypothesisReasoningInvariantError);
+  });
+});
+
+// INTEL-TM-01 (PG-02): reliance is read after the list, pinned to its versions, and only NONE ever reaches the model.
+describe('HypothesisReasoningContextService — INTEL-TM-01 evidence reliance', () => {
+  const evidence = { listEligibleForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<EvidenceService>;
+  const confidence = { listExactVersionsForTargets: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<ConfidenceRepository>;
+  const build = (items: HypothesisRecord[], reliance: Record<string, string>, signals?: object) => {
+    const hypotheses = {
+      listActiveForUser: jest.fn().mockResolvedValue(items),
+      readEvidenceReliance: jest.fn().mockResolvedValue(new Map(Object.entries(reliance))),
+    } as unknown as jest.Mocked<HypothesisService>;
+    return { hypotheses, run: () => new HypothesisReasoningContextService(hypotheses, evidence, confidence, signals as never).build('user', 'token') };
+  };
+  it('offers only NONE items, keeps their order, and counts only them as candidates', async () => {
+    const items = [hypothesis('a'), hypothesis('pending'), hypothesis('b'), hypothesis('unsupported'), hypothesis('unanswered')];
+    const { hypotheses, run } = build(items, { a: 'NONE', pending: 'REVIEW_PENDING', b: 'NONE', unsupported: 'NO_REMAINING_SUPPORT' });
+    const result = await run(); if (result.coverageState !== 'AVAILABLE') throw new Error('expected AVAILABLE');
+    expect(result.context.hypotheses.map((item) => item.statement)).toEqual(['statement a', 'statement b']);
+    expect([result.context.candidateHypothesisCount, result.context.includedHypothesisCount, result.context.truncated]).toEqual([2, 2, false]);
+    expect(hypotheses.readEvidenceReliance).toHaveBeenCalledWith('token', items);
+  });
+  it('answers EMPTY when every current item is withheld', async () => {
+    const { run } = build([hypothesis('x'), hypothesis('y')], { x: 'REVIEW_PENDING', y: 'NO_REMAINING_SUPPORT' });
+    await expect(run()).resolves.toEqual({ coverageState: 'EMPTY', candidateHypothesisCount: 0 });
+  });
+  it('never marks or promotes a withheld item the reader focused on or contested', async () => {
+    const items = [hypothesis('plain'), hypothesis('focused'), hypothesis('contested')];
+    const signals = {
+      readOpenDiscussionFocus: jest.fn().mockResolvedValue({ hypothesis_id: 'focused', hypothesis_version: 2, opened_at: new Date().toISOString() }),
+      listUnderReview: jest.fn().mockResolvedValue(new Set(['contested'])),
+    };
+    const { run } = build(items, { plain: 'NONE', focused: 'REVIEW_PENDING', contested: 'NO_REMAINING_SUPPORT' }, signals);
+    const result = await run(); if (result.coverageState !== 'AVAILABLE') throw new Error('expected AVAILABLE');
+    expect(result.context.hypotheses).toHaveLength(1);
+    expect(result.context.hypotheses[0]).toMatchObject({ statement: 'statement plain' });
+    expect(result.context.hypotheses[0]).not.toHaveProperty('userDiscussion');
+    expect(result.context.hypotheses[0]).not.toHaveProperty('userContest');
+  });
+  it('fails closed when the reliance read fails or is malformed', async () => {
+    const hypotheses = {
+      listActiveForUser: jest.fn().mockResolvedValue([hypothesis('a')]),
+      readEvidenceReliance: jest.fn().mockRejectedValue(new Error('upstream')),
+    } as unknown as jest.Mocked<HypothesisService>;
+    await expect(new HypothesisReasoningContextService(hypotheses, evidence, confidence).build('user', 'token')).rejects.toThrow('upstream');
   });
 });

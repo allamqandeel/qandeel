@@ -155,6 +155,24 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
+### INTEL-TM-01 implementation checkpoint — 2026-10-10 (PR open, not merged)
+
+This is a **locator note, not a new Product authority**. It records branch and PR truth and the binding-over pointers.
+
+- `main` is `44a440cfbb2c05421ed36639a5cf67ee7a8d25e5`, the merge of PR #325 (CI-01; reconciled here). Migrations
+  `0001`–`0150` are canonical on `main`; `0151` exists on the INTEL-TM-01 branch only.
+- **INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)**: implemented on
+  `intel/intel-tm-01-pg02-personal-evidence-truth-maintenance` (migration `0151`), PR open, awaiting independent review and
+  the Product Owner's merge decision; not merged, not deployed. Owner of `QAN-BL-INTEL-01`.
+- **Binds over (Controlled Changes, approved by the Product Owner's Implementation Task Contract):**
+  `docs/hypothesis-update-loop-v1.md` append-only attach and the `0036` header (CC-1, the recorded withdrawal detach); the
+  W3-MEGA-U §2.2 Product view model and the U1 / U2 pins (CC-2, `evidenceChange` and the withheld shape); QIR-006
+  selection and finalization semantics (CC-3, the `0151` selector and the bind-time guard; `0063` is not edited); the
+  post-response dispatcher's strict step sequence (CC-4, one fail-soft step). The frozen texts are not rewritten.
+- Where to look: the [INTEL-TM-01 implementation record](docs/e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md)
+  (reliance definition, CC-1 … CC-4, limits L-1 / L-2, residues), `database/migrations/0151_personal_evidence_truth_maintenance_v1.sql`
+  and `database/verify-migration-0151.mjs`.
+
 ### CI-01 local-closure checkpoint — 2026-10-10 (not merged)
 
 This is a **locator note, not a new Product authority**. It records branch and PR truth only.

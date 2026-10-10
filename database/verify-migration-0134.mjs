@@ -477,6 +477,14 @@ async function verifyWithdrawal() {
 // ------------------------------------------------------------------------------------------------------------------
 // 5. The combined 10-hypothesis proof through the REAL compiled provider-context selection.
 // ------------------------------------------------------------------------------------------------------------------
+/** A compiled API module (apps/api/dist), built here when the job did not build it. */
+function compiledApiModule(relativePath) {
+  const path = join(root, 'apps/api/dist', relativePath);
+  if (!existsSync(path)) execFileSync(process.platform === 'win32' ? 'npm.cmd' : 'npm', ['run', 'build:api'], { cwd: root, stdio: ['ignore', 'ignore', 'inherit'] });
+  if (!existsSync(path)) throw new Error('apps/api/dist could not be built: npm run build:api');
+  return createRequire(import.meta.url)(path);
+}
+
 function compiledReasoningContext() {
   const path = join(root, 'apps/api/dist/hypothesis/hypothesis-reasoning-context.service.js');
   // API CI builds apps/api/dist before the database steps; the focused gate installs but does not build, so build here.
@@ -498,10 +506,16 @@ async function verifyCombinedProviderContext() {
 
   // The reader's own data, read under their RLS exactly as the API's repositories select it.
   const ACTIVE = ['CANDIDATE', 'ACTIVE', 'SUPPORTED', 'MIXED', 'WEAK', 'REOPENED'];
+  // INTEL-TM-01 (0151) re-anchor: the reasoning context also reads evidence reliance after the list. It is the REAL
+  // owner-scoped database read under the same RLS, projected by the REAL compiled projection; these items have no
+  // evidence links, so every one is NONE and the proof below is unchanged.
+  const { projectEvidenceReliance } = compiledApiModule('hypothesis/hypothesis-evidence-reliance.js');
   const service = new Service(
     { listActiveForUser: async (userId) => rows(`SELECT id, user_id, statement, type, domain, scope, origin, status, version, supporting_evidence_ids,
         contradicting_evidence_ids, competing_hypothesis_ids, assumptions, disconfirming_conditions
-        FROM public.hypotheses WHERE user_id = $1 AND status = ANY($2::text[]) ORDER BY updated_at DESC, id ASC LIMIT 32`, [userId, ACTIVE]) },
+        FROM public.hypotheses WHERE user_id = $1 AND status = ANY($2::text[]) ORDER BY updated_at DESC, id ASC LIMIT 32`, [userId, ACTIVE]),
+      readEvidenceReliance: async (_token, items) => projectEvidenceReliance(items,
+        await rows('SELECT hypothesis_id, hypothesis_version, evidence_change FROM public.hypothesis_evidence_reliance_v1($1::uuid[])', [items.map(({ id }) => id)])) },
     { listEligibleForUser: async () => [] },
     { listExactVersionsForTargets: async () => [] },
     {

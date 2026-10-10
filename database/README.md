@@ -4442,3 +4442,46 @@ weakenings; the cross-schema guard of `data-api-retry-hazard-guard.mjs` (no entr
 escape; each retained `40001` discharged by a structural and a live proof; every absorbing handler named; five refused
 weakenings, including a catch trap); stale requests that are `PT409` and write nothing; and the Shared ID rotation races.
 The verifiers that asserted a changed function's `40001` are re-anchored to `PT409`.
+
+## INTEL-TM-01 - Personal Evidence Truth Maintenance, PG-02 (migration 0151)
+
+`0151_personal_evidence_truth_maintenance_v1.sql` is the database part of `QAN-BL-INTEL-01` under the Product Owner's
+INTEL-TM-01 Implementation Task Contract (Controlled Changes CC-1 ... CC-4). No historical migration is edited; `0063`
+and `finalize_conversation_turn_v2` are not redefined. Record:
+[INTEL-TM-01 implementation record](../docs/e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md).
+
+**Why.** Forgetting, disabling or correcting a Memory changed its status but nothing about the Hypotheses citing it: an
+`ACTIVE` Hypothesis over `DELETED` / `DISABLED` evidence was still offered to the model in a new session (CI-01 F1).
+
+**What 0151 does.**
+
+```text
+personal_evidence_standing_v1           L1: CURRENT / WITHDRAWN / CORRECTED / LAPSED / OTHER per linked row (no window)
+hypothesis_evidence_change_core_v1      L3: NONE / REVIEW_PENDING / NO_REMAINING_SUPPORT from committed facts only
+hypothesis_evidence_reliance_v1         authenticated read, auth-derived owner, version-pinned, <= 32 ids
+background_hypothesis_evidence_reliance_v1   the service twin (server-derived owner)
+hypothesis_evidence_withdrawal_reevaluations immutable owner-only record; CASCADE with the Hypothesis; erasure-only DELETE
+hypotheses_evidence_link_removal_guard  a link leaves only with the matching record of WITHDRAWN links, one version step
+background_reevaluate_withdrawn_hypothesis_evidence_v1   housekeeping: record + detach + version + 1 + exact Confidence
+select_formal_question_opportunity_v1   0063 body + three marked reliance lines (candidate, same-turn re-return, BOUND)
+formal_question_turn_binding_reliance_guard   SELECTED -> BOUND: FOR SHARE locks, reliance re-check, 42501 if withheld
+```
+
+L2 (`canonical_eligible_memory_ids_v1`, `0028`) and every Confidence command are unchanged. Reliance only withholds and is
+permanent in V1 for a tainted Hypothesis. No status is ever written, so `0134` never fires. The bind refusal is `42501`
+(`QUESTION_BINDING_RELIANCE_WITHHELD`), finalize v2's own family for an invalid binding: never `40001`, never `PT409`.
+
+**Grants.** `authenticated` executes `hypothesis_evidence_reliance_v1` and reads its own records; `service_role` executes the
+two `background_*` functions; every core, predicate and trigger function is executable by no application role.
+
+```sh
+npm run verify:personal-evidence-truth-maintenance:integration
+```
+
+`verify-migration-0151.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the catalog and
+privileges (the selector is `0063` plus exactly the three marked lines; finalize v2 and L2 byte-identical), T1-T9, T11,
+T14 and T15 on real rows, the housekeeping, two-connection races (a forget or correction in flight during the bind, a
+withdrawal that rolls back, the bind first, duplicate housekeeping, housekeeping holding the Hypothesis while a bind
+waits) with no deadlock, and erasure with a populated record table. Its committed race fixtures, the effect ledger
+included, are removed and the removal is checked. `verify-migration-0028` (the L1 predicate admitted by name, outside
+every Evidence path) and `verify-migration-0134` (the reliance read in its compiled-service stub) are re-anchored.

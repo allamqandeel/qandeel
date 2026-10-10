@@ -18,9 +18,14 @@
  * W3-CORR-U EXACT CORRECTIVE COPY (Product Owner, binding): «أوافق عليه الآن» / "I agree with this now" (the resolution
  * act) and «وافقت لاحقًا على هذا الفهم» / "You later agreed with this understanding" (its evolution sentence). A failed
  * resolution reuses the existing «تعذّر تسجيل رأيك.» / "Your view couldn't be recorded." — no third wording is invented.
+ *
+ * INTEL-TM-01 PRODUCT-OWNER-APPROVED COPY (Implementation Task Contract §6, 2026-10-10): the two evidence-change lines a
+ * withheld understanding shows IN PLACE OF its statement. The Arabic is the Product Owner's, byte-for-byte; the English
+ * is the WP0R2 natural equivalent, with the product name in its established «QANDEEL» form. Both describe a state, never
+ * a process in progress, and neither names, quotes or hints at any Memory.
  */
 import type { ChromeLanguage } from '../orientation-chrome';
-import type { UnderstandingConfidence, UnderstandingEvolutionKind, UnderstandingTheme } from '../runtime-entry';
+import type { UnderstandingConfidence, UnderstandingEvidenceChange, UnderstandingEvolutionKind, UnderstandingTheme } from '../runtime-entry';
 
 export interface UnderstandingCopy {
   readonly name: string;
@@ -48,6 +53,8 @@ export interface UnderstandingCopy {
   readonly agree: string;
   readonly underReview: string;
   readonly underReviewNote: string;
+  /** INTEL-TM-01: shown, and announced, instead of a withheld statement. */
+  readonly evidenceChange: Readonly<Record<Exclude<UnderstandingEvidenceChange, 'NONE'>, string>>;
 }
 
 const AR: UnderstandingCopy = Object.freeze({
@@ -98,6 +105,10 @@ const AR: UnderstandingCopy = Object.freeze({
   agree: 'أوافق عليه الآن',
   underReview: 'قيد المراجعة',
   underReviewNote: 'أخذ قنديل برأيك، وهذا الفهم قيد المراجعة.',
+  evidenceChange: Object.freeze({
+    REVIEW_PENDING: 'هذا الاستنتاج يحتاج إلى مراجعة بعد تغيير معلومات كان يعتمد عليها.',
+    NO_REMAINING_SUPPORT: 'لا توجد حاليًا معلومات مؤهلة تدعم هذا الاستنتاج، ولذلك لن يعتمد عليه قنديل.',
+  }),
 });
 
 const EN: UnderstandingCopy = Object.freeze({
@@ -148,6 +159,10 @@ const EN: UnderstandingCopy = Object.freeze({
   agree: 'I agree with this now',
   underReview: 'Under review',
   underReviewNote: 'QANDEEL took your view into account. This understanding is under review.',
+  evidenceChange: Object.freeze({
+    REVIEW_PENDING: 'This conclusion needs review after a change to information it relied on.',
+    NO_REMAINING_SUPPORT: "No eligible information currently supports this conclusion, so QANDEEL won't rely on it.",
+  }),
 });
 
 export function understandingCopy(language: ChromeLanguage): UnderstandingCopy {

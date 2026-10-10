@@ -37,7 +37,7 @@ describe('HypothesisGenerationService', () => {
   beforeEach(() => {
     evidence = { listEligibleForUser: jest.fn().mockResolvedValue([{ evidenceId, statement: 'A deadline exists.' } as never]) } as unknown as jest.Mocked<EvidenceService>;
     hypotheses = {
-      listActiveForUser: jest.fn().mockResolvedValue([]), create: jest.fn().mockResolvedValue(record()),
+      listReliableActiveForUser: jest.fn().mockResolvedValue([]), create: jest.fn().mockResolvedValue(record()),
       attachEvidence: jest.fn().mockImplementation(async (_u, _t, _id, id, role) => record(role === 'SUPPORTING' ? { supporting_evidence_ids: [id] } : { contradicting_evidence_ids: [id] })),
       linkCompetitor: jest.fn().mockResolvedValue(record()),
     } as unknown as jest.Mocked<HypothesisService>;
@@ -52,7 +52,7 @@ describe('HypothesisGenerationService', () => {
     const generator = new DeterministicFakeGenerator([candidate()]);
     await run(generator);
     expect(evidence.listEligibleForUser).toHaveBeenCalledWith('user-a', 'token-a');
-    expect(hypotheses.listActiveForUser).toHaveBeenCalledWith('user-a', 'token-a');
+    expect(hypotheses.listReliableActiveForUser).toHaveBeenCalledWith('user-a', 'token-a');
     expect(generator.request).toEqual(expect.objectContaining({ userId: 'user-a', domain: 'DECISION', scope: 'Current work decision', maxCandidateCount: 5 }));
     expect(generator.request?.eligibleEvidence).toHaveLength(1);
     for (const forbidden of ['conversation', 'rawTranscript', 'providerPayload', 'safetyHistory', 'hiddenReasoning']) expect(generator.request).not.toHaveProperty(forbidden);
@@ -99,7 +99,7 @@ describe('HypothesisGenerationService', () => {
   });
 
   it('rejects exact normalized batch and active-scope duplicates', async () => {
-    hypotheses.listActiveForUser.mockResolvedValue([record({ statement: 'Existing explanation.' })]);
+    hypotheses.listReliableActiveForUser.mockResolvedValue([record({ statement: 'Existing explanation.' })]);
     const result = await run(new DeterministicFakeGenerator([
       candidate(), candidate({ statement: '  Time   pressure may contribute to indecision.  ' }), candidate({ statement: 'Existing explanation.' }),
     ]));

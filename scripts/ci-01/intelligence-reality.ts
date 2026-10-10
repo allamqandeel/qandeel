@@ -100,6 +100,17 @@ const TOKEN = 'ci01-synthetic-transport-token'; // transport metadata only; iden
 const LINKS_SQL = `SELECT h.id AS hypothesis_id, h.status AS hypothesis_status, m.type AS memory_type, m.status AS memory_status, m.content AS memory_content
   FROM public.hypotheses h CROSS JOIN LATERAL unnest(h.supporting_evidence_ids) AS e(id)
   JOIN public.memories m ON m.id = substring(e.id FROM 8)::uuid WHERE h.user_id = $1 ORDER BY h.created_at, m.created_at`;
+// INTEL-TM-01 (PG-02): the per-HYPOTHESIS reliance measure beside the item count above. On a SHA with migration 0151 it
+// records, for every Hypothesis of the user, the database's own evidence change and whether it ever depended on forgotten,
+// disabled or corrected Memory (a withdrawal record, or a link to such a row in either role). Before 0151 it is null.
+const RELIANCE_PRESENT_SQL = "SELECT to_regprocedure('public.hypothesis_evidence_change_core_v1(uuid,uuid,text[],text[],timestamp with time zone)') IS NOT NULL AS present";
+const RELIANCE_SQL = `SELECT h.status, h.version,
+    public.hypothesis_evidence_change_core_v1(h.user_id, h.id, h.supporting_evidence_ids, h.contradicting_evidence_ids, CURRENT_TIMESTAMP) AS evidence_change,
+    EXISTS (SELECT 1 FROM public.hypothesis_evidence_withdrawal_reevaluations r WHERE r.hypothesis_id = h.id) AS withdrawal_recorded,
+    EXISTS (SELECT 1 FROM unnest(h.supporting_evidence_ids || h.contradicting_evidence_ids) AS e(id)
+      JOIN public.memories m ON m.id = substring(e.id FROM 8)::uuid AND m.user_id = h.user_id
+      WHERE m.status IN ('DELETED', 'DISABLED', 'SUPERSEDED')) AS cites_withdrawn_or_corrected
+  FROM public.hypotheses h WHERE h.user_id = $1 ORDER BY h.created_at, h.id`;
 
 type Role = 'postgres' | 'service_role' | 'authenticated' | 'anon';
 type Json = any;
@@ -538,7 +549,7 @@ async function main(): Promise<void> {
       questionCandidates: Number((await db.observer<Json>('SELECT count(*)::int AS n FROM public.question_candidates WHERE user_id = $1', [userId]))[0].n),
     };
   }
-  function yields(turns: Json[], finals: Record<string, Json>, links: Record<string, Json[]>): Json {
+  function yields(turns: Json[], finals: Record<string, Json>, links: Record<string, Json[]>, reliance: Record<string, Json[] | null> = {}): Json {
     const count = (pred: (t: Json) => boolean) => turns.filter(pred).length;
     const y: Json = {};
     const values = turns.filter((t) => t.measure.valueStatement);
@@ -560,6 +571,14 @@ async function main(): Promise<void> {
       y.pg02 = { hypothesisEvidenceLinksBefore: (links.before ?? []).map((l: Json) => `${l.hypothesis_status}/${l.memory_type}:${l.memory_status}`),
         hypothesisEvidenceLinksAfter: after.map((l: Json) => `${l.hypothesis_status}/${l.memory_type}:${l.memory_status}`),
         activeHypothesesOverNonActiveEvidence: new Set(after.filter((l: Json) => l.hypothesis_status === 'ACTIVE' && l.memory_status !== 'ACTIVE').map((l: Json) => l.hypothesis_id)).size };
+      const relied = reliance.after;
+      if (relied !== undefined) {
+        const dependent = (relied ?? []).filter((r: Json) => r.withdrawal_recorded || r.cites_withdrawn_or_corrected);
+        y.pg02.perHypothesis = relied === null ? null : relied.map((r: Json) => ({ status: r.status, version: r.version, evidenceChange: r.evidence_change,
+          withdrawalRecorded: r.withdrawal_recorded, citesWithdrawnOrCorrected: r.cites_withdrawn_or_corrected }));
+        y.pg02.dependedOnWithdrawnOrCorrected = relied === null ? null : dependent.length;
+        y.pg02.reliedOnAfterWithdrawal = relied === null ? null : dependent.filter((r: Json) => r.evidence_change === 'NONE').length;
+      }
     }
     const third = turns.filter((t) => t.measure.thirdParty);
     if (third.length) y.thirdParty = { thirdPartyStatements: third.length, storedAsUserMemory: third.filter((t) => t.newMemories.length > 0).length,
@@ -583,12 +602,15 @@ async function main(): Promise<void> {
     const fixture = JSON.parse(readFileSync(join(fixturesDir, file), 'utf8'));
     if (fixture.scenario === 'CONTROLS') { controlsFixture = fixture; continue; }
     if (only && only !== fixture.scenario) continue;
-    const turns: Json[] = []; const links: Record<string, Json[]> = {};
+    const turns: Json[] = []; const links: Record<string, Json[]> = {}; const reliance: Record<string, Json[] | null> = {};
     try {
       for (const step of fixture.steps) {
         if (step.kind === 'session') await newSession(step.user, step.session);
         else if (step.kind === 'turn') turns.push(await turn(step));
-        else if (step.kind === 'hypothesis_links') links[step.label] = await db.observer<Json>(LINKS_SQL, [await user(step.user)]);
+        else if (step.kind === 'hypothesis_links') {
+          links[step.label] = await db.observer<Json>(LINKS_SQL, [await user(step.user)]);
+          reliance[step.label] = (await db.observer<Json>(RELIANCE_PRESENT_SQL, []))[0].present ? await db.observer<Json>(RELIANCE_SQL, [await user(step.user)]) : null;
+        }
         else if (step.kind === 'him_seed') {
           const userId = await user(step.user); const sessionId = sessions.get(`${step.user}:${step.session}`);
           if (step.metric !== 'hse.stress') throw new Error(`him_seed metric ${step.metric} not supported by this harness`);
@@ -601,7 +623,7 @@ async function main(): Promise<void> {
       const labels = [...new Set(fixture.steps.map((s: Json) => s.user).filter(Boolean))] as string[];
       const finals: Record<string, Json> = {};
       for (const label of labels) finals[label] = await finalState(label);
-      out.scenarios[fixture.scenario] = { title: fixture.title, purpose: fixture.purpose, fixture: file, status: 'RUN', yields: yields(turns, finals, links), turns, finalState: finals,
+      out.scenarios[fixture.scenario] = { title: fixture.title, purpose: fixture.purpose, fixture: file, status: 'RUN', yields: yields(turns, finals, links, reliance), turns, finalState: finals,
         ...(Object.keys(links).length ? { hypothesisEvidenceLinks: links } : {}) };
       console.log(`[ci-01 driver] SCENARIO ${fixture.scenario} RUN (${turns.length} turns)`);
     } catch (e) {
@@ -767,6 +789,7 @@ function pickSummary(y: Json): Json {
   if (y.truthMaintenance) s.staleServed = `${y.truthMaintenance.staleServed}/${y.truthMaintenance.staleProbes}`, s.duplicateActiveAtEnd = y.truthMaintenance.duplicateActiveMemoriesAtEnd;
   if (y.forget) s.forgottenServed = `${y.forget.forgottenServed}/${y.forget.forgottenProbes}`, s.hypothesisInjectedAfterForget = y.forget.hypothesisInjectedAfterForget;
   if (y.pg02) s.pg02ActiveHypothesesOverNonActiveEvidence = y.pg02.activeHypothesesOverNonActiveEvidence;
+  if (y.pg02 && 'reliedOnAfterWithdrawal' in y.pg02) s.pg02ReliedOnAfterWithdrawal = y.pg02.reliedOnAfterWithdrawal, s.pg02DependedOnWithdrawnOrCorrected = y.pg02.dependedOnWithdrawnOrCorrected;
   if (y.thirdParty) s.thirdPartyStoredAsUserMemory = `${y.thirdParty.storedAsUserMemory}/${y.thirdParty.thirdPartyStatements}`;
   if (y.him) s.himCoverage = y.him.map((h: Json) => `${h.step}:${h.coverageState}/${h.knownMetrics.length}known/${h.behavioralInstructionIds.length}instr`);
   if (y.triggers) s.triggers = y.triggers.map((t: Json) => `${t.step}:${t.classifier}→${t.execution}(+${t.newHypotheses}h)`);

@@ -71,6 +71,8 @@ const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<str
  ['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
  ['ACCOUNT_DELETION',new Map([['claim',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','blocked_expected','superseded_expected',...OPERATION_FAILURES])],['provider_remove',new Set(['success','provider_unavailable'])],['complete',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
  ['UNDERSTANDING_CONFIDENCE',new Map([['confidence_reevaluate',new Set(['success','retry_pending'])]])],
+ // INTEL-TM-01 (CC-4): the fail-soft withdrawal housekeeping step of the post-response dispatcher. Outcome classes only.
+ ['PERSONAL_EVIDENCE_TRUTH_MAINTENANCE',new Map([['withdrawal_reevaluate',new Set(['success',...OPERATION_FAILURES])]])],
  // AI-COST-01: the accounting ledger's own health scan (migration 0135 operations summary).
  ['AI_USAGE_ACCOUNTING',new Map([['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],
  // A3-02: the platform dispatcher (migration 0137). Finite outcome classes only - never a user, item, device, token,

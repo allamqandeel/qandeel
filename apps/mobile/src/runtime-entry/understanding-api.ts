@@ -18,12 +18,18 @@ import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
 /** The four P1 §11.3 concepts, as the server projects them. The words are the surface's approved copy. */
 export type UnderstandingConfidence = 'CLEAR' | 'TAKING_SHAPE' | 'MIXED' | 'NEEDS_MORE';
 export type UnderstandingTheme = 'YOU' | 'RELATIONSHIPS' | 'WORK' | 'DECISIONS' | 'GOALS' | 'HOW_WE_TALK';
+/**
+ * INTEL-TM-01 (PG-02) — whether information an understanding relied on changed. Only NONE carries a statement; the two
+ * other states are withheld: QANDEEL does not rely on them and the statement is never sent to be shown.
+ */
+export type UnderstandingEvidenceChange = 'NONE' | 'REVIEW_PENDING' | 'NO_REMAINING_SUPPORT';
 export type UnderstandingEvolutionKind =
   | 'FIRST_SEEN' | 'SUPPORT_ADDED' | 'CHALLENGE_ADDED' | 'STRENGTHENED' | 'WEAKENED' | 'BECAME_MIXED' | 'WITHDRAWN' | 'RECONSIDERED'
   | 'YOU_DISAGREED' | 'YOU_RESOLVED_DISAGREEMENT';
 
 const CONFIDENCES: readonly string[] = Object.freeze(['CLEAR', 'TAKING_SHAPE', 'MIXED', 'NEEDS_MORE']);
 const THEMES: readonly string[] = Object.freeze(['YOU', 'RELATIONSHIPS', 'WORK', 'DECISIONS', 'GOALS', 'HOW_WE_TALK']);
+const EVIDENCE_CHANGES: readonly string[] = Object.freeze(['NONE', 'REVIEW_PENDING', 'NO_REMAINING_SUPPORT']);
 const EVOLUTION_KINDS: readonly string[] = Object.freeze([
   'FIRST_SEEN', 'SUPPORT_ADDED', 'CHALLENGE_ADDED', 'STRENGTHENED', 'WEAKENED', 'BECAME_MIXED', 'WITHDRAWN', 'RECONSIDERED',
   'YOU_DISAGREED', 'YOU_RESOLVED_DISAGREEMENT',
@@ -42,7 +48,9 @@ export interface UnderstandingItemView {
   /** Opaque token of the exact interpretation shown. */
   readonly revision: string;
   readonly theme: UnderstandingTheme;
-  readonly summary: string;
+  /** The statement — null exactly when `evidenceChange` is not NONE (INTEL-TM-01). It is never shown or announced then. */
+  readonly summary: string | null;
+  readonly evidenceChange: UnderstandingEvidenceChange;
   readonly confidence: UnderstandingConfidence;
   /** U3: the reader explicitly disagreed; the item is Contested / Under Review. */
   readonly underReview: boolean;
@@ -118,16 +126,22 @@ const hasExactly = (value: Record<string, unknown>, keys: readonly string[]) => 
 const isText = (value: unknown): value is string => typeof value === 'string' && value.trim().length > 0 && value.length <= 4000;
 const isTextList = (value: unknown, max: number): value is string[] => Array.isArray(value) && value.length <= max && value.every(isText);
 
-const SUMMARY_KEYS = ['ref', 'revision', 'theme', 'summary', 'confidence', 'underReview'];
+const SUMMARY_KEYS = ['ref', 'revision', 'theme', 'summary', 'evidenceChange', 'confidence', 'underReview'];
 const DETAIL_KEYS = [...SUMMARY_KEYS, 'evidence', 'contradictions', 'alternatives', 'unresolved', 'evolution'];
 
 function decodeSummaryFields(value: Record<string, unknown>): UnderstandingItemView | null {
-  const { ref, revision, theme, summary, confidence, underReview } = value;
+  const { ref, revision, theme, summary, evidenceChange, confidence, underReview } = value;
   if (typeof underReview !== 'boolean' || (underReview && confidence !== 'MIXED')) return null;
   if (typeof ref !== 'string' || !TOKEN.test(ref) || typeof revision !== 'string' || !TOKEN.test(revision)) return null;
   if (typeof theme !== 'string' || !THEMES.includes(theme) || typeof confidence !== 'string' || !CONFIDENCES.includes(confidence)) return null;
-  if (!isText(summary)) return null;
-  return { ref, revision, theme: theme as UnderstandingTheme, summary, confidence: confidence as UnderstandingConfidence, underReview };
+  if (typeof evidenceChange !== 'string' || !EVIDENCE_CHANGES.includes(evidenceChange)) return null;
+  // INTEL-TM-01: a statement arrives exactly when QANDEEL relies on the item; a withheld item has none and is never
+  // Clear or Taking shape. Anything else is not an answer.
+  if (evidenceChange === 'NONE' ? !isText(summary) : summary !== null || (confidence !== 'MIXED' && confidence !== 'NEEDS_MORE')) return null;
+  return {
+    ref, revision, theme: theme as UnderstandingTheme, summary: summary as string | null,
+    evidenceChange: evidenceChange as UnderstandingEvidenceChange, confidence: confidence as UnderstandingConfidence, underReview,
+  };
 }
 
 export function decodeUnderstandingList(body: unknown): readonly UnderstandingItemView[] | null {
@@ -149,6 +163,8 @@ export function decodeUnderstandingDetail(body: unknown): UnderstandingDetailVie
   const { evidence, contradictions, alternatives, unresolved, evolution } = body;
   if (!isTextList(evidence, MAX_CONTEXT) || !isTextList(contradictions, MAX_CONTEXT) || !isTextList(alternatives, MAX_ALTERNATIVES) ||
     !isTextList(unresolved, MAX_CONTEXT) || !Array.isArray(evolution) || evolution.length > MAX_EVOLUTION) return null;
+  // INTEL-TM-01: a withheld item carries none of its own text and none of its reader's context.
+  if (summary.evidenceChange !== 'NONE' && [evidence, contradictions, alternatives, unresolved].some((list) => list.length > 0)) return null;
   const entries: UnderstandingEvolutionView[] = [];
   for (const entry of evolution as unknown[]) {
     if (!isRecord(entry) || !hasExactly(entry, ['kind', 'at'])) return null;
