@@ -1,7 +1,7 @@
 # QANDEEL — INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02) — Implementation Record v1
 
-**Status:** `INTEL-TM-01` — **IMPLEMENTED — PR OPEN, AWAITING INDEPENDENT REVIEW / PRODUCT OWNER MERGE DECISION — NOT MERGED, NOT DEPLOYED.**
-Merge only on the Product Owner's explicit «ادمج».
+**Status:** `INTEL-TM-01` — **CLOSED / MERGED — PR #326 on 2026-10-10 at `995d5ae9bf2530ac8e655b870526e0976be7cbf4` — NOT DEPLOYED.**
+Merged after exact-head API/Mobile CI success and explicit PO authorization. This post-merge governance update changes no runtime.
 **Authority:** the Product Owner's *INTEL-TM-01 / PG-02 Implementation Task Contract* (2026-10-10, "APPROVED FOR BOUNDED
 IMPLEMENTATION"), which approved the WP0R2 architecture with mandatory amendments. Design references, in precedence order:
 WP0R2 *Final Architecture Correction*, WP0R *Revised Architecture Decision*, WP0 *Repo Truth & Architecture Decision*
@@ -11,8 +11,7 @@ WP0R2 *Final Architecture Correction*, WP0R *Revised Architecture Decision*, WP0
 `272a567e62e93fb684f340172621840a2eb48e8f`; every later commit records results or documentation only.
 **Migration:** `0151_personal_evidence_truth_maintenance_v1.sql` (the next free slot; forward-only; no historical
 migration edited).
-**Backlog:** owner of `QAN-BL-INTEL-01`. Its disposition is made by the closing change at the Product Owner's merge
-decision (§9).
+**Backlog:** `QAN-BL-INTEL-01` completed/tombstoned in this closing change (§9); `QAN-BL-INTEL-02` remains with `INTEL-RET-01`; general Question residue `QAN-BL-QIR-01` is owned by `QIR-006-R1`.
 
 ---
 
@@ -190,17 +189,14 @@ announced. A withheld item offers no "talk" control.
 
 ## 9. Backlog and residues
 
-- **`QAN-BL-INTEL-01`:** resolved in the repository by this task; it stays `DEFERRED — OWNED` until the closing change at
-  the Product Owner's merge decision disposes of it under BG-08.
+- **`QAN-BL-INTEL-01`:** resolved in repository implementation and `CLOSED — TOMBSTONE` in the post-merge closing change; PR #326 merged as `995d5ae9bf2530ac8e655b870526e0976be7cbf4`. No hosted deployment is claimed.
 - **`QAN-BL-INTEL-02`:** its reopen condition 3 fired when INTEL-TM-01 opened; discharged by check, not absorbed: PG-02
   reads and writes no `0029` / `0033` `result_payload`. It stays `VALIDATION — OPEN`, owner `INTEL-RET-01`.
 - **R3-G — general question-finalization version recheck (residue, proposed for Product Owner decision).** The bind-time
   guard closes the **PG-02** reliance race only. `finalize_conversation_turn_v2` still binds without re-checking the
   Hypothesis version or lifecycle for other causes (an owner transition or an attach between selection and finalize);
   QIR-006 Fix 02 makes such a `BOUND` row non-current afterwards, but the bind itself is not re-checked. No existing backlog
-  item or owner covers it. **Proposed:** admit it at the closing change as a `MEDIUM` item, proposed owner
-  `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck`, if the Product Owner agrees. It is not marked
-  resolved and no scope is created here.
+  item or owner previously covered it. `QAN-BL-QIR-01` is now admitted at post-merge closure as `MEDIUM`, `DEFERRED — OWNED`, with owner `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck`. This grants no implementation authority.
 - **R2 (observation, unchanged):** clarification-answer turns are not caught by the background `MEMORY_CONTROL_COMMAND`
   guards; for the Memory-control owner to verify before any admission.
 
@@ -209,3 +205,11 @@ announced. A withheld item offers no "talk" control.
 No new LLM call, provider, lifecycle state, Confidence category or retry engine; no change to `0063`, finalize v2,
 `0128`, `0130`, `0134` or the canonical Evidence; no conversation-history rewrite, export redesign or retention policy; no
 roadmap change; no deployment.
+
+
+## 11. Post-merge administrative closure (2026-10-10)
+
+- PR #326 merged on `main` as `995d5ae9bf2530ac8e655b870526e0976be7cbf4` after green exact-head API and Mobile CI; this is repository closure only, not deployment.
+- BG-08/BG-09: `QAN-BL-INTEL-01` tombstoned; `QAN-BL-INTEL-02` unchanged (`VALIDATION — OPEN`, `INTEL-RET-01`); `QAN-BL-QIR-01` admitted, separately owned; the primary task banner and index are synchronized.
+- L-1/L-2 and R2 remain explicit limits/observations, not universal forgetting guarantees. The accepted mobile PG-01 deviation hides talk/disagree/agree for withheld statements; durable server PG-01 commands/history remain.
+- C2 Memory Correction & Arabic Acquisition is the next proposed research slice, not opened for implementation by this close.
