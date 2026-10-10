@@ -155,6 +155,13 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
+### INTEL-TM-01 post-merge closure checkpoint — 2026-10-10 (CURRENT)
+
+- Verified `main` after PR #326: `995d5ae9bf2530ac8e655b870526e0976be7cbf4`; `0151_personal_evidence_truth_maintenance_v1.sql` is merged, **not claimed deployed**. INTEL-TM-01 is closed for repository implementation by its BG-08/BG-09 post-merge governance closing change.
+- `QAN-BL-INTEL-01` is `CLOSED — TOMBSTONE`; the general Question Bind-time gap R3-G is `QAN-BL-QIR-01`, owned by `QIR-006-R1` without implementation authorization; `QAN-BL-INTEL-02` remains `VALIDATION — OPEN` under `INTEL-RET-01`. L-1/L-2 remain limits, not universal forgetting promises.
+- **NEXT C2 STUDY (proposal, not implementation): Memory Correction & Arabic Acquisition.** Start with repo truth, anti-duplication, language examples and the subject-marker Product gate, consuming the already-merged `0128`, `0151`, and CI-01 baseline. Interaction Preferences and Adaptive Conversational Expression remain later proposed C2 slices. Stage 6 Matching, 7 Replay and 8A/8B/9 retain their sequence; no Product roadmap stage is advanced.
+- The previous INTEL-TM-01 and CI-01 checkpoints below are **historical snapshots**, not the current merge state. No other active workstream, notably SHARED-VIS-01, is reclassified by this closure.
+
 ### INTEL-TM-01 implementation checkpoint — 2026-10-10 (PR open, not merged)
 
 This is a **locator note, not a new Product authority**. It records branch and PR truth and the binding-over pointers.
