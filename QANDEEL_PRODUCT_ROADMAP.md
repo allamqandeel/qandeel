@@ -281,8 +281,9 @@ and authorizes nothing.
 - **PROD-RETRY-01** merged through PR #324 as `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24`. Migration `0150` is not deployed.
 - **CI-01 — Shared Intelligence Learning Evidence & Baseline** ran from that `main`.
   - C0 Product decisions are approved (D1–D10, P1–P9).
-  - C1-A (Canonical Evidence and Personality Baseline) and C1-B (Synthetic Intelligence Baseline) are delivered locally.
-  - The C1 closing change is prepared locally. It is **not pushed, not verified on GitHub and not merged**
+  - C1-A (Canonical Evidence and Personality Baseline) and C1-B (Synthetic Intelligence Baseline) are delivered.
+  - CI-01 is open as **Draft PR #325**: API / Mobile CI green on `a99a1b2`, the corrected head pending exact-head
+    validation, **not merged**
     ([C1 contract](docs/e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md)).
 - **Not started:** C2, Stage 8A AI Brain and Stage 8B Voice. The proposed next direction after CI-01 merges is
   C2 — Personal Evidence Truth Maintenance / PG-02 (`QAN-BL-INTEL-01`, owner `INTEL-TM-01`), under its own contract.

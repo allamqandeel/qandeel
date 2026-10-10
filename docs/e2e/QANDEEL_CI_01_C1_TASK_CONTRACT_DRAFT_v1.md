@@ -1,12 +1,12 @@
 # CI-01 / C1 — Intelligence Evidence & Conversational Personality Baseline — TASK CONTRACT
 
-**Phase:** C1 — BASELINE RECORDS, STATIC CONTRACT, SYNTHETIC RECIPE · **Status:** `TASK CONTRACT — APPROVED WITH MANDATORY AMENDMENTS (Product Owner, 2026-10-10) · C1-A CONDITIONALLY ACCEPTED · C1-B ACCEPTED FOR LOCAL BASELINE DELIVERY · C1 CLOSING CHANGE AUTHORIZED LOCAL ONLY AND PREPARED LOCALLY (2026-10-10) · NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED · AT LOCAL C1 CLOSURE REVIEW GATE` · **Date:** 2026-10-10
+**Phase:** C1 — BASELINE RECORDS, STATIC CONTRACT, SYNTHETIC RECIPE · **Status:** `TASK CONTRACT — APPROVED WITH MANDATORY AMENDMENTS (Product Owner, 2026-10-10) · C1-A CONDITIONALLY ACCEPTED · C1-B ACCEPTED FOR LOCAL BASELINE DELIVERY · C1 CLOSING CHANGE DELIVERED (2026-10-10) · DRAFT PR #325 OPEN · API / MOBILE CI VERIFIED GREEN ON a99a1b2 · REVIEW CORRECTION (§17) PENDING EXACT-HEAD VALIDATION · NOT MERGED · AT FINAL PR REVIEW GATE` · **Date:** 2026-10-10
 **Parent:** [CI-01 C0 Decision Report](QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) (D1–D10 approved with controlled amendments, 2026-10-10) and its [Interaction Style annex](QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) (P1–P9).
 **Task name (D2):** `CI-01 — Shared Intelligence Learning Evidence & Baseline`. Not `QAN-BL-CI-01` (iOS CI).
 **Delivers (C1-A):** [`docs/intelligence-evidence-baseline-v1.md`](../intelligence-evidence-baseline-v1.md) · [`docs/conversational-personality-v1.md`](../conversational-personality-v1.md) · `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs` · backlog item `QAN-BL-INTEL-01`.
 **Delivers (C1-B):** [`scripts/ci-01/`](../../scripts/ci-01/README.md) — `local-db.mjs`, `network-guard.cjs`, `intelligence-reality.ts`, `fixtures/*.json`, `results/6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24.json`, `README.md` · `npm run verify:ci-01:intelligence-reality:local` · four C1-B authority pins in the static contract.
 
-> **Approval scope.** The Product Owner approved this contract on 2026-10-10 as *one* contract with two ordered slices and authorized **C1-A only**; after the C1-A Review Gate (same day) C1-A was **conditionally accepted** and **C1-B authorized** with the scope and limits recorded in §0.5. Both slices are delivered locally. After the C1-B Review Gate the Product Owner authorized the closing change **locally only** (§0.6); it is prepared on this branch and is not pushed, not verified on GitHub and not merged. Four lifecycle states stay apart: C0 Product decisions approved; C1 implementation delivered locally; C1 verified on GitHub (not yet); C1 merged into `main` (not yet). The file keeps its historical name (`…_DRAFT_v1.md`) because the Product Owner named it when approving; the banner, not the file name, states the lifecycle. D1–D10 and P1–P9 are inherited unchanged and are not reopened here.
+> **Approval scope.** The Product Owner approved this contract on 2026-10-10 as *one* contract with two ordered slices and authorized **C1-A only**; after the C1-A Review Gate (same day) C1-A was **conditionally accepted** and **C1-B authorized** with the scope and limits recorded in §0.5. Both slices are delivered locally. After the C1-B Review Gate the Product Owner authorized the closing change **locally only** (§0.6); it was pushed as Draft PR #325 (head `a99a1b2`, API CI and Mobile CI green on that head), and the Product Owner then authorized one limited review correction (§17), whose head is pending exact-head validation. Four lifecycle states stay apart: C0 Product decisions approved; C1 delivered; C1 verified on GitHub (on `a99a1b2`; the corrected head pending); C1 merged into `main` (not yet). The file keeps its historical name (`…_DRAFT_v1.md`) because the Product Owner named it when approving; the banner, not the file name, states the lifecycle. D1–D10 and P1–P9 are inherited unchanged and are not reopened here.
 
 ---
 
@@ -316,14 +316,14 @@ Slice 5 of D6 (relevance retrieval review) is folded into the Stage 8A / `QAN-CT
 - **BG-05 at kickoff (done in C1-A):** backlog read in full; no item names CI-01 as owner; referenced items `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02` are cited in A1's gap register, none re-owned.
 - **Admission in C1-A (decision 3):** `QAN-BL-INTEL-01 — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)`, `HIGH`, `DEFERRED — OWNED`, owner `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` (the first C2 slice of §12). Admission authorizes no implementation (BG-07).
 - **BG-08 at closure — done in the local closing change (2026-10-10):** every referenced item stays with its owner, unchanged; `QAN-BL-INTEL-01` unchanged; admitted `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (`VALIDATION — OPEN`, Product Owner closing decisions 2 and 3); the register holds 54 items (backlog §7, "CI-01 C1 closure reconciliation").
-- **BG-09 — done for the local state:** this contract, the two C0 documents, both C1-A records and the harness README now read `C1 LOCAL CLOSURE PREPARED — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED`. `CLOSED` and `MERGED` are not used before a verified GitHub run and the actual merge (Product Owner closing instruction §5).
+- **BG-09 — done for the local state:** this contract, the two C0 documents, both C1-A records and the harness README read `C1 LOCAL CLOSURE PREPARED — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED` at the local closing change, and the §17 review correction moved them to `DRAFT PR #325 OPEN · … · NOT MERGED`. `CLOSED` and `MERGED` are not used before a verified GitHub run and the actual merge (Product Owner closing instruction §5).
 - **AGENTS.md §10.7:** `npm run test:task-closure-governance-contract` in the closing change (and already in C1-A, because the backlog and top-level docs changed).
 - **No `### I-0N closure record`**: CI-01 is a task, not a Connected Worlds phase.
 - **Locators (decision 6) — done:** Current State (§1, §3.7 row, §4, §5 mirror recounted to 54, §7), Project Map (§5 checkpoint note) and Product Roadmap (§6.5), status and sequencing wording only.
 
 ---
 
-**Follow-up path for the forward-safety failure (Product Owner, C1-B term 5).** The 10 failing children of `test:forward-safety-contract` seen at C1-A were one assertion of `qan-inf-03-deterministic-expo-dependency-validation-contract` (`npm explain` of three Expo packages under `doctor:mobile`) that failed identically on the real tree that day and **passed 35 / 35 and 6 / 6 at C1-B without any change to its inputs** (§8.2): an environment-dependent, non-deterministic failure of a contract whose claim is determinism — an `apps/mobile` tooling / local `node_modules` matter outside CI-01's census. At the closing change CI-01 records it in the backlog under its existing owner line (`QAN-INF-03`) as a validation finding with the evidence from §8.1 / §8.2, or re-owns it to the mobile-infrastructure task the Product Owner names; CI-01 itself does not touch `apps/mobile`, QAN-INF-03 or the forward-safety contract. **Executed at the closing change:** `QAN-INF-03` has no backlog item and no active owner, so the follow-up is admitted as `QAN-BL-CI-02` (`VALIDATION — OPEN`, proposed owner `QAN-INF-06`). The §8.1 and §8.2 results both stay as written.
+**Follow-up path for the forward-safety failure (Product Owner, C1-B term 5).** The 10 failing children of `test:forward-safety-contract` seen at C1-A were one assertion of `qan-inf-03-deterministic-expo-dependency-validation-contract` (`npm explain` of three Expo packages under `doctor:mobile`) that failed identically on the real tree that day and **passed 35 / 35 and 6 / 6 at C1-B without any change to its inputs** (§8.2): an environment-dependent, non-deterministic failure of a contract whose claim is determinism — an `apps/mobile` tooling / local `node_modules` matter outside CI-01's census. At the closing change CI-01 records it in the backlog under its existing owner line (`QAN-INF-03`) as a validation finding with the evidence from §8.1 / §8.2, or re-owns it to the mobile-infrastructure task the Product Owner names; CI-01 itself does not touch `apps/mobile`, QAN-INF-03 or the forward-safety contract. **Executed at the closing change:** `QAN-INF-03` has no backlog item and no active owner, so the follow-up is admitted as `QAN-BL-CI-02` (`VALIDATION — OPEN`, owner `QAN-INF-06`, PO-APPROVED). The §8.1 and §8.2 results both stay as written.
 
 ## 14. Stop conditions
 
@@ -342,7 +342,7 @@ Slice 5 of D6 (relevance retrieval review) is folded into the Stage 8A / `QAN-CT
 
 ## 15. Decisions (closed 2026-10-10)
 
-The six decisions of the draft are closed in §0.1. C1-B received its go on 2026-10-10 (§0.5) and is delivered (§8.2). The three items left open at the C1-B Review Gate were decided on 2026-10-10 (§0.6): (a) the `0029` / `0033` retention question is recorded as `QAN-BL-INTEL-02`; (b) the forward-safety follow-up is `QAN-BL-CI-02`; (c) the closing-change scope is §16. Open for the Product Owner at the Local C1 Closure Review Gate: the two proposed owner names (`INTEL-RET-01`, `QAN-INF-06`), and the push / PR decision.
+The six decisions of the draft are closed in §0.1. C1-B received its go on 2026-10-10 (§0.5) and is delivered (§8.2). The three items left open at the C1-B Review Gate were decided on 2026-10-10 (§0.6): (a) the `0029` / `0033` retention question is recorded as `QAN-BL-INTEL-02`; (b) the forward-safety follow-up is `QAN-BL-CI-02`; (c) the closing-change scope is §16. At the Local C1 Closure Review Gate the Product Owner approved both owner names (`INTEL-RET-01`, `QAN-INF-06`) and authorized the push and Draft PR #325 (§17). Open: the merge decision.
 
 ---
 
@@ -392,7 +392,7 @@ summary and every other control is byte-identical to the C1-B run.
 
 No violation is established. The undecided part, whether such text may stay or be read again after a forget /
 do-not-rely and under which provenance, retention and deletion rules, is `QAN-BL-INTEL-02` (`HIGH`, `VALIDATION — OPEN`,
-proposed owner `INTEL-RET-01`). No migration changes.
+owner `INTEL-RET-01`, PO-APPROVED). No migration changes.
 
 ### 16.3 Files changed by the closing change
 
@@ -419,4 +419,41 @@ proposed owner `INTEL-RET-01`). No migration changes.
 | `git diff --check`; secret scan; path scan | clean; no secret-shaped string added; no path under `apps/`, `database/` or `packages/` |
 | not run | Jest API, database verifiers, `brain-eval`, Mobile, GitHub CI — no file in their census changed; the full harness was not re-run beyond §16.1 |
 
-**STOP AT LOCAL C1 CLOSURE REVIEW GATE.** No push, no PR, no merge and no C2 until the Product Owner reviews this closure and issues new instructions.
+---
+
+## 17. PR #325 — push, Draft PR and final review correction (2026-10-10)
+
+**Push and Draft PR.** The Product Owner approved the local closing change at `a99a1b2`, approved the owner names
+`INTEL-RET-01` (`QAN-BL-INTEL-02`) and `QAN-INF-06` (`QAN-BL-CI-02`) without changing either item's severity or status,
+accepted the PROD-RETRY-01 locator correction, and authorized the push and a Draft PR only. The branch was pushed with
+no rebase or merge (`origin/main` still `6a5fa42`) and opened as Draft PR #325. On head `a99a1b2` GitHub ran API CI
+(SUCCESS, forward-safety included) and Mobile CI (SUCCESS). That result does not carry over to the corrected head.
+
+**Review correction (limited, Product Owner authorized).** Two findings only:
+
+1. *Portable, privacy-safe results.* The committed results file published machine-local absolute paths: the PostgreSQL
+   bin directory and the harness-owned temporary cluster directory (five values). The driver now writes the file through
+   a redaction step. The identity proofs still run on the real paths first and are unchanged. Those two locations are
+   then written as `<QANDEEL_CI01_PG_BIN>` and `<harness-temp-root>` and listed under `portability`. A run that would
+   publish any other absolute path stops instead. The driver's SHA-256 changed, so the harness was re-run **once** on a
+   fresh isolated cluster and the results file regenerated. `summary`, `controls` (isolation included) and `census` are
+   identical to the `a99a1b2` file. Only run identifiers changed: timestamps, port, database name, marker nonce, the random
+   hypothesis ids and the driver hash. The network-guard, local-db and fixture hashes are unchanged. The static contract
+   adds one test that the published file holds no absolute local path and is written only through the redaction step.
+2. *Lifecycle wording.* The banners of this contract, both C0 documents, both C1-A records and the harness README,
+   together with the three locators and the backlog, now read Draft PR #325 open. They record API / Mobile CI green on
+   `a99a1b2`, the corrected head pending exact-head validation, and not merged. Where the old "proposed owner" wording
+   remained, `INTEL-RET-01` and `QAN-INF-06` now read PO-APPROVED.
+
+No file under `apps/`, `database/` or `packages/` changed, and no migration, RLS policy, fixture or Product decision changed.
+
+| Gate (corrected head, local) | Result |
+|---|---|
+| harness run (once, fresh isolated cluster) | `RUN_COMPLETE`; controls hold; measurements identical to `a99a1b2` |
+| `test:ci-01-intelligence-evidence-baseline-contract` | **18 / 18 PASS** (17 plus the new no-absolute-path test) |
+| `test:task-closure-governance-contract` | **24 / 24 PASS** |
+| every other static contract that reads a changed file, forward-safety excluded | 36 files (20 that name a changed file, the two contracts above included, plus 16 that scan the docs, scripts or tests directories): **590 / 590 PASS** |
+| `test:forward-safety-contract` | not re-run locally (known `QAN-BL-CI-02` local failure; it passed on GitHub at `a99a1b2`); API CI on the corrected head is the authority |
+| `git diff --check`; secret scan; absolute-path scan of the results file | clean; no secret-shaped string added; 0 absolute local paths in the results file; no path under `apps/`, `database/` or `packages/` |
+
+**STOP AT FINAL PR REVIEW GATE.** The PR stays a draft. No Ready for Review, no merge, and no C2 or PG-02 without the Product Owner's explicit decision.

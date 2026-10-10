@@ -736,11 +736,27 @@ async function main(): Promise<void> {
       'PostgREST (bounded SQL transport; same role + JWT claims per request; autocommit)', 'OpenTelemetry meter + tracer (recording, for the content-leak control)'],
     summary, controls: out.controls, census: out.census, scenarios: out.scenarios,
   };
+  const shareable = portableResultText(result, [[context.cluster.pgBin, '<QANDEEL_CI01_PG_BIN>'], [dirname(expected.dataDir), '<harness-temp-root>']]);
   mkdirSync(dirname(resultsPath), { recursive: true });
-  writeFileSync(resultsPath, JSON.stringify(result, null, 1));
+  writeFileSync(resultsPath, shareable);
   console.log(`[ci-01 driver] ${result.status}; ${Object.keys(out.scenarios).length} scenario(s); controls hold = ${out.controls.allHold}; results → ${basename(resultsPath)}`);
   await db.close();
   if (failures > 0) process.exitCode = 1;
+}
+
+// The committed results file must be shareable: the machine-local PostgreSQL bin directory and the harness-owned
+// temporary cluster root are replaced by placeholders at write time, after every identity proof ran on the real paths.
+// Any absolute path left over stops the run instead of being published.
+function portableResultText(result: Json, replacements: Array<[string, string]>): string {
+  const variants = (path: string): string[] => [...new Set([path, path.split('\\').join('/'), path.split('/').join('\\')])];
+  const pairs = replacements.flatMap(([path, label]) => variants(path).map((v): [string, string] => [JSON.stringify(v).slice(1, -1), label]))
+    .sort((a, b) => b[0].length - a[0].length);
+  result.portability = { placeholders: replacements.map(([, label]) => label),
+    note: 'machine-local absolute paths are replaced at write time; the identity checks above ran on the real values' };
+  const text = pairs.reduce((acc, [from, label]) => acc.split(from).join(label), JSON.stringify(result, null, 1));
+  const leak = /(?<![A-Za-z])[A-Za-z]:(?:\\\\|\/)|\/(?:Users|home|tmp|var\/folders)\//u.exec(text);
+  if (leak) throw new StopError(`results would publish an absolute local path near: ${text.slice(Math.max(0, leak.index - 40), leak.index + 40)}`);
+  return text;
 }
 
 function pickSummary(y: Json): Json {

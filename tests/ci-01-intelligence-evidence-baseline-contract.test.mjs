@@ -265,6 +265,15 @@ test('C1-B: the committed results for the baseline SHA record a passed proof, a 
   assert.ok(results.readThisFirst.some((line) => /NOT a capability pass/u.test(line)), 'the file says what its numbers are not (D7)');
 });
 
+test('C1-B: the committed results are shareable — no machine-local absolute path, and the driver redacts them at write time', async () => {
+  const [, baselineSha] = baseline.match(/\*\*Baseline SHA:\*\* `main` `([0-9a-f]{40})`/u);
+  const text = await read(`scripts/ci-01/results/${baselineSha}.json`);
+  assert.doesNotMatch(text, /(?<![A-Za-z])[A-Za-z]:(?:\\\\|\/)|\/(?:Users|home|tmp|var\/folders)\//u, 'no drive-letter or home/temp path is published');
+  assert.deepEqual(JSON.parse(text).portability.placeholders, ['<QANDEEL_CI01_PG_BIN>', '<harness-temp-root>']);
+  const driver = await read('scripts/ci-01/intelligence-reality.ts');
+  assert.match(driver, /writeFileSync\(resultsPath, shareable\)/u, 'the results file is written only through the redaction step');
+});
+
 // ---------------------------------------------------------------------------------------------
 // Registration. The closing change registers this contract as one API CI step (C1 contract §0.6, decision 4).
 // ---------------------------------------------------------------------------------------------

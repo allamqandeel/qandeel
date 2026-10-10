@@ -1,6 +1,6 @@
 # QANDEEL — Intelligence Evidence Baseline v1
 
-**Status:** `CANONICAL BASELINE RECORD — C1-A AND C1-B DELIVERED LOCALLY · C1 LOCAL CLOSURE PREPARED (2026-10-10) — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` · **Date:** 2026-10-10
+**Status:** `CANONICAL BASELINE RECORD — C1-A AND C1-B DELIVERED · C1 CLOSING CHANGE DELIVERED · DRAFT PR #325 OPEN · API / MOBILE CI VERIFIED GREEN ON a99a1b2 · CORRECTED HEAD PENDING EXACT-HEAD VALIDATION · NOT MERGED` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` · **Date:** 2026-10-10
 **Baseline SHA:** `main` `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24` (merge of PR #324; migrations `0001`–`0150`; `0150` NOT DEPLOYED) · **Census version:** `census-v1 @ 6a5fa42`
 **Authority:** [CI-01 C0 Decision Report](e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) (D1–D10, Product Owner 2026-10-10) · [C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) (approved with mandatory amendments, 2026-10-10) · **Static contract:** `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs`
 **Companion:** [QANDEEL Conversational Personality & Interaction Adaptation v1](conversational-personality-v1.md)
@@ -192,7 +192,7 @@ Each system's own approved deletion and history behaviour governs. **CI-01 inven
 | Auto SUPPORTED / WEAK / REJECTED / RETIRED; evidence weights | deferred, no owner (lifecycle doc §8–§9) | calibrated Confidence | documented only |
 | ABS Part 9 experiment framework / outcome attribution / learning feedback | none (`docs/reasoning-recommendation-integration-v1.md`) | L2 consent design; Stage 8A | documented only; **forbidden without L2 consent** |
 | Conversational language / dialect signal (`locale: 'und'`) | proposed C2 slice 4 (*Adaptive Conversational Expression*) | the companion record; QIR-004 byte accounting | documented; not pinned |
-| Retention and reuse of the `0029` / `0033` ledger content after forget / do-not-rely | **`QAN-BL-INTEL-02`** → proposed owner `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` (admitted by the closing change, `HIGH`, `VALIDATION — OPEN`) | a Product decision on provenance, retention and deletion of derived copies; `INTEL-TM-01` (same forget authority) | admitted; no migration change |
+| Retention and reuse of the `0029` / `0033` ledger content after forget / do-not-rely | **`QAN-BL-INTEL-02`** → owner `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` (admitted by the closing change; owner name PO-APPROVED 2026-10-10; `HIGH`, `VALIDATION — OPEN`) | a Product decision on provenance, retention and deletion of derived copies; `INTEL-TM-01` (same forget authority) | admitted; no migration change |
 
 ---
 

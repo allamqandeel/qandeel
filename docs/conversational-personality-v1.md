@@ -1,6 +1,6 @@
 # QANDEEL — Conversational Personality & Interaction Adaptation v1 (design)
 
-**Status:** `CANONICAL DESIGN RECORD — DESIGN ONLY · DESIGN APPROVED (P1–P9, Product Owner 2026-10-10) · CONVERSATIONAL TEXTS OPEN COPY UNTIL THE PRODUCT COPY GATE · C1-A DELIVERED LOCALLY · C1 LOCAL CLOSURE PREPARED (2026-10-10) — NOT MERGED · NOTHING HERE IS IMPLEMENTED OR FROZEN COPY` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` (C1-A) · **Date:** 2026-10-10
+**Status:** `CANONICAL DESIGN RECORD — DESIGN ONLY · DESIGN APPROVED (P1–P9, Product Owner 2026-10-10) · CONVERSATIONAL TEXTS OPEN COPY UNTIL THE PRODUCT COPY GATE · C1-A DELIVERED · DRAFT PR #325 OPEN · NOT MERGED · NOTHING HERE IS IMPLEMENTED OR FROZEN COPY` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` (C1-A) · **Date:** 2026-10-10
 **Governing principle (Product Owner, P1–P9, 2026-10-10):** **ONE QANDEEL PERSONALITY — ADAPTIVE NATURAL EXPRESSION.**
 **Authority:** [CI-01 C0 Interaction Style annex](e2e/QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) (P1–P9 approved with controlled amendments) · [C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) · frozen records in §1
 **Companion:** [QANDEEL Intelligence Evidence Baseline v1](intelligence-evidence-baseline-v1.md) · **Static contract:** `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs`

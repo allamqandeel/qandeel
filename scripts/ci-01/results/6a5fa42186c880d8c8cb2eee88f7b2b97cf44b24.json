@@ -7,9 +7,9 @@
   "Nothing here is a conversational-quality, naturalness or calibration figure, and nothing predicts what a bound LLM would do (D7).",
   "Defects are recorded, not repaired (C1 contract §0.4, decision 3). Owners stay in the canonical backlog; this file assigns none."
  ],
- "generatedAt": "2026-10-10T12:21:43.033Z",
+ "generatedAt": "2026-10-10T13:49:54.533Z",
  "repository": {
-  "head": "0e49622d44515186bff00506b494e9df592b1066",
+  "head": "a99a1b2147cca5c97f08863a654c0ca3367dd053",
   "originMain": "6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24",
   "baselineMainSha": "6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24",
   "branch": "ci/ci-01-c1-intelligence-personality-baseline",
@@ -18,22 +18,22 @@
  },
  "cluster": {
   "pgVersion": "postgres (PostgreSQL) 17.10",
-  "pgBin": "C:/Users/MG/AppData/Local/Temp/claude/E--QANDEEL-APP/ff93ccee-09e5-46af-9f71-35637bbbb36f/scratchpad/pg/node_modules/@embedded-postgres/windows-x64/native/bin",
-  "port": 54526,
-  "database": "qandeel_ci01_c837fd2b",
-  "dataDirectory": "C:\\Users\\MG\\AppData\\Local\\Temp\\qandeel-ci01-HfuOnq\\pgdata",
-  "markerNonce": "c837fd2b-5f2e-49ff-82df-684756ca3768",
-  "startedAt": "2026-10-10T12:21:29.806Z",
+  "pgBin": "<QANDEEL_CI01_PG_BIN>",
+  "port": 61526,
+  "database": "qandeel_ci01_680338bc",
+  "dataDirectory": "<harness-temp-root>\\pgdata",
+  "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
+  "startedAt": "2026-10-10T13:49:42.222Z",
   "proofs": {
    "cluster": {
-    "checkedAt": "2026-10-10T12:21:33.824Z",
+    "checkedAt": "2026-10-10T13:49:46.238Z",
     "address": "127.0.0.1",
-    "port": 54526,
+    "port": 61526,
     "database": "postgres",
     "version": "PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit",
-    "dataDirectory": "C:/Users/MG/AppData/Local/Temp/qandeel-ci01-HfuOnq/pgdata",
-    "postmasterStartedAt": "2026-10-10T12:21:33.612Z",
-    "markerNonce": "c837fd2b-5f2e-49ff-82df-684756ca3768",
+    "dataDirectory": "<harness-temp-root>/pgdata",
+    "postmasterStartedAt": "2026-10-10T13:49:46.041Z",
+    "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
     "foreignDatabases": 0,
     "checks": {
      "loopbackAddress": true,
@@ -49,14 +49,14 @@
     "passed": true
    },
    "database": {
-    "checkedAt": "2026-10-10T12:21:34.205Z",
+    "checkedAt": "2026-10-10T13:49:46.613Z",
     "address": "127.0.0.1",
-    "port": 54526,
-    "database": "qandeel_ci01_c837fd2b",
+    "port": 61526,
+    "database": "qandeel_ci01_680338bc",
     "version": "PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit",
-    "dataDirectory": "C:/Users/MG/AppData/Local/Temp/qandeel-ci01-HfuOnq/pgdata",
-    "postmasterStartedAt": "2026-10-10T12:21:33.612Z",
-    "markerNonce": "c837fd2b-5f2e-49ff-82df-684756ca3768",
+    "dataDirectory": "<harness-temp-root>/pgdata",
+    "postmasterStartedAt": "2026-10-10T13:49:46.041Z",
+    "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
     "foreignDatabases": 0,
     "checks": {
      "loopbackAddress": true,
@@ -78,17 +78,17 @@
   ],
   "migrationsApplied": 150,
   "lastMigration": "0150_data_api_stale_state_non_retryable_sqlstate_v1.sql",
-  "migrationMs": 4992
+  "migrationMs": 4627
  },
  "driverIdentityProof": {
-  "checkedAt": "2026-10-10T12:21:41.214Z",
+  "checkedAt": "2026-10-10T13:49:52.895Z",
   "address": "127.0.0.1",
-  "port": 54526,
-  "database": "qandeel_ci01_c837fd2b",
+  "port": 61526,
+  "database": "qandeel_ci01_680338bc",
   "version": "PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit",
-  "dataDirectory": "C:/Users/MG/AppData/Local/Temp/qandeel-ci01-HfuOnq/pgdata",
-  "postmasterStartedAt": "2026-10-10T12:21:33.612Z",
-  "markerNonce": "c837fd2b-5f2e-49ff-82df-684756ca3768",
+  "dataDirectory": "<harness-temp-root>/pgdata",
+  "postmasterStartedAt": "2026-10-10T13:49:46.041Z",
+  "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
   "foreignDatabases": 0,
   "checks": {
    "loopbackAddress": true,
@@ -112,7 +112,7 @@
     "localhost",
     "::1"
    ],
-   "allowedPort": 54526,
+   "allowedPort": 61526,
    "probes": [
     {
      "probe": "fetch",
@@ -181,7 +181,7 @@
   "typescript": "5.9.3",
   "openTelemetryApi": "1.9.0",
   "postgres": "postgres (PostgreSQL) 17.10",
-  "driverSha256": "f7ac1743dea0bb78cb020b8ced056a8f38ebb007464495b10bf6bbdb3c82117f",
+  "driverSha256": "604908c60c084c0a28aa88a6b331ebecc72cc197ba33fc6ae518ac82e4bc1bf1",
   "networkGuardSha256": "20f7dd9cb4a6e07d5549c032c741de013a93fc3e44e61772b4a05f2a0e2aef7c",
   "localDbSha256": "9be1c7b3bb21c9f210e04cc03e430056f39ddb42ff5d86beb70cb396ca382bf4",
   "fixtureSha256": {
@@ -1311,14 +1311,14 @@
    "hypothesisEvidenceLinks": {
     "before": [
      {
-      "hypothesis_id": "ad374892-292d-4bef-9afc-8c6a6dbbdf9d",
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
       "hypothesis_status": "ACTIVE",
       "memory_type": "STABLE_PREFERENCE",
       "memory_status": "ACTIVE",
       "memory_content": "أنا بحب القهوة الصبح."
      },
      {
-      "hypothesis_id": "ad374892-292d-4bef-9afc-8c6a6dbbdf9d",
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
       "hypothesis_status": "ACTIVE",
       "memory_type": "DECISION_COMMITMENT",
       "memory_status": "ACTIVE",
@@ -1327,14 +1327,14 @@
     ],
     "after": [
      {
-      "hypothesis_id": "ad374892-292d-4bef-9afc-8c6a6dbbdf9d",
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
       "hypothesis_status": "ACTIVE",
       "memory_type": "STABLE_PREFERENCE",
       "memory_status": "DELETED",
       "memory_content": "أنا بحب القهوة الصبح."
      },
      {
-      "hypothesis_id": "ad374892-292d-4bef-9afc-8c6a6dbbdf9d",
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
       "hypothesis_status": "ACTIVE",
       "memory_type": "DECISION_COMMITMENT",
       "memory_status": "DISABLED",
@@ -3319,5 +3319,12 @@
     }
    }
   }
+ },
+ "portability": {
+  "placeholders": [
+   "<QANDEEL_CI01_PG_BIN>",
+   "<harness-temp-root>"
+  ],
+  "note": "machine-local absolute paths are replaced at write time; the identity checks above ran on the real values"
  }
 }

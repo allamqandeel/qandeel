@@ -1377,9 +1377,9 @@ demoted or re-supported; that is the re-evaluation's job under its own Task Cont
   `AI-COST-01` holds no content. No item covers the retention of post-response ledger content.
 - **Why deferred:** CI-01 changes no runtime and no migration. A rule here needs a Product decision on provenance,
   retention and deletion of derived copies (D4: CI-01 invents no unified deletion rule).
-- **Owner task:** `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review`. The owner name is
-  CI-01's proposal at the Product Owner's request; the Product Owner may rename it or re-own the item. No ownership of any
-  existing item moves.
+- **Owner task:** `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review`. The owner name was
+  CI-01's proposal at the Product Owner's request and is PO-APPROVED (2026-10-10, PR #325 authorization). No ownership of
+  any existing item moves.
 - **Severity:** `HIGH` — if reopened, it touches the user's frozen authority over forget / do-not-rely.
 - **Reopen condition:** any of:
   1. a code path reads an `INTENT_PROVIDER` or `CANDIDATE_PROVIDER` `result_payload` other than to recover its own
@@ -1413,8 +1413,8 @@ This entry decides no retention period and no deletion mechanism, and authorizes
 - **Why deferred:** no hosted CI run has failed on it, and the contract under replay passes on the real tree. It is a
   validation-reliability question in mobile tooling, outside CI-01's census. CI-01 does not touch `apps/mobile`, Expo
   Doctor or the `QAN-INF-03` contract.
-- **Owner task:** `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism`. The owner name is CI-01's proposal;
-  the Product Owner may rename it or re-own the item.
+- **Owner task:** `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism`. The owner name was CI-01's proposal
+  and is PO-APPROVED (2026-10-10, PR #325 authorization).
 - **Severity:** `MEDIUM` — if reopened, a gate could report a failure unrelated to the change under review, or hide one.
 - **Reopen condition:** any of:
   1. the leg fails in hosted API CI on any head;
@@ -2308,7 +2308,7 @@ only.
 The register now holds **52** items: 24 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`. By severity: 30 `HIGH`, 20 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
 
-**CI-01 C1 closure reconciliation (2026-10-10; local closure prepared, not pushed, not verified on GitHub, not merged).**
+**CI-01 C1 closure reconciliation (2026-10-10; Draft PR #325 open, not merged; both owner names PO-APPROVED at the push authorization).**
 The Product Owner reviewed the C1-B report and authorized a local closing change ("CLOSING CHANGE AUTHORIZED — LOCAL ONLY").
 This is the BG-08 half of that change. It is documentation, one CI step and one harness control; it changes no runtime and
 no migration.
@@ -2317,10 +2317,10 @@ no migration.
   `QAN-BL-PRIV-02` stay cited in the baseline's gap register, each unchanged and none re-owned.
 - **`QAN-BL-INTEL-01`:** unchanged: `HIGH`, `DEFERRED — OWNED`, owner `INTEL-TM-01`. C1-B re-measured it on `6a5fa42`
   (one hypothesis `ACTIVE` over `DELETED` / `DISABLED` evidence, injected in 2 / 2 new-session turns).
-- **Admitted — `QAN-BL-INTEL-02`** (`HIGH`, `VALIDATION — OPEN`, proposed owner `INTEL-RET-01`): the retention and reuse
+- **Admitted — `QAN-BL-INTEL-02`** (`HIGH`, `VALIDATION — OPEN`, owner `INTEL-RET-01`, PO-APPROVED): the retention and reuse
   question for the `0029` / `0033` ledger content, at the Product Owner's closing decision 2, after the anti-duplication
   check recorded on the item. No violation is established; no migration changes.
-- **Admitted — `QAN-BL-CI-02`** (`MEDIUM`, `VALIDATION — OPEN`, proposed owner `QAN-INF-06`): the intermittent local
+- **Admitted — `QAN-BL-CI-02`** (`MEDIUM`, `VALIDATION — OPEN`, owner `QAN-INF-06`, PO-APPROVED): the intermittent local
   failure of the forward-safety mirror's `QAN-INF-03` leg, at the Product Owner's closing decision 3. `QAN-INF-03` had no
   backlog item and no active owner; S5-04, SEC-MATCH-00 and PROD-RETRY-01 recorded the same failure only in their records.
 - **Not admitted (BG-06):** the Memory correction / Arabic acquisition defects, the subject marker, trigger precision and
@@ -2409,8 +2409,8 @@ Inherited after T-12 closure reconciliation:
 | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `QAN-BL-PROD-07` |
 | `CI-01 — Shared Intelligence Learning Evidence & Baseline` | none — no item names it; admitted `QAN-BL-INTEL-01` (C1-A, Product Owner decision 3), `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (closing change, Product Owner closing decisions 2 and 3); `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01` and `QAN-BL-PRIV-02` cited and left unchanged |
 | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` |
-| `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (proposed owner name) |
-| `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (proposed owner name) |
+| `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (owner name PO-APPROVED) |
+| `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (owner name PO-APPROVED) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

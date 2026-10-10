@@ -157,14 +157,14 @@ any of them closed.
 
 ### CI-01 local-closure checkpoint — 2026-10-10 (not merged)
 
-This is a **locator note, not a new Product authority**. It records local branch truth only.
+This is a **locator note, not a new Product authority**. It records branch and PR truth only.
 
 - `main` is `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24`, the merge of PR #324 (PROD-RETRY-01, migration `0150`, not deployed).
 - **CI-01 — Shared Intelligence Learning Evidence & Baseline** is a cross-cutting baseline task, not a Product stage.
   - C0 Product decisions: APPROVED (D1–D10, P1–P9, with controlled amendments).
-  - C1-A (Canonical Evidence and Personality Baseline) and C1-B (Synthetic Intelligence Baseline): delivered locally.
-  - The C1 closing change: prepared locally on `ci/ci-01-c1-intelligence-personality-baseline`; not pushed, not verified
-    on GitHub, not merged. CI-01 is not `CLOSED` or `MERGED` on `main`.
+  - C1-A (Canonical Evidence and Personality Baseline) and C1-B (Synthetic Intelligence Baseline): delivered.
+  - The C1 closing change: on `ci/ci-01-c1-intelligence-personality-baseline`, open as Draft PR #325; API / Mobile CI
+    green on `a99a1b2`; the corrected head pending exact-head validation; not merged. CI-01 is not `CLOSED` or `MERGED` on `main`.
 - Where to look: the [C1 Task Contract](docs/e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) (lifecycle, gates, results), the
   [Intelligence Evidence Baseline v1](docs/intelligence-evidence-baseline-v1.md) (census, rules `CI-01-L1` … `L8`, measured
   limits), the [Conversational Personality v1](docs/conversational-personality-v1.md) design (OPEN COPY), and

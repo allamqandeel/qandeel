@@ -1,6 +1,6 @@
 # CI-01 C1-B — Synthetic Intelligence Reality Baseline (dev-only harness)
 
-**Status:** `C1-B DELIVERED LOCALLY · results recorded for main 6a5fa42 · C1 LOCAL CLOSURE PREPARED (2026-10-10) — NOT PUSHED · NOT VERIFIED ON GITHUB · NOT MERGED`
+**Status:** `C1-B DELIVERED · results recorded for main 6a5fa42 · DRAFT PR #325 OPEN · API / MOBILE CI VERIFIED GREEN ON a99a1b2 · CORRECTED HEAD PENDING EXACT-HEAD VALIDATION · NOT MERGED`
 **Owner task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline`, C1 Task Contract
 ([docs/e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md](../../docs/e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md)) §4.2 and §0.3.
 **Never a CI step.** Nothing here runs in any GitHub workflow, touches hosted Supabase, reads `.env`, or calls a provider.
@@ -78,7 +78,7 @@ that "no content in telemetry" is **measured**). `service_role` receives `BYPASS
 
 Production tree (`apps/`, `database/`, `packages/`) byte-identical to the baseline when run. Harness: `RUN_COMPLETE`,
 8 scenarios + controls, 10 synthetic users, 15 sessions, 47 user turns, 43 conversational router calls, 2 intent + 2 candidate
-double calls, 0 external attempts; cluster lifetime 18 s including 150 migrations (5.2 s). Controls **hold**. The closing change regenerated this file once (cluster on `127.0.0.1:54526`, 150 migrations in 5.0 s, 15 s in all) after adding the two-sided isolation control; every scenario summary and every other control was byte-identical to the C1-B run.
+double calls, 0 external attempts; cluster lifetime 18 s including 150 migrations (5.2 s). Controls **hold**. The closing change regenerated this file once (cluster on `127.0.0.1:54526`, 150 migrations in 5.0 s, 15 s in all) after adding the two-sided isolation control; every scenario summary and every other control was byte-identical to the C1-B run. The PR #325 review correction regenerated it once more, only because the driver now writes the file through a redaction step: the PostgreSQL bin directory and the harness-owned temporary cluster root appear as `<QANDEEL_CI01_PG_BIN>` and `<harness-temp-root>` (listed under `portability`), the identity proofs still run on the real paths before the write, and a run that would publish any other absolute path stops instead. Summary, controls and census were identical to the previous run; only run identifiers (timestamps, port, database name, nonce, random hypothesis ids) and the driver hash changed.
 
 | Scenario | Measured (synthetic) | Same as 2026-10-09? |
 |---|---|---|
