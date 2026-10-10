@@ -1,0 +1,3330 @@
+{
+ "record": "QANDEEL CI-01 C1-B — Synthetic Intelligence Reality Baseline (results)",
+ "status": "RUN_COMPLETE",
+ "readThisFirst": [
+  "SYNTHETIC fixtures only; no real user, no real conversation, no provider. Every text here is from scripts/ci-01/fixtures.",
+  "Run success (this file exists, status RUN) is NOT a capability pass. Yields below record what the deterministic pipeline did, including its defects.",
+  "Nothing here is a conversational-quality, naturalness or calibration figure, and nothing predicts what a bound LLM would do (D7).",
+  "Defects are recorded, not repaired (C1 contract §0.4, decision 3). Owners stay in the canonical backlog; this file assigns none."
+ ],
+ "generatedAt": "2026-10-10T13:49:54.533Z",
+ "repository": {
+  "head": "a99a1b2147cca5c97f08863a654c0ca3367dd053",
+  "originMain": "6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24",
+  "baselineMainSha": "6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24",
+  "branch": "ci/ci-01-c1-intelligence-personality-baseline",
+  "workingTreeClean": false,
+  "productionTreeIdenticalToBaseline": true
+ },
+ "cluster": {
+  "pgVersion": "postgres (PostgreSQL) 17.10",
+  "pgBin": "<QANDEEL_CI01_PG_BIN>",
+  "port": 61526,
+  "database": "qandeel_ci01_680338bc",
+  "dataDirectory": "<harness-temp-root>\\pgdata",
+  "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
+  "startedAt": "2026-10-10T13:49:42.222Z",
+  "proofs": {
+   "cluster": {
+    "checkedAt": "2026-10-10T13:49:46.238Z",
+    "address": "127.0.0.1",
+    "port": 61526,
+    "database": "postgres",
+    "version": "PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit",
+    "dataDirectory": "<harness-temp-root>/pgdata",
+    "postmasterStartedAt": "2026-10-10T13:49:46.041Z",
+    "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
+    "foreignDatabases": 0,
+    "checks": {
+     "loopbackAddress": true,
+     "harnessPort": true,
+     "database": true,
+     "postgres17": true,
+     "dataDirectoryIsOurs": true,
+     "markerNonceMatches": true,
+     "markerPidIsThisHarness": true,
+     "freshPostmaster": true,
+     "noForeignDatabases": true
+    },
+    "passed": true
+   },
+   "database": {
+    "checkedAt": "2026-10-10T13:49:46.613Z",
+    "address": "127.0.0.1",
+    "port": 61526,
+    "database": "qandeel_ci01_680338bc",
+    "version": "PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit",
+    "dataDirectory": "<harness-temp-root>/pgdata",
+    "postmasterStartedAt": "2026-10-10T13:49:46.041Z",
+    "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
+    "foreignDatabases": 0,
+    "checks": {
+     "loopbackAddress": true,
+     "harnessPort": true,
+     "database": true,
+     "postgres17": true,
+     "dataDirectoryIsOurs": true,
+     "markerNonceMatches": true,
+     "markerPidIsThisHarness": true,
+     "freshPostmaster": true,
+     "noForeignDatabases": true
+    },
+    "passed": true
+   }
+  },
+  "scrubbedInheritedEnvNames": [
+   "ANTHROPIC_BASE_URL",
+   "npm_config_noproxy"
+  ],
+  "migrationsApplied": 150,
+  "lastMigration": "0150_data_api_stale_state_non_retryable_sqlstate_v1.sql",
+  "migrationMs": 4627
+ },
+ "driverIdentityProof": {
+  "checkedAt": "2026-10-10T13:49:52.895Z",
+  "address": "127.0.0.1",
+  "port": 61526,
+  "database": "qandeel_ci01_680338bc",
+  "version": "PostgreSQL 17.10 on x86_64-windows, compiled by msvc-19.44.35226, 64-bit",
+  "dataDirectory": "<harness-temp-root>/pgdata",
+  "postmasterStartedAt": "2026-10-10T13:49:46.041Z",
+  "markerNonce": "680338bc-9854-4ab7-97f2-096378a0a8db",
+  "foreignDatabases": 0,
+  "checks": {
+   "loopbackAddress": true,
+   "harnessPort": true,
+   "database": true,
+   "postgres17": true,
+   "dataDirectoryIsOurs": true,
+   "markerNonceMatches": true,
+   "markerPidIsParentHarness": true,
+   "noForeignDatabases": true
+  },
+  "passed": true
+ },
+ "networkGuard": {
+  "version": "qandeel-ci01-network-guard-v1",
+  "scrubbedInheritedEnvNames": [],
+  "selfTest": {
+   "version": "qandeel-ci01-network-guard-v1",
+   "allowedHosts": [
+    "127.0.0.1",
+    "localhost",
+    "::1"
+   ],
+   "allowedPort": 61526,
+   "probes": [
+    {
+     "probe": "fetch",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "http.request",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "http.get",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "https.request",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "https.get",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "http2.connect",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "tls.connect",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "dgram.createSocket",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "dns.lookup",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "dns.resolve4",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "net.connect:public-host",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "net.connect:public-ip",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "net.connect:named-pipe",
+     "outcome": "BLOCKED"
+    },
+    {
+     "probe": "net.connect:loopback-other-port",
+     "outcome": "BLOCKED"
+    }
+   ],
+   "allBlocked": true
+  }
+ },
+ "tooling": {
+  "node": "v24.19.0",
+  "pgDriver": "8.23.0",
+  "tsNode": "10.9.2",
+  "typescript": "5.9.3",
+  "openTelemetryApi": "1.9.0",
+  "postgres": "postgres (PostgreSQL) 17.10",
+  "driverSha256": "604908c60c084c0a28aa88a6b331ebecc72cc197ba33fc6ae518ac82e4bc1bf1",
+  "networkGuardSha256": "20f7dd9cb4a6e07d5549c032c741de013a93fc3e44e61772b4a05f2a0e2aef7c",
+  "localDbSha256": "9be1c7b3bb21c9f210e04cc03e430056f39ddb42ff5d86beb70cb396ca382bf4",
+  "fixtureSha256": {
+   "c1-reversal-correction-duplicates.json": "f7a7d48cb1c7f405b0e86c23b95b1444a9e6921d8aeb4ca25506ea17006c172b",
+   "controls-isolation-telemetry.json": "0e5898ad991d66c02d4c6e55f374d77aa0a813fd94ce2d3542b89d584ce52113",
+   "f1-forget-do-not-rely-propagation.json": "c295698e5614e88abc9841692fac455ef926d872c1c7d40402cf689227a34c3d",
+   "h1-him-coverage-adaptation.json": "a5a987f219961d22e02911c7730416a3b70dd69c1d9c144dc67ec81c32199b5c",
+   "k1-preferences-goals-decisions.json": "8153b6708c62b0db193b1589e7c36831a1cd1a3f147096170dc249f53a32fb4b",
+   "m1-arabic-triggers-contradictions.json": "2ef6dada2831c093bc221345af49936eefd01ee14278bc5e613466c141b497c2",
+   "n1-natural-self-description.json": "fea3fed57fd74caa8e4b582f01ed9ef7474dd45315b2752598c322bc7b4e94d8",
+   "p1-third-party-separation.json": "3d43184003dce01c9209d65292a92863923177c2d1a069bdc88a5d11f43a8970",
+   "x1-semantic-chain-dependency.json": "485e3c2248b3f2a9538deeb57f3339eb803001b6f24b15a1a7be8aab7a3a1953"
+  },
+  "command": "npm run verify:ci-01:intelligence-reality:local  (QANDEEL_CI01_PG_BIN=<PostgreSQL 17 bin dir>)"
+ },
+ "doubles": [
+  "conversational Model Router (recording; fixed reply)",
+  "intent / candidate / association hypothesis providers (deterministic, content-free)",
+  "CU/Focus/Thread semantic establishment (frozen A2 two-Moment fixture, no Thread)",
+  "Redis (in-process envelope hand-off from the real outbox publisher)",
+  "PostgREST (bounded SQL transport; same role + JWT claims per request; autocommit)",
+  "OpenTelemetry meter + tracer (recording, for the content-leak control)"
+ ],
+ "summary": {
+  "C1": {
+   "status": "RUN",
+   "captureYield": "3/4",
+   "recall": "2/3",
+   "staleServed": "2/3",
+   "duplicateActiveAtEnd": 1,
+   "newMemories": 3,
+   "newHypotheses": 0,
+   "foregroundErrors": 0
+  },
+  "F1": {
+   "status": "RUN",
+   "captureYield": "2/2",
+   "forgottenServed": "0/2",
+   "hypothesisInjectedAfterForget": 2,
+   "pg02ActiveHypothesesOverNonActiveEvidence": 1,
+   "triggers": [
+    "F1.2:TRIGGER INTERNAL_CONTRADICTION→COMPLETED/COMPLETED/DONE(+1h)"
+   ],
+   "newMemories": 2,
+   "newHypotheses": 1,
+   "foregroundErrors": 0
+  },
+  "H1": {
+   "status": "RUN",
+   "himCoverage": [
+    "H1.organic.1:EMPTY/0known/0instr",
+    "H1.organic.2:EMPTY/0known/0instr",
+    "H1.seeded.1:PARTIAL/1known/3instr",
+    "H1.seeded.2:EMPTY/0known/0instr"
+   ],
+   "newMemories": 0,
+   "newHypotheses": 0,
+   "foregroundErrors": 0
+  },
+  "K1": {
+   "status": "RUN",
+   "captureYield": "3/6",
+   "recall": "1/4",
+   "newMemories": 3,
+   "newHypotheses": 0,
+   "foregroundErrors": 0
+  },
+  "M1": {
+   "status": "RUN",
+   "captureYield": "1/4",
+   "triggers": [
+    "M1.4:NO_TRIGGER GENERIC_QUESTION→SKIPPED/NOT_ELIGIBLE/ELIGIBILITY(+0h)",
+    "M1.5:TRIGGER INTERNAL_CONTRADICTION→COMPLETED/COMPLETED/DONE(+1h)"
+   ],
+   "newMemories": 1,
+   "newHypotheses": 1,
+   "foregroundErrors": 0
+  },
+  "N1": {
+   "status": "RUN",
+   "captureYield": "0/4",
+   "factCapture": "1/1",
+   "recall": "0/2",
+   "newMemories": 1,
+   "newHypotheses": 0,
+   "foregroundErrors": 0
+  },
+  "P1": {
+   "status": "RUN",
+   "thirdPartyStoredAsUserMemory": "1/3",
+   "newMemories": 3,
+   "newHypotheses": 0,
+   "foregroundErrors": 0
+  },
+  "X1": {
+   "status": "RUN",
+   "triggers": [
+    "X1.1:TRIGGER INTERNAL_CONTRADICTION→SKIPPED/NOT_ELIGIBLE/ELIGIBILITY(+0h)",
+    "X1.2:TRIGGER INTERNAL_CONTRADICTION→SKIPPED/NOT_ELIGIBLE/ELIGIBILITY(+0h)"
+   ],
+   "newMemories": 0,
+   "newHypotheses": 0,
+   "foregroundErrors": 0
+  }
+ },
+ "controls": {
+  "isolation": {
+   "method": "owner reads its own rows through RLS (authenticated + its own JWT claims) and must equal the observer ground truth; the non-owner probe reads the same rows by user_id, by row id and unfiltered through the same RLS path and must get nothing; retrieval measured on both sides. holds only when every non-vacuity flag is true.",
+   "probeUser": "ISOLATION_PROBE",
+   "probeUserOwnRows": {
+    "memories": 0,
+    "hypotheses": 0
+   },
+   "probeUserTotalVisibleViaRls": {
+    "memories": 0,
+    "hypotheses": 0
+   },
+   "allUsersRowsViaObserver": {
+    "memories": 13,
+    "hypotheses": 2,
+    "memory_owners": 6
+   },
+   "pairs": [
+    {
+     "target": "K1",
+     "groundTruthViaObserver": {
+      "memories": 3,
+      "hypotheses": 0
+     },
+     "ownerViaRls": {
+      "memories": 3,
+      "hypotheses": 0,
+      "memoryRowsIdenticalToGroundTruth": true,
+      "hypothesisRowsIdenticalToGroundTruth": true,
+      "retrievedItems": 2
+     },
+     "nonOwnerViaRls": {
+      "memoriesByUserId": 0,
+      "hypothesesByUserId": 0,
+      "memoriesByRowId": 0,
+      "hypothesesByRowId": 0,
+      "retrievedItems": 0
+     }
+    },
+    {
+     "target": "F1",
+     "groundTruthViaObserver": {
+      "memories": 2,
+      "hypotheses": 1
+     },
+     "ownerViaRls": {
+      "memories": 2,
+      "hypotheses": 1,
+      "memoryRowsIdenticalToGroundTruth": true,
+      "hypothesisRowsIdenticalToGroundTruth": true,
+      "retrievedItems": null
+     },
+     "nonOwnerViaRls": {
+      "memoriesByUserId": 0,
+      "hypothesesByUserId": 0,
+      "memoriesByRowId": 0,
+      "hypothesesByRowId": 0,
+      "retrievedItems": null
+     }
+    }
+   ],
+   "nonVacuous": {
+    "ownerMemoriesSeen": true,
+    "ownerHypothesesSeen": true,
+    "ownerRetrievalReturnedItems": true,
+    "otherUsersHoldRows": true
+   },
+   "positiveOwnership": true,
+   "negativeCrossUser": true,
+   "holds": true
+  },
+  "telemetry": {
+   "recordsCaptured": 2596,
+   "distinctInstrumentNames": [
+    "qandeel.context_budget.bytes",
+    "qandeel.context_budget.source_decisions",
+    "qandeel.engine",
+    "qandeel.engine.duration",
+    "qandeel.foreground.intelligence.source",
+    "qandeel.hypothesis_context.outcomes",
+    "qandeel.question.foreground_selection",
+    "qandeel.routing.decisions",
+    "qandeel.runtime_event_publisher.operations",
+    "qandeel.turn.outcomes"
+   ],
+   "stringsScanned": 12214,
+   "corpusFragments": 57,
+   "contentLeaks": 0,
+   "arabicScriptStrings": 0,
+   "holds": true
+  },
+  "databaseSurfaces": {
+   "runtime_event_outbox": {
+    "rows": 47,
+    "contentLeaks": 0,
+    "arabicScriptRows": 0,
+    "countedAgainstControls": true
+   },
+   "post_response_intelligence_executions": {
+    "rows": 47,
+    "contentLeaks": 0,
+    "arabicScriptRows": 0,
+    "countedAgainstControls": true
+   },
+   "post_response_intelligence_effects": {
+    "rows": 102,
+    "contentLeaks": 4,
+    "arabicScriptRows": 2,
+    "hitsByEffectKey": {
+     "INTENT_PROVIDER": 2,
+     "CANDIDATE_PROVIDER": 2
+    },
+    "verbatimContentByDesign": "migration 0029 (durable intent provider result) stores result_payload.problem.text — an extractive span of the user's OWN current turn — on the INTENT_PROVIDER effect; the table is RLS-enabled and REVOKEd from anon/authenticated (0022), service_role only. Reported as durable-ledger content, not as telemetry; a Product decision about its retention belongs to the owner of the ledger, not to this baseline.",
+    "countedAgainstControls": false
+   },
+   "ai_provider_calls": {
+    "rows": 0,
+    "contentLeaks": 0,
+    "arabicScriptRows": 0,
+    "countedAgainstControls": true
+   }
+  },
+  "outbox": {
+   "total": 47,
+   "with_content": 0,
+   "published": 47
+  },
+  "ledgerShape": {
+   "provider_calls": 0,
+   "executions": 47,
+   "effects": 102,
+   "note": "the conversational router is a double here, so no ai_provider_calls row can exist; the post-response ledger rows carry codes and identifiers only"
+  },
+  "allHold": true,
+  "durableLedgerContent": [
+   {
+    "surface": "post_response_intelligence_effects",
+    "rowsWithFixtureContent": 4,
+    "byDesign": "migration 0029 (durable intent provider result) stores result_payload.problem.text — an extractive span of the user's OWN current turn — on the INTENT_PROVIDER effect; the table is RLS-enabled and REVOKEd from anon/authenticated (0022), service_role only. Reported as durable-ledger content, not as telemetry; a Product decision about its retention belongs to the owner of the ledger, not to this baseline."
+   }
+  ]
+ },
+ "census": {
+  "conversationalRouterCalls": 43,
+  "intentDoubleCalls": 2,
+  "candidateDoubleCalls": 2,
+  "associationDoubleCalls": 0,
+  "authenticatedRpcCensus": {
+   "attempted": {
+    "create_conversation_session_v1": 15,
+    "create_user_conversation_turn": 47,
+    "read_him_intelligence_snapshot_v1": 43,
+    "read_him_session_cross_context_foreground_v3": 43,
+    "read_him_brain_context_for_turn_v1": 43,
+    "read_him_contextual_current_intelligence_batch_v1": 43,
+    "pending_memory_clarification_v1": 8
+   },
+   "completed": {
+    "create_conversation_session_v1": 15,
+    "create_user_conversation_turn": 47,
+    "read_him_intelligence_snapshot_v1": 43,
+    "read_him_session_cross_context_foreground_v3": 43,
+    "read_him_brain_context_for_turn_v1": 43,
+    "read_him_contextual_current_intelligence_batch_v1": 43,
+    "pending_memory_clarification_v1": 8
+   },
+   "failed": {}
+  },
+  "syntheticUsers": 10,
+  "sessions": 15,
+  "networkAttemptsBlockedDuringRun": 0,
+  "externalHttp": "impossible — every transport throws (see networkGuard.selfTest)"
+ },
+ "scenarios": {
+  "C1": {
+   "title": "Change of mind: natural reversal, restatement, explicit correction",
+   "purpose": "Truth maintenance: is a stale preference still served after a natural reversal; does a restatement create a duplicate; does an explicit correction supersede every earlier copy.",
+   "fixture": "c1-reversal-correction-duplicates.json",
+   "status": "RUN",
+   "yields": {
+    "captureYield": {
+     "valueStatements": 4,
+     "captured": 3,
+     "hedgedCaptured": 0
+    },
+    "recall": {
+     "probes": 3,
+     "hits": 2,
+     "perProbe": [
+      {
+       "step": "C1.3",
+       "hit": false,
+       "servedItems": 1
+      },
+      {
+       "step": "C1.5",
+       "hit": true,
+       "servedItems": 2
+      },
+      {
+       "step": "C1.7",
+       "hit": true,
+       "servedItems": 1
+      }
+     ]
+    },
+    "truthMaintenance": {
+     "staleProbes": 3,
+     "staleServed": 2,
+     "perProbe": [
+      {
+       "step": "C1.3",
+       "staleServed": true,
+       "servedItems": 1
+      },
+      {
+       "step": "C1.5",
+       "staleServed": true,
+       "servedItems": 2
+      },
+      {
+       "step": "C1.7",
+       "staleServed": false,
+       "servedItems": 1
+      }
+     ],
+     "duplicateActiveMemoriesAtEnd": 1,
+     "memoryStatusCountsAtEnd": {
+      "C1": {
+       "SUPERSEDED": 1,
+       "ACTIVE": 2
+      }
+     }
+    },
+    "background": {
+     "turns": 7,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 7
+     },
+     "newMemories": 3,
+     "newHypotheses": 0,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "C1.1",
+     "text": "أنا بفضل أعيش في القاهرة بعد الجواز",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "original preference (Cairo)",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE STABLE_PREFERENCE",
+     "triggerClassifier": "NO_TRIGGER PREFERENCE_OR_GOAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بفضل أعيش في القاهرة بعد الجواز."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "C1.2",
+     "text": "غيرت رأيي وبقيت عايز أعيش في إسكندرية بعد الجواز",
+     "measure": {
+      "valueStatement": true,
+      "reversalOf": "C1.1"
+     },
+     "note": "natural reversal (Alexandria), no anchored pattern",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "C1.3",
+     "text": "فاكر أنا بفضل أعيش فين بعد الجواز؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "إسكندرية"
+       ]
+      },
+      "staleProbe": {
+       "staleTokens": [
+        "القاهرة"
+       ]
+      }
+     },
+     "note": "after the reversal: Cairo served = stale",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [
+      "STABLE_PREFERENCE: أنا بفضل أعيش في القاهرة بعد الجواز."
+     ],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 5078,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": false,
+     "staleServed": true
+    },
+    {
+     "stepId": "C1.4",
+     "text": "أنا بفضل أعيش في إسكندرية بعد الجواز",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "anchored restatement of the new preference",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE STABLE_PREFERENCE",
+     "triggerClassifier": "NO_TRIGGER PREFERENCE_OR_GOAL",
+     "routerCalled": true,
+     "memoryContext": [
+      "STABLE_PREFERENCE: أنا بفضل أعيش في القاهرة بعد الجواز."
+     ],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 5078,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بفضل أعيش في إسكندرية بعد الجواز."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "C1.5",
+     "text": "فاكر أنا بفضل أعيش فين بعد الجواز؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "إسكندرية"
+       ]
+      },
+      "staleProbe": {
+       "staleTokens": [
+        "القاهرة"
+       ]
+      }
+     },
+     "note": "after the restatement: both served = stale + duplicate",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [
+      "STABLE_PREFERENCE: أنا بفضل أعيش في إسكندرية بعد الجواز.",
+      "STABLE_PREFERENCE: أنا بفضل أعيش في القاهرة بعد الجواز."
+     ],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 5210,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": true,
+     "staleServed": true
+    },
+    {
+     "stepId": "C1.6",
+     "text": "أنا مبقتش بفضل أعيش في القاهرة بعد الجواز، أنا بفضل أعيش في إسكندرية بعد الجواز",
+     "measure": {
+      "valueStatement": true,
+      "explicitCorrection": true
+     },
+     "note": "explicit correction pattern",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": false,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": null,
+     "questionContextPresent": false,
+     "guidanceBytes": null,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 2,
+       "content": "أنا بفضل أعيش في إسكندرية بعد الجواز."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "C1.7",
+     "text": "فاكر أنا بفضل أعيش فين بعد الجواز؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "إسكندرية"
+       ]
+      },
+      "staleProbe": {
+       "staleTokens": [
+        "القاهرة"
+       ]
+      }
+     },
+     "note": "after the correction",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [
+      "STABLE_PREFERENCE: أنا بفضل أعيش في إسكندرية بعد الجواز."
+     ],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 5080,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": true,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": true,
+     "staleServed": false
+    }
+   ],
+   "finalState": {
+    "C1": {
+     "memories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "SUPERSEDED",
+       "version": 1,
+       "content": "أنا بفضل أعيش في القاهرة بعد الجواز."
+      },
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بفضل أعيش في إسكندرية بعد الجواز."
+      },
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 2,
+       "content": "أنا بفضل أعيش في إسكندرية بعد الجواز."
+      }
+     ],
+     "memoryStatusCounts": {
+      "SUPERSEDED": 1,
+      "ACTIVE": 2
+     },
+     "duplicateActiveMemories": 1,
+     "hypotheses": [],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   }
+  },
+  "F1": {
+   "title": "Forget / do-not-rely and the propagation of their effect to derived hypotheses (PG-02)",
+   "purpose": "Does forget and do-not-rely change the Memory status; is the forgotten Memory still served; do hypotheses that cite the Memory as evidence stay ACTIVE and reach a new session.",
+   "fixture": "f1-forget-do-not-rely-propagation.json",
+   "status": "RUN",
+   "yields": {
+    "captureYield": {
+     "valueStatements": 2,
+     "captured": 2,
+     "hedgedCaptured": 0
+    },
+    "forget": {
+     "controlCommands": [
+      {
+       "step": "F1.3",
+       "command": "FORGET",
+       "routerCalled": false,
+       "assistantTurn": true
+      },
+      {
+       "step": "F1.4",
+       "command": "DO_NOT_RELY",
+       "routerCalled": false,
+       "assistantTurn": true
+      }
+     ],
+     "forgottenProbes": 2,
+     "forgottenServed": 0,
+     "hypothesisInjectedAfterForget": 2,
+     "memoryStatusCountsAtEnd": {
+      "F1": {
+       "DELETED": 1,
+       "DISABLED": 1
+      }
+     }
+    },
+    "pg02": {
+     "hypothesisEvidenceLinksBefore": [
+      "ACTIVE/STABLE_PREFERENCE:ACTIVE",
+      "ACTIVE/DECISION_COMMITMENT:ACTIVE"
+     ],
+     "hypothesisEvidenceLinksAfter": [
+      "ACTIVE/STABLE_PREFERENCE:DELETED",
+      "ACTIVE/DECISION_COMMITMENT:DISABLED"
+     ],
+     "activeHypothesesOverNonActiveEvidence": 1
+    },
+    "triggers": [
+     {
+      "step": "F1.2",
+      "probe": "contains «بس» inside «بسهر» — records whether the contradiction trigger fires on the substring",
+      "classifier": "TRIGGER INTERNAL_CONTRADICTION",
+      "semanticChain": "FIXTURE_NO_THREAD",
+      "execution": "COMPLETED/COMPLETED/DONE",
+      "newHypotheses": 1,
+      "providerDoubleCalls": {
+       "intent": 1,
+       "candidate": 1,
+       "association": 0
+      }
+     }
+    ],
+    "background": {
+     "turns": 6,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 5,
+      "COMPLETED/COMPLETED/DONE": 1
+     },
+     "newMemories": 2,
+     "newHypotheses": 1,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "F1.1",
+     "text": "أنا بحب القهوة الصبح",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "anchored preference",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE STABLE_PREFERENCE",
+     "triggerClassifier": "NO_TRIGGER PREFERENCE_OR_GOAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بحب القهوة الصبح."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "F1.2",
+     "text": "قررت أنام بدري رغم إني دايما بسهر",
+     "measure": {
+      "valueStatement": true,
+      "triggerProbe": "contains «بس» inside «بسهر» — records whether the contradiction trigger fires on the substring"
+     },
+     "note": "anchored decision; a double-generated hypothesis is expected to attach here if the trigger fires",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE DECISION_COMMITMENT",
+     "triggerClassifier": "TRIGGER INTERNAL_CONTRADICTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "COMPLETED/COMPLETED/DONE",
+     "effects": [
+      "CANDIDATE_PROVIDER:COMPLETED:VALIDATED_CANDIDATES",
+      "CONFIDENCE_BATCH:COMPLETED:CONFIDENCE_BATCH_EVALUATED",
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "HYPOTHESIS_PERSISTENCE:COMPLETED:HYPOTHESES_PERSISTED",
+      "INTENT_PROVIDER:COMPLETED:INTENT_AUTHORIZED",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "DECISION_COMMITMENT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "قررت أنام بدري رغم إني دايما بسهر."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 1,
+     "providerDoubleCalls": {
+      "intent": 1,
+      "candidate": 1,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "F1.3",
+     "text": "انسى إني بحب القهوة الصبح",
+     "measure": {
+      "memoryControl": "FORGET"
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": false,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": null,
+     "questionContextPresent": false,
+     "guidanceBytes": null,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "F1.4",
+     "text": "متعتمدش على إني قررت أنام بدري",
+     "measure": {
+      "memoryControl": "DO_NOT_RELY"
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": false,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": null,
+     "questionContextPresent": false,
+     "guidanceBytes": null,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "F1.5",
+     "text": "فاكر أنا بحب إيه الصبح؟",
+     "measure": {
+      "forgottenProbe": {
+       "noneOf": [
+        "القهوة"
+       ]
+      },
+      "hypothesisInjectionProbe": true
+     },
+     "note": "the forgotten Memory must not be served; records whether a hypothesis derived from it is still injected",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 1,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 10419,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "forgottenServed": false,
+     "hypothesisInjected": true
+    },
+    {
+     "stepId": "F1.6",
+     "text": "فاكر قررت إيه بخصوص النوم؟",
+     "measure": {
+      "forgottenProbe": {
+       "noneOf": [
+        "أنام"
+       ]
+      },
+      "hypothesisInjectionProbe": true
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 1,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 10419,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "forgottenServed": false,
+     "hypothesisInjected": true
+    }
+   ],
+   "finalState": {
+    "F1": {
+     "memories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "DELETED",
+       "version": 1,
+       "content": "أنا بحب القهوة الصبح."
+      },
+      {
+       "type": "DECISION_COMMITMENT",
+       "source": "USER_STATED",
+       "status": "DISABLED",
+       "version": 1,
+       "content": "قررت أنام بدري رغم إني دايما بسهر."
+      }
+     ],
+     "memoryStatusCounts": {
+      "DELETED": 1,
+      "DISABLED": 1
+     },
+     "duplicateActiveMemories": 0,
+     "hypotheses": [
+      {
+       "status": "ACTIVE",
+       "origin": "SYSTEM_GENERATED",
+       "version": 4,
+       "scope": "CONVERSATION_SESSION:<session>",
+       "statement": "SYNTHETIC_DOUBLE_CANDIDATE_1"
+      }
+     ],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   },
+   "hypothesisEvidenceLinks": {
+    "before": [
+     {
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
+      "hypothesis_status": "ACTIVE",
+      "memory_type": "STABLE_PREFERENCE",
+      "memory_status": "ACTIVE",
+      "memory_content": "أنا بحب القهوة الصبح."
+     },
+     {
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
+      "hypothesis_status": "ACTIVE",
+      "memory_type": "DECISION_COMMITMENT",
+      "memory_status": "ACTIVE",
+      "memory_content": "قررت أنام بدري رغم إني دايما بسهر."
+     }
+    ],
+    "after": [
+     {
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
+      "hypothesis_status": "ACTIVE",
+      "memory_type": "STABLE_PREFERENCE",
+      "memory_status": "DELETED",
+      "memory_content": "أنا بحب القهوة الصبح."
+     },
+     {
+      "hypothesis_id": "f39aee58-a343-4f98-a0bd-f05e4c625fab",
+      "hypothesis_status": "ACTIVE",
+      "memory_type": "DECISION_COMMITMENT",
+      "memory_status": "DISABLED",
+      "memory_content": "قررت أنام بدري رغم إني دايما بسهر."
+     }
+    ]
+   }
+  },
+  "H1": {
+   "title": "HIM coverage from ordinary conversation versus a canonical seeded measurement",
+   "purpose": "Does a stressed-day conversation produce any HIM knowledge organically; what changes in the request to the model when a canonical structured measurement exists for the session; does it persist to a new session.",
+   "fixture": "h1-him-coverage-adaptation.json",
+   "status": "RUN",
+   "yields": {
+    "him": [
+     {
+      "step": "H1.organic.1",
+      "coverageState": "EMPTY",
+      "knownMetrics": [],
+      "behavioralInstructionIds": []
+     },
+     {
+      "step": "H1.organic.2",
+      "coverageState": "EMPTY",
+      "knownMetrics": [],
+      "behavioralInstructionIds": []
+     },
+     {
+      "step": "H1.seeded.1",
+      "coverageState": "PARTIAL",
+      "knownMetrics": [
+       "hse.stress=HIGH"
+      ],
+      "behavioralInstructionIds": [
+       "REDUCE_COGNITIVE_LOAD",
+       "REDUCE_STEERING_PRESSURE",
+       "CALMER_DELIVERY"
+      ]
+     },
+     {
+      "step": "H1.seeded.2",
+      "coverageState": "EMPTY",
+      "knownMetrics": [],
+      "behavioralInstructionIds": []
+     }
+    ],
+    "background": {
+     "turns": 4,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 4
+     },
+     "newMemories": 0,
+     "newHypotheses": 0,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "H1.organic.1",
+     "text": "النهارده كان يوم صعب جدا في الشغل وأنا مضغوط ومش قادر أركز",
+     "measure": {
+      "himProbe": true
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "H1.organic.2",
+     "text": "حاسس إني تعبان ومش لاقي طاقة لأي حاجة",
+     "measure": {
+      "himProbe": true
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "H1.seeded.1",
+     "text": "النهارده كان يوم صعب جدا في الشغل وأنا مضغوط ومش قادر أركز",
+     "measure": {
+      "himProbe": true
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [
+       "REDUCE_COGNITIVE_LOAD",
+       "REDUCE_STEERING_PRESSURE",
+       "CALMER_DELIVERY"
+      ],
+      "coverageState": "PARTIAL",
+      "knownMetricCount": 1,
+      "knownMetrics": [
+       "hse.stress=HIGH"
+      ]
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 5495,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "H1.seeded.2",
+     "text": "النهارده كان يوم عادي",
+     "measure": {
+      "himProbe": true
+     },
+     "note": "new session: does the seeded measurement carry over",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    }
+   ],
+   "finalState": {
+    "H1_organic": {
+     "memories": [],
+     "memoryStatusCounts": {},
+     "duplicateActiveMemories": 0,
+     "hypotheses": [],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    },
+    "H1_seeded": {
+     "memories": [],
+     "memoryStatusCounts": {},
+     "duplicateActiveMemories": 0,
+     "hypotheses": [],
+     "himObservations": 1,
+     "himSnapshots": 1,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   }
+  },
+  "K1": {
+   "title": "Preferences, goals and decisions stated in ordinary turns, recalled in a new session",
+   "purpose": "Capture yield of six genuine value statements without any 'remember' command; exact-token versus paraphrased recall.",
+   "fixture": "k1-preferences-goals-decisions.json",
+   "status": "RUN",
+   "yields": {
+    "captureYield": {
+     "valueStatements": 6,
+     "captured": 3,
+     "hedgedCaptured": 0
+    },
+    "recall": {
+     "probes": 4,
+     "hits": 1,
+     "perProbe": [
+      {
+       "step": "K1.7",
+       "hit": false,
+       "servedItems": 0
+      },
+      {
+       "step": "K1.8",
+       "hit": false,
+       "servedItems": 0
+      },
+      {
+       "step": "K1.9",
+       "hit": true,
+       "servedItems": 2
+      },
+      {
+       "step": "K1.10",
+       "hit": false,
+       "servedItems": 0
+      }
+     ]
+    },
+    "background": {
+     "turns": 10,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 10
+     },
+     "newMemories": 3,
+     "newHypotheses": 0,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "K1.1",
+     "text": "أنا بحب الهدوء والبيت المستقر أكتر من الخروج كتير",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "anchored «أنا بحب»",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE STABLE_PREFERENCE",
+     "triggerClassifier": "NO_TRIGGER PREFERENCE_OR_GOAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بحب الهدوء والبيت المستقر أكتر من الخروج كتير."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "K1.2",
+     "text": "الدين بالنسبالي حاجة أساسية ومش هقدر أتنازل عنها",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "unanchored core value",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "K1.3",
+     "text": "نفسي أعيش قريب من أهلي بعد الجواز",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "unanchored wish («نفسي»)",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "K1.4",
+     "text": "بحب السفر جدا وعايز شريكة حياة تحب تكتشف أماكن جديدة",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "«بحب» without the pronoun",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [
+      "STABLE_PREFERENCE: أنا بحب الهدوء والبيت المستقر أكتر من الخروج كتير."
+     ],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 5104,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "K1.5",
+     "text": "هدفي أكون أسرة صغيرة خلال سنتين",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "anchored «هدفي»",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE GOAL",
+     "triggerClassifier": "NO_TRIGGER PREFERENCE_OR_GOAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "GOAL",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "هدفي أكون أسرة صغيرة خلال سنتين."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "K1.6",
+     "text": "قررت إني مش هتجوز حد بيدخن",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "anchored «قررت»",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE DECISION_COMMITMENT",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "DECISION_COMMITMENT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "قررت إني مش هتجوز حد بيدخن."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "K1.7",
+     "text": "تفتكر إيه أهم حاجة عندي في الجواز؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "الهدوء",
+        "الدين",
+        "أهلي",
+        "السفر",
+        "أسرة",
+        "بيدخن"
+       ]
+      }
+     },
+     "note": "open paraphrased probe",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": false
+    },
+    {
+     "stepId": "K1.8",
+     "text": "بالنسبة للهدوء اللي بحبه، ده هيأثر على اختياري؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "الهدوء"
+       ]
+      }
+     },
+     "note": "inflected token «للهدوء»",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": false
+    },
+    {
+     "stepId": "K1.9",
+     "text": "فاكر لما قلتلك إني بحب الهدوء؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "الهدوء"
+       ]
+      }
+     },
+     "note": "exact token «الهدوء»",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [
+      "STABLE_PREFERENCE: أنا بحب الهدوء والبيت المستقر أكتر من الخروج كتير.",
+      "DECISION_COMMITMENT: قررت إني مش هتجوز حد بيدخن."
+     ],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 5219,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": true
+    },
+    {
+     "stepId": "K1.10",
+     "text": "فاكر قلتلك إيه عن التدخين؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "بيدخن",
+        "التدخين"
+       ]
+      }
+     },
+     "note": "paraphrase: «التدخين» vs stored «بيدخن»",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": false
+    }
+   ],
+   "finalState": {
+    "K1": {
+     "memories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بحب الهدوء والبيت المستقر أكتر من الخروج كتير."
+      },
+      {
+       "type": "GOAL",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "هدفي أكون أسرة صغيرة خلال سنتين."
+      },
+      {
+       "type": "DECISION_COMMITMENT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "قررت إني مش هتجوز حد بيدخن."
+      }
+     ],
+     "memoryStatusCounts": {
+      "ACTIVE": 3
+     },
+     "duplicateActiveMemories": 0,
+     "hypotheses": [],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   }
+  },
+  "M1": {
+   "title": "Compound Egyptian Arabic: anecdotes, hedging, «ليه أنا» questions and internal contradictions",
+   "purpose": "Precision of the deterministic Arabic triggers and of the Memory write evaluator on compound, multi-clause turns; whether a contradiction trigger reaches hypothesis generation.",
+   "fixture": "m1-arabic-triggers-contradictions.json",
+   "status": "RUN",
+   "yields": {
+    "captureYield": {
+     "valueStatements": 4,
+     "captured": 1,
+     "hedgedCaptured": 0
+    },
+    "triggers": [
+     {
+      "step": "M1.4",
+      "probe": "recurring-pattern question «ليه أنا دايما …»",
+      "classifier": "NO_TRIGGER GENERIC_QUESTION",
+      "semanticChain": "FIXTURE_NO_THREAD",
+      "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+      "newHypotheses": 0,
+      "providerDoubleCalls": {
+       "intent": 0,
+       "candidate": 0,
+       "association": 0
+      }
+     },
+     {
+      "step": "M1.5",
+      "probe": "internal contradiction «عايز … بس خايف»",
+      "classifier": "TRIGGER INTERNAL_CONTRADICTION",
+      "semanticChain": "FIXTURE_NO_THREAD",
+      "execution": "COMPLETED/COMPLETED/DONE",
+      "newHypotheses": 1,
+      "providerDoubleCalls": {
+       "intent": 1,
+       "candidate": 1,
+       "association": 0
+      }
+     }
+    ],
+    "background": {
+     "turns": 6,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 5,
+      "COMPLETED/COMPLETED/DONE": 1
+     },
+     "newMemories": 1,
+     "newHypotheses": 1,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "M1.1",
+     "text": "بص، أنا اتخطبت قبل كده وفشلت عشان هي كانت عايزة تعيش برا. أنا مش ممكن أسيب مصر. وكمان بحب الستات اللي بتشتغل.",
+     "measure": {
+      "valueStatement": true,
+      "compound": true
+     },
+     "note": "three value-bearing clauses in one anecdote",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP AMBIGUOUS_OR_SPECULATIVE",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "M1.2",
+     "text": "أنا بحب البيت يكون هادي، بس مش عايز واحدة قاعدة في البيت طول الوقت، والصلاة مهمة جدا",
+     "measure": {
+      "valueStatement": true,
+      "compound": true
+     },
+     "note": "anchored «أنا بحب» followed by two more values",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE STABLE_PREFERENCE",
+     "triggerClassifier": "NO_TRIGGER PREFERENCE_OR_GOAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بحب البيت يكون هادي، بس مش عايز واحدة قاعدة في البيت طول الوقت، والصلاة مهمة جدا."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "M1.3",
+     "text": "يمكن أكون عايز أطفال بس مش متأكد",
+     "measure": {
+      "valueStatement": true,
+      "hedged": true
+     },
+     "note": "hedged — storing it as a fact would be wrong; not storing it is correct",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP AMBIGUOUS_OR_SPECULATIVE",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "M1.4",
+     "text": "ليه أنا دايما بختار ناس مش مناسبين ليا؟",
+     "measure": {
+      "triggerProbe": "recurring-pattern question «ليه أنا دايما …»"
+     },
+     "note": "the Arabic recurring-pattern trigger",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "M1.5",
+     "text": "أنا عايز أتجوز بس خايف من المسؤولية",
+     "measure": {
+      "triggerProbe": "internal contradiction «عايز … بس خايف»"
+     },
+     "note": "contradiction trigger; with the semantic chain present the background pipeline may generate",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "TRIGGER INTERNAL_CONTRADICTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "COMPLETED/COMPLETED/DONE",
+     "effects": [
+      "CANDIDATE_PROVIDER:COMPLETED:VALIDATED_CANDIDATES",
+      "CONFIDENCE_BATCH:COMPLETED:CONFIDENCE_BATCH_EVALUATED",
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "HYPOTHESIS_PERSISTENCE:COMPLETED:HYPOTHESES_PERSISTED",
+      "INTENT_PROVIDER:COMPLETED:INTENT_AUTHORIZED",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 1,
+     "providerDoubleCalls": {
+      "intent": 1,
+      "candidate": 1,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "M1.6",
+     "text": "مش عايز حد بيشرب سجاير",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "negated preference without an anchor",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 1,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 10419,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    }
+   ],
+   "finalState": {
+    "M1": {
+     "memories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بحب البيت يكون هادي، بس مش عايز واحدة قاعدة في البيت طول الوقت، والصلاة مهمة جدا."
+      }
+     ],
+     "memoryStatusCounts": {
+      "ACTIVE": 1
+     },
+     "duplicateActiveMemories": 0,
+     "hypotheses": [
+      {
+       "status": "ACTIVE",
+       "origin": "SYSTEM_GENERATED",
+       "version": 3,
+       "scope": "CONVERSATION_SESSION:<session>",
+       "statement": "SYNTHETIC_DOUBLE_CANDIDATE_2"
+      }
+     ],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   }
+  },
+  "N1": {
+   "title": "Natural self-description by a new user (Egyptian Arabic)",
+   "purpose": "Capture yield of ordinary, unanchored value statements and one anchored location fact; recall of the fact in a new session.",
+   "fixture": "n1-natural-self-description.json",
+   "status": "RUN",
+   "yields": {
+    "captureYield": {
+     "valueStatements": 4,
+     "captured": 0,
+     "hedgedCaptured": 0
+    },
+    "factCapture": {
+     "factStatements": 1,
+     "captured": 1,
+     "storedForms": [
+      "أنا ساكن في مدينة نصر."
+     ]
+    },
+    "recall": {
+     "probes": 2,
+     "hits": 0,
+     "perProbe": [
+      {
+       "step": "N1.6",
+       "hit": false,
+       "servedItems": 0
+      },
+      {
+       "step": "N1.7",
+       "hit": false,
+       "servedItems": 0
+      }
+     ]
+    },
+    "background": {
+     "turns": 7,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 7
+     },
+     "newMemories": 1,
+     "newHypotheses": 0,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "N1.1",
+     "text": "اسمي سارة وعندي ٢٩ سنة وبشتغل مهندسة برمجيات",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "name + age + profession in one natural sentence",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER ORDINARY_FACT",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "N1.2",
+     "text": "بصراحة الجواز مهم عندي بس مش مستعجلة",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "priority + pace, hedged",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "N1.3",
+     "text": "عايزة حد محترم وبيصلي وبيحترم شغلي",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "partner values, feminine form",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "N1.4",
+     "text": "أهلي عايزيني أتجوز قريب بس أنا شايفة إن التفاهم أهم من السرعة",
+     "measure": {
+      "valueStatement": true
+     },
+     "note": "family pressure vs own value",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": false
+    },
+    {
+     "stepId": "N1.5",
+     "text": "انا ساكنة في مدينة نصر",
+     "measure": {
+      "factStatement": true,
+      "gramForm": "feminine"
+     },
+     "note": "anchored location pattern in the feminine form",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE PERSONAL_FACT",
+     "triggerClassifier": "NO_TRIGGER ORDINARY_FACT",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "PERSONAL_FACT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا ساكن في مدينة نصر."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "captured": true
+    },
+    {
+     "stepId": "N1.6",
+     "text": "فاكر أنا ساكنة فين؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "ساكن"
+       ]
+      }
+     },
+     "note": "asks the stored fact back with the feminine token",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": false
+    },
+    {
+     "stepId": "N1.7",
+     "text": "تفتكر أنا محتاجة إيه في شريك حياتي؟",
+     "measure": {
+      "recallProbe": {
+       "anyOf": [
+        "محترم",
+        "بيصلي",
+        "التفاهم",
+        "الجواز"
+       ]
+      }
+     },
+     "note": "asks back the value statements",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER GENERIC_QUESTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "recallHit": false
+    }
+   ],
+   "finalState": {
+    "N1": {
+     "memories": [
+      {
+       "type": "PERSONAL_FACT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا ساكن في مدينة نصر."
+      }
+     ],
+     "memoryStatusCounts": {
+      "ACTIVE": 1
+     },
+     "duplicateActiveMemories": 0,
+     "hypotheses": [],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   }
+  },
+  "P1": {
+   "title": "Separating the user's own information from information about other people",
+   "purpose": "Which third-party statements become the USER's Memory, under which type, including through the explicit remember path.",
+   "fixture": "p1-third-party-separation.json",
+   "status": "RUN",
+   "yields": {
+    "thirdParty": {
+     "thirdPartyStatements": 3,
+     "storedAsUserMemory": 1,
+     "perStatement": [
+      {
+       "step": "P1.1",
+       "explicitRemember": false,
+       "storedTypes": []
+      },
+      {
+       "step": "P1.2",
+       "explicitRemember": false,
+       "storedTypes": []
+      },
+      {
+       "step": "P1.5",
+       "explicitRemember": true,
+       "storedTypes": [
+        "PERSONAL_FACT"
+       ]
+      }
+     ],
+     "selfStatementsStored": 2
+    },
+    "background": {
+     "turns": 5,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 5
+     },
+     "newMemories": 3,
+     "newHypotheses": 0,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "P1.1",
+     "text": "أختي بتحب السفر وعايزة تتجوز واحد غني",
+     "measure": {
+      "thirdParty": true
+     },
+     "note": "about the sister",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "thirdPartyStoredAsUserMemory": []
+    },
+    {
+     "stepId": "P1.2",
+     "text": "صاحبي أحمد بيقول إن الجواز بدري غلط",
+     "measure": {
+      "thirdParty": true
+     },
+     "note": "reported speech of a friend",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "thirdPartyStoredAsUserMemory": []
+    },
+    {
+     "stepId": "P1.3",
+     "text": "أحمد صاحبي",
+     "measure": {
+      "selfRelation": true
+     },
+     "note": "relationship fact about the user",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE RELATIONSHIP_CONTEXT",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "RELATIONSHIP_CONTEXT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أحمد صاحبي."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "P1.4",
+     "text": "أنا بحب الطريقة اللي أخويا بيعامل بيها مراته",
+     "measure": {
+      "selfPreferenceMentioningOther": true
+     },
+     "note": "the user's own preference, mentions the brother",
+     "safety": "ALLOW",
+     "memoryEvaluator": "WRITE STABLE_PREFERENCE",
+     "triggerClassifier": "NO_TRIGGER PREFERENCE_OR_GOAL",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:FRESH_EVIDENCE_CREATED"
+     ],
+     "newMemories": [
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بحب الطريقة اللي أخويا بيعامل بيها مراته."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "P1.5",
+     "text": "افتكر إن أختي مش بتحب الأطفال",
+     "measure": {
+      "thirdParty": true,
+      "explicitRemember": true
+     },
+     "note": "explicit remember of a fact about the sister",
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "NO_TRIGGER INSUFFICIENT_SIGNAL",
+     "routerCalled": false,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": null,
+     "questionContextPresent": false,
+     "guidanceBytes": null,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [
+      {
+       "type": "PERSONAL_FACT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أختي مش بتحب الأطفال."
+      }
+     ],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     },
+     "thirdPartyStoredAsUserMemory": [
+      "PERSONAL_FACT"
+     ]
+    }
+   ],
+   "finalState": {
+    "P1": {
+     "memories": [
+      {
+       "type": "RELATIONSHIP_CONTEXT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أحمد صاحبي."
+      },
+      {
+       "type": "STABLE_PREFERENCE",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أنا بحب الطريقة اللي أخويا بيعامل بيها مراته."
+      },
+      {
+       "type": "PERSONAL_FACT",
+       "source": "USER_STATED",
+       "status": "ACTIVE",
+       "version": 1,
+       "content": "أختي مش بتحب الأطفال."
+      }
+     ],
+     "memoryStatusCounts": {
+      "ACTIVE": 3
+     },
+     "duplicateActiveMemories": 0,
+     "hypotheses": [],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   }
+  },
+  "X1": {
+   "title": "Dependency control: a trigger turn without the semantic establishment phase",
+   "purpose": "What the background pipeline does with a contradiction trigger when the CU / Focus / Thread semantic chain of the exchange was never established (provider absent or failed).",
+   "fixture": "x1-semantic-chain-dependency.json",
+   "status": "RUN",
+   "yields": {
+    "triggers": [
+     {
+      "step": "X1.1",
+      "probe": "contradiction trigger, semantic chain ABSENT",
+      "classifier": "TRIGGER INTERNAL_CONTRADICTION",
+      "semanticChain": "ABSENT",
+      "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+      "newHypotheses": 0,
+      "providerDoubleCalls": {
+       "intent": 0,
+       "candidate": 0,
+       "association": 0
+      }
+     },
+     {
+      "step": "X1.2",
+      "probe": "contradiction trigger, semantic chain present, no eligible Memory",
+      "classifier": "TRIGGER INTERNAL_CONTRADICTION",
+      "semanticChain": "FIXTURE_NO_THREAD",
+      "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+      "newHypotheses": 0,
+      "providerDoubleCalls": {
+       "intent": 0,
+       "candidate": 0,
+       "association": 0
+      }
+     }
+    ],
+    "background": {
+     "turns": 2,
+     "executions": {
+      "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY": 2
+     },
+     "newMemories": 0,
+     "newHypotheses": 0,
+     "foregroundErrors": []
+    }
+   },
+   "turns": [
+    {
+     "stepId": "X1.1",
+     "text": "أنا عايز أتجوز بس خايف من المسؤولية",
+     "measure": {
+      "triggerProbe": "contradiction trigger, semantic chain ABSENT"
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "TRIGGER INTERNAL_CONTRADICTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "ABSENT",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    },
+    {
+     "stepId": "X1.2",
+     "text": "أنا عايزة أتجوز بس مش لاقية حد مناسب",
+     "measure": {
+      "triggerProbe": "contradiction trigger, semantic chain present, no eligible Memory"
+     },
+     "safety": "ALLOW",
+     "memoryEvaluator": "SKIP NO_SUPPORTED_EXPLICIT_PATTERN",
+     "triggerClassifier": "TRIGGER INTERNAL_CONTRADICTION",
+     "routerCalled": true,
+     "memoryContext": [],
+     "hypothesisContextItems": 0,
+     "humanIntelligence": {
+      "behavioralInstructionIds": [],
+      "coverageState": "EMPTY",
+      "knownMetricCount": 0,
+      "knownMetrics": []
+     },
+     "questionContextPresent": false,
+     "guidanceBytes": 4780,
+     "assistantTurn": true,
+     "semanticChain": "FIXTURE_NO_THREAD",
+     "outboxEventsPublished": 1,
+     "dispatch": [
+      true
+     ],
+     "execution": "SKIPPED/NOT_ELIGIBLE/ELIGIBILITY",
+     "effects": [
+      "HIM_BRAIN_CONTEXT_MATERIALIZATION:COMPLETED:NO_HIM_BRAIN_CONTEXT",
+      "MEMORY_WRITE:COMPLETED:NO_FRESH_EVIDENCE"
+     ],
+     "newMemories": [],
+     "memoryVersionsChanged": false,
+     "newHypotheses": 0,
+     "providerDoubleCalls": {
+      "intent": 0,
+      "candidate": 0,
+      "association": 0
+     }
+    }
+   ],
+   "finalState": {
+    "X1": {
+     "memories": [],
+     "memoryStatusCounts": {},
+     "duplicateActiveMemories": 0,
+     "hypotheses": [],
+     "himObservations": 0,
+     "himSnapshots": 0,
+     "informationGaps": 0,
+     "questionCandidates": 0
+    }
+   }
+  }
+ },
+ "portability": {
+  "placeholders": [
+   "<QANDEEL_CI01_PG_BIN>",
+   "<harness-temp-root>"
+  ],
+  "note": "machine-local absolute paths are replaced at write time; the identity checks above ran on the real values"
+ }
+}

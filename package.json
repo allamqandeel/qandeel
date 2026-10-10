@@ -269,6 +269,8 @@
     "simulate:ai-cost": "node scripts/ai-cost-simulate.mjs",
     "test:w3-mega-m-conversational-memory-control-contract": "node --test tests/w3-mega-m-conversational-memory-control-contract.test.mjs",
     "test:task-closure-governance-contract": "node --test tests/task-closure-governance-contract.test.mjs",
+    "test:ci-01-intelligence-evidence-baseline-contract": "node --test tests/ci-01-intelligence-evidence-baseline-contract.test.mjs",
+    "verify:ci-01:intelligence-reality:local": "node scripts/ci-01/local-db.mjs run-baseline",
     "test:forward-safety-contract": "node --test tests/forward-safety-contract.test.mjs",
     "test:qan-inf-02-windows-temp-harness-cleanup-contract": "node --test tests/qan-inf-02-windows-temp-harness-cleanup-contract.test.mjs",
     "test:mobile-native-impact-classifier": "node --test tests/mobile-native-impact-classifier.test.mjs",

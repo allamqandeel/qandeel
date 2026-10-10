@@ -1,0 +1,16 @@
+{
+  "scenario": "M1",
+  "title": "Compound Egyptian Arabic: anecdotes, hedging, «ليه أنا» questions and internal contradictions",
+  "purpose": "Precision of the deterministic Arabic triggers and of the Memory write evaluator on compound, multi-clause turns; whether a contradiction trigger reaches hypothesis generation.",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check",
+  "steps": [
+    { "id": "M1.s1", "kind": "session", "user": "M1", "session": "s1" },
+    { "id": "M1.1", "kind": "turn", "user": "M1", "session": "s1", "text": "بص، أنا اتخطبت قبل كده وفشلت عشان هي كانت عايزة تعيش برا. أنا مش ممكن أسيب مصر. وكمان بحب الستات اللي بتشتغل.", "measure": { "valueStatement": true, "compound": true }, "note": "three value-bearing clauses in one anecdote" },
+    { "id": "M1.2", "kind": "turn", "user": "M1", "session": "s1", "text": "أنا بحب البيت يكون هادي، بس مش عايز واحدة قاعدة في البيت طول الوقت، والصلاة مهمة جدا", "measure": { "valueStatement": true, "compound": true }, "note": "anchored «أنا بحب» followed by two more values" },
+    { "id": "M1.3", "kind": "turn", "user": "M1", "session": "s1", "text": "يمكن أكون عايز أطفال بس مش متأكد", "measure": { "valueStatement": true, "hedged": true }, "note": "hedged — storing it as a fact would be wrong; not storing it is correct" },
+    { "id": "M1.4", "kind": "turn", "user": "M1", "session": "s1", "text": "ليه أنا دايما بختار ناس مش مناسبين ليا؟", "measure": { "triggerProbe": "recurring-pattern question «ليه أنا دايما …»" }, "note": "the Arabic recurring-pattern trigger" },
+    { "id": "M1.5", "kind": "turn", "user": "M1", "session": "s1", "text": "أنا عايز أتجوز بس خايف من المسؤولية", "measure": { "triggerProbe": "internal contradiction «عايز … بس خايف»" }, "note": "contradiction trigger; with the semantic chain present the background pipeline may generate" },
+    { "id": "M1.6", "kind": "turn", "user": "M1", "session": "s1", "text": "مش عايز حد بيشرب سجاير", "measure": { "valueStatement": true }, "note": "negated preference without an anchor" }
+  ]
+}

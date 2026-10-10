@@ -1,0 +1,20 @@
+{
+  "scenario": "F1",
+  "title": "Forget / do-not-rely and the propagation of their effect to derived hypotheses (PG-02)",
+  "purpose": "Does forget and do-not-rely change the Memory status; is the forgotten Memory still served; do hypotheses that cite the Memory as evidence stay ACTIVE and reach a new session.",
+  "synthetic": true,
+  "sameTextsAs": "2026-10-09 Intelligence Reality Check",
+  "steps": [
+    { "id": "F1.s1", "kind": "session", "user": "F1", "session": "s1" },
+    { "id": "F1.1", "kind": "turn", "user": "F1", "session": "s1", "text": "أنا بحب القهوة الصبح", "measure": { "valueStatement": true }, "note": "anchored preference" },
+    { "id": "F1.2", "kind": "turn", "user": "F1", "session": "s1", "text": "قررت أنام بدري رغم إني دايما بسهر", "measure": { "valueStatement": true, "triggerProbe": "contains «بس» inside «بسهر» — records whether the contradiction trigger fires on the substring" }, "note": "anchored decision; a double-generated hypothesis is expected to attach here if the trigger fires" },
+    { "id": "F1.links.before", "kind": "hypothesis_links", "user": "F1", "label": "before" },
+    { "id": "F1.3", "kind": "turn", "user": "F1", "session": "s1", "text": "انسى إني بحب القهوة الصبح", "measure": { "memoryControl": "FORGET" } },
+    { "id": "F1.4", "kind": "turn", "user": "F1", "session": "s1", "text": "متعتمدش على إني قررت أنام بدري", "measure": { "memoryControl": "DO_NOT_RELY" } },
+    { "id": "F1.s2", "kind": "session", "user": "F1", "session": "s2" },
+    { "id": "F1.5", "kind": "turn", "user": "F1", "session": "s2", "text": "فاكر أنا بحب إيه الصبح؟", "measure": { "forgottenProbe": { "noneOf": ["القهوة"] }, "hypothesisInjectionProbe": true }, "note": "the forgotten Memory must not be served; records whether a hypothesis derived from it is still injected" },
+    { "id": "F1.6", "kind": "turn", "user": "F1", "session": "s2", "text": "فاكر قررت إيه بخصوص النوم؟", "measure": { "forgottenProbe": { "noneOf": ["أنام"] }, "hypothesisInjectionProbe": true } },
+    { "id": "F1.links.after", "kind": "hypothesis_links", "user": "F1", "label": "after" }
+  ],
+  "finalStateMeasures": { "pg02ActiveHypothesesOverNonActiveEvidence": true }
+}
