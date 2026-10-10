@@ -46,16 +46,19 @@ jobs:
     needs: [plan]
     if: ${{ !cancelled() && needs.plan.outputs.api_heavy != 'CARRY_FORWARD' }}
     runs-on: ubuntu-latest
+    # The service images are the Docker Official Images served by Amazon ECR Public, pinned by digest (the same
+    # digests Docker Hub serves): Docker Hub's anonymous pull limit, shared by every job on the runner's address,
+    # refused postgres:17 before any step ran. PostgreSQL 17.11 and Redis 7.4.11; a newer image is a deliberate edit.
     services:
       postgres:
-        image: postgres:17
+        image: public.ecr.aws/docker/library/postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
         env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: qandeel_test}
         ports: ['5432:5432']
         options: >-
           --health-cmd="pg_isready -U postgres -d qandeel_test"
           --health-interval=5s --health-timeout=5s --health-retries=12
       redis:
-        image: redis:7
+        image: public.ecr.aws/docker/library/redis:7@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
         ports: ['6379:6379']
         options: >-
           --health-cmd="redis-cli ping"
@@ -125,6 +128,7 @@ jobs:
       - {name: "Verify S5-03C Public Explicit Relations + Integrity Closure static contract", run: npm run test:s5-03c-public-explicit-relations-integrity-contract}
       - {name: "Verify S5-04 Public Discussion + @qandeel + Final Public Integration static contract", run: npm run test:s5-04-public-discussion-qandeel-final-integration-contract}
       - {name: "Verify SHARED-VIS-01 Shared World Living Analysis static contract", run: npm run test:shared-vis-01-shared-living-analysis-contract}
+      - {name: "Verify SEC-MATCH-00 Matching direct-RPC protection static contract", run: npm run test:sec-match-00-matching-direct-rpc-protection-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -944,6 +948,14 @@ jobs:
       # by the frozen owner-deletion closure; the ended World's conversation carries no place.
       - name: Verify SHARED-VIS-01 Shared semantic places and the member field read against real PostgreSQL
         run: npm run verify:shared-semantic-field:integration
+      # SEC-MATCH-00: the controlled forward amendment to the frozen I-07A surface. The six widening Matching setup
+      # commands are executable by no application role (PUBLIC, anon, authenticated, service_role, inheritance included)
+      # and every real call is 42501; a fresh human commits no Matching row; an existing human still pauses, turns off,
+      # revokes both authorities and inspects their own setup; retries, ownership and lock-row serialization are intact;
+      # no other client route reaches a Matching write; re-applied over the hosted default-privilege posture it closes
+      # all six and touches no row; and a reopened grant or a client wrapper is refused by the regression checks.
+      - name: Verify SEC-MATCH-00 Matching setup pre-launch direct-execute narrowing against real PostgreSQL
+        run: npm run verify:matching-setup-direct-rpc-narrowing:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}
@@ -953,18 +965,36 @@ jobs:
       # and proves the bounded admission is HTTP 429 {code PT429, message TURN_ADMISSION_LIMITED}, the replay stays
       # 409, and the work commands answer the row shapes the API reads. It runs last because it adds the standard
       # PostgREST login role, which it drops again. The JWT secret signs tokens for this throwaway container only.
-      - name: Prove PROD-SEC-02 refusal contract and PROD-OPS-01 readiness through live PostgREST
+      # The engines are not pulled from Docker Hub, whose anonymous pull limit is shared by every job on the runner's
+      # address and refused v13.0.8 mid-step. Each is imported locally from PostgREST's own release asset, which holds,
+      # byte for byte, the executable the postgrest/postgrest image of that tag runs; an asset whose sha256 is not the
+      # one pinned here stops the step before anything runs.
+      - name: Prove PROD-SEC-02 refusal contract, PROD-OPS-01 readiness and SEC-MATCH-00 direct-RPC refusal through live PostgREST
         env:
           POSTGREST_URL: http://localhost:3001
           POSTGREST_JWT_SECRET: ci-only-throwaway-postgrest-signing-secret-prod-sec-02
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticator LOGIN PASSWORD 'authenticator' NOINHERIT" -c "GRANT anon, authenticated, service_role TO authenticator"
+          declare -A release_sha256=(
+            [v12.2.9]=cfed98394d6f81a96a37225fe0792a6b0094c62dcde04009e6c5c9d2fddfb0bc
+            [v13.0.8]=eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279
+            [v14.18]=98de1c0be7787aea5f5e11a25f303ea0077634d6fc1000b687bfa825fd27d299
+            [v16.4]=b47ecc82fce1dcebbbc4183d839e52f07f7630c9d7ad0f54db753d1939299354
+          )
           for version in v12.2.9 v13.0.8 v14.18 v16.4; do
+            asset="$RUNNER_TEMP/postgrest-$version-linux-static-x86-64.tar.xz"
+            curl -fsSL --retry 3 -o "$asset" "https://github.com/PostgREST/postgrest/releases/download/$version/postgrest-$version-linux-static-x86-64.tar.xz"
+            echo "${release_sha256[$version]}  $asset" | sha256sum --check --strict
+            xz --decompress --stdout "$asset" > "${asset%.xz}"
+            docker import --change 'USER 1000' --change 'CMD ["/postgrest"]' "${asset%.xz}" "postgrest-release:$version" >/dev/null
+            settings="$(docker image inspect --format '{{.Config.User}} {{json .Config.Cmd}}' "postgrest-release:$version")"
+            echo "postgrest-release:$version user and command: $settings"
+            [ "$settings" = '1000 ["/postgrest"]' ] || { echo "::error::postgrest-release:$version does not run /postgrest as user 1000"; exit 1; }
             docker run -d --rm --name "postgrest-$version" --network host \
               -e PGRST_DB_URI="postgresql://authenticator:authenticator@localhost:5432/qandeel_test" \
               -e PGRST_DB_SCHEMAS=public -e PGRST_DB_ANON_ROLE=anon \
               -e PGRST_JWT_SECRET="$POSTGREST_JWT_SECRET" -e PGRST_SERVER_PORT=3001 \
-              "postgrest/postgrest:$version" >/dev/null
+              "postgrest-release:$version" >/dev/null
             ready=""
             for attempt in $(seq 1 60); do
               status=$(curl -s -o /dev/null -w '%{http_code}' "$POSTGREST_URL/" || true)
@@ -975,6 +1005,8 @@ jobs:
             POSTGREST_VERSION="$version" npm run --silent prove:turn-admission-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
             # PROD-OPS-01: the API's own compiled readiness probe and summary repository against the same live engine.
             POSTGREST_VERSION="$version" npm run --silent prove:operational-readiness:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # SEC-MATCH-00: the six suspended Matching setup commands refuse every token on the wire; the five retained work.
+            POSTGREST_VERSION="$version" npm run --silent prove:matching-direct-rpc-refusal:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

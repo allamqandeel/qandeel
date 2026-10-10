@@ -2504,6 +2504,9 @@ from `auth.uid()`, all executable by `authenticated` and by nothing else. `PUBLI
 service-role credential must never be able to manufacture, widen or withdraw a human's Matching
 participation or consent.
 
+**Forward amendment (SEC-MATCH-00, migration 0149).** Six of these boundaries are currently executable by no
+application role. See the 0149 section at the end of this README. The paragraph above remains the I-07A record.
+
 ```text
 activate_matching_participation_v1      pause_matching_participation_v1
 resume_matching_participation_v1        turn_off_matching_participation_v1
@@ -4307,3 +4310,70 @@ pass starts nothing again; append-only history); visibility (current members who
 another World and a member who left read nothing; a newcomer who cannot see one source does not read it until a history
 grant lets them see that source); deletion (any source's owner deletion removes meaning, themes, region and coordinates for
 every reader and from the interpreter's context; QANDEEL's reply stays; nothing regenerates); and the ended World's v2 read.
+
+## SEC-MATCH-00 - Matching setup pre-launch direct-execute narrowing (migration 0149)
+
+`0149_matching_setup_pre_launch_direct_execute_narrowing_v1.sql` is a controlled forward amendment to the frozen I-07A
+surface (0109), approved by the Product Owner as `APPROVE_C2_PATCH_B`. It changes privileges only: no body, signature,
+owner, table, row, policy or Matching semantic. The six widening setup commands become executable by NO application
+role:
+
+```text
+suspended (owner only)                       retained (authenticated only, unchanged)
+activate_matching_participation_v1           pause_matching_participation_v1
+resume_matching_participation_v1             turn_off_matching_participation_v1
+grant_matching_context_v1                    revoke_matching_context_v1
+set_introduction_profile_v1                  revoke_pre_match_disclosure_authority_v1
+set_matching_requirements_v1                 get_my_matching_setup_v1
+grant_pre_match_disclosure_authority_v1
+```
+
+**Why.** Matching is not launched. Before 0149, any signed-in account could call four of the six through the Data API
+with no Matching history and commit a `matching_setup_locks` row. That row is `ON DELETE RESTRICT` to the account and
+can never be deleted, so the governed Personal erasure (0130) then answers BLOCKED (`QAN-BL-ACCT-01`).
+
+**What 0149 does.**
+
+- It revokes `PUBLIC`, `anon` and `authenticated` by name, `service_role` wherever the role exists, and then every
+  other non-owner grantee.
+- Its terminal assertions judge EFFECTIVE privilege, inheritance included. They refuse to commit if any application
+  role can still execute one of the six, if one of the five lost or widened its grant, or if any other
+  application-executable function writes one of the fourteen 0108 relations.
+- The five retained operations cannot commit anything for a human with no Matching history.
+
+**Suspended by Product Owner decision:** resume, and Introduction Profile / requirement correction (the same functions as
+first creation), until a reviewed Stage 6 launch path exists (`QAN-BL-MATCH-01`, owner S6-01). A replay of an
+already committed command of the six now answers 42501. No Matching row is touched, and `QAN-BL-ACCT-01` stays OPEN.
+
+**Deployment rule.** Never expose 0108 / 0109 to live signed-in users without 0149 taking effect in the same controlled
+deployment window. Keep the Data API closed to signed-in use until the effective privileges are verified. Never expose
+0109 through a hosted PostgREST that re-runs a 40001 transaction (every line before v16.0): the retained commands'
+stale-state refusal would never be answered (implementation record §11.6).
+
+```sh
+npm run verify:matching-setup-direct-rpc-narrowing:integration
+npm run prove:matching-direct-rpc-refusal:postgrest   # needs a live PostgREST; API CI runs it on every supported line
+```
+
+`verify-migration-0149.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It runs 20 independent scenarios,
+probing client reach only under real `SET LOCAL ROLE` sessions. State from before 0149 is reached as the owner with
+the human's claims, inside transactions that roll back. It proves:
+
+- `DIRECT_RPC_DENY`: the six are refused for every application role, for fresh and existing humans; correction is
+  suspended.
+- `NEW_FOOTPRINT_ZERO`: a fresh human who tries all eleven boundaries holds no Matching row and no Matching reference
+  to the account.
+- Self-inspection, pause, turn off and both revocations still work, from ACTIVE, PAUSED and OFF.
+- `OWNER_ONLY`; `IDEMPOTENT_RETRY`; and `X01`: two concurrent retained commands serialize on the caller's own lock row.
+- `NO_BACKDOOR`: a transitive census of every function that reaches a Matching write, plus every relation over
+  Matching state.
+- `DELETION_BASELINE_UNCHANGED`: every Matching reference to an account is still RESTRICT, and an existing footprint
+  still blocks erasure.
+- `HOSTED_DEFAULT_PRIVILEGES`: 0149 re-applied over the hosted Supabase posture, with every client role granted and
+  an inherited grant, closes all six and changes no row.
+- `BODIES_UNCHANGED`: the eleven bodies are byte-identical to 0109.
+- Three refused weakenings: an inherited owner privilege, a reopened grant, and a client wrapper.
+
+`verify-migration-0109.mjs` is re-anchored only where it asserted the current `authenticated` grant.
+`verify-migration-0133.mjs` replays every later migration, 0149 included, under hosted Supabase defaults and keeps
+hosted == CI object by object.

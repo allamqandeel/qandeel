@@ -214,6 +214,16 @@ export const MATCHING_COMMANDS = [
   MFN.GRANT_DISCLOSURE, MFN.REVOKE_DISCLOSURE,
 ];
 
+/**
+ * SEC-MATCH-00 (migration 0149): the six widening boundaries that no application role may execute before a reviewed
+ * Stage 6 launch path exists, and the five that keep the 0109 grant to `authenticated` alone. The I-07A contract of
+ * all eleven - owner, definer, pinned path, auth.uid(), no system credential - is unchanged; only who may call them is.
+ */
+export const SEC_MATCH_00_SUSPENDED = [
+  MFN.ACTIVATE, MFN.RESUME, MFN.GRANT_CONTEXT, MFN.SET_PROFILE, MFN.SET_REQUIREMENTS, MFN.GRANT_DISCLOSURE,
+];
+export const SEC_MATCH_00_RETAINED = [MFN.PAUSE, MFN.TURN_OFF, MFN.REVOKE_CONTEXT, MFN.REVOKE_DISCLOSURE, MFN.SETUP];
+
 /** The six trigger functions 0108 installs. */
 export const MATCHING_TRIGGER_FUNCTIONS = [
   'public.reject_matching_setup_mutation_v1()',
