@@ -7,10 +7,13 @@
 // optimistic tokens, and maps exactly TWO database conditions to typed
 // domain errors:
 //
-//   SQLSTATE 40001 + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
+//   SQLSTATE 40001 or PT409 + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
 //   -> StaleConversationalFocusContextError   (predicate REUSED from T-03B1b2)
-//   SQLSTATE 40001 + message EXACTLY 'STALE_THREAD_IDENTITY_CONTEXT'
+//   SQLSTATE 40001 or PT409 + message EXACTLY 'STALE_THREAD_IDENTITY_CONTEXT'
 //   -> StaleThreadIdentityContextError        (the same exact-equality rule)
+//
+// PT409 is migration 0150's answer for the dossier page and the FINAL
+// coordinator (PROD-RETRY-01); the same code set is reused from T-03B1b2.
 //
 // Any other serialization failure, any other status and any status-only
 // transport error stay what they are. No Home coordinate, base, attempt or
@@ -19,7 +22,7 @@
 
 import { DataApiError, readDataApiUpstreamIdentity } from '../conversation/supabase-data-api.service';
 import type { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
-import { isStaleConversationalFocusContext } from '../conversational-focus/conversation-focus-runtime.repository';
+import { isStaleContextSqlstate, isStaleConversationalFocusContext } from '../conversational-focus/conversation-focus-runtime.repository';
 import { StaleConversationalFocusContextError } from '../conversational-focus/conversation-focus-runtime.types';
 import {
   mapConversationThreadLifecycleRuntimeContext,
@@ -37,7 +40,6 @@ import {
   type ThreadIdentityDossierPageRequest,
 } from './conversation-thread-lifecycle-runtime.types';
 
-export const STALE_THREAD_IDENTITY_CONTEXT_SQLSTATE = '40001';
 export const STALE_THREAD_IDENTITY_CONTEXT_TOKEN = 'STALE_THREAD_IDENTITY_CONTEXT';
 
 /** The narrow boundary the establishment service depends on; tests inject a fake. */
@@ -50,12 +52,12 @@ export interface ConversationThreadLifecycleRuntimeBoundary {
 
 /**
  * True only for the exact typed identity-version condition, never for a
- * generic 40001 and never for a message that merely contains the token.
+ * generic 40001 or PT409 and never for a message that merely contains the token.
  */
 export function isStaleThreadIdentityContext(error: unknown): boolean {
   if (!(error instanceof DataApiError)) return false;
   const { databaseCode, databaseMessage } = readDataApiUpstreamIdentity(error);
-  return databaseCode === STALE_THREAD_IDENTITY_CONTEXT_SQLSTATE && databaseMessage === STALE_THREAD_IDENTITY_CONTEXT_TOKEN;
+  return isStaleContextSqlstate(databaseCode) && databaseMessage === STALE_THREAD_IDENTITY_CONTEXT_TOKEN;
 }
 
 function wireUnits(units: readonly ProposedLifecycleUnit[]) {

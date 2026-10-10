@@ -38,6 +38,9 @@ function commandOf(body: unknown, allowed: readonly string[]): Record<string, un
 }
 const databaseCode = (error: unknown): string | undefined => (error instanceof DataApiError ? readDataApiUpstreamIdentity(error).databaseCode : undefined);
 const databaseMessage = (error: unknown): string | undefined => (error instanceof DataApiError ? readDataApiUpstreamIdentity(error).databaseMessage : undefined);
+/** The exact stale-epoch refusal of a rotation (PROD-RETRY-01): PT409 from migration 0150 on, 40001 before it. */
+const isStaleRotation = (error: unknown): boolean => (databaseCode(error) === 'PT409' || databaseCode(error) === '40001')
+  && databaseMessage(error) === 'SHARED_INVITE_CREDENTIAL_STALE_STATE';
 const members = (rows: readonly SharedWorldMemberRow[], worldId: string): SharedMemberView[] =>
   rows.filter((m) => m.world_id === worldId).map((m) => ({ name: m.member_name, self: m.is_self === true }));
 
@@ -194,8 +197,9 @@ export class SharedWorldService {
       } catch (error) {
         if (error instanceof SharedIdSealingUnavailable) return unavailable();
         if (databaseCode(error) === '23505' && databaseMessage(error) === 'SHARED_INVITE_CREDENTIAL_REF_UNAVAILABLE' && draw < REF_DRAWS) continue;
-        // Another request rotated first: its value is the current one.
-        if (databaseCode(error) === '40001') break;
+        // Another request rotated first: its value is the current one. Migration 0150 answers this bounded
+        // stale-state refusal with PT409, which PostgREST never re-runs; 40001 is what a database before 0150 sends.
+        if (isStaleRotation(error)) break;
         throw error;
       }
     }

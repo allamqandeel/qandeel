@@ -79,6 +79,28 @@ describe('ConversationFocusRuntimeRepository', () => {
     }
   });
 
+  it('PROD-RETRY-01: the exact token under PT409 (migration 0150) is the same typed condition; no other PT409 or 409 is', async () => {
+    const stale = new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' });
+    expect(isStaleConversationalFocusContext(stale)).toBe(true);
+    await expect(new ConversationFocusRuntimeRepository(api(jest.fn().mockRejectedValue(stale))).commitFinalizedExchangeWithFocus(REQUEST))
+      .rejects.toBeInstanceOf(StaleConversationalFocusContextError);
+    for (const notStale of [
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'STALE_THREAD_IDENTITY_CONTEXT' }),
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' }),
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'wrapped: STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409, { databaseCode: 'PT409' }),
+      new DataApiError(409, { databaseCode: 'pt409', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409, { databaseCode: ' PT409', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      // PostgREST also answers 23505 with HTTP 409: the status alone is never the stale condition.
+      new DataApiError(409, { databaseCode: '23505', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409, { databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409),
+    ]) {
+      expect(isStaleConversationalFocusContext(notStale)).toBe(false);
+      await expect(new ConversationFocusRuntimeRepository(api(jest.fn().mockRejectedValue(notStale))).commitFinalizedExchangeWithFocus(REQUEST)).rejects.toBe(notStale);
+    }
+  });
+
   it('never casts PostgREST JSON blindly: a malformed row fails closed as an integrity error', async () => {
     const repository = new ConversationFocusRuntimeRepository(api(jest.fn().mockResolvedValue([{ batch_exists: 'yes' }])));
     await expect(repository.readIntegratedBatchSnapshot({ sessionId: SESSION, userId: USER, sourceTurnId: TURN, batchId: BATCH })).rejects.toBeInstanceOf(ConversationFocusIntegrityError);

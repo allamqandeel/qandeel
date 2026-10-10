@@ -93,6 +93,25 @@ describe('ConversationThreadRuntimeRepository (cases 41-45)', () => {
     }
   });
 
+  it('43b. PROD-RETRY-01: the reused predicate accepts the exact token under PT409 as well, and nothing else', async () => {
+    const stale = new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' });
+    await expect(new ConversationThreadRuntimeRepository(api(jest.fn().mockRejectedValue(stale))).commitFinalizedExchangeWithFocusAndThread(REQUEST))
+      .rejects.toBeInstanceOf(StaleConversationalFocusContextError);
+    for (const notStale of [
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' }),
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'wrapped: STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409, { databaseCode: 'PT409' }),
+      new DataApiError(409, { databaseCode: 'pt409', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409, { databaseCode: ' PT409', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      // PostgREST also answers 23505 with HTTP 409: the status alone is never the stale condition.
+      new DataApiError(409, { databaseCode: '23505', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409, { databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' }),
+      new DataApiError(409),
+    ]) {
+      await expect(new ConversationThreadRuntimeRepository(api(jest.fn().mockRejectedValue(notStale))).commitFinalizedExchangeWithFocusAndThread(REQUEST)).rejects.toBe(notStale);
+    }
+  });
+
   it('44. PostgREST JSON is never cast blindly: a malformed row fails closed as an integrity error', async () => {
     const badSnapshot = new ConversationThreadRuntimeRepository(api(jest.fn().mockResolvedValue([{ batch_exists: 'yes' }])));
     await expect(badSnapshot.readIntegratedBatchSnapshot({ sessionId: SESSION, userId: USER, sourceTurnId: TURN, batchId: BATCH }))

@@ -155,7 +155,7 @@ export class ConversationThreadLifecycleUnavailableError extends Error {
 
 /**
  * The SECOND optimistic authority: the user/world Thread identity version
- * moved between the dossier screening and the commit (SQLSTATE 40001 with the
+ * moved between the dossier screening and the commit (SQLSTATE 40001 or PT409 with the
  * message EXACTLY `STALE_THREAD_IDENTITY_CONTEXT`). It shares the ONE bounded
  * retry with the Session-clock stale condition.
  */

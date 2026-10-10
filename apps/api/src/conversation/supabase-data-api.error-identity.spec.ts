@@ -28,6 +28,9 @@ describe('the bounded opaque Data API upstream identity', () => {
   it('parses only bounded code/message strings from a PostgREST error body', async () => {
     expect(await parseDataApiUpstreamIdentity(response({ code: '40001', message: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT', details: 'x', hint: 'y' })))
       .toEqual({ databaseCode: '40001', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' });
+    // PROD-RETRY-01: migration 0150's non-retryable stale-state answer arrives the same way.
+    expect(await parseDataApiUpstreamIdentity(response({ code: 'PT409', message: 'STALE_THREAD_IDENTITY_CONTEXT', details: 'x', hint: null })))
+      .toEqual({ databaseCode: 'PT409', databaseMessage: 'STALE_THREAD_IDENTITY_CONTEXT' });
     expect(await parseDataApiUpstreamIdentity(response({ code: 40001, message: ['no'] }))).toEqual({});
     expect(await parseDataApiUpstreamIdentity(response({ code: '', message: 'x'.repeat(513) }))).toEqual({});
     expect(await parseDataApiUpstreamIdentity(response([]))).toEqual({});

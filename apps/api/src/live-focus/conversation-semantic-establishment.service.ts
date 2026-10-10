@@ -35,8 +35,8 @@
 // Clock token and the user/world Thread identity version - earn ONE shared
 // semantic re-evaluation against a re-read context and re-read dossiers. LF
 // introduces no third stale authority. Segmentation is never repeated. A
-// second stale failure is retryable unavailability. A generic 40001 never
-// qualifies.
+// second stale failure is retryable unavailability. A generic 40001 or PT409
+// never qualifies.
 //
 // It is a POST-FINALIZATION phase: it never marks a completed turn FAILED,
 // never calls failTurn, regenerates nothing, and a technical failure is

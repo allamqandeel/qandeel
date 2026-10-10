@@ -7,9 +7,9 @@
 // expected optimistic tokens, and maps exactly TWO database conditions to
 // typed domain errors:
 //
-//   SQLSTATE 40001 + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
+//   SQLSTATE PT409 (0150; 40001 before it) + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
 //   -> StaleConversationalFocusContextError   (predicate REUSED from T-03B1b2)
-//   SQLSTATE 40001 + message EXACTLY 'STALE_THREAD_IDENTITY_CONTEXT'
+//   SQLSTATE PT409 (0150; 40001 before it) + message EXACTLY 'STALE_THREAD_IDENTITY_CONTEXT'
 //   -> StaleThreadIdentityContextError        (predicate REUSED from T-03B3)
 //
 // LF introduces NO third stale authority and no new mutation RPC beyond the
