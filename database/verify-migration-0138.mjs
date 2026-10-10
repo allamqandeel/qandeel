@@ -271,7 +271,7 @@ async function verifySharedId({ a, b }) {
   await rejected(() => rotateSealed(randomUUID(), 1, drawSharedId(), { ...seal(), nonce: randomBytes(8) }), ['22023']);
   await rejected(() => rotateSealed(randomUUID(), 1, drawSharedId(), { ...seal(), tag: randomBytes(12) }), ['22023']);
   await rejected(() => rotateSealed(randomUUID(), 1, drawSharedId(), { ...seal(), keyVersion: 0 }), ['22023']);
-  await rejected(() => rotateSealed(randomUUID(), 7, drawSharedId()), ['40001']);
+  await rejected(() => rotateSealed(randomUUID(), 7, drawSharedId()), ['PT409']);
   assert.equal((await readSharedId()).credential_epoch, '1');
 
   stage = 'shared id: the legacy client rotation and submission are refused (Journey B item 8)';

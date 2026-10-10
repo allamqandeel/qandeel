@@ -347,3 +347,21 @@ inferred by a threshold. When a semantic layer is eventually added, it inherits
 the mechanics built here for free: it will call the same audited core, it will
 have to supply an exact expected version, and every decision it makes will be
 recorded as an immutable lifecycle transition with its own bounded source.
+
+## 10. Controlled forward amendment — PROD-RETRY-01 (migration `0150`)
+
+From `0150` (PROD-RETRY-01, `QAN-BL-PROD-06`) the "established stale-version SQLSTATE `40001`" of §3 is SQLSTATE
+`PT409`, with the same message (`Stale hypothesis version.`), in both cores: `transition_hypothesis_core_v1` (this
+record) and `apply_hypothesis_evidence_update_core_v1` (`0032`). The batch catcher
+(`execute_post_response_hypothesis_update_batch_v1_core`) now catches `40001` OR `PT409` OR `22023`, so a stale command
+still ends the batch as the durable, all-or-nothing `UPDATES_REJECTED`.
+
+PostgREST before v16.0 re-runs a request's whole transaction, without bound, on SQLSTATE `40001`, so a
+deterministic stale refusal sent through it was never answered; `PT409` is never re-run and is answered HTTP 409 on every
+PostgREST line (before `0150`, v16+ answered HTTP 500 `{code 40001}`). The message, DETAIL and HINT, the compare-and-swap, the lock
+order, the idempotent replay, the owner, the grants, `SECURITY DEFINER` and `search_path` are byte-identical
+(migration 0150 proves this about itself in one transaction).
+
+The two callers that read the version themselves (`record_understanding_disagreement_v1` under its own lock, and the
+generation activation over rows created in the same transaction) cannot reach the stale refusal; their outcomes are
+unchanged. Record: [PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).

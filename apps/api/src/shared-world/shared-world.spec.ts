@@ -42,7 +42,7 @@ const lifecycle = (named: string | null = null) => ({
 }) as unknown as SharedWorldLifecycleRepository;
 
 /** An in-memory stand-in for migration 0138: one account's credential and sealed value. */
-function fakeDatabase(start: { state?: SharedIdRow['state']; provisioning?: boolean } = {}) {
+function fakeDatabase(start: { state?: SharedIdRow['state']; provisioning?: boolean; staleCode?: string } = {}) {
   let epoch = start.state && start.state !== 'ABSENT' ? 1 : 0;
   let ref: string | null = epoch ? 'sid1:legacy' : null;
   let sealed: { epoch: number; ref: string; keyVersion: number; nonce: Buffer; ciphertext: Buffer; tag: Buffer } | null = null;
@@ -62,7 +62,7 @@ function fakeDatabase(start: { state?: SharedIdRow['state']; provisioning?: bool
       calls.push({ name: 'rotate', body: { commandId, expected, value } });
       if (committed.has(commandId)) return [{ outcome: 'ROTATED', credential_epoch: String(committed.get(commandId)) }];
       if (expected === null && start.provisioning === false) return [{ outcome: 'UNAVAILABLE', credential_epoch: null }];
-      if ((expected === null ? 0 : Number(expected)) !== epoch) throw new DataApiError(409, { databaseCode: '40001', databaseMessage: 'SHARED_INVITE_CREDENTIAL_STALE_STATE' });
+      if ((expected === null ? 0 : Number(expected)) !== epoch) throw new DataApiError(409, { databaseCode: start.staleCode ?? 'PT409', databaseMessage: 'SHARED_INVITE_CREDENTIAL_STALE_STATE' });
       epoch += 1;
       ref = sharedIdLookupRef(value);
       sealed = { epoch, ref, ...s };
@@ -164,6 +164,37 @@ describe('S4-01 Shared World Product boundary', () => {
     // A lost answer retried with the same command answers the committed truth and rotates nothing more.
     expect(await service.regenerate(USER, 'token', { commandId: COMMAND })).toEqual(regenerated);
     expect(db.calls.filter((c) => c.name === 'rotate' && c.body.commandId === COMMAND)).toHaveLength(2);
+  });
+
+  it('PROD-RETRY-01: a regeneration that lost to another request shows the winner, whether the stale refusal is PT409 (0150) or 40001', async () => {
+    for (const staleCode of ['PT409', '40001']) {
+      const db = fakeDatabase({ staleCode });
+      const service = new SharedWorldService(db.repository, sealing(), lifecycle());
+      await service.identity(USER, 'token');
+      // Another device regenerates between this request's read and its rotation.
+      const rotate = db.raw.rotateSharedId.getMockImplementation()!;
+      const winner = drawSharedId();
+      db.raw.rotateSharedId.mockImplementationOnce(async (token, commandId, expected, value, seal) => {
+        await rotate(token, '99999999-9999-4999-8999-999999999999', expected, winner, sealing().seal(USER, '2', winner));
+        return rotate(token, commandId, expected, value, seal);
+      });
+      const shown = await service.regenerate(USER, 'token', { commandId: COMMAND });
+      expect(shown.status).toBe('READY');
+      expect(shown).toEqual(await service.identity(USER, 'token'));
+      expect(db.calls.filter((c) => c.name === 'rotate')).toHaveLength(3);
+    }
+  });
+
+  it('PROD-RETRY-01: a PT409 or 40001 that is not the stale-state refusal is never taken for a lost race', async () => {
+    for (const databaseCode of ['PT409', '40001']) {
+      const db = fakeDatabase();
+      const service = new SharedWorldService(db.repository, sealing(), lifecycle());
+      await service.identity(USER, 'token');
+      db.raw.rotateSharedId.mockRejectedValueOnce(new DataApiError(409, { databaseCode, databaseMessage: 'SHARED_INVITE_COMMAND_ID_CONFLICT' }));
+      const reads = db.raw.readSharedId.mock.calls.length;
+      await expect(service.regenerate(USER, 'token', { commandId: COMMAND })).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(db.raw.readSharedId.mock.calls.length).toBe(reads + 1);
+    }
   });
 
   it('never shows a sealed value it cannot prove current, and never silently replaces it', async () => {

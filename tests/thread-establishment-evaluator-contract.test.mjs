@@ -357,7 +357,29 @@ test('T-03B2a itself shipped no migration, no Thread row, no service_role grant 
     'the erasure migration creates, writes or restructures no Thread / Home table');
   assert.doesNotMatch(erasure.replace(/DELETE FROM public\.\w+[^;]*;/gu, '').replace(/CREATE OR REPLACE FUNCTION public\.guard_conversation_world_thread_identity_clock_v1\(\)[\s\S]*?END;\$\$;/u, ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
     'outside its DELETE statements the erasure migration carries no Thread / Home substrate');
-  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION)) {
+
+  // RE-ANCHORED by PROD-RETRY-01 (validation only): migration 0150 re-creates the 0070 dossier page and the 0071 FINAL
+  // coordinator VERBATIM so that their deterministic stale-state refusals carry SQLSTATE PT409, which PostgREST never
+  // re-runs, instead of 40001. It is exempt for those two CREATE OR REPLACE statements alone, each of which must be its
+  // defining statement with exactly that substitution; outside them it carries no Thread / Home substrate.
+  const RETRY_MIGRATION = '0150_data_api_stale_state_non_retryable_sqlstate_v1.sql';
+  const statementOf = (text, name) => {
+    const start = Math.max(text.indexOf(`CREATE FUNCTION public.${name}(`), text.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`));
+    assert.ok(start >= 0, `${name} is created`);
+    const open = text.indexOf('AS $$', start) + 'AS $$'.length;
+    return text.slice(start, text.indexOf('$$;', open) + '$$;'.length);
+  };
+  const retry = read(`database/migrations/${RETRY_MIGRATION}`);
+  const recreated = [['get_conversation_thread_identity_dossier_page_v1', B3_MIGRATION], ['commit_finalized_exchange_with_full_semantic_chain_v1', B3D_MIGRATION]];
+  for (const [name, origin] of recreated) {
+    assert.equal(statementOf(retry, name),
+      statementOf(read(`database/migrations/${origin}`), name).replace(/^CREATE FUNCTION/u, 'CREATE OR REPLACE FUNCTION').replaceAll("ERRCODE='40001'", "ERRCODE='PT409'"),
+      `${RETRY_MIGRATION} re-creates ${name} verbatim apart from its stale-state SQLSTATE`);
+  }
+  assert.doesNotMatch(recreated.reduce((text, [name]) => text.replace(statementOf(text, name), ''), retry)
+    .replaceAll('get_conversation_thread_identity_dossier_page_v1', '').replaceAll('STALE_THREAD_IDENTITY_CONTEXT', ''), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu,
+    `outside its two verbatim re-creations ${RETRY_MIGRATION} carries no Thread / Home substrate`);
+  for (const name of migrations.filter((candidate) => candidate !== B2B2_MIGRATION && candidate !== B2B3_MIGRATION && candidate !== B3_MIGRATION && candidate !== B3D_MIGRATION && candidate !== C_MIGRATION && candidate !== ERASURE_MIGRATION && candidate !== RETRY_MIGRATION)) {
     assert.doesNotMatch(read(`database/migrations/${name}`), /thread_id|thread_establish|home_anchor|canonical_spatial|ThreadEstablished|conversation_threads|thread_home/iu, `${name} carries no Thread / Home substrate`);
   }
   assert.ok(!existsSync(new URL('database/verify-thread-establishment.mjs', root)));

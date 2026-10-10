@@ -107,6 +107,31 @@ describe('ConversationSemanticRuntimeRepository (cases 45-49)', () => {
     }
   });
 
+  it('47b. PROD-RETRY-01: the FINAL coordinator and the dossier page answer PT409 (migration 0150); both tokens map exactly as under 40001', async () => {
+    const focusStale = new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'STALE_CONVERSATIONAL_FOCUS_CONTEXT' });
+    await expect(new ConversationSemanticRuntimeRepository(api(jest.fn().mockRejectedValue(focusStale))).commitFinalizedExchangeWithFullSemanticChain(REQUEST))
+      .rejects.toBeInstanceOf(StaleConversationalFocusContextError);
+    const identityStale = new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'STALE_THREAD_IDENTITY_CONTEXT' });
+    await expect(new ConversationSemanticRuntimeRepository(api(jest.fn().mockRejectedValue(identityStale))).commitFinalizedExchangeWithFullSemanticChain(REQUEST))
+      .rejects.toBeInstanceOf(StaleThreadIdentityContextError);
+    await expect(new ConversationSemanticRuntimeRepository(api(jest.fn().mockRejectedValue(identityStale))).readIdentityDossierPage({ userId: USER, expectedWorldThreadIdentityVersion: 0, afterThreadId: null, limit: 32 }))
+      .rejects.toBeInstanceOf(StaleThreadIdentityContextError);
+    for (const notStale of [
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'STALE_LIVE_FOCUS_CONTEXT' }),
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'AI_PROVIDER_CALL_IDENTITY_CONFLICT' }),
+      new DataApiError(409, { databaseCode: 'PT409', databaseMessage: 'wrapped: STALE_THREAD_IDENTITY_CONTEXT' }),
+      new DataApiError(409, { databaseCode: 'PT409' }),
+      new DataApiError(409, { databaseCode: 'pt409', databaseMessage: 'STALE_THREAD_IDENTITY_CONTEXT' }),
+      new DataApiError(409, { databaseCode: ' PT409', databaseMessage: 'STALE_THREAD_IDENTITY_CONTEXT' }),
+      // PostgREST also answers 23505 with HTTP 409: the status alone is never the stale condition.
+      new DataApiError(409, { databaseCode: '23505', databaseMessage: 'STALE_THREAD_IDENTITY_CONTEXT' }),
+      new DataApiError(409, { databaseMessage: 'STALE_THREAD_IDENTITY_CONTEXT' }),
+      new DataApiError(409),
+    ]) {
+      await expect(new ConversationSemanticRuntimeRepository(api(jest.fn().mockRejectedValue(notStale))).commitFinalizedExchangeWithFullSemanticChain(REQUEST)).rejects.toBe(notStale);
+    }
+  });
+
   it('48. PostgREST JSON is never cast blindly: a malformed row fails closed as an integrity error', async () => {
     const badSnapshot = new ConversationSemanticRuntimeRepository(api(jest.fn().mockResolvedValue([{ ...ABSENT, session_live_focus_kind: 'READING' }])));
     await expect(badSnapshot.readIntegratedBatchSnapshot({ sessionId: SESSION, userId: USER, sourceTurnId: TURN, batchId: BATCH })).rejects.toBeInstanceOf(ConversationSemanticIntegrityError);

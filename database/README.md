@@ -428,6 +428,9 @@ current `ACTIVE` grant; anything else is `40001 STANDING_CONTEXT_STALE_STATE` an
 nothing is "applied to whatever is current". Commands for one World serialize on
 the `shared_worlds` row (`FOR UPDATE`).
 
+**Forward amendment (PROD-RETRY-01, migration 0150).** The stale-state refusal of both commands is SQLSTATE `PT409`
+(same message) from 0150 on. See the 0150 section at the end of this README. The paragraph above remains the 0078 record.
+
 **Revoke.** Revocation is self-owned privacy authority: it requires only that the
 World exists and that the exact expected grant is the caller's own `ACTIVE` grant in
 that World. It is **allowed after membership loss and after the World closed**. An
@@ -639,7 +642,8 @@ can never manufacture a human invitation.
 `rotate_shared_world_invite_credential_v1(p_command_id, p_new_credential_lookup_ref,
 p_expected_epoch)` is compare-and-swap on the caller's own state - `NULL` expects no
 current credential and yields epoch 1, `N` requires exactly `N` and yields `N + 1`, and
-any other current state is a bounded `40001 SHARED_INVITE_CREDENTIAL_STALE_STATE`.
+any other current state is a bounded `40001 SHARED_INVITE_CREDENTIAL_STALE_STATE`
+(`PT409`, same message, from migration 0150 on - PROD-RETRY-01; see the 0150 section).
 **A rotation must actually change the credential**: when current state exists,
 re-presenting the reference that is already current is refused with a bounded
 `22023 SHARED_INVITE_CREDENTIAL_UNCHANGED` **before any mutation**, so a no-op value
@@ -2506,6 +2510,9 @@ participation or consent.
 
 **Forward amendment (SEC-MATCH-00, migration 0149).** Six of these boundaries are currently executable by no
 application role. See the 0149 section at the end of this README. The paragraph above remains the I-07A record.
+
+**Forward amendment (PROD-RETRY-01, migration 0150).** The four retained commands (pause, turn off, both revocations)
+answer their stale expected state with SQLSTATE `PT409` (same message) instead of `40001`. See the 0150 section.
 
 ```text
 activate_matching_participation_v1      pause_matching_participation_v1
@@ -4377,3 +4384,61 @@ the human's claims, inside transactions that roll back. It proves:
 `verify-migration-0109.mjs` is re-anchored only where it asserted the current `authenticated` grant.
 `verify-migration-0133.mjs` replays every later migration, 0149 included, under hosted Supabase defaults and keeps
 hosted == CI object by object.
+
+## PROD-RETRY-01 - Data API stale-state refusals answered with a SQLSTATE PostgREST never re-runs (migration 0150)
+
+`0150_data_api_stale_state_non_retryable_sqlstate_v1.sql` closes the repository side of `QAN-BL-PROD-06`. It is a
+controlled forward amendment to the stale-state refusal contracts of 0032, 0034, 0036, 0070, 0071, 0078, 0081 and 0109.
+No historical migration is edited.
+
+**Why.** PostgREST before v16.0 re-runs a request's whole transaction, without bound, when it fails with SQLSTATE
+`40001` (PostgREST #3673). Twelve bodies answered a caller's stale expectation - a version, an epoch, a clock token or an
+expected current id the caller itself sends - with a deterministic `40001`, so through such a PostgREST the request was
+never answered and held a pool connection. On v16+ it was HTTP 500 `{code 40001}`.
+
+**What 0150 does.** Every `ERRCODE='40001'` in eleven raising bodies becomes `ERRCODE='PT409'` (23 sites), and the
+Hypothesis batch handler accepts `PT409` as well as `40001` and `22023`, so a stale command still ends as the durable
+`UPDATES_REJECTED`. PostgREST answers `PT409` with HTTP 409 on every line and never re-runs it.
+
+```text
+transition_hypothesis_core_v1 (0036)                    2   Stale hypothesis version.
+apply_hypothesis_evidence_update_core_v1 (0032)         2   Stale hypothesis version.
+commit_finalized_exchange_with_full_semantic_chain_v1   2   STALE_CONVERSATIONAL_FOCUS_CONTEXT / STALE_THREAD_IDENTITY_CONTEXT
+get_conversation_thread_identity_dossier_page_v1        1   STALE_THREAD_IDENTITY_CONTEXT
+grant_ / revoke_shared_world_standing_context_v1        2+2 STANDING_CONTEXT_STALE_STATE
+rotate_shared_world_invite_credential_v1 (0081)         4   SHARED_INVITE_CREDENTIAL_STALE_STATE
+pause_ / turn_off_matching_participation_v1,
+revoke_matching_context_v1, revoke_pre_match_
+disclosure_authority_v1 (0109)                          2 each MATCHING_STALE_STATE
+execute_post_response_hypothesis_update_batch_v1_core   handler: WHEN SQLSTATE '40001' OR SQLSTATE 'PT409' OR SQLSTATE '22023'
+```
+
+Each statement is its defining migration's statement verbatim with only that token changed. One transaction snapshots
+every application function, refuses to run unless each target holds exactly its expected sites (a drifted body aborts
+it), creates the twelve, and requires from the catalog that every new body is exactly the substitution, that every
+posture (owner, ACL, security, `search_path`, signature, defaults, result, comment) is unchanged, and that no other
+application function changed. Messages, DETAIL, compare-and-swap, lock order, idempotency, grants and rows are untouched.
+`40P01` is never raised and never converted. Paths kept on `40001` on purpose - race-converging
+(`ensure_public_identity_v1`), replay-guarded (the `commit_own_public_experience_ready_v1` replay branch), absorbed and
+unreachable - are proven by the catalog guard below.
+
+**API.** The two conversation stale predicates and the Shared ID lost-race test accept the exact message under `PT409`
+or `40001`, by equality. Direct Data API callers see HTTP 409 `{code PT409}` where they saw 500 (v16+) or no answer.
+
+**Deployment rule.** Ship the API that accepts both codes first or together with 0150. 0150 re-creates 0078 / 0081 / 0109
+functions, so a hosted project behind 0149 receives it only in its catch-up, in the same controlled window as 0149, and
+never after any exposure of 0078 / 0081 / 0109. Until a hosted database carries 0150 - or its PostgREST is verified on the
+project itself at v16+ - keep its affected functions off live signed-in use (`QAN-BL-PROD-06`). Never reproduce the
+hazard on a hosted environment.
+
+```sh
+npm run verify:data-api-stale-state-non-retryable:integration
+npm run prove:data-api-stale-refusal:postgrest   # needs a live PostgREST; API CI runs it on every supported line
+```
+
+`verify-migration-0150.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It runs 28 independent scenarios:
+the exact bodies and postures; the migration's own self-check re-run over the restored 0149 bodies with six refused
+weakenings; the cross-schema guard of `data-api-retry-hazard-guard.mjs` (no entry point lets a deterministic `40001`
+escape; each retained `40001` discharged by a structural and a live proof; every absorbing handler named; five refused
+weakenings, including a catch trap); stale requests that are `PT409` and write nothing; and the Shared ID rotation races.
+The verifiers that asserted a changed function's `40001` are re-anchored to `PT409`.

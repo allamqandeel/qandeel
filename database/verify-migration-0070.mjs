@@ -543,7 +543,7 @@ async function verifyCrossSessionContinuity(owner, world) {
   const secondPage = await dossierPage(owner, versionBefore, firstPage.thread_id, 1);
   eq([firstPage.thread_id, secondPage[0].thread_id], page.map((d) => d.thread_id), 'fixed-size paging walks the same deterministic order');
   eq(await dossierPage(owner, versionBefore, secondPage[0].thread_id, 1), [], 'the walk terminates after the last Thread');
-  await rejected(() => dossierPage(owner, String(Number(versionBefore) + 1), null, 32), 'STALE_THREAD_IDENTITY_CONTEXT', ['40001']);
+  await rejected(() => dossierPage(owner, String(Number(versionBefore) + 1), null, 32), 'STALE_THREAD_IDENTITY_CONTEXT', ['PT409']);
   await rejected(() => dossierPage(owner, versionBefore, null, 0), 'INVALID_THREAD_DOSSIER_PAGE');
   await rejected(() => dossierPage(owner, versionBefore, null, 65), 'INVALID_THREAD_DOSSIER_PAGE');
 
@@ -1048,7 +1048,7 @@ async function verifyImmutability(owner, world) {
     await rejected(() => runtimeContext(session, owner), 'permission denied', ['42501']);
     // T-03D (migration 0071): the FINAL runtime screens the dossier page as service_role; no other application role reaches it.
     if (role === 'service_role') {
-      await rejected(() => dossierPage(owner, 0, null, 32), 'STALE_THREAD_IDENTITY_CONTEXT', ['40001']);
+      await rejected(() => dossierPage(owner, 0, null, 32), 'STALE_THREAD_IDENTITY_CONTEXT', ['PT409']);
     } else {
       await rejected(() => dossierPage(owner, 0, null, 32), 'permission denied', ['42501']);
     }

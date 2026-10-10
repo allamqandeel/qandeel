@@ -334,11 +334,11 @@ async function verifyParticipation(report, humans) {
       // Expecting nothing when something is current.
       await rejected(() => rt.activate(randomUUID(), 'MANUAL_MY_WORLD_ENTRY'), ['40001'], /MATCHING_STALE_STATE/u);
       // Expecting the wrong act.
-      await rejected(() => rt.pause(randomUUID(), randomUUID()), ['40001'], /MATCHING_STALE_STATE/u);
+      await rejected(() => rt.pause(randomUUID(), randomUUID()), ['PT409'], /MATCHING_STALE_STATE/u);
       // Expecting a real but superseded act.
       const [paused] = await rt.pause(randomUUID(), activated.participation_event_id);
       await rejected(() => rt.pause(randomUUID(), activated.participation_event_id),
-        ['40001'], /MATCHING_STALE_STATE/u);
+        ['PT409'], /MATCHING_STALE_STATE/u);
       // Pausing something that is not ACTIVE, and resuming something that is not PAUSED.
       await rejected(() => rt.pause(randomUUID(), paused.participation_event_id),
         ['55000'], /MATCHING_PARTICIPATION_NOT_ACTIVE/u);
@@ -364,7 +364,7 @@ async function verifyParticipation(report, humans) {
       // They cannot move the first human's state: the act they name is not theirs
       // and the answer is the ordinary stale one, never "that is someone else's".
       await rejected(() => rt.pause(randomUUID(), activated.participation_event_id),
-        ['40001'], /MATCHING_STALE_STATE/u);
+        ['PT409'], /MATCHING_STALE_STATE/u);
       await asRole('postgres');
       assert.equal(await rt.currentActOf(one), activated.participation_event_id,
         'A08 the first human is exactly where they were');
@@ -428,7 +428,7 @@ async function verifyIndependentAuthorities(report, humans) {
       assert.equal(revoked.consent_event_type, 'REVOKED');
       assert.equal(revoked.grant_status, 'REVOKED');
       // A revoked grant is never revoked twice, and never comes back.
-      await rejected(() => rt.revokeContext(randomUUID(), second), ['40001'], /MATCHING_STALE_STATE/u);
+      await rejected(() => rt.revokeContext(randomUUID(), second), ['PT409'], /MATCHING_STALE_STATE/u);
       await asRole('postgres');
       assert.equal(await count(M.GRANTS, 'grantor_user_id = $1', [one]), 2,
         'B02 both authority identities survive as history');

@@ -6,7 +6,7 @@
 // canonical semantic payload, provenance and the expected clock token, and
 // maps ONE exact database condition to a typed domain error:
 //
-//   SQLSTATE 40001 + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
+//   SQLSTATE 40001 (or PT409, 0150) + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
 //   -> StaleConversationalFocusContextError
 //
 // That predicate is REUSED from the T-03B1b2 repository rather than restated,

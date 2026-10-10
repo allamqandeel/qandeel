@@ -218,3 +218,18 @@ change.
   the static database contract.
 * `tests/thread-lifecycle-cross-session-continuity-contract.test.mjs` — the
   repository-wide static anti-scope contract.
+
+## 10. Controlled forward amendment — PROD-RETRY-01 (migration `0150`)
+
+From `0150` (PROD-RETRY-01, `QAN-BL-PROD-06`) `get_conversation_thread_identity_dossier_page_v1` answers
+`STALE_THREAD_IDENTITY_CONTEXT` (DETAIL unchanged) with SQLSTATE `PT409` instead of `40001`. The 0070 coordinator itself
+is not changed and keeps `40001`; it is executable by no application role. `isStaleThreadIdentityContext` accepts the
+exact token under `PT409` or `40001`, by equality, through the one T-03B1b2 code rule.
+
+PostgREST before v16.0 re-runs a request's whole transaction, without bound, on SQLSTATE `40001`, so a
+deterministic stale refusal sent through it was never answered; `PT409` is never re-run and is answered HTTP 409 on every
+PostgREST line (before `0150`, v16+ answered HTTP 500 `{code 40001}`). The message, DETAIL and HINT, the compare-and-swap, the lock
+order, the idempotent replay, the owner, the grants, `SECURITY DEFINER` and `search_path` are byte-identical
+(migration 0150 proves this about itself in one transaction).
+
+Record: [PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).

@@ -110,7 +110,8 @@ const SUBMIT_FN = 'public.submit_shared_world_direct_invitation_v1(uuid,uuid,tex
 const INSUFFICIENT_PRIVILEGE = ['42501'];
 const INVALID_PARAMETER = ['22023'];
 const NOT_USABLE = ['P0002'];
-const STALE = ['40001'];
+// PROD-RETRY-01 (0150): the stale-state refusal is answered with PT409, which PostgREST never re-runs.
+const STALE = ['PT409'];
 const CONFLICT = ['23505'];
 
 const ROTATE_SQL = 'SELECT command_id, credential_epoch FROM public.rotate_shared_world_invite_credential_v1($1,$2,$3)';
@@ -727,7 +728,7 @@ async function verifyConcurrency(c) {
     error = undefined;
     try { await losingFirst; } catch (caught) { error = caught; }
     assert.ok(error, 'the loser did not silently establish a second current state');
-    assert.equal(error.code, '40001');
+    assert.equal(error.code, 'PT409');
     assert.match(error.message, /SHARED_INVITE_CREDENTIAL_STALE_STATE/u);
     await b.query('ROLLBACK');
     const [{ n: states }] = await rows(`SELECT count(*)::int n FROM ${CREDENTIAL} WHERE user_id=$1`, [c.first]);
@@ -742,7 +743,7 @@ async function verifyConcurrency(c) {
     await a.query('COMMIT');
     error = undefined;
     try { await staleRotation; } catch (caught) { error = caught; }
-    assert.ok(error && error.code === '40001', 'the stale rotation loses with a bounded stale state');
+    assert.ok(error && error.code === 'PT409', 'the stale rotation loses with a bounded stale state');
     await b.query('ROLLBACK');
 
     stage = 'concurrency: a submission that wins the lock is invalidated by the rotation that follows it';

@@ -89,7 +89,7 @@ export interface FinalizedExchangeWithFocusResult {
 /**
  * The ONE exact database concurrency condition the runtime handles: the
  * Session Semantic Clock moved after the prior context was read. Raised by
- * the repository only when SQLSTATE 40001 carries the exact technical token.
+ * the repository only when SQLSTATE 40001 or PT409 carries the exact technical token.
  */
 export class StaleConversationalFocusContextError extends Error {
   constructor() {

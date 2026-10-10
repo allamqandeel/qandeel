@@ -7,7 +7,7 @@ import { Injectable, ServiceUnavailableException } from '@nestjs/common';
  *
  * It exists so a server-internal caller can distinguish ONE exact database
  * condition (the integrated focus coordinator's
- * `STALE_CONVERSATIONAL_FOCUS_CONTEXT`, SQLSTATE 40001) from a generic HTTP
+ * `STALE_CONVERSATIONAL_FOCUS_CONTEXT`, SQLSTATE PT409 since migration 0150, 40001 before it) from a generic HTTP
  * failure. It is stored opaquely - never as a property of the error - so no
  * serializer, logger, reporter or user-facing response can reach the raw
  * database detail; only the narrow accessor below returns a copy.

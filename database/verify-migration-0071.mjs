@@ -541,7 +541,7 @@ async function verifyStaticAuthority() {
     && coordinatorBody.indexOf("'STALE_CONVERSATIONAL_FOCUS_CONTEXT'") < coordinatorBody.indexOf("'STALE_THREAD_IDENTITY_CONTEXT'")
     && coordinatorBody.indexOf("'STALE_THREAD_IDENTITY_CONTEXT'") < coordinatorBody.indexOf('commit_conversation_units_with_full_semantic_chain_v1('),
     'the Session clock is locked first, its token compared before the identity version, both before any writer; LF adds no third stale authority');
-  strict((coordinatorBody.match(/ERRCODE='40001'/gu) ?? []).length, 2, 'exactly two exact typed stale conditions');
+  strict((coordinatorBody.match(/ERRCODE='PT409'/gu) ?? []).length, 2, 'exactly two exact typed stale conditions (PT409 since 0150)');
   // Pinned identity vectors reproduce, in SQL and in JS.
   const [vectors] = await rows(`SELECT public.canonical_live_focus_transition_id_v1('33333333-3333-4333-8333-333333333333','11111111-2222-4333-8444-555555555555','NONE',NULL)::text n,
     public.canonical_live_focus_transition_id_v1('33333333-3333-4333-8333-333333333333','11111111-2222-4333-8444-555555555555','EMERGING','4ef8538d-ddda-5e11-b7d9-052be85de59a')::text e,
@@ -681,10 +681,10 @@ async function verifyAdversarialPayloads(owner, world) {
       $1,$2,$3,$4,$5::jsonb,$6,$7,$8,$9,$10,$11::jsonb,$12,$13,$14,$15,$16,$17,$18::jsonb,$19,$20,$21,$22,$23,$24,$25::jsonb,$26,$27,$28,$29,$30,$31,$32,$33::jsonb,$34)`,
   [session, owner, turns.userTurn, randomUUID(), JSON.stringify(userUnits), ...PROVENANCE, JSON.stringify(userBundles), ...FOCUS_PROVENANCE,
     JSON.stringify(userThreads), ...THREAD_PROVENANCE, JSON.stringify(userLifecycle), ...CONTINUITY_PROVENANCE, JSON.stringify(good), '']), 'INVALID_LIVE_FOCUS_PROVENANCE');
-  // Both exact typed stale conditions through the FINAL coordinator: 40001, nothing written, LF adds no third authority.
-  await rejected(() => exchange(...args(good, assistantGood, { sp: 9, seq: 0, version })), 'STALE_CONVERSATIONAL_FOCUS_CONTEXT', ['40001']);
-  await rejected(() => exchange(...args(good, assistantGood, { sp: null, seq: 1, version })), 'STALE_CONVERSATIONAL_FOCUS_CONTEXT', ['40001']);
-  await rejected(() => exchange(...args(good, assistantGood, FRESH(String(Number(version) + 1)))), 'STALE_THREAD_IDENTITY_CONTEXT', ['40001']);
+  // Both exact typed stale conditions through the FINAL coordinator: PT409 (PROD-RETRY-01 (0150)), nothing written, LF adds no third authority.
+  await rejected(() => exchange(...args(good, assistantGood, { sp: 9, seq: 0, version })), 'STALE_CONVERSATIONAL_FOCUS_CONTEXT', ['PT409']);
+  await rejected(() => exchange(...args(good, assistantGood, { sp: null, seq: 1, version })), 'STALE_CONVERSATIONAL_FOCUS_CONTEXT', ['PT409']);
+  await rejected(() => exchange(...args(good, assistantGood, FRESH(String(Number(version) + 1)))), 'STALE_THREAD_IDENTITY_CONTEXT', ['PT409']);
   eq(await worldSnapshot(), before, 'every refused attempt wrote nothing: no CU, no SP, no clock coordinate, no LF row');
   eq(await clockOf(session), { current_sp: null, same_sp_event_sequence: '0' });
   // The canonical payload then commits: the LF rows are the DB derivation.

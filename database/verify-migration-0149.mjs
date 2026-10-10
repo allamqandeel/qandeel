@@ -23,7 +23,8 @@
 //                              holds one, so 0149 erases nothing and QAN-BL-ACCT-01 stays open
 //   HOSTED_DEFAULT_PRIVILEGES  re-applying 0149 over the hosted Supabase posture (every client role granted, plus an
 //                              inherited grant) closes all six, keeps the five, and touches no existing Matching row
-//   BODIES_UNCHANGED           all eleven bodies are byte-identical to the 0109 source, and owners are unchanged
+//   BODIES_UNCHANGED           all eleven bodies are byte-identical to the 0109 source (the four retained commands with
+//                              exactly the 0150 PT409 stale-state substitution, PROD-RETRY-01), and owners are unchanged
 //
 //   f1..f3 the refused weakenings: a posture in which authenticated inherits the owner, a reopened direct grant, and a
 //          client-executable wrapper around one of the six
@@ -175,13 +176,16 @@ async function verifyCatalog(report) {
   await asRole('postgres');
   await report.section('DIRECT_RPC_DENY the six are executable by no application role, and the five keep authenticated', verifySuspendedPosture);
   await report.section('NO_BACKDOOR no other application-executable route reaches Matching setup state', verifyNoBackdoor);
-  await report.section('BODIES_UNCHANGED all eleven bodies are the 0109 source byte for byte, with unchanged owners', async () => {
+  await report.section('BODIES_UNCHANGED all eleven bodies are the 0109 source byte for byte (retained: plus exactly the 0150 substitution), with unchanged owners', async () => {
     const source = readFileSync(MIGRATION_0109, 'utf8').replace(/\r\n/gu, '\n');
     for (const fn of [...MATCHING_COMMANDS, MFN.SETUP]) {
       const start = source.indexOf(`CREATE FUNCTION public.${nameOf(fn)}(`);
       assert.ok(start >= 0, `0109 creates ${fn}`);
       const open = source.indexOf('AS $$', start) + 'AS $$'.length;
-      const body = source.slice(open, source.indexOf('$$;', open));
+      const original = source.slice(open, source.indexOf('$$;', open));
+      // PROD-RETRY-01 (0150) answers the retained commands' stale-state refusal with PT409 and changes nothing else.
+      const body = SEC_MATCH_00_RETAINED.includes(fn) && fn !== MFN.SETUP
+        ? original.replaceAll("ERRCODE='40001'", "ERRCODE='PT409'") : original;
       const posture = await rt.functionPosture(fn);
       assert.equal(posture.prosrc.replace(/\r\n/gu, '\n'), body, `BODIES_UNCHANGED ${fn} is the 0109 body`);
       assert.equal(posture.owner, 'postgres', `BODIES_UNCHANGED ${fn} is postgres-owned`);
@@ -216,8 +220,8 @@ async function verifyClients(report, humans) {
       const foreign = await existingSetup(two);
       await asRole('authenticated', fresh);
       for (const fn of SEC_MATCH_00_SUSPENDED) await rejected(CALL[fn], ['42501'], PERMISSION_DENIED);
-      await rejected(() => rt.pause(randomUUID(), randomUUID()), ['40001'], /MATCHING_STALE_STATE/u);
-      await rejected(() => rt.turnOff(randomUUID(), randomUUID()), ['40001'], /MATCHING_STALE_STATE/u);
+      await rejected(() => rt.pause(randomUUID(), randomUUID()), ['PT409'], /MATCHING_STALE_STATE/u);
+      await rejected(() => rt.turnOff(randomUUID(), randomUUID()), ['PT409'], /MATCHING_STALE_STATE/u);
       await rejected(() => rt.pause(randomUUID(), null), ['22023'], /MATCHING_COMMAND_INVALID/u);
       await rejected(() => rt.turnOff(foreign.activation, randomUUID()), ['23505'], /MATCHING_COMMAND_ID_CONFLICT/u);
       await rejected(() => rt.revokeContext(randomUUID(), randomUUID()), ['P0002'], /MATCHING_GRANT_NOT_FOUND/u);
@@ -320,8 +324,8 @@ async function verifyClients(report, humans) {
       const nothing = await rejected(() => rt.revokeContext(randomUUID(), randomUUID()), ['P0002'], /MATCHING_GRANT_NOT_FOUND/u);
       assert.equal(theirs.message, nothing.message, 'OWNER_ONLY another human grant is reported exactly as a nonexistent one');
       await rejected(() => rt.revokeDisclosure(randomUUID(), setup.authority), ['P0002'], /MATCHING_DISCLOSURE_AUTHORITY_NOT_FOUND/u);
-      await rejected(() => rt.pause(randomUUID(), setup.act), ['40001'], /MATCHING_STALE_STATE/u);
-      await rejected(() => rt.turnOff(randomUUID(), setup.act), ['40001'], /MATCHING_STALE_STATE/u);
+      await rejected(() => rt.pause(randomUUID(), setup.act), ['PT409'], /MATCHING_STALE_STATE/u);
+      await rejected(() => rt.turnOff(randomUUID(), setup.act), ['PT409'], /MATCHING_STALE_STATE/u);
       const [seen] = await rt.setup();
       assert.deepEqual([seen.participation_state, seen.matching_context_grant_id], ['OFF', null], 'OWNER_ONLY two sees only themself');
       await asRole('authenticated', one);
@@ -417,7 +421,7 @@ async function verifyConcurrency(report, humans) {
         refusal = error;
       }
       assert.ok(refusal, 'X01 the loser is refused rather than forking the history');
-      assert.equal(refusal.code, '40001', 'X01 and the refusal is the bounded stale-state one');
+      assert.equal(refusal.code, 'PT409', 'X01 and the refusal is the bounded stale-state one');
       await q2('ROLLBACK');
       await asRole('postgres');
       assert.equal(await rt.currentActOf(human), paused.participation_event_id, 'X01 the pointer names the winner');

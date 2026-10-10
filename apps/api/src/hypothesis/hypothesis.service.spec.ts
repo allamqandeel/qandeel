@@ -55,6 +55,12 @@ describe('HypothesisService', () => {
     repository.transition.mockRejectedValue(stale);
     await expect(service.transition('user-a','t',record().id,'ACTIVE')).rejects.toBe(stale);
     expect(repository.transition).toHaveBeenCalledTimes(1);
+    // PROD-RETRY-01: migration 0150 answers the same refusal with PT409; it is still never retried here.
+    repository.transition.mockReset();
+    const stalePt409 = Object.assign(new Error('Stale hypothesis version.'), { code: 'PT409' });
+    repository.transition.mockRejectedValue(stalePt409);
+    await expect(service.transition('user-a','t',record().id,'ACTIVE')).rejects.toBe(stalePt409);
+    expect(repository.transition).toHaveBeenCalledTimes(1);
   });
   // Evidence attachment is not a lifecycle decision: no automatic SUPPORTED /
   // MIXED / WEAK / REJECTED / RETIRED / REOPENED is ever derived here.

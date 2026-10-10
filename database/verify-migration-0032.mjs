@@ -156,8 +156,8 @@ async function verifyForegroundParity() {
 
   // Cross-user target: no mutation, no audit, no existence leak.
   assert.equal((await rows(WRAPPER_CALL, [randomUUID(), foreignTarget, 1, `memory:${eligible}`, 'SUPPORTING'])).length, 0);
-  // Stale version keeps the canonical 40001 contract.
-  await rejected(() => q(WRAPPER_CALL, [randomUUID(), target, 1, `memory:${second}`, 'SUPPORTING']), ['40001']);
+  // Stale version keeps the canonical stale contract (40001, PROD-RETRY-01 (0150): PT409).
+  await rejected(() => q(WRAPPER_CALL, [randomUUID(), target, 1, `memory:${second}`, 'SUPPORTING']), ['PT409']);
   // Validation contract unchanged.
   await rejected(() => q(WRAPPER_CALL, [randomUUID(), target, 0, `memory:${second}`, 'SUPPORTING']), ['22023']);
   await rejected(() => q(WRAPPER_CALL, [randomUUID(), target, 2, `memory:${second}`, 'NEUTRAL']), ['22023']);
@@ -210,8 +210,8 @@ async function verifyBackgroundPath() {
   assert.equal((await rows(BACKGROUND_CALL, [owner, sessionId, randomUUID(), otherSessionTarget, 1, `memory:${eligible}`, 'SUPPORTING'])).length, 0);
   // A caller cannot bind another user's session scope onto a foreign owner.
   assert.equal((await rows(BACKGROUND_CALL, [other, sessionId, randomUUID(), target, 1, `memory:${eligible}`, 'SUPPORTING'])).length, 0);
-  // Stale version keeps the canonical 40001 contract, with no mutation/audit.
-  await rejected(() => q(BACKGROUND_CALL, [owner, sessionId, randomUUID(), target, 1, `memory:${second}`, 'SUPPORTING']), ['40001']);
+  // Stale version keeps the canonical stale contract (PROD-RETRY-01 (0150): PT409), with no mutation/audit.
+  await rejected(() => q(BACKGROUND_CALL, [owner, sessionId, randomUUID(), target, 1, `memory:${second}`, 'SUPPORTING']), ['PT409']);
   // Evidence no longer eligible is rejected at mutation time.
   await rejected(() => q(BACKGROUND_CALL, [owner, sessionId, randomUUID(), target, 2, `memory:${superseded}`, 'SUPPORTING']), ['22023']);
   // Already-attached Evidence is rejected, in either role.

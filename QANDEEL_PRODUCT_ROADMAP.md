@@ -257,3 +257,20 @@ nothing.
 - **Paused:** S6-01 (Stage 6, Intelligent Matching Onboarding) stays at its decision checkpoint. It now owns
   `QAN-BL-MATCH-01`: Matching enrollment, correction and resume stay suspended until a reviewed Stage 6 launch path
   exists.
+
+### 6.4 Execution note — 2026-10-10 (PROD-RETRY-01)
+**Recorded:** 2026-10-10 by PROD-RETRY-01's closing change. This is a status note only: it rewrites no earlier section
+and authorizes nothing.
+- **SEC-MATCH-00** is `CLOSED / MERGED` through PR #323 as `e07857bab47f500a035e265b0eefc4b0bb65bd34`. It is not deployed.
+- **Inserted after it: PROD-RETRY-01 — Data API 40001 Retry Hazard Closure** (`QAN-BL-PROD-06`). It is a cross-cutting
+  launch and deployment gate, not a Product stage.
+  - Migration `0150` is `CLOSED / READY FOR PO MERGE DECISION` on PR #324. It is not merged.
+  - It is complete in the repository and **not deployed** on the hosted environment
+    ([record](docs/e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md)).
+- **The Product sequence is unchanged: CI-01 — Shared Intelligence Learning Evidence & Baseline is next.** It has not
+  started.
+- **The hosted deployment gate is separate from the Product sequence.**
+  - `QAN-BL-PROD-06` is `HIGH`, `DEFERRED — OWNED`, owner `HOSTED-DEPLOY-01`.
+  - It blocks every hosted deployment that would expose an affected function, until `0150` is applied there or
+    PostgREST `v16.0`+ is verified on the project itself.
+  - Deploying needs the Product Owner's separate approval.

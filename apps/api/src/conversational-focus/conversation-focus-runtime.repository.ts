@@ -6,8 +6,14 @@
 // canonical semantic payload, provenance and the expected clock token, and
 // maps ONE exact database condition to a typed domain error:
 //
-//   SQLSTATE 40001 + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
+//   SQLSTATE 40001 or PT409 + message EXACTLY 'STALE_CONVERSATIONAL_FOCUS_CONTEXT'
 //   -> StaleConversationalFocusContextError
+//
+// PROD-RETRY-01: migration 0150 answers the FINAL coordinator's stale-state
+// refusals with PT409, which PostgREST never re-runs (before v16 it re-ran a
+// 40001 transaction without bound). The coordinators 0150 does not change still
+// answer 40001. Both codes are accepted, so this seam is correct against a
+// database before or after 0150; the MESSAGE rule below is unchanged.
 //
 // Exact equality, never containment (FIX-T03B1B2-01). Migration 0066 emits
 // this stable token as the message itself and carries every variable part in
@@ -31,7 +37,12 @@ import {
   type ProposedFocusUnit,
 } from './conversation-focus-runtime.types';
 
-export const STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE = '40001';
+/** The SQLSTATE an exact stale-context refusal arrives with from migration 0150 on (PostgREST never re-runs it)... */
+export const STALE_CONTEXT_SQLSTATE = 'PT409';
+/** ...and the one a coordinator 0150 does not change, or a database before it, answers. */
+export const STALE_CONTEXT_LEGACY_SQLSTATE = '40001';
+/** Exactly those two codes, compared by equality. */
+export const isStaleContextSqlstate = (code: string | undefined): boolean => code === STALE_CONTEXT_SQLSTATE || code === STALE_CONTEXT_LEGACY_SQLSTATE;
 export const STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN = 'STALE_CONVERSATIONAL_FOCUS_CONTEXT';
 
 /** The narrow boundary the establishment service depends on; tests inject a fake. */
@@ -47,13 +58,13 @@ function wireUnits(units: readonly ProposedFocusUnit[]) {
 
 /**
  * True only for the exact typed database condition, never for a generic 40001
- * and never for a message that merely contains the token. No regex, no
+ * or PT409 and never for a message that merely contains the token. No regex, no
  * prefix/suffix acceptance, no case folding, no trimming or normalization.
  */
 export function isStaleConversationalFocusContext(error: unknown): boolean {
   if (!(error instanceof DataApiError)) return false;
   const { databaseCode, databaseMessage } = readDataApiUpstreamIdentity(error);
-  return databaseCode === STALE_CONVERSATIONAL_FOCUS_CONTEXT_SQLSTATE
+  return isStaleContextSqlstate(databaseCode)
     && databaseMessage === STALE_CONVERSATIONAL_FOCUS_CONTEXT_TOKEN;
 }
 
