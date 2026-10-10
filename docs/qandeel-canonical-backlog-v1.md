@@ -183,7 +183,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-06` | The Ended Shared World Has No Read-Only Living Analysis View | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CW-07` | Shared World Temporal Navigation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-01 — Intelligent Matching Onboarding` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching) | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation) | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-07` | Post-v16 PostgREST: Race-Converging `40001` Paths and Genuine Deadlocks Lose the Server-Side Re-run | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `LOW` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1168,7 +1169,7 @@ entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes impl
 
 ---
 
-### `QAN-BL-PROD-06` — Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching)
+### `QAN-BL-PROD-06` — Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation)
 
 - **Title / Finding:** PostgREST before `v16.0` runs every request through `hasql-transaction`, which re-runs the whole
   transaction without any bound when it fails with `40001` (`serialization_failure`), and from `hasql-transaction` 1.1
@@ -1218,11 +1219,53 @@ entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes impl
   Moving these commands off the Data API is rejected for now. A green CI run is not closure evidence. The hazard must
   never be reproduced on the hosted environment. If `S6-01` restores the six suspended Matching commands
   (`QAN-BL-MATCH-01`), they carry the same rule.
+- **Scope, amended by PROD-RETRY-01 (C0 / C1 / C2, 2026-10-10):** a cross-schema census (`public` and every `*_private`
+  schema) finds 24 Data API entry points that reach a `40001` raise: 12 **deterministic** (the list above, plus
+  `rotate_own_sealed_shared_id_v1` through `rotate_shared_world_invite_credential_v1` (`0081`) - a double-tap or a
+  two-device Shared ID regeneration), 2 race-converging, 2 guarded and 8 absorbing. Corrections to the list above:
+  `persist_post_response_hypothesis_generation_v1` cannot reach its stale raise (it activates only rows created in the same
+  transaction), and `execute_post_response_hypothesis_update_batch_v1` absorbs it into a durable `UPDATES_REJECTED` -
+  but its catcher is on the change path, so option (b) must extend it.
+- **Repository resolution (PROD-RETRY-01 C2; implemented, pending the Product Owner's merge decision):** option **(b)**.
+  Migration `0150` answers the 23 deterministic stale-state sites of the 11 raising bodies with `PT409` and extends the
+  batch catcher to accept it; compare-and-swap, every message, privilege and row are unchanged, and the API recognises
+  both codes. The cross-schema guard of `verify-migration-0150.mjs` proves no Data API entry point lets a deterministic
+  `40001` escape, and the live wire proof answers every stale request at once on `v12.2.9`, `v13.0.8`, `v14.18` and
+  `v16.4` ([implementation record](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md)). The
+  hosted condition stays: the hosted project is at `0074`, its PostgREST version is unverified, and `0150` reaches it
+  only in the `0075`+ catch-up (deployment rule in `database/README.md`, migration `0150` section). The disposition
+  (tombstone) is the closing change at the merge decision; until then this item stays as it is.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: Architecture and the Product Owner explicitly designated it at the
 SEC-MATCH-00 governance review, and the record defers it to a named future task. It chooses neither (a) nor (b), and
 nothing here authorizes implementation, an upgrade or a migration (BG-07).
+
+---
+
+### `QAN-BL-PROD-07` — Post-v16 PostgREST: Race-Converging `40001` Paths and Genuine Deadlocks Lose the Server-Side Re-run
+
+- **Title / Finding:** PROD-RETRY-01 deliberately keeps `40001` where PostgREST's server-side re-run is the CORRECT
+  answer before v16: the first-creation race of `ensure_public_identity_v1` (through
+  `start_own_public_experience_draft_v1` and `post_own_public_discussion_v1`), whose re-run answers `ALREADY_PRESENT`, and a
+  genuine deadlock (`40P01`, never raised by any function), whose re-run usually succeeds. PostgREST v16+ no longer
+  re-runs either: the race loser and a deadlock victim then receive HTTP 500, and the API has no bounded retry for them.
+- **Source:** [PROD-RETRY-01 C1 design](e2e/QANDEEL_PROD_RETRY_01_C1_DESIGN_v1.md) D7 (§4.4, §4.5, §11), accepted by
+  the Product Owner at the C1 gate (2026-10-10) as a `LOW` deferred item that does not block launch.
+- **Anti-duplication:** `QAN-BL-PROD-06` is the deterministic hazard on lines BEFORE v16 and is resolved in the
+  repository by `0150`; no item covers the behavior of the race-converging and deadlock paths AFTER a move to v16.
+  `QAN-BL-PROD-01` … `05` and `QAN-BL-LAUNCH-*` name neither.
+- **Why deferred:** no QANDEEL environment is verified on PostgREST v16+, the race is a rare concurrent first identity
+  creation, and lock-order discipline keeps deadlocks rare; the API may not retry a request it does not know to be
+  idempotent, so the answer is a bounded, idempotency-aware retry design, not a code swap.
+- **Owner task:** `PROD-RETRY-02 — Post-v16 Data API Retry Semantics`
+- **Severity:** `LOW`. Not a launch gate.
+- **Reopen condition:** before any QANDEEL environment (hosted included) is moved to PostgREST v16+, or when a
+  race-converging path or a deadlock is observed failing a request.
+- **Required future property:** on PostgREST v16+, a race-converging `40001` and a genuine `40P01` are retried a
+  bounded number of times by the server channel that issued them, only where the request is idempotent, or are answered
+  with a typed retryable outcome; nothing here weakens the `PT409` stale-state contract of `0150`.
+- **Status:** `DEFERRED — OWNED`
 
 ---
 
@@ -2054,6 +2097,20 @@ The independent review of PR #323 at `a0290f84c5e40b5bcde4944eb23d648fc337a078` 
 
 The register now holds **50** items: 22 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`. By severity: 29 `HIGH`, 20 `MEDIUM` and 1 `LOW`, counted mechanically from the §4 index.
+
+**PROD-RETRY-01 reconciliation (2026-10-10; implemented, not merged).** PROD-RETRY-01 is the Data API `40001` retry
+hazard closure, migration `0150`, under the Product Owner's C1 decision ("C1 ACCEPTED WITH CORRECTIONS — AUTHORIZE C2").
+
+- **Inherited items (BG-05):** `QAN-BL-PROD-06`. Its scope is amended (the Shared ID rotation added; the generation and
+  batch rows corrected) and its repository resolution is recorded; it stays `DEFERRED — OWNED` until the closing change
+  at the Product Owner's merge decision, which disposes of it under BG-08.
+- **Admitted:** `QAN-BL-PROD-07` (`LOW`, `DEFERRED — OWNED`, owner `PROD-RETRY-02 — Post-v16 Data API Retry Semantics`),
+  the Product Owner's D7. Anti-duplication: no item covered the post-v16 behavior of the race-converging and deadlock
+  paths. It is not a launch gate.
+- **`QAN-BL-MATCH-01`**, **`QAN-BL-ACCT-01`**: unchanged.
+
+The register now holds **51** items: 23 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`. By severity: 29 `HIGH`, 20 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
 
 ---
 

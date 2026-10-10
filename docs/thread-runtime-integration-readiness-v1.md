@@ -198,3 +198,10 @@ payload change; no new dependency and no lockfile change.
   static database contract.
 * `tests/thread-runtime-integration-readiness-contract.test.mjs` — the
   repository-wide static anti-scope contract.
+
+## 7. Controlled forward amendment — PROD-RETRY-01 (migration `0150`)
+
+The typed stale condition this slice reuses from T-03B1b2 is now "SQLSTATE `PT409` or `40001` whose message EQUALS
+`STALE_CONVERSATIONAL_FOCUS_CONTEXT`". The 0068 coordinator this slice calls is not changed and keeps `40001`; `PT409` is
+what the FINAL coordinator answers from `0150` (PROD-RETRY-01, `QAN-BL-PROD-06`). The predicate is still reused, never
+restated. Record: [PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).

@@ -1455,3 +1455,24 @@ unchanged.
 **BG-08 / BG-09.** SEC-MATCH-00 admits `QAN-BL-MATCH-01` to the canonical backlog and records a `QAN-BL-ACCT-01`
 current-truth note there. It changes no phase status: `I-07A`, `I-07B`, `I-07C`, `I-07D` and parent `I-07` remain **CLOSED / FROZEN**. This is a controlled
 privilege amendment to their frozen surface, not a reopening of Product scope.
+
+## 48. `PROD-RETRY-01` — controlled forward amendment to the `I-07A` stale-state SQLSTATE
+
+Migration `0150` (PROD-RETRY-01, `QAN-BL-PROD-06`; Product Owner C1 decision of 2026-10-10) changes ONE thing in the four
+commands §47 retained for `authenticated`: `pause_matching_participation_v1`, `turn_off_matching_participation_v1`,
+`revoke_matching_context_v1` and `revoke_pre_match_disclosure_authority_v1` answer their stale expected state
+(`MATCHING_STALE_STATE`) with SQLSTATE `PT409` instead of `40001`. Where §7 (the command boundary) states "a
+bounded `40001`", read `PT409` for these four from `0150` on.
+
+PostgREST before v16.0 re-runs a request's whole transaction, without bound, on SQLSTATE `40001`, so a
+deterministic stale refusal sent through it was never answered; `PT409` is never re-run and is answered HTTP 409 on every
+PostgREST line (before `0150`, v16+ answered HTTP 500 `{code 40001}`). The message, DETAIL and HINT, the compare-and-swap, the lock
+order, the idempotent replay, the owner, the grants, `SECURITY DEFINER` and `search_path` are byte-identical
+(migration 0150 proves this about itself in one transaction).
+
+What does NOT change: the six commands `0149` suspended, the `I-07B` … `I-07D` cores and every other Matching raiser
+still answer `40001`; none is executable by an application role. The deployment rule of §47 is **narrowed, not removed**:
+the four retained commands no longer hang a PostgREST before v16, but any future exposure of a Matching function that
+raises `40001` (including the restoration of the six under `QAN-BL-MATCH-01`) is refused by the PROD-RETRY-01 catalog
+guard (`database/verify-migration-0150.mjs`) until it is converted or proven safe. `I-07` and its slices remain
+**CLOSED / FROZEN**; this is not a reopening. Record: [PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).

@@ -105,3 +105,20 @@ The older real-PostgreSQL verifiers (0065–0070) asserted the temporary T-03A2 
 ## 7. Anti-scope
 
 No T-03C historical projection, knowledge frontier or PRE_FIRST_SP. No Return-to-Live-Focus, no Go Live + Locate, no focus-follow. No LF label, Home, direction, relation count, confidence, importance, content or spatial hint on the wire or in the database. No visual UI, no mobile shell change, no kernel change. No new dependency, no lockfile change. No Thread merge, no Home relocation, no rewrite of any 0064–0070 object.
+
+## 8. Controlled forward amendment — PROD-RETRY-01 (migration `0150`)
+
+From `0150` (PROD-RETRY-01, `QAN-BL-PROD-06`) the FINAL coordinator `commit_finalized_exchange_with_full_semantic_chain_v1`
+answers its two exact typed stale conditions (`STALE_CONVERSATIONAL_FOCUS_CONTEXT`, `STALE_THREAD_IDENTITY_CONTEXT`,
+DETAIL unchanged) with SQLSTATE `PT409` instead of `40001`. D-07's bounded recovery is unchanged: the runtime
+recognises the exact message under `PT409` or `40001`, by equality, and spends the same ONE shared retry; LF still adds
+no third stale authority.
+
+PostgREST before v16.0 re-runs a request's whole transaction, without bound, on SQLSTATE `40001`, so a
+deterministic stale refusal sent through it was never answered; `PT409` is never re-run and is answered HTTP 409 on every
+PostgREST line (before `0150`, v16+ answered HTTP 500 `{code 40001}`). The message, DETAIL and HINT, the compare-and-swap, the lock
+order, the idempotent replay, the owner, the grants, `SECURITY DEFINER` and `search_path` are byte-identical
+(migration 0150 proves this about itself in one transaction).
+
+Before `0150`, behind a PostgREST before v16, the recovery never ran (the request was never answered). Record:
+[PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).

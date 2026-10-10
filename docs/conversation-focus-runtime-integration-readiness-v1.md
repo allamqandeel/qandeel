@@ -117,3 +117,18 @@ failure leaves both turns COMPLETED: no `failTurn`, no regeneration.
 - `database/tests/conversation-focus-runtime-integration-readiness-v1.test.mjs` and
   `tests/conversation-focus-runtime-integration-readiness-contract.test.mjs`, both wired
   into API CI
+
+## Controlled forward amendment — PROD-RETRY-01 (migration `0150`)
+
+The repository's ONE mapped condition is now "SQLSTATE `PT409` **or** `40001` whose message EQUALS
+`STALE_CONVERSATIONAL_FOCUS_CONTEXT`" (`isStaleContextSqlstate`, by equality; FIX-T03B1B2-01 unchanged: no
+containment, regex, case folding or normalization, and never an HTTP status). `PT409` is what the FINAL coordinator
+answers from `0150` (PROD-RETRY-01, `QAN-BL-PROD-06`); the 0066 / 0067 / 0068 coordinators keep `40001`.
+
+PostgREST before v16.0 re-runs a request's whole transaction, without bound, on SQLSTATE `40001`, so a
+deterministic stale refusal sent through it was never answered; `PT409` is never re-run and is answered HTTP 409 on every
+PostgREST line (before `0150`, v16+ answered HTTP 500 `{code 40001}`). The message, DETAIL and HINT, the compare-and-swap, the lock
+order, the idempotent replay, the owner, the grants, `SECURITY DEFINER` and `search_path` are byte-identical
+(migration 0150 proves this about itself in one transaction).
+
+Record: [PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).
