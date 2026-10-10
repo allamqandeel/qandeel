@@ -185,7 +185,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-01 — Intelligent Matching Onboarding` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation) | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-07` | Post-v16 PostgREST: Race-Converging `40001` Paths and Genuine Deadlocks Lose the Server-Side Re-run | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `LOW` | `DEFERRED — OWNED` |
-| `QAN-BL-INTEL-01` | Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02) | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-INTEL-01` | Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02) | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-QIR-01` | General Question Bind-Time Version and Lifecycle Recheck (R3-G) | `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-INTEL-02` | Post-Response Intelligence Ledger Content (`0029` Intent Span, `0033` Candidate Plan): Retention and Reuse After Forget / Do-Not-Rely | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `HIGH` | `VALIDATION — OPEN` |
 | `QAN-BL-CI-02` | Forward-Safety Mirror: the `QAN-INF-03` Expo Dependency-Validation Leg Fails Intermittently on Some Local Hosts | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `MEDIUM` | `VALIDATION — OPEN` |
 
@@ -1297,59 +1298,17 @@ nothing here authorizes implementation, an upgrade or a migration (BG-07).
 
 ---
 
-### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
+### `QAN-BL-QIR-01` — General Question Bind-Time Version and Lifecycle Recheck (R3-G)
 
-- **Title / Finding:** When a user forgets a Memory (`DELETED`) or stops relying on it (`DISABLED`) through the `0128`
-  commands, that Memory stops counting as Evidence at read time — but the hypotheses, Confidence evaluations and
-  Understanding items derived from it keep their statement, status and visibility and are still injected into later
-  sessions. The derivative is *technically stored* without being *currently usable*, and nothing re-evaluates it. Confirmed
-  on a synthetic harness (CI-01 C0 report §4.4, scenario F1): after forget / do-not-rely, the linked hypotheses stayed
-  `ACTIVE` and reached a new session.
-- **Source:** frozen I-08A4 §18 (`PG-02 — Personal Evidence Invalidation → Derived Understanding Propagation`); P1 closure
-  §11 / §18 ("The Product must not pretend these gaps are implemented"); the
-  [W3-MEGA-U record](e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md) §5; the
-  [CI-01 C0 Decision Report](e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) §4.2 (D4) and §4.4; the
-  [Intelligence Evidence Baseline v1](intelligence-evidence-baseline-v1.md) §5.3 and §6. Admitted under the Product Owner's
-  C1 decision 3 (2026-10-10), recorded in the [C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) §0.1.
-- **Anti-duplication:** a search of this register for `PG-02`, "invalidation", "propagation" and "re-evaluation" finds no
-  item. `QAN-BL-CTX-01` is conversational relevance; `QAN-BL-PRIV-01` / `02` are export completeness; `QAN-BL-CW-02` is
-  the Shared private-source lane; W3-MEGA-M closed its Memory-control findings inside its own task and did not admit PG-02.
-  Until now PG-02 was named only in frozen records and in Current State as an open gap with no owner.
-- **Why deferred:** CI-01 is a baseline task (D1, D5) that changes no runtime; the Product Owner decomposed the repair
-  (D6) into bounded slices after C1. The correct behaviour is **re-evaluation according to the derivative's state and the
-  remaining evidence — not automatic falsification and not silent reliance**; it must not invent a Confidence number
-  (`CI-01-L5`), must strengthen forget rather than weaken it (`CI-01-L6`), and needs a Product decision on what the owner
-  sees for an item pending re-evaluation. Any change to frozen Confidence or lifecycle semantics is a Controlled Change.
-- **Owner task:** `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` — the first C2 slice after CI-01 C1 (C1
-  contract §12, item 1).
-- **Severity:** `HIGH` — it touches the user's frozen authority over forget / do-not-rely and the truth of the Understanding
-  surface.
-- **Phased scope (documentation; authorizes nothing):** (1) take the invalidation signal from the existing `0128` effect
-  ledger when a Memory leaves `ACTIVE`; (2) re-evaluate the derived hypotheses through the existing Confidence core and
-  transition functions (`0006`, `0035`, `0036`), never inventing a score; (3) let the Understanding projection reflect a
-  pending re-evaluation under Product-approved wording (Copy Gate); (4) accept against the CI-01 C1-B synthetic scenario
-  F1 re-run; export and erasure paths unchanged.
-- **Dependencies:** the frozen Confidence / lifecycle cores; the `0128` effect ledger; coexistence with the `0134` contest
-  semantics (a contested item that also lost evidence has two independent reasons for MIXED); the CI-01 C1-B harness as
-  the measurement; a Product decision on the owner-visible wording.
-- **Reopen condition:** automatic when `INTEL-TM-01` opens; it MUST be opened before any production feature claims that
-  forgetting a Memory removes its influence from QANDEEL's Understanding, and before Stage 8A benchmarks hypothesis
-  quality on real LLMs over data that a user may have asked QANDEEL to forget.
-- **Required future property:** evidence loss ≠ hypothesis false; re-evaluation per state and remaining evidence; no
-  numeric Confidence invented; forget and do-not-rely strengthened, never weakened; no unified deletion rule (D4); the
-  derivative is never silently relied upon while its evidence is gone.
-- **Current truth (INTEL-TM-01, 2026-10-10; implemented, PR open, not merged):** resolved in the repository by migration
-  `0151` under the Product Owner's Implementation Task Contract (Controlled Changes CC-1 … CC-4): a Hypothesis known to
-  depend on forgotten, disabled or corrected Memory is withheld from every provider-facing consumer, from question
-  selection and binding, and shown to its owner without its statement — derived from committed facts, never a worker —
-  and nothing is declared false. Record: [INTEL-TM-01 implementation record](e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md).
-  It stays `DEFERRED — OWNED` until the closing change at the Product Owner's merge decision disposes of it (BG-08).
+- **Title / Finding:** migration `0151` closes the PG-02 withdrawal/correction race, but general `finalize_conversation_turn_v2` binding lacks an exact-version / questioning-eligible-lifecycle recheck for OTHER concurrent changes between SELECTED and BOUND. The later non-current status of a BOUND row does not prove no stale question was delivered.
+- **Source:** INTEL-TM-01 implementation record §9, residue R3-G, and migration `0063`'s question binding / finalize v2.
+- **Anti-duplication:** `QAN-BL-INTEL-01` covers evidence reliance after withdraw/correct; `QAN-BL-INTEL-02` covers durable ledger retention; `QAN-BL-CTX-01` covers conversational relevance. No indexed item owns general question bind-time version/lifecycle validity.
+- **Why deferred:** separate from the approved PG-02 Controlled Changes. No general version/lifecycle semantics or historical SQL is changed in INTEL-TM-01.
+- **Owner task:** `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck`.
+- **Severity:** `MEDIUM`.
+- **Reopen condition:** a QIR-006 finalization change, a claim that general bound questions are valid at commit, or a Stage 8A formal Question quality gate that relies on that property.
+- **Required future property:** define and prove commit-point correctness for other version/lifecycle races with two-connection tests while preserving selection history, atomicity, idempotency and PG-02 safety. A future Product-approved Task Contract is required for any code.
 - **Status:** `DEFERRED — OWNED`
-
-This entry freezes **no algorithm** and no owner-visible wording. It does not decide whether a derivative is retired,
-demoted or re-supported; that is the re-evaluation's job under its own Task Contract (BG-07).
-
----
 
 ### `QAN-BL-INTEL-02` — Post-Response Intelligence Ledger Content (`0029` Intent Span, `0033` Candidate Plan): Retention and Reuse After Forget / Do-Not-Rely
 
@@ -1639,6 +1598,66 @@ Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
+### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
+
+- **Closing task:** `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)`
+- **PR / SHA:** `#326` / `995d5ae9bf2530ac8e655b870526e0976be7cbf4`
+- **Disposition:** repository implementation completed with migration `0151`; hosted deployment remains a separate gate. No global forgotten-content erasure claim.
+
+- **Title / Finding:** When a user forgets a Memory (`DELETED`) or stops relying on it (`DISABLED`) through the `0128`
+  commands, that Memory stops counting as Evidence at read time — but the hypotheses, Confidence evaluations and
+  Understanding items derived from it keep their statement, status and visibility and are still injected into later
+  sessions. The derivative is *technically stored* without being *currently usable*, and nothing re-evaluates it. Confirmed
+  on a synthetic harness (CI-01 C0 report §4.4, scenario F1): after forget / do-not-rely, the linked hypotheses stayed
+  `ACTIVE` and reached a new session.
+- **Source:** frozen I-08A4 §18 (`PG-02 — Personal Evidence Invalidation → Derived Understanding Propagation`); P1 closure
+  §11 / §18 ("The Product must not pretend these gaps are implemented"); the
+  [W3-MEGA-U record](e2e/QANDEEL_W3_MEGA_U_UNDERSTANDING_CONTESTED_IMPLEMENTATION_RECORD_v1.md) §5; the
+  [CI-01 C0 Decision Report](e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) §4.2 (D4) and §4.4; the
+  [Intelligence Evidence Baseline v1](intelligence-evidence-baseline-v1.md) §5.3 and §6. Admitted under the Product Owner's
+  C1 decision 3 (2026-10-10), recorded in the [C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) §0.1.
+- **Anti-duplication:** a search of this register for `PG-02`, "invalidation", "propagation" and "re-evaluation" finds no
+  item. `QAN-BL-CTX-01` is conversational relevance; `QAN-BL-PRIV-01` / `02` are export completeness; `QAN-BL-CW-02` is
+  the Shared private-source lane; W3-MEGA-M closed its Memory-control findings inside its own task and did not admit PG-02.
+  Until now PG-02 was named only in frozen records and in Current State as an open gap with no owner.
+- **Why deferred:** CI-01 is a baseline task (D1, D5) that changes no runtime; the Product Owner decomposed the repair
+  (D6) into bounded slices after C1. The correct behaviour is **re-evaluation according to the derivative's state and the
+  remaining evidence — not automatic falsification and not silent reliance**; it must not invent a Confidence number
+  (`CI-01-L5`), must strengthen forget rather than weaken it (`CI-01-L6`), and needs a Product decision on what the owner
+  sees for an item pending re-evaluation. Any change to frozen Confidence or lifecycle semantics is a Controlled Change.
+- **Owner task:** `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` — the first C2 slice after CI-01 C1 (C1
+  contract §12, item 1).
+- **Severity:** `HIGH` — it touches the user's frozen authority over forget / do-not-rely and the truth of the Understanding
+  surface.
+- **Phased scope (documentation; authorizes nothing):** (1) take the invalidation signal from the existing `0128` effect
+  ledger when a Memory leaves `ACTIVE`; (2) re-evaluate the derived hypotheses through the existing Confidence core and
+  transition functions (`0006`, `0035`, `0036`), never inventing a score; (3) let the Understanding projection reflect a
+  pending re-evaluation under Product-approved wording (Copy Gate); (4) accept against the CI-01 C1-B synthetic scenario
+  F1 re-run; export and erasure paths unchanged.
+- **Dependencies:** the frozen Confidence / lifecycle cores; the `0128` effect ledger; coexistence with the `0134` contest
+  semantics (a contested item that also lost evidence has two independent reasons for MIXED); the CI-01 C1-B harness as
+  the measurement; a Product decision on the owner-visible wording.
+- **Reopen condition:** automatic when `INTEL-TM-01` opens; it MUST be opened before any production feature claims that
+  forgetting a Memory removes its influence from QANDEEL's Understanding, and before Stage 8A benchmarks hypothesis
+  quality on real LLMs over data that a user may have asked QANDEEL to forget.
+- **Required future property:** evidence loss ≠ hypothesis false; re-evaluation per state and remaining evidence; no
+  numeric Confidence invented; forget and do-not-rely strengthened, never weakened; no unified deletion rule (D4); the
+  derivative is never silently relied upon while its evidence is gone.
+- **Current truth (INTEL-TM-01, 2026-10-10; merged, PR #326):** resolved in the repository by migration
+  `0151` under the Product Owner's Implementation Task Contract (Controlled Changes CC-1 … CC-4): a Hypothesis known to
+  depend on forgotten, disabled or corrected Memory is withheld from every provider-facing consumer, from question
+  selection and binding, and shown to its owner without its statement — derived from committed facts, never a worker —
+  and nothing is declared false. Record: [INTEL-TM-01 implementation record](e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md).
+  It is `CLOSED — TOMBSTONE` through the post-merge BG-08/BG-09 reconciliation.
+- **Status:** `CLOSED — TOMBSTONE`
+
+This entry freezes **no algorithm** and no owner-visible wording. It does not decide whether a derivative is retired,
+demoted or re-supported; that is the re-evaluation's job under its own Task Contract (BG-07).
+
+---
+
+
+
 All T-12 tombstones below were reconciled under BG-08 against **T-12 — Final Living Analysis Map
 Integration v1**, PR **#220**, with final implementation/validation evidence head
 **`02bff1b61c65c33a0d186da52dfa25d25baebe9e`**. The BG-08 commits after that head are governance-
@@ -1913,13 +1932,13 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | `DEFERRED — OWNED` | 24 |
 | `VALIDATION — OPEN` | 2 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **54** |
+| `CLOSED — TOMBSTONE` | 19 |
+| **Total** | **55** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 31 |
-| `MEDIUM` | 21 |
+| `MEDIUM` | 22 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -2362,6 +2381,9 @@ The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION �
 
 ---
 
+
+**INTEL-TM-01 post-merge closure (2026-10-10).** PR #326 merged as `995d5ae9bf2530ac8e655b870526e0976be7cbf4`; its inherited `QAN-BL-INTEL-01` is `CLOSED — TOMBSTONE`, `QAN-BL-QIR-01` is admitted under `QIR-006-R1` as `MEDIUM / DEFERRED — OWNED`, and `QAN-BL-INTEL-02` remains `VALIDATION — OPEN` under `INTEL-RET-01`. L-1/L-2/R2 are limitations/observations, not duplicated backlog or global erasure claims. **Latest index: 55 items; 24 / 2 / 10 / 19 by status, 31 / 22 / 2 by severity.** C2 Memory Correction & Arabic Acquisition is research-next, not implementation-open.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -2438,7 +2460,8 @@ Inherited after T-12 closure reconciliation:
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
 | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `QAN-BL-PROD-07` |
 | `CI-01 — Shared Intelligence Learning Evidence & Baseline` | none — no item names it; admitted `QAN-BL-INTEL-01` (C1-A, Product Owner decision 3), `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (closing change, Product Owner closing decisions 2 and 3); `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01` and `QAN-BL-PRIV-02` cited and left unchanged |
-| `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` — resolved in the repository (migration `0151`, PR open, not merged); stays `DEFERRED — OWNED` until the closing change at the Product Owner's merge decision; `QAN-BL-INTEL-02` triggered check recorded; residue R3-G proposed for the Product Owner's decision |
+| `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` tombstoned after merged PR #326; `QAN-BL-QIR-01` admitted under `QIR-006-R1`; `QAN-BL-INTEL-02` remains `VALIDATION — OPEN` under `INTEL-RET-01`; no deployment or global erasure claim |
+| `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck` | `QAN-BL-QIR-01` (admitted at INTEL-TM-01 post-merge closure) |
 | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (owner name PO-APPROVED) |
 | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (owner name PO-APPROVED) |
 
