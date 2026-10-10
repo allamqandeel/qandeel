@@ -7,7 +7,8 @@ IMPLEMENTATION"), which approved the WP0R2 architecture with mandatory amendment
 WP0R2 *Final Architecture Correction*, WP0R *Revised Architecture Decision*, WP0 *Repo Truth & Architecture Decision*
 (task-local reports; WP0R2 wins where it amends WP0R).
 **Baseline:** `main = 44a440cfbb2c05421ed36639a5cf67ee7a8d25e5` (the merge of PR #325); migrations `0001`–`0150`.
-**Branch:** `intel/intel-tm-01-pg02-personal-evidence-truth-maintenance`.
+**Branch:** `intel/intel-tm-01-pg02-personal-evidence-truth-maintenance`. The **implementation evidence head** is
+`272a567e62e93fb684f340172621840a2eb48e8f`; every later commit records results or documentation only.
 **Migration:** `0151_personal_evidence_truth_maintenance_v1.sql` (the next free slot; forward-only; no historical
 migration edited).
 **Backlog:** owner of `QAN-BL-INTEL-01`. Its disposition is made by the closing change at the Product Owner's merge
@@ -180,6 +181,12 @@ announced. A withheld item offers no "talk" control.
 - Static: `tests/intel-tm-01-personal-evidence-truth-maintenance-contract.test.mjs`, plus the re-anchored U1 and W3-CORR-U.
 - CI-01: the F1 scenario re-run on the implementation SHA, recorded in a **new** results file; the `6a5fa42` results stay
   untouched. The driver gains a per-Hypothesis reliance measure beside the old item count.
+- **CI-01 F1 re-run:** `scripts/ci-01/results/272a567e62e93fb684f340172621840a2eb48e8f.json` (implementation SHA `272a567`, from
+  `main` `44a440c`). F1: Hypothesis injected after forget 2 / 2 → **0 / 2** with the turns generating normally; the one
+  Hypothesis that depended on withdrawn Memory is `NO_REMAINING_SUPPORT` with its withdrawal recorded, relied on **0**; the
+  other seven scenario summaries are identical to `6a5fa42`; controls hold. A first run at `3eed288` measured failed turns
+  (the harness's own transport refused the new reliance read, so the reasoning context failed closed); it was discarded,
+  the transport fixed in `272a567`, and nothing from it is recorded.
 
 ## 9. Backlog and residues
 
