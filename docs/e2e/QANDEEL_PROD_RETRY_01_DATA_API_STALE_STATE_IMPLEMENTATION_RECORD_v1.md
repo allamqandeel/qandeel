@@ -1,9 +1,17 @@
 # PROD-RETRY-01 — Data API 40001 Retry Hazard Closure: Implementation Record (C2)
 
-**Status:** `IMPLEMENTED — READY FOR REVIEW` on `prod/prod-retry-01-stale-state-pt409` from `main` at
-`e07857bab47f500a035e265b0eefc4b0bb65bd34`. The exact-head API CI is pending. **NOT MERGED. NOT DEPLOYED.**
+**Status:** `CLOSED / READY FOR PO MERGE DECISION — NOT MERGED / NOT DEPLOYED`. The Product Owner's technical review
+passed (2026-10-10, "TECHNICAL REVIEW PASSED — AUTHORIZE DOCUMENTATION CLOSURE ONLY") at the exact reviewed head
+`3a780baf0069e3464511e7bd6312d59006a11ac1` of `prod/prod-retry-01-stale-state-pt409` (PR #324). That branch starts from `main` at
+`e07857bab47f500a035e265b0eefc4b0bb65bd34`. The closing change on top of it is documentation only (§10).
+- Merging needs the Product Owner's explicit decision.
+- Deploying needs its own approval and stays gated by `QAN-BL-PROD-06` (§8, §10.4).
+- The repository fix being complete is **not** the hosted hazard being closed.
 
-**Backlog:** inherits `QAN-BL-PROD-06` (`HIGH`, launch / deployment gate) and admits `QAN-BL-PROD-07` (`LOW`).
+*(At C2: `IMPLEMENTED — READY FOR REVIEW`; the exact-head API CI was pending.)*
+
+**Backlog:** inherits `QAN-BL-PROD-06` (`HIGH`, launch / deployment gate). At closure it is re-owned, not tombstoned, to
+`HOSTED-DEPLOY-01` (§10.4). Admits `QAN-BL-PROD-07` (`LOW`).
 
 **Design:** [C1 design, coverage and safety contract](QANDEEL_PROD_RETRY_01_C1_DESIGN_v1.md), accepted by the Product
 Owner with corrections (2026-10-10). C2 was authorized under that contract.
@@ -205,7 +213,7 @@ with a non-transactional sequence:
 An EXIT trap stops every engine container whatever happens.
 
 `verify-migration-0133.mjs` replays 0150 under hosted defaults through `psql`, which this host lacks: CI-only
-confirmation. **Nothing was run against a hosted environment.**
+confirmation. **Nothing was run against a hosted environment.** The exact-head CI results are in §10.2.
 
 **Re-anchored, only where a check asserted a changed function's stale code or its pinned text:**
 - **Verifiers:** 0027, 0028, 0032, 0036, 0070, 0071, 0078, 0081, 0109, 0138 and 0149 (`BODIES_UNCHANGED`: the four
@@ -224,8 +232,8 @@ confirmation. **Nothing was run against a hosted environment.**
 - **`QAN-BL-PROD-06`.**
   - Scope amended (C0 / C1 / C2): the Shared ID rotation is added; the generation entry is guarded; the batch absorbs,
     and its catcher is on the change path.
-  - Repository resolution recorded. It stays `DEFERRED — OWNED` until the closing change at the Product Owner's merge
-    decision (BG-08).
+  - Repository resolution recorded. *(At C2:)* it stays `DEFERRED — OWNED` until the closing change at the Product
+    Owner's merge decision (BG-08). The closing change re-owned it instead of tombstoning it (§10.4).
   - The hosted condition is recorded as the 0150 deployment rule in `database/README.md`.
 - **`QAN-BL-PROD-07`** admitted after anti-duplication: `LOW`, `DEFERRED — OWNED`, owner `PROD-RETRY-02 — Post-v16
   Data API Retry Semantics`. It covers the post-v16 behavior of the race-converging `40001` paths and genuine
@@ -268,3 +276,116 @@ confirmation. **Nothing was run against a hosted environment.**
   and `40001` in the unreachable I-07B..D cores. The guard forces conversion the moment any of those becomes reachable.
 - **v16 removes the server re-run** that today resolves the race-converging paths and genuine deadlocks
   (`QAN-BL-PROD-07`).
+
+## 10. Closure (2026-10-10) — CLOSED / READY FOR PO MERGE DECISION, NOT MERGED, NOT DEPLOYED
+
+The Product Owner's decision was "TECHNICAL REVIEW PASSED — AUTHORIZE DOCUMENTATION CLOSURE ONLY". This closing change
+touches documentation alone. It changes no SQL, no migration (`0150` included), no API or mobile code, no test and no
+workflow. Nothing was merged or deployed, and no hosted environment was contacted.
+
+### 10.1 Exact reviewed head
+
+`3a780baf0069e3464511e7bd6312d59006a11ac1` on `prod/prod-retry-01-stale-state-pt409` (PR #324). The branch starts from
+`main` at `e07857bab47f500a035e265b0eefc4b0bb65bd34`. Its four commits are `347a4f8` (migration, guard, verifier, wire
+proof, contract, CI), `7a7c4be` (API), `dd1a508` (re-anchors) and `3a780ba` (documentation).
+
+### 10.2 Final results on that head
+
+| Gate | Run | Result |
+|---|---|---|
+| API CI (whole gate) | `38019937801` | **success** |
+| Mobile CI | `38019937819` | **success**. VAL-01 found no mobile path changed: the fast mobile contract gate ran and passed, and the build and device jobs were skipped by plan |
+| `verify-migration-0150.mjs` | in API CI | **28 / 28 PASS**: bodies, posture, census, self-check p0–p6, guard with g1–g5, stale / no-write, Shared ID races, race-converging and replay-guarded |
+| Live PostgREST `v12.2.9` | in API CI | **PASS**: every deterministic stale refusal is HTTP 409 `{code PT409}` with the frozen message and DETAIL, nothing written, `PT409` executed exactly once |
+| Live PostgREST `v13.0.8` | in API CI | **PASS**, same as `v12.2.9` |
+| Live PostgREST `v14.18` | in API CI | **PASS**, same as `v12.2.9` |
+| Live PostgREST `v16.4` | in API CI | **PASS**, same as `v12.2.9`; in addition, `40001` is HTTP 500 after exactly one execution |
+| SEC-MATCH-00, PROD-SEC-02 and PROD-OPS-01 live PostgREST proofs | in API CI, on all four lines | **PASS** |
+| `verify-migration-0133.mjs` (hosted-default replay through `psql`; CI-only) | in API CI | **PASS** |
+| `verify-migration-0130.mjs` (a known Windows clock-skew flake locally) | in API CI | **PASS** |
+| `test:forward-safety-contract` (flaked locally only under a parallel `node --test`) | in API CI | **35 / 35** |
+
+Nothing above was re-run for this closing change. Proportional validation of the closing change itself is in §10.6.
+
+### 10.3 What was found and closed during C1 / C2
+
+- **PT409 → 409 against 40001 → 500 (the Product Owner's C1 correction).**
+  - Documented in §5.
+  - No consumer branches on HTTP status, and messages are unchanged.
+  - The Data API behavior is proven on the wire on all four lines.
+- **The Shared ID rotation**, found in C0. It is covered by `0150`, its API recogniser and the `SHARED_ID_RACES` proofs.
+- **The Hypothesis batch catch-trap.** Option S extends the one catcher.
+  - `UPDATES_REJECTED` is proven unchanged by `verify-migration-0034`.
+  - Guard probe g2 refuses a regression.
+- **C1's classification of `commit_own_public_experience_ready_v1`** as absorbed was corrected to replay-guarded. Its
+  replay branch calls the core outside its handler, but the core answers a committed command first. This is proven
+  structurally and live (`REPLAY_GUARDED`), and no further function needed a change.
+- **`persist_post_response_hypothesis_generation_v1`** is guarded: it touches only rows created in the same transaction.
+- **The Thread and Home contracts** ban thread tokens in later migrations. `0150` has a narrow exemption for its two
+  verbatim re-creations alone, each checked byte for byte, following the `0130` precedent.
+- **`verify-migration-0036`** re-applies `0036` inside a rolled-back savepoint, so it keeps `40001` there.
+- **Wire-proof teardown** hit the canonical historical-row guards. It now removes its fixtures in one replica-role
+  transaction and asserts that no residue remains.
+- **Governance:**
+  - the SEC-MATCH-00 merge state was reconciled in Current State in C2;
+  - the backlog §7 and Current State §5 count tables, which C2 had not moved for `QAN-BL-PROD-07`, are corrected in this
+    closing change.
+
+### 10.4 BG-08: repository closure against hosted closure
+
+**A. Repository implementation: complete.**
+- `0150` is implemented.
+- The API accepts `PT409` and `40001`, by equality with the exact message.
+- Every required gate passed on the exact head (§10.2).
+- The fix is ready for the Product Owner's merge decision.
+
+**B. Hosted deployment: not done, and the hazard stands there.**
+- `0150` has not been deployed to Supabase.
+- The hosted database was at `0074` at the last approved metadata check.
+- The hosted PostgREST version is **NOT VERIFIED**.
+- Until the required future property of `QAN-BL-PROD-06` holds on the hosted project itself, the risk stays live there.
+  That property is `0150` applied there, or PostgREST `v16.0`+ verified there.
+
+**Disposition.**
+- **`QAN-BL-PROD-06`** is **re-owned**, not tombstoned, to `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment &
+  Data API Retry Gate`.
+  - It keeps `HIGH` and `DEFERRED — OWNED`, and its reopen condition (a launch and deployment gate) and required future
+    property are unchanged.
+  - It now records a closure condition proven on the hosted project itself: read-only evidence, never a retry-loop
+    reproduction.
+  - A tombstone now would hide the remaining deployment gate. Re-owning keeps one item for one hazard, and no second
+    item is admitted.
+- **`QAN-BL-PROD-07`** is unchanged: `LOW`, `DEFERRED — OWNED`, owner `PROD-RETRY-02`. It is not a launch gate.
+- **Admitted at closure:** none.
+- The register holds 51 items, recounted mechanically.
+
+### 10.5 Deferred risks and their owners
+
+| Risk | Owner | State |
+|---|---|---|
+| Hosted exposure. The five entry points already at `0074` stay exposed on any PostgREST before `v16`, and the rest arrive with the catch-up, until the hosted project carries `0150` or is verified at `v16.0`+ | `HOSTED-DEPLOY-01` (`QAN-BL-PROD-06`, `HIGH`) | `DEFERRED — OWNED`; launch and deployment gate |
+| Post-v16 loss of the server-side re-run for the race-converging `40001` paths and genuine `40P01` | `PROD-RETRY-02` (`QAN-BL-PROD-07`, `LOW`) | `DEFERRED — OWNED`; not a launch gate |
+| Mixed codes for one message family, for example `MATCHING_STALE_STATE` in the unreachable I-07B..D cores | the `0150` guard (`verify-migration-0150`, in every API CI run) | enforced; a core that becomes reachable fails the guard |
+| The six suspended Matching commands, if restored, carry the same rule | `S6-01` (`QAN-BL-MATCH-01`) | `DEFERRED — OWNED`, unchanged |
+
+### 10.6 Validation of this closing change
+
+The validation is proportional to a documentation-only change:
+- `npm run test:task-closure-governance-contract`;
+- the static contracts that read the changed documents;
+- a mechanical recount of the §4 index against the backlog §7 and Current State §5 tables;
+- a secret scan of the diff.
+
+The four PostgREST proofs and the 42 local verifier runs were not repeated: the closing change touches no code they
+exercise.
+
+Results (local, on this host):
+- `test:task-closure-governance-contract`: 24 / 24.
+- The 20 static contracts that read the changed documents, plus this task's contract: 298 / 298.
+- The recount: the §4 index holds 51 items (23 / 0 / 10 / 18; 29 / 20 / 2). The backlog §7 and Current State §5 tables
+  equal it, and the Current State's 33 active rows equal the index rows one for one.
+- The secret scan of the diff: no credential, key, token or hosted identifier.
+- `test:forward-safety-contract` fails 10 / 35 locally, and **identically on the unmodified head `3a780ba`**. All ten come
+  from the mirror's replay of `qan-inf-03`'s offline `expo-doctor` check. That check passes 6 / 6 on the real tree, so
+  the failure belongs to this host's environment, not to this change. On the same head, CI ran forward-safety at
+  35 / 35. The closing change's own CI run is the authority.

@@ -183,7 +183,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-06` | The Ended Shared World Has No Read-Only Living Analysis View | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CW-07` | Shared World Temporal Navigation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-01 — Intelligent Matching Onboarding` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation) | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation) | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-07` | Post-v16 PostgREST: Race-Converging `40001` Paths and Genuine Deadlocks Lose the Server-Side Re-run | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `LOW` | `DEFERRED — OWNED` |
 
 ---
@@ -1200,7 +1200,12 @@ entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes impl
 - **Why deferred:** closing it is either an infrastructure fact on the hosted project or a cross-domain forward
   migration that amends frozen refusal contracts (conversation focus and thread, Hypothesis, Shared Standing Context,
   I-07A). Neither is SEC-MATCH-00's scope, which protects Matching before launch and rebuilds no I-07A contract.
-- **Owner task:** `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure`
+  *After PROD-RETRY-01:* the forward migration exists in the repository; what remains is a hosted deployment and evidence
+  read on the hosted project itself, which need the Product Owner's separate approval and a hosted connection that
+  PROD-RETRY-01 was not authorized to make.
+- **Owner task:** `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate`. Re-owned from `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` by its closing change
+  (2026-10-10), at the Product Owner's direction. It is the hosted catch-up deployment that brings the hosted database
+  from `0074` forward; it opens only through its own Task Contract and the Product Owner's explicit deployment approval.
 - **Severity:** `HIGH`. A signed-in user, or an ordinary concurrent turn, can make a Data API request that never
   completes and holds a pool connection, and the API's designed stale-state handling never runs. At the Product Owner's
   direction this is a **launch and deployment gate**, not a schedule (§2): see the required future property.
@@ -1233,8 +1238,28 @@ entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes impl
   `40001` escape, and the live wire proof answers every stale request at once on `v12.2.9`, `v13.0.8`, `v14.18` and
   `v16.4` ([implementation record](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md)). The
   hosted condition stays: the hosted project is at `0074`, its PostgREST version is unverified, and `0150` reaches it
-  only in the `0075`+ catch-up (deployment rule in `database/README.md`, migration `0150` section). The disposition
-  (tombstone) is the closing change at the merge decision; until then this item stays as it is.
+  only in the `0075`+ catch-up (deployment rule in `database/README.md`, migration `0150` section).
+- **Closing reconciliation (PROD-RETRY-01, 2026-10-10; Product Owner direction):**
+  - **Repository: complete.** `0150` and the API change passed every required gate on the exact reviewed head
+    `3a780baf0069e3464511e7bd6312d59006a11ac1` (PR #324): API CI `38019937801` and Mobile CI `38019937819` green;
+    `verify-migration-0150` 28 / 28; the live PostgREST wire proof on `v12.2.9`, `v13.0.8`, `v14.18` and `v16.4`
+    answers every deterministic stale refusal with HTTP 409 `PT409`, executed exactly once, with nothing written.
+  - **Hosted: not closed.** `0150` is not deployed. The hosted database was at `0074` at the last approved metadata
+    check, and its PostgREST version is unverified. The hazard therefore stands on the hosted project until the
+    required future property holds there.
+  - **Disposition.** The item is re-owned to `HOSTED-DEPLOY-01`, not tombstoned. It keeps `HIGH`,
+    `DEFERRED — OWNED`, its reopen condition and its required future property, unchanged. Merging PR #324 changes none
+    of this.
+- **Closure condition:** `HOSTED-DEPLOY-01`'s closing change tombstones this item only by citing read-only evidence
+  taken from the hosted project itself, never inferred from this repository, a CI run, an upstream release or a
+  changelog. The evidence must show that one of these held before any affected function was exposed:
+  - **(b), as delivered:** the hosted database carries `0150`. Its migration history records it, it applied under its
+    own self-check, and the twelve bodies answer `PT409`. It arrived in the `0075`+ catch-up under the
+    `database/README.md` deployment rule, with an API that accepts both codes deployed first or together.
+  - **(a):** the hosted PostgREST is `v16.0` or later, verified on the project itself. `QAN-BL-PROD-07`'s reopen
+    condition then fires.
+
+  A retry-loop reproduction on the hosted environment is never evidence, and none may be attempted.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: Architecture and the Product Owner explicitly designated it at the
@@ -1743,17 +1768,17 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 22 |
+| `DEFERRED — OWNED` | 23 |
 | `VALIDATION — OPEN` | 0 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 18 |
-| **Total** | **50** |
+| **Total** | **51** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 29 |
 | `MEDIUM` | 20 |
-| `LOW` | 1 |
+| `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
 
@@ -2112,6 +2137,27 @@ hazard closure, migration `0150`, under the Product Owner's C1 decision ("C1 ACC
 The register now holds **51** items: 23 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`. By severity: 29 `HIGH`, 20 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
 
+**PROD-RETRY-01 closure reconciliation (2026-10-10; CLOSED / READY FOR PO MERGE DECISION, not merged, not deployed).**
+The Product Owner's technical review of PR #324 passed at the exact head `3a780baf0069e3464511e7bd6312d59006a11ac1` ("TECHNICAL REVIEW PASSED — AUTHORIZE
+DOCUMENTATION CLOSURE ONLY"). API CI `38019937801` and Mobile CI `38019937819` are green on that head. This is the BG-08
+half of the closing change, which is documentation only.
+
+- **Inherited items (BG-05):** `QAN-BL-PROD-06` is **re-owned**, not tombstoned, to `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate`.
+  - It keeps `HIGH` and `DEFERRED — OWNED`, and its reopen condition and required future property are unchanged.
+    It now states a closure condition proven on the hosted project itself.
+  - The repository implementation is complete, but `0150` is not deployed. The hosted database was at `0074` at the
+    last approved check, and its PostgREST version is unverified. A tombstone would hide that deployment gate.
+  - The C2 record planned a tombstone at the merge decision; the Product Owner directed this re-ownership instead.
+  - Anti-duplication: one item stays one hazard, and no second item is admitted for the hosted remainder.
+- **`QAN-BL-PROD-07`:** unchanged: `LOW`, `DEFERRED — OWNED`, owner `PROD-RETRY-02`. It is not a launch gate.
+- **Admitted:** none.
+- **`QAN-BL-MATCH-01`**, **`QAN-BL-ACCT-01`**: unchanged.
+- **§7 correction:** the table above had not been moved for `QAN-BL-PROD-07`'s admission. It is corrected here,
+  from the §4 index.
+
+The register still holds **51** items: 23 `DEFERRED — OWNED`, 0 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`. By severity: 29 `HIGH`, 20 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
+
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -2186,6 +2232,9 @@ Inherited after T-12 closure reconciliation:
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
 | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
+| `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
+| `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
+| `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `QAN-BL-PROD-07` |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
