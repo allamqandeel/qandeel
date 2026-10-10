@@ -19,14 +19,14 @@ describe('HypothesisEvidenceAssociationAuthorityService', () => {
 
   beforeEach(() => {
     evidence = { listEligibleForUser: jest.fn().mockResolvedValue([evidenceItem()]) } as unknown as jest.Mocked<EvidenceService>;
-    hypotheses = { listActiveForUser: jest.fn().mockResolvedValue([hypothesis()]) } as unknown as jest.Mocked<HypothesisService>;
+    hypotheses = { listReliableActiveForUser: jest.fn().mockResolvedValue([hypothesis()]) } as unknown as jest.Mocked<HypothesisService>;
     service = new HypothesisEvidenceAssociationAuthorityService(evidence, hypotheses);
   });
 
   it('revalidates the exact fresh Evidence and exposes only approved provider fields', async () => {
     const result = await service.prepare('user-a', 'token-a', SESSION, EVIDENCE_ID);
     expect(evidence.listEligibleForUser).toHaveBeenCalledWith('user-a', 'token-a');
-    expect(hypotheses.listActiveForUser).toHaveBeenCalledTimes(1);
+    expect(hypotheses.listReliableActiveForUser).toHaveBeenCalledTimes(1);
     expect(result).toMatchObject({ status: 'PREPARED', snapshot: {
       contractVersion: 1, maxAssociationCount: MAX_FRESH_EVIDENCE_ASSOCIATIONS,
       freshEvidence: {
@@ -56,20 +56,20 @@ describe('HypothesisEvidenceAssociationAuthorityService', () => {
     const otherSession = hypothesis({ id: id(2), scope: 'CONVERSATION_SESSION:90000000-0000-4000-8000-000000000009' });
     const global = hypothesis({ id: id(3), scope: 'GLOBAL' });
     const second = hypothesis({ id: id(4), statement: 'second' });
-    hypotheses.listActiveForUser.mockResolvedValue([first, otherSession, global, second]);
+    hypotheses.listReliableActiveForUser.mockResolvedValue([first, otherSession, global, second]);
     const result = await service.prepare('user-a', 'token-a', SESSION, EVIDENCE_ID);
     expect((result as any).snapshot.candidateHypotheses.map((item: any) => item.hypothesisId)).toEqual([first.id, second.id]);
   });
 
   it('returns EMPTY for no same-session candidates without falling back', async () => {
-    hypotheses.listActiveForUser.mockResolvedValue([hypothesis({ scope: 'GLOBAL' })]);
+    hypotheses.listReliableActiveForUser.mockResolvedValue([hypothesis({ scope: 'GLOBAL' })]);
     await expect(service.prepare('user-a', 'token-a', SESSION, EVIDENCE_ID)).resolves.toEqual({
       status: 'EMPTY', reason: 'NO_SAME_SESSION_HYPOTHESES',
     });
   });
 
   it('keeps at most eight complete candidates in canonical order', async () => {
-    hypotheses.listActiveForUser.mockResolvedValue(Array.from({ length: 12 }, (_, index) => hypothesis({ id: id(index + 1) })));
+    hypotheses.listReliableActiveForUser.mockResolvedValue(Array.from({ length: 12 }, (_, index) => hypothesis({ id: id(index + 1) })));
     const result = await service.prepare('user-a', 'token-a', SESSION, EVIDENCE_ID);
     expect((result as any).snapshot.candidateHypotheses).toHaveLength(MAX_ASSOCIATION_HYPOTHESIS_CANDIDATES);
     expect((result as any).snapshot.candidateHypotheses[0].hypothesisId).toBe(id(1));
@@ -85,7 +85,7 @@ describe('HypothesisEvidenceAssociationAuthorityService', () => {
     const second = hypothesis({ id: id(2), ...heavy });
     const overBudget = hypothesis({ id: id(3), ...heavy });
     const laterSmall = hypothesis({ id: id(4), statement: 'small' });
-    hypotheses.listActiveForUser.mockResolvedValue([first, second, overBudget, laterSmall]);
+    hypotheses.listReliableActiveForUser.mockResolvedValue([first, second, overBudget, laterSmall]);
     const result = await service.prepare('user-a', 'token-a', SESSION, EVIDENCE_ID);
     expect((result as any).snapshot.candidateHypotheses.map((item: any) => item.hypothesisId)).toEqual([first.id, second.id]);
   });
@@ -93,7 +93,7 @@ describe('HypothesisEvidenceAssociationAuthorityService', () => {
   it('returns NO_ASSOCIATION for an empty semantic proposal array', async () => {
     const snapshot = await prepared();
     await expect(service.authorize('user-a', 'token-a', SESSION, snapshot, [])).resolves.toEqual({ status: 'NO_ASSOCIATION' });
-    expect(hypotheses.listActiveForUser).toHaveBeenCalledTimes(1);
+    expect(hypotheses.listReliableActiveForUser).toHaveBeenCalledTimes(1);
   });
 
   it('authorizes canonical current-version update commands without mutation', async () => {
@@ -104,7 +104,7 @@ describe('HypothesisEvidenceAssociationAuthorityService', () => {
     expect(result).toEqual({ status: 'AUTHORIZED', commands: [{
       hypothesisId: id(1), expectedVersion: 3, evidenceId: EVIDENCE_ID, evidenceRole: 'SUPPORTING',
     }] });
-    expect(hypotheses.listActiveForUser).toHaveBeenCalledTimes(2);
+    expect(hypotheses.listReliableActiveForUser).toHaveBeenCalledTimes(2);
     expect(evidence.listEligibleForUser).toHaveBeenCalledTimes(2);
   });
 
@@ -125,7 +125,7 @@ describe('HypothesisEvidenceAssociationAuthorityService', () => {
     [{ supporting_evidence_ids: [EVIDENCE_ID] }, 'SUPPORTING', 'ALREADY_ATTACHED'],
     [{ contradicting_evidence_ids: [EVIDENCE_ID] }, 'SUPPORTING', 'OPPOSITE_ROLE_CONFLICT'],
   ])('rejects attached-role conflicts', async (overrides, role, reason) => {
-    hypotheses.listActiveForUser.mockResolvedValue([hypothesis(overrides)]);
+    hypotheses.listReliableActiveForUser.mockResolvedValue([hypothesis(overrides)]);
     const snapshot = await prepared();
     await expect(service.authorize('user-a', 'token-a', SESSION, snapshot, [
       { hypothesisId: id(1), evidenceRole: role },
@@ -134,7 +134,7 @@ describe('HypothesisEvidenceAssociationAuthorityService', () => {
 
   it('fails closed when the target version changes after provider snapshot', async () => {
     const snapshot = await prepared();
-    hypotheses.listActiveForUser.mockResolvedValue([hypothesis({ version: 4 })]);
+    hypotheses.listReliableActiveForUser.mockResolvedValue([hypothesis({ version: 4 })]);
     await expect(service.authorize('user-a', 'token-a', SESSION, snapshot, [
       { hypothesisId: id(1), evidenceRole: 'SUPPORTING' },
     ])).resolves.toEqual({ status: 'NOT_AUTHORIZED', reason: 'STALE_HYPOTHESIS_VERSION' });

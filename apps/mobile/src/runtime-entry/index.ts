@@ -118,6 +118,7 @@ export type {
   UnderstandingDetailView,
   UnderstandingDisagreementOutcome,
   UnderstandingDiscussionOutcome,
+  UnderstandingEvidenceChange,
   UnderstandingEvolutionKind,
   UnderstandingEvolutionView,
   UnderstandingItemView,

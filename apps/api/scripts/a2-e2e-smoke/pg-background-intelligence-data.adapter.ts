@@ -28,6 +28,7 @@ import type { ConfidenceEvaluationRecord } from '../../src/hypothesis/confidence
 import type { HimSnapshotSourceRow } from '../../src/human-model/him-intelligence-snapshot.types';
 import type { HimBrainContextSourceRow } from '../../src/human-model/him-brain-context.types';
 import type { EvidenceRole, HypothesisRecord } from '../../src/hypothesis/hypothesis.types';
+import type { HypothesisEvidenceRelianceRow } from '../../src/hypothesis/hypothesis-evidence-reliance';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../../src/hypothesis/hypothesis-update.types';
 import type { MemoryRecord } from '../../src/memory/memory.types';
 import type { SmokeDbSession } from './smoke-db';
@@ -120,6 +121,26 @@ export class PgBackgroundIntelligenceDataApiAdapter {
         ORDER BY updated_at DESC, id ASC LIMIT $2`,
       [context.userId, limit],
     );
+  }
+
+  // INTEL-TM-01 (migration 0151): the two server reads, through the same service-role twins production calls.
+  async readHypothesisEvidenceReliance(context: BackgroundIntelligenceExecutionContext, hypothesisIds: readonly string[]): Promise<HypothesisEvidenceRelianceRow[]> {
+    this.assertExecutionContext(context);
+    return this.db.asRole<HypothesisEvidenceRelianceRow>(
+      'service_role',
+      'SELECT hypothesis_id, hypothesis_version, evidence_change FROM public.background_hypothesis_evidence_reliance_v1($1, $2::uuid[])',
+      [context.userId, [...hypothesisIds]],
+    );
+  }
+
+  async reevaluateWithdrawnHypothesisEvidence(context: BackgroundIntelligenceExecutionContext, limit: number): Promise<unknown> {
+    this.assertExecutionContext(context);
+    const rows = await this.db.asRole<{ reevaluated: number }>(
+      'service_role',
+      'SELECT public.background_reevaluate_withdrawn_hypothesis_evidence_v1($1, $2) AS reevaluated',
+      [context.userId, limit],
+    );
+    return rows[0]?.reevaluated;
   }
 
   async findHypothesis(context: BackgroundIntelligenceExecutionContext, id: string): Promise<HypothesisRecord | undefined> {

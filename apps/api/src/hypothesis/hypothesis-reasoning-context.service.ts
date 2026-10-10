@@ -5,6 +5,7 @@ import { CONFIDENCE_MISSING_INFORMATION_CODES, CONFIDENCE_POLICY_VERSION, type C
 import { HypothesisService } from './hypothesis.service';
 import { DISCUSSION_FOCUS_WINDOW_MS, HypothesisUserSignalRepository, type HypothesisDiscussionFocusRow } from './hypothesis-user-signal.repository';
 import { HYPOTHESIS_DOMAINS, HYPOTHESIS_ORIGINS, HYPOTHESIS_STATUSES, HYPOTHESIS_TYPES, MAX_ACTIVE_HYPOTHESES, MAX_ASSUMPTIONS, MAX_DISCONFIRMING_CONDITIONS, MAX_EVIDENCE_LINKS_PER_ROLE, MAX_SCOPE_LENGTH, MAX_STATEMENT_LENGTH, MAX_STRUCTURED_TEXT_LENGTH, type HypothesisRecord } from './hypothesis.types';
+import { reliableOnly } from './hypothesis-evidence-reliance';
 import { HYPOTHESIS_REASONING_CONTEXT_CONTRACT_VERSION, HypothesisReasoningInvariantError, MAX_HYPOTHESIS_CONTEXT_STRING_CHARS, MAX_MODEL_HYPOTHESES, type HypothesisReasoningContextResult, type HypothesisReasoningItem } from './hypothesis-reasoning-context.types';
 
 @Injectable()
@@ -21,23 +22,30 @@ export class HypothesisReasoningContextService {
     if (!Array.isArray(candidates) || candidates.length > MAX_ACTIVE_HYPOTHESES) this.reject();
     if (candidates.length === 0) return { coverageState: 'EMPTY', candidateHypothesisCount: 0 };
     candidates.forEach((value) => this.validateHypothesis(value, userId));
-    const [eligibleEvidence, evaluations, focus, underReview] = await Promise.all([
+    const [reliance, eligibleEvidence, evaluations, focus, underReview] = await Promise.all([
+      // INTEL-TM-01 (PG-02): read after the list and pinned to its versions. An item QANDEEL may not rely on — linked to
+      // forgotten, disabled or corrected information, or left with no eligible support — never reaches the model: not
+      // as an ordinary item, not as the reader's discussed item and not as a contested one. A failed read omits the
+      // whole context, exactly like every other read here.
+      this.hypotheses.readEvidenceReliance(token, candidates),
       this.evidence.listEligibleForUser(userId, token),
       this.confidence.listExactVersionsForTargets(token, userId, candidates.map(({ id, version }) => ({ id, version }))),
       this.signals ? this.signals.readOpenDiscussionFocus(token, userId) : Promise.resolve(null),
       // U3 (PG-01): the reader's explicit disagreements. A contested interpretation is never offered as uncontested.
       this.signals ? this.signals.listUnderReview(token, userId, candidates.map(({ id }) => id)) : Promise.resolve(new Set<string>()),
     ]);
+    const reliable = reliableOnly(candidates, reliance);
+    if (reliable.length === 0) return { coverageState: 'EMPTY', candidateHypothesisCount: 0 };
     // W3-MEGA-U U2: the ONE item the reader explicitly chose, from QANDEEL Understanding, to talk about — while its
     // focus is open and recent — is marked and offered first. W3-CORR-U (U-5): every other item the reader explicitly
     // disagreed with and is still under review comes next, ahead of ordinary items, so an active contest never gives
     // way to an ordinary item under the model bound. Both groups are the reader's own explicit acts, not a relevance
     // ranking (that remains QAN-BL-CTX-01): within each group, and for every other item, the repository order is kept.
-    const discussedId = this.discussedHypothesisId(focus, candidates);
+    const discussedId = this.discussedHypothesisId(focus, reliable);
     const ordered = [
-      ...candidates.filter(({ id }) => id === discussedId),
-      ...candidates.filter(({ id }) => id !== discussedId && underReview.has(id)),
-      ...candidates.filter(({ id }) => id !== discussedId && !underReview.has(id)),
+      ...reliable.filter(({ id }) => id === discussedId),
+      ...reliable.filter(({ id }) => id !== discussedId && underReview.has(id)),
+      ...reliable.filter(({ id }) => id !== discussedId && !underReview.has(id)),
     ];
     const eligibleIds = new Set(eligibleEvidence.map(({ evidenceId }) => evidenceId));
     if (!Array.isArray(evaluations) || evaluations.length >= MAX_BULK_CONFIDENCE_ROWS) this.reject();
@@ -76,8 +84,8 @@ export class HypothesisReasoningContextService {
     return { coverageState: 'AVAILABLE', context: {
       contractVersion: HYPOTHESIS_REASONING_CONTEXT_CONTRACT_VERSION,
       source: 'QANDEEL_HYPOTHESIS_REASONING_CONTEXT', coverageState: 'AVAILABLE',
-      candidateHypothesisCount: candidates.length, includedHypothesisCount: included.length,
-      truncated: included.length < candidates.length, hypotheses: included,
+      candidateHypothesisCount: reliable.length, includedHypothesisCount: included.length,
+      truncated: included.length < reliable.length, hypotheses: included,
     } };
   }
 

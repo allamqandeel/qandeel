@@ -1338,6 +1338,12 @@ nothing here authorizes implementation, an upgrade or a migration (BG-07).
 - **Required future property:** evidence loss ≠ hypothesis false; re-evaluation per state and remaining evidence; no
   numeric Confidence invented; forget and do-not-rely strengthened, never weakened; no unified deletion rule (D4); the
   derivative is never silently relied upon while its evidence is gone.
+- **Current truth (INTEL-TM-01, 2026-10-10; implemented, PR open, not merged):** resolved in the repository by migration
+  `0151` under the Product Owner's Implementation Task Contract (Controlled Changes CC-1 … CC-4): a Hypothesis known to
+  depend on forgotten, disabled or corrected Memory is withheld from every provider-facing consumer, from question
+  selection and binding, and shown to its owner without its statement — derived from committed facts, never a worker —
+  and nothing is declared false. Record: [INTEL-TM-01 implementation record](e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md).
+  It stays `DEFERRED — OWNED` until the closing change at the Product Owner's merge decision disposes of it (BG-08).
 - **Status:** `DEFERRED — OWNED`
 
 This entry freezes **no algorithm** and no owner-visible wording. It does not decide whether a derivative is retired,
@@ -1389,6 +1395,10 @@ demoted or re-supported; that is the re-evaluation's job under its own Task Cont
   4. Stage 8A binds a real intent or candidate provider, so the stored spans become real-model output.
 - **Required future property:** a forgotten or disabled source is never re-served through a ledger copy; any retention
   beyond the recovery of its own execution is decided explicitly, with provenance; nothing here weakens forget.
+- **Triggered check (INTEL-TM-01, 2026-10-10):** reopen condition 3 fired when `INTEL-TM-01` opened. It is discharged by
+  check, not absorbed: INTEL-TM-01 reads and writes no `0029` / `0033` `result_payload`, and it claims nothing for a
+  Hypothesis without an evidence link (its record §7, limit L-1). Whether a withheld Hypothesis's candidate-plan text may
+  stay in that ledger remains this item's question. Unchanged: `VALIDATION — OPEN`, owner `INTEL-RET-01`.
 - **Status:** `VALIDATION — OPEN`
 
 This entry decides no retention period and no deletion mechanism, and authorizes no change to `0029`, `0033` or `0130`
@@ -2330,6 +2340,26 @@ no migration.
 The register now holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
 `CLOSED — TOMBSTONE`. By severity: 31 `HIGH`, 21 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
 
+**INTEL-TM-01 reconciliation (2026-10-10; implemented, PR open, not merged, not deployed).** INTEL-TM-01 is Personal
+Evidence Truth Maintenance (PG-02), migration `0151`, under the Product Owner's Implementation Task Contract
+("APPROVED FOR BOUNDED IMPLEMENTATION"), from `main` `44a440c`.
+
+- **Inherited items (BG-05):** `QAN-BL-INTEL-01`. Its repository resolution is recorded on the item; it stays
+  `DEFERRED — OWNED` until the closing change at the Product Owner's merge decision, which disposes of it under BG-08.
+- **`QAN-BL-INTEL-02`:** its reopen condition 3 fired; discharged by check and recorded on the item. Unchanged:
+  `VALIDATION — OPEN`, owner `INTEL-RET-01`.
+- **Admitted:** none. The general question-finalization version recheck (residue R3-G — finalize v2 binds without
+  re-checking a Hypothesis version or lifecycle for causes other than PG-02) is preserved in the
+  [INTEL-TM-01 record](e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md) §9 with a
+  proposed owner for the Product Owner's decision, to be admitted or dispositioned by the closing change — not marked
+  resolved, and no scope created.
+- **Not admitted (BG-06):** the L-2 boundary (forgotten content in conversation history and other derived stores) is a
+  stated limit of PG-02, not designated by a canonical document as an obligation; R2 (clarification-answer turns) stays an
+  observation for the Memory-control owner.
+
+The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION — OPEN`, 10 `OPEN — UNASSIGNED` and 18
+`CLOSED — TOMBSTONE`. By severity: 31 `HIGH`, 21 `MEDIUM` and 2 `LOW`, counted mechanically from the §4 index.
+
 ---
 
 ## 8. What is deliberately not in this backlog
@@ -2408,7 +2438,7 @@ Inherited after T-12 closure reconciliation:
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
 | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `QAN-BL-PROD-07` |
 | `CI-01 — Shared Intelligence Learning Evidence & Baseline` | none — no item names it; admitted `QAN-BL-INTEL-01` (C1-A, Product Owner decision 3), `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (closing change, Product Owner closing decisions 2 and 3); `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01` and `QAN-BL-PRIV-02` cited and left unchanged |
-| `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` |
+| `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` — resolved in the repository (migration `0151`, PR open, not merged); stays `DEFERRED — OWNED` until the closing change at the Product Owner's merge decision; `QAN-BL-INTEL-02` triggered check recorded; residue R3-G proposed for the Product Owner's decision |
 | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (owner name PO-APPROVED) |
 | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (owner name PO-APPROVED) |
 

@@ -47,7 +47,11 @@ describe('UnderstandingService', () => {
   let telemetry: TelemetryService, reevaluationSignals: jest.Mock;
 
   beforeEach(() => {
-    hypotheses = { listActiveForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<HypothesisService>;
+    hypotheses = {
+      listActiveForUser: jest.fn().mockResolvedValue([]),
+      // INTEL-TM-01: every item may be relied on unless a test says otherwise.
+      readEvidenceReliance: jest.fn(async (_token: string, items: readonly HypothesisRecord[]) => new Map(items.map(({ id }) => [id, 'NONE']))),
+    } as unknown as jest.Mocked<HypothesisService>;
     evidenceService = { listEligibleForUser: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<EvidenceService>;
     confidence = { listExactVersionsForTargets: jest.fn().mockResolvedValue([]) } as unknown as jest.Mocked<ConfidenceRepository>;
     repository = {
@@ -80,7 +84,7 @@ describe('UnderstandingService', () => {
     expect(confidence.listExactVersionsForTargets).toHaveBeenCalledWith('token', USER, [{ id: H1, version: 2 }]);
     expect(view).toEqual({ items: [{
       ref: understandingItemRef(USER, H1), revision: understandingRevision(USER, H1, 2),
-      theme: 'WORK', summary: value.statement, confidence: 'CLEAR', underReview: false,
+      theme: 'WORK', summary: value.statement, evidenceChange: 'NONE', confidence: 'CLEAR', underReview: false,
     }] });
     const serialized = JSON.stringify(view);
     for (const leaked of [H1, USER, 'SESSION:', 'SUPPORTED', 'memory:', 'UNCALIBRATED', '0.97', 'BEHAVIORAL', 'SYSTEM_GENERATED']) {
@@ -154,7 +158,7 @@ describe('UnderstandingService', () => {
     const view = await service.detail(USER, 'token', understandingItemRef(USER, H1));
     expect(view).toEqual({
       ref: understandingItemRef(USER, H1), revision: understandingRevision(USER, H1, 2), theme: 'WORK',
-      summary: main.statement, confidence: 'MIXED', underReview: false,
+      summary: main.statement, evidenceChange: 'NONE', confidence: 'MIXED', underReview: false,
       evidence: ['I plan my week on Sunday.'], contradictions: ['I left the report to the last night.'],
       alternatives: ['You prepare early only for others.'], unresolved: ['Deadlines matter to you.'],
       evolution: [
@@ -564,5 +568,82 @@ describe('UnderstandingService', () => {
   it('sanitizes an upstream failure into one generic 503', async () => {
     hypotheses.listActiveForUser.mockRejectedValue(new Error('upstream secret detail'));
     await expect(service.list(USER, 'token', {})).rejects.toThrow('Understanding is unavailable.');
+  });
+
+  // INTEL-TM-01 (PG-02, CC-2): the owner still sees a withheld item — theme, confidence in words, review state and
+  // evolution — but never its statement or any text that could carry it, and nothing withheld is ever discussed.
+  describe('INTEL-TM-01 — an understanding QANDEEL may no longer rely on', () => {
+    const withhold = (states: Record<string, string>) => {
+      hypotheses.readEvidenceReliance.mockImplementation(async (_token, items) => new Map(items.map(({ id }) => [id, (states[id] ?? 'NONE') as never])));
+    };
+
+    it('lists a withheld item without its statement, as Needs more and never Clear, even with a Clear-grade record', async () => {
+      const value = hypothesis(H1, { status: 'SUPPORTED' });
+      hypotheses.listActiveForUser.mockResolvedValue([value, hypothesis(H2)]);
+      evidenceService.listEligibleForUser.mockResolvedValue([evidence('memory:s1', 'I plan my week on Sunday.')]);
+      confidence.listExactVersionsForTargets.mockResolvedValue([evaluation(value)]);
+      withhold({ [H1]: 'REVIEW_PENDING', [H2]: 'NO_REMAINING_SUPPORT' });
+      const view = await service.list(USER, 'token', {});
+      expect(view.items.map(({ summary, evidenceChange, confidence: state }) => [summary, evidenceChange, state])).toEqual([
+        [null, 'REVIEW_PENDING', 'NEEDS_MORE'], [null, 'NO_REMAINING_SUPPORT', 'NEEDS_MORE'],
+      ]);
+      expect(JSON.stringify(view)).not.toContain('prepare early');
+      expect(hypotheses.readEvidenceReliance).toHaveBeenCalledWith('token', [value, hypothesis(H2)]);
+    });
+
+    it('a withheld detail carries no evidence, contradictions, alternatives or unresolved points; its evolution stays', async () => {
+      const main = hypothesis(H1, { supporting_evidence_ids: ['memory:s1'], contradicting_evidence_ids: ['memory:c1'], competing_hypothesis_ids: [H2], assumptions: ['Deadlines matter to you.'] });
+      hypotheses.listActiveForUser.mockResolvedValue([main, hypothesis(H2, { statement: 'A rival reading.' })]);
+      evidenceService.listEligibleForUser.mockResolvedValue([evidence('memory:s1', 'I plan my week on Sunday.'), evidence('memory:c1', 'I left it late.')]);
+      repository.listEvidenceUpdates.mockResolvedValue([{ evidence_role: 'SUPPORTING', created_at: '2026-09-29T09:00:00.000000+00:00' }]);
+      withhold({ [H1]: 'REVIEW_PENDING' });
+      const view = await service.detail(USER, 'token', understandingItemRef(USER, H1));
+      expect(view).toMatchObject({ summary: null, evidenceChange: 'REVIEW_PENDING', confidence: 'NEEDS_MORE', evidence: [], contradictions: [], alternatives: [], unresolved: [] });
+      expect(view.evolution.map((entry) => entry.kind)).toEqual(['SUPPORT_ADDED', 'FIRST_SEEN']);
+      for (const text of ['prepare early', 'Sunday', 'left it late', 'rival', 'Deadlines']) expect(JSON.stringify(view)).not.toContain(text);
+    });
+
+    it('a relied-on item never names a withheld competitor as an alternative', async () => {
+      const main = hypothesis(H1, { competing_hypothesis_ids: [H2] });
+      hypotheses.listActiveForUser.mockResolvedValue([main, hypothesis(H2, { statement: 'A withheld rival reading.' })]);
+      withhold({ [H2]: 'REVIEW_PENDING' });
+      const view = await service.detail(USER, 'token', understandingItemRef(USER, H1));
+      expect(view).toMatchObject({ summary: main.statement, evidenceChange: 'NONE', alternatives: [] });
+      expect(JSON.stringify(view)).not.toContain('withheld rival');
+    });
+
+    it('a contested item that is also withheld stays Mixed and under review', async () => {
+      const contested = hypothesis(H1, { version: 4, status: 'MIXED' });
+      hypotheses.listActiveForUser.mockResolvedValue([contested]);
+      repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00.000000+00:00' }]);
+      withhold({ [H1]: 'REVIEW_PENDING' });
+      await expect(service.list(USER, 'token', {})).resolves.toMatchObject({ items: [{ summary: null, evidenceChange: 'REVIEW_PENDING', confidence: 'MIXED', underReview: true }] });
+    });
+
+    it('talking about a withheld item answers that it changed and writes no focus', async () => {
+      repository.openDiscussion = jest.fn().mockResolvedValue('OPENED');
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 4 })]);
+      withhold({ [H1]: 'NO_REMAINING_SUPPORT' });
+      await expect(service.openDiscussion(USER, 'token', understandingItemRef(USER, H1), { revision: understandingRevision(USER, H1, 4) }))
+        .rejects.toMatchObject({ status: 409, response: { code: 'UNDERSTANDING_ITEM_CHANGED' } });
+      expect(repository.openDiscussion).not.toHaveBeenCalled();
+    });
+
+    it('disagreeing with a withheld item still works (PG-01 unchanged) — it lifts nothing', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1, { version: 3 })]);
+      withhold({ [H1]: 'REVIEW_PENDING' });
+      (repository.recordDisagreement as jest.Mock).mockResolvedValue([{ outcome: 'RECORDED', contested_version: 3, reevaluated_version: 4, confidence_evaluation_id: 'b2b2b2b2-0000-4000-8000-000000000009' }]);
+      repository.listContestsUnderReview.mockResolvedValue([{ hypothesis_id: H1, reevaluation_after_version: 4, created_at: '2026-09-30T10:00:00.000000+00:00' }]);
+      await expect(service.disagree(USER, 'token', understandingItemRef(USER, H1), { commandId: '6c3f7d4e-8b2e-4d3f-a011-234567890abd', revision: understandingRevision(USER, H1, 3) }))
+        .resolves.toEqual({ underReview: true, revision: understandingRevision(USER, H1, 4) });
+    });
+
+    it('fails closed when an item has no reliance answer for its exact version, or the read fails', async () => {
+      hypotheses.listActiveForUser.mockResolvedValue([hypothesis(H1)]);
+      hypotheses.readEvidenceReliance.mockResolvedValueOnce(new Map());
+      await expect(service.list(USER, 'token', {})).rejects.toBeInstanceOf(ServiceUnavailableException);
+      hypotheses.readEvidenceReliance.mockRejectedValueOnce(new DataApiError(500));
+      await expect(service.detail(USER, 'token', understandingItemRef(USER, H1))).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
   });
 });

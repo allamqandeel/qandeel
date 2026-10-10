@@ -4,6 +4,7 @@ import { CONFIDENCE_MISSING_INFORMATION_CODES, CONFIDENCE_POLICY_VERSION, type C
 import { ConfidenceService } from '../hypothesis/confidence.service';
 import { HypothesisService } from '../hypothesis/hypothesis.service';
 import type { HypothesisRecord } from '../hypothesis/hypothesis.types';
+import type { HypothesisEvidenceChange } from '../hypothesis/hypothesis-evidence-reliance';
 import { EvidenceService } from '../memory/evidence.service';
 import { classifyOperationalFailure, type OperationalFailureClass } from '../observability/operational-failure';
 import { TelemetryService } from '../observability/telemetry.service';
@@ -28,6 +29,8 @@ interface OwnedContext {
   readonly exactVersion: ReadonlyMap<string, readonly ConfidenceMissingInformationCode[]>;
   /** U3: the reader's contests under review, by item. */
   readonly contests: ReadonlyMap<string, UnderstandingContestRow>;
+  /** INTEL-TM-01: every surfaced item's evidence change, for the exact version surfaced. */
+  readonly reliance: ReadonlyMap<string, HypothesisEvidenceChange>;
 }
 
 const COMMAND_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu;
@@ -83,19 +86,22 @@ export class UnderstandingService {
       ]);
       if (!Array.isArray(updates) || !Array.isArray(transitions) || !Array.isArray(contestHistory)) this.reject();
       for (const row of contestHistory) this.validateContestHistory(row);
-      const texts = (ids: readonly string[]) => ids.flatMap((id) => {
+      // INTEL-TM-01 (CC-2): a withheld item shows its theme, confidence, review state and evolution, never its own text
+      // or its reader's context; and no item ever names a withheld competitor as an alternative.
+      const withheld = this.evidenceChange(hypothesis, context) !== 'NONE';
+      const texts = (ids: readonly string[]) => withheld ? [] : ids.flatMap((id) => {
         const statement = context.eligibleEvidence.get(id);
         return statement === undefined ? [] : [statement];
       }).slice(0, MAX_DETAIL_CONTEXT_ITEMS);
-      const alternatives = hypothesis.competing_hypothesis_ids
-        .flatMap((id) => context.surfaced.filter((value) => value.id === id).map((value) => value.statement))
+      const alternatives = withheld ? [] : hypothesis.competing_hypothesis_ids
+        .flatMap((id) => context.surfaced.filter((value) => value.id === id && this.evidenceChange(value, context) === 'NONE').map((value) => value.statement))
         .slice(0, MAX_DETAIL_ALTERNATIVES);
       const view: UnderstandingItemDetail = {
         ...this.summary(userId, hypothesis, context),
         evidence: texts(hypothesis.supporting_evidence_ids),
         contradictions: texts(hypothesis.contradicting_evidence_ids),
         alternatives,
-        unresolved: hypothesis.assumptions.slice(0, MAX_DETAIL_CONTEXT_ITEMS),
+        unresolved: withheld ? [] : hypothesis.assumptions.slice(0, MAX_DETAIL_CONTEXT_ITEMS),
         evolution: this.evolution(hypothesis, updates.map((row): UnderstandingEvolutionEntry => ({
           kind: row.evidence_role === 'SUPPORTING' ? 'SUPPORT_ADDED' : 'CHALLENGE_ADDED', at: row.created_at,
         })), transitions, contestHistory),
@@ -120,6 +126,10 @@ export class UnderstandingService {
       const hypothesis = active.find((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status) && understandingItemRef(userId, value.id) === ref);
       if (!hypothesis) throw new NotFoundException('Understanding item not found.');
       if (understandingRevision(userId, hypothesis.id, hypothesis.version) !== revision) throw this.changed();
+      // INTEL-TM-01 (CC-2): an item QANDEEL may not rely on cannot become the discussion focus. The reader is told it
+      // changed — they read it again and see why — and nothing is written. (Even a focus written just before a
+      // withdrawal never carries the item to the model: the reasoning context reads reliance itself.)
+      if ((await this.hypotheses.readEvidenceReliance(token, [hypothesis])).get(hypothesis.id) !== 'NONE') throw this.changed();
       const answer = await this.repository.openDiscussion(token, hypothesis.id, hypothesis.version);
       if (answer === 'OPENED') return;
       if (answer === 'STALE') throw this.changed();
@@ -314,11 +324,13 @@ export class UnderstandingService {
     // Owner re-checked defensively on every row (ownedActive), then only CURRENT understanding is kept. The
     // repository order (updated_at DESC, id ASC) is the recency order the first view needs: most recently changed first.
     const surfaced = (await this.ownedActive(userId, token)).filter((value) => UNDERSTANDING_SURFACE_STATUSES.includes(value.status));
-    if (surfaced.length === 0) return { surfaced, eligibleEvidence: new Map(), exactVersion: new Map(), contests: new Map() };
-    const [eligible, evaluations, contestRows] = await Promise.all([
+    if (surfaced.length === 0) return { surfaced, eligibleEvidence: new Map(), exactVersion: new Map(), contests: new Map(), reliance: new Map() };
+    const [eligible, evaluations, contestRows, reliance] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
       this.confidence.listExactVersionsForTargets(token, userId, surfaced.map(({ id, version }) => ({ id, version }))),
       this.repository.listContestsUnderReview(token, userId, surfaced.map(({ id }) => id)),
+      // INTEL-TM-01: read after the list and pinned to its versions; an item without an answer fails the read closed.
+      this.hypotheses.readEvidenceReliance(token, surfaced),
     ]);
     if (!Array.isArray(eligible) || !Array.isArray(evaluations) || !Array.isArray(contestRows)) this.reject();
     const contests = new Map<string, UnderstandingContestRow>();
@@ -340,22 +352,32 @@ export class UnderstandingService {
       eligibleEvidence: new Map(eligible.map((item) => [item.evidenceId, item.statement])),
       exactVersion,
       contests,
+      reliance,
     };
+  }
+
+  /** INTEL-TM-01: the item's evidence change. Every surfaced item has one for its exact version, or the read fails closed. */
+  private evidenceChange(hypothesis: HypothesisRecord, context: OwnedContext): HypothesisEvidenceChange {
+    return context.reliance.get(hypothesis.id) ?? this.reject();
   }
 
   private summary(userId: string, hypothesis: HypothesisRecord, context: OwnedContext): UnderstandingItemSummary {
     const eligible = (ids: readonly string[]) => ids.filter((id) => context.eligibleEvidence.has(id)).length;
+    const change = this.evidenceChange(hypothesis, context);
     return {
       ref: understandingItemRef(userId, hypothesis.id),
       revision: understandingRevision(userId, hypothesis.id, hypothesis.version),
       theme: THEME_BY_DOMAIN[hypothesis.domain] ?? this.reject(),
-      summary: hypothesis.statement,
+      // INTEL-TM-01 (CC-2): a statement QANDEEL may not rely on is never shown automatically. It stays stored.
+      summary: change === 'NONE' ? hypothesis.statement : null,
+      evidenceChange: change,
       confidence: projectUnderstandingConfidence({
         status: hypothesis.status,
         eligibleSupporting: eligible(hypothesis.supporting_evidence_ids),
         eligibleContradicting: eligible(hypothesis.contradicting_evidence_ids),
         exactVersionMissingInformation: context.exactVersion.get(hypothesis.id) ?? null,
         contested: context.contests.has(hypothesis.id),
+        withheld: change !== 'NONE',
       }),
       underReview: context.contests.has(hypothesis.id),
     };

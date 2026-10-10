@@ -216,6 +216,9 @@ export function createUnderstandingController({
       const detail = state.detail;
       if (!live() || talking || detail === null || detail.status !== 'READY' || detail.view === null) return null;
       const view = detail.view;
+      // INTEL-TM-01: an understanding QANDEEL no longer relies on is never brought into the Conversation.
+      if (view.evidenceChange !== 'NONE' || view.summary === null) return null;
+      const summary = view.summary;
       talking = true;
       update({ talk: 'OPENING' });
       try {
@@ -226,7 +229,7 @@ export function createUnderstandingController({
             update({
               talk: 'IDLE',
               discussion: {
-                ref: view.ref, revision: view.revision, theme: view.theme, summary: view.summary, underReview: view.underReview,
+                ref: view.ref, revision: view.revision, theme: view.theme, summary, underReview: view.underReview,
                 disagreement: 'IDLE', resolution: 'IDLE',
               },
             });
@@ -268,9 +271,10 @@ export function createUnderstandingController({
             command = null;
             const fresh = await transport.readItem(ref).catch((): UnderstandingDetailOutcome => ({ kind: 'UNAVAILABLE' }));
             if (!live()) return 'CHANGED';
-            if (fresh.kind === 'READ') {
+            if (fresh.kind === 'READ' && fresh.view.evidenceChange === 'NONE' && fresh.view.summary !== null) {
               updateDiscussion(ref, { revision: fresh.view.revision, summary: fresh.view.summary, theme: fresh.view.theme, underReview: fresh.view.underReview, disagreement: 'IDLE' });
-            } else if (fresh.kind === 'GONE') {
+            } else if (fresh.kind === 'GONE' || fresh.kind === 'READ') {
+              // INTEL-TM-01: gone, or no longer relied on (withheld) — the discussion of it ends; its statement is not shown.
               update({ discussion: null });
             } else {
               updateDiscussion(ref, { disagreement: 'FAILED' });
@@ -321,9 +325,10 @@ export function createUnderstandingController({
             resolutionCommand = null;
             const fresh = await transport.readItem(ref).catch((): UnderstandingDetailOutcome => ({ kind: 'UNAVAILABLE' }));
             if (!live()) return 'CHANGED';
-            if (fresh.kind === 'READ') {
+            if (fresh.kind === 'READ' && fresh.view.evidenceChange === 'NONE' && fresh.view.summary !== null) {
               updateDiscussion(ref, { revision: fresh.view.revision, summary: fresh.view.summary, theme: fresh.view.theme, underReview: fresh.view.underReview, resolution: 'IDLE' });
-            } else if (fresh.kind === 'GONE') {
+            } else if (fresh.kind === 'GONE' || fresh.kind === 'READ') {
+              // INTEL-TM-01: gone, or no longer relied on (withheld) — the discussion of it ends; its statement is not shown.
               update({ discussion: null });
             } else {
               updateDiscussion(ref, { resolution: 'FAILED' });

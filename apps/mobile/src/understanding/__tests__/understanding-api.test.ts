@@ -6,7 +6,9 @@ import { UnderstandingApiClient, type RuntimeHttpFetch } from '../../runtime-ent
 
 const REF = 'AAAAAAAAAAAAAAAAAAAAAA';
 const REV = 'rrrrrrrrrrrrrrrrrrrrr1';
-const summary = { ref: REF, revision: REV, theme: 'WORK', summary: 'You prepare early.', confidence: 'CLEAR', underReview: false };
+const summary = { ref: REF, revision: REV, theme: 'WORK', summary: 'You prepare early.', evidenceChange: 'NONE', confidence: 'CLEAR', underReview: false };
+// INTEL-TM-01: the withheld shapes — no statement, no text, never Clear or Taking shape.
+const withheld = { ...summary, summary: null, evidenceChange: 'REVIEW_PENDING', confidence: 'NEEDS_MORE' };
 const detail = { ...summary, evidence: ['x'], contradictions: [], alternatives: [], unresolved: [], evolution: [{ kind: 'FIRST_SEEN', at: '2026-09-30T10:00:00.123+00:00' }] };
 
 function client(answer: { status: number; body?: unknown }) {
@@ -24,6 +26,17 @@ describe('UnderstandingApiClient', () => {
     await expect(client({ status: 200, body: detail }).api.readItem(REF)).resolves.toEqual({ kind: 'READ', view: detail });
   });
 
+  it('INTEL-TM-01 — accepts a withheld item only without its statement and without any text', async () => {
+    const unsupported = { ...withheld, ref: 'BBBBBBBBBBBBBBBBBBBBBB', evidenceChange: 'NO_REMAINING_SUPPORT' };
+    const contested = { ...withheld, ref: 'CCCCCCCCCCCCCCCCCCCCCC', confidence: 'MIXED', underReview: true };
+    await expect(client({ status: 200, body: { items: [withheld, unsupported, contested] } }).api.readItems()).resolves.toEqual({ kind: 'READ', items: [withheld, unsupported, contested] });
+    const withheldDetail = { ...withheld, evidence: [], contradictions: [], alternatives: [], unresolved: [], evolution: detail.evolution };
+    await expect(client({ status: 200, body: withheldDetail }).api.readItem(REF)).resolves.toEqual({ kind: 'READ', view: withheldDetail });
+    for (const leaked of [{ evidence: ['x'] }, { contradictions: ['x'] }, { alternatives: ['x'] }, { unresolved: ['x'] }, { summary: 'You prepare early.' }]) {
+      await expect(client({ status: 200, body: { ...withheldDetail, ...leaked } }).api.readItem(REF)).resolves.toEqual({ kind: 'UNAVAILABLE' });
+    }
+  });
+
   it.each([
     ['a numeric confidence', { items: [{ ...summary, confidence: 0.8 }] }],
     ['an added score', { items: [{ ...summary, score: 80 }] }],
@@ -35,6 +48,13 @@ describe('UnderstandingApiClient', () => {
     ['category tabs', { items: [], tabs: ['WORK'] }],
     ['a duplicated item', { items: [summary, summary] }],
     ['an item under review that is not Mixed', { items: [{ ...summary, underReview: true }] }],
+    ['a missing evidence change', { items: [{ ref: REF, revision: REV, theme: 'WORK', summary: 'x', confidence: 'CLEAR', underReview: false }] }],
+    ['an invented evidence change', { items: [{ ...summary, evidenceChange: 'RESTORED' }] }],
+    ['a relied-on item without a statement', { items: [{ ...summary, summary: null }] }],
+    ['a withheld item carrying its statement', { items: [{ ...withheld, summary: 'You prepare early.' }] }],
+    ['a withheld item shown as Clear', { items: [{ ...withheld, confidence: 'CLEAR' }] }],
+    ['a withheld item shown as Taking shape', { items: [{ ...withheld, confidence: 'TAKING_SHAPE' }] }],
+    ['an empty withheld statement instead of null', { items: [{ ...withheld, summary: '' }] }],
   ])('refuses %s as unavailable', async (_name, body) => {
     await expect(client({ status: 200, body }).api.readItems()).resolves.toEqual({ kind: 'UNAVAILABLE' });
   });

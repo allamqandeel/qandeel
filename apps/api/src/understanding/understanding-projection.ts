@@ -3,7 +3,7 @@ import type { ConfidenceMissingInformationCode } from '../hypothesis/confidence.
 import type { HypothesisStatus } from '../hypothesis/hypothesis.types';
 import {
   MAX_DETAIL_ALTERNATIVES, MAX_DETAIL_CONTEXT_ITEMS, MAX_DETAIL_EVOLUTION, UNDERSTANDING_CONFIDENCE_STATES,
-  UNDERSTANDING_EVOLUTION_KINDS, UNDERSTANDING_LIST_MAX_LIMIT, UNDERSTANDING_THEMES, UnderstandingProjectionInvariantError,
+  UNDERSTANDING_EVIDENCE_CHANGES, UNDERSTANDING_EVOLUTION_KINDS, UNDERSTANDING_LIST_MAX_LIMIT, UNDERSTANDING_THEMES, UnderstandingProjectionInvariantError,
   type UnderstandingConfidenceState,
 } from './understanding.types';
 
@@ -26,6 +26,11 @@ export interface UnderstandingConfidenceFacts {
   readonly exactVersionMissingInformation: readonly ConfidenceMissingInformationCode[] | null;
   /** An unresolved explicit disagreement by the reader (W3-MEGA-U U3, PG-01). */
   readonly contested: boolean;
+  /**
+   * INTEL-TM-01 (PG-02): QANDEEL may not rely on it (its evidence change is not NONE). Its stored Confidence record says
+   * nothing about the information that changed, so it is never a ground for CLEAR or TAKING_SHAPE.
+   */
+  readonly withheld: boolean;
 }
 
 /**
@@ -33,6 +38,7 @@ export interface UnderstandingConfidenceFacts {
  *
  * 1. an unresolved explicit disagreement                                    → MIXED
  * 2. the canonical lifecycle state MIXED                                    → MIXED
+ * W. withheld from reliance (INTEL-TM-01: evidence change not NONE)         → NEEDS_MORE
  * 3. currently eligible supporting AND contradicting context both present   → MIXED
  * 4. no Confidence record for the exact current version                     → NEEDS_MORE
  * 5. the canonical lifecycle state WEAK                                     → NEEDS_MORE
@@ -50,6 +56,7 @@ export interface UnderstandingConfidenceFacts {
 export function projectUnderstandingConfidence(facts: UnderstandingConfidenceFacts): UnderstandingConfidenceState {
   if (facts.contested) return 'MIXED';
   if (facts.status === 'MIXED') return 'MIXED';
+  if (facts.withheld) return 'NEEDS_MORE';
   if (facts.eligibleSupporting > 0 && facts.eligibleContradicting > 0) return 'MIXED';
   const record = facts.exactVersionMissingInformation;
   if (record === null) return 'NEEDS_MORE';
@@ -87,7 +94,7 @@ export function isUnderstandingToken(value: unknown): value is string {
 // widened upstream object, a numeric field, an internal identifier or an added reasoning field fails closed instead
 // of reaching the client.
 
-const SUMMARY_KEYS = ['confidence', 'ref', 'revision', 'summary', 'theme', 'underReview'];
+const SUMMARY_KEYS = ['confidence', 'evidenceChange', 'ref', 'revision', 'summary', 'theme', 'underReview'];
 const DETAIL_KEYS = [...SUMMARY_KEYS, 'alternatives', 'contradictions', 'evidence', 'evolution', 'unresolved'].sort();
 const MAX_TEXT = 2000;
 const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/u;
@@ -110,10 +117,16 @@ function textList(value: unknown, max: number): boolean {
 function auditSummaryFields(value: Record<string, unknown>): void {
   if (!isUnderstandingToken(value.ref) || !isUnderstandingToken(value.revision) ||
     !(UNDERSTANDING_THEMES as readonly unknown[]).includes(value.theme) ||
-    !(UNDERSTANDING_CONFIDENCE_STATES as readonly unknown[]).includes(value.confidence) || !text(value.summary) ||
+    !(UNDERSTANDING_CONFIDENCE_STATES as readonly unknown[]).includes(value.confidence) ||
+    !(UNDERSTANDING_EVIDENCE_CHANGES as readonly unknown[]).includes(value.evidenceChange) ||
     typeof value.underReview !== 'boolean') reject();
   // An item under review is never presented as anything but Mixed (P1 §11.4; P4-C3R `confMixed`).
   if (value.underReview === true && value.confidence !== 'MIXED') reject();
+  // INTEL-TM-01 (CC-2): a statement is shown exactly when QANDEEL may rely on it. A withheld item carries no statement
+  // and is never presented as Clear or Taking shape.
+  if (value.evidenceChange === 'NONE') {
+    if (!text(value.summary)) reject();
+  } else if (value.summary !== null || (value.confidence !== 'MIXED' && value.confidence !== 'NEEDS_MORE')) reject();
 }
 
 export function auditUnderstandingList(value: unknown): void {
@@ -134,6 +147,9 @@ export function auditUnderstandingDetail(value: unknown): void {
   if (!textList(value.evidence, MAX_DETAIL_CONTEXT_ITEMS) || !textList(value.contradictions, MAX_DETAIL_CONTEXT_ITEMS) ||
     !textList(value.alternatives, MAX_DETAIL_ALTERNATIVES) || !textList(value.unresolved, MAX_DETAIL_CONTEXT_ITEMS) ||
     !Array.isArray(value.evolution) || value.evolution.length > MAX_DETAIL_EVOLUTION) reject();
+  // INTEL-TM-01 (CC-2): a withheld item shows none of its own text and none of its reader's context.
+  if (value.evidenceChange !== 'NONE' && [value.evidence, value.contradictions, value.alternatives, value.unresolved]
+    .some((list) => (list as unknown[]).length > 0)) reject();
   for (const entry of value.evolution as unknown[]) {
     if (!isRecord(entry) || !exactKeys(entry, ['at', 'kind']) ||
       !(UNDERSTANDING_EVOLUTION_KINDS as readonly unknown[]).includes(entry.kind) ||

@@ -193,8 +193,28 @@ async function verifyEffectiveAcls() {
         AND pg_get_functiondef(p.oid) ~ 'source IN \\(''USER_STATED'',''USER_CONFIRMED''\\)'
       ORDER BY p.proname`,
   )).map((row) => row.proname);
-  assert.deepEqual(stragglers, ['canonical_eligible_memory_ids_v1'],
+  // INTEL-TM-01 (migration 0151) re-anchor, the QAN-AUD-03 objection its record pre-empts: L1 Memory standing
+  // (personal_evidence_standing_v1) states the same row facts as steps A + B, without the window and without
+  // deduplication, and it is NOT Evidence - it only ever WITHHOLDS reliance on a Hypothesis. It is admitted here by
+  // name and only while it stays outside every Evidence path: executable by no application role, and called by none of
+  // the canonical primitive's consumers (attach, the Update Loop core, both Confidence commands). Any other copy of the
+  // predicate still fails, and so does the standing function the moment an Evidence consumer starts using it.
+  assert.deepEqual(stragglers.filter((name) => name !== 'personal_evidence_standing_v1'), ['canonical_eligible_memory_ids_v1'],
     'the canonical primitive is the only SQL implementation of Evidence eligibility');
+  if (stragglers.includes('personal_evidence_standing_v1')) {
+    const standing = 'public.personal_evidence_standing_v1(uuid,text,timestamp with time zone)';
+    for (const role of ['anon', 'authenticated', 'service_role']) {
+      assert.equal((await rows("SELECT has_function_privilege($1, to_regprocedure($2), 'EXECUTE') AS allowed", [role, standing]))[0].allowed, false,
+        `${role} cannot execute the L1 standing predicate`);
+    }
+    const evidenceUsers = (await rows(
+      `SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace
+        WHERE n.nspname='public' AND p.prokind='f' AND p.proname = ANY($1::text[])
+          AND pg_get_functiondef(p.oid) ~ '(personal_evidence_standing_v1|hypothesis_evidence_change_core_v1|hypothesis_reliance_usable_v1)'`,
+      [users],
+    )).map((row) => row.proname);
+    assert.deepEqual(evidenceUsers, [], 'no Evidence consumer reads reliance or standing: L1 never widens Evidence');
+  }
 }
 
 // Section 7: JavaScript / SQL exact-normalization parity, proven against the

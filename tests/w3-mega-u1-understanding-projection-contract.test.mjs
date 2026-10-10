@@ -27,8 +27,10 @@ const plant = (key, from, to) => {
 };
 
 // The one exact Product shape of a summary and a detail. A new key needs a new Product decision. U3 added exactly one,
-// `underReview` — P1 §11.4's own Contested / Under Review state, a boolean, never a score.
-const SUMMARY_FIELDS = ['confidence', 'ref', 'revision', 'summary', 'theme', 'underReview'];
+// `underReview` — P1 §11.4's own Contested / Under Review state, a boolean, never a score. INTEL-TM-01 added exactly one
+// more under its Product decision (Controlled Change CC-2, Implementation Task Contract 2026-10-10): `evidenceChange`, a
+// three-value state (NONE / REVIEW_PENDING / NO_REMAINING_SUPPORT) beside the four confidence states, never a fifth one.
+const SUMMARY_FIELDS = ['confidence', 'evidenceChange', 'ref', 'revision', 'summary', 'theme', 'underReview'];
 const DETAIL_FIELDS = [...SUMMARY_FIELDS, 'alternatives', 'contradictions', 'evidence', 'evolution', 'unresolved'].sort();
 function interfaceFields(text, name) {
   const match = text.match(new RegExp(`export interface ${name}(?: extends (\\w+))? \\{([\\s\\S]*?)\\n\\}`, 'u'));
@@ -46,7 +48,7 @@ function outboundShapeViolations(world) {
   const detail = interfaceFields(world.types, 'UnderstandingItemDetail');
   if (JSON.stringify(summary) !== JSON.stringify(SUMMARY_FIELDS)) out.push(`summary fields ${summary}`);
   if (JSON.stringify(detail) !== JSON.stringify(DETAIL_FIELDS)) out.push(`detail fields ${detail}`);
-  if (!/const SUMMARY_KEYS = \['confidence', 'ref', 'revision', 'summary', 'theme', 'underReview'\];/u.test(world.projection)) out.push('the audit key list drifted');
+  if (!/const SUMMARY_KEYS = \['confidence', 'evidenceChange', 'ref', 'revision', 'summary', 'theme', 'underReview'\];/u.test(world.projection)) out.push('the audit key list drifted');
   return out;
 }
 
@@ -200,7 +202,7 @@ const PLANTED = [
   ['invented default for an unknown / uncalibrated state', 'inventedDefaultViolations', () => plant('projection', "if (record === null) return 'NEEDS_MORE';", "if (record === null) return 'TAKING_SHAPE';")],
   ['an invented optimistic fall-through', 'inventedDefaultViolations', () => plant('projection', "  return 'NEEDS_MORE';\n}", "  return 'TAKING_SHAPE';\n}")],
   ['a second path to Clear', 'inventedDefaultViolations', () => plant('projection', "if (facts.status === 'ACTIVE' || facts.status === 'SUPPORTED') return 'TAKING_SHAPE';", "if (facts.status === 'ACTIVE') return 'CLEAR';\n  if (facts.status === 'ACTIVE' || facts.status === 'SUPPORTED') return 'TAKING_SHAPE';")],
-  ['a widened outbound shape', 'outboundShapeViolations', () => plant('types', 'readonly summary: string;', 'readonly summary: string;\n  readonly explanation: string;')],
+  ['a widened outbound shape', 'outboundShapeViolations', () => plant('types', 'readonly summary: string | null;', 'readonly summary: string | null;\n  readonly explanation: string;')],
 ];
 
 for (const [name, detector, world] of PLANTED) {

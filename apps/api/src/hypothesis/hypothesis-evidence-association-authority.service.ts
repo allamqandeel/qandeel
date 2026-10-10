@@ -34,7 +34,7 @@ export class HypothesisEvidenceAssociationAuthorityService {
     }
     const [eligibleEvidence, activeHypotheses] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
-      this.hypotheses.listActiveForUser(userId, token),
+      this.hypotheses.listReliableActiveForUser(userId, token),
     ]);
     return this.prepareFromCanonicalState(userId, sessionId, freshEvidenceId, eligibleEvidence, activeHypotheses);
   }
@@ -105,7 +105,7 @@ export class HypothesisEvidenceAssociationAuthorityService {
     }
     const [currentlyEligibleEvidence, current] = await Promise.all([
       this.evidence.listEligibleForUser(userId, token),
-      this.hypotheses.listActiveForUser(userId, token),
+      this.hypotheses.listReliableActiveForUser(userId, token),
     ]);
     return this.authorizeFromCanonicalState(userId, sessionId, snapshot, proposals, currentlyEligibleEvidence, current);
   }

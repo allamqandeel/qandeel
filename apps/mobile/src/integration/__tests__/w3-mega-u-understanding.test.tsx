@@ -25,7 +25,7 @@ const LANGUAGE = deviceProductLocale().language;
 const COPY = understandingCopy(LANGUAGE);
 const REF = 'AAAAAAAAAAAAAAAAAAAAAA';
 const REV = 'rrrrrrrrrrrrrrrrrrrrr1';
-const ITEM = { ref: REF, revision: REV, theme: 'GOALS', summary: 'Finishing the course matters to you.', confidence: 'MIXED', underReview: false };
+const ITEM = { ref: REF, revision: REV, theme: 'GOALS', summary: 'Finishing the course matters to you.', evidenceChange: 'NONE', confidence: 'MIXED', underReview: false };
 const style = (node: { props: { style?: unknown } }) => StyleSheet.flatten(node.props.style as never) as Record<string, unknown>;
 
 async function world(): Promise<{ h: IntegrationHarness; view: RenderResult }> {

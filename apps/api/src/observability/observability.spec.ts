@@ -211,4 +211,13 @@ describe('PROD-OPS-01 operational telemetry',()=>{
   expect(()=>t.recordOperationalOutcome('ACCOUNT_DELETION','erase','success')).not.toThrow();expect(()=>t.recordPrivacyOperationState('ACCOUNT_DELETION','stuck_due',1,60)).not.toThrow();expect(()=>t.recordPrivacyExportRecentFailures('INTERNAL_OTHER',1)).not.toThrow();
   Object.assign(t as any,{operationalOutcomes:{},privacyOperationStateCounts:{},privacyOperationOldestAges:{},privacyExportRecentFailures:{}});
   expect(()=>t.recordOperationalOutcome('ACCOUNT_DELETION','erase','success')).not.toThrow();expect(()=>t.recordPrivacyOperationState('ACCOUNT_DELETION','stuck_due',1,60)).not.toThrow();});
+
+// INTEL-TM-01 (CC-4): the housekeeping step's relation — three outcome classes, nothing else, never a failure class.
+describe('INTEL-TM-01 truth-maintenance telemetry',()=>{
+ it('emits exactly success, transport_failure and integrity_failure for withdrawal_reevaluate',()=>{const t=new TelemetryService(new CorrelationService()),add=jest.fn();Object.assign(t as any,{operationalOutcomes:{add}});
+  for(const outcome of ['success','transport_failure','integrity_failure','retry_pending','ERROR: duplicate key'])t.recordOperationalOutcome('PERSONAL_EVIDENCE_TRUTH_MAINTENANCE','withdrawal_reevaluate',outcome);
+  t.recordOperationalOutcome('PERSONAL_EVIDENCE_TRUTH_MAINTENANCE','withdrawal_reevaluate','success','TRANSPORT');t.recordOperationalOutcome('PERSONAL_EVIDENCE_TRUTH_MAINTENANCE','detach_hypothesis','success');
+  expect(add.mock.calls.map(([,labels])=>labels.outcome)).toEqual(['success','transport_failure','integrity_failure']);
+  for(const [,labels] of add.mock.calls)expect(Object.keys(labels).sort()).toEqual(['domain','operation','outcome','policy_version']);});
+});
 });

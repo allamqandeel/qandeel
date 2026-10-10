@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from '../memory/memory-data-api.service';
 import { HypothesisServiceRoleApiService } from './hypothesis-service-role-api.service';
+import type { HypothesisEvidenceRelianceRow } from './hypothesis-evidence-reliance';
 import type { CreateHypothesisInput, EvidenceRole, HypothesisRecord, HypothesisStatus } from './hypothesis.types';
 const FIELDS = 'id,user_id,statement,type,domain,scope,origin,status,version,supporting_evidence_ids,contradicting_evidence_ids,competing_hypothesis_ids,assumptions,disconfirming_conditions,created_at,updated_at';
 // Reads stay on the authenticated owner-scoped path. Creation goes through the
@@ -33,6 +34,11 @@ export class HypothesisRepository {
   listActive(token: string, userId: string, limit: number): Promise<HypothesisRecord[]> {
     const query = new URLSearchParams({ select: FIELDS, user_id: `eq.${userId}`, status: 'in.(CANDIDATE,ACTIVE,SUPPORTED,MIXED,WEAK,REOPENED)', order: 'updated_at.desc,id.asc', limit: String(limit) });
     return this.dataApi.request<HypothesisRecord[]>(token, `hypotheses?${query}`);
+  }
+  // INTEL-TM-01 (migration 0151): the owner's reliance read, on the authenticated owner-scoped path. The database
+  // derives the owner from the token and answers only the caller's own ids, each with the version it judged.
+  readEvidenceReliance(token: string, hypothesisIds: readonly string[]): Promise<HypothesisEvidenceRelianceRow[]> {
+    return this.dataApi.request<HypothesisEvidenceRelianceRow[]>(token, 'rpc/hypothesis_evidence_reliance_v1', { method: 'POST', body: JSON.stringify({ p_hypothesis_ids: hypothesisIds }) });
   }
   // Migration 0036: the exact-version, audited lifecycle transition boundary.
   // The legacy last-writer-wins `transition_hypothesis` RPC holds no

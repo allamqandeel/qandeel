@@ -69,24 +69,34 @@ function Paragraph({ text, palette, writing, role = 'body', color }: {
   );
 }
 
+/**
+ * INTEL-TM-01 (PG-02): what stands in an item's statement place. A withheld understanding — one QANDEEL no longer relies
+ * on — never carries its statement, so its approved evidence-change line is shown (and announced) instead.
+ */
+function statementLine(item: UnderstandingItemView, copy: UnderstandingCopy): string {
+  return item.evidenceChange === 'NONE' && item.summary !== null ? item.summary : copy.evidenceChange[item.evidenceChange === 'NONE' ? 'REVIEW_PENDING' : item.evidenceChange];
+}
+
 function ItemRow({ item, copy, language, palette, writing, onOpen }: {
   readonly item: UnderstandingItemView; readonly copy: UnderstandingCopy; readonly language: ChromeLanguage;
   readonly palette: ConversationPalette; readonly writing: 'rtl' | 'ltr'; readonly onOpen: (ref: string) => void;
 }) {
   const title = copy.theme[item.theme];
   const confidence = copy.confidenceName(copy.confidence[item.confidence]);
+  const line = statementLine(item, copy);
   return (
     <Control
       palette={palette}
       language={language}
-      // One stop for the screen reader, in reading order: title, summary, then the confidence named in words.
-      accessibilityLabel={item.underReview ? `${title}, ${item.summary}, ${confidence}, ${copy.underReview}` : `${title}, ${item.summary}, ${confidence}`}
+      // One stop for the screen reader, in reading order: title, summary (or the evidence-change line), then the
+      // confidence named in words.
+      accessibilityLabel={item.underReview ? `${title}, ${line}, ${confidence}, ${copy.underReview}` : `${title}, ${line}, ${confidence}`}
       onPress={() => onOpen(item.ref)}
       testID={`qandeel-understanding-item-${item.ref}`}
       style={{ minHeight: MIN_TARGET, paddingVertical: 12, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0 }}
     >
       <Text style={{ ...typeStyle('action'), color: palette.primary, writingDirection: writing }}>{title}</Text>
-      <Text style={{ ...typeStyle('body'), color: palette.secondary, paddingTop: 2, writingDirection: writing }}>{item.summary}</Text>
+      <Text testID={item.evidenceChange === 'NONE' ? undefined : `qandeel-understanding-item-${item.ref}-evidence-change`} style={{ ...typeStyle('body'), color: palette.secondary, paddingTop: 2, writingDirection: writing }}>{line}</Text>
       <Text testID={`qandeel-understanding-item-${item.ref}-confidence`} style={{ ...typeStyle('metadata'), color: palette.tertiary, paddingTop: 4, writingDirection: writing }}>
         {confidence}
       </Text>
@@ -111,9 +121,17 @@ function Detail({ view, copy, language, palette, writing, talkState, onTalk }: {
     [copy.unresolved, view.unresolved, 'unresolved'],
   ];
   const busy = talkState === 'OPENING';
+  // INTEL-TM-01: a withheld understanding cannot be talked about — QANDEEL does not rely on it — so it offers no talk.
+  const withheld = view.evidenceChange !== 'NONE';
   return (
     <View testID="qandeel-understanding-detail">
-      <Paragraph text={view.summary} palette={palette} writing={writing} />
+      {withheld ? (
+        <Text testID="qandeel-understanding-detail-evidence-change" style={{ ...typeStyle('body'), color: palette.primary, paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 4, writingDirection: writing }}>
+          {statementLine(view, copy)}
+        </Text>
+      ) : (
+        <Paragraph text={statementLine(view, copy)} palette={palette} writing={writing} />
+      )}
       <Text testID="qandeel-understanding-detail-confidence" style={{ ...typeStyle('metadata'), color: palette.tertiary, paddingStart: ROW_START, paddingEnd: ROW_END, paddingTop: 4, writingDirection: writing }}>
         {copy.confidenceName(copy.confidence[view.confidence])}
       </Text>
@@ -136,7 +154,7 @@ function Detail({ view, copy, language, palette, writing, talkState, onTalk }: {
           ))}
         </View>
       )}
-      <View style={{ paddingTop: 24 }}>
+      {withheld ? null : <View style={{ paddingTop: 24 }}>
         {talkState === 'FAILED' ? (
           <Text accessibilityLiveRegion="polite" testID="qandeel-understanding-talk-failed" style={{ ...typeStyle('supporting'), color: palette.error, paddingStart: ROW_START, paddingEnd: ROW_END, paddingBottom: 4, writingDirection: writing }}>
             {copy.talkFailed}
@@ -153,7 +171,7 @@ function Detail({ view, copy, language, palette, writing, talkState, onTalk }: {
         >
           <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{copy.talk}</Text>
         </Control>
-      </View>
+      </View>}
     </View>
   );
 }

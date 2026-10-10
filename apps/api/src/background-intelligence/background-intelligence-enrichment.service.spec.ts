@@ -258,4 +258,31 @@ describe('BackgroundIntelligenceEnrichmentService',()=>{const setup=(overrides:R
    expect(data.applyHypothesisUpdate).not.toHaveBeenCalled();
   });
  });
+ // INTEL-TM-01 (PG-02): the background list holds only what QANDEEL may rely on, and the housekeeping answers a count.
+ describe('INTEL-TM-01 reliance and withdrawal housekeeping',()=>{
+  const record=(id:string,statement=`Statement ${id}.`)=>({id,user_id:ids.user,statement,type:'CAUSAL',domain:'GENERAL',scope:`CONVERSATION_SESSION:${ids.session}`,origin:'SYSTEM_GENERATED',status:'ACTIVE',version:3,supporting_evidence_ids:[],contradicting_evidence_ids:[],competing_hypothesis_ids:[],assumptions:[],disconfirming_conditions:[],created_at:'2026-10-01T00:00:00Z',updated_at:'2026-10-02T00:00:00Z'});
+  const answer=(id:string,change:string,version=3)=>({hypothesis_id:id,hypothesis_version:version,evidence_change:change});
+  const a='30000000-0000-4000-8000-00000000000a',b='30000000-0000-4000-8000-00000000000b',c='30000000-0000-4000-8000-00000000000c';
+  it('keeps only NONE items, read after the list for exactly its ids, in list order',async()=>{const valid=await context(),{service,data}=setup({listActiveHypotheses:jest.fn().mockResolvedValue([record(a),record(b),record(c)]),readHypothesisEvidenceReliance:jest.fn().mockResolvedValue([answer(c,'NONE'),answer(b,'REVIEW_PENDING'),answer(a,'NONE')])});
+   await expect(service.listReliableActiveHypotheses(valid)).resolves.toEqual([record(a),record(c)]);
+   expect((data as unknown as {readHypothesisEvidenceReliance:jest.Mock}).readHypothesisEvidenceReliance).toHaveBeenCalledWith(valid,[a,b,c]);});
+  it('asks nothing for an empty list and fails closed on a malformed or stale-version answer shape',async()=>{const valid=await context(),empty=setup({readHypothesisEvidenceReliance:jest.fn()});
+   await expect(empty.service.listReliableActiveHypotheses(valid)).resolves.toEqual([]);expect((empty.data as unknown as {readHypothesisEvidenceReliance:jest.Mock}).readHypothesisEvidenceReliance).not.toHaveBeenCalled();
+   const bad=setup({listActiveHypotheses:jest.fn().mockResolvedValue([record(a)]),readHypothesisEvidenceReliance:jest.fn().mockResolvedValue([answer(a,'UNKNOWN')])});
+   await expect(bad.service.listReliableActiveHypotheses(valid)).rejects.toThrow('HYPOTHESIS_EVIDENCE_RELIANCE_INTEGRITY');
+   const stale=setup({listActiveHypotheses:jest.fn().mockResolvedValue([record(a)]),readHypothesisEvidenceReliance:jest.fn().mockResolvedValue([answer(a,'NONE',4)])});
+   await expect(stale.service.listReliableActiveHypotheses(valid)).resolves.toEqual([]);});
+  it('generation sees and collides with only the reliable items, so a withheld statement can return as a NEW item',async()=>{const valid=await context(),{service}=setup({listActiveMemories:jest.fn().mockResolvedValue([memory()]),listActiveHypotheses:jest.fn().mockResolvedValue([record(a,'I give up when goals feel vague.'),record(b,'I recover focus after small wins.')]),readHypothesisEvidenceReliance:jest.fn().mockResolvedValue([answer(a,'REVIEW_PENDING'),answer(b,'NONE')])});
+   const proposal=(statement:string)=>({statement,type:'CAUSAL' as const,domain:'GENERAL' as const,scope:`CONVERSATION_SESSION:${ids.session}`,supportingEvidenceIds:[`memory:${memory().id}`],contradictingEvidenceIds:[],assumptions:[],disconfirmingConditions:[],subjectGroundingHandles:[]});
+   const generate=jest.fn().mockResolvedValue([proposal('I give up when goals feel vague.'),proposal('I recover focus after small wins.')]);
+   const plan=await service.generateHypothesisCandidatePlan(valid,{problem:'Why do I always give up?',domain:'GENERAL',scope:`CONVERSATION_SESSION:${ids.session}`,evidenceIds:[`memory:${memory().id}`]},{generate});
+   expect(generate.mock.calls[0][0].existingActiveHypotheses.map((item:{id:string})=>item.id)).toEqual([b]);
+   if(plan.code!=='VALIDATED_CANDIDATES')throw new Error('expected a validated plan');
+   expect(plan.candidates.map(candidate=>candidate.statement)).toEqual(['I give up when goals feel vague.']);
+   expect(plan.candidates[0].hypothesisId).not.toBe(a);});
+  it('the housekeeping sends only the authority-issued owner and the bound, and accepts only a bounded count',async()=>{const valid=await context(),step=jest.fn().mockResolvedValue(2),{service}=setup({reevaluateWithdrawnHypothesisEvidence:step});
+   await expect(service.reevaluateWithdrawnHypothesisEvidence(valid)).resolves.toBe(2);expect(step).toHaveBeenCalledWith(valid,32);
+   for(const malformed of[-1,33,1.5,'2',null,[2]]){step.mockResolvedValueOnce(malformed);await expect(service.reevaluateWithdrawnHypothesisEvidence(valid)).rejects.toThrow('PERSONAL_EVIDENCE_REEVALUATION_INTEGRITY');}
+   await expect(service.reevaluateWithdrawnHypothesisEvidence({...valid})).rejects.toThrow('BACKGROUND_INTELLIGENCE_AUTHORITY_REQUIRED');});
+ });
 });

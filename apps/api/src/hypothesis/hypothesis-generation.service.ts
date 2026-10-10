@@ -83,7 +83,8 @@ export class HypothesisGenerationService {
       domain,
       scope,
       eligibleEvidence: requested as HypothesisGenerationRequest['eligibleEvidence'],
-      existingActiveHypotheses: await this.hypotheses.listActiveForUser(userId, accessToken),
+      // INTEL-TM-01: only Hypotheses QANDEEL may rely on are shown to the generator or used for collision.
+      existingActiveHypotheses: await this.hypotheses.listReliableActiveForUser(userId, accessToken),
       maxCandidateCount: MAX_GENERATED_HYPOTHESIS_CANDIDATES,
     };
   }

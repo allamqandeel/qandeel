@@ -115,3 +115,20 @@ effects, new Memory rows and provider-double calls for each fixture step.
 - Fixtures are changed only to add scenarios or to fix a fixture error, never to improve a number (Product Owner, C1-B
   decision). A fixture change invalidates comparability and must say so in the results `readThisFirst`.
 - A real-LLM run (Stage 8A) is a different instrument with its own contract; it does not reuse these doubles.
+
+## 8. INTEL-TM-01 re-run on the implementation SHA `272a567e62e93fb684f340172621840a2eb48e8f` (2026-10-10; PR open, not merged)
+
+The PG-02 repair (INTEL-TM-01, migration `0151`) re-ran this harness on its own implementation SHA, as its Task Contract
+directs, and added `results/272a567e62e93fb684f340172621840a2eb48e8f.json`; the `6a5fa42` file is untouched. The driver
+gained one measure beside the old item count: per Hypothesis, the database's own evidence change and whether it ever
+depended on forgotten, disabled or corrected Memory (`pg02.perHypothesis`, `pg02.reliedOnAfterWithdrawal`).
+
+| Scenario | `6a5fa42` | `272a567` |
+|---|---|---|
+| F1 Hypothesis injected after forget (new session) | 2 / 2 | **0 / 2** (the turns generate; the context offers no withheld item) |
+| F1 `ACTIVE` Hypotheses over non-`ACTIVE` evidence links | 1 | 0 (the housekeeping detached the withdrawn links, with a record) |
+| F1 Hypotheses that depended on withdrawn / corrected Memory · relied on | not measured | 1 · **0** (`NO_REMAINING_SUPPORT`, withdrawal recorded) |
+| C1, H1, K1, M1, N1, P1, X1 summaries | — | identical to `6a5fa42` |
+
+Controls hold (isolation, 0 content leaks, 0 outbound attempts). These are structural yields of the deterministic
+pipeline with provider doubles, not a capability pass.

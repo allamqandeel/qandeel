@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { randomUUID } from 'node:crypto';
 import { EvidenceService } from '../memory/evidence.service';
 import { canTransitionHypothesis } from './hypothesis-lifecycle';
+import { projectEvidenceReliance, reliableOnly, type HypothesisEvidenceChange } from './hypothesis-evidence-reliance';
 import { HypothesisRepository } from './hypothesis.repository';
 import { HYPOTHESIS_DOMAINS, HYPOTHESIS_ORIGINS, HYPOTHESIS_STATUSES, HYPOTHESIS_TYPES, MAX_ACTIVE_HYPOTHESES, MAX_ASSUMPTIONS, MAX_DISCONFIRMING_CONDITIONS, MAX_SCOPE_LENGTH, MAX_STATEMENT_LENGTH, MAX_STRUCTURED_TEXT_LENGTH, type CreateHypothesisInput, type EvidenceRole, type HypothesisRecord, type HypothesisStatus, type HypothesisView } from './hypothesis.types';
 
@@ -23,6 +24,20 @@ export class HypothesisService {
   }
   listActiveForUser(userId: string, token: string): Promise<HypothesisRecord[]> {
     return this.repository.listActive(token, userId, MAX_ACTIVE_HYPOTHESES);
+  }
+  /**
+   * INTEL-TM-01 (PG-02): the version-pinned reliance of these owned Hypotheses, read after them. Only NONE may be relied
+   * on; an item answered for another version, or not answered, is absent and so never usable. A malformed answer throws.
+   */
+  async readEvidenceReliance(token: string, hypotheses: readonly HypothesisRecord[]): Promise<ReadonlyMap<string, HypothesisEvidenceChange>> {
+    if (hypotheses.length === 0) return new Map();
+    return projectEvidenceReliance(hypotheses, await this.repository.readEvidenceReliance(token, hypotheses.map(({ id }) => id)));
+  }
+  /** INTEL-TM-01: the current Hypotheses QANDEEL may rely on. Every provider-facing reader uses this, never the raw list. */
+  async listReliableActiveForUser(userId: string, token: string): Promise<HypothesisRecord[]> {
+    const active = await this.listActiveForUser(userId, token);
+    if (!Array.isArray(active)) return active;
+    return reliableOnly(active, await this.readEvidenceReliance(token, active));
   }
   async transition(userId: string, token: string, id: string, status: HypothesisStatus): Promise<HypothesisRecord> {
     if (!HYPOTHESIS_STATUSES.includes(status)) throw new BadRequestException('Invalid hypothesis status.');
