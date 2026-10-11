@@ -173,7 +173,9 @@ any of them closed.
   - `0128` — the command shape `CHECK` is replaced (0128's disjuncts verbatim plus the subject question, REMEMBER answers,
     `RECONFIRMED`, `CORRECTED_TO_EXISTING`); the runtime finalizes through `server_finalize_memory_control_turn_v2`. Its
     equivalent copies keep to a compatible subject (equal, or one side unattributed): the same words about the user and
-    about someone else are two facts, never retired or kept for one another (G-C2 correction RC-C2).
+    about someone else are two facts, never retired or kept for one another (G-C2 correction RC-C2). A correction of an
+    unattributed fact asks the subject question rather than resolving into another subject's Memory, answered only through
+    `pending_memory_correction_subject_clarification_v1` and bound to its exact target (G-C2 decision L-11).
   - `0026`, `0072`, `0128` — `service_role` EXECUTE on the six legacy Memory writers is revoked (bodies unchanged). The
     only Memory writers are v2, `background_record_memory_v1` and the governed erasure (`0130`, unchanged).
 - Backlog: `QAN-BL-INTEL-03` (`INTEL-SV-01`) and `QAN-BL-PRIV-03` (`PRIV-EXPORT-01`) admitted; INTEL-TM-01's R2 observation
