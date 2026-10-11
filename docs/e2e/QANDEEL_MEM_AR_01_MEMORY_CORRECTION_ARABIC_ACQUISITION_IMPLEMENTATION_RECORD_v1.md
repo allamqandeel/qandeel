@@ -383,8 +383,9 @@ CC-H1, CC-M1, CC-M2′ and CC-M3′.
 **Branch:** `mem/mem-ar-01c-subject-identity-evidence-protection`, cut from `origin/main`
 `20e33ae3f0c7a4c95a952802d293547f1a98f676` (the merge of PR #329).
 
-**Implementation commit (the tested code tree):** `b9549663b9f5eee234dabc24af664bd295326079`. Every later commit on the branch adds documentation or
-CI-01 results only (RC-3).
+**Implementation commit (the tested code tree):** `38c977f051248b038cceb1763c5173fc08cce2ee` — the first implementation
+`b9549663b9f5eee234dabc24af664bd295326079` plus the G-C2 review corrections RC-C1 and RC-C2 (§13). Every later commit on
+the branch adds documentation or CI-01 results only (RC-3).
 
 ### 1. Anti-duplication gate (contract §1.2), at the start of the slice
 
@@ -425,7 +426,8 @@ untouched):
   C3.3, closed list); a correction whose words name no subject carries `asSaid` and inherits its target's subject in SQL.
 - *Memory control:* REMEMBER asks the locked question when the subject is undecided and keeps it from the question turn's
   words after the answer; the plan names the equivalent the server found and carries `subject`, `replyIfExisting`;
-  equivalent copies are offered once (`collapseEquivalents`); the inspection lists Memories about other people in their
+  equivalent copies are offered once (`collapseEquivalents`), per subject — the same words about the user and about
+  someone else are two candidates, and an unattributed copy goes with the attributed fact of its words (RC-C2, §13); the inspection lists Memories about other people in their
   own section (locked copy, CQ-1 form when first). The Conversation repository finalizes through v2.
 - *Evidence / retrieval:* `projectEligibleEvidence` admits SELF only (CC-M1-TS); every served Memory carries `about`
   (`USER` / `SOMEONE_ELSE` / `NOT_RECORDED`) and the memory-context guidance carries the RC-2 sentence (MF-1).
@@ -461,8 +463,10 @@ matrix: SELF 1 / UNATTRIBUTED 6; reliance before → after: only-(a) `NONE` → 
 
 - **One equivalent ACTIVE fact per owner:** REMEMBER over an attributed equivalent → `ALREADY_REMEMBERED`; over only
   UNATTRIBUTED equivalents → `RECONFIRMED`; CORRECT into an existing value → `CORRECTED_TO_EXISTING` (target superseded
-  status-only, no second copy); FORGET / DISABLE / CORRECT over a legacy duplicate pair change every copy, each with its
-  disposition; the background never retires or attributes an existing row (`EQUIVALENT_EXISTS`).
+  status-only, no second copy); FORGET / DISABLE / CORRECT over a legacy duplicate pair change every copy with a
+  compatible subject (equal, or one side unattributed), each with its disposition — a copy about someone else is a
+  different fact and is never retired or kept for the user's (RC-C2, verify-0152 D-2); the background never retires or
+  attributes an existing row (`EQUIVALENT_EXISTS`).
 - **Lineage invariant:** every `SUPERSEDED` row has exactly one of a successor, a `CORRECTED_TO_EXISTING` target or a
   disposition (verify-0152 D-1, after every L-4 step); the export label stays "replaced by a correction".
 - **Atomicity (W-5):** a failure injected after each write step — Memory insert / update, attribution, disposition,
@@ -488,7 +492,7 @@ create.
 | Route spec (`memory-control-words-answer.route.spec.ts`, real orchestrator → v2 mirror → outbox → real dispatcher → real enrichment) | the words answer «أنا بحب الكشري» forgets the chosen Memory; the evaluator still reads the words; the writer answers `SKIPPED_COMMAND_TURN`; the effect completes `NO_FRESH_EVIDENCE`; a replay of the same event writes nothing; recall does not serve the forgotten statement; an unrelated ordinary statement afterwards is captured |
 | S-2b (same spec) | the subject answer «عن أختي» — which the evaluator alone would keep as the user's relationship — is the command's: `SKIPPED_COMMAND_TURN` |
 | verify-0152 (real PostgreSQL) | the FORGET answer turn and the question turn: `SKIPPED_COMMAND_TURN`, replay identical; the Memory stays `DELETED`, never Evidence again; an unrelated ordinary turn is `CREATED` |
-| CI-01 U1 on `b9549663b9f5eee234dabc24af664bd295326079` | U1.4 `FORGET/FORGOTTEN` answering the question, `ACTIVE → DELETED`, `MEMORY_WRITE … NO_FRESH_EVIDENCE`, no new row; **U1.5 `forgottenServed` = false (0 / 1)** |
+| CI-01 U1 on `b9549663b9f5eee234dabc24af664bd295326079`, identical on `38c977f051248b038cceb1763c5173fc08cce2ee` | U1.4 `FORGET/FORGOTTEN` answering the question, `ACTIVE → DELETED`, `MEMORY_WRITE … NO_FRESH_EVIDENCE`, no new row; **U1.5 `forgottenServed` = false (0 / 1)** |
 
 ### 6. CC-M1 / CC-M2′ / CC-M3′ / CC-H1
 
@@ -517,20 +521,23 @@ create.
 
 ### 8. Validation
 
-**Local (on the implementation tree):**
+**Local (on the implementation tree `38c977f`; the `b9549663` figures, where they differ, in brackets):**
 
 | Check | Result |
 |---|---|
 | API typecheck (`tsconfig.json`, `tsconfig.scripts.json`) | pass |
-| API Jest, full | 235 suites, 5,422 / 5,422 |
-| Static: MEM-AR-01 contract (new) · W3-MEGA-M · INTEL-TM-01 · CI-01 · task-closure governance · `test:database` | 21 / 21 · 36 / 36 · 23 / 23 · 18 / 18 · 24 / 24 · 1,304 / 1,304 |
-| verify-0152 on a fresh PostgreSQL 17.10, and again after the whole database leg on the same database | pass, pass |
+| API Jest, full | 235 suites, 5,427 / 5,427 [5,422] |
+| Static: MEM-AR-01 contract (new) · W3-MEGA-M · INTEL-TM-01 · CI-01 · task-closure governance · `test:database` | 28 / 28 [21] · 36 / 36 · 23 / 23 · 18 / 18 · 24 / 24 · 1,304 / 1,304; every `tests/*.test.mjs` file: 1,329 / 1,329 |
+| verify-0152 on a fresh PostgreSQL 17.10, and again after the whole database leg on the same database | pass, pass (with D-2 on `38c977f`) |
+| Full Intelligence smoke-transport adapter test, Full Intelligence e2e smoke, Integrated Brain e2e hardening v2, A2 e2e smoke, on a fresh PostgreSQL 17.10 | 5 / 5, PASS, PASS, PASS — a local pre-check only, against a scratch in-process Redis Streams stand-in (no Redis on the development machine); the binding runs are API CI's, against `redis:7` |
 | The API CI database leg, locally, PostgreSQL 17.10 (126 steps) | 119 pass; the rest are environment-only: 4 need Redis, 0133 needs `psql` (passed through a node-pg replay of the same files), 0130's known Windows clock-skew check (passes on rerun) |
 
-**CI-01 on `b9549663b9f5eee234dabc24af664bd295326079`** (`scripts/ci-01/results/b9549663b9f5eee234dabc24af664bd295326079.json`; local PostgreSQL 17.10, 152 migrations, provider
-doubles, network guard; the 01A / 01B / INTEL-TM-01 results files untouched): 14 scenarios RUN, controls hold (two-sided
-isolation, 0 content leaks, 0 outbound attempts), 0 foreground errors. Against the 01B results (`3d0ff0f…`) only two
-summaries move, both as intended; C2, F1, H1, K1, M1, N1, P1, U2 and X1 are identical.
+**CI-01 on `38c977f051248b038cceb1763c5173fc08cce2ee`** (`scripts/ci-01/results/38c977f051248b038cceb1763c5173fc08cce2ee.json`; local PostgreSQL 17.10, 152
+migrations, provider doubles, network guard; every earlier results file untouched, `b9549663…` included): 14 scenarios RUN,
+controls hold (two-sided isolation, 0 content leaks, 0 outbound attempts), 0 foreground errors. Against the results on
+`b9549663…` every scenario summary is identical and the bodies differ only in the random ids of F1 / F2 fixture
+Hypotheses — no scenario holds the same words about two subjects, so RC-C2 leaves CI-01 unchanged. Against the 01B
+results (`3d0ff0f…`) only two summaries move, both as intended; C2, F1, H1, K1, M1, N1, P1, U2 and X1 are identical.
 
 | Scenario | Result |
 |---|---|
@@ -542,8 +549,8 @@ summaries move, both as intended; C2, F1, H1, K1, M1, N1, P1, U2 and X1 are iden
 | F1 | PG-02 holds: 0 injected after forget, 0 relied on after withdrawal |
 | F2 (new) | reliance `NONE` → forget → `REVIEW_PENDING` → re-confirmation → still `REVIEW_PENDING` (no automatic restoration) |
 
-**Focused Database Verification** (dispatched from `main`, selector `migration-0152`, `target_ref` = `b9549663b9f5eee234dabc24af664bd295326079`): run 1
-[`38171158583`](https://github.com/allamqandeel/qandeel/actions/runs/38171158583) — PASS (harness `main`, 1 verifier, 1 passed), run 2 [`38171378648`](https://github.com/allamqandeel/qandeel/actions/runs/38171378648) — PASS (harness `main`, 1 verifier, 1 passed); two consecutive fresh green runs on the same implementation SHA. **API CI** runs on the exact PR head, which carries this record; that run is reported on PR #330 and in the G-C2 report, not here (a record cannot name the result of the commit that contains it).
+**Focused Database Verification** (dispatched from `main`, selector `migration-0152`, `target_ref` = `38c977f051248b038cceb1763c5173fc08cce2ee`): run 1
+[`38176554144`](https://github.com/allamqandeel/qandeel/actions/runs/38176554144) — PASS (harness `main`, 1 verifier, 1 passed), run 2 [`38176700560`](https://github.com/allamqandeel/qandeel/actions/runs/38176700560) — PASS (harness `main`, 1 verifier, 1 passed); two consecutive fresh green runs on the same implementation SHA, with D-2. The earlier pair on `b9549663…` ([`38171158583`](https://github.com/allamqandeel/qandeel/actions/runs/38171158583), [`38171378648`](https://github.com/allamqandeel/qandeel/actions/runs/38171378648), both PASS) proved the 0152 body before RC-C2. **API CI** runs on the exact PR head, which carries this record; that run is reported on PR #330 and in the G-C2 report, not here (a record cannot name the result of the commit that contains it).
 
 ### 9. Closing governance (BG-08 / BG-09)
 
@@ -580,6 +587,8 @@ Apply the migration and release the API together. **No hosted migration or relea
 | L-7 | the subject screen is a closed list (kin nouns, pronouns, first-person verbs, a complementizer rule); other wording asks the question | by design (conservative) |
 | L-8 | the background TypeScript pre-screen still skips an exact duplicate before the writer, so a crash-replay of a capture whose row already exists completes with no fresh Evidence instead of `ALREADY_RECORDED` (the SQL replay rule is proven directly) | recorded |
 | L-9 | Arabic subject answers and screens are Egyptian Arabic plus a minimal English list | by contract |
+| L-10 | when the user's fact and someone else's carry the same words, the existing target question lists the same words twice: the options carry no subject label (no approved copy exists for one); the user answers by number | open for the Product Owner at G-C2 (§13) |
+| L-11 | an unattributed Memory is compatible with every subject (A1 C1.3, the v2 header): an undecided correction of an unattributed fact may end in an existing equivalent about someone else (`CORRECTED_TO_EXISTING`), and a command on an unattributed target retires compatible copies of either subject. The plan never offers an unattributed copy as the target while an attributed copy of its words exists, so this needs a fact whose subject was never established | open for the Product Owner at G-C2 (§13) |
 
 ### 12. Aggregate-only impact runbook (NOT executed; needs a separate explicit authorization)
 
@@ -593,6 +602,62 @@ SELECT public.hypothesis_evidence_change_core_v1(h.user_id, h.id, h.supporting_e
 ```
 
 No content, no id. Production impact is **not claimed** anywhere in this record.
+
+### 13. G-C2 review corrections (RC-C1, RC-C2)
+
+The Product Owner's independent review of PR #330 (API CI run
+[`38171592904`](https://github.com/allamqandeel/qandeel/actions/runs/38171592904) on `d89b76d1`) returned two corrections,
+implemented in `38c977f051248b038cceb1763c5173fc08cce2ee` on top of the first implementation and its closing change.
+
+**RC-C1 — the Full Intelligence smoke failed at `FOREGROUND_TURN_1` ("Conversation generation failed.").** Cause,
+reproduced against local PostgreSQL 17 by driving the real `MemoryRepository` and `MemoryControlRepository` through the
+unchanged smoke transport: every Memory read now embeds `memory_subject_attributions(subject)`, and the smoke-only
+PostgREST substitute (`pg-foreground-intelligence.adapters.ts`) refused it —
+`FULL_INTELLIGENCE_E2E_UNSUPPORTED_DATA_API_REQUEST:select` from its plain-column-list rule. The orchestrator turns any
+failure of the turn into its generic error, so CI showed only that. Correction (smoke-only; production error handling
+unchanged):
+- the substitute accepts exactly the pinned embed, on `memories` only, as the last item of a plain column list, and
+  answers it as PostgREST answers the one-to-one relationship — `{ subject }` or `null` — through a correlated read on
+  `(memory_id, user_id)` in the same request, under the caller's role, so the attribution table's own RLS applies;
+  filters, order, limit and the RPC census are unchanged, and every other select shape still fails closed;
+- refused shapes are recorded, and both smokes print them when they fail;
+- `pg-foreground-intelligence.adapters.test.ts` (`test:full-intelligence-e2e-smoke-adapters`, in the API CI database leg
+  before the smoke): the four production request shapes translate exactly; 18 other shapes (other tables, unknown
+  relationships, extra or wildcard columns, nesting, hints, aliases, spreads, misplaced or repeated embeds) are refused;
+  against real PostgreSQL the subject is read as SELF / OTHER / unattributed, another owner's Memory is neither found nor
+  listed, and RLS — not the query's own filter — is what hides it.
+
+Past `FOREGROUND_TURN_1` the same smoke then compared the second turn's `memoryContext` with a shape that predates MF-1. The
+expectation now includes the served `about: 'USER'`, which the SELF attribution of the background's first-person
+capture yields — a stronger assertion, not a relaxed one. `verify:integrated-brain:e2e-hardening-v2` wraps the same
+substitute and needed no change of its own.
+
+**RC-C2 — SELF / OTHER equivalence isolation: CONFIRMED and corrected.** v2 FORGET and DISABLE retired every equivalent
+copy of the target whatever its subject, although the v2 header defines an equivalent with a compatible subject and
+CORRECT already applied it; `collapseEquivalents` folded a SELF and an OTHER copy of the same words into one candidate,
+chosen by read order. So forgetting the user's fact also deleted the identical fact about someone else (and vice versa).
+Correction, the smallest compatible one:
+- v2 FORGET and DISABLE retire a copy only with a compatible subject — the CORRECT predicate, verbatim; nothing else in
+  0152 changes;
+- the plan keeps a SELF and an OTHER copy as two candidates, so the existing target question asks (approved behaviour for
+  several matches), and never offers an unattributed copy in place of the attributed fact of its words.
+
+| Check (D-2 in verify-0152; RC-C2 cases in the route spec) | Result |
+|---|---|
+| FORGET targeting SELF / OTHER | only the target (and its compatible unattributed copies) is `DELETED`; the other subject stays `ACTIVE` — or `DISABLED` — with no disposition |
+| DISABLE targeting either subject | the other subject stays relied on |
+| An unattributed copy beside both | retired with the chosen fact; disposition names this command and the target |
+| CORRECT / CORRECTED_TO_EXISTING | the other subject's copy of the old words stays `ACTIVE`; a SELF correction never ends in someone else's Memory, even when the caller names it as the equivalent |
+| Same-subject duplicates, the unattributed legacy pair, R2, PG-02 | unchanged (D-1, R2, L-4, verify-0151 untouched) |
+| Owner isolation, lineage, attributions | another owner untouched; no lineage violation; no attribution changed |
+
+The new D-2 stage fails against the pre-correction 0152 body and four of the five route cases fail against the
+pre-correction service (the fifth, CORRECTED_TO_EXISTING isolation, already held and stays as a guard). The static
+contract adds the subject-isolation and smoke-transport detectors with seven planted defects.
+
+**Open for the Product Owner at G-C2 (not decided here, nothing invented):** L-10 (the identical-words question carries no
+subject label) and L-11 (how far an unattributed Memory's compatibility with every subject should reach). Both keep the
+behaviour the approved decisions define.
 
 **Next gate:** G-C2 — MEM-AR-01C Final PR Review (STOP). No merge, no auto-merge, no deployment; merge only on the
 Product Owner's explicit «ادمج».
