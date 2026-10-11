@@ -344,13 +344,20 @@ function isCurrent(memory: MemoryRecord, now: Date): boolean {
 }
 
 /**
- * MEM-AR-01C: equivalent copies of one fact (same type and the same comparison key - the database's
- * memory_equivalence_key_v1) are offered once, as their first row in the canonical read order.
+ * MEM-AR-01C: equivalent copies of one fact (same type, the same comparison key - the database's
+ * memory_equivalence_key_v1 - and a compatible subject) are offered once, as their first row in the canonical read order.
+ * The same words about the user and about someone else are two facts (RC-C2), each offered on its own, so a command never
+ * picks one of them by read order. An UNATTRIBUTED copy belongs with the attributed fact of its words when there is one -
+ * the database changes it together with that fact - so it is never offered as the target in its place.
  */
 function collapseEquivalents(rows: ReadonlyArray<MemoryRecord>): MemoryRecord[] {
+  const wordsOf = (memory: MemoryRecord) => `${memory.type}\u0000${normalizeMemoryContent(memory.content)}`;
+  const attributed = new Set(rows.filter((memory) => memory.subject).map(wordsOf));
   const seen = new Set<string>();
   return rows.filter((memory) => {
-    const key = `${memory.type}\u0000${normalizeMemoryContent(memory.content)}`;
+    const words = wordsOf(memory);
+    if (!memory.subject && attributed.has(words)) return false;
+    const key = `${words}\u0000${memory.subject ?? ''}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

@@ -88,6 +88,7 @@
     "verify:a2-e2e-runtime-smoke": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-a2-end-to-end-runtime-smoke.ts",
     "test:a2-e2e-smoke-contract": "node --test tests/a2-e2e-runtime-smoke-contract.test.mjs",
     "verify:full-intelligence-e2e-runtime": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts",
+    "test:full-intelligence-e2e-smoke-adapters": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters.test.ts",
     "test:full-intelligence-e2e-runtime-contract": "node --test tests/full-intelligence-e2e-runtime-contract.test.mjs",
     "verify:integrated-brain:e2e-hardening-v2": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/verify-integrated-brain-end-to-end-hardening-v2.ts",
     "test:integrated-brain-e2e-hardening-v2-contract": "node --test tests/integrated-brain-e2e-hardening-v2-contract.test.mjs",

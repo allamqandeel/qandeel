@@ -586,8 +586,11 @@ BEGIN
         OR (m.type=target.type AND m.status IN ('ACTIVE','DISABLED') AND public.memory_equivalence_key_v1(m.content)=target_key))
       ORDER BY m.id FOR UPDATE;
     -- Lifecycle deletion, never a physical DELETE (v1). A forgotten fact never survives as a copy: every equivalent
-    -- ACTIVE or DISABLED row of the owner is deleted with it, whatever its subject.
+    -- ACTIVE or DISABLED row of the owner with a compatible subject is deleted with it. A copy about someone else is a
+    -- different fact and is never deleted because its words match (RC-C2): a SELF target leaves OTHER copies, an OTHER
+    -- target leaves SELF copies.
     SELECT * INTO target FROM public.memories m WHERE m.id=p_target_memory_id AND m.user_id=p_user_id;
+    target_subject := public.memory_subject_v1(p_user_id, target.id);
     IF target.status IN ('ACTIVE','DISABLED') THEN
       SELECT * INTO changed FROM public.server_mark_memory_deleted_v1(p_user_id, p_target_memory_id);
     ELSIF target.status='DELETED' THEN
@@ -601,6 +604,7 @@ BEGIN
         SELECT m.id FROM public.memories m
          WHERE m.user_id=p_user_id AND m.id<>target.id AND m.type=target.type AND m.status IN ('ACTIVE','DISABLED')
            AND public.memory_equivalence_key_v1(m.content)=target_key
+           AND (target_subject IS NULL OR coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) = target_subject)
          ORDER BY m.id
       LOOP
         PERFORM public.memory_dispose_equivalent_v1(p_user_id, member.id, new_command_id, target.id, 'FORGOTTEN');
@@ -621,11 +625,14 @@ BEGIN
       applied := 'TARGET_CHANGED';
     ELSE
       recorded_target := target.id;
+      -- The same compatible-subject rule as FORGET (RC-C2): a copy about someone else stays relied on.
+      target_subject := public.memory_subject_v1(p_user_id, target.id);
       FOR member IN
         SELECT m.id FROM public.memories m
          WHERE m.user_id=p_user_id AND m.id<>target.id AND m.type=target.type AND m.status='ACTIVE'
            AND (m.expires_at IS NULL OR m.expires_at>CURRENT_TIMESTAMP)
            AND public.memory_equivalence_key_v1(m.content)=target_key
+           AND (target_subject IS NULL OR coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) = target_subject)
          ORDER BY m.id
       LOOP
         PERFORM public.memory_dispose_equivalent_v1(p_user_id, member.id, new_command_id, target.id, 'DISABLED');

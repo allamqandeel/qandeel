@@ -19,6 +19,10 @@
 //         one answer, a sensitive request declined before any question) and that v1 can reach none of the new shapes;
 //   D-1   duplicates: RECONFIRMED, CORRECTED_TO_EXISTING, FORGET / DISABLE / CORRECT over a legacy pair, the lineage
 //         invariant, the export label;
+//   D-2   (RC-C2) the same words about the user and about someone else are two facts: FORGET / DISABLE of either
+//         subject, a DISABLED copy, an UNATTRIBUTED copy retired only with the compatible fact (disposition provenance),
+//         the UNATTRIBUTED legacy pair unchanged, CORRECT and CORRECTED_TO_EXISTING never retiring or keeping the other
+//         subject's Memory, another owner untouched;
 //   L-2   RECONFIRMED over an unattributed row linked by a Hypothesis: one successor, withheld before and after, never NONE;
 //   R2    background_record_memory_v1: SKIPPED_COMMAND_TURN for a target answer and a subject answer (the confirmed
 //         R2 shape), the replay writes nothing, an ordinary turn is captured; W-3 SUPERSEDED_BY_LATER_COMMAND;
@@ -732,6 +736,103 @@ async function verifyDuplicates() {
 }
 
 // ------------------------------------------------------------------------------------------------------------------
+// D-2 (RC-C2). The same words about the user and about someone else are two facts (rolled back): a command about one
+// never retires the other because the words match. Copies are retired only with a compatible subject - equal, or one
+// side UNATTRIBUTED - the rule the v2 header states for every equivalent, now applied to FORGET and DISABLE as it
+// already was to CORRECT.
+// ------------------------------------------------------------------------------------------------------------------
+async function verifySubjectIsolation() {
+  const me = await reader();
+  const stranger = await reader();
+  const s = await session(me);
+  let lastTurn;
+  const turn = async () => (lastTurn = await userTurn(me, s));
+  const statuses = async (...ids) => Promise.all(ids.map(async (id) => (await memoryRow(id)).status));
+  const pair = async (content, type = 'PERSONAL_FACT') => [
+    await memory(me, { content, type, subject: 'SELF' }), await memory(me, { content, type, subject: 'OTHER' })];
+  const dispositionsBy = async (command) => (await dispositionsOf(me)).filter((d) => d.command_id === command)
+    .map((d) => [d.memory_id, d.primary_memory_id, d.disposition]);
+
+  stage = 'D-2: FORGET of the user\'s fact leaves someone else\'s fact with the same words (and another owner\'s copy)';
+  const [selfA, otherA] = await pair('عيد الميلاد يوم ٥ مارس.');
+  const strangersCopy = await memory(stranger, { content: 'عيد الميلاد يوم ٥ مارس.', subject: 'SELF' });
+  assert.equal((await finalize2({ session: s, user: me, turn: await turn(), kind: 'FORGET', outcome: 'FORGOTTEN', target: selfA }))[0].outcome, 'FORGOTTEN');
+  assert.deepEqual(await statuses(selfA, otherA, strangersCopy), ['DELETED', 'ACTIVE', 'ACTIVE']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), [], 'no disposition: nothing else was retired');
+
+  stage = 'D-2: FORGET of someone else\'s fact leaves the user\'s fact with the same words';
+  const [selfB, otherB] = await pair('بيحب الكورة.', 'STABLE_PREFERENCE');
+  assert.equal((await finalize2({ session: s, user: me, turn: await turn(), kind: 'FORGET', outcome: 'FORGOTTEN', target: otherB }))[0].outcome, 'FORGOTTEN');
+  assert.deepEqual(await statuses(selfB, otherB), ['ACTIVE', 'DELETED']);
+
+  stage = 'D-2: FORGET never deletes a DISABLED copy about someone else either';
+  // An attribution is created only with an ACTIVE Memory, so the other person's copy is disabled through v2 itself.
+  const [selfC, otherC] = await pair('بيشتغل في البنك.');
+  await finalize2({ session: s, user: me, turn: await turn(), kind: 'DISABLE', outcome: 'DISABLED', target: otherC });
+  assert.deepEqual(await statuses(selfC, otherC), ['ACTIVE', 'DISABLED']);
+  await finalize2({ session: s, user: me, turn: await turn(), kind: 'FORGET', outcome: 'FORGOTTEN', target: selfC });
+  assert.deepEqual(await statuses(selfC, otherC), ['DELETED', 'DISABLED']);
+
+  stage = 'D-2: DISABLE of either subject leaves the other relied on';
+  const [selfD, otherD] = await pair('بيحب الجري.', 'STABLE_PREFERENCE');
+  assert.equal((await finalize2({ session: s, user: me, turn: await turn(), kind: 'DISABLE', outcome: 'DISABLED', target: selfD }))[0].outcome, 'DISABLED');
+  assert.deepEqual(await statuses(selfD, otherD), ['DISABLED', 'ACTIVE']);
+  const [selfE, otherE] = await pair('بيحب السفر.', 'STABLE_PREFERENCE');
+  assert.equal((await finalize2({ session: s, user: me, turn: await turn(), kind: 'DISABLE', outcome: 'DISABLED', target: otherE }))[0].outcome, 'DISABLED');
+  assert.deepEqual(await statuses(selfE, otherE), ['ACTIVE', 'DISABLED']);
+
+  stage = 'D-2: an UNATTRIBUTED copy is retired with the attributed fact it is compatible with; the other subject stays';
+  const [selfF, otherF] = await pair('بيحب القراءة.', 'STABLE_PREFERENCE');
+  const legacyF = await memory(me, { content: 'بيحب القراءة', type: 'STABLE_PREFERENCE' });
+  await finalize2({ session: s, user: me, turn: await turn(), kind: 'FORGET', outcome: 'FORGOTTEN', target: selfF });
+  assert.deepEqual(await statuses(selfF, legacyF, otherF), ['DELETED', 'DELETED', 'ACTIVE']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), [[legacyF, selfF, 'FORGOTTEN']], 'disposition provenance: this command, the target');
+  const [selfG, otherG] = await pair('بيحب الرسم.', 'STABLE_PREFERENCE');
+  const legacyG = await memory(me, { content: 'بيحب الرسم.', type: 'STABLE_PREFERENCE' });
+  await finalize2({ session: s, user: me, turn: await turn(), kind: 'DISABLE', outcome: 'DISABLED', target: otherG });
+  assert.deepEqual(await statuses(otherG, legacyG, selfG), ['DISABLED', 'DISABLED', 'ACTIVE']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), [[legacyG, otherG, 'DISABLED']]);
+
+  stage = 'D-2: an UNATTRIBUTED legacy pair is still one fact (unchanged)';
+  const legacyH1 = await memory(me, { content: 'شغلي في المصنع.' });
+  const legacyH2 = await memory(me, { content: 'شغلي في المصنع' });
+  await finalize2({ session: s, user: me, turn: await turn(), kind: 'FORGET', outcome: 'FORGOTTEN', target: legacyH1 });
+  assert.deepEqual(await statuses(legacyH1, legacyH2), ['DELETED', 'DELETED']);
+
+  stage = 'D-2: CORRECT changes only its target\'s subject: someone else\'s copy of the old words stays ACTIVE';
+  const [selfI, otherI] = await pair('ساكن في أكتوبر.');
+  const successorI = randomUUID();
+  assert.equal((await finalize2({ session: s, user: me, turn: await turn(), kind: 'CORRECT', outcome: 'CORRECTED', target: selfI, newId: successorI, content: 'ساكن في إسكندرية.' }))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(selfI, otherI, successorI), ['SUPERSEDED', 'ACTIVE', 'ACTIVE']);
+  assert.equal((await attributionOf(successorI)).subject, 'SELF');
+
+  stage = 'D-2: CORRECTED_TO_EXISTING keeps only a Memory with the successor\'s subject - never someone else\'s';
+  const octoberJ = await memory(me, { content: 'أنا ساكن في الدقي.', subject: 'SELF' });
+  const otherTantaJ = await memory(me, { content: 'أنا ساكن في الزمالك.', subject: 'OTHER' });
+  const successorJ = randomUUID();
+  // Even when the caller names the other person's Memory as the equivalent, the database does not keep it.
+  assert.deepEqual(await finalize2({ session: s, user: me, turn: await turn(), kind: 'CORRECT', outcome: 'CORRECTED', target: octoberJ, newId: successorJ, content: 'أنا ساكن في الزمالك.', subject: 'SELF', equivalent: otherTantaJ }),
+    [{ outcome: 'CORRECTED', reply: 'reply:CORRECTED' }]);
+  assert.deepEqual(await statuses(octoberJ, successorJ, otherTantaJ), ['SUPERSEDED', 'ACTIVE', 'ACTIVE']);
+  const commandJ = await commandOf(lastTurn);
+  assert.deepEqual([commandJ.target_memory_id, commandJ.result_memory_id], [octoberJ, successorJ]);
+  assert.deepEqual(await dispositionsBy(commandJ.id), []);
+  // The same correction into the USER's own existing value is still CORRECTED_TO_EXISTING (unchanged).
+  const heliopolisK = await memory(me, { content: 'أنا ساكن في مصر الجديدة.', subject: 'SELF' });
+  const selfTargetK = await memory(me, { content: 'أنا ساكن في المعادي.', subject: 'SELF' });
+  assert.deepEqual(await finalize2({ session: s, user: me, turn: await turn(), kind: 'CORRECT', outcome: 'CORRECTED', target: selfTargetK, content: 'أنا ساكن في مصر الجديدة.', subject: 'SELF' }),
+    [{ outcome: 'CORRECTED_TO_EXISTING', reply: 'reply:EXISTING' }]);
+  assert.deepEqual(await statuses(selfTargetK, heliopolisK), ['SUPERSEDED', 'ACTIVE']);
+
+  stage = 'D-2: the lineage invariant holds and no attribution changed';
+  assert.deepEqual(await lineageViolations(me), []);
+  for (const [id, subject] of [[otherA, 'OTHER'], [selfB, 'SELF'], [otherC, 'OTHER'], [otherD, 'OTHER'], [selfE, 'SELF'], [otherF, 'OTHER'], [selfG, 'SELF'], [otherI, 'OTHER'], [otherTantaJ, 'OTHER']]) {
+    assert.equal((await attributionOf(id)).subject, subject);
+  }
+  assert.equal(await count("SELECT count(*) AS n FROM public.memories WHERE user_id = $1 AND status <> 'ACTIVE'", [stranger]), 0, 'another owner is untouched');
+}
+
+// ------------------------------------------------------------------------------------------------------------------
 // R2 + W-3 + W-6 + the background writer's contract (rolled back).
 // ------------------------------------------------------------------------------------------------------------------
 async function verifyBackgroundWriter() {
@@ -1176,12 +1277,12 @@ async function main() {
     await verifyCatalog();
     await verifyKeyParity();
     await verifyLegacyAttribution();
-    for (const step of [verifyEvidenceProtection, verifySubjectLifecycle, verifyDuplicates, verifyBackgroundWriter, verifyFailureInjection, verifyIsolation, verifyMonotonicity, verifyErasure]) {
+    for (const step of [verifyEvidenceProtection, verifySubjectLifecycle, verifyDuplicates, verifySubjectIsolation, verifyBackgroundWriter, verifyFailureInjection, verifyIsolation, verifyMonotonicity, verifyErasure]) {
       await client.query('BEGIN');
       try { await step(); } finally { await client.query('ROLLBACK'); }
     }
     await verifyRaces();
-    console.log('Verified migration 0152 Memory Subject Identity, Atomicity & Evidence Protection: append-only subject attribution created only with its Memory, the legacy attribution by provenance alone, SELF-only personal Evidence with permanent subject taints, the subject question and its answers, one ACTIVE equivalent per owner with auditable dispositions and lineage, no background write for a command turn (R2) or a fact a later command withdrew, refusal of unsupported generated candidates, writers limited to v2, the background writer and the governed erasure, atomic under injected failures, isolated per owner, monotonic under random sequences, and race-safe without deadlock.');
+    console.log('Verified migration 0152 Memory Subject Identity, Atomicity & Evidence Protection: append-only subject attribution created only with its Memory, the legacy attribution by provenance alone, SELF-only personal Evidence with permanent subject taints, the subject question and its answers, one ACTIVE equivalent per owner and subject with auditable dispositions and lineage, a fact about someone else never retired by words that match one about the user, no background write for a command turn (R2) or a fact a later command withdrew, refusal of unsupported generated candidates, writers limited to v2, the background writer and the governed erasure, atomic under injected failures, isolated per owner, monotonic under random sequences, and race-safe without deadlock.');
   } finally {
     await client.end();
   }

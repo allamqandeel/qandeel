@@ -126,6 +126,7 @@ import { DeterministicConversationalModelRouter } from './full-intelligence-e2e-
 import {
   PgAuthenticatedDataApiAdapter,
   PgConversationServiceRoleApiAdapter,
+  refusedSmokeRequestShapes,
 } from './full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters';
 
 // ---------------------------------------------------------------------------
@@ -1359,8 +1360,11 @@ async function main(): Promise<void> {
     // actually written by Turn #1 background processing is consumed by the
     // next real foreground orchestration. Semantic identity, not row order.
     assert.ok(secondCall.request.memoryContext, 'second request contains a memoryContext');
+    // MEM-AR-01C (MF-1): the served item names whom it concerns. The background capture of the user's own first-person
+    // words is attributed SELF in the same transaction (FIRST_PERSON_CAPTURE), read back through the subject embed, and
+    // served as USER.
     assert.deepEqual(secondCall.request.memoryContext, [{
-      type: memoryCandidate!.type, content: memoryCandidate!.content, source: 'USER_STATED',
+      type: memoryCandidate!.type, content: memoryCandidate!.content, source: 'USER_STATED', about: 'USER',
     }], 'background-created Memory is consumed by the next real foreground orchestration');
 
     // HIM consumption: the same real session snapshot, still PARTIAL, stress
@@ -1737,5 +1741,8 @@ async function main(): Promise<void> {
 main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`FULL_INTELLIGENCE_E2E_RUNTIME FAILED stage=${stage}: ${message}`);
+  // A refused transport shape inside a fail-closed production path surfaces above only as that path's generic error.
+  const refused = refusedSmokeRequestShapes();
+  if (refused.length > 0) console.error(`(smoke transport refused request shapes: ${refused.join(', ')})`);
   process.exitCode = 1;
 });

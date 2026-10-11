@@ -150,6 +150,7 @@ import { PgPostResponseIntelligenceRepositoryAdapter } from './a2-e2e-smoke/pg-p
 import { PgRuntimeEventAdminRepositoryAdapter } from './a2-e2e-smoke/pg-runtime-event-admin.adapter';
 import { establishFinalSemanticChain } from './a2-e2e-smoke/final-semantic-chain-fixture';
 import { SmokeDbSession } from './a2-e2e-smoke/smoke-db';
+import { refusedSmokeRequestShapes } from './full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters';
 // QIR-007 verification-only harness.
 import {
   createHardeningPostResponseLedger,
@@ -2076,5 +2077,8 @@ main().catch((error: unknown) => {
   const message = error instanceof Error ? error.message : String(error);
   console.error(`INTEGRATED_BRAIN_E2E_HARDENING_V2 FAILED stage=${stage}: ${message}`);
   if (message.includes(HARDENING_PROVIDER_FAILURE)) console.error('(the armed provider failure escaped its scenario)');
+  // A refused transport shape inside a fail-closed production path surfaces above only as that path's generic error.
+  const refused = refusedSmokeRequestShapes();
+  if (refused.length > 0) console.error(`(smoke transport refused request shapes: ${refused.join(', ')})`);
   process.exitCode = 1;
 });

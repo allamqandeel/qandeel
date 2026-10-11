@@ -271,7 +271,8 @@ class CanonicalStore {
       if (outcome === 'FORGOTTEN') {
         recordedTarget = target!.id;
         for (const copy of this.memories.filter((m) => m.user_id === user && m.id !== target!.id && m.type === target!.type
-          && (m.status === 'ACTIVE' || m.status === 'DISABLED') && key(m.content) === key(target!.content)).sort(byId)) dispose(copy, target!.id, 'FORGOTTEN');
+          && (m.status === 'ACTIVE' || m.status === 'DISABLED') && key(m.content) === key(target!.content)
+          && compatible(m, this.subjectOf(target!.id))).sort(byId)) dispose(copy, target!.id, 'FORGOTTEN');
       }
     } else if (outcome === 'DISABLED') {
       if (current(target)) Object.assign(target!, { status: 'DISABLED', updated_at: this.now() });
@@ -279,7 +280,7 @@ class CanonicalStore {
       if (outcome === 'DISABLED') {
         recordedTarget = target!.id;
         for (const copy of this.memories.filter((m) => m.user_id === user && m.id !== target!.id && m.type === target!.type && current(m)
-          && key(m.content) === key(target!.content)).sort(byId)) dispose(copy, target!.id, 'DISABLED');
+          && key(m.content) === key(target!.content) && compatible(m, this.subjectOf(target!.id))).sort(byId)) dispose(copy, target!.id, 'DISABLED');
       }
     }
     if (outcome === 'TARGET_CHANGED') recordedTarget = String(body.p_target_memory_id);
@@ -762,6 +763,72 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       expect(ask.reply).toMatch(/^تمام، نسيت «أنا بحب القهوة\.?»/u);
       expect([memoryOf(first.id).status, memoryOf(copy.id).status]).toEqual(['DELETED', 'DELETED']);
       expect(store.dispositions).toEqual([expect.objectContaining({ disposition: 'FORGOTTEN', command_id: store.commands[0].id })]);
+    });
+
+    // RC-C2: the same words about the user and about someone else are two facts. A command about one never changes the
+    // other because the words match, and QANDEEL never picks one of them by read order: it asks.
+    it('RC-C2: FORGET asks between the user\'s fact and someone else\'s with the same words, and forgets only the chosen one', async () => {
+      const mine = store.remember(A, 'عيد الميلاد يوم ٥ مارس.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      const theirs = store.remember(A, 'عيد الميلاد يوم ٥ مارس.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
+      const strangers = store.remember(B, 'عيد الميلاد يوم ٥ مارس.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      const before = JSON.stringify(store.memories);
+      const ask = await say('انسى إن عيد الميلاد يوم ٥ مارس');
+      expect(ask.reply).toContain('تقصد أنهي واحدة؟');
+      expect(JSON.stringify(store.memories)).toBe(before);
+      const [first, second] = store.commands[0].candidate_memory_ids;
+      expect([first, second].sort()).toEqual([mine.id, theirs.id].sort());
+      await say('1');
+      expect(memoryOf(first).status).toBe('DELETED');
+      expect(memoryOf(second).status).toBe('ACTIVE');
+      expect(memoryOf(strangers.id).status).toBe('ACTIVE');
+      expect(store.dispositions).toEqual([]);
+      expect(store.commands[1]).toEqual(expect.objectContaining({ kind: 'FORGET', outcome: 'FORGOTTEN', target_memory_id: first, answers_command_id: store.commands[0].id }));
+    });
+
+    it('RC-C2: DISABLE asks the same way and leaves the other person\'s fact relied on', async () => {
+      const mine = store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE', 'ACTIVE', 'SELF');
+      const theirs = store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE', 'ACTIVE', 'OTHER');
+      expect((await say('متعتمدش على إن بيحب الكورة')).reply).toContain('تقصد أنهي واحدة؟');
+      const [, second] = store.commands[0].candidate_memory_ids;
+      await say('2');
+      expect(memoryOf(second).status).toBe('DISABLED');
+      expect(memoryOf(second === mine.id ? theirs.id : mine.id).status).toBe('ACTIVE');
+      expect(store.dispositions).toEqual([]);
+    });
+
+    it('RC-C2: an UNATTRIBUTED copy goes with the chosen fact; the other person\'s copy stays, and each change has its provenance', async () => {
+      const mine = store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE', 'ACTIVE', 'SELF');
+      const theirs = store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE', 'ACTIVE', 'OTHER');
+      const legacy = store.remember(A, 'بيحب الكورة', 'STABLE_PREFERENCE');
+      await say('انسى إن بيحب الكورة');
+      // The unattributed copy is not offered as a third option in place of a fact whose subject is known.
+      expect([...store.commands[0].candidate_memory_ids].sort()).toEqual([mine.id, theirs.id].sort());
+      await say(String(store.commands[0].candidate_memory_ids.indexOf(mine.id) + 1));
+      expect([memoryOf(mine.id).status, memoryOf(legacy.id).status, memoryOf(theirs.id).status]).toEqual(['DELETED', 'DELETED', 'ACTIVE']);
+      expect(store.dispositions).toEqual([{ memory_id: legacy.id, command_id: store.commands[1].id, primary_memory_id: mine.id, disposition: 'FORGOTTEN' }]);
+    });
+
+    it('RC-C2: a correction asks between the two facts, corrects only the chosen one, and never ends in the other person\'s', async () => {
+      const mine = store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      const theirs = store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في إسكندرية')).reply).toContain('تقصد أنهي واحدة؟');
+      await say(String(store.commands[0].candidate_memory_ids.indexOf(theirs.id) + 1));
+      const successor = store.memories.find((m) => m.supersedes_memory_id === theirs.id)!;
+      expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'OTHER', basis: 'CORRECTION_INHERITED' }));
+      expect(memoryOf(mine.id).status).toBe('ACTIVE');
+      expect(store.dispositions).toEqual([]);
+    });
+
+    it('RC-C2: CORRECTED_TO_EXISTING keeps only a Memory with the successor\'s subject, never someone else\'s', async () => {
+      // Someone else's «أنا ساكن في طنطا.» is not the user's new residence: the user's correction is a new attributed
+      // successor, and the other fact is untouched.
+      const october = store.remember(A, 'أنا ساكن في أكتوبر.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      const otherTanta = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
+      await say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.');
+      const corrected = store.memories.find((m) => m.supersedes_memory_id === october.id)!;
+      expect(store.commands.at(-1)).toEqual(expect.objectContaining({ kind: 'CORRECT', outcome: 'CORRECTED', target_memory_id: october.id, result_memory_id: corrected.id }));
+      expect(store.attributions.get(corrected.id)?.subject).toBe('SELF');
+      expect(memoryOf(otherTanta.id)).toEqual(otherTanta);
     });
 
     it('a correction says whose fact it is only when its words decide it; otherwise it keeps its target\'s', async () => {

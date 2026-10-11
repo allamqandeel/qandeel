@@ -1,5 +1,5 @@
 // MEM-AR-01C — Memory Subject Identity, Atomicity & Evidence Protection: static contract (matrix rows H-5, W-1 static,
-// G-1, and the shape of the R2 guard, CC-M1, CC-H1 and MF-1).
+// G-1, and the shape of the R2 guard, CC-M1, CC-H1 and MF-1; the G-C2 corrections RC-C1 and RC-C2).
 //
 // Each detector guards one property the slice froze, runs clean on the shipped source, and is proven able to fail by
 // planted defects below. Behaviour is proven elsewhere (API Jest on the production route and the R2 route; real
@@ -35,6 +35,8 @@ const shipped = Object.freeze({
   retriever: read('apps/api/src/memory/memory-retriever.service.ts'),
   modelRouter: read('apps/api/src/model-router/model-router.types.ts'),
   subject: read('apps/api/src/memory/memory-subject.ts'),
+  control: read('apps/api/src/memory/memory-control.service.ts'),
+  smokeAdapters: read('apps/api/scripts/full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters.ts'),
   packageJson: read('package.json'),
   ci: read('.github/workflows/api-ci.yml'),
 });
@@ -134,15 +136,44 @@ function copyViolations(w) {
   return out;
 }
 
+// RC-C2: the same words about the user and about someone else are two facts. Every v2 loop that retires a target's copies
+// (CORRECTED, FORGOTTEN, DISABLED) keeps to a compatible subject, and the plan never folds a SELF and an OTHER Memory into
+// one candidate.
+const COMPATIBLE_COPY = 'AND (target_subject IS NULL OR coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) = target_subject)';
+const ADAPTER_STEP = '      - {name: Verify Full Intelligence smoke transport adapters, run: npm run test:full-intelligence-e2e-smoke-adapters}\n';
+const HARDENING_STEP = '      - {name: Verify Integrated Brain end-to-end hardening v2, run: npm run verify:integrated-brain:e2e-hardening-v2}\n';
+const SUBJECT_KEYED ="const key = `${words}\\u0000${memory.subject ?? ''}`;";
+const disposalLoop = (v2, disposition) => {
+  const end = v2.indexOf(`new_command_id, target.id, '${disposition}');`);
+  return end < 0 ? '' : v2.slice(v2.lastIndexOf('FOR member IN', end), end);
+};
+function subjectIsolationViolations(w) {
+  const out = [];
+  const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
+  for (const disposition of ['CORRECTED', 'FORGOTTEN', 'DISABLED']) {
+    if (!disposalLoop(v2, disposition).includes(COMPATIBLE_COPY)) out.push(`v2 retires ${disposition} copies whatever their subject`);
+  }
+  const collapse = w.control.slice(w.control.indexOf('function collapseEquivalents('), w.control.indexOf('function fallbackType('));
+  if (!collapse.includes(SUBJECT_KEYED)) out.push('the plan folds equivalent copies whatever their subject');
+  if (!collapse.includes('if (!memory.subject && attributed.has(words)) return false;')) out.push('an UNATTRIBUTED copy can be offered in place of an attributed fact');
+  return out;
+}
+
 function wiringViolations(w) {
   const out = [];
   if (!/"verify:memory-subject-identity:integration": "node --env-file-if-exists=\.env database\/verify-migration-0152\.mjs"/u.test(w.packageJson)) out.push('verify-0152 has no package script');
   if (!/run: npm run verify:memory-subject-identity:integration/u.test(w.ci)) out.push('API CI does not run verify-0152');
   if (!/run: npm run test:mem-ar-01-memory-subject-identity-contract/u.test(w.ci)) out.push('API CI does not run this contract');
+  // RC-C1: the foreground smoke transport accepts the one pinned subject embed, on memories only, and is tested before the
+  // smoke runs.
+  if (!w.smokeAdapters.includes("const MEMORY_SUBJECT_EMBED_TABLE = 'memories';\nconst MEMORY_SUBJECT_EMBED = 'memory_subject_attributions(subject)';")) out.push('the smoke transport does not pin the subject embed to memories');
+  if (!w.packageJson.includes('"test:full-intelligence-e2e-smoke-adapters": "node --env-file-if-exists=.env node_modules/ts-node/dist/bin.js --project apps/api/tsconfig.scripts.json apps/api/scripts/full-intelligence-e2e-smoke/pg-foreground-intelligence.adapters.test.ts"')) out.push('the smoke transport test has no package script');
+  const adapterStep = w.ci.indexOf('run: npm run test:full-intelligence-e2e-smoke-adapters}');
+  if (adapterStep < 0 || adapterStep > w.ci.indexOf('run: npm run verify:full-intelligence-e2e-runtime}')) out.push('API CI does not test the smoke transport before the smoke');
   return out;
 }
 
-const detectors = { writerSurfaceViolations, r2Violations, evidenceViolations, hypothesisCreationViolations, copyViolations, wiringViolations };
+const detectors = { writerSurfaceViolations, r2Violations, evidenceViolations, hypothesisCreationViolations, copyViolations, subjectIsolationViolations, wiringViolations };
 
 test('the shipped source satisfies every MEM-AR-01C detector', () => {
   for (const [name, detect] of Object.entries(detectors)) assert.deepEqual(detect(shipped), [], name);
@@ -170,6 +201,15 @@ const planted = [
   ['a runtime path starts calling the background creation wrapper', 'hypothesisCreationViolations', (w) => ({ ...w, runtime: { ...w.runtime, 'apps/api/src/background-intelligence/background-intelligence-enrichment.service.ts': `${w.enrichment}\nawait this.data.createSystemHypothesis(context, input);` } })],
   ['the locked subject question drifts', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace('المعلومة دي عنك إنت، ولا عن حد تاني؟', 'ده عنك ولا عن حد تاني؟') })],
   ['the CQ-1 heading keeps «كمان»', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace("ar: 'فيه حاجات حكيتلي عنها تخص ناس تانية:'", "ar: 'فيه كمان حاجات حكيتلي عنها تخص ناس تانية:'") })],
+  ...['CORRECTED', 'FORGOTTEN', 'DISABLED'].map((disposition) => [`v2 retires ${disposition} copies whatever their subject`, 'subjectIsolationViolations', (w) => {
+    const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
+    const loop = disposalLoop(v2, disposition);
+    return { ...w, migration: w.migration.replace(v2, v2.replace(loop, loop.replace(COMPATIBLE_COPY, ''))) };
+  }]),
+  ['the plan folds a SELF and an OTHER copy into one candidate', 'subjectIsolationViolations', (w) => ({ ...w, control: w.control.replace(SUBJECT_KEYED, 'const key = words;') })],
+  ['an UNATTRIBUTED copy is offered in place of the attributed fact', 'subjectIsolationViolations', (w) => ({ ...w, control: w.control.replace('if (!memory.subject && attributed.has(words)) return false;', '') })],
+  ['the smoke transport accepts the embed on every table', 'wiringViolations', (w) => ({ ...w, smokeAdapters: w.smokeAdapters.replace("const MEMORY_SUBJECT_EMBED_TABLE = 'memories';", "const MEMORY_SUBJECT_EMBED_TABLE = String(process.env.TABLE);") })],
+  ['API CI tests the smoke transport only after the smoke', 'wiringViolations', (w) => ({ ...w, ci: w.ci.replace(ADAPTER_STEP, '').replace(HARDENING_STEP, `${HARDENING_STEP}${ADAPTER_STEP}`) })],
   ['API CI stops running verify-0152', 'wiringViolations', (w) => ({ ...w, ci: w.ci.replace('run: npm run verify:memory-subject-identity:integration', 'run: npm run verify:nothing') })],
 ];
 for (const [label, detector, mutate] of planted) {
