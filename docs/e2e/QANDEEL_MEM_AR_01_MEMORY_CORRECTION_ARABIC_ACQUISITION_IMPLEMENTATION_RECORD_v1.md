@@ -26,7 +26,8 @@ No migration, no deployment.
 
 **Branch:** `mem/mem-ar-01a-arabic-fidelity-normalization`, cut from `origin/main` `1294a69`.
 
-**Implementation commit (the tested code tree):** `0815ff3f56fde97f4dab04bd768b17f96bc4baf1`.
+**Implementation commit (the tested code tree):** `d94bb9b15b7cb9e3673327b6236e52c4d0ffc49c` (G-A1 corrections, §5), on top of the
+first implementation commit `0815ff3f56fde97f4dab04bd768b17f96bc4baf1` (§2–§4).
 - Every later commit on the branch adds documentation or harness results only.
 - The PR head's code tree must equal this commit's tree for `apps/`, `database/`, `packages/`, `tests/` and every
   `scripts/` path except `scripts/ci-01/results/` (RC-3; verified in the PR description).
@@ -53,6 +54,7 @@ No migration, no deployment.
 | **F. Trigger boundaries (PD-6)** | «ليه أنا» uses `(?![\p{L}\p{M}])` instead of the ASCII-only `\b`. «بس» is a whole word in the two INTERNAL_CONTRADICTION patterns, so «بسهر» no longer fires; «لكن», «لكنه» and «لكني» still match. No new trigger or category | `hypothesis-generation-trigger-classification.service.ts` |
 | Static contract re-anchor | The W3-MEGA-M purity rule admits the pure `arabic-text` helper and checks that the helper itself imports nothing. Two planted defects prove the check | `tests/w3-mega-m-conversational-memory-control-contract.test.mjs` |
 | CI-01 | New fixture U2: Unicode duplicates, feminine wording, «بطلت» fail-closed, pronoun-less «بحب». N1, K1 and M1 are unchanged | `scripts/ci-01/fixtures/u2-unicode-duplicates-bounded-cues.json` |
+| G-A1 corrections (§5) | RC-A1: F1 gains the genuine contradiction turn F1.2b. RC-A2: «بحب» is non-distinctive in recall | `f1-forget-do-not-rely-propagation.json`; `memory-retriever.service.ts` |
 
 **Exclusions held:**
 - No migration and no SQL.
@@ -79,7 +81,7 @@ All local checks ran on the implementation tree `0815ff3`.
 | `evidence-normalization-parity` golden file | byte-unchanged (`git diff` empty) |
 | PostgreSQL migration verification | not run: 01A changes no schema |
 | Mobile | not run: no Mobile change |
-| API CI on the PR head | see the PR; reported at the review gate |
+| API CI on the PR head | `71977f7` (code tree = `0815ff3`): API CI **success** (`verify-api` pass; VAL-01 plan and evidence pass). For `d94bb9b` see §5 |
 
 **Focused matrix rows (contract §10.1):**
 - **F-1:** evaluator spec. Covers the three paths, the bounded cues and their exclusions, I-F3 anchoring (12
@@ -98,17 +100,17 @@ All local checks ran on the implementation tree `0815ff3`.
 |---|---|---|---|
 | N1 | recall 0/2; fact stored «أنا ساكن في مدينة نصر.» | recall **1/2**; fact stored «أنا ساكنة في مدينة نصر.» | N1.6 «فاكر أنا ساكنة فين؟» now hits. N1.7 stays a miss: the value statements N1.1–N1.4 are not captured (Stage 8A) |
 | K1 | capture 3/6, recall 1/4 | capture **4/6**, recall **2/4** | K1.4 pronoun-less «بحب» is captured; K1.8 «للهدوء» hits. **K1.10 «التدخين» against «بيدخن» stays a recorded miss.** K1.7 (paraphrase) is a miss |
-| K1.9 | served 2 (one through «إني») | served **2** | The «إني» hit is gone. The second item is now the newly captured K1.4 «بحب السفر…», reached through the shared predicate «بحب». The contract's "K1.9 serves 1" assumed K1.4 stays uncaptured. Removing it would need a ranking change, which 01A excludes. Recorded for review (§4, item 2) |
+| K1.9 | served 2 (one through «إني») | served **2** | The «إني» hit is gone. The second item is now the newly captured K1.4 «بحب السفر…», reached through the shared predicate «بحب». Resolved at G-A1: served **1** on `d94bb9b` (§5) |
 | M1 | M1.4 «ليه أنا دايما …» → `NO_TRIGGER` | M1.4 → **`TRIGGER EXPLICIT_WHY_SELF`** (+1 Hypothesis) | F-3 effect. Capture is still 1/4 (compound turns; Stage 8A) |
 | U2 (new) | — | capture 5/9 (by design); fact 1/1; recall 1/1; **0 duplicate ACTIVE rows** | U2.2 (tatweel) and U2.4 (Arabic-Indic digits) are already remembered. U2.6 is a duplicate. U2.8 «بطلت أشرب قهوة» beside «أنا بحب القهوة» writes nothing. U2.9 «بطلت السهر» and U2.10 «بحب السفر» are captured as said |
 | C1, P1, H1, X1 | — | identical to `272a567` | Not 01A's scope. Correction, third party and HIM are unchanged |
-| F1 | 1 Hypothesis (from the F1.2 trigger) | **0 Hypotheses**; `pg02DependedOnWithdrawnOrCorrected` 0 | See §4, item 1 |
+| F1 | 1 Hypothesis (from the F1.2 trigger) | **0 Hypotheses**; `pg02DependedOnWithdrawnOrCorrected` 0 | See §4, item 1. Non-vacuous again on `d94bb9b` (§5) |
 
 **Controls:**
 - User isolation holds on both sides: owner reads equal ground truth; the non-owner reads nothing by user id, by row
   id, unfiltered or through retrieval.
-- The isolation result is `holds: false` only because one non-vacuity flag, `ownerHypothesesSeen`, is false (§4,
-  item 1). Memory and retrieval non-vacuity are true.
+- On `0815ff3` the isolation result is `holds: false` only because one non-vacuity flag, `ownerHypothesesSeen`, is false
+  (§4, item 1). Memory and retrieval non-vacuity are true. On `d94bb9b` every flag is true and `allHold` is true (§5).
 
 ### 4. Findings and residues (for Product Owner review)
 
@@ -121,9 +123,9 @@ All local checks ran on the implementation tree `0815ff3`.
    - Nothing regressed. PG-02 itself is proven by `verify-0151` in API CI, and the INTEL-TM-01 contract pins its own
      `272a567` results, which remain committed.
    - 01A does not change F1 ("re-run unchanged"; do not broaden scope to make historical synthetic results green).
-   - **Proposed:** a later CI-01 maintenance replaces F1.2 with a genuine contradiction turn, e.g. «أنا قررت أنام بدري بس
-     دايما بسهر». It needs a Product Owner decision and an owner.
-2. **K1.9 serves 2, not 1** (§3).
+   - **Resolved at G-A1 (RC-A1, §5):** F1.2 is kept as the false-trigger probe, and a genuine contradiction turn,
+     F1.2b, is added.
+2. **K1.9 serves 2, not 1** (§3). **Resolved at G-A1 (RC-A2, §5).**
 3. **«بطلت» detection is lexical.**
    - A reversal with no shared word with the old fact (old «بشرب سجاير», new «بطلت التدخين») is captured beside the old
      fact. The capture is silent and claims no correction.
@@ -135,5 +137,76 @@ All local checks ran on the implementation tree `0815ff3`.
    - The C1.6 duplicate ACTIVE pair after a correction whose replacement already exists, and duplicate retirement in
      general → 01C.
    - Third-party subject separation (P1) → 01C.
+
+### 5. G-A1 focused review corrections (Product Owner review of PR #328)
+
+The Product Owner accepted the implementation in principle and required two focused dispositions. Implementation
+commit: `d94bb9b15b7cb9e3673327b6236e52c4d0ffc49c`.
+
+**RC-A1: F1 non-vacuity (fixture only; the harness is unchanged).**
+- F1.2 «قررت أنام بدري رغم إني دايما بسهر» is kept unchanged as the «بسهر» false-trigger probe.
+- New turn F1.2b «مع إني قررت أنام بدري بس بشرب القهوة بالليل وبسهر», before `F1.links.before`:
+  - It is a genuine `INTERNAL_CONTRADICTION` («مع إني … بس …», with a whole-word «بس»).
+  - It concerns the two Memories captured at F1.1 and F1.2.
+  - It writes no Memory of its own (`NO_SUPPORTED_EXPLICIT_PATTERN`), so FORGET and DO_NOT_RELY still resolve to the
+    same two Memories.
+- The Hypothesis comes from the production generation path with the existing candidate double. No Hypothesis is
+  fabricated. Historical result files are unchanged.
+
+**RC-A2: K1.9 lexical precision (retriever).**
+- «بحب» (and «بحبه» / «بحبها», which stem to it) never selects a Memory on its own while the query's other words select
+  one. When they select nothing, the earlier behaviour is kept.
+- A plain stop word was tried as the negative control, and two recall guards fail with it:
+  - «فاكر أنا بحب إيه؟» would serve nothing instead of every «بحب» Memory.
+  - «فاكر إني بحب القهوة؟» would serve nothing when no Memory mentions coffee.
+
+  It is therefore not used.
+- The scoring formula, the ordering, the bounds (32 → 4, 2,400 characters) and every other token are unchanged.
+  Nothing is semantic.
+- Intentional consequence: a Memory that also contains «بحب» no longer outranks an equally distinctive match only
+  because of «بحب».
+- Only «بحب» is treated this way. English "like" and "love" and the other predicates are untouched; widening the rule
+  belongs to `QAN-BL-CTX-01`.
+
+**Validation (on `d94bb9b`):**
+
+| Check | Result |
+|---|---|
+| API typecheck (both tsconfigs) | pass |
+| Affected Jest, `--no-cache`: retriever, orchestrator, HIM-snapshot degradation, foreground gatherer | **4 suites, 296 tests, all pass** |
+| New RC-A2 tests against the `0815ff3` retriever | the K1.9 test fails; the three guard tests pass, because they pin behaviour that must not change |
+| Plain stop-word variant (negative control) | 2 guard tests fail |
+| Static contracts that read the retriever or CI-01, plus W3-MEGA-M | **76 + 33 tests, all pass** |
+| CI-01, one full run | `scripts/ci-01/results/d94bb9b15b7cb9e3673327b6236e52c4d0ffc49c.json` |
+
+**CI-01 on `d94bb9b`:**
+
+**F1:**
+- F1.2 → `AMBIGUOUS TRIGGER_LIKE_BUT_UNRESOLVED`, +0 Hypotheses. The false trigger stays fixed.
+- F1.2b → `TRIGGER INTERNAL_CONTRADICTION` → generation `COMPLETED`, +1 Hypothesis.
+  - Before withdrawal it is linked to `STABLE_PREFERENCE:ACTIVE` and `DECISION_COMMITMENT:ACTIVE`.
+- After FORGET (`DELETED`) and DO_NOT_RELY (`DISABLED`):
+  - the links are detached;
+  - the Hypothesis carries `NO_REMAINING_SUPPORT`, with the withdrawal recorded.
+- PG-02 measures: `pg02DependedOnWithdrawnOrCorrected` **1**; `pg02ReliedOnAfterWithdrawal` **0**;
+  `activeHypothesesOverNonActiveEvidence` 0.
+- Forgotten content served: 0/2. Hypothesis injected after forget: 0.
+
+**K1:**
+- Recall stays 2/4 and capture 4/6.
+- **K1.9 serves 1 item**, the «الهدوء» Memory.
+- K1.4 still sees one item through the fallback.
+- K1.7 and K1.10 stay recorded misses.
+
+**Controls:**
+- Isolation `holds: true`, with every non-vacuity flag true, including `ownerHypothesesSeen`. F1 owner: 1 / 1
+  Hypotheses, 2 / 2 Memories.
+- Positive ownership and the negative cross-user checks both hold.
+- Telemetry content leaks: 0. Outbox content: 0. Guard: 14 / 14 transports blocked.
+- **`allHold: true`**.
+- The 0029 by-design ledger rows rise from 4 to 6, because there is one more generation. They are not counted against
+  the controls.
+
+**Other scenarios:** C1, H1, M1, N1, P1, U2 and X1 yields are identical to `0815ff3`.
 
 **Next gate:** G-A1 — MEM-AR-01A Review (STOP). Nothing of 01B or 01C is started. Migration `0152` is not created.
