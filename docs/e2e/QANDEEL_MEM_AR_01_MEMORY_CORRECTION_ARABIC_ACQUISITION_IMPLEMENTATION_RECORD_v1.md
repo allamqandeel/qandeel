@@ -1,7 +1,7 @@
 # QANDEEL — MEM-AR-01 — Memory Correction & Arabic Acquisition — Implementation Record v1
 
 **Status:** `MEM-AR-01` — **ACTIVE.** One task contract with three ordered slices, `MEM-AR-01A` → `MEM-AR-01B` →
-`MEM-AR-01C`. Only 01A is implemented. 01B and 01C are NOT STARTED.
+`MEM-AR-01C`. 01A is merged (PR #328). 01B is implemented, Draft PR open, not merged. 01C is NOT STARTED.
 
 **Authority:** the Product Owner's *MEM-AR-01 Implementation Task Contract*.
 - Approved 2026-10-11 with mandatory review corrections RC-1 to RC-4. CQ-1 and CQ-2 were answered.
@@ -21,8 +21,8 @@
 
 ## Slice: MEM-AR-01A — Arabic Fidelity & Normalization
 
-**Slice:** `MEM-AR-01A` — **IMPLEMENTED — DRAFT PR OPEN — NOT MERGED.** Merge only on the Product Owner's explicit «ادمج».
-No migration, no deployment.
+**Slice:** `MEM-AR-01A` — **IMPLEMENTED — MERGED** through PR #328 on the Product Owner's «ادمج» (merge commit
+`04dfbf21e8e40fe24ca042baa3e1456ac99ae798`). No migration, no deployment.
 
 **Branch:** `mem/mem-ar-01a-arabic-fidelity-normalization`, cut from `origin/main` `1294a69`.
 
@@ -209,4 +209,159 @@ commit: `d94bb9b15b7cb9e3673327b6236e52c4d0ffc49c`.
 
 **Other scenarios:** C1, H1, M1, N1, P1, U2 and X1 yields are identical to `0815ff3`.
 
-**Next gate:** G-A1 — MEM-AR-01A Review (STOP). Nothing of 01B or 01C is started. Migration `0152` is not created.
+**Gate:** G-A1 passed; 01A merged as PR #328. Migration `0152` is not created.
+
+---
+
+## Slice: MEM-AR-01B — Natural Reversal & Correction
+
+**Slice:** `MEM-AR-01B` — **IMPLEMENTED — DRAFT PR OPEN — UNDER REVIEW (G-B1) — NOT MERGED.** Merge only on the Product
+Owner's explicit «ادمج». No migration, no deployment.
+
+**Authority:** the 01B brief ("IMPLEMENT MEM-AR-01B ONLY. Draft PR allowed. NO MERGE") under the approved contract §2.2,
+§8.2 and §14, RC-4 included.
+
+**Branch:** `mem/mem-ar-01b-natural-reversal-correction`, cut from `origin/main` `04dfbf21` (the merge of PR #328).
+
+**Implementation commit (the tested code tree):** `3d0ff0f9c3e543ae1a2116468d4908de2e4c8b47`. Every later commit on the
+branch adds documentation or harness results only (RC-3).
+
+### 1. Anti-duplication gate (contract §1.2), at the start of the slice
+
+| Check | Result |
+|---|---|
+| `origin/main` | `04dfbf21e8e40fe24ca042baa3e1456ac99ae798`, the verified main. PR #328 is merged and its code is present |
+| Terminal migration | `0151`; 01B adds none |
+| Open PRs, and other 01B branches | none |
+| The 01C names of §1.1 on `origin/main` outside `docs/` | none, except a forward-reference comment to `memory_equivalence_key_v1` in 01A's `arabic-text.ts` |
+| Backlog | `QAN-BL-INTEL-03`, `QAN-BL-PRIV-03` and `MEM-AR` absent; not modified |
+
+### 2. What changed
+
+| Area | Change | Files |
+|---|---|---|
+| **Cues (PD-2)** | `CORRECT_AR` admits «غيرت رأيي» as an opener, so «غيرت رأيي، مبقتش X، أنا Y» is the existing explicit correction. A new pure reader, `interpretNaturalReversal`, reads three single-clause shapes, each a `CORRECT` with a `natural` marker (no new kind, no new outcome): «(أنا) مبقتش X» (`NO_LONGER`), «(أنا) بطلت X» (`STOPPED`, never before a «ت… / ي… / ن…» verb) and «(أنا) بقيت Y» (`BECAME`), optionally after «غيرت رأيي». The cue must open the utterance: quoted words, a question, a second clause, or anything in front of the cue («هو بطل …», «قالي …», «مراتي بقت …») is not a reversal | `memory-control.interpreter.ts`; `NaturalReversal` in `memory-control.types.ts` |
+| **Target (contract §2.2 items 2–4)** | `resolveReversalTarget`, pure, beside `resolveMemoryTarget` and with the shared 01A normalizer and stem. `BECAME` replaces a value only in the single-valued residence / location frame («أنا ساكن / ساكنة / عايش / عايشة في …», the evaluator's location frame): a first-person Memory of the same type in that frame with another value. Every other frame is multi-valued, so «بقيت بحب الشاي» never replaces coffee. `NO_LONGER` / `STOPPED` negate the same object: every distinctive word of X, the predicate included, must be in the target; a predicate alone names nothing; the type must match when X is a typed statement; a Memory that already negates or stops something is never the target. One morphological bridge, nothing semantic: after «بطلت», the first verb's bare first-person form («أشرب») also meets the habitual «بشرب». Exactly one target → `RESOLVED`; two or more → `AMBIGUOUS` (at most three, recency order); none → `NONE` | `memory-control.resolution.ts` |
+| **Plan** | An explicit request is read first, then a natural reversal. One target → the existing v1 `CORRECT` / `CORRECTED` plan with the existing `correctedReply`; several → the existing `CLARIFICATION_REQUIRED`; none → `null`, i.e. ordinary conversation with no command row and no Memory reply. A Memory that already says the new statement is never the target, so a repeated reversal changes nothing. The successor of a negation keeps the user's words («أنا مبقتش بحب القهوة.») with the target's type, importance and expiry inherited; «أنا» is written out when it was implicit, as every correction already does. A clarification answer re-reads the original reversal the same way | `memory-control.service.ts` |
+| **Background** | Unchanged. Natural reversals are not added to the background's command skip, so «بطلت السهر» with no related Memory is still captured (U2.9). After a committed reversal, the 01A capture screen stops a second row (C2.9: `NO_FRESH_EVIDENCE`) | none |
+| **Static contract re-anchor** | W3-MEGA-M's "only a unique match is RESOLVED" now counts the one reversal path, pins its unique-match line, the predicate-alone refusal, and "a reversal that names nothing is ordinary conversation". Three planted defects prove them | `tests/w3-mega-m-conversational-memory-control-contract.test.mjs` |
+| **CI-01** | Fixtures C2 (reversal shapes) and U1 (words answer). Two per-turn observations: the committed Memory-control command (kind, outcome, options, answered) and status changes of existing Memories. Additive; no existing measure changed | `scripts/ci-01/` |
+
+**Exclusions held:** no SQL or migration, no new command kind, outcome or copy, no R2 guard, no subject attribution, no
+finalize v2, no duplicate retirement, no CC-H1 / CC-M1 / CC-M2′ / CC-M3′, no copula-less correction, no bulk forget or
+re-enable, no semantic matcher or provider, no Mobile / Shared / Public World change, no backlog change, no hosted access.
+
+### 3. Validation (on the implementation tree `3d0ff0f`)
+
+| Check | Result |
+|---|---|
+| API typecheck (`tsconfig.json`, `tsconfig.scripts.json`) | pass |
+| Changed-module and neighbouring Jest, `--no-cache`: interpreter, resolution, Memory-control route, R2 words-answer route, background enrichment, evaluator | **6 suites, 302 tests, all pass** |
+| Non-vacuity: the new route tests against `main`'s Memory-control modules | **6 of 7** R-2 tests fail; the seventh (ordinary conversation) is a guard that holds on both |
+| W3-MEGA-M | **36 / 36** (33 + 3 planted defects) |
+| The 32 static contracts that walk the API sources or read Memory control (W3-MEGA-M included) | **407 / 407** |
+| CI-01 contract | **18 / 18** |
+| PostgreSQL migration verification | not run locally: no schema change. The 0128 / 0151 verifiers run in API CI |
+| Mobile | not run: no Mobile change |
+
+**R-1 (unit; interpreter and resolution specs):**
+- Each cue against one, several and no target.
+- Single-valued (residence) against multi-valued (preference) frames; same-object negation; the type never crossing.
+- A predicate alone never naming the fact.
+- Explicit against natural shapes; ordinary statements without a cue.
+- Quoted, reported and third-party sentences; questions.
+- The «بطلت» bridge and its limit («التدخين» never meets «سجاير»).
+
+**R-2 (route; the real production turn route):**
+- «غيرت رأيي، بقيت ساكن في طنطا»: the one remembered residence → `SUPERSEDED`, exactly one successor «أنا ساكن في طنطا.»
+  (version 2, `PERSONAL_FACT`), the reply `correctedReply`, the only server command
+  `server_finalize_memory_control_turn_v1`. A friend's residence and another reader's identical row are untouched.
+- «أنا مبقتش بحب القهوة»: successor «أنا مبقتش بحب القهوة.», `STABLE_PREFERENCE` inherited; tea untouched.
+- «أنا بطلت أشرب قهوة» against «أنا بشرب قهوة كل يوم.»: corrected.
+- Two residences: the existing clarification, nothing changed, then only the chosen one corrected (`answers_command_id`
+  linked). An answered negation keeps the inherited type.
+- Ordinary conversation, no command, no change: «بقيت بحب الشاي», «أنا بحب الكشري» beside «أنا بحب الفول.», «أنا بطلت أشرب
+  قهوة» beside «أنا بحب القهوة.» only, «غيرت رأيي، بقيت ساكن في طنطا» with no residence, «قالي: أنا مبقتش بحب القهوة», a
+  question, and a repeat after a committed reversal.
+- No reply carries an id, a status, a type or a score.
+- **PG-02:** the correction is the unchanged v1 SQL path. Its taint and withholding are proven by `verify-migration-0128`
+  and `verify-migration-0151` in API CI; CI-01 F1 is identical to 01A.
+
+### 4. S-2a — R2 characterization verdict: **CONFIRMED**
+
+The question (INTEL-TM-01 R2, PD-7): when a FORGET clarification is answered in words, does background capture write the
+answer or re-create the forgotten Memory?
+
+**Route reproduction** (`apps/api/src/post-response-intelligence/memory-control-words-answer.route.spec.ts`). It drives
+`ConversationService` → the real orchestrator → the Memory-control boundary → the 0128 mirror → the completed-turn
+outbox event → the real `PostResponseIntelligenceDispatcher` → the real `BackgroundIntelligenceEnrichment`. Data ports
+are doubles.
+
+| Step | Observed |
+|---|---|
+| Stored | «أنا بحب الكشري.», «أنا بحب الفول.» (`STABLE_PREFERENCE`) |
+| «انسى إني بحب» | `FORGET` / `CLARIFICATION_REQUIRED`, both options; background `SKIP` |
+| «أنا بحب الكشري» (the answer) | `FORGET` / `FORGOTTEN`, answering the question: «الكشري» → `DELETED`, «الفول» `ACTIVE` |
+| Background on the same turn | The interpreter sees no command in the words; the deleted row is outside the active screen. `MEMORY_WRITE` = `WRITE` (`FRESH_EVIDENCE_CREATED`): a new `ACTIVE` «أنا بحب الكشري.» |
+| Control: the answer «2» | the same Memory forgotten; background `SKIP`, nothing written |
+
+**Database reproduction** (CI-01 U1, local PostgreSQL 17.10, every migration):
+
+| Turn | Command | Status change | Background `MEMORY_WRITE` | New row |
+|---|---|---|---|---|
+| U1.3 «انسى إني بحب» | `FORGET` / `CLARIFICATION_REQUIRED` (2 options) | none | `NO_FRESH_EVIDENCE` | none |
+| U1.4 «أنا بحب الكشري» | `FORGET` / `FORGOTTEN`, answering | «أنا بحب الكشري.» `ACTIVE` → `DELETED` | `FRESH_EVIDENCE_CREATED` | `STABLE_PREFERENCE` `ACTIVE` «أنا بحب الكشري.» |
+| U1.5 «فاكر أنا بحب إيه؟» | none | none | — | none; the forgotten statement **is served** (`forgottenServed: true`) |
+
+End state: one `DELETED` and one `ACTIVE` row with the same words, plus «الفول».
+
+**Verdict: CONFIRMED** by both reproductions: the forgotten Memory is re-created and served again. No guard is installed
+in 01B. The spec asserts the observed behaviour; its assertions marked OBSERVED are the ones a guard inverts.
+**Handoff:** the R2 guard belongs to MEM-AR-01C under the existing contract (A1/A2: a predicate in
+`background_record_memory_v1`, `SKIPPED_COMMAND_TURN`; S-2b).
+
+### 5. CI-01 on `3d0ff0f`
+
+`scripts/ci-01/results/3d0ff0f9c3e543ae1a2116468d4908de2e4c8b47.json`: full harness, 11 scenarios plus controls, one run.
+Repository head `3d0ff0f`, working tree clean.
+
+**C2 (new):**
+
+| Turn | Outcome |
+|---|---|
+| C2.6 «غيرت رأيي، بقيت ساكن في طنطا» | `CORRECTED`: «أنا ساكن في أكتوبر.» → `SUPERSEDED`, successor «أنا ساكن في طنطا.» v2. C2.7 recall hit, stale 0 |
+| C2.8 «أنا مبقتش بحب القهوة» | `CORRECTED`: successor «أنا مبقتش بحب القهوة.» `STABLE_PREFERENCE` v2 |
+| C2.9 «أنا بطلت أشرب قهوة» | `CORRECTED` against «أنا بشرب قهوة كل يوم.»; the background's own capture is stopped as a duplicate |
+| C2.10 «بقيت بحب الشاي» | ordinary; nothing superseded, nothing captured |
+| C2.11 «أنا بحب الكشري» | ordinary; captured; «أنا بحب الفول.» untouched |
+| C2.12 «غيرت رأيي، مبقتش بحب الفول، أنا بحب الطعمية» | explicit `CORRECTED` → «أنا بحب الطعمية.» |
+| C2.13 «بطلت التدخين» beside «أنا بشرب سجاير.» | ordinary; **captured** «بطلت التدخين.» while «أنا بشرب سجاير.» stays `ACTIVE` (limit L-1) |
+| C2.14 the C2.8 sentence again | ordinary; nothing left to reverse |
+| C2b.3 «غيرت رأيي وبقيت ساكن في المعادي» with two residences | `CLARIFICATION_REQUIRED` (2 options) |
+| C2b.4 «1» | `CORRECTED`, answering: «أنا عايش في الزمالك.» → «أنا ساكن في المعادي.» |
+
+End state: C2 4 `SUPERSEDED`, 7 `ACTIVE`, 0 duplicate actives; C2b 1 `SUPERSEDED`, 2 `ACTIVE`.
+
+**U1 (new):** §4.
+
+**C1, F1, H1, K1, M1, N1, P1, U2, X1:** yields, turns and end states identical to 01A's `d94bb9b` run, apart from the
+two new observation fields.
+- F1: PG-02 proof unchanged.
+- K1.9: still serves 1 item.
+- C1.2 stays unrecognized (limit L-2), and C1.6 still leaves one duplicate active pair (L-4).
+
+**Controls:** `allHold: true`; isolation two-sided and non-vacuous; 0 telemetry content leaks; 0 outbox content;
+guard 14 / 14. Only volumes grew: 82 executions and outbox events instead of 59, from the 23 new turns.
+
+### 6. Limitations and 01C handoff
+
+| # | Limitation | Disposition |
+|---|---|---|
+| R2 | A words answer to a FORGET clarification re-creates the forgotten Memory (§4) | **CONFIRMED → 01C**, as contracted. No guard in 01B |
+| L-1 | «بطلت التدخين» has no lexical link to «أنا بشرب سجاير.»: nothing is corrected, and the background captures «بطلت التدخين.» beside the old fact (the 01A screen cannot see the relation). Not inferred | Recorded; for the 01C closing reconciliation (BG-08) |
+| L-2 | C1.2 «غيرت رأيي وبقيت عايز أعيش في إسكندرية بعد الجواز»: a preference (multi-valued by contract) with another predicate («عايز» ≠ «بفضل»). It stays ordinary; the stale value is served at C1.3 | Recorded; by contract |
+| L-3 | Only residence / location is single-valued for «بقيت». Other single-valued facts are not replaced by a bare new value | By contract |
+| L-4 | A correction into a value already stored still leaves a duplicate active pair (C1.6) | 01C (`CORRECTED_TO_EXISTING`), as contracted |
+| L-5 | The four cues are Egyptian Arabic only; English natural reversals are not read | By contract |
+
+**Next gate:** G-B1 — MEM-AR-01B Review (STOP). 01C is not started; migration `0152` is not created.
