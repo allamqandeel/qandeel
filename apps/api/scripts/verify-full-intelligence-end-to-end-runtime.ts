@@ -52,7 +52,6 @@ import { MemoryRetrieverService } from '../src/memory/memory-retriever.service';
 import { MemoryRuntimeService } from '../src/memory/memory-runtime.service';
 import { MemoryRepository } from '../src/memory/memory.repository';
 import type { MemoryDataApiService } from '../src/memory/memory-data-api.service';
-import type { MemoryServiceRoleApiService } from '../src/memory/memory-service-role-api.service';
 import { EvidenceService } from '../src/memory/evidence.service';
 import { HimTurnContextSelectionService } from '../src/human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../src/human-model/him-intelligence-snapshot.service';
@@ -327,7 +326,7 @@ async function main(): Promise<void> {
     const conversationRepository = new ConversationRepository(conversationDataApi, serviceRoleApi, correlation);
     const contextBuilder = new ContextBuilderService(conversationRepository);
     const memoryRuntime = new MemoryRuntimeService(
-      new MemoryRepository(memoryDataApi, unusedDependency<MemoryServiceRoleApiService>('MEMORY_SERVICE_ROLE_API')));
+      new MemoryRepository(memoryDataApi));
     const memoryRetriever = new MemoryRetrieverService(memoryRuntime);
     const evidenceService = new EvidenceService(memoryRuntime);
     const himRepository = new HimRepository(memoryDataApi);

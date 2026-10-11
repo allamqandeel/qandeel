@@ -14,7 +14,7 @@ import { HimReasoningConsumptionService } from '../human-model/him-reasoning-con
 import { projectHimHypothesisGenerationContext, type HimHypothesisGenerationContext } from '../hypothesis/him-hypothesis-generation-context';
 import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidence } from '../memory/evidence.service';
 import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, screenMemoryCapture } from '../memory/memory-write-evaluator.service';
-import type { MemoryWriteResult } from '../memory/memory-write.service';
+import type { MemoryWriteResult } from '../memory/memory.types';
 import { interpretMemoryControl } from '../memory/memory-control.interpreter';
 import type { EvidenceItem } from '../memory/evidence.types';
 import type { SafetyDisposition } from '../conversation/safety-response-gate.types';
@@ -117,7 +117,11 @@ export class BackgroundIntelligenceEnrichmentService {
  async evaluateAndWriteMemory(context:BackgroundIntelligenceExecutionContext,currentUserContent:string):Promise<MemoryWriteResult>{
   this.assert(context);const decision=this.evaluator.evaluate(currentUserContent);if(decision.decision==='SKIP')return decision;if(interpretMemoryControl(currentUserContent))return{decision:'SKIP',reason:'MEMORY_CONTROL_COMMAND'};
   const active=await this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);const screen=screenMemoryCapture(decision.candidate,active);if(screen)return{decision:'SKIP',reason:screen,type:decision.candidate.type};
-  const created=await this.data.createMemory(context,{id:randomUUID(),...decision.candidate,status:decision.candidate.status??'ACTIVE'});return{decision:'WRITE',type:decision.candidate.type,memoryId:created.id,evidenceId:`memory:${created.id}`};
+  // MEM-AR-01C: the database decides the write under the owner's lock. Only a Memory this execution recorded is fresh
+  // Evidence (CREATED, or ALREADY_RECORDED on a replay); every other answer completes the effect with no Evidence.
+  const recorded=await this.data.recordMemory(context,{id:randomUUID(),...decision.candidate,status:decision.candidate.status??'ACTIVE'});
+  if(recorded.outcome!=='CREATED'&&recorded.outcome!=='ALREADY_RECORDED')return{decision:'SKIP',reason:recorded.outcome,type:decision.candidate.type};
+  return{decision:'WRITE',type:decision.candidate.type,memoryId:recorded.memoryId,evidenceId:`memory:${recorded.memoryId}`};
  }
 
  async listEligibleEvidence(context:BackgroundIntelligenceExecutionContext,now=new Date()):Promise<ReadonlyArray<EvidenceItem>>{this.assert(context);return projectEligibleEvidence(context.userId,await this.data.listActiveMemories(context,EVIDENCE_CANDIDATE_LIMIT,now),now).slice(0,MAX_ELIGIBLE_EVIDENCE);}

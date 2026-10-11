@@ -4,8 +4,10 @@
 //   catalog   the record table (owner-only RLS, no client write, immutable, erasure-only DELETE, CASCADE), every
 //             function's owner / security mode / empty search_path, EXECUTE only on the three entry points, the two
 //             triggers with their exact WHEN conditions; the selector is migration 0063's body plus exactly the three
-//             marked reliance lines, with its posture unchanged; finalize v2 and the canonical Evidence projection are
-//             byte-identical to their defining migrations (L2 unchanged);
+//             marked reliance lines, with its posture unchanged; finalize v2 is byte-identical to its defining migration,
+//             and the canonical Evidence projection is its latest definition (0152, CC-M1 - 0151 itself changes no L2);
+//             MEM-AR-01C (0152) re-anchors: eligible fixtures are attributed SELF before any link, the lifecycle
+//             primitives are moved as their owner, and T5's lapsed SELF fixtures are read after they lapse;
 //   T1-T8     the reliance value on real rows: withdrawn link + remaining support (REVIEW_PENDING), only support
 //             withdrawn (NO_REMAINING_SUPPORT), contradicting-only withdrawal and correction, supporting correction
 //             (link kept, no record), expiry (only when no support is left), CURRENT out of the 64-row window and a
@@ -31,6 +33,7 @@ import { dirname, join } from 'node:path';
 import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -95,6 +98,11 @@ async function memory(userId, { status = 'ACTIVE', source = 'USER_STATED', type 
              CASE WHEN $8::integer IS NULL THEN NULL ELSE now() + make_interval(days => $8::integer) END)`,
     [id, userId, type, content ?? `verifier-0151 fact ${memorySequence} ${id.slice(0, 8)}`, source, status, age, expiresIn],
   );
+  // MEM-AR-01C (0152, CC-M1 / CC-M2'): an eligible fixture is the reader's own Evidence (SELF), attributed before any link,
+  // so its standing is exactly what it was before 0152 (CURRENT, then WITHDRAWN / CORRECTED / LAPSED as the test moves it).
+  if (status === 'ACTIVE' && ['USER_STATED', 'USER_CONFIRMED'].includes(source) && type !== 'DERIVED_INSIGHT' && (expiresIn === null || expiresIn > 0)) {
+    await attributeFixtureSelf(on, id, userId);
+  }
   return id;
 }
 const link = (memoryId) => `memory:${memoryId}`;
@@ -108,8 +116,12 @@ async function hypothesis(userId, { supporting = [], contradicting = [], status 
 }
 const itemOf = async (id, on = client) => one('SELECT status, version, supporting_evidence_ids AS s, contradicting_evidence_ids AS c, statement FROM public.hypotheses WHERE id = $1', [id], on);
 /** The reliance value as the core computes it on the current row (owner-side). */
-const change = async (id, on = client) => (await one(`SELECT public.hypothesis_evidence_change_core_v1(h.user_id, h.id, h.supporting_evidence_ids,
-  h.contradicting_evidence_ids, CURRENT_TIMESTAMP) AS value FROM public.hypotheses h WHERE h.id = $1`, [id], on)).value;
+const change = async (id, on = client, at = 'CURRENT_TIMESTAMP') => (await one(`SELECT public.hypothesis_evidence_change_core_v1(h.user_id, h.id, h.supporting_evidence_ids,
+  h.contradicting_evidence_ids, ${at}) AS value FROM public.hypotheses h WHERE h.id = $1`, [id], on)).value;
+// MEM-AR-01C (0152) re-anchor for T5: a lapsed Memory of the reader's own is one that was attributed SELF while it was
+// current and expired since. The 0152 insert guard attributes only a current row, so T5's lapsed fixtures are attributed
+// while current and their reliance is read at this later instant, after they have lapsed. Same guarantee as before.
+const LATER = "CURRENT_TIMESTAMP + interval '2 days'";
 /** The reliance value through the authenticated entry point, as the reader. */
 async function relianceAs(userId, ids, on = client) {
   await actAs('authenticated', userId, on);
@@ -120,9 +132,12 @@ async function relianceAs(userId, ids, on = client) {
 }
 const records = async (id, on = client) => rows(`SELECT before_version, after_version, detached_supporting_evidence_ids AS s, detached_contradicting_evidence_ids AS c, confidence_evaluation_id
   FROM public.hypothesis_evidence_withdrawal_reevaluations WHERE hypothesis_id = $1 ORDER BY before_version`, [id], on);
-const forget = (userId, memoryId, on = client) => asServer(() => rows('SELECT id FROM public.server_mark_memory_deleted_v1($1, $2)', [userId, memoryId], on), on);
-const disable = (userId, memoryId, on = client) => asServer(() => rows('SELECT id FROM public.server_disable_memory_v1($1, $2)', [userId, memoryId], on), on);
-const correct = (userId, memoryId, on = client) => asServer(() => rows(
+// MEM-AR-01C (0152): the 0026 / 0128 lifecycle primitives are no longer service_role's; these fixtures move a Memory
+// through them as their owner (the same bodies the runtime's v2 calls).
+const asPrimitiveOwner = async (work, on) => { await asOwner(on); return work(); };
+const forget = (userId, memoryId, on = client) => asPrimitiveOwner(() => rows('SELECT id FROM public.server_mark_memory_deleted_v1($1, $2)', [userId, memoryId], on), on);
+const disable = (userId, memoryId, on = client) => asPrimitiveOwner(() => rows('SELECT id FROM public.server_disable_memory_v1($1, $2)', [userId, memoryId], on), on);
+const correct = (userId, memoryId, on = client) => asPrimitiveOwner(() => rows(
   `SELECT id FROM public.server_supersede_memory_v1($1, $2, $3, 'PERSONAL_FACT', $4, 'USER_STATED', 0.9, 0.8, 'ACTIVE', NULL)`,
   [userId, memoryId, randomUUID(), `verifier-0151 corrected ${randomUUID().slice(0, 8)}`], on), on);
 const housekeep = async (userId, limit = 32, on = client) => (await asServer(() => one('SELECT public.background_reevaluate_withdrawn_hypothesis_evidence_v1($1, $2) AS n', [userId, limit], on), on)).n;
@@ -226,7 +241,10 @@ async function verifyCatalog() {
   const finalizeLive = (await one("SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.finalize_conversation_turn_v2(uuid,uuid,uuid,uuid,text,text,uuid,uuid,uuid,uuid)')")).prosrc.replace(/\r\n/gu, '\n');
   assert.equal(finalizeLive, bodyOf(m0063, 'CREATE FUNCTION public.finalize_conversation_turn_v2('), 'finalize v2 is not redefined');
   const projectionLive = (await one("SELECT prosrc FROM pg_proc WHERE oid = to_regprocedure('public.canonical_eligible_memory_ids_v1(uuid,timestamp with time zone)')")).prosrc.replace(/\r\n/gu, '\n');
-  assert.equal(projectionLive, bodyOf(migrationText('0028_canonical_evidence_eligibility_v1.sql'), 'CREATE FUNCTION public.canonical_eligible_memory_ids_v1('), 'the canonical Evidence projection (L2) is unchanged');
+  // MEM-AR-01C (migration 0152) re-anchor: L2 is no longer 0028's byte for byte. CC-M1 (a Product Owner Controlled Change)
+  // adds ONE Step-B line - the SELF attribution - and verify-migration-0152 proves that is the only difference. 0151 itself
+  // still changes nothing in L2: the live body is exactly the 0152 body.
+  assert.equal(projectionLive, bodyOf(migrationText('0152_memory_subject_identity_atomicity_v1.sql'), 'CREATE OR REPLACE FUNCTION public.canonical_eligible_memory_ids_v1('), 'the canonical Evidence projection (L2) is 0152\'s (CC-M1)');
   assert.doesNotMatch(m0151.replace(/--[^\n]*/gu, ''), /ERRCODE\s*=\s*'(?:40001|40P01|PT409)'/u, 'no retryable or PROD-RETRY-01-tracked SQLSTATE is raised');
   assert.doesNotMatch(m0151.replace(/--[^\n]*/gu, ''), /'(?:REJECTED|RETIRED)'/u, 'no lifecycle status is ever written');
 }
@@ -272,13 +290,14 @@ async function verifySemantics() {
   assert.equal(await change(t4), 'REVIEW_PENDING');
 
   stage = 'T5: expiry withholds only when no support is left, and taints nothing';
-  const lapsed = await memory(me, { expiresIn: -1, age: 3 });
-  const expiredStatus = await memory(me, { status: 'EXPIRED' });
+  const lapsed = await memory(me, { expiresIn: 1, age: 3 });
+  const expiredStatus = await memory(me);
+  await client.query("UPDATE public.memories SET status = 'EXPIRED' WHERE id = $1", [expiredStatus]);
   const current = await memory(me);
   const t5all = await hypothesis(me, { supporting: [lapsed, expiredStatus] });
   const t5partial = await hypothesis(me, { supporting: [lapsed, current] });
-  assert.equal(await change(t5all), 'NO_REMAINING_SUPPORT');
-  assert.equal(await change(t5partial), 'NONE', 'partial expiry leaves it usable');
+  assert.equal(await change(t5all, client, LATER), 'NO_REMAINING_SUPPORT');
+  assert.equal(await change(t5partial, client, LATER), 'NONE', 'partial expiry leaves it usable');
 
   stage = 'CC-4: one housekeeping call detaches exactly the WITHDRAWN links, with record, version + 1 and the exact Confidence';
   const before = { t1: await itemOf(t1), t2: await itemOf(t2), t3a: await itemOf(t3a), t4: await itemOf(t4), t5all: await itemOf(t5all) };
@@ -299,7 +318,7 @@ async function verifySemantics() {
   assert.deepEqual([(await itemOf(t4)).s, (await itemOf(t4)).version, (await records(t4)).length], [before.t4.s, before.t4.version, 0], 'T4: a correction is never detached');
   assert.deepEqual([(await itemOf(t5all)).s, (await records(t5all)).length], [before.t5all.s, 0], 'T5: expiry is never detached');
   for (const [id, value] of [[t1, 'REVIEW_PENDING'], [t2, 'NO_REMAINING_SUPPORT'], [t3a, 'REVIEW_PENDING'], [t4, 'REVIEW_PENDING'], [t5all, 'NO_REMAINING_SUPPORT'], [t5partial, 'NONE'], [provisional, 'NONE']]) {
-    assert.equal(await change(id), value, 'after the housekeeping the value is identical');
+    assert.equal(await change(id, client, [t5all, t5partial].includes(id) ? LATER : undefined), value, 'after the housekeeping the value is identical');
   }
   for (const limit of [0, 33, null]) await rejected(() => housekeep(me, limit), ['22023']);
 
@@ -328,7 +347,7 @@ async function verifySemantics() {
   stage = 'T5 restoration: an untainted NO_REMAINING_SUPPORT lifts only when CURRENT support is attached';
   const fresh = await memory(me);
   await asServer(() => client.query('SELECT 1 FROM public.background_attach_hypothesis_evidence_v1($1, $2, $3, $4)', [me, t5all, link(fresh), 'SUPPORTING']));
-  assert.equal(await change(t5all), 'NONE');
+  assert.equal(await change(t5all, client, LATER), 'NONE');
 
   stage = 'T8: tainted stays withheld through WEAK->ACTIVE, RETIRED->REOPENED->ACTIVE, new support, a fresh Confidence and PG-01';
   let v = (await itemOf(t1)).version;
@@ -690,7 +709,7 @@ async function main() {
       try { await step(); } finally { await client.query('ROLLBACK'); }
     }
     await verifyRaces();
-    console.log('Verified migration 0151 Personal Evidence Truth Maintenance: reliance derived from committed facts only and identical before and after the housekeeping, permanent withholding for withdrawn or corrected evidence, L2 unchanged and contained in CURRENT, links removed only with an immutable record, the selector and the bind guard fail closed under every race without deadlock, owner-only, erased with the account.');
+    console.log('Verified migration 0151 Personal Evidence Truth Maintenance: reliance derived from committed facts only and identical before and after the housekeeping, permanent withholding for withdrawn or corrected evidence, L2 (the SELF-only CC-M1 body of 0152) contained in CURRENT, links removed only with an immutable record, the selector and the bind guard fail closed under every race without deadlock, owner-only, erased with the account.');
   } finally {
     await client.end();
   }

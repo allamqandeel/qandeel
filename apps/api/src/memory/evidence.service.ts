@@ -68,11 +68,15 @@ export function projectEligibleEvidence(
     }));
 }
 
+// MEM-AR-01C CC-M1 (PD-1): personal Evidence is about the user. A Memory attributed OTHER, or whose subject was never
+// established (UNATTRIBUTED), stays visible to the user and to conversation but is never Evidence - the same rule as
+// Step B of the canonical SQL Evidence projection (migration 0152). The 64-row window above it is unchanged.
 function isEligible(userId: string, memory: MemoryRecord, now: Date): boolean {
   return memory.user_id === userId &&
     memory.status === 'ACTIVE' &&
     (memory.source === 'USER_STATED' || memory.source === 'USER_CONFIRMED') &&
     memory.type !== 'DERIVED_INSIGHT' &&
+    memory.subject === 'SELF' &&
     (memory.expires_at === null || new Date(memory.expires_at).getTime() > now.getTime());
 }
 

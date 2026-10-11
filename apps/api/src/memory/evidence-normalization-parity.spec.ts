@@ -27,7 +27,7 @@ function memory(id: string, content: string, updatedAt: string, overrides: Parti
     id, user_id: 'user-1', scope: 'USER', type: 'PERSONAL_FACT', content, source: 'USER_STATED',
     confidence: 0.9, importance: 0.6, status: 'ACTIVE', version: 1,
     created_at: '2026-08-10T10:00:00.000Z', updated_at: updatedAt,
-    expires_at: null, supersedes_memory_id: null, ...overrides,
+    expires_at: null, supersedes_memory_id: null, subject: 'SELF', ...overrides,
   };
 }
 
@@ -80,6 +80,17 @@ describe('canonical Evidence normalization parity fixtures', () => {
       '00000000-0000-4000-8000-000000000003',
       '00000000-0000-4000-8000-000000000004',
     ]);
+  });
+
+  it('MEM-AR-01C CC-M1: the subject filter runs before deduplication, exactly as Step B does in SQL', () => {
+    const raw = byName.get('already-canonical')!.raw;
+    const items = projectEligibleEvidence('user-1', [
+      memory('00000000-0000-4000-8000-000000000001', raw, '2026-08-16T10:00:00.000Z', { subject: null }),
+      memory('00000000-0000-4000-8000-000000000002', raw, '2026-08-16T09:00:00.000Z', { subject: 'OTHER' }),
+      memory('00000000-0000-4000-8000-000000000003', raw, '2026-08-16T08:00:00.000Z', { subject: 'SELF' }),
+    ], NOW);
+    // The newest two are not about the user, so the older SELF copy is the one Evidence item.
+    expect(items.map((item) => item.originatingMemoryId)).toEqual(['00000000-0000-4000-8000-000000000003']);
   });
 
   it('breaks a duplicate tie on equal updated_at by the lowest id', () => {

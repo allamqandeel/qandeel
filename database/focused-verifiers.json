@@ -15,6 +15,29 @@
   ],
   "version": 1,
   "groups": {
+    "mem-ar-01c": {
+      "title": "MEM-AR-01C - Memory subject identity, atomicity and Evidence protection (migration 0152) with the historical verifiers it re-anchors",
+      "verifiers": [
+        "database/verify-migration-0152.mjs",
+        "database/verify-migration-0006.mjs",
+        "database/verify-migration-0008.mjs",
+        "database/verify-migration-0021.mjs",
+        "database/verify-migration-0026.mjs",
+        "database/verify-migration-0027.mjs",
+        "database/verify-migration-0028.mjs",
+        "database/verify-migration-0032.mjs",
+        "database/verify-migration-0033.mjs",
+        "database/verify-migration-0034.mjs",
+        "database/verify-migration-0035.mjs",
+        "database/verify-migration-0036.mjs",
+        "database/verify-exact-version-confidence.mjs",
+        "database/verify-migration-0063.mjs",
+        "database/verify-migration-0072.mjs",
+        "database/verify-migration-0128.mjs",
+        "database/verify-migration-0130.mjs",
+        "database/verify-migration-0151.mjs"
+      ]
+    },
     "i06d-0106": {
       "title": "I-06D - Replay post-finalization source availability and current complete-Replay usability (migration 0106)",
       "verifiers": ["database/verify-migration-0106.mjs"]

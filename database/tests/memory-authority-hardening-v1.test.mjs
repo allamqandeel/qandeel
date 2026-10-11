@@ -172,15 +172,21 @@ test('wires the background Memory write and the repository to the narrow server 
     new URL('../../apps/api/src/background-intelligence/background-intelligence-data-api.service.ts', import.meta.url),
     'utf8',
   );
-  assert.match(background, /rpc\/server_create_memory_v1/u);
-  assert.match(background, /p_user_id: context\.userId/u);
+  // MEM-AR-01C (migration 0152) re-anchor: the 0026 commands are no longer service_role's. The background path writes
+  // through the ONE guarded background writer, named by the source turn - the database derives the owner from the
+  // durable execution, so the caller no longer supplies one.
+  assert.match(background, /rpc\/background_record_memory_v1/u);
+  assert.match(background, /p_source_turn_id: context\.sourceTurnId/u);
+  assert.doesNotMatch(background, /rpc\/server_create_memory_v1/u);
   // No direct Memory table write survives on the background path.
   assert.doesNotMatch(background, /this\.request<MemoryRecord\[\]>\('memories'/u);
 
   const repository = await readFile(new URL('../../apps/api/src/memory/memory.repository.ts', import.meta.url), 'utf8');
+  // The repository writes nothing at all any more: its three 0026 write methods were dead and are removed (0152).
   for (const command of ['server_create_memory_v1', 'server_mark_memory_deleted_v1', 'server_supersede_memory_v1']) {
-    assert.match(repository, new RegExp(`serverAuthority\\.rpc<MemoryRecord\\[\\]>\\('${command}'`, 'u'), command);
+    assert.doesNotMatch(repository, new RegExp(command, 'u'), command);
   }
+  assert.doesNotMatch(repository, /serverAuthority|rpc/u);
   // Every authenticated (user-token) call is a plain owner-scoped read.
   assert.doesNotMatch(repository, /dataApi\.request[\s\S]{0,400}?method: '(?:POST|PATCH|PUT|DELETE)'/u);
   assert.doesNotMatch(repository, /rpc\/supersede_memory/u);

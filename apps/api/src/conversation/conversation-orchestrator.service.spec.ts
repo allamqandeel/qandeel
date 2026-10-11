@@ -9,7 +9,9 @@ import type { ContextBuilder } from './context-builder.types';
 import type { BehavioralResponsePolicy } from './behavioral-response-policy.types';
 import type { SafetyResponseGate } from './safety-response-gate.types';
 import { MemoryRetrieverService } from '../memory/memory-retriever.service';
-import { MemoryWriteService } from '../memory/memory-write.service';
+// MEM-AR-01C: the foreground never wrote Memory by inference; the removed MemoryWriteService survives here only as the
+// never-called double these assertions were written against.
+type MemoryWriteService = { evaluateAndWrite(...args: unknown[]): Promise<unknown> };
 import { HimTurnContextSelectionService } from '../human-model/him-turn-context-selection.service';
 import { HimIntelligenceSnapshotService } from '../human-model/him-intelligence-snapshot.service';
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';

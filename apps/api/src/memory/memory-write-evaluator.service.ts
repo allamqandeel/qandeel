@@ -112,6 +112,15 @@ export class MemoryWriteEvaluatorService {
     };
   }
 
+  /**
+   * MEM-AR-01C (PD-1) — step 1 of the subject screen: whether the closed first-person / user-relative grammar the
+   * background captures with (I-F3) recognises this explicit statement. Such a statement is about the user (SELF).
+   */
+  recognizesFirstPersonStatement(rawStatement: string, now = new Date()): boolean {
+    const statement = prepareRememberContent(rawStatement).replace(/^(?:إني|اني|انى|إنّي)\s+/u, 'أنا ');
+    return this.match(statement, now) !== undefined;
+  }
+
   private match(content: string, now: Date): PatternMatch | undefined {
     let match: RegExpMatchArray | null;
 

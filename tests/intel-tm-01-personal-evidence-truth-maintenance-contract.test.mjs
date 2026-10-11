@@ -25,6 +25,7 @@ const read = (path) => readFileSync(join(root, path), 'utf8').replace(/\r\n/gu, 
 const readIfPresent = (path) => (existsSync(join(root, path)) ? read(path) : null);
 const MIGRATIONS = 'database/migrations';
 const M0151 = '0151_personal_evidence_truth_maintenance_v1.sql';
+const M0152 = '0152_memory_subject_identity_atomicity_v1.sql';
 const RECORD = 'docs/e2e/QANDEEL_INTEL_TM_01_PERSONAL_EVIDENCE_TRUTH_MAINTENANCE_IMPLEMENTATION_RECORD_v1.md';
 const MARK = ' -- INTEL-TM-01 (0151)';
 const AR = Object.freeze({
@@ -54,7 +55,10 @@ const shipped = Object.freeze({
   migrations: readdirSync(join(root, MIGRATIONS)).filter((name) => name.endsWith('.sql')).sort(),
   m0151: read(`${MIGRATIONS}/${M0151}`),
   m0063: read(`${MIGRATIONS}/0063_question_information_gap_closed_loop_v1.sql`),
-  otherMigrationTexts: readdirSync(join(root, MIGRATIONS)).filter((name) => name.endsWith('.sql') && name !== M0151).map((name) => read(`${MIGRATIONS}/${name}`)).join('\n'),
+  // MEM-AR-01C (K-2): 0152 is the one later migration admitted to redefine the L1 / L3 predicates (CC-M2', CC-M3');
+  // it is held to exactly that below, and every other migration still may not reference them.
+  m0152: read(`${MIGRATIONS}/${M0152}`),
+  otherMigrationTexts: readdirSync(join(root, MIGRATIONS)).filter((name) => name.endsWith('.sql') && name !== M0151 && name !== M0152).map((name) => read(`${MIGRATIONS}/${name}`)).join('\n'),
   api: apiSources(),
   mobileApi: read('apps/mobile/src/runtime-entry/understanding-api.ts'),
   mobileCopy: read('apps/mobile/src/understanding/copy.ts'),
@@ -90,6 +94,14 @@ function migrationViolations(world) {
   if (!/GRANT EXECUTE ON FUNCTION public\.hypothesis_evidence_reliance_v1\(uuid\[\]\) TO authenticated;/u.test(world.m0151)) out.push('the authenticated reliance read is not granted');
   if ((world.m0151.match(/^GRANT EXECUTE ON FUNCTION /gmu) ?? []).length !== 4) out.push('0151 grants EXECUTE on something beyond the three entry points and the unchanged selector');
   if (/personal_evidence_standing_v1|hypothesis_evidence_change_core_v1/u.test(world.otherMigrationTexts)) out.push('another migration references the L1 / L3 predicates');
+  // MEM-AR-01C (K-2): in 0152 the predicates appear only inside their own two CREATE OR REPLACE bodies (the Controlled
+  // Changes CC-M2' and CC-M3'), and nowhere else in that migration.
+  const m0152 = code(world.m0152);
+  const bodyOf = (name) => { const start = m0152.indexOf(`CREATE OR REPLACE FUNCTION public.${name}(`); return start < 0 ? '' : m0152.slice(start, m0152.indexOf('$$;', start) + 3); };
+  const standing = bodyOf('personal_evidence_standing_v1'), core = bodyOf('hypothesis_evidence_change_core_v1');
+  if (!standing || !core) out.push('0152 does not redefine both L1 and L3 as its Controlled Changes');
+  if (/personal_evidence_standing_v1|hypothesis_evidence_change_core_v1/u.test(m0152.replace(standing, '').replace(core, ''))) out.push('0152 references the L1 / L3 predicates outside its two Controlled Changes');
+  if (/\bCREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+public\.(?:reevaluate_withdrawn_hypothesis_evidence_core_v1|guard_hypothesis_evidence_link_removal_v1|guard_formal_question_binding_reliance_v1|select_formal_question_opportunity_v1)\b/u.test(m0152)) out.push('0152 redefines the housekeeping, the link guard, the bind guard or the selector');
   return out;
 }
 
@@ -110,7 +122,7 @@ function consumerViolations(world) {
   const association = api(world, 'post-response-intelligence/model-assisted-hypothesis-association.service.ts');
   if ((association.match(/listReliableActiveHypotheses\(/gu) ?? []).length !== 2 || association.includes('listActiveHypotheses(')) out.push('background association sees withheld items');
   const rawReaders = Object.entries(world.api).filter(([, text]) => text.includes('.listActiveForUser(')).map(([path]) => path.replace('apps/api/src/', '')).sort();
-  if (JSON.stringify(rawReaders) !== JSON.stringify(['hypothesis/hypothesis-reasoning-context.service.ts', 'hypothesis/hypothesis.service.ts', 'understanding/understanding.service.ts', 'memory/evidence.service.ts', 'memory/memory-retriever.service.ts', 'memory/memory-runtime.service.ts', 'memory/memory-write.service.ts'].sort())) {
+  if (JSON.stringify(rawReaders) !== JSON.stringify(['hypothesis/hypothesis-reasoning-context.service.ts', 'hypothesis/hypothesis.service.ts', 'understanding/understanding.service.ts', 'memory/evidence.service.ts', 'memory/memory-retriever.service.ts', 'memory/memory-runtime.service.ts'].sort())) { // MEM-AR-01C: MemoryWriteService removed
     out.push(`unexpected raw active-list readers: ${rawReaders}`);
   }
   return out;
@@ -231,6 +243,9 @@ const PLANTED = [
   ['the bind refusal becomes PT409', 'migrationViolations', () => plant('m0151', "RAISE EXCEPTION 'QUESTION_BINDING_RELIANCE_WITHHELD' USING ERRCODE='42501',", "RAISE EXCEPTION 'QUESTION_BINDING_RELIANCE_WITHHELD' USING ERRCODE='PT409',")],
   ['the bind guard fires on every update', 'migrationViolations', () => plant('m0151', "FOR EACH ROW WHEN (OLD.state = 'SELECTED' AND NEW.state = 'BOUND')", 'FOR EACH ROW')],
   ['a selector reliance line is dropped', 'migrationViolations', () => plant('m0151', MARK, '')],
+  // MEM-AR-01C (K-2): 0152 may touch the predicates only through its two Controlled Changes.
+  ['0152 uses the L1 predicate outside its Controlled Changes', 'migrationViolations', () => plant('m0152', 'CREATE FUNCTION public.memory_subject_v1(', 'SELECT public.personal_evidence_standing_v1(NULL, NULL, NULL);\nCREATE FUNCTION public.memory_subject_v1(')],
+  ['0152 redefines the bind guard', 'migrationViolations', () => plant('m0152', 'COMMIT;', 'CREATE OR REPLACE FUNCTION public.guard_formal_question_binding_reliance_v1() RETURNS trigger AS $$ BEGIN RETURN NEW; END; $$ LANGUAGE plpgsql;\nCOMMIT;')],
   ['the reasoning context stops reading reliance', 'consumerViolations', () => plant('api:hypothesis/hypothesis-reasoning-context.service.ts', 'this.hypotheses.readEvidenceReliance(token, candidates)', 'Promise.resolve(new Map())')],
   ['generation reads the raw list', 'consumerViolations', () => plant('api:hypothesis/hypothesis-generation.service.ts', 'listReliableActiveForUser(userId, accessToken)', 'listActiveForUser(userId, accessToken)')],
   ['background association reads the raw list', 'consumerViolations', () => plant('api:post-response-intelligence/model-assisted-hypothesis-association.service.ts', 'this.enrichment.listReliableActiveHypotheses(context)', 'this.enrichment.listActiveHypotheses(context)')],

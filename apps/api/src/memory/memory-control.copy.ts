@@ -45,22 +45,43 @@ const LINES = {
   whichOne: { ar: 'تقصد أنهي واحدة؟', en: 'Which one do you mean?' },
   oneAtATime: { ar: 'خلّينا ناخدهم واحدة واحدة. تقصد أنهي واحدة الأول؟', en: "Let's take them one at a time. Which one first?" },
   numberIsEnough: { ar: 'رقمها يكفي.', en: 'The number is enough.' },
+  // MEM-AR-01C — PRODUCT OWNER LOCKED COPY (Task Contract §9.1). Exact bytes; pinned by the MEM-AR-01 static contract.
+  subjectQuestion: { ar: 'المعلومة دي عنك إنت، ولا عن حد تاني؟', en: 'Is this about you or someone else?' },
+  inspectAboutOthers: {
+    ar: 'وفيه كمان حاجات حكيتلي عنها تخص ناس تانية:',
+    en: "And here are some things you've told me about other people:",
+  },
+  // CQ-1 (Product Owner, 2026-10-11): the same heading when no section precedes it.
+  inspectAboutOthersFirst: {
+    ar: 'فيه حاجات حكيتلي عنها تخص ناس تانية:',
+    en: "Here are some things you've told me about other people:",
+  },
 } satisfies Record<string, Line>;
 
+/**
+ * MEM-AR-01C: `aboutOthers` are the current Memories about someone else (subject OTHER). They follow the user's own
+ * section (and «inspectOlder») and precede the not-relied section; UNATTRIBUTED Memories stay in the user's section,
+ * exactly as before, without claiming whom they are about.
+ */
 export function inspectReply(
   language: MemoryControlLanguage,
   relied: ReadonlyArray<string>,
   notRelied: ReadonlyArray<string>,
   hasOlder: boolean,
+  aboutOthers: ReadonlyArray<string> = [],
 ): string {
-  if (relied.length === 0 && notRelied.length === 0) return LINES.nothingRemembered[language];
+  if (relied.length === 0 && notRelied.length === 0 && aboutOthers.length === 0) return LINES.nothingRemembered[language];
   const lines: string[] = [];
   if (relied.length > 0) {
     lines.push(LINES.inspectIntro[language], ...relied.map((content) => `• ${quoteMemory(language, content)}`));
     if (hasOlder) lines.push(LINES.inspectOlder[language]);
   }
+  if (aboutOthers.length > 0) {
+    lines.push(relied.length > 0 ? LINES.inspectAboutOthers[language] : LINES.inspectAboutOthersFirst[language]);
+    lines.push(...aboutOthers.map((content) => `• ${quoteMemory(language, content)}`));
+  }
   if (notRelied.length > 0) {
-    lines.push(relied.length > 0 ? LINES.inspectKeptNotRelied[language] : LINES.inspectKeptNotRelied[language].replace(/^وفيه/u, 'فيه').replace(/^And some/u, 'Some'));
+    lines.push(relied.length > 0 || aboutOthers.length > 0 ? LINES.inspectKeptNotRelied[language] : LINES.inspectKeptNotRelied[language].replace(/^وفيه/u, 'فيه').replace(/^And some/u, 'Some'));
     lines.push(...notRelied.map((content) => `• ${quoteMemory(language, content)}`));
   }
   return lines.join('\n');
@@ -120,4 +141,9 @@ export function plainReply(
     case 'TARGET_CHANGED': return LINES.targetChanged[language];
     case 'CLARIFICATION_DECLINED': return LINES.declined[language];
   }
+}
+
+/** MEM-AR-01C: the one question asked when a remember request does not say whom it is about. */
+export function subjectQuestionReply(language: MemoryControlLanguage): string {
+  return LINES.subjectQuestion[language];
 }

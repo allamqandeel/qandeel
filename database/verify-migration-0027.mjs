@@ -26,6 +26,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 
 const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
@@ -696,6 +697,8 @@ async function main() {
         ($2,$3,'USER','DERIVED_INSIGHT','ineligible evidence','SYSTEM_DERIVED',0.9,0.7,'PENDING_CONFIRMATION')`,
       [evidenceMemory, ineligibleMemory, owner],
     );
+    // MEM-AR-01C (0152, CC-M1): the cited fixtures are the user's own Evidence (SELF), attributed before any link. The ineligible row stays as it was.
+    await attributeFixtureSelf(client, evidenceMemory, owner);
     // Rows that stand in for Hypothesis history written before this migration,
     // deliberately carrying nontrivial authoritative values.
     await q(

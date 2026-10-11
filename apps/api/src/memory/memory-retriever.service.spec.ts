@@ -9,7 +9,7 @@ const memory = (id: string, content: string, overrides: Partial<MemoryRecord> = 
   id, user_id: 'user-a', scope: 'USER', type: 'PERSONAL_FACT', content, source: 'USER_STATED',
   confidence: 0.5, importance: 0.5, status: 'ACTIVE', version: 1,
   created_at: '2026-01-01T00:00:00.000Z', updated_at: '2026-01-01T00:00:00.000Z',
-  expires_at: null, supersedes_memory_id: null, ...overrides,
+  expires_at: null, supersedes_memory_id: null, subject: 'SELF', ...overrides,
 });
 
 describe('MemoryRetrieverService', () => {
@@ -58,7 +58,7 @@ describe('MemoryRetrieverService', () => {
 
   it('supports conservative Arabic normalization and lexical relevance', () => {
     expect(selectMemories('فاكر شُغلي؟', [memory('1', 'شغلي في التصميم'), memory('2', 'بحب الشاي')]))
-      .toEqual([{ type: 'PERSONAL_FACT', content: 'شغلي في التصميم', source: 'USER_STATED' }]);
+      .toEqual([{ type: 'PERSONAL_FACT', content: 'شغلي في التصميم', source: 'USER_STATED', about: 'USER' }]);
   });
 
   it('deduplicates and enforces top-K and total character budget without truncation', () => {
@@ -68,7 +68,20 @@ describe('MemoryRetrieverService', () => {
       .toHaveLength(MAX_SELECTED_MEMORIES);
     const oversized = memory('large', `job ${'x'.repeat(MAX_MEMORY_CONTEXT_CHARACTERS)}`);
     expect(selectMemories('job', [oversized, memory('fits', 'job fits')])).toEqual([
-      { type: 'PERSONAL_FACT', content: 'job fits', source: 'USER_STATED' },
+      { type: 'PERSONAL_FACT', content: 'job fits', source: 'USER_STATED', about: 'USER' },
+    ]);
+  });
+
+  it('MEM-AR-01C (L-3, MF-2): serves SELF, OTHER and UNATTRIBUTED Memories alike, each saying whom it concerns', () => {
+    const served = selectMemories('job', [
+      memory('a', 'my job is design', { subject: 'SELF' }),
+      memory('b', 'my sister job is law', { subject: 'OTHER' }),
+      memory('c', 'job was mentioned once', { subject: null }),
+      memory('d', 'job without an embed'),
+    ].map((row, index) => (index === 3 ? { ...row, subject: undefined } : row)));
+    expect(served.map(({ content, about }) => [content, about])).toEqual([
+      ['my job is design', 'USER'], ['my sister job is law', 'SOMEONE_ELSE'],
+      ['job was mentioned once', 'NOT_RECORDED'], ['job without an embed', 'NOT_RECORDED'],
     ]);
   });
 

@@ -132,6 +132,7 @@ jobs:
       - {name: "Verify PROD-RETRY-01 Data API stale-state SQLSTATE static contract", run: npm run test:prod-retry-01-data-api-stale-state-contract}
       - {name: "Verify CI-01 Intelligence Evidence Baseline static contract (records, isolation authorities, recorded synthetic proofs)", run: npm run test:ci-01-intelligence-evidence-baseline-contract}
       - {name: "Verify INTEL-TM-01 Personal Evidence Truth Maintenance static contract (reliance guards, withheld Understanding shape, records)", run: npm run test:intel-tm-01-personal-evidence-truth-maintenance-contract}
+      - {name: "Verify MEM-AR-01C Memory subject identity static contract (writer surface, R2 guard, locked copy, subject-safe Evidence)", run: npm run test:mem-ar-01-memory-subject-identity-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -974,6 +975,13 @@ jobs:
       # the account. Its committed race fixtures are removed and the removal is checked.
       - name: Verify INTEL-TM-01 Personal Evidence Truth Maintenance against real PostgreSQL
         run: npm run verify:personal-evidence-truth-maintenance:integration
+      # MEM-AR-01C: migration 0152 - append-only subject attribution created only with its Memory, the legacy attribution
+      # by provenance alone, SELF-only personal Evidence with permanent subject taints, the subject question, one ACTIVE
+      # equivalent per owner with dispositions and lineage, no background write for a command turn (R2) or a fact a later
+      # command withdrew, refusal of zero-support generated candidates, writers limited to v2, the background writer and
+      # the governed erasure; atomic under injected failure, isolated, monotonic, race-safe without deadlock.
+      - name: Verify MEM-AR-01C Memory subject identity, atomicity and Evidence protection against real PostgreSQL
+        run: npm run verify:memory-subject-identity:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       - {name: Verify Full Intelligence end-to-end runtime smoke, run: npm run verify:full-intelligence-e2e-runtime}

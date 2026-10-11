@@ -1,0 +1,20 @@
+{
+  "scenario": "P2",
+  "title": "Whom a remembered fact is about: SELF, OTHER, the subject question and its answers (MEM-AR-01C, PD-1)",
+  "purpose": "Records each explicit remember request's subject (SELF / OTHER), the subject question for an undecided one, the answers (another person, decline), the inspection section about other people, the about field served to the model, which Memories are personal Evidence, and that the subject answer is never captured by the background (R2, S-2b).",
+  "synthetic": true,
+  "sameTextsAs": "MEM-AR-01 Task Contract §10.1 S-3 (2026-10-11)",
+  "steps": [
+    { "id": "P2.s1", "kind": "session", "user": "P2", "session": "s1" },
+    { "id": "P2.1", "kind": "turn", "user": "P2", "session": "s1", "text": "افتكر إن أختي بتحب الكشري", "measure": { "memoryControl": "REMEMBER", "thirdParty": true }, "note": "another person's preference: kept as OTHER, never personal Evidence" },
+    { "id": "P2.2", "kind": "turn", "user": "P2", "session": "s1", "text": "افتكر إني بتخانق مع أختي كتير", "measure": { "memoryControl": "REMEMBER" }, "note": "the user's own relationship fact: SELF" },
+    { "id": "P2.3", "kind": "turn", "user": "P2", "session": "s1", "text": "افتكر إن ساكنة في طنطا", "measure": { "memoryControl": "REMEMBER" }, "note": "no subject in the words: the locked subject question, nothing stored" },
+    { "id": "P2.4", "kind": "turn", "user": "P2", "session": "s1", "text": "عن أختي", "measure": { "memoryControl": "REMEMBER" }, "note": "the answer: kept as OTHER from the question turn's words; the background writes nothing for this turn" },
+    { "id": "P2.5", "kind": "turn", "user": "P2", "session": "s1", "text": "افتكر إن أحمد بيحب الكورة", "measure": { "memoryControl": "REMEMBER" }, "note": "a name as the subject: the question again" },
+    { "id": "P2.6", "kind": "turn", "user": "P2", "session": "s1", "text": "لا", "measure": { "memoryControl": "REMEMBER" }, "note": "declined: nothing stored" },
+    { "id": "P2.7", "kind": "turn", "user": "P2", "session": "s1", "text": "إنت فاكر عني إيه؟", "measure": { "memoryControl": "INSPECT" }, "note": "the user's own section, then the section about other people" },
+    { "id": "P2.s2", "kind": "session", "user": "P2", "session": "s2" },
+    { "id": "P2.8", "kind": "turn", "user": "P2", "session": "s2", "text": "فاكر أختي بتحب إيه؟", "measure": { "recallProbe": { "anyOf": ["الكشري"] } }, "note": "served to the model with about SOMEONE_ELSE" }
+  ],
+  "finalStateMeasures": { "duplicateActiveMemories": true }
+}

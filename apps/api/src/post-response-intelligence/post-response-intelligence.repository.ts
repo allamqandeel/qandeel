@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type{HypothesisGenerationIntentExtractionResult}from'../hypothesis/hypothesis-generation-intent-extraction.types';
 import{parseSubjectGroundingUniverseResolution}from'../hypothesis/hypothesis-subject-grounding.authority';
 import type{SubjectGroundingUniverseResolution}from'../hypothesis/hypothesis-subject-grounding.types';
-import type{MemoryWriteResult}from'../memory/memory-write.service';
+import type{MemoryWriteResult}from'../memory/memory.types';
 import type{DurableAssociationResult}from'./durable-association-result';
 import type{DurableCandidateProviderResult}from'./durable-generation-result';
 import{parseInformationGapSyncResult}from'./information-gap-sync-result';

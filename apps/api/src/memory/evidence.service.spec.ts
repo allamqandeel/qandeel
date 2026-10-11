@@ -10,7 +10,7 @@ function memory(overrides: Partial<MemoryRecord> = {}): MemoryRecord {
     type: 'PERSONAL_FACT', content: 'I live in Cairo.', source: 'USER_STATED',
     confidence: 0.95, importance: 0.65, status: 'ACTIVE', version: 1,
     created_at: '2026-08-10T10:00:00.000Z', updated_at: '2026-08-16T10:00:00.000Z',
-    expires_at: null, supersedes_memory_id: null, ...overrides,
+    expires_at: null, supersedes_memory_id: null, subject: 'SELF', ...overrides,
   };
 }
 
@@ -35,6 +35,15 @@ describe('EvidenceService', () => {
   it.each<[MemorySource]>([['SYSTEM_DERIVED'], ['IMPORTED'], ['ADMIN_CONTROLLED']])(
     'excludes non-authoritative %s provenance', (source) => expect(projectEligibleEvidence('user-1', [memory({ source })], NOW)).toEqual([]),
   );
+
+  it('MEM-AR-01C CC-M1-TS: only a Memory about the user is Evidence - OTHER and UNATTRIBUTED are never', () => {
+    expect(projectEligibleEvidence('user-1', [
+      memory({ id: 'other', subject: 'OTHER' }),
+      memory({ id: 'unattributed', subject: null }),
+      memory({ id: 'absent', subject: undefined }),
+      memory({ id: 'self', subject: 'SELF', content: 'I work at the bank.' }),
+    ], NOW).map(({ originatingMemoryId }) => originatingMemoryId)).toEqual(['self']);
+  });
 
   it('excludes derived insight and expired temporary state', () => {
     expect(projectEligibleEvidence('user-1', [

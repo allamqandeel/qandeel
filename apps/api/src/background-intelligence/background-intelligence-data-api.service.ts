@@ -3,6 +3,7 @@ import type { SessionStatus, TurnStatus } from '../conversation/conversation.typ
 import type { HimSnapshotSourceRow } from '../human-model/him-intelligence-snapshot.types';
 import type { HimBrainContextSourceRow } from '../human-model/him-brain-context.types';
 import type { MemoryRecord, MemorySource, MemoryStatus, MemoryType } from '../memory/memory.types';
+import { MEMORY_SUBJECT_EMBED, withMemorySubject } from '../memory/memory-subject';
 import type { HypothesisRecord, HypothesisType, HypothesisDomain, EvidenceRole } from '../hypothesis/hypothesis.types';
 import type { HypothesisMutationResult, HypothesisUpdateRequest } from '../hypothesis/hypothesis-update.types';
 import type { ConfidenceEvaluationRecord } from '../hypothesis/confidence.types';
@@ -16,7 +17,7 @@ import { type BackgroundIntelligenceExecutionContext, isBackgroundIntelligenceEx
 const SESSION_FIELDS = 'id,status,channel';
 const TURN_FIELDS = 'id,session_id,role,status,source_turn_id';
 const SOURCE_TURN_FIELDS = `${TURN_FIELDS},content,processing_path,routing_reason`;
-const MEMORY_FIELDS = 'id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id';
+const MEMORY_FIELDS = `id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id,${MEMORY_SUBJECT_EMBED}`;
 const HYPOTHESIS_FIELDS = 'id,user_id,statement,type,domain,scope,origin,status,version,supporting_evidence_ids,contradicting_evidence_ids,competing_hypothesis_ids,assumptions,disconfirming_conditions,created_at,updated_at';
 // The canonical UUID shape, used only to fail closed on a malformed execution
 // identity before it can reach the service-role transport.
@@ -36,6 +37,10 @@ export interface BackgroundMemoryCreateInput {
   readonly status: MemoryStatus;
   readonly expiresAt?: string;
 }
+/** MEM-AR-01C: what background_record_memory_v1 committed for one capture. */
+export type BackgroundMemoryRecordResult =
+  | { readonly outcome: 'CREATED' | 'ALREADY_RECORDED'; readonly memoryId: string }
+  | { readonly outcome: 'SKIPPED_COMMAND_TURN' | 'EQUIVALENT_EXISTS' | 'SUPERSEDED_BY_LATER_COMMAND' };
 export interface BackgroundHypothesisCreateInput { readonly id:string; readonly statement:string; readonly type:HypothesisType; readonly domain:HypothesisDomain; readonly scope:string; readonly assumptions:readonly string[]; readonly disconfirmingConditions:readonly string[]; }
 
 @Injectable()
@@ -58,29 +63,39 @@ export class BackgroundIntelligenceDataApiService {
     return (await this.request<BackgroundConversationTurnState[]>(`conversation_turns?${query}`))[0];
   }
 
-  // Canonical background Memory creation. It is a narrow server-only database
-  // command (migration 0026), not a broad table write: the owner is taken from
-  // the authority-issued execution context and never from the input, and scope,
-  // version, lineage and both timestamps are derived in the database. The
-  // supplied Memory UUID is returned unchanged so the `memory:<uuid>` Evidence
-  // identity formed by the caller stays exact.
-  async createMemory(context: BackgroundIntelligenceExecutionContext, input: BackgroundMemoryCreateInput): Promise<MemoryRecord> {
+  // MEM-AR-01C (migration 0152): the ONE background Memory writer, background_record_memory_v1. The source turn - never
+  // the owner - names the durable RUNNING execution with MEMORY_WRITE claimed, so the owner, the Session association and
+  // the history boundary are the database's. Under the owner's equivalence lock it writes nothing for a turn a Memory
+  // command already answered (SKIPPED_COMMAND_TURN), for a fact a later command forgot or corrected
+  // (SUPERSEDED_BY_LATER_COMMAND) or one already remembered (EQUIVALENT_EXISTS); a replay of this execution answers the
+  // Memory it already wrote (ALREADY_RECORDED). A new Memory is created with its SELF / FIRST_PERSON_CAPTURE subject in
+  // the same transaction. The supplied Memory UUID is returned unchanged on CREATED, so `memory:<uuid>` stays exact.
+  async recordMemory(context: BackgroundIntelligenceExecutionContext, input: BackgroundMemoryCreateInput): Promise<BackgroundMemoryRecordResult> {
     this.assertExecutionContext(context);
-    const rows = await this.request<MemoryRecord[]>('rpc/server_create_memory_v1', {
+    const rows = await this.request<Array<{ outcome: unknown; memory_id: unknown }>>('rpc/background_record_memory_v1', {
       method: 'POST',
       body: JSON.stringify({
-        p_user_id: context.userId,
+        p_source_turn_id: context.sourceTurnId,
         p_memory_id: input.id,
         p_type: input.type,
         p_content: input.content,
-        p_source: input.source,
         p_confidence: input.confidence,
         p_importance: input.importance,
-        p_status: input.status,
         p_expires_at: input.expiresAt ?? null,
       }),
     });
-    return rows[0];
+    const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : undefined;
+    const outcome = row?.outcome;
+    if (outcome === 'CREATED' || outcome === 'ALREADY_RECORDED') {
+      if (typeof row?.memory_id !== 'string' || !BACKGROUND_UUID.test(row.memory_id) || (outcome === 'CREATED' && row.memory_id !== input.id)) {
+        throw new Error('BACKGROUND_MEMORY_RECORD_INTEGRITY');
+      }
+      return { outcome, memoryId: row.memory_id };
+    }
+    if ((outcome === 'SKIPPED_COMMAND_TURN' || outcome === 'EQUIVALENT_EXISTS' || outcome === 'SUPERSEDED_BY_LATER_COMMAND') && row?.memory_id === null) {
+      return { outcome };
+    }
+    throw new Error('BACKGROUND_MEMORY_RECORD_INTEGRITY');
   }
 
   async readCanonicalSourceTurn(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundCanonicalSourceTurn | undefined> {
@@ -92,7 +107,7 @@ export class BackgroundIntelligenceDataApiService {
   async listActiveMemories(context: BackgroundIntelligenceExecutionContext, limit:number, now=new Date()):Promise<MemoryRecord[]> {
     this.assertExecutionContext(context);
     const query=new URLSearchParams({select:MEMORY_FIELDS,user_id:`eq.${context.userId}`,status:'eq.ACTIVE',or:`(expires_at.is.null,expires_at.gt.${now.toISOString()})`,order:'updated_at.desc,id.desc',limit:String(limit)});
-    return this.request<MemoryRecord[]>(`memories?${query}`);
+    return (await this.request<MemoryRecord[]>(`memories?${query}`)).map(withMemorySubject);
   }
 
   async listActiveHypotheses(context: BackgroundIntelligenceExecutionContext, limit:number):Promise<HypothesisRecord[]> {

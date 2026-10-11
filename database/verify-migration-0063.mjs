@@ -19,6 +19,7 @@
 // later legitimate selection); binding-substrate immutability and zero direct
 // role privileges; and a real two-connection concurrent-selection proof.
 import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import process from 'node:process'; import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 const { Client } = pg; const databaseUrl = process.env.DATABASE_URL; if (!databaseUrl) throw new Error('DATABASE_URL is required in the ignored local .env file.');
 const client = new Client({ connectionString: databaseUrl });
 
@@ -430,6 +431,8 @@ async function main() { await client.connect(); try {
   await insertHypothesis(mallory, hForeign, 1, sessionM, 'CANDIDATE');
   await insertSession(alice, sessionC);
   await client.query("INSERT INTO public.memories(id,user_id,type,content,source,confidence,importance,status) VALUES($1,$2,'GOAL','pending-retry fixture evidence','USER_STATED',1,1,'ACTIVE')", [pendingMemory, alice]);
+  // MEM-AR-01C (0152, CC-M1): the cited fixtures are the user's own Evidence (SELF), attributed before any link.
+  await attributeFixtureSelf(client, pendingMemory, alice);
   await insertHypothesis(alice, hPending, 1, sessionC, 'CANDIDATE');
   await insertHypothesis(alice, hDecoy, 1, randomUUID(), 'CANDIDATE');
   // 1. An automatic gap exists for version 1 and is OPEN.

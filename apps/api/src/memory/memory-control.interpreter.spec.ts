@@ -1,4 +1,6 @@
-import { interpretMemoryControl, interpretNaturalReversal, memoryControlLanguage, readClarificationAnswer } from './memory-control.interpreter';
+import {
+  interpretMemoryControl, interpretNaturalReversal, memoryControlLanguage, readClarificationAnswer, readSubjectAnswer, screenMemorySubject,
+} from './memory-control.interpreter';
 
 describe('W3-MEGA-M conversational Memory command interpretation', () => {
   it.each([
@@ -148,5 +150,43 @@ describe('MEM-AR-01B natural reversal cues (interpretation only: no Memory is na
   ])('is not a natural reversal: %s', (content) => {
     expect(interpretNaturalReversal(content)).toBeNull();
     expect(interpretMemoryControl(content)).toBeNull();
+  });
+});
+
+// MEM-AR-01C (PD-1, S-3): whom an explicit statement is about. Step 1 (the closed first-person grammar → SELF, e.g.
+// «منى أختي», «أنا بحب الطريقة اللي أخويا…») is the service's; this table covers the pure screen behind it.
+describe('MEM-AR-01C subject screen (S-3) and subject answers (A1 C3.3)', () => {
+  it.each([
+    ['أختي بتحب الكشري', 'OTHER'],
+    ['أمي عايزاني أتجوز قريب', 'OTHER'],
+    ['هي مش بتحب السفر', 'OTHER'],
+    ['my sister hates kids', 'OTHER'],
+    ['She works at the bank', 'OTHER'],
+    ['أنا بتخانق مع أختي', 'SELF'],
+    ['عندي أخت', 'SELF'],
+    ['بحب الطريقة اللي أخويا بيتعامل بيها', 'SELF'],
+    ['أنا عارف إني محتاج أنام بدري', 'SELF'],
+    ["I'm training for a marathon", 'SELF'],
+    ['ساكنة في طنطا', 'AMBIGUOUS'],
+    ['أحمد بيحب الكورة', 'AMBIGUOUS'],
+    ['أنا عارف إن أختي بتحب الكشري', 'AMBIGUOUS'],
+    ['I know my sister likes kids', 'AMBIGUOUS'],
+    ['I think that he is right', 'AMBIGUOUS'],
+    ['Sam loves football', 'AMBIGUOUS'],
+  ] as const)('%s → %s', (statement, subject) => {
+    expect(screenMemorySubject(statement)).toBe(subject);
+  });
+
+  it.each([
+    ['عني', 'SELF'], ['عنّي', 'SELF'], ['أنا', 'SELF'], ['ليا', 'SELF'], ['عن نفسي', 'SELF'], ['بتاعي', 'SELF'], ['me', 'SELF'], ['about me', 'SELF'], ['Myself', 'SELF'],
+    ['مش عني', 'OTHER'], ['لا مش عني', 'OTHER'], ['لأ مش عني', 'OTHER'], ['عن حد تاني', 'OTHER'], ['حد تاني', 'OTHER'], ['عن أختي', 'OTHER'], ['عن جوزي.', 'OTHER'],
+    ['someone else', 'OTHER'], ['not me', 'OTHER'], ['about my sister', 'OTHER'],
+    ['لا', 'DECLINE'], ['لأ', 'DECLINE'], ['خلاص', 'DECLINE'], ['مش مهم', 'DECLINE'], ['بلاش', 'DECLINE'], ['no', 'DECLINE'], ['never mind', 'DECLINE'],
+  ] as const)('the answer %s is %s', (content, answer) => {
+    expect(readSubjectAnswer(content)).toBe(answer);
+  });
+
+  it.each(['عني؟', 'عن أحمد', 'عن صاحبي أحمد', 'أيوه', 'ماشي', 'أنا بحب الكشري', 'it is about my work'])('%s is not an answer', (content) => {
+    expect(readSubjectAnswer(content)).toBeNull();
   });
 });
