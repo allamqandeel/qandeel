@@ -2,17 +2,17 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import type { MemoryRecord, MemoryType } from './memory.types';
 import { MemoryControlRepository } from './memory-control.repository';
-import { MemoryWriteEvaluatorService, memoryDuplicateKeys, normalizeMemoryContent } from './memory-write-evaluator.service';
+import { MEMORY_IMPORTANCE, MemoryWriteEvaluatorService, memoryDuplicateKeys, normalizeMemoryContent } from './memory-write-evaluator.service';
 import {
-  interpretMemoryControl, memoryControlLanguage, readClarificationAnswer,
+  interpretMemoryControl, interpretNaturalReversal, memoryControlLanguage, readClarificationAnswer,
   type ClarificationAnswer, type MemoryControlIntent,
 } from './memory-control.interpreter';
-import { distinctiveWords, resolveMemoryTarget, type MemoryTargetResolution } from './memory-control.resolution';
+import { distinctiveWords, resolveMemoryTarget, resolveReversalTarget, type MemoryTargetResolution } from './memory-control.resolution';
 import {
   alreadyCorrectReply, alreadyRememberedReply, clarificationReply, correctedReply, disabledReply, forgottenReply,
   inspectReply, plainReply, rememberedReply, type MemoryControlLanguage,
 } from './memory-control.copy';
-import type { MemoryControlKind, MemoryControlPlan, PendingMemoryClarification } from './memory-control.types';
+import type { MemoryControlKind, MemoryControlPlan, NaturalReversal, PendingMemoryClarification } from './memory-control.types';
 
 const INSPECT_RELIED_SHOWN = 8;
 const INSPECT_NOT_RELIED_SHOWN = 4;
@@ -46,7 +46,9 @@ export class MemoryControlService {
   ) {}
 
   async plan(turn: MemoryControlTurn, now = new Date()): Promise<MemoryControlPlan | null> {
-    const intent = interpretMemoryControl(turn.content);
+    // MEM-AR-01B: an explicit request first; otherwise a natural reversal («مبقتش …», «بطلت …», «بقيت …»), which is a
+    // command only when it names the one remembered fact it reverses.
+    const intent = interpretMemoryControl(turn.content) ?? interpretNaturalReversal(turn.content);
     if (intent) {
       const planned = await this.planCommand(turn, intent, now);
       if (planned) return planned;
@@ -99,6 +101,7 @@ export class MemoryControlService {
         };
       }
       case 'CORRECT': {
+        if (intent.natural) return this.planReversal(language, { ...intent, natural: intent.natural }, current, now);
         // A correction restates the SAME predicate with a new value («ساكن في أكتوبر» → «ساكن في طنطا», "live in …" →
         // "live in …", or "I'm X" → "I'm Y"). "I don't like my job, but I need the money" restates nothing: ordinary talk.
         const shared = new Set([...distinctiveWords(intent.previous)].filter((word) => distinctiveWords(intent.replacement).has(word)));
@@ -157,8 +160,34 @@ export class MemoryControlService {
     return { kind, outcome: 'TARGET_NOT_SPECIFIED', candidateMemoryIds: [], reply: plainReply(language, 'TARGET_NOT_SPECIFIED') };
   }
 
+  /**
+   * MEM-AR-01B (PD-2): a natural reversal is a correction only when it names the one remembered fact it reverses, and
+   * then it is the existing v1 CORRECT. Two or three candidates ask the existing question. Anything else is ordinary
+   * conversation: no command, no reply about Memory (whether the background then keeps anything is its own grammar's
+   * decision).
+   */
+  private planReversal(
+    language: MemoryControlLanguage, intent: Extract<MemoryControlIntent, { kind: 'CORRECT' }> & { natural: NaturalReversal },
+    current: ReadonlyArray<MemoryRecord>, now: Date,
+  ): MemoryControlPlan | null {
+    const replacement = this.evaluator.explicitStatementCandidate(intent.replacement, now);
+    const replacementKeys = replacement.decision === 'WRITE' ? memoryDuplicateKeys(replacement.candidate.content) : new Set<string>();
+    // A Memory that already says the new thing is not what is being reversed, so a repeated reversal changes nothing.
+    const correctable = current.filter((memory) => !replacementKeys.has(normalizeMemoryContent(memory.content)));
+    const words = intent.natural === 'BECAME' ? intent.replacement : intent.previous;
+    const statement = this.evaluator.evaluate(intent.natural === 'BECAME' ? words : `أنا ${words}`, now);
+    const resolution = resolveReversalTarget(intent.natural, words, statement.decision === 'WRITE' ? statement.candidate.type : undefined, correctable);
+    if (resolution.state === 'RESOLVED') return this.correction(language, resolution.memory, intent.replacement, now, undefined, intent.natural !== 'BECAME');
+    if (resolution.state !== 'AMBIGUOUS') return null;
+    if (replacement.decision === 'SKIP' && replacement.reason === 'SENSITIVE_DATA') {
+      return { kind: 'CORRECT', outcome: 'DECLINED_SENSITIVE', candidateMemoryIds: [], reply: plainReply(language, 'DECLINED_SENSITIVE') };
+    }
+    return clarification('CORRECT', language, resolution.options);
+  }
+
+  /** `inherit` (MEM-AR-01B): the successor of a negation («أنا مبقتش بحب القهوة.») is the same kind of fact it negates. */
   private correction(
-    language: MemoryControlLanguage, target: MemoryRecord, replacementWords: string, now: Date, answersCommandId?: string,
+    language: MemoryControlLanguage, target: MemoryRecord, replacementWords: string, now: Date, answersCommandId?: string, inherit = false,
   ): MemoryControlPlan | null {
     const decision = this.evaluator.explicitStatementCandidate(replacementWords, now, fallbackType(target.type));
     const answering = answersCommandId ? { answersCommandId } : {};
@@ -167,7 +196,10 @@ export class MemoryControlService {
         ? { kind: 'CORRECT', outcome: 'DECLINED_SENSITIVE', candidateMemoryIds: [], ...answering, reply: plainReply(language, 'DECLINED_SENSITIVE') }
         : null;
     }
-    const { type, content, confidence, importance, expiresAt } = decision.candidate;
+    const { content, confidence } = decision.candidate;
+    const type = inherit ? fallbackType(target.type) : decision.candidate.type;
+    const importance = inherit ? MEMORY_IMPORTANCE[fallbackType(target.type)] : decision.candidate.importance;
+    const expiresAt = inherit ? target.expires_at ?? undefined : decision.candidate.expiresAt;
     return {
       kind: 'CORRECT', outcome: 'CORRECTED', targetMemoryId: target.id, candidateMemoryIds: [], ...answering,
       newMemory: { id: randomUUID(), type, content, confidence, importance, ...(expiresAt ? { expiresAt } : {}) },
@@ -214,9 +246,10 @@ export class MemoryControlService {
     }
 
     if (pending.kind === 'CORRECT') {
-      const original = interpretMemoryControl(pending.clarifiedTurnContent);
+      const original = interpretMemoryControl(pending.clarifiedTurnContent) ?? interpretNaturalReversal(pending.clarifiedTurnContent);
       if (original?.kind !== 'CORRECT') return null;
-      return this.correction(language, chosen, original.replacement, now, pending.commandId);
+      const negation = original.natural === 'NO_LONGER' || original.natural === 'STOPPED';
+      return this.correction(language, chosen, original.replacement, now, pending.commandId, negation);
     }
     return { ...lifecycleChange(pending.kind, language, chosen), ...answering };
   }

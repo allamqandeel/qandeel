@@ -1,4 +1,4 @@
-import { interpretMemoryControl, memoryControlLanguage, readClarificationAnswer } from './memory-control.interpreter';
+import { interpretMemoryControl, interpretNaturalReversal, memoryControlLanguage, readClarificationAnswer } from './memory-control.interpreter';
 
 describe('W3-MEGA-M conversational Memory command interpretation', () => {
   it.each([
@@ -109,5 +109,44 @@ describe('W3-MEGA-M reply to "which one do you mean?"', () => {
     expect(readClarificationAnswer('I was thinking about what we discussed yesterday and the day before')).toBeNull();
     expect(readClarificationAnswer('ليه بتسأل ده كله يعني؟')).toBeNull();
     expect(readClarificationAnswer('تاني؟')).toBeNull();
+  });
+});
+
+describe('MEM-AR-01B natural reversal cues (interpretation only: no Memory is named here)', () => {
+  it.each([
+    ['غيرت رأيي، بقيت ساكن في طنطا', '', 'أنا ساكن في طنطا', 'BECAME'],
+    ['أنا بقيت ساكنة في طنطا.', '', 'أنا ساكنة في طنطا', 'BECAME'],
+    ['بقيت بحب الشاي', '', 'أنا بحب الشاي', 'BECAME'],
+    ['أنا مبقتش بحب القهوة', 'بحب القهوة', 'أنا مبقتش بحب القهوة', 'NO_LONGER'],
+    ['غيرت رأيي ومبقتش بحب القهوة', 'بحب القهوة', 'أنا مبقتش بحب القهوة', 'NO_LONGER'],
+    ['انا ما بقتش ساكن في أكتوبر', 'ساكن في أكتوبر', 'أنا ما بقتش ساكن في أكتوبر', 'NO_LONGER'],
+    ['أنا بطلت أشرب قهوة', 'أشرب قهوة', 'أنا بطلت أشرب قهوة', 'STOPPED'],
+    ['بطلت التدخين', 'التدخين', 'أنا بطلت التدخين', 'STOPPED'],
+  ])('%s', (content, previous, replacement, natural) => {
+    expect(interpretMemoryControl(content)).toBeNull();
+    expect(interpretNaturalReversal(content)).toEqual({ kind: 'CORRECT', previous, replacement, copula: false, natural });
+  });
+
+  it('«غيرت رأيي» may open the explicit correction, which stays explicit (no natural marker)', () => {
+    expect(interpretMemoryControl('غيرت رأيي، أنا مش ساكن في أكتوبر، أنا ساكن في طنطا'))
+      .toEqual({ kind: 'CORRECT', previous: 'ساكن في أكتوبر', replacement: 'أنا ساكن في طنطا', copula: false });
+    expect(interpretMemoryControl('أنا مبقتش بحب القهوة، بقيت بحب الشاي'))
+      .toEqual({ kind: 'CORRECT', previous: 'بحب القهوة', replacement: 'أنا بحب الشاي', copula: false });
+    // Two clauses are never a bare reversal: the explicit form above, or ordinary talk.
+    expect(interpretNaturalReversal('أنا مبقتش بحب القهوة، بقيت بحب الشاي')).toBeNull();
+    expect(interpretNaturalReversal('أنا بطلت أشرب قهوة بس لسه بحب ريحتها')).toBeNull();
+  });
+
+  it.each([
+    // No cue: an ordinary statement, whatever it shares with a remembered one.
+    'أنا بحب الكشري', 'غيرت رأيي', 'غيرت رأيي في الموضوع ده', 'بقيت',
+    // Someone else's change, reported or quoted, is never the user's reversal.
+    'هو بطل التدخين', 'أحمد بقى ساكن في طنطا', 'مراتي بقت ساكنة في طنطا', 'هي بطلت تشرب قهوة',
+    'قالي إنه مبقاش بيحب القهوة', 'قالي: أنا مبقتش بحب القهوة', '«أنا مبقتش بحب القهوة»', '"بطلت التدخين" دي جملة من الفيلم',
+    // «بطلت» before another person's verb, and questions.
+    'بطلت تكلمني', 'بطلت تكلمني ليه؟', 'إنت بقيت ساكن في طنطا؟', 'أنا مبقتش بحب القهوة؟',
+  ])('is not a natural reversal: %s', (content) => {
+    expect(interpretNaturalReversal(content)).toBeNull();
+    expect(interpretMemoryControl(content)).toBeNull();
   });
 });

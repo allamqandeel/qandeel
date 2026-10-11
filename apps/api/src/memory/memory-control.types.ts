@@ -5,6 +5,12 @@ import type { MemoryType } from './memory.types';
 
 export type MemoryControlKind = 'INSPECT' | 'REMEMBER' | 'CORRECT' | 'FORGET' | 'DISABLE';
 
+/**
+ * MEM-AR-01B (PD-2): the shape of a natural reversal, which is only ever a `CORRECT` (no new kind, no new outcome).
+ * NO_LONGER «مبقتش X» and STOPPED «بطلت X» negate a remembered fact; BECAME «بقيت Y» states a new value for it.
+ */
+export type NaturalReversal = 'NO_LONGER' | 'STOPPED' | 'BECAME';
+
 /** Outcomes the server may ASK the database to commit. `TARGET_CHANGED` is decided by the database, never asked for. */
 export type MemoryControlRequestedOutcome =
   | 'INSPECTED' | 'NOTHING_REMEMBERED'

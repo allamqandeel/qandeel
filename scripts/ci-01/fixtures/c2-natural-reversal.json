@@ -1,0 +1,31 @@
+{
+  "scenario": "C2",
+  "title": "Natural reversal as a correction of the one remembered fact it reverses (MEM-AR-01B)",
+  "purpose": "Whether «غيرت رأيي» / «بقيت» / «مبقتش» / «بطلت» supersede exactly the remembered fact they reverse through the existing v1 CORRECT; whether a new preference leaves another preference alone; whether a statement without a cue changes nothing; whether two candidates are asked about; and the recorded limit «بطلت التدخين» beside «بشرب سجاير», which the deterministic grammar cannot relate.",
+  "synthetic": true,
+  "sameTextsAs": "WP0 §6 C2 (2026-10-10), narrowed by the approved Task Contract §2.2 (single-valued frames only)",
+  "steps": [
+    { "id": "C2.s1", "kind": "session", "user": "C2", "session": "s1" },
+    { "id": "C2.1", "kind": "turn", "user": "C2", "session": "s1", "text": "أنا ساكن في أكتوبر", "measure": { "factStatement": true }, "note": "residence, background capture" },
+    { "id": "C2.2", "kind": "turn", "user": "C2", "session": "s1", "text": "أنا بحب القهوة", "measure": { "valueStatement": true } },
+    { "id": "C2.3", "kind": "turn", "user": "C2", "session": "s1", "text": "أنا بحب الفول", "measure": { "valueStatement": true } },
+    { "id": "C2.4", "kind": "turn", "user": "C2", "session": "s1", "text": "افتكر إني بشرب قهوة كل يوم", "measure": { "valueStatement": true }, "note": "explicit remember of a habit" },
+    { "id": "C2.5", "kind": "turn", "user": "C2", "session": "s1", "text": "افتكر إني بشرب سجاير", "measure": { "valueStatement": true }, "note": "explicit remember" },
+    { "id": "C2.s2", "kind": "session", "user": "C2", "session": "s2" },
+    { "id": "C2.6", "kind": "turn", "user": "C2", "session": "s2", "text": "غيرت رأيي، بقيت ساكن في طنطا", "measure": { "reversalOf": "C2.1" }, "note": "«غيرت رأيي» + «بقيت», one remembered residence: expected CORRECT" },
+    { "id": "C2.7", "kind": "turn", "user": "C2", "session": "s2", "text": "فاكر أنا ساكن فين؟", "measure": { "recallProbe": { "anyOf": ["طنطا"] }, "staleProbe": { "staleTokens": ["أكتوبر"] } } },
+    { "id": "C2.8", "kind": "turn", "user": "C2", "session": "s2", "text": "أنا مبقتش بحب القهوة", "measure": { "reversalOf": "C2.2" }, "note": "bare negation of the same object" },
+    { "id": "C2.9", "kind": "turn", "user": "C2", "session": "s2", "text": "أنا بطلت أشرب قهوة", "measure": { "reversalOf": "C2.4" }, "note": "«بطلت أشرب» against the remembered habit «بشرب قهوة»" },
+    { "id": "C2.10", "kind": "turn", "user": "C2", "session": "s2", "text": "بقيت بحب الشاي", "measure": { "valueStatement": true }, "note": "a new preference: multi-valued, nothing is superseded" },
+    { "id": "C2.11", "kind": "turn", "user": "C2", "session": "s2", "text": "أنا بحب الكشري", "measure": { "valueStatement": true }, "note": "no cue beside «أنا بحب الفول»: nothing is superseded" },
+    { "id": "C2.12", "kind": "turn", "user": "C2", "session": "s2", "text": "غيرت رأيي، مبقتش بحب الفول، أنا بحب الطعمية", "measure": { "reversalOf": "C2.3", "explicitCorrection": true }, "note": "«غيرت رأيي» opening the explicit correction" },
+    { "id": "C2.13", "kind": "turn", "user": "C2", "session": "s2", "text": "بطلت التدخين", "measure": { "valueStatement": true, "reversalOf": "C2.5" }, "note": "no lexical link to «بشرب سجاير»: recorded limit, never inferred" },
+    { "id": "C2.14", "kind": "turn", "user": "C2", "session": "s2", "text": "أنا مبقتش بحب القهوة", "note": "the same reversal again: nothing left to reverse" },
+    { "id": "C2b.s1", "kind": "session", "user": "C2b", "session": "s1" },
+    { "id": "C2b.1", "kind": "turn", "user": "C2b", "session": "s1", "text": "أنا ساكن في أكتوبر", "measure": { "factStatement": true } },
+    { "id": "C2b.2", "kind": "turn", "user": "C2b", "session": "s1", "text": "أنا عايش في الزمالك", "measure": { "factStatement": true } },
+    { "id": "C2b.3", "kind": "turn", "user": "C2b", "session": "s1", "text": "غيرت رأيي وبقيت ساكن في المعادي", "note": "two remembered residences: expected the existing clarification" },
+    { "id": "C2b.4", "kind": "turn", "user": "C2b", "session": "s1", "text": "1", "note": "the first option offered (the most recent)" }
+  ],
+  "finalStateMeasures": { "duplicateActiveMemories": true }
+}

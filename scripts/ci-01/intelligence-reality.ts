@@ -480,7 +480,8 @@ async function main(): Promise<void> {
     rec.memoryEvaluator = md.decision === 'WRITE' ? `WRITE ${md.candidate.type}` : `SKIP ${md.reason}`;
     const tc = classifier.classify({ text: step.text, safetyDisposition: 'ALLOW' });
     rec.triggerClassifier = `${tc.classification} ${tc.reason}`;
-    const memBefore = (await memories(userId)).length;
+    const memsBefore = await memories(userId);
+    const memBefore = memsBefore.length;
     const hypBefore = await hypothesisCount(userId);
     const pBefore = { intent: intent.calls, cand: cand.calls, assoc: assoc.calls };
     await db.setAuthenticatedClaims(userId);
@@ -521,6 +522,11 @@ async function main(): Promise<void> {
     const memAfter = await memories(userId);
     rec.newMemories = memAfter.slice(memBefore).map((m: Json) => ({ type: m.type, source: m.source, status: m.status, version: m.version, content: m.content }));
     rec.memoryVersionsChanged = memAfter.length === memBefore && memAfter.some((m: Json) => m.version > 1);
+    // MEM-AR-01B: what the turn did to Memories that already existed (rows are never removed, so the order is stable),
+    // and the Memory-control command it committed, if any (kind / outcome / options offered / whether it answered).
+    rec.statusChanges = memsBefore.flatMap((m: Json, i: number) => memAfter[i].status !== m.status ? [`${m.status}→${memAfter[i].status}: ${m.content}`] : []);
+    const [command] = await db.observer<Json>('SELECT kind, outcome, cardinality(candidate_memory_ids)::int AS options, answers_command_id IS NOT NULL AS answers FROM public.memory_control_commands WHERE source_turn_id = $1', [turnRow.id]);
+    rec.memoryControlCommand = command ? `${command.kind}/${command.outcome}${command.options ? ` (${command.options} options)` : ''}${command.answers ? ' answering the previous question' : ''}` : 'NONE';
     rec.newHypotheses = (await hypothesisCount(userId)) - hypBefore;
     rec.providerDoubleCalls = { intent: intent.calls - pBefore.intent, candidate: cand.calls - pBefore.cand, association: assoc.calls - pBefore.assoc };
     // derived measurements (definitions live in the fixture; nothing here judges "good" or "bad")
