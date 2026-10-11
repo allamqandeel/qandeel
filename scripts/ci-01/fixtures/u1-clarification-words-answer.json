@@ -1,0 +1,17 @@
+{
+  "scenario": "U1",
+  "title": "A FORGET clarification answered in words: is the answer captured or the forgotten Memory re-created? (MEM-AR-01B S-2a, INTEL-TM-01 R2)",
+  "purpose": "Characterization only, no guard: the FORGET asks which one, the user answers in words («أنا بحب الكشري»), the foreground forgets the chosen Memory, and the same words reach the background as an ordinary completed turn. Records the command, the option chosen, the status change, the background MEMORY_WRITE effect, any new row, and whether the forgotten content is served afterwards.",
+  "synthetic": true,
+  "sameTextsAs": "WP0 §6 U1 (2026-10-10)",
+  "steps": [
+    { "id": "U1.s1", "kind": "session", "user": "U1", "session": "s1" },
+    { "id": "U1.1", "kind": "turn", "user": "U1", "session": "s1", "text": "أنا بحب الكشري", "measure": { "valueStatement": true } },
+    { "id": "U1.2", "kind": "turn", "user": "U1", "session": "s1", "text": "أنا بحب الفول", "measure": { "valueStatement": true } },
+    { "id": "U1.3", "kind": "turn", "user": "U1", "session": "s1", "text": "انسى إني بحب", "measure": { "memoryControl": "FORGET" }, "note": "a predicate only: expected the clarification with both options" },
+    { "id": "U1.4", "kind": "turn", "user": "U1", "session": "s1", "text": "أنا بحب الكشري", "measure": { "memoryControl": "FORGET", "valueStatement": true }, "note": "the answer in words: forgets «الكشري»; records whether the background captures the same words" },
+    { "id": "U1.s2", "kind": "session", "user": "U1", "session": "s2" },
+    { "id": "U1.5", "kind": "turn", "user": "U1", "session": "s2", "text": "فاكر أنا بحب إيه؟", "measure": { "forgottenProbe": { "noneOf": ["الكشري"] } }, "note": "is the forgotten statement served again" }
+  ],
+  "finalStateMeasures": { "duplicateActiveMemories": true }
+}

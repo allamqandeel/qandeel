@@ -118,7 +118,12 @@ function disableViolations(w) {
 function guessViolations(w) {
   const out = [];
   if (!w.resolution.includes("if (full.length === 1) return { state: 'RESOLVED', memory: full[0].memory };")) out.push('RESOLVED is not the unique full match');
-  if ((w.resolution.match(/state: 'RESOLVED'/gu) ?? []).length !== 2) out.push('a second path to RESOLVED exists');
+  // MEM-AR-01B (PD-2): the natural reversal is the one other path to RESOLVED, and it too is a unique match only. A
+  // predicate alone never names the fact it reverses, and a reversal that names nothing is ordinary conversation.
+  if (!w.resolution.includes("if (targets.length === 1) return { state: 'RESOLVED', memory: targets[0] };")) out.push('a reversal target is not the unique match');
+  if ((w.resolution.match(/state: 'RESOLVED'/gu) ?? []).length !== 3) out.push('another path to RESOLVED exists');
+  if (!w.resolution.includes("if (!slots.some((forms) => [...forms].some((word) => !PREDICATE_WORDS.has(word)))) return { state: 'NONE' };")) out.push('a predicate alone can name the fact a reversal reverses');
+  if (!w.service.includes("if (resolution.state !== 'AMBIGUOUS') return null;")) out.push('a reversal that names nothing is acted on');
   const deictic = w.service.slice(w.service.indexOf('private deictic('), w.service.indexOf('private correction('));
   if (!deictic || /lifecycleChange|targetMemoryId/u.test(deictic)) out.push('a pointer to earlier words can change Memory without asking');
   if (/targetMemoryId: (?!target\.id)/u.test(w.service)) out.push('a target id comes from somewhere other than a canonical row');
@@ -187,6 +192,9 @@ const PLANTED = [
   ['a generic status updater', 'disableViolations', () => ({ ...src, migration: `${src.migration}\nUPDATE public.memories SET status = p_status;` })],
   ['disable without the row lock', 'disableViolations', () => ({ ...src, migration: src.migration.replace('m.id=p_memory_id AND m.user_id=p_user_id FOR UPDATE', 'm.id=p_memory_id') })],
   ['best-of-several is acted on', 'guessViolations', () => ({ ...src, resolution: src.resolution.replace("if (full.length > 1) return { state: 'AMBIGUOUS'", "if (full.length > 1) return { state: 'RESOLVED', memory: full[0].memory }; if (false) return { state: 'AMBIGUOUS'") })],
+  ['best-of-several reversal is acted on', 'guessViolations', () => ({ ...src, resolution: src.resolution.replace("if (targets.length > 1) return { state: 'AMBIGUOUS'", "if (targets.length > 1) return { state: 'RESOLVED', memory: targets[0] }; if (false) return { state: 'AMBIGUOUS'") })],
+  ['a predicate alone names a reversal target', 'guessViolations', () => ({ ...src, resolution: src.resolution.replace("if (!slots.some((forms) => [...forms].some((word) => !PREDICATE_WORDS.has(word)))) return { state: 'NONE' };", '') })],
+  ['a reversal that names nothing still asks', 'guessViolations', () => ({ ...src, service: src.service.replace("if (resolution.state !== 'AMBIGUOUS') return null;", "if (resolution.state === 'NONE') return clarification('CORRECT', language, current);") })],
   ['a pointer changes Memory directly', 'guessViolations', () => ({ ...src, service: src.service.replace("if (pointed.state === 'RESOLVED') return clarification(kind, language, [pointed.memory]);", "if (pointed.state === 'RESOLVED') return lifecycleChange(kind, language, pointed.memory);") })],
   ['unanchored words delete directly', 'guessViolations', () => ({ ...src, service: src.service.replace('if (soft) return clarification(intent.kind, language, [resolution.memory]);', '') })],
   ['any negated-then-affirmed sentence corrects', 'guessViolations', () => ({ ...src, service: src.service.replace('if (shared.size === 0 && !intent.copula) return null;', '') })],

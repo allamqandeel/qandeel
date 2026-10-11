@@ -9,12 +9,22 @@
 // that…", "I don't … anymore, I …" (a correction, which is only a command when it names something remembered),
 // "forget…", "don't rely on…". Idioms that merely look similar are left alone: a bare «انسى» / «انساها» / "forget it"
 // means "never mind", "don't rely on me" is about the user, and a verb reported in someone else's speech is not a cue.
+//
+// MEM-AR-01B (PD-2): a NATURAL reversal («غيرت رأيي، بقيت ساكن في طنطا», «أنا مبقتش بحب القهوة», «أنا بطلت أشرب قهوة») is
+// read by `interpretNaturalReversal`, apart from the explicit requests above. It is only a possible correction: it
+// changes Memory only when the resolution step finds the one fact it reverses; otherwise the turn stays ordinary
+// conversation, and background inference still reads it through its own unchanged grammar.
+import type { NaturalReversal } from './memory-control.types';
 
 export type MemoryControlIntent =
   | { kind: 'INSPECT' }
   | { kind: 'REMEMBER'; statement: string }
-  /** `copula`: "I'm not X, I'm Y" — the restated predicate is the copula itself. */
-  | { kind: 'CORRECT'; previous: string; replacement: string; copula: boolean }
+  /**
+   * `copula`: "I'm not X, I'm Y" — the restated predicate is the copula itself.
+   * `natural` (MEM-AR-01B): a natural reversal. For NO_LONGER / STOPPED, `previous` is the negated clause X and
+   * `replacement` the user's own negated statement; for BECAME, `previous` is empty (the old value is not said).
+   */
+  | { kind: 'CORRECT'; previous: string; replacement: string; copula: boolean; natural?: NaturalReversal }
   /**
    * EXPLICIT: the words are anchored to Memory («إن / إني …», "that …", «ذاكرتك», «متفتكرش», "memory", …). SOFT: they are
    * not («امسح الشغل», "forget the work stuff"), so only a full match counts and anything less is ordinary conversation.
@@ -111,8 +121,8 @@ const REMEMBER_EN = [
 /** "Remember that movie I told you about" points back at the conversation; it states nothing to keep. */
 const CONVERSATION_REFERENCE = /\b(?:i\s+told\s+you|i\s+said|we\s+talked|we\s+discussed|you\s+said|i\s+mentioned)\b|قلتلك|قولتلك|قلت\s+لك|اتكلمنا|حكيتلك|قولتهولك/iu;
 
-// ---- CORRECT: a negated first-person clause, then the replacement clause.
-const CORRECT_AR = /^(?:(?:لا|لأ|على\s+فكرة)[،,]?\s+)?(?:(?:أنا|انا)\s+)?(?:مش|مبقتش|ما\s?بقتش|مابقيتش|ماعدتش|معدتش|لم\s+[اأ]عد|لست)\s+(.+?)\s*(?:[،,؛;.]|\s(?:بل|لكن|بس))\s*(?:(?:بل|لكن|بس)\s+)?(?:(?:أنا|انا)\s+)?(?:(?:دلوقتي|حاليا|حاليًا|بقيت|بقت|بقى)\s+)*(.+)$/u;
+// ---- CORRECT: a negated first-person clause, then the replacement clause. MEM-AR-01B: «غيرت رأيي» may open it.
+const CORRECT_AR = /^(?:(?:لا|لأ|على\s+فكرة|غيرت\s+(?:رأيي|رايي|رأيى|رايى))[،,]?\s+)?(?:(?:أنا|انا)\s+)?(?:مش|مبقتش|ما\s?بقتش|مابقيتش|ماعدتش|معدتش|لم\s+[اأ]عد|لست)\s+(.+?)\s*(?:[،,؛;.]|\s(?:بل|لكن|بس))\s*(?:(?:بل|لكن|بس)\s+)?(?:(?:أنا|انا)\s+)?(?:(?:دلوقتي|حاليا|حاليًا|بقيت|بقت|بقى)\s+)*(.+)$/u;
 const CORRECT_EN_DO = /^(?:(?:no|actually)[,.]?\s+)?i\s+(?:don'?t|do\s+not|no\s+longer|didn'?t)\s+(.+?)(?:\s+any\s?more)?\s*(?:[,;.]|\s+but|\s+—|\s+-)\s*(?:(?:now|actually|but)[,]?\s+)?i\s+(.+)$/iu;
 const CORRECT_EN_BE = /^(?:(?:no|actually)[,.]?\s+)?i(?:'m|\s+am)\s+(?:not|no\s+longer)\s+(.+?)(?:\s+any\s?more)?\s*(?:[,;.]|\s+but)\s*(?:(?:now|actually)[,]?\s+)?i(?:'m|\s+am)\s+(.+)$/iu;
 
@@ -156,6 +166,40 @@ export function interpretMemoryControl(content: string): MemoryControlIntent | n
   if (englishCorrection && !QUESTION.test(raw) && payload(englishCorrection[1]) && payload(englishCorrection[2])) {
     const copula = CORRECT_EN_BE.test(text);
     return { kind: 'CORRECT', previous: payload(englishCorrection[1]), replacement: `${copula ? "I'm" : 'I'} ${payload(englishCorrection[2])}`, copula };
+  }
+  return null;
+}
+
+// ---- MEM-AR-01B (PD-2): a natural reversal. The cue opens the utterance, after an optional «غيرت رأيي» and an optional
+// «أنا». Anything else in front of it («هو بطل …», «قالي إنه …», «مراتي بقت …») is someone else's change, not the
+// user's, and quoted words are never the user's own statement.
+const REVERSAL_PREAMBLE = /^غيرت\s+(?:رأيي|رايي|رأيى|رايى)(?:\s*[،,:]\s*|\s+)(?:و(?=(?:أنا|انا|مبقتش|ما\s?بقتش|مابقيتش|مبقيتش|بطلت|بقيت)\s))?/u;
+const NO_LONGER = /^(?:(?:أنا|انا)\s+)?(?:مبقتش|ما\s?بقتش|مابقيتش|مبقيتش)\s+(.+)$/u;
+// «بطلت» before a «ت… / ي… / ن…» verb is another person's act («بطلت تكلمني»), as in the 01A capture grammar.
+const STOPPED = /^(?:(?:أنا|انا)\s+)?بطلت\s+(?![تين])(.+)$/u;
+const BECAME = /^(?:(?:أنا|انا)\s+)?بقيت\s+(?:(?:أنا|انا)\s+)?(.+)$/u;
+/** One clause only. Two clauses are the explicit correction above («مبقتش X، أنا Y»), or ordinary talk. */
+const SECOND_CLAUSE = /[،,؛;.:]|\s(?:بس|لكن|بل)\s/u;
+const QUOTED = /[«»"“”]/u;
+const NATURAL_CUES: ReadonlyArray<readonly [NaturalReversal, RegExp]> = [['NO_LONGER', NO_LONGER], ['STOPPED', STOPPED], ['BECAME', BECAME]];
+
+/**
+ * MEM-AR-01B: a natural first-person reversal, or `null`. It names no Memory and decides nothing: the caller acts on
+ * it only when the resolution step finds the one fact it reverses.
+ */
+export function interpretNaturalReversal(content: string): MemoryControlIntent | null {
+  if (typeof content !== 'string' || content.length > 1000) return null;
+  const raw = cleanUtterance(content);
+  if (QUESTION.test(raw) || QUOTED.test(raw)) return null;
+  const text = core(content).replace(REVERSAL_PREAMBLE, '');
+  for (const [natural, pattern] of NATURAL_CUES) {
+    const match = text.match(pattern);
+    if (!match) continue;
+    const clause = payload(match[1]);
+    if (!clause || SECOND_CLAUSE.test(clause)) return null;
+    // The successor keeps the user's words; only the subject «أنا» is written out when it was left implicit.
+    if (natural === 'BECAME') return { kind: 'CORRECT', previous: '', replacement: `أنا ${clause}`, copula: false, natural };
+    return { kind: 'CORRECT', previous: clause, replacement: `أنا ${text.replace(/^(?:أنا|انا)\s+/u, '')}`, copula: false, natural };
   }
   return null;
 }

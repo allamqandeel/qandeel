@@ -15,8 +15,11 @@
 //
 // MEM-AR-01A: the normalization and the light stem are the shared, pure `arabic-text` helpers (one comparison
 // normalizer for duplicates, retrieval and resolution). The rules above are unchanged.
-import type { MemoryRecord } from './memory.types';
-import { MAX_CLARIFICATION_OPTIONS } from './memory-control.types';
+//
+// MEM-AR-01B: `resolveReversalTarget` finds the one fact a natural reversal reverses, under the same rule: a unique
+// match only, several ask, none is ordinary conversation (see the function).
+import type { MemoryRecord, MemoryType } from './memory.types';
+import { MAX_CLARIFICATION_OPTIONS, type NaturalReversal } from './memory-control.types';
 import { lightArabicStem as stem, normalizeArabicComparison } from './arabic-text';
 
 export type MemoryTargetResolution =
@@ -92,5 +95,68 @@ export function resolveMemoryTarget(
   const partial = scored.filter(({ coverage, telling }) => (predicateOnly ? coverage === 1 : coverage >= 0.5 && telling))
     .sort((left, right) => right.coverage - left.coverage || left.order - right.order);
   if (partial.length > 0) return { state: 'PARTIAL', options: partial.slice(0, MAX_CLARIFICATION_OPTIONS).map(({ memory }) => memory) };
+  return { state: 'NONE' };
+}
+
+// ---- MEM-AR-01B (PD-2) — the remembered fact a natural reversal reverses.
+//
+//   * BECAME «بقيت Y» replaces a value only in a SINGLE-VALUED frame: residence («أنا ساكن / ساكنة / عايش / عايشة في …»,
+//     the evaluator's location frame). The target is a first-person statement of the same type in the same frame with
+//     another value. Every other frame is treated as multi-valued: «بقيت بحب الشاي» never replaces «أنا بحب القهوة».
+//   * NO_LONGER «مبقتش X» / STOPPED «بطلت X» negate the SAME object. Every distinctive word of X, its predicate included,
+//     must be in the target; at least one of them must be more than a predicate («مبقتش بحب حاجة» names nothing); the
+//     type must match when X is a typed statement; and a Memory that already negates or stops something is never the
+//     fact being reversed. One morphological bridge, no semantics: after «بطلت» the first verb is the bare first-person
+//     form («أشرب»), which a remembered habit says as «بشرب».
+//   * exactly one target → RESOLVED; two or more → AMBIGUOUS (at most three, in the given recency order); none → NONE.
+//     Nothing partial is ever offered: a reversal is not a request about Memory unless it names a remembered fact.
+const RESIDENCE = /^انا (?:ساكن|ساكنه|عايش|عايشه) (?:في )?(.+)$/u;
+const NEGATING_WORDS = new Set(['مش', 'مبقتش', 'بقتش', 'مابقتش', 'مبقيتش', 'بقيتش', 'مابقيتش', 'ماعدتش', 'معدتش', 'لست']);
+
+function residenceValue(value: string): string | undefined {
+  return normalizeMemoryWords(value).match(RESIDENCE)?.[1];
+}
+
+function negatesOrStops(content: string): boolean {
+  const normalized = normalizeMemoryWords(content);
+  return (normalized.match(/[\p{L}\p{N}']+/gu) ?? []).some((word) => NEGATING_WORDS.has(word) || word.includes('بطل')) || /(?:^| )لم اعد(?: |$)/u.test(normalized);
+}
+
+/** The words X must share with the target, each as its accepted forms. */
+function negatedObjectSlots(clause: string, stopped: boolean): Array<ReadonlySet<string>> {
+  const tokens = (normalizeMemoryWords(clause).match(/[\p{L}\p{N}']+/gu) ?? []).filter((token) => token.length > 1 && !STOP_WORDS.has(token));
+  return tokens.map((token, index) => {
+    const forms = new Set([stem(token)]);
+    if (stopped && index === 0 && /^ا(?!ل)[؀-ۿ]{2,}$/u.test(token)) forms.add(stem(`ب${token.slice(1)}`));
+    return new Set([...forms].filter((form) => form.length > 1));
+  }).filter((forms) => forms.size > 0);
+}
+
+/**
+ * `words`: the new statement for BECAME, the negated clause X for NO_LONGER / STOPPED. `type`: the type of that
+ * statement when the closed grammar gives it one. `candidates` as for `resolveMemoryTarget`.
+ */
+export function resolveReversalTarget(
+  natural: NaturalReversal, words: string, type: MemoryType | undefined, candidates: ReadonlyArray<MemoryRecord>,
+): MemoryTargetResolution {
+  let targets: MemoryRecord[];
+  if (natural === 'BECAME') {
+    const value = residenceValue(words);
+    if (value === undefined || type === undefined) return { state: 'NONE' };
+    targets = candidates.filter((memory) => {
+      const remembered = residenceValue(memory.content);
+      return memory.type === type && remembered !== undefined && remembered !== value;
+    });
+  } else {
+    const slots = negatedObjectSlots(words, natural === 'STOPPED');
+    if (!slots.some((forms) => [...forms].some((word) => !PREDICATE_WORDS.has(word)))) return { state: 'NONE' };
+    targets = candidates.filter((memory) => {
+      if ((type !== undefined && memory.type !== type) || negatesOrStops(memory.content)) return false;
+      const remembered = distinctiveWords(memory.content);
+      return slots.every((forms) => [...forms].some((word) => remembered.has(word)));
+    });
+  }
+  if (targets.length === 1) return { state: 'RESOLVED', memory: targets[0] };
+  if (targets.length > 1) return { state: 'AMBIGUOUS', options: targets.slice(0, MAX_CLARIFICATION_OPTIONS) };
   return { state: 'NONE' };
 }

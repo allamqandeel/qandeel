@@ -470,6 +470,108 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     });
   });
 
+  describe('MEM-AR-01B natural reversal through the existing v1 CORRECT (R-2)', () => {
+    const commandShapes = () => store.commands.map((c) => [c.kind, c.outcome]);
+
+    it('«غيرت رأيي، بقيت ساكن في طنطا» supersedes the one remembered residence through the v1 command', async () => {
+      const october = { ...store.remember(A, 'أنا ساكن في أكتوبر.') };
+      const friend = store.remember(A, 'صاحبي ساكن في الزمالك.');
+      const othersOctober = store.remember(B, 'أنا ساكن في أكتوبر.');
+
+      const { reply } = await say('غيرت رأيي، بقيت ساكن في طنطا');
+
+      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expectCleanReply(reply);
+      expect(memoryOf(october.id)).toEqual({ ...october, status: 'SUPERSEDED', updated_at: expect.any(String) });
+      const successors = store.memories.filter((m) => m.supersedes_memory_id === october.id);
+      expect(successors).toEqual([expect.objectContaining({ user_id: A, content: 'أنا ساكن في طنطا.', type: 'PERSONAL_FACT', version: 2, status: 'ACTIVE' })]);
+      expect([memoryOf(friend.id).status, memoryOf(othersOctober.id).status]).toEqual(['ACTIVE', 'ACTIVE']);
+      expect(store.commands).toEqual([expect.objectContaining({ kind: 'CORRECT', outcome: 'CORRECTED', target_memory_id: october.id, result_memory_id: successors[0].id })]);
+      expect(store.serviceCalls.filter((name) => name.startsWith('server_'))).toEqual(['server_finalize_memory_control_turn_v1']);
+    });
+
+    it('«أنا مبقتش بحب القهوة» is a correction, not a forget: the successor keeps the words, the type is inherited', async () => {
+      const coffee = { ...store.remember(A, 'أنا بحب القهوة.', 'STABLE_PREFERENCE') };
+      const tea = store.remember(A, 'أنا بحب الشاي.', 'STABLE_PREFERENCE');
+
+      const { reply } = await say('أنا مبقتش بحب القهوة');
+
+      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا مبقتش بحب القهوة.» بدل «أنا بحب القهوة.».');
+      expectCleanReply(reply);
+      expect(memoryOf(coffee.id)).toEqual({ ...coffee, status: 'SUPERSEDED', updated_at: expect.any(String) });
+      expect(store.memories.filter((m) => m.supersedes_memory_id === coffee.id)).toEqual([
+        expect.objectContaining({ content: 'أنا مبقتش بحب القهوة.', type: 'STABLE_PREFERENCE', version: 2, status: 'ACTIVE', importance: 0.75 }),
+      ]);
+      expect(memoryOf(tea.id).status).toBe('ACTIVE');
+      expect(commandShapes()).toEqual([['CORRECT', 'CORRECTED']]);
+    });
+
+    it('«أنا بطلت أشرب قهوة» corrects the remembered habit «بشرب قهوة» it names', async () => {
+      const habit = { ...store.remember(A, 'أنا بشرب قهوة كل يوم.') };
+      const { reply } = await say('أنا بطلت أشرب قهوة');
+      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا بطلت أشرب قهوة.» بدل «أنا بشرب قهوة كل يوم.».');
+      expect(memoryOf(habit.id).status).toBe('SUPERSEDED');
+      expect(store.memories.filter((m) => m.supersedes_memory_id === habit.id)).toEqual([expect.objectContaining({ content: 'أنا بطلت أشرب قهوة.', type: 'PERSONAL_FACT', version: 2 })]);
+    });
+
+    it('two remembered residences: QANDEEL asks, changes nothing, then corrects only the chosen one', async () => {
+      const october = store.remember(A, 'أنا ساكن في أكتوبر.');
+      const maadi = store.remember(A, 'أنا عايش في المعادي.');
+      const before = JSON.stringify(store.memories);
+
+      const ask = await say('غيرت رأيي، بقيت ساكن في طنطا');
+      expect(ask.reply).toBe('تقصد أنهي واحدة؟\n1. «أنا عايش في المعادي.»\n2. «أنا ساكن في أكتوبر.»\nرقمها يكفي.');
+      expectCleanReply(ask.reply);
+      expect(JSON.stringify(store.memories)).toBe(before);
+
+      expect((await say('2')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect([memoryOf(october.id).status, memoryOf(maadi.id).status]).toEqual(['SUPERSEDED', 'ACTIVE']);
+      expect(commandShapes()).toEqual([['CORRECT', 'CLARIFICATION_REQUIRED'], ['CORRECT', 'CORRECTED']]);
+      expect(store.commands[1].answers_command_id).toBe(store.commands[0].id);
+    });
+
+    it('an answered negation keeps the inherited type', async () => {
+      const morning = store.remember(A, 'أنا بحب القهوة الصبح.', 'STABLE_PREFERENCE');
+      const night = store.remember(A, 'أنا بحب القهوة بالليل.', 'STABLE_PREFERENCE');
+      expect((await say('أنا مبقتش بحب القهوة')).reply).toContain('تقصد أنهي واحدة؟');
+      expect((await say('التانية')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا مبقتش بحب القهوة.» بدل «أنا بحب القهوة الصبح.».');
+      expect([memoryOf(night.id).status, memoryOf(morning.id).status]).toEqual(['ACTIVE', 'SUPERSEDED']);
+      expect(store.memories.find((m) => m.supersedes_memory_id === morning.id)).toEqual(expect.objectContaining({ type: 'STABLE_PREFERENCE', content: 'أنا مبقتش بحب القهوة.' }));
+    });
+
+    it('ordinary conversation: no target, a multi-valued frame, no cue, a question, or reported words change nothing and commit no command', async () => {
+      const coffee = store.remember(A, 'أنا بحب القهوة.', 'STABLE_PREFERENCE');
+      const ful = store.remember(A, 'أنا بحب الفول.', 'STABLE_PREFERENCE');
+      const before = JSON.stringify(store.memories);
+      for (const content of [
+        'بقيت بحب الشاي', // a new preference never cancels another
+        'أنا بحب الكشري', // no cue
+        'أنا بطلت أشرب قهوة', // «بشرب» is not remembered: no unique fact to reverse
+        'غيرت رأيي، بقيت ساكن في طنطا', // no remembered residence
+        'قالي: أنا مبقتش بحب القهوة', // reported speech
+        'أنا مبقتش بحب القهوة؟', // a question
+      ]) {
+        touched.length = 0;
+        await expect(say(content)).rejects.toBeInstanceOf(ServiceUnavailableException);
+        expect(touched).toContain('FOREGROUND_GATHER');
+      }
+      expect(JSON.stringify(store.memories)).toBe(before);
+      expect([memoryOf(coffee.id).status, memoryOf(ful.id).status]).toEqual(['ACTIVE', 'ACTIVE']);
+      expect(store.commands).toHaveLength(0);
+    });
+
+    it('ordinary conversation after a committed reversal: repeating it finds nothing left to reverse', async () => {
+      store.remember(A, 'أنا بحب القهوة.', 'STABLE_PREFERENCE');
+      await say('أنا مبقتش بحب القهوة');
+      const after = JSON.stringify(store.memories);
+      touched.length = 0;
+      await expect(say('أنا مبقتش بحب القهوة')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(touched).toContain('FOREGROUND_GATHER');
+      expect(JSON.stringify(store.memories)).toBe(after);
+      expect(commandShapes()).toEqual([['CORRECT', 'CORRECTED']]);
+    });
+  });
+
   describe('English', () => {
     it('inspect, remember, correct, forget and do-not-rely, each from canonical truth', async () => {
       const october = store.remember(A, 'I live in October.');
