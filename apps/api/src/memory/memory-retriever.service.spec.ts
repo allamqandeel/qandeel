@@ -112,5 +112,32 @@ describe('MemoryRetrieverService', () => {
       expect(served('فاكر أنا ساكن في طنطا؟', [partial, exact])).toEqual(['أنا ساكن في طنطا.', 'صاحبي في طنطا.']);
       expect(served('فاكر الشغل؟', Array.from({ length: 8 }, (_, index) => memory(String(index), `الشغل رقم ${index}`)))).toHaveLength(MAX_SELECTED_MEMORIES);
     });
+
+    // G-A1 RC-A2: «بحب» is not what a Memory is about.
+    const calm = memory('calm', 'أنا بحب الهدوء والبيت المستقر.');
+    const travel = memory('travel', 'بحب السفر جدا.');
+    const tea = memory('tea', 'أنا بحب الشاي.');
+
+    it('«بحب» never selects a Memory on its own while the other words select one (K1.9)', () => {
+      expect(served('فاكر لما قلتلك إني بحب الهدوء؟', [calm, travel, tea])).toEqual(['أنا بحب الهدوء والبيت المستقر.']);
+      expect(served('بالنسبة للهدوء اللي بحبه، ده هيأثر على اختياري؟', [calm, travel])).toEqual(['أنا بحب الهدوء والبيت المستقر.']);
+      expect(served('فاكر إني بحبها، السفر؟', [calm, travel])).toEqual(['بحب السفر جدا.']);
+    });
+
+    it('a question about what the user likes still recalls every «بحب» Memory, in the unchanged order', () => {
+      expect(served('فاكر أنا بحب إيه؟', [calm, travel, tea])).toEqual(selectMemories('فاكر أنا بحب إيه؟', [tea, travel, calm]).map(({ content }) => content));
+      expect(served('فاكر أنا بحب إيه؟', [calm, travel, tea])).toHaveLength(3);
+    });
+
+    it('when the other words select nothing, the earlier «بحب» behaviour is kept rather than serving nothing', () => {
+      expect(served('فاكر إني بحب القهوة؟', [calm, travel])).toEqual(served('فاكر إني بحب؟', [calm, travel]));
+      expect(served('فاكر إني بحب القهوة؟', [calm, travel])).toHaveLength(2);
+    });
+
+    it('other predicates and every other token are untouched', () => {
+      expect(served('فاكر أنا ساكنة فين؟', [memory('home', 'أنا ساكن في مدينة نصر.'), calm])).toEqual(['أنا ساكن في مدينة نصر.']);
+      expect(served('I love tea, remember?', [memory('en', 'I love hiking.'), memory('en2', 'I drink tea.')])).toHaveLength(2);
+      expect(served('فاكر الشاي؟', [calm, tea])).toEqual(['أنا بحب الشاي.']);
+    });
   });
 });

@@ -22,6 +22,9 @@ const STOP_WORDS = new Set([
   // MEM-AR-01A: «إني», «إنه», «إنها» (post-normalization forms) are particles, never what a Memory is about.
   'اني', 'انه', 'انها',
 ]);
+// MEM-AR-01A (G-A1 RC-A2): «بحب» (and «بحبه», «بحبها», which stem to it) says how the user relates to something, not
+// what the Memory is about. It never selects a Memory on its own while the query's other words select one.
+const NON_DISTINCTIVE_STEMS = new Set(['بحب']);
 
 interface RankedMemory { memory: MemoryRecord; relevance: number; score: number }
 
@@ -43,7 +46,27 @@ export class MemoryRetrieverService {
 
 export function selectMemories(query: string, candidates: ReadonlyArray<MemoryRecord>): ReadonlyArray<ModelRouterMemoryContext> {
   const queryTokens = tokens(query);
-  const ranked = candidates.map((memory): RankedMemory => {
+  const distinctive = new Set([...queryTokens].filter((token) => !NON_DISTINCTIVE_STEMS.has(token)));
+  const byDistinctive = distinctive.size < queryTokens.size ? rank(distinctive, candidates) : [];
+  const ranked = byDistinctive.length > 0 ? byDistinctive : rank(queryTokens, candidates);
+
+  const selected: ModelRouterMemoryContext[] = [];
+  const seen = new Set<string>();
+  let characters = 0;
+  for (const { memory } of ranked) {
+    const duplicateKey = normalize(memory.content).trim().replace(/\s+/gu, ' ');
+    if (seen.has(duplicateKey)) continue;
+    seen.add(duplicateKey);
+    if (selected.length >= MAX_SELECTED_MEMORIES) break;
+    if (characters + memory.content.length > MAX_MEMORY_CONTEXT_CHARACTERS) continue;
+    selected.push({ type: memory.type, content: memory.content, source: memory.source });
+    characters += memory.content.length;
+  }
+  return selected;
+}
+
+function rank(queryTokens: ReadonlySet<string>, candidates: ReadonlyArray<MemoryRecord>): RankedMemory[] {
+  return candidates.map((memory): RankedMemory => {
     const memoryTokens = tokens(memory.content);
     const matches = [...queryTokens].filter((token) => memoryTokens.has(token)).length;
     const relevance = queryTokens.size === 0 ? 0 : matches / queryTokens.size;
@@ -59,20 +82,6 @@ export function selectMemories(query: string, candidates: ReadonlyArray<MemoryRe
       right.memory.updated_at.localeCompare(left.memory.updated_at) ||
       left.memory.id.localeCompare(right.memory.id),
     );
-
-  const selected: ModelRouterMemoryContext[] = [];
-  const seen = new Set<string>();
-  let characters = 0;
-  for (const { memory } of ranked) {
-    const duplicateKey = normalize(memory.content).trim().replace(/\s+/gu, ' ');
-    if (seen.has(duplicateKey)) continue;
-    seen.add(duplicateKey);
-    if (selected.length >= MAX_SELECTED_MEMORIES) break;
-    if (characters + memory.content.length > MAX_MEMORY_CONTEXT_CHARACTERS) continue;
-    selected.push({ type: memory.type, content: memory.content, source: memory.source });
-    characters += memory.content.length;
-  }
-  return selected;
 }
 
 // MEM-AR-01A: one shared comparison normalizer (tatweel, harakat, hamza / ى / ة folds, Arabic-Indic digits, white
