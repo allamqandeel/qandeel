@@ -81,4 +81,34 @@ describe('HypothesisGenerationTriggerClassificationService', () => {
     expect(HypothesisGenerationTriggerClassificationService.length).toBe(0);
     expect(Object.keys(service)).toEqual([]);
   });
+
+  // ---- MEM-AR-01A (F-3): the two Unicode-boundary repairs, nothing else ------------------------------------------
+  it.each([
+    'ليه أنا دايما بختار ناس مش مناسبين ليا؟',
+    'ليه أنا دايمًا ببعد لما حد يقرب مني',
+    'ليه انا كده؟',
+    'ليه إني دايما بتأخر؟',
+  ])('«ليه أنا …» is recognised after an Arabic word: %s', (text) => {
+    expect(classify(text)).toEqual({ classification: 'TRIGGER', reason: 'EXPLICIT_WHY_SELF' });
+  });
+
+  it('«ليه أنانية …» is not «ليه أنا»', () => {
+    expect(classify('ليه أنانية الناس بتضايقني؟')).not.toEqual({ classification: 'TRIGGER', reason: 'EXPLICIT_WHY_SELF' });
+  });
+
+  it.each([
+    ['أنا عايز أنام بدري وبسهر كل يوم', { classification: 'NO_TRIGGER', reason: 'PREFERENCE_OR_GOAL' }],
+    ['مع إني بحب الصبح بسهر كتير', { classification: 'NO_TRIGGER', reason: 'INSUFFICIENT_SIGNAL' }],
+  ])('«بسهر» is not the connective «بس»: %s', (text, expected) => {
+    expect(classify(text)).toEqual(expected);
+  });
+
+  it.each([
+    'أنا عايز أنام بدري بس بسهر كل يوم',
+    'أنا عايز أسيب الشغل بس خايف',
+    'أنا محتاج أرتاح لكنه مش موافق',
+    'مع إني تعبان بس بكمل',
+  ])('a standalone «بس» (and «لكن») keeps its trigger: %s', (text) => {
+    expect(classify(text)).toEqual({ classification: 'TRIGGER', reason: 'INTERNAL_CONTRADICTION' });
+  });
 });

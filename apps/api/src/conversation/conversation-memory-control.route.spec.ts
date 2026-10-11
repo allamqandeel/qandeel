@@ -446,6 +446,30 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     });
   });
 
+  describe('MEM-AR-01A wording fidelity on the explicit paths (F-1)', () => {
+    it('«افتكر إني ساكنة في مدينة نصر» is remembered as said, never as a masculine template', async () => {
+      const { reply } = await say('افتكر إني ساكنة في مدينة نصر');
+      expect(reply).toBe('تمام، هفتكر ده: «أنا ساكنة في مدينة نصر.»');
+      expect(store.memories).toEqual([expect.objectContaining({ user_id: A, content: 'أنا ساكنة في مدينة نصر.', type: 'PERSONAL_FACT', status: 'ACTIVE', version: 1 })]);
+    });
+
+    it('a legacy template row of the same statement is already remembered, and is left exactly as it was', async () => {
+      const legacy = { ...store.remember(A, 'أنا ساكن في مدينة نصر.') };
+      const { reply } = await say('افتكر إني ساكنة في مدينة نصر');
+      expect(reply).toBe('فاكر ده أصلًا: «أنا ساكن في مدينة نصر.»');
+      expect(store.memories).toEqual([legacy]);
+      expect(store.commands[0]).toEqual(expect.objectContaining({ kind: 'REMEMBER', outcome: 'ALREADY_REMEMBERED' }));
+    });
+
+    it('a correction keeps the replacement in the user\'s words', async () => {
+      const october = store.remember(A, 'أنا ساكن في أكتوبر.');
+      const { reply } = await say('أنا مش ساكنة في أكتوبر دلوقتي، أنا ساكنة في طنطا.');
+      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكنة في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect(store.memories.find((m) => m.supersedes_memory_id === october.id)).toEqual(expect.objectContaining({ content: 'أنا ساكنة في طنطا.', version: 2, status: 'ACTIVE' }));
+      expect(memoryOf(october.id).content).toBe('أنا ساكن في أكتوبر.');
+    });
+  });
+
   describe('English', () => {
     it('inspect, remember, correct, forget and do-not-rely, each from canonical truth', async () => {
       const october = store.remember(A, 'I live in October.');

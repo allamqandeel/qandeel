@@ -3,7 +3,7 @@ import { MemoryRuntimeService } from './memory-runtime.service';
 import {
   MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT,
   MemoryWriteEvaluatorService,
-  normalizeMemoryContent,
+  screenMemoryCapture,
 } from './memory-write-evaluator.service';
 import type { MemoryType } from './memory.types';
 import { interpretMemoryControl } from './memory-control.interpreter';
@@ -26,11 +26,10 @@ export class MemoryWriteService {
     if (interpretMemoryControl(currentUserContent)) return { decision: 'SKIP', reason: 'MEMORY_CONTROL_COMMAND' };
 
     const active = await this.runtime.listActiveForUser(userId, accessToken, MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);
-    const duplicate = active.some((memory) =>
-      memory.type === decision.candidate.type &&
-      normalizeMemoryContent(memory.content) === normalizeMemoryContent(decision.candidate.content),
-    );
-    if (duplicate) return { decision: 'SKIP', reason: 'EXACT_NORMALIZED_DUPLICATE', type: decision.candidate.type };
+    // MEM-AR-01A: the shared capture screen (normalized and legacy-template duplicates; «بطلت» fails closed beside a
+    // Memory it may reverse).
+    const screen = screenMemoryCapture(decision.candidate, active);
+    if (screen) return { decision: 'SKIP', reason: screen, type: decision.candidate.type };
 
     // The access token scopes the duplicate lookup only; the write itself is a
     // server-authority command that never carries a caller credential.

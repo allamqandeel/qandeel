@@ -30,7 +30,8 @@ const TRIGGER_RULES: readonly TriggerRule[] = [
     reason: 'EXPLICIT_WHY_SELF',
     patterns: [
       /\b(?:why do i|why am i|why can't i|why cannot i|i (?:do not|don't|cannot|can't) understand why i)\b/iu,
-      /(?:ليه|لماذا)\s+(?:انا|أنا|إني|اني)\b/u,
+      // MEM-AR-01A: JavaScript's \b is ASCII-only, so after an Arabic word it never matched («ليه أنا دايمًا …»).
+      /(?:ليه|لماذا)\s+(?:انا|أنا|إني|اني)(?![\p{L}\p{M}])/u,
       /(?:مش فاهم|مش فاهمة|مش عارف|مش عارفة|ما بفهمش)\s+ليه\s+(?:انا|أنا|إني|اني)?/u,
     ],
   },
@@ -48,8 +49,9 @@ const TRIGGER_RULES: readonly TriggerRule[] = [
     patterns: [
       /\bi (?:want|decided|intend|plan|need)\b[^.!?؟]{1,240}\b(?:but|yet|even though)\b[^.!?؟]{1,240}\bi\b/iu,
       /\bi\b[^.!?؟]{1,240}\b(?:even though|despite the fact that) i\b[^.!?؟]{1,240}/iu,
-      /(?:انا|أنا)\s+(?:عايز|عايزة|نفسي|قررت|محتاج|محتاجة)[^.!?؟]{1,240}(?:بس|لكن|مع إني|مع اني|رغم إني|رغم اني)[^.!?؟]{1,240}/u,
-      /(?:مع إني|مع اني|رغم إني|رغم اني)[^.!?؟]{1,240}(?:بس|لكن|إلا إني|الا اني)[^.!?؟]{1,240}/u,
+      // MEM-AR-01A: «بس» is a whole word, so «بسهر» is not «بس» («لكنه», «لكني» keep matching).
+      /(?:انا|أنا)\s+(?:عايز|عايزة|نفسي|قررت|محتاج|محتاجة)[^.!?؟]{1,240}(?:(?<![\p{L}\p{M}])بس(?![\p{L}\p{M}])|لكن|مع إني|مع اني|رغم إني|رغم اني)[^.!?؟]{1,240}/u,
+      /(?:مع إني|مع اني|رغم إني|رغم اني)[^.!?؟]{1,240}(?:(?<![\p{L}\p{M}])بس(?![\p{L}\p{M}])|لكن|إلا إني|الا اني)[^.!?؟]{1,240}/u,
     ],
   },
 ];

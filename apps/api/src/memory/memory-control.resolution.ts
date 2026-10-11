@@ -12,8 +12,12 @@
 //   * nothing matches → NONE; no distinctive word at all ("that information", «المعلومة دي») → UNSPECIFIED.
 //
 // RESOLVED only proposes a target: the database re-checks it under a row lock before anything changes.
+//
+// MEM-AR-01A: the normalization and the light stem are the shared, pure `arabic-text` helpers (one comparison
+// normalizer for duplicates, retrieval and resolution). The rules above are unchanged.
 import type { MemoryRecord } from './memory.types';
 import { MAX_CLARIFICATION_OPTIONS } from './memory-control.types';
+import { lightArabicStem as stem, normalizeArabicComparison } from './arabic-text';
 
 export type MemoryTargetResolution =
   | { state: 'RESOLVED'; memory: MemoryRecord }
@@ -43,26 +47,16 @@ const PREDICATE_WORDS_RAW = [
   'like', 'love', 'prefer', 'hate', 'have', 'want', 'enjoy',
 ];
 
-const ARABIC_PREFIX = /^(?:وال|بال|فال|كال|لل|ال|و|ب|ف)(?=[؀-ۿ]{3,})/u;
-const ARABIC_SUFFIX = /(?:هم|كم|نا|ها|ي|ك|ه)$/u;
-
 export function normalizeMemoryWords(value: string): string {
-  return value.normalize('NFKC').toLocaleLowerCase('und')
-    .replace(/[ـً-ٰٟ]/gu, '')
-    .replace(/[أإآ]/gu, 'ا').replace(/ى/gu, 'ي').replace(/ة/gu, 'ه')
-    .replace(/[’']/gu, "'");
-}
-
-function stem(token: string): string {
-  if (/^[؀-ۿ]+$/u.test(token)) {
-    let word = token.replace(ARABIC_PREFIX, '');
-    if (word.length >= 4) word = word.replace(ARABIC_SUFFIX, '');
-    return word;
-  }
-  return token.length > 3 && token.endsWith('s') && !token.endsWith('ss') ? token.slice(0, -1) : token;
+  return normalizeArabicComparison(value).replace(/[’']/gu, "'");
 }
 
 const PREDICATE_WORDS = new Set(PREDICATE_WORDS_RAW.map((word) => stem(normalizeMemoryWords(word))));
+
+/** MEM-AR-01A: whether a distinctive word only names a predicate («بحب», "like", «ساكن»). */
+export function isPredicateWord(word: string): boolean {
+  return PREDICATE_WORDS.has(word);
+}
 
 /** The words that can identify one Memory. */
 export function distinctiveWords(value: string): Set<string> {

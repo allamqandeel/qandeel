@@ -1,0 +1,23 @@
+{
+  "scenario": "U2",
+  "title": "Unicode variants of one statement, feminine wording, and the bounded «بطلت» / pronoun-less «بحب» cues (MEM-AR-01A)",
+  "purpose": "Whether a tatweel or Arabic-Indic-digit variant of an already remembered statement creates a second Memory (explicit remember and background capture); whether a feminine statement is stored as said; whether «بطلت …» beside a Memory it may reverse writes nothing (01A fails closed; the controlled correction is 01B's); whether «بطلت …» and pronoun-less «بحب …» with no related Memory are captured in the user's words.",
+  "synthetic": true,
+  "sameTextsAs": "WP0 §7 U2 (2026-10-10), extended by the 01A brief §3.D safety boundary",
+  "steps": [
+    { "id": "U2.s1", "kind": "session", "user": "U2", "session": "s1" },
+    { "id": "U2.1", "kind": "turn", "user": "U2", "session": "s1", "text": "افتكر إني بحب الشاي", "measure": { "valueStatement": true }, "note": "explicit remember, plain spelling" },
+    { "id": "U2.2", "kind": "turn", "user": "U2", "session": "s1", "text": "افتكر إني بحب الشــاي", "measure": { "valueStatement": true }, "note": "the same statement with tatweel: already remembered, no new Memory" },
+    { "id": "U2.3", "kind": "turn", "user": "U2", "session": "s1", "text": "افتكر إن عندي 29 سنة", "measure": { "valueStatement": true }, "note": "explicit remember, ASCII digits" },
+    { "id": "U2.4", "kind": "turn", "user": "U2", "session": "s1", "text": "افتكر إن عندي ٢٩ سنة", "measure": { "valueStatement": true }, "note": "the same statement with Arabic-Indic digits: already remembered" },
+    { "id": "U2.5", "kind": "turn", "user": "U2", "session": "s1", "text": "أنا بحب القهوة", "measure": { "valueStatement": true }, "note": "background capture" },
+    { "id": "U2.6", "kind": "turn", "user": "U2", "session": "s1", "text": "أنا بحب القهــوة", "measure": { "valueStatement": true }, "note": "background restatement with tatweel: a duplicate, not captured" },
+    { "id": "U2.7", "kind": "turn", "user": "U2", "session": "s1", "text": "أنا ساكنة في مدينة نصر", "measure": { "factStatement": true, "gramForm": "feminine" }, "note": "background capture in the feminine form, stored as said" },
+    { "id": "U2.8", "kind": "turn", "user": "U2", "session": "s1", "text": "بطلت أشرب قهوة", "measure": { "valueStatement": true, "reversalOf": "U2.5" }, "note": "«بطلت» beside a Memory it may reverse: 01A writes nothing (fails closed)" },
+    { "id": "U2.9", "kind": "turn", "user": "U2", "session": "s1", "text": "بطلت السهر", "measure": { "valueStatement": true }, "note": "«بطلت» with no related Memory: captured in the user's words" },
+    { "id": "U2.10", "kind": "turn", "user": "U2", "session": "s1", "text": "بحب السفر", "measure": { "valueStatement": true }, "note": "pronoun-less «بحب»" },
+    { "id": "U2.s2", "kind": "session", "user": "U2", "session": "s2" },
+    { "id": "U2.11", "kind": "turn", "user": "U2", "session": "s2", "text": "فاكر أنا ساكنة فين؟", "measure": { "recallProbe": { "anyOf": ["مدينة نصر"] } }, "note": "recall of the feminine statement" }
+  ],
+  "finalStateMeasures": { "duplicateActiveMemories": true }
+}

@@ -24,6 +24,8 @@ const shipped = Object.freeze({
   migration: read('database/migrations/0128_conversational_memory_control_v1.sql'),
   interpreter: read('apps/api/src/memory/memory-control.interpreter.ts'),
   resolution: read('apps/api/src/memory/memory-control.resolution.ts'),
+  // MEM-AR-01A: the shared comparison normalizer and light stem the resolution consumes; pure like it.
+  arabicText: read('apps/api/src/memory/arabic-text.ts'),
   service: read('apps/api/src/memory/memory-control.service.ts'),
   copy: read('apps/api/src/memory/memory-control.copy.ts'),
   controlRepository: read('apps/api/src/memory/memory-control.repository.ts'),
@@ -49,8 +51,9 @@ function authorityViolations(w) {
   if (/model-router|MODEL_ROUTER|\.generate\(|provider/iu.test(code.replace(/\/\/.*$/gmu, '').replace(/\/\*[\s\S]*?\*\//gu, ''))) out.push('a Memory-control module reaches a model or provider');
   if (/from '\.\.\/(?:understanding|hypothesis|human-model)/u.test(code) || /hypothes|understanding_/iu.test(w.migration.replace(/--.*$/gmu, ''))) out.push('Memory control depends on QANDEEL Understanding / Hypothesis');
   for (const pure of [w.interpreter, w.resolution]) {
-    if (/from '(?!\.\/memory(?:-control)?\.types')/u.test(pure) || /await |fetch\(|Date\.now/u.test(pure)) out.push('interpretation / resolution is not pure and CPU-only');
+    if (/from '(?!\.\/(?:memory(?:-control)?\.types|arabic-text)')/u.test(pure) || /await |fetch\(|Date\.now/u.test(pure)) out.push('interpretation / resolution is not pure and CPU-only');
   }
+  if (/\bfrom '|\brequire\(|await |fetch\(|Date\.now/u.test(w.arabicText)) out.push('the shared Arabic comparison helper is not pure and CPU-only');
   if ((w.orchestrator.match(/this\.router\.generate\(/gu) ?? []).length !== 1) out.push('a second provider call appeared on the turn path');
   return out;
 }
@@ -168,6 +171,8 @@ const PLANTED = [
   ['a provider decides the target', 'authorityViolations', () => ({ ...src, service: `${src.service}\nimport { MODEL_ROUTER } from '../model-router/model-router.types';` })],
   ['Memory control reads Understanding', 'authorityViolations', () => ({ ...src, service: `${src.service}\nimport { UnderstandingService } from '../understanding/understanding.service';` })],
   ['resolution awaits I/O', 'authorityViolations', () => ({ ...src, resolution: `${src.resolution}\nconst x = await fetch('x');` })],
+  ['the shared Arabic helper imports I/O', 'authorityViolations', () => ({ ...src, arabicText: `import { readFileSync } from 'node:fs';\n${src.arabicText}` })],
+  ['resolution imports a non-pure module', 'authorityViolations', () => ({ ...src, resolution: `import { x } from './memory-control.repository';\n${src.resolution}` })],
   ['a second provider call', 'authorityViolations', () => ({ ...src, orchestrator: `${src.orchestrator}\nthis.router.generate({});` })],
   ['GUIDED turns reach the boundary', 'routeViolations', () => ({ ...src, orchestrator: src.orchestrator.replace("if (safety.disposition === 'ALLOW') {\n        const previousUserContent", "if (safety.disposition !== 'BLOCK') {\n        const previousUserContent") })],
   ['Human Intelligence launched before the Memory boundary', 'routeViolations', () => ({ ...src, orchestrator: src.orchestrator.replace("if (safety.disposition === 'ALLOW') {\n        const previousUserContent", "const himForegroundLanePromise = this.engine('him_context', selection.path, work);\n      if (safety.disposition === 'ALLOW') {\n        const previousUserContent") })],

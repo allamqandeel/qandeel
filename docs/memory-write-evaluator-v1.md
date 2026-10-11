@@ -67,3 +67,35 @@ Evaluation or persistence failure is caught only at this non-authoritative bound
 Correction/supersession is deferred: deterministic predecessor selection would expand the narrow v1 pattern boundary, while general contradiction resolution is explicitly out of scope. V1 also omits cross-turn synthesis, confirmation UX, inferred traits, broad PII classification, semantic duplicate detection, embeddings, public memory APIs, and multi-candidate extraction.
 
 A future model-assisted evaluator may propose multiple candidates, confidence-aware confirmation, semantic duplicates, contradiction/correction candidates, and richer multilingual extraction, but must preserve user scope, provenance, Safety separation, and the rule that inference never silently becomes fact.
+
+## MEM-AR-01A amendment (2026-10-11): Arabic wording fidelity, bounded cues, one comparison normalizer
+
+Amends the pattern and duplicate sections above. It changes no authority, writer, status or database object.
+
+- **Wording fidelity (PD-4).** An Arabic statement is stored as the user's own clause, never re-gendered or re-verbed.
+  - This holds on all three write paths: background capture, explicit remember and correction replacement.
+  - «أنا ساكنة في مدينة نصر» is stored as «أنا ساكنة في مدينة نصر.», not «أنا ساكن في …».
+  - «أنا مسافرة الإسكندرية بكرة» keeps its feminine form and its preposition.
+  - A stated residence duration is kept, because it is part of the clause.
+  - Only orthography changes: the existing `clean`, «انا / إني → أنا», one terminal full stop, and the
+    «بالمناسبة» preamble, which is not part of the clause.
+  - English keeps its documented templates. "I live in Cairo." still drops the duration.
+- **Bounded Egyptian cues (PD-5).** Two cues are captured in the user's words:
+  - utterance-initial, pronoun-less «بحب …» → `STABLE_PREFERENCE`;
+  - first-person «(أنا) بطلت …» → `PERSONAL_FACT`.
+
+  Neither cue is captured when the text is a question. «بطلت» is not captured when it is followed by a «ت… / ي… / ن…»
+  verb, which is another person («بطلت تكلمني»). «نفسي …», «مش عايز حد …» and multi-candidate extraction stay
+  excluded. Every background pattern stays anchored to the first person or to the user (I-F3).
+- **«بطلت» fails closed.** «بطلت X» can reverse a remembered fact.
+  - When X shares a distinctive, non-predicate word with a current Memory («أنا بحب القهوة» → «بطلت أشرب قهوة»), the
+    background writes nothing (`REVERSAL_NEEDS_CORRECTION`). Nothing is corrected, retired or contradicted: the
+    controlled correction is MEM-AR-01B's.
+  - A reversal with no lexical link to the old wording is not detectable here. This is a known limit.
+- **Duplicates.**
+  - The duplicate key is the shared comparison normalizer in `apps/api/src/memory/arabic-text.ts`. On top of the
+    earlier folds, it also covers tatweel, Arabic-Indic digits and the 25 White_Space code points.
+  - Rows written before 01A are never rewritten. A new statement is also compared with the frozen pre-01A template of
+    the same statement, so «أنا ساكنة في X» does not duplicate a legacy «أنا ساكن في X.». This applies only to the
+    two formerly templated shapes (location, travel), on the background and the explicit remember and correct paths.
+- **Evidence key unchanged.** The frozen 0028 Evidence key and its golden parity fixtures are unchanged.

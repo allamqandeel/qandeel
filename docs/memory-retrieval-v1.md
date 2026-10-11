@@ -24,3 +24,15 @@ Safety evaluates the current turn and authoritative recent history before memory
 Eligibility relies on the existing Memory Runtime query and RLS boundary: only the authenticated user's ACTIVE, unexpired rows are candidates. PENDING_CONFIRMATION, SUPERSEDED, DELETED, DISABLED, and expired records are excluded at the database boundary.
 
 V1 makes no provider, embedding, vector, or paid retrieval calls and performs no memory writes or usage updates. Semantic/vector retrieval, synonym-aware ranking, semantic contradiction resolution, automatic candidate/write evaluation, and user-facing memory management remain deferred to their own controlled gates.
+
+## MEM-AR-01A amendment (2026-10-11): shared normalizer and the established light stem
+
+Amends the matching paragraph in "Bounds and ranking".
+- Query and Memory tokens pass through the shared comparison normalizer (`apps/api/src/memory/arabic-text.ts`: NFKC,
+  tatweel and harakat, hamza / ى / ة folds, Arabic-Indic digits, ASCII case, white space). They then pass through the
+  established W3-MEGA-M light stem: one clitic prefix, one pronoun suffix, an English plural "s".
+- As a result, «ساكنة» meets a stored «ساكن», and «للهدوء» meets «الهدوء».
+- «اني», «انه» and «انها» (normalized «إني», «إنه», «إنها») join the stop words, so a particle never produces a hit.
+- Matching is still lexical: no synonyms and no semantic guess. «التدخين» does not meet «بيدخن».
+- The candidate bound (32), the selection bounds (4 Memories, 2,400 characters), the scoring and the tie-breaking
+  are unchanged.

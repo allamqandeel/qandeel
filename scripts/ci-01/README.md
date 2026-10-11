@@ -31,7 +31,7 @@ means the harness executed; it is **not** a capability PASS. Defects are **recor
 | `local-db.mjs` | cluster lifecycle: `run-baseline` (start → prove → migrate → drive → stop, cleanup always), `start`, `prove <state>`, `stop <state>`, `drive <state> [results]` |
 | `network-guard.cjs` | **preload** (`node --require`) that scrubs inherited env and makes every outbound transport throw; exposes `selfTest()`. Accepted by the Product Owner as part of C1-B (closing decision 1): it must load before ts-node and every production module, which a file inside the driver cannot guarantee. It adds no transport and no parallel test structure |
 | `intelligence-reality.ts` | the driver: production composition + doubles + fixture execution + yields + controls |
-| `fixtures/*.json` | one file per scenario (N1, K1, C1, P1, F1, H1, M1, X1) + `controls-isolation-telemetry.json`; synthetic texts, measurement definitions, no expected values |
+| `fixtures/*.json` | one file per scenario (N1, K1, C1, P1, F1, H1, M1, X1; U2 added by MEM-AR-01A, which also added the genuine-contradiction turn F1.2b at G-A1) + `controls-isolation-telemetry.json`; synthetic texts, measurement definitions, no expected values |
 | `results/<baseline-sha>.json` | the recorded run for that `main` SHA, with the isolation proofs, guard self-test, tool versions and file hashes |
 
 ## 3. Running it
