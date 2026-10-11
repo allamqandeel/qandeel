@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { Injectable } from '@nestjs/common';
 import type { MemoryRecord, MemoryType } from './memory.types';
 import { MemoryControlRepository } from './memory-control.repository';
-import { MemoryWriteEvaluatorService, normalizeMemoryContent } from './memory-write-evaluator.service';
+import { MemoryWriteEvaluatorService, memoryDuplicateKeys, normalizeMemoryContent } from './memory-write-evaluator.service';
 import {
   interpretMemoryControl, memoryControlLanguage, readClarificationAnswer,
   type ClarificationAnswer, type MemoryControlIntent,
@@ -85,7 +85,9 @@ export class MemoryControlService {
             ? { kind: 'REMEMBER', outcome: 'DECLINED_SENSITIVE', candidateMemoryIds: [], reply: plainReply(language, 'DECLINED_SENSITIVE') }
             : null;
         }
-        const existing = current.find((memory) => normalizeMemoryContent(memory.content) === normalizeMemoryContent(decision.candidate.content));
+        // MEM-AR-01A: the user's own words now; a legacy template row of the same statement is the same Memory.
+        const keys = memoryDuplicateKeys(decision.candidate.content);
+        const existing = current.find((memory) => keys.has(normalizeMemoryContent(memory.content)));
         if (existing) {
           return { kind: 'REMEMBER', outcome: 'ALREADY_REMEMBERED', candidateMemoryIds: [], reply: alreadyRememberedReply(language, existing.content) };
         }
@@ -102,12 +104,12 @@ export class MemoryControlService {
         const shared = new Set([...distinctiveWords(intent.previous)].filter((word) => distinctiveWords(intent.replacement).has(word)));
         if (shared.size === 0 && !intent.copula) return null;
         const replacement = this.evaluator.explicitStatementCandidate(intent.replacement, now);
-        const replacementKey = replacement.decision === 'WRITE' ? normalizeMemoryContent(replacement.candidate.content) : undefined;
+        const replacementKeys = replacement.decision === 'WRITE' ? memoryDuplicateKeys(replacement.candidate.content) : new Set<string>();
         // A Memory that already says the new thing is not what is being corrected.
-        const correctable = current.filter((memory) => normalizeMemoryContent(memory.content) !== replacementKey);
+        const correctable = current.filter((memory) => !replacementKeys.has(normalizeMemoryContent(memory.content)));
         const resolution = resolveMemoryTarget(intent.previous, correctable, shared);
         if (resolution.state === 'RESOLVED') return this.correction(language, resolution.memory, intent.replacement, now);
-        const existing = replacementKey === undefined ? undefined : current.find((memory) => normalizeMemoryContent(memory.content) === replacementKey);
+        const existing = current.find((memory) => replacementKeys.has(normalizeMemoryContent(memory.content)));
         if (existing) return { kind: 'CORRECT', outcome: 'ALREADY_CORRECT', candidateMemoryIds: [], reply: alreadyCorrectReply(language, existing.content) };
         if (resolution.state === 'AMBIGUOUS') {
           if (replacement.decision === 'SKIP' && replacement.reason === 'SENSITIVE_DATA') {

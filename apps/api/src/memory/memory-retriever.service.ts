@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import type { ModelRouterMemoryContext } from '../model-router/model-router.types';
 import type { MemoryRecord } from './memory.types';
 import { MemoryRuntimeService } from './memory-runtime.service';
+import { lightArabicStem, normalizeArabicComparison } from './arabic-text';
 
 export const MEMORY_CANDIDATE_LIMIT = 32;
 export const MAX_SELECTED_MEMORIES = 4;
@@ -18,6 +19,8 @@ const PERSONAL_SIGNALS = [
 const STOP_WORDS = new Set([
   'a', 'an', 'the', 'is', 'are', 'what', 'did', 'i', 'you', 'about', 'my', 'to', 'we', 'it',
   'فاكر', 'تفتكر', 'لما', 'قلتلك', 'قبل', 'كده', 'عن', 'في', 'من', 'على', 'انا', 'إيه', 'ايه',
+  // MEM-AR-01A: «إني», «إنه», «إنها» (post-normalization forms) are particles, never what a Memory is about.
+  'اني', 'انه', 'انها',
 ]);
 
 interface RankedMemory { memory: MemoryRecord; relevance: number; score: number }
@@ -72,15 +75,14 @@ export function selectMemories(query: string, candidates: ReadonlyArray<MemoryRe
   return selected;
 }
 
+// MEM-AR-01A: one shared comparison normalizer (tatweel, harakat, hamza / ى / ة folds, Arabic-Indic digits, white
+// space) and the established light stem, so «ساكنة» meets a stored «ساكن» and «للهدوء» meets «الهدوء». Lexical only:
+// no semantic guess, and the scoring, ordering and bounds above are unchanged.
 function normalize(value: string): string {
-  return value.toLocaleLowerCase('und')
-    .normalize('NFKC')
-    .replace(/[\u064B-\u065F\u0670]/gu, '')
-    .replace(/[أإآ]/gu, 'ا')
-    .replace(/ى/gu, 'ي')
-    .replace(/ة/gu, 'ه');
+  return normalizeArabicComparison(value);
 }
 
 function tokens(value: string): Set<string> {
-  return new Set(normalize(value).match(/[\p{L}\p{N}]+/gu)?.filter((token) => token.length > 1 && !STOP_WORDS.has(token)) ?? []);
+  return new Set(normalize(value).match(/[\p{L}\p{N}]+/gu)
+    ?.filter((token) => token.length > 1 && !STOP_WORDS.has(token)).map(lightArabicStem).filter((token) => token.length > 1) ?? []);
 }

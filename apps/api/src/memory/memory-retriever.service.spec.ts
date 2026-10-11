@@ -71,4 +71,46 @@ describe('MemoryRetrieverService', () => {
       { type: 'PERSONAL_FACT', content: 'job fits', source: 'USER_STATED' },
     ]);
   });
+
+  // ---- MEM-AR-01A (F-2) -----------------------------------------------------------------------------------------
+  describe('MEM-AR-01A lexical recall: shared normalizer + light stem, nothing semantic', () => {
+    const served = (query: string, candidates: ReadonlyArray<MemoryRecord>) => selectMemories(query, candidates).map(({ content }) => content);
+
+    it('a feminine question meets the stored masculine (legacy) form, and the reverse', () => {
+      expect(served('فاكر أنا ساكنة فين؟', [memory('1', 'أنا ساكن في مدينة نصر.'), memory('2', 'أنا بحب الشاي.')])).toEqual(['أنا ساكن في مدينة نصر.']);
+      expect(served('فاكر أنا ساكن فين؟', [memory('1', 'أنا ساكنة في مدينة نصر.')])).toEqual(['أنا ساكنة في مدينة نصر.']);
+    });
+
+    it('a clitic-inflected word meets its plain form («للهدوء» → «الهدوء»)', () => {
+      expect(served('بالنسبة للهدوء اللي بحبه، ده هيأثر على اختياري؟', [memory('1', 'أنا بحب الهدوء والبيت المستقر.'), memory('2', 'هدفي أكون أسرة صغيرة.')]))
+        .toEqual(['أنا بحب الهدوء والبيت المستقر.']);
+    });
+
+    it('«إني», «إنه», «إنها» are particles: they never produce a hit on their own', () => {
+      const plan = memory('plan', 'هدفي إني أسيب الشغل خلال 6 شهور.');
+      expect(served('فاكر إني؟', [plan])).toEqual([]);
+      expect(served('فاكر لما قلتلك إني بحب الهدوء؟', [plan, memory('calm', 'أنا بحب الهدوء.')])).toEqual(['أنا بحب الهدوء.']);
+      expect(served('فاكر إنه قال إنها مسافرة؟', [plan])).toEqual([]);
+    });
+
+    it('tatweel, harakat and Arabic-Indic digits do not split a match', () => {
+      expect(served('فاكر الشــاي؟', [memory('1', 'أنا بحب الشاي.')])).toEqual(['أنا بحب الشاي.']);
+      expect(served('فاكر شُغلي؟', [memory('1', 'شغلي في التصميم')])).toEqual(['شغلي في التصميم']);
+      expect(served('فاكر الأوضة ٢٩؟', [memory('1', 'رقم الأوضة 29.'), memory('2', 'أنا بحب الشاي.')])).toEqual(['رقم الأوضة 29.']);
+    });
+
+    it('a paraphrase stays a recorded miss: «التدخين» does not meet «بيدخن» (K1.10, no semantic guess)', () => {
+      expect(served('فاكر قلتلك إيه عن التدخين؟', [memory('1', 'قررت إني مش هتجوز حد بيدخن.')])).toEqual([]);
+    });
+
+    it('the bounds and the exact-match ordering are unchanged', () => {
+      expect(MEMORY_CANDIDATE_LIMIT).toBe(32);
+      expect(MAX_SELECTED_MEMORIES).toBe(4);
+      expect(MAX_MEMORY_CONTEXT_CHARACTERS).toBe(2400);
+      const exact = memory('exact', 'أنا ساكن في طنطا.', { importance: 0.2, confidence: 0.2 });
+      const partial = memory('partial', 'صاحبي في طنطا.', { importance: 1, confidence: 1 });
+      expect(served('فاكر أنا ساكن في طنطا؟', [partial, exact])).toEqual(['أنا ساكن في طنطا.', 'صاحبي في طنطا.']);
+      expect(served('فاكر الشغل؟', Array.from({ length: 8 }, (_, index) => memory(String(index), `الشغل رقم ${index}`)))).toHaveLength(MAX_SELECTED_MEMORIES);
+    });
+  });
 });

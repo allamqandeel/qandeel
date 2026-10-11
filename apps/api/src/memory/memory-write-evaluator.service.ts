@@ -1,5 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import type { CreateMemoryInput, MemoryType } from './memory.types';
+import type { CreateMemoryInput, MemoryRecord, MemoryType } from './memory.types';
+import { normalizeArabicComparison } from './arabic-text';
+import { distinctiveWords, isPredicateWord } from './memory-control.resolution';
 
 export const MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT = 32;
 /** W3-MEGA-M: the longest statement an explicit "remember" request keeps as one Memory. */
@@ -130,8 +132,9 @@ export class MemoryWriteEvaluatorService {
 
     match = content.match(/^(?:by the way,?\s+)?i live in\s+(.+?)(?:\s+for\s+\d+\s+(?:years?|months?))?[.!؟]?$/iu);
     if (match) return candidate('PERSONAL_FACT', `I live in ${trimValue(match[1])}.`);
-    match = content.match(/^(?:بالمناسبة\s+)?(?:أنا|انا)\s+(?:ساكن|ساكنة|عايش|عايشة)\s+(?:في\s+)?(.+?)(?:\s+من\s+\d+\s+سنين)?[.!؟]?$/u);
-    if (match) return candidate('PERSONAL_FACT', `أنا ساكن في ${trimValue(match[1])}.`);
+    // MEM-AR-01A (PD-4): the user's own clause, never re-gendered or re-verbed («أنا ساكنة …», «أنا عايشة …»).
+    match = content.match(/^(?:بالمناسبة\s+)?((?:أنا|انا)\s+(?:ساكن|ساكنة|عايش|عايشة)\s+(?:في\s+)?\S.*?)[.!؟]?$/u);
+    if (match) return candidate('PERSONAL_FACT', asSaid(match[1]));
 
     match = content.match(/^([\p{L}][\p{L}\p{M}' -]{0,60})\s+is my\s+(brother|sister|friend|wife|husband|mother|father|son|daughter)[.!؟]?$/iu);
     if (match) return candidate('RELATIONSHIP_CONTEXT', `${trimValue(match[1])} is my ${match[2].toLocaleLowerCase('en')}.`);
@@ -142,11 +145,20 @@ export class MemoryWriteEvaluatorService {
     if (match) return candidate('STABLE_PREFERENCE', `I ${/^i prefer/iu.test(content) ? 'prefer' : 'like'} ${trimValue(match[1])}.`);
     match = content.match(/^(?:أنا|انا)\s+(بفضل|بفضّل|بحب)\s+(.+?)[.!؟]?$/u);
     if (match) return candidate('STABLE_PREFERENCE', `أنا ${match[1]} ${trimValue(match[2])}.`);
+    // MEM-AR-01A (PD-5): «بحب …» without the pronoun is still first person («بيحب», «بتحب», «بنحب» are not). A
+    // question is never a statement to keep.
+    match = content.match(/^(بحب\s+[^?؟]+?)[.!]?$/u);
+    if (match) return candidate('STABLE_PREFERENCE', asSaid(match[1]));
+    // MEM-AR-01A (PD-5): first-person «بطلت …», in the user's words. A following «ت… / ي… / ن…» verb is another
+    // person («بطلت تكلمني»), so it is not captured. Kept apart from an existing Memory it may reverse by
+    // `screenMemoryCapture` below: reversing a fact is 01B's controlled correction, never a silent capture.
+    match = content.match(/^((?:(?:أنا|انا)\s+)?بطلت\s+(?![تين])[^?؟]+?)[.!]?$/u);
+    if (match) return candidate('PERSONAL_FACT', asSaid(match[1]));
 
     match = content.match(/^i(?:'m| am) traveling to\s+(.+?)\s+(tomorrow|next week)[.!؟]?$/iu);
     if (match) return temporary(`I'm traveling to ${trimValue(match[1])} ${match[2].toLocaleLowerCase('en')}.`, match[2], now);
-    match = content.match(/^(?:أنا|انا)\s+مسافر(?:ة)?\s+(?:إلى|الى|لـ?|على)?\s*(.+?)\s+(بكرة|غدًا|غدا|الأسبوع الجاي|الاسبوع الجاي)[.!؟]?$/u);
-    if (match) return temporary(`أنا مسافر ${trimValue(match[1])} ${match[2]}.`, match[2], now);
+    match = content.match(/^((?:أنا|انا)\s+مسافر(?:ة)?\s+(?:إلى|الى|لـ?|على)?\s*.+?\s+(بكرة|غدًا|غدا|الأسبوع الجاي|الاسبوع الجاي))[.!؟]?$/u);
+    if (match) return temporary(asSaid(match[1]), match[2], now);
     return undefined;
   }
 }
@@ -160,14 +172,65 @@ function temporary(content: string, relative: string, now: Date): PatternMatch {
   return { type: 'TEMPORARY_STATE', content, expiresAt: new Date(now.getTime() + days * 86_400_000).toISOString() };
 }
 
+/** MEM-AR-01A: the duplicate-comparison key is the ONE shared comparison normalizer (`arabic-text`). */
 export function normalizeMemoryContent(value: string): string {
-  return value.toLocaleLowerCase('und').normalize('NFKC')
-    .replace(/[\u064B-\u065F\u0670]/gu, '')
-    .replace(/[أإآ]/gu, 'ا').replace(/ى/gu, 'ي').replace(/ة/gu, 'ه')
-    .replace(/[.!؟،,;:]+$/gu, '').replace(/\s+/gu, ' ').trim();
+  return normalizeArabicComparison(value);
+}
+
+// MEM-AR-01A — legacy-template compatibility. Before 01A the Arabic location and travel patterns stored a masculine
+// template («أنا ساكن في X.», «أنا مسافر X بكرة.») whatever the user said. Those rows are never rewritten; instead a new
+// statement of the SAME fact in the user's own words («أنا ساكنة في X») is compared with the template it would have
+// produced. The two regular expressions below are the frozen pre-01A patterns, unchanged, and they apply only to these
+// two statement shapes: no other wording, subject or fact is collapsed.
+const LEGACY_LOCATION_TEMPLATE = /^(?:بالمناسبة\s+)?(?:أنا|انا)\s+(?:ساكن|ساكنة|عايش|عايشة)\s+(?:في\s+)?(.+?)(?:\s+من\s+\d+\s+سنين)?[.!؟]?$/u;
+const LEGACY_TRAVEL_TEMPLATE = /^(?:أنا|انا)\s+مسافر(?:ة)?\s+(?:إلى|الى|لـ?|على)?\s*(.+?)\s+(بكرة|غدًا|غدا|الأسبوع الجاي|الاسبوع الجاي)[.!؟]?$/u;
+
+function legacyTemplateForm(content: string): string | undefined {
+  const text = clean(content);
+  let match = text.match(LEGACY_LOCATION_TEMPLATE);
+  if (match) return `أنا ساكن في ${trimValue(match[1])}.`;
+  match = text.match(LEGACY_TRAVEL_TEMPLATE);
+  if (match) return `أنا مسافر ${trimValue(match[1])} ${match[2]}.`;
+  return undefined;
+}
+
+/**
+ * The comparison keys a new statement is already remembered under: its own words and, for the two formerly templated
+ * Arabic shapes only, the frozen legacy template of the same statement.
+ */
+export function memoryDuplicateKeys(content: string): ReadonlySet<string> {
+  const legacy = legacyTemplateForm(content);
+  return new Set([normalizeMemoryContent(content), ...(legacy === undefined ? [] : [normalizeMemoryContent(legacy)])]);
+}
+
+const REVERSAL_CAPTURE = /^(?:أنا\s+)?بطلت\s+(.+)$/u;
+
+/**
+ * MEM-AR-01A — the background capture screen against the user's current Memories (owner-scoped, bounded by the caller).
+ *  * EXACT_NORMALIZED_DUPLICATE: a Memory of the same type already says it (own words or the legacy template).
+ *  * REVERSAL_NEEDS_CORRECTION: «بطلت X» shares a distinctive word with a current Memory («أنا بحب القهوة»). It may
+ *    reverse that fact, which only 01B's controlled correction may do, so the capture fails closed: nothing is written,
+ *    retired or corrected. A reversal with no lexical link to the old wording is not detectable here (a known limit).
+ */
+export function screenMemoryCapture(
+  candidate: Pick<CreateMemoryInput, 'type' | 'content'>,
+  current: ReadonlyArray<Pick<MemoryRecord, 'type' | 'content'>>,
+): 'EXACT_NORMALIZED_DUPLICATE' | 'REVERSAL_NEEDS_CORRECTION' | undefined {
+  const keys = memoryDuplicateKeys(candidate.content);
+  if (current.some((memory) => memory.type === candidate.type && keys.has(normalizeMemoryContent(memory.content)))) return 'EXACT_NORMALIZED_DUPLICATE';
+  const reversal = candidate.content.match(REVERSAL_CAPTURE);
+  if (reversal) {
+    const object = [...distinctiveWords(reversal[1])].filter((word) => !isPredicateWord(word));
+    if (current.some((memory) => { const words = distinctiveWords(memory.content); return object.some((word) => words.has(word)); })) {
+      return 'REVERSAL_NEEDS_CORRECTION';
+    }
+  }
+  return undefined;
 }
 
 function clean(value: string): string { return value.normalize('NFKC').trim().replace(/\s+/gu, ' '); }
+/** MEM-AR-01A: the user's clause as said: orthographic «انا» → «أنا» and one terminal full stop, nothing else. */
+function asSaid(clause: string): string { return `${trimValue(clause).replace(/^انا(?=\s)/u, 'أنا')}.`; }
 function trimValue(value: string): string { return value.trim().replace(/[.!؟،,;:]+$/gu, '').trim(); }
 function prepareRememberContent(value: string): string {
   return clean(value).replace(/^(?:إني|اني|انى)\s+(?=(?:ساكن|ساكنة|عايش|عايشة|بفضل|بفضّل|بحب)(?:\s|$))/u, 'أنا ');

@@ -13,7 +13,7 @@ import type { DurableHimBrainContextResult } from '../post-response-intelligence
 import { HimReasoningConsumptionService } from '../human-model/him-reasoning-consumption.service';
 import { projectHimHypothesisGenerationContext, type HimHypothesisGenerationContext } from '../hypothesis/him-hypothesis-generation-context';
 import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidence } from '../memory/evidence.service';
-import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, normalizeMemoryContent } from '../memory/memory-write-evaluator.service';
+import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, screenMemoryCapture } from '../memory/memory-write-evaluator.service';
 import type { MemoryWriteResult } from '../memory/memory-write.service';
 import { interpretMemoryControl } from '../memory/memory-control.interpreter';
 import type { EvidenceItem } from '../memory/evidence.types';
@@ -116,7 +116,7 @@ export class BackgroundIntelligenceEnrichmentService {
  // don't rely on it" must not become a new Memory while the command disables the old one.
  async evaluateAndWriteMemory(context:BackgroundIntelligenceExecutionContext,currentUserContent:string):Promise<MemoryWriteResult>{
   this.assert(context);const decision=this.evaluator.evaluate(currentUserContent);if(decision.decision==='SKIP')return decision;if(interpretMemoryControl(currentUserContent))return{decision:'SKIP',reason:'MEMORY_CONTROL_COMMAND'};
-  const active=await this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);if(active.some(memory=>memory.type===decision.candidate.type&&normalizeMemoryContent(memory.content)===normalizeMemoryContent(decision.candidate.content)))return{decision:'SKIP',reason:'EXACT_NORMALIZED_DUPLICATE',type:decision.candidate.type};
+  const active=await this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);const screen=screenMemoryCapture(decision.candidate,active);if(screen)return{decision:'SKIP',reason:screen,type:decision.candidate.type};
   const created=await this.data.createMemory(context,{id:randomUUID(),...decision.candidate,status:decision.candidate.status??'ACTIVE'});return{decision:'WRITE',type:decision.candidate.type,memoryId:created.id,evidenceId:`memory:${created.id}`};
  }
 
