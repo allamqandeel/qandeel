@@ -155,7 +155,29 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
-### INTEL-TM-01 post-merge closure checkpoint — 2026-10-10 (CURRENT)
+### MEM-AR-01 closing checkpoint at 01C — 2026-10-11 (CURRENT; Draft PR, awaiting the Product Owner's merge decision)
+
+- `main` holds MEM-AR-01A (PR #328) and MEM-AR-01B (PR #329, merge `20e33ae3`). **MEM-AR-01C** (migration
+  `0152_memory_subject_identity_atomicity_v1.sql`) is implemented on `mem/mem-ar-01c-subject-identity-evidence-protection`,
+  in a Draft PR, **not merged and not deployed**; its record is the
+  [MEM-AR-01 implementation record](docs/e2e/QANDEEL_MEM_AR_01_MEMORY_CORRECTION_ARABIC_ACQUISITION_IMPLEMENTATION_RECORD_v1.md).
+- **What `0152` binds over (Product Owner Controlled Changes, forward-only; read the earlier migration together with it):**
+  - `0028` L2 `canonical_eligible_memory_ids_v1` — **CC-M1**: Step B admits only a SELF-attributed Memory; the window,
+    dedup key, ordering and bound are 0028's.
+  - `0151` L1 `personal_evidence_standing_v1` and L3 `hypothesis_evidence_change_core_v1` — **CC-M2'** (NOT_SELF and
+    UNATTRIBUTED before LAPSED) and **CC-M3'** (both taint, permanently). The housekeeping, the link-removal guard, the bind
+    guard and the selector are 0151's.
+  - `0033` `complete_post_response_candidate_provider_effect_v1` — **CC-H1**: a zero-support validated candidate is refused
+    (`22023 CANDIDATE_WITHOUT_SUPPORT`); the validator and the provider schema are unchanged. The frozen sentence in
+    `docs/controlled-hypothesis-generation-v1.md` carries the amendment note.
+  - `0128` — the command shape `CHECK` is replaced (0128's disjuncts verbatim plus the subject question, REMEMBER answers,
+    `RECONFIRMED`, `CORRECTED_TO_EXISTING`); the runtime finalizes through `server_finalize_memory_control_turn_v2`.
+  - `0026`, `0072`, `0128` — `service_role` EXECUTE on the six legacy Memory writers is revoked (bodies unchanged). The
+    only Memory writers are v2, `background_record_memory_v1` and the governed erasure (`0130`, unchanged).
+- Backlog: `QAN-BL-INTEL-03` (`INTEL-SV-01`) and `QAN-BL-PRIV-03` (`PRIV-EXPORT-01`) admitted; INTEL-TM-01's R2 observation
+  fixed and its L-1 narrowed; `QAN-BL-INTEL-02` untouched. Merge only on the Product Owner's «ادمج»; no deployment.
+
+### INTEL-TM-01 post-merge closure checkpoint — 2026-10-10 (historical snapshot)
 
 - Verified `main` after PR #326: `995d5ae9bf2530ac8e655b870526e0976be7cbf4`; `0151_personal_evidence_truth_maintenance_v1.sql` is merged, **not claimed deployed**. INTEL-TM-01 is closed for repository implementation by its BG-08/BG-09 post-merge governance closing change.
 - `QAN-BL-INTEL-01` is `CLOSED — TOMBSTONE`; the general Question Bind-time gap R3-G is `QAN-BL-QIR-01`, owned by `QIR-006-R1` without implementation authorization; `QAN-BL-INTEL-02` remains `VALIDATION — OPEN` under `INTEL-RET-01`. L-1/L-2 remain limits, not universal forgetting promises.

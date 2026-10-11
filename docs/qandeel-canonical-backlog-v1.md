@@ -189,6 +189,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-QIR-01` | General Question Bind-Time Version and Lifecycle Recheck (R3-G) | `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-INTEL-02` | Post-Response Intelligence Ledger Content (`0029` Intent Span, `0033` Candidate Plan): Retention and Reuse After Forget / Do-Not-Rely | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `HIGH` | `VALIDATION — OPEN` |
 | `QAN-BL-CI-02` | Forward-Safety Mirror: the `QAN-INF-03` Expo Dependency-Validation Leg Fails Intermittently on Some Local Hosts | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `MEDIUM` | `VALIDATION — OPEN` |
+| `QAN-BL-INTEL-03` | Hypothesis Semantic Support: Legacy Never-Supported Hypotheses (R-G1a) and Support by Unrelated Eligible Evidence (R-G1b) | `INTEL-SV-01 — Hypothesis Semantic Support Verification` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-PRIV-03` | Export My Data Omits Whom Each Memory Is About (the Subject `about` Field) | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1365,6 +1367,39 @@ This entry decides no retention period and no deletion mechanism, and authorizes
 
 ---
 
+### `QAN-BL-INTEL-03` — Hypothesis Semantic Support: Legacy Never-Supported Hypotheses (R-G1a) and Support by Unrelated Eligible Evidence (R-G1b)
+
+- **Title / Finding:** MEM-AR-01C closed the creation path of unsupported generated Hypotheses (CC-H1: TypeScript
+  `NO_SUPPORTING_EVIDENCE`; SQL `22023 CANDIDATE_WITHOUT_SUPPORT` in the `0033` completion, migration `0152`) and made
+  personal Evidence SELF-only (CC-M1). Two residuals remain that no deterministic check inside MEM-AR-01 can close:
+  **R-G1a** — Hypotheses created before `0152` that never had a supporting link stay `ACTIVE` with reliance `NONE` (shown
+  as "needs more", passed to the model as provisional); **R-G1b** — a generated candidate may cite eligible SELF Evidence
+  that is semantically unrelated to its statement, and it is accepted.
+- **Source:** MEM-AR-01 WP0R Addendum A2 §G1.4–§G1.5 (A-4, A-5) and §G4.1, approved by the Product Owner with RD-1
+  Option B (CC-H1) and the residual ownership; the
+  [MEM-AR-01 implementation record](e2e/QANDEEL_MEM_AR_01_MEMORY_CORRECTION_ARABIC_ACQUISITION_IMPLEMENTATION_RECORD_v1.md)
+  01C §9; INTEL-TM-01 record §7 limit L-1, which CC-H1 narrows to legacy rows only. Migration `0151`'s header already
+  names "a separately authorized semantic verifier" as the only path that may lift a withheld Hypothesis.
+- **Anti-duplication:** `QAN-BL-INTEL-01` (PG-02, tombstoned) withholds reliance after a withdrawal and claims nothing for
+  unlinked items; `QAN-BL-INTEL-02` is ledger retention (`INTEL-RET-01`) and is not reused (BG-04); `QAN-BL-QIR-01` is
+  question bind-time validity; `QAN-BL-CTX-01` is conversational relevance. No item covers zero-support, third-party or
+  semantic-support Hypotheses. Searched again at the 01C closing change: still none.
+- **Why deferred:** judging whether Evidence semantically supports a statement needs a verifier the Product Owner kept out
+  of MEM-AR-01 (no Understanding, Confidence, HIM or semantic-scorer redesign); retiring or rewriting legacy Hypotheses
+  needs a new reliance value, an L3 redefinition or a status write, each a separate Controlled Change.
+- **Owner task:** `INTEL-SV-01 — Hypothesis Semantic Support Verification`.
+- **Severity:** `MEDIUM` — the consequence is a provisional statement voiced tentatively by the model or shown as "needs
+  more"; never Clear, and never relied on after a withdrawal.
+- **Reopen condition:** `INTEL-SV-01` is scheduled, **or** an authorized aggregate count shows more than zero `ACTIVE`
+  never-supported Hypotheses in a hosted environment.
+- **Required future property:** no automatic restoration of a withheld Hypothesis by re-confirmation, attachment or
+  correction; any lifting or retirement is an explicit, auditable decision of the semantic verifier; the provider schema
+  is not tightened to force citations (that would push R-G1b).
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by MEM-AR-01C under BG-06 (Architecture-designated, Product Owner approved) in its closing change. Nothing here
+authorizes implementation (BG-07).
+
 ### `QAN-BL-CI-02` — Forward-Safety Mirror: the `QAN-INF-03` Expo Dependency-Validation Leg Fails Intermittently on Some Local Hosts
 
 - **Title / Finding:** On some local Windows runs, `test:forward-safety-contract` reports 25 / 35. All ten failures are the
@@ -1565,6 +1600,33 @@ inherits it at kickoff (BG-05). Nothing here authorizes implementation (BG-07).
 Admitted by A3-01 under BG-06 (the A3-01 Task Contract defers `QAN-BL-NOTIF-01` to the named `A3-02` by name; the
 Product Owner's A3-01 kickoff decisions name the owners of `NOTIF-02` … `NOTIF-04`; `PRIV-02` follows the
 `QAN-BL-PRIV-01` precedent). Nothing here authorizes implementation (BG-07).
+
+### `QAN-BL-PRIV-03` — Export My Data Omits Whom Each Memory Is About (the Subject `about` Field)
+
+- **Title / Finding:** MEM-AR-01C (migration `0152`) records whom each Memory is about — SELF, OTHER, or not established
+  — and serves it to the model as `about` (`USER` / `SOMEONE_ELSE` / `NOT_RECORDED`). The Personal export
+  (`personal_data_private.build_personal_export_v1`, migration `0130`) lists every Memory with its words, kind and state,
+  but not whom it is about.
+- **Source:** MEM-AR-01 WP0R §3.3 and §9 (the export `about` field proposed for this ID), Task Contract §2.3 exclusions and
+  §13.3; CQ-2 answered by the Product Owner (proposed, implementation deferred, admitted at the 01C closing change after
+  anti-duplication); the [MEM-AR-01 implementation record](e2e/QANDEEL_MEM_AR_01_MEMORY_CORRECTION_ARABIC_ACQUISITION_IMPLEMENTATION_RECORD_v1.md) 01C §9.
+- **Current truth:** nothing in the export is false: a Memory's own words name the person they concern. The attribution
+  rows cascade with the Memory, so the governed erasure removes them with it.
+- **Anti-duplication:** `QAN-BL-PRIV-01` (a later explicit agreement) and `QAN-BL-PRIV-02` (notification preferences) are
+  other missing export facts of the same owner; `QAN-BL-ACCT-01` is Connected Worlds deletion. No item covers the
+  Memory subject in the export.
+- **Why deferred:** the export's content and shape are a Privacy & Data Product decision (the W3-MEGA-S export contract);
+  adding a field from inside MEM-AR-01 would redefine the `0130` export body, which the contract excluded.
+- **Owner task:** `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` — the owner of the export-completeness
+  items `QAN-BL-PRIV-01` and `QAN-BL-PRIV-02`.
+- **Severity:** `MEDIUM` — completeness of the reader's own exported data, not its truthfulness.
+- **Reopen condition:** automatic when `PRIV-EXPORT-01` starts; it must also be reopened before Export My Data is declared
+  complete for launch.
+- **Required future properties:** export the subject as a readable fact in the reader's language (about you / about
+  someone else / not recorded), never an internal basis code, command or execution id.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by MEM-AR-01C under BG-06 in its closing change (CQ-2). Nothing here authorizes implementation (BG-07).
 
 ### `QAN-BL-NOTIF-05` — Native Push Physical-Device Exit Gates (PD-01 … PD-09)
 
@@ -1929,16 +1991,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 24 |
+| `DEFERRED — OWNED` | 26 |
 | `VALIDATION — OPEN` | 2 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 19 |
-| **Total** | **55** |
+| **Total** | **57** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 31 |
-| `MEDIUM` | 22 |
+| `MEDIUM` | 24 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -2383,6 +2445,13 @@ The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION �
 
 
 **INTEL-TM-01 post-merge closure (2026-10-10).** PR #326 merged as `995d5ae9bf2530ac8e655b870526e0976be7cbf4`; its inherited `QAN-BL-INTEL-01` is `CLOSED — TOMBSTONE`, `QAN-BL-QIR-01` is admitted under `QIR-006-R1` as `MEDIUM / DEFERRED — OWNED`, and `QAN-BL-INTEL-02` remains `VALIDATION — OPEN` under `INTEL-RET-01`. L-1/L-2/R2 are limitations/observations, not duplicated backlog or global erasure claims. **Latest index: 55 items; 24 / 2 / 10 / 19 by status, 31 / 22 / 2 by severity.** C2 Memory Correction & Arabic Acquisition is research-next, not implementation-open.
+
+**MEM-AR-01 closing change at 01C (2026-10-11; Draft PR, implementation complete, awaiting the Product Owner's merge decision; not merged, not deployed).** MEM-AR-01 (slices 01A, 01B merged through PRs #328 / #329; 01C with migration `0152`) inherited no item (BG-05: none names it; re-checked at each slice).
+- **Admitted — `QAN-BL-INTEL-03`** (`MEDIUM`, `DEFERRED — OWNED`, owner `INTEL-SV-01 — Hypothesis Semantic Support Verification`, Product Owner approved): residuals R-G1a and R-G1b. Anti-duplication re-run against this register at the closing change.
+- **Admitted — `QAN-BL-PRIV-03`** (`MEDIUM`, `DEFERRED — OWNED`, owner `PRIV-EXPORT-01`): the export `about` field (CQ-2). Anti-duplication re-run.
+- **INTEL-TM-01 residue R2** (an observation, never an item): **fixed** by `background_record_memory_v1`'s `SKIPPED_COMMAND_TURN` (route spec `memory-control-words-answer.route.spec.ts`, `verify-migration-0152`, CI-01 U1 `forgottenServed` 0). INTEL-TM-01 limit **L-1** is narrowed: no new zero-support generated Hypothesis is accepted (CC-H1); legacy rows remain under `QAN-BL-INTEL-03`.
+- **Untouched:** `QAN-BL-INTEL-02` (CC-H1 refuses payloads and changes no retention, so none of its reopen conditions fires), `QAN-BL-QIR-01`, `QAN-BL-CTX-01`. `QAN-BL-PROD-06` current truth: `0152` joins the undeployed catch-up queue with `0150` and `0151`.
+- **Latest index: 57 items; 26 / 2 / 10 / 19 by status, 31 / 24 / 2 by severity**, recounted mechanically from §4.
 
 ## 8. What is deliberately not in this backlog
 

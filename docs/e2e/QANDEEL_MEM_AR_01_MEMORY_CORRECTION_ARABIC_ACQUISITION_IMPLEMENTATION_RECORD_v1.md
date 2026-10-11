@@ -1,7 +1,9 @@
 # QANDEEL — MEM-AR-01 — Memory Correction & Arabic Acquisition — Implementation Record v1
 
-**Status:** `MEM-AR-01` — **ACTIVE.** One task contract with three ordered slices, `MEM-AR-01A` → `MEM-AR-01B` →
-`MEM-AR-01C`. 01A is merged (PR #328). 01B is implemented, Draft PR open, not merged. 01C is NOT STARTED.
+**Status:** `MEM-AR-01` — **CLOSED / READY FOR PO MERGE DECISION.** One task contract with three ordered slices,
+`MEM-AR-01A` → `MEM-AR-01B` → `MEM-AR-01C`. 01A is merged (PR #328) and 01B is merged (PR #329). 01C — migration
+`0152` — is implemented and carries this closing change (BG-08 / BG-09) in Draft PR #330, **awaiting the Product Owner's
+merge decision («ادمج»); not merged, not deployed.**
 
 **Authority:** the Product Owner's *MEM-AR-01 Implementation Task Contract*.
 - Approved 2026-10-11 with mandatory review corrections RC-1 to RC-4. CQ-1 and CQ-2 were answered.
@@ -14,7 +16,8 @@
 
 **Backlog:**
 - MEM-AR-01 inherits no backlog item.
-- `QAN-BL-INTEL-03` (owner `INTEL-SV-01`) and `QAN-BL-PRIV-03` are proposed for admission at the 01C closing change only.
+- Admitted by the 01C closing change: `QAN-BL-INTEL-03` (owner `INTEL-SV-01`) and `QAN-BL-PRIV-03` (owner
+  `PRIV-EXPORT-01`). See 01C §9.
 - `QAN-BL-INTEL-02` stays with `INTEL-RET-01` and is not touched.
 
 ---
@@ -215,8 +218,8 @@ commit: `d94bb9b15b7cb9e3673327b6236e52c4d0ffc49c`.
 
 ## Slice: MEM-AR-01B — Natural Reversal & Correction
 
-**Slice:** `MEM-AR-01B` — **IMPLEMENTED — DRAFT PR OPEN — UNDER REVIEW (G-B1) — NOT MERGED.** Merge only on the Product
-Owner's explicit «ادمج». No migration, no deployment.
+**Slice:** `MEM-AR-01B` — **IMPLEMENTED — MERGED** through PR #329 on the Product Owner's «ادمج» (merge commit
+`20e33ae3f0c7a4c95a952802d293547f1a98f676`). No migration, no deployment.
 
 **Authority:** the 01B brief ("IMPLEMENT MEM-AR-01B ONLY. Draft PR allowed. NO MERGE") under the approved contract §2.2,
 §8.2 and §14, RC-4 included.
@@ -364,4 +367,232 @@ guard 14 / 14. Only volumes grew: 82 executions and outbox events instead of 59,
 | L-4 | A correction into a value already stored still leaves a duplicate active pair (C1.6) | 01C (`CORRECTED_TO_EXISTING`), as contracted |
 | L-5 | The four cues are Egyptian Arabic only; English natural reversals are not read | By contract |
 
-**Next gate:** G-B1 — MEM-AR-01B Review (STOP). 01C is not started; migration `0152` is not created.
+**Gate passed:** G-B1 — merged through PR #329 (`20e33ae3`). Its R2 verdict and L-1 … L-4 are disposed of in 01C §5 and §11.
+
+---
+
+## Slice: MEM-AR-01C — Subject Identity, Atomicity & Evidence Protection
+
+**Slice:** `MEM-AR-01C` — **IMPLEMENTED — CLOSING CHANGE INCLUDED — DRAFT PR #330 — AWAITING THE PRODUCT OWNER'S MERGE
+DECISION (G-C2) — NOT MERGED, NOT DEPLOYED.** Sole owner of migration `0152`.
+
+**Authority:** the 01C brief ("IMPLEMENT 01C ONLY. Draft PR allowed. NO MERGE. NO DEPLOYMENT") under the approved
+contract §2.3, §4, §6, §7, §8.3, §9, §10, §12, §13 and §16 (RC-1 … RC-4, CQ-1, CQ-2), with PD-1 … PD-8, RD-1 Option B,
+CC-H1, CC-M1, CC-M2′ and CC-M3′.
+
+**Branch:** `mem/mem-ar-01c-subject-identity-evidence-protection`, cut from `origin/main`
+`20e33ae3f0c7a4c95a952802d293547f1a98f676` (the merge of PR #329).
+
+**Implementation commit (the tested code tree):** `b9549663b9f5eee234dabc24af664bd295326079`. Every later commit on the branch adds documentation or
+CI-01 results only (RC-3).
+
+### 1. Anti-duplication gate (contract §1.2), at the start of the slice
+
+| Check | Result |
+|---|---|
+| `origin/main` | `20e33ae3f0c7a4c95a952802d293547f1a98f676`; PRs #328 and #329 merged |
+| Terminal migration | `0151`; **`0152` free** — taken by this slice |
+| §1.1 names on `main` outside `docs/` | none (01A's `arabic-text.ts` names `memory_equivalence_key_v1` in a comment only) |
+| Open PRs touching Memory control, the evaluator, the retriever, Evidence, the generation policy, 0028 / 0033 / 0128 / 0151 | none (no open PR) |
+| Backlog | `QAN-BL-INTEL-03`, `QAN-BL-PRIV-03` free; no item names MEM-AR-01 (re-checked at the closing change) |
+
+### 2. What changed
+
+**SQL — `database/migrations/0152_memory_subject_identity_atomicity_v1.sql`** (one transaction, forward-only, 0001–0151
+untouched):
+- `memory_equivalence_key_v1` — one `translate` pass, at parity with 01A's `normalizeArabicComparison` (golden fixture
+  `database/fixtures/memory-equivalence-key-v1.json`, 38 cases, SQL = TS).
+- `memory_subject_attributions` (SELF / OTHER; bases `FIRST_PERSON_CAPTURE`, `EXPLICIT_STATEMENT`, `USER_CLARIFIED`,
+  `CORRECTION_INHERITED`, `LEGACY_FIRST_PERSON_CAPTURE`; a capture basis is always SELF and names its execution, a command
+  basis names its command) and `memory_equivalence_dispositions` (`CORRECTED`, `FORGOTTEN`, `DISABLED`, `RECONFIRMED`):
+  append-only, `UPDATE` refused, `DELETE` only inside the governed erasure, `CASCADE` with the Memory, owner-only RLS,
+  `SELECT` for `authenticated` / `service_role`, no write grant.
+- The legacy attribution (A1 C1.1, five provenance conditions), run once before the insert guard exists.
+- `guard_memory_subject_attribution_insert_v1`: an attribution only with its Memory (owned, ACTIVE, unexpired, linked by
+  no Hypothesis in either role, named by no withdrawal record).
+- The `memory_control_commands` shape `CHECK`: the 0128 disjuncts verbatim plus `SUBJECT_CLARIFICATION_REQUIRED`, the
+  REMEMBER answers, `RECONFIRMED` and `CORRECTED_TO_EXISTING`.
+- `server_finalize_memory_control_turn_v2` (lock order: turn → answered command → owner advisory lock → Memory rows `FOR
+  UPDATE ORDER BY id` → writes), `background_record_memory_v1`, `pending_memory_subject_clarification_v1`, and four
+  internal helpers with no grant (status-only supersede, the lock, the subject read, the disposition writer).
+- CC-M1 (0028 L2 + one Step-B line), CC-M2′ / CC-M3′ (0151 L1 / L3), CC-H1 (0033 completion + one line).
+- `REVOKE EXECUTE … FROM service_role` on the six legacy writers (bodies unchanged).
+
+**TypeScript (API):**
+- *Subject identity:* `memory-subject.ts` (the embed and its fail-safe reading); every Memory read embeds
+  `memory_subject_attributions(subject)`; `MemoryRecord.subject`. The subject screen: step 1 is the closed first-person
+  grammar (`recognizesFirstPersonStatement`), steps 2–4 `screenMemorySubject`; the answer parser `readSubjectAnswer` (A1
+  C3.3, closed list); a correction whose words name no subject carries `asSaid` and inherits its target's subject in SQL.
+- *Memory control:* REMEMBER asks the locked question when the subject is undecided and keeps it from the question turn's
+  words after the answer; the plan names the equivalent the server found and carries `subject`, `replyIfExisting`;
+  equivalent copies are offered once (`collapseEquivalents`); the inspection lists Memories about other people in their
+  own section (locked copy, CQ-1 form when first). The Conversation repository finalizes through v2.
+- *Evidence / retrieval:* `projectEligibleEvidence` admits SELF only (CC-M1-TS); every served Memory carries `about`
+  (`USER` / `SOMEONE_ELSE` / `NOT_RECORDED`) and the memory-context guidance carries the RC-2 sentence (MF-1).
+- *Background:* `recordMemory` → `background_record_memory_v1(p_source_turn_id, …)`; non-write answers complete as no
+  fresh Evidence; `ALREADY_RECORDED` completes with the returned id.
+- *Hypotheses:* CC-H1 `NO_SUPPORTING_EVIDENCE` after `EVIDENCE_OUTSIDE_REQUEST` and `EVIDENCE_ROLE_CONFLICT`.
+- *Dead writers removed:* `MemoryRuntimeService.create / markDeleted / supersede`, the three `MemoryRepository` write
+  methods, `MemoryWriteService` and the then-unused `MemoryServiceRoleApiService` (+ specs).
+
+**Harnesses:** the A2 e2e smoke PG adapter writes through `background_record_memory_v1` (K-3); the CI-01 harness speaks
+v2, the pending subject read and the subject embed, records each Memory's subject, the personal Evidence at the end, the
+served `about`, and the reliance at every labelled snapshot; fixtures P2, C3 and F2.
+
+### 3. Subject attribution and legacy data
+
+| Path | Subject | Proven by |
+|---|---|---|
+| Background first-person capture | SELF / `FIRST_PERSON_CAPTURE` (+ execution) | verify-0152 R2 / background section; CI-01 every capture |
+| Explicit remember, decisive screen | SELF or OTHER / `EXPLICIT_STATEMENT` | route spec S-3; CI-01 P1.5 (OTHER), P2.1 (OTHER), P2.2 (SELF) |
+| Explicit remember, undecided | the locked question; nothing stored | route spec; verify-0152 S-1; CI-01 P2.3, P2.5 |
+| The answer | `USER_CLARIFIED` from the question turn's words; «لا» keeps nothing; anything else lapses | route spec; verify-0152 S-1; CI-01 P2.4, P2.6 |
+| Correction, decisive / undecided | `EXPLICIT_STATEMENT` / `CORRECTION_INHERITED` (an UNATTRIBUTED target gives an UNATTRIBUTED successor) | route spec; verify-0152 D-1 |
+| Re-confirmation of an unattributed fact | `RECONFIRMED`: one attributed successor, lineage kept | route spec; verify-0152 D-1, L-2 |
+| Legacy rows | SELF only for fixture (a) of the matrix (a)–(g); `memories`, `hypotheses`, history and withdrawal rows byte-identical | verify-0152 L-1 on a fresh scratch database |
+
+S-3 table (interpreter spec): «أختي بتحب الكشري» → OTHER; «أنا بتخانق مع أختي» → SELF; «أنا بحب الطريقة اللي أخويا…» →
+SELF (closed grammar); «أمي عايزاني أتجوز قريب» → OTHER; «ساكنة في طنطا», «أحمد بيحب…», «أنا عارف إن أختي…» → AMBIGUOUS;
+"my sister hates kids" → OTHER; a sensitive request is declined before any question. Legacy impact on the injected
+matrix: SELF 1 / UNATTRIBUTED 6; reliance before → after: only-(a) `NONE` → `NONE`, only-(g) and only-(b) `NONE` →
+`NO_REMAINING_SUPPORT`, (a)+(g) `NONE` → `REVIEW_PENDING`. **Production counts are not claimed** (§12).
+
+### 4. Duplicates, atomicity, concurrency, isolation
+
+- **One equivalent ACTIVE fact per owner:** REMEMBER over an attributed equivalent → `ALREADY_REMEMBERED`; over only
+  UNATTRIBUTED equivalents → `RECONFIRMED`; CORRECT into an existing value → `CORRECTED_TO_EXISTING` (target superseded
+  status-only, no second copy); FORGET / DISABLE / CORRECT over a legacy duplicate pair change every copy, each with its
+  disposition; the background never retires or attributes an existing row (`EQUIVALENT_EXISTS`).
+- **Lineage invariant:** every `SUPERSEDED` row has exactly one of a successor, a `CORRECTED_TO_EXISTING` target or a
+  disposition (verify-0152 D-1, after every L-4 step); the export label stays "replaced by a correction".
+- **Atomicity (W-5):** a failure injected after each write step — Memory insert / update, attribution, disposition,
+  command, turn finalization; foreground and background — leaves nothing behind.
+- **Idempotency / replay (W-6):** a replayed execution answers `ALREADY_RECORDED` with the same id; a replayed answer turn
+  writes nothing; a second answer is refused 42501.
+- **Races (W-2, two connections, the second shown to block):** REMEMBER vs capture of the same fact (both orders),
+  CORRECT into a value being captured (both orders), two sessions remembering the same fact — exactly one ACTIVE copy
+  each time. **Deadlock (W-4):** v2 FORGET against the 0151 bind guard over the same Memory, both orders, three rounds —
+  no `40P01`.
+- **Isolation (I-1):** RLS two-sided on both tables; v2 with a foreign turn answers nothing; a foreign target, equivalent
+  or candidate is refused 42501; classes, the lock decision and the stale-capture rule never span owners.
+
+### 5. R2 — fixed (mandatory)
+
+01B CONFIRMED R2 (this record, 01B §4; results `3d0ff0f…`, kept unchanged as the regression evidence). 01C installs
+`SKIPPED_COMMAND_TURN` in `background_record_memory_v1`: a turn a Memory command already answered — decided from the
+committed `memory_control_commands` row bound to that source turn, never from its words — writes nothing, before any
+create.
+
+| Proof | Result |
+|---|---|
+| Route spec (`memory-control-words-answer.route.spec.ts`, real orchestrator → v2 mirror → outbox → real dispatcher → real enrichment) | the words answer «أنا بحب الكشري» forgets the chosen Memory; the evaluator still reads the words; the writer answers `SKIPPED_COMMAND_TURN`; the effect completes `NO_FRESH_EVIDENCE`; a replay of the same event writes nothing; recall does not serve the forgotten statement; an unrelated ordinary statement afterwards is captured |
+| S-2b (same spec) | the subject answer «عن أختي» — which the evaluator alone would keep as the user's relationship — is the command's: `SKIPPED_COMMAND_TURN` |
+| verify-0152 (real PostgreSQL) | the FORGET answer turn and the question turn: `SKIPPED_COMMAND_TURN`, replay identical; the Memory stays `DELETED`, never Evidence again; an unrelated ordinary turn is `CREATED` |
+| CI-01 U1 on `b9549663b9f5eee234dabc24af664bd295326079` | U1.4 `FORGET/FORGOTTEN` answering the question, `ACTIVE → DELETED`, `MEMORY_WRITE … NO_FRESH_EVIDENCE`, no new row; **U1.5 `forgottenServed` = false (0 / 1)** |
+
+### 6. CC-M1 / CC-M2′ / CC-M3′ / CC-H1
+
+| Change | Result |
+|---|---|
+| CC-M1 (SQL + TS) | only SELF Memories are personal Evidence; OTHER / UNATTRIBUTED stay visible and controllable, absent from L2, generation, intent, association and Confidence; attach refused 22023 (verify-0152; evidence / parity / enrichment specs; CI-01 P1, P2 `personalEvidence`) |
+| CC-M2′ | `NOT_SELF` / `UNATTRIBUTED` precede `LAPSED` (an expired unattributed row stays tainted); `CURRENT` requires SELF |
+| CC-M3′ | both subject standings taint, permanently; the housekeeping still detaches only `WITHDRAWN`; property test L-4: 40 random steps, 8 Hypotheses × 2 clocks, no withheld → `NONE`; CI-01 F2: `NONE` → `REVIEW_PENDING` after the forget → still `REVIEW_PENDING` after the re-confirmation (no restoration) |
+| CC-H1 | TS `NO_SUPPORTING_EVIDENCE` (zero support, contradiction-only; precedence kept) — policy and generation specs; SQL `22023 CANDIDATE_WITHOUT_SUPPORT` directly and through the grounded wrapper, ledger unchanged, a supported candidate still completes — verify-0152; the validator and the provider schema unchanged |
+| PG-02 | 0151's housekeeping, link guard, bind guard and selector are byte-identical (verify-0152 catalog); verify-0151 green |
+
+### 7. Historical verifier re-anchor census (contract §10.3, K-1 … K-3, RC-1)
+
+| Group | Verifiers | Re-anchor | Expectations changed? |
+|---|---|---|---|
+| Fixture attribution (RC-1: only ACTIVE fixtures the verifier cites as the reader's Evidence; before any link) | 0006, 0008, 0021, 0027, 0028, 0032, 0033, 0034, 0035, 0036, 0063, 0072, 0151, exact-version Confidence | one `attributeFixtureSelf` call per cited fixture (`database/verifier-memory-subject-fixture.mjs`); ineligible / foreign / superseded fixtures stay unattributed | no |
+| Revoked writers | 0026, 0072, 0128, 0151 | grant assertions at the 0152 terminal state (0026's replay of its own text keeps 0026's grant); body proofs run as the owner | grants only |
+| 0130 | 0130 | the fixture command uses v2, so erasure is proved over the attribution table too | no |
+| Pinned bodies | 0151 (L2), 0028 (none needed) | 0151 pins L2 to its 0152 body; verify-0152 proves 0152 = 0028 + one marked line | pin only |
+| 0151 T5 | 0151 | the lapsed SELF fixtures are attributed while current and read 2 days later (the guard attributes only a current row) | evaluation instant only |
+| Not affected | 0029 (listed by the contract; no L2 consumer fixture), all others | — | — |
+| Static | W3-MEGA-M (v2 RPC pin + its planted defect), INTEL-TM-01 (K-2: 0152 admitted only through its two Controlled Changes, + 2 planted defects; census drops `MemoryWriteService`), `database/tests/memory-authority-hardening-v1` (background writer, no repository writer), `database/tests/canonical-evidence-eligibility-v1` (unchanged; a comment reworded) | — | pins only |
+| Harness / smoke | A2 e2e PG adapter (K-3), Full Intelligence and Integrated Brain smoke scripts (removed service), CI-01 harness | new writer names | — |
+
+`0133` (Supabase default privileges) needs no change: hosted == CI for every 0152 object.
+
+### 8. Validation
+
+**Local (on the implementation tree):**
+
+| Check | Result |
+|---|---|
+| API typecheck (`tsconfig.json`, `tsconfig.scripts.json`) | pass |
+| API Jest, full | 235 suites, 5,422 / 5,422 |
+| Static: MEM-AR-01 contract (new) · W3-MEGA-M · INTEL-TM-01 · CI-01 · task-closure governance · `test:database` | 21 / 21 · 36 / 36 · 23 / 23 · 18 / 18 · 24 / 24 · 1,304 / 1,304 |
+| verify-0152 on a fresh PostgreSQL 17.10, and again after the whole database leg on the same database | pass, pass |
+| The API CI database leg, locally, PostgreSQL 17.10 (126 steps) | 119 pass; the rest are environment-only: 4 need Redis, 0133 needs `psql` (passed through a node-pg replay of the same files), 0130's known Windows clock-skew check (passes on rerun) |
+
+**CI-01 on `b9549663b9f5eee234dabc24af664bd295326079`** (`scripts/ci-01/results/b9549663b9f5eee234dabc24af664bd295326079.json`; local PostgreSQL 17.10, 152 migrations, provider
+doubles, network guard; the 01A / 01B / INTEL-TM-01 results files untouched): 14 scenarios RUN, controls hold (two-sided
+isolation, 0 content leaks, 0 outbound attempts), 0 foreground errors. Against the 01B results (`3d0ff0f…`) only two
+summaries move, both as intended; C2, F1, H1, K1, M1, N1, P1, U2 and X1 are identical.
+
+| Scenario | Result |
+|---|---|
+| U1 (R2) | U1.4 `FORGET/FORGOTTEN` answering the question, `ACTIVE → DELETED`, no new row; **`forgottenServed` 1/1 → 0/1**; capture yield 3/3 → 2/3 (the words answer is no longer captured) |
+| C1 (L-4) | C1.6 `CORRECT/CORRECTED_TO_EXISTING`; **`duplicateActiveAtEnd` 1 → 0**; new Memories 3 → 2 |
+| C3 (new) | C3.3 `CORRECTED_TO_EXISTING` (target `SUPERSEDED`, no copy); C3.5 `ALREADY_REMEMBERED`; the restatement writes nothing; 0 duplicate actives; served `USER` |
+| P2 (new) | P2.1 «أختي بتحب الكشري» OTHER; P2.2 «أنا بتخانق مع أختي كتير» SELF; P2.3 / P2.5 the locked question, nothing stored; P2.4 the answer «عن أختي» → OTHER; P2.6 «لا» → `CLARIFICATION_DECLINED`, nothing stored; personal Evidence = the SELF row only; served `SOMEONE_ELSE` / `USER` |
+| P1 | P1.5 «أختي مش بتحب الأطفال» stored OTHER (the 1/3 third-party measure now names a row the user can see but that is not Evidence); personal Evidence = the two SELF rows |
+| F1 | PG-02 holds: 0 injected after forget, 0 relied on after withdrawal |
+| F2 (new) | reliance `NONE` → forget → `REVIEW_PENDING` → re-confirmation → still `REVIEW_PENDING` (no automatic restoration) |
+
+**Focused Database Verification** (dispatched from `main`, selector `migration-0152`, `target_ref` = `b9549663b9f5eee234dabc24af664bd295326079`): run 1
+[`38171158583`](https://github.com/allamqandeel/qandeel/actions/runs/38171158583) — PASS (harness `main`, 1 verifier, 1 passed), run 2 [`38171378648`](https://github.com/allamqandeel/qandeel/actions/runs/38171378648) — PASS (harness `main`, 1 verifier, 1 passed); two consecutive fresh green runs on the same implementation SHA. **API CI** runs on the exact PR head, which carries this record; that run is reported on PR #330 and in the G-C2 report, not here (a record cannot name the result of the commit that contains it).
+
+### 9. Closing governance (BG-08 / BG-09)
+
+- **Inherited items:** none (BG-05).
+- **Admitted:** `QAN-BL-INTEL-03` — Hypothesis Semantic Support (R-G1a, R-G1b), owner `INTEL-SV-01`, `MEDIUM`, `DEFERRED —
+  OWNED`; `QAN-BL-PRIV-03` — the export `about` field, owner `PRIV-EXPORT-01`, `MEDIUM`, `DEFERRED — OWNED`. Anti-duplication
+  re-run against the register at the closing change.
+- **INTEL-TM-01 R2** (observation): fixed (§5). **INTEL-TM-01 L-1:** narrowed — no new zero-support generated row;
+  legacy rows under `QAN-BL-INTEL-03`.
+- **Untouched:** `QAN-BL-INTEL-02` (CC-H1 refuses payloads and changes no retention; no reopen condition fires),
+  `QAN-BL-QIR-01`, `QAN-BL-CTX-01`; `QAN-BL-PROD-06`: `0152` joins the undeployed catch-up with `0150` and `0151`.
+- **01B limits:** L-1 («بطلت التدخين» beside «بشرب سجاير»: no lexical link, nothing inferred) and L-2 / L-3 / L-5 stay
+  stated limitations by contract — BG-06 admits none of them; L-4 is closed (CI-01 C1.6 `CORRECTED_TO_EXISTING`).
+- **Register:** 57 items, 26 / 2 / 10 / 19 by status, 31 / 24 / 2 by severity, recounted mechanically; mirrored in Current
+  State §5. This record's banner, the Current State row, the Project Map checkpoint and the CC-H1 note in
+  `docs/controlled-hypothesis-generation-v1.md` are updated in the same change.
+
+### 10. Deployment compatibility (contract §12)
+
+| Pairing | Behaviour | Proof |
+|---|---|---|
+| Old API, new database | **fails closed**: the v1 finalize and `server_create_memory_v1` are not executable by `service_role` (permission denied) — the turn fails, the `MEMORY_WRITE` effect fails; no unlocked or unattributed row is written | verify-0152 W-1 (grants, writer census); verify-0128 / 0026 (`service_role` refused) |
+| New API, old database | **fails closed**: v2, `background_record_memory_v1` and the pending subject read do not exist (`PGRST202`) — the same turn / effect failure | the RPC names exist only in 0152 |
+
+Apply the migration and release the API together. **No hosted migration or release is authorized.**
+
+### 11. Limitations and residual risks
+
+| # | Limitation | Disposition |
+|---|---|---|
+| R-G1a / R-G1b | legacy never-supported Hypotheses stay `NONE`; a candidate citing unrelated SELF Evidence is accepted | `QAN-BL-INTEL-03` |
+| E-1 | the export lists Memories without whom they are about | `QAN-BL-PRIV-03` |
+| L-6 | legacy rows that the five conditions cannot prove (explicit-command results, pre-ledger rows) stay UNATTRIBUTED for life: visible and controllable, never Evidence; their Hypotheses are withheld permanently | by design (A1 C1.4); the user can re-confirm (`RECONFIRMED`) for future reasoning |
+| L-7 | the subject screen is a closed list (kin nouns, pronouns, first-person verbs, a complementizer rule); other wording asks the question | by design (conservative) |
+| L-8 | the background TypeScript pre-screen still skips an exact duplicate before the writer, so a crash-replay of a capture whose row already exists completes with no fresh Evidence instead of `ALREADY_RECORDED` (the SQL replay rule is proven directly) | recorded |
+| L-9 | Arabic subject answers and screens are Egyptian Arabic plus a minimal English list | by contract |
+
+### 12. Aggregate-only impact runbook (NOT executed; needs a separate explicit authorization)
+
+```sql
+SELECT m.status, coalesce(a.subject, 'UNATTRIBUTED') AS subject, count(*) AS memories
+  FROM public.memories m LEFT JOIN public.memory_subject_attributions a ON a.memory_id = m.id AND a.user_id = m.user_id
+ GROUP BY 1, 2 ORDER BY 1, 2;
+SELECT public.hypothesis_evidence_change_core_v1(h.user_id, h.id, h.supporting_evidence_ids, h.contradicting_evidence_ids, now()) AS reliance,
+       count(*) AS hypotheses
+  FROM public.hypotheses h WHERE h.status IN ('ACTIVE','SUPPORTED','MIXED','WEAK','REOPENED','CANDIDATE') GROUP BY 1 ORDER BY 1;
+```
+
+No content, no id. Production impact is **not claimed** anywhere in this record.
+
+**Next gate:** G-C2 — MEM-AR-01C Final PR Review (STOP). No merge, no auto-merge, no deployment; merge only on the
+Product Owner's explicit «ادمج».
