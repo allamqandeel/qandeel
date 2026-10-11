@@ -13,7 +13,8 @@ import {
   inspectReply, plainReply, rememberedReply, subjectQuestionReply, type MemoryControlLanguage,
 } from './memory-control.copy';
 import type {
-  MemoryControlKind, MemoryControlPlan, NaturalReversal, PendingMemoryClarification, PendingSubjectClarification,
+  MemoryControlKind, MemoryControlPlan, NaturalReversal, PendingCorrectionSubjectClarification, PendingMemoryClarification,
+  PendingSubjectClarification,
 } from './memory-control.types';
 
 const INSPECT_RELIED_SHOWN = 8;
@@ -67,6 +68,14 @@ export class MemoryControlService {
         return null;
       }
       if (pendingSubject) return this.planSubjectAnswer(turn, pendingSubject, subjectAnswer, now);
+      // L-11: or the subject question a correction asked - its own read, never the REMEMBER one.
+      let pendingCorrection: PendingCorrectionSubjectClarification | undefined;
+      try {
+        pendingCorrection = await this.repository.findPendingCorrectionSubjectClarification(turn.accessToken, turn.sessionId, turn.sourceTurnId);
+      } catch {
+        return null;
+      }
+      if (pendingCorrection) return this.planCorrectionSubjectAnswer(turn, pendingCorrection, subjectAnswer, now);
     }
     // «انسى التانية» / "forget the second one" names no Memory by itself, but it may answer the question just asked.
     const answer = readClarificationAnswer(turn.content);
@@ -206,10 +215,13 @@ export class MemoryControlService {
    * MEM-AR-01C: the new value's subject comes from the subject screen when it is decisive; otherwise the database gives
    * the successor its target's subject (an UNATTRIBUTED target gives an UNATTRIBUTED successor). A Memory that already
    * holds the new value is named, so the database keeps that one instead of a second copy (CORRECTED_TO_EXISTING).
+   * L-11: when neither the words nor the target say whom the fact is about and the new value is already remembered with
+   * an established subject, QANDEEL asks the subject question and changes nothing; `confirmed` is the user's answer.
    */
   private correction(
     language: MemoryControlLanguage, target: MemoryRecord, replacementWords: string, now: Date,
     current: ReadonlyArray<MemoryRecord>, answersCommandId?: string, inherit = false, subjectWords = replacementWords,
+    confirmed?: MemorySubject,
   ): MemoryControlPlan | null {
     const decision = this.evaluator.explicitStatementCandidate(replacementWords, now, fallbackType(target.type));
     const answering = answersCommandId ? { answersCommandId } : {};
@@ -223,12 +235,17 @@ export class MemoryControlService {
     const importance = inherit ? MEMORY_IMPORTANCE[fallbackType(target.type)] : decision.candidate.importance;
     const expiresAt = inherit ? target.expires_at ?? undefined : decision.candidate.expiresAt;
     const screened = this.subjectOf(subjectWords, now);
-    const subject = screened === 'AMBIGUOUS' ? undefined : screened;
+    const subject = confirmed ?? (screened === 'AMBIGUOUS' ? undefined : screened);
     const successorSubject = subject ?? target.subject ?? null;
     const keys = memoryDuplicateKeys(content);
-    const existing = current.find((memory) => memory.id !== target.id && memory.type === type
-      && keys.has(normalizeMemoryContent(memory.content))
-      && (successorSubject === null || (memory.subject ?? successorSubject) === successorSubject));
+    const equivalents = current.filter((memory) => memory.id !== target.id && memory.type === type && keys.has(normalizeMemoryContent(memory.content)));
+    if (successorSubject === null && equivalents.some((memory) => memory.subject)) {
+      return {
+        kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', targetMemoryId: target.id, candidateMemoryIds: [], ...answering,
+        reply: subjectQuestionReply(language),
+      };
+    }
+    const existing = equivalents.find((memory) => successorSubject === null || (memory.subject ?? successorSubject) === successorSubject);
     return {
       kind: 'CORRECT', outcome: 'CORRECTED', targetMemoryId: target.id, candidateMemoryIds: [], ...answering,
       newMemory: { id: randomUUID(), type, content, confidence, importance, ...(expiresAt ? { expiresAt } : {}) },
@@ -288,6 +305,30 @@ export class MemoryControlService {
     const rows = await this.repository.listControllable(turn.accessToken, turn.userId);
     const current = rows.filter((memory) => memory.user_id === turn.userId && isCurrent(memory, now));
     return { ...this.remember(language, decision.candidate, answer, current), ...answering };
+  }
+
+  /**
+   * L-11: the answer to the subject question a correction asked. The correction is the one that asked - its request's
+   * words and the exact fact the question named - never the answer's words; «لا» changes nothing. The database accepts it
+   * only for the question the immediately preceding user turn received, at most once, and only for that fact.
+   */
+  private async planCorrectionSubjectAnswer(
+    turn: MemoryControlTurn, pending: PendingCorrectionSubjectClarification, answer: SubjectAnswer, now: Date,
+  ): Promise<MemoryControlPlan | null> {
+    const language = memoryControlLanguage(turn.content, pending.clarifiedTurnContent);
+    const answering = { answersCommandId: pending.commandId };
+    if (answer === 'DECLINE') {
+      return { kind: 'CORRECT', outcome: 'CLARIFICATION_DECLINED', candidateMemoryIds: [], ...answering, reply: plainReply(language, 'CLARIFICATION_DECLINED') };
+    }
+    const original = interpretMemoryControl(pending.clarifiedTurnContent) ?? interpretNaturalReversal(pending.clarifiedTurnContent);
+    if (original?.kind !== 'CORRECT') return null;
+    const [target] = (await this.repository.findOwned(turn.accessToken, turn.userId, [pending.targetMemoryId]))
+      .filter((memory) => memory.user_id === turn.userId && memory.id === pending.targetMemoryId);
+    if (!target) return null;
+    const negation = original.natural === 'NO_LONGER' || original.natural === 'STOPPED';
+    const rows = await this.repository.listControllable(turn.accessToken, turn.userId);
+    const current = rows.filter((memory) => memory.user_id === turn.userId && isCurrent(memory, now));
+    return this.correction(language, target, original.replacement, now, current, pending.commandId, negation, original.asSaid, answer);
   }
 
   private async planAnswer(
@@ -374,7 +415,7 @@ function clarification(
 ): MemoryControlPlan {
   return {
     kind, outcome: 'CLARIFICATION_REQUIRED', candidateMemoryIds: options.map(({ id }) => id),
-    reply: clarificationReply(language, options.map(({ content }) => content), oneAtATime),
+    reply: clarificationReply(language, options.map(({ content }) => content), oneAtATime, options.map(({ subject }) => subject)),
   };
 }
 

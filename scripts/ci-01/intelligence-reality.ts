@@ -172,6 +172,8 @@ const READABLE_TABLES = new Set(['conversation_sessions', 'conversation_turns', 
 const AUTHENTICATED_RPC_ALLOWLIST = new Set(['pending_memory_clarification_v1', 'create_conversation_session_v1', 'create_user_conversation_turn',
   // MEM-AR-01C (migration 0152): the owner-token read of an unanswered subject question.
   'pending_memory_subject_clarification_v1',
+  // L-11 (migration 0152): the owner-token read of an unanswered subject question a correction asked.
+  'pending_memory_correction_subject_clarification_v1',
   'read_him_intelligence_snapshot_v1', 'read_him_contextual_current_intelligence_batch_v1', 'read_him_session_cross_context_foreground_v3',
   'read_him_brain_context_for_turn_v1', 'set_him_session_context_binding_v1',
   // INTEL-TM-01 (migration 0151): the reasoning context's evidence-reliance read, issued after the active-Hypothesis list.

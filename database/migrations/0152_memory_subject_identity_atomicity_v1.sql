@@ -20,7 +20,7 @@
 --   4. The legacy attribution: a pre-0152 Memory becomes SELF only when the background ledger proves the closed
 --      first-person capture wrote it (five provenance conditions, no content read). Everything else stays UNATTRIBUTED.
 --   5. memory_control_commands shape: the 0128 disjuncts verbatim, plus the subject question, the REMEMBER answers,
---      RECONFIRMED and CORRECTED_TO_EXISTING.
+--      RECONFIRMED and CORRECTED_TO_EXISTING, and (L-11) the subject question of a correction of an UNATTRIBUTED fact.
 --   6. server_finalize_memory_control_turn_v2 - v1's turn, command and answer checks, then the owner equivalence lock,
 --      the target and equivalence-class rows locked in id order, the subject outcomes, dispositions and attribution, all
 --      in the one transaction that also finalizes the turn.
@@ -28,7 +28,8 @@
 --      MEMORY_WRITE CLAIMED, history bound to its Session), then the R2 guard (no write for a turn a Memory command
 --      already answered), replay, the owner lock, the stale-capture skip and the equivalence skip, then create +
 --      FIRST_PERSON_CAPTURE attribution.
---   8. pending_memory_subject_clarification_v1 - the owner-token read of an unanswered subject question.
+--   8. pending_memory_subject_clarification_v1 - the owner-token read of an unanswered subject question; and (L-11)
+--      pending_memory_correction_subject_clarification_v1, its own read for the question a correction asked.
 --   9. Controlled Changes: CC-M1 (0028 L2 Step B is SELF-only), CC-M2' (0151 L1 order), CC-M3' (0151 taint set),
 --      CC-H1 (0033 completion refuses a validated candidate with no supporting Evidence).
 --  10. EXECUTE on the six legacy Memory writers is revoked from service_role. Their bodies are unchanged.
@@ -257,6 +258,9 @@ ALTER TABLE public.memory_control_commands ADD CONSTRAINT memory_control_command
       AND target_memory_id IS NULL AND result_memory_id IS NULL AND cardinality(candidate_memory_ids)=0 AND answers_command_id IS NOT NULL)
     OR (kind='CORRECT' AND outcome='CORRECTED_TO_EXISTING'
       AND target_memory_id IS NOT NULL AND result_memory_id IS NOT NULL AND cardinality(candidate_memory_ids)=0)
+    -- L-11 (Product Owner, 2026-10-12): the subject question of a correction names the exact fact it would correct.
+    OR (kind='CORRECT' AND outcome='SUBJECT_CLARIFICATION_REQUIRED'
+      AND target_memory_id IS NOT NULL AND result_memory_id IS NULL AND cardinality(candidate_memory_ids)=0)
 );
 
 -- ---------------------------------------------------------------------------------------------------------------
@@ -342,6 +346,39 @@ LANGUAGE sql STABLE SECURITY INVOKER SET search_path='' AS $$
      AND NOT EXISTS (SELECT 1 FROM public.memory_control_commands a WHERE a.answers_command_id=c.id)
 $$;
 
+-- L-11 (Product Owner, 2026-10-12): the subject question a CORRECTION asked - a correction of an UNATTRIBUTED fact whose
+-- new value is already remembered with an established subject - read on its own, never through the REMEMBER read
+-- above. It returns the exact fact the correction names and the words of the request that asked for the correction: a
+-- correction chosen by answering "which one?" keeps the words of the request that first asked, as 0128's read does.
+-- SECURITY INVOKER: RLS keeps it to the caller's own rows. It is never asked again, so it has no re-ask chain of its own.
+CREATE FUNCTION public.pending_memory_correction_subject_clarification_v1(p_session_id uuid, p_source_turn_id uuid)
+RETURNS TABLE(command_id uuid, target_memory_id uuid, clarified_turn_content text)
+LANGUAGE sql STABLE SECURITY INVOKER SET search_path='' AS $$
+  WITH RECURSIVE current_turn AS (
+    SELECT t.id, t.session_id, t.created_at FROM public.conversation_turns t
+     WHERE t.id=p_source_turn_id AND t.session_id=p_session_id AND t.role='USER'
+  ), previous_turn AS (
+    SELECT t.id FROM public.conversation_turns t, current_turn cur
+     WHERE t.session_id=cur.session_id AND t.role='USER' AND t.status<>'CANCELLED' AND t.id<>cur.id
+       AND (t.created_at, t.id) < (cur.created_at, cur.id)
+     ORDER BY t.created_at DESC, t.id DESC LIMIT 1
+  ), pending AS (
+    SELECT c.id, c.target_memory_id, c.answers_command_id, c.source_turn_id
+      FROM public.memory_control_commands c JOIN previous_turn p ON p.id=c.source_turn_id
+     WHERE c.session_id=p_session_id AND c.kind='CORRECT' AND c.outcome='SUBJECT_CLARIFICATION_REQUIRED'
+       AND NOT EXISTS (SELECT 1 FROM public.memory_control_commands a WHERE a.answers_command_id=c.id)
+  ), origin AS (
+    SELECT pd.answers_command_id, pd.source_turn_id, 0 AS depth FROM pending pd
+    UNION ALL
+    SELECT c.answers_command_id, c.source_turn_id, o.depth + 1
+      FROM public.memory_control_commands c JOIN origin o ON c.id=o.answers_command_id
+     WHERE o.depth < 16
+  )
+  SELECT pd.id, pd.target_memory_id, t.content
+    FROM pending pd, origin o JOIN public.conversation_turns t ON t.id=o.source_turn_id
+   WHERE o.answers_command_id IS NULL
+$$;
+
 -- ---------------------------------------------------------------------------------------------------------------
 -- 9. The ONE atomic foreground command, v2.
 --
@@ -363,6 +400,11 @@ $$;
 -- Subject: p_subject is the subject screen's decisive answer (SELF / OTHER). A REMEMBER needs one (basis
 -- EXPLICIT_STATEMENT, or USER_CLARIFIED when it answers the subject question). A CORRECT without one inherits its
 -- target's subject under the row lock (CORRECTION_INHERITED); an UNATTRIBUTED target gives an UNATTRIBUTED successor.
+-- L-11 (Product Owner, 2026-10-12): no cross-subject correction by inference. An undecided correction of an UNATTRIBUTED
+-- fact never resolves into a Memory whose subject is established: the server asks the subject question instead
+-- (SUBJECT_CLARIFICATION_REQUIRED, CORRECT, naming the UNATTRIBUTED target), and if such a Memory appears under the
+-- lock all the same, nothing changes (TARGET_CHANGED). The answer is CORRECTED with the confirmed subject (basis
+-- USER_CLARIFIED) for exactly the fact the question named, or CLARIFICATION_DECLINED.
 -- ---------------------------------------------------------------------------------------------------------------
 CREATE FUNCTION public.server_finalize_memory_control_turn_v2(
   p_session_id uuid, p_user_id uuid, p_source_turn_id uuid, p_assistant_turn_id uuid,
@@ -419,6 +461,8 @@ BEGIN
      OR (p_outcome = 'REMEMBERED' AND p_subject IS NULL)
      OR (p_equivalent_memory_id IS NOT NULL AND p_outcome NOT IN ('REMEMBERED','CORRECTED'))
      OR (p_kind = 'REMEMBER' AND p_target_memory_id IS NOT NULL)
+     OR (p_outcome = 'SUBJECT_CLARIFICATION_REQUIRED' AND p_kind NOT IN ('REMEMBER','CORRECT'))
+     OR (p_kind = 'CORRECT' AND p_outcome = 'SUBJECT_CLARIFICATION_REQUIRED' AND p_target_memory_id IS NULL)
   THEN RAISE EXCEPTION 'INVALID_MEMORY_CONTROL_SHAPE' USING ERRCODE='22023'; END IF;
 
   -- Lock order: the source turn first, then the answered command, then the owner lock, then the Memory rows.
@@ -433,8 +477,10 @@ BEGIN
   THEN RAISE EXCEPTION 'INVALID_MEMORY_CONTROL_CANDIDATES' USING ERRCODE='42501'; END IF;
 
   -- A follow-up answers exactly the question the immediately preceding user turn of this Session received, at most
-  -- once: a target question (CLARIFICATION_REQUIRED, same kind, only one of its options) or the subject question
-  -- (SUBJECT_CLARIFICATION_REQUIRED, REMEMBER, answered by REMEMBERED or CLARIFICATION_DECLINED).
+  -- once: a target question (CLARIFICATION_REQUIRED, same kind, only one of its options), the subject question
+  -- (SUBJECT_CLARIFICATION_REQUIRED, REMEMBER, answered by REMEMBERED or CLARIFICATION_DECLINED), or (L-11) a
+  -- correction's subject question (SUBJECT_CLARIFICATION_REQUIRED, CORRECT, answered by CORRECTED of exactly its target
+  -- with a confirmed subject, or CLARIFICATION_DECLINED).
   IF p_answers_command_id IS NOT NULL THEN
     SELECT t.id INTO previous_user_turn_id FROM public.conversation_turns t
       WHERE t.session_id=p_session_id AND t.user_id=p_user_id AND t.role='USER' AND t.status<>'CANCELLED' AND t.id<>source_row.id
@@ -442,12 +488,17 @@ BEGIN
       ORDER BY t.created_at DESC, t.id DESC LIMIT 1;
     SELECT * INTO pending FROM public.memory_control_commands c
       WHERE c.id=p_answers_command_id AND c.user_id=p_user_id AND c.session_id=p_session_id AND c.kind=p_kind
-        AND c.outcome = CASE WHEN p_kind='REMEMBER' THEN 'SUBJECT_CLARIFICATION_REQUIRED' ELSE 'CLARIFICATION_REQUIRED' END
+        AND (c.outcome = CASE WHEN p_kind='REMEMBER' THEN 'SUBJECT_CLARIFICATION_REQUIRED' ELSE 'CLARIFICATION_REQUIRED' END
+             OR (p_kind='CORRECT' AND c.outcome='SUBJECT_CLARIFICATION_REQUIRED'))
       FOR UPDATE;
     IF NOT FOUND OR pending.source_turn_id IS DISTINCT FROM previous_user_turn_id
        OR EXISTS (SELECT 1 FROM public.memory_control_commands a WHERE a.answers_command_id=pending.id)
-       OR (p_target_memory_id IS NOT NULL AND NOT (p_target_memory_id = ANY (pending.candidate_memory_ids)))
+       OR (pending.outcome='CLARIFICATION_REQUIRED' AND p_target_memory_id IS NOT NULL
+           AND NOT (p_target_memory_id = ANY (pending.candidate_memory_ids)))
        OR (p_kind='REMEMBER' AND p_outcome NOT IN ('REMEMBERED','CLARIFICATION_DECLINED'))
+       OR (p_kind='CORRECT' AND pending.outcome='SUBJECT_CLARIFICATION_REQUIRED' AND NOT (
+             p_outcome='CLARIFICATION_DECLINED'
+             OR (p_outcome='CORRECTED' AND p_subject IS NOT NULL AND p_target_memory_id IS NOT DISTINCT FROM pending.target_memory_id)))
     THEN RAISE EXCEPTION 'INVALID_MEMORY_CLARIFICATION_ANSWER' USING ERRCODE='42501'; END IF;
   END IF;
 
@@ -455,6 +506,10 @@ BEGIN
   THEN RAISE EXCEPTION 'INVALID_MEMORY_CONTROL_TARGET' USING ERRCODE='42501'; END IF;
   IF p_equivalent_memory_id IS NOT NULL AND NOT EXISTS (SELECT 1 FROM public.memories m WHERE m.id=p_equivalent_memory_id AND m.user_id=p_user_id)
   THEN RAISE EXCEPTION 'INVALID_MEMORY_CONTROL_TARGET' USING ERRCODE='42501'; END IF;
+  -- L-11: a correction asks whom its new value is about only for a fact whose subject was never established (an
+  -- attribution never changes, so the answer finds it the same).
+  IF p_kind='CORRECT' AND p_outcome='SUBJECT_CLARIFICATION_REQUIRED' AND public.memory_subject_v1(p_user_id, p_target_memory_id) IS NOT NULL
+  THEN RAISE EXCEPTION 'INVALID_MEMORY_CONTROL_SHAPE' USING ERRCODE='22023'; END IF;
 
   IF p_outcome='REMEMBERED' THEN
     IF p_new_memory_id IS NULL THEN RAISE EXCEPTION 'INVALID_MEMORY_CONTROL_SHAPE' USING ERRCODE='22023'; END IF;
@@ -527,7 +582,8 @@ BEGIN
     ELSE
       target_subject := public.memory_subject_v1(p_user_id, target.id);
       successor_subject := coalesce(p_subject, target_subject);
-      successor_basis := CASE WHEN p_subject IS NOT NULL THEN 'EXPLICIT_STATEMENT' ELSE 'CORRECTION_INHERITED' END;
+      successor_basis := CASE WHEN p_subject IS NULL THEN 'CORRECTION_INHERITED'
+                              WHEN pending.outcome='SUBJECT_CLARIFICATION_REQUIRED' THEN 'USER_CLARIFIED' ELSE 'EXPLICIT_STATEMENT' END;
       recorded_target := target.id;
       -- The replacement's equivalents (never the target). An UNATTRIBUTED successor is compatible with every subject.
       equivalents := ARRAY(
@@ -541,7 +597,13 @@ BEGIN
       SELECT m.* INTO retained FROM public.memories m WHERE m.id = (
         SELECT e FROM unnest(equivalents) AS e
          WHERE successor_subject IS NULL OR public.memory_subject_v1(p_user_id, e) = successor_subject ORDER BY e LIMIT 1);
-      IF retained.id IS NOT NULL THEN
+      IF successor_subject IS NULL
+         AND EXISTS (SELECT 1 FROM unnest(equivalents) AS e WHERE public.memory_subject_v1(p_user_id, e) IS NOT NULL) THEN
+        -- L-11: an UNATTRIBUTED fact's new value is already remembered about the user or about someone else. Whose it is
+        -- is never inferred: the server asks first, so this is reached only when such a Memory appeared after its read.
+        -- Nothing changes.
+        applied := 'TARGET_CHANGED';
+      ELSIF retained.id IS NOT NULL THEN
         -- CORRECTED_TO_EXISTING: no second copy. The target is superseded status-only; this command row (target ->
         -- result = the retained Memory) is its auditable relation.
         IF NOT public.memory_status_only_supersede_v1(p_user_id, target.id) THEN
@@ -561,13 +623,14 @@ BEGIN
       END IF;
       -- Unattributed copies of the new value are retired towards the Memory that now holds it.
       FOR member IN SELECT e AS id FROM unnest(equivalents) AS e
-                     WHERE public.memory_subject_v1(p_user_id, e) IS NULL AND e <> result_id ORDER BY e LOOP
+                     WHERE applied <> 'TARGET_CHANGED' AND public.memory_subject_v1(p_user_id, e) IS NULL AND e <> result_id ORDER BY e LOOP
         PERFORM public.memory_dispose_equivalent_v1(p_user_id, member.id, new_command_id, result_id, 'RECONFIRMED');
       END LOOP;
       -- Copies of the corrected fact (a legacy duplicate pair) leave with it.
       FOR member IN
         SELECT m.id FROM public.memories m
-         WHERE m.user_id=p_user_id AND m.id<>target.id AND m.id<>result_id AND m.type=target.type AND m.status='ACTIVE'
+         WHERE applied <> 'TARGET_CHANGED'
+           AND m.user_id=p_user_id AND m.id<>target.id AND m.id<>result_id AND m.type=target.type AND m.status='ACTIVE'
            AND public.memory_equivalence_key_v1(m.content)=target_key
            AND (target_subject IS NULL OR coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) = target_subject)
          ORDER BY m.id
@@ -652,7 +715,8 @@ BEGIN
     id, user_id, session_id, source_turn_id, kind, outcome, target_memory_id, result_memory_id, candidate_memory_ids, answers_command_id)
   VALUES (
     new_command_id, p_user_id, p_session_id, p_source_turn_id, p_kind, applied,
-    CASE WHEN applied IN ('CORRECTED','CORRECTED_TO_EXISTING','FORGOTTEN','DISABLED','TARGET_CHANGED','RECONFIRMED') THEN recorded_target END,
+    CASE WHEN applied IN ('CORRECTED','CORRECTED_TO_EXISTING','FORGOTTEN','DISABLED','TARGET_CHANGED','RECONFIRMED') THEN recorded_target
+         WHEN applied='SUBJECT_CLARIFICATION_REQUIRED' AND p_kind='CORRECT' THEN p_target_memory_id END,
     CASE WHEN applied IN ('REMEMBERED','RECONFIRMED','CORRECTED','CORRECTED_TO_EXISTING') THEN result_id END,
     candidates, p_answers_command_id);
 
@@ -893,6 +957,7 @@ ALTER FUNCTION public.memory_equivalence_lock_v1(uuid) OWNER TO postgres;
 ALTER FUNCTION public.memory_subject_v1(uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.memory_dispose_equivalent_v1(uuid,uuid,uuid,uuid,text) OWNER TO postgres;
 ALTER FUNCTION public.pending_memory_subject_clarification_v1(uuid,uuid) OWNER TO postgres;
+ALTER FUNCTION public.pending_memory_correction_subject_clarification_v1(uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.server_finalize_memory_control_turn_v2(uuid,uuid,uuid,uuid,text,text,uuid,uuid,text,text,double precision,double precision,timestamptz,uuid[],uuid,text,uuid,text,text,text,uuid,uuid,uuid) OWNER TO postgres;
 ALTER FUNCTION public.background_record_memory_v1(uuid,uuid,text,text,double precision,double precision,timestamptz) OWNER TO postgres;
 
@@ -909,6 +974,8 @@ REVOKE ALL ON FUNCTION
 FROM PUBLIC, anon, authenticated, service_role;
 REVOKE ALL ON FUNCTION public.pending_memory_subject_clarification_v1(uuid,uuid) FROM PUBLIC, anon, service_role;
 GRANT EXECUTE ON FUNCTION public.pending_memory_subject_clarification_v1(uuid,uuid) TO authenticated;
+REVOKE ALL ON FUNCTION public.pending_memory_correction_subject_clarification_v1(uuid,uuid) FROM PUBLIC, anon, service_role;
+GRANT EXECUTE ON FUNCTION public.pending_memory_correction_subject_clarification_v1(uuid,uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.server_finalize_memory_control_turn_v2(uuid,uuid,uuid,uuid,text,text,uuid,uuid,text,text,double precision,double precision,timestamptz,uuid[],uuid,text,uuid,text,text,text,uuid,uuid,uuid) TO service_role;
 GRANT EXECUTE ON FUNCTION public.background_record_memory_v1(uuid,uuid,text,text,double precision,double precision,timestamptz) TO service_role;
 

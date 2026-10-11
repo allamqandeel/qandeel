@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { MemoryDataApiService } from './memory-data-api.service';
 import { MEMORY_SUBJECT_EMBED, withMemorySubject } from './memory-subject';
 import type { MemoryRecord } from './memory.types';
-import type { PendingMemoryClarification, PendingSubjectClarification } from './memory-control.types';
+import type { PendingCorrectionSubjectClarification, PendingMemoryClarification, PendingSubjectClarification } from './memory-control.types';
 
 // MEM-AR-01C: every candidate carries its subject (SELF / OTHER / UNATTRIBUTED), resolved from the embedded attribution.
 const MEMORY_FIELDS = `id,user_id,scope,type,content,source,confidence,importance,status,version,created_at,updated_at,expires_at,supersedes_memory_id,${MEMORY_SUBJECT_EMBED}`;
@@ -71,5 +71,25 @@ export class MemoryControlRepository {
       throw new Error('MEMORY_CONTROL_PENDING_SUBJECT_CLARIFICATION_INTEGRITY');
     }
     return { commandId: row.command_id, clarifiedTurnContent: row.clarified_turn_content };
+  }
+
+  /**
+   * L-11: the subject question a CORRECTION asked the IMMEDIATELY preceding user turn of this Session and nobody has
+   * answered - its own read, never the REMEMBER one - with the fact it names and the correction request's words.
+   */
+  async findPendingCorrectionSubjectClarification(
+    accessToken: string, sessionId: string, sourceTurnId: string,
+  ): Promise<PendingCorrectionSubjectClarification | undefined> {
+    const rows = await this.dataApi.request<Array<{ command_id: unknown; target_memory_id: unknown; clarified_turn_content: unknown }>>(
+      accessToken, 'rpc/pending_memory_correction_subject_clarification_v1', {
+        method: 'POST', body: JSON.stringify({ p_session_id: sessionId, p_source_turn_id: sourceTurnId }),
+      });
+    if (!Array.isArray(rows) || rows.length === 0) return undefined;
+    const [row] = rows;
+    if (rows.length !== 1 || typeof row.command_id !== 'string' || !UUID.test(row.command_id)
+      || typeof row.target_memory_id !== 'string' || !UUID.test(row.target_memory_id) || typeof row.clarified_turn_content !== 'string') {
+      throw new Error('MEMORY_CONTROL_PENDING_CORRECTION_SUBJECT_CLARIFICATION_INTEGRITY');
+    }
+    return { commandId: row.command_id, targetMemoryId: row.target_memory_id, clarifiedTurnContent: row.clarified_turn_content };
   }
 }

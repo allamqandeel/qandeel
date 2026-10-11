@@ -4536,7 +4536,10 @@ writer census, K-1 key parity, the legacy matrix on a fresh scratch database (00
 afterwards), CC-M1 / CC-M2' / CC-M3' on real rows, the attribution guard and immutability, the subject lifecycle and v1's
 reach, duplicates and lineage, subject isolation of equivalent copies (D-2: the same words about the user and about
 someone else are two facts - FORGET, DISABLE, CORRECT and CORRECTED_TO_EXISTING never retire or keep the other
-subject's Memory; an UNATTRIBUTED copy goes with the compatible fact), the R2 guard and the stale-capture rule, CC-H1 directly and through the grounded wrapper,
+subject's Memory; an UNATTRIBUTED copy goes with the compatible fact), no cross-subject correction by inference (S-2,
+L-11: the correction's own subject question for an UNATTRIBUTED fact, its own owner-token read
+`pending_memory_correction_subject_clarification_v1`, answers bound to exactly that fact and answered once, nothing
+resolved into an established subject under the lock), the R2 guard and the stale-capture rule, CC-H1 directly and through the grounded wrapper,
 failure injection after each write step, tenant isolation, a seeded property test (no withheld Hypothesis is ever
 lifted), two-connection races without deadlock, and erasure. Its committed race fixtures are removed and the removal is
 checked. Fixture Memories that historical verifiers cite as Evidence are attributed SELF before any link through

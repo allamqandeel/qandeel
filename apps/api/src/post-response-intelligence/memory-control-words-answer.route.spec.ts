@@ -126,6 +126,8 @@ class CanonicalStore {
         && c.outcome === 'SUBJECT_CLARIFICATION_REQUIRED' && !this.commands.some((a) => a.answers_command_id === c.id));
       return command ? [{ command_id: command.id, clarified_turn_content: previous!.content }] : [];
     }
+    // L-11: no correction asks the subject question on this path.
+    if (resource === 'rpc/pending_memory_correction_subject_clarification_v1') return [];
     if (resource === 'rpc/pending_memory_clarification_v1') {
       const current = this.turns.find((t) => t.id === body.p_source_turn_id && t.user_id === owner);
       const previous = current && this.previousUserTurn(current);

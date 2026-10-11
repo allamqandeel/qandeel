@@ -128,6 +128,9 @@ const LOCKED = [
   ["subjectQuestion: { ar: 'المعلومة دي عنك إنت، ولا عن حد تاني؟', en: 'Is this about you or someone else?' }", 'the subject question'],
   ["ar: 'وفيه كمان حاجات حكيتلي عنها تخص ناس تانية:',\n    en: \"And here are some things you've told me about other people:\",", 'the other-people heading'],
   ["ar: 'فيه حاجات حكيتلي عنها تخص ناس تانية:',\n    en: \"Here are some things you've told me about other people:\",", 'the other-people heading with no section before it (CQ-1)'],
+  // L-10 (Product Owner, 2026-10-12): the subject labels of otherwise identical clarification options.
+  ["aboutYou: { ar: 'عنك إنت', en: 'about you' },", 'the about-you label'],
+  ["aboutSomeoneElse: { ar: 'عن حد تاني', en: 'about someone else' },", 'the about-someone-else label'],
 ];
 function copyViolations(w) {
   const out = [];
@@ -159,6 +162,33 @@ function subjectIsolationViolations(w) {
   return out;
 }
 
+// L-10 / L-11 (Product Owner, 2026-10-12). L-10: only an option with an established subject is ever labelled, and the
+// plan hands every option's subject to the copy. L-11: an undecided correction of an UNATTRIBUTED fact never resolves
+// into a Memory whose subject is established - the plan asks, v2 refuses under its lock, and the correction's subject
+// question is asked only for an UNATTRIBUTED fact, answered only for exactly that fact, through its own read (never the
+// REMEMBER one).
+const LABEL_RULE = "return (subject === 'SELF' || subject === 'OTHER')";
+const PLAN_ASKS = 'if (successorSubject === null && equivalents.some((memory) => memory.subject)) {';
+const V2_REFUSES = 'IF successor_subject IS NULL\n         AND EXISTS (SELECT 1 FROM unnest(equivalents) AS e WHERE public.memory_subject_v1(p_user_id, e) IS NOT NULL) THEN';
+const ANSWER_BINDS = "(p_outcome='CORRECTED' AND p_subject IS NOT NULL AND p_target_memory_id IS NOT DISTINCT FROM pending.target_memory_id)";
+const ASKED_ONLY_UNATTRIBUTED = "IF p_kind='CORRECT' AND p_outcome='SUBJECT_CLARIFICATION_REQUIRED' AND public.memory_subject_v1(p_user_id, p_target_memory_id) IS NOT NULL";
+const OPTION_SUBJECTS = 'clarificationReply(language, options.map(({ content }) => content), oneAtATime, options.map(({ subject }) => subject))';
+const REMEMBER_READ = "WHERE c.session_id=p_session_id AND c.kind='REMEMBER' AND c.outcome='SUBJECT_CLARIFICATION_REQUIRED'";
+function decisionViolations(w) {
+  const out = [];
+  if (!w.copy.includes(LABEL_RULE)) out.push('an option whose subject was never established can be labelled');
+  if (!w.control.includes(OPTION_SUBJECTS)) out.push('the plan does not hand the options\' subjects to the copy');
+  const correction = w.control.slice(w.control.indexOf('  private correction('), w.control.indexOf('  private remember('));
+  if (!correction.includes(PLAN_ASKS) || correction.indexOf(PLAN_ASKS) > correction.indexOf('const existing =')) out.push('the plan resolves an UNATTRIBUTED correction into an established subject');
+  const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
+  if (!v2.includes(V2_REFUSES) || v2.indexOf(V2_REFUSES) > v2.indexOf('ELSIF retained.id IS NOT NULL THEN')) out.push('v2 resolves an undecided correction into an established subject');
+  if (!v2.includes(ANSWER_BINDS)) out.push('a correction subject answer is not bound to the question\'s fact');
+  if (!v2.includes(ASKED_ONLY_UNATTRIBUTED)) out.push('a correction subject question can be asked for an attributed fact');
+  if (!sqlFunction(w.migration, 'pending_memory_subject_clarification_v1').includes(REMEMBER_READ)) out.push('the REMEMBER subject read is not REMEMBER-only');
+  if (!sqlFunction(w.migration, 'pending_memory_correction_subject_clarification_v1').includes("c.kind='CORRECT' AND c.outcome='SUBJECT_CLARIFICATION_REQUIRED'")) out.push('the correction subject question has no read of its own');
+  return out;
+}
+
 function wiringViolations(w) {
   const out = [];
   if (!/"verify:memory-subject-identity:integration": "node --env-file-if-exists=\.env database\/verify-migration-0152\.mjs"/u.test(w.packageJson)) out.push('verify-0152 has no package script');
@@ -173,7 +203,7 @@ function wiringViolations(w) {
   return out;
 }
 
-const detectors = { writerSurfaceViolations, r2Violations, evidenceViolations, hypothesisCreationViolations, copyViolations, subjectIsolationViolations, wiringViolations };
+const detectors = { writerSurfaceViolations, r2Violations, evidenceViolations, hypothesisCreationViolations, copyViolations, subjectIsolationViolations, decisionViolations, wiringViolations };
 
 test('the shipped source satisfies every MEM-AR-01C detector', () => {
   for (const [name, detect] of Object.entries(detectors)) assert.deepEqual(detect(shipped), [], name);
@@ -208,6 +238,14 @@ const planted = [
   }]),
   ['the plan folds a SELF and an OTHER copy into one candidate', 'subjectIsolationViolations', (w) => ({ ...w, control: w.control.replace(SUBJECT_KEYED, 'const key = words;') })],
   ['an UNATTRIBUTED copy is offered in place of the attributed fact', 'subjectIsolationViolations', (w) => ({ ...w, control: w.control.replace('if (!memory.subject && attributed.has(words)) return false;', '') })],
+  ['the about-you label drifts', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace("aboutYou: { ar: 'عنك إنت'", "aboutYou: { ar: 'عنك'") })],
+  ['an UNATTRIBUTED option is labelled', 'decisionViolations', (w) => ({ ...w, copy: w.copy.replace(LABEL_RULE, 'return (subject !== undefined)') })],
+  ['the plan stops handing subjects to the copy', 'decisionViolations', (w) => ({ ...w, control: w.control.replace(OPTION_SUBJECTS, 'clarificationReply(language, options.map(({ content }) => content), oneAtATime)') })],
+  ['the plan resolves an UNATTRIBUTED correction by inference', 'decisionViolations', (w) => ({ ...w, control: w.control.replace(PLAN_ASKS, 'if (false) {') })],
+  ['v2 drops the cross-subject guard', 'decisionViolations', (w) => ({ ...w, migration: w.migration.replace(V2_REFUSES, 'IF false THEN') })],
+  ['v2 accepts a correction subject answer for any fact', 'decisionViolations', (w) => ({ ...w, migration: w.migration.replace(ANSWER_BINDS, "(p_outcome='CORRECTED' AND p_subject IS NOT NULL)") })],
+  ['the correction subject question is asked for an attributed fact', 'decisionViolations', (w) => ({ ...w, migration: w.migration.replace(ASKED_ONLY_UNATTRIBUTED, 'IF false') })],
+  ['the REMEMBER subject read answers a correction question', 'decisionViolations', (w) => ({ ...w, migration: w.migration.replace(REMEMBER_READ, "WHERE c.session_id=p_session_id AND c.outcome='SUBJECT_CLARIFICATION_REQUIRED'") })],
   ['the smoke transport accepts the embed on every table', 'wiringViolations', (w) => ({ ...w, smokeAdapters: w.smokeAdapters.replace("const MEMORY_SUBJECT_EMBED_TABLE = 'memories';", "const MEMORY_SUBJECT_EMBED_TABLE = String(process.env.TABLE);") })],
   ['API CI tests the smoke transport only after the smoke', 'wiringViolations', (w) => ({ ...w, ci: w.ci.replace(ADAPTER_STEP, '').replace(HARDENING_STEP, `${HARDENING_STEP}${ADAPTER_STEP}`) })],
   ['API CI stops running verify-0152', 'wiringViolations', (w) => ({ ...w, ci: w.ci.replace('run: npm run verify:memory-subject-identity:integration', 'run: npm run verify:nothing') })],

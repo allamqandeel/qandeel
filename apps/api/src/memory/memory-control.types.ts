@@ -13,7 +13,8 @@ export type NaturalReversal = 'NO_LONGER' | 'STOPPED' | 'BECAME';
 
 /**
  * Outcomes the server may ASK the database to commit (`server_finalize_memory_control_turn_v2`, migration 0152).
- * MEM-AR-01C: `SUBJECT_CLARIFICATION_REQUIRED` asks whom a remember request is about.
+ * MEM-AR-01C: `SUBJECT_CLARIFICATION_REQUIRED` asks whom a remember request is about, and (L-11) whom the new value of a
+ * correction of an UNATTRIBUTED fact is about, when that value is already remembered with an established subject.
  */
 export type MemoryControlRequestedOutcome =
   | 'INSPECTED' | 'NOTHING_REMEMBERED'
@@ -84,5 +85,15 @@ export interface PendingMemoryClarification {
 /** MEM-AR-01C: the subject question the immediately preceding user turn received, with that turn's words (migration 0152). */
 export interface PendingSubjectClarification {
   commandId: string;
+  clarifiedTurnContent: string;
+}
+
+/**
+ * L-11: the subject question a correction asked the immediately preceding user turn, with the exact fact it names and the
+ * words of the request that asked for the correction (migration 0152).
+ */
+export interface PendingCorrectionSubjectClarification {
+  commandId: string;
+  targetMemoryId: string;
   clarifiedTurnContent: string;
 }

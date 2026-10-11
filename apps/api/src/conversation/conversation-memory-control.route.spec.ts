@@ -26,6 +26,7 @@ import { MemoryWriteEvaluatorService } from '../memory/memory-write-evaluator.se
 import type { MemoryDataApiService } from '../memory/memory-data-api.service';
 import type { MemoryRecord, MemoryStatus, MemorySubject, MemoryType } from '../memory/memory.types';
 import { normalizeArabicComparison } from '../memory/arabic-text';
+import { clarificationReply } from '../memory/memory-control.copy';
 
 const A = 'aaaaaaaa-0000-4000-8000-000000000001';
 const B = 'bbbbbbbb-0000-4000-8000-000000000002';
@@ -122,6 +123,19 @@ class CanonicalStore {
         && c.kind === 'REMEMBER' && c.outcome === 'SUBJECT_CLARIFICATION_REQUIRED' && !this.commands.some((a) => a.answers_command_id === c.id));
       return command ? [{ command_id: command.id, clarified_turn_content: previous!.content }] : [];
     }
+    if (resource === 'rpc/pending_memory_correction_subject_clarification_v1') {
+      // L-11: the subject question a correction asked, with its fact and the words of the request that first asked.
+      expect(Object.keys(body).sort()).toEqual(sqlParameters('pending_memory_correction_subject_clarification_v1'));
+      const current = this.turns.find((t) => t.id === body.p_source_turn_id && t.session_id === body.p_session_id && t.role === 'USER' && owns(t, owner));
+      const previous = current && this.previousUserTurn(current);
+      const command = previous && this.commands.find((c) => c.user_id === owner && c.source_turn_id === previous.id && c.session_id === body.p_session_id
+        && c.kind === 'CORRECT' && c.outcome === 'SUBJECT_CLARIFICATION_REQUIRED' && !this.commands.some((a) => a.answers_command_id === c.id));
+      if (!command) return [];
+      let origin = command;
+      while (origin.answers_command_id) origin = this.commands.find((c) => c.id === origin.answers_command_id)!;
+      const asked = this.turns.find((t) => t.id === origin.source_turn_id)!;
+      return [{ command_id: command.id, target_memory_id: command.target_memory_id, clarified_turn_content: asked.content }];
+    }
     if (resource === 'rpc/pending_memory_clarification_v1') {
       expect(Object.keys(body).sort()).toEqual(sqlParameters('pending_memory_clarification_v1'));
       const current = this.turns.find((t) => t.id === body.p_source_turn_id && t.session_id === body.p_session_id && t.role === 'USER' && owns(t, owner));
@@ -193,14 +207,20 @@ class CanonicalStore {
     const own = (id: unknown) => this.memories.find((m) => m.id === id && m.user_id === user);
     const candidates = (body.p_candidate_memory_ids as string[]) ?? [];
     if (candidates.some((id) => !own(id)) || new Set(candidates).size !== candidates.length || candidates.length > 3) throw new DataApiError(403);
+    let pending: CommandRow | undefined;
     if (body.p_answers_command_id) {
       const asked = kind === 'REMEMBER' ? 'SUBJECT_CLARIFICATION_REQUIRED' : 'CLARIFICATION_REQUIRED';
-      const pending = this.commands.find((c) => c.id === body.p_answers_command_id && c.user_id === user && c.session_id === body.p_session_id && c.outcome === asked && c.kind === kind);
-      if (!pending || pending.source_turn_id !== this.previousUserTurn(turn)?.id || this.commands.some((a) => a.answers_command_id === pending.id)
-        || (body.p_target_memory_id && !pending.candidate_memory_ids.includes(String(body.p_target_memory_id)))) throw new DataApiError(403);
+      pending = this.commands.find((c) => c.id === body.p_answers_command_id && c.user_id === user && c.session_id === body.p_session_id && c.kind === kind
+        && (c.outcome === asked || (kind === 'CORRECT' && c.outcome === 'SUBJECT_CLARIFICATION_REQUIRED')));
+      if (!pending || pending.source_turn_id !== this.previousUserTurn(turn)?.id || this.commands.some((a) => a.answers_command_id === pending!.id)
+        || (pending.outcome === 'CLARIFICATION_REQUIRED' && body.p_target_memory_id && !pending.candidate_memory_ids.includes(String(body.p_target_memory_id)))
+        // L-11: a correction's subject question is answered only by CORRECTED of exactly its fact with a confirmed subject, or declined.
+        || (kind === 'CORRECT' && pending.outcome === 'SUBJECT_CLARIFICATION_REQUIRED' && !(body.p_outcome === 'CLARIFICATION_DECLINED'
+          || (body.p_outcome === 'CORRECTED' && body.p_subject && body.p_target_memory_id === pending.target_memory_id)))) throw new DataApiError(403);
     }
     if (body.p_target_memory_id && !own(body.p_target_memory_id)) throw new DataApiError(403);
     if (body.p_equivalent_memory_id && !own(body.p_equivalent_memory_id)) throw new DataApiError(403);
+    if (kind === 'CORRECT' && body.p_outcome === 'SUBJECT_CLARIFICATION_REQUIRED' && (!body.p_target_memory_id || this.subjectOf(String(body.p_target_memory_id)))) throw new DataApiError(400);
     let outcome = String(body.p_outcome);
     let result: string | null = null;
     let recordedTarget: string | null = null;
@@ -253,17 +273,21 @@ class CanonicalStore {
         const equivalents = this.memories.filter((m) => m.user_id === user && m.id !== target!.id && current(m) && m.type === body.p_type
           && (key(m.content) === key(String(body.p_content)) || m.id === body.p_equivalent_memory_id) && compatible(m, subject)).sort(byId);
         const retained = equivalents.find((m) => subject === null || this.subjectOf(m.id) === subject);
-        if (retained) {
-          Object.assign(target!, { status: 'SUPERSEDED', updated_at: this.now() });
-          outcome = 'CORRECTED_TO_EXISTING'; result = retained.id;
+        if (subject === null && equivalents.some((m) => this.subjectOf(m.id))) {
+          outcome = 'TARGET_CHANGED'; // L-11: never resolved into an established subject by inference
         } else {
-          const successor = supersede(target!);
-          attribute(successor, subject, body.p_subject ? 'EXPLICIT_STATEMENT' : 'CORRECTION_INHERITED');
-          result = successor.id;
+          if (retained) {
+            Object.assign(target!, { status: 'SUPERSEDED', updated_at: this.now() });
+            outcome = 'CORRECTED_TO_EXISTING'; result = retained.id;
+          } else {
+            const successor = supersede(target!);
+            attribute(successor, subject, !body.p_subject ? 'CORRECTION_INHERITED' : pending?.outcome === 'SUBJECT_CLARIFICATION_REQUIRED' ? 'USER_CLARIFIED' : 'EXPLICIT_STATEMENT');
+            result = successor.id;
+          }
+          for (const copy of equivalents.filter((m) => m.id !== result && this.subjectOf(m.id) === null)) dispose(copy, result!, 'RECONFIRMED');
+          for (const copy of this.memories.filter((m) => m.user_id === user && m.id !== target!.id && m.id !== result && m.type === target!.type
+            && m.status === 'ACTIVE' && key(m.content) === key(target!.content) && compatible(m, targetSubject)).sort(byId)) dispose(copy, target!.id, 'CORRECTED');
         }
-        for (const copy of equivalents.filter((m) => m.id !== result && this.subjectOf(m.id) === null)) dispose(copy, result!, 'RECONFIRMED');
-        for (const copy of this.memories.filter((m) => m.user_id === user && m.id !== target!.id && m.id !== result && m.type === target!.type
-          && m.status === 'ACTIVE' && key(m.content) === key(target!.content) && compatible(m, targetSubject)).sort(byId)) dispose(copy, target!.id, 'CORRECTED');
       } else outcome = 'TARGET_CHANGED';
     } else if (outcome === 'FORGOTTEN') {
       if (target?.status === 'ACTIVE' || target?.status === 'DISABLED') Object.assign(target, { status: 'DELETED', updated_at: this.now() });
@@ -287,7 +311,8 @@ class CanonicalStore {
     if (this.commands.some((c) => c.source_turn_id === turn.id)) throw new DataApiError(409);
     this.commands.push({
       id: commandId, user_id: user, session_id: turn.session_id, source_turn_id: turn.id, kind, outcome,
-      target_memory_id: ['CORRECTED', 'CORRECTED_TO_EXISTING', 'FORGOTTEN', 'DISABLED', 'TARGET_CHANGED', 'RECONFIRMED'].includes(outcome) ? recordedTarget : null,
+      target_memory_id: ['CORRECTED', 'CORRECTED_TO_EXISTING', 'FORGOTTEN', 'DISABLED', 'TARGET_CHANGED', 'RECONFIRMED'].includes(outcome) ? recordedTarget
+        : kind === 'CORRECT' && outcome === 'SUBJECT_CLARIFICATION_REQUIRED' ? String(body.p_target_memory_id) : null,
       result_memory_id: result, candidate_memory_ids: [...candidates], answers_command_id: (body.p_answers_command_id as string | null) ?? null,
     });
     const reply = outcome === 'TARGET_CHANGED' ? String(body.p_reply_if_changed)
@@ -844,6 +869,157 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const job = store.remember(A, 'أنا شغال في المصنع.');
       await say('لا، أنا مش شغال في المصنع، شغال في المكتب');
       expect(store.attributions.get(store.memories.find((m) => m.supersedes_memory_id === job.id)!.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'EXPLICIT_STATEMENT' }));
+    });
+  });
+
+  // L-10 / L-11 (Product Owner decisions, 2026-10-12).
+  describe('MEM-AR-01C G-C2 decisions: subject labels (L-10) and no cross-subject correction by inference (L-11)', () => {
+    const shapes = () => store.commands.map((c) => [c.kind, c.outcome]);
+    const labelOf = (id: string) => (store.subjectOf(id) === 'SELF' ? 'عنك إنت' : 'عن حد تاني');
+
+    it('L-10: identical options with different subjects say whom each is about; the numbers still name the same Memories', async () => {
+      const mine = store.remember(A, 'عيد الميلاد يوم ٥ مارس.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      const theirs = store.remember(A, 'عيد الميلاد يوم ٥ مارس.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
+      const ask = await say('انسى إن عيد الميلاد يوم ٥ مارس');
+      const [first, second] = store.commands[0].candidate_memory_ids;
+      expect([first, second].sort()).toEqual([mine.id, theirs.id].sort());
+      expect(ask.reply).toBe(`تقصد أنهي واحدة؟\n1. «عيد الميلاد يوم ٥ مارس.» — ${labelOf(first)}\n2. «عيد الميلاد يوم ٥ مارس.» — ${labelOf(second)}\nرقمها يكفي.`);
+      expectCleanReply(ask.reply);
+      expect(ask.reply).not.toMatch(/SELF|OTHER|UNATTRIBUTED/u);
+      // Asked again (an answer outside the options), the same labels follow the same Memories.
+      expect((await say('5')).reply).toBe(ask.reply);
+      expect(store.commands[1].candidate_memory_ids).toEqual([first, second]);
+      await say('2');
+      expect([memoryOf(second).status, memoryOf(first).status]).toEqual(['DELETED', 'ACTIVE']);
+      expect(store.commands[2]).toEqual(expect.objectContaining({ kind: 'FORGET', outcome: 'FORGOTTEN', target_memory_id: second }));
+    });
+
+    it('L-10: in English, the approved labels', async () => {
+      const sessionB = store.session(B);
+      store.remember(B, 'Birthday is on March 5.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      store.remember(B, 'Birthday is on March 5.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
+      const ask = await say('Forget that birthday is on March 5', sessionB, B);
+      const labels = store.commands[0].candidate_memory_ids.map((id) => (store.subjectOf(id) === 'SELF' ? 'about you' : 'about someone else'));
+      expect(ask.reply).toBe(`Which one do you mean?\n1. “Birthday is on March 5.” — ${labels[0]}\n2. “Birthday is on March 5.” — ${labels[1]}\nThe number is enough.`);
+    });
+
+    it('L-10: labels only where the words alone cannot tell the options apart, and never on an UNATTRIBUTED Memory', async () => {
+      // Different words: the existing wording, unchanged, whatever the subjects.
+      store.remember(A, 'شغلي الجديد في البنك.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      store.remember(A, 'مديري في الشغل صعب.', 'RELATIONSHIP_CONTEXT', 'ACTIVE', 'OTHER');
+      expect((await say('امسح موضوع الشغل.')).reply).toBe('تقصد أنهي واحدة؟\n1. «مديري في الشغل صعب.»\n2. «شغلي الجديد في البنك.»\nرقمها يكفي.');
+      await say('لا');
+      // The same words with no established subject (two kinds of fact): no label is invented.
+      store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE');
+      store.remember(A, 'بيحب الكورة.', 'PERSONAL_FACT');
+      expect((await say('انسى إن بيحب الكورة')).reply).toBe('تقصد أنهي واحدة؟\n1. «بيحب الكورة.»\n2. «بيحب الكورة.»\nرقمها يكفي.');
+      // The copy rule itself: SELF and OTHER are labelled, the UNATTRIBUTED copy of the same words is not.
+      expect(clarificationReply('ar', ['س', 'س', 'س'], false, ['SELF', 'OTHER', null]))
+        .toBe('تقصد أنهي واحدة؟\n1. «س» — عنك إنت\n2. «س» — عن حد تاني\n3. «س»\nرقمها يكفي.');
+      expect(clarificationReply('en', ['x', 'x'], false, ['SELF', null])).toBe('Which one do you mean?\n1. “x”\n2. “x”\nThe number is enough.');
+      expect(clarificationReply('en', ['x', 'x'], false, ['OTHER', 'OTHER'])).toBe('Which one do you mean?\n1. “x”\n2. “x”\nThe number is enough.');
+    });
+
+    it('L-11: an UNATTRIBUTED fact whose new value is the user\'s own asks first, changes nothing, then «عني» keeps the user\'s Memory', async () => {
+      const legacy = { ...store.remember(A, 'شغال في البنك.') };
+      const mine = { ...store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
+      const before = JSON.stringify(store.memories);
+      const ask = await say('لا، مش شغال في البنك، شغال في الشركة');
+      expect(ask.reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      expect(JSON.stringify(store.memories)).toBe(before);
+      expect(store.commands[0]).toEqual(expect.objectContaining({ kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target_memory_id: legacy.id, result_memory_id: null, candidate_memory_ids: [] }));
+      expect(store.attributions.has(legacy.id)).toBe(false);
+
+      const answer = await say('عني');
+      expect(answer.reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا شغال في الشركة.» بدل «شغال في البنك.».');
+      expect(memoryOf(legacy.id)).toEqual({ ...legacy, status: 'SUPERSEDED', updated_at: expect.any(String) });
+      expect(memoryOf(mine.id)).toEqual(mine);
+      expect(store.commands[1]).toEqual(expect.objectContaining({
+        kind: 'CORRECT', outcome: 'CORRECTED_TO_EXISTING', target_memory_id: legacy.id, result_memory_id: mine.id, answers_command_id: store.commands[0].id,
+      }));
+      expect(store.attributions.has(legacy.id)).toBe(false);
+    });
+
+    it('L-11: answered «عن حد تاني», the correction is someone else\'s new fact; the user\'s Memory is never merged or touched', async () => {
+      const legacy = store.remember(A, 'شغال في البنك.');
+      const mine = { ...store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
+      await say('لا، مش شغال في البنك، شغال في الشركة');
+      expect((await say('عن حد تاني')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا شغال في الشركة.» بدل «شغال في البنك.».');
+      const successor = store.memories.find((m) => m.supersedes_memory_id === legacy.id)!;
+      expect(successor).toEqual(expect.objectContaining({ content: 'أنا شغال في الشركة.', status: 'ACTIVE', version: 2 }));
+      expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'OTHER', basis: 'USER_CLARIFIED', command_id: store.commands[1].id }));
+      expect(memoryOf(mine.id)).toEqual(mine);
+      expect(store.dispositions).toEqual([]);
+    });
+
+    it('L-11: someone else\'s existing value and the answer «عني» give the user a new fact; theirs stays exactly as it was', async () => {
+      const legacy = store.remember(A, 'ساكن في أكتوبر.');
+      const theirs = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في طنطا')).reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      await say('عني');
+      const successor = store.memories.find((m) => m.supersedes_memory_id === legacy.id)!;
+      expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'USER_CLARIFIED' }));
+      expect(memoryOf(theirs.id)).toEqual(theirs);
+      expect(shapes()).toEqual([['CORRECT', 'SUBJECT_CLARIFICATION_REQUIRED'], ['CORRECT', 'CORRECTED']]);
+    });
+
+    it('L-11: «لا», an unrelated reply, a late answer and a repeated answer change nothing', async () => {
+      const legacy = store.remember(A, 'شغال في البنك.');
+      store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      const before = JSON.stringify(store.memories);
+      await say('لا، مش شغال في البنك، شغال في الشركة');
+      expect((await say('لا')).reply).toBe('تمام، ماغيّرتش حاجة.');
+      expect(JSON.stringify(store.memories)).toBe(before);
+      expect(store.commands[1]).toEqual(expect.objectContaining({ kind: 'CORRECT', outcome: 'CLARIFICATION_DECLINED', answers_command_id: store.commands[0].id, target_memory_id: null }));
+      // Answered once, the question is no longer pending: a repeated answer is ordinary conversation.
+      touched.length = 0;
+      await expect(say('عني')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      // Unanswered: an unrelated reply lets it lapse, and a later answer is ordinary conversation too.
+      await say('لا، مش شغال في البنك، شغال في الشركة');
+      touched.length = 0;
+      await expect(say('ماشي يا عم')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      touched.length = 0;
+      await expect(say('عن حد تاني')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      touched.length = 0;
+      expect(JSON.stringify(store.memories)).toBe(before);
+      expect(store.attributions.has(legacy.id)).toBe(false);
+      expect(shapes()).toEqual([
+        ['CORRECT', 'SUBJECT_CLARIFICATION_REQUIRED'], ['CORRECT', 'CLARIFICATION_DECLINED'], ['CORRECT', 'SUBJECT_CLARIFICATION_REQUIRED'],
+      ]);
+    });
+
+    it('L-11: chosen by "which one?", the correction asks the subject question and its answer keeps the original request', async () => {
+      const fact = store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT');
+      const preference = store.remember(A, 'ساكن في أكتوبر.', 'STABLE_PREFERENCE');
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في إسكندرية')).reply).toBe('تقصد أنهي واحدة؟\n1. «ساكن في أكتوبر.»\n2. «ساكن في أكتوبر.»\nرقمها يكفي.');
+      // Between the two turns, the new value is remembered about someone else.
+      const theirs = { ...store.remember(A, 'أنا ساكن في إسكندرية.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
+      const chosen = store.commands[0].candidate_memory_ids.indexOf(fact.id) + 1;
+      expect((await say(String(chosen))).reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      expect(store.commands[1]).toEqual(expect.objectContaining({ kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target_memory_id: fact.id, answers_command_id: store.commands[0].id }));
+      expect((await say('عني')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في إسكندرية.» بدل «ساكن في أكتوبر.».');
+      const successor = store.memories.find((m) => m.supersedes_memory_id === fact.id)!;
+      expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'USER_CLARIFIED' }));
+      expect([memoryOf(preference.id).status, memoryOf(theirs.id)]).toEqual(['ACTIVE', theirs]);
+    });
+
+    it('L-11: a value of an established subject that appears after the read is never merged into - nothing changes', async () => {
+      const legacy = { ...store.remember(A, 'شغال في البنك.') };
+      let theirs: MemoryRecord | undefined;
+      store.beforeMemoryControlCommand = () => { theirs = { ...store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') }; };
+      expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('المعلومة دي اتغيّرت قبل ما أعدّلها، فماغيّرتش حاجة.');
+      expect(memoryOf(legacy.id)).toEqual(legacy);
+      expect(memoryOf(theirs!.id)).toEqual(theirs);
+      expect(store.memories).toHaveLength(2);
+      expect(shapes()).toEqual([['CORRECT', 'TARGET_CHANGED']]);
+    });
+
+    it('L-11: an UNATTRIBUTED correction with no remembered value of an established subject is unchanged - no question, no attribution', async () => {
+      const legacy = store.remember(A, 'شغال في البنك.');
+      const unattributedCopy = store.remember(A, 'أنا شغال في الشركة.');
+      await say('لا، مش شغال في البنك، شغال في الشركة');
+      expect(store.commands).toEqual([expect.objectContaining({ kind: 'CORRECT', outcome: 'CORRECTED_TO_EXISTING', target_memory_id: legacy.id, result_memory_id: unattributedCopy.id })]);
+      expect(store.attributions.size).toBe(0);
     });
   });
 

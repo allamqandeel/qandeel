@@ -7,6 +7,7 @@
 //
 // TASK-APPROVED DELEGATED COPY (W3-MEGA-M §10: no large copy redesign; plain, concise, non-diagnostic).
 import type { MemoryControlOutcome } from './memory-control.types';
+import type { MemorySubject } from './memory.types';
 
 export type MemoryControlLanguage = 'ar' | 'en';
 
@@ -56,6 +57,9 @@ const LINES = {
     ar: 'فيه حاجات حكيتلي عنها تخص ناس تانية:',
     en: "Here are some things you've told me about other people:",
   },
+  // L-10 (Product Owner, 2026-10-12): the subject labels of otherwise identical clarification options. Exact bytes.
+  aboutYou: { ar: 'عنك إنت', en: 'about you' },
+  aboutSomeoneElse: { ar: 'عن حد تاني', en: 'about someone else' },
 } satisfies Record<string, Line>;
 
 /**
@@ -117,14 +121,27 @@ export function disabledReply(language: MemoryControlLanguage, content: string):
     : `Done, I won't rely on ${quoteMemory(language, content)} when we talk, but I'll keep it.`;
 }
 
-/** One option: "do you mean …?"; several: a short numbered list. Only the remembered words are shown. */
-export function clarificationReply(language: MemoryControlLanguage, options: ReadonlyArray<string>, oneAtATime = false): string {
+/**
+ * One option: "do you mean …?"; several: a short numbered list. Only the remembered words are shown - and (L-10) when
+ * options would read the same while their established subjects differ, each of those with an established subject also
+ * says whom it is about. An option whose subject was never established is never labelled. `subjects` follows `options`.
+ */
+export function clarificationReply(
+  language: MemoryControlLanguage, options: ReadonlyArray<string>, oneAtATime = false,
+  subjects: ReadonlyArray<MemorySubject | null | undefined> = [],
+): string {
   if (options.length === 1) {
     return language === 'ar' ? `تقصد ${quoteMemory(language, options[0])}؟` : `Do you mean ${quoteMemory(language, options[0])}?`;
   }
+  const shown = options.map((content) => quoteMemory(language, content));
+  const labelled = (index: number): boolean => {
+    const subject = subjects[index];
+    return (subject === 'SELF' || subject === 'OTHER')
+      && shown.some((words, other) => other !== index && words === shown[index] && (subjects[other] === 'SELF' || subjects[other] === 'OTHER') && subjects[other] !== subject);
+  };
   return [
     oneAtATime ? LINES.oneAtATime[language] : LINES.whichOne[language],
-    ...options.map((content, index) => `${index + 1}. ${quoteMemory(language, content)}`),
+    ...shown.map((words, index) => `${index + 1}. ${words}${labelled(index) ? ` — ${(subjects[index] === 'SELF' ? LINES.aboutYou : LINES.aboutSomeoneElse)[language]}` : ''}`),
     LINES.numberIsEnough[language],
   ].join('\n');
 }

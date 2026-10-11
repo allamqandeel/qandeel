@@ -23,6 +23,10 @@
 //         subject, a DISABLED copy, an UNATTRIBUTED copy retired only with the compatible fact (disposition provenance),
 //         the UNATTRIBUTED legacy pair unchanged, CORRECT and CORRECTED_TO_EXISTING never retiring or keeping the other
 //         subject's Memory, another owner untouched;
+//   S-2   (L-11) no cross-subject correction by inference: the correction's own subject question names its UNATTRIBUTED
+//         fact (its own owner-token read, the request's words through a "which one?" chain), only CORRECTED of that fact
+//         with a confirmed subject (USER_CLARIFIED) or a decline answers it, once, from the very next turn; under the lock a
+//         newly established equivalent changes nothing; PG-02 stays withheld; R2 for both turns;
 //   L-2   RECONFIRMED over an unattributed row linked by a Hypothesis: one successor, withheld before and after, never NONE;
 //   R2    background_record_memory_v1: SKIPPED_COMMAND_TURN for a target answer and a subject answer (the confirmed
 //         R2 shape), the replay writes nothing, an ordinary turn is captured; W-3 SUPERSEDED_BY_LATER_COMMAND;
@@ -203,6 +207,7 @@ const NEW_FUNCTIONS = {
   'public.memory_subject_v1(uuid,uuid)': { definer: false, roles: [] },
   'public.memory_dispose_equivalent_v1(uuid,uuid,uuid,uuid,text)': { definer: true, roles: [] },
   'public.pending_memory_subject_clarification_v1(uuid,uuid)': { definer: false, roles: ['authenticated'] },
+  'public.pending_memory_correction_subject_clarification_v1(uuid,uuid)': { definer: false, roles: ['authenticated'] },
   'public.server_finalize_memory_control_turn_v2(uuid,uuid,uuid,uuid,text,text,uuid,uuid,text,text,double precision,double precision,timestamp with time zone,uuid[],uuid,text,uuid,text,text,text,uuid,uuid,uuid)': { definer: true, roles: ['service_role'] },
   'public.background_record_memory_v1(uuid,uuid,text,text,double precision,double precision,timestamp with time zone)': { definer: true, roles: ['service_role'] },
 };
@@ -632,11 +637,14 @@ async function verifySubjectLifecycle() {
     { kind: 'FORGET', outcome: 'CLARIFICATION_DECLINED', answers: clarification },
     { kind: 'REMEMBER', outcome: 'SUBJECT_CLARIFICATION_REQUIRED' }, { kind: 'REMEMBER', outcome: 'RECONFIRMED', target: someMemory, result: someMemory },
     { kind: 'CORRECT', outcome: 'CORRECTED_TO_EXISTING', target: someMemory, result: someMemory },
+    { kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: someMemory },
   ]) await insert(row);
   for (const row of [
     { kind: 'REMEMBER', outcome: 'RECONFIRMED', result: someMemory }, { kind: 'FORGET', outcome: 'CORRECTED_TO_EXISTING', target: someMemory, result: someMemory },
     { kind: 'REMEMBER', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', candidates: [someMemory] }, { kind: 'REMEMBER', outcome: 'CLARIFICATION_REQUIRED', candidates: [someMemory] },
     { kind: 'REMEMBER', outcome: 'CLARIFICATION_DECLINED' }, { kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED' },
+    { kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: someMemory, result: someMemory }, { kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: someMemory, candidates: [someMemory] },
+    { kind: 'FORGET', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: someMemory },
   ]) await rejected(() => insert(row), ['23514']);
 }
 
@@ -830,6 +838,169 @@ async function verifySubjectIsolation() {
     assert.equal((await attributionOf(id)).subject, subject);
   }
   assert.equal(await count("SELECT count(*) AS n FROM public.memories WHERE user_id = $1 AND status <> 'ACTIVE'", [stranger]), 0, 'another owner is untouched');
+}
+
+// ------------------------------------------------------------------------------------------------------------------
+// S-2 (L-11, Product Owner 2026-10-12). No cross-subject correction by inference (rolled back): an undecided correction
+// of an UNATTRIBUTED fact never resolves into a Memory whose subject is established. The correction's own subject
+// question names its exact fact; only CORRECTED of that fact with a confirmed subject (USER_CLARIFIED) or a decline
+// answers it, once, from the very next turn; under the lock a newly established equivalent changes nothing.
+// ------------------------------------------------------------------------------------------------------------------
+async function verifyCorrectionSubject() {
+  const me = await reader();
+  const stranger = await reader();
+  const s = await session(me);
+  const QUESTION = 'المعلومة دي عنك إنت، ولا عن حد تاني؟';
+  const statuses = async (...ids) => Promise.all(ids.map(async (id) => (await memoryRow(id)).status));
+  const footprint = async () => JSON.stringify([
+    await rows('SELECT id, status, version FROM public.memories WHERE user_id = $1 ORDER BY id', [me]),
+    await rows('SELECT memory_id, subject FROM public.memory_subject_attributions WHERE user_id = $1 ORDER BY memory_id', [me]),
+    await dispositionsOf(me)]);
+  const pendingReads = async (turnId, userId = me) => {
+    await actAs('authenticated', userId);
+    const read = {
+      correction: await rows('SELECT * FROM public.pending_memory_correction_subject_clarification_v1($1, $2)', [s, turnId]),
+      remember: await rows('SELECT * FROM public.pending_memory_subject_clarification_v1($1, $2)', [s, turnId]),
+      target: await rows('SELECT * FROM public.pending_memory_clarification_v1($1, $2)', [s, turnId]),
+    };
+    await asOwner();
+    return read;
+  };
+  const ask = async (target, content = 'لا، مش شغال في البنك، شغال في الشركة', answers = null) => {
+    const turn = await userTurn(me, s, { content });
+    assert.deepEqual(await finalize2({ session: s, user: me, turn, kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target, answers, reply: QUESTION }),
+      [{ outcome: 'SUBJECT_CLARIFICATION_REQUIRED', reply: QUESTION }]);
+    return { turn, command: await commandOf(turn) };
+  };
+
+  stage = 'S-2: the question names its UNATTRIBUTED fact, writes one command and changes no Memory';
+  const legacy = await memory(me, { content: 'شغال في البنك.' });
+  const mine = await memory(me, { content: 'أنا شغال في الشركة.', subject: 'SELF' });
+  const hSupport = await hypothesis(me, { supporting: [legacy] });
+  const elsewhere = await memory(me, { content: 'شغال في المصنع.' });
+  const standingBefore = await change(hSupport);
+  assert.notEqual(standingBefore, 'NONE', 'PG-02: a Hypothesis on an UNATTRIBUTED fact is withheld');
+  const before = await footprint();
+  const q1 = await ask(legacy);
+  assert.deepEqual([q1.command.kind, q1.command.outcome, q1.command.target_memory_id, q1.command.result_memory_id, q1.command.candidate_memory_ids, q1.command.answers_command_id],
+    ['CORRECT', 'SUBJECT_CLARIFICATION_REQUIRED', legacy, null, [], null]);
+  assert.equal(await footprint(), before, 'asking changes no Memory, attribution or disposition');
+
+  stage = 'S-2: its own read returns the fact and the request\'s words; the REMEMBER and target reads never see it';
+  const a1 = await userTurn(me, s, { content: 'عني' });
+  assert.deepEqual(await pendingReads(a1), {
+    correction: [{ command_id: q1.command.id, target_memory_id: legacy, clarified_turn_content: 'لا، مش شغال في البنك، شغال في الشركة' }], remember: [], target: [] });
+  assert.deepEqual((await pendingReads(a1, stranger)).correction, [], 'another owner reads nothing');
+
+  stage = 'S-2: only CORRECTED of exactly that fact with a confirmed subject, or a decline, answers it';
+  for (const [answer, codes] of [
+    [{ kind: 'CORRECT', outcome: 'CORRECTED', target: elsewhere, content: 'أنا شغال في الشركة.', subject: 'SELF' }, ['42501']],
+    [{ kind: 'CORRECT', outcome: 'CORRECTED', target: legacy, content: 'أنا شغال في الشركة.' }, ['42501']],
+    [{ kind: 'CORRECT', outcome: 'ALREADY_CORRECT' }, ['42501']],
+    [{ kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: legacy }, ['42501']],
+    [{ kind: 'REMEMBER', outcome: 'REMEMBERED', content: 'أنا شغال في الشركة.', subject: 'SELF' }, ['42501']],
+    [{ kind: 'FORGET', outcome: 'CLARIFICATION_DECLINED' }, ['42501']],
+  ]) await rejected(() => finalize2({ session: s, user: me, turn: a1, answers: q1.command.id, ...answer }), codes);
+  const strangerSession = await session(stranger);
+  const strangerTurn = await userTurn(stranger, strangerSession, { content: 'عني' });
+  await rejected(() => finalize2({ session: strangerSession, user: stranger, turn: strangerTurn,
+    kind: 'CORRECT', outcome: 'CORRECTED', target: legacy, content: 'أنا شغال في الشركة.', subject: 'SELF', answers: q1.command.id }), ['42501']);
+  assert.equal(await footprint(), before);
+
+  stage = 'S-2: «عني» - the confirmed SELF answer keeps the user\'s existing Memory (CORRECTED_TO_EXISTING), once';
+  assert.deepEqual(await finalize2({ session: s, user: me, turn: a1, kind: 'CORRECT', outcome: 'CORRECTED', target: legacy, content: 'أنا شغال في الشركة.', subject: 'SELF', answers: q1.command.id }),
+    [{ outcome: 'CORRECTED_TO_EXISTING', reply: 'reply:EXISTING' }]);
+  const c1 = await commandOf(a1);
+  assert.deepEqual([c1.kind, c1.outcome, c1.target_memory_id, c1.result_memory_id, c1.answers_command_id], ['CORRECT', 'CORRECTED_TO_EXISTING', legacy, mine, q1.command.id]);
+  assert.deepEqual(await statuses(legacy, mine), ['SUPERSEDED', 'ACTIVE']);
+  assert.equal(await attributionOf(legacy), undefined, 'the corrected fact itself is never attributed');
+  assert.equal((await attributionOf(mine)).subject, 'SELF');
+  const standingAfter = await change(hSupport);
+  assert.ok(standingAfter !== 'NONE', `PG-02: still withheld after the correction (${standingBefore} -> ${standingAfter})`);
+  assert.deepEqual(await finalize2({ session: s, user: me, turn: a1, kind: 'CORRECT', outcome: 'CORRECTED', target: legacy, content: 'أنا شغال في الشركة.', subject: 'SELF', answers: q1.command.id }), [], 'a replayed answer turn writes nothing');
+  const again = await userTurn(me, s, { content: 'عني' });
+  assert.deepEqual((await pendingReads(again)).correction, [], 'an answered question is no longer pending');
+  await rejected(() => finalize2({ session: s, user: me, turn: again, kind: 'CORRECT', outcome: 'CORRECTED', target: legacy, content: 'أنا شغال في الشركة.', subject: 'SELF', answers: q1.command.id }), ['42501'], /INVALID_MEMORY_CLARIFICATION_ANSWER/u);
+  await client.query("UPDATE public.conversation_turns SET status = 'COMPLETED' WHERE id = $1", [again]);
+
+  stage = 'S-2: «عن حد تاني» - the confirmed OTHER answer is a new fact about someone else; the user\'s Memory is untouched';
+  const legacy2 = await memory(me, { content: 'ساكن في أكتوبر.' });
+  const mineTanta = await memory(me, { content: 'أنا ساكن في طنطا.', subject: 'SELF' });
+  const q2 = await ask(legacy2, 'لا، مش ساكن في أكتوبر، ساكن في طنطا');
+  const a2 = await userTurn(me, s, { content: 'عن حد تاني' });
+  const successor2 = randomUUID();
+  assert.equal((await finalize2({ session: s, user: me, turn: a2, kind: 'CORRECT', outcome: 'CORRECTED', target: legacy2, newId: successor2, content: 'أنا ساكن في طنطا.', subject: 'OTHER', answers: q2.command.id }))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(legacy2, successor2, mineTanta), ['SUPERSEDED', 'ACTIVE', 'ACTIVE']);
+  assert.equal((await memoryRow(successor2)).supersedes_memory_id, legacy2);
+  assert.deepEqual(await attributionOf(successor2), { subject: 'OTHER', basis: 'USER_CLARIFIED', command_id: (await commandOf(a2)).id, execution_id: null });
+  assert.deepEqual(await dispositionsOf(me), [], 'nothing about the user was retired');
+
+  stage = 'S-2: a decline, an unrelated reply and a late answer change nothing';
+  const legacy3 = await memory(me, { content: 'بيحب الشاي.', type: 'STABLE_PREFERENCE' });
+  await memory(me, { content: 'أنا بحب الشاي.', type: 'STABLE_PREFERENCE', subject: 'OTHER' });
+  const quiet = await footprint();
+  const q3 = await ask(legacy3, 'لا، مش بيحب الشاي، بحب الشاي');
+  const a3 = await userTurn(me, s, { content: 'لا' });
+  assert.deepEqual(await finalize2({ session: s, user: me, turn: a3, kind: 'CORRECT', outcome: 'CLARIFICATION_DECLINED', answers: q3.command.id }), [{ outcome: 'CLARIFICATION_DECLINED', reply: 'reply:CLARIFICATION_DECLINED' }]);
+  const q4 = await ask(legacy3, 'لا، مش بيحب الشاي، بحب الشاي');
+  await userTurn(me, s, { status: 'COMPLETED', content: 'ماشي يا عم' });
+  const late = await userTurn(me, s, { content: 'عني' });
+  assert.deepEqual((await pendingReads(late)).correction, [], 'a question lapses after any other turn');
+  await rejected(() => finalize2({ session: s, user: me, turn: late, kind: 'CORRECT', outcome: 'CORRECTED', target: legacy3, type: 'STABLE_PREFERENCE', content: 'أنا بحب الشاي.', subject: 'SELF', answers: q4.command.id }), ['42501']);
+  assert.equal(await footprint(), quiet);
+  await client.query("UPDATE public.conversation_turns SET status = 'COMPLETED' WHERE id = $1", [late]);
+
+  stage = 'S-2: the question is asked only for an UNATTRIBUTED fact, and only by a correction';
+  await rejected(async () => finalize2({ session: s, user: me, turn: await userTurn(me, s), kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: mine }), ['22023'], /INVALID_MEMORY_CONTROL_SHAPE/u);
+  await rejected(async () => finalize2({ session: s, user: me, turn: await userTurn(me, s), kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED' }), ['22023'], /INVALID_MEMORY_CONTROL_SHAPE/u);
+  await rejected(async () => finalize2({ session: s, user: me, turn: await userTurn(me, s), kind: 'FORGET', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: legacy3 }), ['22023'], /INVALID_MEMORY_CONTROL_SHAPE/u);
+
+  stage = 'S-2: an undecided correction never resolves into an established subject under the lock - nothing changes';
+  const legacy5 = await memory(me, { content: 'بيشتغل بالليل.' });
+  const theirs5 = await memory(me, { content: 'أنا بشتغل بالليل.', subject: 'OTHER' });
+  const quiet5 = await footprint();
+  for (const equivalent of [null, theirs5]) {
+    const turn = await userTurn(me, s);
+    assert.deepEqual(await finalize2({ session: s, user: me, turn, kind: 'CORRECT', outcome: 'CORRECTED', target: legacy5, content: 'أنا بشتغل بالليل.', equivalent }),
+      [{ outcome: 'TARGET_CHANGED', reply: 'reply:TARGET_CHANGED' }]);
+    assert.deepEqual([(await commandOf(turn)).target_memory_id, (await commandOf(turn)).result_memory_id], [legacy5, null]);
+  }
+  assert.equal(await footprint(), quiet5, 'no successor, no supersede, no attribution, no disposition');
+  // An UNATTRIBUTED equivalent alone is still the approved CORRECTED_TO_EXISTING (unchanged).
+  const legacy6 = await memory(me, { content: 'بيصحى بدري.' });
+  const copy6 = await memory(me, { content: 'أنا بصحى بدري.' });
+  assert.equal((await finalize2({ session: s, user: me, turn: await userTurn(me, s), kind: 'CORRECT', outcome: 'CORRECTED', target: legacy6, content: 'أنا بصحى بدري.' }))[0].outcome, 'CORRECTED_TO_EXISTING');
+  assert.deepEqual(await statuses(legacy6, copy6), ['SUPERSEDED', 'ACTIVE']);
+
+  stage = 'S-2: chosen by "which one?", the question answers that question and keeps the words of the request that first asked';
+  const x = await memory(me, { content: 'ساكن في الدقي.' });
+  const y = await memory(me, { content: 'ساكن في الدقي.', type: 'STABLE_PREFERENCE' });
+  const which = await userTurn(me, s, { content: 'لا، مش ساكن في الدقي، ساكن في الزمالك' });
+  await finalize2({ session: s, user: me, turn: which, kind: 'CORRECT', outcome: 'CLARIFICATION_REQUIRED', candidates: [x, y] });
+  const chose = await userTurn(me, s, { content: '1' });
+  await rejected(async () => finalize2({ session: s, user: me, turn: chose, kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: legacy5, answers: (await commandOf(which)).id }), ['42501']);
+  await finalize2({ session: s, user: me, turn: chose, kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target: x, answers: (await commandOf(which)).id, reply: QUESTION });
+  const subjectTurn = await userTurn(me, s, { content: 'عني' });
+  assert.deepEqual((await pendingReads(subjectTurn)).correction,
+    [{ command_id: (await commandOf(chose)).id, target_memory_id: x, clarified_turn_content: 'لا، مش ساكن في الدقي، ساكن في الزمالك' }]);
+  const successorX = randomUUID();
+  assert.equal((await finalize2({ session: s, user: me, turn: subjectTurn, kind: 'CORRECT', outcome: 'CORRECTED', target: x, newId: successorX, content: 'أنا ساكن في الزمالك.', subject: 'SELF', answers: (await commandOf(chose)).id }))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(x, y, successorX), ['SUPERSEDED', 'ACTIVE', 'ACTIVE']);
+  assert.equal((await attributionOf(successorX)).basis, 'USER_CLARIFIED');
+
+  stage = 'S-2 / R2: the question and answer turns are the command\'s; the background writes nothing for either';
+  for (const turnId of [q1.turn, a1]) {
+    const id = randomUUID();
+    await client.query("UPDATE public.conversation_turns SET status = 'COMPLETED' WHERE id = $1 AND status <> 'COMPLETED'", [turnId]);
+    await client.query(`INSERT INTO public.post_response_intelligence_executions (id, event_id, user_id, session_id, source_turn_id, event_version, processing_path,
+        safety_disposition, state, current_stage) VALUES ($1, $2, $3, $4, $5, '2.0', 'FAST', 'ALLOW', 'RUNNING', 'VERIFIER_0152')`, [id, randomUUID(), me, s, turnId]);
+    await client.query("INSERT INTO public.post_response_intelligence_effects (execution_id, effect_key, state) VALUES ($1, 'MEMORY_WRITE', 'CLAIMED')", [id]);
+    assert.deepEqual(await record(turnId, 'أنا شغال في الشركة.', { type: 'PERSONAL_FACT' }), { outcome: 'SKIPPED_COMMAND_TURN', memory_id: null });
+  }
+
+  stage = 'S-2: the lineage invariant holds; another owner is untouched';
+  assert.deepEqual(await lineageViolations(me), []);
+  assert.equal(await count('SELECT count(*) AS n FROM public.memory_control_commands WHERE user_id = $1', [stranger]), 0);
 }
 
 // ------------------------------------------------------------------------------------------------------------------
@@ -1277,12 +1448,12 @@ async function main() {
     await verifyCatalog();
     await verifyKeyParity();
     await verifyLegacyAttribution();
-    for (const step of [verifyEvidenceProtection, verifySubjectLifecycle, verifyDuplicates, verifySubjectIsolation, verifyBackgroundWriter, verifyFailureInjection, verifyIsolation, verifyMonotonicity, verifyErasure]) {
+    for (const step of [verifyEvidenceProtection, verifySubjectLifecycle, verifyDuplicates, verifySubjectIsolation, verifyCorrectionSubject, verifyBackgroundWriter, verifyFailureInjection, verifyIsolation, verifyMonotonicity, verifyErasure]) {
       await client.query('BEGIN');
       try { await step(); } finally { await client.query('ROLLBACK'); }
     }
     await verifyRaces();
-    console.log('Verified migration 0152 Memory Subject Identity, Atomicity & Evidence Protection: append-only subject attribution created only with its Memory, the legacy attribution by provenance alone, SELF-only personal Evidence with permanent subject taints, the subject question and its answers, one ACTIVE equivalent per owner and subject with auditable dispositions and lineage, a fact about someone else never retired by words that match one about the user, no background write for a command turn (R2) or a fact a later command withdrew, refusal of unsupported generated candidates, writers limited to v2, the background writer and the governed erasure, atomic under injected failures, isolated per owner, monotonic under random sequences, and race-safe without deadlock.');
+    console.log('Verified migration 0152 Memory Subject Identity, Atomicity & Evidence Protection: append-only subject attribution created only with its Memory, the legacy attribution by provenance alone, SELF-only personal Evidence with permanent subject taints, the subject question and its answers, one ACTIVE equivalent per owner and subject with auditable dispositions and lineage, a fact about someone else never retired by words that match one about the user, no correction resolved into another subject by inference, no background write for a command turn (R2) or a fact a later command withdrew, refusal of unsupported generated candidates, writers limited to v2, the background writer and the governed erasure, atomic under injected failures, isolated per owner, monotonic under random sequences, and race-safe without deadlock.');
   } finally {
     await client.end();
   }
