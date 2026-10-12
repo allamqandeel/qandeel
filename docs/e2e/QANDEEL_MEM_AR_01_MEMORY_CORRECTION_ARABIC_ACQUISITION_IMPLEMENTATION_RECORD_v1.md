@@ -383,10 +383,10 @@ CC-H1, CC-M1, CC-M2′ and CC-M3′.
 **Branch:** `mem/mem-ar-01c-subject-identity-evidence-protection`, cut from `origin/main`
 `20e33ae3f0c7a4c95a952802d293547f1a98f676` (the merge of PR #329).
 
-**Implementation commit (the tested code tree):** `b73206bb700d91c576eafc7824ad953bdd25a74e` — the first implementation
-`b9549663b9f5eee234dabc24af664bd295326079`, the G-C2 review corrections RC-C1 and RC-C2 (§13, `38c977f`) and the
-Product Owner's G-C2 decisions L-10 and L-11 (§14). Every later commit on the branch adds documentation or CI-01 results
-only (RC-3).
+**Implementation commit (the tested code tree):** `023f68e4e465795fd01aac80a857cf85ccb47851` — the first implementation
+`b9549663b9f5eee234dabc24af664bd295326079`, the G-C2 review corrections RC-C1 and RC-C2 (§13, `38c977f`), the
+Product Owner's G-C2 decisions L-10 and L-11 (§14, `b73206bb`) and the G-C2 final corrections A and L-12 (§15). Every
+later commit on the branch adds documentation or CI-01 results only (RC-3).
 
 ### 1. Anti-duplication gate (contract §1.2), at the start of the slice
 
@@ -524,16 +524,24 @@ create.
 
 ### 8. Validation
 
-**Local (on the implementation tree `b73206bb`; the `38c977f` and `b9549663` figures, where they differ, in brackets):**
+**Local (on the implementation tree `023f68e4`; the `b73206bb`, `38c977f` and `b9549663` figures, where they differ, in brackets):**
 
 | Check | Result |
 |---|---|
 | API typecheck (`tsconfig.json`, `tsconfig.scripts.json`) | pass |
-| API Jest, full | 235 suites, 5,437 / 5,437 [5,427; 5,422] |
-| Static: MEM-AR-01 contract (new) · W3-MEGA-M · INTEL-TM-01 · CI-01 · task-closure governance · `test:database` | 36 / 36 [28; 21] · 36 / 36 · 23 / 23 · 18 / 18 · 24 / 24 · 1,304 / 1,304; every `tests/*.test.mjs` file: 1,337 / 1,337 [1,329] |
-| verify-0152 on a fresh PostgreSQL 17.10 | pass, with D-2 (`38c977f`) and S-2 (`b73206bb`) |
-| Full Intelligence smoke-transport adapter test, Full Intelligence e2e smoke, Integrated Brain e2e hardening v2, A2 e2e smoke, on a fresh PostgreSQL 17.10 | 5 / 5, PASS, PASS, PASS — a local pre-check only, against a scratch in-process Redis Streams stand-in (no Redis on the development machine); the binding runs are API CI's, against `redis:7` |
+| API Jest, full | 235 suites, 5,448 / 5,448 [5,437; 5,427; 5,422] |
+| Static: MEM-AR-01 contract (new) · W3-MEGA-M · INTEL-TM-01 · CI-01 · task-closure governance · `test:database` | 40 / 40 [36; 28; 21] · 36 / 36 · 23 / 23 · 18 / 18 · 24 / 24 · 1,304 / 1,304; every `tests/*.test.mjs` file: 1,341 / 1,341 [1,337; 1,329] |
+| verify-0152 on a fresh PostgreSQL 17.10 | pass, with D-2 (`38c977f`), S-2 (`b73206bb`) and O-1 (`023f68e4`) |
+| Full Intelligence smoke-transport adapter test, Full Intelligence e2e smoke, Integrated Brain e2e hardening v2, A2 e2e smoke, on a fresh PostgreSQL 17.10 (on `b73206bb`; §15 changes none of their paths, and API CI runs them on the PR head) | 5 / 5, PASS, PASS, PASS — a local pre-check only, against a scratch in-process Redis Streams stand-in (no Redis on the development machine); the binding runs are API CI's, against `redis:7` |
 | The API CI database leg, locally, PostgreSQL 17.10 (126 steps) | 119 pass; the rest are environment-only: 4 need Redis, 0133 needs `psql` (passed through a node-pg replay of the same files), 0130's known Windows clock-skew check (passes on rerun) |
+
+**CI-01 on `023f68e4e465795fd01aac80a857cf85ccb47851`** (`scripts/ci-01/results/023f68e4e465795fd01aac80a857cf85ccb47851.json`): 14 scenarios RUN, controls hold;
+against the results on `b73206bb…` the summary, controls, census and every scenario are identical once random ids and
+timestamps are set aside (only the head, cluster port, nonce and timings differ): `forgottenServed` stays 0 (R2), no
+scenario ends with a duplicate ACTIVE Memory, no SELF or OTHER Memory changes beyond the earlier results, and PG-02 and
+the Evidence controls hold. No scenario corrects an unattributed fact beside an attributed copy of its words or asks an
+ambiguous correction whose new value is already remembered, so A and L-12 leave CI-01 unchanged. Every earlier results
+file is untouched.
 
 **CI-01 on `b73206bb700d91c576eafc7824ad953bdd25a74e`** (`scripts/ci-01/results/b73206bb700d91c576eafc7824ad953bdd25a74e.json`): 14 scenarios RUN, controls hold; against the results
 on `38c977f…` the summary, controls, census and every scenario are identical once random ids and timestamps are set
@@ -558,7 +566,12 @@ results (`3d0ff0f…`) only two summaries move, both as intended; C2, F1, H1, K1
 | F1 | PG-02 holds: 0 injected after forget, 0 relied on after withdrawal |
 | F2 (new) | reliance `NONE` → forget → `REVIEW_PENDING` → re-confirmation → still `REVIEW_PENDING` (no automatic restoration) |
 
-**Focused Database Verification** (dispatched from `main`, selector `migration-0152`, `target_ref` = `b73206bb700d91c576eafc7824ad953bdd25a74e`): run 1
+**Focused Database Verification** (dispatched from `main`, selector `migration-0152`, `target_ref` = `023f68e4e465795fd01aac80a857cf85ccb47851`): run 1
+[`38208191349`](https://github.com/allamqandeel/qandeel/actions/runs/38208191349) — PASS (harness `main`, 1 verifier, 1 passed), run 2
+[`38208209858`](https://github.com/allamqandeel/qandeel/actions/runs/38208209858) — PASS (harness `main`, 1 verifier, 1 passed); two
+consecutive fresh green runs on the same implementation SHA, with D-2, S-2 and O-1. The earlier pairs follow.
+
+**Focused Database Verification on `b73206bb700d91c576eafc7824ad953bdd25a74e`** (before A and L-12): run 1
 [`38181599496`](https://github.com/allamqandeel/qandeel/actions/runs/38181599496) — PASS (harness `main`, 1 verifier, 1 passed), run 2
 [`38181746727`](https://github.com/allamqandeel/qandeel/actions/runs/38181746727) — PASS (harness `main`, 1 verifier, 1 passed); two
 consecutive fresh green runs on the same implementation SHA, with D-2 and S-2. The pair on `38c977f…` follows.
@@ -602,8 +615,8 @@ Apply the migration and release the API together. **No hosted migration or relea
 | L-8 | the background TypeScript pre-screen still skips an exact duplicate before the writer, so a crash-replay of a capture whose row already exists completes with no fresh Evidence instead of `ALREADY_RECORDED` (the SQL replay rule is proven directly) | recorded |
 | L-9 | Arabic subject answers and screens are Egyptian Arabic plus a minimal English list | by contract |
 | L-10 | when the user's fact and someone else's carry the same words, the existing target question lists the same words twice: the options carry no subject label (no approved copy exists for one); the user answers by number | **DECIDED** by the Product Owner (2026-10-12) and implemented: approved labels (§14) |
-| L-11 | an unattributed Memory is compatible with every subject (A1 C1.3, the v2 header): an undecided correction of an unattributed fact may end in an existing equivalent about someone else (`CORRECTED_TO_EXISTING`), and a command on an unattributed target retires compatible copies of either subject. The plan never offers an unattributed copy as the target while an attributed copy of its words exists, so this needs a fact whose subject was never established | **DECIDED** for the correction's new value by the Product Owner (2026-10-12) and implemented: the subject question, never an inferred merge (§14). The second half — an unattributed target's compatible copies of the OLD words — was not part of the decision and is unchanged: the plan never picks an unattributed target while an attributed copy of its words is current, so it needs a concurrent write between the plan's read and the lock |
-| L-12 | an ambiguous correction («which one?») whose new value is already remembered answers `ALREADY_CORRECT` («فاكرها كده أصلًا») from any current Memory with those words, whatever its subject (01B behaviour). It changes no Memory | recorded for the Product Owner; not changed (outside L-10 / L-11) |
+| L-11 | an unattributed Memory is compatible with every subject (A1 C1.3, the v2 header): an undecided correction of an unattributed fact may end in an existing equivalent about someone else (`CORRECTED_TO_EXISTING`), and a command on an unattributed target retires compatible copies of either subject. The plan never offers an unattributed copy as the target while an attributed copy of its words exists, so this needs a fact whose subject was never established | **DECIDED** for the correction's new value by the Product Owner (2026-10-12) and implemented: the subject question, never an inferred merge (§14). The second half — an unattributed correction target's copies of the OLD words — **DECIDED** (2026-10-12) and implemented as correction A (§15): never retired when SELF or OTHER; FORGET / DISABLE keep the RC-C2 rule |
+| L-12 | an ambiguous correction («which one?») whose new value is already remembered answers `ALREADY_CORRECT` («فاكرها كده أصلًا») from any current Memory with those words, whatever its subject (01B behaviour). It changes no Memory | **DECIDED** by the Product Owner (2026-10-12) and implemented as correction B (§15) |
 
 ### 12. Aggregate-only impact runbook (NOT executed; needs a separate explicit authorization)
 
@@ -723,7 +736,63 @@ Discrimination: against the pre-decision service and copy, 7 of the 10 new route
 unchanged-behaviour guards); S-2 fails at its first step against the pre-decision 0152 (the shape is refused). The static
 contract adds the decision detector and eight planted defects (36 / 36).
 
-Residual for the Product Owner, not changed (outside the two decisions): L-11's second half and L-12 (§11).
+Residual for the Product Owner, not changed (outside the two decisions): L-11's second half and L-12 (§11). *(Decided on
+2026-10-12: §15.)*
+
+### 15. G-C2 final corrections (A, L-12)
+
+The Product Owner's review of head `446e6dbb` (API CI [`38182581650`](https://github.com/allamqandeel/qandeel/actions/runs/38182581650)
+SUCCESS) approved two final corrections in the same PR ("MEM-AR-01C — Final G-C2 Corrections", 2026-10-12; no new task, no
+merge). Implemented in `023f68e4e465795fd01aac80a857cf85ccb47851`. The anti-duplication check found no newer commit on the branch or `main`
+(`20e33ae3`) addressing either.
+
+**A — no cross-subject old-fact retirement (0152, a bounded change to the unmerged migration).** Confirmed: in v2's CORRECT
+branch the old-words loop admitted a copy when `target_subject IS NULL OR …`, so a correction of an UNATTRIBUTED fact
+superseded every ACTIVE copy of its old words, SELF and OTHER included, with a `CORRECTED` disposition (reproduced on a
+disposable database with the previous 0152: both copies `SUPERSEDED`). The plan never offers such a target while an
+attributed copy of its words is current (`collapseEquivalents`), so reaching it needs a write between the plan's read and
+the lock — or an expired attributed copy, which the loop also took. Correction, the smallest one:
+- under the lock, a correction of an UNATTRIBUTED fact with a current SELF or OTHER copy of its old words commits
+  `TARGET_CHANGED` and changes nothing — the existing fail-closed outcome and reply, as L-11's guard; a retry then reads
+  the attributed fact as its target, and that correction takes the UNATTRIBUTED copies with it;
+- the old-words loop retires only UNATTRIBUTED copies and copies with the target's own subject
+  (`coalesce(subject, target_subject) IS NOT DISTINCT FROM target_subject`): an UNATTRIBUTED target retires only
+  UNATTRIBUTED copies (its legacy pair, as before), and an expired SELF or OTHER copy is never retired;
+- SELF and OTHER targets are unchanged (same-subject and UNATTRIBUTED copies); `CORRECTED_TO_EXISTING`, provenance,
+  dispositions, versioning and the one-transaction finalization are unchanged. FORGET and DISABLE were inspected and keep
+  the approved RC-C2 rule: a forget or do-not-rely request is the user's own instruction about those words, and leaving a
+  copy would serve forgotten words again (R2 / U1); they are not corrections.
+
+**B — L-12, no misleading ALREADY_CORRECT (API only).** Confirmed: an explicit correction whose old words did not resolve
+to one fact answered `ALREADY_CORRECT` («فاكرها كده أصلًا») from any current Memory holding the new value — before an
+ambiguous target was asked about, and whatever that Memory's subject (someone else's, or never established). Correction:
+- the target is resolved first: an ambiguous one asks the existing «تقصد أنهي واحدة؟» question, and the chosen fact's
+  correction then decides — `CORRECTED_TO_EXISTING` into a Memory of the established subject, a new successor, or the L-11
+  subject question when the subject is unknown;
+- `ALREADY_CORRECT` is claimed only when no remembered fact matches the old words any more, and only from a Memory whose
+  established subject is the one the words name (the existing subject screen: «أنا …», "I …" → SELF). Someone else's fact,
+  an UNATTRIBUTED one (never SELF by inference) or words that name nobody prove nothing: the turn stays ordinary
+  conversation, the existing no-command path;
+- no Memory changes to produce a reply; clarification binding, option numbering and stale-answer protection are the
+  existing ones; Arabic and English share the one pipeline. **No new Product Copy** — every reply is an approved one.
+
+| Check (O-1 in verify-0152; the G-C2 final-correction cases in the route spec) | Result |
+|---|---|
+| UNATTRIBUTED target + a SELF, an OTHER, or both copies of the old words (also with an UNATTRIBUTED duplicate, a decided subject, or `CORRECTED_TO_EXISTING`) | `TARGET_CHANGED`; no supersede, successor, attribution or disposition; PG-02 reliance and Evidence standing unchanged |
+| A SELF copy committed while the correction waits on the owner lock (two connections, the wait observed in `pg_stat_activity`, no sleep as proof) | the correction blocks, then commits `TARGET_CHANGED`; both rows `ACTIVE` |
+| Retry on the attributed fact; a stale target; a replayed turn | the retry corrects it and retires the UNATTRIBUTED copies (dispositions name it); `TARGET_CHANGED`; nothing written |
+| Expired SELF copy of the old words | not retired; the UNATTRIBUTED fact is corrected alone |
+| UNATTRIBUTED legacy pair; SELF / OTHER targets with same-subject duplicates | one fact, as before; same-subject and UNATTRIBUTED copies `CORRECTED` with dispositions naming the target; the other subject `ACTIVE`; successor attribution `EXPLICIT_STATEMENT` / `CORRECTION_INHERITED` |
+| Another owner with the same words | untouched; no command |
+| Ambiguous target + new value only about someone else / only the user's / both | which one? → the chosen fact corrected (a new SELF successor / `CORRECTED_TO_EXISTING` into the user's own / the L-11 subject question, then exactly that person's fact); never "already" |
+| No old fact left + the new value about someone else, UNATTRIBUTED, or words naming nobody (Arabic, English) | ordinary conversation; no command; no Memory change; no "already" |
+| No old fact left + the new value with the subject the words name (Arabic, English) | `ALREADY_CORRECT`, unchanged |
+| «لا», a re-asked, lapsed or late answer | nothing changes |
+| R2, L-10, L-11, RC-C1, RC-C2, PG-02 | unchanged: every earlier stage and route case passes; CI-01 identical |
+
+Discrimination: against the previous 0152, O-1 fails at its first step (the old body commits `CORRECTED` and supersedes
+the SELF / OTHER copies); against the previous service, 6 of the 7 L-12 route cases fail (the seventh is the justified
+"already" guard). The static contract adds the correction-truth detector and five planted defects (40 / 40).
 
 **Next gate:** G-C2 — MEM-AR-01C Final PR Review (STOP). No merge, no auto-merge, no deployment; merge only on the
 Product Owner's explicit «ادمج».
