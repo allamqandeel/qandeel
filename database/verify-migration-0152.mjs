@@ -27,6 +27,12 @@
 //         fact (its own owner-token read, the request's words through a "which one?" chain), only CORRECTED of that fact
 //         with a confirmed subject (USER_CLARIFIED) or a decline answers it, once, from the very next turn; under the lock a
 //         newly established equivalent changes nothing; PG-02 stays withheld; R2 for both turns;
+//   O-1   (G-C2 A) a correction of an UNATTRIBUTED fact never changes a SELF or OTHER Memory because its old words match:
+//         with a SELF, an OTHER or both copies (and an UNATTRIBUTED duplicate beside them) nothing changes, also for
+//         CORRECTED_TO_EXISTING and a decided subject; PG-02 and Evidence standing unchanged; the retry on the attributed
+//         fact, a stale target and a replay; an expired SELF copy never retired; the UNATTRIBUTED legacy pair, SELF and
+//         OTHER targets with same-subject duplicates (dispositions, attribution), another owner with the same words, and
+//         (W-2) a SELF copy committed by a lock-holding writer while the correction waits;
 //   L-2   RECONFIRMED over an unattributed row linked by a Hypothesis: one successor, withheld before and after, never NONE;
 //   R2    background_record_memory_v1: SKIPPED_COMMAND_TURN for a target answer and a subject answer (the confirmed
 //         R2 shape), the replay writes nothing, an ordinary turn is captured; W-3 SUPERSEDED_BY_LATER_COMMAND;
@@ -39,7 +45,8 @@
 //         NONE, every SUPERSEDED row keeps its lineage, no attribution changes;
 //   W-2 / W-4  on two real connections, the second shown to block: REMEMBER vs background capture of the same fact (both
 //         orders), CORRECT into a value being captured (both orders), two sessions remembering the same fact - exactly
-//         one ACTIVE copy each time; v2 against the 0151 bind guard over the same Memory, both orders, no 40P01.
+//         one ACTIVE copy each time; a SELF copy of the old words committed while a correction waits (O-1); v2 against
+//         the 0151 bind guard over the same Memory, both orders, no 40P01.
 // Committed race fixtures are removed and the removal is checked; the scratch database is dropped.
 import assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
@@ -1004,6 +1011,134 @@ async function verifyCorrectionSubject() {
 }
 
 // ------------------------------------------------------------------------------------------------------------------
+// O-1 (G-C2 correction A, Product Owner 2026-10-12). A correction of an UNATTRIBUTED fact never retires, supersedes or
+// otherwise changes a SELF or OTHER Memory because its old words match (rolled back; the copy that arrives while the
+// correction waits on the owner lock is in the committed races below). Its own UNATTRIBUTED legacy copies still leave
+// with it, and a SELF or OTHER target still retires its UNATTRIBUTED and same-subject copies.
+// ------------------------------------------------------------------------------------------------------------------
+async function verifyOldValueIsolation() {
+  const me = await reader();
+  const stranger = await reader();
+  const s = await session(me);
+  let lastTurn;
+  const turn = async () => (lastTurn = await userTurn(me, s));
+  const statuses = async (...ids) => { const out = []; for (const id of ids) out.push((await memoryRow(id)).status); return out; };
+  const standings = async (ids) => { const out = []; for (const id of ids) out.push(await standing(me, id)); return out; };
+  const footprint = async () => JSON.stringify([
+    await rows('SELECT id, status, version, supersedes_memory_id FROM public.memories WHERE user_id = $1 ORDER BY id', [me]),
+    await rows('SELECT memory_id, subject, basis FROM public.memory_subject_attributions WHERE user_id = $1 ORDER BY memory_id', [me]),
+    await dispositionsOf(me)]);
+  const dispositionsBy = async (command) => (await dispositionsOf(me)).filter((d) => d.command_id === command)
+    .map((d) => [d.memory_id, d.primary_memory_id, d.disposition]);
+  const sorted = (pairs) => [...pairs].sort((l, r) => l[0].localeCompare(r[0]));
+  const correct = (target, content, extra = {}) => finalize2({ session: s, user: me, turn: lastTurn, kind: 'CORRECT', outcome: 'CORRECTED', target, content, ...extra });
+  const strangersCopies = [];
+  const words = async (content, ...subjects) => {
+    strangersCopies.push(await memory(stranger, { content }), await memory(stranger, { content, subject: 'SELF' }));
+    const ids = [];
+    for (const subject of subjects) ids.push(await memory(me, { content, subject }));
+    return ids;
+  };
+
+  stage = 'O-1: an UNATTRIBUTED target with a SELF, an OTHER, or a SELF and an OTHER copy of its words - nothing changes';
+  for (const subjects of [['SELF'], ['OTHER'], ['SELF', 'OTHER']]) {
+    const content = `شغال في الورشة ${subjects.join(' و ')}.`;
+    const [legacy, ...copies] = await words(content, null, ...subjects);
+    const h = await hypothesis(me, { supporting: copies });
+    const relied = [await change(h), ...await standings(copies)];
+    const before = await footprint();
+    await turn();
+    assert.deepEqual(await correct(legacy, 'أنا شغال في المكتب.'), [{ outcome: 'TARGET_CHANGED', reply: 'reply:TARGET_CHANGED' }], subjects.join('+'));
+    assert.equal(await footprint(), before, `${subjects.join('+')}: no supersede, successor, attribution or disposition`);
+    const command = await commandOf(lastTurn);
+    assert.deepEqual([command.kind, command.outcome, command.target_memory_id, command.result_memory_id], ['CORRECT', 'TARGET_CHANGED', legacy, null]);
+    assert.deepEqual([await change(h), ...await standings(copies)], relied, 'PG-02 / Evidence standing unchanged');
+    // The same when the words decide the new value's subject, either way.
+    for (const extra of [{ subject: 'SELF' }, { subject: 'OTHER' }]) {
+      await turn();
+      assert.equal((await correct(legacy, 'أنا شغال في المكتب.', extra))[0].outcome, 'TARGET_CHANGED');
+    }
+    assert.equal(await footprint(), before);
+  }
+
+  stage = 'O-1: an UNATTRIBUTED legacy duplicate next to a SELF copy is not retired either - the whole correction waits for its fact';
+  const [legacyB, legacyDupB, selfB] = await words('بيحب الكورة.', null, null, 'SELF');
+  const beforeB = await footprint();
+  await turn();
+  assert.equal((await correct(legacyB, 'أنا بحب التنس.'))[0].outcome, 'TARGET_CHANGED');
+  assert.equal(await footprint(), beforeB);
+  // Retried as the server's read now offers it (the SELF fact), the correction takes the UNATTRIBUTED copies with it.
+  await turn();
+  assert.equal((await correct(selfB, 'أنا بحب التنس.', { subject: 'SELF' }))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(selfB, legacyB, legacyDupB), ['SUPERSEDED', 'SUPERSEDED', 'SUPERSEDED']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), sorted([[legacyB, selfB, 'CORRECTED'], [legacyDupB, selfB, 'CORRECTED']]));
+  // A stale target (already corrected) and a replayed turn change nothing.
+  const replayed = lastTurn;
+  const settled = await footprint();
+  await turn();
+  assert.equal((await correct(legacyB, 'أنا بحب التنس.'))[0].outcome, 'TARGET_CHANGED');
+  lastTurn = replayed;
+  assert.deepEqual(await correct(selfB, 'أنا بحب التنس.', { subject: 'SELF' }), [], 'a replayed turn writes nothing');
+  assert.equal(JSON.parse(await footprint())[0].length, JSON.parse(settled)[0].length);
+
+  stage = 'O-1: an expired SELF copy of the old words is not current and not retired - the UNATTRIBUTED fact is corrected alone';
+  const legacyC = await memory(me, { content: 'عنده اجتماع بكرة.' });
+  const expiredC = randomUUID();
+  await client.query(`INSERT INTO public.memories (id, user_id, type, content, source, confidence, importance, status, created_at, updated_at, expires_at)
+    VALUES ($1, $2, 'PERSONAL_FACT', 'عنده اجتماع بكرة.', 'USER_STATED', 0.95, 0.65, 'ACTIVE', now() - interval '2 days', now() - interval '2 days', now() + interval '1 day')`, [expiredC, me]);
+  await client.query("INSERT INTO public.memory_subject_attributions (memory_id, user_id, subject, basis) VALUES ($1, $2, 'SELF', 'EXPLICIT_STATEMENT')", [expiredC, me]);
+  // Attributed while it was current, then its time passed (a fixture edit of an immutable field, so without triggers).
+  await client.query("SET LOCAL session_replication_role = 'replica'");
+  await client.query("UPDATE public.memories SET expires_at = now() - interval '1 day' WHERE id = $1", [expiredC]);
+  await client.query("SET LOCAL session_replication_role = 'origin'");
+  await turn();
+  assert.equal((await correct(legacyC, 'أنا عندي اجتماع النهارده.'))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(legacyC, expiredC), ['SUPERSEDED', 'ACTIVE']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), [], 'the expired SELF Memory is not disposed');
+
+  stage = 'O-1: UNATTRIBUTED legacy duplicates are still one fact (unchanged)';
+  const [legacyD, legacyDupD] = await words('شغلي في المخزن.', null, null);
+  const successorD = randomUUID();
+  await turn();
+  assert.equal((await correct(legacyD, 'أنا شغال في المحل.', { newId: successorD }))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(legacyD, legacyDupD, successorD), ['SUPERSEDED', 'SUPERSEDED', 'ACTIVE']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), [[legacyDupD, legacyD, 'CORRECTED']]);
+  assert.equal(await attributionOf(successorD), undefined, 'an UNATTRIBUTED fact gives an UNATTRIBUTED successor');
+
+  stage = 'O-1: a SELF target retires its SELF and UNATTRIBUTED copies; someone else\'s copy stays';
+  const [selfE, selfDupE, legacyE, otherE] = await words('بيسافر كل شهر.', 'SELF', 'SELF', null, 'OTHER');
+  const successorE = randomUUID();
+  await turn();
+  assert.equal((await correct(selfE, 'أنا بسافر كل سنة.', { newId: successorE, subject: 'SELF' }))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(selfE, selfDupE, legacyE, otherE, successorE), ['SUPERSEDED', 'SUPERSEDED', 'SUPERSEDED', 'ACTIVE', 'ACTIVE']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), sorted([[selfDupE, selfE, 'CORRECTED'], [legacyE, selfE, 'CORRECTED']]));
+  assert.deepEqual(await attributionOf(successorE), { subject: 'SELF', basis: 'EXPLICIT_STATEMENT', command_id: (await commandOf(lastTurn)).id, execution_id: null });
+
+  stage = 'O-1: an OTHER target retires its OTHER and UNATTRIBUTED copies; the user\'s copy stays';
+  const [otherF, otherDupF, legacyF, selfF] = await words('بيحب السمك.', 'OTHER', 'OTHER', null, 'SELF');
+  const successorF = randomUUID();
+  await turn();
+  assert.equal((await correct(otherF, 'بيحب الفراخ.', { newId: successorF }))[0].outcome, 'CORRECTED');
+  assert.deepEqual(await statuses(otherF, otherDupF, legacyF, selfF, successorF), ['SUPERSEDED', 'SUPERSEDED', 'SUPERSEDED', 'ACTIVE', 'ACTIVE']);
+  assert.deepEqual(await dispositionsBy((await commandOf(lastTurn)).id), sorted([[otherDupF, otherF, 'CORRECTED'], [legacyF, otherF, 'CORRECTED']]));
+  assert.equal((await attributionOf(successorF)).basis, 'CORRECTION_INHERITED');
+  // CORRECTED_TO_EXISTING takes the same rule: an UNATTRIBUTED target with an established copy of its words changes nothing.
+  const [legacyG, otherG] = await words('ساكن في شبرا.', null, 'OTHER');
+  const [existingG] = await words('أنا ساكن في حلوان.', 'SELF');
+  const beforeG = await footprint();
+  await turn();
+  assert.equal((await correct(legacyG, 'أنا ساكن في حلوان.', { subject: 'SELF', equivalent: existingG }))[0].outcome, 'TARGET_CHANGED');
+  assert.equal(await footprint(), beforeG);
+  assert.equal((await memoryRow(otherG)).status, 'ACTIVE');
+
+  stage = 'O-1: lineage, attributions and another owner\'s copies hold';
+  assert.deepEqual(await lineageViolations(me), []);
+  assert.equal(await count('SELECT count(*) AS n FROM public.memory_subject_attributions a JOIN public.memories m ON m.id = a.memory_id WHERE a.user_id <> m.user_id'), 0);
+  assert.deepEqual(await statuses(...strangersCopies), strangersCopies.map(() => 'ACTIVE'), 'another owner with the same words is untouched');
+  assert.equal(await count('SELECT count(*) AS n FROM public.memory_control_commands WHERE user_id = $1', [stranger]), 0);
+}
+
+// ------------------------------------------------------------------------------------------------------------------
 // R2 + W-3 + W-6 + the background writer's contract (rolled back).
 // ------------------------------------------------------------------------------------------------------------------
 async function verifyBackgroundWriter() {
@@ -1385,6 +1520,21 @@ async function verifyRaces() {
       assert.equal(await count("SELECT count(*) AS n FROM public.memories WHERE user_id = $1 AND status = 'ACTIVE' AND content = $2", [me, fruit]), 1, `exactly one ACTIVE ${fruit}`);
     }
 
+    stage = 'O-1: a SELF copy of the old words committed while the correction waits on the owner lock - nothing changes';
+    // After the server's read, a writer holding the owner lock commits a SELF copy of the UNATTRIBUTED fact's words; the
+    // correction blocks on that lock, then sees the copy under its own and fails closed.
+    const legacyR = await committed(() => memory(me, { content: 'شغال في الورشة.' }));
+    t = await generatingTurn();
+    let copyR;
+    const [, waited] = await race(
+      async (on) => { await on.query('SELECT public.memory_equivalence_lock_v1($1)', [me]); copyR = await memory(me, { content: 'شغال في الورشة.', subject: 'SELF', on }); },
+      (on) => finalize2({ session: s, user: me, turn: t, kind: 'CORRECT', outcome: 'CORRECTED', content: 'أنا شغال في المكتب.', target: legacyR }, on));
+    assert.deepEqual(waited.value, [{ outcome: 'TARGET_CHANGED', reply: 'reply:TARGET_CHANGED' }]);
+    assert.deepEqual([(await memoryRow(legacyR)).status, (await memoryRow(copyR)).status], ['ACTIVE', 'ACTIVE']);
+    assert.equal(await count('SELECT count(*) AS n FROM public.memories WHERE supersedes_memory_id = ANY($1)', [[legacyR, copyR]]), 0, 'no successor');
+    assert.equal(await count('SELECT count(*) AS n FROM public.memory_equivalence_dispositions WHERE memory_id = ANY($1)', [[legacyR, copyR]]), 0, 'no disposition');
+    assert.equal((await attributionOf(copyR)).subject, 'SELF');
+
     stage = 'W-2 / T-C4-3: two sessions of one owner remember the same fact - exactly one ACTIVE copy';
     const s2 = await committed(() => session(me));
     const t1 = await generatingTurn();
@@ -1448,12 +1598,12 @@ async function main() {
     await verifyCatalog();
     await verifyKeyParity();
     await verifyLegacyAttribution();
-    for (const step of [verifyEvidenceProtection, verifySubjectLifecycle, verifyDuplicates, verifySubjectIsolation, verifyCorrectionSubject, verifyBackgroundWriter, verifyFailureInjection, verifyIsolation, verifyMonotonicity, verifyErasure]) {
+    for (const step of [verifyEvidenceProtection, verifySubjectLifecycle, verifyDuplicates, verifySubjectIsolation, verifyCorrectionSubject, verifyOldValueIsolation, verifyBackgroundWriter, verifyFailureInjection, verifyIsolation, verifyMonotonicity, verifyErasure]) {
       await client.query('BEGIN');
       try { await step(); } finally { await client.query('ROLLBACK'); }
     }
     await verifyRaces();
-    console.log('Verified migration 0152 Memory Subject Identity, Atomicity & Evidence Protection: append-only subject attribution created only with its Memory, the legacy attribution by provenance alone, SELF-only personal Evidence with permanent subject taints, the subject question and its answers, one ACTIVE equivalent per owner and subject with auditable dispositions and lineage, a fact about someone else never retired by words that match one about the user, no correction resolved into another subject by inference, no background write for a command turn (R2) or a fact a later command withdrew, refusal of unsupported generated candidates, writers limited to v2, the background writer and the governed erasure, atomic under injected failures, isolated per owner, monotonic under random sequences, and race-safe without deadlock.');
+    console.log('Verified migration 0152 Memory Subject Identity, Atomicity & Evidence Protection: append-only subject attribution created only with its Memory, the legacy attribution by provenance alone, SELF-only personal Evidence with permanent subject taints, the subject question and its answers, one ACTIVE equivalent per owner and subject with auditable dispositions and lineage, a fact about someone else never retired by words that match one about the user, no correction resolved into another subject by inference, no established fact changed by the old words of an UNATTRIBUTED correction, no background write for a command turn (R2) or a fact a later command withdrew, refusal of unsupported generated candidates, writers limited to v2, the background writer and the governed erasure, atomic under injected failures, isolated per owner, monotonic under random sequences, and race-safe without deadlock.');
   } finally {
     await client.end();
   }

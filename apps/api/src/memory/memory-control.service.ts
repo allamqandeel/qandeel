@@ -136,15 +136,23 @@ export class MemoryControlService {
         const correctable = collapseEquivalents(current.filter((memory) => !replacementKeys.has(normalizeMemoryContent(memory.content))));
         const resolution = resolveMemoryTarget(intent.previous, correctable, shared);
         if (resolution.state === 'RESOLVED') return this.correction(language, resolution.memory, intent.replacement, now, current, undefined, false, intent.asSaid);
-        const existing = current.find((memory) => replacementKeys.has(normalizeMemoryContent(memory.content)));
-        if (existing) return { kind: 'CORRECT', outcome: 'ALREADY_CORRECT', candidateMemoryIds: [], reply: alreadyCorrectReply(language, existing.content) };
+        // L-12: the fact being corrected is found first; the chosen one's correction then keeps any Memory that already
+        // holds the new value (CORRECTED_TO_EXISTING), or asks whom it is about (L-11).
         if (resolution.state === 'AMBIGUOUS') {
           if (replacement.decision === 'SKIP' && replacement.reason === 'SENSITIVE_DATA') {
             return { kind: 'CORRECT', outcome: 'DECLINED_SENSITIVE', candidateMemoryIds: [], reply: plainReply(language, 'DECLINED_SENSITIVE') };
           }
           return clarification('CORRECT', language, resolution.options);
         }
-        // Nothing remembered fully matches the old words: an ordinary statement, not a Memory command.
+        // Nothing remembered says the old value any more. QANDEEL says it already has the new one only when a Memory holds
+        // it about the same person the words are about - established, never inferred: someone else's fact, or one whose
+        // subject was never established, proves nothing about the user's (L-12).
+        if (resolution.state === 'NONE') {
+          const said = this.subjectOf(intent.asSaid ?? intent.replacement, now);
+          const existing = current.find((memory) => replacementKeys.has(normalizeMemoryContent(memory.content)) && memory.subject === said);
+          if (existing) return { kind: 'CORRECT', outcome: 'ALREADY_CORRECT', candidateMemoryIds: [], reply: alreadyCorrectReply(language, existing.content) };
+        }
+        // Otherwise nothing remembered fully matches the old words: an ordinary statement, not a Memory command.
         return null;
       }
       case 'FORGET':

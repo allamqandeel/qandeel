@@ -266,9 +266,13 @@ class CanonicalStore {
         for (const copy of equivalents.filter((m) => m !== reconfirmed && this.subjectOf(m.id) === null)) dispose(copy, created.id, 'RECONFIRMED');
       }
     } else if (outcome === 'CORRECTED') {
-      if (current(target) && !this.memories.some((m) => m.supersedes_memory_id === target!.id)) {
+      const targetSubject = target ? this.subjectOf(target.id) : null;
+      // G-C2 (A): an UNATTRIBUTED fact whose words are also remembered with an established subject is not corrected.
+      const establishedCopy = (m: MemoryRecord) => m.user_id === user && m.id !== target!.id && m.type === target!.type && current(m)
+        && key(m.content) === key(target!.content) && this.subjectOf(m.id) !== null;
+      if (current(target) && !this.memories.some((m) => m.supersedes_memory_id === target!.id)
+        && !(targetSubject === null && this.memories.some(establishedCopy))) {
         recordedTarget = target!.id;
-        const targetSubject = this.subjectOf(target!.id);
         const subject = (body.p_subject as MemorySubject | null) ?? targetSubject;
         const equivalents = this.memories.filter((m) => m.user_id === user && m.id !== target!.id && current(m) && m.type === body.p_type
           && (key(m.content) === key(String(body.p_content)) || m.id === body.p_equivalent_memory_id) && compatible(m, subject)).sort(byId);
@@ -286,7 +290,9 @@ class CanonicalStore {
           }
           for (const copy of equivalents.filter((m) => m.id !== result && this.subjectOf(m.id) === null)) dispose(copy, result!, 'RECONFIRMED');
           for (const copy of this.memories.filter((m) => m.user_id === user && m.id !== target!.id && m.id !== result && m.type === target!.type
-            && m.status === 'ACTIVE' && key(m.content) === key(target!.content) && compatible(m, targetSubject)).sort(byId)) dispose(copy, target!.id, 'CORRECTED');
+            && m.status === 'ACTIVE' && key(m.content) === key(target!.content) && (this.subjectOf(m.id) ?? targetSubject) === targetSubject).sort(byId)) {
+            dispose(copy, target!.id, 'CORRECTED');
+          }
         }
       } else outcome = 'TARGET_CHANGED';
     } else if (outcome === 'FORGOTTEN') {
@@ -1020,6 +1026,150 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       await say('لا، مش شغال في البنك، شغال في الشركة');
       expect(store.commands).toEqual([expect.objectContaining({ kind: 'CORRECT', outcome: 'CORRECTED_TO_EXISTING', target_memory_id: legacy.id, result_memory_id: unattributedCopy.id })]);
       expect(store.attributions.size).toBe(0);
+    });
+  });
+
+  // G-C2 final corrections (Product Owner, 2026-10-12): A (no cross-subject old-fact retirement) and B / L-12 (no
+  // misleading ALREADY_CORRECT).
+  describe('MEM-AR-01C G-C2 final corrections: established facts never change by matching words (A), no false "already" (L-12)', () => {
+    const shapes = () => store.commands.map((c) => [c.kind, c.outcome]);
+    const options = (...ids: string[]) => ids.map((id) => store.commands.at(-1)!.candidate_memory_ids.indexOf(id) + 1);
+
+    it.each([[['SELF']], [['OTHER']], [['SELF', 'OTHER']]] as MemorySubject[][][])(
+      'A: a %j copy of an UNATTRIBUTED fact\'s words that appears after the read is never retired - nothing changes',
+      async (subjects) => {
+        const legacy = { ...store.remember(A, 'شغال في البنك.') };
+        let copies: MemoryRecord[] = [];
+        store.beforeMemoryControlCommand = () => {
+          copies = subjects.map((subject) => ({ ...store.remember(A, 'شغال في البنك.', 'PERSONAL_FACT', 'ACTIVE', subject) }));
+        };
+        expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('المعلومة دي اتغيّرت قبل ما أعدّلها، فماغيّرتش حاجة.');
+        expect(memoryOf(legacy.id)).toEqual(legacy);
+        for (const copy of copies) expect(memoryOf(copy.id)).toEqual(copy);
+        expect(store.memories).toHaveLength(1 + subjects.length);
+        expect(store.dispositions).toEqual([]);
+        expect(store.commands).toEqual([expect.objectContaining({ kind: 'CORRECT', outcome: 'TARGET_CHANGED', target_memory_id: legacy.id, result_memory_id: null })]);
+      },
+    );
+
+    it('A: an UNATTRIBUTED fact still takes its own UNATTRIBUTED legacy copies with it', async () => {
+      const pair = [store.remember(A, 'شغال في البنك.').id, store.remember(A, 'شغال في البنك.').id];
+      expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا شغال في الشركة.» بدل «شغال في البنك.».');
+      const target = store.commands[0].target_memory_id!;
+      const [copy] = pair.filter((id) => id !== target);
+      const successor = store.memories.find((m) => m.supersedes_memory_id === target)!;
+      expect([memoryOf(target).status, memoryOf(copy).status, successor.status]).toEqual(['SUPERSEDED', 'SUPERSEDED', 'ACTIVE']);
+      expect(store.dispositions).toEqual([{ memory_id: copy, command_id: store.commands[0].id, primary_memory_id: target, disposition: 'CORRECTED' }]);
+      expect(store.attributions.size).toBe(0);
+    });
+
+    it('L-12: the old fact is ambiguous and the new value is remembered only about someone else - QANDEEL asks which one, never "already"', async () => {
+      const fact = store.remember(A, 'أنا ساكن في أكتوبر.', 'PERSONAL_FACT');
+      const preference = store.remember(A, 'أنا ساكن في أكتوبر.', 'STABLE_PREFERENCE');
+      const theirs = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
+      const before = JSON.stringify(store.memories);
+      const ask = await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا');
+      expect(ask.reply).toBe('تقصد أنهي واحدة؟\n1. «أنا ساكن في أكتوبر.»\n2. «أنا ساكن في أكتوبر.»\nرقمها يكفي.');
+      expect(ask.reply).not.toContain('فاكرها كده أصلًا');
+      expect(JSON.stringify(store.memories)).toBe(before);
+      const [chosen] = options(fact.id);
+      expect((await say(String(chosen))).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      const successor = store.memories.find((m) => m.supersedes_memory_id === fact.id)!;
+      expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'EXPLICIT_STATEMENT' }));
+      expect([memoryOf(theirs.id), memoryOf(preference.id).status]).toEqual([theirs, 'ACTIVE']);
+      expect(shapes()).toEqual([['CORRECT', 'CLARIFICATION_REQUIRED'], ['CORRECT', 'CORRECTED']]);
+    });
+
+    it('L-12: the old fact is ambiguous and the new value is the user\'s own - the chosen fact is corrected into it, no second copy', async () => {
+      const fact = store.remember(A, 'أنا ساكن في أكتوبر.', 'PERSONAL_FACT');
+      const preference = store.remember(A, 'أنا ساكن في أكتوبر.', 'STABLE_PREFERENCE');
+      const mine = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
+      expect((await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا')).reply).toContain('تقصد أنهي واحدة؟');
+      const [chosen] = options(fact.id);
+      expect((await say(String(chosen))).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect([memoryOf(fact.id).status, memoryOf(preference.id).status, memoryOf(mine.id)]).toEqual(['SUPERSEDED', 'ACTIVE', mine]);
+      expect(store.commands[1]).toEqual(expect.objectContaining({ outcome: 'CORRECTED_TO_EXISTING', target_memory_id: fact.id, result_memory_id: mine.id }));
+      expect(store.memories).toHaveLength(3);
+    });
+
+    it('L-12: ambiguous, with the new value remembered about both - which one, then whom (L-11), then exactly that person\'s fact', async () => {
+      const fact = store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT');
+      store.remember(A, 'ساكن في أكتوبر.', 'STABLE_PREFERENCE');
+      const mine = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
+      const theirs = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في طنطا')).reply).toBe('تقصد أنهي واحدة؟\n1. «ساكن في أكتوبر.»\n2. «ساكن في أكتوبر.»\nرقمها يكفي.');
+      const [chosen] = options(fact.id);
+      expect((await say(String(chosen))).reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      expect((await say('عن حد تاني')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «ساكن في أكتوبر.».');
+      expect(store.commands[2]).toEqual(expect.objectContaining({ outcome: 'CORRECTED_TO_EXISTING', target_memory_id: fact.id, result_memory_id: theirs.id }));
+      expect([memoryOf(mine.id), memoryOf(theirs.id)]).toEqual([mine, theirs]);
+      expect(store.attributions.has(fact.id)).toBe(false);
+      expect(shapes()).toEqual([['CORRECT', 'CLARIFICATION_REQUIRED'], ['CORRECT', 'SUBJECT_CLARIFICATION_REQUIRED'], ['CORRECT', 'CORRECTED_TO_EXISTING']]);
+    });
+
+    it('L-12: with nothing left to correct, someone else\'s fact or an UNATTRIBUTED one never proves "already" - ordinary conversation', async () => {
+      // Someone else's fact (A), a fact whose subject was never established (B), and the user's own fact when the words
+      // say nobody (B): none of them is claimed.
+      store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
+      store.remember(A, 'I live in Tanta.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
+      const sessionB = store.session(B);
+      store.remember(B, 'أنا ساكن في طنطا.');
+      store.remember(B, 'I live in Tanta.');
+      store.remember(B, 'أنا ساكن في إسكندرية.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      const before = JSON.stringify(store.memories);
+      await expect(say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await expect(say("I don't live in October anymore, I live in Tanta.")).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await expect(say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا', sessionB, B)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await expect(say("I don't live in October anymore, I live in Tanta.", sessionB, B)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      await expect(say('لا، مش ساكن في أكتوبر، ساكن في إسكندرية', sessionB, B)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(touched).toContain('FOREGROUND_GATHER');
+      expect(JSON.stringify(store.memories)).toBe(before);
+      expect(store.commands).toEqual([]);
+      expect(store.turns.filter((t) => t.role === 'ASSISTANT' && /فاكرها كده أصلًا|already have it/u.test(t.content))).toEqual([]);
+    });
+
+    it('L-12: the justified "already" stays - the new value is remembered about the same person the words name', async () => {
+      const mine = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
+      expect((await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا')).reply).toBe('فاكرها كده أصلًا: «أنا ساكن في طنطا.»');
+      const sessionB = store.session(B);
+      store.remember(B, 'I live in Tanta.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
+      expect((await say("I don't live in October anymore, I live in Tanta.", sessionB, B)).reply).toBe('I already have it that way: “I live in Tanta.”');
+      expect(memoryOf(mine.id)).toEqual(mine);
+      expect(store.memories).toHaveLength(2);
+      expect(shapes()).toEqual([['CORRECT', 'ALREADY_CORRECT'], ['CORRECT', 'ALREADY_CORRECT']]);
+    });
+
+    it('L-12: in English, an ambiguous old fact with the new value only about someone else asks which one', async () => {
+      const sessionB = store.session(B);
+      const fact = store.remember(B, 'I live in October.', 'PERSONAL_FACT');
+      store.remember(B, 'I live in October.', 'STABLE_PREFERENCE');
+      const theirs = { ...store.remember(B, 'I live in Tanta.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
+      const ask = await say("I don't live in October anymore, I live in Tanta.", sessionB, B);
+      expect(ask.reply).toBe('Which one do you mean?\n1. “I live in October.”\n2. “I live in October.”\nThe number is enough.');
+      const [chosen] = options(fact.id);
+      expect((await say(String(chosen), sessionB, B)).reply).toBe("Got it, I've corrected it. I now remember “I live in Tanta.” instead of “I live in October.”.");
+      expect(memoryOf(theirs.id)).toEqual(theirs);
+      expect(store.attributions.get(store.memories.find((m) => m.supersedes_memory_id === fact.id)!.id)).toEqual(expect.objectContaining({ subject: 'SELF' }));
+    });
+
+    it('L-12: a declined, re-asked, lapsed or late answer to the "which one?" changes nothing and never says "already"', async () => {
+      store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT');
+      store.remember(A, 'ساكن في أكتوبر.', 'STABLE_PREFERENCE');
+      store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
+      const before = JSON.stringify(store.memories);
+      const ask = await say('لا، مش ساكن في أكتوبر، ساكن في طنطا');
+      expect((await say('5')).reply).toBe(ask.reply);
+      expect((await say('لا')).reply).toBe('تمام، ماغيّرتش حاجة.');
+      await say('لا، مش ساكن في أكتوبر، ساكن في طنطا');
+      touched.length = 0;
+      await expect(say('ماشي يا عم')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      touched.length = 0;
+      await expect(say('1')).rejects.toBeInstanceOf(ServiceUnavailableException);
+      touched.length = 0;
+      expect(JSON.stringify(store.memories)).toBe(before);
+      expect(shapes()).toEqual([
+        ['CORRECT', 'CLARIFICATION_REQUIRED'], ['CORRECT', 'CLARIFICATION_REQUIRED'], ['CORRECT', 'CLARIFICATION_DECLINED'], ['CORRECT', 'CLARIFICATION_REQUIRED'],
+      ]);
     });
   });
 

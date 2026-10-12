@@ -140,7 +140,7 @@ function copyViolations(w) {
 }
 
 // RC-C2: the same words about the user and about someone else are two facts. Every v2 loop that retires a target's copies
-// (CORRECTED, FORGOTTEN, DISABLED) keeps to a compatible subject, and the plan never folds a SELF and an OTHER Memory into
+// (FORGOTTEN, DISABLED here; CORRECTED, stricter, in correctionTruthViolations) keeps to a compatible subject, and the plan never folds a SELF and an OTHER Memory into
 // one candidate.
 const COMPATIBLE_COPY = 'AND (target_subject IS NULL OR coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) = target_subject)';
 const ADAPTER_STEP = '      - {name: Verify Full Intelligence smoke transport adapters, run: npm run test:full-intelligence-e2e-smoke-adapters}\n';
@@ -153,7 +153,7 @@ const disposalLoop = (v2, disposition) => {
 function subjectIsolationViolations(w) {
   const out = [];
   const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
-  for (const disposition of ['CORRECTED', 'FORGOTTEN', 'DISABLED']) {
+  for (const disposition of ['FORGOTTEN', 'DISABLED']) {
     if (!disposalLoop(v2, disposition).includes(COMPATIBLE_COPY)) out.push(`v2 retires ${disposition} copies whatever their subject`);
   }
   const collapse = w.control.slice(w.control.indexOf('function collapseEquivalents('), w.control.indexOf('function fallbackType('));
@@ -189,6 +189,31 @@ function decisionViolations(w) {
   return out;
 }
 
+// G-C2 final corrections (Product Owner, 2026-10-12). A: the old-words loop of a correction retires only UNATTRIBUTED and
+// same-subject copies (an UNATTRIBUTED target only UNATTRIBUTED ones), and v2 changes nothing when a current copy of an
+// UNATTRIBUTED fact's words has an established subject. L-12: ALREADY_CORRECT is the plan's only after the corrected fact
+// is resolved (an ambiguous one asks first), when nothing is left to correct, and only from a Memory whose established
+// subject is the one the words name.
+const CORRECTION_COPY = 'AND coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) IS NOT DISTINCT FROM target_subject';
+const OLD_WORDS_GUARD = 'ELSIF public.memory_subject_v1(p_user_id, target.id) IS NULL\n          AND EXISTS (SELECT 1 FROM public.memories m';
+const ALREADY_SUBJECT = 'replacementKeys.has(normalizeMemoryContent(memory.content)) && memory.subject === said';
+function correctionTruthViolations(w) {
+  const out = [];
+  const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
+  if (!disposalLoop(v2, 'CORRECTED').includes(CORRECTION_COPY)) out.push('a correction retires an established copy of its old words whatever its subject');
+  const corrected = v2.slice(v2.indexOf("ELSIF p_outcome='CORRECTED' THEN"), v2.indexOf("ELSIF p_outcome='FORGOTTEN' THEN"));
+  const guard = corrected.indexOf(OLD_WORDS_GUARD);
+  if (guard < 0 || guard > corrected.indexOf('successor_subject := coalesce(p_subject, target_subject);')) out.push('v2 corrects an UNATTRIBUTED fact next to an established copy of its words');
+  const correct = w.control.slice(w.control.indexOf("      case 'CORRECT': {"), w.control.indexOf("      case 'FORGET':"));
+  const already = correct.indexOf("outcome: 'ALREADY_CORRECT'");
+  const asked = correct.indexOf("if (resolution.state === 'AMBIGUOUS') {");
+  const none = correct.indexOf("if (resolution.state === 'NONE') {");
+  if (already < 0 || asked < 0 || none < 0 || already < asked || already < none) out.push('ALREADY_CORRECT is claimed before the corrected fact is resolved');
+  if (!correct.includes(ALREADY_SUBJECT)) out.push('ALREADY_CORRECT is claimed from a Memory about someone else or of no established subject');
+  if ((w.control.match(/outcome: 'ALREADY_CORRECT'/gu) ?? []).length !== 1) out.push('ALREADY_CORRECT has another source in the plan');
+  return out;
+}
+
 function wiringViolations(w) {
   const out = [];
   if (!/"verify:memory-subject-identity:integration": "node --env-file-if-exists=\.env database\/verify-migration-0152\.mjs"/u.test(w.packageJson)) out.push('verify-0152 has no package script');
@@ -203,7 +228,7 @@ function wiringViolations(w) {
   return out;
 }
 
-const detectors = { writerSurfaceViolations, r2Violations, evidenceViolations, hypothesisCreationViolations, copyViolations, subjectIsolationViolations, decisionViolations, wiringViolations };
+const detectors = { writerSurfaceViolations, r2Violations, evidenceViolations, hypothesisCreationViolations, copyViolations, subjectIsolationViolations, decisionViolations, correctionTruthViolations, wiringViolations };
 
 test('the shipped source satisfies every MEM-AR-01C detector', () => {
   for (const [name, detect] of Object.entries(detectors)) assert.deepEqual(detect(shipped), [], name);
@@ -231,7 +256,7 @@ const planted = [
   ['a runtime path starts calling the background creation wrapper', 'hypothesisCreationViolations', (w) => ({ ...w, runtime: { ...w.runtime, 'apps/api/src/background-intelligence/background-intelligence-enrichment.service.ts': `${w.enrichment}\nawait this.data.createSystemHypothesis(context, input);` } })],
   ['the locked subject question drifts', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace('المعلومة دي عنك إنت، ولا عن حد تاني؟', 'ده عنك ولا عن حد تاني؟') })],
   ['the CQ-1 heading keeps «كمان»', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace("ar: 'فيه حاجات حكيتلي عنها تخص ناس تانية:'", "ar: 'فيه كمان حاجات حكيتلي عنها تخص ناس تانية:'") })],
-  ...['CORRECTED', 'FORGOTTEN', 'DISABLED'].map((disposition) => [`v2 retires ${disposition} copies whatever their subject`, 'subjectIsolationViolations', (w) => {
+  ...['FORGOTTEN', 'DISABLED'].map((disposition) => [`v2 retires ${disposition} copies whatever their subject`, 'subjectIsolationViolations', (w) => {
     const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
     const loop = disposalLoop(v2, disposition);
     return { ...w, migration: w.migration.replace(v2, v2.replace(loop, loop.replace(COMPATIBLE_COPY, ''))) };
@@ -246,6 +271,18 @@ const planted = [
   ['v2 accepts a correction subject answer for any fact', 'decisionViolations', (w) => ({ ...w, migration: w.migration.replace(ANSWER_BINDS, "(p_outcome='CORRECTED' AND p_subject IS NOT NULL)") })],
   ['the correction subject question is asked for an attributed fact', 'decisionViolations', (w) => ({ ...w, migration: w.migration.replace(ASKED_ONLY_UNATTRIBUTED, 'IF false') })],
   ['the REMEMBER subject read answers a correction question', 'decisionViolations', (w) => ({ ...w, migration: w.migration.replace(REMEMBER_READ, "WHERE c.session_id=p_session_id AND c.outcome='SUBJECT_CLARIFICATION_REQUIRED'") })],
+  ...[['v2 retires CORRECTED copies whatever their subject', ''], ['an UNATTRIBUTED correction retires SELF and OTHER copies again (the pre-G-C2 predicate)', COMPATIBLE_COPY]].map(([label, predicate]) => [label, 'correctionTruthViolations', (w) => {
+    const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
+    const loop = disposalLoop(v2, 'CORRECTED');
+    return { ...w, migration: w.migration.replace(v2, v2.replace(loop, loop.replace(CORRECTION_COPY, predicate))) };
+  }]),
+  ['v2 drops the old-words guard', 'correctionTruthViolations', (w) => ({ ...w, migration: w.migration.replace(OLD_WORDS_GUARD, 'ELSIF false\n          AND EXISTS (SELECT 1 FROM public.memories m') })],
+  ['ALREADY_CORRECT moves back ahead of the which-one question', 'correctionTruthViolations', (w) => ({ ...w, control: w.control.replace(
+    "        if (resolution.state === 'AMBIGUOUS') {\n          if (replacement.decision",
+    "        const early = current.find((memory) => replacementKeys.has(normalizeMemoryContent(memory.content)));\n"
+      + "        if (early) return { kind: 'CORRECT', outcome: 'ALREADY_CORRECT', candidateMemoryIds: [], reply: alreadyCorrectReply(language, early.content) };\n"
+      + "        if (resolution.state === 'AMBIGUOUS') {\n          if (replacement.decision") })],
+  ['ALREADY_CORRECT is claimed from a Memory of any subject', 'correctionTruthViolations', (w) => ({ ...w, control: w.control.replace(ALREADY_SUBJECT, 'replacementKeys.has(normalizeMemoryContent(memory.content))') })],
   ['the smoke transport accepts the embed on every table', 'wiringViolations', (w) => ({ ...w, smokeAdapters: w.smokeAdapters.replace("const MEMORY_SUBJECT_EMBED_TABLE = 'memories';", "const MEMORY_SUBJECT_EMBED_TABLE = String(process.env.TABLE);") })],
   ['API CI tests the smoke transport only after the smoke', 'wiringViolations', (w) => ({ ...w, ci: w.ci.replace(ADAPTER_STEP, '').replace(HARDENING_STEP, `${HARDENING_STEP}${ADAPTER_STEP}`) })],
   ['API CI stops running verify-0152', 'wiringViolations', (w) => ({ ...w, ci: w.ci.replace('run: npm run verify:memory-subject-identity:integration', 'run: npm run verify:nothing') })],

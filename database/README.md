@@ -4539,7 +4539,10 @@ someone else are two facts - FORGET, DISABLE, CORRECT and CORRECTED_TO_EXISTING 
 subject's Memory; an UNATTRIBUTED copy goes with the compatible fact), no cross-subject correction by inference (S-2,
 L-11: the correction's own subject question for an UNATTRIBUTED fact, its own owner-token read
 `pending_memory_correction_subject_clarification_v1`, answers bound to exactly that fact and answered once, nothing
-resolved into an established subject under the lock), the R2 guard and the stale-capture rule, CC-H1 directly and through the grounded wrapper,
+resolved into an established subject under the lock), no established fact changed by a correction's old words (O-1,
+G-C2 A: a correction of an UNATTRIBUTED fact never retires a SELF or OTHER copy of its words and changes nothing when
+one is current, also when it is committed while the correction waits; SELF and OTHER targets still retire their
+same-subject and UNATTRIBUTED copies), the R2 guard and the stale-capture rule, CC-H1 directly and through the grounded wrapper,
 failure injection after each write step, tenant isolation, a seeded property test (no withheld Hypothesis is ever
 lifted), two-connection races without deadlock, and erasure. Its committed race fixtures are removed and the removal is
 checked. Fixture Memories that historical verifiers cite as Evidence are attributed SELF before any link through

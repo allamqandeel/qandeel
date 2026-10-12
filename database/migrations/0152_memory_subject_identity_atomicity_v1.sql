@@ -393,8 +393,8 @@ $$;
 --   * FORGET / DISABLE / CORRECT also retire every equivalent copy of the target (legacy duplicate pairs) with a
 --     disposition naming this command and the target.
 -- Equivalent: same owner, same type, same memory_equivalence_key_v1, ACTIVE and unexpired (FORGET also takes DISABLED
--- copies), and a compatible subject (equal, or one side UNATTRIBUTED); a correction's equivalents never include its
--- target. p_equivalent_memory_id is the equivalent the caller found itself (it also compares the frozen pre-01A
+-- copies), and a compatible subject (equal, or one side UNATTRIBUTED; a copy of a correction's OLD words is compatible
+-- only when it is UNATTRIBUTED or has the target's own subject); a correction's equivalents never include its target. p_equivalent_memory_id is the equivalent the caller found itself (it also compares the frozen pre-01A
 -- template form, which is not this key); the database accepts it only if it is the owner's, ACTIVE, unexpired and of
 -- the same type.
 -- Subject: p_subject is the subject screen's decisive answer (SELF / OTHER). A REMEMBER needs one (basis
@@ -405,6 +405,10 @@ $$;
 -- (SUBJECT_CLARIFICATION_REQUIRED, CORRECT, naming the UNATTRIBUTED target), and if such a Memory appears under the
 -- lock all the same, nothing changes (TARGET_CHANGED). The answer is CORRECTED with the confirmed subject (basis
 -- USER_CLARIFIED) for exactly the fact the question named, or CLARIFICATION_DECLINED.
+-- G-C2 (A, Product Owner, 2026-10-12): a correction of an UNATTRIBUTED fact never retires, supersedes or otherwise
+-- changes a SELF or OTHER Memory because its old words match. Its own legacy copies (UNATTRIBUTED) leave with it; if a
+-- current copy with an established subject is found under the lock, nothing changes (TARGET_CHANGED). A SELF or OTHER
+-- target retires its UNATTRIBUTED and same-subject copies, as before.
 -- ---------------------------------------------------------------------------------------------------------------
 CREATE FUNCTION public.server_finalize_memory_control_turn_v2(
   p_session_id uuid, p_user_id uuid, p_source_turn_id uuid, p_assistant_turn_id uuid,
@@ -579,6 +583,16 @@ BEGIN
     SELECT * INTO target FROM public.memories m WHERE m.id=p_target_memory_id AND m.user_id=p_user_id;
     IF NOT (target.status='ACTIVE' AND (target.expires_at IS NULL OR target.expires_at>CURRENT_TIMESTAMP)) THEN
       applied := 'TARGET_CHANGED';
+    ELSIF public.memory_subject_v1(p_user_id, target.id) IS NULL
+          AND EXISTS (SELECT 1 FROM public.memories m
+                       WHERE m.user_id=p_user_id AND m.id<>target.id AND m.type=target.type AND m.status='ACTIVE'
+                         AND (m.expires_at IS NULL OR m.expires_at>CURRENT_TIMESTAMP)
+                         AND public.memory_equivalence_key_v1(m.content)=target_key
+                         AND public.memory_subject_v1(p_user_id, m.id) IS NOT NULL) THEN
+      -- G-C2 (A): the corrected words are also remembered with an established subject. The server's read offers that
+      -- Memory, never an UNATTRIBUTED copy of it, so this is reached only when it appeared after the read: whose fact the
+      -- correction meant is not known, and an established fact is never changed because its words match. Nothing changes.
+      applied := 'TARGET_CHANGED';
     ELSE
       target_subject := public.memory_subject_v1(p_user_id, target.id);
       successor_subject := coalesce(p_subject, target_subject);
@@ -626,13 +640,14 @@ BEGIN
                      WHERE applied <> 'TARGET_CHANGED' AND public.memory_subject_v1(p_user_id, e) IS NULL AND e <> result_id ORDER BY e LOOP
         PERFORM public.memory_dispose_equivalent_v1(p_user_id, member.id, new_command_id, result_id, 'RECONFIRMED');
       END LOOP;
-      -- Copies of the corrected fact (a legacy duplicate pair) leave with it.
+      -- Copies of the corrected fact (a legacy duplicate pair) leave with it: UNATTRIBUTED copies, and copies with the
+      -- target's own established subject. An UNATTRIBUTED target never retires a SELF or OTHER copy (G-C2, A).
       FOR member IN
         SELECT m.id FROM public.memories m
          WHERE applied <> 'TARGET_CHANGED'
            AND m.user_id=p_user_id AND m.id<>target.id AND m.id<>result_id AND m.type=target.type AND m.status='ACTIVE'
            AND public.memory_equivalence_key_v1(m.content)=target_key
-           AND (target_subject IS NULL OR coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) = target_subject)
+           AND coalesce(public.memory_subject_v1(p_user_id, m.id), target_subject) IS NOT DISTINCT FROM target_subject
          ORDER BY m.id
       LOOP
         PERFORM public.memory_dispose_equivalent_v1(p_user_id, member.id, new_command_id, target.id, 'CORRECTED');
