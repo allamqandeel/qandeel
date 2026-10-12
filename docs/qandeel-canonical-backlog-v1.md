@@ -2228,7 +2228,8 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   reconciliation under BG-09, not a quiet rewrite.
 - **PR / SHA:** PR #321, merged as `5973123153e26494d702a4a859a79631ede225cd` (2026-10-09). The Product Owner's merge
   decision on that PR approved the exact head `8563e5699a100fe88c3e5ef451ca825c98d4c18e`, with an explicit pre-launch
-  condition (Issue #322, below). This retroactive disposition holds from the merge of the GOV-REC-01 pull request.
+  condition (Issue #322, below). This retroactive disposition holds from the merge of the GOV-REC-01 pull request,
+  PR #334.
 - **Why it is recorded late:** SHARED-VIS-01 planned its closing change: this tombstone, its record banner and the locator
   rows (record §10: the item "stays `DEFERRED — OWNED` … until this task's closing change tombstones it"). That change
   did not land before PR #321 merged. CI-01 recorded the drift as an independent documentation gap (C0 decision D10).
@@ -2276,9 +2277,11 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 - **Closing task:** `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` (name APPROVED by the Product
   Owner, 2026-10-12).
-- **PR / SHA:** the GOV-REC-01 pull request from branch `gov/gov-rec-01-post-merge-reconciliation`, from `main` at
-  `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b` (the merge of PR #333). Documentation and governance only: no migration and
-  no runtime change. The tombstone holds from that PR's merge. Until then this item is not closed.
+- **PR / SHA:** PR #334 from branch `gov/gov-rec-01-post-merge-reconciliation`, from `main` at
+  `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b` (the merge of PR #333). The reconciliation evidence commit is
+  `086325071f9147c4ba41810a6aaf91615334e36e`; the commits after it add only the PR number and the validation results.
+  Documentation and governance only: no migration and no runtime change. The tombstone holds from the merge of PR #334.
+  Until then this item is not closed.
 - **Disposition:** completed. Each correction is recorded explicitly, and text that is history is kept and labelled
   ([GOV-REC-01 record](e2e/QANDEEL_GOV_REC_01_POST_MERGE_LOCATOR_CLOSURE_RECORD_RECONCILIATION_v1.md)). The six findings:
   1. Current State and the Project Map now have IP-IMP-01 (PR #331, `424cd023…`) and ACE-01 (PR #332, `141a3190…`). The
@@ -2806,7 +2809,7 @@ Kickoff (BG-05): it inherited exactly one item, `QAN-BL-ACE-01`, included in its
 - **Latest index: 62 items; 28 / 4 / 10 / 20 by status, 31 / 29 / 2 by severity**, recounted mechanically from §4.
 
 **GOV-REC-01 reconciliation (2026-10-12; documentation / governance only; from `main` at
-`84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`; PR open, not merged).** GOV-REC-01 — Post-merge Locator & Closure-Record
+`84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`; PR #334; effective from its merge).** GOV-REC-01 — Post-merge Locator & Closure-Record
 Reconciliation is not a Product stage and changes no runtime, migration, API, screen or Product decision. Its owner name
 is **APPROVED** by the Product Owner (2026-10-12). Every place that still called it proposed (the ACE-SP-01 paragraph
 above, the item's owner line, the §9 row and the ACE-SP-01 record §10) now records the approval and keeps the original
@@ -2818,8 +2821,8 @@ GitHub truth read at kickoff: PR #321 (SHARED-VIS-01) merged as `5973123…`; PR
 register that calls one of these tasks "PR open", "Draft PR" or "not merged" describes the state at its own date.
 
 - **Inherited items (BG-05):** exactly one, `QAN-BL-GOV-01`, included in the task. Re-checked at closure.
-- **Tombstoned — `QAN-BL-GOV-01`:** every listed finding is corrected (§6 tombstone). It holds from the GOV-REC-01 PR's
-  merge.
+- **Tombstoned — `QAN-BL-GOV-01`:** every listed finding is corrected (§6 tombstone). It holds from the merge of
+  PR #334.
 - **Tombstoned retroactively — `QAN-BL-CW-03`**, for SHARED-VIS-01 (PR #321), under BG-08 / BG-09. GOV-REC-01 finds no
   gap inside the item's own scope; the parts not delivered were already dispositioned by the Product Owner to
   `QAN-BL-CW-05` … `07`, `QAN-BL-VIS-01` and Stage 8A (§6 tombstone).

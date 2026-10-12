@@ -307,7 +307,8 @@ not merged" of §6.5 describe their own dates.
 - **Execution status** (the 9-stage map in [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md) §5.1):
   - **Stages 1–5: DONE / MERGED** within their implemented limits. Stage 1 keeps its named residuals, and "Stage 5 DONE"
     is not "Public World launch-ready".
-  - **Current: GOV-REC-01**, documentation / governance only. It is not a Product stage and not a Stage 6 start.
+  - **Current: GOV-REC-01** (PR #334), documentation / governance only. It is not a Product stage and not a Stage 6
+    start.
   - **Stage 6 — Matching / Introductions: NEXT** after GOV-REC-01's independent review and the Product Owner's merge
     approval. It opens as *Stage 6 — Matching & Introductions Kickoff*, which begins with independent research and an
     Anti-duplication Census before its task count and contracts are fixed.

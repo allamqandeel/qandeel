@@ -7,7 +7,7 @@ on 2026-10-12.
 **Kickoff baseline:** `main = 84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`, the merge of PR #333 (ACE-SP-01). It was
 verified on GitHub at kickoff and matched the Product Owner's stated starting point.
 **Branch:** `gov/gov-rec-01-post-merge-reconciliation`.
-**Status:** `GOV-REC-01 — CLOSING CHANGE COMPLETE IN THIS PR · CLOSED FROM THE MERGE OF THE GOV-REC-01 PR · MERGE ONLY ON THE PRODUCT OWNER'S ORDER · NO RUNTIME CHANGE`.
+**Status:** `GOV-REC-01 — CLOSING CHANGE COMPLETE IN PR #334 · CLOSED FROM THE MERGE OF PR #334 · MERGE ONLY ON THE PRODUCT OWNER'S ORDER · NO RUNTIME CHANGE`.
 If the PR is not merged, nothing here is closed. The banner needs no successor edit: it becomes true at the merge.
 
 > This reconciliation changes no code, migration, API, screen, copy, Product decision, sequencing decision or frozen
@@ -232,4 +232,24 @@ All runs are local on the branch tree. The exact commands and results are in §1
 
 ## 11. PR, commits and validation results
 
-Filled in at the push (documentation only).
+- **PR:** Draft [PR #334](https://github.com/allamqandeel/qandeel/pull/334), `gov/gov-rec-01-post-merge-reconciliation`
+  → `main`. Not merged. Merge only on the Product Owner's explicit order; auto-merge is not enabled.
+- **Commits:**
+  - `086325071f9147c4ba41810a6aaf91615334e36e` — the reconciliation and the six re-anchors (the evidence commit);
+  - the next commit — documentation only: the PR number and these results.
+- **Local results** (on `08632507`; the follow-up commit changes documentation only):
+
+| Command | Result |
+|---|---|
+| `npm run test:task-closure-governance-contract` | 24 / 24 pass |
+| `npm run test:ci-01-intelligence-evidence-baseline-contract` | 18 / 18 pass |
+| `npm run test:ace-01-adaptive-conversational-expression-contract` | 6 / 6 pass |
+| `npm run test:ace-sp-01-shared-public-personality-core-contract` | 7 / 7 pass |
+| `git diff --check` | clean |
+| `node --test` over the 23 contracts that read an edited document | 352 / 352 pass |
+| `node --test database/tests/replay-distribution-reconciliation-closure-v1.test.mjs` | 15 / 15 pass |
+| §4 index recount / §9 coverage script | 62 · 26 / 4 / 10 / 22 · 31 / 29 / 2 · no open owned item without a §9 entry |
+| `git diff --name-only` against `apps/`, `packages/`, `database/`, `.github/`, `package*.json` | empty |
+
+- **GitHub CI:** API CI and Mobile CI run on the PR's exact head and are reported on the PR. A failure would be
+  classified by root cause before any change.

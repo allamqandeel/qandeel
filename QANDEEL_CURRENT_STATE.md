@@ -390,7 +390,7 @@ integrity.
     - Stages 1–5 are **DONE / MERGED** within their implemented limits. Stage 1 keeps its named residuals, and
       "Stage 5 DONE" is not "Public World launch-ready".
     - The Stage-4 corrective task SHARED-VIS-01 is **DONE / MERGED** through PR #321.
-    - The current task, until its own PR merges, is **GOV-REC-01 — Post-merge Locator & Closure-Record
+    - The current task, until its own PR (#334) merges, is **GOV-REC-01 — Post-merge Locator & Closure-Record
       Reconciliation**. It is documentation / governance only: not a Product stage, and it authorizes no Stage 6 work.
     - Then Stage 6 — Matching / Introductions is **NEXT**. Stages 7, 8A, 8B and 9 are **LATER**.
     - Issue #322 and every release blocker stay open.
