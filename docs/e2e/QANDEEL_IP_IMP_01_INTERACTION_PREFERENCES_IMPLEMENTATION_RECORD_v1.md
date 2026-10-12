@@ -3,7 +3,8 @@
 **Status:** `IP-IMP-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
 WP0–WP7 are implemented on one branch with migration `0153`, and this record carries the closing change (BG-08 / BG-09).
 **Not merged** (merge only on «ادمج»), **migration not applied to any hosted database, nothing deployed.** The PO Copy
-Addendum in §8 is open (2 rows `PROPOSED`).
+Addendum in §8 is closed: CA-1 and CA-2 (as corrected in R2) are `APPROVED`, and the owner name `PUBLIC-PREF-01` is
+`APPROVED` (Product Owner, R2 approval, 2026-10-12).
 
 **Authority:** the Product Owner's *IP-IMP-01 R1 Task Contract*.
 - It carries the four review findings the Product Owner accepted: all capture paths in WP2, SELF-only in WP3, BG-05/08/09,
@@ -310,19 +311,19 @@ see §10 (filled after push).
 
 **APPROVED (verbatim from the contract's table):** every Settings string and all three result messages, in AR and EN.
 
-**PROPOSED — awaiting the Product Owner:**
+**APPROVED by the Product Owner (R2 approval, 2026-10-12)** — CA-1 as written; CA-2 in its R2-corrected wording (§11):
 
 | # | Where | AR | EN |
 | --- | --- | --- | --- |
 | CA-1 | conversation command reply, composed only of approved strings: `<result message> <field label>: <value label>.` | «تم حفظ التفضيل. اللغة واللهجة: مصري.» / «تمت إعادة التفضيل إلى تلقائي. اللغة واللهجة: تلقائي.» / STALE: «لم يُحفظ التغيير. حاول مرة أخرى.» | "Preference saved. Reply Language & Dialect: Egyptian Arabic." / "Preference reset to Automatic. Humour: Automatic." / "Your change wasn't saved. Try again." |
-| CA-2 | model-facing directive texts (OPEN COPY, never shown to the user) | — | header: "Standing interaction preferences the user explicitly chose. Apply them to this reply. An explicit request the user makes in the current conversation takes precedence for what it asks, and safety guidance always takes precedence. They take precedence over anything inferred from the conversation or from user memory context."; lines: "- Reply length: keep the reply brief.", "- Reply language: reply in <Egyptian Arabic \| Modern Standard Arabic \| Levantine Arabic \| Gulf Arabic \| Maghrebi Arabic \| English>.", "- Humour: light humour is welcome where it fits naturally; never force a joke." / "- Humour: do not use humour." / (every GUIDED turn, own line after the block) "This turn carries safety guidance: do not use humour or playfulness in this reply.", "- Explanation style: explain in simpler terms." / "get to the point directly." / "explain in simple terms and get to the point directly." |
+| CA-2 | model-facing directive texts (never shown to the user; R2 wording) | — | header: "Standing interaction preferences the user explicitly chose. Apply them to this reply. An explicit request the user makes in the current conversation takes precedence for what it asks, and safety guidance always takes precedence. They take precedence over anything inferred from the conversation or from user memory context."; lines: "- Reply length: keep the reply brief.", "- Reply language: reply in <Egyptian Arabic \| Modern Standard Arabic \| Levantine Arabic \| Gulf Arabic \| Maghrebi Arabic \| English>.", "- Humour: light humour is welcome where it fits naturally; never force a joke." / "- Humour: do not use humour." / (every GUIDED turn, own line after the block) "This turn carries safety guidance: do not use humour or playfulness in this reply.", "- Explanation style: explain in simpler terms." / "get to the point directly." / "explain in simple terms and get to the point directly." |
 
 ## 9. Closing change (BG-08 / BG-09)
 
 - **Inherited items (BG-05):** none.
 - **Admitted, both after an anti-duplication run against the whole register:**
   - `QAN-BL-IP-01` — Personal interaction preferences in the Public World. `MEDIUM`, `DEFERRED — OWNED`, owner
-    `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` (proposed name, for the Product Owner).
+    `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` (name APPROVED by the Product Owner, 2026-10-12).
   - `QAN-BL-IP-02` — Interaction Preferences real-model behavioural quality (seven dialects, brevity, humour, explanation).
     `MEDIUM`, `VALIDATION — OPEN`, owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`.
 - **Reconciliation note:** on `QAN-BL-CW-02` (Shared); owner, scope, severity and status unchanged.
@@ -396,7 +397,7 @@ see §10 (filled after push).
 - **Gap closed:** the header named what comes before the preference (Safety, the current request) but not what comes after
   it. The contract's order is Safety > current explicit request > durable preference > model interpretation, so the header
   now ends with: "They take precedence over anything inferred from the conversation or from user memory context."
-  - This is open copy, under CA-2.
+  - This wording is part of CA-2, APPROVED by the Product Owner in the R2 approval.
   - No Memory is filtered, edited or deleted, so the owner's data and rights are unchanged.
 - **Proof** (`conversation-interaction-preferences.spec.ts`):
   - With `DECLINED` and the retrieved Memory, the provider receives exactly Text v1 + the `DECLINED` block. The Memory is

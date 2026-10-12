@@ -1683,8 +1683,8 @@ Nothing here authorizes implementation (BG-07).
   grant; no Public exception path exists in the frozen contracts and no item covers the Public World.
 - **Why deferred:** honouring a private Personal preference in a Public reply would amend CW2-04 §21–§22, a frozen
   Connected Worlds contract; that is a Product / privacy decision, not engineering.
-- **Owner task:** `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` (proposed name, for the Product
-  Owner's confirmation).
+- **Owner task:** `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` (name APPROVED by the Product
+  Owner, IP-IMP-01 R2 approval, 2026-10-12).
 - **Severity:** `MEDIUM` — the reader's own declared style is not applied in one World; nothing private leaks.
 - **Reopen condition:** before any Public QANDEEL feature claims to honour a reader's Personal interaction preferences, and
   only after a reviewed Product decision amending CW2-04 §21–§22.
@@ -2517,7 +2517,7 @@ The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION �
 - **Latest index: 57 items; 26 / 2 / 10 / 19 by status, 31 / 24 / 2 by severity**, recounted mechanically from §4.
 
 **IP-IMP-01 closing change (2026-10-12; PR open, implementation complete, awaiting independent review and the Product Owner's merge decision; not merged, not migrated on any hosted database, not deployed).** IP-IMP-01 (Interaction Preferences, migration `0153`) inherited no item (BG-05: none names it; re-checked at closure).
-- **Admitted — `QAN-BL-IP-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision`, proposed name): Personal preferences do not shape Public replies (CW2-04 §21–§22). Anti-duplication run against the whole register.
+- **Admitted — `QAN-BL-IP-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision`, name APPROVED by the Product Owner): Personal preferences do not shape Public replies (CW2-04 §21–§22). Anti-duplication run against the whole register.
 - **Admitted — `QAN-BL-IP-02`** (`MEDIUM`, `VALIDATION — OPEN`, owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`): real-model preference-following quality for the seven reply languages / dialects, brevity, humour and explanation style. Anti-duplication run.
 - **Reconciled, unchanged — `QAN-BL-CW-02`:** the Shared half; a current-truth note records the new Personal source; owner, scope, severity and status unchanged; no second item.
 - **Untouched:** `QAN-BL-PRIV-01/02/03` (other export facts; the Interaction Preferences export section is IP-IMP-01's own contract scope, WP6), `QAN-BL-CW-05`, `QAN-BL-CTX-01`. `QAN-BL-PROD-06` current truth: `0153` joins the undeployed hosted catch-up queue with `0150`–`0152`.

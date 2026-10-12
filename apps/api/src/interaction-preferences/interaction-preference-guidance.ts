@@ -17,7 +17,7 @@ import type { InteractionPreferences } from './interaction-preferences.types';
 // preference says, DEFAULT included. That constraint is Safety's, not the user's choice, so it is its own line after the
 // preference block, never a line under the header that says "the user explicitly chose".
 //
-// The model-facing texts below are OPEN COPY recorded in the IP-IMP-01 PO Copy Addendum.
+// The model-facing texts below are APPROVED copy: IP-IMP-01 PO Copy Addendum CA-2, in its R2-corrected wording.
 
 export const INTERACTION_PREFERENCE_GUIDANCE_HEADER =
   'Standing interaction preferences the user explicitly chose. Apply them to this reply. An explicit request the user makes in the current conversation takes precedence for what it asks, and safety guidance always takes precedence. They take precedence over anything inferred from the conversation or from user memory context.';

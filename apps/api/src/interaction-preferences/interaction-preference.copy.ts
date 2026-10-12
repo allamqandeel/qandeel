@@ -2,7 +2,7 @@ import type { InteractionPreferenceField, InteractionPreferenceOutcome, Interact
 
 // IP-IMP-01 — the conversation command's deterministic replies. Every word below is the Product Owner's APPROVED
 // IP-IMP-01 UI copy (labels and the three result messages), used verbatim. Only the composition — the result message
-// followed by «<field label>: <value label>.» — is new, and is recorded in the IP-IMP-01 PO Copy Addendum.
+// followed by «<field label>: <value label>.» — is new, and is IP-IMP-01 PO Copy Addendum CA-1 (APPROVED).
 
 type Language = 'ar' | 'en';
 
