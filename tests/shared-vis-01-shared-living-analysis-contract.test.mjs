@@ -126,11 +126,24 @@ test('6 — the Copy Gate: reused words exactly; CLOSED — 6 / 6 APPROVED by th
   assert.equal(approved, 12, 'six rows, in Arabic and English, approved');
 });
 
-test('7 — lifecycle and backlog truth: Stage 5 DONE / MERGED; SHARED-VIS-01 the current task, not merged; Stage 6 not started', () => {
+test('7 — lifecycle and backlog truth: Stage 5 DONE / MERGED; SHARED-VIS-01 current, or recorded merged through PR #321; Stage 6 not started', () => {
   const record = read(RECORD);
   assert.match(record, /^\*\*Status:\*\* `(ACTIVE — IMPLEMENTED ON feat\/shared-vis-01-shared-living-analysis — NOT MERGED; NOT CLOSED|CLOSED[^`]*|DONE \/ MERGED[^`]*)`/mu);
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /\| `QAN-BL-CW-03` \|[^\n]*\| `(DEFERRED — OWNED|CLOSED — TOMBSTONE)` \|/u);
+  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only): PR #321 merged as 5973123 and GOV-REC-01 tombstones
+  // QAN-BL-CW-03 retroactively. A tombstone must name this task as its closing task, carry the merge commit and keep the
+  // physical-Android release gate (Issue #322) open — the merge is not device proof.
+  if (/\| `QAN-BL-CW-03` \|[^\n]*\| `CLOSED — TOMBSTONE` \|/u.test(backlog)) {
+    const tombstones = backlog.slice(backlog.indexOf('## 6. Tombstones'), backlog.indexOf('## 7. Counts at this baseline'));
+    const start = tombstones.indexOf('### `QAN-BL-CW-03` — ');
+    assert.ok(start >= 0, 'QAN-BL-CW-03 has a §6 tombstone');
+    const end = tombstones.indexOf('\n### ', start + 1);
+    const cw03 = tombstones.slice(start, end < 0 ? undefined : end);
+    assert.match(cw03, /\n- \*\*Closing task:\*\* `SHARED-VIS-01 — /u, 'the tombstone names SHARED-VIS-01');
+    assert.match(cw03, /`5973123153e26494d702a4a859a79631ede225cd`/u, 'the tombstone carries the PR #321 merge commit');
+    assert.match(cw03.replace(/\s+/gu, ' '), /Issue #322[^.]*stays \*\*OPEN \/ NOT PROVEN \/ RELEASE BLOCKER\*\*/u, 'Issue #322 stays open');
+  }
   for (const id of ['QAN-BL-CW-05', 'QAN-BL-CW-06', 'QAN-BL-CW-07']) assert.match(backlog, new RegExp(`\\| \`${id}\` \\|`, 'u'), `${id} is admitted`);
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
@@ -139,6 +152,8 @@ test('7 — lifecycle and backlog truth: Stage 5 DONE / MERGED; SHARED-VIS-01 th
     assert.doesNotMatch(state, /Stage 6[^\n]*\*\*ACTIVE/u, 'Stage 6 is not started');
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
-    assert.match(read('QANDEEL_PROJECT_MAP.md'), /> \*\*CURRENT IMPLEMENTATION TASK: SHARED-VIS-01 — Shared World Living Analysis Map Product Integration\*\*/u);
+    // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only): once PR #321 merged, SHARED-VIS-01 is no longer the
+    // current task; the map must then record it merged with its PR and merge commit.
+    assert.match(read('QANDEEL_PROJECT_MAP.md'), /> \*\*CURRENT IMPLEMENTATION TASK: SHARED-VIS-01 — Shared World Living Analysis Map Product Integration\*\*|\*\*SHARED-VIS-01 is DONE \/ MERGED\*\* through PR #321 as `5973123153e26494d702a4a859a79631ede225cd`/u);
   }
 });

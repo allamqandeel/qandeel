@@ -1,6 +1,11 @@
 # QANDEEL — MEM-AR-01 — Memory Correction & Arabic Acquisition — Implementation Record v1
 
-**Status:** `MEM-AR-01` — **CLOSED / READY FOR PO MERGE DECISION.** One task contract with three ordered slices,
+**Status:** `MEM-AR-01` — **CLOSED / MERGED — all three slices merged: 01A through PR #328 (`04dfbf21`), 01B through PR
+#329 (`20e33ae3`), 01C through PR #330 as `3bec87ac725c73db0aecc5a6fb4e01c90acce66b` (2026-10-12); migration `0152` NOT
+DEPLOYED.** The post-merge status is recorded by GOV-REC-01 (2026-10-12; the 01C slice's §16, at the end of this record).
+Everything else is kept as written before the 01C merge.
+
+**Status at the 01C closing change (historical, kept verbatim):** `MEM-AR-01` — **CLOSED / READY FOR PO MERGE DECISION.** One task contract with three ordered slices,
 `MEM-AR-01A` → `MEM-AR-01B` → `MEM-AR-01C`. 01A is merged (PR #328) and 01B is merged (PR #329). 01C — migration
 `0152` — is implemented and carries this closing change (BG-08 / BG-09) in Draft PR #330, **awaiting the Product Owner's
 merge decision («ادمج»); not merged, not deployed.**
@@ -796,3 +801,20 @@ the SELF / OTHER copies); against the previous service, 6 of the 7 L-12 route ca
 
 **Next gate:** G-C2 — MEM-AR-01C Final PR Review (STOP). No merge, no auto-merge, no deployment; merge only on the
 Product Owner's explicit «ادمج».
+
+### 16. Post-merge Governance Reconciliation (GOV-REC-01, 2026-10-12)
+
+Added by `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` (BG-09: recorded explicitly, never a quiet
+rewrite). Nothing above is changed. The "Draft PR #330 … not merged" of the record banner and of the 01C slice banner,
+and "Next gate: G-C2 … (STOP)", describe the state before the merge.
+
+**GitHub truth (read 2026-10-12):** [PR #330](https://github.com/allamqandeel/qandeel/pull/330) was MERGED on 2026-10-12
+at 06:08 UTC as merge commit `3bec87ac725c73db0aecc5a6fb4e01c90acce66b`, from the final head
+`f98e956ddef0078908ae24dcd3c4b30f30aba6ab`. With PR #328 (`04dfbf21e8e40fe24ca042baa3e1456ac99ae798`) and PR #329
+(`20e33ae3f0c7a4c95a952802d293547f1a98f676`), all three slices are merged. Migration `0152` is on `main` and not on the
+hosted database (`QAN-BL-PROD-06`).
+
+**Lifecycle:** `CLOSED / MERGED`. The closing change at 01C carried the BG-08 half: it admitted `QAN-BL-INTEL-03` and
+`QAN-BL-PRIV-03`. Only the locators had drifted: Current State and the Project Map still showed 01C awaiting the merge
+decision, and the backlog §9 had no `INTEL-SV-01` row and no `QAN-BL-PRIV-03` entry. GOV-REC-01 corrects them. No item,
+owner or Product decision changes.

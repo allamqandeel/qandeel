@@ -1,6 +1,10 @@
 # QANDEEL — ACE-SP-01 — Shared / Public QANDEEL Personality Core — Implementation Record v1
 
-**Status:** `ACE-SP-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
+**Status:** `ACE-SP-01` — **CLOSED / MERGED through PR #333 as `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b` (2026-10-12);
+no migration; NOT DEPLOYED.** The controlled amendment binds from that merge. The post-merge status is recorded by
+GOV-REC-01 (2026-10-12, §12). §1–§11 are kept as written before the merge.
+
+**Status at the closing change (historical, kept verbatim):** `ACE-SP-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
 - One branch and one Draft PR. This record carries the closing change (BG-08 / BG-09).
 - **Not merged**: merge happens only on the Product Owner's explicit order.
 - No migration was added. Nothing was migrated on a hosted database, and nothing is deployed.
@@ -196,7 +200,9 @@ GitHub CI validates the exact head (§9).
 - `QAN-BL-ACE-02` — the validation set is extended to Shared / Public (D-4); its owner (Stage 8A) and its status
   (`VALIDATION — OPEN`) are unchanged.
 - `QAN-BL-GOV-01` — admitted for pre-existing locator / closure-record drift, presented as one standalone item at the
-  Product Owner's direction. Its owner name, `GOV-REC-01`, is proposed for confirmation.
+  Product Owner's direction. Its owner name, `GOV-REC-01`, was **APPROVED** by the Product Owner on 2026-10-12. *(As
+  written at the closing change: "Its owner name, `GOV-REC-01`, is proposed for confirmation." The approval is recorded
+  by GOV-REC-01, §12.)*
 - `QAN-BL-CW-02` (SHARED-CTX-01), `QAN-BL-IP-01` (PUBLIC-PREF-01), `QAN-BL-MATCH-01` — current-truth notes or citations
   only; owners and statuses unchanged.
 
@@ -217,3 +223,24 @@ GitHub CI validates the exact head (§9).
 - **No edits to frozen or closed records.** No edit to a CW2 file, a SHA-pinned artifact, or the S4-02 / S5-04 records.
 - **No repair of predecessor drift.** Admitted as `QAN-BL-GOV-01` instead.
 - **No merge, hosted migration or deployment.**
+
+## 12. Post-merge Governance Reconciliation (GOV-REC-01, 2026-10-12)
+
+Added by `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` (BG-09: recorded explicitly, never a quiet
+rewrite). §1–§11 are unchanged apart from the owner-name line of §10. Their "Draft PR" and "not merged" describe the state
+before the merge, and their results stay tied to the heads they name.
+
+**GitHub truth (read 2026-10-12):** [PR #333](https://github.com/allamqandeel/qandeel/pull/333) was MERGED on 2026-10-12
+at 19:45 UTC as merge commit `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`, from the final head
+`dbd3329f9f78bf17622862a599351ff15428a622`. No migration. Nothing is deployed. The
+[ACE-SP-01 controlled amendment](../canonical-authority/connected-worlds-v2/architecture/QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md)
+binds from this merge. Its own bytes and banner are unchanged; the Canonical Authority Index row records the merge.
+
+**Lifecycle:** `CLOSED / MERGED`.
+- The `QAN-BL-ACE-01` tombstone (backlog §6) now carries the merge SHA; its pre-merge wording is kept.
+- `QAN-BL-GOV-01` — the residual this task admitted — is delivered by GOV-REC-01 and tombstoned there, effective from
+  GOV-REC-01's merge.
+- The owner name `GOV-REC-01` is APPROVED (§10).
+
+**Not changed:** the world-neutral core, the GUIDED suspension line, the World frames, the approved copy CG-1 … CG-6 and
+every Product decision (D-1 … D-4).

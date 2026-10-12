@@ -127,7 +127,13 @@ test('authority before code: the standalone amendment, registered; CW2-03 / 04 /
 
 test('BG-08 / BG-09: the record states its lifecycle and the backlog carries the dispositions', () => {
   assert.match(record, /^# QANDEEL — ACE-SP-01 — Shared \/ Public QANDEEL Personality Core — Implementation Record v1$/mu);
-  assert.match(record, /^\*\*Status:\*\* `ACE-SP-01` — \*\*IMPLEMENTATION COMPLETE/mu);
+  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only): PR #333 merged as 84dd486c. The banner may now state the
+  // merged lifecycle with its exact merge commit, and then the pre-merge banner must be kept beside it (BG-09).
+  assert.match(record, /^\*\*Status:\*\* `ACE-SP-01` — \*\*(IMPLEMENTATION COMPLETE|CLOSED \/ MERGED through PR #333 as `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`)/mu);
+  if (/^\*\*Status:\*\* `ACE-SP-01` — \*\*CLOSED \/ MERGED/mu.test(record)) {
+    assert.match(record, /^\*\*Status at the closing change \(historical, kept verbatim\):\*\* `ACE-SP-01` — \*\*IMPLEMENTATION COMPLETE/mu,
+      'the pre-merge banner is kept as history');
+  }
   assert.doesNotMatch(record, /^\*\*Phase:\*\*/mu, 'ACE-SP-01 is a task, not a Connected Worlds phase');
   assert.match(record, /## 1\. Kickoff census \(BG-05\)[\s\S]*?`QAN-BL-ACE-01`/u);
   assert.match(backlog, /^\| `QAN-BL-ACE-01` \| [^\n]*\| `CLOSED — TOMBSTONE` \|$/mu);
@@ -136,7 +142,12 @@ test('BG-08 / BG-09: the record states its lifecycle and the backlog carries the
   const ace02 = backlog.slice(backlog.indexOf('### `QAN-BL-ACE-02` — '), backlog.indexOf('### `QAN-BL-GOV-01` — '));
   assert.match(ace02, /\*\*Scope extension \(ACE-SP-01; Product Owner decision D-4, 2026-10-12\):\*\*/u, 'D-4: the Stage 8A set is extended');
   assert.match(ace02, /- \*\*Status:\*\* `VALIDATION — OPEN`/u);
-  assert.match(backlog, /^\| `QAN-BL-GOV-01` \| [^\n]*\| `DEFERRED — OWNED` \|$/mu, 'pre-existing drift is one owned item');
+  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only): the owner task delivered QAN-BL-GOV-01 and tombstoned it.
+  // The item stays one item; a tombstone must name GOV-REC-01 as its closing task.
+  assert.match(backlog, /^\| `QAN-BL-GOV-01` \| [^\n]*\| `(DEFERRED — OWNED|CLOSED — TOMBSTONE)` \|$/mu, 'pre-existing drift is one owned item');
+  if (/^\| `QAN-BL-GOV-01` \| [^\n]*\| `CLOSED — TOMBSTONE` \|$/mu.test(backlog)) {
+    assert.match(tombstones, /### `QAN-BL-GOV-01` — [^\n]*\n\n- \*\*Closing task:\*\* `GOV-REC-01 — /u, 'the tombstone names GOV-REC-01');
+  }
   assert.match(backlog, /\*\*ACE-SP-01 closing change \(2026-10-12;/u);
 });
 

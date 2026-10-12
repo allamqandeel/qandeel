@@ -177,7 +177,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-LAUNCH-03` | Shared ID Sealing Key: Production Custody, Provisioning and Rotation | `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CI-01` | iOS Simulator Maestro / XCTest Driver Startup Reliability in Mobile CI | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-02` | Shared Standing Context Product & Private-Source Integration | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-CW-03` | Shared World Living Analysis Map / Semantic Geography Product Integration | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-CW-03` | Shared World Living Analysis Map / Semantic Geography Product Integration | `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-CW-04` | Public Lightweight Reactions Runtime (PG-07) | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-05` | QANDEEL Conversational Output Cannot Be a Shared Semantic-Place Source | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-06` | The Ended Shared World Has No Read-Only Living Analysis View | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
@@ -195,7 +195,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-IP-02` | Interaction Preferences: Real-Model Behavioural Quality (Seven Reply Languages / Dialects, Brevity, Humour, Explanation Style) | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
 | `QAN-BL-ACE-01` | The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B) | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-ACE-02` | Adaptive Conversational Expression: Real-Model Personality Behaviour on the Golden Conversations Suite | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
-| `QAN-BL-GOV-01` | Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-GOV-01` | Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 
 ---
 
@@ -1018,6 +1018,10 @@ of S4-02's scope, and nothing here authorizes implementation (BG-07).
 
 ### `QAN-BL-CW-03` — Shared World Living Analysis Map / Semantic Geography Product Integration
 
+> **Historical pre-closure schema.** This block records the item as admitted and as its owner task found it. It is not the
+> current lifecycle state; the current state is the `CLOSED — TOMBSTONE` record in §6 below (SHARED-VIS-01, closed
+> retroactively by GOV-REC-01).
+
 - **Title / Finding:** the Stage-4 Shared World runtime, authority, conversation, governance, history, Activity and Direct
   Entry are delivered, but the production mobile World surface is still conversation-centric (`SharedWorldArea` +
   `SharedWorldThread`) rather than the Living Analysis semantic World described by the Shared Product North Star. It does
@@ -1063,6 +1067,11 @@ closed ([record](e2e/QANDEEL_SHARED_VIS_01_SHARED_WORLD_LIVING_ANALYSIS_IMPLEMEN
 and serve Personal and Public. Shared World is still not integrated into that surface; when this item opens, Shared consumes
 the same stack. This note changes none of this item's fields: `SHARED-VIS-01`, `HIGH`, `DEFERRED — OWNED`, and its
 sequencing gate (only after Stage 5 is fully `DONE / MERGED`) is unchanged.
+
+**Current truth (GOV-REC-01, 2026-10-12).** SHARED-VIS-01 merged through PR #321 as
+`5973123153e26494d702a4a859a79631ede225cd` on 2026-10-09, but its closing change never landed, so this item stayed
+`DEFERRED — OWNED` with no recorded disposition. GOV-REC-01 records that disposition retroactively under BG-08 / BG-09:
+the item is `CLOSED — TOMBSTONE` (§6). The notes above are kept as written at their dates.
 
 ### `QAN-BL-CW-04` — Public Lightweight Reactions Runtime (PG-07)
 
@@ -1811,6 +1820,10 @@ authorizes implementation (BG-07).
 
 ### `QAN-BL-GOV-01` — Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges
 
+> **Historical pre-closure schema.** This block records the item as admitted by ACE-SP-01; only its owner-name line is
+> updated, with the Product Owner's approval. It is not the current lifecycle state; the current state is the
+> `CLOSED — TOMBSTONE` record in §6 below (GOV-REC-01).
+
 - **Title / Finding:** several repository locators and closure records still describe merged work as unmerged, or omit it.
   Each was verified on `main` at `141a3190deb02bc6695d2ace05da275e623a2754`:
   1. `QANDEEL_CURRENT_STATE.md` and `QANDEEL_PROJECT_MAP.md` have no IP-IMP-01 (PR #331, `424cd023`) or ACE-01 (PR #332,
@@ -1836,8 +1849,9 @@ authorizes implementation (BG-07).
   SHARED-VIS-01's closing change and is not decided here.
 - **Why deferred:** AGENTS.md §10.6 and BG-09 say that repairing a predecessor's closure record is a governance task, not
   ordinary inheritance. The Product Owner kept it out of ACE-SP-01's scope.
-- **Owner task:** `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation`. ACE-SP-01 proposed this name; the
-  Product Owner confirms it or renames it at review.
+- **Owner task:** `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation`. Name **APPROVED** by the Product
+  Owner on 2026-10-12. *(As admitted by ACE-SP-01: "ACE-SP-01 proposed this name; the Product Owner confirms it or
+  renames it at review." The approval is recorded by GOV-REC-01.)*
 - **Severity:** `MEDIUM` — locators that misstate lifecycle can mislead the next task's kickoff (BG-05). No runtime effect.
 - **Reopen condition:** before the next task whose kickoff relies on Current State or the Project Map for the IP-IMP-01,
   ACE-01 or SHARED-VIS-01 lifecycle, and in any case before Stage 8A starts.
@@ -2179,10 +2193,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 ### `QAN-BL-ACE-01` — The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B)
 
 - **Closing task:** `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`
-- **PR / SHA:** Draft PR #333 from branch `ace/ace-sp-01-shared-public-personality-core` (closing change `335bb09a`; the
+- **PR / SHA:** PR #333, merged as `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b` (2026-10-12; exact head
+  `dbd3329f9f78bf17622862a599351ff15428a622`); no migration; not deployed. *(As first written, before the merge: "Draft
+  PR #333 from branch `ace/ace-sp-01-shared-public-personality-core` (closing change `335bb09a`; the
   [ACE-SP-01 implementation record](e2e/QANDEEL_ACE_SP_01_SHARED_PUBLIC_PERSONALITY_CORE_IMPLEMENTATION_RECORD_v1.md)
   §9). The tombstone holds from that PR's merge, and the merge SHA is filled in at merge. Not merged; no migration; not
-  deployed.
+  deployed."; the merge SHA was filled in by GOV-REC-01's reconciliation.)*
 - **Disposition:** completed for both Worlds, under the Product Owner's *ACE-SP-01 — Final Product Approval &
   Implementation Authorization* (2026-10-12; D-1 … D-4; Product Copy Gate CG-1 … CG-6 APPROVED 6 / 6).
   - **Amendment first.** The standalone [ACE-SP-01 controlled amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md),
@@ -2205,16 +2221,93 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   - **Real-model behaviour** is validated under `QAN-BL-ACE-02` (validation set extended, D-4).
 - **Status:** `CLOSED — TOMBSTONE`
 
+### `QAN-BL-CW-03` — Shared World Living Analysis Map / Semantic Geography Product Integration
+
+- **Closing task:** `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration`. Its BG-08 half is recorded
+  retroactively by `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation`: an explicit governance
+  reconciliation under BG-09, not a quiet rewrite.
+- **PR / SHA:** PR #321, merged as `5973123153e26494d702a4a859a79631ede225cd` (2026-10-09). The Product Owner's merge
+  decision on that PR approved the exact head `8563e5699a100fe88c3e5ef451ca825c98d4c18e`, with an explicit pre-launch
+  condition (Issue #322, below). This retroactive disposition holds from the merge of the GOV-REC-01 pull request.
+- **Why it is recorded late:** SHARED-VIS-01 planned its closing change: this tombstone, its record banner and the locator
+  rows (record §10: the item "stays `DEFERRED — OWNED` … until this task's closing change tombstones it"). That change
+  did not land before PR #321 merged. CI-01 recorded the drift as an independent documentation gap (C0 decision D10).
+  ACE-SP-01 admitted it as `QAN-BL-GOV-01` at the Product Owner's direction, and GOV-REC-01 repairs it. Nothing below is
+  decided anew: each fact is read from the merged record, PR #321 and the Product Owner's recorded decisions.
+- **Disposition:** completed for its scope. It was delivered under the Product Owner's SHARED-VIS-01 Decision Gate
+  (Option A, D1–D7, 2026-10-08), the Visual Layout Correction (2026-10-08) and the Controlled Frozen Map Correction
+  (2026-10-09) ([SHARED-VIS-01 record](e2e/QANDEEL_SHARED_VIS_01_SHARED_WORLD_LIVING_ANALYSIS_IMPLEMENTATION_RECORD_v1.md)
+  §3, §13, §14).
+  - **Scope.** An ALLOWed Shared World opens on the ONE common Living Analysis surface (`LivingAnalysisSurface →
+    WorldViewSurface → WorldCanvas`; FAR / MID / NEAR; `CHROME_ONLY`). It has a Shared-specific projection
+    (`SharedFieldView`) and a World-local camera and focus owned by `SharedFieldController`. The S4-02 conversation and
+    the membership, governance, history, Activity and authority surfaces stay the World's own chrome; the conversation is
+    one entry away (D7). No Shared truth is mapped into Personal Threads, Readings or Sessions. I-04 is not rebuilt:
+    migration `0148` is additive, in its own schema, over the frozen I-04G core.
+  - **Required future properties, each held:**
+    - one renderer family across Personal, Shared and Public (the common stack; no Shared renderer);
+    - exact-World semantic geography (`QANDEEL_SHARED_FIELD_V1` World-local coordinates);
+    - no Personal camera, focus or timeline leakage, and independent Shared viewer state (per-World anchors, keyed by
+      the World; record §5);
+    - no invented cross-World coordinate alignment;
+    - Shared authority and privacy laws unchanged (D3: a place is served only when every source is visible; D4: it is
+      removed by the frozen owner-deletion closure);
+    - targeted non-regression proof for the merged Stage-4 journeys (record §9, the re-anchored S4 journeys).
+  - **"The World grows from Shared-native truth over time."** A place is built from the World's own human text only.
+    Its producer is provider-neutral and refuses until Stage 8A binds a provider (D2), so the production field is empty
+    by truth until then. That binding is Stage 8A's delivery objective (Project Map §5.1), not a gap in this item.
+  - **"Time state."** There is no Shared Timeline, by the Product Owner's D5. Shared temporal navigation is
+    `QAN-BL-CW-07`.
+  - **Dispositioned elsewhere by the Product Owner, not dropped:** `QAN-BL-CW-05` (Stage 8A); `QAN-BL-CW-06` and
+    `QAN-BL-CW-07` (`OPEN — UNASSIGNED`); Shared density at scale under `QAN-BL-VIS-01` (`LA-SCALE-01`).
+- **Release evidence — not part of this item:** GitHub Issue #322, *Physical Android rapid interaction & resize
+  stability proof*, stays **OPEN / NOT PROVEN / RELEASE BLOCKER**.
+  - The Product Owner made it the condition of the PR #321 merge (decision of 2026-10-09 on the PR).
+  - The issue places it under the Stage 9 Economy + Launch Closure / release-readiness gate, or an earlier explicit
+    validation owner.
+  - The issue itself says it is not an instruction to reopen SHARED-VIS-01.
+  - This tombstone is not evidence that the device condition is met; neither are the merge, green CI or the emulator
+    proofs.
+  - No register item carries it today: `QAN-BL-NOTIF-05` covers native Push only, and `QAN-BL-VIS-01` covers scale and
+    LOD. Whether it is admitted as an item is left to the Product Owner (GOV-REC-01 record §7).
+- **Status:** `CLOSED — TOMBSTONE`
+
+### `QAN-BL-GOV-01` — Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges
+
+- **Closing task:** `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` (name APPROVED by the Product
+  Owner, 2026-10-12).
+- **PR / SHA:** the GOV-REC-01 pull request from branch `gov/gov-rec-01-post-merge-reconciliation`, from `main` at
+  `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b` (the merge of PR #333). Documentation and governance only: no migration and
+  no runtime change. The tombstone holds from that PR's merge. Until then this item is not closed.
+- **Disposition:** completed. Each correction is recorded explicitly, and text that is history is kept and labelled
+  ([GOV-REC-01 record](e2e/QANDEEL_GOV_REC_01_POST_MERGE_LOCATOR_CLOSURE_RECORD_RECONCILIATION_v1.md)). The six findings:
+  1. Current State and the Project Map now have IP-IMP-01 (PR #331, `424cd023…`) and ACE-01 (PR #332, `141a3190…`). The
+     INTEL-TM-01 checkpoint's "later proposed C2 slices" carries a dated note.
+  2. The IP-IMP-01 and ACE-01 records carry a post-merge `**Status:**` and a dated post-merge governance reconciliation.
+     Their pre-merge banners and closing-change paragraphs are kept, labelled historical.
+  3. SHARED-VIS-01 is recorded merged (PR #321, `5973123…`) in Current State §3.7 and §7, the Project Map §5.1, the
+     Roadmap and this register's §9. `QAN-BL-CW-03` is tombstoned (above).
+  4. §9's Stage 8A row lists `QAN-BL-CW-05`, `QAN-BL-IP-02` and `QAN-BL-ACE-02`.
+  5. Current State §5 counts the register mechanically from §4.
+  6. The CI-01 baseline marks rows C-22, C-23, C-30 and C-31 as historical at their census version, with a dated
+     post-merge note. No measurement changed.
+
+  The comprehensive search found more of the same drift, corrected the same way: the ACE-SP-01, MEM-AR-01 and CI-01
+  records' pre-merge banners; the ACE-01 tombstone's merge SHA; the Canonical Authority Index's ACE-SP-01 row; the §9
+  entries of eight more open items whose owner had none (§7, GOV-REC-01 reconciliation); and the stale "open PR" /
+  "not merged" labels in Current State §3.4, §3.6 and §4 (record §4).
+- **Status:** `CLOSED — TOMBSTONE`
+
 ---
 
 ## 7. Counts at this baseline
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 28 |
+| `DEFERRED — OWNED` | 26 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 20 |
+| `CLOSED — TOMBSTONE` | 22 |
 | **Total** | **62** |
 
 | Severity | Count |
@@ -2698,7 +2791,8 @@ Kickoff (BG-05): it inherited exactly one item, `QAN-BL-ACE-01`, included in its
   also covers the world-neutral personality in Shared / Public — mixed-language groups, differing participants, the
   public discussion, `GUIDED` Safety, fitting humour. No duplicate item was created and no paid evaluation was run.
 - **Admitted — `QAN-BL-GOV-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `GOV-REC-01 — Post-merge Locator & Closure-Record
-  Reconciliation`, name proposed for the Product Owner's confirmation): pre-existing locator and closure-record drift
+  Reconciliation`, name APPROVED by the Product Owner on 2026-10-12 — *as written at this closing change: "name proposed
+  for the Product Owner's confirmation"; the approval is recorded by GOV-REC-01*): pre-existing locator and closure-record drift
   after the IP-IMP-01, ACE-01 and SHARED-VIS-01 merges, presented as one standalone item at the Product Owner's direction
   (§6) and not repaired here. Anti-duplication run against the whole register.
 - **Reconciled, owner and status unchanged:**
@@ -2710,6 +2804,39 @@ Kickoff (BG-05): it inherited exactly one item, `QAN-BL-ACE-01`, included in its
 - **Untouched:** `QAN-BL-IP-02`, `QAN-BL-CW-03`, `QAN-BL-CW-05`, `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01` (no account edge).
   `QAN-BL-PROD-06` current truth is unchanged: ACE-SP-01 adds no migration.
 - **Latest index: 62 items; 28 / 4 / 10 / 20 by status, 31 / 29 / 2 by severity**, recounted mechanically from §4.
+
+**GOV-REC-01 reconciliation (2026-10-12; documentation / governance only; from `main` at
+`84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`; PR open, not merged).** GOV-REC-01 — Post-merge Locator & Closure-Record
+Reconciliation is not a Product stage and changes no runtime, migration, API, screen or Product decision. Its owner name
+is **APPROVED** by the Product Owner (2026-10-12). Every place that still called it proposed (the ACE-SP-01 paragraph
+above, the item's owner line, the §9 row and the ACE-SP-01 record §10) now records the approval and keeps the original
+wording as history.
+
+GitHub truth read at kickoff: PR #321 (SHARED-VIS-01) merged as `5973123…`; PR #325 (CI-01) as `44a440c…`; PRs #326 /
+#327 (INTEL-TM-01); PRs #328 / #329 / #330 (MEM-AR-01A / 01B / 01C) as `04dfbf21…` / `20e33ae3…` / `3bec87ac…`; PR #331
+(IP-IMP-01) as `424cd023…`; PR #332 (ACE-01) as `141a3190…`; PR #333 (ACE-SP-01) as `84dd486c…`. Every dated note in this
+register that calls one of these tasks "PR open", "Draft PR" or "not merged" describes the state at its own date.
+
+- **Inherited items (BG-05):** exactly one, `QAN-BL-GOV-01`, included in the task. Re-checked at closure.
+- **Tombstoned — `QAN-BL-GOV-01`:** every listed finding is corrected (§6 tombstone). It holds from the GOV-REC-01 PR's
+  merge.
+- **Tombstoned retroactively — `QAN-BL-CW-03`**, for SHARED-VIS-01 (PR #321), under BG-08 / BG-09. GOV-REC-01 finds no
+  gap inside the item's own scope; the parts not delivered were already dispositioned by the Product Owner to
+  `QAN-BL-CW-05` … `07`, `QAN-BL-VIS-01` and Stage 8A (§6 tombstone).
+- **Merge SHA filled in:** the `QAN-BL-ACE-01` tombstone (PR #333, `84dd486c…`).
+- **§9 corrected, owners and scopes unchanged:** the Stage 8A row lists `QAN-BL-CW-05`, `QAN-BL-IP-02` and
+  `QAN-BL-ACE-02`. The open items whose owner had no §9 entry gain one, read mechanically from §4: `QAN-BL-PROD-04`,
+  `QAN-BL-PROD-05`, `QAN-BL-LAUNCH-03`, `QAN-BL-CI-01`, `QAN-BL-MATCH-01`, `QAN-BL-INTEL-03`, `QAN-BL-PRIV-03` and
+  `QAN-BL-IP-01`. IP-IMP-01 and MEM-AR-01 gain their task rows. The SHARED-VIS-01 and GOV-REC-01 rows record their
+  closures.
+- **Not admitted — a Product Owner decision:** GitHub Issue #322 (the physical-Android rapid-interaction and resize
+  stability proof, `OPEN / NOT PROVEN / RELEASE BLOCKER`, Stage 9 release-readiness gate). No register item covers it
+  (`QAN-BL-NOTIF-05` is native Push; `QAN-BL-VIS-01` is scale and LOD), and this task does not create a commitment the
+  Product Owner has not approved for the register. It is referenced in the `QAN-BL-CW-03` tombstone and in the locators.
+  Issue #322 is not closed.
+- **Untouched:** every other item, owner, severity and status. `QAN-BL-PROD-06` current truth is unchanged: GOV-REC-01
+  adds no migration.
+- **Latest index: 62 items; 26 / 4 / 10 / 22 by status, 31 / 29 / 2 by severity**, recounted mechanically from §4.
 
 ## 8. What is deliberately not in this backlog
 
@@ -2756,9 +2883,12 @@ Inherited after T-12 closure reconciliation:
 | `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` | `QAN-BL-PROD-03` — widened by its contract and delivered; tombstoned by itself under BG-08 |
 | `PROD-SEC-01 — API Baseline Hardening` | `QAN-BL-PROD-02` — widened by its contract to SEC-A … SEC-H and delivered; tombstoned by itself under BG-08 |
 | `LAUNCH-EDGE-SECURITY-GATE — Trusted Proxy / Edge / Origin Production Proof` | `QAN-BL-LAUNCH-01` |
-| `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-02` |
+| `FINAL-LAUNCH-CLOSURE — Identifier Key Management Gate` | `QAN-BL-LAUNCH-02`; `QAN-BL-LAUNCH-03` (admitted by S4-01; listed here by GOV-REC-01) |
+| `PROD-AUTH-01 — Auth Verification Path` | `QAN-BL-PROD-04` (PROD-READINESS-01 corrective admission; listed here by GOV-REC-01) |
+| `PROD-DATA-01 — List/Fan-out Correction` | `QAN-BL-PROD-05` (PROD-READINESS-01 corrective admission; listed here by GOV-REC-01) |
+| `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `QAN-BL-CI-01` (admitted by S4-01; listed here by GOV-REC-01) |
 | `W3-CORR-U — Understanding Integrity` | none — U-1 … U-5 closed inside the task; admitted `QAN-BL-PRIV-01` |
-| `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02` |
+| `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02`; `QAN-BL-PRIV-03` (admitted by MEM-AR-01; listed here by GOV-REC-01) |
 | `AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation` | none — no item names it; none admitted |
 | `W3-MEGA-S-CLOSE-01 — Product Copy Approval + Residual Reconciliation` | none — admitted `QAN-BL-A11Y-01` |
 | `ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation` | none — no item names it; none admitted |
@@ -2772,7 +2902,7 @@ Inherited after T-12 closure reconciliation:
 | `REMINDER-EVT-01 — User-Requested Reminder Runtime & Event Producer` | `QAN-BL-NOTIF-03` |
 | `ACCOUNT-SEC-EVT-01 — Account & Security Event-Producer Integration` | `QAN-BL-NOTIF-04` |
 | `SHARED-CTX-01 — Shared Standing Context Product Integration` | `QAN-BL-CW-02` |
-| `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `QAN-BL-CW-03` — ACTIVE since 2026-10-08 (Stage 5 DONE / MERGED); stays `DEFERRED — OWNED` until this task's closing change tombstones it; admitted `QAN-BL-CW-05` (owned by Stage 8A at the Product Owner's deferral), `QAN-BL-CW-06` and `QAN-BL-CW-07` (deferred by the Product Owner, unassigned); `QAN-BL-VIS-01` (Shared density at scale observed within `LA-SCALE-01`), `QAN-BL-ACCT-01` (0148 references no account) and `QAN-BL-VOICE-01` observed and left unchanged; the Stage-8A binding of the two Shared ports recorded |
+| `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` | `QAN-BL-CW-03` — **delivered and merged through PR #321 (`5973123153e26494d702a4a859a79631ede225cd`, 2026-10-09); its closing change never landed, so `GOV-REC-01` tombstones it retroactively under BG-08 / BG-09; Issue #322 (physical-Android release evidence) stays OPEN, outside this item.** *As written on 2026-10-08:* ACTIVE since 2026-10-08 (Stage 5 DONE / MERGED); stays `DEFERRED — OWNED` until this task's closing change tombstones it; admitted `QAN-BL-CW-05` (owned by Stage 8A at the Product Owner's deferral), `QAN-BL-CW-06` and `QAN-BL-CW-07` (deferred by the Product Owner, unassigned); `QAN-BL-VIS-01` (Shared density at scale observed within `LA-SCALE-01`), `QAN-BL-ACCT-01` (0148 references no account) and `QAN-BL-VOICE-01` observed and left unchanged; the Stage-8A binding of the two Shared ports recorded |
 | `S5-01 — Public World Reachability, Entry & Identity Foundation` | none — no item names it; `QAN-BL-CW-01` re-owned to `S5-02` (Product Owner designation); `QAN-BL-ACCT-01` observed and left unchanged; none admitted |
 | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `QAN-BL-CW-01` — delivered by migration `0143` before any Draft / review path became application-reachable; tombstoned by itself under BG-08 (effective from its merge); `E2E-H-08` CLOSED and the 64 → 80 reconciliation DONE by S5-02; the original assignment, kept as written: must close `ASSURE-F05` before any application-reachable Draft / review creation path is opened; Product Owner assignments (S5-01 R1, not backlog items): close `E2E-H-08` when the real authorship / Public-Identity creation path consumes the S5-01 display foundation, and when that path is opened reconcile the old I-05 64-character display-label implementation ceiling with the valid 80-character account Name by a reviewed forward migration so REAL_NAME represents the full canonical account Name (no silent truncation) |
 | `S5-03A — Public Semantic Interpretation + Publisher Review` | none — no item names it; `QAN-BL-ACCT-01` observed, scope unchanged, its new Experience Version / Semantic Placement `RESTRICT` dependents recorded; none admitted; the Stage-8A provider binding recorded as a closure-time admission candidate pending the Product Owner's owner-task designation |
@@ -2781,7 +2911,8 @@ Inherited after T-12 closure reconciliation:
 | `S5-04 — Public Discussion + @qandeel + Public Activity / Direct Entry + Final Public Integration` | none — no item names it; `QAN-BL-VIS-01` re-owned to `LA-SCALE-01` (Product Owner D6; S5-03B G04 / G05 and S5-03C's read bounds reconciled under it); `QAN-BL-CW-04` admitted (Product Owner D3); `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01`, `QAN-BL-CW-03` and `QAN-BL-NOTIF-02` … `05` observed and left unchanged |
 | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
-| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-ACE-02` (ACE-01 closing change) |
+| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4) |
+| `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
@@ -2791,9 +2922,13 @@ Inherited after T-12 closure reconciliation:
 | `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck` | `QAN-BL-QIR-01` (admitted at INTEL-TM-01 post-merge closure) |
 | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (owner name PO-APPROVED) |
 | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (owner name PO-APPROVED) |
+| `MEM-AR-01 — Memory Correction & Arabic Acquisition` | none — no item names it (re-checked at each slice); admitted `QAN-BL-INTEL-03` and `QAN-BL-PRIV-03`; merged through PRs #328, #329 and #330 (01C, `3bec87ac725c73db0aecc5a6fb4e01c90acce66b`) (row added by GOV-REC-01) |
+| `INTEL-SV-01 — Hypothesis Semantic Support Verification` | `QAN-BL-INTEL-03` (admitted by MEM-AR-01; listed here by GOV-REC-01) |
+| `IP-IMP-01 — Interaction Preferences` | none — no item names it; admitted `QAN-BL-IP-01` and `QAN-BL-IP-02`; `QAN-BL-CW-02` reconciled with owner unchanged; merged through PR #331 (`424cd0231429e5280a0e70be25c2f83437e117c8`) (row added by GOV-REC-01) |
+| `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` | `QAN-BL-IP-01` (owner name APPROVED by the Product Owner, IP-IMP-01 R2; listed here by GOV-REC-01) |
 | `ACE-01 — Adaptive Conversational Expression v1` | none — no item names it; admitted `QAN-BL-ACE-01` (Gate B) and `QAN-BL-ACE-02` (Stage 8A); `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05` and `QAN-BL-VOICE-01` observed and left unchanged |
 | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` — authorized by the Product Owner (2026-10-12; D-1 … D-4, Copy Gate 6 / 6); delivered for both Worlds under the ACE-SP-01 controlled amendment and tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-ACE-02`'s validation set extended (D-4; owner and status unchanged); admitted `QAN-BL-GOV-01`; `QAN-BL-CW-02`, `QAN-BL-IP-01` and `QAN-BL-MATCH-01` reconciled with owners unchanged |
-| `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `QAN-BL-GOV-01` (admitted by ACE-SP-01; owner name proposed for the Product Owner's confirmation) |
+| `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `QAN-BL-GOV-01` (admitted by ACE-SP-01; owner name APPROVED by the Product Owner, 2026-10-12 — *as first written: "owner name proposed for the Product Owner's confirmation"*) — delivered; tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-CW-03` tombstoned retroactively for SHARED-VIS-01; Issue #322 not admitted (a Product Owner decision); none admitted |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

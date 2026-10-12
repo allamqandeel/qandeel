@@ -289,3 +289,32 @@ and authorizes nothing.
   C2 — Personal Evidence Truth Maintenance / PG-02 (`QAN-BL-INTEL-01`, owner `INTEL-TM-01`), under its own contract.
 - **Unchanged:** the hosted deployment gate (`QAN-BL-PROD-06`, owner `HOSTED-DEPLOY-01`) and every independent release
   blocker. The Product sequence after CI-01 is the Product Owner's decision.
+
+### 6.6 Execution note — 2026-10-12 (GOV-REC-01)
+**Recorded:** 2026-10-12 by GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation, from
+`main = 84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`. This is a status note only. It rewrites no earlier section, changes no
+sequencing or Product Owner decision, and authorizes nothing. The "ACTIVE, not merged" of §6.2 and the "Draft PR #325 …
+not merged" of §6.5 describe their own dates.
+- **Merged since §6.5, none deployed:**
+  - SHARED-VIS-01 (PR #321, `5973123153e26494d702a4a859a79631ede225cd`, 2026-10-09). Its missing closing change is
+    recorded by GOV-REC-01.
+  - CI-01 (PR #325, `44a440cfbb2c05421ed36639a5cf67ee7a8d25e5`).
+  - INTEL-TM-01 (PRs #326 and #327).
+  - MEM-AR-01 (PRs #328, #329 and #330, `3bec87ac725c73db0aecc5a6fb4e01c90acce66b`).
+  - IP-IMP-01 (PR #331, `424cd0231429e5280a0e70be25c2f83437e117c8`).
+  - ACE-01 (PR #332, `141a3190deb02bc6695d2ace05da275e623a2754`).
+  - ACE-SP-01 (PR #333, `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`).
+- **Execution status** (the 9-stage map in [`QANDEEL_PROJECT_MAP.md`](QANDEEL_PROJECT_MAP.md) §5.1):
+  - **Stages 1–5: DONE / MERGED** within their implemented limits. Stage 1 keeps its named residuals, and "Stage 5 DONE"
+    is not "Public World launch-ready".
+  - **Current: GOV-REC-01**, documentation / governance only. It is not a Product stage and not a Stage 6 start.
+  - **Stage 6 — Matching / Introductions: NEXT** after GOV-REC-01's independent review and the Product Owner's merge
+    approval. It opens as *Stage 6 — Matching & Introductions Kickoff*, which begins with independent research and an
+    Anti-duplication Census before its task count and contracts are fixed.
+  - **Stage 7 Replay, Stage 8A AI Brain, Stage 8B Voice and Stage 9 Economy & Launch: LATER.**
+- **Unchanged:**
+  - the hosted deployment gate (`QAN-BL-PROD-06`, owner `HOSTED-DEPLOY-01`; the hosted database was at `0074` at the
+    last approved check);
+  - GitHub Issue #322 — the physical-Android rapid-interaction and resize stability proof required before any public
+    launch — `OPEN / NOT PROVEN / RELEASE BLOCKER` (Stage 9 release-readiness gate);
+  - every other independent release blocker.
