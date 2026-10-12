@@ -332,4 +332,29 @@ see §10 (filled after push).
 
 ## 10. PR and focused database verification
 
-Filled after the push (§ appended below).
+- **Branch:** `ip/ip-imp-01-interaction-preferences`, from `main @ 3bec87ac725c73db0aecc5a6fb4e01c90acce66b`.
+- **PR:** https://github.com/allamqandeel/qandeel/pull/331 (Draft, not merged).
+- **Verified SHA:** `be73bdc5c78733e14d9fe2095be261391c6ba3c2`.
+  - Its code tree equals `8af35fd9`'s; it adds documentation only.
+  - The commit that fills this section also changes documentation only.
+- **Focused database gate:** `focused-database-verification.yml`, on PostgreSQL 17.
+  - Each run applied all 153 migrations from zero (`0001` .. `0153`).
+  - Target: `be73bdc5`.
+
+| Run | Selector | Result |
+|---|---|---|
+| [38222800258](https://github.com/allamqandeel/qandeel/actions/runs/38222800258) | `migration-0153` | PASS |
+| [38222812295](https://github.com/allamqandeel/qandeel/actions/runs/38222812295) | `migration-0153` (second consecutive) | PASS |
+| [38223147075](https://github.com/allamqandeel/qandeel/actions/runs/38223147075) | `migration-0130` (personal export; `0153` replaces its builder) | PASS |
+| [38223157120](https://github.com/allamqandeel/qandeel/actions/runs/38223157120) | `migration-0132` | PASS |
+| [38223165704](https://github.com/allamqandeel/qandeel/actions/runs/38223165704) | `migration-0133` (anon / `PUBLIC` EXECUTE census) | PASS |
+| [38223173788](https://github.com/allamqandeel/qandeel/actions/runs/38223173788) | `migration-0152` (MEM-AR-01 writer census and guards) | PASS |
+| [38222765317](https://github.com/allamqandeel/qandeel/actions/runs/38222765317) | `pull_request` self-test of the gate (`focused-verifiers.json` changed) | PASS |
+
+- **The `ip-imp-01` group** in `database/focused-verifiers.json` covers `0153`, `0130`, `0132`, `0133` and `0152`.
+  - A dispatch reads its mapping from the default branch, so the group can be selected only after merge.
+  - Until then, each verifier in the group was dispatched under its own `migration-NNNN` selector (the table above).
+- **Nothing hosted:**
+  - no migration was applied to the hosted database;
+  - nothing was deployed;
+  - nothing was merged.
