@@ -247,4 +247,28 @@ Nothing in Shared / Public changes until the Product Owner chooses. No world's p
 
 ## 10. PR and verification results
 
-Filled in at PR creation (below).
+- **Commits:**
+  - `4bd52b7e`: the implementation, the tested code tree;
+  - `3a220128` and later: documentation only.
+- **PR:** the ACE-01 pull request opened from this branch for independent review. It is not merged.
+- **Local results on the implementation tree (2026-10-12):**
+  - `npx tsc --noEmit -p apps/api/tsconfig.json`: clean.
+  - Full API jest (`npx jest --runInBand`, apps/api): **244 suites, 5657 tests, all passed.**
+  - New and re-anchored focused specs, all inside that run:
+    - ACE spec: 23 tests;
+    - locale spec: 20 tests;
+    - Golden spec: 7 tests;
+    - policy spec: 3 tests;
+    - the IP-IMP-01 guidance and orchestrator specs.
+  - Full static contract suite (`node --test tests/*.test.mjs`): passes after the two documented re-anchors (§4).
+    - The first full run found one genuine hit: the W3-MEGA-U3 keyword detector against the approved disagreement
+      sentence. It is re-anchored to that exact sentence only.
+    - The forward-safety mirror failures in that run were that same failure reproduced inside the mirror. Rerun alone,
+      forward-safety passes 35/35.
+  - `npm run test:ace-01-adaptive-conversational-expression-contract`,
+    `npm run test:task-closure-governance-contract` and `npm run test:ci-01-intelligence-evidence-baseline-contract`:
+    pass.
+  - `npm run eval:brain:validate`: 24 cases, 48 planned requests, ZERO CALLS.
+  - `npm run eval:brain:dry-run -- golden-conversations`: 22 cases, 44 planned requests, ZERO CALLS.
+  - No paid evaluation, no provider key, no Stage 8A run.
+- **GitHub CI:** the exact-head run on the PR is the gate. It is reported in the PR, not here.
