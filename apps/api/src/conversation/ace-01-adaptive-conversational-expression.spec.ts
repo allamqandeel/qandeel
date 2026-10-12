@@ -38,7 +38,7 @@ import { INTERACTION_PREFERENCE_GUIDANCE_HEADER, SAFETY_HUMOUR_SUSPENSION_LINE }
 const SESSION = '00000000-0000-4000-8000-000000000201';
 const TURN = '00000000-0000-4000-8000-000000000202';
 
-import { QANDEEL_PERSONALITY_CORE_V1, TEXT_V1_BEHAVIORAL_GUIDANCE } from './behavioral-response-policy.service';
+import { QANDEEL_PERSONALITY_CORE_V1, TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from './behavioral-response-policy.service';
 import { SafetyResponseGateService } from './safety-response-gate.service';
 import { assembleSharedConversationRequest, SHARED_CONVERSATION_FRAME } from '../shared-world/shared-conversation-model-input';
 import { assemblePublicQandeelRequest, PUBLIC_QANDEEL_FRAME } from '../public-world/public-qandeel-model-input';
@@ -285,19 +285,24 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
     expect(after).not.toMatch(new RegExp(ids.join('|'), 'u'));
   });
 
-  // 14 — Shared and Public keep their frozen authority (Gate B: no change without a Product Owner decision).
-  it('(14) Shared and Public model inputs are untouched: frozen Text v1 + their frame, no personality core, no Personal data, locale und', () => {
+  // 14 — Shared and Public keep their frozen authority (Gate B). RE-ANCHORED by ACE-SP-01 (2026-10-12; Gate B Option A,
+  // the ACE-SP-01 controlled amendment): Text v1 + the frame stay the unchanged prefix, followed by the world-neutral core
+  // only — still no Personal preference, no durable-preference clause and locale und.
+  it('(14) Shared and Public model inputs keep frozen Text v1 + their frame as the prefix, then the world-neutral core only; no Personal data, locale und', () => {
     const shared = assembleSharedConversationRequest([{ producer: 'HUMAN', authorName: 'Mona', text: 'صباح الخير يا جماعة' }])!;
-    expect(shared.behavioralGuidance).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}`);
+    expect(shared.behavioralGuidance).toBe(withWorldNeutralPersonality(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}`, false));
+    expect(shared.behavioralGuidance.startsWith(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}\n\n`)).toBe(true);
     expect(shared.locale).toBe('und');
     const publicRequest = assemblePublicQandeelRequest({
       versionId: 'v', meaning: 'm', primaryThemes: [], secondaryThemes: [], content: [], earlierResponses: [], related: [],
       posts: [{ id: 'p', ordinal: 1, invoking: true, text: '@qandeel رأيك؟' }],
     })!;
-    expect(publicRequest.behavioralGuidance).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${PUBLIC_QANDEEL_FRAME}`);
+    expect(publicRequest.behavioralGuidance).toBe(withWorldNeutralPersonality(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${PUBLIC_QANDEEL_FRAME}`, false));
+    expect(publicRequest.behavioralGuidance.startsWith(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${PUBLIC_QANDEEL_FRAME}\n\n`)).toBe(true);
     expect(publicRequest.locale).toBe('und');
     for (const request of [shared, publicRequest]) {
-      expect(request.behavioralGuidance).not.toContain(QANDEEL_PERSONALITY_CORE_V1.split('\n')[0]);
+      expect(request.behavioralGuidance).toContain(QANDEEL_PERSONALITY_CORE_V1.split('\n')[0]);
+      expect(request.behavioralGuidance).not.toContain('durable interaction preferences');
       expect(request.behavioralGuidance).not.toMatch(/Standing interaction preferences|Reply language:|Humour:/u);
     }
   });
