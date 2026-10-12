@@ -855,7 +855,10 @@ async function main(): Promise<void> {
     assert.equal(firstCall.request.latencyBudgetMs, 3000, 'existing FAST latency budget unchanged');
     assert.equal(firstCall.request.costBudget, 'LOW', 'existing cost budget unchanged');
     assert.equal(firstCall.request.safetyLevel, 'STANDARD', 'existing safety level unchanged');
-    assert.equal(firstCall.request.locale, 'und');
+    // ACE-01 (WP2): the locale is decided by resolveConversationLocale (explicit current request > durable replyLanguage >
+    // conservative script > und). This user has no stored preference, and SOURCE_TURN_TEXT is plain English (ASCII letters
+    // only, no Arabizi digits), so the script indication is 'en'. Before ACE-01 the orchestrator always sent 'und'.
+    assert.equal(firstCall.request.locale, 'en', 'ACE-01: plain English current turn with no preference resolves to en');
     assert.equal(firstCall.request.modality, 'TEXT');
     assert.equal(firstCall.request.safetyGuidance, undefined, 'ALLOW disposition adds no safety guidance');
     assert.deepEqual(firstCall.request.context, [{ role: 'USER', content: SOURCE_TURN_TEXT }],
@@ -1352,6 +1355,7 @@ async function main(): Promise<void> {
     assert.equal(secondCall.request.path, 'FAST', 'route remains FAST');
     assert.equal(secondCall.request.complexity, 'LOW');
     assert.equal(secondCall.request.task, 'CONVERSATIONAL_RESPONSE');
+    assert.equal(secondCall.request.locale, 'en', 'ACE-01: SECOND_TURN_TEXT is plain English too, so the locale is en again');
 
     // Context continuity per the existing ContextBuilder limits/order: the
     // previous completed exchange plus the new USER turn — from the real
