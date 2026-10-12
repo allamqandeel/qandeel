@@ -301,6 +301,12 @@ async function verifyConversationCommand() {
     assert.equal(await events(first), 1);
     assert.deepEqual(await one(RECORD, [alice]), { ...DEFAULTS, reply_language: 'EGYPTIAN_ARABIC', version: 1 });
 
+    stage = 'equivalence: the conversation command and the Settings command reach the same record through the same core';
+    const viaSettings = await account();
+    assert.deepEqual(await setOwn(viaSettings, 'REPLY_LANGUAGE', 'EGYPTIAN_ARABIC', 0), { outcome: saved.outcome, version: saved.version });
+    assert.deepEqual(await one(RECORD, [viaSettings]), await one(RECORD, [alice]), 'identical record, outcome and version either way');
+    assert.deepEqual(await setOwn(viaSettings, 'REPLY_LANGUAGE', 'EGYPTIAN_ARABIC', 0), { outcome: 'UNCHANGED', version: 1 });
+
     stage = 'command: a replay of the same turn (no longer GENERATING) writes nothing and answers no row';
     assert.deepEqual(await finalize(first, 'REPLY_LANGUAGE', 'ENGLISH', 1), []);
     assert.deepEqual(await one(RECORD, [alice]), { ...DEFAULTS, reply_language: 'EGYPTIAN_ARABIC', version: 1 });

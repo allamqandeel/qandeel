@@ -15,6 +15,16 @@
   ],
   "version": 1,
   "groups": {
+    "ip-imp-01": {
+      "title": "IP-IMP-01 - Interaction Preferences (migration 0153) with the export, export-preparation, privilege-matrix and Memory-writer verifiers it touches",
+      "verifiers": [
+        "database/verify-migration-0153.mjs",
+        "database/verify-migration-0130.mjs",
+        "database/verify-migration-0132.mjs",
+        "database/verify-migration-0133.mjs",
+        "database/verify-migration-0152.mjs"
+      ]
+    },
     "mem-ar-01c": {
       "title": "MEM-AR-01C - Memory subject identity, atomicity and Evidence protection (migration 0152) with the historical verifiers it re-anchors",
       "verifiers": [

@@ -49,6 +49,7 @@ describe('IP-IMP-01 — the orchestrator consumes the canonical Interaction Pref
   let safety: { evaluate: jest.Mock };
   let memoryControl: { plan: jest.Mock };
   let orchestrator: ConversationOrchestratorService;
+  let assembler: IntegratedContextBudgetAssemblerService;
 
   const dispatched = (): ModelRouterRequest => router.generate.mock.calls[0][0] as ModelRouterRequest;
   const stored = (over: Record<string, unknown>) => [{ reply_length: 'DEFAULT', reply_language: 'DEFAULT', humour: 'DEFAULT', explanation_style: 'DEFAULT', version: 3, ...over }];
@@ -79,6 +80,7 @@ describe('IP-IMP-01 — the orchestrator consumes the canonical Interaction Pref
       correlation, telemetry,
     );
     const preferences = new InteractionPreferencesService({ read: preferenceRead } as unknown as InteractionPreferencesRepository);
+    assembler = new IntegratedContextBudgetAssemblerService(telemetry);
     orchestrator = new ConversationOrchestratorService(
       repository, contextBuilder, safety as unknown as SafetyResponseGate, new BehavioralResponsePolicyService(),
       new HimTurnContextSelectionService(),
@@ -91,7 +93,7 @@ describe('IP-IMP-01 — the orchestrator consumes the canonical Interaction Pref
       { read: jest.fn().mockResolvedValue(undefined), consumeSourceRows: jest.fn() } as unknown as HimBrainContextService,
       foregroundGatherer,
       { select: jest.fn().mockResolvedValue({ state: 'LEGITIMATE_EMPTY', reason: 'NO_ELIGIBLE_GAP' }) } as unknown as QuestionForegroundSelectionService,
-      new IntegratedContextBudgetAssemblerService(telemetry),
+      assembler,
       { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as RecommendationGroundingService,
       router, correlation, telemetry, memoryControl as never, preferences,
     );
@@ -118,6 +120,26 @@ describe('IP-IMP-01 — the orchestrator consumes the canonical Interaction Pref
     expect(request.locale).toBe('und');
     // No private preference leaks anywhere else in the request.
     expect(JSON.stringify({ ...request, behavioralGuidance: '' })).not.toMatch(/EGYPTIAN|Egyptian Arabic|ALWAYS_BRIEF/u);
+  });
+
+  it('QIR-004: the preference block is Mandatory Core, measured in exact UTF-8 bytes, and the accounting identity holds', async () => {
+    const assemble = jest.spyOn(assembler, 'assemble');
+    await orchestrator.orchestrate('token', 'user', turnOf('مرحبا'));
+    const without = assemble.mock.results[0].value as ReturnType<IntegratedContextBudgetAssemblerService['assemble']>;
+    preferenceRead.mockResolvedValue(stored({ reply_language: 'MODERN_STANDARD_ARABIC', humour: 'DECLINED', explanation_style: 'SIMPLER_AND_DIRECT', reply_length: 'ALWAYS_BRIEF' }));
+    await orchestrator.orchestrate('token', 'user', turnOf('مرحبا'));
+    const withPreferences = assemble.mock.results[1].value as ReturnType<IntegratedContextBudgetAssemblerService['assemble']>;
+    const block = withPreferences.request.behavioralGuidance.slice(TEXT_V1_BEHAVIORAL_GUIDANCE.length);
+    expect(block.startsWith(`
+
+${INTERACTION_PREFERENCE_GUIDANCE_HEADER}`)).toBe(true);
+    // Exactly the block's UTF-8 bytes join the non-truncatable Mandatory Core; nothing is moved into an optional lane.
+    expect(withPreferences.mandatoryCoreBytes - without.mandatoryCoreBytes).toBe(Buffer.byteLength(block, 'utf8'));
+    expect(withPreferences.mandatoryCoreBytes).toBe(Buffer.byteLength(composeServerGuidance({ behavioralGuidance: withPreferences.request.behavioralGuidance } as never), 'utf8') + Buffer.byteLength('مرحبا', 'utf8'));
+    const contextBytes = withPreferences.request.context.reduce((sum, message) => sum + Buffer.byteLength(message.content, 'utf8'), 0);
+    expect(withPreferences.finalTextBytes).toBe(Buffer.byteLength(composeServerGuidance(withPreferences.request), 'utf8') + contextBytes);
+    expect(withPreferences.decisions.map((d) => d.source)).toEqual(without.decisions.map((d) => d.source));
+    expect(router.generate).toHaveBeenCalledTimes(2);
   });
 
   it('GUIDED Safety: guidance follows the preference block and a welcomed humour is suspended for the turn', async () => {
