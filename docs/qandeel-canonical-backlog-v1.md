@@ -193,6 +193,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PRIV-03` | Export My Data Omits Whom Each Memory Is About (the Subject `about` Field) | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-IP-01` | Personal Interaction Preferences Do Not Shape Public World QANDEEL Replies | `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-IP-02` | Interaction Preferences: Real-Model Behavioural Quality (Seven Reply Languages / Dialects, Brevity, Humour, Explanation Style) | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
+| `QAN-BL-ACE-01` | The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B) | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-ACE-02` | Adaptive Conversational Expression: Real-Model Personality Behaviour on the Golden Conversations Suite | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
 
 ---
 
@@ -1721,6 +1723,60 @@ implementation (BG-07).
 Admitted by IP-IMP-01 under BG-06 / BG-08 in its closing change (the contract defers it to Stage 8A by name). Nothing here
 authorizes implementation (BG-07).
 
+### `QAN-BL-ACE-01` — The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B)
+
+- **Title / Finding:** ACE-01 activates the approved ONE QANDEEL personality core in the Personal conversation (Text v2 =
+  frozen Text v1 + the core). Shared World and Public World QANDEEL replies are still built on Text v1 alone, so they carry
+  the frozen hard policy but not the personality wording.
+- **Source:** the ACE-01 R0 Task Contract WP0 ("If changing frozen Shared/Public guidance requires a controlled authority
+  amendment, stop at that specific decision gate") and Gate B; the Product Owner's execution authorization, rule 6; S4-02
+  ("consumed as they are"; `tests/s4-02-shared-conversation-material-contract.test.mjs`: "the frozen Behavioral Response
+  Policy, unchanged"); CW2-04 §21–§22 / S5-04; the [ACE-01 implementation record](e2e/QANDEEL_ACE_01_ADAPTIVE_CONVERSATIONAL_EXPRESSION_IMPLEMENTATION_RECORD_v1.md) §7.
+- **Current truth:** frozen-contract compliant: Shared and Public model inputs are byte-identical to before ACE-01, with no
+  personality core, no Personal preference and `locale: 'und'` (ACE-01 spec item 14, static contract).
+- **Anti-duplication:** `QAN-BL-CW-02` owns private Personal context in a Shared World; `QAN-BL-IP-01` owns Personal
+  interaction preferences in Public replies. Neither covers the non-private personality wording; no item did.
+- **Why deferred:** sending the core to Shared / Public amends frozen Connected Worlds model inputs, and the core's
+  "durable interaction preferences" clause has no authority there; that is a Product decision (Gate B), not engineering.
+- **Owner task:** `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` (proposed name, for the Product Owner's
+  confirmation at Gate B).
+- **Severity:** `MEDIUM` — personality consistency across Worlds; nothing private is involved and nothing leaks.
+- **Reopen condition:** the Product Owner's Gate B decision; and before any Shared or Public feature claims the QANDEEL
+  personality.
+- **Required future properties:** one personality definition, never a second persona; any world-neutral wording passes the
+  Product Copy Gate; Shared / Public inputs still carry no Personal data; the frozen records are amended before any code.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by ACE-01 under BG-06 / BG-08 in its closing change (the contract's Gate B). Nothing here authorizes implementation
+(BG-07).
+
+### `QAN-BL-ACE-02` — Adaptive Conversational Expression: Real-Model Personality Behaviour on the Golden Conversations Suite
+
+- **Title / Finding:** ACE-01 proves structurally that the personality core and its Safety / preference boundaries reach
+  the ONE provider request, and prepares the Golden Conversations suite (22 synthetic cases, 13-dimension blinded rubric,
+  explicit unfit-register FAIL mark). Whether a real production model sounds natural and consistent, fits the register,
+  initiates humour only where it fits, turns serious at once, avoids canned empathy, stays brief, disagrees respectfully,
+  follows dialects, handles multi-turn shifts and honours explicit temporary requests is not measured.
+- **Source:** the ACE-01 R0 Task Contract WP3 ("Real-model behavioral scoring belongs to Stage 8A"; "Not authorized now:
+  paid evaluation, real-model comparison, production model selection"); conversational-personality-v1 §7–§8 (P8, P9); the
+  [ACE-01 implementation record](e2e/QANDEEL_ACE_01_ADAPTIVE_CONVERSATIONAL_EXPRESSION_IMPLEMENTATION_RECORD_v1.md) §6.
+- **Current truth:** nothing is known to be wrong; no paid evaluation was run and no score exists.
+- **Anti-duplication:** `QAN-BL-IP-02` owns preference-following quality (dialect fidelity of the seven declared reply
+  languages, brevity, humour and explanation preferences) and is not duplicated: its dimension is scored there.
+  `QAN-BL-CW-05` is a different Stage 8A obligation. `QAN-BL-VOICE-01` owns voice; audio expression is Stage 8B.
+- **Why deferred:** real-model behaviour is Stage 8A's scope by the contract; a deterministic double proves structure only.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `MEDIUM` — the quality of the approved Personal personality.
+- **Reopen condition:** automatic when Stage 8A starts its Golden Conversations evaluation; and before any release claims
+  the personality's behaviour as validated.
+- **Required future properties (validation set):** the `golden-conversations` suite run blinded through the existing
+  harness, every negative control scored with its FAIL condition, the unfit-register FAIL counts reported, no human review of
+  private conversations, and no provider selected by the evaluation itself.
+- **Status:** `VALIDATION — OPEN`
+
+Admitted by ACE-01 under BG-06 / BG-08 in its closing change (the contract defers it to Stage 8A by name). Nothing here
+authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -2054,16 +2110,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 27 |
-| `VALIDATION — OPEN` | 3 |
+| `DEFERRED — OWNED` | 28 |
+| `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 19 |
-| **Total** | **59** |
+| **Total** | **61** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 31 |
-| `MEDIUM` | 26 |
+| `MEDIUM` | 28 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -2524,6 +2580,13 @@ The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION �
 - **Fixed inside the task, never backlog (BG-01):** the evaluator templates that stored a temporary «كلمني بالمصري» as an `INTERACTION_PREFERENCE` Memory (record §1.1 T-3, DD-6).
 - **Latest index: 59 items; 27 / 3 / 10 / 19 by status, 31 / 26 / 2 by severity**, recounted mechanically from §4.
 
+**ACE-01 closing change (2026-10-12; PR open, implementation complete, awaiting independent review and the Product Owner's merge decision; not merged, no migration, not deployed; Gate B open).** ACE-01 (Adaptive Conversational Expression: the approved personality core in the Personal guidance, the WP2 locale compiler, the Golden Conversations suite) inherited no item (BG-05: none names it; re-checked at closure).
+- **Admitted — `QAN-BL-ACE-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`, proposed name): the core does not reach Shared / Public replies until the Product Owner's Gate B decision. Anti-duplication run against the whole register (`QAN-BL-CW-02`, `QAN-BL-IP-01` distinct).
+- **Admitted — `QAN-BL-ACE-02`** (`MEDIUM`, `VALIDATION — OPEN`, owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`): real-model personality behaviour on the Golden Conversations suite. Anti-duplication run (`QAN-BL-IP-02` keeps preference following).
+- **Untouched:** `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-VOICE-01`. `QAN-BL-PROD-06` current truth unchanged: ACE-01 adds no migration.
+- **Not backlog (BG-06):** the absent tone engine, the model-honoured temporary requests and the absent first-contact signal are design decisions recorded in the [ACE-01 record](e2e/QANDEEL_ACE_01_ADAPTIVE_CONVERSATIONAL_EXPRESSION_IMPLEMENTATION_RECORD_v1.md) §2, not obligations.
+- **Latest index: 61 items; 28 / 4 / 10 / 19 by status, 31 / 28 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -2594,7 +2657,7 @@ Inherited after T-12 closure reconciliation:
 | `S5-04 — Public Discussion + @qandeel + Public Activity / Direct Entry + Final Public Integration` | none — no item names it; `QAN-BL-VIS-01` re-owned to `LA-SCALE-01` (Product Owner D6; S5-03B G04 / G05 and S5-03C's read bounds reconciled under it); `QAN-BL-CW-04` admitted (Product Owner D3); `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01`, `QAN-BL-CW-03` and `QAN-BL-NOTIF-02` … `05` observed and left unchanged |
 | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
-| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08) |
+| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-ACE-02` (ACE-01 closing change) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
@@ -2604,6 +2667,8 @@ Inherited after T-12 closure reconciliation:
 | `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck` | `QAN-BL-QIR-01` (admitted at INTEL-TM-01 post-merge closure) |
 | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (owner name PO-APPROVED) |
 | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (owner name PO-APPROVED) |
+| `ACE-01 — Adaptive Conversational Expression v1` | none — no item names it; admitted `QAN-BL-ACE-01` (Gate B) and `QAN-BL-ACE-02` (Stage 8A); `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05` and `QAN-BL-VOICE-01` observed and left unchanged |
+| `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` (owner name proposed, for the Product Owner's confirmation at Gate B) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
