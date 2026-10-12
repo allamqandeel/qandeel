@@ -34,7 +34,10 @@ The rules below are the repository's own, each cited to where it is stated.
      Product realization I-08N-01 §21 left open. It supersedes no I-08N-01 semantics and keeps G3 §D's Matching rule
      (its §19);
    - the P4 closure and its controlled amendments (P4-C1, P4-C2, the P4-C3R approvals, P4-C4) with APP-OPS-01, each
-     binding only in its named scope, and the CW2-08A controlled amendment in its named scope.
+     binding only in its named scope, and the CW2-08A controlled amendment in its named scope;
+   - the [ACE-SP-01 Shared / Public QANDEEL Personality Core controlled amendment](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md),
+     in its named scope: the model-facing guidance of the Shared World and Public World QANDEEL replies. It supersedes
+     no CW2 sentence (registered in the [Canonical Authority Index](docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md)).
 
    Source: [`docs/canonical-authority/README.md`](docs/canonical-authority/README.md), "What this directory is not".
 3. **Current records do not erase upstream history.** Upstream sources stay preserved byte-exact as the
