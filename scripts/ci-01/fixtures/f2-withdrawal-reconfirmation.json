@@ -1,0 +1,19 @@
+{
+  "scenario": "F2",
+  "title": "Reliance after withdrawal and re-confirmation: no automatic restoration (MEM-AR-01C, CC-M2' / CC-M3', PG-02)",
+  "purpose": "The F1 shape, then the user remembers the forgotten preference again. Records the Hypothesis links and reliance before the forget, after it, and after the re-confirmation: the re-confirmed Memory is new Evidence for the future, and the withheld Hypothesis stays withheld.",
+  "synthetic": true,
+  "sameTextsAs": "MEM-AR-01 WP0R Addendum A1 C2.4 (2026-10-10)",
+  "steps": [
+    { "id": "F2.s1", "kind": "session", "user": "F2", "session": "s1" },
+    { "id": "F2.1", "kind": "turn", "user": "F2", "session": "s1", "text": "أنا بحب القهوة الصبح", "measure": { "valueStatement": true } },
+    { "id": "F2.2", "kind": "turn", "user": "F2", "session": "s1", "text": "قررت أنام بدري", "measure": { "valueStatement": true } },
+    { "id": "F2.3", "kind": "turn", "user": "F2", "session": "s1", "text": "مع إني قررت أنام بدري بس بشرب القهوة بالليل وبسهر", "measure": { "triggerProbe": "the genuine contradiction that generates the Hypothesis under test" } },
+    { "id": "F2.links.before", "kind": "hypothesis_links", "user": "F2", "label": "before" },
+    { "id": "F2.4", "kind": "turn", "user": "F2", "session": "s1", "text": "انسى إني بحب القهوة الصبح", "measure": { "memoryControl": "FORGET" } },
+    { "id": "F2.links.forgotten", "kind": "hypothesis_links", "user": "F2", "label": "forgotten" },
+    { "id": "F2.5", "kind": "turn", "user": "F2", "session": "s1", "text": "افتكر إني بحب القهوة الصبح", "measure": { "memoryControl": "REMEMBER" }, "note": "re-confirmation: a NEW attributed Memory; the withheld Hypothesis is not restored" },
+    { "id": "F2.links.reconfirmed", "kind": "hypothesis_links", "user": "F2", "label": "reconfirmed" }
+  ],
+  "finalStateMeasures": { "pg02ActiveHypothesesOverNonActiveEvidence": true }
+}

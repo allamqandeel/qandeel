@@ -15,16 +15,20 @@
 // changes Memory only when the resolution step finds the one fact it reverses; otherwise the turn stays ordinary
 // conversation, and background inference still reads it through its own unchanged grammar.
 import type { NaturalReversal } from './memory-control.types';
+import { normalizeArabicComparison } from './arabic-text';
 
 export type MemoryControlIntent =
   | { kind: 'INSPECT' }
   | { kind: 'REMEMBER'; statement: string }
   /**
    * `copula`: "I'm not X, I'm Y" — the restated predicate is the copula itself.
+   * `asSaid` (MEM-AR-01C): the replacement exactly as said, present only when the user named no subject anywhere in
+   * the correction («لا، مش ساكن في أكتوبر، ساكن في طنطا») and the «أنا» of `replacement` is this reader's; the subject
+   * screen reads it, so such a correction keeps its target's subject instead of claiming the user's.
    * `natural` (MEM-AR-01B): a natural reversal. For NO_LONGER / STOPPED, `previous` is the negated clause X and
    * `replacement` the user's own negated statement; for BECAME, `previous` is empty (the old value is not said).
    */
-  | { kind: 'CORRECT'; previous: string; replacement: string; copula: boolean; natural?: NaturalReversal }
+  | { kind: 'CORRECT'; previous: string; replacement: string; copula: boolean; natural?: NaturalReversal; asSaid?: string }
   /**
    * EXPLICIT: the words are anchored to Memory («إن / إني …», "that …", «ذاكرتك», «متفتكرش», "memory", …). SOFT: they are
    * not («امسح الشغل», "forget the work stuff"), so only a full match counts and anything less is ordinary conversation.
@@ -156,9 +160,12 @@ export function interpretMemoryControl(content: string): MemoryControlIntent | n
   if (arabicCorrection) {
     const replacement = payload(arabicCorrection[2]);
     if (!QUESTION.test(raw) && payload(arabicCorrection[1]) && replacement) {
+      const lead = text.slice(0, text.length - arabicCorrection[2].length);
+      const subjectSaid = /(?:^|[\s،,])(?:أنا|انا|بقيت|مبقتش|ما\s?بقتش|مابقيتش|مبقيتش)\s/u.test(lead) || /^(?:أنا|انا)\s/u.test(replacement);
       return {
         kind: 'CORRECT', previous: payload(arabicCorrection[1]),
         replacement: /^(?:أنا|انا)\s/u.test(replacement) ? replacement : `أنا ${replacement}`, copula: false,
+        ...(subjectSaid ? {} : { asSaid: replacement }),
       };
     }
   }
@@ -269,5 +276,69 @@ export function readClarificationAnswer(content: string): ClarificationAnswer | 
   if (POINTING.test(words.join(' '))) return { type: 'YES' };
   if (words.length <= 3 && words.every((word) => YES.has(word) || FILLER.has(word)) && words.some((word) => YES.has(word))) return { type: 'YES' };
   if (words.length <= 6) return { type: 'WORDS', text: cleanUtterance(content) };
+  return null;
+}
+
+// ---- MEM-AR-01C (PD-1): whom a remember request (or a correction's new value) is about.
+//
+// Deterministic and closed (WP0R §3.2, A1 C3.3). The caller has already applied step 1 - the background's closed
+// first-person grammar recognising the statement means SELF - and the sensitive-data screen before it. This reads the
+// rest, on the comparison-normalized words, in order:
+//   2. the clause's subject is another person - a possessive person noun from the closed list or a third-person
+//      pronoun - so it is OTHER («أختي بتحب الكشري», «أمي عايزاني أتجوز قريب», "my sister hates kids");
+//   3. the subject is the user - «أنا / إني», "I", or one of the tested first-person verbs - and no clause about another
+//      person is embedded in it, so it is SELF («أنا بتخانق مع أختي», «عندي أخت»);
+//   4. anything else is AMBIGUOUS and is asked about, never guessed: a bare participle («ساكنة في طنطا»), a name as the
+//      subject («أحمد بيحب …»), or a mixed frame («أنا عارف إن أختي …»).
+export type MemorySubjectScreen = 'SELF' | 'OTHER' | 'AMBIGUOUS';
+export type SubjectAnswer = 'SELF' | 'OTHER' | 'DECLINE';
+
+// Closed lists, in comparison-normalized form (أ/إ/آ → ا, ة → ه, ى → ي, no harakat).
+const KIN_AR = new Set(['اختي', 'اخويا', 'امي', 'ماما', 'ابويا', 'بابا', 'مراتي', 'جوزي', 'ابني', 'بنتي', 'صاحبي', 'صاحبتي', 'خطيبي', 'خطيبتي', 'مديري', 'زميلي', 'جاري']);
+const KIN_EN = 'sister|brother|mother|mom|mum|father|dad|wife|husband|son|daughter|friend|fiance|fiancee|boss|manager|colleague|coworker|neighbor|neighbour';
+const THIRD_PERSON_AR = new Set(['هو', 'هي', 'هما']);
+const FIRST_PERSON_AR = new Set(['انا', 'اني']);
+const FIRST_PERSON_VERBS_AR = new Set(['بحب', 'بفضل', 'بكره', 'بقيت', 'بطلت', 'مبقتش', 'عندي', 'ليا']);
+const COMPLEMENTIZERS_AR = new Set(['ان', 'انه', 'انها', 'انهم']);
+const COGNITION_EN = 'know|knew|think|thought|believe|feel|felt|guess|heard|noticed|said|told|realized|realised|hope|wish|worry';
+const OTHER_SUBJECT_EN = new RegExp(`^(?:my (?:${KIN_EN})\\b|(?:he|she|they)\\b)`, 'u');
+const FIRST_PERSON_EN = /^i(?:'m|'ve|'d|'ll)?\b/u;
+const EMBEDDED_OTHER_EN = new RegExp(`\\b(?:${COGNITION_EN}) (?:that (?!i\\b)|my (?:${KIN_EN})\\b|(?:he|she|they)\\b)`, 'u');
+
+function subjectWords(statement: string): string[] {
+  return normalizeArabicComparison(statement).replace(/[.!؟?،,؛;:«»"“”()]/gu, ' ').split(/\s+/u).filter(Boolean);
+}
+
+/** Steps 2-4 of the subject screen (step 1, the closed first-person grammar, is the caller's). */
+export function screenMemorySubject(statement: string): MemorySubjectScreen {
+  const words = subjectWords(statement);
+  if (words.length === 0) return 'AMBIGUOUS';
+  const text = words.join(' ');
+  const subject = words[0];
+  if (KIN_AR.has(subject) || THIRD_PERSON_AR.has(subject) || OTHER_SUBJECT_EN.test(text)) return 'OTHER';
+  if (!FIRST_PERSON_AR.has(subject) && !FIRST_PERSON_VERBS_AR.has(subject) && !FIRST_PERSON_EN.test(text)) return 'AMBIGUOUS';
+  // A first-person frame that embeds a clause about somebody else («أنا عارف إن أختي …», "I think my sister …") is mixed:
+  // the fact to keep may be the other person's.
+  const embeddedArabic = words.some((word, index) => index > 0 && COMPLEMENTIZERS_AR.has(word)
+    && (word !== 'ان' || !FIRST_PERSON_AR.has(words[index + 1] ?? '')));
+  if (embeddedArabic || EMBEDDED_OTHER_EN.test(text)) return 'AMBIGUOUS';
+  return 'SELF';
+}
+
+// A1 C3.3: the whole reply, against a closed list. OTHER is read first, then SELF, then DECLINE, so «لا مش عني» is OTHER.
+const SUBJECT_OTHER = new Set(['مش عني', 'لا مش عني', 'عن حد تاني', 'حد تاني', 'someone else', 'not me']);
+const SUBJECT_SELF = new Set(['عني', 'انا', 'ليا', 'عن نفسي', 'بتاعي', 'me', 'about me', 'myself']);
+const SUBJECT_DECLINE = new Set(['لا', 'خلاص', 'مش مهم', 'بلاش', 'no', 'never mind']);
+const ABOUT_MY_KIN_EN = new RegExp(`^about my (?:${KIN_EN})$`, 'u');
+
+/** The answer to «المعلومة دي عنك إنت، ولا عن حد تاني؟». Anything that is not one of these is not an answer. */
+export function readSubjectAnswer(content: string): SubjectAnswer | null {
+  if (typeof content !== 'string' || content.length > 80 || QUESTION.test(content)) return null;
+  const words = subjectWords(content);
+  const text = words.join(' ');
+  if (!text) return null;
+  if (SUBJECT_OTHER.has(text) || ABOUT_MY_KIN_EN.test(text) || (words.length === 2 && words[0] === 'عن' && KIN_AR.has(words[1]))) return 'OTHER';
+  if (SUBJECT_SELF.has(text)) return 'SELF';
+  if (SUBJECT_DECLINE.has(text)) return 'DECLINE';
   return null;
 }

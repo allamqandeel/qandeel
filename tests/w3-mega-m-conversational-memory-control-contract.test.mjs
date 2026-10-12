@@ -71,7 +71,9 @@ function routeViolations(w) {
   if ((o.match(/this\.memoryControl\.plan\(/gu) ?? []).length !== 1) out.push('more than one Memory-control entry on the turn path');
   if (!/if \(!finalized\) return this\.currentResult\(accessToken, userId, claimed\);\n\s+this\.telemetry\.recordTurnOutcome\('completed',selection\.path\);\n\s+return \{ userTurn: finalized\.userTurn, assistantTurn: finalized\.assistantTurn \};\n\s+\}\n\s+\}\n/u.test(o.slice(finalize)))
     out.push('a Memory-control turn does not end with its own atomic finalization');
-  if (!w.conversationRepository.includes("this.serviceApi.rpc<Array<{ outcome: MemoryControlOutcome; user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('server_finalize_memory_control_turn_v1'"))
+  // MEM-AR-01C (migration 0152) re-anchor: the runtime finalizes through v2, which keeps v1's turn, command and answer
+  // checks verbatim and adds the owner's equivalence lock (v1's EXECUTE is revoked; its body stays, proved by verify-0128).
+  if (!w.conversationRepository.includes("this.serviceApi.rpc<Array<{ outcome: MemoryControlOutcome; user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('server_finalize_memory_control_turn_v2'"))
     out.push('the Memory command is not the server-authority atomic RPC');
   if (/dataApi\.request[^;]*server_finalize_memory_control_turn_v1/u.test(w.conversationRepository)) out.push('the Memory command runs with a caller token');
   return out;
@@ -181,7 +183,7 @@ const PLANTED = [
   ['a second provider call', 'authorityViolations', () => ({ ...src, orchestrator: `${src.orchestrator}\nthis.router.generate({});` })],
   ['GUIDED turns reach the boundary', 'routeViolations', () => ({ ...src, orchestrator: src.orchestrator.replace("if (safety.disposition === 'ALLOW') {\n        const previousUserContent", "if (safety.disposition !== 'BLOCK') {\n        const previousUserContent") })],
   ['Human Intelligence launched before the Memory boundary', 'routeViolations', () => ({ ...src, orchestrator: src.orchestrator.replace("if (safety.disposition === 'ALLOW') {\n        const previousUserContent", "const himForegroundLanePromise = this.engine('him_context', selection.path, work);\n      if (safety.disposition === 'ALLOW') {\n        const previousUserContent") })],
-  ['the command runs with the caller token', 'routeViolations', () => ({ ...src, conversationRepository: src.conversationRepository.replace("this.serviceApi.rpc<Array<{ outcome: MemoryControlOutcome; user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('server_finalize_memory_control_turn_v1'", "this.dataApi.request(token, 'rpc/server_finalize_memory_control_turn_v1'") })],
+  ['the command runs with the caller token', 'routeViolations', () => ({ ...src, conversationRepository: src.conversationRepository.replace("this.serviceApi.rpc<Array<{ outcome: MemoryControlOutcome; user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('server_finalize_memory_control_turn_v2'", "this.dataApi.request(token, 'rpc/server_finalize_memory_control_turn_v2'") })],
   ['a stale turn still writes', 'atomicViolations', () => ({ ...src, migration: src.migration.replace("t.role='USER' AND t.status='GENERATING'\n    FOR UPDATE;\n  IF NOT FOUND THEN RETURN; END IF;", "t.role='USER'\n    FOR UPDATE;") })],
   ['the reply is the requested one whatever happened', 'atomicViolations', () => ({ ...src, migration: src.migration.replace("IF applied='TARGET_CHANGED' THEN reply := p_reply_if_changed; END IF;", '') })],
   ['finalization in a separate step', 'atomicViolations', () => ({ ...src, migration: src.migration.replace('FROM public.finalize_conversation_turn_v2(', 'FROM public.not_finalizing(') })],

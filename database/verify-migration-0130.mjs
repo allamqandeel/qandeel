@@ -139,11 +139,13 @@ async function pendingTurn(userId, sessionId, content) {
   return id;
 }
 
+// MEM-AR-01C (migration 0152): the runtime's Memory command is v2 (v1's EXECUTE is revoked from service_role). Through it
+// the fixture also writes the Memory's subject attribution, so the erasure below is proved over that table too.
 async function rememberCommand(userId, sessionId, turnId, content) {
   await actAs('service_role');
-  const answer = await rows('SELECT * FROM public.server_finalize_memory_control_turn_v1($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)', [
+  const answer = await rows('SELECT * FROM public.server_finalize_memory_control_turn_v2($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23)', [
     sessionId, userId, turnId, randomUUID(), 'REMEMBER', 'REMEMBERED', null, randomUUID(), 'PERSONAL_FACT', content,
-    0.98, 0.65, null, [], null, 'Got it.', null, randomUUID(), null, null,
+    0.98, 0.65, null, [], null, 'SELF', null, 'Got it.', null, 'I already remember that.', randomUUID(), null, null,
   ]);
   await asOwner();
   assert.equal(answer[0]?.outcome, 'REMEMBERED', 'fixture Memory command committed');

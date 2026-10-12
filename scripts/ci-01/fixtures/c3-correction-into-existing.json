@@ -1,0 +1,19 @@
+{
+  "scenario": "C3",
+  "title": "Correction into a value already remembered, re-confirmation and background restatement (MEM-AR-01C, D-1)",
+  "purpose": "Records that a correction into a value already remembered keeps that Memory (CORRECTED_TO_EXISTING) instead of a second ACTIVE copy, that an explicit remember of a fact already kept is ALREADY_REMEMBERED, and that a background restatement of it writes nothing (EQUIVALENT_EXISTS).",
+  "synthetic": true,
+  "sameTextsAs": "MEM-AR-01 Task Contract §8.3 item 7 (C1.6) (2026-10-11)",
+  "steps": [
+    { "id": "C3.s1", "kind": "session", "user": "C3", "session": "s1" },
+    { "id": "C3.1", "kind": "turn", "user": "C3", "session": "s1", "text": "أنا ساكن في أكتوبر", "measure": { "valueStatement": true }, "note": "first-person capture: SELF" },
+    { "id": "C3.2", "kind": "turn", "user": "C3", "session": "s1", "text": "أنا ساكن في طنطا", "measure": { "valueStatement": true }, "note": "a second residence captured beside it" },
+    { "id": "C3.3", "kind": "turn", "user": "C3", "session": "s1", "text": "أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا", "measure": { "valueStatement": true, "explicitCorrection": true }, "note": "the new value already exists: CORRECTED_TO_EXISTING, one ACTIVE «طنطا»" },
+    { "id": "C3.4", "kind": "turn", "user": "C3", "session": "s1", "text": "افتكر إني بحب الشاي", "measure": { "memoryControl": "REMEMBER" }, "note": "REMEMBERED as SELF" },
+    { "id": "C3.5", "kind": "turn", "user": "C3", "session": "s1", "text": "افتكر إني بحب الشاي", "measure": { "memoryControl": "REMEMBER" }, "note": "ALREADY_REMEMBERED" },
+    { "id": "C3.6", "kind": "turn", "user": "C3", "session": "s1", "text": "أنا بحب الشاي", "measure": { "valueStatement": true }, "note": "an ordinary restatement: the background writes nothing" },
+    { "id": "C3.s2", "kind": "session", "user": "C3", "session": "s2" },
+    { "id": "C3.7", "kind": "turn", "user": "C3", "session": "s2", "text": "فاكر أنا ساكن فين؟", "measure": { "recallProbe": { "anyOf": ["طنطا"] }, "staleProbe": { "staleTokens": ["أكتوبر"] } } }
+  ],
+  "finalStateMeasures": { "duplicateActiveMemories": true }
+}

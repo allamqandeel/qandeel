@@ -113,13 +113,15 @@ function commandArgs(c) {
 // The role is reset only on success: after a refusal the transaction is aborted until the caller's savepoint rollback,
 // which also undoes SET LOCAL ROLE — a RESET ROLE there would fail with 25P02 and mask the refusal being proven.
 async function command(c, on = client) {
-  await actAs('service_role', null, on);
+  // MEM-AR-01C (0152): v1's body is proved as its owner; service_role no longer executes it.
+  await asOwner(on);
   const answer = await rows(COMMAND, commandArgs(c), on);
   await asOwner(on);
   return answer;
 }
 async function disable(userId, memoryId, on = client) {
-  await actAs('service_role', null, on);
+  await asOwner(on); // MEM-AR-01C (0152): proved as its owner
+
   const answer = await rows('SELECT * FROM public.server_disable_memory_v1($1, $2)', [userId, memoryId], on);
   await asOwner(on);
   return answer;
@@ -181,7 +183,9 @@ async function verifyCatalog() {
   const FINALIZE = 'public.server_finalize_memory_control_turn_v1(uuid,uuid,uuid,uuid,text,text,uuid,uuid,text,text,double precision,double precision,timestamptz,uuid[],uuid,text,text,uuid,uuid,uuid)';
   const PENDING = 'public.pending_memory_clarification_v1(uuid,uuid)';
   for (const signature of [DISABLE, FINALIZE]) {
-    assert.equal(await may('service_role', signature), true);
+    // MEM-AR-01C (migration 0152, A2 §G3.1): both bodies are unchanged, but no application role executes them any more -
+    // the runtime finalizes through server_finalize_memory_control_turn_v2, which calls the DISABLED primitive as its owner.
+    assert.equal(await may('service_role', signature), false, `0152 revoked service_role EXECUTE on ${signature}`);
     for (const role of ['anon', 'authenticated']) assert.equal(await may(role, signature), false, `${role} cannot execute ${signature}`);
   }
   assert.equal(await may('authenticated', PENDING), true);

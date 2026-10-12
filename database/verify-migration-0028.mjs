@@ -15,6 +15,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 
 const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
@@ -97,6 +98,9 @@ async function seedMemory(user, options = {}) {
        CURRENT_TIMESTAMP - make_interval(mins => $8), $9)`,
     [id, user, type, content, source, status, createdMinutesAgo, minutesAgo, expiresAt],
   );
+  // MEM-AR-01C (0152, CC-M1): a fixture that is eligible Evidence is the user's own (SELF), attributed before any link.
+  if (status === 'ACTIVE' && ['USER_STATED', 'USER_CONFIRMED'].includes(source) && type !== 'DERIVED_INSIGHT'
+      && (expiresAt === null || new Date(expiresAt).getTime() > Date.now())) await attributeFixtureSelf(client, id, user);
   return id;
 }
 

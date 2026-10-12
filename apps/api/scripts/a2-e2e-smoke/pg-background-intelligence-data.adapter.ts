@@ -23,6 +23,7 @@ import type {
   BackgroundConversationTurnState,
   BackgroundHypothesisCreateInput,
   BackgroundMemoryCreateInput,
+  BackgroundMemoryRecordResult,
 } from '../../src/background-intelligence/background-intelligence-data-api.service';
 import type { ConfidenceEvaluationRecord } from '../../src/hypothesis/confidence.types';
 import type { HimSnapshotSourceRow } from '../../src/human-model/him-intelligence-snapshot.types';
@@ -36,8 +37,10 @@ import type { SmokeDbSession } from './smoke-db';
 const SESSION_FIELDS = 'id, status, channel';
 const TURN_FIELDS = 'id, session_id, role, status, source_turn_id';
 const SOURCE_TURN_FIELDS = `${TURN_FIELDS}, content, processing_path, routing_reason`;
+// MEM-AR-01C: every Memory read carries its subject, as the production read does through the attribution embed.
 const MEMORY_FIELDS =
-  'id, user_id, scope, type, content, source, confidence, importance, status, version, created_at, updated_at, expires_at, supersedes_memory_id';
+  'id, user_id, scope, type, content, source, confidence, importance, status, version, created_at, updated_at, expires_at, supersedes_memory_id, '
+  + '(SELECT a.subject FROM public.memory_subject_attributions a WHERE a.memory_id = memories.id AND a.user_id = memories.user_id) AS subject';
 const HYPOTHESIS_FIELDS =
   'id, user_id, statement, type, domain, scope, origin, status, version, supporting_evidence_ids, contradicting_evidence_ids, competing_hypothesis_ids, assumptions, disconfirming_conditions, created_at, updated_at';
 
@@ -80,14 +83,19 @@ export class PgBackgroundIntelligenceDataApiAdapter {
     return rows[0];
   }
 
-  async createMemory(context: BackgroundIntelligenceExecutionContext, input: BackgroundMemoryCreateInput): Promise<MemoryRecord> {
+  // MEM-AR-01C (K-3): the smoke writes through the ONE guarded background writer, exactly as production does - never the
+  // revoked legacy server_create_memory_v1, which would leave an unattributed, non-Evidence row.
+  async recordMemory(context: BackgroundIntelligenceExecutionContext, input: BackgroundMemoryCreateInput): Promise<BackgroundMemoryRecordResult> {
     this.assertExecutionContext(context);
-    const rows = await this.db.asRole<MemoryRecord>(
+    const rows = await this.db.asRole<{ outcome: string; memory_id: string | null }>(
       'service_role',
-      'SELECT * FROM public.server_create_memory_v1($1, $2, $3, $4, $5, $6, $7, $8, $9)',
-      [context.userId, input.id, input.type, input.content, input.source, input.confidence, input.importance, input.status, input.expiresAt ?? null],
+      'SELECT * FROM public.background_record_memory_v1($1, $2, $3, $4, $5, $6, $7)',
+      [context.sourceTurnId, input.id, input.type, input.content, input.confidence, input.importance, input.expiresAt ?? null],
     );
-    return rows[0];
+    const [row] = rows;
+    if (row?.outcome === 'CREATED' || row?.outcome === 'ALREADY_RECORDED') return { outcome: row.outcome, memoryId: row.memory_id as string };
+    if (row?.outcome === 'SKIPPED_COMMAND_TURN' || row?.outcome === 'EQUIVALENT_EXISTS' || row?.outcome === 'SUPERSEDED_BY_LATER_COMMAND') return { outcome: row.outcome };
+    throw new Error('A2_SMOKE_BACKGROUND_MEMORY_RECORD_INTEGRITY');
   }
 
   async readCanonicalSourceTurn(context: BackgroundIntelligenceExecutionContext): Promise<BackgroundCanonicalSourceTurn | undefined> {

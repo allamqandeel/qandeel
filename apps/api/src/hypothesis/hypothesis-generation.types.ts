@@ -73,6 +73,8 @@ export type HypothesisCandidateRejectionReason =
   | 'DUPLICATE_ACTIVE_HYPOTHESIS'
   | 'EVIDENCE_OUTSIDE_REQUEST'
   | 'EVIDENCE_ROLE_CONFLICT'
+  /** MEM-AR-01C CC-H1: the candidate cites no eligible supporting Evidence. */
+  | 'NO_SUPPORTING_EVIDENCE'
   | SubjectGroundingRejectionReason;
 
 export interface HypothesisGenerationResult {

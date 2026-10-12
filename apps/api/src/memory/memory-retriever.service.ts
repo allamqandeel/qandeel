@@ -59,10 +59,16 @@ export function selectMemories(query: string, candidates: ReadonlyArray<MemoryRe
     seen.add(duplicateKey);
     if (selected.length >= MAX_SELECTED_MEMORIES) break;
     if (characters + memory.content.length > MAX_MEMORY_CONTEXT_CHARACTERS) continue;
-    selected.push({ type: memory.type, content: memory.content, source: memory.source });
+    selected.push({ type: memory.type, content: memory.content, source: memory.source, about: aboutOf(memory) });
     characters += memory.content.length;
   }
   return selected;
+}
+
+// MEM-AR-01C (MF-2): every served Memory says whom it concerns. Retrieval keeps serving OTHER and UNATTRIBUTED Memories
+// (they are the user's own words); only how they are read changes. Scoring, order, bounds and escaping are unchanged.
+function aboutOf(memory: MemoryRecord): NonNullable<ModelRouterMemoryContext['about']> {
+  return memory.subject === 'SELF' ? 'USER' : memory.subject === 'OTHER' ? 'SOMEONE_ELSE' : 'NOT_RECORDED';
 }
 
 function rank(queryTokens: ReadonlySet<string>, candidates: ReadonlyArray<MemoryRecord>): RankedMemory[] {

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'; import { randomUUID } from 'node:crypto'; import process from 'node:process'; import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 const {Client}=pg; if(!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required in the ignored local .env file.');
 const client=new Client({connectionString:process.env.DATABASE_URL});
 async function identity(id){ await client.query('SET LOCAL ROLE authenticated'); await client.query("SELECT set_config('request.jwt.claims',$1,true)",[JSON.stringify({sub:id,role:'authenticated'})]); }
@@ -43,6 +44,8 @@ async function main(){ await client.connect(); try{
       ($1,$5,'USER','PERSONAL_FACT','support','USER_STATED',.9,.5,'ACTIVE'),($2,$5,'USER','PERSONAL_FACT','contradict','USER_CONFIRMED',.9,.5,'ACTIVE'),
       ($3,$6,'USER','PERSONAL_FACT','other','USER_STATED',.9,.5,'ACTIVE'),($4,$5,'USER','PERSONAL_FACT','inactive','USER_STATED',.9,.5,'SUPERSEDED'),
       ($7,$5,'USER','GOAL','  Canonical   duplicate  ','USER_STATED',.9,.5,'ACTIVE'),($8,$5,'USER','GOAL','Canonical duplicate','USER_STATED',.9,.5,'ACTIVE')`,[support,contradict,otherMemory,ineligible,user,other,duplicateWinner,duplicateLoser]);
+    // MEM-AR-01C (0152, CC-M1): the cited fixtures are the user's own Evidence (SELF), attributed before any link. The other reader's row and the superseded row stay as they were.
+    for(const id of [support,contradict,duplicateWinner,duplicateLoser]) await attributeFixtureSelf(client,id,user);
     await client.query("UPDATE public.memories SET updated_at=CASE id WHEN $1 THEN '2098-01-02T00:00:00Z'::timestamptz WHEN $2 THEN '2098-01-01T00:00:00Z'::timestamptz ELSE updated_at END WHERE id IN ($1,$2)",[duplicateWinner,duplicateLoser]);
     await client.query("INSERT INTO public.hypotheses(id,user_id,statement,type,domain,scope,origin,status,assumptions) VALUES($1,$3,'owned','CAUSAL','GENERAL','fixed scope','HUMAN_REVIEWED','ACTIVE',ARRAY['fixed assumption']),($2,$4,'other','CAUSAL','GENERAL','fixed scope','HUMAN_REVIEWED','ACTIVE','{}')",[hypothesis,otherHypothesis,user,other]);
     await identity(user); const call='SELECT * FROM public.apply_hypothesis_evidence_update($1,$2,$3,$4,$5)';
@@ -58,6 +61,8 @@ async function main(){ await client.connect(); try{
     await client.query('RESET ROLE');
     for(let index=0;index<boundedIds.length;index+=1) await client.query(`INSERT INTO public.memories(id,user_id,scope,type,content,source,confidence,importance,status,created_at,updated_at)
       VALUES($1,$2,'USER','PERSONAL_FACT',$3,'USER_STATED',.9,.5,'ACTIVE',$4,$4)`,[boundedIds[index],user,`bounded-${index}`,new Date(Date.UTC(2099,0,1,0,0,index)).toISOString()]);
+    // MEM-AR-01C (0152): the window fixtures are SELF, so the 65th is refused for being outside the window, as before.
+    for(const id of boundedIds) await attributeFixtureSelf(client,id,user);
     await identity(user); await rejects(call,[randomUUID(),hypothesis,3,`memory:${boundedIds[0]}`,'SUPPORTING']);
     await rejects("INSERT INTO public.hypothesis_updates(id,user_id,hypothesis_id,before_version,after_version,evidence_id,evidence_role,source) VALUES($1,$2,$3,9,99,$4,'SUPPORTING','forged')",[randomUUID(),user,hypothesis,`memory:${support}`]);
     await identity(other); assert.equal((await client.query('SELECT * FROM public.hypothesis_updates WHERE hypothesis_id=$1',[hypothesis])).rowCount,0);

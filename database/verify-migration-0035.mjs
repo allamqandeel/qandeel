@@ -31,6 +31,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 
 const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
@@ -683,6 +684,8 @@ async function main() {
         ($3,$4,'PERSONAL_FACT','confidence batch drift evidence','USER_STATED',1,1,'ACTIVE')`,
       [memories.first, memories.second, memories.drift, userId],
     );
+    // MEM-AR-01C (0152, CC-M1): the cited fixtures are the user's own Evidence (SELF), attributed before any link.
+    for (const id of [memories.first, memories.second, memories.drift]) await attributeFixtureSelf(client, id, userId);
     // Bounded verifier-only transient fault: one temporary trigger that raises
     // for exactly the target named by a transaction-local setting. It is armed
     // and disarmed explicitly, is invisible to the canonical runtime, and is

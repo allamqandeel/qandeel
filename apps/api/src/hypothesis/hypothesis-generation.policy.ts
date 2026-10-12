@@ -13,6 +13,10 @@ export function validateHypothesisCandidate(value:HypothesisCandidateProposal,re
  const allowedFields=new Set(['statement','type','domain','scope','supportingEvidenceIds','contradictingEvidenceIds','assumptions','disconfirmingConditions','subjectGroundingHandles']);
  if(!value||typeof value!=='object'||Object.keys(value).some(key=>!allowedFields.has(key))||!HYPOTHESIS_TYPES.includes(value.type)||value.domain!==request.domain||value.scope!==request.scope||!validText(value.statement,MAX_STATEMENT_LENGTH)||!validList(value.assumptions,MAX_ASSUMPTIONS)||!validList(value.disconfirmingConditions,MAX_DISCONFIRMING_CONDITIONS)||!validIds(value.supportingEvidenceIds)||!validIds(value.contradictingEvidenceIds))return'INVALID_CANDIDATE';
  const allowed=new Set(request.eligibleEvidence.map(item=>item.evidenceId));if([...value.supportingEvidenceIds,...value.contradictingEvidenceIds].some(id=>!allowed.has(id)))return'EVIDENCE_OUTSIDE_REQUEST';if(value.supportingEvidenceIds.some(id=>value.contradictingEvidenceIds.includes(id)))return'EVIDENCE_ROLE_CONFLICT';
+ // MEM-AR-01C CC-H1 (RD-1 Option B): a generated Hypothesis needs at least one eligible supporting Evidence id - the
+ // controlled amendment of controlled-hypothesis-generation-v1 ("zero supporting evidence is valid"). The database refuses
+ // the same payload (22023 CANDIDATE_WITHOUT_SUPPORT); the provider schema and the candidate validator are unchanged.
+ if(value.supportingEvidenceIds.length===0)return'NO_SUPPORTING_EVIDENCE';
  // T-03C R2: subject grounding is a subset of the server-issued handles of THIS request's universe - never Evidence, never text. A request without a universe admits no grounding at all.
  const grounding=authorizeSubjectGroundingHandles(value.subjectGroundingHandles,request.eligibleSubjectGroundings);if(grounding.status==='REJECTED')return grounding.reason;
  const key=hypothesisCollisionKey(value.statement,value.scope);if(seen.has(key))return'DUPLICATE_IN_BATCH';seen.add(key);if(active.has(key))return'DUPLICATE_ACTIVE_HYPOTHESIS';return undefined;

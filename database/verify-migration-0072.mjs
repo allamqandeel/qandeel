@@ -83,6 +83,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -625,7 +626,9 @@ async function verifyStaticAuthority() {
   strict((await definer(CAUSAL_FRONTIER)).volatility, 's', `${CAUSAL_FRONTIER} is STABLE: the immutable causal frontier is derived, never written`);
   // THE AUTHORITY POSTURE.
   const authenticatedExecutable = [PROJECTION];
-  const serviceExecutable = [PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, MEMORY_FOR_EXECUTION, BUILD_UNIVERSE, GROUNDED_COMPLETION];
+  // MEM-AR-01C (migration 0152, A2 E-1): the execution-associated Memory writer keeps its body and its association
+  // check, but no application role executes it any more - its successor is background_record_memory_v1.
+  const serviceExecutable = [PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, BUILD_UNIVERSE, GROUNDED_COMPLETION];
   for (const role of ['anon', 'authenticated', 'service_role']) {
     for (const signature of [PROJECTION, EXPIRY, WALL_TIME, IDENTITY, CAPTURE_BEGIN, CAPTURE_CONTEXT, CAPTURE_EXECUTION, IDENTITY_CONFLICT, RECORD_PARTICIPATION, RECORD_RELATION,
       BIND, UNBIND, MEMORY_FOR_EXECUTION, PERSIST, UPDATE_BATCH, CONFIDENCE_BATCH, SYNC_V1, PERSIST_CORE, UPDATE_BATCH_CORE, CONFIDENCE_BATCH_CORE, ...HOOKS, ...R2_SURFACE]) {
@@ -803,15 +806,16 @@ async function legacyWorld(owner) {
   const H0 = randomUUID();
   await rows('SELECT * FROM public.server_create_hypothesis_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, H0, 'legacy reading: the manager avoids direct feedback', 'CAUSAL', 'GENERAL', 'legacy scope', 'HUMAN_REVIEWED', ['assumes one team'], ['direct feedback observed']]);
   await newLogicalTransaction();
-  await identity('service_role');
+  await identity('postgres'); // MEM-AR-01C (0152): the 0026 writer is no longer service_role's; legacy rows are written as its owner.
   const M0 = randomUUID();
   await rows('SELECT * FROM public.server_create_memory_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, M0, 'GOAL', 'legacy material: wants a calmer team', 'USER_STATED', 1, 0.8, 'ACTIVE', null]);
+  await attributeFixtureSelf(client, M0, owner); // cited as the reader's own Evidence (CC-M1), attributed before any link
   await newLogicalTransaction();
-  await identity('service_role');
+  await identity('postgres'); // MEM-AR-01C (0152): the 0026 writer is no longer service_role's; legacy rows are written as its owner.
   const M6 = randomUUID();
   await rows('SELECT * FROM public.server_create_memory_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, M6, 'TEMPORARY_STATE', 'legacy material with an expiry', 'USER_STATED', 1, 0.5, 'ACTIVE', new Date(Date.now() + 86_400_000).toISOString()]);
   await newLogicalTransaction();
-  await identity('service_role');
+  await identity('postgres'); // MEM-AR-01C (0152): the 0026 writer is no longer service_role's; legacy rows are written as its owner.
   const M7 = randomUUID();
   await rows('SELECT * FROM public.server_create_memory_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, M7, 'TEMPORARY_STATE', 'legacy material expiring exactly at a Moment', 'USER_STATED', 1, 0.5, 'ACTIVE', new Date(Date.now() + 86_400_000).toISOString()]);
   await newLogicalTransaction();
@@ -828,13 +832,15 @@ async function legacyWorld(owner) {
     'unassociated writes are captured with a world version and NO Session anchor (never untracked, never fabricated)');
   ok(new Set(reading.map((e) => e.wv)).size === 3, 'each logical transaction advanced the world clock by exactly one');
   eq((await eventsOf('historical_evidence_participation_events', 'hypothesis_id=$1', [H0])).map((e) => e.event_kind), ['ATTACHED']);
-  await identity('service_role');
+  await identity('postgres'); // MEM-AR-01C (0152): the 0026 writer is no longer service_role's; legacy rows are written as its owner.
   const M9 = randomUUID();
   await rows('SELECT * FROM public.server_create_memory_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, M9, 'GOAL', 'legacy material that stays eligible Evidence', 'USER_CONFIRMED', 1, 0.7, 'ACTIVE', null]);
+  await attributeFixtureSelf(client, M9, owner); // cited as the reader's own Evidence (CC-M1), attributed before any link
   await newLogicalTransaction();
-  await identity('service_role');
+  await identity('postgres'); // MEM-AR-01C (0152): the 0026 writer is no longer service_role's; legacy rows are written as its owner.
   const M10 = randomUUID();
   await rows('SELECT * FROM public.server_create_memory_v1($1,$2,$3,$4,$5,$6,$7,$8,$9)', [owner, M10, 'GOAL', 'a second legacy material that stays eligible Evidence', 'USER_CONFIRMED', 1, 0.7, 'ACTIVE', null]);
+  await attributeFixtureSelf(client, M10, owner); // cited as the reader's own Evidence (CC-M1), attributed before any link
   await newLogicalTransaction();
   return { H0, M0, M6, M7, M9, M10, worldBefore: await worldVersionOf(owner) };
 }
@@ -1129,7 +1135,7 @@ async function verifyExpiry(owner, legacy, worldState) {
   // A supersession within an associated context: the predecessor becomes
   // SUPERSEDED at SP7 and its successor is created there; lineage both ways.
   await beginCapture(owner, world.session, true);
-  await identity('service_role');
+  await identity('postgres'); // MEM-AR-01C (0152): the 0026 writer is no longer service_role's; legacy rows are written as its owner.
   const M5 = randomUUID();
   await rows('SELECT * FROM public.server_supersede_memory_v1($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)', [owner, legacy.M0, M5, 'GOAL', 'the calmer team, restated', 'USER_CONFIRMED', 1, 0.9, 'ACTIVE', null]);
   await newLogicalTransaction();
@@ -1191,10 +1197,13 @@ async function verifyManagedCommands(owner, legacy, worldState) {
   // execution keyed by the canonical source turn; nothing weaker qualifies.
   const memoryExecution = { id: randomUUID(), turn: randomUUID() };
   await q('SELECT * FROM public.acquire_post_response_intelligence_execution_v1($1,$2,$3,$4,$5,$6,$7,$8)', [memoryExecution.id, randomUUID(), owner, world.session, memoryExecution.turn, '2.0', 'FAST', 'ALLOW']);
-  await identity('service_role');
+  // MEM-AR-01C (0152): the execution-associated writer's body is proved as its owner; service_role no longer executes it.
+  await identity('postgres');
   await rejected(() => q("SELECT * FROM public.server_create_memory_for_execution_v1($1,$2,'GOAL','memory before the claim','USER_STATED',1,0.5,'ACTIVE',NULL)", [memoryExecution.turn, randomUUID()]), 'MEMORY_WRITE_EXECUTION_NOT_ASSOCIATED', ['42501']);
   await rejected(() => q("SELECT * FROM public.server_create_memory_for_execution_v1($1,$2,'GOAL','memory of no execution','USER_STATED',1,0.5,'ACTIVE',NULL)", [randomUUID(), randomUUID()]), 'MEMORY_WRITE_EXECUTION_NOT_ASSOCIATED', ['42501']);
+  await identity('service_role');
   strict((await one('SELECT public.claim_post_response_intelligence_effect_v1($1,$2) ok', [memoryExecution.id, 'MEMORY_WRITE'])).ok, true);
+  await identity('postgres');
   const M8 = randomUUID();
   const [created] = await rows("SELECT * FROM public.server_create_memory_for_execution_v1($1,$2,'GOAL','memory written inside its execution','USER_STATED',1,0.5,'ACTIVE',NULL)", [memoryExecution.turn, M8]);
   eq([created.id, created.user_id, created.status, created.version], [M8, owner, 'ACTIVE', 1], 'the same record shape as the 0026 command');

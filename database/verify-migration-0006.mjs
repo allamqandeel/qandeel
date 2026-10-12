@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 
 const { Client } = pg;
 const databaseUrl = process.env.DATABASE_URL;
@@ -32,6 +33,8 @@ async function main() {
               ($2,$4,'USER','PERSONAL_FACT','contradict','USER_CONFIRMED',0.9,0.5,'ACTIVE',NULL),
               ($3,$4,'USER','PERSONAL_FACT','historical','USER_STATED',0.9,0.5,'SUPERSEDED',NULL)`,
         [supportingMemory, contradictingMemory, ineligibleMemory, user]);
+      // MEM-AR-01C (0152, CC-M1): the cited fixtures are the user's own Evidence (SELF), attributed before any link.
+      for (const id of [supportingMemory, contradictingMemory]) await attributeFixtureSelf(client, id, user);
       await client.query(`INSERT INTO public.hypotheses(id,user_id,statement,type,domain,scope,origin,status,supporting_evidence_ids,contradicting_evidence_ids,competing_hypothesis_ids,assumptions)
         VALUES($1,$3,'target','CAUSAL','GENERAL','test','HUMAN_REVIEWED','ACTIVE',$4,$5,ARRAY[$2]::uuid[],ARRAY['canonical assumption']),
               ($2,$3,'alternative','CAUSAL','GENERAL','test','HUMAN_REVIEWED','ACTIVE','{}','{}',ARRAY[$1]::uuid[],'{}')`,

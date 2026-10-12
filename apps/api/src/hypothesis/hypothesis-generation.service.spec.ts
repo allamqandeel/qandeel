@@ -120,11 +120,14 @@ describe('HypothesisGenerationService', () => {
     expect(result).not.toHaveProperty('primaryHypothesis');
   });
 
-  it('allows a provisional zero-support candidate and has no confidence, ranking, question, personality, diagnosis, or HIM fields', async () => {
-    const proposal = candidate({ supportingEvidenceIds: [], contradictingEvidenceIds: [], assumptions: [], disconfirmingConditions: [] });
-    const result = await run(new DeterministicFakeGenerator([proposal]), []);
-    expect(result.accepted).toHaveLength(1);
+  it('MEM-AR-01C CC-H1: refuses a zero-support candidate; a supported one has no confidence, ranking, question, personality, diagnosis, or HIM fields', async () => {
+    const unsupported = candidate({ supportingEvidenceIds: [], contradictingEvidenceIds: [], assumptions: [], disconfirmingConditions: [] });
+    const refused = await run(new DeterministicFakeGenerator([unsupported]), []);
+    expect(refused.accepted).toHaveLength(0);
+    expect(refused.rejected).toEqual([{ candidateIndex: 0, reason: 'NO_SUPPORTING_EVIDENCE' }]);
     expect(hypotheses.attachEvidence).not.toHaveBeenCalled();
+    const proposal = candidate({ contradictingEvidenceIds: [], assumptions: [], disconfirmingConditions: [] });
+    expect((await run(new DeterministicFakeGenerator([proposal]))).accepted).toHaveLength(1);
     const shape = proposal as unknown as Record<string, unknown>;
     for (const forbidden of ['confidence', 'probability', 'ranking', 'question', 'personality', 'diagnosis', 'him', 'chainOfThought', 'hiddenRationale']) expect(shape).not.toHaveProperty(forbidden);
   });

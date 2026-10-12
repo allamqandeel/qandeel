@@ -1,7 +1,7 @@
 {
   "scenario": "U1",
-  "title": "A FORGET clarification answered in words: is the answer captured or the forgotten Memory re-created? (MEM-AR-01B S-2a, INTEL-TM-01 R2)",
-  "purpose": "Characterization only, no guard: the FORGET asks which one, the user answers in words («أنا بحب الكشري»), the foreground forgets the chosen Memory, and the same words reach the background as an ordinary completed turn. Records the command, the option chosen, the status change, the background MEMORY_WRITE effect, any new row, and whether the forgotten content is served afterwards.",
+  "title": "A FORGET clarification answered in words: the forgotten Memory is never re-created (MEM-AR-01C R2 regression; MEM-AR-01B S-2a, INTEL-TM-01 R2)",
+  "purpose": "MEM-AR-01B characterized R2 here (results 3d0ff0f…: the answer re-created the forgotten Memory and U1.5 served it again; that file stays as the regression evidence). Since MEM-AR-01C the background writer refuses a turn a Memory command answered (SKIPPED_COMMAND_TURN): the FORGET asks which one, the user answers in words («أنا بحب الكشري»), the foreground forgets the chosen Memory, the background writes nothing, and U1.5 must not serve the forgotten statement (forgottenServed false). Records the command, the option chosen, the status change, the background MEMORY_WRITE effect and any new row.",
   "synthetic": true,
   "sameTextsAs": "WP0 §6 U1 (2026-10-10)",
   "steps": [

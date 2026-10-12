@@ -45,6 +45,7 @@ import { randomUUID } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import pg from 'pg';
+import { attributeFixtureSelf } from './verifier-memory-subject-fixture.mjs';
 
 const { Client } = pg;
 if (!process.env.DATABASE_URL) throw new Error('DATABASE_URL is required. Add it to the ignored local .env file.');
@@ -839,6 +840,8 @@ async function main() {
         ($2,$3,'GOAL','lifecycle completion fixture evidence two','USER_CONFIRMED',1,1,'ACTIVE')`,
       [memories.first, memories.second, userId],
     );
+    // MEM-AR-01C (0152, CC-M1): the cited fixtures are the user's own Evidence (SELF), attributed before any link.
+    for (const id of [memories.first, memories.second]) await attributeFixtureSelf(client, id, userId);
 
     // Bounded verifier-only faults. Both are plain transaction-local settings
     // read by temporary triggers; nothing in the canonical runtime knows they

@@ -92,6 +92,28 @@ const SERVICE_ROLE_RPC_ALLOWLIST = new Set([
 ]);
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/u;
 const SELECT_LIST = /^[a-z_][a-z0-9_,]*$/u;
+// MEM-AR-01C (migration 0152): the ONE resource embed the production Memory reads use. It is pinned here verbatim - not
+// imported from production - so a changed or additional embed fails closed instead of being silently translated. It is
+// accepted only on `memories`, only as the last item of a plain column list, and is answered as PostgREST answers the
+// one-to-one relationship memory_subject_attributions.(memory_id, user_id) -> memories.(id, user_id): one object
+// `{ subject }`, or null when the Memory has no attribution. The correlated read runs in the same request under the
+// caller's role, so the attribution table's own RLS (owner only) applies exactly as it would behind PostgREST.
+const MEMORY_SUBJECT_EMBED_TABLE = 'memories';
+const MEMORY_SUBJECT_EMBED = 'memory_subject_attributions(subject)';
+const MEMORY_SUBJECT_EMBED_SQL =
+  "(SELECT json_build_object('subject', attribution.subject) FROM public.memory_subject_attributions attribution"
+  + ' WHERE attribution.memory_id = memories.id AND attribution.user_id = memories.user_id) AS memory_subject_attributions';
+
+/**
+ * Smoke-only record of every request shape this substitute refused. A refusal inside an optional or fail-closed
+ * production path surfaces upstream only as that path's generic failure (for a conversation turn,
+ * "Conversation generation failed."), so the smokes print these on failure to name the exact unsupported shape.
+ * Production is unaware of it and unaffected by it.
+ */
+const refusedRequestShapes: string[] = [];
+export function refusedSmokeRequestShapes(): readonly string[] {
+  return [...refusedRequestShapes];
+}
 
 /**
  * Smoke-only authenticated RPC transport census.
@@ -133,6 +155,7 @@ export class SmokeAuthenticatedRpcCensus {
 }
 
 function unsupported(detail: string): never {
+  refusedRequestShapes.push(detail);
   throw new Error(`FULL_INTELLIGENCE_E2E_UNSUPPORTED_DATA_API_REQUEST:${detail}`);
 }
 
@@ -153,7 +176,7 @@ interface TranslatedQuery {
  * dialect fails closed. This is transport plumbing only — every SELECT shape
  * originates verbatim in a production repository.
  */
-function translateTableRead(table: string, queryString: string): TranslatedQuery {
+export function translateTableRead(table: string, queryString: string): TranslatedQuery {
   if (!READABLE_TABLES.has(table)) unsupported(`table:${table}`);
   const params = new URLSearchParams(queryString);
   const values: unknown[] = [];
@@ -207,8 +230,11 @@ function translateTableRead(table: string, queryString: string): TranslatedQuery
 
   for (const [key, value] of params.entries()) {
     if (key === 'select') {
-      if (!SELECT_LIST.test(value)) unsupported('select');
-      columns = value.split(',').map((column) => identifier(column)).join(', ');
+      const embedded = table === MEMORY_SUBJECT_EMBED_TABLE && value.endsWith(`,${MEMORY_SUBJECT_EMBED}`);
+      const plain = embedded ? value.slice(0, -(MEMORY_SUBJECT_EMBED.length + 1)) : value;
+      if (!SELECT_LIST.test(plain)) unsupported('select');
+      columns = plain.split(',').map((column) => identifier(column)).join(', ');
+      if (embedded) columns = `${columns}, ${MEMORY_SUBJECT_EMBED_SQL}`;
     } else if (key === 'order') {
       orderBy = ` ORDER BY ${value
         .split(',')

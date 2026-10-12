@@ -90,7 +90,7 @@ const unknownRow = (slotOrder: number, contextId: string): HimBrainContextSource
 const setup = (rows: unknown) => {
   const data = {
     readHimBrainContextSource: jest.fn().mockResolvedValue(rows),
-    readCanonicalSourceTurn: jest.fn(), listActiveMemories: jest.fn().mockResolvedValue([]), createMemory: jest.fn(),
+    readCanonicalSourceTurn: jest.fn(), listActiveMemories: jest.fn().mockResolvedValue([]), recordMemory: jest.fn(),
     listActiveHypotheses: jest.fn().mockResolvedValue([]), findHypothesis: jest.fn(), createSystemHypothesis: jest.fn(),
     attachHypothesisEvidence: jest.fn(), linkCompetingHypotheses: jest.fn(), createConfidenceEvaluation: jest.fn(),
     readHimConversationSnapshot: jest.fn().mockResolvedValue([]),

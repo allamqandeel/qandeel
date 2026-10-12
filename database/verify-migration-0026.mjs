@@ -71,7 +71,11 @@ const createArgs = (user, id, overrides = {}) => {
   return [user, id, shape.type, shape.content, shape.source, shape.confidence, shape.importance, shape.status, shape.expiresAt];
 };
 
-async function verifyEffectiveAcls() {
+// MEM-AR-01C (migration 0152, A2 §G3.1): the terminal state revokes service_role EXECUTE on the three 0026 writers - the
+// application writes Memory only through server_finalize_memory_control_turn_v2 and background_record_memory_v1, which
+// call them as their owner. `serverGrant` is true only where this verifier has just replayed the 0026 text itself (the
+// upgrade proof below), which is 0026's own guarantee.
+async function verifyEffectiveAcls({ serverGrant = false } = {}) {
   stage = 'effective ACLs';
   const priv = [
     // Owner-scoped reads survive for Memory Retrieval / Evidence projection.
@@ -95,9 +99,9 @@ async function verifyEffectiveAcls() {
     // The legacy generic mutation RPC is no longer an authenticated bypass, and
     // it was not handed to any other role either.
     ['authenticated', LEGACY, false], ['anon', LEGACY, false], ['service_role', LEGACY, false],
-    ['authenticated', CREATE, false], ['anon', CREATE, false], ['service_role', CREATE, true],
-    ['authenticated', REMOVE, false], ['anon', REMOVE, false], ['service_role', REMOVE, true],
-    ['authenticated', SUPERSEDE, false], ['anon', SUPERSEDE, false], ['service_role', SUPERSEDE, true],
+    ['authenticated', CREATE, false], ['anon', CREATE, false], ['service_role', CREATE, serverGrant],
+    ['authenticated', REMOVE, false], ['anon', REMOVE, false], ['service_role', REMOVE, serverGrant],
+    ['authenticated', SUPERSEDE, false], ['anon', SUPERSEDE, false], ['service_role', SUPERSEDE, serverGrant],
   ];
   for (const [role, signature, expected] of fn) {
     const [{ allowed }] = await rows('SELECT has_function_privilege($1,$2,$3) allowed', [role, signature, 'EXECUTE']);
@@ -315,7 +319,8 @@ async function verifyAnonymousAttacks(owner, ownedMemory) {
 
 async function verifyServerCreate(owner, other) {
   stage = 'server-authoritative creation';
-  await identity('service_role');
+  // MEM-AR-01C (0152): service_role no longer holds EXECUTE on the 0026 commands; their bodies are proved as their owner.
+  await identity('postgres');
   const id = randomUUID();
   // 15/16/17. Legitimate creation succeeds, is owned by the intended user, and
   // preserves the trusted internal semantics exactly as supplied.
@@ -373,13 +378,13 @@ function assertOnlyStatusMoved(before, after, label) {
 
 async function verifyServerDelete(owner, other, activeId) {
   stage = 'server-authoritative deletion';
-  const [before] = await readAsOwner('SELECT * FROM public.memories WHERE id=$1', [activeId], 'service_role');
+  const [before] = await readAsOwner('SELECT * FROM public.memories WHERE id=$1', [activeId], 'postgres');
   assert.equal(before.status, 'ACTIVE');
   // 21. ACTIVE -> DELETED: only the lifecycle status (and updated_at) moves.
   const [deleted] = await rows(REMOVE_CALL, [owner, activeId]);
   assertOnlyStatusMoved(before, deleted, 'ACTIVE target');
   // 26. No physical delete: the row is still present.
-  const [{ n }] = await readAsOwner('SELECT count(*)::int n FROM public.memories WHERE id=$1', [activeId], 'service_role');
+  const [{ n }] = await readAsOwner('SELECT count(*)::int n FROM public.memories WHERE id=$1', [activeId], 'postgres');
   assert.equal(n, 1, 'deletion is a lifecycle transition, never a physical delete');
   // An already DELETED owned row stays a legitimate target and is returned
   // again, exactly as the pre-hardening owned-row update behaved. This command
@@ -391,7 +396,7 @@ async function verifyServerDelete(owner, other, activeId) {
   assert.equal((await rows(REMOVE_CALL, [other, activeId])).length, 0);
   // A nonexistent target likewise returns no row.
   assert.equal((await rows(REMOVE_CALL, [owner, randomUUID()])).length, 0);
-  const [still] = await readAsOwner('SELECT * FROM public.memories WHERE id=$1', [activeId], 'service_role');
+  const [still] = await readAsOwner('SELECT * FROM public.memories WHERE id=$1', [activeId], 'postgres');
   assertOnlyStatusMoved(deleted, still, 'after rejected attempts');
   // 20. Malformed input fails closed.
   await rejected(() => q(REMOVE_CALL, [null, activeId]), ['22023']);
@@ -404,11 +409,12 @@ async function verifyServerDelete(owner, other, activeId) {
 // content and lineage on both sides of the link.
 async function verifyDeleteAcrossLifecycleStates(owner) {
   stage = 'deletion across lifecycle states';
-  await identity('service_role');
+  // MEM-AR-01C (0152): service_role no longer holds EXECUTE on the 0026 commands; their bodies are proved as their owner.
+  await identity('postgres');
   const predecessorId = randomUUID(), successorId = randomUUID();
   await rows(CREATE_CALL, createArgs(owner, predecessorId, { content: 'lineage predecessor' }));
   await rows(SUPERSEDE_CALL, [owner, predecessorId, successorId, 'PERSONAL_FACT', 'lineage successor', 'USER_CONFIRMED', 1, 0.8, 'ACTIVE', null]);
-  const [before] = await readAsOwner('SELECT * FROM public.memories WHERE id=$1', [predecessorId], 'service_role');
+  const [before] = await readAsOwner('SELECT * FROM public.memories WHERE id=$1', [predecessorId], 'postgres');
   assert.equal(before.status, 'SUPERSEDED');
 
   const [deleted] = await rows(REMOVE_CALL, [owner, predecessorId]);
@@ -417,7 +423,7 @@ async function verifyDeleteAcrossLifecycleStates(owner) {
 
   const after = await readAsOwner(
     'SELECT id, status, content, version, supersedes_memory_id FROM public.memories WHERE id=ANY($1) ORDER BY version',
-    [[predecessorId, successorId]], 'service_role',
+    [[predecessorId, successorId]], 'postgres',
   );
   assert.equal(after.length, 2, 'no physical delete: both lineage rows remain');
   assert.deepEqual(after[0], {
@@ -442,7 +448,8 @@ async function verifyDeleteAcrossLifecycleStates(owner) {
 
 async function verifyServerSupersede(owner, other, otherMemory) {
   stage = 'server-authoritative supersession';
-  await identity('service_role');
+  // MEM-AR-01C (0152): service_role no longer holds EXECUTE on the 0026 commands; their bodies are proved as their owner.
+  await identity('postgres');
   const predecessorId = randomUUID(), successorId = randomUUID();
   await rows(CREATE_CALL, createArgs(owner, predecessorId, { content: 'I live in Cairo.' }));
 
@@ -451,7 +458,7 @@ async function verifyServerSupersede(owner, other, otherMemory) {
   // 23. Cross-user supersession finds no predecessor and mutates nothing.
   assert.equal((await rows(SUPERSEDE_CALL, [other, predecessorId, randomUUID(), 'PERSONAL_FACT', 'x', 'USER_CONFIRMED', 1, 1, 'ACTIVE', null])).length, 0);
   assert.equal((await rows(SUPERSEDE_CALL, [owner, otherMemory, randomUUID(), 'PERSONAL_FACT', 'x', 'USER_CONFIRMED', 1, 1, 'ACTIVE', null])).length, 0);
-  let [state] = await readAsOwner('SELECT status FROM public.memories WHERE id=$1', [predecessorId], 'service_role');
+  let [state] = await readAsOwner('SELECT status FROM public.memories WHERE id=$1', [predecessorId], 'postgres');
   assert.equal(state.status, 'ACTIVE', 'a rejected supersession leaves the predecessor untouched');
 
   // 22. Successor creation and predecessor transition succeed together.
@@ -461,7 +468,7 @@ async function verifyServerSupersede(owner, other, otherMemory) {
   assert.equal(successor.scope, 'USER');
   assert.equal(successor.version, 2, 'version is derived from the predecessor');
   assert.equal(successor.supersedes_memory_id, predecessorId);
-  [state] = await readAsOwner('SELECT status FROM public.memories WHERE id=$1', [predecessorId], 'service_role');
+  [state] = await readAsOwner('SELECT status FROM public.memories WHERE id=$1', [predecessorId], 'postgres');
   assert.equal(state.status, 'SUPERSEDED');
 
   // 22. Failure is atomic: an invalid successor leaves the predecessor ACTIVE
@@ -471,7 +478,7 @@ async function verifyServerSupersede(owner, other, otherMemory) {
   await rejected(() => q(SUPERSEDE_CALL, [owner, secondPredecessor, randomUUID(), 'PERSONAL_FACT', 'x', 'USER_CONFIRMED', 5, 1, 'ACTIVE', null]), ['22023']);
   const atomic = await readAsOwner(
     'SELECT (SELECT status FROM public.memories WHERE id=$1) status, (SELECT count(*)::int FROM public.memories WHERE supersedes_memory_id=$1) successors',
-    [secondPredecessor], 'service_role',
+    [secondPredecessor], 'postgres',
   );
   assert.deepEqual(atomic[0], { status: 'ACTIVE', successors: 0 });
 
@@ -531,8 +538,9 @@ async function verifyUpgradePath(owner) {
   const [{ total }] = await rows('SELECT count(*)::int total FROM public.memories');
   assert.ok(total > 0, 'the upgrade deletes nothing');
   // The hardened final state is reached from the upgraded database too - which
-  // includes stripping the legacy EXECUTE this environment started with.
-  await verifyEffectiveAcls();
+  // includes stripping the legacy EXECUTE this environment started with. (The 0026 text replayed here grants the three
+  // commands to service_role; 0152, later, revokes them.)
+  await verifyEffectiveAcls({ serverGrant: true });
   stage = 'upgrade from the pre-hardening schema';
   for (const role of ['anon', 'authenticated', 'service_role']) {
     assert.equal(await legacyExecutable(role), false, `upgrade revoked legacy EXECUTE from ${role}`);

@@ -4485,3 +4485,67 @@ withdrawal that rolls back, the bind first, duplicate housekeeping, housekeeping
 waits) with no deadlock, and erasure with a populated record table. Its committed race fixtures, the effect ledger
 included, are removed and the removal is checked. `verify-migration-0028` (the L1 predicate admitted by name, outside
 every Evidence path) and `verify-migration-0134` (the reliance read in its compiled-service stub) are re-anchored.
+
+## MEM-AR-01C - Memory Subject Identity, Atomicity & Evidence Protection (migration 0152)
+
+`0152_memory_subject_identity_atomicity_v1.sql` is the database part of `MEM-AR-01C` under the Product Owner's MEM-AR-01
+Implementation Task Contract (PD-1, PD-3, PD-7, RD-1 Option B; Controlled Changes CC-M1, CC-M2', CC-M3', CC-H1). No
+historical migration is edited. Record:
+[MEM-AR-01 implementation record](../docs/e2e/QANDEEL_MEM_AR_01_MEMORY_CORRECTION_ARABIC_ACQUISITION_IMPLEMENTATION_RECORD_v1.md).
+
+**Why.** A Memory carried no subject, so a fact about the user's sister was personal Evidence about the user; an
+equivalent fact could be kept twice; a correction into a value already remembered left two ACTIVE copies; and a
+clarification answered in words was captured again by the background, re-creating the Memory it had just forgotten (R2).
+
+**What 0152 does.**
+
+```text
+memory_equivalence_key_v1                 the comparison key, one-to-one with the 01A TypeScript normalizer (golden fixture)
+memory_subject_attributions               append-only SELF / OTHER per Memory (no row = UNATTRIBUTED); created only WITH its Memory
+memory_equivalence_dispositions           append-only CORRECTED / FORGOTTEN / DISABLED / RECONFIRMED per retired equivalent copy
+legacy attribution (DML, once)            SELF only for a proven first-person background capture (five provenance conditions)
+memory_control_commands shape CHECK       the 0128 disjuncts + SUBJECT_CLARIFICATION_REQUIRED, REMEMBER answers, RECONFIRMED,
+                                          CORRECTED_TO_EXISTING
+server_finalize_memory_control_turn_v2    v1's checks + owner lock + id-ordered row locks + subject + equivalence + dispositions
+background_record_memory_v1               0072 association + SKIPPED_COMMAND_TURN (R2) + replay + stale-capture + equivalence
+pending_memory_subject_clarification_v1   owner-token read of the unanswered subject question
+canonical_eligible_memory_ids_v1          CC-M1: 0028 body + one Step-B line (SELF only)
+personal_evidence_standing_v1             CC-M2': NOT_SELF / UNATTRIBUTED standings before LAPSED
+hypothesis_evidence_change_core_v1        CC-M3': both subject standings taint (permanently)
+complete_post_response_candidate_provider_effect_v1   CC-H1: 0033 body + one line (22023 CANDIDATE_WITHOUT_SUPPORT)
+```
+
+**Grants.** `service_role` executes v2 and `background_record_memory_v1`; `authenticated` executes the pending subject read
+and reads its own attributions and dispositions; every internal helper is executable by no application role. EXECUTE on
+the six legacy Memory writers (`server_create_memory_v1`, `server_create_memory_for_execution_v1`,
+`server_supersede_memory_v1`, `server_mark_memory_deleted_v1`, `server_disable_memory_v1`,
+`server_finalize_memory_control_turn_v1`) is revoked from `service_role`; their bodies are unchanged. The writable set is
+exactly v2, the background writer and the governed erasure.
+
+**Deployment.** Apply the migration and release the API together: an old API fails closed against it (permission
+denied on the revoked writers - the turn or the `MEMORY_WRITE` effect fails, nothing is written), and the new API fails
+closed against an older database (the new functions do not exist). Not deployed; `QAN-BL-PROD-06` owns the hosted
+catch-up.
+
+```sh
+npm run verify:memory-subject-identity:integration
+```
+
+`verify-migration-0152.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the catalog and the
+writer census, K-1 key parity, the legacy matrix on a fresh scratch database (0001-0151, fixtures, then 0152; dropped
+afterwards), CC-M1 / CC-M2' / CC-M3' on real rows, the attribution guard and immutability, the subject lifecycle and v1's
+reach, duplicates and lineage, subject isolation of equivalent copies (D-2: the same words about the user and about
+someone else are two facts - FORGET, DISABLE, CORRECT and CORRECTED_TO_EXISTING never retire or keep the other
+subject's Memory; an UNATTRIBUTED copy goes with the compatible fact), no cross-subject correction by inference (S-2,
+L-11: the correction's own subject question for an UNATTRIBUTED fact, its own owner-token read
+`pending_memory_correction_subject_clarification_v1`, answers bound to exactly that fact and answered once, nothing
+resolved into an established subject under the lock), no established fact changed by a correction's old words (O-1,
+G-C2 A: a correction of an UNATTRIBUTED fact never retires a SELF or OTHER copy of its words and changes nothing when
+one is current, also when it is committed while the correction waits; SELF and OTHER targets still retire their
+same-subject and UNATTRIBUTED copies), the R2 guard and the stale-capture rule, CC-H1 directly and through the grounded wrapper,
+failure injection after each write step, tenant isolation, a seeded property test (no withheld Hypothesis is ever
+lifted), two-connection races without deadlock, and erasure. Its committed race fixtures are removed and the removal is
+checked. Fixture Memories that historical verifiers cite as Evidence are attributed SELF before any link through
+`database/verifier-memory-subject-fixture.mjs` (0006, 0008, 0021, 0027, 0028, 0032-0036, 0063, 0072, 0151,
+exact-version Confidence); the revoked writers' body proofs run as their owner (0026, 0072, 0128, 0151); 0130's fixture
+uses v2; verify-0151 pins L2 to its 0152 body and reads T5 after its SELF fixtures lapse.

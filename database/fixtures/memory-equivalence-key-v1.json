@@ -1,0 +1,195 @@
+{
+  "contract": "normalizeArabicComparison (apps/api/src/memory/arabic-text.ts, MEM-AR-01A) == public.memory_equivalence_key_v1 (migration 0152)",
+  "cases": [
+    {
+      "name": "plain-arabic-statement",
+      "raw": "أنا بحب القهوة.",
+      "expected": "انا بحب القهوه"
+    },
+    {
+      "name": "alef-hamza-above",
+      "raw": "أنا ساكن في أكتوبر",
+      "expected": "انا ساكن في اكتوبر"
+    },
+    {
+      "name": "alef-hamza-below",
+      "raw": "إني بحب الشاي",
+      "expected": "اني بحب الشاي"
+    },
+    {
+      "name": "alef-madda",
+      "raw": "آخر مرة سافرت",
+      "expected": "اخر مره سافرت"
+    },
+    {
+      "name": "alef-maksura",
+      "raw": "مشيت على البحر",
+      "expected": "مشيت علي البحر"
+    },
+    {
+      "name": "ta-marbuta",
+      "raw": "أنا ساكنة في المدينة",
+      "expected": "انا ساكنه في المدينه"
+    },
+    {
+      "name": "tatweel",
+      "raw": "الشــــاي",
+      "expected": "الشاي"
+    },
+    {
+      "name": "tatweel-only",
+      "raw": "ـــ",
+      "expected": ""
+    },
+    {
+      "name": "harakat",
+      "raw": "أَنَا بُحِبّ القَهْوَة",
+      "expected": "انا بحب القهوه"
+    },
+    {
+      "name": "harakat-full-range",
+      "raw": "بًٌٍَُِّْٕٖٜٟٓٔٗ٘ٙٚٛٝٞت",
+      "expected": "بت"
+    },
+    {
+      "name": "superscript-alef",
+      "raw": "هٰذا",
+      "expected": "هذا"
+    },
+    {
+      "name": "arabic-indic-digits",
+      "raw": "عندي ٢٩ سنة",
+      "expected": "عندي 29 سنه"
+    },
+    {
+      "name": "all-arabic-indic-digits",
+      "raw": "٠١٢٣٤٥٦٧٨٩",
+      "expected": "0123456789"
+    },
+    {
+      "name": "ascii-case-fold",
+      "raw": "I Like TEA.",
+      "expected": "i like tea"
+    },
+    {
+      "name": "non-ascii-case-kept",
+      "raw": "Éclair ÉTÉ",
+      "expected": "Éclair ÉtÉ"
+    },
+    {
+      "name": "fullwidth-nfkc",
+      "raw": "ＡＢＣ drink",
+      "expected": "abc drink"
+    },
+    {
+      "name": "lam-alef-ligature-nfkc",
+      "raw": "ﻻ بأس",
+      "expected": "لا باس"
+    },
+    {
+      "name": "circled-digit-nfkc",
+      "raw": "① thing",
+      "expected": "1 thing"
+    },
+    {
+      "name": "tab-newline-cr",
+      "raw": "أنا\tبحب\nالقهوة\r",
+      "expected": "انا بحب القهوه"
+    },
+    {
+      "name": "vertical-tab-formfeed",
+      "raw": "a\u000bb\fc",
+      "expected": "a b c"
+    },
+    {
+      "name": "nbsp-and-nel",
+      "raw": "أنا بحبالشاي",
+      "expected": "انا بحب الشاي"
+    },
+    {
+      "name": "ogham-and-en-quad",
+      "raw": "x y z",
+      "expected": "x y z"
+    },
+    {
+      "name": "general-punctuation-spaces",
+      "raw": "a b c d e f g h i j k",
+      "expected": "a b c d e f g h i j k"
+    },
+    {
+      "name": "line-paragraph-separators",
+      "raw": "a b c",
+      "expected": "a b c"
+    },
+    {
+      "name": "narrow-nbsp-mmsp-ideographic",
+      "raw": "a b c　d",
+      "expected": "a b c d"
+    },
+    {
+      "name": "leading-trailing-runs",
+      "raw": "   أنا   بحب    الكشري   ",
+      "expected": "انا بحب الكشري"
+    },
+    {
+      "name": "bom-is-not-white-space",
+      "raw": "﻿أنا بحب الفول﻿",
+      "expected": "﻿انا بحب الفول﻿"
+    },
+    {
+      "name": "terminal-full-stop",
+      "raw": "أنا بحب الكشري.",
+      "expected": "انا بحب الكشري"
+    },
+    {
+      "name": "terminal-run-mixed",
+      "raw": "بجد؟!...",
+      "expected": "بجد"
+    },
+    {
+      "name": "terminal-arabic-comma-semicolon",
+      "raw": "كده،؛",
+      "expected": "كده"
+    },
+    {
+      "name": "terminal-ascii-run",
+      "raw": "ok,;:!?",
+      "expected": "ok"
+    },
+    {
+      "name": "space-before-terminal",
+      "raw": "أنا بحب الشاي .",
+      "expected": "انا بحب الشاي"
+    },
+    {
+      "name": "terminal-then-space",
+      "raw": "أنا بحب الشاي. ",
+      "expected": "انا بحب الشاي"
+    },
+    {
+      "name": "internal-punctuation-kept",
+      "raw": "a.b, c؟d",
+      "expected": "a.b, c؟d"
+    },
+    {
+      "name": "only-punctuation",
+      "raw": "؟",
+      "expected": ""
+    },
+    {
+      "name": "mixed-script",
+      "raw": "Ahmed أحمد صاحبي",
+      "expected": "ahmed احمد صاحبي"
+    },
+    {
+      "name": "non-folded-arabic-letters",
+      "raw": "گ ک ی ۀ",
+      "expected": "گ ک ی ۀ"
+    },
+    {
+      "name": "empty",
+      "raw": "",
+      "expected": ""
+    }
+  ]
+}

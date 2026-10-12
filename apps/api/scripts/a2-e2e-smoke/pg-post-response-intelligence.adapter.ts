@@ -8,7 +8,7 @@
 // A2.3c batch, atomic generation persistence and the managed QAN-AUD-06
 // Confidence batch all live in the canonical SECURITY DEFINER functions.
 import type { HypothesisGenerationIntentExtractionResult } from '../../src/hypothesis/hypothesis-generation-intent-extraction.types';
-import type { MemoryWriteResult } from '../../src/memory/memory-write.service';
+import type { MemoryWriteResult } from '../../src/memory/memory.types';
 import type { DurableAssociationResult } from '../../src/post-response-intelligence/durable-association-result';
 import type { DurableCandidateProviderResult } from '../../src/post-response-intelligence/durable-generation-result';
 import { parseSubjectGroundingUniverseResolution } from '../../src/hypothesis/hypothesis-subject-grounding.authority';

@@ -170,11 +170,16 @@ class AutoCommitDb {
 // Transport plumbing only; every SELECT shape originates verbatim in a production repository.
 const READABLE_TABLES = new Set(['conversation_sessions', 'conversation_turns', 'memories', 'hypotheses', 'confidence_evaluations', 'memory_control_commands']);
 const AUTHENTICATED_RPC_ALLOWLIST = new Set(['pending_memory_clarification_v1', 'create_conversation_session_v1', 'create_user_conversation_turn',
+  // MEM-AR-01C (migration 0152): the owner-token read of an unanswered subject question.
+  'pending_memory_subject_clarification_v1',
+  // L-11 (migration 0152): the owner-token read of an unanswered subject question a correction asked.
+  'pending_memory_correction_subject_clarification_v1',
   'read_him_intelligence_snapshot_v1', 'read_him_contextual_current_intelligence_batch_v1', 'read_him_session_cross_context_foreground_v3',
   'read_him_brain_context_for_turn_v1', 'set_him_session_context_binding_v1',
   // INTEL-TM-01 (migration 0151): the reasoning context's evidence-reliance read, issued after the active-Hypothesis list.
   'hypothesis_evidence_reliance_v1']);
-const SERVICE_ROLE_RPC_ALLOWLIST = new Set(['server_finalize_memory_control_turn_v1', 'claim_conversation_turn', 'finalize_conversation_turn_v2',
+// MEM-AR-01C (migration 0152): the Memory command is v2; v1's EXECUTE is revoked from service_role.
+const SERVICE_ROLE_RPC_ALLOWLIST = new Set(['server_finalize_memory_control_turn_v2', 'claim_conversation_turn', 'finalize_conversation_turn_v2',
   'fail_conversation_turn', 'select_formal_question_opportunity_v1']);
 const IDENTIFIER = /^[a-z_][a-z0-9_]*$/u;
 const SELECT_LIST = /^[a-z_][a-z0-9_,]*$/u;
@@ -212,7 +217,16 @@ function translateTableRead(table: string, queryString: string): { text: string;
     return `(${terms.map((term) => { const dot = term.indexOf('.'); if (dot <= 0) unsupported('or-term'); return simple(term.slice(0, dot), term.slice(dot + 1)); }).join(' OR ')})`;
   };
   for (const [key, value] of params.entries()) {
-    if (key === 'select') { if (!SELECT_LIST.test(value)) unsupported('select'); columns = value.split(',').map(identifier).join(', '); }
+    if (key === 'select') {
+      // MEM-AR-01C (migration 0152): a Memory read embeds its subject attribution through the composite FK - the ONE embed
+      // the production repositories emit - answered the way PostgREST answers a to-one embed (an object or null), under
+      // the same role and RLS as the read itself.
+      const embed = ',memory_subject_attributions(subject)';
+      const plain = table === 'memories' && value.endsWith(embed) ? value.slice(0, -embed.length) : value;
+      if (!SELECT_LIST.test(plain)) unsupported('select');
+      columns = plain.split(',').map(identifier).join(', ');
+      if (plain !== value) columns += ", (SELECT json_build_object('subject', a.subject) FROM public.memory_subject_attributions a WHERE a.memory_id = memories.id AND a.user_id = memories.user_id) AS memory_subject_attributions";
+    }
     else if (key === 'order') {
       orderBy = ` ORDER BY ${value.split(',').map((segment) => { const [column, direction] = segment.split('.'); if (direction !== 'asc' && direction !== 'desc') unsupported('order'); return `${identifier(column)} ${direction.toUpperCase()}`; }).join(', ')}`;
     } else if (key === 'limit') { if (!/^\d{1,6}$/u.test(value)) unsupported('limit'); limit = ` LIMIT ${Number(value)}`; }
@@ -466,7 +480,12 @@ async function main(): Promise<void> {
     sessions.set(`${label}:${sessionLabel}`, sessionId);
     return sessionId;
   }
-  const memories = (userId: string) => db.observer<Json>('SELECT type, content, source, status, version FROM public.memories WHERE user_id = $1 ORDER BY created_at, id', [userId]);
+  // MEM-AR-01C: each Memory's subject (SELF / OTHER / UNATTRIBUTED) is recorded with it.
+  const memories = (userId: string) => db.observer<Json>(`SELECT m.type, m.content, m.source, m.status, m.version, coalesce(a.subject, 'UNATTRIBUTED') AS subject
+    FROM public.memories m LEFT JOIN public.memory_subject_attributions a ON a.memory_id = m.id AND a.user_id = m.user_id
+    WHERE m.user_id = $1 ORDER BY m.created_at, m.id`, [userId]);
+  const personalEvidence = async (userId: string) => (await db.observer<Json>(`SELECT m.content FROM public.canonical_eligible_memory_ids_v1($1, now()) e
+    JOIN public.memories m ON m.id = e.memory_id ORDER BY m.content`, [userId])).map((r: Json) => r.content);
   const hypothesisCount = async (userId: string) => Number((await db.observer<Json>('SELECT count(*)::int AS n FROM public.hypotheses WHERE user_id = $1', [userId]))[0].n);
 
   async function turn(step: Json): Promise<Json> {
@@ -492,7 +511,7 @@ async function main(): Promise<void> {
     catch (e) { rec.foregroundError = (e as Error).message; }
     const call = router.calls.length > before ? router.calls[router.calls.length - 1].request : undefined;
     rec.routerCalled = Boolean(call);
-    rec.memoryContext = call?.memoryContext ? call.memoryContext.map((m: Json) => `${m.type}: ${m.content}`) : [];
+    rec.memoryContext = call?.memoryContext ? call.memoryContext.map((m: Json) => `${m.type}${m.about ? `/${m.about}` : ''}: ${m.content}`) : [];
     rec.hypothesisContextItems = call?.hypothesisContext ? (Array.isArray(call.hypothesisContext) ? call.hypothesisContext.length : (call.hypothesisContext.hypotheses?.length ?? 1)) : 0;
     rec.humanIntelligence = call?.humanIntelligence ? {
       behavioralInstructionIds: call.humanIntelligence.behavioralInstructionIds ?? [],
@@ -520,7 +539,7 @@ async function main(): Promise<void> {
     rec.execution = exec ? `${exec.state}/${exec.outcome_code ?? '-'}/${exec.current_stage ?? '-'}` : 'NONE';
     if (exec) rec.effects = (await db.observer<Json>('SELECT effect_key, state, result_code FROM public.post_response_intelligence_effects WHERE execution_id = $1 ORDER BY effect_key', [exec.id])).map((r: Json) => `${r.effect_key}:${r.state}:${r.result_code ?? '-'}`);
     const memAfter = await memories(userId);
-    rec.newMemories = memAfter.slice(memBefore).map((m: Json) => ({ type: m.type, source: m.source, status: m.status, version: m.version, content: m.content }));
+    rec.newMemories = memAfter.slice(memBefore).map((m: Json) => ({ type: m.type, source: m.source, status: m.status, version: m.version, subject: m.subject, content: m.content }));
     rec.memoryVersionsChanged = memAfter.length === memBefore && memAfter.some((m: Json) => m.version > 1);
     // MEM-AR-01B: what the turn did to Memories that already existed (rows are never removed, so the order is stable),
     // and the Memory-control command it committed, if any (kind / outcome / options offered / whether it answered).
@@ -546,7 +565,9 @@ async function main(): Promise<void> {
     const activeByContent = new Map<string, number>();
     for (const m of mems) if (m.status === 'ACTIVE') activeByContent.set(m.content, (activeByContent.get(m.content) ?? 0) + 1);
     return {
-      memories: mems.map((m: Json) => ({ type: m.type, source: m.source, status: m.status, version: m.version, content: m.content })),
+      memories: mems.map((m: Json) => ({ type: m.type, source: m.source, status: m.status, version: m.version, subject: m.subject, content: m.content })),
+      // MEM-AR-01C (CC-M1): the Memories that are personal Evidence (L2), by content.
+      personalEvidence: await personalEvidence(userId),
       memoryStatusCounts: mems.reduce((acc: Json, m: Json) => ({ ...acc, [m.status]: (acc[m.status] ?? 0) + 1 }), {}),
       duplicateActiveMemories: [...activeByContent.values()].filter((n) => n > 1).length,
       hypotheses: (await db.observer<Json>('SELECT status, scope, origin, version, statement FROM public.hypotheses WHERE user_id = $1 ORDER BY created_at', [userId]))
@@ -632,7 +653,10 @@ async function main(): Promise<void> {
       const finals: Record<string, Json> = {};
       for (const label of labels) finals[label] = await finalState(label);
       out.scenarios[fixture.scenario] = { title: fixture.title, purpose: fixture.purpose, fixture: file, status: 'RUN', yields: yields(turns, finals, links, reliance), turns, finalState: finals,
-        ...(Object.keys(links).length ? { hypothesisEvidenceLinks: links } : {}) };
+        ...(Object.keys(links).length ? { hypothesisEvidenceLinks: links } : {}),
+        // MEM-AR-01C (F2): the reliance of each Hypothesis at every labelled snapshot (no statement, no id).
+        ...(Object.keys(reliance).length ? { relianceByLabel: Object.fromEntries(Object.entries(reliance)
+          .map(([label, value]) => [label, value === null ? null : value.map((r: Json) => r.evidence_change)])) } : {}) };
       console.log(`[ci-01 driver] SCENARIO ${fixture.scenario} RUN (${turns.length} turns)`);
     } catch (e) {
       failures += 1;

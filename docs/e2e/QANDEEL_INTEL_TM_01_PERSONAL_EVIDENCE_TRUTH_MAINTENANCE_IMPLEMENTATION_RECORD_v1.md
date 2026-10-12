@@ -159,7 +159,8 @@ announced. A withheld item offers no "talk" control.
 
 - **L-1:** a Hypothesis created with no evidence link cannot be traced by PG-02 to a withdrawn Memory, and the
   `0029` / `0033` ledger that could trace it belongs to `INTEL-RET-01` (`QAN-BL-INTEL-02`). PG-02 claims nothing for
-  unlinked items.
+  unlinked items. *Current truth (MEM-AR-01C, 2026-10-11, not merged):* CC-H1 refuses any new generated Hypothesis without
+  supporting Evidence, so L-1 now concerns legacy rows only, owned by `QAN-BL-INTEL-03` (`INTEL-SV-01`).
 - **L-2:** PG-02 covers derived Hypotheses only. Conversation history (still passed to the provider), the export (which
   already contains forgotten Memory text labelled «forgotten», `0130:578-584`, by approved design) and other derived
   stores keep their own contracts. No conversation-history rewrite, export redesign or retention policy is made here.
@@ -199,6 +200,9 @@ announced. A withheld item offers no "talk" control.
   item or owner previously covered it. `QAN-BL-QIR-01` is now admitted at post-merge closure as `MEDIUM`, `DEFERRED — OWNED`, with owner `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck`. This grants no implementation authority.
 - **R2 (observation, unchanged):** clarification-answer turns are not caught by the background `MEMORY_CONTROL_COMMAND`
   guards; for the Memory-control owner to verify before any admission.
+  *Current truth (MEM-AR-01, 2026-10-11):* CONFIRMED by MEM-AR-01B and fixed by MEM-AR-01C (migration `0152`,
+  `background_record_memory_v1` → `SKIPPED_COMMAND_TURN`, in a Draft PR awaiting the Product Owner's merge decision). See
+  the [MEM-AR-01 implementation record](QANDEEL_MEM_AR_01_MEMORY_CORRECTION_ARABIC_ACQUISITION_IMPLEMENTATION_RECORD_v1.md).
 
 ## 10. Not done here, on purpose
 
