@@ -178,8 +178,16 @@ GitHub CI validates the exact head (§9).
 
 ## 9. PR and CI
 
-The closing change is recorded before the push. The PR number, the exact head and the API CI / Mobile CI results are
-appended here after the push, without changing anything above.
+- **PR:** Draft [PR #333](https://github.com/allamqandeel/qandeel/pull/333), `ace/ace-sp-01-shared-public-personality-core` → `main`.
+- **Commits:**
+  - `2b223c3a`: the amendment and its registration;
+  - `ca0eec92`: the code and tests;
+  - `335bb09a`: the closing change;
+  - then this documentation-only note.
+- **CI:** API CI and Mobile CI run on the exact final head of the PR, and their results are reported on the PR for the
+  independent review. A failure would be classified by root cause and fixed inside the scope only.
+- **Not merged.** The merge, and the merge SHA in the `QAN-BL-ACE-01` tombstone, wait for the Product Owner's explicit
+  order.
 
 ## 10. Backlog closure (BG-08) and residuals
 

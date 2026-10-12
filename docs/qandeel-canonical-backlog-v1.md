@@ -2179,9 +2179,9 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 ### `QAN-BL-ACE-01` — The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B)
 
 - **Closing task:** `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`
-- **PR / SHA:** the ACE-SP-01 Draft PR from branch `ace/ace-sp-01-shared-public-personality-core`, whose number and head
-  are recorded in the [ACE-SP-01 implementation record](e2e/QANDEEL_ACE_SP_01_SHARED_PUBLIC_PERSONALITY_CORE_IMPLEMENTATION_RECORD_v1.md)
-  §9. The tombstone holds from that PR's merge, and the merge SHA is filled in at merge. Not merged; no migration; not
+- **PR / SHA:** Draft PR #333 from branch `ace/ace-sp-01-shared-public-personality-core` (closing change `335bb09a`; the
+  [ACE-SP-01 implementation record](e2e/QANDEEL_ACE_SP_01_SHARED_PUBLIC_PERSONALITY_CORE_IMPLEMENTATION_RECORD_v1.md)
+  §9). The tombstone holds from that PR's merge, and the merge SHA is filled in at merge. Not merged; no migration; not
   deployed.
 - **Disposition:** completed for both Worlds, under the Product Owner's *ACE-SP-01 — Final Product Approval &
   Implementation Authorization* (2026-10-12; D-1 … D-4; Product Copy Gate CG-1 … CG-6 APPROVED 6 / 6).
