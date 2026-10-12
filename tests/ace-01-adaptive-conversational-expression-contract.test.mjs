@@ -115,14 +115,16 @@ test('WP3: Golden Conversations is a second named suite of the ONE brain-eval sy
 
 test('BG-08 / BG-09: the record states its lifecycle and the backlog carries the admissions', () => {
   assert.match(record, /^# QANDEEL — ACE-01 — Adaptive Conversational Expression — Implementation Record v1$/mu);
-  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only): PR #332 merged as 141a3190. The banner may now state the
-  // merged lifecycle with its exact merge commit, and then the pre-merge banner must be kept beside it (BG-09: recorded
-  // explicitly, never a quiet rewrite).
-  assert.match(record, /^\*\*Status:\*\* `ACE-01` — \*\*(IMPLEMENTATION COMPLETE|CLOSED \/ MERGED through PR #332 as `141a3190deb02bc6695d2ace05da275e623a2754`)/mu);
-  if (/^\*\*Status:\*\* `ACE-01` — \*\*CLOSED \/ MERGED/mu.test(record)) {
-    assert.match(record, /^\*\*Status at the closing change \(historical, kept verbatim\):\*\* `ACE-01` — \*\*IMPLEMENTATION COMPLETE/mu,
-      'the pre-merge banner is kept as history');
-  }
+  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only; tightened by its review R1): PR #332 merged as 141a3190. The
+  // ONE current banner states exactly that merged lifecycle, with its PR and merge commit, and no pre-merge state. The
+  // pre-merge banner is kept beside it, labelled historical (BG-09: recorded explicitly, never a quiet rewrite).
+  const statusBanners = record.match(/^\*\*Status:\*\* [^\n]*(?:\n(?!\n)[^\n]*)*/gmu) ?? [];
+  assert.equal(statusBanners.length, 1, 'one current Status banner');
+  assert.match(statusBanners[0], /^\*\*Status:\*\* `ACE-01` — \*\*CLOSED \/ MERGED through PR #332 as `141a3190deb02bc6695d2ace05da275e623a2754` \(2026-10-12\);/u);
+  assert.doesNotMatch(statusBanners[0], /IMPLEMENTATION COMPLETE|READY FOR|NOT MERGED|\bACTIVE\b|DEFERRED/u, 'the current banner carries no pre-merge state');
+  assert.match(record, /^\*\*Status at the closing change \(historical, kept verbatim\):\*\* `ACE-01` — \*\*IMPLEMENTATION COMPLETE \/ READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION\.\*\*$/mu,
+    'the pre-merge banner is kept as history');
+  assert.match(record, /^## 13\. Post-merge Governance Reconciliation \(GOV-REC-01, 2026-10-12\)$/mu, 'the post-merge facts are a dated section');
   assert.doesNotMatch(record, /^\*\*Phase:\*\*/mu, 'ACE-01 is a task, not a Connected Worlds phase');
   assert.match(record, /Kickoff census \(BG-05\)[\s\S]*?\*\*NONE\.\*\*/u);
   assert.match(backlog, /^### `QAN-BL-ACE-01` — /mu);

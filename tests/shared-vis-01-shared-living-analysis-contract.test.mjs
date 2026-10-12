@@ -126,34 +126,53 @@ test('6 — the Copy Gate: reused words exactly; CLOSED — 6 / 6 APPROVED by th
   assert.equal(approved, 12, 'six rows, in Arabic and English, approved');
 });
 
-test('7 — lifecycle and backlog truth: Stage 5 DONE / MERGED; SHARED-VIS-01 current, or recorded merged through PR #321; Stage 6 not started', () => {
+// RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only; tightened by its review R1): PR #321 merged as 5973123 and
+// GOV-REC-01 records the missing closure retroactively. Every current-state pin below accepts only that merged truth, with
+// its PR and merge commit; the pre-merge banner and the Project Map's old current-task paragraph are kept, labelled
+// historical. QAN-BL-CW-03 is `CLOSED — TOMBSTONE` from the merge of PR #334, and the physical-Android release gate
+// (Issue #322) stays OPEN — the merge is not device proof.
+test('7 — lifecycle and backlog truth: Stage 5 DONE / MERGED; SHARED-VIS-01 merged through PR #321 and tombstoned; Issue #322 open; Stage 6 not started', () => {
+  const MERGE = '5973123153e26494d702a4a859a79631ede225cd';
   const record = read(RECORD);
-  assert.match(record, /^\*\*Status:\*\* `(ACTIVE — IMPLEMENTED ON feat\/shared-vis-01-shared-living-analysis — NOT MERGED; NOT CLOSED|CLOSED[^`]*|DONE \/ MERGED[^`]*)`/mu);
+  const statusBanners = record.match(/^\*\*Status:\*\* [^\n]*(?:\n(?!\n)[^\n]*)*/gmu) ?? [];
+  assert.equal(statusBanners.length, 1, 'one current Status banner');
+  assert.equal(statusBanners[0], `**Status:** \`CLOSED / MERGED — PR #321 merged as ${MERGE} (2026-10-09) — CLOSURE RECORDED RETROACTIVELY BY GOV-REC-01 (2026-10-12) — NOT DEPLOYED — ISSUE #322 OPEN / NOT PROVEN / RELEASE BLOCKER\``,
+    'the current banner is the merged lifecycle, and Issue #322 stays open');
+  assert.match(record, /^\*\*Status before the merge \(historical, kept verbatim\):\*\* `ACTIVE — IMPLEMENTED ON feat\/shared-vis-01-shared-living-analysis — NOT MERGED; NOT CLOSED`\.$/mu,
+    'the pre-merge banner is kept as history');
+  assert.match(record, /^## 15\. Post-merge Governance Reconciliation \(GOV-REC-01, 2026-10-12\)$/mu, 'the post-merge facts are a dated section');
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
-  assert.match(backlog, /\| `QAN-BL-CW-03` \|[^\n]*\| `(DEFERRED — OWNED|CLOSED — TOMBSTONE)` \|/u);
-  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only): PR #321 merged as 5973123 and GOV-REC-01 tombstones
-  // QAN-BL-CW-03 retroactively. A tombstone must name this task as its closing task, carry the merge commit and keep the
-  // physical-Android release gate (Issue #322) open — the merge is not device proof.
-  if (/\| `QAN-BL-CW-03` \|[^\n]*\| `CLOSED — TOMBSTONE` \|/u.test(backlog)) {
-    const tombstones = backlog.slice(backlog.indexOf('## 6. Tombstones'), backlog.indexOf('## 7. Counts at this baseline'));
-    const start = tombstones.indexOf('### `QAN-BL-CW-03` — ');
-    assert.ok(start >= 0, 'QAN-BL-CW-03 has a §6 tombstone');
-    const end = tombstones.indexOf('\n### ', start + 1);
-    const cw03 = tombstones.slice(start, end < 0 ? undefined : end);
-    assert.match(cw03, /\n- \*\*Closing task:\*\* `SHARED-VIS-01 — /u, 'the tombstone names SHARED-VIS-01');
-    assert.match(cw03, /`5973123153e26494d702a4a859a79631ede225cd`/u, 'the tombstone carries the PR #321 merge commit');
-    assert.match(cw03.replace(/\s+/gu, ' '), /Issue #322[^.]*stays \*\*OPEN \/ NOT PROVEN \/ RELEASE BLOCKER\*\*/u, 'Issue #322 stays open');
-  }
+  assert.equal((backlog.match(/^\| `QAN-BL-CW-03` \|/gmu) ?? []).length, 1, 'QAN-BL-CW-03 is one item');
+  assert.match(backlog, /^\| `QAN-BL-CW-03` \| Shared World Living Analysis Map \/ Semantic Geography Product Integration \| `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration` \| `HIGH` \| `CLOSED — TOMBSTONE` \|$/mu);
+  const tombstones = backlog.slice(backlog.indexOf('## 6. Tombstones'), backlog.indexOf('## 7. Counts at this baseline'));
+  const start = tombstones.indexOf('### `QAN-BL-CW-03` — ');
+  assert.ok(start >= 0, 'QAN-BL-CW-03 has a §6 tombstone');
+  const end = tombstones.indexOf('\n### ', start + 1);
+  const cw03 = tombstones.slice(start, end < 0 ? undefined : end).replace(/\s+/gu, ' ').trimEnd();
+  assert.match(cw03, /^### `QAN-BL-CW-03` — [^\n]*? - \*\*Closing task:\*\* `SHARED-VIS-01 — Shared World Living Analysis Map Product Integration`\. Its BG-08 half is recorded retroactively by `GOV-REC-01 — /u,
+    'the tombstone names SHARED-VIS-01, recorded by GOV-REC-01');
+  assert.match(cw03, new RegExp(`- \\*\\*PR / SHA:\\*\\* PR #321, merged as \`${MERGE}\` \\(2026-10-09\\)\\.`, 'u'), 'the tombstone carries the PR #321 merge commit');
+  assert.match(cw03, /This retroactive disposition holds from the merge of the GOV-REC-01 pull request, PR #334\./u, 'the closure takes effect only on the merge of PR #334');
+  assert.match(cw03, /Issue #322[^.]*stays \*\*OPEN \/ NOT PROVEN \/ RELEASE BLOCKER\*\*/u, 'Issue #322 stays open');
+  assert.match(cw03, /- \*\*Status:\*\* `CLOSED — TOMBSTONE`$/u);
+  const cw03Item = backlog.slice(backlog.indexOf('### `QAN-BL-CW-03` — '), backlog.indexOf('### ', backlog.indexOf('### `QAN-BL-CW-03` — ') + 1))
+    .replace(/\n> /gu, '\n').replace(/\s+/gu, ' ');
+  assert.match(cw03Item, /^### `QAN-BL-CW-03` — [^*]*\*\*Historical pre-closure schema\.\*\* .*? the current state is the `CLOSED — TOMBSTONE` record in §6 below \(SHARED-VIS-01, closed retroactively by GOV-REC-01\)\./u,
+    'the §5 block is kept, labelled as the historical pre-closure schema');
   for (const id of ['QAN-BL-CW-05', 'QAN-BL-CW-06', 'QAN-BL-CW-07']) assert.match(backlog, new RegExp(`\\| \`${id}\` \\|`, 'u'), `${id} is admitted`);
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
     assert.match(state, /Stage 5 \(Public World Product Integration\) is \*\*DONE \/ MERGED\*\*/u);
-    assert.match(state, /\| SHARED-VIS-01 — Shared World Living Analysis Map Product Integration \(migration `0148`\) \|/u);
+    assert.match(state, new RegExp(`^\\| SHARED-VIS-01 — Shared World Living Analysis Map Product Integration \\(migration \`0148\`\\) \\| \\*\\*\`CLOSED / MERGED\` through PR #321 as \`${MERGE}\` \\(2026-10-09\\); NOT DEPLOYED\\.\\*\\* [^\\n]*\\*\\*GitHub Issue #322 — [^\\n]*stays \`OPEN / NOT PROVEN / RELEASE BLOCKER\`\\*\\*`, 'mu'),
+      'Current State §3.7 records SHARED-VIS-01 merged, and Issue #322 open');
+    assert.match(state, /\*\*SHARED-VIS-01 is DONE \/ MERGED\*\* through PR #321 as `5973123153e26494d702a4a859a79631ede225cd`/u, 'Current State §7: Stage 4 records the merge');
+    assert.match(state, /^\| `Stage 9 — Economy \+ Launch Closure` \(release-readiness gate\)[^\n]*\[Issue #322\][^\n]*`OPEN \/ NOT PROVEN \/ RELEASE BLOCKER`/mu, 'the release gate keeps Issue #322 open');
     assert.doesNotMatch(state, /Stage 6[^\n]*\*\*ACTIVE/u, 'Stage 6 is not started');
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
-    // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only): once PR #321 merged, SHARED-VIS-01 is no longer the
-    // current task; the map must then record it merged with its PR and merge commit.
-    assert.match(read('QANDEEL_PROJECT_MAP.md'), /> \*\*CURRENT IMPLEMENTATION TASK: SHARED-VIS-01 — Shared World Living Analysis Map Product Integration\*\*|\*\*SHARED-VIS-01 is DONE \/ MERGED\*\* through PR #321 as `5973123153e26494d702a4a859a79631ede225cd`/u);
+    const map = read('QANDEEL_PROJECT_MAP.md');
+    assert.match(map, /^\| \*\*4 — Shared World Product Integration\*\* \|[^\n]*\*\*SHARED-VIS-01 is DONE \/ MERGED\*\* through PR #321 as `5973123153e26494d702a4a859a79631ede225cd`/mu, 'the map records the merge');
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: SHARED-VIS-01/u, 'SHARED-VIS-01 is no longer the current task');
+    assert.match(map, /^\*\(Historical, SHARED-VIS-01:\)\* \*\*SHARED-VIS-01 — Shared World Living Analysis Map Product Integration\*\*/mu, 'its old current-task paragraph is kept, labelled historical');
   }
 });

@@ -171,7 +171,12 @@ the GOV-REC-01 §7 paragraph says so once instead of rewriting each. The ACE-SP-
 
 ---
 
-## 8. Static contracts re-anchored (validation only; none weakened)
+## 8. Static contracts re-anchored (validation only) — as first pushed; tightened by review R1 (§12)
+
+> **Superseded by review R1 (§12).** This section and its table record the re-anchors as first pushed (head
+> `849d265274d3963a2c8b444be47ea43da38dbc32`), kept as history. Each kept the pre-merge state as an accepted
+> alternative to the merged one, so a revert to the stale state still passed. Against those re-anchors, the R1 mutation
+> run caught only 12 of 39 stale-state mutations. §12 replaces every alternative with a strict pin of the merged truth.
 
 Each re-anchor carries a dated `RE-ANCHORED by GOV-REC-01` note. Each accepts the post-merge state only together with
 evidence that is at least as strong as the pre-merge assertion.
@@ -236,7 +241,9 @@ All runs are local on the branch tree. The exact commands and results are in §1
   → `main`. Not merged. Merge only on the Product Owner's explicit order; auto-merge is not enabled.
 - **Commits:**
   - `086325071f9147c4ba41810a6aaf91615334e36e` — the reconciliation and the six re-anchors (the evidence commit);
-  - the next commit — documentation only: the PR number and these results.
+  - `849d265274d3963a2c8b444be47ea43da38dbc32` — documentation only: the PR number and these results;
+  - the review R1 correction — the six re-anchors tightened, plus this record's §8 note and §12. No other document
+    changed (§12).
 - **Local results** (on `08632507`; the follow-up commit changes documentation only):
 
 | Command | Result |
@@ -253,3 +260,83 @@ All runs are local on the branch tree. The exact commands and results are in §1
 
 - **GitHub CI:** API CI and Mobile CI run on the PR's exact head and are reported on the PR. A failure would be
   classified by root cause before any change.
+
+---
+
+## 12. Independent review R1 — strict current-state pins (2026-10-12)
+
+**Finding.** The Product Owner's independent review R1 of PR #334 at `849d2652` found that some re-anchored contracts
+still accepted the historical state as an equivalent alternative to the current one (§8). The review required:
+- pins of the merged state with the exact PR and SHA;
+- `QAN-BL-CW-03` and `QAN-BL-GOV-01` pinned `CLOSED — TOMBSTONE`, with the closure effective from the merge of PR #334;
+- proof that the historical banners are kept;
+- Issue #322 kept `OPEN / NOT PROVEN / RELEASE BLOCKER`;
+- mutation proof that a revert to ACTIVE, NOT MERGED or DEFERRED fails;
+- no contract weakened and no production change.
+
+**Correction.** Only the six contracts of §8 change, plus this record (the §8 note, the §11 commit list and this section).
+No locator, backlog text, record banner or other document changes. The documents already state the merged truth; the
+contracts now accept only that truth. Each change carries a `RE-ANCHORED by GOV-REC-01 (…; tightened by its review R1)`
+note.
+
+| Contract | Strict pin after R1 |
+|---|---|
+| `tests/ace-01-…-contract.test.mjs` (BG-08 / BG-09 test) | Exactly one `**Status:**` banner. It states `CLOSED / MERGED through PR #332 as` `141a3190deb02bc6695d2ace05da275e623a2754` `(2026-10-12)` and carries no `IMPLEMENTATION COMPLETE`, `READY FOR`, `NOT MERGED`, `ACTIVE` or `DEFERRED`. The historical banner is present verbatim, and so is §13 (the post-merge reconciliation) |
+| `tests/ace-sp-01-…-contract.test.mjs` (BG-08 / BG-09 test) | The same for PR #333 / `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b` and §12. `QAN-BL-GOV-01` has one §4 row: owner GOV-REC-01, `CLOSED — TOMBSTONE`. Its §6 tombstone names GOV-REC-01 (name APPROVED), holds from the merge of PR #334 and not before, has status `CLOSED — TOMBSTONE` and no open status. Its §5 block opens with the historical pre-closure schema note |
+| `tests/shared-vis-01-…-contract.test.mjs` test 7 | **Record:** one `**Status:**` banner, equal to the merged banner (PR #321, `5973123…`, closure recorded retroactively, NOT DEPLOYED, Issue #322 open). The pre-merge banner is kept verbatim; §15 is present. **`QAN-BL-CW-03`:** one §4 row, exactly `CLOSED — TOMBSTONE`. Its §6 tombstone names SHARED-VIS-01 as recorded by GOV-REC-01, carries the merge SHA, holds from the merge of PR #334, keeps Issue #322 `OPEN / NOT PROVEN / RELEASE BLOCKER` and has status `CLOSED — TOMBSTONE`. The §5 historical note is present. **Current State:** the §3.7 row is `CLOSED / MERGED` through PR #321 with Issue #322 open; §7 Stage 4 records the merge; the Stage 9 release-gate row keeps Issue #322 open; no Stage 6 `**ACTIVE`. **Project Map:** the Stage 4 row records the merge; SHARED-VIS-01 is not the current task; its old current-task paragraph is kept, labelled historical |
+| `tests/s5-03b-…-contract.test.mjs` test 9 | Exactly one current-task line in the Project Map: `CURRENT TASK: GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation`. No merged task (S5-0x, SHARED-VIS-01) is named the current implementation task |
+| `tests/s5-03c-…-contract.test.mjs` test 8 | `QAN-BL-CW-03`: one row, exactly `CLOSED — TOMBSTONE`, closing task SHARED-VIS-01 (not S5-03C). Map: the GOV-REC-01 current-task line; S5-03C, S5-04 and SHARED-VIS-01 are not current |
+| `tests/s5-04-…-contract.test.mjs` test 9 | `QAN-BL-CW-03`: one row, exactly `CLOSED — TOMBSTONE`, closing task SHARED-VIS-01 (not S5-04) |
+
+**Mutation proof.**
+- **Harness.** Each mutation edits one document in place, runs the six contracts with `node --test`, and restores the
+  original bytes. A mutation whose target text is not found exactly once aborts the run.
+- **Record banners (16).** ACE-01 ×7, ACE-SP-01 ×4 and SHARED-VIS-01 ×5. The mutations revert a banner to its
+  pre-merge state, set it to `ACTIVE — NOT MERGED`, give it a wrong PR or merge SHA, add a `NOT MERGED` clause, add a
+  second pre-merge banner, or delete its historical banner. Issue #322 is also dropped from, or closed in, the
+  SHARED-VIS-01 banner.
+- **Backlog (14).** For each of the two items:
+  - the §4 row is reverted to `DEFERRED — OWNED`, or duplicated by a `DEFERRED` row;
+  - the tombstone status is reverted to `DEFERRED — OWNED`;
+  - the merge-of-PR-#334 condition is removed;
+  - another closing task is named;
+  - the §5 historical-schema note is deleted.
+
+  The CW-03 tombstone also gets a wrong merge SHA, and Issue #322 closed.
+- **Current State (4).** The SHARED-VIS-01 row is set to `ACTIVE — NOT MERGED`; Issue #322 is closed in that row or in
+  the release-gate row; Stage 4 says SHARED-VIS-01 is ACTIVE.
+- **Project Map (5).** The Stage 4 row says ACTIVE; the current task is reverted to SHARED-VIS-01 or to S5-04; an old
+  current-task line is kept beside the new one; the historical SHARED-VIS-01 paragraph is deleted.
+
+| Re-anchors under test | Mutations caught |
+|---|---|
+| As first pushed (`849d2652`, run in a temporary detached worktree) | 12 / 39 — 27 stale states passed |
+| After R1 | **39 / 39**, each failing exactly the expected contracts. After the restore, 6 / 6 contracts pass, and `git diff` over `docs/` and the two locators is empty |
+
+**Validation after R1** (local, on the R1 tree):
+
+| Command | Result |
+|---|---|
+| `node --test` over the six tightened contracts | 51 / 51 pass |
+| `npm run test:task-closure-governance-contract` | 24 / 24 pass |
+| `npm run test:ci-01-intelligence-evidence-baseline-contract` | 18 / 18 pass |
+| `npm run test:ace-01-adaptive-conversational-expression-contract` | 6 / 6 pass |
+| `npm run test:ace-sp-01-shared-public-personality-core-contract` | 7 / 7 pass |
+| `node --test` over the 23 contracts that read an edited document (§9) | 352 / 352 pass |
+| `node --test database/tests/replay-distribution-reconciliation-closure-v1.test.mjs` | 15 / 15 pass |
+| `git diff --check` | clean |
+| `git diff --name-only` against `apps/`, `packages/`, `database/`, `.github/`, `package*.json` | empty |
+
+**Unchanged by R1:**
+- the register: 62 items · 26 / 4 / 10 / 22;
+- Issue #322: OPEN, and not admitted, because that is the Product Owner's decision (§7);
+- every locator, record banner and backlog text;
+- full Jest, Android / iOS and PostgreSQL were not run: no runtime changed.
+
+**Not pinned, before or after R1 (outside its narrow scope).** No static contract pins the lifecycle of the IP-IMP-01
+or MEM-AR-01 record banners. The CI-01 contract requires only that the baseline carries a `**Status:**` banner. R1 adds
+no contract there.
+
+**Forward note.** The strict pins name GOV-REC-01 as the current task and Stage 6 as not started. The task that starts
+Stage 6 re-anchors them in its own change (validation only), as every earlier task did: s5-03b test 9, s5-03c test 8
+and shared-vis-01 test 7.
