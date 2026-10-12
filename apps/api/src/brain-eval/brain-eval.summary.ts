@@ -19,7 +19,20 @@ export function summarizeResults(results: ReadonlyArray<CandidateResult>, review
     const counts = { A: rows.filter((row) => row.overallPreference === 'A').length, B: rows.filter((row) => row.overallPreference === 'B').length, Tie: rows.filter((row) => row.overallPreference === 'Tie').length };
     return [path, { reviewed: rows.length, counts, rates: { A: rows.length ? counts.A / rows.length : null, B: rows.length ? counts.B / rows.length : null, Tie: rows.length ? counts.Tie / rows.length : null } }];
   }));
-  return { preferences, metrics, rubricAverages: calculateRubricAverages(reviews), note: 'Evidence only; this report does not select a production provider.' };
+  const unfitRegister = countUnfitRegisterFailures(reviews);
+  return {
+    preferences, metrics, rubricAverages: calculateRubricAverages(reviews),
+    ...(unfitRegister === undefined ? {} : { unfitRegisterFailures: unfitRegister }),
+    note: 'Evidence only; this report does not select a production provider.',
+  };
+}
+
+/** ACE-01 (WP3): explicit unfit-register FAIL marks (Golden Conversations only), counted per blinded candidate. */
+function countUnfitRegisterFailures(reviews: ReadonlyArray<Record<string, unknown>>) {
+  const marked = reviews.filter((review) => typeof review.unfitRegisterFail === 'object' && review.unfitRegisterFail !== null);
+  if (!marked.length) return undefined;
+  const marks = marked.map((review) => review.unfitRegisterFail as { A: unknown; B: unknown });
+  return { cases: marked.length, A: marks.filter(({ A }) => A === true).length, B: marks.filter(({ B }) => B === true).length };
 }
 
 function calculateRubricAverages(reviews: ReadonlyArray<Record<string, unknown>>) {

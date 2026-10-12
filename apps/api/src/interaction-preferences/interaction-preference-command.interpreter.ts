@@ -164,6 +164,23 @@ export function interpretLegacyInteractionPreference(content: string): Pick<Inte
 }
 
 /**
+ * ACE-01 (WP2) — the reply language / dialect this whole message explicitly asks for, with or without a durable marker
+ * («كلمني بالانجليزي», "answer in English"), read with the SAME closed grammar; null for anything else. It stores nothing
+ * and is not a command: it only tells the current turn which explicit language request it carries.
+ */
+export function interpretExplicitReplyLanguageRequest(content: string): InteractionPreferenceValue | null {
+  if (typeof content !== 'string' || content.length === 0 || content.length > 200 || QUESTION.test(content)) return null;
+  const text = prepare(content);
+  if (text.length === 0) return null;
+  const languageCores = SET_CORES.filter((core) => core.field === 'REPLY_LANGUAGE');
+  const core = first(languageCores, text) ?? (() => {
+    const stripped = withoutDurableMarker(text);
+    return stripped === undefined ? undefined : first(languageCores, stripped);
+  })();
+  return core ? core.value : null;
+}
+
+/**
  * The explicit durable command this whole message is, or null. Never throws; anything it does not recognise is null.
  */
 export function interpretInteractionPreferenceCommand(content: string): InteractionPreferenceCommand | null {

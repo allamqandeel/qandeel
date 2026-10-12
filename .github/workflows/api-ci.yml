@@ -131,6 +131,7 @@ jobs:
       - {name: "Verify SEC-MATCH-00 Matching direct-RPC protection static contract", run: npm run test:sec-match-00-matching-direct-rpc-protection-contract}
       - {name: "Verify PROD-RETRY-01 Data API stale-state SQLSTATE static contract", run: npm run test:prod-retry-01-data-api-stale-state-contract}
       - {name: "Verify CI-01 Intelligence Evidence Baseline static contract (records, isolation authorities, recorded synthetic proofs)", run: npm run test:ci-01-intelligence-evidence-baseline-contract}
+      - {name: "Verify ACE-01 Adaptive Conversational Expression static contract (one personality core, frozen Shared/Public guidance, no tone engine, Golden suite)", run: npm run test:ace-01-adaptive-conversational-expression-contract}
       - {name: "Verify INTEL-TM-01 Personal Evidence Truth Maintenance static contract (reliance guards, withheld Understanding shape, records)", run: npm run test:intel-tm-01-personal-evidence-truth-maintenance-contract}
       - {name: "Verify MEM-AR-01C Memory subject identity static contract (writer surface, R2 guard, locked copy, subject-safe Evidence)", run: npm run test:mem-ar-01-memory-subject-identity-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,

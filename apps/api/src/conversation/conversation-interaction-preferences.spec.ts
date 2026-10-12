@@ -24,7 +24,7 @@ import { ConversationOrchestratorService } from './conversation-orchestrator.ser
 import type { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
 import type { ContextBuilder } from './context-builder.types';
-import { BehavioralResponsePolicyService, TEXT_V1_BEHAVIORAL_GUIDANCE } from './behavioral-response-policy.service';
+import { BehavioralResponsePolicyService, TEXT_V2_BEHAVIORAL_GUIDANCE } from './behavioral-response-policy.service';
 import type { SafetyResponseGate, SafetyResponseGateResult } from './safety-response-gate.types';
 import type { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import type { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -101,10 +101,10 @@ describe('IP-IMP-01 — the orchestrator consumes the canonical Interaction Pref
     );
   });
 
-  it('no durable declaration: the guidance is byte-identical Text v1 and the provider is called once', async () => {
+  it('no durable declaration: the guidance is byte-identical Text v2 and the provider is called once', async () => {
     await orchestrator.orchestrate('token', 'user', turnOf('hello'));
     expect(router.generate).toHaveBeenCalledTimes(1);
-    expect(dispatched().behavioralGuidance).toBe(TEXT_V1_BEHAVIORAL_GUIDANCE);
+    expect(dispatched().behavioralGuidance).toBe(TEXT_V2_BEHAVIORAL_GUIDANCE);
     expect(preferenceRead).toHaveBeenCalledWith('token', 'user');
   });
 
@@ -114,12 +114,13 @@ describe('IP-IMP-01 — the orchestrator consumes the canonical Interaction Pref
     expect(router.generate).toHaveBeenCalledTimes(1);
     const request = dispatched();
     const block = `${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Reply length: keep the reply brief.\n- Reply language: reply in Egyptian Arabic.`;
-    expect(request.behavioralGuidance).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${block}`);
+    expect(request.behavioralGuidance).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${block}`);
     const rendered = composeServerGuidance(request);
-    expect(rendered.startsWith(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${block}`)).toBe(true);
-    // The non-truncatable current user message is the last context message, unchanged; the locale stays undetermined.
+    expect(rendered.startsWith(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${block}`)).toBe(true);
+    // The non-truncatable current user message is the last context message, unchanged; the locale (ACE-01 WP2) is the
+    // durable reply language's LANGUAGE, never a dialect.
     expect(request.context[request.context.length - 1]).toEqual({ role: 'USER', content: 'عامل إيه؟' });
-    expect(request.locale).toBe('und');
+    expect(request.locale).toBe('ar');
     // No private preference leaks anywhere else in the request.
     expect(JSON.stringify({ ...request, behavioralGuidance: '' })).not.toMatch(/EGYPTIAN|Egyptian Arabic|ALWAYS_BRIEF/u);
   });
@@ -131,7 +132,7 @@ describe('IP-IMP-01 — the orchestrator consumes the canonical Interaction Pref
     preferenceRead.mockResolvedValue(stored({ reply_language: 'MODERN_STANDARD_ARABIC', humour: 'DECLINED', explanation_style: 'SIMPLER_AND_DIRECT', reply_length: 'ALWAYS_BRIEF' }));
     await orchestrator.orchestrate('token', 'user', turnOf('مرحبا'));
     const withPreferences = assemble.mock.results[1].value as ReturnType<IntegratedContextBudgetAssemblerService['assemble']>;
-    const block = withPreferences.request.behavioralGuidance.slice(TEXT_V1_BEHAVIORAL_GUIDANCE.length);
+    const block = withPreferences.request.behavioralGuidance.slice(TEXT_V2_BEHAVIORAL_GUIDANCE.length);
     expect(block.startsWith(`
 
 ${INTERACTION_PREFERENCE_GUIDANCE_HEADER}`)).toBe(true);
@@ -149,7 +150,7 @@ ${INTERACTION_PREFERENCE_GUIDANCE_HEADER}`)).toBe(true);
     decide({ category: 'HIGH_STAKES_MEDICAL_CRISIS', disposition: 'GUIDED', safetyGuidance: 'Be calm and supportive.' });
     await orchestrator.orchestrate('token', 'user', turnOf('أنا تعبان'));
     const rendered = composeServerGuidance(dispatched());
-    expect(dispatched().behavioralGuidance).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Reply length: keep the reply brief.\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
+    expect(dispatched().behavioralGuidance).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Reply length: keep the reply brief.\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
     expect(dispatched().behavioralGuidance).not.toContain('humour is welcome');
     expect(rendered.indexOf(INTERACTION_PREFERENCE_GUIDANCE_HEADER)).toBeLessThan(rendered.indexOf('Safety guidance for this turn:'));
   });
@@ -160,7 +161,7 @@ ${INTERACTION_PREFERENCE_GUIDANCE_HEADER}`)).toBe(true);
     decide({ category: 'HIGH_STAKES_MEDICAL_CRISIS', disposition: 'GUIDED', safetyGuidance: 'Be calm and supportive.' });
     await orchestrator.orchestrate('token', 'user', turnOf('أنا تعبان'));
     expect(router.generate).toHaveBeenCalledTimes(1);
-    expect(dispatched().behavioralGuidance).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
+    expect(dispatched().behavioralGuidance).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
     expect(dispatched().behavioralGuidance).not.toContain(INTERACTION_PREFERENCE_GUIDANCE_HEADER);
     const assembled = assemble.mock.results[0].value as ReturnType<IntegratedContextBudgetAssemblerService['assemble']>;
     // QIR-004: the line is Mandatory Core, counted in exact UTF-8 bytes like the rest of the guidance and the safety text.
@@ -178,7 +179,7 @@ ${INTERACTION_PREFERENCE_GUIDANCE_HEADER}`)).toBe(true);
     const request = dispatched();
     // The declared preference is the only humour directive, in the non-truncatable Mandatory Core, and it states that it
     // outranks anything inferred from memory.
-    expect(request.behavioralGuidance).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Humour: do not use humour.`);
+    expect(request.behavioralGuidance).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Humour: do not use humour.`);
     expect(INTERACTION_PREFERENCE_GUIDANCE_HEADER).toContain('They take precedence over anything inferred from the conversation or from user memory context.');
     // The Memory is served exactly as stored (the user's data is preserved, not filtered, edited or deleted), as
     // untrusted contextual data rendered AFTER the declared preference.
@@ -194,7 +195,7 @@ ${INTERACTION_PREFERENCE_GUIDANCE_HEADER}`)).toBe(true);
   it('R2-02: with no declaration, a remembered «أنا بحب الهزار» creates no humour directive: Memory never becomes a preference', async () => {
     memoryRetrieve.mockResolvedValue([{ type: 'STABLE_PREFERENCE', content: 'أنا بحب الهزار.', source: 'CONVERSATION', about: 'USER' }]);
     await orchestrator.orchestrate('token', 'user', turnOf('فاكر أنا بحب إيه؟'));
-    expect(dispatched().behavioralGuidance).toBe(TEXT_V1_BEHAVIORAL_GUIDANCE);
+    expect(dispatched().behavioralGuidance).toBe(TEXT_V2_BEHAVIORAL_GUIDANCE);
     expect(dispatched().memoryContext).toHaveLength(1);
   });
 

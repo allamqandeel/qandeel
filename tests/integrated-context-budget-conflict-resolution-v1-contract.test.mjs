@@ -440,7 +440,9 @@ function assertIntegratedContextBudgetContract(world) {
     "complexity: selection.path === 'DEEP' ? 'HIGH' : 'LOW',",
     "latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,",
     "costBudget: 'LOW', safetyLevel: 'STANDARD',",
-    "locale: 'und', modality: 'TEXT',",
+    // ACE-01 (WP2) re-anchor: the locale is now decided upstream of QIR-004 (resolveConversationLocale, `und` when
+    // unreliable) and carried through here unchanged, exactly like the other already-decided semantics.
+    "locale, modality: 'TEXT',",
   ]) {
     if (!world.orchestrator.includes(carried))
       violated(`QIR-004 carries the existing execution semantics through unchanged: missing ${carried}`);

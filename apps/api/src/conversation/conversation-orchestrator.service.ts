@@ -37,6 +37,7 @@ import { QuestionForegroundSelectionService } from '../question/question-foregro
 import { MemoryControlService } from '../memory/memory-control.service';
 import { InteractionPreferencesService } from '../interaction-preferences/interaction-preferences.service';
 import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
+import { resolveConversationLocale } from './conversation-turn-locale';
 
 // QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
 // maximum foreground orchestration time spent waiting for OPTIONAL Human
@@ -495,11 +496,16 @@ export class ConversationOrchestratorService {
       // failure still fails the turn closed before any provider generation.
       const recommendationGrounding = hypothesisResult ? this.recommendationGrounding.ground(hypothesisResult) : undefined;
       // IP-IMP-01 (WP4): the owner's durable preferences render inside the Behavioral Runtime's guidance (QIR-004
-      // Mandatory Core, the ONE composeServerGuidance). All DEFAULT leaves the guidance exactly Text v1.
+      // Mandatory Core, the ONE composeServerGuidance). All DEFAULT leaves the guidance exactly the Personal Text v2
+      // (ACE-01: frozen Text v1 + the approved personality core).
       const interactionPreferences = await interactionPreferencesPromise;
       const behavioralGuidance = this.behavioralPolicy.buildTextGuidance({
         preferences: interactionPreferences.preferences, safetyGuided: safety.disposition === 'GUIDED',
       });
+      // ACE-01 (WP2): the request locale from deterministic facts only - an explicit language request in this message,
+      // else the durable reply-language preference, else a conservative script indication, else `und`. Pure CPU work;
+      // it names a language, never a dialect or a tone, and no provider renders it.
+      const locale = resolveConversationLocale({ currentUserContent: userTurn.content, preferences: interactionPreferences.preferences });
       // QIR-004: the ONE final normalized provider-request assembly boundary.
       //
       // Everything that may reach the provider passes through here exactly
@@ -543,7 +549,7 @@ export class ConversationOrchestratorService {
         // SELECTED for this turn. The assembler includes it whole or omits it
         // whole; an omitted or never-selected Question changes presence only.
         ...(questionForeground?.state === 'SELECTED' ? { questionContext: questionForeground.questionContext } : {}),
-        locale: 'und', modality: 'TEXT',
+        locale, modality: 'TEXT',
         latencyBudgetMs: selection.path === 'DEEP' ? 10000 : 3000,
         costBudget: 'LOW', safetyLevel: 'STANDARD',
       });
