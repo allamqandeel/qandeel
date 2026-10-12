@@ -139,8 +139,8 @@ None is re-owned.
 | DD-6 | **Defect D-1 is fixed, not deferred.** No evaluator template produces `INTERACTION_PREFERENCE` any more, and the background TypeScript guard also skips command turns. The Memory type stays for the owner's existing rows. | C-1; "a permanent request writes only to the canonical record" |
 | DD-7 | A legacy `INTERACTION_PREFERENCE` Memory is filtered out of the model's Memory context. It stays listed, exported, correctable and forgettable. | "old Memory must never override or revive a revoked preference" |
 | DD-8 | The per-turn read is launched beside the existing lanes and joined before the Behavioral Runtime renders. A failed or malformed read rejects, which fails the turn closed with zero provider calls. An absent row is the legitimate DEFAULT. | WP4 fail-closed |
-| DD-9 | Compiled guidance is appended to Text v1 inside `behavioralGuidance`, so it sits in the Mandatory Core through the ONE `composeServerGuidance` with exact UTF-8 accounting. The order is fixed: length, language, humour, explanation. All-DEFAULT is byte-identical Text v1. The block states the precedence: Safety and the current explicit request come first; the preference overrides the model's own inference. | WP4 rendering and precedence |
-| DD-10 | `WELCOME` permits humour and "never force a joke". `DECLINED` forbids humour. Under GUIDED, a welcomed humour is suspended for the turn. | WP4 |
+| DD-9 | Compiled guidance is appended to Text v1 inside `behavioralGuidance`, so it sits in the Mandatory Core through the ONE `composeServerGuidance` with exact UTF-8 accounting. The order is fixed: length, language, humour, explanation. All-DEFAULT without GUIDED is byte-identical Text v1. The block states the precedence: Safety and the current explicit request come first; the preference overrides the model's own inference, including inference from user memory context (R2-02, §11). | WP4 rendering and precedence |
+| DD-10 | `WELCOME` permits humour and "never force a joke". `DECLINED` forbids humour. **Every** GUIDED turn suspends humour whatever the preference, `DEFAULT` included (P6 / `HUMOUR_SUSPENDED_SAFETY`), through one Safety-sourced line after the preference block (R2-01, §11). | WP4 |
 | DD-11 | Legacy review offers only the owner's ACTIVE, unexpired, SELF `INTERACTION_PREFERENCE` Memories that the same grammar maps to an approved value not already held. The server derives the value from the Memory; the DB re-validates the Memory at commit (FOR SHARE) and never changes it. Skip is client-side. An empty list is legitimate. | WP3, SELF-only, no backfill |
 | DD-12 | No command log table and no change to `background_record_memory_v1`. Its body is pinned by verify-0152, and a preference command writes no Memory, so the TypeScript guard plus the removed templates suffice. The writable Memory set is unchanged. | simplicity; MEM-AR-01 unchanged |
 
@@ -213,7 +213,7 @@ no paid model evaluation.
 | 7 | legacy review: SELF / OTHER / UNATTRIBUTED, stale candidate, conflicting choice | `verify-0153` legacy stage (+ forgotten, expired, another type, another account; the Memory is never changed); service spec; mobile Apply / Replace / Skip / empty |
 | 8 | no revival through Memory retrieval | retriever spec (legacy rows never selected) |
 | 9 | canonical read each eligible generation; failure → zero provider calls | consumption spec (read on ALLOW and GUIDED, none on BLOCK; upstream failure, unknown value and two rows → 503, `failTurn`, router never called) |
-| 10 | Safety precedence, current-turn precedence, no classifier, single provider call | consumption spec (GUIDED suspension, safety after the block, temporary request in history plus the precedence line, `generate` called exactly once); the grammar is closed and deterministic |
+| 10 | Safety precedence, current-turn precedence, no classifier, single provider call | consumption spec (GUIDED suspension on every GUIDED turn including all-DEFAULT, safety after the block, temporary request in history plus the precedence line, `generate` called exactly once); the grammar is closed and deterministic |
 | 11 | QIR-004 budget, Mandatory Core, lane isolation | consumption spec: the block's exact UTF-8 bytes join `mandatoryCoreBytes`; the accounting identity holds; the source decisions are unchanged |
 | 12 | AR/EN copy, RTL/LTR, a11y, navigation | `settings/__tests__/interaction-preferences.test.tsx` (19 tests); `w3-settings-appearance-signout` re-anchor |
 | 13 | export and deletion | `verify-0153` (readable words, absent = automatic, no identifier, governed erasure leaves 0 rows) |
@@ -315,7 +315,7 @@ see §10 (filled after push).
 | # | Where | AR | EN |
 | --- | --- | --- | --- |
 | CA-1 | conversation command reply, composed only of approved strings: `<result message> <field label>: <value label>.` | «تم حفظ التفضيل. اللغة واللهجة: مصري.» / «تمت إعادة التفضيل إلى تلقائي. اللغة واللهجة: تلقائي.» / STALE: «لم يُحفظ التغيير. حاول مرة أخرى.» | "Preference saved. Reply Language & Dialect: Egyptian Arabic." / "Preference reset to Automatic. Humour: Automatic." / "Your change wasn't saved. Try again." |
-| CA-2 | model-facing directive texts (OPEN COPY, never shown to the user) | — | header: "Standing interaction preferences the user explicitly chose. Apply them to this reply. An explicit request the user makes in the current conversation takes precedence for what it asks, and safety guidance always takes precedence."; lines: "- Reply length: keep the reply brief.", "- Reply language: reply in <Egyptian Arabic \| Modern Standard Arabic \| Levantine Arabic \| Gulf Arabic \| Maghrebi Arabic \| English>.", "- Humour: light humour is welcome where it fits naturally; never force a joke." / "- Humour: do not use humour." / (GUIDED) "- Humour: do not use humour in this reply.", "- Explanation style: explain in simpler terms." / "get to the point directly." / "explain in simple terms and get to the point directly." |
+| CA-2 | model-facing directive texts (OPEN COPY, never shown to the user) | — | header: "Standing interaction preferences the user explicitly chose. Apply them to this reply. An explicit request the user makes in the current conversation takes precedence for what it asks, and safety guidance always takes precedence. They take precedence over anything inferred from the conversation or from user memory context."; lines: "- Reply length: keep the reply brief.", "- Reply language: reply in <Egyptian Arabic \| Modern Standard Arabic \| Levantine Arabic \| Gulf Arabic \| Maghrebi Arabic \| English>.", "- Humour: light humour is welcome where it fits naturally; never force a joke." / "- Humour: do not use humour." / (every GUIDED turn, own line after the block) "This turn carries safety guidance: do not use humour or playfulness in this reply.", "- Explanation style: explain in simpler terms." / "get to the point directly." / "explain in simple terms and get to the point directly." |
 
 ## 9. Closing change (BG-08 / BG-09)
 
@@ -358,3 +358,54 @@ see §10 (filled after push).
   - no migration was applied to the hosted database;
   - nothing was deployed;
   - nothing was merged.
+
+## 11. Independent review R2 — corrections (on top of `be73bdc5`)
+
+**R2-01 — P6 / GUIDED Safety (confirmed defect, fixed).**
+- **Defect:** `conversational-personality-v1.md` defines `HUMOUR_SUSPENDED_SAFETY` for *any* GUIDED disposition. The
+  compiler only suspended humour under GUIDED when the preference was `WELCOME`; with `DEFAULT` nothing was rendered.
+- **Fix:** `interaction-preference-guidance.ts`.
+  - Every GUIDED turn now adds one line after the preference block: "This turn carries safety guidance: do not use humour
+    or playfulness in this reply."
+  - Because it is Safety's constraint, the line sits outside the "the user explicitly chose" header.
+  - Under GUIDED, `WELCOME` renders no welcome line; `DECLINED` keeps its own line.
+  - No new engine, classifier or provider call is added. The line lives in `behavioralGuidance`, so it is QIR-004
+    Mandatory Core at exact UTF-8 bytes.
+- **Effect on all-DEFAULT:** without GUIDED the guidance is still byte-identical Text v1. GUIDED with all-DEFAULT is now
+  Text v1 + `
+
+` + the suspension line, and both cases are tested.
+- **Proof:**
+  - `interaction-preference-guidance.spec.ts`: four GUIDED cases (`DEFAULT`, `WELCOME`, `DECLINED`, `DEFAULT` with
+    another field), plus the all-DEFAULT with/without GUIDED test.
+  - `conversation-interaction-preferences.spec.ts`: the exact GUIDED guidance; GUIDED all-DEFAULT through the real
+    orchestrator, with one provider call and Mandatory Core bytes reconciled.
+  - Against the pre-fix compiler, 9 of these tests fail.
+
+**R2-02 — Memory is not a parallel preference authority (verified; one sentence made explicit).**
+- **Scenario:**
+  1. «أنا بحب الهزار» is captured as `STABLE_PREFERENCE` (the evaluator's `بحب` template; MEM-AR-01A).
+  2. The owner later sets `HUMOUR=DECLINED`.
+  3. The Memory is retrieved on a later turn.
+- **What already held structurally:**
+  - The Memory is served as "untrusted contextual data" in the optional memory lane, after the Mandatory Core.
+  - No path turns a Memory into a directive or into a write to the canonical record. The remark has no durable marker,
+    so it is not a command.
+  - WP3 offers only `INTERACTION_PREFERENCE` Memories, and only on owner action.
+  - `DECLINED` is the only humour directive, in the non-truncatable Mandatory Core.
+- **Gap closed:** the header named what comes before the preference (Safety, the current request) but not what comes after
+  it. The contract's order is Safety > current explicit request > durable preference > model interpretation, so the header
+  now ends with: "They take precedence over anything inferred from the conversation or from user memory context."
+  - This is open copy, under CA-2.
+  - No Memory is filtered, edited or deleted, so the owner's data and rights are unchanged.
+- **Proof** (`conversation-interaction-preferences.spec.ts`):
+  - With `DECLINED` and the retrieved Memory, the provider receives exactly Text v1 + the `DECLINED` block. The Memory is
+    served unchanged, after the directive and after the "untrusted contextual data" preamble. The record is only read
+    (`finalizeInteractionPreferenceTurn` is never called); one provider call is made.
+  - With no declaration, the same Memory produces no humour directive (byte-identical Text v1).
+
+**Focused verification (no full CI re-run, per the review):**
+- `jest src/conversation src/interaction-preferences src/post-response-intelligence/interaction-preference-command.route.spec.ts src/brain-eval src/memory`:
+  51 suites, 1437/1437.
+- API `tsc --noEmit`: clean.
+- No migration, SQL or mobile file changed, so the focused database runs on `be73bdc5` remain the database proof.

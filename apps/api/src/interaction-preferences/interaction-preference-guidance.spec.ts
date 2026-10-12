@@ -1,5 +1,5 @@
 import { BehavioralResponsePolicyService, TEXT_V1_BEHAVIORAL_GUIDANCE } from '../conversation/behavioral-response-policy.service';
-import { compileInteractionPreferenceGuidance, INTERACTION_PREFERENCE_GUIDANCE_HEADER } from './interaction-preference-guidance';
+import { compileInteractionPreferenceGuidance, INTERACTION_PREFERENCE_GUIDANCE_HEADER, SAFETY_HUMOUR_SUSPENSION_LINE } from './interaction-preference-guidance';
 import { DEFAULT_INTERACTION_PREFERENCES, type InteractionPreferences } from './interaction-preferences.types';
 
 const prefs = (over: Partial<InteractionPreferences>): InteractionPreferences => ({ ...DEFAULT_INTERACTION_PREFERENCES, ...over });
@@ -38,14 +38,39 @@ describe('IP-IMP-01 WP4 — the interaction-preference constraint compiler', () 
     expect(INTERACTION_PREFERENCE_GUIDANCE_HEADER).toMatch(/safety guidance always takes precedence/u);
   });
 
-  it('WELCOME permits humour and never asks for a joke; DECLINED forbids it; GUIDED suspends a welcome', () => {
+  it('WELCOME permits humour and never asks for a joke; DECLINED forbids it', () => {
     const welcome = compileInteractionPreferenceGuidance({ preferences: prefs({ humour: 'WELCOME' }), safetyGuided: false })!;
     expect(welcome).toContain('- Humour: light humour is welcome where it fits naturally; never force a joke.');
     expect(welcome).not.toMatch(/\b(?:tell|include|add|make) (?:a )?jokes?\b/iu);
-    expect(compileInteractionPreferenceGuidance({ preferences: prefs({ humour: 'WELCOME' }), safetyGuided: true }))
-      .toBe(`${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Humour: do not use humour in this reply.`);
-    expect(compileInteractionPreferenceGuidance({ preferences: prefs({ humour: 'DECLINED' }), safetyGuided: true }))
+    expect(compileInteractionPreferenceGuidance({ preferences: prefs({ humour: 'DECLINED' }), safetyGuided: false }))
       .toBe(`${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Humour: do not use humour.`);
+  });
+
+  // R2-01 — P6 / HUMOUR_SUSPENDED_SAFETY: EVERY GUIDED turn suspends humour, whatever the preference, DEFAULT included.
+  it.each([
+    ['DEFAULT (no declaration at all)', DEFAULT_INTERACTION_PREFERENCES, undefined],
+    ['WELCOME', prefs({ humour: 'WELCOME' }), undefined],
+    ['DECLINED', prefs({ humour: 'DECLINED' }), `${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Humour: do not use humour.`],
+    ['DEFAULT with another field chosen', prefs({ replyLength: 'ALWAYS_BRIEF' }), `${INTERACTION_PREFERENCE_GUIDANCE_HEADER}\n- Reply length: keep the reply brief.`],
+  ] as const)('GUIDED with humour %s: the Safety suspension is rendered, never a welcome', (_name, preferences, block) => {
+    const guided = compileInteractionPreferenceGuidance({ preferences, safetyGuided: true })!;
+    expect(guided).toBe(block === undefined ? SAFETY_HUMOUR_SUSPENSION_LINE : `${block}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
+    expect(guided).not.toContain('humour is welcome');
+    // Safety's constraint is its own line, never presented under the header as the user's own choice.
+    expect(guided.slice(0, guided.indexOf(SAFETY_HUMOUR_SUSPENSION_LINE))).not.toContain('playfulness');
+    expect(new BehavioralResponsePolicyService().buildTextGuidance({ preferences, safetyGuided: true }))
+      .toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${guided}`);
+  });
+
+  it('all DEFAULT is byte-identical Text v1 only without GUIDED; GUIDED all-DEFAULT adds exactly the Safety suspension', () => {
+    const policy = new BehavioralResponsePolicyService();
+    expect(policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: false })).toBe(TEXT_V1_BEHAVIORAL_GUIDANCE);
+    expect(policy.buildTextGuidance({ preferences: DEFAULT_INTERACTION_PREFERENCES, safetyGuided: true }))
+      .toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`);
+  });
+
+  it('R2-02: the block outranks remembered context, so an old Memory never weakens a declared preference', () => {
+    expect(INTERACTION_PREFERENCE_GUIDANCE_HEADER).toMatch(/take precedence over anything inferred from the conversation or from user memory context/u);
   });
 
   it('is pure and deterministic, carries no provider name, no profiling and no user content', () => {
