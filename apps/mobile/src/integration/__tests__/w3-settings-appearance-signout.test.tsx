@@ -16,6 +16,7 @@ import { exchange, historyBody } from '../../conversation/__fixtures__/conversat
 import { CANONICAL_VISUAL } from '../../conversation/visual/canonical-visual.generated';
 import { resize } from '../../responsive/__fixtures__/composition';
 import { settingsCopy } from '../../settings';
+import { interactionPreferencesCopy } from '../../settings';
 import { notificationsCopy } from '../../activity';
 import { productSignInCopy } from '../auth-gateway';
 import { RuntimePhaseSurface } from '../composition/ProductRoot';
@@ -36,6 +37,9 @@ const COPY = settingsCopy(LANGUAGE);
 // A3-01 re-anchor (validation only): «الإشعارات والنشاط» / Notifications & Activity is now a real group, placed where P1 §8.1
 // reserved it — after QANDEEL & Conversation. Every other group, and the absence of any placeholder, is unchanged.
 const NOTIFICATIONS = notificationsCopy(LANGUAGE).section;
+// IP-IMP-01 re-anchor (validation only): «تفضيلات التعامل» / Interaction Preferences is one row inside the existing
+// QANDEEL & Conversation group, after the Language row. No group is added; every other group and control is unchanged.
+const INTERACTION_PREFERENCES = interactionPreferencesCopy(LANGUAGE).row;
 const DARK = CANONICAL_VISUAL.palettes.DARK.standard;
 const LIGHT = CANONICAL_VISUAL.palettes.LIGHT.standard;
 
@@ -209,7 +213,7 @@ describe('E2E-D-01 — the ONE General Settings destination, entered from Person
     const languageRow = [COPY.language.term, COPY.language.names[LANGUAGE]].join(', ');
     // S4-01 re-anchor (validation only): Account & Identity also holds the Shared ID row (E2E-D-08).
     const sharedIdRow = sharedCopy(LANGUAGE).yourSharedId;
-    expect(controls).toEqual([COPY.backName, publicIdRow, sharedIdRow, languageRow, NOTIFICATIONS, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
+    expect(controls).toEqual([COPY.backName, publicIdRow, sharedIdRow, languageRow, INTERACTION_PREFERENCES, NOTIFICATIONS, COPY.appearance.DARK, COPY.appearance.LIGHT, COPY.appearance.SYSTEM, COPY.signOut].sort());
     for (const node of settings.getAllByRole('radio')) expect(style(node).minHeight).toBeGreaterThanOrEqual(44);
     expect(style(settings.getByTestId('qandeel-settings-back'))).toMatchObject({ width: 44, height: 44 });
     h.dispose();

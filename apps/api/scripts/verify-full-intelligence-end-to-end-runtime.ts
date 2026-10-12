@@ -96,6 +96,8 @@ import { HimReasoningConsumptionService } from '../src/human-model/him-reasoning
 import { MemoryWriteEvaluatorService } from '../src/memory/memory-write-evaluator.service';
 import { MemoryControlRepository } from '../src/memory/memory-control.repository';
 import { MemoryControlService } from '../src/memory/memory-control.service';
+import { InteractionPreferencesRepository } from '../src/interaction-preferences/interaction-preferences.repository';
+import { InteractionPreferencesService } from '../src/interaction-preferences/interaction-preferences.service';
 import { CorrelationService } from '../src/observability/correlation.service';
 import { TelemetryService } from '../src/observability/telemetry.service';
 import { ModelAssistedHypothesisAssociationService } from '../src/post-response-intelligence/model-assisted-hypothesis-association.service';
@@ -724,7 +726,11 @@ async function main(): Promise<void> {
       new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry,
       // W3-MEGA-M: the real Memory-control boundary. No turn of this smoke is a Memory command.
-      new MemoryControlService(new MemoryControlRepository(memoryDataApi), new MemoryWriteEvaluatorService()));
+      new MemoryControlService(new MemoryControlRepository(memoryDataApi), new MemoryWriteEvaluatorService()),
+      // IP-IMP-01: the real canonical Interaction Preferences read on every eligible turn, under the authenticated role and
+      // RLS. No turn of this smoke declares a preference, so the record is absent and the guidance stays Text v1.
+      new InteractionPreferencesService(new InteractionPreferencesRepository(conversationDataApi)),
+    );
 
     // Background provider doubles exist from the start so the foreground phase
     // can prove they were never touched before background dispatch.

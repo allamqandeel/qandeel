@@ -107,6 +107,8 @@ import { FORMAL_QUESTION_TYPES, QUESTION_INFORMATION_OBJECTIVES, type QuestionCo
 import { MemoryWriteEvaluatorService } from '../src/memory/memory-write-evaluator.service';
 import { MemoryControlRepository } from '../src/memory/memory-control.repository';
 import { MemoryControlService } from '../src/memory/memory-control.service';
+import { InteractionPreferencesRepository } from '../src/interaction-preferences/interaction-preferences.repository';
+import { InteractionPreferencesService } from '../src/interaction-preferences/interaction-preferences.service';
 import { CorrelationService } from '../src/observability/correlation.service';
 import { TelemetryService } from '../src/observability/telemetry.service';
 // Background production services (same real classes the frozen A2 smoke runs).
@@ -499,7 +501,11 @@ async function main(): Promise<void> {
       foregroundGatherer, questionSelectionService, contextBudgetAssembler, new RecommendationGroundingService(),
       conversationalRouter, correlation, telemetry,
       // W3-MEGA-M: the real Memory-control boundary. No turn of this smoke is a Memory command.
-      new MemoryControlService(new MemoryControlRepository(memoryDataApi), new MemoryWriteEvaluatorService()));
+      new MemoryControlService(new MemoryControlRepository(memoryDataApi), new MemoryWriteEvaluatorService()),
+      // IP-IMP-01: the real canonical Interaction Preferences read on every eligible turn, under the authenticated role and
+      // RLS. No turn of this smoke declares a preference, so the record is absent and the guidance stays Text v1.
+      new InteractionPreferencesService(new InteractionPreferencesRepository(conversationDataApi)),
+    );
 
     // Background composition. The ledger substitute is wrapped by the QIR-007
     // fault injector so a LOST TRANSPORT (never a fabricated durable state) can

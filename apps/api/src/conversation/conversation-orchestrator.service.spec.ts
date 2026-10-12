@@ -60,6 +60,7 @@ import { QuestionForegroundSelectionService } from '../question/question-foregro
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { QIR_NON_HI_FOREGROUND_WAIT_BUDGET_MS } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.types';
 import { HYPOTHESIS_RECOMMENDATION_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
+import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
 
 describe('ConversationOrchestratorService', () => {
   let repository: jest.Mocked<ConversationRepository>;
@@ -93,6 +94,7 @@ describe('ConversationOrchestratorService', () => {
   let telemetry: TelemetryService;
   // W3-MEGA-M: the Memory-control boundary answers "not a Memory request" unless a test says otherwise.
   let memoryControl: { plan: jest.Mock };
+  let interactionPreferences: { readForTurn: jest.Mock; planCommand: jest.Mock };
   let orchestrator: ConversationOrchestratorService;
   const userTurn: ConversationTurn = {
     id: 'user-turn', session_id: 'session', role: 'USER', status: 'RECEIVED', content: 'hello',
@@ -274,6 +276,8 @@ describe('ConversationOrchestratorService', () => {
     hypothesisContext = { build: jest.fn().mockResolvedValue({ coverageState: 'EMPTY', candidateHypothesisCount: 0 }) } as unknown as jest.Mocked<HypothesisReasoningContextService>;
     recommendationGrounding = { ground: jest.fn().mockReturnValue({ coverageState: 'EMPTY', reason: 'NO_ACTIVE_HYPOTHESES' }) } as unknown as jest.Mocked<RecommendationGroundingService>;
     memoryControl = { plan: jest.fn().mockResolvedValue(null) };
+    // IP-IMP-01: the canonical record answers "no durable declaration" unless a test says otherwise.
+    interactionPreferences = { readForTurn: jest.fn().mockResolvedValue({ preferences: DEFAULT_INTERACTION_PREFERENCES, version: 0 }), planCommand: jest.fn() };
     hypothesisEligibility = { evaluateWithContext: jest.fn().mockResolvedValue({ eligibility: { status: 'NOT_ELIGIBLE', reason: 'NO_TRIGGER' } }) } as unknown as jest.Mocked<HypothesisGenerationEligibilityService>;
     hypothesisExtraction = { extract: jest.fn().mockResolvedValue({ status: 'NOT_AUTHORIZED', reason: 'AUTHORITY_REJECTED', authorityReason: 'PROBLEM_NOT_GROUNDED' }) } as unknown as jest.Mocked<HypothesisGenerationIntentExtractionService>;
     hypothesisRequestAssembler = { assemble: jest.fn().mockReturnValue({ status: 'READY', request: { problem: 'problem', domain: 'GENERAL', scope: 'CONVERSATION_SESSION:session', evidenceIds: [] } }) } as unknown as jest.Mocked<HypothesisGenerationRequestAssemblerService>;
@@ -297,7 +301,7 @@ describe('ConversationOrchestratorService', () => {
     // QIR-004: the REAL assembler, so every orchestrator proof runs through the
     // production single normalized provider-request assembly boundary.
     integratedContextBudget = new IntegratedContextBudgetAssemblerService(telemetry);
-    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router,correlation,telemetry,memoryControl as never);
+    orchestrator = new ConversationOrchestratorService(repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge, himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, himCrossContextForeground, himBrainContext, foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router,correlation,telemetry,memoryControl as never,interactionPreferences as never);
   });
 
   it('orchestrates a successful TEXT turn through the router and persists exactly one assistant result', async () => {
@@ -1649,7 +1653,7 @@ describe('ConversationOrchestratorService', () => {
       const wired = new ConversationOrchestratorService(
         repository, contextBuilder, safetyGate, behavioralPolicy, himSelector, himSnapshot, himBridge,
         himConsumptionPolicy, himAdaptation, himContextualCurrent, himReflectionConsumption, aggregation, himBrainContext,
-        foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router, correlation, telemetry, memoryControl as never,
+        foregroundGatherer, questionForegroundSelection, integratedContextBudget, recommendationGrounding, router, correlation, telemetry, memoryControl as never, interactionPreferences as never,
       );
       return { wired, crossContextRepository, situationRepository, decisionRepository, goalRepository, relationshipRepository, situationDirectRead, decisionDirectRead, goalDirectRead, relationshipDirectRead };
     };

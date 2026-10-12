@@ -37,6 +37,7 @@ import { ConversationTurnApiClient } from './conversation/conversation-turn-api'
 import { AccountApiClient, LoginIdAvailabilityClient } from './account/account-api';
 import { UnderstandingApiClient } from './understanding-api';
 import { ActivityApiClient } from './activity-api';
+import { InteractionPreferencesApiClient } from './interaction-preferences-api';
 import { PushApiClient } from './push-api';
 import { SharedWorldApiClient } from './shared-world-api';
 import { PublicWorldApiClient } from './public-world-api';
@@ -134,6 +135,11 @@ export interface MobileRuntimeEntry {
    * auth generation: a replaced identity's request is refused before it is issued.
    */
   activityFor(bundle: CanonicalRuntimeBundle): ActivityApiClient;
+  /**
+   * IP-IMP-01 — the Interaction Preferences client for a bundle this coordinator produced, on the same AC-01 seam bound
+   * to the bundle's own auth generation: a replaced identity's request is refused before it is issued.
+   */
+  interactionPreferencesFor(bundle: CanonicalRuntimeBundle): InteractionPreferencesApiClient;
   /**
    * A3-02 — the device-registration client for a bundle this coordinator produced, on the same AC-01 seam bound to the
    * bundle's own auth generation: a replaced identity's request is refused before it is issued.
@@ -308,6 +314,9 @@ export function createMobileRuntimeEntry(options: MobileRuntimeEntryOptions = {}
     },
     activityFor(bundle) {
       return new ActivityApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
+    },
+    interactionPreferencesFor(bundle) {
+      return new InteractionPreferencesApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });
     },
     pushFor(bundle) {
       return new PushApiClient({ baseUrl: config.apiBaseUrl, fetch: authorizedFetchFor(bundle.authGeneration) });

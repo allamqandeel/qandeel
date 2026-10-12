@@ -6,6 +6,9 @@ import { SupabaseServiceRoleApiService } from './supabase-service-role-api.servi
 import { CorrelationService } from '../observability/correlation.service';
 import type { RuntimeRoutePair } from '../intelligence-runtime/fast-deep-routing-contract';
 import { MEMORY_CONTROL_OUTCOMES, type MemoryControlOutcome, type MemoryControlPlan } from '../memory/memory-control.types';
+import {
+  INTERACTION_PREFERENCE_OUTCOMES, type InteractionPreferenceCommandPlan, type InteractionPreferenceOutcome,
+} from '../interaction-preferences/interaction-preferences.types';
 
 const SESSION_FIELDS = 'id,status,channel,created_at,updated_at,last_activity_at,closed_at';
 const TURN_FIELDS = 'id,session_id,role,status,content,processing_path,routing_reason,source_turn_id,idempotency_key,created_at,updated_at,completed_at';
@@ -208,6 +211,25 @@ export class ConversationRepository {
     const row = rows[0];
     if (!row) return undefined;
     if (!MEMORY_CONTROL_OUTCOMES.has(row.outcome)) throw new Error('MEMORY_CONTROL_OUTCOME_INTEGRITY');
+    return { outcome: row.outcome, userTurn: row.user_turn, assistantTurn: row.assistant_turn };
+  }
+
+  // IP-IMP-01 (WP2): the durable interaction-preference command's finalization authority (migration 0153). In ONE
+  // transaction the database locks this GENERATING turn, applies the one-field compare-and-set to the canonical record
+  // (SAVED / UNCHANGED / STALE, decided under the owner's lock) and finalizes through finalize_conversation_turn_v2 with
+  // the reply for the outcome it actually committed. Server authority only; a turn that is no longer GENERATING writes
+  // nothing. No Memory is written, read or changed.
+  async finalizeInteractionPreferenceTurn(input: { sessionId: string; userId: string; sourceTurnId: string; assistantTurnId: string; plan: InteractionPreferenceCommandPlan }): Promise<{ outcome: InteractionPreferenceOutcome; userTurn: ConversationTurn; assistantTurn: ConversationTurn } | undefined> {
+    const { plan } = input;
+    const rows = await this.serviceApi.rpc<Array<{ outcome: InteractionPreferenceOutcome; version: number; user_turn: ConversationTurn; assistant_turn: ConversationTurn }>>('server_finalize_interaction_preference_turn_v1', {
+      p_session_id: input.sessionId, p_user_id: input.userId, p_source_turn_id: input.sourceTurnId, p_assistant_turn_id: input.assistantTurnId,
+      p_field: plan.field, p_value: plan.value, p_expected_version: plan.expectedVersion,
+      p_reply_if_saved: plan.replyIfSaved, p_reply_if_unchanged: plan.replyIfUnchanged, p_reply_if_stale: plan.replyIfStale,
+      ...this.eventMetadata(),
+    });
+    const row = rows[0];
+    if (!row) return undefined;
+    if (!INTERACTION_PREFERENCE_OUTCOMES.has(row.outcome)) throw new Error('INTERACTION_PREFERENCE_OUTCOME_INTEGRITY');
     return { outcome: row.outcome, userTurn: row.user_turn, assistantTurn: row.assistant_turn };
   }
 

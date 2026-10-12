@@ -31,3 +31,6 @@ export type {
 export { PRIVACY_PREPARING_POLL_MS, PRIVACY_READ_RETRY_DELAYS_MS, createPrivacyDataController } from './privacy-data-controller';
 export type { FormerSharedMaterialController, FormerSharedMaterialState, FormerSharedMaterialTransport } from './former-shared-material-controller';
 export { createFormerSharedMaterialController } from './former-shared-material-controller';
+export type { InteractionPreferencesController, InteractionPreferencesState, InteractionPreferencesTransport } from './interaction-preferences-controller';
+export { createInteractionPreferencesController } from './interaction-preferences-controller';
+export { interactionPreferencesCopy, INTERACTION_PREFERENCES_COPY_GATE } from './interaction-preferences-copy';

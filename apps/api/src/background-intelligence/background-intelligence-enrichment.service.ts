@@ -16,6 +16,7 @@ import { EVIDENCE_CANDIDATE_LIMIT, MAX_ELIGIBLE_EVIDENCE, projectEligibleEvidenc
 import { MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT, MemoryWriteEvaluatorService, screenMemoryCapture } from '../memory/memory-write-evaluator.service';
 import type { MemoryWriteResult } from '../memory/memory.types';
 import { interpretMemoryControl } from '../memory/memory-control.interpreter';
+import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
 import type { EvidenceItem } from '../memory/evidence.types';
 import type { SafetyDisposition } from '../conversation/safety-response-gate.types';
 import { HypothesisGenerationTriggerClassificationService } from '../hypothesis/hypothesis-generation-trigger-classification.service';
@@ -116,6 +117,9 @@ export class BackgroundIntelligenceEnrichmentService {
  // don't rely on it" must not become a new Memory while the command disables the old one.
  async evaluateAndWriteMemory(context:BackgroundIntelligenceExecutionContext,currentUserContent:string):Promise<MemoryWriteResult>{
   this.assert(context);const decision=this.evaluator.evaluate(currentUserContent);if(decision.decision==='SKIP')return decision;if(interpretMemoryControl(currentUserContent))return{decision:'SKIP',reason:'MEMORY_CONTROL_COMMAND'};
+  // IP-IMP-01 (WP2): a durable interaction-preference command is the foreground's too; it writes only the canonical
+  // record (0153), never a Memory. The same deterministic grammar decides it here.
+  if(interpretInteractionPreferenceCommand(currentUserContent))return{decision:'SKIP',reason:'INTERACTION_PREFERENCE_COMMAND'};
   const active=await this.data.listActiveMemories(context,MEMORY_WRITE_DUPLICATE_LOOKUP_LIMIT);const screen=screenMemoryCapture(decision.candidate,active);if(screen)return{decision:'SKIP',reason:screen,type:decision.candidate.type};
   // MEM-AR-01C: the database decides the write under the owner's lock. Only a Memory this execution recorded is fresh
   // Evidence (CREATED, or ALREADY_RECORDED on a replay); every other answer completes the effect with no Evidence.

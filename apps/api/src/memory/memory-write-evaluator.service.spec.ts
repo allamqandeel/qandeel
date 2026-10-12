@@ -25,8 +25,6 @@ describe('MemoryWriteEvaluatorService', () => {
     ['قررت أبدأ الجيم من السبت.', 'DECISION_COMMITMENT', 'قررت أبدأ الجيم من السبت.'],
     ['Nora is my sister.', 'RELATIONSHIP_CONTEXT', 'Nora is my sister.'],
     ['سلمى أختي.', 'RELATIONSHIP_CONTEXT', 'سلمى أختي.'],
-    ['Speak to me in Egyptian Arabic.', 'INTERACTION_PREFERENCE', 'Speak to me in Egyptian Arabic.'],
-    ['كلمني بالمصري.', 'INTERACTION_PREFERENCE', 'كلمني بالمصري.'],
   ])('writes one explicit candidate for %s', (content, type, normalized) => {
     const decision = evaluator.evaluate(content, now);
     expect(decision).toMatchObject({
@@ -40,6 +38,16 @@ describe('MemoryWriteEvaluatorService', () => {
       expect(decision.candidate.type).not.toBe('DERIVED_INSIGHT');
       expect(decision.candidate.source).not.toBe('SYSTEM_DERIVED');
     }
+  });
+
+  // IP-IMP-01 (WP2): an interaction-preference request is never captured as a Memory. Without a durable marker it is a
+  // temporary request (honoured in that conversation only); with one it is a command that writes only the canonical
+  // Interaction Preferences record. Either way the background evaluator writes nothing.
+  it.each([
+    'Speak to me in Egyptian Arabic.', 'كلمني بالمصري.', 'رد عليا بالإنجليزي', 'كلّمني بالفصحى', 'talk to me in English',
+    'Always speak to me in English.', 'كلمني دايمًا بالمصري', 'من هنا ورايح خلي ردودك مختصرة',
+  ])('never captures an interaction-preference request as a Memory: %s', (content) => {
+    expect(evaluator.evaluate(content, now)).toEqual({ decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' });
   });
 
   it('writes a bounded temporary state with deterministic expiration', () => {

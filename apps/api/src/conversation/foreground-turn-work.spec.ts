@@ -216,7 +216,7 @@ describe('the orchestrator takes the exchange\'s work lease before the generatio
     const inert = {} as never;
     orchestrator = new ConversationOrchestratorService(
       repository, inert, inert, inert, inert, inert, inert, inert, inert, inert, inert, inert, inert, inert, inert, inert, inert,
-      router, correlation, new TelemetryService(correlation), inert,
+      router, correlation, new TelemetryService(correlation), inert, inert,
     );
   });
 

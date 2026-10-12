@@ -151,6 +151,11 @@ export type {
 } from './activity-api';
 export { ActivityApiClient } from './activity-api';
 export type {
+  InteractionPreferenceChange, InteractionPreferenceField, InteractionPreferences, InteractionPreferencesRead, InteractionPreferencesRecord,
+  LegacyPreferenceCandidate, LegacyPreferenceReview,
+} from './interaction-preferences-api';
+export { InteractionPreferencesApiClient } from './interaction-preferences-api';
+export type {
   SharedAcceptResult, SharedDeclineResult, SharedDeleteResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
   SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,
   SharedApproveResult, SharedClosedWorld, SharedClosedWorldResult, SharedHistoryApproveResult, SharedHistoryCandidate, SharedHistoryCandidatesResult,
