@@ -3,8 +3,9 @@
 **Status:** `ACE-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
 WP0–WP5 are implemented on one branch, and this record carries the closing change (BG-08 / BG-09). **Not merged**: merge
 happens only on «ادمج». No migration was added and nothing is deployed. The independent review's one correction (R1,
-temporary language requests) is applied (§11). **Gate B is open for one narrow decision**: whether
-the personality core may reach Shared / Public QANDEEL (§7). Until that decision, those frozen model inputs are unchanged.
+temporary language requests) is applied (§11), and the review's CI correction R2 is applied (§12). **Gate B is decided:
+Option A — APPROVED** by the Product Owner (2026-10-12, §7). Shared / Public stay unchanged in this task; their parity is
+future work under `QAN-BL-ACE-01`, owned by `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`.
 
 **Authority:** the Product Owner's *ACE-01 — FINAL PRODUCT OWNER APPROVAL & EXECUTION AUTHORIZATION* (2026-10-12) of the
 *ACE-01 — Adaptive Conversational Expression v1 — C2 Structural Implementation — Draft Task Contract R0*. It approved the
@@ -38,7 +39,7 @@ branching. Migrations `0001`–`0153`; ACE-01 adds none.
 | HIM | QHIA-013, 12 frozen instruction IDs | rendered after the charter, in frozen order | yes | none |
 | QIR-004 | Mandatory Core non-truncatable, isolated optional lanes | `IntegratedContextBudgetAssemblerService` | yes | none (byte accounting re-proved) |
 | Evaluation | P8; personality record §7 (Decision 5: a second named suite through the same validator / harness / scripts) | `brain-eval` validator (20–30), harness, blinded review, CLI | Bake-off suite, 24 cases, never run | **Golden Conversations suite** (WP3) |
-| Shared / Public | S4-02 ("the frozen Behavioral Response Policy, unchanged"; pinned by `tests/s4-02-shared-conversation-material-contract.test.mjs`); CW2-04 §21–§22 / S5-04 | both assemblers import `TEXT_V1_BEHAVIORAL_GUIDANCE` directly | yes | **Gate B decision (§7)**; unchanged here |
+| Shared / Public | S4-02 ("the frozen Behavioral Response Policy, unchanged"; pinned by `tests/s4-02-shared-conversation-material-contract.test.mjs`); CW2-04 §21–§22 / S5-04 | both assemblers import `TEXT_V1_BEHAVIORAL_GUIDANCE` directly | yes | **Gate B: Option A APPROVED (§7)**; unchanged here, future work `ACE-SP-01` |
 
 ### 1.2 Every path that reads `TEXT_V1_BEHAVIORAL_GUIDANCE`
 
@@ -218,6 +219,15 @@ ACE-01 therefore changed nothing there. The alternatives are:
 
 Nothing in Shared / Public changes until the Product Owner chooses. No world's permissions changed.
 
+**Product Owner decision (2026-10-12): Gate B — Option A — APPROVED.** The Product Owner also approved the future task's
+name: `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`. Consequences:
+- ACE-01 leaves Shared / Public model inputs byte-identical (frozen Text v1 + their frames, no core, no Personal data,
+  `locale: 'und'`). This is pinned by ACE spec item 14 and the ACE static contract.
+- The future work stays `QAN-BL-ACE-01` (`DEFERRED — OWNED`), owned by `ACE-SP-01`. It needs a world-neutral core
+  variant without the preference clause, which needs its own Product Copy Gate, plus narrow controlled amendments of S4-02
+  and CW2-04 / S5-04 before any code.
+- `ACE-SP-01` is not implemented now and is not authorized by this decision (BG-07).
+
 ---
 
 ## 8. Open risks and owned deferrals
@@ -236,15 +246,17 @@ Nothing in Shared / Public changes until the Product Owner chooses. No world's p
 
 - **Inherited items (BG-05):** none.
 - **Admitted, both after an anti-duplication run against the whole register:**
-  - **`QAN-BL-ACE-01`:** the Shared / Public QANDEEL personality core decision. `MEDIUM`, `DEFERRED — OWNED`. Proposed owner
-    `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`, a name for the Product Owner to confirm at Gate B.
+  - **`QAN-BL-ACE-01`:** the Shared / Public QANDEEL personality core decision. `MEDIUM`, `DEFERRED — OWNED`. Owner
+    `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`. The Product Owner approved the owner name and Gate B
+    Option A on 2026-10-12.
   - **`QAN-BL-ACE-02`:** real-model personality behaviour on the Golden Conversations suite. `MEDIUM`,
     `VALIDATION — OPEN`. Owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`.
 - **Unchanged:**
   - `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05` and `QAN-BL-VOICE-01`;
   - `QAN-BL-PROD-06`: no new migration joins the hosted catch-up queue.
 - **Not backlog (BG-06):** DD-3, DD-5 and the absent tone engine are design decisions and non-goals, not obligations.
-- **Banner:** this record's own banner states the true state: implementation complete, PR open, not merged, Gate B open.
+- **Banner:** this record's own banner states the true state: implementation complete, PR open, not merged, Gate B decided
+  (Option A APPROVED).
 - **Gate:** `npm run test:task-closure-governance-contract` passes (§10).
 
 ## 10. PR and verification results
@@ -327,3 +339,30 @@ no value for the plain «بالعربي».
 - `eval:brain:validate` and `eval:brain:dry-run -- golden-conversations`: ZERO CALLS. The Golden locale check uses the same
   resolver.
 - Per the review, full CI was not repeated locally. GitHub CI on the new head is the gate.
+
+## 12. Independent review correction R2 — Full Intelligence smoke compatibility
+
+**Finding (GitHub API CI, runs 38254010927 and 38255795654):** `npm run verify:full-intelligence-e2e-runtime` failed at
+`FOREGROUND_TURN_1` with `'en' !== 'und'`. The smoke still pinned the pre-ACE-01 constant `locale: 'und'`. VAL-01 failed
+only because API CI failed.
+
+**Correction (test expectation only, no production change):**
+- In `apps/api/scripts/verify-full-intelligence-end-to-end-runtime.ts`, `FOREGROUND_TURN_1` now expects `locale: 'en'`,
+  with a comment explaining why. The smoke user has no stored preference, and `SOURCE_TURN_TEXT` is plain English (ASCII
+  letters, no Arabizi digits). Under WP2 the result is therefore `en`.
+- `FOREGROUND_TURN_2` adds one focused check that the locale is `en` for `SECOND_TURN_TEXT`.
+- No other assertion was changed, removed or disabled (HIM, Memory, Hypothesis, Confidence, Question, Safety, QIR). One
+  review of the file found no other expectation tied to ACE-01.
+
+**Verification:**
+- `test:full-intelligence-e2e-runtime-contract`: 18 / 18.
+- `tsc` on `tsconfig.scripts.json` and `tsconfig.json`: clean.
+- The smoke itself needs PostgreSQL and Redis, and no local test environment exists. Per the review's policy, none was
+  built. GitHub API CI on the correction head is the gate.
+
+**CI result on the R2 head `a6478108`:** the Full Intelligence end-to-end runtime smoke passed. The next step,
+`verify:integrated-brain:e2e-hardening-v2`, then failed at `B_DEEP_PARITY_AND_D_AUTHORITY` with the same `'en' !== 'und'`
+pin. Commit `96f6c7a0`, pushed to the branch from outside this session, re-anchors that one assertion: the FAST and DEEP
+turns are plain English with no reply-language preference, so the locale is `en`. No other assertion is touched. The
+remaining `locale: 'und'` in `apps/api/scripts/integrated-brain-e2e-hardening-v2/human-intelligence-capacity.ts` builds a
+request fixture and is not an expectation.

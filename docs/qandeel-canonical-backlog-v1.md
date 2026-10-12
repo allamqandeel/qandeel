@@ -1738,11 +1738,15 @@ authorizes implementation (BG-07).
   interaction preferences in Public replies. Neither covers the non-private personality wording; no item did.
 - **Why deferred:** sending the core to Shared / Public amends frozen Connected Worlds model inputs, and the core's
   "durable interaction preferences" clause has no authority there; that is a Product decision (Gate B), not engineering.
-- **Owner task:** `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` (proposed name, for the Product Owner's
-  confirmation at Gate B).
+- **Owner task:** `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`. The Product Owner approved the name
+  on 2026-10-12.
+- **Product Owner decision (2026-10-12):** Gate B — **Option A — APPROVED**. Shared / Public stay unchanged in ACE-01;
+  parity is decided later by `ACE-SP-01` through a narrow controlled amendment of S4-02 and CW2-04 / S5-04, with a
+  world-neutral core variant (no preference clause) passing its own Product Copy Gate. `ACE-SP-01` is not authorized by
+  this decision.
 - **Severity:** `MEDIUM` — personality consistency across Worlds; nothing private is involved and nothing leaks.
-- **Reopen condition:** the Product Owner's Gate B decision; and before any Shared or Public feature claims the QANDEEL
-  personality.
+- **Reopen condition:** when the Product Owner authorizes `ACE-SP-01`, and before any Shared or Public feature claims the
+  QANDEEL personality.
 - **Required future properties:** one personality definition, never a second persona; any world-neutral wording passes the
   Product Copy Gate; Shared / Public inputs still carry no Personal data; the frozen records are amended before any code.
 - **Status:** `DEFERRED — OWNED`
@@ -2580,8 +2584,8 @@ The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION �
 - **Fixed inside the task, never backlog (BG-01):** the evaluator templates that stored a temporary «كلمني بالمصري» as an `INTERACTION_PREFERENCE` Memory (record §1.1 T-3, DD-6).
 - **Latest index: 59 items; 27 / 3 / 10 / 19 by status, 31 / 26 / 2 by severity**, recounted mechanically from §4.
 
-**ACE-01 closing change (2026-10-12; PR open, implementation complete, awaiting independent review and the Product Owner's merge decision; not merged, no migration, not deployed; Gate B open).** ACE-01 (Adaptive Conversational Expression: the approved personality core in the Personal guidance, the WP2 locale compiler, the Golden Conversations suite) inherited no item (BG-05: none names it; re-checked at closure).
-- **Admitted — `QAN-BL-ACE-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`, proposed name): the core does not reach Shared / Public replies until the Product Owner's Gate B decision. Anti-duplication run against the whole register (`QAN-BL-CW-02`, `QAN-BL-IP-01` distinct).
+**ACE-01 closing change (2026-10-12; PR open, implementation complete, awaiting independent review and the Product Owner's merge decision; not merged, no migration, not deployed; Gate B decided: Option A APPROVED).** ACE-01 (Adaptive Conversational Expression: the approved personality core in the Personal guidance, the WP2 locale compiler, the Golden Conversations suite) inherited no item (BG-05: none names it; re-checked at closure).
+- **Admitted — `QAN-BL-ACE-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`, name approved by the Product Owner): the core does not reach Shared / Public replies. Gate B: Option A APPROVED (2026-10-12), so parity is future work under `ACE-SP-01`, not implemented now. Anti-duplication run against the whole register (`QAN-BL-CW-02`, `QAN-BL-IP-01` distinct).
 - **Admitted — `QAN-BL-ACE-02`** (`MEDIUM`, `VALIDATION — OPEN`, owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`): real-model personality behaviour on the Golden Conversations suite. Anti-duplication run (`QAN-BL-IP-02` keeps preference following).
 - **Untouched:** `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-VOICE-01`. `QAN-BL-PROD-06` current truth unchanged: ACE-01 adds no migration.
 - **Not backlog (BG-06):** the absent tone engine, the model-honoured temporary requests and the absent first-contact signal are design decisions recorded in the [ACE-01 record](e2e/QANDEEL_ACE_01_ADAPTIVE_CONVERSATIONAL_EXPRESSION_IMPLEMENTATION_RECORD_v1.md) §2, not obligations.
@@ -2668,7 +2672,7 @@ Inherited after T-12 closure reconciliation:
 | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (owner name PO-APPROVED) |
 | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (owner name PO-APPROVED) |
 | `ACE-01 — Adaptive Conversational Expression v1` | none — no item names it; admitted `QAN-BL-ACE-01` (Gate B) and `QAN-BL-ACE-02` (Stage 8A); `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05` and `QAN-BL-VOICE-01` observed and left unchanged |
-| `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` (owner name proposed, for the Product Owner's confirmation at Gate B) |
+| `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` (owner name and Gate B Option A approved by the Product Owner, 2026-10-12; not yet authorized) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
