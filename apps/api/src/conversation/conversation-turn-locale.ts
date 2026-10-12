@@ -8,8 +8,9 @@ import type { InteractionPreferences, InteractionPreferenceValue } from '../inte
 // Egyptian, Levantine, Gulf or Maghrebi, and nuanced dialect stays with the model in its one main generation, under the
 // approved personality core and the owner's durable `replyLanguage` preference (the compiled guidance, IP-IMP-01).
 //
-// Precedence (P4): an explicit language request in the current message > the durable `replyLanguage` preference (0153) >
-// a conservative script indication of the current message > `und`. Mixed, ambiguous or too-short text is `und`.
+// Precedence (P4): an explicit language request in the current message, temporary or durable (review R1) > the durable
+// `replyLanguage` preference (0153) > a conservative script indication of the current message > `und`. Mixed, ambiguous
+// or too-short text is `und`.
 //
 // `locale` is request metadata: no provider adapter renders it into the model input, so this changes no model-facing text.
 
@@ -54,7 +55,7 @@ export function scriptLocaleOf(content: string): ConversationLocale {
 
 export function resolveConversationLocale(input: ConversationLocaleInput): ConversationLocale {
   const explicit = interpretExplicitReplyLanguageRequest(input.currentUserContent);
-  if (explicit !== null) return localeOfReplyLanguage(explicit);
+  if (explicit !== null) return explicit;
   const durable = localeOfReplyLanguage(input.preferences.replyLanguage);
   if (durable !== 'und') return durable;
   return scriptLocaleOf(input.currentUserContent);

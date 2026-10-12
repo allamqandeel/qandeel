@@ -187,6 +187,30 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
     expect(next.locale).toBe('ar');
   });
 
+  // 5 (review R1) — a natural temporary language request conflicting with the durable preference.
+  it.each([
+    ['EGYPTIAN_ARABIC', 'Can you answer in English?', 'en', '- Reply language: reply in Egyptian Arabic.', 'ar'],
+    ['ENGLISH', 'خلاص قول لي بالعربي', 'ar', '- Reply language: reply in English.', 'en'],
+  ] as const)(
+    '(5-R1) durable %s + «%s» → locale %s for this turn only; nothing durable is written',
+    async (durable, message, locale, durableLine, nextLocale) => {
+      preferenceRead.mockResolvedValue(stored({ reply_language: durable }));
+      await orchestrator.orchestrate('token', 'user', turnOf(message));
+      const request = dispatched();
+      expect(request.locale).toBe(locale);
+      // The durable record still renders unchanged this turn; the approved copy states the current request's precedence.
+      expect(request.behavioralGuidance).toContain(durableLine);
+      expect(request.behavioralGuidance).toContain('An explicit request the user makes in the current conversation takes precedence for what it asks');
+      expect(request.context.at(-1)).toEqual({ role: 'USER', content: message });
+      expect(repository.finalizeInteractionPreferenceTurn).not.toHaveBeenCalled();
+      // The next ordinary turn is back under the durable preference.
+      await orchestrator.orchestrate('token', 'user', turnOf('تمام'));
+      const next = router.generate.mock.calls[1][0] as ModelRouterRequest;
+      expect(next.locale).toBe(nextLocale);
+      expect(next.behavioralGuidance).toContain(durableLine);
+    },
+  );
+
   // 6 — Memory never becomes style authority.
   it('(6) a remembered remark never becomes a style instruction: guidance and locale are unchanged, the Memory stays untrusted data', async () => {
     memoryRetrieve.mockResolvedValue([{ type: 'STABLE_PREFERENCE', content: 'أنا بحب الهزار وبحب الكلام بالإنجليزي.', source: 'CONVERSATION', about: 'USER' }]);

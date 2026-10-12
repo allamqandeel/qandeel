@@ -2,7 +2,8 @@
 
 **Status:** `ACE-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
 WP0–WP5 are implemented on one branch, and this record carries the closing change (BG-08 / BG-09). **Not merged**: merge
-happens only on «ادمج». No migration was added and nothing is deployed. **Gate B is open for one narrow decision**: whether
+happens only on «ادمج». No migration was added and nothing is deployed. The independent review's one correction (R1,
+temporary language requests) is applied (§11). **Gate B is open for one narrow decision**: whether
 the personality core may reach Shared / Public QANDEEL (§7). Until that decision, those frozen model inputs are unchanged.
 
 **Authority:** the Product Owner's *ACE-01 — FINAL PRODUCT OWNER APPROVAL & EXECUTION AUTHORIZATION* (2026-10-12) of the
@@ -58,8 +59,9 @@ ACE-01 reimplements none of these:
 - CI-01: the design, the scenario list and the baseline census;
 - IP-IMP-01: the record, the commands, the compiler, the R2 suspension, the Memory filtering and the precedence header.
 
-`interpretExplicitReplyLanguageRequest` reads the IP-IMP-01 grammar through its own `SET_CORES`, so ACE-01 adds no second
-language grammar.
+`interpretExplicitReplyLanguageRequest` reuses the IP-IMP-01 language verbs and varieties and its normalizer, so ACE-01 adds
+no second language vocabulary. After review R1 it also accepts a bounded set of natural temporary request forms (§11). It
+never feeds the durable command grammar, which is unchanged.
 
 ACE-01 does not touch `QAN-BL-CW-02`, `QAN-BL-IP-01` or `QAN-BL-IP-02` (§9).
 
@@ -108,7 +110,7 @@ These neighbouring items are cited and left unchanged:
 - **WP1:** `behavioral-response-policy.service.ts` (Text v2, the core); the types comment; the orchestrator comment.
 - **WP2:**
   - `conversation-turn-locale.ts` (new, pure);
-  - `interpretExplicitReplyLanguageRequest` in the IP-IMP-01 interpreter (additive);
+  - `interpretExplicitReplyLanguageRequest` in the IP-IMP-01 interpreter (additive; widened by review R1, §11);
   - the orchestrator computes `locale` after the preference join and passes it to the ONE QIR-004 assembly.
 - **WP3:**
   - `brain-eval.types.ts`: `STYLE_FOCUS`, optional case fields, the Golden rubric;
@@ -272,3 +274,56 @@ Nothing in Shared / Public changes until the Product Owner chooses. No world's p
   - `npm run eval:brain:dry-run -- golden-conversations`: 22 cases, 44 planned requests, ZERO CALLS.
   - No paid evaluation, no provider key, no Stage 8A run.
 - **GitHub CI:** the exact-head run on the PR is the gate. It is reported in the PR, not here.
+
+## 11. Independent review correction R1 — temporary language requests
+
+**Finding (independent review at `724cd4d2`):** when a durable `replyLanguage` conflicted with a clear, naturally phrased
+request in the current message, the durable preference won `locale`:
+- `replyLanguage=EGYPTIAN_ARABIC` with "Can you answer in English?";
+- `replyLanguage=ENGLISH` with «خلاص قول لي بالعربي».
+
+The cause: the explicit-request reader accepted only the exact durable-command phrasing, rejected every question, and had
+no value for the plain «بالعربي».
+
+**Correction, bounded:**
+- `interpretExplicitReplyLanguageRequest` now returns a language (`ar` | `en`), not a preference value, and reads a closed,
+  whole-message grammar. It is the IP-IMP-01 language verbs and varieties plus:
+  - a few Arabic lead words (خلاص، طب، طيب، ممكن، المرة دي …) and current-turn tails (دلوقتي، بقى، المرة دي …);
+  - a few more verbs (قول لي، احكي لي، رد، جاوب، اكتب، كمّل، نتكلم);
+  - «بالعربي / بالعربية / عربي»;
+  - the English request forms "can / could / would / will you … in X", "can we / let's talk in X", "switch to X", with
+    "this time / for now / instead".
+- A question mark is accepted only at the end of a request-phrased question («ممكن …؟», "can / could / would / will you",
+  "can / shall we").
+- Unchanged:
+  - the durable command grammar, so a temporary request is still never a command and is never stored;
+  - no dialect or tone is inferred: the result is a language only;
+  - mixed-script messages stay `und`;
+  - `locale` is still rendered by no provider;
+  - no new model-facing text.
+
+**Tests:**
+- `conversation-turn-locale.spec.ts` now has 53 tests:
+  - the two review cases, both directions;
+  - 14 positive forms;
+  - 17 null cases: negation (English, Egyptian, «مش عايزك», «بلاش»), quotation (straight quotes, guillemets, reported
+    speech), embedded requests, capability, complaint and unphrased questions, the ambiguous «ما تكلمني …», mixed script,
+    translation;
+  - durable precedence on ambiguity;
+  - `interpretInteractionPreferenceCommand` returns null for every temporary form, while a marked command still parses.
+- The ACE orchestrator spec adds `(5-R1)` for both review cases on the real provider request:
+  - the turn's `locale` follows the request;
+  - the durable line still renders;
+  - `finalizeInteractionPreferenceTurn` is never called;
+  - the next ordinary turn returns to the durable language.
+
+**Focused verification (local, R1 tree):**
+- `tsc`: clean.
+- jest:
+  - `src/conversation`, `src/model-router`, `src/intelligence-runtime`, `src/human-model`, `src/shared-world`,
+    `src/public-world`: 104 suites, 2645 tests passed;
+  - interaction-preferences and brain-eval: passed.
+- Static contracts: ACE (6), task-closure governance (24), QIR-004 + W3-MEGA-U3 (39) all pass.
+- `eval:brain:validate` and `eval:brain:dry-run -- golden-conversations`: ZERO CALLS. The Golden locale check uses the same
+  resolver.
+- Per the review, full CI was not repeated locally. GitHub CI on the new head is the gate.

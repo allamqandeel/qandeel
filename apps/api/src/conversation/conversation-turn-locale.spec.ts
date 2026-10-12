@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEFAULT_INTERACTION_PREFERENCES, type InteractionPreferences } from '../interaction-preferences/interaction-preferences.types';
-import { interpretExplicitReplyLanguageRequest } from '../interaction-preferences/interaction-preference-command.interpreter';
+import { interpretExplicitReplyLanguageRequest, interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
 import { MIN_SCRIPT_LETTERS, resolveConversationLocale, scriptLocaleOf } from './conversation-turn-locale';
 
 const withLanguage = (replyLanguage: InteractionPreferences['replyLanguage']): InteractionPreferences => ({ ...DEFAULT_INTERACTION_PREFERENCES, replyLanguage });
@@ -52,16 +52,70 @@ describe('ACE-01 WP2 — the conservative, deterministic conversation locale', (
     expect(resolve('ok')).toBe('und');
   });
 
-  it('only a WHOLE-message explicit language request counts; «بالعربي» names no variety and a request inside a sentence is not one', () => {
-    expect(interpretExplicitReplyLanguageRequest('answer in English')).toBe('ENGLISH');
-    expect(interpretExplicitReplyLanguageRequest('من فضلك كلمني بالشامي')).toBe('LEVANTINE_ARABIC');
-    expect(interpretExplicitReplyLanguageRequest('دايمًا رد عليا بالفصحى')).toBe('MODERN_STANDARD_ARABIC');
-    expect(interpretExplicitReplyLanguageRequest('خلاص قول لي بالعربي')).toBeNull();
-    expect(interpretExplicitReplyLanguageRequest('can you answer in English?')).toBeNull();
-    expect(interpretExplicitReplyLanguageRequest('I told him to answer in English yesterday')).toBeNull();
-    expect(interpretExplicitReplyLanguageRequest('keep it short')).toBeNull();
-    // Mixed scripts stay und unless an explicit request decides.
+  // Review R1 — an explicit TEMPORARY language request in natural form outranks the durable preference in `locale`.
+  it('R1: a natural temporary request outranks a conflicting durable reply language, in both directions', () => {
+    expect(resolve('Can you answer in English?', withLanguage('EGYPTIAN_ARABIC'))).toBe('en');
+    expect(resolve('خلاص قول لي بالعربي', withLanguage('ENGLISH'))).toBe('ar');
+    expect(resolve('could you please reply in English for now', withLanguage('GULF_ARABIC'))).toBe('en');
+    expect(resolve("Let's switch to Arabic", withLanguage('ENGLISH'))).toBe('ar');
+  });
+
+  it.each([
+    ['Can you answer in English?', 'en'],
+    ['could you please reply in English for now', 'en'],
+    ['ok, answer in English this time', 'en'],
+    ['switch to English please', 'en'],
+    ["let's talk in Arabic", 'ar'],
+    ['can we continue in Arabic?', 'ar'],
+    ['answer in English', 'en'],
+    ['from now on answer in English', 'en'],
+    ['خلاص قول لي بالعربي', 'ar'],
+    ['طب كلمني بالعربي المرة دي', 'ar'],
+    ['ممكن ترد عليا بالإنجليزي؟', 'en'],
+    ['رد بالانجليزي بقى', 'en'],
+    ['من فضلك كلمني بالشامي', 'ar'],
+    ['دايمًا رد عليا بالفصحى', 'ar'],
+  ] as const)('R1: «%s» is an explicit language request → %s', (message, language) => {
+    expect(interpretExplicitReplyLanguageRequest(message)).toBe(language);
+  });
+
+  it.each([
+    ['negation (English)', "don't answer in English"],
+    ['negation inside a request question', 'can you not answer in English?'],
+    ['negation (Egyptian)', 'متكلمنيش بالانجليزي'],
+    ['negation (wish)', 'مش عايزك ترد بالانجليزي'],
+    ['refusal', 'بلاش تكلمني بالانجليزي'],
+    ['quotation (English)', '"answer in English"'],
+    ['quotation (Arabic guillemets)', '«كلمني بالانجليزي»'],
+    ['reported speech', 'قال لي "رد بالانجليزي"'],
+    ['inside a longer message', 'I told him to answer in English yesterday'],
+    ['a capability question, not a request', 'Do you speak English?'],
+    ['an ambiguous bare capability question', 'Can you speak English?'],
+    ['a complaint question', 'ليه بتكلمني بالانجليزي؟'],
+    ['an unphrased question', 'answer in English?'],
+    ['ambiguous «ما» (invitation or negation)', 'ما تكلمني بالانجليزي'],
+    ['mixed scripts', 'خلاص قول لي in English'],
+    ['a different instruction', 'keep it short'],
+    ['a translation request', 'what is this in English'],
+  ])('R1: not an explicit language request → null: %s', (_name, message) => {
+    expect(interpretExplicitReplyLanguageRequest(message)).toBeNull();
+  });
+
+  it('R1: an unrecognised or ambiguous message leaves the durable preference in charge; mixed scripts stay und', () => {
+    expect(resolve('Do you speak English?', withLanguage('EGYPTIAN_ARABIC'))).toBe('ar');
+    expect(resolve("don't answer in English", withLanguage('EGYPTIAN_ARABIC'))).toBe('ar');
+    expect(resolve('«كلمني بالانجليزي»', withLanguage('LEVANTINE_ARABIC'))).toBe('ar');
+    expect(resolve('مش عايزك ترد بالعربي', withLanguage('ENGLISH'))).toBe('en');
     expect(resolve('خلاص قول لي in English')).toBe('und');
+  });
+
+  it('R1: a temporary request is never a durable command, so it can never be stored', () => {
+    for (const message of [
+      'Can you answer in English?', 'خلاص قول لي بالعربي', 'could you please reply in English for now', "let's talk in Arabic",
+      'switch to English', 'ممكن ترد عليا بالإنجليزي؟', 'طب كلمني بالعربي المرة دي', 'answer in English', 'كلمني بالمصري',
+    ]) expect(interpretInteractionPreferenceCommand(message)).toBeNull();
+    // The durable grammar is unchanged: a marked command is still a command.
+    expect(interpretInteractionPreferenceCommand('from now on answer in English')).toEqual({ field: 'REPLY_LANGUAGE', value: 'ENGLISH', language: 'en' });
   });
 
   it('is pure and provider-neutral: no I/O, no model, no clock, no randomness, no tone vocabulary', () => {
