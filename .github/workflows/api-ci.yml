@@ -982,6 +982,12 @@ jobs:
       # the governed erasure; atomic under injected failure, isolated, monotonic, race-safe without deadlock.
       - name: Verify MEM-AR-01C Memory subject identity, atomicity and Evidence protection against real PostgreSQL
         run: npm run verify:memory-subject-identity:integration
+      # IP-IMP-01: migration 0153 - the ONE owner-only Interaction Preferences record with closed values, single-field
+      # compare-and-set (SAVED / UNCHANGED / STALE) under the owner lock, the conversation command committed with its reply
+      # in one transaction (replay-safe, no Memory written), the SELF-only legacy review that never changes a Memory,
+      # owner-only privileges, Export My Data (the 0130 body plus one section) and the governed erasure.
+      - name: Verify IP-IMP-01 Interaction Preferences against real PostgreSQL
+        run: npm run verify:interaction-preferences:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

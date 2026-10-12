@@ -23,6 +23,7 @@ import { HimModule } from '../human-model/him.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { HypothesisModule } from '../hypothesis/hypothesis.module';
 import { RecommendationModule } from '../recommendation/recommendation.module';
+import { InteractionPreferencesModule } from '../interaction-preferences/interaction-preferences.module';
 import { BoundedForegroundIntelligenceGathererService } from '../intelligence-runtime/bounded-foreground-intelligence-gatherer.service';
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
@@ -77,7 +78,7 @@ export const THREAD_ESTABLISHMENT_BINDING_FACTORY = Symbol('THREAD_ESTABLISHMENT
 export const THREAD_CONTINUITY_BINDING_FACTORY = Symbol('THREAD_CONTINUITY_BINDING_FACTORY');
 
 @Module({
-  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule],
+  imports: [ModelRouterModule, MemoryModule, HimModule, HypothesisModule, RecommendationModule, ObservabilityModule, InteractionPreferencesModule],
   // QHIA-011A: the explicit session context activation entry is its own
   // authenticated controller. It is a separate product command surface, never
   // part of create-turn input and never reached from a normal turn.

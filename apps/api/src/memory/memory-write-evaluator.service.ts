@@ -124,10 +124,10 @@ export class MemoryWriteEvaluatorService {
   private match(content: string, now: Date): PatternMatch | undefined {
     let match: RegExpMatchArray | null;
 
-    match = content.match(/^(?:speak|talk|respond|answer)\s+(?:to\s+)?me\s+in\s+(.+?)[.!؟]?$/iu);
-    if (match) return candidate('INTERACTION_PREFERENCE', `Speak to me in ${trimValue(match[1])}.`);
-    match = content.match(/^(?:كلمني|كلّمني|اتكلم معايا|رد عليا|رد عليّ)\s+(.+?)[.!؟]?$/u);
-    if (match) return candidate('INTERACTION_PREFERENCE', `${content.match(/^(?:كلمني|كلّمني|اتكلم معايا|رد عليا|رد عليّ)/u)![0]} ${trimValue(match[1])}.`);
+    // IP-IMP-01 (WP2): no template produces an INTERACTION_PREFERENCE Memory any more. «كلمني بالمصري» / "speak to me in
+    // English" without a durable marker is a TEMPORARY request - honoured in that conversation and never stored - and an
+    // explicit durable request is a command that writes only the canonical Interaction Preferences record (0153). The
+    // type stays for the owner's existing legacy rows, which are never rewritten (their review is the owner's choice).
 
     match = content.match(/^my goal is\s+(.+?)[.!؟]?$/iu);
     if (match) return candidate('GOAL', `My goal is ${trimValue(match[1])}.`);

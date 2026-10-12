@@ -4549,3 +4549,48 @@ checked. Fixture Memories that historical verifiers cite as Evidence are attribu
 `database/verifier-memory-subject-fixture.mjs` (0006, 0008, 0021, 0027, 0028, 0032-0036, 0063, 0072, 0151,
 exact-version Confidence); the revoked writers' body proofs run as their owner (0026, 0072, 0128, 0151); 0130's fixture
 uses v2; verify-0151 pins L2 to its 0152 body and reads T5 after its SELF fixtures lapse.
+
+## IP-IMP-01 - Interaction Preferences (migration 0153)
+
+`0153_interaction_preferences_v1.sql` is the database part of `IP-IMP-01` under the Product Owner's IP-IMP-01 R1 Task
+Contract (FINAL PRODUCT OWNER APPROVAL, D-SP Option A). No historical migration is edited. Record:
+[IP-IMP-01 implementation record](../docs/e2e/QANDEEL_IP_IMP_01_INTERACTION_PREFERENCES_IMPLEMENTATION_RECORD_v1.md).
+
+**Why.** The owner's durable interaction preferences had no canonical home: «كلمني بالمصري» was captured as an
+`INTERACTION_PREFERENCE` Memory whether it was meant for one reply or for good, and that Memory reached the model only
+when lexical retrieval happened to select it, as untrusted data.
+
+**What 0153 does.**
+
+```text
+public.interaction_preferences                          ONE owner-only row: reply_length, reply_language, humour,
+                                                        explanation_style (closed CHECKs; DEFAULT = Automatic), version
+interaction_preference_private.apply_v1                 the ONE write core: one field, owner advisory lock, UNCHANGED for a
+                                                        held value, STALE for an unread version, else SAVED (version + 1)
+public.set_own_interaction_preference_v1                Settings: SECURITY INVOKER pass-through, the caller is auth.uid()
+public.apply_own_legacy_interaction_preference_v1       legacy review: re-validates the caller's ACTIVE SELF
+                                                        INTERACTION_PREFERENCE Memory at commit (FOR SHARE), never changes it
+public.server_finalize_interaction_preference_turn_v1   the conversation command: the GENERATING turn, the change and the
+                                                        reply for the committed outcome in ONE transaction
+personal_data_private.build_personal_export_v1          the 0130 body plus one `interactionPreferences` section
+```
+
+**Grants.** `authenticated` reads its own row (RLS) and runs the two owner commands; `service_role` runs only the
+conversation command and reaches neither the table nor the private schema; the write core is executable by no application
+role; nothing for `anon` or `PUBLIC`. The row cascades with `public.users`, so the governed erasure removes it.
+
+**Deployment.** Apply the migration and release the API together: the new API fails closed against an older database (the
+per-turn read and the functions do not exist, so a turn fails before any provider call). An old API ignores the table.
+Not deployed; `QAN-BL-PROD-06` owns the hosted catch-up.
+
+```sh
+npm run verify:interaction-preferences:integration
+```
+
+`verify-migration-0153.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It proves the catalog and the
+privilege boundary, that the live export builder is the 0130 body plus exactly the one added section, the Settings
+compare-and-set (SAVED / UNCHANGED / STALE, every approved value, the reset, refusals and the CHECKs), isolation, the
+conversation command (one transaction with its reply and completed-turn event, replay writes nothing, injected failure
+leaves nothing, no Memory / attribution / Memory command written), the SELF-only legacy review that never changes a Memory,
+two concurrent first writes serializing without deadlock (committed fixtures, removed and checked), the export in readable
+words and the governed erasure.

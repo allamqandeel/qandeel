@@ -776,10 +776,12 @@ test('B2 - anti-vacuity: the real guard rejects every named regression', () => {
         'this.router.generate({ ...assembled.request, memoryContext })',
       ),
     }],
+    // IP-IMP-01 re-anchor (validation only): the Behavioral Runtime guidance now takes the owner's interaction
+    // preferences, so the second assembly is inserted after the preference join, still before the ONE real assembly.
     ['the Orchestrator assembled twice', {
       orchestrator: shipped.orchestrator.replace(
-        '      const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();',
-        '      const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();\n      void this.integratedContextBudget.assemble({} as never);',
+        '      const interactionPreferences = await interactionPreferencesPromise;',
+        '      const interactionPreferences = await interactionPreferencesPromise;\n      void this.integratedContextBudget.assemble({} as never);',
       ),
     }],
     ['a second conversational provider invocation appeared', {

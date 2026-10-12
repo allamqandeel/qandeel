@@ -153,4 +153,14 @@ describe('MemoryRetrieverService', () => {
       expect(served('فاكر الشاي؟', [calm, tea])).toEqual(['أنا بحب الشاي.']);
     });
   });
+
+  it('IP-IMP-01 (WP4): a legacy INTERACTION_PREFERENCE Memory never reaches the model; the canonical record is the one authority', () => {
+    const candidates = [
+      memory('legacy', 'كلمني بالمصري.', { type: 'INTERACTION_PREFERENCE', importance: 0.9 }),
+      memory('legacy-en', 'Speak to me in English.', { type: 'INTERACTION_PREFERENCE', importance: 0.9 }),
+      memory('fact', 'بحب الأكل المصري.'),
+    ];
+    expect(selectMemories('فاكر الأكل المصري؟', candidates).map((m) => m.content)).toEqual(['بحب الأكل المصري.']);
+    expect(selectMemories('do you remember: speak to me in English', candidates)).toEqual([]);
+  });
 });

@@ -44,7 +44,11 @@ export class MemoryRetrieverService {
   }
 }
 
-export function selectMemories(query: string, candidates: ReadonlyArray<MemoryRecord>): ReadonlyArray<ModelRouterMemoryContext> {
+export function selectMemories(query: string, allCandidates: ReadonlyArray<MemoryRecord>): ReadonlyArray<ModelRouterMemoryContext> {
+  // IP-IMP-01 (WP4): a legacy INTERACTION_PREFERENCE Memory never steers a reply. The canonical Interaction Preferences
+  // record is the ONE preference authority, so an old Memory can neither override it nor revive a preference the owner
+  // reset. The Memory itself is untouched: still listed, exported, correctable and forgettable by its owner.
+  const candidates = allCandidates.filter((memory) => memory.type !== 'INTERACTION_PREFERENCE');
   const queryTokens = tokens(query);
   const distinctive = new Set([...queryTokens].filter((token) => !NON_DISTINCTIVE_STEMS.has(token)));
   const byDistinctive = distinctive.size < queryTokens.size ? rank(distinctive, candidates) : [];

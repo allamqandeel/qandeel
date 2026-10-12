@@ -35,6 +35,8 @@ import { BoundedForegroundIntelligenceGathererService } from '../intelligence-ru
 import { IntegratedContextBudgetAssemblerService } from '../intelligence-runtime/integrated-context-budget-assembler.service';
 import { QuestionForegroundSelectionService } from '../question/question-foreground-selection.service';
 import { MemoryControlService } from '../memory/memory-control.service';
+import { InteractionPreferencesService } from '../interaction-preferences/interaction-preferences.service';
+import { interpretInteractionPreferenceCommand } from '../interaction-preferences/interaction-preference-command.interpreter';
 
 // QHIA-005 amendment (PR #164), generalized by QHIA-014A: the ONE shared
 // maximum foreground orchestration time spent waiting for OPTIONAL Human
@@ -101,6 +103,7 @@ export class ConversationOrchestratorService {
     private readonly correlation:CorrelationService,
     private readonly telemetry:TelemetryService,
     private readonly memoryControl: MemoryControlService,
+    private readonly interactionPreferences: InteractionPreferencesService,
   ) {}
 
   async orchestrate(accessToken: string, userId: string, userTurn: ConversationTurn): Promise<OrchestratedTurnResult> {
@@ -178,6 +181,23 @@ export class ConversationOrchestratorService {
       // records the command and finalizes this turn with the reply for the outcome actually committed, so the change
       // and the reply that reports it exist together or not at all. It launches no Human Intelligence, Memory
       // retrieval, Hypothesis, Question or provider work; a failure here fails the turn closed like any other stage.
+      // IP-IMP-01 (WP2): an EXPLICIT DURABLE interaction-preference command (the closed deterministic grammar; no model,
+      // no classifier) is answered from the canonical record, never by the provider. Like a Memory command it is
+      // eligible on an ALLOW turn only: a GUIDED turn keeps its Safety guidance on the ordinary provider path and stores
+      // nothing. ONE database transaction applies the one-field compare-and-set and finalizes this turn with the reply
+      // for the outcome actually committed (SAVED / UNCHANGED / STALE), so a stale or failed command is never
+      // acknowledged as saved. No Memory is written: the record is the only durable preference authority. A temporary
+      // request carries no durable marker, is not a command, and continues below as ordinary conversation.
+      const preferenceCommand = safety.disposition === 'ALLOW' ? interpretInteractionPreferenceCommand(userTurn.content) : null;
+      if (preferenceCommand) {
+        const plan = await this.engine('interaction_preferences',selection.path,()=>this.interactionPreferences.planCommand(accessToken, userId, preferenceCommand));
+        const finalized = await this.repository.finalizeInteractionPreferenceTurn({
+          sessionId: userTurn.session_id, userId, sourceTurnId: userTurn.id, assistantTurnId: randomUUID(), plan,
+        });
+        if (!finalized) return this.currentResult(accessToken, userId, claimed);
+        this.telemetry.recordTurnOutcome('completed',selection.path);
+        return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
+      }
       if (safety.disposition === 'ALLOW') {
         const previousUserContent = [...context].slice(0, -1).reverse().find(({ role }) => role === 'USER')?.content;
         const memoryControl = await this.engine('memory_control',selection.path,()=>this.memoryControl.plan({
@@ -193,6 +213,12 @@ export class ConversationOrchestratorService {
           return { userTurn: finalized.userTurn, assistantTurn: finalized.assistantTurn };
         }
       }
+      // IP-IMP-01 (WP4): the ONE bounded owner-scoped read of the canonical Interaction Preferences record, launched
+      // beside the lanes below and joined before the Behavioral Runtime renders its guidance. It never degrades: a failed
+      // or malformed read is NOT "no preference" - it rejects at the join and fails the turn closed through the outer
+      // failure path with zero provider calls. The swallow handler only prevents an unhandled rejection meanwhile.
+      const interactionPreferencesPromise = this.engine('interaction_preferences',selection.path,()=>this.interactionPreferences.readForTurn(accessToken, userId));
+      interactionPreferencesPromise.catch(() => undefined);
       // QIR-003: the frozen Human Intelligence foreground lane is LAUNCHED
       // HERE - byte-identical inside - and is no longer awaited inline. Its
       // ONE barrier, its shared 300 ms wait class, its zero-required-wait
@@ -468,7 +494,12 @@ export class ConversationOrchestratorService {
       // fallback and no provider-generated replacement; a grounding invariant
       // failure still fails the turn closed before any provider generation.
       const recommendationGrounding = hypothesisResult ? this.recommendationGrounding.ground(hypothesisResult) : undefined;
-      const behavioralGuidance = this.behavioralPolicy.buildTextGuidance();
+      // IP-IMP-01 (WP4): the owner's durable preferences render inside the Behavioral Runtime's guidance (QIR-004
+      // Mandatory Core, the ONE composeServerGuidance). All DEFAULT leaves the guidance exactly Text v1.
+      const interactionPreferences = await interactionPreferencesPromise;
+      const behavioralGuidance = this.behavioralPolicy.buildTextGuidance({
+        preferences: interactionPreferences.preferences, safetyGuided: safety.disposition === 'GUIDED',
+      });
       // QIR-004: the ONE final normalized provider-request assembly boundary.
       //
       // Everything that may reach the provider passes through here exactly

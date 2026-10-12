@@ -26,6 +26,7 @@ import type { SafetyResponseGate } from './safety-response-gate.types';
 import type { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import type { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
 import type { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
+import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
 
 // QHIA-014A permanent remediation proof.
 //
@@ -159,6 +160,8 @@ describe('QHIA-014A - HSE Snapshot foreground latency-safe degradation (QHIA-014
       telemetry,
       // W3-MEGA-M: no turn here is a Memory command.
       { plan: jest.fn().mockResolvedValue(null) } as never,
+      // IP-IMP-01: no durable interaction preference.
+      { readForTurn: jest.fn().mockResolvedValue({ preferences: DEFAULT_INTERACTION_PREFERENCES, version: 0 }), planCommand: jest.fn() } as never,
     );
   });
 

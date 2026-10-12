@@ -378,6 +378,8 @@ describe('MEM-AR-01B S-2a / MEM-AR-01C S-2b — R2: a clarification answered in 
       untouchable('HIM_ADAPTATION'), untouchable('HIM_CONTEXTUAL'), untouchable('HIM_REFLECTION'), untouchable('HIM_CROSS_CONTEXT'),
       untouchable('HIM_BRAIN_CONTEXT'), untouchable('FOREGROUND_GATHER'), untouchable('QUESTION_SELECTION'),
       untouchable('CONTEXT_BUDGET'), untouchable('RECOMMENDATION'), untouchable('MODEL_ROUTER'), correlation, telemetry as never, memoryControl,
+      // IP-IMP-01: a Memory command never reads or writes the Interaction Preferences record.
+      untouchable('INTERACTION_PREFERENCES'),
     );
     const semantic = { establish: (_user: string, result: unknown) => Promise.resolve(result) };
     conversations = new ConversationService(repository, orchestrator, correlation, semantic as never, { begin: jest.fn().mockResolvedValue({ outcome: 'GRANTED', leaseId: 'lease-r2' }), end: jest.fn().mockResolvedValue(undefined) } as never);

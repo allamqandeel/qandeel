@@ -191,6 +191,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CI-02` | Forward-Safety Mirror: the `QAN-INF-03` Expo Dependency-Validation Leg Fails Intermittently on Some Local Hosts | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `MEDIUM` | `VALIDATION — OPEN` |
 | `QAN-BL-INTEL-03` | Hypothesis Semantic Support: Legacy Never-Supported Hypotheses (R-G1a) and Support by Unrelated Eligible Evidence (R-G1b) | `INTEL-SV-01 — Hypothesis Semantic Support Verification` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-03` | Export My Data Omits Whom Each Memory Is About (the Subject `about` Field) | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-IP-01` | Personal Interaction Preferences Do Not Shape Public World QANDEEL Replies | `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-IP-02` | Interaction Preferences: Real-Model Behavioural Quality (Seven Reply Languages / Dialects, Brevity, Humour, Explanation Style) | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
 
 ---
 
@@ -979,6 +981,12 @@ S4-01's scope, and nothing here authorizes implementation (BG-07).
   fail-closed implementations (never CLEAR, never AVAILABLE), unused with zero candidates. Personal Memory, Understanding,
   HIM, hypotheses and conversation never enter a Shared reply. The Shared-history portion of `G-08` is delivered; the
   private-context portion is NOT closed.
+- **Current truth (BG-08 reconciliation at IP-IMP-01, PR open, not merged):** the owner's canonical Interaction Preferences
+  record (migration `0153`: reply length, reply language / dialect, humour, explanation style) is a new Personal private
+  source in exactly this item's sense. It shapes Personal-world replies only; the Shared reply builder still renders the
+  fixed Text v1 guidance and offers no private candidate (proved structurally by IP-IMP-01's isolation spec). Whether a
+  participant's preferences may ever shape a Shared group reply is decided here; the item's scope, owner, severity and
+  status are unchanged, and no second item was admitted for it (anti-duplication).
 - **Why deferred:** each missing part is a reviewed Product / privacy boundary of its own; inventing a Personal source,
   collector, detector or source-state resolver inside S4-02 would be engineering inventing Product and authority logic
   (`AGENTS.md` §2). It does not block S4-02's Shared conversation over Shared-native history.
@@ -1658,6 +1666,61 @@ Admitted by A3-02 under BG-06 (the A3-02 Task Contract defers physical-device pr
 §5 names the owner). It re-owns the physical-evidence clause of `QAN-BL-NOTIF-01` and is not an alias of any item.
 Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-IP-01` — Personal Interaction Preferences Do Not Shape Public World QANDEEL Replies
+
+- **Title / Finding:** IP-IMP-01 (migration `0153`) gives the owner ONE canonical record of durable interaction preferences
+  (reply length, reply language / dialect, humour, explanation style), consumed by Personal-world replies only. A Public
+  @qandeel reply is composed from Public material alone and never sees them.
+- **Source:** the IP-IMP-01 R1 Task Contract (D-SP Option A, approved: implement the Personal world fully; register a
+  qualifying item with a named future owner if Shared / Public cannot be integrated without changing frozen contracts) and
+  the Product Owner's clarification C-2; CW2-04 §21 ("It may not use: Personal context") and §22 ("The invoking user's
+  private QANDEEL history does not enrich that response"); the
+  [IP-IMP-01 implementation record](e2e/QANDEEL_IP_IMP_01_INTERACTION_PREFERENCES_IMPLEMENTATION_RECORD_v1.md) §1.3.
+- **Current truth:** frozen-contract compliant: no Personal preference enters a Public model input (structural proof:
+  `interaction-preferences.isolation.spec.ts`). A reader's explicit request in their own visible Public post is World-native
+  context and is unaffected.
+- **Anti-duplication:** `QAN-BL-CW-02` owns private Personal context in a Shared World only, through the Standing Context
+  grant; no Public exception path exists in the frozen contracts and no item covers the Public World.
+- **Why deferred:** honouring a private Personal preference in a Public reply would amend CW2-04 §21–§22, a frozen
+  Connected Worlds contract; that is a Product / privacy decision, not engineering.
+- **Owner task:** `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` (name APPROVED by the Product
+  Owner, IP-IMP-01 R2 approval, 2026-10-12).
+- **Severity:** `MEDIUM` — the reader's own declared style is not applied in one World; nothing private leaks.
+- **Reopen condition:** before any Public QANDEEL feature claims to honour a reader's Personal interaction preferences, and
+  only after a reviewed Product decision amending CW2-04 §21–§22.
+- **Required future properties:** whatever is decided, a Public reply is public material for every viewer: no private
+  value is disclosed, implied or inferable from the reply, and the decision is recorded before any code.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by IP-IMP-01 under BG-06 / BG-08 in its closing change (D-SP Option A, C-2). Nothing here authorizes
+implementation (BG-07).
+
+### `QAN-BL-IP-02` — Interaction Preferences: Real-Model Behavioural Quality (Seven Reply Languages / Dialects, Brevity, Humour, Explanation Style)
+
+- **Title / Finding:** IP-IMP-01 proves structurally that the owner's durable preferences reach the ONE provider request as
+  exact Mandatory Core instructions with the right precedence. Whether a real production model follows them well — dialect
+  fidelity for Egyptian, Modern Standard, Levantine, Gulf and Maghrebi Arabic and English; brevity; humour judgement
+  (welcome without forcing, none when declined or under GUIDED Safety); simpler / direct explanation — is not measured.
+- **Source:** the IP-IMP-01 R1 Task Contract WP7 ("The Golden Conversations suite and real dialect-performance evaluation
+  remain Stage 8A"; "All seven are test candidates; their quality is proven in Stage 8A, and none may be removed"); the
+  [IP-IMP-01 implementation record](e2e/QANDEEL_IP_IMP_01_INTERACTION_PREFERENCES_IMPLEMENTATION_RECORD_v1.md) §5.
+- **Current truth:** nothing is known to be wrong; no paid model evaluation was run (contract WP7).
+- **Anti-duplication:** `QAN-BL-CW-05` is a different Stage 8A obligation (Shared semantic-place sources); no item covers
+  preference-following quality.
+- **Why deferred:** real-model behaviour is Stage 8A's evaluation scope by the contract; claiming it from a deterministic
+  router double would be fake proof.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`
+- **Severity:** `MEDIUM` — the reply quality of an approved Personal preference.
+- **Reopen condition:** automatic when Stage 8A starts its Golden Conversations / dialect evaluation; and before any
+  release claims the seven reply languages / dialects as supported.
+- **Required future properties (validation set):** each of the seven reply languages / dialects, `ALWAYS_BRIEF`, `WELCOME`
+  / `DECLINED` (and GUIDED suspension), and the three explanation styles evaluated on the production model, with the
+  current-request precedence; none of the seven is removed without a Product decision.
+- **Status:** `VALIDATION — OPEN`
+
+Admitted by IP-IMP-01 under BG-06 / BG-08 in its closing change (the contract defers it to Stage 8A by name). Nothing here
+authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -1991,16 +2054,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 26 |
-| `VALIDATION — OPEN` | 2 |
+| `DEFERRED — OWNED` | 27 |
+| `VALIDATION — OPEN` | 3 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 19 |
-| **Total** | **57** |
+| **Total** | **59** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 31 |
-| `MEDIUM` | 24 |
+| `MEDIUM` | 26 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -2452,6 +2515,14 @@ The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION �
 - **INTEL-TM-01 residue R2** (an observation, never an item): **fixed** by `background_record_memory_v1`'s `SKIPPED_COMMAND_TURN` (route spec `memory-control-words-answer.route.spec.ts`, `verify-migration-0152`, CI-01 U1 `forgottenServed` 0). INTEL-TM-01 limit **L-1** is narrowed: no new zero-support generated Hypothesis is accepted (CC-H1); legacy rows remain under `QAN-BL-INTEL-03`.
 - **Untouched:** `QAN-BL-INTEL-02` (CC-H1 refuses payloads and changes no retention, so none of its reopen conditions fires), `QAN-BL-QIR-01`, `QAN-BL-CTX-01`. `QAN-BL-PROD-06` current truth: `0152` joins the undeployed catch-up queue with `0150` and `0151`.
 - **Latest index: 57 items; 26 / 2 / 10 / 19 by status, 31 / 24 / 2 by severity**, recounted mechanically from §4.
+
+**IP-IMP-01 closing change (2026-10-12; PR open, implementation complete, awaiting independent review and the Product Owner's merge decision; not merged, not migrated on any hosted database, not deployed).** IP-IMP-01 (Interaction Preferences, migration `0153`) inherited no item (BG-05: none names it; re-checked at closure).
+- **Admitted — `QAN-BL-IP-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision`, name APPROVED by the Product Owner): Personal preferences do not shape Public replies (CW2-04 §21–§22). Anti-duplication run against the whole register.
+- **Admitted — `QAN-BL-IP-02`** (`MEDIUM`, `VALIDATION — OPEN`, owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`): real-model preference-following quality for the seven reply languages / dialects, brevity, humour and explanation style. Anti-duplication run.
+- **Reconciled, unchanged — `QAN-BL-CW-02`:** the Shared half; a current-truth note records the new Personal source; owner, scope, severity and status unchanged; no second item.
+- **Untouched:** `QAN-BL-PRIV-01/02/03` (other export facts; the Interaction Preferences export section is IP-IMP-01's own contract scope, WP6), `QAN-BL-CW-05`, `QAN-BL-CTX-01`. `QAN-BL-PROD-06` current truth: `0153` joins the undeployed hosted catch-up queue with `0150`–`0152`.
+- **Fixed inside the task, never backlog (BG-01):** the evaluator templates that stored a temporary «كلمني بالمصري» as an `INTERACTION_PREFERENCE` Memory (record §1.1 T-3, DD-6).
+- **Latest index: 59 items; 27 / 3 / 10 / 19 by status, 31 / 26 / 2 by severity**, recounted mechanically from §4.
 
 ## 8. What is deliberately not in this backlog
 

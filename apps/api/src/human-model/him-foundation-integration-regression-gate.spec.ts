@@ -28,6 +28,7 @@ import { HimBrainContextService } from './him-brain-context.service';
 import { HimBrainContextRepository } from './him-brain-context.repository';
 import { RecommendationGroundingService } from '../recommendation/recommendation-grounding.service';
 import type { HimSnapshotSourceRow } from './him-intelligence-snapshot.types';
+import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
 
 const inputSession = '20000000-0000-4000-8000-000000000001';
 const claimedSession = '20000000-0000-4000-8000-000000000002';
@@ -144,7 +145,7 @@ function setup(sourceRows: HimSnapshotSourceRow[], content = 'hello') {
   // the gate drives the real total-result classification with zero selected
   // formal Question and zero QuestionContext.
   const questionSelection = new QuestionForegroundSelectionService({ rpc: jest.fn().mockResolvedValue([{ outcome: 'NO_ELIGIBLE_GAP', binding_id: null, question_type: null }]) } as never, correlation, telemetry);
-  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), foregroundGatherer, questionSelection, new IntegratedContextBudgetAssemblerService(telemetry), new RecommendationGroundingService(), router,correlation,telemetry,{ plan: jest.fn().mockResolvedValue(null) } as never);
+  const orchestrator = new ConversationOrchestratorService(repository as never, contextBuilder as never, safety as never, { buildTextGuidance: jest.fn().mockReturnValue('behavior') } as never, selector, snapshot, bridge, policy, new HimInteractionAdaptationService(), new HimContextualCurrentIntelligenceService(reflectionBatchRepository as never), new HimSessionReflectionConsumptionService(), new HimCrossContextForegroundAggregationService(new HimCrossContextForegroundRepository(crossContextForegroundDataApi as never), situationStressConsumption, decisionAttentionConsumption, goalMotivationConsumption, relationshipCommunicationConsumption), new HimBrainContextService(new HimBrainContextRepository(brainContextDataApi as never)), foregroundGatherer, questionSelection, new IntegratedContextBudgetAssemblerService(telemetry), new RecommendationGroundingService(), router,correlation,telemetry,{ plan: jest.fn().mockResolvedValue(null) } as never,{ readForTurn: jest.fn().mockResolvedValue({ preferences: DEFAULT_INTERACTION_PREFERENCES, version: 0 }), planCommand: jest.fn() } as never);
   return { orchestrator, repository, snapshotRepository, safety, memoryRetriever, hypothesisContext, router, selector, snapshot, bridge, policy, situationStressDataApi, decisionAttentionDataApi, goalMotivationDataApi, relationshipCommunicationDataApi, crossContextForegroundDataApi, brainContextDataApi };
 }
 

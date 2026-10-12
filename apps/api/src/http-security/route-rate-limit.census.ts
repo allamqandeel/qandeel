@@ -78,6 +78,12 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'PUT /activity/snooze': 'AUTHENTICATED',
   'PUT /activity/mutes': 'AUTHENTICATED',
 
+  // Interaction Preferences (IP-IMP-01): owner-only Settings reads and single-field writes, and the optional legacy review.
+  'GET /interaction-preferences': 'AUTHENTICATED',
+  'PUT /interaction-preferences': 'AUTHENTICATED',
+  'GET /interaction-preferences/legacy-review': 'AUTHENTICATED',
+  'POST /interaction-preferences/legacy-review': 'AUTHENTICATED',
+
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',
   'POST /push/device/detach': 'AUTHENTICATED',

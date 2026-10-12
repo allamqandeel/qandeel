@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import type { BehavioralResponsePolicy } from './behavioral-response-policy.types';
+import {
+  compileInteractionPreferenceGuidance, type InteractionPreferenceGuidanceInput,
+} from '../interaction-preferences/interaction-preference-guidance';
 
 export const TEXT_V1_BEHAVIORAL_GUIDANCE = [
   'Respond in the user\'s language or dialect when reasonably inferable from the conversation; never invent demographic, religious, cultural, or other identity facts.',
@@ -14,7 +17,8 @@ export const TEXT_V1_BEHAVIORAL_GUIDANCE = [
 
 @Injectable()
 export class BehavioralResponsePolicyService implements BehavioralResponsePolicy {
-  buildTextGuidance(): string {
-    return TEXT_V1_BEHAVIORAL_GUIDANCE;
+  buildTextGuidance(interaction?: InteractionPreferenceGuidanceInput): string {
+    const preferences = interaction === undefined ? undefined : compileInteractionPreferenceGuidance(interaction);
+    return preferences === undefined ? TEXT_V1_BEHAVIORAL_GUIDANCE : `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${preferences}`;
   }
 }

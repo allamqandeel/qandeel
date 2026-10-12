@@ -80,6 +80,8 @@ import type { FormerSharedMaterialController } from './former-shared-material-co
 import type { SharedAlertsController, SharedIdController } from '../shared-world';
 import type { PublicDisplayController } from './public-display-controller';
 import { PublicDisplaySection } from './PublicDisplaySection';
+import type { InteractionPreferencesController } from './interaction-preferences-controller';
+import { InteractionPreferencesPage, InteractionPreferencesRow } from './InteractionPreferencesSection';
 
 export const SETTINGS_SURFACE_TEST_ID = 'qandeel-settings';
 
@@ -108,12 +110,14 @@ export interface SettingsSurfaceProps {
   readonly notifications?: ActivityPreferencesController;
   /** A3-02 — the device's OS permission and the education, shown in Notifications & Activity. */
   readonly push?: PushController;
+  /** IP-IMP-01: the reader's Interaction Preferences, in QANDEEL & Conversation. Without it, that row is not drawn. */
+  readonly interactionPreferences?: InteractionPreferencesController;
   /** A3-01: open directly on Notifications & Activity (from Activity, or a Direct Entry); Back from it is then Back. */
   readonly initialPage?: 'NOTIFICATIONS';
 }
 
 /** The change shown in place of the groups, if any. */
-type Change = 'PUBLIC_ID' | 'SHARED_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS' | 'FORMER_SHARED';
+type Change = 'PUBLIC_ID' | 'SHARED_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS' | 'FORMER_SHARED' | 'INTERACTION_PREFERENCES';
 /** Where the screen reader returns when a change closes. */
 type RowKey = Change;
 
@@ -219,7 +223,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, sharedAlerts, notifications, push, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, sharedAlerts, notifications, push, interactionPreferences, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -437,6 +441,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     change = <FormerSharedMaterialPage controller={formerShared} language={language} palette={palette} />;
   }
 
+  if (changing === 'INTERACTION_PREFERENCES' && interactionPreferences !== undefined) {
+    change = <InteractionPreferencesPage controller={interactionPreferences} language={language} palette={palette} busyChanged={onCommitBusy} />;
+  }
+
   if (changing === 'NOTIFICATIONS' && notifications !== undefined) {
     change = <NotificationsSettings controller={notifications} language={language} palette={palette} push={push} sharedWorlds={sharedAlerts} />;
   }
@@ -547,6 +555,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
             <View testID="qandeel-settings-group-qandeel">
               <GroupHeading text={copy.qandeelGroup} language={language} palette={palette} testID="qandeel-settings-group-qandeel-name" />
               <LanguageRow copy={copy.language} language={language} palette={palette} onOpen={() => void openLanguageSettings()} />
+              {/* IP-IMP-01 — how QANDEEL replies to the reader. Separate from the app language above (the system's). */}
+              {interactionPreferences !== undefined ? (
+                <InteractionPreferencesRow language={language} palette={palette} onOpen={() => openChange('INTERACTION_PREFERENCES')} rowRef={rowRef('INTERACTION_PREFERENCES')} />
+              ) : null}
             </View>
 
             {notifications !== undefined ? (

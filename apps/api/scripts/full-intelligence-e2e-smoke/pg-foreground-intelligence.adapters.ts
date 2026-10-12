@@ -26,6 +26,8 @@ const READABLE_TABLES = new Set([
   'memories',
   'hypotheses',
   'confidence_evaluations',
+  // IP-IMP-01: the owner's canonical Interaction Preferences record (migration 0153), read once per eligible turn.
+  'interaction_preferences',
 ]);
 const AUTHENTICATED_RPC_ALLOWLIST = new Set([
   'create_conversation_session_v1',
