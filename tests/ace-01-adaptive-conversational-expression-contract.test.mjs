@@ -2,8 +2,8 @@
 //
 // Pins the boundaries this task must not cross, each a single cited fact:
 //   * ONE personality core, the approved Product Copy Gate wording, in the ONE Behavioral Runtime guidance (WP1);
-//   * the frozen Text v1 lines unchanged, and Shared / Public still built on Text v1 alone (Gate B: no change to frozen
-//     Connected Worlds model inputs without a Product Owner decision);
+//   * the frozen Text v1 lines unchanged, and still the unchanged prefix of the Shared / Public guidance (Gate B: no change
+//     to frozen Connected Worlds model inputs without a Product Owner decision; re-anchored by ACE-SP-01, which carries it);
 //   * no second prompt, persona registry, tone engine, sentiment / emotion classifier or extra provider call (P3 / P5);
 //   * the WP2 locale compiler is pure and provider-neutral and the orchestrator still makes ONE provider call;
 //   * the Golden Conversations suite is a second named suite of the ONE brain-eval system, with no new provider and no
@@ -67,12 +67,16 @@ test('WP1: the ONE personality core is the approved Product Copy Gate wording, i
   assert.match(policy, /return preferences === undefined \? TEXT_V2_BEHAVIORAL_GUIDANCE : `\$\{TEXT_V2_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{preferences\}`;/u);
 });
 
-test('the frozen Text v1 lines are byte-identical and stay the Shared / Public guidance (Gate B)', () => {
+// RE-ANCHORED by ACE-SP-01 (2026-10-12; Gate B Option A, the ACE-SP-01 controlled amendment): Shared / Public keep Text v1
+// as the unchanged prefix of their guidance and now also receive the world-neutral core through the one pure helper. The
+// two negatives below (no Personal guidance, preference or locale authority; `locale: 'und'`) are kept verbatim.
+test('the frozen Text v1 lines are byte-identical and stay the unchanged prefix of the Shared / Public guidance (Gate B, ACE-SP-01)', () => {
   const v1 = block(policy, 'TEXT_V1_BEHAVIORAL_GUIDANCE');
   for (const line of FROZEN_TEXT_V1) assert.ok(v1.includes(`'${line}'`), `frozen v1 line present: ${line.slice(0, 40)}`);
   assert.equal((v1.match(/^\s+'/gmu) ?? []).length, FROZEN_TEXT_V1.length);
-  for (const [name, source] of [['Shared', shared], ['Public', publicInput]]) {
-    assert.match(source, /import \{ TEXT_V1_BEHAVIORAL_GUIDANCE \} from '\.\.\/conversation\/behavioral-response-policy\.service';/u, `${name} imports Text v1 only`);
+  for (const [name, source, frame] of [['Shared', shared, 'SHARED_CONVERSATION_FRAME'], ['Public', publicInput, 'PUBLIC_QANDEEL_FRAME']]) {
+    assert.match(source, /import \{ TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality \} from '\.\.\/conversation\/behavioral-response-policy\.service';/u, `${name} imports Text v1 and the world-neutral helper only`);
+    assert.ok(source.includes(`behavioralGuidance: withWorldNeutralPersonality(\`\${TEXT_V1_BEHAVIORAL_GUIDANCE}\\n\${${frame}}\`, Boolean(safetyGuidance)),`), `${name} keeps Text v1 + its frame as the literal prefix`);
     assert.doesNotMatch(source, /TEXT_V2_BEHAVIORAL_GUIDANCE|QANDEEL_PERSONALITY_CORE|BehavioralResponsePolicyService|interaction-preference|resolveConversationLocale/u, `${name} receives no Personal guidance, preference or locale authority`);
     assert.match(source, /locale: 'und',/u, `${name} keeps its frozen locale`);
   }

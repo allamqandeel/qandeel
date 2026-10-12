@@ -2,7 +2,7 @@ import { BadRequestException, ServiceUnavailableException } from '@nestjs/common
 import { currentAiUsageAttribution } from '../ai-usage/ai-usage-attribution';
 import type { SharedQandeelReplyService } from '../connected-worlds/material-commit/shared-qandeel-reply.service';
 import { SafetyResponseGateService } from '../conversation/safety-response-gate.service';
-import { TEXT_V1_BEHAVIORAL_GUIDANCE } from '../conversation/behavioral-response-policy.service';
+import { TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from '../conversation/behavioral-response-policy.service';
 import { DataApiError } from '../conversation/supabase-data-api.service';
 import { ROUTE_RATE_LIMIT_CENSUS } from '../http-security/route-rate-limit.census';
 import { HISTORY_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
@@ -196,7 +196,9 @@ describe('S4-02 Shared model-input assembler', () => {
       { role: 'ASSISTANT', content: 'Hi both.' },
       { role: 'USER', content: 'Amal: كيف حالك؟' },
     ]);
-    expect(request.behavioralGuidance).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}`);
+    // RE-ANCHORED by ACE-SP-01 (2026-10-12; the ACE-SP-01 controlled amendment): Text v1 + the Shared frame stay the
+    // unchanged prefix, followed by the world-neutral QANDEEL personality (no Safety guidance on this turn).
+    expect(request.behavioralGuidance).toBe(withWorldNeutralPersonality(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}`, false));
   });
 
   it('carries no Personal intelligence of any kind', () => {

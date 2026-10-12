@@ -275,6 +275,7 @@
     "test:task-closure-governance-contract": "node --test tests/task-closure-governance-contract.test.mjs",
     "test:ci-01-intelligence-evidence-baseline-contract": "node --test tests/ci-01-intelligence-evidence-baseline-contract.test.mjs",
     "test:ace-01-adaptive-conversational-expression-contract": "node --test tests/ace-01-adaptive-conversational-expression-contract.test.mjs",
+    "test:ace-sp-01-shared-public-personality-core-contract": "node --test tests/ace-sp-01-shared-public-personality-core-contract.test.mjs",
     "test:intel-tm-01-personal-evidence-truth-maintenance-contract": "node --test tests/intel-tm-01-personal-evidence-truth-maintenance-contract.test.mjs",
     "test:mem-ar-01-memory-subject-identity-contract": "node --test tests/mem-ar-01-memory-subject-identity-contract.test.mjs",
     "verify:ci-01:intelligence-reality:local": "node scripts/ci-01/local-db.mjs run-baseline",

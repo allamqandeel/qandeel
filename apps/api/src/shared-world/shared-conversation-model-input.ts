@@ -7,6 +7,9 @@
  *   - the frozen Behavioral Response Policy (TEXT_V1), unchanged, plus a short STRUCTURAL frame that tells the model
  *     the truth about where it is: a Shared World conversation between named people and QANDEEL, with nothing known
  *     about them beyond what is written there (CW2-03 §41, §43; Product definition §10). It adds no new behaviour law;
+ *   - after that unchanged prefix, the ONE QANDEEL personality in its world-neutral form, and on a Safety GUIDED turn
+ *     the approved humour suspension (the ACE-SP-01 controlled amendment). It reads no Personal preference, person or
+ *     state, so the requester gains no authority over the others and nothing about anyone is kept;
  *   - the Safety Response Gate's guidance when it guided this turn;
  *   - producer attribution by legitimate visible Name only — no internal identifier, audience, authority or provenance
  *     reaches the provider;
@@ -15,7 +18,7 @@
  * It never adds Memory, Human Intelligence, Hypothesis, Recommendation or Question context: Personal intelligence is
  * not Shared context (S4-02 §1.3). Pure; no I/O.
  */
-import { TEXT_V1_BEHAVIORAL_GUIDANCE } from '../conversation/behavioral-response-policy.service';
+import { TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from '../conversation/behavioral-response-policy.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { HISTORY_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
 import type { ModelRouterContextMessage, ModelRouterRequest } from '../model-router/model-router.types';
@@ -81,7 +84,7 @@ export function assembleSharedConversationRequest(
     task: 'CONVERSATIONAL_RESPONSE',
     path,
     complexity: path === 'DEEP' ? 'HIGH' : 'LOW',
-    behavioralGuidance: `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}`,
+    behavioralGuidance: withWorldNeutralPersonality(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${SHARED_CONVERSATION_FRAME}`, Boolean(safetyGuidance)),
     ...(safetyGuidance === undefined ? {} : { safetyGuidance }),
     context,
     locale: 'und',

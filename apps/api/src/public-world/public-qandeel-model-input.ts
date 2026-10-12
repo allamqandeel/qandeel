@@ -11,9 +11,11 @@
  *
  * The request adds the frozen Behavioral Response Policy (TEXT_V1), unchanged, and a short STRUCTURAL frame telling the
  * model the truth about where it is: a public discussion under one published Experience, where its answer is public
- * discussion material, not a private conversation. Pure; no I/O.
+ * discussion material, not a private conversation. After that unchanged prefix comes the ONE QANDEEL personality in its
+ * world-neutral form, and on a Safety GUIDED turn the approved humour suspension (the ACE-SP-01 controlled amendment);
+ * it reads no Personal preference, person or state. Pure; no I/O.
  */
-import { TEXT_V1_BEHAVIORAL_GUIDANCE } from '../conversation/behavioral-response-policy.service';
+import { TEXT_V1_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality } from '../conversation/behavioral-response-policy.service';
 import { decideFastDeepRoute } from '../intelligence-runtime/fast-deep-runtime-decision-policy-v2';
 import { HISTORY_BUDGET_BYTES } from '../intelligence-runtime/integrated-context-budget-contract';
 import type { ModelRouterRequest } from '../model-router/model-router.types';
@@ -82,7 +84,7 @@ export function assemblePublicQandeelRequest(context: PublicQandeelContext, safe
     task: 'CONVERSATIONAL_RESPONSE',
     path,
     complexity: path === 'DEEP' ? 'HIGH' : 'LOW',
-    behavioralGuidance: `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${PUBLIC_QANDEEL_FRAME}`,
+    behavioralGuidance: withWorldNeutralPersonality(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n${PUBLIC_QANDEEL_FRAME}`, Boolean(safetyGuidance)),
     ...(safetyGuidance === undefined ? {} : { safetyGuidance }),
     context: [{ role: 'USER', content: `${experienceBlock(context)}\n\n${discussion}` }],
     locale: 'und',

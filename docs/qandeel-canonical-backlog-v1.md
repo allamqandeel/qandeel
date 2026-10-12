@@ -193,8 +193,9 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PRIV-03` | Export My Data Omits Whom Each Memory Is About (the Subject `about` Field) | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-IP-01` | Personal Interaction Preferences Do Not Shape Public World QANDEEL Replies | `PUBLIC-PREF-01 — Public World Personal Interaction Preference Decision` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-IP-02` | Interaction Preferences: Real-Model Behavioural Quality (Seven Reply Languages / Dialects, Brevity, Humour, Explanation Style) | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
-| `QAN-BL-ACE-01` | The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B) | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-ACE-01` | The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B) | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-ACE-02` | Adaptive Conversational Expression: Real-Model Personality Behaviour on the Golden Conversations Suite | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
+| `QAN-BL-GOV-01` | Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -989,6 +990,11 @@ S4-01's scope, and nothing here authorizes implementation (BG-07).
   fixed Text v1 guidance and offers no private candidate (proved structurally by IP-IMP-01's isolation spec). Whether a
   participant's preferences may ever shape a Shared group reply is decided here; the item's scope, owner, severity and
   status are unchanged, and no second item was admitted for it (anti-duplication).
+- **Current truth (BG-08 reconciliation at ACE-SP-01, 2026-10-12; Draft PR, not merged):** the Shared reply builder now
+  renders Text v1 + the Shared frame, then the world-neutral QANDEEL personality guidance (the ACE-SP-01 controlled
+  amendment), plus the approved humour suspension on a Safety `GUIDED` turn. That guidance is the same for every
+  participant, and no participant's preference is read. It still offers no private candidate, and the isolation spec stays
+  unchanged and green. This item's scope, owner, severity and status are unchanged.
 - **Why deferred:** each missing part is a reviewed Product / privacy boundary of its own; inventing a Personal source,
   collector, detector or source-state resolver inside S4-02 would be engineering inventing Product and authority logic
   (`AGENTS.md` §2). It does not block S4-02's Shared conversation over Shared-native history.
@@ -1681,6 +1687,10 @@ Nothing here authorizes implementation (BG-07).
 - **Current truth:** frozen-contract compliant: no Personal preference enters a Public model input (structural proof:
   `interaction-preferences.isolation.spec.ts`). A reader's explicit request in their own visible Public post is World-native
   context and is unaffected.
+- **Current truth (BG-08 reconciliation at ACE-SP-01, 2026-10-12; Draft PR, not merged):** Public QANDEEL responses now
+  also carry the world-neutral QANDEEL personality guidance (the ACE-SP-01 controlled amendment). That guidance is
+  identical for every reader and reads no preference. The isolation spec stays unchanged and green: still no Personal
+  preference in a Public input. This item's scope, owner, severity and status are unchanged.
 - **Anti-duplication:** `QAN-BL-CW-02` owns private Personal context in a Shared World only, through the Standing Context
   grant; no Public exception path exists in the frozen contracts and no item covers the Public World.
 - **Why deferred:** honouring a private Personal preference in a Public reply would amend CW2-04 §21–§22, a frozen
@@ -1724,6 +1734,9 @@ Admitted by IP-IMP-01 under BG-06 / BG-08 in its closing change (the contract de
 authorizes implementation (BG-07).
 
 ### `QAN-BL-ACE-01` — The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B)
+
+> **Historical pre-closure schema.** This block records the item as admitted by ACE-01. It is not the current lifecycle
+> state; the current state is the `CLOSED — TOMBSTONE` record in §6 below (ACE-SP-01).
 
 - **Title / Finding:** ACE-01 activates the approved ONE QANDEEL personality core in the Personal conversation (Text v2 =
   frozen Text v1 + the core). Shared World and Public World QANDEEL replies are still built on Text v1 alone, so they carry
@@ -1776,10 +1789,65 @@ Admitted by ACE-01 under BG-06 / BG-08 in its closing change (the contract's Gat
 - **Required future properties (validation set):** the `golden-conversations` suite run blinded through the existing
   harness, every negative control scored with its FAIL condition, the unfit-register FAIL counts reported, no human review of
   private conversations, and no provider selected by the evaluation itself.
+- **Scope extension (ACE-SP-01; Product Owner decision D-4, 2026-10-12):** the same validation, with the same owner, now
+  also covers the world-neutral personality that ACE-SP-01 sends to Shared World and Public World QANDEEL replies. No new
+  item is created.
+
+  Cases to add to the validation set, synthetic and with no private conversation reviewed by a human:
+  1. a Shared group whose participants write in different languages or dialects;
+  2. one participant's explicit language or style request, followed by another participant's turn (the request must not
+     become a standing preference for the others);
+  3. disagreement between participants (no side taken by default; respectful disagreement without humiliating anyone);
+  4. a public discussion under an Experience, where the reply is public material and must not read as a private
+     conversation;
+  5. a Safety `GUIDED` turn in each World (the humour suspension is honoured);
+  6. fitting light humour in an everyday group moment, and none at anyone's expense.
+
+  ACE-SP-01 proves the structure deterministically and runs no paid evaluation.
 - **Status:** `VALIDATION — OPEN`
 
 Admitted by ACE-01 under BG-06 / BG-08 in its closing change (the contract defers it to Stage 8A by name). Nothing here
 authorizes implementation (BG-07).
+
+### `QAN-BL-GOV-01` — Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges
+
+- **Title / Finding:** several repository locators and closure records still describe merged work as unmerged, or omit it.
+  Each was verified on `main` at `141a3190deb02bc6695d2ace05da275e623a2754`:
+  1. `QANDEEL_CURRENT_STATE.md` and `QANDEEL_PROJECT_MAP.md` have no IP-IMP-01 (PR #331, `424cd023`) or ACE-01 (PR #332,
+     `141a3190`) row. The Project Map's INTEL-TM-01 checkpoint still calls them "later proposed C2 slices".
+  2. The IP-IMP-01 and ACE-01 implementation records keep their pre-merge `**Status:**` banners ("READY FOR INDEPENDENT
+     REVIEW AND THE PRODUCT OWNER'S MERGE DECISION"). Their closing-change paragraphs in §7 still read "PR open … not
+     merged".
+  3. SHARED-VIS-01 merged through PR #321 as `59731231`, but Current State (§3.7, §7) and this register's §9 owner row
+     still show it as ACTIVE / not merged, and `QAN-BL-CW-03` is still `DEFERRED — OWNED` with no recorded disposition.
+  4. The §9 owner row for `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` omits `QAN-BL-IP-02`.
+  5. Current State §5 still counts 57 items while §4 holds more.
+  6. The CI-01 baseline census (`docs/intelligence-evidence-baseline-v1.md`) rows C-30 and C-31 describe the pre-ACE-01
+     guidance and locale ("one static string (8 lines)", `locale: 'und'` always). Rows C-22 and C-23 do not mention the
+     world-neutral personality guidance added by ACE-SP-01. The census is dated (`census-v2`), so these rows are
+     historical at their SHA, but nothing marks them so.
+- **Source:** the Product Owner's *ACE-SP-01 — Final Product Approval & Implementation Authorization* (2026-10-12), §6:
+  pre-existing drift is presented as one standalone, clearly owned item for later review and is not repaired inside
+  ACE-SP-01. It was observed in the ACE-SP-01 WP0 report §12.
+- **Current truth:** no runtime, Product or authority semantics are affected. The backlog's §4 index and §7 counts are
+  current. ACE-SP-01 updated only its own rows (the Canonical Authority Index, Project Map rule 2, its Current State row
+  and its own backlog items). It does not claim that the locators are reconciled.
+- **Anti-duplication:** no item covers locator or closure-record drift. `QAN-BL-CW-03`'s own disposition belongs to
+  SHARED-VIS-01's closing change and is not decided here.
+- **Why deferred:** AGENTS.md §10.6 and BG-09 say that repairing a predecessor's closure record is a governance task, not
+  ordinary inheritance. The Product Owner kept it out of ACE-SP-01's scope.
+- **Owner task:** `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation`. ACE-SP-01 proposed this name; the
+  Product Owner confirms it or renames it at review.
+- **Severity:** `MEDIUM` — locators that misstate lifecycle can mislead the next task's kickoff (BG-05). No runtime effect.
+- **Reopen condition:** before the next task whose kickoff relies on Current State or the Project Map for the IP-IMP-01,
+  ACE-01 or SHARED-VIS-01 lifecycle, and in any case before Stage 8A starts.
+- **Required future property:** each listed locator and record states the true merged lifecycle with its PR and SHA. Each
+  correction is recorded explicitly, never by quietly rewriting history (BG-09). `QAN-BL-CW-03` receives a recorded
+  disposition. No Product semantics are reopened.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted by ACE-SP-01 under BG-06 in its closing change, as the Product Owner designated (§6 of the authorization).
+Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -2108,6 +2176,35 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
   two connections with no deadlock.
 - **Status:** `CLOSED — TOMBSTONE`
 
+### `QAN-BL-ACE-01` — The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B)
+
+- **Closing task:** `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision`
+- **PR / SHA:** Draft PR #333 from branch `ace/ace-sp-01-shared-public-personality-core` (closing change `335bb09a`; the
+  [ACE-SP-01 implementation record](e2e/QANDEEL_ACE_SP_01_SHARED_PUBLIC_PERSONALITY_CORE_IMPLEMENTATION_RECORD_v1.md)
+  §9). The tombstone holds from that PR's merge, and the merge SHA is filled in at merge. Not merged; no migration; not
+  deployed.
+- **Disposition:** completed for both Worlds, under the Product Owner's *ACE-SP-01 — Final Product Approval &
+  Implementation Authorization* (2026-10-12; D-1 … D-4; Product Copy Gate CG-1 … CG-6 APPROVED 6 / 6).
+  - **Amendment first.** The standalone [ACE-SP-01 controlled amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md),
+    registered in the Canonical Authority Index and Project Map rule 2, precedes the code in the same PR. CW2-03 / 04 / 08,
+    `CW2_SOURCE_PROVENANCE.sha256` and the S4-02 / S5-04 records are untouched.
+  - **One personality.** Shared World and Public World QANDEEL replies now carry Text v1 + their unchanged frame, then the
+    world-neutral core derived by reference from the ONE approved core.
+  - **GUIDED.** On a Safety `GUIDED` turn only, the approved humour-suspension line is added, immediately before the
+    Safety block.
+  - **Every required future property holds:**
+    - one personality definition, no second persona;
+    - the world-neutral wording passed the Product Copy Gate;
+    - Shared / Public inputs carry no Personal data, no preference and no requester identity;
+    - `locale: 'und'`;
+    - BLOCK still makes zero provider calls;
+    - Personal guidance is byte-identical;
+    - the frozen records were amended before any code.
+  - **Proof:** `apps/api/src/conversation/ace-sp-01-shared-public-personality-core.spec.ts` and
+    `tests/ace-sp-01-shared-public-personality-core-contract.test.mjs`.
+  - **Real-model behaviour** is validated under `QAN-BL-ACE-02` (validation set extended, D-4).
+- **Status:** `CLOSED — TOMBSTONE`
+
 ---
 
 ## 7. Counts at this baseline
@@ -2117,13 +2214,13 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | `DEFERRED — OWNED` | 28 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 19 |
-| **Total** | **61** |
+| `CLOSED — TOMBSTONE` | 20 |
+| **Total** | **62** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 31 |
-| `MEDIUM` | 28 |
+| `MEDIUM` | 29 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -2591,6 +2688,29 @@ The register still holds **54** items: 24 `DEFERRED — OWNED`, 2 `VALIDATION �
 - **Not backlog (BG-06):** the absent tone engine, the model-honoured temporary requests and the absent first-contact signal are design decisions recorded in the [ACE-01 record](e2e/QANDEEL_ACE_01_ADAPTIVE_CONVERSATIONAL_EXPRESSION_IMPLEMENTATION_RECORD_v1.md) §2, not obligations.
 - **Latest index: 61 items; 28 / 4 / 10 / 19 by status, 31 / 28 / 2 by severity**, recounted mechanically from §4.
 
+**ACE-SP-01 closing change (2026-10-12; Draft PR, implementation complete, ready for independent review and the Product
+Owner's merge decision; not merged, no migration, not deployed).** ACE-SP-01 (Shared / Public QANDEEL Personality Core,
+under the [ACE-SP-01 controlled amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_ACE-SP-01_SHARED_PUBLIC_PERSONALITY_CORE_CONTROLLED_AMENDMENT_v1.0.md)).
+Kickoff (BG-05): it inherited exactly one item, `QAN-BL-ACE-01`, included in its Task Contract. Re-checked at closure.
+- **Tombstoned — `QAN-BL-ACE-01`:** both Worlds are delivered and the protection is proven (§6 tombstone). It holds from
+  the PR's merge.
+- **Scope extended, owner and status unchanged — `QAN-BL-ACE-02`** (Product Owner D-4): the Stage 8A validation set now
+  also covers the world-neutral personality in Shared / Public — mixed-language groups, differing participants, the
+  public discussion, `GUIDED` Safety, fitting humour. No duplicate item was created and no paid evaluation was run.
+- **Admitted — `QAN-BL-GOV-01`** (`MEDIUM`, `DEFERRED — OWNED`, owner `GOV-REC-01 — Post-merge Locator & Closure-Record
+  Reconciliation`, name proposed for the Product Owner's confirmation): pre-existing locator and closure-record drift
+  after the IP-IMP-01, ACE-01 and SHARED-VIS-01 merges, presented as one standalone item at the Product Owner's direction
+  (§6) and not repaired here. Anti-duplication run against the whole register.
+- **Reconciled, owner and status unchanged:**
+  - `QAN-BL-CW-02` (`SHARED-CTX-01`): a current-truth note records that the Shared assembler now adds the world-neutral
+    personality guidance, and still offers no private candidate.
+  - `QAN-BL-IP-01` (`PUBLIC-PREF-01`): a current-truth note records that no Personal preference enters a Public input.
+  - `QAN-BL-MATCH-01`: Introduction-phase Shared Worlds share the Shared reply path and gain no Matching or Introduction
+    context.
+- **Untouched:** `QAN-BL-IP-02`, `QAN-BL-CW-03`, `QAN-BL-CW-05`, `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01` (no account edge).
+  `QAN-BL-PROD-06` current truth is unchanged: ACE-SP-01 adds no migration.
+- **Latest index: 62 items; 28 / 4 / 10 / 20 by status, 31 / 29 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -2672,7 +2792,8 @@ Inherited after T-12 closure reconciliation:
 | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `QAN-BL-INTEL-02` (owner name PO-APPROVED) |
 | `QAN-INF-06 — Forward-Safety Mirror Expo Validation Determinism` | `QAN-BL-CI-02` (owner name PO-APPROVED) |
 | `ACE-01 — Adaptive Conversational Expression v1` | none — no item names it; admitted `QAN-BL-ACE-01` (Gate B) and `QAN-BL-ACE-02` (Stage 8A); `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05` and `QAN-BL-VOICE-01` observed and left unchanged |
-| `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` (owner name and Gate B Option A approved by the Product Owner, 2026-10-12; not yet authorized) |
+| `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` — authorized by the Product Owner (2026-10-12; D-1 … D-4, Copy Gate 6 / 6); delivered for both Worlds under the ACE-SP-01 controlled amendment and tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-ACE-02`'s validation set extended (D-4; owner and status unchanged); admitted `QAN-BL-GOV-01`; `QAN-BL-CW-02`, `QAN-BL-IP-01` and `QAN-BL-MATCH-01` reconciled with owners unchanged |
+| `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `QAN-BL-GOV-01` (admitted by ACE-SP-01; owner name proposed for the Product Owner's confirmation) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 
