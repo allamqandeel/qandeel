@@ -2,16 +2,19 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ClaudeModelRouter } from '../src/model-router/providers/anthropic/claude-model-router';
 import { OpenAIModelRouter } from '../src/model-router/providers/openai/openai-model-router';
-import { EVALUATION_ARTIFACT_DIRECTORY, expectedRequestCount, runEvaluation, writeEvaluationArtifacts } from '../src/brain-eval/brain-eval.harness';
-import { BRAIN_EVALUATION_SUITE } from '../src/brain-eval/brain-eval.suite';
+import { expectedRequestCount, runEvaluation, writeEvaluationArtifacts } from '../src/brain-eval/brain-eval.harness';
+import { resolveEvaluationSuite } from '../src/brain-eval/brain-eval.suites';
 import { summarizeResults } from '../src/brain-eval/brain-eval.summary';
-import { assertPaidRunAllowed, validateEvaluationSuite } from '../src/brain-eval/brain-eval.validation';
+import { assertPaidRunAllowed } from '../src/brain-eval/brain-eval.validation';
 import type { CandidateResult } from '../src/brain-eval/brain-eval.types';
 
 async function main(): Promise<void> {
   const command = process.argv[2];
+  // ACE-01 (WP3): an optional suite name selects a named suite of the same system; the default is the Brain Bake-off.
+  const suite = resolveEvaluationSuite(process.argv[3]);
   if (command === 'validate' || command === 'dry-run') {
-    const report = validateEvaluationSuite(BRAIN_EVALUATION_SUITE);
+    const report = suite.validate(suite.cases);
+    console.log(`SUITE: ${suite.name}.`);
     console.log(`VALID: ${report.caseCount} synthetic cases (${report.fastCount} FAST, ${report.deepCount} DEEP).`);
     console.log(`PLANNED: ${report.expectedPaidRequests} bounded provider requests in a paid run.`);
     for (const warning of report.warnings) console.log(`PRICING WARNING: ${warning}`);
@@ -19,24 +22,24 @@ async function main(): Promise<void> {
     return;
   }
   if (command === 'run') {
-    const planned = expectedRequestCount(BRAIN_EVALUATION_SUITE);
-    console.log(`PLANNED PAID REQUESTS: ${planned}. This command will incur provider cost.`);
+    const planned = expectedRequestCount(suite.cases);
+    console.log(`PLANNED PAID REQUESTS (${suite.name}): ${planned}. This command will incur provider cost.`);
     assertPaidRunAllowed(process.env);
-    validateEvaluationSuite(BRAIN_EVALUATION_SUITE);
-    const results = await runEvaluation(BRAIN_EVALUATION_SUITE, { ANTHROPIC: ClaudeModelRouter.fromEnvironment(), OPENAI: OpenAIModelRouter.fromEnvironment() });
-    await writeEvaluationArtifacts(BRAIN_EVALUATION_SUITE, results);
-    console.log(`COMPLETE: ${results.length} attempts. Local artifacts written under artifacts/evals/.`);
+    suite.validate(suite.cases);
+    const results = await runEvaluation(suite.cases, { ANTHROPIC: ClaudeModelRouter.fromEnvironment(), OPENAI: OpenAIModelRouter.fromEnvironment() });
+    await writeEvaluationArtifacts(suite.cases, results, suite.artifactDirectory, suite.rubric);
+    console.log(`COMPLETE: ${results.length} attempts. Local artifacts written under ${suite.artifactDirectory}.`);
     return;
   }
   if (command === 'summarize') {
-    const results = JSON.parse(await readFile(join(EVALUATION_ARTIFACT_DIRECTORY, 'results.json'), 'utf8')) as CandidateResult[];
-    const reviews = JSON.parse(await readFile(join(EVALUATION_ARTIFACT_DIRECTORY, 'blinded-review.json'), 'utf8')) as Record<string, unknown>[];
+    const results = JSON.parse(await readFile(join(suite.artifactDirectory, 'results.json'), 'utf8')) as CandidateResult[];
+    const reviews = JSON.parse(await readFile(join(suite.artifactDirectory, 'blinded-review.json'), 'utf8')) as Record<string, unknown>[];
     const summary = summarizeResults(results, reviews);
-    await writeFile(join(EVALUATION_ARTIFACT_DIRECTORY, 'summary.json'), JSON.stringify(summary, null, 2));
-    console.log('SUMMARY COMPLETE: evidence written to artifacts/evals/summary.json; no production winner was selected.');
+    await writeFile(join(suite.artifactDirectory, 'summary.json'), JSON.stringify(summary, null, 2));
+    console.log(`SUMMARY COMPLETE: evidence written to ${join(suite.artifactDirectory, 'summary.json')}; no production winner was selected.`);
     return;
   }
-  throw new Error('Usage: brain-eval.ts validate|dry-run|run|summarize');
+  throw new Error('Usage: brain-eval.ts validate|dry-run|run|summarize [brain-bakeoff|golden-conversations]');
 }
 
 main().catch((error: unknown) => {

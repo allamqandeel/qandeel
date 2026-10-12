@@ -152,7 +152,11 @@ function explicitTriggerViolations(world) {
   const out = [];
   // No keyword interception: nothing in the Conversation turn path looks at what the reader typed for a disagreement.
   if (world.conversationPath.length < 1000) out.push('the conversation path was not read');
-  if (/disagree|contest|I see it differently|أراه بشكل مختلف/iu.test(code(world.conversationPath))) out.push('the conversation path interprets what the reader says as a disagreement');
+  // ACE-01 re-anchor: the ONE approved model-facing personality sentence about QANDEEL's own respectful disagreement (P7,
+  // Product Copy Gate) is guidance TO the model, not interception of what the reader types; exactly that sentence is
+  // excluded, so any other occurrence anywhere on the path is still caught.
+  const path = code(world.conversationPath).replace('When genuine evidence supports disagreement, be clear and respectful. Explain the reason without moralizing, humiliating the user or arguing to win.', '');
+  if (/disagree|contest|I see it differently|أراه بشكل مختلف/iu.test(path)) out.push('the conversation path interprets what the reader says as a disagreement');
   if (!/onPress=\{\(\) => \{\n\s*void controller\.disagree\(\);/u.test(world.strip)) out.push('the act is not one explicit control');
   return out;
 }

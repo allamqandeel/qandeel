@@ -163,6 +163,73 @@ export function interpretLegacyInteractionPreference(content: string): Pick<Inte
   return core ? { field: core.field, value: core.value } : null;
 }
 
+// ------------------------------------------------------------------------------------------------------------------
+// ACE-01 (WP2, review R1) — an explicit TEMPORARY reply-language request, for the current turn's `locale` only.
+// A closed, whole-message grammar that extends the language verbs and varieties above with the natural request forms
+// («خلاص قول لي بالعربي», «ممكن ترد بالانجليزي؟», "Can you answer in English?", "switch to Arabic"). It names a LANGUAGE
+// (`ar` | `en`), never a dialect or a tone, and it is never a command: the durable grammar above is unchanged, so a
+// temporary request is still not stored. Anything outside it — a negation, a quotation, a request inside a longer
+// message, a mixed-script or ambiguous question ("Do you speak English?") — is null.
+// ------------------------------------------------------------------------------------------------------------------
+export type ExplicitReplyLanguage = 'ar' | 'en';
+
+const languageOfValue = (value: InteractionPreferenceValue): ExplicitReplyLanguage => (value === 'ENGLISH' ? 'en' : 'ar');
+
+const AR_TEMPORARY_LEAD = '(?:(?:خلاص|طب|طيب|بس|يلا|اوك|اوكي|معلش|ممكن|ياريت|يا ريت|من فضلك|لو سمحت|المره دي) ){0,3}';
+const AR_TEMPORARY_VERB = `(?:${AR_LANGUAGE_VERB}|ت?قول ?لي|ت?قوللي|ت?احكي ?لي|ت?حكي ?لي|ت?رد|ت?جاوب|ت?اكتب ?لي|ت?اكتب|ت?كمل|اتكلم|ت?تكلم|نتكلم|خلينا نتكلم)`;
+const AR_TEMPORARY_LANGUAGES: ReadonlyArray<readonly [string, ExplicitReplyLanguage]> = [
+  ['(?:بالعربي|بالعربيه|باللغه العربيه|عربي)', 'ar'],
+  ['(?:انجليزي|انكليزي)', 'en'],
+  ...AR_VARIETIES.map(([variety, value]) => [variety, languageOfValue(value)] as const),
+];
+const AR_TEMPORARY_TRAIL = '(?: (?:المره دي|دلوقتي|بقي|بقا|الحين|هلق|هلا))?';
+
+const EN_TEMPORARY_LEAD = '(?:(?:ok|okay|so|now|actually|alright|hey|then) )?';
+const EN_TEMPORARY_LANGUAGES: ReadonlyArray<readonly [string, ExplicitReplyLanguage]> = [
+  ['arabic', 'ar'],
+  ...EN_VARIETIES.map(([variety, value]) => [variety, languageOfValue(value)] as const),
+];
+const EN_TEMPORARY_FORMS = (language: string): readonly string[] => [
+  `(?:(?:can|could|would|will) you (?:please )?)?(?:${EN_LANGUAGE_VERB}|continue) in ${language}`,
+  `(?:(?:can|could|shall) we|let[’']s|let us) (?:please )?(?:speak|talk|chat|continue)(?: in)? ${language}`,
+  `(?:(?:can|could) you (?:please )?|let[’']s |let us )?(?:switch|change|go) (?:back )?to ${language}`,
+];
+const EN_TEMPORARY_TRAIL = '(?: (?:this time|for now|now|instead))?';
+
+const TEMPORARY_LANGUAGE_REQUESTS: ReadonlyArray<{ readonly language: ExplicitReplyLanguage; readonly pattern: RegExp }> = [
+  ...AR_TEMPORARY_LANGUAGES.map(([variety, language]) => ({
+    language, pattern: new RegExp(`^${AR_TEMPORARY_LEAD}${AR_TEMPORARY_VERB} ${variety}${AR_TEMPORARY_TRAIL}$`, 'u'),
+  })),
+  ...EN_TEMPORARY_LANGUAGES.flatMap(([variety, language]) => EN_TEMPORARY_FORMS(variety).map((form) => ({
+    language, pattern: new RegExp(`^${EN_TEMPORARY_LEAD}${form}${EN_TEMPORARY_TRAIL}$`, 'u'),
+  }))),
+];
+
+/** One question mark may END a request only when it is phrased as one («ممكن …؟», "can / could / would you …?"). */
+const TRAILING_QUESTION = /\s*[?؟]+\s*$/u;
+const REQUEST_QUESTION = /(?:^| )(?:ممكن|(?:can|could|would|will|shall) (?:you|we)) /u;
+
+/**
+ * ACE-01 (WP2) — the reply language this whole message explicitly asks for in the current turn, temporary or durable
+ * («خلاص قول لي بالعربي», "Can you answer in English?", "from now on answer in English"); null for anything else. It
+ * stores nothing and is not a command: it only tells the current turn which explicit language request it carries.
+ */
+export function interpretExplicitReplyLanguageRequest(content: string): ExplicitReplyLanguage | null {
+  if (typeof content !== 'string' || content.length === 0 || content.length > 200) return null;
+  const asked = TRAILING_QUESTION.test(content);
+  const body = content.replace(TRAILING_QUESTION, '');
+  if (QUESTION.test(body)) return null;
+  const text = prepare(body);
+  if (text.length === 0) return null;
+  for (const candidate of [text, withoutDurableMarker(text)]) {
+    if (candidate === undefined || candidate.length === 0) continue;
+    if (asked && !REQUEST_QUESTION.test(candidate)) continue;
+    const request = TEMPORARY_LANGUAGE_REQUESTS.find((entry) => entry.pattern.test(candidate));
+    if (request) return request.language;
+  }
+  return null;
+}
+
 /**
  * The explicit durable command this whole message is, or null. Never throws; anything it does not recognise is null.
  */

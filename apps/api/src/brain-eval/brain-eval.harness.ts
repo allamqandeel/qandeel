@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { BehavioralResponsePolicyService } from '../conversation/behavioral-response-policy.service';
+import { SafetyResponseGateService } from '../conversation/safety-response-gate.service';
+import { DEFAULT_INTERACTION_PREFERENCES } from '../interaction-preferences/interaction-preferences.types';
 import { resolveAnthropicModel, resolveOpenAIModel } from '../model-router/model-profile.registry';
 import type { ModelRouter, ModelRouterRequest, ProcessingPath } from '../model-router/model-router.types';
 import { estimateCostUsd } from './brain-eval.pricing';
@@ -30,12 +32,35 @@ export function providerExecutionOrder(caseId: string): readonly [EvaluationProv
   return first === 'ANTHROPIC' ? ['ANTHROPIC', 'OPENAI'] : ['OPENAI', 'ANTHROPIC'];
 }
 
-export function buildEvaluationRequest(testCase: BrainEvaluationCase, guidance: string): ModelRouterRequest {
+/**
+ * ACE-01 (WP3): the production Safety guidance for a case the production Safety gate decides GUIDED, else undefined.
+ * A case labelled GUIDED that the gate does not decide GUIDED is refused, so a label never stands in for Safety.
+ */
+export function evaluationSafetyGuidance(testCase: BrainEvaluationCase): string | undefined {
+  if (testCase.safety !== 'GUIDED') return undefined;
+  const decision = new SafetyResponseGateService().evaluate(testCase.context.at(-1)?.content ?? '', testCase.context);
+  if (decision.disposition !== 'GUIDED' || !decision.safetyGuidance) throw new Error(`${testCase.id} is not GUIDED by the production Safety gate.`);
+  return decision.safetyGuidance;
+}
+
+/**
+ * The production Behavioral Runtime guidance for a case. A case without declared preferences or GUIDED Safety gets the
+ * plain production guidance; a Golden case gets it exactly as the orchestrator renders it, compiled preferences and the
+ * GUIDED humour suspension included.
+ */
+export function evaluationGuidance(testCase: BrainEvaluationCase, policy = new BehavioralResponsePolicyService()): string {
+  const safetyGuided = testCase.safety === 'GUIDED';
+  if (testCase.interactionPreferences === undefined && !safetyGuided) return policy.buildTextGuidance();
+  return policy.buildTextGuidance({ preferences: testCase.interactionPreferences ?? DEFAULT_INTERACTION_PREFERENCES, safetyGuided });
+}
+
+export function buildEvaluationRequest(testCase: BrainEvaluationCase, guidance: string, safetyGuidance?: string): ModelRouterRequest {
   return {
     task: 'CONVERSATIONAL_RESPONSE',
     path: testCase.path,
     complexity: testCase.path === 'FAST' ? 'LOW' : 'HIGH',
     behavioralGuidance: guidance,
+    ...(safetyGuidance === undefined ? {} : { safetyGuidance }),
     context: testCase.context.map((message) => ({ ...message })),
     locale: testCase.locale,
     modality: 'TEXT',
@@ -54,11 +79,13 @@ export async function runEvaluation(
   routers: EvaluationRouters,
   now: () => number = () => performance.now(),
 ): Promise<ReadonlyArray<CandidateResult>> {
-  const guidance = new BehavioralResponsePolicyService().buildTextGuidance();
+  const policy = new BehavioralResponsePolicyService();
   const results: CandidateResult[] = [];
   for (const testCase of cases) {
+    const guidance = evaluationGuidance(testCase, policy);
+    const safetyGuidance = evaluationSafetyGuidance(testCase);
     for (const provider of providerExecutionOrder(testCase.id)) {
-      const request = buildEvaluationRequest(testCase, guidance);
+      const request = buildEvaluationRequest(testCase, guidance, safetyGuidance);
       const started = now();
       try {
         const result = await routers[provider].generate(request);
@@ -84,7 +111,11 @@ export async function runEvaluation(
   return results;
 }
 
-export function createReviewArtifacts(cases: ReadonlyArray<BrainEvaluationCase>, results: ReadonlyArray<CandidateResult>) {
+export function createReviewArtifacts(
+  cases: ReadonlyArray<BrainEvaluationCase>,
+  results: ReadonlyArray<CandidateResult>,
+  rubric: ReadonlyArray<string> = RUBRIC,
+) {
   const blindedReview = cases.map((testCase) => {
     const pair = results.filter((result) => result.caseId === testCase.id);
     const aProvider = candidateAProvider(testCase.id);
@@ -92,8 +123,16 @@ export function createReviewArtifacts(cases: ReadonlyArray<BrainEvaluationCase>,
     const candidateB = pair.find((result) => result.provider !== aProvider);
     return {
       caseId: testCase.id, path: testCase.path, context: testCase.context, reviewNotes: testCase.reviewNotes,
+      // ACE-01 (WP3): a Golden case tells the blinded reviewer what it measures and which canonical authority applied,
+      // and carries the explicit unfit-register FAIL mark (true = FAIL, whatever the scores). No model identity.
+      ...(testCase.styleFocus === undefined ? {} : {
+        styleFocus: testCase.styleFocus,
+        declaredPreferences: testCase.interactionPreferences ?? DEFAULT_INTERACTION_PREFERENCES,
+        safetyGuided: testCase.safety === 'GUIDED',
+        unfitRegisterFail: { A: null as boolean | null, B: null as boolean | null },
+      }),
       candidateA: candidateA?.response ?? '', candidateB: candidateB?.response ?? '',
-      scores: Object.fromEntries(RUBRIC.map((name) => [name, { A: null, B: null }])),
+      scores: Object.fromEntries(rubric.map((name) => [name, { A: null, B: null }])),
       overallPreference: null as 'A' | 'B' | 'Tie' | null,
       reviewerNote: '',
     };
@@ -108,12 +147,17 @@ export function createReviewArtifacts(cases: ReadonlyArray<BrainEvaluationCase>,
   return { blindedReview, providerMap };
 }
 
-export async function writeEvaluationArtifacts(cases: ReadonlyArray<BrainEvaluationCase>, results: ReadonlyArray<CandidateResult>): Promise<void> {
-  const { blindedReview, providerMap } = createReviewArtifacts(cases, results);
-  await mkdir(EVALUATION_ARTIFACT_DIRECTORY, { recursive: true });
+export async function writeEvaluationArtifacts(
+  cases: ReadonlyArray<BrainEvaluationCase>,
+  results: ReadonlyArray<CandidateResult>,
+  directory: string = EVALUATION_ARTIFACT_DIRECTORY,
+  rubric: ReadonlyArray<string> = RUBRIC,
+): Promise<void> {
+  const { blindedReview, providerMap } = createReviewArtifacts(cases, results, rubric);
+  await mkdir(directory, { recursive: true });
   await Promise.all([
-    writeFile(join(EVALUATION_ARTIFACT_DIRECTORY, 'results.json'), JSON.stringify(results, null, 2)),
-    writeFile(join(EVALUATION_ARTIFACT_DIRECTORY, 'blinded-review.json'), JSON.stringify(blindedReview, null, 2)),
-    writeFile(join(EVALUATION_ARTIFACT_DIRECTORY, 'provider-map.json'), JSON.stringify(providerMap, null, 2)),
+    writeFile(join(directory, 'results.json'), JSON.stringify(results, null, 2)),
+    writeFile(join(directory, 'blinded-review.json'), JSON.stringify(blindedReview, null, 2)),
+    writeFile(join(directory, 'provider-map.json'), JSON.stringify(providerMap, null, 2)),
   ]);
 }

@@ -952,7 +952,9 @@ async function main(): Promise<void> {
       assert.equal(request.task, 'CONVERSATIONAL_RESPONSE');
       assert.equal(request.costBudget, 'LOW');
       assert.equal(request.safetyLevel, 'STANDARD');
-      assert.equal(request.locale, 'und');
+      // ACE-01 WP2: FAST (RECALL_TEXT) and DEEP (DEEP_CONFLICT_TEXT) use plain-English current turns;
+      // this fixture has no durable reply-language override. The production locale resolver returns 'en', not legacy 'und'.
+      assert.equal(request.locale, 'en', 'ACE-01: English current turn without a reply-language override resolves to en on both FAST and DEEP');
       assert.equal(request.modality, 'TEXT');
       assert.equal(request.safetyGuidance, undefined, 'B: an ALLOW disposition adds no Safety guidance on either path');
     }
