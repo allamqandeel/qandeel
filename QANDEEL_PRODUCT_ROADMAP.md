@@ -319,3 +319,90 @@ not merged" of §6.5 describe their own dates.
   - GitHub Issue #322 — the physical-Android rapid-interaction and resize stability proof required before any public
     launch — `OPEN / NOT PROVEN / RELEASE BLOCKER` (Stage 9 release-readiness gate);
   - every other independent release blocker.
+
+### 6.7 Execution note — 2026-10-13 (Stage 6 WP0: Product Owner decisions)
+**Recorded:** 2026-10-13 by the Stage 6 WP0 governance change (PR #335), from
+`main = 135142004097136336d586e5d5ff6cfd119cd864` (the merge of PR #334, GOV-REC-01). This is a status note only. It
+rewrites no earlier section, opens no task and authorizes no implementation. The "Current: GOV-REC-01" of §6.6 and the
+"Paused" of §6.3 describe their own dates.
+- **WP0 delivered** its research and planning evidence
+  ([WP0 record](docs/e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md)). The Product Owner first
+  approved its Tier 0, then issued a consolidated final approval package deciding every WP0 gate at the level record §14
+  states (the sub-questions it leaves open are in §14.9).
+  - The final approval package is **APPROVED subject to the explicit architecture, privacy, security and Copy Gate
+    boundaries it states**.
+  - It authorizes decision recording and governance updates only: no S6-01 implementation, runtime change, migration,
+    deployment or merge.
+- **Sequencing and framing:**
+  - Stage 6 runs as S6-series execution tasks that reuse the frozen I-07 runtime and Connected Worlds authority. It may
+    prepare closed-by-default integration boundaries.
+  - I-09 / Stage 9 retains production launch authorization and gate opening.
+  - Stage 6 may reach engineering integration completion with the production AI provider unbound. Real proposals and
+    Introductions stay unavailable until Stage 8A and the required Stage 9 gates are satisfied.
+  - MERGED is always distinct from DEPLOYED and LAUNCH-READY.
+  - Phase `I-08` is not declared closed.
+- **The approved planning direction** (subject to final Task Contracts):
+  - `S6-01` — Intelligent Matching Onboarding;
+  - `S6-02` — Introduction-Phase Privacy Isolation & Safe END Boundary;
+  - `S6-03` — Matching Proposal Pipeline & Intelligence Prerequisites;
+  - `S6-04` — Private Proposal Review and Decisions;
+  - `S6-05` — Mutual Match & Introduction World;
+  - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation;
+  - `S6-07` — Activity, Direct Entry and Final Integration.
+
+  The package states that every task must undergo research, repository truth, anti-duplication, the Product Decision /
+  Copy Gate where required, a Product Owner-approved Task Contract, proportional validation, independent review and the
+  Product Owner's explicit merge approval. It also says to avoid XL monolithic implementations: a task may be split into
+  focused, ordered work packages when justified, without duplicating frozen I-07 work or changing the approved stage
+  count silently.
+- **QANDEEL-wide language rule:**
+  - All fixed Arabic application copy uses neutral or simplified Modern Standard Arabic and is gender-considerate.
+  - Generated QANDEEL conversation adapts to the user's language and dialect.
+  - Conflicting frozen or approved copy changes only through controlled Copy Amendments that the Product Owner approves
+    (record §14.1, §14.8).
+- **Register:** this PR admits `QAN-BL-LAUNCH-04` (Issue #322; owner `Stage 9 — Economy + Launch Closure
+  (release-readiness gate)`), `QAN-BL-MATCH-02` (owner `S6-02`), `QAN-BL-MATCH-03` (owner `Stage 8A — QANDEEL AI Brain /
+  Production LLM Runtime`) and `QAN-BL-PRIV-04` (owner `S6-07`; WP0's assignment under GATE-19, awaiting the Product
+  Owner's confirmation; confirmed in §6.8). The register goes from 62 to 66 items (backlog §7; 67 after §6.8). `QAN-BL-MATCH-01` stays with `S6-01`.
+- **Before S6-01:**
+  - the historical S6-01 lifecycle references (this roadmap's §6.3 "Paused" against "Not started" elsewhere) are
+    reconciled before its Task Contract;
+  - the historical Return Gate (the "return gate" of the Product Owner's local notes, CI-02 … CI-05, not repository ids; WP0 record §6) is reconciled before it starts;
+  - the controlled amendments that the decisions require are approved before any implementation they touch (record
+    §14.7).
+- **Unchanged:**
+  - Stage 6 is still not started, and no Stage 6 Task Contract exists;
+  - the hosted deployment gate (`QAN-BL-PROD-06`);
+  - Issue #322 itself, which stays `OPEN / NOT PROVEN / RELEASE BLOCKER`;
+  - every other independent release blocker.
+
+### 6.8 Execution note — 2026-10-13 (Stage 6 WP0: final decision addendum)
+**Recorded:** 2026-10-13 by the same governance change (PR #335). This is a status note only. It opens no task and
+authorizes no implementation, and §6.7 stays as written.
+- **Decisions** ([WP0 record](docs/e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §14.14):
+  - **D1, GATE-16:** Matching v1 proposes opposite-sex male / female pairs only, on an explicitly declared and confirmed
+    sex fact that is never inferred. A missing or unconfirmed fact is UNKNOWN and never eligible. The I-07 runtime has no
+    sex dimension, so a controlled architecture amendment (CA-09) comes before any implementation.
+  - **D2:** `QAN-BL-PRIV-04` is confirmed with owner `S6-07` and severity `HIGH`. S6-07 is not a cross-world export task.
+  - **D3:** a separately owned account-deletion correction path, provisionally `ACCT-DEL-01`, for `QAN-BL-ACCT-01`. No
+    real Matching enrollment happens before the deletion-blocking footprint is resolved.
+  - **D4:** generated conversation respects an explicitly chosen language or dialect. Otherwise it follows the user's
+    dialect when that is reasonably clear. If neither can be determined, it defaults to neutral simplified Modern
+    Standard Arabic, never to Egyptian for every Arabic user. Fixed Arabic copy stays simplified Modern Standard Arabic.
+  - **D5:** cross-world export completeness goes to `PRIV-EXPORT-01`, coordinating with Stage 7 for Replay
+    (`QAN-BL-PRIV-05` admitted).
+- **Parallel execution strategy (D6), after WP0 closes.** Two independent workstreams:
+  - **LANG:** controlled Arabic authority amendments, Product Owner copy approvals and focused corrections, using the
+    existing 109-unit census;
+  - **S6:** Stage 6 Matching implementation, starting with S6-01 after its historical Return Gate and the required
+    architecture decisions are reconciled.
+
+  They run on independent branches and PRs, with no duplicated implementation. LANG owns existing Arabic copy and its
+  language-authority amendments. S6 owns new Matching UX and follows the approved simplified-MSA rule. A shared text or
+  frozen-contract dependency is resolved in its owning workstream first. Verification is focused per workstream, with
+  proportionate integration verification. The 109-unit census is maintained, not restarted.
+- **Register:** from 66 to 67 items (`QAN-BL-PRIV-05`; backlog §7).
+- **Unchanged:**
+  - neither workstream receives implementation authorization through the addendum;
+  - Stage 6 is still not started, and no Task Contract exists;
+  - PR #335 is not merged.
