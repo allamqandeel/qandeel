@@ -430,7 +430,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     });
 
     it('M-01 with nothing remembered says so honestly — and a failed Memory read is a failed turn, never "nothing"', async () => {
-      expect((await say('إيه اللي فاكره عني؟')).reply).toBe('لسه مش فاكر عنك حاجة محددة.');
+      expect((await say('إيه اللي فاكره عني؟')).reply).toBe('لا أتذكّر عنك شيئًا محددًا حتى الآن.');
       const request = store.request.bind(store);
       jest.spyOn(store, 'request').mockImplementation((token, path, init) => path.startsWith('memories?') ? Promise.reject(new ServiceUnavailableException('Memory persistence is unavailable.')) : request(token, path, init));
       await expect(say('إنت فاكر عني إيه؟')).rejects.toBeInstanceOf(ServiceUnavailableException);
@@ -442,10 +442,10 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       // MEM-AR-01C (PD-1): a name as the subject does not say whom the fact is about, so QANDEEL asks first - the locked
       // question - and keeps nothing until the answer.
       const asked = await say('افتكر إن أحمد عنده امتحان الخميس.');
-      expect(asked.reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      expect(asked.reply).toBe('أهذه المعلومة عنك أنت، أم عن شخص آخر؟');
       expect(store.memories).toHaveLength(0);
       const first = await say('عن حد تاني');
-      expect(first.reply).toBe('تمام، هفتكر ده: «أحمد عنده امتحان الخميس.»');
+      expect(first.reply).toBe('حسنًا، سأتذكّر هذا: «أحمد عنده امتحان الخميس.»');
       expect(store.memories).toEqual([expect.objectContaining({
         user_id: A, content: 'أحمد عنده امتحان الخميس.', status: 'ACTIVE', source: 'USER_STATED', version: 1, supersedes_memory_id: null,
       })]);
@@ -458,7 +458,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
       // Asked again, the same fact about the same person is already remembered.
       await say('افتكر إن أحمد عنده امتحان الخميس');
-      expect((await say('عن حد تاني')).reply).toBe('فاكر ده أصلًا: «أحمد عنده امتحان الخميس.»');
+      expect((await say('عن حد تاني')).reply).toBe('أتذكّر هذا بالفعل: «أحمد عنده امتحان الخميس.»');
       expect(store.memories).toHaveLength(1);
     });
 
@@ -475,7 +475,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
       const { reply } = await say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.');
 
-      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect(reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في طنطا.» بدلًا من «أنا ساكن في أكتوبر.».');
       expect(memoryOf(october.id)).toEqual({ ...october, status: 'SUPERSEDED', updated_at: expect.any(String) });
       const successor = store.memories.find((m) => m.supersedes_memory_id === october.id)!;
       expect(successor).toEqual(expect.objectContaining({ user_id: A, content: 'أنا ساكن في طنطا.', version: 2, status: 'ACTIVE', type: 'PERSONAL_FACT' }));
@@ -491,7 +491,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
         store.memories.push({ ...october, id: store.id('3e3e3e3e'), content: 'أنا ساكن في الجيزة.', version: 2, supersedes_memory_id: october.id, status: 'ACTIVE' });
       };
       const { reply } = await say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.');
-      expect(reply).toBe('المعلومة دي اتغيّرت قبل ما أعدّلها، فماغيّرتش حاجة.');
+      expect(reply).toBe('تغيّرت هذه المعلومة قبل أن أعدّلها، لذلك لم أغيّر شيئًا.');
       expect(store.memories.filter((m) => m.supersedes_memory_id === october.id)).toHaveLength(1);
       expect(activeContents()).toEqual(['أنا ساكن في الجيزة.']);
       expect(store.commands[0]).toEqual(expect.objectContaining({ outcome: 'TARGET_CHANGED', target_memory_id: october.id, result_memory_id: null }));
@@ -502,26 +502,26 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const tea = store.remember(A, 'أنا بحب الشاي بالنعناع.', 'STABLE_PREFERENCE');
       const othersCafe = store.remember(B, 'أنا بحب كافيه النيل.', 'STABLE_PREFERENCE');
 
-      expect((await say('انسى إني بحب كافيه النيل.')).reply).toBe('تمام، نسيت «أنا بحب كافيه النيل.» ومش هرجع له تاني.');
+      expect((await say('انسى إني بحب كافيه النيل.')).reply).toBe('حسنًا، نسيت «أنا بحب كافيه النيل.» ولن أعود إليه مرة أخرى.');
       expect(memoryOf(cafe.id)).toEqual({ ...cafe, status: 'DELETED', updated_at: expect.any(String) });
       expect(memoryOf(tea.id).status).toBe('ACTIVE');
       expect(memoryOf(othersCafe.id).status).toBe('ACTIVE');
 
-      expect((await say('انسى إني بحب كافيه النيل.')).reply).toBe('مش لاقي حاجة زي كده في اللي فاكره.');
+      expect((await say('انسى إني بحب كافيه النيل.')).reply).toBe('لا أجد شيئًا كهذا فيما أتذكّره.');
       expect(store.memories.map((m) => m.status)).toEqual(['DELETED', 'ACTIVE', 'ACTIVE']);
     });
 
     it('M-05 «متعتمدش على …» is DISABLED, not DELETED: kept, listed as not relied on, and out of the current set', async () => {
       const tea = { ...store.remember(A, 'أنا بحب الشاي بالنعناع.', 'STABLE_PREFERENCE') };
 
-      expect((await say('متعتمدش على إني بحب الشاي بالنعناع')).reply).toBe('تمام، مش هعتمد على «أنا بحب الشاي بالنعناع.» في كلامنا، بس هفضل فاكرها.');
+      expect((await say('متعتمدش على إني بحب الشاي بالنعناع')).reply).toBe('حسنًا، لن أعتمد على «أنا بحب الشاي بالنعناع.» في محادثاتنا، لكنني سأظل أتذكّرها.');
       expect(memoryOf(tea.id)).toEqual({ ...tea, status: 'DISABLED', updated_at: expect.any(String) });
       expect(activeContents()).toEqual([]);
 
       const inspect = await say('إنت فاكر عني إيه؟');
-      expect(inspect.reply).toBe('فيه حاجات لسه فاكرها، بس مش بعتمد عليها بناءً على طلبك:\n• «أنا بحب الشاي بالنعناع.»');
+      expect(inspect.reply).toBe('هناك أشياء ما زلت أتذكّرها، لكنني لا أعتمد عليها بناءً على طلبك:\n• «أنا بحب الشاي بالنعناع.»');
 
-      expect((await say('متعتمدش على إني بحب الشاي بالنعناع')).reply).toContain('مش هعتمد على');
+      expect((await say('متعتمدش على إني بحب الشاي بالنعناع')).reply).toContain('لن أعتمد على');
       expect(memoryOf(tea.id).status).toBe('DISABLED');
     });
 
@@ -530,10 +530,10 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       store.exchange(A, sessionA, 'أنا بحب الشاي بالنعناع', 'جميل.');
 
       const ask = await say('متنساش المعلومة، بس متعتمدش عليها معايا.');
-      expect(ask.reply).toBe('تقصد «أنا بحب الشاي بالنعناع.»؟');
+      expect(ask.reply).toBe('هل المقصود «أنا بحب الشاي بالنعناع.»؟');
       expect(memoryOf(tea.id).status).toBe('ACTIVE');
 
-      expect((await say('أيوه')).reply).toContain('مش هعتمد على');
+      expect((await say('أيوه')).reply).toContain('لن أعتمد على');
       expect(memoryOf(tea.id).status).toBe('DISABLED');
       expect(store.commands.map((c) => [c.kind, c.outcome])).toEqual([['DISABLE', 'CLARIFICATION_REQUIRED'], ['DISABLE', 'DISABLED']]);
       expect(store.commands[1].answers_command_id).toBe(store.commands[0].id);
@@ -546,12 +546,12 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const before = JSON.stringify(store.memories);
 
       const ask = await say('امسح موضوع الشغل.');
-      expect(ask.reply).toBe('تقصد أنهي واحدة؟\n1. «مديري في الشغل صعب.»\n2. «شغلي الجديد في البنك.»\nرقمها يكفي.');
+      expect(ask.reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «مديري في الشغل صعب.»\n2. «شغلي الجديد في البنك.»\nرقمها يكفي.');
       expectCleanReply(ask.reply);
       expect(JSON.stringify(store.memories)).toBe(before);
       expect(store.commands[0]).toEqual(expect.objectContaining({ kind: 'FORGET', outcome: 'CLARIFICATION_REQUIRED', candidate_memory_ids: [boss.id, bank.id] }));
 
-      expect((await say('2')).reply).toBe('تمام، نسيت «شغلي الجديد في البنك.» ومش هرجع له تاني.');
+      expect((await say('2')).reply).toBe('حسنًا، نسيت «شغلي الجديد في البنك.» ولن أعود إليه مرة أخرى.');
       expect(memoryOf(bank.id).status).toBe('DELETED');
       expect(memoryOf(boss.id).status).toBe('ACTIVE');
     });
@@ -563,8 +563,8 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const statuses = before();
 
       await say('امسح موضوع الشغل.');
-      expect((await say('5')).reply).toContain('تقصد أنهي واحدة؟');
-      expect((await say('لا')).reply).toBe('تمام، ماغيّرتش حاجة.');
+      expect((await say('5')).reply).toContain('أيّ هذه المعلومات هي المقصودة؟');
+      expect((await say('لا')).reply).toBe('حسنًا، لم أغيّر شيئًا.');
       expect(before()).toBe(statuses);
       // The clarification was answered, so a later "1" is ordinary conversation (and reaches the provider path).
       await expect(say('1')).rejects.toBeInstanceOf(ServiceUnavailableException);
@@ -576,7 +576,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
   describe('MEM-AR-01A wording fidelity on the explicit paths (F-1)', () => {
     it('«افتكر إني ساكنة في مدينة نصر» is remembered as said, never as a masculine template', async () => {
       const { reply } = await say('افتكر إني ساكنة في مدينة نصر');
-      expect(reply).toBe('تمام، هفتكر ده: «أنا ساكنة في مدينة نصر.»');
+      expect(reply).toBe('حسنًا، سأتذكّر هذا: «أنا ساكنة في مدينة نصر.»');
       expect(store.memories).toEqual([expect.objectContaining({ user_id: A, content: 'أنا ساكنة في مدينة نصر.', type: 'PERSONAL_FACT', status: 'ACTIVE', version: 1 })]);
     });
 
@@ -584,7 +584,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       // MEM-AR-01C: the legacy row is the user's own (a proven first-person capture, SELF), so it is the same Memory.
       const legacy = { ...store.remember(A, 'أنا ساكن في مدينة نصر.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
       const { reply } = await say('افتكر إني ساكنة في مدينة نصر');
-      expect(reply).toBe('فاكر ده أصلًا: «أنا ساكن في مدينة نصر.»');
+      expect(reply).toBe('أتذكّر هذا بالفعل: «أنا ساكن في مدينة نصر.»');
       expect(store.memories).toEqual([legacy]);
       expect(store.commands[0]).toEqual(expect.objectContaining({ kind: 'REMEMBER', outcome: 'ALREADY_REMEMBERED' }));
     });
@@ -592,7 +592,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('MEM-AR-01C: the same legacy row with no established subject is RECONFIRMED, with lineage, in the user\'s words', async () => {
       const legacy = { ...store.remember(A, 'أنا ساكن في مدينة نصر.') };
       const { reply } = await say('افتكر إني ساكنة في مدينة نصر');
-      expect(reply).toBe('تمام، هفتكر ده: «أنا ساكنة في مدينة نصر.»');
+      expect(reply).toBe('حسنًا، سأتذكّر هذا: «أنا ساكنة في مدينة نصر.»');
       expect(memoryOf(legacy.id)).toEqual({ ...legacy, status: 'SUPERSEDED', updated_at: expect.any(String) });
       const successor = store.memories.find((m) => m.supersedes_memory_id === legacy.id)!;
       expect(successor).toEqual(expect.objectContaining({ content: 'أنا ساكنة في مدينة نصر.', version: 2, status: 'ACTIVE' }));
@@ -603,7 +603,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('a correction keeps the replacement in the user\'s words', async () => {
       const october = store.remember(A, 'أنا ساكن في أكتوبر.');
       const { reply } = await say('أنا مش ساكنة في أكتوبر دلوقتي، أنا ساكنة في طنطا.');
-      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكنة في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect(reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكنة في طنطا.» بدلًا من «أنا ساكن في أكتوبر.».');
       expect(store.memories.find((m) => m.supersedes_memory_id === october.id)).toEqual(expect.objectContaining({ content: 'أنا ساكنة في طنطا.', version: 2, status: 'ACTIVE' }));
       expect(memoryOf(october.id).content).toBe('أنا ساكن في أكتوبر.');
     });
@@ -619,7 +619,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
       const { reply } = await say('غيرت رأيي، بقيت ساكن في طنطا');
 
-      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect(reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في طنطا.» بدلًا من «أنا ساكن في أكتوبر.».');
       expectCleanReply(reply);
       expect(memoryOf(october.id)).toEqual({ ...october, status: 'SUPERSEDED', updated_at: expect.any(String) });
       const successors = store.memories.filter((m) => m.supersedes_memory_id === october.id);
@@ -635,7 +635,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
       const { reply } = await say('أنا مبقتش بحب القهوة');
 
-      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا مبقتش بحب القهوة.» بدل «أنا بحب القهوة.».');
+      expect(reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا مبقتش بحب القهوة.» بدلًا من «أنا بحب القهوة.».');
       expectCleanReply(reply);
       expect(memoryOf(coffee.id)).toEqual({ ...coffee, status: 'SUPERSEDED', updated_at: expect.any(String) });
       expect(store.memories.filter((m) => m.supersedes_memory_id === coffee.id)).toEqual([
@@ -648,7 +648,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('«أنا بطلت أشرب قهوة» corrects the remembered habit «بشرب قهوة» it names', async () => {
       const habit = { ...store.remember(A, 'أنا بشرب قهوة كل يوم.') };
       const { reply } = await say('أنا بطلت أشرب قهوة');
-      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا بطلت أشرب قهوة.» بدل «أنا بشرب قهوة كل يوم.».');
+      expect(reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا بطلت أشرب قهوة.» بدلًا من «أنا بشرب قهوة كل يوم.».');
       expect(memoryOf(habit.id).status).toBe('SUPERSEDED');
       expect(store.memories.filter((m) => m.supersedes_memory_id === habit.id)).toEqual([expect.objectContaining({ content: 'أنا بطلت أشرب قهوة.', type: 'PERSONAL_FACT', version: 2 })]);
     });
@@ -659,11 +659,11 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const before = JSON.stringify(store.memories);
 
       const ask = await say('غيرت رأيي، بقيت ساكن في طنطا');
-      expect(ask.reply).toBe('تقصد أنهي واحدة؟\n1. «أنا عايش في المعادي.»\n2. «أنا ساكن في أكتوبر.»\nرقمها يكفي.');
+      expect(ask.reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «أنا عايش في المعادي.»\n2. «أنا ساكن في أكتوبر.»\nرقمها يكفي.');
       expectCleanReply(ask.reply);
       expect(JSON.stringify(store.memories)).toBe(before);
 
-      expect((await say('2')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect((await say('2')).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في طنطا.» بدلًا من «أنا ساكن في أكتوبر.».');
       expect([memoryOf(october.id).status, memoryOf(maadi.id).status]).toEqual(['SUPERSEDED', 'ACTIVE']);
       expect(commandShapes()).toEqual([['CORRECT', 'CLARIFICATION_REQUIRED'], ['CORRECT', 'CORRECTED']]);
       expect(store.commands[1].answers_command_id).toBe(store.commands[0].id);
@@ -672,8 +672,8 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('an answered negation keeps the inherited type', async () => {
       const morning = store.remember(A, 'أنا بحب القهوة الصبح.', 'STABLE_PREFERENCE');
       const night = store.remember(A, 'أنا بحب القهوة بالليل.', 'STABLE_PREFERENCE');
-      expect((await say('أنا مبقتش بحب القهوة')).reply).toContain('تقصد أنهي واحدة؟');
-      expect((await say('التانية')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا مبقتش بحب القهوة.» بدل «أنا بحب القهوة الصبح.».');
+      expect((await say('أنا مبقتش بحب القهوة')).reply).toContain('أيّ هذه المعلومات هي المقصودة؟');
+      expect((await say('التانية')).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا مبقتش بحب القهوة.» بدلًا من «أنا بحب القهوة الصبح.».');
       expect([memoryOf(night.id).status, memoryOf(morning.id).status]).toEqual(['ACTIVE', 'SUPERSEDED']);
       expect(store.memories.find((m) => m.supersedes_memory_id === morning.id)).toEqual(expect.objectContaining({ type: 'STABLE_PREFERENCE', content: 'أنا مبقتش بحب القهوة.' }));
     });
@@ -727,7 +727,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       }
       for (const request of ['افتكر إن ساكنة في طنطا', 'افتكر إن أحمد بيحب الكورة', 'افتكر إني عارف إن أختي بتحب الكشري']) {
         const before = store.memories.length;
-        expect((await say(request)).reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+        expect((await say(request)).reply).toBe('أهذه المعلومة عنك أنت، أم عن شخص آخر؟');
         expect(store.memories).toHaveLength(before);
       }
       expect((await say('Remember that Sam loves football')).reply).toBe('Is this about you or someone else?');
@@ -735,13 +735,13 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
     it('S-1: «عني» keeps the question turn\'s words as the user\'s; «لا» keeps nothing; anything else lets the question lapse', async () => {
       await say('افتكر إن ساكنة في طنطا');
-      expect((await say('عني')).reply).toBe('تمام، هفتكر ده: «ساكنة في طنطا.»');
+      expect((await say('عني')).reply).toBe('حسنًا، سأتذكّر هذا: «ساكنة في طنطا.»');
       const kept = store.memories.at(-1)!;
       expect(store.attributions.get(kept.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'USER_CLARIFIED' }));
       expect(store.commands[1]).toEqual(expect.objectContaining({ kind: 'REMEMBER', outcome: 'REMEMBERED', answers_command_id: store.commands[0].id }));
 
       await say('افتكر إن أحمد بيحب الكورة');
-      expect((await say('لا')).reply).toBe('تمام، ماغيّرتش حاجة.');
+      expect((await say('لا')).reply).toBe('حسنًا، لم أغيّر شيئًا.');
       expect(store.memories).toHaveLength(1);
 
       await say('افتكر إن منى عندها شغل بكرة');
@@ -768,7 +768,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       store.remember(A, 'أنا ساكن في أكتوبر.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
       store.remember(A, 'أختي بتحب الكشري.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
       expect((await say('إنت فاكر عني إيه؟')).reply)
-        .toBe('ده اللي فاكره من كلامنا:\n• «أنا ساكن في أكتوبر.»\nوفيه كمان حاجات حكيتلي عنها تخص ناس تانية:\n• «أختي بتحب الكشري.»');
+        .toBe('هذا ما أتذكّره من محادثاتنا:\n• «أنا ساكن في أكتوبر.»\nوهناك أيضًا أشياء أخبرتني بها عن أشخاص آخرين:\n• «أختي بتحب الكشري.»');
       const sessionB = store.session(B);
       store.remember(B, 'My sister hates kids.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
       expect((await say('What do you remember about me?', sessionB, B)).reply)
@@ -782,7 +782,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const october = { ...store.remember(A, 'أنا ساكن في أكتوبر.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
       const tanta = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
       const { reply } = await say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.');
-      expect(reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect(reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في طنطا.» بدلًا من «أنا ساكن في أكتوبر.».');
       expect(memoryOf(october.id)).toEqual({ ...october, status: 'SUPERSEDED', updated_at: expect.any(String) });
       expect(memoryOf(tanta.id)).toEqual(tanta);
       expect(store.memories).toHaveLength(2);
@@ -793,7 +793,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const first = store.remember(A, 'أنا بحب القهوة.', 'STABLE_PREFERENCE', 'ACTIVE', 'SELF');
       const copy = store.remember(A, 'أنا بحب القهوة', 'STABLE_PREFERENCE');
       const ask = await say('انسى إني بحب القهوة');
-      expect(ask.reply).toMatch(/^تمام، نسيت «أنا بحب القهوة\.?»/u);
+      expect(ask.reply).toMatch(/^حسنًا، نسيت «أنا بحب القهوة\.?»/u);
       expect([memoryOf(first.id).status, memoryOf(copy.id).status]).toEqual(['DELETED', 'DELETED']);
       expect(store.dispositions).toEqual([expect.objectContaining({ disposition: 'FORGOTTEN', command_id: store.commands[0].id })]);
     });
@@ -806,7 +806,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const strangers = store.remember(B, 'عيد الميلاد يوم ٥ مارس.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
       const before = JSON.stringify(store.memories);
       const ask = await say('انسى إن عيد الميلاد يوم ٥ مارس');
-      expect(ask.reply).toContain('تقصد أنهي واحدة؟');
+      expect(ask.reply).toContain('أيّ هذه المعلومات هي المقصودة؟');
       expect(JSON.stringify(store.memories)).toBe(before);
       const [first, second] = store.commands[0].candidate_memory_ids;
       expect([first, second].sort()).toEqual([mine.id, theirs.id].sort());
@@ -821,7 +821,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('RC-C2: DISABLE asks the same way and leaves the other person\'s fact relied on', async () => {
       const mine = store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE', 'ACTIVE', 'SELF');
       const theirs = store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE', 'ACTIVE', 'OTHER');
-      expect((await say('متعتمدش على إن بيحب الكورة')).reply).toContain('تقصد أنهي واحدة؟');
+      expect((await say('متعتمدش على إن بيحب الكورة')).reply).toContain('أيّ هذه المعلومات هي المقصودة؟');
       const [, second] = store.commands[0].candidate_memory_ids;
       await say('2');
       expect(memoryOf(second).status).toBe('DISABLED');
@@ -844,7 +844,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('RC-C2: a correction asks between the two facts, corrects only the chosen one, and never ends in the other person\'s', async () => {
       const mine = store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
       const theirs = store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER');
-      expect((await say('لا، مش ساكن في أكتوبر، ساكن في إسكندرية')).reply).toContain('تقصد أنهي واحدة؟');
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في إسكندرية')).reply).toContain('أيّ هذه المعلومات هي المقصودة؟');
       await say(String(store.commands[0].candidate_memory_ids.indexOf(theirs.id) + 1));
       const successor = store.memories.find((m) => m.supersedes_memory_id === theirs.id)!;
       expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'OTHER', basis: 'CORRECTION_INHERITED' }));
@@ -883,7 +883,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
   // L-10 / L-11 (Product Owner decisions, 2026-10-12).
   describe('MEM-AR-01C G-C2 decisions: subject labels (L-10) and no cross-subject correction by inference (L-11)', () => {
     const shapes = () => store.commands.map((c) => [c.kind, c.outcome]);
-    const labelOf = (id: string) => (store.subjectOf(id) === 'SELF' ? 'عنك إنت' : 'عن حد تاني');
+    const labelOf = (id: string) => (store.subjectOf(id) === 'SELF' ? 'عنك أنت' : 'عن شخص آخر');
 
     it('L-10: identical options with different subjects say whom each is about; the numbers still name the same Memories', async () => {
       const mine = store.remember(A, 'عيد الميلاد يوم ٥ مارس.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
@@ -891,7 +891,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const ask = await say('انسى إن عيد الميلاد يوم ٥ مارس');
       const [first, second] = store.commands[0].candidate_memory_ids;
       expect([first, second].sort()).toEqual([mine.id, theirs.id].sort());
-      expect(ask.reply).toBe(`تقصد أنهي واحدة؟\n1. «عيد الميلاد يوم ٥ مارس.» — ${labelOf(first)}\n2. «عيد الميلاد يوم ٥ مارس.» — ${labelOf(second)}\nرقمها يكفي.`);
+      expect(ask.reply).toBe(`أيّ هذه المعلومات هي المقصودة؟\n1. «عيد الميلاد يوم ٥ مارس.» — ${labelOf(first)}\n2. «عيد الميلاد يوم ٥ مارس.» — ${labelOf(second)}\nرقمها يكفي.`);
       expectCleanReply(ask.reply);
       expect(ask.reply).not.toMatch(/SELF|OTHER|UNATTRIBUTED/u);
       // Asked again (an answer outside the options), the same labels follow the same Memories.
@@ -915,15 +915,15 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       // Different words: the existing wording, unchanged, whatever the subjects.
       store.remember(A, 'شغلي الجديد في البنك.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
       store.remember(A, 'مديري في الشغل صعب.', 'RELATIONSHIP_CONTEXT', 'ACTIVE', 'OTHER');
-      expect((await say('امسح موضوع الشغل.')).reply).toBe('تقصد أنهي واحدة؟\n1. «مديري في الشغل صعب.»\n2. «شغلي الجديد في البنك.»\nرقمها يكفي.');
+      expect((await say('امسح موضوع الشغل.')).reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «مديري في الشغل صعب.»\n2. «شغلي الجديد في البنك.»\nرقمها يكفي.');
       await say('لا');
       // The same words with no established subject (two kinds of fact): no label is invented.
       store.remember(A, 'بيحب الكورة.', 'STABLE_PREFERENCE');
       store.remember(A, 'بيحب الكورة.', 'PERSONAL_FACT');
-      expect((await say('انسى إن بيحب الكورة')).reply).toBe('تقصد أنهي واحدة؟\n1. «بيحب الكورة.»\n2. «بيحب الكورة.»\nرقمها يكفي.');
+      expect((await say('انسى إن بيحب الكورة')).reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «بيحب الكورة.»\n2. «بيحب الكورة.»\nرقمها يكفي.');
       // The copy rule itself: SELF and OTHER are labelled, the UNATTRIBUTED copy of the same words is not.
       expect(clarificationReply('ar', ['س', 'س', 'س'], false, ['SELF', 'OTHER', null]))
-        .toBe('تقصد أنهي واحدة؟\n1. «س» — عنك إنت\n2. «س» — عن حد تاني\n3. «س»\nرقمها يكفي.');
+        .toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «س» — عنك أنت\n2. «س» — عن شخص آخر\n3. «س»\nرقمها يكفي.');
       expect(clarificationReply('en', ['x', 'x'], false, ['SELF', null])).toBe('Which one do you mean?\n1. “x”\n2. “x”\nThe number is enough.');
       expect(clarificationReply('en', ['x', 'x'], false, ['OTHER', 'OTHER'])).toBe('Which one do you mean?\n1. “x”\n2. “x”\nThe number is enough.');
     });
@@ -933,13 +933,13 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const mine = { ...store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
       const before = JSON.stringify(store.memories);
       const ask = await say('لا، مش شغال في البنك، شغال في الشركة');
-      expect(ask.reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      expect(ask.reply).toBe('أهذه المعلومة عنك أنت، أم عن شخص آخر؟');
       expect(JSON.stringify(store.memories)).toBe(before);
       expect(store.commands[0]).toEqual(expect.objectContaining({ kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target_memory_id: legacy.id, result_memory_id: null, candidate_memory_ids: [] }));
       expect(store.attributions.has(legacy.id)).toBe(false);
 
       const answer = await say('عني');
-      expect(answer.reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا شغال في الشركة.» بدل «شغال في البنك.».');
+      expect(answer.reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا شغال في الشركة.» بدلًا من «شغال في البنك.».');
       expect(memoryOf(legacy.id)).toEqual({ ...legacy, status: 'SUPERSEDED', updated_at: expect.any(String) });
       expect(memoryOf(mine.id)).toEqual(mine);
       expect(store.commands[1]).toEqual(expect.objectContaining({
@@ -952,7 +952,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const legacy = store.remember(A, 'شغال في البنك.');
       const mine = { ...store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
       await say('لا، مش شغال في البنك، شغال في الشركة');
-      expect((await say('عن حد تاني')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا شغال في الشركة.» بدل «شغال في البنك.».');
+      expect((await say('عن حد تاني')).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا شغال في الشركة.» بدلًا من «شغال في البنك.».');
       const successor = store.memories.find((m) => m.supersedes_memory_id === legacy.id)!;
       expect(successor).toEqual(expect.objectContaining({ content: 'أنا شغال في الشركة.', status: 'ACTIVE', version: 2 }));
       expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'OTHER', basis: 'USER_CLARIFIED', command_id: store.commands[1].id }));
@@ -963,7 +963,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('L-11: someone else\'s existing value and the answer «عني» give the user a new fact; theirs stays exactly as it was', async () => {
       const legacy = store.remember(A, 'ساكن في أكتوبر.');
       const theirs = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
-      expect((await say('لا، مش ساكن في أكتوبر، ساكن في طنطا')).reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في طنطا')).reply).toBe('أهذه المعلومة عنك أنت، أم عن شخص آخر؟');
       await say('عني');
       const successor = store.memories.find((m) => m.supersedes_memory_id === legacy.id)!;
       expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'USER_CLARIFIED' }));
@@ -976,7 +976,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
       const before = JSON.stringify(store.memories);
       await say('لا، مش شغال في البنك، شغال في الشركة');
-      expect((await say('لا')).reply).toBe('تمام، ماغيّرتش حاجة.');
+      expect((await say('لا')).reply).toBe('حسنًا، لم أغيّر شيئًا.');
       expect(JSON.stringify(store.memories)).toBe(before);
       expect(store.commands[1]).toEqual(expect.objectContaining({ kind: 'CORRECT', outcome: 'CLARIFICATION_DECLINED', answers_command_id: store.commands[0].id, target_memory_id: null }));
       // Answered once, the question is no longer pending: a repeated answer is ordinary conversation.
@@ -999,13 +999,13 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('L-11: chosen by "which one?", the correction asks the subject question and its answer keeps the original request', async () => {
       const fact = store.remember(A, 'ساكن في أكتوبر.', 'PERSONAL_FACT');
       const preference = store.remember(A, 'ساكن في أكتوبر.', 'STABLE_PREFERENCE');
-      expect((await say('لا، مش ساكن في أكتوبر، ساكن في إسكندرية')).reply).toBe('تقصد أنهي واحدة؟\n1. «ساكن في أكتوبر.»\n2. «ساكن في أكتوبر.»\nرقمها يكفي.');
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في إسكندرية')).reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «ساكن في أكتوبر.»\n2. «ساكن في أكتوبر.»\nرقمها يكفي.');
       // Between the two turns, the new value is remembered about someone else.
       const theirs = { ...store.remember(A, 'أنا ساكن في إسكندرية.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
       const chosen = store.commands[0].candidate_memory_ids.indexOf(fact.id) + 1;
-      expect((await say(String(chosen))).reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+      expect((await say(String(chosen))).reply).toBe('أهذه المعلومة عنك أنت، أم عن شخص آخر؟');
       expect(store.commands[1]).toEqual(expect.objectContaining({ kind: 'CORRECT', outcome: 'SUBJECT_CLARIFICATION_REQUIRED', target_memory_id: fact.id, answers_command_id: store.commands[0].id }));
-      expect((await say('عني')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في إسكندرية.» بدل «ساكن في أكتوبر.».');
+      expect((await say('عني')).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في إسكندرية.» بدلًا من «ساكن في أكتوبر.».');
       const successor = store.memories.find((m) => m.supersedes_memory_id === fact.id)!;
       expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'USER_CLARIFIED' }));
       expect([memoryOf(preference.id).status, memoryOf(theirs.id)]).toEqual(['ACTIVE', theirs]);
@@ -1015,7 +1015,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const legacy = { ...store.remember(A, 'شغال في البنك.') };
       let theirs: MemoryRecord | undefined;
       store.beforeMemoryControlCommand = () => { theirs = { ...store.remember(A, 'أنا شغال في الشركة.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') }; };
-      expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('المعلومة دي اتغيّرت قبل ما أعدّلها، فماغيّرتش حاجة.');
+      expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('تغيّرت هذه المعلومة قبل أن أعدّلها، لذلك لم أغيّر شيئًا.');
       expect(memoryOf(legacy.id)).toEqual(legacy);
       expect(memoryOf(theirs!.id)).toEqual(theirs);
       expect(store.memories).toHaveLength(2);
@@ -1045,7 +1045,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
         store.beforeMemoryControlCommand = () => {
           copies = subjects.map((subject) => ({ ...store.remember(A, 'شغال في البنك.', 'PERSONAL_FACT', 'ACTIVE', subject) }));
         };
-        expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('المعلومة دي اتغيّرت قبل ما أعدّلها، فماغيّرتش حاجة.');
+        expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('تغيّرت هذه المعلومة قبل أن أعدّلها، لذلك لم أغيّر شيئًا.');
         expect(memoryOf(legacy.id)).toEqual(legacy);
         for (const copy of copies) expect(memoryOf(copy.id)).toEqual(copy);
         expect(store.memories).toHaveLength(1 + subjects.length);
@@ -1056,7 +1056,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
     it('A: an UNATTRIBUTED fact still takes its own UNATTRIBUTED legacy copies with it', async () => {
       const pair = [store.remember(A, 'شغال في البنك.').id, store.remember(A, 'شغال في البنك.').id];
-      expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا شغال في الشركة.» بدل «شغال في البنك.».');
+      expect((await say('لا، مش شغال في البنك، شغال في الشركة')).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا شغال في الشركة.» بدلًا من «شغال في البنك.».');
       const target = store.commands[0].target_memory_id!;
       const [copy] = pair.filter((id) => id !== target);
       const successor = store.memories.find((m) => m.supersedes_memory_id === target)!;
@@ -1071,11 +1071,11 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const theirs = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
       const before = JSON.stringify(store.memories);
       const ask = await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا');
-      expect(ask.reply).toBe('تقصد أنهي واحدة؟\n1. «أنا ساكن في أكتوبر.»\n2. «أنا ساكن في أكتوبر.»\nرقمها يكفي.');
+      expect(ask.reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «أنا ساكن في أكتوبر.»\n2. «أنا ساكن في أكتوبر.»\nرقمها يكفي.');
       expect(ask.reply).not.toContain('فاكرها كده أصلًا');
       expect(JSON.stringify(store.memories)).toBe(before);
       const [chosen] = options(fact.id);
-      expect((await say(String(chosen))).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect((await say(String(chosen))).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في طنطا.» بدلًا من «أنا ساكن في أكتوبر.».');
       const successor = store.memories.find((m) => m.supersedes_memory_id === fact.id)!;
       expect(store.attributions.get(successor.id)).toEqual(expect.objectContaining({ subject: 'SELF', basis: 'EXPLICIT_STATEMENT' }));
       expect([memoryOf(theirs.id), memoryOf(preference.id).status]).toEqual([theirs, 'ACTIVE']);
@@ -1086,9 +1086,9 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const fact = store.remember(A, 'أنا ساكن في أكتوبر.', 'PERSONAL_FACT');
       const preference = store.remember(A, 'أنا ساكن في أكتوبر.', 'STABLE_PREFERENCE');
       const mine = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
-      expect((await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا')).reply).toContain('تقصد أنهي واحدة؟');
+      expect((await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا')).reply).toContain('أيّ هذه المعلومات هي المقصودة؟');
       const [chosen] = options(fact.id);
-      expect((await say(String(chosen))).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «أنا ساكن في أكتوبر.».');
+      expect((await say(String(chosen))).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في طنطا.» بدلًا من «أنا ساكن في أكتوبر.».');
       expect([memoryOf(fact.id).status, memoryOf(preference.id).status, memoryOf(mine.id)]).toEqual(['SUPERSEDED', 'ACTIVE', mine]);
       expect(store.commands[1]).toEqual(expect.objectContaining({ outcome: 'CORRECTED_TO_EXISTING', target_memory_id: fact.id, result_memory_id: mine.id }));
       expect(store.memories).toHaveLength(3);
@@ -1099,10 +1099,10 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       store.remember(A, 'ساكن في أكتوبر.', 'STABLE_PREFERENCE');
       const mine = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
       const theirs = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'OTHER') };
-      expect((await say('لا، مش ساكن في أكتوبر، ساكن في طنطا')).reply).toBe('تقصد أنهي واحدة؟\n1. «ساكن في أكتوبر.»\n2. «ساكن في أكتوبر.»\nرقمها يكفي.');
+      expect((await say('لا، مش ساكن في أكتوبر، ساكن في طنطا')).reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «ساكن في أكتوبر.»\n2. «ساكن في أكتوبر.»\nرقمها يكفي.');
       const [chosen] = options(fact.id);
-      expect((await say(String(chosen))).reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
-      expect((await say('عن حد تاني')).reply).toBe('تمام، صحّحتها. بقيت فاكر «أنا ساكن في طنطا.» بدل «ساكن في أكتوبر.».');
+      expect((await say(String(chosen))).reply).toBe('أهذه المعلومة عنك أنت، أم عن شخص آخر؟');
+      expect((await say('عن حد تاني')).reply).toBe('حسنًا، صحّحتها. أصبحت أتذكّر «أنا ساكن في طنطا.» بدلًا من «ساكن في أكتوبر.».');
       expect(store.commands[2]).toEqual(expect.objectContaining({ outcome: 'CORRECTED_TO_EXISTING', target_memory_id: fact.id, result_memory_id: theirs.id }));
       expect([memoryOf(mine.id), memoryOf(theirs.id)]).toEqual([mine, theirs]);
       expect(store.attributions.has(fact.id)).toBe(false);
@@ -1132,7 +1132,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
     it('L-12: the justified "already" stays - the new value is remembered about the same person the words name', async () => {
       const mine = { ...store.remember(A, 'أنا ساكن في طنطا.', 'PERSONAL_FACT', 'ACTIVE', 'SELF') };
-      expect((await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا')).reply).toBe('فاكرها كده أصلًا: «أنا ساكن في طنطا.»');
+      expect((await say('أنا مش ساكن في أكتوبر، أنا ساكن في طنطا')).reply).toBe('أتذكّرها بهذا الشكل بالفعل: «أنا ساكن في طنطا.»');
       const sessionB = store.session(B);
       store.remember(B, 'I live in Tanta.', 'PERSONAL_FACT', 'ACTIVE', 'SELF');
       expect((await say("I don't live in October anymore, I live in Tanta.", sessionB, B)).reply).toBe('I already have it that way: “I live in Tanta.”');
@@ -1161,7 +1161,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       const before = JSON.stringify(store.memories);
       const ask = await say('لا، مش ساكن في أكتوبر، ساكن في طنطا');
       expect((await say('5')).reply).toBe(ask.reply);
-      expect((await say('لا')).reply).toBe('تمام، ماغيّرتش حاجة.');
+      expect((await say('لا')).reply).toBe('حسنًا، لم أغيّر شيئًا.');
       await say('لا، مش ساكن في أكتوبر، ساكن في طنطا');
       touched.length = 0;
       await expect(say('ماشي يا عم')).rejects.toBeInstanceOf(ServiceUnavailableException);
@@ -1218,7 +1218,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       expect(store.turns.filter((t) => t.role === 'ASSISTANT')).toHaveLength(1);
 
       const retry = await say('افتكر إن أختي عندها امتحان الخميس.', sessionA, A, key);
-      expect(retry.reply).toBe('تمام، هفتكر ده: «أختي عندها امتحان الخميس.»');
+      expect(retry.reply).toBe('حسنًا، سأتذكّر هذا: «أختي عندها امتحان الخميس.»');
       expect(store.memories).toHaveLength(1);
       expect(store.commands).toHaveLength(1);
       expect(store.turns.filter((t) => t.role === 'ASSISTANT')).toHaveLength(1);
@@ -1231,7 +1231,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       await expect(say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.', sessionA, A, 'k-correct')).rejects.toBeInstanceOf(ServiceUnavailableException);
       await say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.', sessionA, A, 'k-correct');
       // The reader re-sends it as a NEW message: QANDEEL already has it that way.
-      expect((await say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.')).reply).toBe('فاكرها كده أصلًا: «أنا ساكن في طنطا.»');
+      expect((await say('أنا مش ساكن في أكتوبر دلوقتي، أنا ساكن في طنطا.')).reply).toBe('أتذكّرها بهذا الشكل بالفعل: «أنا ساكن في طنطا.»');
       expect(store.memories.filter((m) => m.supersedes_memory_id === october.id)).toHaveLength(1);
       expect(store.memories).toHaveLength(2);
     });
@@ -1239,7 +1239,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
     it('one reader can never reach another reader\'s Memory', async () => {
       const mine = store.remember(A, 'أنا بحب كافيه النيل.');
       const sessionB = store.session(B);
-      expect((await say('انسى إني بحب كافيه النيل.', sessionB, B)).reply).toBe('مش لاقي حاجة زي كده في اللي فاكره.');
+      expect((await say('انسى إني بحب كافيه النيل.', sessionB, B)).reply).toBe('لا أجد شيئًا كهذا فيما أتذكّره.');
       expect((await say('What do you remember about me?', sessionB, B)).reply).toBe("I don't have anything specific remembered about you yet.");
       expect(memoryOf(mine.id).status).toBe('ACTIVE');
     });
@@ -1268,14 +1268,14 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
 
     it('an unanchored request that matches one Memory («امسح موضوع البنك») is confirmed before anything changes', async () => {
       const bank = store.remember(A, 'شغلي الجديد في البنك.');
-      expect((await say('امسح موضوع البنك')).reply).toBe('تقصد «شغلي الجديد في البنك.»؟');
+      expect((await say('امسح موضوع البنك')).reply).toBe('هل المقصود «شغلي الجديد في البنك.»؟');
       expect(memoryOf(bank.id).status).toBe('ACTIVE');
-      expect((await say('أيوه')).reply).toBe('تمام، نسيت «شغلي الجديد في البنك.» ومش هرجع له تاني.');
+      expect((await say('أيوه')).reply).toBe('حسنًا، نسيت «شغلي الجديد في البنك.» ولن أعود إليه مرة أخرى.');
       expect(memoryOf(bank.id).status).toBe('DELETED');
     });
     it('«انسى إني بحب المكان ده» never forgets a different preference that merely shares «بحب»', async () => {
       const kushari = store.remember(A, 'أنا بحب الكشري.', 'STABLE_PREFERENCE');
-      expect((await say('انسى إني بحب المكان ده.')).reply).toBe('مش لاقي حاجة زي كده في اللي فاكره.');
+      expect((await say('انسى إني بحب المكان ده.')).reply).toBe('لا أجد شيئًا كهذا فيما أتذكّره.');
       expect(memoryOf(kushari.id).status).toBe('ACTIVE');
     });
 
@@ -1285,7 +1285,7 @@ describe('W3-MEGA-M conversational Memory control through the production turn ro
       await say('امسح موضوع الشغل.');
       expect((await say('هي دي')).reply).toContain('1. «مديري في الشغل صعب.»');
       expect(store.memories.map((m) => m.status)).toEqual(['ACTIVE', 'ACTIVE']);
-      expect((await say('انسى التانية')).reply).toBe('تمام، نسيت «شغلي الجديد في البنك.» ومش هرجع له تاني.');
+      expect((await say('انسى التانية')).reply).toBe('حسنًا، نسيت «شغلي الجديد في البنك.» ولن أعود إليه مرة أخرى.');
       expect([memoryOf(bank.id).status, memoryOf(boss.id).status]).toEqual(['DELETED', 'ACTIVE']);
     });
 

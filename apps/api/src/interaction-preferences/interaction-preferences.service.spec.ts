@@ -61,7 +61,7 @@ describe('IP-IMP-01 — InteractionPreferencesService', () => {
         field: 'REPLY_LANGUAGE', value: 'EGYPTIAN_ARABIC', expectedVersion: 7,
         replyIfSaved: 'تم حفظ التفضيل. اللغة واللهجة: مصري.',
         replyIfUnchanged: 'تم حفظ التفضيل. اللغة واللهجة: مصري.',
-        replyIfStale: 'لم يُحفظ التغيير. حاول مرة أخرى.',
+        replyIfStale: 'لم يُحفظ التغيير. يمكنك المحاولة مرة أخرى.',
       });
     });
 

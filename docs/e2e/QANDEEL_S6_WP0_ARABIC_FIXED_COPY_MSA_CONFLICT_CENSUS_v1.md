@@ -7,6 +7,16 @@ the [Stage 6 WP0 record](QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CE
 (Draft PR #335).
 **Status:** `PROPOSED — CENSUS AND DRAFT CONTROLLED COPY AMENDMENTS — NOT APPROVED — NOTHING IMPLEMENTED`.
 
+> **LANG-01 note (2026-10-13).** The status line above records this census as published. The Product Owner's editorial
+> approval register of 2026-10-13 has since approved all 109 units: 39 with an explicit final wording, 70 as the
+> «Proposed» below, verbatim. Each unit's exact approved text and disposition is in the
+> [LANG-01 resolved manifest](lang-01/QANDEEL_LANG_01_RESOLVED_APPROVAL_MANIFEST_v1.json). The controlled amendments
+> are the [LANG-01 controlled amendment](../canonical-authority/final-product-experience/lang/QANDEEL_LANG01_ARABIC_LANGUAGE_AUTHORITY_FIXED_COPY_CONTROLLED_AMENDMENT_v1.0.md)
+> and the [G2.3 one](../design/i-08b3.1-g2.3/G2_3_LANG01_MATCHING_COPY_CONTROLLED_AMENDMENT.md); the
+> [LANG-01 record](QANDEEL_LANG_01_ARABIC_LANGUAGE_AUTHORITY_FIXED_COPY_CORRECTION_RECORD_v1.md) tracks what is
+> implemented. No unit, original or proposal below is changed: the LANG-01 static contract derives the approved texts
+> from them.
+
 > This document changes no copy. Every original below keeps its approval as history. No replacement is applied to code,
 > tests, frozen records or proofs until the Product Owner approves it in a Copy Gate, unit by unit or family by family.
 > The task that would apply an approved amendment is not named here. Every proposed Arabic sentence is a draft for the

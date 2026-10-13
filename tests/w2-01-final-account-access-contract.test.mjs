@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 
 // W2-01 — Final Account Access Lifecycle (E2E-A-06, A-07, A-08, A-11, A-12). Static contract.
 //
@@ -79,19 +80,23 @@ const APPROVED_SIGN_IN = {
     'We couldn’t sign you in with these details. Check them and try again.', 'Your session has ended. Sign in to continue.'],
 };
 
+/** The production form: the Arabic as amended by LANG-01 (CA-06, CA-07, CA-08); the record keeps the lists above. */
+const CODE_ACCESS = { ar: APPROVED_ACCESS.ar.map(lang01), en: APPROVED_ACCESS.en };
+const CODE_SIGN_IN = { ar: APPROVED_SIGN_IN.ar.map(lang01), en: APPROVED_SIGN_IN.en };
+
 /** The literals of a copy module. */
 const literals = (path) => [...code(read(path)).matchAll(/(['"`])((?:(?!\1)[^\\]|\\.)*)\1/gu)].map((match) => match[2]);
 
 test('§2 — every approved W2-01 string is in its one copy module, verbatim, and the access module holds nothing else', () => {
   const access = new Set(literals(ACCESS_COPY));
-  for (const text of [...APPROVED_ACCESS.ar, ...APPROVED_ACCESS.en]) assert.ok(access.has(text), `approved access string missing or altered: ${text}`);
-  const approved = new Set([...APPROVED_ACCESS.ar, ...APPROVED_ACCESS.en]);
+  for (const text of [...CODE_ACCESS.ar, ...CODE_ACCESS.en]) assert.ok(access.has(text), `approved access string missing or altered: ${text}`);
+  const approved = new Set([...CODE_ACCESS.ar, ...CODE_ACCESS.en]);
   for (const literal of access) {
     if (literal === 'ar' || literal.startsWith('../')) continue;
     assert.ok(approved.has(literal), `an unapproved string is in the access copy module: ${literal}`);
   }
   const signIn = new Set(literals(SIGN_IN_COPY));
-  for (const text of [...APPROVED_SIGN_IN.ar, ...APPROVED_SIGN_IN.en]) assert.ok(signIn.has(text), `approved sign-in string missing or altered: ${text}`);
+  for (const text of [...CODE_SIGN_IN.ar, ...CODE_SIGN_IN.en]) assert.ok(signIn.has(text), `approved sign-in string missing or altered: ${text}`);
   // T-14's superseded Email-only failure is gone from the Product copy.
   for (const superseded of ['Email or password is incorrect.', 'البريد الإلكتروني أو كلمة المرور غير صحيحة.']) {
     assert.equal(signIn.has(superseded), false, `superseded wording is still Product copy: ${superseded}`);
@@ -226,14 +231,14 @@ test('W2-01 R1 — a client never learns which Email belongs to a Login ID, incl
   assert.match(verify, /target\.via === 'EMAIL' \? await auth\.verifyEmailCode\(target\.email, code\) : await auth\.verifyLoginIdEmailCode\(target\.loginId, code\)/u);
   assert.match(verify, /target\.via === 'EMAIL' \? await auth\.resendEmailCode\(target\.email\) : await auth\.resendLoginIdEmailCode\(target\.loginId\)/u);
   const access = new Set(literals(ACCESS_COPY));
-  assert.ok(access.has('أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.'), 'the approved Arabic instruction, verbatim');
+  assert.ok(access.has(lang01('أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.')), 'the approved Arabic instruction, verbatim (as amended by LANG-01 CA-08)');
   assert.ok(access.has('Enter the verification code sent to the email linked to your account.'), 'the approved English instruction, verbatim');
 
   guards('no confirmationEmail anywhere', everywhere.map((file) => read(file)).join('\n'), (text) => !text.includes('confirmationEmail'), 'readonly confirmationEmail?: string;');
   guards('no Login ID answer names an Email', answers.join('\n'), (text) => text.split('\n').every((literal) => !namesAnAddress(literal)), "{ outcome: 'EMAIL_NOT_CONFIRMED', email: outcome.email }");
   guards('the port reads no Email from an answer', port, (text) => !/answer\.body\??\.email/u.test(text), 'const address = answer.body?.email;');
-  const INSTRUCTIONS = { en: 'Enter the verification code sent to the email linked to your account.', ar: 'أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.' };
-  const noDrift = (text) => text.split('\n').filter((literal) => /^Enter the verification code|^أدخل رمز التأكيد/u.test(literal)).sort().join('|') === [INSTRUCTIONS.en, INSTRUCTIONS.ar].sort().join('|');
+  const INSTRUCTIONS = { en: 'Enter the verification code sent to the email linked to your account.', ar: lang01('أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.') };
+  const noDrift = (text) => text.split('\n').filter((literal) => /^Enter the verification code|^(?:أدخل|يُرجى إدخال) رمز التأكيد/u.test(literal)).sort().join('|') === [INSTRUCTIONS.en, INSTRUCTIONS.ar].sort().join('|');
   guards('the generic instruction does not drift (English)', [...access].join('\n'), noDrift, 'Enter the verification code sent to your email.');
   guards('the generic instruction does not drift (Arabic)', [...access].join('\n'), noDrift, 'أدخل رمز التأكيد الذي أُرسل إلى بريدك.');
 });

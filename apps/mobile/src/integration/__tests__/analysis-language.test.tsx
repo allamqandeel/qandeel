@@ -87,7 +87,7 @@ describe('W1A-01 — the production Analysis depth speaks the reader’s languag
     }
     // The Product Owner's current-edge wording is the one in use; the superseded wording is gone.
     const all = strings.map(({ text }) => text).join('\n');
-    expect(all).toMatch(/تتابع المحادثة الآن|العودة لمتابعة المحادثة/u);
+    expect(all).toMatch(/متابعة المحادثة مفعّلة الآن|العودة لمتابعة المحادثة/u);
     for (const old of ['أنت عند آخر المحادثة', 'العودة إلى المحادثة الجارية', 'مباشر']) expect(all).not.toContain(old);
     expect(all).toContain('خريطة تحليل المحادثة');
     view.unmount();

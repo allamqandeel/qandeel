@@ -261,7 +261,8 @@ const APPROVED_W3_MEGA_S = Object.freeze({
     deleteNotCancellable: 'لم يعد إلغاء الحذف ممكنًا.',
     // ★ the Connected Worlds hard stop, told without naming the mechanism.
     deleteBlocked: 'يتعذّر إتمام الحذف حاليًا، ويبقى حسابك كما هو.',
-    enterPassword: 'أدخل كلمة المرور.',
+    // Arabic amended by LANG-01 CA-06 (A-18).
+    enterPassword: 'كلمة المرور مطلوبة.',
   }),
   en: Object.freeze({
     languageTerm: 'Language',
@@ -334,9 +335,12 @@ const AR_BASE = Object.freeze({
     next: 'الجديد',
     confirm: 'تأكيد التغيير',
     keep: 'الإبقاء على المعرّف الحالي',
-    invalid: 'أدخل معرّفًا عامًا صالحًا.',
-    unavailable: 'المعرّف العام هذا غير متاح. اختر معرّفًا آخر.',
-    network: 'تعذّر الاتصال. حاول مرة أخرى.',
+    // Arabic amended by LANG-01 CA-09 (A-22).
+    invalid: 'يُرجى إدخال معرّف عام صالح.',
+    // Arabic amended by LANG-01 CA-09 (A-23).
+    unavailable: 'هذا المعرّف العام غير متاح. يُرجى اختيار معرّف آخر.',
+    // Arabic amended by LANG-01 CA-06 (A-07).
+    network: 'تعذّر الاتصال. يمكنك المحاولة مرة أخرى.',
   }),
   appearanceGroup: 'المظهر وتسهيلات الاستخدام',
   supportGroup: 'الدعم ومعلومات التطبيق',

@@ -148,7 +148,8 @@ test('6 — the Shared Activity words: approved bytes reused from their sources;
   // S5-01 R1 re-anchor: the Product Owner approved `joined` (2026-10-06); the bytes are unchanged.
   assert.match(api, /status: 'S4-04 PRODUCT COPY GATE — CLOSED — 1 row APPROVED',/u, 'the one gate states its status');
   assert.match(api, /approved: \['joined'\],\n  proposed: \[\],/u);
-  assert.match(api, /\/\*\* APPROVED — S4-04 Product Copy Gate \(Product Owner, 2026-10-06\)\. \{0\}: the person's own Name\. \*\/\n  joined: \{ ar: 'انضم \{0\} إلى هذا العالم\.', en: '\{0\} joined this world\.' \},/u);
+  // LANG-01 CA-14 (SW-15) amends the Arabic; the English and the approval are unchanged.
+  assert.match(api, /\/\*\* APPROVED — S4-04 Product Copy Gate \(Product Owner, 2026-10-06\)\. \{0\}: the person's own Name\. \*\/\n  \/\/ Arabic amended by LANG-01 CA-14 \(SW-15\)\.\n  joined: \{ ar: 'تمّ انضمام \{0\} إلى هذا العالم\.', en: '\{0\} joined this world\.' \},/u);
   // The per-World row's state word is the approved p3.mutedWorld bytes.
   const registry = JSON.parse(read('docs/design/p4-residual/QANDEEL_P4-C3_RESIDUAL_VISUAL_COPY_PROOF/data/COPY_REGISTRY.json')).rows;
   const muted = registry.find((r) => r.k === 'p3.mutedWorld');

@@ -66,14 +66,14 @@ export interface PublicSemanticCopy {
 const AR = {
   heading: 'كيف فهم قنديل هذه التجربة', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06) (not «فهم قنديل»: that is P1's Personal surface name)
   explain: 'قبل أي نشر، يقترح قنديل المعنى الذي يفهمه من هذه التجربة. يمكنك قبوله أو تصحيحه.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
-  ask: 'اطلب فهم قنديل لهذه التجربة', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
+  ask: 'طلب فهم قنديل لهذه التجربة', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06); Arabic amended by LANG-01 CA-16 (PW-03)
   meaningHeading: 'المعنى', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   primaryHeading: 'المعاني الأساسية', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   secondaryHeading: 'معانٍ أخرى', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   whyHeading: 'لماذا فهمها قنديل هكذا', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   accept: 'أوافق على هذا الفهم', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   correct: 'تصحيح الفهم', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
-  correctionScope: 'التصحيح يخص المعنى فقط، ولا ينقل التجربة إلى مكان تختاره.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
+  correctionScope: 'التصحيح يخص المعنى فقط، ولا يتيح اختيار مكان التجربة.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06); Arabic amended by LANG-01 CA-16 (PW-04)
   meaningLabel: 'المعنى بكلماتك', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   primaryLabel: 'المعاني الأساسية، مفصولة بفاصلة', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   secondaryLabel: 'معانٍ أخرى، اختياري', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
@@ -84,7 +84,7 @@ const AR = {
   notSupported: 'محتوى التجربة لا يدعم هذا التصحيح. يمكنك صياغته بشكل آخر.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   unchanged: 'هذا التصحيح مطابق للفهم الحالي.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
   correctionInvalid: 'المعنى سطر واحد حتى 120 حرفًا، ومن معنى أساسي إلى ثلاثة، كلٌّ منها حتى 40 حرفًا.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
-  limited: 'وصلت هذه التجربة إلى الحد المسموح اليوم. حاول لاحقًا.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06)
+  limited: 'وصلت هذه التجربة إلى الحد المسموح اليوم. يمكنك المحاولة لاحقًا.', // APPROVED — S5-03A Product Copy Gate (Product Owner, 2026-10-06); Arabic amended by LANG-01 CA-16 (PW-05)
 } as const;
 
 const EN = {

@@ -326,12 +326,14 @@ export function screenMemorySubject(statement: string): MemorySubjectScreen {
 }
 
 // A1 C3.3: the whole reply, against a closed list. OTHER is read first, then SELF, then DECLINE, so «لا مش عني» is OTHER.
-const SUBJECT_OTHER = new Set(['مش عني', 'لا مش عني', 'عن حد تاني', 'حد تاني', 'someone else', 'not me']);
-const SUBJECT_SELF = new Set(['عني', 'انا', 'ليا', 'عن نفسي', 'بتاعي', 'me', 'about me', 'myself']);
+// LANG-01 (LA-12): every answer recognised before stays; the narrow Modern Standard Arabic echoes of the amended question
+// and labels («عن شخص آخر»، «شخص آخر»، «عني أنا») are added, written here in their normalized form.
+const SUBJECT_OTHER = new Set(['مش عني', 'لا مش عني', 'عن حد تاني', 'حد تاني', 'عن شخص اخر', 'شخص اخر', 'someone else', 'not me']);
+const SUBJECT_SELF = new Set(['عني', 'انا', 'عني انا', 'ليا', 'عن نفسي', 'بتاعي', 'me', 'about me', 'myself']);
 const SUBJECT_DECLINE = new Set(['لا', 'خلاص', 'مش مهم', 'بلاش', 'no', 'never mind']);
 const ABOUT_MY_KIN_EN = new RegExp(`^about my (?:${KIN_EN})$`, 'u');
 
-/** The answer to «المعلومة دي عنك إنت، ولا عن حد تاني؟». Anything that is not one of these is not an answer. */
+/** The answer to «أهذه المعلومة عنك أنت، أم عن شخص آخر؟». Anything that is not one of these is not an answer. */
 export function readSubjectAnswer(content: string): SubjectAnswer | null {
   if (typeof content !== 'string' || content.length > 80 || QUESTION.test(content)) return null;
   const words = subjectWords(content);

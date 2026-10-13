@@ -135,6 +135,7 @@ jobs:
       - {name: "Verify ACE-SP-01 Shared / Public QANDEEL Personality Core static contract (world-neutral core by reference, GUIDED humour suspension, frozen prefixes, amendment and CW2 provenance)", run: npm run test:ace-sp-01-shared-public-personality-core-contract}
       - {name: "Verify INTEL-TM-01 Personal Evidence Truth Maintenance static contract (reliance guards, withheld Understanding shape, records)", run: npm run test:intel-tm-01-personal-evidence-truth-maintenance-contract}
       - {name: "Verify MEM-AR-01C Memory subject identity static contract (writer surface, R2 guard, locked copy, subject-safe Evidence)", run: npm run test:mem-ar-01-memory-subject-identity-contract}
+      - {name: "Verify LANG-01 Arabic language authority static contract (register, derived manifest, one disposition per unit, verbatim amendments, preserved proofs, safety gate)", run: npm run test:lang-01-arabic-language-authority-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root

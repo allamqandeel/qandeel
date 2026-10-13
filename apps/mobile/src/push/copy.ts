@@ -11,7 +11,9 @@
  *     registry status is `AUDIT_OWNED` (P4-C2 §5 handed the sheet to the End-to-End audit; E2E-E-10 is
  *     `PRODUCT OWNER DECISION REQUIRED`), and the backlog Exit Gate of QAN-BL-NOTIF-01 requires them approved BEFORE the
  *     OS prompt ships. The rows below are APPROVED BY THE PRODUCT OWNER, bound byte-exact as given (record §24a): the
- *     title and body as edited by the Product Owner, the other three rows as proposed from P3-A's own wording.
+ *     title and body as edited by the Product Owner, the other three rows as proposed from P3-A's own wording. Their
+ *     Arabic is as amended by the LANG-01 controlled amendment (CA-05; `docs/canonical-authority/final-product-experience/lang/`), which
+ *     superseded the Product Owner's own Egyptian edit («خلّيني») by the Product Owner's register of 2026-10-13.
  *
  * The OS permission prompt itself is the platform's and is never drawn or imitated here (P3 §11, P3-A C-PERM).
  */
@@ -26,18 +28,18 @@ export const PUSH_COPY_GATE = Object.freeze({
   status: 'APPROVED BY THE PRODUCT OWNER — A3-02 PRODUCT COPY GATE' as PushCopyGateStatus,
   rows: Object.freeze({
     /** p3.eduTitle — the education sheet's heading (QANDEEL speaks in the first person, P3-A EDU). */
-    eduTitle: { ar: 'خلّيني أوصلك لما يكون في حاجة تستاهل', en: "Let me reach you when it's worth it" },
+    eduTitle: { ar: 'إشعارات لما يهمّك فقط', en: "Let me reach you when it's worth it" },
     /** p3.eduBody — what notifications are for, and that they can be reduced or turned off. */
     eduBody: {
-      ar: 'مش هبعتلك إشعار لمجرد إني أرجعك للتطبيق. هستخدم الإشعارات بس لما يكون في حاجة مهمة ليك، وتقدر تقللها أو توقفها في أي وقت.',
+      ar: 'لن أرسل إليك إشعارًا لمجرد إعادتك إلى التطبيق. سأستخدم الإشعارات فقط عندما يكون هناك ما يهمّك، ويمكنك تقليلها أو إيقافها في أي وقت.',
       en: "I won't notify you just to bring you back to the app. I'll use notifications only when there's something that matters to you, and you can get fewer notifications or turn them off anytime.",
     },
     /** p3.eduAllow — hands over to the platform's own prompt. Also the Device Notification Settings act before any ask. */
     eduAllow: { ar: 'السماح بالإشعارات', en: 'Allow notifications' },
     /** p3.eduNotNow — keeps everything in the app working; QANDEEL does not ask again by itself. */
-    eduNotNow: { ar: 'مش دلوقتي', en: 'Not now' },
+    eduNotNow: { ar: 'ليس الآن', en: 'Not now' },
     /** p3.notNowNote — said once, after "Not now". */
-    notNowNote: { ar: 'تمام. النشاط هيفضل يظهر هنا جوه التطبيق.', en: 'Okay. Activity will keep showing here in the app.' },
+    notNowNote: { ar: 'حسنًا. سيظل النشاط يظهر هنا داخل التطبيق.', en: 'Okay. Activity will keep showing here in the app.' },
   }),
 });
 

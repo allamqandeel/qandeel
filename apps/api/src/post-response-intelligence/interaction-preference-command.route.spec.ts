@@ -499,7 +499,7 @@ describe('IP-IMP-01 WP2 — durable interaction-preference commands through the 
       store.preferences.set(A, { reply_length: 'DEFAULT', reply_language: 'ENGLISH', humour: 'DEFAULT', explanation_style: 'DEFAULT', version: 1 });
     };
     const said = await say('كلمني دايمًا بالمصري');
-    expect(said.reply).toBe('لم يُحفظ التغيير. حاول مرة أخرى.');
+    expect(said.reply).toBe('لم يُحفظ التغيير. يمكنك المحاولة مرة أخرى.');
     expect(record()).toEqual(expect.objectContaining({ reply_language: 'ENGLISH', version: 1 }));
     expect(store.memories).toEqual([]);
   });
@@ -524,7 +524,7 @@ describe('IP-IMP-01 WP2 — durable interaction-preference commands through the 
 
   it('a Memory command is unchanged and never touches the Interaction Preferences record', async () => {
     const said = await say('افتكر إني بحب القهوة');
-    expect(said.reply).toBe('تمام، هفتكر ده: «أنا بحب القهوة.»');
+    expect(said.reply).toBe('حسنًا، سأتذكّر هذا: «أنا بحب القهوة.»');
     expect(store.commands.map((c) => [c.kind, c.outcome])).toEqual([['REMEMBER', 'REMEMBERED']]);
     expect(store.preferences.size).toBe(0);
     expect(store.preferenceCommands).toBe(0);

@@ -181,6 +181,8 @@ describe('MEM-AR-01C subject screen (S-3) and subject answers (A1 C3.3)', () => 
     ['عني', 'SELF'], ['عنّي', 'SELF'], ['أنا', 'SELF'], ['ليا', 'SELF'], ['عن نفسي', 'SELF'], ['بتاعي', 'SELF'], ['me', 'SELF'], ['about me', 'SELF'], ['Myself', 'SELF'],
     ['مش عني', 'OTHER'], ['لا مش عني', 'OTHER'], ['لأ مش عني', 'OTHER'], ['عن حد تاني', 'OTHER'], ['حد تاني', 'OTHER'], ['عن أختي', 'OTHER'], ['عن جوزي.', 'OTHER'],
     ['someone else', 'OTHER'], ['not me', 'OTHER'], ['about my sister', 'OTHER'],
+    // LANG-01 (LA-12): the Modern Standard Arabic echoes of the amended question and labels; every answer above stays.
+    ['عن شخص آخر', 'OTHER'], ['شخص آخر', 'OTHER'], ['عني أنا', 'SELF'], ['عني انا', 'SELF'],
     ['لا', 'DECLINE'], ['لأ', 'DECLINE'], ['خلاص', 'DECLINE'], ['مش مهم', 'DECLINE'], ['بلاش', 'DECLINE'], ['no', 'DECLINE'], ['never mind', 'DECLINE'],
   ] as const)('the answer %s is %s', (content, answer) => {
     expect(readSubjectAnswer(content)).toBe(answer);

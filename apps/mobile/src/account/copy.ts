@@ -5,10 +5,13 @@
  * Every string is exactly as the Product Owner approved it for W1B-01, and
  * `docs/e2e/QANDEEL_W1B01_IMPLEMENTATION_RECORD_v1.md` §2 records each approval verbatim. Nothing is
  * paraphrased, re-punctuated or translated on the fly, and no other module of this layer writes a
- * Product word. The network sentence is T-14's frozen one, reused rather than rewritten; the Welcome
+ * Product word. The Arabic of the gender-marked and dialect rows — the opener, the Welcome's last two lines,
+ * the First Conversation Opening's invitation, and the entry and verification messages — is as amended by the
+ * LANG-01 controlled amendment (CA-01, CA-02, CA-06, CA-07; `docs/canonical-authority/final-product-experience/lang/`); the
+ * records keep the originals as history. The network sentence is T-14's frozen one, reused rather than rewritten; the Welcome
  * and the First Conversation Opening are the Product Owner's controlled amendment to I-08A4 §14–§15
  * (`docs/canonical-authority/final-product-experience/w1b/`); the normal opener is G1.1 §1 / P4-C4,
- * unchanged.
+ * as amended by LANG-01 CA-01.
  *
  * `{display_name}` and `{email}` are substituted as ISOLATED runs (first-strong isolate … pop), so a
  * Latin name or address inside Arabic, or an Arabic name inside English, can never reorder the
@@ -71,29 +74,29 @@ const ENTRY_AR: AccountEntryCopy = Object.freeze({
   createAccountTitle: 'إنشاء حساب',
   nameLabel: 'الاسم',
   loginIdLabel: 'معرّف الدخول',
-  loginIdHelp: 'معرّف خاص تستخدمه لتسجيل الدخول إلى قنديل. احتفظ به؛ لن يظهر للآخرين.',
+  loginIdHelp: 'معرّف خاص لتسجيل الدخول إلى قنديل. من المهم الاحتفاظ به، ولن يظهر للآخرين.',
   emailLabel: 'البريد الإلكتروني',
   passwordLabel: 'كلمة المرور',
   createAccountAction: 'إنشاء الحساب',
-  emptyName: 'أدخل الاسم.',
-  emptyLoginId: 'أدخل معرّف الدخول.',
-  malformedLoginId: 'استخدم من 3 إلى 30 حرفًا أو رقمًا بالإنجليزية. ويمكن استخدام . أو - أو _ بين الحروف والأرقام.',
-  invalidEmail: 'أدخل بريدًا إلكترونيًا صحيحًا.',
+  emptyName: 'الاسم مطلوب.',
+  emptyLoginId: 'معرّف الدخول مطلوب.',
+  malformedLoginId: 'يتكوّن معرّف الدخول من 3 إلى 30 حرفًا أو رقمًا باللغة الإنجليزية، ويمكن استخدام الرموز . أو - أو _ بين الحروف والأرقام.',
+  invalidEmail: 'يُرجى إدخال بريد إلكتروني صحيح.',
   passwordRejected: 'كلمة المرور لا تستوفي المتطلبات.',
-  loginIdUnavailable: 'معرّف الدخول هذا غير متاح. اختر معرّفًا آخر.',
+  loginIdUnavailable: 'معرّف الدخول هذا غير متاح. يُرجى اختيار معرّف آخر.',
   accountRefused: 'تعذّر إنشاء الحساب بهذه البيانات.',
-  network: 'تعذّر الاتصال. حاول مرة أخرى.',
+  network: 'تعذّر الاتصال. يمكنك المحاولة مرة أخرى.',
   returnFromCreateAccount: 'لديك حساب بالفعل؟ تسجيل الدخول',
   verifyTitle: 'تأكيد البريد الإلكتروني',
-  verifyInstruction: (email: string) => `أرسلنا رمزًا إلى ${isolate(email)}. أدخل الرمز لتأكيد بريدك.`,
+  verifyInstruction: (email: string) => `أرسلنا رمزًا إلى ${isolate(email)}. يُرجى إدخال الرمز لتأكيد بريدك.`,
   codeLabel: 'رمز التأكيد',
   verifyAction: 'تأكيد البريد',
   resendAction: 'لم يصلك الرمز؟ إعادة الإرسال',
   resendSucceeded: 'تم إرسال رمز جديد.',
   codeIncorrect: 'رمز التأكيد غير صحيح.',
-  codeExpired: 'انتهت صلاحية رمز التأكيد. أرسل رمزًا جديدًا.',
-  resendFailed: 'تعذّر إرسال رمز التأكيد. حاول مرة أخرى.',
-  verifyFailed: 'تعذّر تأكيد البريد الإلكتروني الآن. حاول مرة أخرى.',
+  codeExpired: 'انتهت صلاحية رمز التأكيد. يمكنك طلب رمز جديد.',
+  resendFailed: 'تعذّر إرسال رمز التأكيد. يمكنك المحاولة مرة أخرى.',
+  verifyFailed: 'تعذّر تأكيد البريد الإلكتروني الآن. يمكنك المحاولة مرة أخرى.',
   returnFromVerify: 'العودة لتسجيل الدخول',
 });
 
@@ -131,12 +134,12 @@ const FIRST_USE_AR: FirstUseCopy = Object.freeze({
   welcome: (displayName: string) =>
     [
       `أهلًا يا ${isolate(displayName)}.`,
-      'أنا قنديل. كل ما نتكلم أكثر، أفهمك أكثر وأتذكر ما يهمك، علشان أساعدك تشوف نفسك وحياتك بشكل أوضح.',
-      'ابدأ بما يشغلك الآن.',
+      'أنا قنديل. كلما تحدثنا أكثر، فهمتك أكثر وتذكّرت ما يهمك، لأساعدك على رؤية نفسك وحياتك بوضوح أكبر.',
+      'لنبدأ بما يشغلك الآن.',
     ] as const,
   firstOpening: (displayName: string) =>
-    [`أنا معك يا ${isolate(displayName)}.`, 'ابدأ بما يشغلك الآن… حتى لو كان شيئًا لا تعرف كيف تصفه بعد. ونبدأ من هناك.'] as const,
-  normalOpener: (displayName: string) => `اهلا يا ${isolate(displayName)} ... انا في انتظارك ... يلا نبدأ`,
+    [`أنا معك يا ${isolate(displayName)}.`, 'لنبدأ بما يشغلك الآن… حتى إن كان من الصعب وصفه. ومن هناك ننطلق.'] as const,
+  normalOpener: (displayName: string) => `أهلًا يا ${isolate(displayName)} ... أنا في انتظارك ... هيا نبدأ`,
 });
 
 const FIRST_USE_EN: FirstUseCopy = Object.freeze({

@@ -57,7 +57,7 @@ export class MemoryControlRepository {
   }
 
   /**
-   * MEM-AR-01C: the subject question («المعلومة دي عنك إنت، ولا عن حد تاني؟») the IMMEDIATELY preceding user turn of
+   * MEM-AR-01C: the subject question («أهذه المعلومة عنك أنت، أم عن شخص آخر؟») the IMMEDIATELY preceding user turn of
    * this Session received and nobody has answered, with that question turn's words (migration 0152).
    */
   async findPendingSubjectClarification(accessToken: string, sessionId: string, sourceTurnId: string): Promise<PendingSubjectClarification | undefined> {

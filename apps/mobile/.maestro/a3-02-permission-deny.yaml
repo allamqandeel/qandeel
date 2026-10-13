@@ -1,5 +1,5 @@
 # A3-02 — the permission boundary, NOT NOW and DENIED paths (P3 §11; I-08N-01 D50). VALIDATION ONLY.
-# «مش دلوقتي» keeps everything working and is said once; choosing Allow for Proactive QANDEEL again does not ask again;
+# «ليس الآن» keeps everything working and is said once; choosing Allow for Proactive QANDEEL again does not ask again;
 # only the reader's own Device Notification Settings visit offers the education again; the REAL OS prompt answered
 # Don't allow; after that QANDEEL never re-prompts, and Device Notification Settings hands off to the OS (the leg's
 # runner asserts the OS settings screen took focus).

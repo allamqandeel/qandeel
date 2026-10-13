@@ -1,0 +1,895 @@
+{
+  "project": "QANDEEL APP",
+  "title": "Arabic Fixed Copy — Editorial Approval Register",
+  "review_date": "2026-10-13",
+  "base_main_sha": "af94748de73cca744c466d8db526984427b94b38",
+  "baseline_census": "docs/e2e/QANDEEL_S6_WP0_ARABIC_FIXED_COPY_MSA_CONFLICT_CENSUS_v1.md",
+  "baseline_census_url": "https://github.com/allamqandeel/qandeel/blob/af94748de73cca744c466d8db526984427b94b38/docs/e2e/QANDEEL_S6_WP0_ARABIC_FIXED_COPY_MSA_CONFLICT_CENSUS_v1.md",
+  "approval_type": "Product Owner approval of 27 entries plus explicit delegation of editorial decisions for 82 entries",
+  "reference_rule": "If final_text is null, use EXACT Proposed string from pinned census at baseline_census_url, for this ID; no paraphrase at implementation.",
+  "precautions": [
+    "Approval of wording is not authorization to amend frozen contract, edit code, open launch gates, or merge PRs.",
+    "87 entries require controlled Copy Amendments; 6 deterministic safety responses require expert safety review; 16 future/fixture examples require owning task Copy Gate and are not deployable copy.",
+    "M-13 is an illustrative Product Vision example which includes pre-Match identity and compatibility-reason content conflicts. Do not implement or promote it; S6 Copy Gate must separately decide privacy-safe actual copy.",
+    "Historical product proof/fixture bytes must not be edited silently. Exact placeholders, isolation, bidi controls, interpolation semantics and pinned test updates are mandatory at implementation.",
+    "LANG and S6 are separate workstreams/worktrees; nothing was changed in GitHub repository by this approval register."
+  ],
+  "total": 109,
+  "owner_individual_approvals": 27,
+  "delegated_editorial_approvals": 82,
+  "explicit_overrides": 39,
+  "items": [
+    {
+      "id": "M-01",
+      "family": "التعارف والمطابقة",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "يرى قنديل، بناءً على فهمه لكلٍّ منكما، أن هناك شخصًا يستحق التعرّف إليه، وأن بينكما مساحة تستحق الاستكشاف معًا."
+    },
+    {
+      "id": "M-02",
+      "family": "التعارف والمطابقة",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-03",
+      "family": "التعارف والمطابقة",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "خصوصيتك محفوظة. لن تُعرض بياناتك وتحليلاتك الخاصة على الطرف الآخر، ولن يُشارَك منها شيء إلا باختيارك. وسيكون قنديل معك خطوة بخطوة، حرصًا على راحتك وطمأنينتك."
+    },
+    {
+      "id": "M-04",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-05",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-06",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-07",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-08",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-09",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-10",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-11",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-12",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "أهلًا بكما. أنا معكما في البداية، ولكلٍّ منكما حرية اختيار ما يشاركه ومتى."
+    },
+    {
+      "id": "M-13",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-14",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-15",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "M-16",
+      "family": "التعارف والمطابقة",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "Q-01",
+      "family": "الترحيب والافتتاح",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "أهلًا يا ${isolate(displayName)} ... أنا في انتظارك ... هيا نبدأ"
+    },
+    {
+      "id": "Q-02",
+      "family": "الترحيب والافتتاح",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "أنا قنديل. كلما تحدثنا أكثر، فهمتك أكثر وتذكّرت ما يهمك، لأساعدك على رؤية نفسك وحياتك بوضوح أكبر."
+    },
+    {
+      "id": "Q-03",
+      "family": "الترحيب والافتتاح",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "لنبدأ بما يشغلك الآن."
+    },
+    {
+      "id": "Q-04",
+      "family": "الترحيب والافتتاح",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "لنبدأ بما يشغلك الآن… حتى إن كان من الصعب وصفه. ومن هناك ننطلق."
+    },
+    {
+      "id": "S-01",
+      "family": "ردود الأمان الحتمية",
+      "category": "safety-review-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "S-02",
+      "family": "ردود الأمان الحتمية",
+      "category": "safety-review-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "S-03",
+      "family": "ردود الأمان الحتمية",
+      "category": "safety-review-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "S-04",
+      "family": "ردود الأمان الحتمية",
+      "category": "safety-review-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "S-05",
+      "family": "ردود الأمان الحتمية",
+      "category": "safety-review-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "S-06",
+      "family": "ردود الأمان الحتمية",
+      "category": "safety-review-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-01",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-02",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-03",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-04",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-05",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-06",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-07",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-08",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-09",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-10",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-11",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-12",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-13",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-14",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-15",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "أهذه المعلومة عنك أنت، أم عن شخص آخر؟"
+    },
+    {
+      "id": "MEM-16",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-17",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-18",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-19",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-20",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-21",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-22",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "MEM-23",
+      "family": "الذاكرة والتحكم فيها",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "P-01",
+      "family": "التوعية بالإشعارات",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "إشعارات لما يهمّك فقط"
+    },
+    {
+      "id": "P-02",
+      "family": "التوعية بالإشعارات",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "P-03",
+      "family": "التوعية بالإشعارات",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "P-04",
+      "family": "التوعية بالإشعارات",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "A-01",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "معرّف خاص لتسجيل الدخول إلى قنديل. من المهم الاحتفاظ به، ولن يظهر للآخرين."
+    },
+    {
+      "id": "A-02",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "الاسم مطلوب."
+    },
+    {
+      "id": "A-03",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "معرّف الدخول مطلوب."
+    },
+    {
+      "id": "A-04",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "يتكوّن معرّف الدخول من 3 إلى 30 حرفًا أو رقمًا باللغة الإنجليزية، ويمكن استخدام الرموز . أو - أو _ بين الحروف والأرقام."
+    },
+    {
+      "id": "A-05",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "يُرجى إدخال بريد إلكتروني صحيح."
+    },
+    {
+      "id": "A-06",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "معرّف الدخول هذا غير متاح. يُرجى اختيار معرّف آخر."
+    },
+    {
+      "id": "A-07",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر الاتصال. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "A-08",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "أرسلنا رمزًا إلى ${isolate(email)}. يُرجى إدخال الرمز لتأكيد بريدك."
+    },
+    {
+      "id": "A-09",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "انتهت صلاحية رمز التأكيد. يمكنك طلب رمز جديد."
+    },
+    {
+      "id": "A-10",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر إرسال رمز التأكيد. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "A-11",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر تأكيد البريد الإلكتروني الآن. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "A-12",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "رمز إعادة التعيين يتكوّن من 6 أرقام."
+    },
+    {
+      "id": "A-13",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر التحقق من الرمز. يُرجى التأكد منه أو طلب رمز جديد."
+    },
+    {
+      "id": "A-14",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر تغيير كلمة المرور الآن. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "A-15",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر التحقق من جلستك الآن. يُرجى التأكد من اتصالك بالإنترنت والمحاولة مرة أخرى."
+    },
+    {
+      "id": "A-16",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "يُرجى إدخال رمز التأكيد المُرسل إلى البريد الإلكتروني المرتبط بحسابك."
+    },
+    {
+      "id": "A-17",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "يُرجى إدخال معرّف الدخول أو البريد الإلكتروني."
+    },
+    {
+      "id": "A-18",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "كلمة المرور مطلوبة."
+    },
+    {
+      "id": "A-19",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر تسجيل الدخول بهذه البيانات. يمكنك مراجعتها والمحاولة مرة أخرى."
+    },
+    {
+      "id": "A-20",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر تسجيل الدخول الآن. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "A-21",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "انتهت جلستك. يمكنك تسجيل الدخول للمتابعة."
+    },
+    {
+      "id": "A-22",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "يُرجى إدخال معرّف عام صالح."
+    },
+    {
+      "id": "A-23",
+      "family": "الحساب والدخول",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_explicitly_by_product_owner",
+      "selection": "exact_explicit_text",
+      "final_text": "هذا المعرّف العام غير متاح. يُرجى اختيار معرّف آخر."
+    },
+    {
+      "id": "IP-01",
+      "family": "تفضيلات التفاعل",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "لم يُحفظ التغيير. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "IP-02",
+      "family": "تفضيلات التفاعل",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر تحميل تفضيلاتك. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "AC-01",
+      "family": "إعدادات النشاط",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "تعذّر حفظ التغيير. يمكنك المحاولة مرة أخرى."
+    },
+    {
+      "id": "SW-01",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-02",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-03",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-04",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-05",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-06",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "اقتراح من {0} بعودتك إلى عالم مشترك كنت فيه، وقد وافق عليه كل أعضائه."
+    },
+    {
+      "id": "SW-07",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-08",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-09",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "ستظهر هذه الرسائل فقط لـ{0}:"
+    },
+    {
+      "id": "SW-10",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-11",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-12",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-13",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-14",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "SW-15",
+      "family": "العالم المشترك",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-01",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-02",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-03",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-04",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-05",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-06",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-07",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PW-08",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "طلب تحديد مكان التجربة من قنديل"
+    },
+    {
+      "id": "PW-09",
+      "family": "العالم العام",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "PC-01",
+      "family": "التحليل الشخصي",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "exact_explicit_text",
+      "final_text": "متابعة المحادثة مفعّلة الآن."
+    },
+    {
+      "id": "PC-02",
+      "family": "التحليل الشخصي",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "N-01",
+      "family": "المصطلحات",
+      "category": "controlled-copy-amendment-required",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "V-01",
+      "family": "حالات الصوت",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "V-02",
+      "family": "حالات الصوت",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    },
+    {
+      "id": "V-03",
+      "family": "حالات الصوت",
+      "category": "future-copy-gate-only",
+      "decision": "approved_editorially_under_product_owner_delegation",
+      "selection": "verbatim_Proposed_from_pinned_census",
+      "final_text": null
+    }
+  ]
+}

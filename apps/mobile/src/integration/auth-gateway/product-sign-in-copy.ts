@@ -2,7 +2,8 @@
  * T-14 §6 — the ONE place any word the signed-out reader can see or hear is written, in both Product
  * languages.
  *
- * Every string is frozen by the T-14 contract. That is deliberate and it is not laziness: a Product
+ * Every string is frozen by the T-14 contract, its Arabic as amended by the LANG-01 controlled amendment (CA-06 for
+ * T-14's own sentences, CA-08 for the W2-01 ones; `docs/canonical-authority/final-product-experience/lang/`). That is deliberate and it is not laziness: a Product
  * entry surface is exactly where an implementation task drifts into a copywriting exercise, and the
  * three sentences that matter most here — the three failures — are the ones a well-meaning author is
  * most likely to make more "helpful" and, in doing so, more revealing.
@@ -25,9 +26,10 @@
  * ## Register
  *
  * These strings are **T1 · Chrome** under the frozen VI-01 register law: labels, a control, and
- * system-level failure statements. Neutral contemporary Arabic, no displayed case endings, and
- * gender-neutral — the two imperatives («أدخل») are the one form VI-01 §3.6 permits for a control,
- * and every failure is stated object-first so no addressee is inflected at all.
+ * system-level failure statements. Neutral simplified Modern Standard Arabic, no displayed case endings,
+ * and gender-neutral: no imperative addresses the reader (LANG-01 LA-16 superseded the earlier «أدخل»
+ * reading of VI-01 §3.6), and every failure is stated object-first or with a masdar, so no addressee is
+ * inflected at all.
  *
  * VI-01 froze no sign-in vocabulary, so nothing here overrides a frozen term; what it does is apply
  * the register law to words the language system left to ordinary microcopy.
@@ -87,12 +89,12 @@ const ARABIC: ProductSignInCopy = Object.freeze({
   passwordLabel: 'كلمة المرور',
   submit: 'دخول',
   submitting: 'جارٍ تسجيل الدخول',
-  missingIdentifier: 'أدخل معرّف الدخول أو البريد الإلكتروني.',
-  missingPassword: 'أدخل كلمة المرور.',
-  invalidCredentials: 'تعذّر تسجيل الدخول بهذه البيانات. تأكد منها وحاول مرة أخرى.',
-  network: 'تعذّر الاتصال. حاول مرة أخرى.',
-  unexpected: 'تعذّر تسجيل الدخول الآن. حاول مرة أخرى.',
-  sessionEnded: 'انتهت جلستك. سجّل الدخول للمتابعة.',
+  missingIdentifier: 'يُرجى إدخال معرّف الدخول أو البريد الإلكتروني.',
+  missingPassword: 'كلمة المرور مطلوبة.',
+  invalidCredentials: 'تعذّر تسجيل الدخول بهذه البيانات. يمكنك مراجعتها والمحاولة مرة أخرى.',
+  network: 'تعذّر الاتصال. يمكنك المحاولة مرة أخرى.',
+  unexpected: 'تعذّر تسجيل الدخول الآن. يمكنك المحاولة مرة أخرى.',
+  sessionEnded: 'انتهت جلستك. يمكنك تسجيل الدخول للمتابعة.',
 });
 
 const ENGLISH: ProductSignInCopy = Object.freeze({

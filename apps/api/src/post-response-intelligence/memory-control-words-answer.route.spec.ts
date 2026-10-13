@@ -406,13 +406,13 @@ describe('MEM-AR-01B S-2a / MEM-AR-01C S-2b — R2: a clarification answered in 
 
     // 1. The FORGET request names only a predicate, so QANDEEL asks. Nothing changes; the background writes nothing.
     const ask = await say('انسى إني بحب');
-    expect(ask.reply).toBe('تقصد أنهي واحدة؟\n1. «أنا بحب الفول.»\n2. «أنا بحب الكشري.»\nرقمها يكفي.');
+    expect(ask.reply).toBe('أيّ هذه المعلومات هي المقصودة؟\n1. «أنا بحب الفول.»\n2. «أنا بحب الكشري.»\nرقمها يكفي.');
     expect(store.commands.map((c) => [c.kind, c.outcome, c.candidate_memory_ids])).toEqual([['FORGET', 'CLARIFICATION_REQUIRED', [ful.id, kushari.id]]]);
     expect(ask.memoryWrite).toEqual({ decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' });
 
     // 2. The answer in words resolves to one option: the foreground forgets exactly that Memory.
     const answer = await say('أنا بحب الكشري');
-    expect(answer.reply).toBe('تمام، نسيت «أنا بحب الكشري.» ومش هرجع له تاني.');
+    expect(answer.reply).toBe('حسنًا، نسيت «أنا بحب الكشري.» ولن أعود إليه مرة أخرى.');
     expect(store.commands[1]).toEqual(expect.objectContaining({ kind: 'FORGET', outcome: 'FORGOTTEN', answers_command_id: store.commands[0].id }));
     expect(store.memories.find((m) => m.id === kushari.id)!.status).toBe('DELETED');
     expect(store.memories.find((m) => m.id === ful.id)!.status).toBe('ACTIVE');
@@ -446,10 +446,10 @@ describe('MEM-AR-01B S-2a / MEM-AR-01C S-2b — R2: a clarification answered in 
     // The evaluator alone reads «عن أختي» as a relationship of the user («X أختي»): without the guard it would be kept.
     expect(new MemoryWriteEvaluatorService().evaluate('عن أختي')).toEqual(expect.objectContaining({ decision: 'WRITE' }));
     const ask = await say('افتكر إن ساكنة في طنطا');
-    expect(ask.reply).toBe('المعلومة دي عنك إنت، ولا عن حد تاني؟');
+    expect(ask.reply).toBe('أهذه المعلومة عنك أنت، أم عن شخص آخر؟');
     expect(ask.memoryWrite).toEqual(expect.objectContaining({ decision: 'SKIP' }));
     const answer = await say('عن أختي');
-    expect(answer.reply).toBe('تمام، هفتكر ده: «ساكنة في طنطا.»');
+    expect(answer.reply).toBe('حسنًا، سأتذكّر هذا: «ساكنة في طنطا.»');
     expect(store.commands.map((c) => [c.kind, c.outcome])).toEqual([['REMEMBER', 'SUBJECT_CLARIFICATION_REQUIRED'], ['REMEMBER', 'REMEMBERED']]);
     expect(answer.memoryWrite).toEqual({ decision: 'SKIP', reason: 'SKIPPED_COMMAND_TURN', type: 'RELATIONSHIP_CONTEXT' });
     expect(store.memories.map((m) => m.content)).toEqual(['ساكنة في طنطا.']);
@@ -462,7 +462,7 @@ describe('MEM-AR-01B S-2a / MEM-AR-01C S-2b — R2: a clarification answered in 
     store.remember(A, 'أنا بحب الفول.', 'STABLE_PREFERENCE');
     await say('انسى إني بحب');
     const answer = await say('2');
-    expect(answer.reply).toBe('تمام، نسيت «أنا بحب الكشري.» ومش هرجع له تاني.');
+    expect(answer.reply).toBe('حسنًا، نسيت «أنا بحب الكشري.» ولن أعود إليه مرة أخرى.');
     expect(store.memories.find((m) => m.id === kushari.id)!.status).toBe('DELETED');
     expect(answer.memoryWrite).toEqual({ decision: 'SKIP', reason: 'NO_SUPPORTED_EXPLICIT_PATTERN' });
     expect(answer.memoryEffect).toEqual(expect.objectContaining({ result_code: 'NO_FRESH_EVIDENCE' }));

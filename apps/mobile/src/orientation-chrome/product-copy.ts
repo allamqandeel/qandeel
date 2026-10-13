@@ -406,9 +406,9 @@ const AR: LanguagePack = Object.freeze<LanguagePack>({
   },
   temporal: (temporal) => {
     if (temporal.mode === 'FOLLOW_LIVE') {
-      // W1A-01 Product Owner supersession: «تتابع المحادثة الآن» replaces «أنت عند آخر المحادثة», with
-      // this slot's sentence full stop, like every other stance sentence here.
-      return temporal.liveHeadEstablished ? 'تتابع المحادثة الآن.' : 'لم تبدأ المحادثة بعد.';
+      // W1A-01 Product Owner supersession of «أنت عند آخر المحادثة», as amended by LANG-01 CA-19 (PC-01): «متابعة المحادثة
+      // مفعّلة الآن», with this slot's sentence full stop, like every other stance sentence here.
+      return temporal.liveHeadEstablished ? 'متابعة المحادثة مفعّلة الآن.' : 'لم تبدأ المحادثة بعد.';
     }
     return `أنت عند اللحظة ${digits(temporal.at ?? 0)}.`;
   },

@@ -8,6 +8,7 @@
 // Live behaviour is proven by database/verify-migration-0138.mjs, apps/api/src/shared-world/shared-world.spec.ts and the
 // mobile Jest suites; this file proves structure.
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 
@@ -82,7 +83,7 @@ test('4 — the Global Switcher carries the S4-01 destinations (and, since S5-01
 test('5 — the approved meanings and the frozen names are bound byte for byte', () => {
   const copy = read(`${MOBILE}/shared-world/copy.ts`);
   for (const exact of [
-    "invitation: '{0} يدعوك لإنشاء عالم مشترك بينكما ومع قنديل.', // APPROVED — S4-01 §1.3",
+    `invitation: '${lang01('{0} يدعوك لإنشاء عالم مشترك بينكما ومع قنديل.')}', // APPROVED — S4-01 §1.3`,
     "invitation: '{0} invites you to create a Shared World together with QANDEEL.', // APPROVED — S4-01 §1.3",
     "welcome: 'أهلًا بكما. هذا عالمكما المشترك معي.', // APPROVED — S4-01 §1.6",
     "welcome: 'Welcome. This is your Shared World with me.', // APPROVED — S4-01 §1.6",
@@ -97,7 +98,7 @@ test('5 — the approved meanings and the frozen names are bound byte for byte',
   assert.doesNotMatch(copy, /\/\/ PROPOSED/u, 'no S4-01 Product copy row remains PROPOSED');
   for (const exact of [
     "declined: 'تم رفض الدعوة.'",
-    "invalidSharedId: 'تأكد من المعرّف المشترك وحاول مرة أخرى.'",
+    `invalidSharedId: '${lang01('تأكد من المعرّف المشترك وحاول مرة أخرى.')}'`,
     "invalidSharedId: 'Check the Shared ID and try again.'",
     "switcherLabel: 'التنقل بين قنديل والعالم المشترك'",
     "switcherLabel: 'Switch between QANDEEL and Shared World'",

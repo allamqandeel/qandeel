@@ -1,0 +1,2512 @@
+{
+  "title": "QANDEEL LANG-01 — Resolved Arabic Copy Approval Manifest v1",
+  "status": "MECHANICALLY RESOLVED — 109 / 109 — EVERY ID HAS ONE DISPOSITION",
+  "task": "LANG-01 — Arabic Language Authority & Fixed Copy Correction",
+  "baselineMain": "af94748de73cca744c466d8db526984427b94b38",
+  "approvalRegister": {
+    "path": "docs/e2e/lang-01/QANDEEL_LANG_Approval_Register_2026-10-13.json",
+    "sha256": "6ba3bc62e72938998a067e32f8c87b69c01f102f6d3c3fa98b342081cff16785"
+  },
+  "approvalRecordDocx": {
+    "name": "QANDEEL_LANG_Arabic_Copy_Approval_2026-10-13.docx",
+    "sha256": "3eb9c4a17a36011f3a0c79898adf6cc5bf9d1681087f2a58134cda630167f17c",
+    "explicitOverridesMatchingRegister": 39
+  },
+  "census": {
+    "path": "docs/e2e/QANDEEL_S6_WP0_ARABIC_FIXED_COPY_MSA_CONFLICT_CENSUS_v1.md",
+    "pinnedAt": "af94748de73cca744c466d8db526984427b94b38"
+  },
+  "resolutionRule": "final_text when non-null (exact); otherwise the exact «Proposed» text of the same ID in the pinned census. No paraphrase.",
+  "counts": {
+    "total": 109,
+    "byCategory": {
+      "CONTROLLED_COPY_AMENDMENT_REQUIRED": 87,
+      "FUTURE_OWNING_COPY_GATE_ONLY": 16,
+      "SAFETY_REVIEW_REQUIRED": 6
+    },
+    "byTextSource": {
+      "REGISTER_FINAL_TEXT": 39,
+      "CENSUS_PROPOSED_VERBATIM": 70
+    },
+    "byDisposition": {
+      "AMENDED_IN_LANG_RUNTIME_USE_OWNED_BY_S6": 3,
+      "ROUTED_TO_FUTURE_COPY_GATE": 15,
+      "NOT_TO_BE_IMPLEMENTED": 1,
+      "IMPLEMENT": 83,
+      "BLOCKED_PENDING_INDEPENDENT_SAFETY_REVIEW": 6,
+      "AMENDED_DOCUMENT_ONLY": 1
+    },
+    "ownerIndividualApprovals": 27
+  },
+  "items": [
+    {
+      "id": "M-01",
+      "family": "M",
+      "title": "G2.3 §1 Matching opening (attention cue)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "قنديل شايف إن في شخص يستحق إنك تتعرف عليه. بناءً على فهمه لكل منكما، شايف إن بينكم مساحة تستحق إنكم تكتشفوها سوا.",
+      "resolvedText": "يرى قنديل، بناءً على فهمه لكلٍّ منكما، أن هناك شخصًا يستحق التعرّف إليه، وأن بينكما مساحة تستحق الاستكشاف معًا.",
+      "resolvedTextSha256": "a3dfac82355b3d5e7a882dc1e430025056651bbb681c33299c2f0ff5524c0caa",
+      "amendmentSection": "G2.3 — Matching opening and private-proposal copy (docs/design/i-08b3.1-g2.3/G2_3_LANG01_MATCHING_COPY_CONTROLLED_AMENDMENT.md)",
+      "workPackage": "A",
+      "disposition": "AMENDED_IN_LANG_RUNTIME_USE_OWNED_BY_S6",
+      "dispositionText": "amended by LANG-01 Work Package A; no runtime surface exists, and its runtime use belongs to the owning S6 task",
+      "owner": "S6-04 — Private Proposal Review and Decisions (the Matching attention cue and the private proposal); the runtime surface does not exist today",
+      "locations": []
+    },
+    {
+      "id": "M-02",
+      "family": "M",
+      "title": "G2.3 §2 QANDEEL view in the private proposal",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "قنديل شايف إن بينكم نقاط اتفاق كثيرة، وفي نفس الوقت في اختلافات تستحق إنكم تفهموها بهدوء. لو قررتوا تبدأوا التعارف، قنديل هيكون معاكم يساعدكم تفهموا بعض، ويتكلم معاكم عن نقاط الاتفاق والاختلاف في الوقت المناسب.",
+      "resolvedText": "يرى قنديل أن بينكما نقاط اتفاق كثيرة، وفي الوقت نفسه اختلافات تستحق أن تفهماها بهدوء. وإذا قررتما بدء التعارف، فسيكون قنديل معكما، يساعد كلًّا منكما على فهم الآخر، ويتحدث معكما عن نقاط الاتفاق والاختلاف في الوقت المناسب.",
+      "resolvedTextSha256": "ea45e7cf94f8f2553ae800a7b138d28b2af76d912e2be1bd426201a82f0ab4d4",
+      "amendmentSection": "G2.3 — Matching opening and private-proposal copy (docs/design/i-08b3.1-g2.3/G2_3_LANG01_MATCHING_COPY_CONTROLLED_AMENDMENT.md)",
+      "workPackage": "A",
+      "disposition": "AMENDED_IN_LANG_RUNTIME_USE_OWNED_BY_S6",
+      "dispositionText": "amended by LANG-01 Work Package A; no runtime surface exists, and its runtime use belongs to the owning S6 task",
+      "owner": "S6-04 — Private Proposal Review and Decisions (the Matching attention cue and the private proposal); the runtime surface does not exist today",
+      "locations": []
+    },
+    {
+      "id": "M-03",
+      "family": "M",
+      "title": "G2.3 §2 privacy paragraph in the private proposal",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "خصوصيتك محفوظة. بياناتك وتحليلاتك الخاصة لن تُعرض على الطرف الآخر، ولن يُشارك منها شيء إلا ما تختار أنت مشاركته. وقنديل هيكون معك خطوة بخطوة لحد ما تكون مرتاح ومطمئن.",
+      "resolvedText": "خصوصيتك محفوظة. لن تُعرض بياناتك وتحليلاتك الخاصة على الطرف الآخر، ولن يُشارَك منها شيء إلا باختيارك. وسيكون قنديل معك خطوة بخطوة، حرصًا على راحتك وطمأنينتك.",
+      "resolvedTextSha256": "f9b6bc087b3405ba98c0269e3361451586ead4f57f7f284af833296cecf8f9ff",
+      "amendmentSection": "G2.3 — Matching opening and private-proposal copy (docs/design/i-08b3.1-g2.3/G2_3_LANG01_MATCHING_COPY_CONTROLLED_AMENDMENT.md)",
+      "workPackage": "A",
+      "disposition": "AMENDED_IN_LANG_RUNTIME_USE_OWNED_BY_S6",
+      "dispositionText": "amended by LANG-01 Work Package A; no runtime surface exists, and its runtime use belongs to the owning S6 task",
+      "owner": "S6-04 — Private Proposal Review and Decisions (the Matching attention cue and the private proposal); the runtime surface does not exist today",
+      "locations": []
+    },
+    {
+      "id": "M-04",
+      "family": "M",
+      "title": "Matching cue action label (OPEN proof copy)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "ليه؟",
+      "resolvedText": "لماذا؟",
+      "resolvedTextSha256": "12a115f9b658b5c09fd93cfb74d02b65e45d0def9f2c701ec3c40514a6615f06",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-05",
+      "family": "M",
+      "title": "First-recipient explanatory line (OPEN proof copy)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "لو كمّلت، هيتعرض التعارف على الطرف التاني.",
+      "resolvedText": "عند المتابعة، سيُعرض التعارف على الطرف الآخر.",
+      "resolvedTextSha256": "a6a5232f71ae815089ffa3a04d849dcaafd318d3d5c0b948a6a4bf496b9f83e8",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-06",
+      "family": "M",
+      "title": "Second-accepter explanatory line (OPEN proof copy)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "لو كمّلت، هيتفتح لكم عالم مشترك للتعارف على طول.",
+      "resolvedText": "عند المتابعة، سيُفتح لكما عالم مشترك للتعارف فورًا.",
+      "resolvedTextSha256": "2c3e80e09fde82152de544967dd3e0d786ee9560012afc51c8afa1c7a6f761a1",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-07",
+      "family": "M",
+      "title": "Decline act (OPEN proof copy)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "لأ، شكراً",
+      "resolvedText": "لا، شكرًا",
+      "resolvedTextSha256": "1724c2e89ea0da4b5613fa8a779d16fa1fba15f484834ed95d180e42ed12dc7f",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-08",
+      "family": "M",
+      "title": "First-accepter acknowledgement (OPEN proof copy)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "وصل ردّك لقنديل، ولو جدّ جديد هيقولك.",
+      "resolvedText": "وصل ردّك إلى قنديل، وسيُخبرك إذا استجدّ شيء.",
+      "resolvedTextSha256": "d66ca460c5d80785521b1694c709a78d4fb61e0e294bf4ec306e2835e4829c0c",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-09",
+      "family": "M",
+      "title": "Neutral unavailable state (OPEN proof copy)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "التعارف ده مبقاش متاح.",
+      "resolvedText": "لم يعد هذا التعارف متاحًا.",
+      "resolvedTextSha256": "ea7aa0de199808091333882c6559c33e81a697eb8609e3e93af06c9876691e35",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-10",
+      "family": "M",
+      "title": "Dismissing the ended state (OPEN proof copy)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تمام",
+      "resolvedText": "حسنًا",
+      "resolvedTextSha256": "a64b3d93816bd33f5ffbd2810f31f6d59c94cd0f0dc45f7497a6a5197f681645",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-11",
+      "family": "M",
+      "title": "First-accepter later arrival (OPEN proof copy)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "الطرفين وافقوا على التعارف",
+      "resolvedText": "وافق الطرفان على التعارف.",
+      "resolvedTextSha256": "27a81bb40c7718dcc376a87700eaf25b18583bcb445dfeb0a36773703d3b5e2e",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-05 — Mutual Match & Introduction World (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-12",
+      "family": "M",
+      "title": "Introduction-phase welcome in the Shared World (OPEN proof copy)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أهلاً بيكم. أنا هنا معاكم في البداية، وكل واحد فيكم يقرر يشارك إيه وإمتى.",
+      "resolvedText": "أهلًا بكما. أنا معكما في البداية، ولكلٍّ منكما حرية اختيار ما يشاركه ومتى.",
+      "resolvedTextSha256": "c3eda3b143499a29adec42bbc30db29df1bba4530d88bcaa1fcb2b7df4b8e156",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-05 — Mutual Match & Introduction World (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-13",
+      "family": "M",
+      "title": "Product Vision example of a proposal message (illustrative only)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "هدير ممكن تكون ترشيح قوي ليك. أنا شايف إن بينكم تقارب في جوانب نفسية وشخصية وقيم معينة، وفي جوانب عندها ممكن تكمل احتياجات مهمة عندك. لو حابب، أقدر أبعت لها ترشيح عنك ونشوف هل في إمكانية للتعارف.",
+      "resolvedText": "قد تكون هدير ترشيحًا مناسبًا لك. أرى أن بينكما تقاربًا في جوانب نفسية وشخصية وفي بعض القيم، وأن لديها جوانب قد تكمّل احتياجات مهمة لديك. إذا رغبت، يمكنني أن أرسل إليها ترشيحًا عنك، لنرى إن كانت هناك إمكانية للتعارف.",
+      "resolvedTextSha256": "404ace3977bdae201beda2d3c5f378519b913839ac453bd0b51be15183a862b2",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "NOT_TO_BE_IMPLEMENTED",
+      "dispositionText": "approved editorial reference only; must not be implemented or promoted (pre-Match privacy conflict)",
+      "owner": "S6-04 — Private Proposal Review and Decisions (its Copy Gate decides privacy-safe proposal copy; this Product Vision example is never promoted: it names pre-Match identity and compatibility reasons, which G2 §D and G2.3 §2 forbid)",
+      "locations": []
+    },
+    {
+      "id": "M-14",
+      "family": "M",
+      "title": "Product Vision example of a neutral END notice (illustrative only)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "التعارف انتهى، ومش هنكمل فيه.",
+      "resolvedText": "انتهى هذا التعارف، ولن يُستأنف.",
+      "resolvedTextSha256": "3f4d961ac9cb776dcb0986c721aa92da03a155ec681a26f93375634731aaf04c",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-07 — Activity, Direct Entry and Final Integration (the END notice copy, WP0 GATE-34), with S6-02 owning the END carrier",
+      "locations": []
+    },
+    {
+      "id": "M-15",
+      "family": "M",
+      "title": "P3 / P4-C3 fixture: Introductions proposal sentence (FIXTURE_ONLY)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "فيه تعارف جديد في انتظارك",
+      "resolvedText": "هناك تعارف جديد في انتظارك.",
+      "resolvedTextSha256": "b8cfff2e0c00bce57b2f271af2737e4296e67f6ae969b6ff757e402cc7f3758a",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-07 — Activity, Direct Entry and Final Integration (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "M-16",
+      "family": "M",
+      "title": "P3 / P4-C3 fixture: mutual acceptance preview (FIXTURE_ONLY)",
+      "conflictKind": "GENDER",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "قَبِل الطرفان التعارف. افتح التعارف لتكمل.",
+      "resolvedText": "قَبِل الطرفان التعارف. يمكنك فتح التعارف للمتابعة.",
+      "resolvedTextSha256": "8e55515369386d992d6242ad22643d7ce74e4a823d2c7640f0d3b9dd64a4127b",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "S6-07 — Activity, Direct Entry and Final Integration (its Copy Gate, WP0 GATE-28)",
+      "locations": []
+    },
+    {
+      "id": "Q-01",
+      "family": "Q",
+      "title": "Normal new-conversation opener (G1.1 §1 / P4-C4 `opener`)",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "اهلا يا ${isolate(displayName)} ... انا في انتظارك ... يلا نبدأ",
+      "resolvedText": "أهلًا يا ${isolate(displayName)} ... أنا في انتظارك ... هيا نبدأ",
+      "resolvedTextSha256": "b8d2227827e23dceff00e959b9a63d65bc125e2c14e173564dfd07da60084d8b",
+      "amendmentSection": "CA-01 — the normal new-conversation opener (G1.1 §1; P4-C4 `opener`; W1B-01 §4)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "FIRST_USE_AR.normalOpener"
+        }
+      ]
+    },
+    {
+      "id": "Q-02",
+      "family": "Q",
+      "title": "First-use Welcome, QANDEEL self-introduction (W1B-01 §3.1)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أنا قنديل. كل ما نتكلم أكثر، أفهمك أكثر وأتذكر ما يهمك، علشان أساعدك تشوف نفسك وحياتك بشكل أوضح.",
+      "resolvedText": "أنا قنديل. كلما تحدثنا أكثر، فهمتك أكثر وتذكّرت ما يهمك، لأساعدك على رؤية نفسك وحياتك بوضوح أكبر.",
+      "resolvedTextSha256": "532eb06b317bd467f2dd9ccc1a1000dfcc48ad18080581fb202670e55ca106a9",
+      "amendmentSection": "CA-02 — First-use Welcome and First Conversation Opening (W1B-01 §3.1–§3.2)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "FIRST_USE_AR.welcome[1]"
+        }
+      ]
+    },
+    {
+      "id": "Q-03",
+      "family": "Q",
+      "title": "First-use Welcome start act (W1B-01 §3.1)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "ابدأ بما يشغلك الآن.",
+      "resolvedText": "لنبدأ بما يشغلك الآن.",
+      "resolvedTextSha256": "fea0081a6ff4c3b62d107c37d37f9cc5d6943ac8b3e3f535c955fd841eda400f",
+      "amendmentSection": "CA-02 — First-use Welcome and First Conversation Opening (W1B-01 §3.1–§3.2)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "FIRST_USE_AR.welcome[2]"
+        }
+      ]
+    },
+    {
+      "id": "Q-04",
+      "family": "Q",
+      "title": "First Conversation Opening, line 2 (W1B-01 §3.2)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "ابدأ بما يشغلك الآن… حتى لو كان شيئًا لا تعرف كيف تصفه بعد. ونبدأ من هناك.",
+      "resolvedText": "لنبدأ بما يشغلك الآن… حتى إن كان من الصعب وصفه. ومن هناك ننطلق.",
+      "resolvedTextSha256": "152638a64db240fa745527ef7bacf7742213609f33e1cd911c9a1bbaf23f3eec",
+      "amendmentSection": "CA-02 — First-use Welcome and First Conversation Opening (W1B-01 §3.1–§3.2)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "FIRST_USE_AR.firstOpening[1]"
+        }
+      ]
+    },
+    {
+      "id": "S-01",
+      "family": "S",
+      "title": "Self-harm or suicide",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "SAFETY_REVIEW_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش هقدر أساعد في طرق لإيذاء نفسك. لو ممكن تنفّذ دلوقتي، ابعد عن أي حاجة ممكن تستخدمها واتصل بالطوارئ المحلية أو بشخص موثوق يفضل معاك حالًا.",
+      "resolvedText": "لا أستطيع المساعدة في طرق لإيذاء نفسك. إن كنت في خطر الآن، فالأهم هو الابتعاد عن أي شيء قد يؤذيك، والاتصال فورًا بالطوارئ المحلية أو بشخص موثوق يمكنه البقاء معك.",
+      "resolvedTextSha256": "7608bff7548f128ccd904cda343305e98a1bdba45123db2b0ff27ea41f1899d8",
+      "amendmentSection": null,
+      "workPackage": "D-SAFETY",
+      "disposition": "BLOCKED_PENDING_INDEPENDENT_SAFETY_REVIEW",
+      "dispositionText": "editorially approved; production integration is LANG-01 Work Package D, blocked until an independent safety review passes",
+      "owner": "LANG-01 Work Package D (PR D), after the independent safety gate",
+      "locations": [
+        {
+          "path": "apps/api/src/conversation/safety-response-gate.service.ts",
+          "key": "RESPONSES.SELF_HARM_OR_SUICIDE.ar"
+        }
+      ]
+    },
+    {
+      "id": "S-02",
+      "family": "S",
+      "title": "Violence or harm to others",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "SAFETY_REVIEW_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش هقدر أساعد في التخطيط لإيذاء حد أو تنفيذه. ابعد عن أي سلاح وعن الشخص المعني، ولو في خطر فوري اتصل بالطوارئ المحلية. أقدر أساعدك تهدّي الموقف بأمان.",
+      "resolvedText": "لا أستطيع المساعدة في التخطيط لإيذاء أي شخص أو تنفيذه. الأهم الآن هو الابتعاد عن أي سلاح وعن الشخص المعني، وإن كان هناك خطر فوري فيجب الاتصال بالطوارئ المحلية. يمكنني المساعدة في تهدئة الموقف بأمان.",
+      "resolvedTextSha256": "ed02d2ed63f120c8d1789a1fbcacc108523015f5a6281e4e58c6d72702c55d44",
+      "amendmentSection": null,
+      "workPackage": "D-SAFETY",
+      "disposition": "BLOCKED_PENDING_INDEPENDENT_SAFETY_REVIEW",
+      "dispositionText": "editorially approved; production integration is LANG-01 Work Package D, blocked until an independent safety review passes",
+      "owner": "LANG-01 Work Package D (PR D), after the independent safety gate",
+      "locations": [
+        {
+          "path": "apps/api/src/conversation/safety-response-gate.service.ts",
+          "key": "RESPONSES.VIOLENCE_OR_HARM_TO_OTHERS.ar"
+        }
+      ]
+    },
+    {
+      "id": "S-03",
+      "family": "S",
+      "title": "Sexual content involving minors",
+      "conflictKind": "DIALECT",
+      "category": "SAFETY_REVIEW_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش هقدر أساعد في إنشاء أو إيجاد أو وصف محتوى جنسي يتعلق بقاصرين.",
+      "resolvedText": "لا أستطيع المساعدة في إنشاء أو إيجاد أو وصف محتوى جنسي يتعلق بقاصرين.",
+      "resolvedTextSha256": "bfe8d986a130edddfaddd31d91459035c50e262cf16d8b9704e5a360a46bee92",
+      "amendmentSection": null,
+      "workPackage": "D-SAFETY",
+      "disposition": "BLOCKED_PENDING_INDEPENDENT_SAFETY_REVIEW",
+      "dispositionText": "editorially approved; production integration is LANG-01 Work Package D, blocked until an independent safety review passes",
+      "owner": "LANG-01 Work Package D (PR D), after the independent safety gate",
+      "locations": [
+        {
+          "path": "apps/api/src/conversation/safety-response-gate.service.ts",
+          "key": "RESPONSES.SEXUAL_CONTENT_MINOR.ar"
+        }
+      ]
+    },
+    {
+      "id": "S-04",
+      "family": "S",
+      "title": "Severe illegal actionable harm",
+      "conflictKind": "DIALECT",
+      "category": "SAFETY_REVIEW_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش هقدر أقدّم تعليمات تمكّن ضررًا جسيمًا أو جريمة. أقدر أساعد ببدائل قانونية أو وقائية تركّز على الأمان.",
+      "resolvedText": "لا أستطيع تقديم تعليمات تُمكّن من إحداث ضرر جسيم أو ارتكاب جريمة. يمكنني المساعدة ببدائل قانونية أو وقائية تركّز على الأمان.",
+      "resolvedTextSha256": "f37d0ec3729d820f312fc8b1f9469439103d696844954a87f57870bb70cc9a61",
+      "amendmentSection": null,
+      "workPackage": "D-SAFETY",
+      "disposition": "BLOCKED_PENDING_INDEPENDENT_SAFETY_REVIEW",
+      "dispositionText": "editorially approved; production integration is LANG-01 Work Package D, blocked until an independent safety review passes",
+      "owner": "LANG-01 Work Package D (PR D), after the independent safety gate",
+      "locations": [
+        {
+          "path": "apps/api/src/conversation/safety-response-gate.service.ts",
+          "key": "RESPONSES.SEVERE_ILLEGAL_ACTIONABLE_HARM.ar"
+        }
+      ]
+    },
+    {
+      "id": "S-05",
+      "family": "S",
+      "title": "High-stakes medical crisis",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "SAFETY_REVIEW_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "دي ممكن تكون حالة طبية طارئة. اتصل بالطوارئ المحلية أو اطلب رعاية طبية عاجلة حضوريًا دلوقتي، وما تستناش تشخيصًا أونلاين.",
+      "resolvedText": "قد تكون هذه حالة طبية طارئة. يجب الاتصال بالطوارئ المحلية أو طلب رعاية طبية عاجلة حضوريًا الآن، دون انتظار تشخيص عبر الإنترنت.",
+      "resolvedTextSha256": "0c5c76f73362248be7e0091c9b4f0aeb1a82053739e6f845feee6c7092d5f284",
+      "amendmentSection": null,
+      "workPackage": "D-SAFETY",
+      "disposition": "BLOCKED_PENDING_INDEPENDENT_SAFETY_REVIEW",
+      "dispositionText": "editorially approved; production integration is LANG-01 Work Package D, blocked until an independent safety review passes",
+      "owner": "LANG-01 Work Package D (PR D), after the independent safety gate",
+      "locations": [
+        {
+          "path": "apps/api/src/conversation/safety-response-gate.service.ts",
+          "key": "RESPONSES.HIGH_STAKES_MEDICAL_CRISIS.ar"
+        }
+      ]
+    },
+    {
+      "id": "S-06",
+      "family": "S",
+      "title": "Third-party facilitation",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "SAFETY_REVIEW_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش هقدر أساعد في طرق تنهي أو تأذي حياة حد. لو ممكن ينفّذ قريب، اتصل بالطوارئ المحلية حالًا وشجّعه يتكلم مع متخصص أو خط مساعدة. أقدر أساعدك تلاقي طرق آمنة تكون جنبه بيها.",
+      "resolvedText": "لا أستطيع المساعدة في طرق لإنهاء حياة شخص أو إيذائه. إن كان هذا الشخص قد يُقدِم على ذلك قريبًا، فيجب الاتصال بالطوارئ المحلية فورًا وتشجيعه على التحدث مع مختص أو خط مساعدة. يمكنني المساعدة في إيجاد طرق آمنة للوقوف إلى جانبه.",
+      "resolvedTextSha256": "4f2ed2f32956cd6ddcf38dc89955753d7ac1d34324cca9e0d61ba9a9b0fa58f3",
+      "amendmentSection": null,
+      "workPackage": "D-SAFETY",
+      "disposition": "BLOCKED_PENDING_INDEPENDENT_SAFETY_REVIEW",
+      "dispositionText": "editorially approved; production integration is LANG-01 Work Package D, blocked until an independent safety review passes",
+      "owner": "LANG-01 Work Package D (PR D), after the independent safety gate",
+      "locations": [
+        {
+          "path": "apps/api/src/conversation/safety-response-gate.service.ts",
+          "key": "THIRD_PARTY_FACILITATION_RESPONSES.ar"
+        }
+      ]
+    },
+    {
+      "id": "MEM-01",
+      "family": "MEM",
+      "title": "Inspect reply heading",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "ده اللي فاكره من كلامنا:",
+      "resolvedText": "هذا ما أتذكّره من محادثاتنا:",
+      "resolvedTextSha256": "12badca6c5e46e17a8305f23d002add207125b8fabc22a56714885dc925ba62a",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.inspectIntro"
+        }
+      ]
+    },
+    {
+      "id": "MEM-02",
+      "family": "MEM",
+      "title": "Inspect: older items",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "وفيه حاجات أقدم كمان.",
+      "resolvedText": "وهناك أشياء أقدم أيضًا.",
+      "resolvedTextSha256": "a926b1797c0b925f60e9ca267dbcc56b96663aa3f73b3e21cc30224dbf3aa992",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.inspectOlder"
+        }
+      ]
+    },
+    {
+      "id": "MEM-03",
+      "family": "MEM",
+      "title": "Inspect: kept but not relied on",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "وفيه حاجات لسه فاكرها، بس مش بعتمد عليها بناءً على طلبك:",
+      "resolvedText": "وهناك أشياء ما زلت أتذكّرها، لكنني لا أعتمد عليها بناءً على طلبك:",
+      "resolvedTextSha256": "a68390d161bd92b1a698f3d9f4208376824610bea797a8ed20dc860a8435b673",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.inspectKeptNotRelied (and its first-section derivation in inspectReply)"
+        }
+      ]
+    },
+    {
+      "id": "MEM-04",
+      "family": "MEM",
+      "title": "Nothing remembered",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "لسه مش فاكر عنك حاجة محددة.",
+      "resolvedText": "لا أتذكّر عنك شيئًا محددًا حتى الآن.",
+      "resolvedTextSha256": "597cdfa9f8944438d8f41fcf8a4f498a40771c5887b9ad1bc52bffedceee9f53",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.nothingRemembered"
+        }
+      ]
+    },
+    {
+      "id": "MEM-05",
+      "family": "MEM",
+      "title": "Remembered",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تمام، هفتكر ده:",
+      "resolvedText": "حسنًا، سأتذكّر هذا:",
+      "resolvedTextSha256": "07521ed16f80d477aec113b91307b5c375ca42e0cbb2b44a6e1f969347fb9b99",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.remembered"
+        }
+      ]
+    },
+    {
+      "id": "MEM-06",
+      "family": "MEM",
+      "title": "Already remembered",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "فاكر ده أصلًا:",
+      "resolvedText": "أتذكّر هذا بالفعل:",
+      "resolvedTextSha256": "e49c8307fa16f177920b89dc8fa646063a73b75d19466f211847550e883d7f1f",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.alreadyRemembered"
+        }
+      ]
+    },
+    {
+      "id": "MEM-07",
+      "family": "MEM",
+      "title": "Sensitive data declined",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "دي معلومة حساسة، زي كلمة سر أو كود أو رقم هوية، ومش بحتفظ بالحاجات دي.",
+      "resolvedText": "هذه معلومة حساسة، مثل كلمة مرور أو رمز أو رقم هوية، ولا أحتفظ بمثل هذه المعلومات.",
+      "resolvedTextSha256": "7847c5e4994910e9c5f15ad73613f8adf8af2a775dc783045d4d21552ed674aa",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.declinedSensitive"
+        }
+      ]
+    },
+    {
+      "id": "MEM-08",
+      "family": "MEM",
+      "title": "Already correct",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "فاكرها كده أصلًا:",
+      "resolvedText": "أتذكّرها بهذا الشكل بالفعل:",
+      "resolvedTextSha256": "74b6ab83f4ea85dc375714de452c3446b970b82c32b1543de163fe8cb45acc24",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.alreadyCorrect"
+        }
+      ]
+    },
+    {
+      "id": "MEM-09",
+      "family": "MEM",
+      "title": "Target not found",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش لاقي حاجة زي كده في اللي فاكره.",
+      "resolvedText": "لا أجد شيئًا كهذا فيما أتذكّره.",
+      "resolvedTextSha256": "5fef50c974fd8b787c7a5457345e24c16bd92ca860c109a0a57e0c6438ae28f4",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.targetNotFound"
+        }
+      ]
+    },
+    {
+      "id": "MEM-10",
+      "family": "MEM",
+      "title": "Target not specified",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تقصد أنهي معلومة بالظبط؟",
+      "resolvedText": "ما المعلومة المقصودة تحديدًا؟",
+      "resolvedTextSha256": "409c3d46e408421a55fe54d71cb80d14c41211a78e3c73be8bd71fdcb5fc2faf",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.targetNotSpecified"
+        }
+      ]
+    },
+    {
+      "id": "MEM-11",
+      "family": "MEM",
+      "title": "Target changed (nothing changed)",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "المعلومة دي اتغيّرت قبل ما أعدّلها، فماغيّرتش حاجة.",
+      "resolvedText": "تغيّرت هذه المعلومة قبل أن أعدّلها، لذلك لم أغيّر شيئًا.",
+      "resolvedTextSha256": "9472744cd55ab78d001a91c26da8491235cb372e30220fe348b7b22fbfb05d62",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.targetChanged"
+        }
+      ]
+    },
+    {
+      "id": "MEM-12",
+      "family": "MEM",
+      "title": "Clarification declined",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تمام، ماغيّرتش حاجة.",
+      "resolvedText": "حسنًا، لم أغيّر شيئًا.",
+      "resolvedTextSha256": "bf1c1cac5732268dcfab84260800df02744ce44e798a63f1ef98d38a4105e143",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.declined"
+        }
+      ]
+    },
+    {
+      "id": "MEM-13",
+      "family": "MEM",
+      "title": "Which one",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تقصد أنهي واحدة؟",
+      "resolvedText": "أيّ هذه المعلومات هي المقصودة؟",
+      "resolvedTextSha256": "f99dfe9c2400ff1956df0cdbacfa4f711ae1de279a2b8e4bb6903791a29712ee",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.whichOne"
+        }
+      ]
+    },
+    {
+      "id": "MEM-14",
+      "family": "MEM",
+      "title": "One at a time",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "خلّينا ناخدهم واحدة واحدة. تقصد أنهي واحدة الأول؟",
+      "resolvedText": "لنتناولها واحدة تلو الأخرى. بأيّها نبدأ؟",
+      "resolvedTextSha256": "ea3d94ff225d3cb22bf6ee6d4cc3ee07a6fd9c7cf985856435d2735baf9b3eb9",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.oneAtATime"
+        }
+      ]
+    },
+    {
+      "id": "MEM-15",
+      "family": "MEM",
+      "title": "Subject question (MEM-AR-01 locked copy)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "المعلومة دي عنك إنت، ولا عن حد تاني؟",
+      "resolvedText": "أهذه المعلومة عنك أنت، أم عن شخص آخر؟",
+      "resolvedTextSha256": "8dd159fac204e823c77c5ca52c535fdc0d05e730ad00ecaf898fa6b928af8e5c",
+      "amendmentSection": "CA-04 — Memory subject question, sections and labels (MEM-AR-01 locked copy, CQ-1, L-10, L-11)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.subjectQuestion"
+        }
+      ]
+    },
+    {
+      "id": "MEM-16",
+      "family": "MEM",
+      "title": "Inspect: about other people",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "وفيه كمان حاجات حكيتلي عنها تخص ناس تانية:",
+      "resolvedText": "وهناك أيضًا أشياء أخبرتني بها عن أشخاص آخرين:",
+      "resolvedTextSha256": "dcc63604d9e8adff6a644bc7f4b4b38a6c685601ccbcf96cbb94b41b33922723",
+      "amendmentSection": "CA-04 — Memory subject question, sections and labels (MEM-AR-01 locked copy, CQ-1, L-10, L-11)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.inspectAboutOthers"
+        }
+      ]
+    },
+    {
+      "id": "MEM-17",
+      "family": "MEM",
+      "title": "Inspect: about other people, first-section form (CQ-1)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "فيه حاجات حكيتلي عنها تخص ناس تانية:",
+      "resolvedText": "هناك أشياء أخبرتني بها عن أشخاص آخرين:",
+      "resolvedTextSha256": "aedb12c0e277791927b6723a83af97b6c134d00e4a08259fd6be491ea21d544b",
+      "amendmentSection": "CA-04 — Memory subject question, sections and labels (MEM-AR-01 locked copy, CQ-1, L-10, L-11)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.inspectAboutOthersFirst"
+        }
+      ]
+    },
+    {
+      "id": "MEM-18",
+      "family": "MEM",
+      "title": "Subject label: about you (L-10)",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "عنك إنت",
+      "resolvedText": "عنك أنت",
+      "resolvedTextSha256": "cecb1bdf69de6eb3c573ae285cd2d10e6d2cdcb7f0bdde19c989d443659d466c",
+      "amendmentSection": "CA-04 — Memory subject question, sections and labels (MEM-AR-01 locked copy, CQ-1, L-10, L-11)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.aboutYou"
+        }
+      ]
+    },
+    {
+      "id": "MEM-19",
+      "family": "MEM",
+      "title": "Subject label: about someone else (L-10)",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "عن حد تاني",
+      "resolvedText": "عن شخص آخر",
+      "resolvedTextSha256": "1d4515c48d885f889e0702e6a3b8fcd0415bc21cf8d8281d761d8098355e2bc0",
+      "amendmentSection": "CA-04 — Memory subject question, sections and labels (MEM-AR-01 locked copy, CQ-1, L-10, L-11)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "LINES.aboutSomeoneElse"
+        }
+      ]
+    },
+    {
+      "id": "MEM-20",
+      "family": "MEM",
+      "title": "Corrected reply",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تمام، صحّحتها. بقيت فاكر ${quoteMemory(language, current)} بدل ${quoteMemory(language, previous)}.",
+      "resolvedText": "حسنًا، صحّحتها. أصبحت أتذكّر ${quoteMemory(language, current)} بدلًا من ${quoteMemory(language, previous)}.",
+      "resolvedTextSha256": "80ff34154329f9057e319e2e9d3e941028089116182c67150fa4a66bc76c914e",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "correctedReply (ar template)"
+        }
+      ]
+    },
+    {
+      "id": "MEM-21",
+      "family": "MEM",
+      "title": "Forgotten reply",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تمام، نسيت ${quoteMemory(language, content)} ومش هرجع له تاني.",
+      "resolvedText": "حسنًا، نسيت ${quoteMemory(language, content)} ولن أعود إليه مرة أخرى.",
+      "resolvedTextSha256": "abc717e30d4af9701b37fd18503e2eddc5526640bb5049299f48c04714e2257e",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "forgottenReply (ar template)"
+        }
+      ]
+    },
+    {
+      "id": "MEM-22",
+      "family": "MEM",
+      "title": "Do-not-rely reply",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تمام، مش هعتمد على ${quoteMemory(language, content)} في كلامنا، بس هفضل فاكرها.",
+      "resolvedText": "حسنًا، لن أعتمد على ${quoteMemory(language, content)} في محادثاتنا، لكنني سأظل أتذكّرها.",
+      "resolvedTextSha256": "0bc85eaa7f36b6dc165a566dbc0397f50145ec5cc070a25417f63458e30e2d0e",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "disabledReply (ar template)"
+        }
+      ]
+    },
+    {
+      "id": "MEM-23",
+      "family": "MEM",
+      "title": "One-option confirmation question",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تقصد ${quoteMemory(language, options[0])}؟",
+      "resolvedText": "هل المقصود ${quoteMemory(language, options[0])}؟",
+      "resolvedTextSha256": "c666079784eb760fb520c61e740fc8f713620f7c8d9c337cbe8779b28252719b",
+      "amendmentSection": "CA-03 — Conversational memory-control replies (W3-MEGA-M §6 / §10)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/memory/memory-control.copy.ts",
+          "key": "clarificationReply single option (ar template)"
+        }
+      ]
+    },
+    {
+      "id": "P-01",
+      "family": "P",
+      "title": "Education sheet heading",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "خلّيني أوصلك لما يكون في حاجة تستاهل",
+      "resolvedText": "إشعارات لما يهمّك فقط",
+      "resolvedTextSha256": "9c34f41846dde29b4caaab3e2d8f4402300321019084c734412339d87d975098",
+      "amendmentSection": "CA-05 — Push permission education (A3-02 Product Copy Gate §24a)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/push/copy.ts",
+          "key": "PUSH_COPY_GATE.rows.eduTitle"
+        }
+      ]
+    },
+    {
+      "id": "P-02",
+      "family": "P",
+      "title": "Education sheet body",
+      "conflictKind": "DIALECT+GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش هبعتلك إشعار لمجرد إني أرجعك للتطبيق. هستخدم الإشعارات بس لما يكون في حاجة مهمة ليك، وتقدر تقللها أو توقفها في أي وقت.",
+      "resolvedText": "لن أرسل إليك إشعارًا لمجرد إعادتك إلى التطبيق. سأستخدم الإشعارات فقط عندما يكون هناك ما يهمّك، ويمكنك تقليلها أو إيقافها في أي وقت.",
+      "resolvedTextSha256": "1096dd0b9ff7ba4ba02adc8a3453202db665fb131e9149160f4ab9538992dbb6",
+      "amendmentSection": "CA-05 — Push permission education (A3-02 Product Copy Gate §24a)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/push/copy.ts",
+          "key": "PUSH_COPY_GATE.rows.eduBody"
+        }
+      ]
+    },
+    {
+      "id": "P-03",
+      "family": "P",
+      "title": "Education sheet secondary act",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "مش دلوقتي",
+      "resolvedText": "ليس الآن",
+      "resolvedTextSha256": "6e607f30769c8965b76e907e2d8493d14b4b89e33e58287541e1d0b400098d44",
+      "amendmentSection": "CA-05 — Push permission education (A3-02 Product Copy Gate §24a)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/push/copy.ts",
+          "key": "PUSH_COPY_GATE.rows.eduNotNow"
+        }
+      ]
+    },
+    {
+      "id": "P-04",
+      "family": "P",
+      "title": "Confirmation after «Not now»",
+      "conflictKind": "DIALECT",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تمام. النشاط هيفضل يظهر هنا جوه التطبيق.",
+      "resolvedText": "حسنًا. سيظل النشاط يظهر هنا داخل التطبيق.",
+      "resolvedTextSha256": "afb8806e85a25b2e1abcfe077dc5a6beca0f524c669cf312f07c2f695752ebd1",
+      "amendmentSection": "CA-05 — Push permission education (A3-02 Product Copy Gate §24a)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/push/copy.ts",
+          "key": "PUSH_COPY_GATE.rows.notNowNote"
+        }
+      ]
+    },
+    {
+      "id": "A-01",
+      "family": "A",
+      "title": "Login ID field help",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "معرّف خاص تستخدمه لتسجيل الدخول إلى قنديل. احتفظ به؛ لن يظهر للآخرين.",
+      "resolvedText": "معرّف خاص لتسجيل الدخول إلى قنديل. من المهم الاحتفاظ به، ولن يظهر للآخرين.",
+      "resolvedTextSha256": "b10959166b2d60e0af7fe9bea789fd96708a5d2aab4f1bb52a37d52a6b40845c",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.loginIdHelp"
+        }
+      ]
+    },
+    {
+      "id": "A-02",
+      "family": "A",
+      "title": "Empty name",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل الاسم.",
+      "resolvedText": "الاسم مطلوب.",
+      "resolvedTextSha256": "5c1c6f5943f67fa1d48196f1820d1e1c48b727fc562dbe57ac340f545cf2f699",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.emptyName"
+        }
+      ]
+    },
+    {
+      "id": "A-03",
+      "family": "A",
+      "title": "Empty Login ID",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل معرّف الدخول.",
+      "resolvedText": "معرّف الدخول مطلوب.",
+      "resolvedTextSha256": "2ba0867ec9ae266fa31547226a1b39ab46cf80d6daba3490cca727055f79c5a5",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.emptyLoginId"
+        }
+      ]
+    },
+    {
+      "id": "A-04",
+      "family": "A",
+      "title": "Malformed Login ID",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "استخدم من 3 إلى 30 حرفًا أو رقمًا بالإنجليزية. ويمكن استخدام . أو - أو _ بين الحروف والأرقام.",
+      "resolvedText": "يتكوّن معرّف الدخول من 3 إلى 30 حرفًا أو رقمًا باللغة الإنجليزية، ويمكن استخدام الرموز . أو - أو _ بين الحروف والأرقام.",
+      "resolvedTextSha256": "83c200b97b9204fb309fe523d6b24936bbec08383de1135909eca0f4449215e6",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.malformedLoginId"
+        }
+      ]
+    },
+    {
+      "id": "A-05",
+      "family": "A",
+      "title": "Invalid email",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل بريدًا إلكترونيًا صحيحًا.",
+      "resolvedText": "يُرجى إدخال بريد إلكتروني صحيح.",
+      "resolvedTextSha256": "ec3e8f2ee5f623ca40ca6a5c1cc7d1c52bd23c8c4ae9beb5d0625c66f5305b49",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.invalidEmail"
+        },
+        {
+          "path": "apps/mobile/src/account/access/copy.ts",
+          "key": "ACCESS_AR.invalidEmail"
+        }
+      ]
+    },
+    {
+      "id": "A-06",
+      "family": "A",
+      "title": "Login ID unavailable",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "معرّف الدخول هذا غير متاح. اختر معرّفًا آخر.",
+      "resolvedText": "معرّف الدخول هذا غير متاح. يُرجى اختيار معرّف آخر.",
+      "resolvedTextSha256": "9c4bf9d13abc5e479a4da9d673e4099d83c8f3bc5158b8f06213b3fbb6388ad1",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.loginIdUnavailable"
+        }
+      ]
+    },
+    {
+      "id": "A-07",
+      "family": "A",
+      "title": "T-14 network sentence",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر الاتصال. حاول مرة أخرى.",
+      "resolvedText": "تعذّر الاتصال. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "7d6f7cafc68affa28de36a2ac847ecebf163867f3aa387c380f7cfbff2af8f1f",
+      "amendmentSection": "CA-06 — T-14 frozen sign-in copy and its reuses",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/integration/auth-gateway/product-sign-in-copy.ts",
+          "key": "ARABIC.network"
+        },
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.network"
+        },
+        {
+          "path": "apps/mobile/src/account/access/copy.ts",
+          "key": "ACCESS_AR.network"
+        },
+        {
+          "path": "apps/mobile/src/settings/copy.ts",
+          "key": "AR_BASE.publicId.network"
+        }
+      ]
+    },
+    {
+      "id": "A-08",
+      "family": "A",
+      "title": "Verify Email instruction",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أرسلنا رمزًا إلى ${isolate(email)}. أدخل الرمز لتأكيد بريدك.",
+      "resolvedText": "أرسلنا رمزًا إلى ${isolate(email)}. يُرجى إدخال الرمز لتأكيد بريدك.",
+      "resolvedTextSha256": "7f020b69ba6e66f4f6143c2949f174024608384f0c6c6214fe39fdb8cae3479d",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.verifyInstruction"
+        }
+      ]
+    },
+    {
+      "id": "A-09",
+      "family": "A",
+      "title": "Verification code expired (approved, not displayed today)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "انتهت صلاحية رمز التأكيد. أرسل رمزًا جديدًا.",
+      "resolvedText": "انتهت صلاحية رمز التأكيد. يمكنك طلب رمز جديد.",
+      "resolvedTextSha256": "2604f77996b25e37161222a6bab87d10f8e052031420489ca0f2d4e2e10af543",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.codeExpired"
+        }
+      ]
+    },
+    {
+      "id": "A-10",
+      "family": "A",
+      "title": "Resend failed",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر إرسال رمز التأكيد. حاول مرة أخرى.",
+      "resolvedText": "تعذّر إرسال رمز التأكيد. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "f94ec34127f5eb14ad1b349887d61e327009a854da81840c18db9471ad31e1db",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.resendFailed"
+        }
+      ]
+    },
+    {
+      "id": "A-11",
+      "family": "A",
+      "title": "Verify failed",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر تأكيد البريد الإلكتروني الآن. حاول مرة أخرى.",
+      "resolvedText": "تعذّر تأكيد البريد الإلكتروني الآن. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "5f68a3cc34ca4870e39ff19799afbda3ffbecce436ad923e8ba9c0a52e82df2a",
+      "amendmentSection": "CA-07 — Account creation and email verification (W1B-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/copy.ts",
+          "key": "ENTRY_AR.verifyFailed"
+        }
+      ]
+    },
+    {
+      "id": "A-12",
+      "family": "A",
+      "title": "Recovery code shape",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل رمز إعادة التعيين المكوّن من 6 أرقام.",
+      "resolvedText": "رمز إعادة التعيين يتكوّن من 6 أرقام.",
+      "resolvedTextSha256": "657a5d08ce52c80adb09b68ebf4728e6ed7177ccd1bf4352fa4e0d8f4f7f7646",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/access/copy.ts",
+          "key": "ACCESS_AR.codeShape"
+        }
+      ]
+    },
+    {
+      "id": "A-13",
+      "family": "A",
+      "title": "Recovery code rejected",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر التحقق من الرمز. تأكد منه أو أرسل رمزًا جديدًا.",
+      "resolvedText": "تعذّر التحقق من الرمز. يُرجى التأكد منه أو طلب رمز جديد.",
+      "resolvedTextSha256": "2a692da36c9d29f72409914330a4b94d832ac34b1ae0e02f7d4bd2311fce1999",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/access/copy.ts",
+          "key": "ACCESS_AR.codeRejected"
+        }
+      ]
+    },
+    {
+      "id": "A-14",
+      "family": "A",
+      "title": "Password update failed",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر تغيير كلمة المرور الآن. حاول مرة أخرى.",
+      "resolvedText": "تعذّر تغيير كلمة المرور الآن. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "246fd7491e6b51f2e9e5a830cd1429adfb70e8fcb04eef7f21bd9992f4064906",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/access/copy.ts",
+          "key": "ACCESS_AR.updateFailed"
+        }
+      ]
+    },
+    {
+      "id": "A-15",
+      "family": "A",
+      "title": "Session could not be verified",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر التحقق من جلستك الآن. تحقق من اتصالك وحاول مرة أخرى.",
+      "resolvedText": "تعذّر التحقق من جلستك الآن. يُرجى التأكد من اتصالك بالإنترنت والمحاولة مرة أخرى.",
+      "resolvedTextSha256": "58e91c5e9984a619f03dd34d4503189bbbc6f3e3719fb4260cb952255bf70961",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/access/copy.ts",
+          "key": "ACCESS_AR.sessionUnverified"
+        }
+      ]
+    },
+    {
+      "id": "A-16",
+      "family": "A",
+      "title": "Verify linked email instruction",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.",
+      "resolvedText": "يُرجى إدخال رمز التأكيد المُرسل إلى البريد الإلكتروني المرتبط بحسابك.",
+      "resolvedTextSha256": "f0dfc0cb45edf5893557f9180c56623b66e281ec7f787d15864263017fa77953",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/account/access/copy.ts",
+          "key": "ACCESS_AR.verifyLinkedEmailInstruction"
+        }
+      ]
+    },
+    {
+      "id": "A-17",
+      "family": "A",
+      "title": "Missing sign-in identifier",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل معرّف الدخول أو البريد الإلكتروني.",
+      "resolvedText": "يُرجى إدخال معرّف الدخول أو البريد الإلكتروني.",
+      "resolvedTextSha256": "870008435f227eca25c23b997e3cae22251e7483db54ad6736cd2c55fa4cbe1e",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/integration/auth-gateway/product-sign-in-copy.ts",
+          "key": "ARABIC.missingIdentifier"
+        }
+      ]
+    },
+    {
+      "id": "A-18",
+      "family": "A",
+      "title": "Enter password",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل كلمة المرور.",
+      "resolvedText": "كلمة المرور مطلوبة.",
+      "resolvedTextSha256": "ed9179389c43545b45c314561a6ea215bcd7304dbf1d5280aee9effcb606bd12",
+      "amendmentSection": "CA-06 — T-14 frozen sign-in copy and its reuses",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/integration/auth-gateway/product-sign-in-copy.ts",
+          "key": "ARABIC.missingPassword"
+        },
+        {
+          "path": "apps/mobile/src/settings/copy.ts",
+          "key": "APPROVED_W3_MEGA_S.ar.enterPassword"
+        }
+      ]
+    },
+    {
+      "id": "A-19",
+      "family": "A",
+      "title": "Invalid credentials",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر تسجيل الدخول بهذه البيانات. تأكد منها وحاول مرة أخرى.",
+      "resolvedText": "تعذّر تسجيل الدخول بهذه البيانات. يمكنك مراجعتها والمحاولة مرة أخرى.",
+      "resolvedTextSha256": "41456e2d901383f391f8549b2ce50529cb1ab1b884516f63d1cef699a46fd192",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/integration/auth-gateway/product-sign-in-copy.ts",
+          "key": "ARABIC.invalidCredentials"
+        }
+      ]
+    },
+    {
+      "id": "A-20",
+      "family": "A",
+      "title": "Unexpected sign-in failure",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر تسجيل الدخول الآن. حاول مرة أخرى.",
+      "resolvedText": "تعذّر تسجيل الدخول الآن. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "f435f34641d7ae0b7cd76690fdd834e3d0fe252f1659e096553766d88c3aecaf",
+      "amendmentSection": "CA-06 — T-14 frozen sign-in copy and its reuses",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/integration/auth-gateway/product-sign-in-copy.ts",
+          "key": "ARABIC.unexpected"
+        }
+      ]
+    },
+    {
+      "id": "A-21",
+      "family": "A",
+      "title": "Session ended",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "انتهت جلستك. سجّل الدخول للمتابعة.",
+      "resolvedText": "انتهت جلستك. يمكنك تسجيل الدخول للمتابعة.",
+      "resolvedTextSha256": "f21bf2a4f923732bd2c826b46d406d92335aa979438ffc75b7c924bd13a46219",
+      "amendmentSection": "CA-08 — Account access and recovery (W2-01 Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/integration/auth-gateway/product-sign-in-copy.ts",
+          "key": "ARABIC.sessionEnded"
+        }
+      ]
+    },
+    {
+      "id": "A-22",
+      "family": "A",
+      "title": "Invalid Public ID",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "أدخل معرّفًا عامًا صالحًا.",
+      "resolvedText": "يُرجى إدخال معرّف عام صالح.",
+      "resolvedTextSha256": "fbb0ff85801c36ed84e6acf61ac6cb5e06535f980ac190164104d8491072ca41",
+      "amendmentSection": "CA-09 — Public ID (W3-02 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/settings/copy.ts",
+          "key": "AR_BASE.publicId.invalid"
+        }
+      ]
+    },
+    {
+      "id": "A-23",
+      "family": "A",
+      "title": "Public ID unavailable",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_explicitly_by_product_owner",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "المعرّف العام هذا غير متاح. اختر معرّفًا آخر.",
+      "resolvedText": "هذا المعرّف العام غير متاح. يُرجى اختيار معرّف آخر.",
+      "resolvedTextSha256": "e3c577a066f2cd2b7bc0a18c9bcc83d35d0575844c3a4d22cf9dad783a794b87",
+      "amendmentSection": "CA-09 — Public ID (W3-02 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/settings/copy.ts",
+          "key": "AR_BASE.publicId.unavailable"
+        }
+      ]
+    },
+    {
+      "id": "IP-01",
+      "family": "IP",
+      "title": "Change not saved (Settings notice and CA-1 conversation reply)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "لم يُحفظ التغيير. حاول مرة أخرى.",
+      "resolvedText": "لم يُحفظ التغيير. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "b7ebe1db1a663e2d07311f997f84dd99db7e82a8f004c63d2ee28d48271074d4",
+      "amendmentSection": "CA-10 — Interaction Preferences (IP-IMP-01 R1 copy table; CA-1)",
+      "workPackage": "B-MOBILE+B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/settings/interaction-preferences-copy.ts",
+          "key": "INTERACTION_PREFERENCES_COPY_GATE.ar.notSaved"
+        },
+        {
+          "path": "apps/api/src/interaction-preferences/interaction-preference.copy.ts",
+          "key": "NOT_SAVED.ar"
+        }
+      ]
+    },
+    {
+      "id": "IP-02",
+      "family": "IP",
+      "title": "Preferences failed to load",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر تحميل تفضيلاتك. حاول مرة أخرى.",
+      "resolvedText": "تعذّر تحميل تفضيلاتك. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "0f146f8d35e95aa018e2849f4f0b675db64290453f0874265b0e047c4d5e6149",
+      "amendmentSection": "CA-10 — Interaction Preferences (IP-IMP-01 R1 copy table; CA-1)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/settings/interaction-preferences-copy.ts",
+          "key": "INTERACTION_PREFERENCES_COPY_GATE.ar.loadFailed"
+        }
+      ]
+    },
+    {
+      "id": "AC-01",
+      "family": "AC",
+      "title": "Change not confirmed by the server",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تعذّر حفظ التغيير. حاول مرة أخرى.",
+      "resolvedText": "تعذّر حفظ التغيير. يمكنك المحاولة مرة أخرى.",
+      "resolvedTextSha256": "ac280b39af02747f9bcd65ab1eaa2ea80154f6e2936ff71c0d1b8217c61726b1",
+      "amendmentSection": "CA-11 — Notifications & Activity settings (A3-01 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/activity/copy.ts",
+          "key": "ACTIVITY_COPY_GATE.rows.saveFailed"
+        }
+      ]
+    },
+    {
+      "id": "SW-01",
+      "family": "SW",
+      "title": "Invitation row",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "{0} يدعوك لإنشاء عالم مشترك بينكما ومع قنديل.",
+      "resolvedText": "دعوة من {0} لإنشاء عالم مشترك بينكما ومع قنديل.",
+      "resolvedTextSha256": "88d4930841d7f4216e074be6e0f7a21981e9e6cf40c3e35b2705bcae8d8ad3e8",
+      "amendmentSection": "CA-12 — Shared World reachability (S4-01 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/copy.ts",
+          "key": "AR.invitation"
+        }
+      ]
+    },
+    {
+      "id": "SW-02",
+      "family": "SW",
+      "title": "Invalid Shared ID",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تأكد من المعرّف المشترك وحاول مرة أخرى.",
+      "resolvedText": "يُرجى التأكد من المعرّف المشترك والمحاولة مرة أخرى.",
+      "resolvedTextSha256": "ab036bc8e29f121d333f60ba0d0042424a5c2d95f01d3cc6490303e71cebfd54",
+      "amendmentSection": "CA-12 — Shared World reachability (S4-01 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/copy.ts",
+          "key": "AR.invalidSharedId"
+        }
+      ]
+    },
+    {
+      "id": "SW-03",
+      "family": "SW",
+      "title": "Shared ID privacy explanation",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "معرّفك المشترك خاص. شاركه فقط مع من تريد أن يستطيع دعوتك إلى عالم مشترك.",
+      "resolvedText": "معرّفك المشترك خاص. مشاركته تعني السماح لمن يحصل عليه بدعوتك إلى عالم مشترك.",
+      "resolvedTextSha256": "96e8f6d8757fa1d0618f0e1702ede144aeb265a8b749dc79b6bbeec3d96a727f",
+      "amendmentSection": "CA-12 — Shared World reachability (S4-01 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/copy.ts",
+          "key": "AR.sharedIdPrivacy"
+        }
+      ]
+    },
+    {
+      "id": "SW-04",
+      "family": "SW",
+      "title": "Regenerate Shared ID warning",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "سيتوقف معرّفك الحالي عن العمل، ولن تصل إليك الدعوات المرسلة إليه التي لم تقبلها بعد. عوالمك المشتركة الحالية لن تتأثر.",
+      "resolvedText": "سيتوقف معرّفك الحالي عن العمل، ولن تصل إليك الدعوات المرسلة إليه التي لم تُقبَل بعد. عوالمك المشتركة الحالية لن تتأثر.",
+      "resolvedTextSha256": "47acdc46ff598b9e14272fe07c342c09f7e37295e6a71db24c09e98c2cc805cc",
+      "amendmentSection": "CA-12 — Shared World reachability (S4-01 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/copy.ts",
+          "key": "AR.regenerateWarning"
+        }
+      ]
+    },
+    {
+      "id": "SW-05",
+      "family": "SW",
+      "title": "Member request: add (root row and Activity / push sentence)",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "{0} يقترح انضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.",
+      "resolvedText": "اقتراح من {0} بانضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.",
+      "resolvedTextSha256": "1c8914e5f216732bdca9f6af5c4d283043d51491fbf9793ecb6eec078c8ed7ea",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE+B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.memberRequestAdd"
+        },
+        {
+          "path": "apps/api/src/shared-world/shared-activity-copy.ts",
+          "key": "SHARED_ACTIVITY_COPY.memberRequestAdd"
+        }
+      ]
+    },
+    {
+      "id": "SW-06",
+      "family": "SW",
+      "title": "Member request: rejoin (root row and Activity / push sentence)",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "{0} يقترح عودتك إلى عالم مشترك كنت فيه، وقد وافق عليها كل أعضائه.",
+      "resolvedText": "اقتراح من {0} بعودتك إلى عالم مشترك كنت فيه، وقد وافق عليه كل أعضائه.",
+      "resolvedTextSha256": "faa31996645343afec08e8c5c4e07bb7927262feb9e27ecf4d4d6fadbe664c89",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE+B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.memberRequestRejoin"
+        },
+        {
+          "path": "apps/api/src/shared-world/shared-activity-copy.ts",
+          "key": "SHARED_ACTIVITY_COPY.memberRequestRejoin"
+        }
+      ]
+    },
+    {
+      "id": "SW-07",
+      "family": "SW",
+      "title": "Removal explanation",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "تحتاج إزالة {0} موافقة جميع الأعضاء الآخرين. لا يحتاج {0} إلى الموافقة، ويبقى كلامه السابق باسمه.",
+      "resolvedText": "تحتاج إزالة {0} موافقة جميع الأعضاء الآخرين، ولا تُطلب موافقة العضو المقترح إزالته. ويبقى الكلام السابق في هذا العالم باسم صاحبه.",
+      "resolvedTextSha256": "24ee66cbe39814283de19dd49df76f047f82f2160481ac7e2874cba57745cb05",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.removeExplain"
+        }
+      ]
+    },
+    {
+      "id": "SW-08",
+      "family": "SW",
+      "title": "History-share explanation",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "الانضمام إلى العالم لا يفتح كل تاريخه السابق تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة معه، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها.",
+      "resolvedText": "الانضمام إلى العالم لا يفتح كل تاريخه السابق تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة مع هذا العضو، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها.",
+      "resolvedTextSha256": "46d5299bff3d979ed60a59b86686395a7c0bdab39b9c2d2d218d97d81f21e92d",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.shareExplain"
+        }
+      ]
+    },
+    {
+      "id": "SW-09",
+      "family": "SW",
+      "title": "Share preview heading",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "سيرى {0} هذه الرسائل فقط:",
+      "resolvedText": "ستظهر هذه الرسائل فقط لـ{0}:",
+      "resolvedTextSha256": "94aff732975528f2e1521fd52d42b95623027ac028b82bc9a56da6e3d2ad2ac6",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.previewHeading"
+        }
+      ]
+    },
+    {
+      "id": "SW-10",
+      "family": "SW",
+      "title": "Share request row",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "اقتراح بأن يرى {0} الرسائل السابقة التالية:",
+      "resolvedText": "اقتراح بمشاركة الرسائل السابقة التالية مع {0}:",
+      "resolvedTextSha256": "b9bc60dd9a8fb64199e49ef9ddb0f6dffb40d54d53972f146d5f8fca7d658a14",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.shareRequest"
+        }
+      ]
+    },
+    {
+      "id": "SW-11",
+      "family": "SW",
+      "title": "Former-member share request",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "اقتراح بأن يرى عضو في عالم مشترك لم تعد عضوًا فيه كلامك السابق هذا. موافقتك لا تعيدك إلى العالم:",
+      "resolvedText": "اقتراح بإتاحة كلامك السابق هذا لعضو في عالم مشترك انتهت عضويتك فيه. موافقتك لا تعيدك إلى العالم:",
+      "resolvedTextSha256": "56b28f21e0d891125ea68c24a37802012adda8a2ca57d4bc2c1d0d4961b15370",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.formerShareRequest"
+        }
+      ]
+    },
+    {
+      "id": "SW-12",
+      "family": "SW",
+      "title": "Leave explanation",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "ستغادر فورًا، ولن تتمكن من رؤية هذا العالم وأنت خارجه. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات.",
+      "resolvedText": "المغادرة فورية، ولن يظهر لك هذا العالم ما دمت خارجه. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات.",
+      "resolvedTextSha256": "65e6d0b36caf888687fefe5a47641d0aebeb52dda1486c8d9a62eeee9f508a14",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.leaveExplain"
+        }
+      ]
+    },
+    {
+      "id": "SW-13",
+      "family": "SW",
+      "title": "Former-member material row and page title",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "كلامك في عوالم مشتركة لم تعد عضوًا فيها",
+      "resolvedText": "كلامك في عوالم مشتركة انتهت عضويتك فيها",
+      "resolvedTextSha256": "b6279fa8ced3ce1439a2f5062ec3be7d163d0df45a0a90ea23765269626d8265",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.formerRow"
+        }
+      ]
+    },
+    {
+      "id": "SW-14",
+      "family": "SW",
+      "title": "Former-member material empty state",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "لا يوجد لك كلام في عوالم مشتركة لم تعد عضوًا فيها.",
+      "resolvedText": "لا يوجد لك كلام في عوالم مشتركة انتهت عضويتك فيها.",
+      "resolvedTextSha256": "abf4513595b94cd7613802695a029700496f6ab12d8ab002406d03fea09933f8",
+      "amendmentSection": "CA-13 — Shared World lifecycle and governance (S4-03 Product Copy Gate; S4-04 reuse)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/shared-world/lifecycle-copy.ts",
+          "key": "AR_OWN.formerEmpty"
+        }
+      ]
+    },
+    {
+      "id": "SW-15",
+      "family": "SW",
+      "title": "A person joined (Activity / push sentence, JOINED and BIRTH)",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "انضم {0} إلى هذا العالم.",
+      "resolvedText": "تمّ انضمام {0} إلى هذا العالم.",
+      "resolvedTextSha256": "f070127ca153f81b8c30f5e0cad33dd7fb3bc885ab546ee00fc37251941943be",
+      "amendmentSection": "CA-14 — Shared Activity (S4-04 Product Copy Gate)",
+      "workPackage": "B-API",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/api/src/shared-world/shared-activity-copy.ts",
+          "key": "SHARED_ACTIVITY_COPY.joined"
+        }
+      ]
+    },
+    {
+      "id": "PW-01",
+      "family": "PW",
+      "title": "Choose-sources heading",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "اختر ما سيصبح عامًا",
+      "resolvedText": "اختيار ما سيصبح عامًا",
+      "resolvedTextSha256": "2e2abbfa559d618c4d03cb54993def6f273e28d59ea5536d9b1fd4ba969a9813",
+      "amendmentSection": "CA-15 — Public authoring (S5-02 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-authoring/copy.ts",
+          "key": "chooseHeading"
+        }
+      ]
+    },
+    {
+      "id": "PW-02",
+      "family": "PW",
+      "title": "Choose-sources hint",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "من كلامك في قنديل، ومما تراه في عوالمك المشتركة. حتى 20 عنصرًا.",
+      "resolvedText": "من كلامك في قنديل، ومما يظهر لك في عوالمك المشتركة. حتى 20 عنصرًا.",
+      "resolvedTextSha256": "8f8fa6653fff7985e68ccbed9ed1c841dd32350ad639e4b49ddfb96fa9dc99f9",
+      "amendmentSection": "CA-15 — Public authoring (S5-02 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-authoring/copy.ts",
+          "key": "chooseHint"
+        }
+      ]
+    },
+    {
+      "id": "PW-03",
+      "family": "PW",
+      "title": "Ask QANDEEL to propose its understanding (button)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "اطلب فهم قنديل لهذه التجربة",
+      "resolvedText": "طلب فهم قنديل لهذه التجربة",
+      "resolvedTextSha256": "e433f4fc8f20a39f28672960d6e760192ce0588290e2a7f93697dc6ef9344c37",
+      "amendmentSection": "CA-16 — Public semantic review (S5-03A Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-authoring/semantic-copy.ts",
+          "key": "ask"
+        }
+      ]
+    },
+    {
+      "id": "PW-04",
+      "family": "PW",
+      "title": "Semantic correction scope",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "التصحيح يخص المعنى فقط، ولا ينقل التجربة إلى مكان تختاره.",
+      "resolvedText": "التصحيح يخص المعنى فقط، ولا يتيح اختيار مكان التجربة.",
+      "resolvedTextSha256": "6263bdf8c5085640d401e1f3f6c85dafee7fc609e577735350f552d74f6be0b1",
+      "amendmentSection": "CA-16 — Public semantic review (S5-03A Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-authoring/semantic-copy.ts",
+          "key": "correctionScope"
+        }
+      ]
+    },
+    {
+      "id": "PW-05",
+      "family": "PW",
+      "title": "Daily limit reached",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "وصلت هذه التجربة إلى الحد المسموح اليوم. حاول لاحقًا.",
+      "resolvedText": "وصلت هذه التجربة إلى الحد المسموح اليوم. يمكنك المحاولة لاحقًا.",
+      "resolvedTextSha256": "4d386dfd1ad6e7f9add60327e563f52e2da3683570583732c3c81d5efa6377e7",
+      "amendmentSection": "CA-16 — Public semantic review (S5-03A Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-authoring/semantic-copy.ts",
+          "key": "limited"
+        }
+      ]
+    },
+    {
+      "id": "PW-06",
+      "family": "PW",
+      "title": "Public search field (label, placeholder, accessible name)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "ابحث عن تجربة أو شعور أو معنى",
+      "resolvedText": "البحث عن تجربة أو شعور أو معنى",
+      "resolvedTextSha256": "d5a5a86911d59ad5593082d03c5ac674b30832a86aa99e83b6b82d8f2d1aa6cb",
+      "amendmentSection": "CA-17 — Public semantic field (S5-03B Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-world/field/field-copy.ts",
+          "key": "searchLabel"
+        }
+      ]
+    },
+    {
+      "id": "PW-07",
+      "family": "PW",
+      "title": "«Shared by {0}» metadata line",
+      "conflictKind": "GENDER (third-person agreement with a named person)",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "شاركها {0}",
+      "resolvedText": "مشاركة من {0}",
+      "resolvedTextSha256": "fb3b2c50bbf8f1585e262952ae6320436137be66c4a2a31f4c6ae7b29ab50d8c",
+      "amendmentSection": "CA-17 — Public semantic field (S5-03B Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-world/field/field-copy.ts",
+          "key": "sharedBy"
+        }
+      ]
+    },
+    {
+      "id": "PW-08",
+      "family": "PW",
+      "title": "Ask QANDEEL to set the place (button)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "اطلب من قنديل تحديد مكانها",
+      "resolvedText": "طلب تحديد مكان التجربة من قنديل",
+      "resolvedTextSha256": "81ce39a0280c4f7f91b2f4841422beee38adad97bd106904fe3ba536ef5b4aa9",
+      "amendmentSection": "CA-17 — Public semantic field (S5-03B Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-world/field/field-copy.ts",
+          "key": "placeAsk"
+        }
+      ]
+    },
+    {
+      "id": "PW-09",
+      "family": "PW",
+      "title": "Discussion composer hint",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "اكتب ‎@qandeel لتسأل قنديل هنا، وردّه يظهر للجميع.",
+      "resolvedText": "يمكنك كتابة ‎@qandeel لتوجيه سؤال إلى قنديل هنا، وردّه يظهر للجميع.",
+      "resolvedTextSha256": "cf6d97c09257da6eeafd82684aa6e2274b44b920ed454e2cec817d984cc161d2",
+      "amendmentSection": "CA-18 — Public discussion (S5-04 Product Copy Gate)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/public-world/field/discussion-copy.ts",
+          "key": "invokeHint"
+        }
+      ]
+    },
+    {
+      "id": "PC-01",
+      "family": "PC",
+      "title": "Following the conversation (stance sentence and live-edge state)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "exact_explicit_text",
+      "textSource": "REGISTER_FINAL_TEXT",
+      "original": "تتابع المحادثة الآن.",
+      "resolvedText": "متابعة المحادثة مفعّلة الآن.",
+      "resolvedTextSha256": "43624acb1a1e99db923edd2479a4bebda417ab5b88330b237a09ed0884d0b2d6",
+      "amendmentSection": "CA-19 — Personal chrome and analysis language (W1A-01)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/orientation-chrome/product-copy.ts",
+          "key": "AR.temporal FOLLOW_LIVE + liveHeadEstablished (T-08 slot: with its full stop)"
+        },
+        {
+          "path": "apps/mobile/src/analysis-language/analysis-copy.ts",
+          "key": "AR.followingConversation (no full stop, W1A-01 record :258)"
+        }
+      ]
+    },
+    {
+      "id": "PC-02",
+      "family": "PC",
+      "title": "Moment-number accessibility hint",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "أدخل رقمًا من 1 إلى ${digits(max)}. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
+      "resolvedText": "يمكنك إدخال رقم من 1 إلى ${digits(max)}. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
+      "resolvedTextSha256": "77c03f6d1ffe7f25813102b6e6273d9faa310a23675cd5305962e995aa19980f",
+      "amendmentSection": "CA-19 — Personal chrome and analysis language (W1A-01)",
+      "workPackage": "B-MOBILE",
+      "disposition": "IMPLEMENT",
+      "dispositionText": "implemented by LANG-01 Work Package B",
+      "locations": [
+        {
+          "path": "apps/mobile/src/analysis-language/analysis-copy.ts",
+          "key": "AR.momentNumberHint"
+        }
+      ]
+    },
+    {
+      "id": "N-01",
+      "family": "N",
+      "title": "«Ask QANDEEL» name row (I-08A4 §8)",
+      "conflictKind": "GENDER",
+      "category": "CONTROLLED_COPY_AMENDMENT_REQUIRED",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "اسأل قنديل",
+      "resolvedText": "سؤالك لقنديل",
+      "resolvedTextSha256": "ab1552812168e78d4c9287f08386c54d34888a3b06b088a05f272f25bc7a279b",
+      "amendmentSection": "CA-20 — Product naming (I-08A4 §8)",
+      "workPackage": "A",
+      "disposition": "AMENDED_DOCUMENT_ONLY",
+      "dispositionText": "amended by LANG-01 Work Package A; no runtime surface exists",
+      "owner": "no runtime surface carries this name today; any future surface uses the amended name",
+      "locations": []
+    },
+    {
+      "id": "V-01",
+      "family": "V",
+      "title": "Live Call microphone state (accessible name)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "الميكروفون شغّال",
+      "resolvedText": "الميكروفون يعمل",
+      "resolvedTextSha256": "a1f35105dd643d0881c22af29051bdce397d438697ef2d283e5e0b27973a684d",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "`QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime (owner UNASSIGNED; Stage 8B — Voice Runtime), when it authors the Voice / call strings",
+      "locations": []
+    },
+    {
+      "id": "V-02",
+      "family": "V",
+      "title": "Live Call QANDEEL-speaking state (accessible name)",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "قنديل بيتكلم",
+      "resolvedText": "قنديل يتحدث",
+      "resolvedTextSha256": "0190962a72b9704c617530c76301fa165003fd19ba4abc987031722b09d2f2e3",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "`QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime (owner UNASSIGNED; Stage 8B — Voice Runtime), when it authors the Voice / call strings",
+      "locations": []
+    },
+    {
+      "id": "V-03",
+      "family": "V",
+      "title": "Voice Note recording state",
+      "conflictKind": "DIALECT",
+      "category": "FUTURE_OWNING_COPY_GATE_ONLY",
+      "registerDecision": "approved_editorially_under_product_owner_delegation",
+      "registerSelection": "verbatim_Proposed_from_pinned_census",
+      "textSource": "CENSUS_PROPOSED_VERBATIM",
+      "original": "بسجّل",
+      "resolvedText": "جارٍ التسجيل",
+      "resolvedTextSha256": "6cb8f0f08724756de3e66eff5da97ffcc45ae631293dd541f3fa1d098da499f4",
+      "amendmentSection": null,
+      "workPackage": "FUTURE",
+      "disposition": "ROUTED_TO_FUTURE_COPY_GATE",
+      "dispositionText": "approved editorial reference only; routed to its owning future Copy Gate; nothing implemented",
+      "owner": "`QAN-BL-VOICE-01` — Personal Voice / Live Call Runtime (owner UNASSIGNED; Stage 8B — Voice Runtime), when it authors the Voice / call strings",
+      "locations": []
+    }
+  ]
+}

@@ -9,6 +9,7 @@ import assert from 'node:assert/strict';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
@@ -157,7 +158,7 @@ test('8 — the Lock Screen words are the approved registry bytes; L0 is one sen
 test('9 — permission education: the copy authority is explicit; nothing asks at launch; Not now is remembered', () => {
   const copy = read(`${MOBILE}/copy.ts`);
   assert.match(copy, /status: 'APPROVED BY THE PRODUCT OWNER — A3-02 PRODUCT COPY GATE' as PushCopyGateStatus,/u, 'the Copy Gate is APPROVED');
-  // The five rows the Product Owner approved (record §24a), byte-exact.
+  // The five rows the Product Owner approved (record §24a), byte-exact; the Arabic as amended by LANG-01 CA-05.
   const APPROVED = {
     eduTitle: ['خلّيني أوصلك لما يكون في حاجة تستاهل', "Let me reach you when it's worth it"],
     eduBody: ['مش هبعتلك إشعار لمجرد إني أرجعك للتطبيق. هستخدم الإشعارات بس لما يكون في حاجة مهمة ليك، وتقدر تقللها أو توقفها في أي وقت.',
@@ -169,7 +170,7 @@ test('9 — permission education: the copy authority is explicit; nothing asks a
   for (const [key, [ar, en]] of Object.entries(APPROVED)) {
     const row = copy.match(new RegExp(`${key}: \\{\\s*ar: '([^']*)',\\s*en: (['"])(.*?)\\2,?\\s*\\}`, 'u'));
     assert.ok(row, `${key} is bound`);
-    assert.equal(row[1], ar, `${key} Arabic is the approved bytes`);
+    assert.equal(row[1], lang01(ar), `${key} Arabic is the approved bytes`);
     assert.equal(row[3], en, `${key} English is the approved bytes`);
   }
   for (const key of ['eduTitle', 'eduAllow', 'eduNotNow', 'notNowNote']) assert.equal(registry(`p3.${key}`).st, 'AUDIT_OWNED', `p3.${key} was audit-owned before this gate`);

@@ -207,7 +207,7 @@ describe('S4-01 copy', () => {
     expect(SHARED_COPY_GATE.proposed).toEqual([]);
     expect(SHARED_COPY_GATE.status).toMatch(/— CLOSED/u);
     expect(sharedCopy('ar').declined).toBe('تم رفض الدعوة.');
-    expect(sharedCopy('ar').invalidSharedId).toBe('تأكد من المعرّف المشترك وحاول مرة أخرى.');
+    expect(sharedCopy('ar').invalidSharedId).toBe('يُرجى التأكد من المعرّف المشترك والمحاولة مرة أخرى.');
     expect(sharedCopy('en').invalidSharedId).toBe('Check the Shared ID and try again.');
     expect(sharedCopy('ar').switcherLabel).toBe('التنقل بين قنديل والعالم المشترك');
     expect(sharedCopy('en').switcherLabel).toBe('Switch between QANDEEL and Shared World');
@@ -215,7 +215,7 @@ describe('S4-01 copy', () => {
     expect(sharedCopy('en').sharedWorld).toBe('Shared World');
     expect(sharedCopy('ar').personalWorld).toBe('قنديل');
     expect(sharedCopy('en').personalWorld).toBe('QANDEEL');
-    expect(fill(sharedCopy('ar').invitation, 'محمد')).toBe('محمد يدعوك لإنشاء عالم مشترك بينكما ومع قنديل.');
+    expect(fill(sharedCopy('ar').invitation, 'محمد')).toBe('دعوة من محمد لإنشاء عالم مشترك بينكما ومع قنديل.');
     expect(fill(sharedCopy('en').invitation, 'Mohamed')).toBe('Mohamed invites you to create a Shared World together with QANDEEL.');
     expect(sharedCopy('ar').welcome).toBe('أهلًا بكما. هذا عالمكما المشترك معي.');
     expect(sharedCopy('en').welcome).toBe('Welcome. This is your Shared World with me.');

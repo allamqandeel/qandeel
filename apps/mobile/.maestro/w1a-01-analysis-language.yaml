@@ -22,4 +22,4 @@ appId: com.qandeel.mobile
 - takeScreenshot: ${PREFIX}-01-analysis-arabic
 # The current-edge wording approved by the Product Owner, visibly in use.
 - assertVisible:
-    text: ".*(تتابع المحادثة الآن|العودة لمتابعة المحادثة).*"
+    text: ".*(متابعة المحادثة مفعّلة الآن|العودة لمتابعة المحادثة).*"
