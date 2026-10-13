@@ -3,17 +3,30 @@
 **Task:** `Stage 6 — Matching & Introductions Kickoff`, work package `WP0 — Repository Truth, Product Gap Census & Execution
 Plan`, authorized by the Product Owner's Stage 6 / WP0 brief (2026-10-13).
 **Task type:** research and planning evidence, plus the one governance admission the Product Owner approved in the same
-brief (Issue #322 → `QAN-BL-LAUNCH-04`, §9). WP0 is not S6-01 and does not start, resume or contract it.
+brief (Issue #322 → `QAN-BL-LAUNCH-04`, §9). After the Product Owner reviewed it the same day, this record also records
+the Product Owner's decisions (§14): first Tier 0, then the consolidated final approval package. It covers every gate,
+the binding fixed-Arabic-copy language rule and the approved seven-task map, and records three admissions:
+`QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-PRIV-04`. WP0 is not S6-01 and does not start, resume or contract it.
 **Baseline:** `main = 135142004097136336d586e5d5ff6cfd119cd864`, the merge of PR #334 (GOV-REC-01). It was verified on
 GitHub on 2026-10-13, matching the Product Owner's stated starting point. Issue #322 was read on GitHub the same day:
 `OPEN`.
 **Branch:** `s6/s6-wp0-matching-introductions-census`.
-**Status:** `WP0 RESEARCH / PLANNING EVIDENCE — AWAITING PRODUCT OWNER REVIEW — CREATES NO PRODUCT AUTHORITY — AUTHORIZES NO IMPLEMENTATION`.
+**Status:** `WP0 RESEARCH / PLANNING EVIDENCE AND PRODUCT OWNER DECISION RECORD — EVERY WP0 GATE DECIDED AT THE LEVEL §14 STATES (2026-10-13); SUB-QUESTIONS OPEN (§14.9) — APPROVED PRODUCT INTENT ONLY — AUTHORIZES NO IMPLEMENTATION, MIGRATION, DEPLOYMENT OR S6-01 TASK CONTRACT`.
+*(First published at `30dff6f6` as `WP0 RESEARCH / PLANNING EVIDENCE — AWAITING PRODUCT OWNER REVIEW — CREATES NO PRODUCT
+AUTHORITY — AUTHORIZES NO IMPLEMENTATION`.)*
 
 > Everything in this record labelled PROPOSED or RECOMMENDED is for the Product Owner's review. Nothing here is approved,
 > freezes a Product decision, fixes a task count, writes a Task Contract or authorizes implementation. No runtime,
 > migration, API, screen, copy or frozen Product contract was changed. The only register change is the approved
 > admission in §9.
+>
+> *(2026-10-13, after the Product Owner's decisions:)* the Product Owner has decided every gate at the level §14 records; the sub-questions those decisions leave open
+> are listed in §14.9. Those decisions are
+> approved Product intent, direction or initial policy proposals, and none authorizes implementation. The register
+> changes are the admission in §9 and the three admissions in §14.4. Still true:
+> - no runtime, migration, API, screen, copy or frozen Product contract was changed;
+> - no Task Contract is written;
+> - every proposed copy replacement (§14.8) and every controlled amendment (§14.7) awaits the Product Owner's approval.
 
 ---
 
@@ -114,7 +127,8 @@ Connected Worlds kernel already encodes the Matching laws (`MATCHING` / `INTRODU
   The disclosure gate raises `MATCHING_PROPOSAL_POLICY_UNCONFIGURED` (0120:455-460).
 - A recipient view requires a filter-`PERMITTED` Safe Compatibility Conclusion (0120:462-472). The conclusion is
   caller-supplied, untrusted input (0111:804-808), and **nothing in the repository produces one**: no model path, no
-  template, no AI-COST feature family (0135:96-98), no eval suite, no backlog owner.
+  template, no AI-COST feature family (0135:96-98), no eval suite, no backlog owner. *(Since the Product Owner's GATE-03
+  decision of 2026-10-13, the production capability has an owner: `QAN-BL-MATCH-03`, Stage 8A; §14.)*
 
 **Consequence** *(read from code, not executed)*. No proposal, Mutual Match or Introduction can occur in any deployed or
 deployable configuration, even if EXECUTE were granted.
@@ -162,6 +176,13 @@ Conversely, every closed-World and former-own-material read is `STANDARD`-only (
 refuses `INTRODUCTION` (0083:327-333, reached through the 0140 wrapper at 0140:711).
 So an **ended** Introduction would vanish from the Product, its
 owners could not find their own words to delete them, and END has no route. No backlog item records any of this.
+
+*(2026-10-13, after the Product Owner's GATE-03 decision:)* the account-Name exposure is now `QAN-BL-MATCH-02`, owned by
+`S6-02`. The ended-Introduction, closed-view and END-route findings are still not register items: GATE-03 did not admit
+them. The re-verification behind that admission corrected this section in three places (§14.10):
+- the 0141 derivations do not name the actor to the counterpart;
+- the 0148 place-sources read cannot be reached before SUCCESS;
+- the citations are more precise.
 
 ### 2.6 Tests and CI
 
@@ -250,6 +271,8 @@ and `0150` must precede any exposure (`QAN-BL-PROD-06`, owner `HOSTED-DEPLOY-01`
    while CW2-03 §44 says it "may additionally" be more proactive (GATE-30).
 7. **Ownership.** The I-07 record assigns the mobile Matching UI to Connected Worlds `I-08` and the production grant or
    wrapper, safety and Launch Gate to `I-09` / CW2-08; no locator maps either onto the 9-stage execution map (GATE-01).
+   *(Decided 2026-10-13, GATE-01: S6-series tasks consume the I-07 runtime and may prepare closed-by-default integration
+   boundaries; I-09 / Stage 9 retains launch authorization and gate opening; phase `I-08` is not declared closed. §14.2.)*
 8. **"Candidate cards or feed".** I-07 record §24 and Current State's I-08 row name "candidate cards or feed" for I-08,
    against the frozen no-feed law (drift, §11).
 
@@ -515,7 +538,8 @@ Stage 6 can make the journey completable behind closed gates. Every row, whateve
 after `QAN-BL-PROD-06` (HOSTED-DEPLOY-01), `QAN-BL-ACCT-01` for any footprint, and the Stage 9 production gate opening
 (§6). **8A** / **8B** / **9** mark a dependency on Stage 8A (production LLM / provider), Stage 8B (Voice) or Stage 9
 (CW2-08 / I-09 safety, moderation, entitlement, Launch Gate, release hardening, economy).
-Proposed owners refer to the PROPOSED tasks of §8 and are not assignments. GATE ids are
+Proposed owners refer to the PROPOSED tasks of §8 and are not assignments (since GATE-03, `S6-02` is the register
+owner of `QAN-BL-MATCH-02`; §14.4). GATE ids are
 the decisions of §10.
 
 | Journey | Canonical authority | Repository implementation | Current state | Gap | Sev. | Dependencies | Proposed owner | PO decision |
@@ -541,7 +565,8 @@ the decisions of §10.
 evidence source class, private reasoning and the Safe Compatibility Conclusion are all caller-supplied. The Model Router
 has one task literal (`CONVERSATIONAL_RESPONSE`), `MODEL_PROVIDER` is empty and the router fails closed. The repository's
 honest interim for an unbound provider is the S5-03A / SHARED-VIS-01 refusing port (`NOT_RUN` / `NO_PROVIDER` before any
-lease, read or spend).
+lease, read or spend). *(Made precise in §14.10: the "before any lease, read or spend" property belongs to SHARED-VIS-01.
+S5-03A refuses with no provider call or spend, but stages the work and reads its input first.)*
 
 **Deterministic without a model:** manual entry; the consent acts; a user-entered profile and requirements; pause, off and
 revoke; a catalogue-based hard-requirement comparison (if the Product Owner chooses one); the progressive-disclosure acts;
@@ -549,7 +574,7 @@ SUCCESS approvals; END; reactivation.
 
 | Owner | What stays with it |
 |---|---|
-| **Stage 8A** — production LLM / provider | The Safe Compatibility Conclusion producer (unless the Product Owner approves a non-model alternative — §10 GATE-22); any evaluator over Personal context (QIR-001 rule 7); free-text dealbreakers; conversational entry and the QANDEEL offer (intent detection; the Proactive Gate is `ABSENT`, `QAN-BL-NOTIF-02`); structured onboarding drafts; QANDEEL Introduction mode (CW2-03 §44; needs a controlled ACE-SP-01 amendment); QANDEEL-initiated disclosure or SUCCESS suggestions; reply quality in Introduction Worlds (`QAN-BL-ACE-02`, `IP-02`, `CW-05`); a Matching AI-COST feature family (none in 0135) and a Matching eval suite. |
+| **Stage 8A** — production LLM / provider | The Safe Compatibility Conclusion producer (unless the Product Owner approves a non-model alternative — §10 GATE-22); any evaluator over Personal context (QIR-001 rule 7); free-text dealbreakers; conversational entry and the QANDEEL offer (intent detection; the Proactive Gate is `ABSENT`, `QAN-BL-NOTIF-02`); structured onboarding drafts; QANDEEL Introduction mode (CW2-03 §44; needs a controlled ACE-SP-01 amendment); QANDEEL-initiated disclosure or SUCCESS suggestions; reply quality in Introduction Worlds (`QAN-BL-ACE-02`, `IP-02`, `CW-05`); a Matching AI-COST feature family (none in 0135) and a Matching eval suite. *(Since GATE-03, 2026-10-13: the conclusion producer, with its AI cost attribution and evaluation, is `QAN-BL-MATCH-03`. The other Matching intelligence listed here is not a register item; §14.4.)* |
 | **Stage 8B** — Voice (a roadmap stage; `QAN-BL-VOICE-01` itself stays `OPEN — UNASSIGNED`) | Real Live-Call truth (Stage 6 consumes only `NO_CALL_KNOWN`); Introduction voice notes. Human-to-human calls stay disabled by a Product / legal gate. |
 | **Stage 9** — CW2-08 / Connected Worlds I-09, release hardening, economy | Replacing the four `NOT_EVALUATED` seams; `INTRODUCTION_BLOCK_POLICY`; report, block, moderation and the CW2-08A classification; entitlement and pricing; opening any Matching gate in production, rollout and cohorts; `QAN-BL-LAUNCH-01…04` and `QAN-BL-NOTIF-05` physical proofs; `QAN-BL-SEC-01` before the store release; the store deletion path and legal retention. |
 | **HOSTED-DEPLOY-01** (`QAN-BL-PROD-06`) | The `0075+` catch-up: `0108` / `0109` only with `0149` and `0150` in the same controlled window, an API that accepts both `40001` and `PT409` first or together, none of it after any exposure of `0078` / `0081` / `0109` (0149:52-54; 0150:61-64), then every Stage 6 migration from `0154`; verifying the hosted PostgREST version; closing PROD-06 on hosted evidence. No Stage 6 surface reaches a real user before this. |
@@ -566,7 +591,8 @@ private contexts needs an explicit rule. The repository records no technical dep
 `QAN-BL-CI-02`). CI-01 C0 :323 records no forward dependency between CI-01 and S6-01, and also that S6-01 would consume the
 same per-user understanding, which CI-01 C2-a would improve. Whether the return gate precedes S6-01 is the Product Owner's
 sequencing decision (GATE-02); an explicit-input onboarding, if chosen (GATE-11, GATE-14), would read no Personal
-understanding.
+understanding. *(GATE-02 was approved on 2026-10-13, but the Product Owner recorded that the historical Return Gate and
+the S6-01 kickoff ordering still need reconciliation. That ordering is therefore not decided; §14.3.)*
 
 ---
 
@@ -663,10 +689,18 @@ A naive `CASCADE` would probably fail as `55000` from the BEFORE DELETE triggers
 - **Honest closure.** With the provider unbound and the CW2-08 seams answering `NOT_EVALUATED`, Stage 6 can integrate
   every journey behind closed gates but delivers **zero** proposals and zero Introductions to real users: a recipient view
   needs a `PERMITTED` conclusion and the seam blocks every offer. Whether Stage 6 may close that way is GATE-02.
+  *(Approved 2026-10-13: Stage 6 may reach engineering integration completion with the production provider unbound, and
+  must fabricate no conclusion, proposal or Introduction; §14.3.)*
 - **BG-05.** WP0 inherits nothing (no item names it). The only open item owned by a Stage 6 task is `QAN-BL-MATCH-01`
   (`S6-01 — Intelligent Matching Onboarding`, pinned at `tests/sec-match-00-…:211`), which S6-01 inherits at its own
   kickoff. No `S6-02…S6-07` id exists in the repository; the Product Owner's local sketch uses S6-02…S6-05 with different
-  meanings (§8.4), so the numbers below are provisional labels only.
+  meanings (§8.4), so the numbers below are provisional labels only. *(Since GATE-03, 2026-10-13, `S6-02` is a register
+  owner: `QAN-BL-MATCH-02`, owner `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary`. The id is the Product Owner's (GATE-03),
+  and the name is the Product Owner's task-map name (§14.6); this record's proposal was §8.2's heading. The other numbers, the count and the scope of every task, S6-02
+  included, are still provisional. Folding S6-02 into another task (§8.3) would re-own `QAN-BL-MATCH-02` explicitly.)*
+  *(Then, in the final approval package the same day, the Product Owner approved the seven-task map and its names as the
+  planning direction (§14.6). Only each task's scope stays provisional until its Task Contract, and a change to the
+  count needs an explicit Product Owner decision.)*
 - **Two hazards must be fenced before the path that exposes them:** the permanent deletion footprint (MATCH-01) before any
   Matching scope can open (S6-01), and the Introduction-phase account-Name leak (§2.5) before any birth path (S6-02 before
   S6-05). With them: an END boundary no later than birth — an inference from CW2-03 §14 / CW2-06 §43 (either matched
@@ -690,6 +724,10 @@ evidence requirement, ordering or backlog obligation; each of those is set only 
 Product Owner approves the plan. The judge panel scored three independent decompositions (risk-first 42 / 50, aligned with
 the Product Owner's sketch 41 / 50, journey-first 39 / 50) and synthesized this one from the risk-first backbone and the
 sketch-aligned cut.
+
+*(2026-10-13: the Product Owner approved the seven-task structure as the planning direction, subject to final Task
+Contracts, and named the tasks (§14.6). The names and sketches below are WP0's proposals as reviewed. Where a sketch
+differs from a Product Owner decision in §14, the decision binds.)*
 
 **S6-01 — Intelligent Matching Onboarding** (owner of `QAN-BL-MATCH-01`; owner string kept verbatim if GATE-01 (a) is
 chosen). Possibly two ordered PRs (server, then mobile).
@@ -735,7 +773,7 @@ chosen). Possibly two ordered PRs (server, then mobile).
 - *Complexity.* XL. *Can close with the provider unbound:* yes, as explicit-input onboarding (if GATE-11 / GATE-14 choose
   it). A conversational reading of "Intelligent" cannot close unbound.
 
-**S6-02 — Introduction-Phase Shared Isolation Fence and the END Server Boundary** (new; proposed as a prerequisite of any
+**S6-02 — Introduction-Phase Shared Isolation Fence and the END Server Boundary** *(the Product Owner's approved task map, 2026-10-13, names it `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary`; §14)* (new; proposed as a prerequisite of any
 birth path).
 - *Objective.* Before any path can birth an Introduction World, make every phase-blind S4 / SHARED-VIS-01 surface answer an
   Introduction-phase World with the interim the Product Owner confirms (GATE-20; the recommended interim is the non-member
@@ -755,7 +793,8 @@ birth path).
   real-PostgreSQL verifier; a static contract; dated notes on the stale 0139 / 0111 comments.
 - *Dependencies.* Tier 0 and Tier 2 of §10; can run in parallel with S6-01. Proposed invariant: merges before any wrapper
   over 0114, the 0116 SUCCESS or the 0118 Introduction conversation.
-- *Backlog (proposed).* The proposed new item for the Name leak, if admitted (GATE-03). PROD-06 (END is a new entry
+- *Backlog (proposed).* The proposed new item for the Name leak, if admitted (GATE-03) — *admitted 2026-10-13 as
+  `QAN-BL-MATCH-02`, owner S6-02, covering the account Name exposure only (§14.4)*. PROD-06 (END is a new entry
   point); PROD-07 (END vs SUCCESS race). An ACCT-01 note (END writes `RESTRICT` closed-view rows).
 - *Evidence a future contract could require (illustrative).* On Introduction Worlds born inside rolled-back transactions:
   every redefined function returns the interim answer; no output column carries `users.name`; send refuses; the 0141
@@ -784,7 +823,8 @@ sketch's "Matching Intelligence & Eligibility").
 - *Dependencies.* S6-01 (server); Tier 3. External: a conclusion producer (Stage 8A or a Product Owner-approved
   alternative) and Stage 9 CLEARED before any delivery.
 - *Backlog (proposed).* Owns none. Proposed Kickoff admissions under Stage 8A (conclusion producer, AI-COST family, eval
-  suite). Records the `QAN-BL-CTX-01` ruling. Observes PROD-05, PROD-06, ACCT-01.
+  suite). Records the `QAN-BL-CTX-01` ruling. Observes PROD-05, PROD-06, ACCT-01. *(2026-10-13: the conclusion producer,
+  with its AI cost attribution and evaluation, is admitted as `QAN-BL-MATCH-03` under Stage 8A, not S6-03; §14.4.)*
 - *Evidence a future contract could require (illustrative).* The seam answers `RESOLVED` only for a confirmed Introduction
   First Name; with policies absent nothing is written; with production seams zero `PREPARED` rows and zero notes; a full
   discover-to-offer walk passes only with policies and seams installed inside rolled-back transactions, then restored
@@ -879,7 +919,8 @@ closed Introduction).
 - *Dependencies.* S6-01, S6-04, S6-05, S6-06; Tier 4. External: VOICE-01 (Voice) for real call truth; NOTIF-05 (Stage 9)
   for physical push.
 - *Backlog (proposed).* Discharges A3-01 G-17. Records the NOTIF-02 classification; observes NOTIF-05, VOICE-01, SEC-01;
-  the export item per GATE-19; final dispositions of ACCT-01, PROD-06, the I-08 relation and the Stage 8A residue.
+  the export item per GATE-19 *(now `QAN-BL-PRIV-04`, owned by S6-07; §14.4)*; final dispositions of ACCT-01, PROD-06,
+  the I-08 relation and the Stage 8A residue.
 - *Evidence a future contract could require (illustrative).* Items only after legitimate entry; Introduction events emitted
   in the category GATE-31 decides; nothing at L0 reveals Introductions; a producer failure never changes a command's answer;
   Direct Entry revalidates and fails closed; items deferred under a fake known call; an export verifier per the decided
@@ -892,7 +933,9 @@ closed Introduction).
 ### 8.3 Proposed order
 
 0. **Kickoff decisions** (Tier 0 of §10). Any governance edit they authorize — re-anchoring the current-task pins,
-   admissions, dated drift notes — is its own reviewed change, not part of WP0.
+   admissions, dated drift notes — is its own reviewed change, not part of WP0. *(Tier 0 was approved on 2026-10-13, and
+   at the Product Owner's direction the two GATE-03 admissions are made in this same PR (§14). The pin re-anchoring and
+   the §11 drift notes are still not made here.)*
 1. **S6-01** (server, then mobile) after Tier 1. **S6-02** in parallel, after Tier 2.
 2. **S6-03** after S6-01's server part and Tier 3.
 3. **S6-04** after S6-03 (its mobile surface may start on proof-root fixtures).
@@ -902,13 +945,15 @@ closed Introduction).
 
 The critical path is the Product Owner's decision tiers, not engineering. The proposed count is seven (not fixed; the
 count is the Product Owner's decision). It could fall to six by folding S6-02 into S6-05 (S6-02 would then lose its
-independence and serialize the fence) and to five by also folding S6-07 into S6-06.
+independence and serialize the fence) and to five by also folding S6-07 into S6-06. *(Superseded 2026-10-13: the Product
+Owner retained the seven-task structure as the approved planning direction (§14.6). A fold would change the approved
+count, so it needs an explicit Product Owner decision.)*
 
 ### 8.4 Divergence from the Product Owner's local sketch (S6-01…S6-05)
 
 | Sketch | Proposed | Why (repository evidence) |
 |---|---|---|
-| S6-01 Intelligent Matching Onboarding (A + B) | **S6-01**, kept as one task, possibly in two ordered PRs; owner string verbatim if GATE-01 (a) | Proposed re-scope (GATE-11, GATE-14) to explicit-entry onboarding: the "personalization" purpose has no basis in authority (0108:65-80; 0109:146-149 reads no `MY_WORLD`). Adds the launch path the sketch leaves implicit (gate, footprint, `40001`, read-back, first-name store). Whether the local "return gate" precedes S6-01 is GATE-02. |
+| S6-01 Intelligent Matching Onboarding (A + B) | **S6-01**, kept as one task, possibly in two ordered PRs; owner string verbatim if GATE-01 (a) | Proposed re-scope (GATE-11, GATE-14) to explicit-entry onboarding: the "personalization" purpose has no basis in authority (0108:65-80; 0109:146-149 reads no `MY_WORLD`). Adds the launch path the sketch leaves implicit (gate, footprint, `40001`, read-back, first-name store). Whether the local "return gate" precedes S6-01 is GATE-02. *(GATE-01 (a) approved 2026-10-13: the owner string stays verbatim. The return-gate ordering is still to be reconciled; §14.3.)* *(GATE-11, 2026-10-13: the Product Owner approved, as Product intent, QANDEEL suggesting existing `MY_WORLD` facts for onboarding, but only after a separately defined, explicit and revocable permission, with no implementation until the controlled architecture amendment is approved; §14.5.)* |
 | S6-02 Matching Intelligence & Eligibility | **S6-03**, deterministic and fail-closed | No repository path aggregates either party's knowledge: nothing reads Personal context under the grant, the conclusion is caller-supplied, CW-02 owns the source definition and QIR rule 7 applies. Proposed: the intelligence half to Stage 8A. |
 | S6-03 Proposal & Safe Disclosure | **S6-04** | Split: the second recipient's *accept* is the Match commit (0112:743-746), so it is proposed for S6-05. "First name + safe info" collides with G2.3 §2 → GATE-23. |
 | S6-04 Mutual Match & Shared Birth | **S6-05** | The sketch's worry that the grant leaks into Shared is already closed (0114 creates no Shared Standing grant). The real leak is the account Name (§2.5) → new S6-02 (forced by the phase-blind reads, confirmed by re-reading the SQL; not executed). END and the closed view are proposed here so an ended Introduction never strands words. |
@@ -923,7 +968,7 @@ ACCT-01, CW2-08, #322 and 8A) and made explicit: an integrational closure delive
 
 | Item | Disposition at WP0 | Proposed task |
 |---|---|---|
-| `QAN-BL-MATCH-01` (HIGH, `DEFERRED — OWNED`, S6-01) | **Not inherited by WP0** (no item names WP0). It is the only open item owned by a Stage 6 task: S6-01 inherits it under BG-05 at its own kickoff. Unchanged: WP0 does not start or resume S6-01. Reopens automatically when S6-01 resumes or any task takes Matching toward users. | S6-01 (owner string verbatim if GATE-01 (a); proposed: tombstone at closure if the approved path lands, or re-own the residue to one named task) |
+| `QAN-BL-MATCH-01` (HIGH, `DEFERRED — OWNED`, S6-01) | **Not inherited by WP0** (no item names WP0). It is the only open item owned by a Stage 6 task: S6-01 inherits it under BG-05 at its own kickoff. Unchanged: WP0 does not start or resume S6-01. Reopens automatically when S6-01 resumes or any task takes Matching toward users. *(2026-10-13: owner kept by GATE-01. Since GATE-03, `QAN-BL-MATCH-02` is the second open item owned by a Stage 6 task. Whether S6-01 "resumes" or starts fresh is still undecided; §14.2.)* | S6-01 (owner string verbatim if GATE-01 (a); proposed: tombstone at closure if the approved path lands, or re-own the residue to one named task) |
 | `QAN-BL-ACCT-01` (HIGH, `OPEN — UNASSIGNED`) | Bears on every footprint. Does **not** fire at WP0 (nothing goes toward users). Fires when S6-01 does. | Stays unassigned with dated notes, unless the Product Owner assigns it (GATE-05); assigning re-anchors seven pinned contracts |
 | `QAN-BL-PROD-06` (HIGH, `DEFERRED — OWNED`, HOSTED-DEPLOY-01) | Does not fire at WP0. The restored six "carry the same rule". | Observed by every wrapper task; owner unchanged |
 | `QAN-BL-PROD-07` (LOW, PROD-RETRY-02) | Bears: post-v16 race-converging `40001` paths (the 0114 / 0116 races) | Observed in S6-02 (END vs SUCCESS) and the S6-04…S6-06 wrapper designs |
@@ -938,15 +983,15 @@ ACCT-01, CW2-08, #322 and 8A) and made explicit: an integrational closure delive
 | `QAN-BL-CW-05` (Stage 8A), `QAN-BL-ACE-02`, `QAN-BL-IP-02` (Stage 8A) | Bear: Introduction-phase Worlds use the Shared reply path; real-model quality is Stage 8A | Stage 8A; S6-05 records that replies answer `UNAVAILABLE` while unbound |
 | `QAN-BL-CW-06`, `CW-07` (`OPEN — UNASSIGNED`) | Bear only if Introduction Worlds open on the Living Analysis surface (GATE-29) | Noted in S6-05 after GATE-29 |
 | `QAN-BL-VIS-01` (LA-SCALE-01), `QAN-BL-LAUNCH-04` (Issue #322, §9) | Bear only under the same Living Analysis condition | Observed in S6-05 / S6-07 if so; otherwise outside |
-| `QAN-BL-PRIV-01…03` (PRIV-EXPORT-01) | Bear: a candidate owner for Matching export (`0153:314`) | GATE-19 decides |
+| `QAN-BL-PRIV-01…03` (PRIV-EXPORT-01) | Bear: a candidate owner for Matching export (`0153:314`) | GATE-19 decides *(decided 2026-10-13: GATE-19 led to `QAN-BL-PRIV-04`; WP0 assigned it to S6-07, awaiting the Product Owner's confirmation, and did not choose `PRIV-EXPORT-01`; §14.4)* |
 | `QAN-BL-PROD-04` (PROD-AUTH-01), `QAN-BL-PROD-05` (PROD-DATA-01) | Bear: auth-verification cost of new routes; discovery / listing fan-out | Observed in S6-01, S6-03, S6-04, S6-07 |
 | `QAN-BL-CI-01`, `CI-02` | Bear: validation reopen hazards | Observed in every S6 validation |
 | `QAN-BL-LAUNCH-01` | Bears at launch only | Stage 9 |
 | `QAN-BL-NAV-02` (MEDIUM, `OPEN — UNASSIGNED`) | Bears only if GATE-35 allows Replay of Introduction material | Stage 7; outside Stage 6 |
 | `QAN-BL-INTEL-02`, `INTEL-03`, `QIR-01`, `QAN-BL-IP-01` | Outside while Stage 6 reads no Personal intelligence (IP-01: Public replies only) | — |
 | `QAN-BL-LAUNCH-02`, `LAUNCH-03`, `QAN-BL-NAV-01`, `QAN-BL-LANTERN-01`, `QAN-BL-CW-04` and the remaining items | Outside: no Matching / Introductions coupling (LAUNCH-03: an Introduction World is born by Match, not invitation — an inference) | — |
-| I-07 deferrals to Connected Worlds `I-08` and `I-09` / CW2-08 (named owners, not register items) | Bear: the I-07 closure record assigned them; E2E Next Closure Waves maps E2E-I-01…I-10, I-12 to I-08 and I-13 to I-09 | GATE-01 decides whether Stage 6 discharges I-08; I-09 / Stage 9 keeps the seams, block policy and gate opening |
-| **Proposed new admissions** (not made by WP0) | (i) the Introduction-phase account-Name leak; (ii) the Stage 8A Matching conclusion producer, AI-COST family and eval suite; conditional: the Matching / Introductions export item (GATE-19), the image / media pipeline item (GATE-18), the Arabic floor item (GATE-26), orchestrator operational visibility | Each with one named owner at the Kickoff, if the Product Owner approves (GATE-03) |
+| I-07 deferrals to Connected Worlds `I-08` and `I-09` / CW2-08 (named owners, not register items) | Bear: the I-07 closure record assigned them; E2E Next Closure Waves maps E2E-I-01…I-10, I-12 to I-08 and I-13 to I-09 | GATE-01 decides whether Stage 6 discharges I-08; I-09 / Stage 9 keeps the seams, block policy and gate opening. *(GATE-01 approved 2026-10-13: S6-series tasks consume the I-07 runtime; I-09 / Stage 9 retains launch authorization and gate opening; phase `I-08` is not declared closed; §14.2.)* |
+| **Proposed new admissions** (not made by WP0) | (i) the Introduction-phase account-Name leak; (ii) the Stage 8A Matching conclusion producer, AI-COST family and eval suite; conditional: the Matching / Introductions export item (GATE-19), the image / media pipeline item (GATE-18), the Arabic floor item (GATE-26), orchestrator operational visibility | Each with one named owner at the Kickoff, if the Product Owner approves (GATE-03). *(Decided 2026-10-13: (i) admitted as `QAN-BL-MATCH-02` (S6-02) and (ii) as `QAN-BL-MATCH-03` (Stage 8A), in this PR. The conditional items are not admitted; §14.4. The final approval package then admitted the export item as `QAN-BL-PRIV-04`, owner S6-07, at GATE-19; the image, Arabic floor and orchestrator items stay unadmitted.)* |
 
 ---
 
@@ -988,7 +1033,8 @@ a new explicit Product Owner decision recorded with the release risk.
 **Owner.** One named owner (BG-02). The issue's "or an earlier explicit validation owner when a physical device becomes
 available" is recorded as a re-owning route — made explicitly in the register, never silently — not as a second owner.
 
-**Files changed for the admission.**
+**Files changed for the admission.** *(This table and the counts below describe the `QAN-BL-LAUNCH-04` admission at
+`30dff6f6`. The later GATE-03 admissions and their files are in §14.)*
 
 | File | Change |
 |---|---|
@@ -999,7 +1045,7 @@ available" is recorded as a re-owning route — made explicitly in the register,
 
 **Counts, recounted mechanically from the §4 index** (the `INDEX_ROW` regex of the governance test):
 
-| | Before (GOV-REC-01) | After (WP0) |
+| | Before (GOV-REC-01) | After the `QAN-BL-LAUNCH-04` admission |
 |---|---|---|
 | Total | 62 | **63** |
 | `DEFERRED — OWNED` / `VALIDATION — OPEN` / `OPEN — UNASSIGNED` / `CLOSED — TOMBSTONE` | 26 / 4 / 10 / 22 | **27 / 4 / 10 / 22** |
@@ -1007,7 +1053,8 @@ available" is recorded as a re-owning route — made explicitly in the register,
 | Active (not tombstoned) | 40 (14 / 24 / 2) | **41 (15 / 24 / 2)** |
 
 No duplicate ID; the Current State active list has 41 rows in index order. The roadmap is unchanged: §6.6 already records
-Issue #322 as `OPEN` under the Stage 9 release-readiness gate, which stays true.
+Issue #322 as `OPEN` under the Stage 9 release-readiness gate, which stays true. *(The roadmap later gains a §6.7 status
+note for the Product Owner's decisions; §14.11. The §6.6 statement about Issue #322 is untouched.)*
 
 ---
 
@@ -1015,9 +1062,15 @@ Issue #322 as `OPEN` under the Stage 9 release-readiness gate, which stays true.
 
 The research produced overlapping decision lists. The completeness critic merged and de-duplicated them, and the review
 pass re-tiered them by what each one blocks. Nothing is decided. "Recommended" is the research package's recommendation,
-labelled as such; "none" means the research makes no recommendation.
+labelled as such; "none" means the research makes no recommendation. *(2026-10-13: the Product Owner has since decided
+every gate, at the level §14 records (the sub-questions left open are in §14.9). Tier 0 came first, then a consolidated final approval package covering all tiers and the Stage 9 rows (§14).
+The tables below keep the options and recommendations as they were put to the Product Owner. The decisions are in §14,
+and none authorizes implementation.)*
 
 ### Tier 0 — before any Stage 6 Task Contract
+
+*Decided by the Product Owner on 2026-10-13: all three approved (§14.2 … §14.4). The table is kept as it was put to the
+Product Owner.*
 
 | ID | Decision | Blocks | Options | Recommended |
 |---|---|---|---|---|
@@ -1044,7 +1097,7 @@ labelled as such; "none" means the research makes no recommendation.
 | GATE-16 | **Requirement dimensions and eligibility facts** (age; who may be proposed to whom — no gender concept exists); whether an empty set is matchable | S6-01 capture; the evaluation method → S6-03 (Tier 3); the legal-policy owner → Stage 9 | Structured catalogue; free text judged by 8A; hybrid. Empty set: allow by change, or keep required | None (only the catalogue needs no 8A) |
 | GATE-17 | **Consent / onboarding Copy Gate:** consent and revocation copy; consent-version capture (no column exists); first-name wording; requirement editing copy and how an UNKNOWN or blocking requirement is explained (J04); English | S6-01 Copy Gate | The S4 / S5 Copy Gate pattern; Arabic first; version capture by an additive relation or not at all | The Copy Gate pattern |
 | GATE-18 | **Introduction image:** captured at setup (S6-01 scope, a new store) or at the first post-Match disclosure, or excluded from the first release; media provider; where the stage order is enforced | S6-01 scope if captured at setup; S6-06 | Capture after the Match; capture at setup; defer images | Exclude unless a media provider is explicitly authorized |
-| GATE-19 | **Export of Matching / Introductions data:** owner and content — decided before S6-01 creates the first Matching footprint (the admission itself is made under GATE-03) | The export item; S6-07 | S6-01; a new item or PRIV-EXPORT-01; one cross-world export item; Stage 9 | Admit an item at the Kickoff |
+| GATE-19 | **Export of Matching / Introductions data:** owner and content — decided before S6-01 creates the first Matching footprint (the admission itself is made under GATE-03) | The export item; S6-07 | S6-01; a new item or PRIV-EXPORT-01; one cross-world export item; Stage 9 | Admit an item at the Kickoff *(not admitted by the GATE-03 approval of 2026-10-13, which covers (i) and (ii) only; then admitted the same day by the final approval package as `QAN-BL-PRIV-04`, owner S6-07; §14.4)* |
 | GATE-23 | **What a pre-Match proposal displays** (G2.3 §2 vs CW2-06 §20) | S6-01 (whether field approval is built); S6-04 surface; the J08 handoff | Frozen copy only; + first name; + fields and conclusion by controlled amendment | None |
 | GATE-24a | **Whether any Introduction Profile field may ever cross into a pre-Match proposal** (the field half of GATE-23; GATE-24's allowlist values stay in Tier 3) | Whether S6-01 builds the Pre-Match Disclosure Authority field-approval act at all | Frozen copy only (no field approval in S6-01); first name only; fields by controlled amendment | None |
 
@@ -1092,12 +1145,23 @@ labelled as such; "none" means the research makes no recommendation.
 |---|---|
 | GATE-38 | Admission of Issue #322 as `QAN-BL-LAUNCH-04` — **approved by the Product Owner; done in this change (§9).** |
 
+### Decided by the Product Owner after review (2026-10-13)
+
+| ID | Decision |
+|---|---|
+| GATE-01 | **APPROVED** — the framework recommendation (a), with the Product Owner's limits (§14.2). |
+| GATE-02 | **APPROVED** — the framework recommendation (a), with the Product Owner's limits; the Return Gate and S6-01 kickoff ordering still need reconciliation (§14.3). |
+| GATE-03 | **APPROVED** — admissions (i) and (ii) only: `QAN-BL-MATCH-02` (owner `S6-02`) and `QAN-BL-MATCH-03` (owner Stage 8A). The other conditional admissions are not approved automatically (§14.4). |
+| GATE-04 … GATE-37, GATE-39 | **Decided in the Product Owner's consolidated final approval package** (2026-10-13), each as approved Product intent, direction or initial policy proposal. None authorizes implementation (§14.5). GATE-19's export obligation is admitted as `QAN-BL-PRIV-04` (§14.4). |
+
 ---
 
 ## 11. Locator drift observed (recorded, not fixed by WP0)
 
 WP0 corrected only the statements the admission made false (§9). The rest belongs to the Kickoff change the Product Owner
-authorizes (GATE-03), each as a dated note that keeps history:
+authorizes (GATE-03), each as a dated note that keeps history. *(2026-10-13: the GATE-03 approval covers the two
+admissions only. It does not cover these drift notes or the pin re-anchoring, which are still not made. The Tier 0
+decisions and the final approval package added the dated notes that §14.11 lists.)*
 
 1. `QANDEEL_PROJECT_MAP.md` — the single `> **CURRENT TASK: GOV-REC-01 …**` line still names a merged task. It is pinned by
    `tests/s5-03b-…` test 9 and `tests/s5-03c-…` test 8; the Stage 6 Kickoff re-anchors them (validation only), together
@@ -1140,7 +1204,7 @@ All checks ran on the final state of the branch (base `13514200`), on Windows wi
 |---|---|---|---|
 | 1 | Task-closure governance gate (AGENTS.md §10.7) | `npm run test:task-closure-governance-contract` | **PASS 24 / 24** |
 | 2 | The 24 static contracts that read the edited documents: `a3-01`, `ace-01`, `ace-sp-01`, `ci-01`, `intel-tm-01`, `prod-sec-01`, `s5-01`, `s5-02`, `s5-03a`, `s5-03b`, `s5-03c`, `s5-04`, `sec-match-00`, `shared-vis-01`, `t11`, `t12`, `t12p`, `t14`, `task-closure-governance`, `val-01`, `vport-02`, `w2-02`, `w3-mega-s` (under `tests/`) and `database/tests/replay-distribution-reconciliation-closure-v1` | `node --test <the 24 files>` | **PASS 367 / 367** |
-| 3 | Forward-safety mirror | `node --test tests/forward-safety-contract.test.mjs` | **PASS 35 / 35** (396 s). A first attempt was stopped by my own 300-second bound, not by a failure. Under `QAN-BL-CI-02` a local forward-safety result is not relied on for a merge decision; CI runs it. |
+| 3 | Forward-safety mirror | `node --test tests/forward-safety-contract.test.mjs` | **PASS 35 / 35** (396 s). A first attempt was stopped by my own 300-second bound, not by a failure. Under `QAN-BL-CI-02` a local forward-safety result is not relied on for a merge decision; CI runs it. *(Precisely: on a push to `main`, API CI runs it together with the governance gate (`api-ci.yml:110`, `:143`) under VAL-01's change-aware plan, which may carry an earlier green run forward and re-run only the root contracts that read the changed paths. Nothing runs it on this PR; see the correction below.)* |
 | 4 | Mechanical recount of backlog §4 with the governance test's `INDEX_ROW` shape | a local Node script | 63 rows, no duplicate ID; 27 / 4 / 10 / 22; 32 / 29 / 2; 41 active (15 / 24 / 2); the `QAN-BL-LAUNCH-04` row parses; the Current State active list has the same 41 IDs in index order |
 | 5 | Relative Markdown links in the five changed files | a local Node script | 499 checked, **0 broken** |
 | 6 | Whitespace | `git diff --check`; a trailing-space search on the new record | clean |
@@ -1149,7 +1213,11 @@ GitHub was read, not written, for the baseline: `gh api repos/allamqandeel/qande
 `135142004097136336d586e5d5ff6cfd119cd864`; `gh issue view 322` → `OPEN`.
 
 **Not run, deliberately:** database verifiers, API and mobile suites, Maestro, and any CI loop. Nothing they cover
-changed. The PR's own CI is the remaining check.
+changed. The PR's own CI is the remaining check. *(Corrected 2026-10-13: no CI workflow runs on this PR. Three
+workflows have a `pull_request` trigger: `api-ci.yml`, `mobile-ci.yml`, and `focused-database-verification.yml`, which
+runs only for its own files. None of their path filters matches `docs/**` or the root locator Markdown files, and GitHub
+reports no checks for PR #335. The local checks above are therefore the PR's only validation; §14.12 records the same
+for the decision update.)*
 
 **Independent review before commit.** Five reviewers re-read the record and the diff against the repository, each with a
 different lens: facts (§2, §6, §7), the census and gap matrix, governance consistency, overreach and Product Owner rules,
@@ -1171,10 +1239,680 @@ renumbered. The main corrections:
 - No Matching functionality, screen, route, migration, grant restoration, gate, wrapper or copy; no frozen contract
   changed; no test or CI file changed.
 - No Task Contract written; the task count, the decomposition and every decision in §10 remain the Product Owner's.
+  *(2026-10-13: Tier 0 has since been decided, and then every remaining gate by the final approval package, which also
+  approved the seven-task map as a planning direction (§14.5, §14.6). No Task Contract is written.)*
 - S6-01 not started or resumed; Stage 7, 8A, 8B and 9 not started.
 - `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01`, `QAN-BL-PROD-06` and every other item keep their owner, severity, status and
   disposition. The only item text added besides the new `QAN-BL-LAUNCH-04` is a dated pointer in the `QAN-BL-CW-03`
-  tombstone. No proposed admission in §8.5 was made.
+  tombstone. No proposed admission in §8.5 was made. *(2026-10-13: after the Product Owner's GATE-03 decision, admissions
+  (i) and (ii) were made as `QAN-BL-MATCH-02` and `QAN-BL-MATCH-03` (§14). The conditional ones were not, except that
+  the final approval package then admitted the export obligation as `QAN-BL-PRIV-04` at GATE-19 (§14.4).)*
 - Issue #322 not closed, waived or reclassified; SHARED-VIS-01 not reopened.
 - The locator drift of §11 left for the Kickoff change, except the statements the admission itself made false (§9).
+  *(2026-10-13: and, likewise, the statements the Product Owner's decisions made false; §14.11.)*
 - No merge: the Product Owner decides, on review of this record and its PR.
+
+---
+
+## 14. Product Owner decisions (2026-10-13)
+
+The Product Owner reviewed this record at `30dff6f6` (Draft PR #335) and decided in two messages on 2026-10-13:
+
+1. **Tier 0 update.** GATE-01, GATE-02 and GATE-03 approved, with the two GATE-03 admissions recorded in this PR.
+2. **Consolidated final approval package.** It restates those approvals. It decides every remaining gate, adds a binding
+   QANDEEL-wide language rule, and approves the seven-task Stage 6 map as a planning direction.
+
+The package is **APPROVED subject to the explicit architecture, privacy, security and Copy Gate boundaries it states**.
+It authorizes **decision recording and governance updates only**: it authorizes no S6-01 implementation, runtime change,
+migration, grant, API, screen, AI provider, frozen-contract amendment, deployment or merge. Throughout this section
+**APPROVED PRODUCT INTENT** (or any of the Product Owner's labels: APPROVED, APPROVED DIRECTION, APPROVED PRODUCT
+DIRECTION, APPROVED AS INITIAL POLICY PROPOSAL) means a decision that future Task Contracts must honour. GATE-25's values
+are the exception in kind: they are starting limits to research and validate, not values a contract must adopt. None
+of these labels means IMPLEMENTATION AUTHORIZED: no gate below authorizes implementation. The decisions are recorded at
+the level the Product Owner stated them. The sub-questions they leave open are listed in §14.9. The tables
+of §10 keep the options and recommendations as they were put to the Product Owner.
+
+### 14.1 Binding language and localization rule (QANDEEL-wide)
+
+**A. Dynamic QANDEEL conversation.** QANDEEL adapts its spoken and written conversational language to the user's
+preferred language, dialect and interaction preferences: Egyptian Arabic for a user who prefers Egyptian Arabic, Gulf
+Arabic for a user who prefers a Gulf dialect, Modern Standard Arabic or another supported language when preferred. This
+concerns genuinely generated conversational responses.
+
+**B. Fixed Arabic application copy.** **All** static Arabic application copy **must** use neutral Modern Standard Arabic
+or simplified Modern Standard Arabic suitable for users across the Arab world. This includes:
+- navigation and screen titles;
+- buttons, labels and settings;
+- onboarding and guided setup;
+- **prewritten QANDEEL messages appearing in guided conversations**;
+- consent and privacy explanations;
+- Matching proposals and system notices;
+- Activity and Push notifications;
+- error, success and empty-state messages;
+- accessibility labels and instructional copy;
+- Introduction lifecycle and disclosure messages.
+
+Egyptian colloquial Arabic, or any other regional dialect, is not used as the default for fixed strings. The Arabic is
+natural, concise, welcoming, **gender-considerate** and understandable across Arabic-speaking regions. A scripted message
+inside a chat bubble is not dynamically generated content, so it still follows the static-copy rule. English copy remains
+separately reviewed.
+
+**Scope.** The rule applies across QANDEEL, not only Matching.
+
+**Controlled amendment.** Previously frozen G2 / G2.3 and other approved Arabic copy is inspected. Where it contains
+dialect-specific phrasing or gender-dependent wording that conflicts with the decision:
+1. identify the exact conflict;
+2. propose a controlled Copy Amendment;
+3. present the original and the recommended replacement;
+4. preserve the original historical approval;
+5. do not silently rewrite frozen text;
+6. do not implement replacement copy before the required approval.
+
+**Precedence until the amendments are approved** (this record's reading of steps 5 and 6): the rule binds every new or
+amended fixed string at every Copy Gate. The conflicting frozen language authorities (census §3) stay in force as
+written until their controlled amendments are approved, and nothing frozen is superseded here.
+
+This record does not rewrite any frozen or approved copy. §14.8 summarizes the census of conflicts, and the full census
+with every original and proposed replacement is a separate PROPOSED document. Every proposed replacement awaits the
+Product Owner's Copy Gate.
+
+### 14.2 GATE-01 — framing: APPROVED
+
+- Stage 6 uses **S6-series execution tasks**.
+- They reuse the frozen I-07 Matching runtime and the Connected Worlds authority.
+- Stage 6 may prepare **closed-by-default integration boundaries**.
+- **I-09 / Stage 9 retains production launch authorization and gate opening.**
+- `QAN-BL-MATCH-01` stays owned by `S6-01 — Intelligent Matching Onboarding`. Its row and fields are unchanged.
+- **Phase `I-08` is not declared closed.** Stage 6 is not phase I-08: no `**Phase:**` banner and no `### I-08 closure
+  record` are written.
+- **The historical S6-01 lifecycle references are reconciled before S6-01's Task Contract.** This covers roadmap §6.3
+  "Paused" against "Not started" elsewhere, the S6-01 brief, Reality Check and D1–D6 that CI-01 C0 (`docs/e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md:323`) cites (none is
+  in the repository), and whether S6-01 "resumes", which fires `QAN-BL-MATCH-01`'s automatic reopen, or starts fresh.
+  This update does not reconcile them: the Product Owner asked that they not be rewritten without evidence.
+
+### 14.3 GATE-02 — definition of done: APPROVED
+
+- Stage 6 may reach **engineering integration completion with the production AI provider unbound**.
+- Real Matching proposals and Introductions stay unavailable until Stage 8A and the required Stage 9 gates are
+  satisfied.
+- No compatibility conclusion is fabricated.
+- **MERGED is always distinct from DEPLOYED and LAUNCH-READY.**
+- **The historical Return Gate is reconciled before S6-01 starts** (§6; §8.4). This update does not reconcile it.
+
+### 14.4 Admissions: GATE-03 (two items) and GATE-19 (one item)
+
+Three independently owned obligations were admitted, each after a fresh anti-duplication check:
+
+| ID | Title | Owner | Severity | Status | Decision |
+|---|---|---|---|---|---|
+| `QAN-BL-MATCH-02` | Introduction-Phase Account Name Exposure Through Phase-Blind Shared World Reads | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `HIGH` | `DEFERRED — OWNED` | GATE-03 |
+| `QAN-BL-MATCH-03` | Safe Compatibility Conclusion Production Capability, AI Cost Attribution and Evaluation | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` | GATE-03 |
+| `QAN-BL-PRIV-04` | Export My Data Omits the Reader's Matching and Introductions Data | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` | GATE-19 (owner and severity: WP0's assignment, awaiting the Product Owner's confirmation) |
+
+Issue #322 stays `QAN-BL-LAUNCH-04` (Stage 9), `OPEN / NOT PROVEN / RELEASE BLOCKER` (§9; restated by the package).
+
+**IDs.** Register families follow the obligation's domain, never its owner: `QAN-BL-CW-05`, `IP-02` and `ACE-02` keep
+their domain families although Stage 8A owns them.
+- `MATCH` is the register's Matching / Introductions family. Both GATE-03 obligations exist only because of
+  Introductions, and `CW` would split Stage 6's BG-05 inheritance across two families.
+- `PRIV` is the family of "Export My Data Omits …" items (`QAN-BL-PRIV-01` … `03`). The GATE-19 obligation is one of
+  them, so it takes `PRIV-04`.
+- All three IDs, and the alternatives `QAN-BL-CW-08`, `INTEL-04` and `AI-01`, were unused in the tree, in the history of
+  every ref, and in GitHub issues and PRs.
+
+**Severities.**
+- `QAN-BL-MATCH-02` is `HIGH`. If reopened, it decides whether a matched person's account Name reaches the counterpart or
+  a model provider before that person's own `FULL_NAME` disclosure. That would break a frozen privacy rule (P1 §13;
+  backlog §2: "an already-frozen capability"). It is latent but known from the code, so it is `DEFERRED — OWNED`, not
+  `VALIDATION — OPEN` (the `QAN-BL-CW-01` and `QAN-BL-CW-02` precedents).
+- `QAN-BL-MATCH-03` is `HIGH`. Without it, no recipient view can exist, so the frozen I-07 capability delivers nothing.
+  That matches `QAN-BL-MATCH-01` ("Matching cannot launch") and `QAN-BL-NOTIF-02` (a frozen behaviour with no producer).
+  It is not `MEDIUM` / `VALIDATION — OPEN` like `IP-02` / `ACE-02`: those measure a feature that exists, while this
+  capability is absent.
+- `QAN-BL-PRIV-04` is `HIGH`. `QAN-BL-PRIV-01` … `03` are `MEDIUM` because each adds one owner's own facts. This data binds
+  two humans. Building the section means deciding whether a reader is added over frozen I-07 relations that were designed
+  to have no downstream reader (`0110:491-493`, `:516-519`, `:621`, `:647-651`). The work decides what crosses from one person to the other, against
+  frozen pair-privacy law (CW2-06 §28, §33, §38, §53; CW2-08 §2). Today the export is truthful, because it names the
+  category as not yet included (`0153:314`). The severity states the consequence of the reopened work, not a present
+  defect. **For the Product Owner:** `MEDIUM` would follow the `PRIV-01` … `03` reading of export as completeness only.
+  This record recommends `HIGH`.
+
+**Owner strings.**
+- The Stage 8A string is copied character-exact from the existing rows.
+- `S6-02` and `S6-07` are the Product Owner's approved task-map names (§14.6). GATE-03 named S6-02 as the owner of the
+  Name exposure. This S6-02 is not the "Matching Intelligence & Eligibility" of the Product Owner's earlier local sketch
+  (§8.4).
+- `S6-07` for the export follows WP0 §8.2, which placed the export there. S6-07 runs last, after S6-01 … S6-06 create
+  every relation the export must cover. The approved name drops the "Data Rights" of WP0's proposed S6-07 name, so the
+  assignment is recorded for the Product Owner's confirmation.
+- `PRIV-EXPORT-01` was considered and not chosen:
+  - it is named for Understanding facts and holds only single-owner Personal facts;
+  - it appears in no stage of the Roadmap or execution map;
+  - Shared and Public export, parked on non-task owners, is still missing after Stages 4 and 5 closed.
+
+  S6-07 reconciles with `PRIV-EXPORT-01`, because every change re-states the whole export body (`0153:222-224`).
+- A rename, renumbering or fold into another task is recorded in the register as a re-owning.
+
+**Scope limits written into the items.**
+- `QAN-BL-MATCH-02` is the account Name exposure only. The rest of the GATE-20 fence (member and material views,
+  conversation and Model Router input, Activity and notifications, semantic readers, Direct Entry, closed history and
+  former-own-material access, the END boundary) is, in this record's reading, S6-02's planning scope (§14.5 Carrier;
+  not an assignment: S6-02's Task Contract sets it), not register items. Replay of Introduction material is excluded
+  until Stage 7 (GATE-35).
+- `QAN-BL-MATCH-03` is conclusion production, its AI cost attribution and its evaluation only.
+  - GATE-22 keeps a refusing provider-neutral port until Stage 8A, so no non-model alternative is approved.
+  - GATE-23 limits what a proposal shows. If its controlled amendment changes whether a conclusion is needed at all, the
+    item is narrowed or re-owned explicitly.
+  - It does not absorb the deterministic floor (GATE-26), the filter policy or the CW2-08 seam. Nor does it absorb the
+    unadmitted Stage 8A provider bindings of S5-03A, S5-03B and SHARED-VIS-01.
+- `QAN-BL-PRIV-04` is the reader's Matching and Introductions export only. It does not cover the Shared, Public or Replay
+  categories, deletion (`QAN-BL-ACCT-01`) or the package size (`QAN-BL-PROD-05`). Its open content questions are S6-07's,
+  under GATE-19: which of the reader's own proposal views and received disclosures are exported; whether reasoning about
+  the reader reaches the reader; and whether an export names who ended an Introduction.
+
+**Recorded, not admitted.** The package asked for one more admission only (GATE-19). The remaining decisions are
+recorded in §14.5 as approved Product intent for task scope, or as later-stage obligations that frozen authority already
+carries. Admitting any of them would duplicate an owner or precede the fence it depends on:
+- the media / image pipeline (GATE-18: no media provider, S6-06 scope);
+- the deterministic Arabic / English floor (GATE-26: a Stage 6 prerequisite, S6-03 or the first task that opens a
+  disclosure path);
+- the onboarding-assistance permission (GATE-11: the amendment has no named owner yet);
+- a narrow deletion correction (GATE-05: "commission an explicitly owned, narrow deletion correction if justified").
+  `QAN-BL-ACCT-01` stays `OPEN — UNASSIGNED`. WP0's assessment: a correction is justified only if no pre-enrollment
+  design can avoid a permanent footprint (AR-02). It needs CA-02 and a named owner, which the Product Owner is asked to
+  decide (§14.9 item 4);
+- the Replay contract (GATE-35: Introduction material stays excluded from user-facing Replay until Stage 7 defines and
+  approves its contract; only whether a register item is admitted for that contract is reconsidered at S6-02's closure,
+  when the fence exists);
+- Stage 9 policy and entitlement (GATE-36, GATE-37: carried by CW2-08 §13 / §20 and CW2-06 §57; the I-07 closure record
+  refused to duplicate them);
+- Living Analysis dependencies (GATE-29: `QAN-BL-VIS-01` and `QAN-BL-LAUNCH-04` bear only if S6-05 uses the stack);
+- orchestrator operational visibility;
+- the QANDEEL-wide copy conformance sweep (§14.8: Copy Gates are task-local; a sweep needs a Product Owner designation).
+
+**Observation reported, not admitted:** the Shared, Public and Replay world-scoped export categories have no register
+owner. W3-MEGA-S item 9 left them to "each Connected World's integration (Stages 4 – 7)" (`:574`). Stages 4 and 5
+closed with `'shared'` and `'public'` still in `notYetIncluded` (`0153:314`). The Stage 5 records point their gaps at the
+stale E2E-D-16 row, and the Stage 4 records record no export gap. Admitting an owner needs a Product Owner designation (BG-06).
+
+**Defect reported, not admitted:** on `main`, the Shared removal explanation renders a literal `{0}` in Arabic and
+English. Its template has two `{0}`, and `fill()` replaces only the first (census §6; `apps/mobile/src/shared-world/copy.ts:147-149`).
+It is a code defect in merged S4-03 work, outside Stage 6 and outside this documentation-only change. A separate fix
+task is suggested; whether it becomes a register item is the Product Owner's designation.
+
+**Anti-duplication method.**
+- For MATCH-02 and MATCH-03, six independent read-only verifiers worked over the tree at `30dff6f6`:
+  - two anti-duplication sweeps, one per item. They read the whole register (all 63 IDs then, every tombstone, the §7
+    paragraphs, the §9 closure records), the E2E gap matrix, the P4 census, the I-07 runtime record, the S4 /
+    SHARED-VIS-01 / ACE-SP-01 records and the open GitHub issues;
+  - two line-by-line evidence checks;
+  - an ID, severity and owner calibration;
+  - a locator sweep.
+
+  Neither obligation was carried in whole or in part. The nearest text was the ACE-SP-01 reconciliation note under
+  `QAN-BL-MATCH-01` ("gain no Matching or Introduction context"), which concerns context, not the Name. I-07A had
+  assigned "Safe Compatibility Conclusion generation" to I-07B (runtime `:243-245`). I-07B built only the intake and the
+  filter, and no later record named an owner for a producer.
+- For PRIV-04, a separate read-only verifier checked:
+  - all 65 earlier IDs and every tombstone;
+  - the §7 paragraphs and the §9 closure records, including the I-07 record ("Admitted: none");
+  - the W3-PDG-01 closure (§7.3, §8.4, §11) and W3-MEGA-S (§18.2 item 9, §18.3);
+  - migrations `0130` and `0153`, and the E2E gap matrix (E2E-D-16, E2E-D-17);
+  - the S5 records' export gaps and the open GitHub issues.
+
+  `QAN-BL-PRIV-01` … `03`, `ACCT-01`, `MATCH-01`, `PROD-05` and the `PROD-03` tombstone are each a different obligation.
+
+**Counts, recounted mechanically from the backlog's §4 index:**
+
+| | Before (§9, `30dff6f6`) | After GATE-03 | After GATE-19 (final) |
+|---|---|---|---|
+| Total | 63 | 65 | **66** |
+| `DEFERRED — OWNED` / `VALIDATION — OPEN` / `OPEN — UNASSIGNED` / `CLOSED — TOMBSTONE` | 27 / 4 / 10 / 22 | 29 / 4 / 10 / 22 | **30 / 4 / 10 / 22** |
+| `HIGH` / `MEDIUM` / `LOW` | 32 / 29 / 2 | 34 / 29 / 2 | **35 / 29 / 2** |
+| Active (not tombstoned), as HIGH / MEDIUM / LOW | 41 (15 / 24 / 2) | 43 (17 / 24 / 2) | **44 (18 / 24 / 2)** |
+
+### 14.5 The remaining gates: decision register
+
+The register condenses the Product Owner's text, using the Product Owner's words where they are short. "Kind" is the
+Product Owner's own label: **APPROVED** unless marked otherwise. **No gate authorizes implementation.** Each one is an
+input that a future Task Contract must honour, through that task's Product Decision and Copy Gate. "Conflicts" points to
+§14.7, which classifies each decision against frozen authority and current code. "Carrier" is this record's reading of
+the task that would honour it, for orientation only; the task map is in §14.6. The conflict ids are defined in §14.7:
+AR architecture review, CA controlled architecture amendment, CP controlled Product / copy amendment, EI existing
+implementation conflict, LS later-stage obligation.
+
+**Entry and onboarding**
+
+| Gate | Product Owner decision (2026-10-13) | Kind | Conflicts (§14.7) | Carrier |
+|---|---|---|---|---|
+| GATE-13 | A manual Introductions entry inside `MY_WORLD`; no fourth top-level World area. QANDEEL may suggest Introductions conversationally after Stage 8A. A suggestion is never enrollment or consent; no repetitive or intrusive suggestions; no misleading pre-entry Activity or notification affordances | APPROVED | EI-01; CP-01; LS-07 | S6-01; S6-07; Stage 8A (suggestion) |
+| GATE-14 | QANDEEL leads a progressive, step-by-step guided onboarding, not a long conventional form. Users can review, correct, return and resume later. Stage 6 uses a deterministic guided flow, and Stage 8A may add natural intelligent conversation. All fixed guided text uses simplified MSA | APPROVED | AR-07; LS-08 | S6-01; Stage 8A |
+| GATE-15 | A progressive Introduction Profile with four required basics: a confirmed Introduction First Name; age, subject to eligibility rules; a broad geographic area, not a detailed address; marital status. Other personality, interest, lifestyle and relationship preferences stay progressive. The required profile and consent set must be complete before real-Matching eligibility. Nothing sensitive is inferred or silently imported | APPROVED | AR-08; LS-09 | S6-01 |
+| GATE-16 | Hard dealbreakers are separate from soft preferences. An explicit, user-confirmed definition of the category of partner sought. Structured, reviewable criteria, not unverified AI inference. An incomplete required set is never matchable. Frozen PASS / FAIL / UNKNOWN semantics hold: UNKNOWN is never PASS | APPROVED | AR-09 (an open question for the Product Owner; §14.9) | S6-01 (capture); S6-03 (evaluation) |
+| GATE-17 | Distinct explicit consent steps; a user-readable confirmation before final enrollment; the approved consent wording and its version evidence preserved. Fixed Arabic follows the simplified-MSA rule. All new and amended wording goes through the Copy Gate | APPROVED | AR-10 | S6-01 |
+
+**`MY_WORLD` context, consent and profile**
+
+| Gate | Product Owner decision (2026-10-13) | Kind | Conflicts (§14.7) | Carrier |
+|---|---|---|---|---|
+| GATE-10 | The existing Matching Context Grant stays independently required for context-based eligibility, as in the frozen runtime. Profile preparation grants no context access | APPROVED | none | S6-01 |
+| GATE-11 | QANDEEL may suggest existing `MY_WORLD` facts for onboarding, but **only** after a separately defined, explicit, revocable permission for that purpose. No automatic Memory read or copying. Candidate facts are shown one by one for confirmation or correction, and rejection means ordinary manual onboarding. The permission is separate from evaluation and disclosure permission, and the Matching Context Grant is never used for this. **No implementation until the controlled architecture amendment is approved** | **APPROVED PRODUCT INTENT, CONTROLLED ARCHITECTURE REQUIRED** | CA-05; LS-06 | the controlled amendment first (owner not named); S6-01 is explicit-input until it is approved |
+| GATE-12 | The confirmed Introduction First Name is a distinct source from the account Name. No automatic resolution from `users.name`. Owner-only read-back and correction. The source is confirmed before the first-name seam is wired | APPROVED | AR-06 | S6-01 (store, read-back); S6-03 (seam); S6-02 (the name source of the fence) |
+| GATE-06 | Separate scopes for first setup, profile and requirement correction, resume, and permission reconfirmation. A profile-version change never silently keeps an ineffective or obsolete disclosure permission | APPROVED | AR-03; CA-03 (conditional) | S6-01 |
+| GATE-18 | No required photos during onboarding. Post-Match photos only when an authorized secure media path exists. The frozen three-stage progressive blur and disclosure order are kept. No premature image provider or media implementation | APPROVED | AR-11 | S6-06 |
+| GATE-19 | Matching and Introduction data are addressed in the governed personal export scope without exposing the other participant's private data or confidential reasoning. An owned obligation is created after anti-duplication | APPROVED | AR-12 | `QAN-BL-PRIV-04` → S6-07 (§14.4) |
+
+**Security and database boundaries**
+
+| Gate | Product Owner decision (2026-10-13) | Kind | Conflicts (§14.7) | Carrier |
+|---|---|---|---|---|
+| GATE-04 | Closed-by-default in-database gating with properly authorized wrappers is the preferred **research direction**, and **not** authorization to bypass SEC-MATCH-00. O-B must first resolve the conflict between server-canonical authorization and the ban on client-executable wrappers. **If that cannot be resolved safely, the six operations stay closed.** No unrestricted service-role path and no manufactured consent | **APPROVED DIRECTION, NOT AN IMPLEMENTATION MECHANISM** | CA-01; AR-01; LS-02 | S6-01 (owner of `QAN-BL-MATCH-01`) |
+| GATE-05 | No real enrollment before the account-deletion footprint problem is resolved. "Truly enrolled" means a completed explicit authorization act. Cancellable pre-enrollment preparation without a permanent footprint, where the architecture permits. Enrollment is refused during a scheduled deletion. An explicitly owned narrow deletion correction is commissioned if justified. Full Matching / Introduction deletion integrity remains a launch prerequisite | APPROVED | CA-02; AR-02; LS-03 | S6-01; `QAN-BL-ACCT-01` (unassigned) |
+| GATE-07 | Bounded stale-state handling, preferably R-1 if verified. Safe retry and committed-result replay; no duplicate consent or operation. The frozen six-command bodies are kept unless a separately approved amendment is needed | APPROVED | AR-04; LS-04 | S6-01 and every later wrapper |
+| GATE-08 | Resume requires fresh validation of state, profile, requirements and permissions before the user is matchable again. The frozen resume-contract tension is resolved through architecture review | APPROVED | AR-05; CA-04 (conditional) | S6-01 |
+| GATE-09 | Separate Matching launch scopes, closed by default, operator-controlled and auditable. No live users or real proposals in Stage 6. Production gate opening stays with Stage 9. No unnecessary cohort or rollout runtime at this stage | APPROVED | LS-05 | S6-01 (gate); Stage 9 (opening) |
+| GATE-20 | A dedicated Introduction-phase isolation fence before any accessible Mutual Match birth. It protects account names; member and material views; conversation and Model Router input; Activity and notifications; Shared semantic readers; Direct Entry; and closed-history and former-own-material access. The interim fails closed. **No birth path is reachable before the unilateral END capability is securely available** | APPROVED | EI-02; AR-13; CA-06 (conditional) | S6-02 (`QAN-BL-MATCH-02`) |
+| GATE-21 | Stage 6 builds closed integration boundaries; Stage 9 owns launch clearance and activation | APPROVED | LS-10 | S6-04 … S6-06; Stage 9 |
+| GATE-26 | A deterministic Arabic / English privacy and contact-information refusal floor, covering text and numeric representations, exists before any pre-Match disclosure path can operate. Model-based checks may be added later, never as the only protection | APPROVED | AR-15; LS-13 | S6-03, or the first task that opens a disclosure path |
+
+**Proposal intelligence and policy**
+
+| Gate | Product Owner decision (2026-10-13) | Kind | Conflicts (§14.7) | Carrier |
+|---|---|---|---|---|
+| GATE-22 | A refusing, provider-neutral Safe Compatibility Conclusion port until Stage 8A supplies a properly evaluated real producer. No fake AI recommendation and no unauthorized combination of two humans' private contexts | APPROVED | LS-11 | S6-03 (port); Stage 8A (`QAN-BL-MATCH-03`) |
+| GATE-23 | The initial pre-Match proposal shows only approved neutral QANDEEL copy, with no names, detailed traits, individual agreement reasons or private evidence. The conflict with frozen proposal-view assumptions is documented and resolved by a controlled amendment **before implementation** | **APPROVED PRODUCT DIRECTION** | CA-07; CP-02 | a controlled amendment before S6-03 / S6-04 |
+| GATE-24a | No Introduction Profile field is disclosed before the Mutual Match in the initial direction. Existing permission authority stays safe and inactive wherever it cannot yet be reconciled | APPROVED | CA-08 | S6-01 (whether to build field approval); S6-03 (policy) |
+| GATE-24 | The pre-Match disclosure allowlist starts empty. Any widening needs an exact field catalogue, reviewed permission and a controlled change | APPROVED | none | S6-03 |
+| GATE-25 | Research and validate these starting limits: about five proposals a week; at most two pending; expiry after 72 hours; no automatic re-proposal of the same person after a rejection or an ended Introduction. The final configuration is validated against frozen contracts, privacy rules and the journey before activation. **Do not treat these values as already present in the database** | **APPROVED AS INITIAL POLICY PROPOSAL** | AR-14; LS-12 | S6-03; Stage 9 (activation) |
+
+**Proposal, Introduction and lifecycle experience**
+
+| Gate | Product Owner decision (2026-10-13) | Kind | Conflicts (§14.7) | Carrier |
+|---|---|---|---|---|
+| GATE-27 | A person's own private incoming proposals, never a browsable candidate feed. Privacy-limited notifications. Direct Entry to the right Introductions destination. No repeated nagging. No disclosure that another person was considered before the authorized step | APPROVED | AR-16 | S6-04; S6-07 |
+| GATE-28 | Fixed Arabic copy in universally understood simplified MSA; gender-considerate wording; dynamic conversation adapts to the user's dialect; new copy through the Copy Gate. Any collision with frozen G2 / G2.3 text needs an explicit controlled amendment | APPROVED | CP-03 (§14.8) | the S6 Copy Gates (S6-01, S6-04, S6-05, S6-07) |
+| GATE-29 | A Mutual Match creates an `INTRODUCTION` phase of an existing `SHARED_WORLD`, not a new World type. It belongs to the Shared World area while presenting an explicitly distinct private Introduction experience. It reuses QANDEEL's visual language without leaking `MY_WORLD` analysis or private compatibility evidence. The final visual design is reviewed and approved separately before implementation. If the Living Analysis stack is used, the dependencies on scale and on Issue #322 physical-device proof are recorded, and existing release evidence is not claimed for Introduction behaviour | APPROVED | AR-17 | S6-05 (over S6-02) |
+| GATE-30 | An initial approved neutral welcome. No private compatibility-reason disclosure and no unauthorized Handoff consumption. More intelligent facilitation waits for Stage 8A. ACE-SP-01 is kept, or amended through controlled change where necessary | APPROVED | LS-14 | S6-05; Stage 8A |
+| GATE-31 | Introductions notifications default to privacy-limited L0. No unauthorized names or content on the Lock Screen. Per-World mute controls. Separate lifecycle and message categories are reviewed against the existing Activity law | APPROVED | EI-03; AR-18 | S6-05; S6-07 |
+| GATE-32 | A clear progressive disclosure panel. Each person controls, previews and explicitly confirms what they release. Disclosure is non-reciprocal, and neither participant is pressured into equal disclosure | APPROVED | none | S6-06 |
+| GATE-33 | QANDEEL may propose SUCCESS when appropriately capable; both humans must explicitly approve. No automatic conversion and no unilateral promotion to `STANDARD` | APPROVED | LS-15 | S6-06 (approval path closed); Stage 8A (proposer) |
+| GATE-34 | Either human may end an Introduction unilaterally, without waiting for the other. Appropriate closed history, personal deletion rights and privacy are kept. Resuming Matching requires explicit user action and valid revalidation | APPROVED | EI-04; AR-19 | S6-02 (END); S6-05 (closed view); S6-06 (reactivation) |
+| GATE-35 | Introduction material is excluded from user-facing Replay until Stage 7 defines and approves its privacy and presentation contract. Standard Shared Replay is never silently reused | APPROVED | AR-20; LS-16 | S6-02 (fence); Stage 7 |
+| GATE-39 | Users can inspect their own participation state, including pauses caused by active or concluded Introductions, without exposing unrelated private state to the other participant | APPROVED | none | S6-01 (read surface); S6-05 / S6-06 |
+
+**Stage 9 launch and economy**
+
+| Gate | Product Owner decision (2026-10-13) | Kind | Conflicts (§14.7) | Carrier |
+|---|---|---|---|---|
+| GATE-36 | Before real Matching launch: a reviewed policy for blocking, reporting, harassment and safety, plus the relevant privacy and content classification. No hidden policy default; Stage 6 authorizes no launch | APPROVED | LS-17 | Stage 9 (I-09 / CW2-08) |
+| GATE-37 | No paid Introductions entitlement is selected or enforced in Stage 6. A neutral, fail-closed entitlement boundary is kept. Final free-versus-paid Product and economic decisions belong to Stage 9 | APPROVED | LS-18 | S6-04 … S6-06 (neutral boundary); Stage 9 |
+
+GATE-01 … GATE-03 are in §14.2 … §14.4, and GATE-38 is §9.
+
+### 14.6 Approved Stage 6 task map (planning direction, subject to final Task Contracts)
+
+The Product Owner kept the seven-task structure as the approved planning direction. The names are the Product Owner's.
+The scope sketches of §8.2 remain WP0 proposals until each task's own contract fixes its scope.
+
+| Task | Product Owner's name | Register items it owns today | Main approved decisions it consumes |
+|---|---|---|---|
+| `S6-01` | Intelligent Matching Onboarding | `QAN-BL-MATCH-01` | GATE-04 … GATE-10, GATE-11 (only after its amendment), GATE-12 … GATE-17, GATE-24a, GATE-28, GATE-39; the language rule (§14.1) |
+| `S6-02` | Introduction-Phase Privacy Isolation & Safe END Boundary | `QAN-BL-MATCH-02` | GATE-20, GATE-12 (name source), GATE-34 (END), GATE-35 (Replay fence) |
+| `S6-03` | Matching Proposal Pipeline & Intelligence Prerequisites | none | GATE-12 (seam), GATE-16 (evaluation), GATE-22, GATE-23 (its amendment first), GATE-24, GATE-24a, GATE-25, GATE-26 |
+| `S6-04` | Private Proposal Review and Decisions | none | GATE-21, GATE-23, GATE-27, GATE-28, GATE-37 |
+| `S6-05` | Mutual Match & Introduction World | none | GATE-21, GATE-28, GATE-29, GATE-30, GATE-31, GATE-34, GATE-37, GATE-39 |
+| `S6-06` | Progressive Disclosure, SUCCESS and Reactivation | none | GATE-18 (post-Match images), GATE-21, GATE-32, GATE-33, GATE-34 (reactivation), GATE-37, GATE-39 |
+| `S6-07` | Activity, Direct Entry and Final Integration | `QAN-BL-PRIV-04` | GATE-13 (pre-entry truth), GATE-19, GATE-27, GATE-28, GATE-31 |
+
+The "decisions it consumes" column is this record's reading for orientation, not an assignment.
+
+The Product Owner's package states that every task must undergo:
+1. Research.
+2. Repository truth.
+3. Anti-duplication.
+4. The Product Decision and Copy Gate, where required.
+5. A Product Owner-approved Task Contract.
+6. Proportional validation.
+7. Independent review.
+8. The Product Owner's explicit merge approval.
+
+The package also states: "Avoid XL monolithic implementations. Split a task into focused, ordered work packages when
+justified, without duplicating frozen I-07 work or changing the approved stage count silently." This record reads the
+"stage count" as the seven-task count.
+
+**The proposed order of §8.3 still applies as a proposal.** Two of the Product Owner's decisions now make parts of it
+binding:
+- GATE-20: the isolation fence comes before any accessible Mutual Match birth, and no birth path is reachable before the
+  unilateral END capability is securely available.
+- GATE-01 / GATE-02: the historical S6-01 references and the Return Gate are reconciled before S6-01's contract and
+  start.
+
+### 14.7 Conflict register: decisions against frozen authority and current code
+
+A read-only reviewer classified every gate decision against frozen authority and the code on `main` (`13514200`). Its
+81 rows, one or more per gate, fall into these classes:
+
+| Class | Meaning | Rows |
+|---|---|---:|
+| NO CONFLICT | the decision fits frozen authority as written | 28 |
+| ARCHITECTURE REVIEW (AR) | no frozen text is broken, but the design needs a reviewed decision before code | 20 |
+| CONTROLLED ARCHITECTURE AMENDMENT (CA) | frozen architecture, a migration body or a verifier pin must change through a controlled amendment before code (three only if a particular design is chosen) | 8 |
+| CONTROLLED PRODUCT / COPY AMENDMENT (CP) | frozen Product or copy text must change through a controlled amendment | 3 |
+| EXISTING IMPLEMENTATION CONFLICT (EI) | code on `main` already contradicts the decision (live or latent) | 4 |
+| LATER-STAGE OBLIGATION (LS) | the decision binds a later stage that already owns the work | 18 |
+
+These ids are this record's own; IP-IMP-01's Copy Addendum decisions "CA-1" / "CA-2" are unrelated. Every CA, CP
+and EI citation below was re-read against the tree. **No amendment is made or authorized here.** Each one
+needs its own controlled change, approved by the Product Owner and Architecture, before any implementation it touches.
+
+**Controlled architecture amendments**
+
+| ID | Gate | Frozen authority in the way | What the amendment must settle | Before |
+|---|---|---|---|---|
+| CA-01 | GATE-04 | `QAN-BL-MATCH-01`'s required property forbids regaining `EXECUTE` on the six "through … a client-executable wrapper". `database/verify-migration-0149.mjs` NO_BACKDOOR and probe f3 (`:455`) refuse exactly an `authenticated` SECURITY DEFINER wrapper over a suspended command. The SEC-MATCH-00 static contract says a Stage 6 path "must amend this contract" | A ruling that a closed-by-default in-database gate plus wrappers is the permitted "server-canonical launch path". Then: amending the MATCH-01 property text, verify-0149 NO_BACKDOOR / f3, the SEC-MATCH-00 contract and the verify-0150 lists, plus an I-07 record amendment. The `0108` / `0109` bytes stay pinned. **If it cannot be resolved safely, the six stay closed** (GATE-04) | any S6-01 server work |
+| CA-02 | GATE-05 | `0108:661` (UPDATE and DELETE refused for every role); `0130:46-47` (erasure touches no Matching row); verify-0149 DELETION_BASELINE_UNCHANGED | A narrow deletion correction contradicts all three, so it needs a controlled amendment and an explicitly named owner. `QAN-BL-ACCT-01` is `OPEN — UNASSIGNED` | a commissioned deletion correction |
+| CA-03 | GATE-06 | `0109` bodies (BODIES_UNCHANGED; the `0109` hash pin) | *Conditional:* only if correction / authority coherence is enforced inside the frozen bodies. A wrapper design avoids it (AR-03) | S6-01, if that design is chosen |
+| CA-04 | GATE-08 | `0109:42-44`: no command reads profile, requirements, grant or authority to decide participation | *Conditional:* only if the resume act itself is refused on that state. Gating matchability instead avoids it (AR-05) | S6-01, if that design is chosen |
+| CA-05 | GATE-11 | CW2-06 §7 (`:128-135`): the Matching Context Grant's fixed purpose. `0108:66-74`: semantics fixed by table identity, with no column that could widen | A new consent family for onboarding assistance, by controlled CW2-06 / I-07A amendment. Confirmed values then enter as explicit Matching answers or profile evidence, which is already permitted. "Self-authored `MY_WORLD`" stays `QAN-BL-CW-02`'s definition | any onboarding assistance (GATE-11 already bars it until then) |
+| CA-06 | GATE-20 | ACE-SP-01 (`:89-90`): Introduction-phase Worlds "use the same Shared reply path and gain no Matching or Introduction context" | *Conditional:* only if the fail-closed interim makes the Shared reply path behave differently in an Introduction-phase World. Swapping only the speaker label (the Introduction First Name for the account Name) does not need it | S6-02, if that design is chosen |
+| CA-07 | GATE-23 | CW2-06 §20 (`:331-335`: the first recipient receives a first name, bounded approved information and a conclusion) and §23. The recipient view binds both (`0110:845-846`, `0112:945-946`) and cannot be materialized without a resolved first name and a permitted conclusion (`0120:462-479`) | A controlled CW2-06 §20 / §23 and I-07B amendment that changes what a recipient view must bind, consistent with neutral-copy-only proposals. If a conclusion is no longer needed, `QAN-BL-MATCH-03` is narrowed or re-owned | S6-03 and S6-04 |
+| CA-08 | GATE-24a | CW2-06 §11 (`:185-189`) and F11 (`:856`): the Pre-Match Disclosure Authority is required to surface a candidate. `0109:768-771` refuses an empty approved-field set. Matchable needs an `ACTIVE` authority (`0111:263-264`) | With no field disclosable, the frozen rules leave two bad outcomes. Either nobody can ever be matchable, or users must approve a field that will never be shown, which is misleading consent. An amendment makes the authority optional or zero-field while the allowlist is empty, or decouples matchability from it. Until then, building it would mean approving a field that is never shown; whether S6-01 builds it is for its Task Contract (GATE-24a) | S6-01's field-approval scope |
+
+**Controlled Product / copy amendments**
+
+| ID | Gate | Frozen text | What the amendment must settle |
+|---|---|---|---|
+| CP-01 | GATE-13 | P3 §3 (`:115-116`) freezes five Activity filters, Introductions included, with no entry condition | Hiding the Introductions filter before legitimate entry needs a P3 amendment, or a recorded Product Owner reading that P3 §12.2's entry condition (`:441`) extends to the filter. The Android channel is not frozen (P3 `:604`), so it needs only the implementation change |
+| CP-02 | GATE-23 | CW2-00 (`:176`, `:182`) and P1 §4 (`:131-135`) frame the Introduction First Name and a safe compatibility explanation as pre-Match proposal content | A dated precedence note in CA-07's controlled change: the ceiling is not breached, the field is still needed after the Match (CW2-06 §41 `:636`; P1 `:522`), but P1's "This field supplies CW2-06 §12's "first name" disclosure" (`:135`) would become inoperative once that controlled change is approved |
+| CP-03 | GATE-28 and the language rule | G2.3 §1-§2 (`:20`, `:31`, `:39-41`): Egyptian Matching copy, masculine-singular at `:20` and `:41`, and "No gender-neutral rewrite is authorized by G2.3" | A controlled G2.3 Copy Amendment, together with the language-authority amendments of §14.8. The three replacement drafts are units M-01 … M-03 of the copy census |
+
+**Existing implementation conflicts** (code on `main`; none is changed here)
+
+| ID | Gate | Code | Status | Carrier |
+|---|---|---|---|---|
+| EI-01 | GATE-13 | An always-drawn, always-empty «التعارف» Activity filter (`apps/mobile/src/activity/ActivitySurface.tsx:162`, pinned by `surfaces.test.tsx:118`). An Android `category-introductions` channel registered unconditionally at push start (`apps/mobile/src/push/push-controller.ts:153`, pinned by `push.test.ts:165`). The server already silences the items (`activity-decision.ts:22-23`) | **live**: pre-entry affordances that GATE-13 rules out | S6-01 (entry truth); S6-07 (Activity / push) |
+| EI-02 | GATE-20 | The phase-blind Stage 4 reads and the Shared reply prompt (`0138:623-625`, `0139:139`, `shared-conversation-model-input.ts:46`; also `0141:71-73`, `0148:255-256`) | latent: no birth path exists | S6-02 (`QAN-BL-MATCH-02`) |
+| EI-03 | GATE-31 | The Shared Activity derivation and the per-World alerts list are phase-blind (`0141:71-73`, `:188`). An Introduction-phase message would become ordinary `SHARED` Activity, at the L2 default | latent | S6-02 (fence); S6-07 |
+| EI-04 | GATE-34 | Every closed-World reader and the former-own-material read are `STANDARD`-only (`0140:507`, `:527`, `:554`, `:597`). An ended Introduction would vanish, and its owners could not find their own words to delete them | latent | S6-05 (closed view); S6-02 (END) |
+
+**Architecture review items** (a reviewed design decision before code; no frozen text broken)
+
+| ID | Gate | What needs review |
+|---|---|---|
+| AR-01 | GATE-04 | Consent stays the human's own act: the byte-identical six run under the caller's `auth.uid()`, `service_role` is revoked by name, and the gate is operator-only with absent meaning DENY (the `0138:28-34` precedent) |
+| AR-02 | GATE-05 | Every committed call of the six leaves a permanent `RESTRICT` footprint, so cancellable preparation must be client-held or a separate deletable store. Refusal during a scheduled deletion needs a reviewed read of `account_deletions` (`0130:108`) |
+| AR-03 | GATE-06 | Separate scopes in wrappers, keyed on the expected predecessor. Correction must be coupled to an explicit re-approval or revocation in the same act, because `0109` keeps an `ACTIVE` authority on the old version |
+| AR-04 | GATE-07 | R-1 absorbs `40001` / `PT409` in the wrapper (the verify-0150 ABSORBED list). Still needed: a deliberate verifier edit, the replay answer after a scope closes, and proof of no duplicate consent row |
+| AR-05 | GATE-08 | The least-amending resume is a wrapper that binds the gate snapshot and adds a version-coherence check before the user counts as matchable (`0109:358-360`; the `0117:440-446` precedent) |
+| AR-06 | GATE-12 | The first-name store: a reserved profile key (each correction re-binds the authority) or a dedicated store (a new footprint under GATE-05). Owner read-back is a new no-oracle boundary. Seam wiring re-anchors the verify-0111 A03 pins |
+| AR-07 | GATE-14 | "Return and resume later" needs a non-footprint draft (GATE-05), and "review and correct" needs read-back (GATE-12). The flow never passes through the Personal Memory write |
+| AR-08 | GATE-15 | The geographic key must avoid the `0108:421-424` key-ban tokens (`geo`, `address`, `street`, `gps`). Progressive steps belong in a pre-enrollment draft. "Four required categories" is enforced by a reviewed wrapper or catalogue. Age is self-declared only |
+| AR-09 | GATE-16 | A user-confirmed "category of partner sought" can only PASS against a matching self-declared fact about the candidate. If the category is the counterpart's sex (no gender concept exists, §10 GATE-16), none of GATE-15's four required categories can match it, so every candidate would evaluate UNKNOWN (§14.9). The evaluator over the catalogue is S6-03 work |
+| AR-10 | GATE-17 | Consent-wording version evidence has no column (`0108:202-210`, `:329-335`; the grant's fixed semantics, `:73-74`). It needs an additive relation, itself a footprint under GATE-05 and the verify-0149 naming regex |
+| AR-11 | GATE-18 | `0115:62-64`: the two image stages are independent versions, so the frozen order is enforced in the S6-06 wrapper. No media boundary exists |
+| AR-12 | GATE-19 | Several Matching rows bind two humans (`0110:213-979`), and Matching operational state is private (CW2-06 `:608-624`), so the export content rule, including what counts as confidential reasoning, needs review. That is `QAN-BL-PRIV-04` |
+| AR-13 | GATE-20 | The fence forward-redefines S4 / SHARED-VIS-01 functions (the `0118` precedent), with `STANDARD` behaviour byte-identical. The END core is executable by no role, so S6-02 needs a wrapper and route that is never launch- or seam-gated (`0116:1380-1381`, `:1910-1912`). WP0 proposes (§8.1) that no Match wrapper merges before END and the fence |
+| AR-14 | GATE-25 | No cooldown policy kind exists (`0110:258-260`), and the pair index allows a fresh proposal after any terminal state (`0110:697-702`). The no-re-proposal rule must live in a reviewed new layer, or come by controlled amendment |
+| AR-15 | GATE-26 | An add-only floor extension is anticipated (`0111:95-99`). But the `0110` CHECKs inline English-only regexes, so an extended classifier must stay in agreement with them (`0111:88-93`). Disclosed field values get only contact and provenance checks, and Arabic words and Arabic-Indic digits are uncovered |
+| AR-16 | GATE-27 | A person's own pending list needs a new owner-only, non-enumerating read. The Direct Entry and listing placement must be reconciled with G2's process, which begins with Analysis attention (`:146`). The A3-01 destinations pin is re-anchored deliberately |
+| AR-17 | GATE-29 | The Living Analysis stack refuses semantic work outside `ACTIVE` / `STANDARD` (`0148:310`). If used, `QAN-BL-LAUNCH-04` and `QAN-BL-VIS-01` bear without existing release evidence |
+| AR-18 | GATE-31 | Per-World mutes accept only `SHARED_WORLD` contexts (`0136:473-474`), and the silence decision ignores mutes for `INTRODUCTIONS` (`activity-decision.ts:54-56`) |
+| AR-19 | GATE-34 | The frozen reactivation (`0117:441-443`) does not re-check the Disclosure Authority or version coherence. The gap is liveness, not leakage, because matchability still requires the authority |
+| AR-20 | GATE-35 | CW2-05 (`:336`) is permissive under "Product / runtime rules", so a Product exclusion needs no amendment. The Replay draft path already authorizes Introduction-phase material through the `0119` resolver (unreachable today), so S6-02 decides whether to fence it |
+
+**Later-stage obligations** (the decision binds a stage that already owns the work)
+
+| ID | Gate | Bound stage and why |
+|---|---|---|
+| LS-01 | GATE-02 | Real proposal delivery and decisions need the CW2-08 seam (`0111:309-313`, Stage 9) and a producer (`QAN-BL-MATCH-03`, Stage 8A) |
+| LS-02 | GATE-04 | Any wrapper migration deploys only after `0149` / `0150`; the hosted PostgREST line is verified; production opening is a Stage 9 operator act (`QAN-BL-PROD-06`) |
+| LS-03 | GATE-05 | Full Matching / Introduction deletion integrity is a launch gate (W3-PDG-01 `:279-280`; `QAN-BL-ACCT-01`) |
+| LS-04 | GATE-07 | Never through a hosted PostgREST that re-runs `40001` (runtime `:1445-1447`; `QAN-BL-PROD-06`) |
+| LS-05 | GATE-09 | Opening any Matching scope, cohort or rollout is a Stage 9 operator act (`0138:31-34`) |
+| LS-06 | GATE-11 | Producing candidate facts from Memory is a Stage 8A capability under QIR-001 rule 7 (`integrated-intelligence-runtime-contract-v1.md:316-318`); the source definition is `QAN-BL-CW-02` |
+| LS-07 | GATE-13 | A conversational suggestion needs Stage 8A intent detection and the Proactive Gate (`QAN-BL-NOTIF-02`), under the no-nagging law (CW2-06 `:92`) |
+| LS-08 | GATE-14 | Natural onboarding conversation needs the production provider (Stage 8A) |
+| LS-09 | GATE-15 | Age eligibility rules belong to the CW2-08 legal and safety policy (Stage 9). Until then the snapshot treats them as unconfigured and fails closed |
+| LS-10 | GATE-21 | Replacing the four `NOT_EVALUATED` seams, the block policy, entitlement and gate opening stay with Stage 9 (`0111:312-313`) |
+| LS-11 | GATE-22 | The production producer, its cost attribution and evaluation (`QAN-BL-MATCH-03`, Stage 8A) |
+| LS-12 | GATE-25 | Validating and activating policy rows happens at launch clearance (CW2-08 `:566-579`: "No permissive guess") |
+| LS-13 | GATE-26 | Model-assisted checks are additive and later (`0111:97-99`; Stage 8A / Stage 9) |
+| LS-14 | GATE-30 | Active ice-breaking (CW2-00 `:188`; CW2-03 `:766-774`) binds Stage 8A, together with a controlled ACE-SP-01 amendment |
+| LS-15 | GATE-33 | SUCCESS starts from a QANDEEL suggestion (CW2-00 `:192`), so it stays dormant until a Stage 8A proposer exists; S6-06 builds the approval path closed |
+| LS-16 | GATE-35 | The Introduction Replay contract is Stage 7's (`activity.service.ts:194-195`); `QAN-BL-NAV-02` bears only if it is allowed |
+| LS-17 | GATE-36 | `INTRODUCTION_BLOCK_POLICY`, the PAIR_INELIGIBLE check and the CW2-08A classification are real-launch prerequisites (CW2-08 `:195-201`) |
+| LS-18 | GATE-37 | Pricing is deferred (CW2-06 `:905`); the final decision and enforcement are Stage 9's |
+
+### 14.8 The fixed Arabic copy census (summary)
+
+The language rule of §14.1 asks for every conflict to be identified, with the original and a recommended replacement.
+The full census is a separate document:
+[`QANDEEL_S6_WP0_ARABIC_FIXED_COPY_MSA_CONFLICT_CENSUS_v1.md`](QANDEEL_S6_WP0_ARABIC_FIXED_COPY_MSA_CONFLICT_CENSUS_v1.md).
+Its status is **PROPOSED: not approved, nothing implemented**. Every original keeps its approval as history, and no
+string in code, tests, frozen records or proofs is changed.
+
+**Method.** Seven read-only reviewers covered the tree at `30dff6f6` (code = `main` `13514200`):
+- every fixed Arabic string in `apps/mobile/src` and `apps/api/src`, by domain;
+- the design and canonical copy authorities: G2 / G2.3 / G3, VI-01, I-08A4, I-08N-01, P3 / P4, W1B-01 and the e2e Copy
+  Gate records.
+
+They reviewed 925 strings: 776 conform, 147 rows conflict, and 2 are historical. Input recognisers, tests, fixtures,
+evaluation suites, model prompts, generated output, comments and English were out of scope. After strings that appear
+in several places were merged, the 147 rows are **109 amendment units**. Every quoted original was checked verbatim
+against its file, and an independent Arabic-quality review corrected 16 proposals before publication. No Arabic copy was found in migrations, and the remaining Arabic-bearing source files hold only
+comments or proof generators.
+
+| Result | Units |
+|---|---:|
+| Approved or frozen copy in force: **controlled Copy Amendment required** | 87 |
+| Prewritten safety replies in force **with no recorded copy approval**: Egyptian, four of them also masculine; PO copy approval and safety review required | 6 |
+| Not yet approved copy (OPEN proof lines, fixtures, Product Vision examples, provisional voice strings): **authored in MSA at the owning Copy Gate**, with no amendment | 16 |
+| **Total** | **109** |
+
+By kind: 34 dialect, 57 gender and 18 both. Nine of the gender units are third-person agreement with a named person,
+for example «{0} يقترح» where `{0}` may be a woman. Matching and Introductions account for 16 units: the three frozen
+G2.3 paragraphs (CP-03) and thirteen not-yet-approved lines. The rest are QANDEEL-wide:
+- the first-use and opener messages;
+- memory control;
+- push education;
+- account and sign-in;
+- Shared and Public World;
+- interaction preferences;
+- personal chrome;
+- one name row;
+- the deterministic safety replies;
+- Activity settings;
+- the provisional voice and call strings.
+
+**The language authorities themselves.** The census identifies conflicts in the documents that set the language:
+- VI-01's T2 tier, which makes QANDEEL's voice restrained Egyptian for every conversational turn, scripted or generated;
+- VI-01's T3b analysis-prose tier;
+- VI-01 §3.2, where "neutral" is "not MSA-by-default" and the flavour gate is only a review preference;
+- G2.3's "No gender-neutral rewrite is authorized";
+- the G1.1 / P4-C4 `opener` row and the P4-C3 check that freezes its colloquial spelling;
+- W1B-01 §3.1–§3.2 and its "needs no amendment" finding for the opener;
+- A3-02 §24a;
+- W3-MEGA-M §6, whose Egyptian conversational register covers all memory-control replies;
+- MEM-AR-01 L-10 / L-11;
+- the E1R register table.
+
+It recommends one controlled VI-01 amendment. That amendment splits generated turns, which adapt under rule A, from
+scripted turns, which are simplified MSA. It is consistent with what already matches the rule: VI-01's T1 / T3a / T4
+"neutral contemporary Arabic" and its §3.6 gender policy, I-08A4 §11's chrome register, I-08N-01 D18A ("no hard-coded
+Egyptian") and IP-IMP-01's dialect preference.
+
+**Open question for the Product Owner.** Rule A does not say which dialect a generated reply uses when the user has
+stated no preference. I-08A4 §11 (`:337`) allows an Egyptian-compatible default, and I-08N-01 (`:651`) points to a
+neutral fallback.
+
+**Observations outside the language rule** (reported, not acted on):
+- the Shared removal explanation template uses `{0}` twice, but `fill()` replaces only the first, so the second renders
+  literally today (`apps/mobile/src/shared-world/copy.ts:147-149`; `lifecycle-copy.ts:153`; the test builds its
+  expectation with the same `fill()`);
+- the memory subject recogniser knows only colloquial answers (`memory-control.interpreter.ts:329-331`), and a regex
+  derives one memory heading from its Egyptian wording (`memory-control.copy.ts:88`). Any amendment there changes code
+  with the copy;
+- the Matching Product Definition's example proposal names reason categories, which G2 §D forbids before the
+  Introduction. That is a content conflict, not a language one.
+
+### 14.9 Unresolved implementation blockers
+
+Nothing below is resolved by this update. The list is ordered by what each item blocks. "Needs" names the decision or
+controlled change, not an implementation.
+
+| # | Blocker | Blocks | Needs |
+|---|---|---|---|
+| 1 | The historical S6-01 lifecycle references are not reconciled: Roadmap §6.3 "Paused" against "Not started"; the S6-01 brief, Reality Check and D1–D6 cited by CI-01 C0 (`docs/e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md:323`) are not in the repository; "resume" (which fires `QAN-BL-MATCH-01`'s reopen) or a fresh start | S6-01's Task Contract | reconciliation on evidence (GATE-01) |
+| 2 | The historical Return Gate is not reconciled | S6-01's start | reconciliation (GATE-02) |
+| 3 | The O-B wrapper shape is forbidden by `QAN-BL-MATCH-01`'s property, verify-0149 NO_BACKDOOR / f3 and the SEC-MATCH-00 contract | any S6-01 server path | CA-01, or the six stay closed (GATE-04) |
+| 4 | Real enrollment would leave a deletion-blocking footprint; `QAN-BL-ACCT-01` is unassigned | real enrollment (GATE-05); launch | a pre-enrollment design that leaves no footprint (AR-02). The Product Owner is asked whether a narrow correction is justified (§14.4) and who owns it; if so, CA-02 |
+| 5 | An inactive Pre-Match Disclosure Authority makes nobody matchable, and a non-empty approved set would be misleading consent | S6-01's field-approval scope; any matchability | CA-08 (GATE-24a) |
+| 6 | If GATE-16's "category of partner sought" is a dimension that none of GATE-15's four required categories records (for example the counterpart's sex: no gender concept exists, §10 GATE-16), no candidate fact can satisfy it, and every candidate would evaluate UNKNOWN | real Matching | an open question for the Product Owner: define the category and the structured, user-declared fact about the candidate that it is checked against (AR-09) |
+| 7 | Onboarding assistance needs a new consent family, and nobody owns that amendment | any use of `MY_WORLD` facts in onboarding | CA-05 with a named owner (GATE-11); S6-01 stays explicit-input meanwhile |
+| 8 | Pre-entry Introductions affordances exist on `main` (the filter chip and the Android channel), and P3 freezes the five filters | S6-01 entry truth | EI-01 fix inside an S6 task; CP-01 |
+| 9 | Consent-version evidence and the first-name store have no home, and both are footprints | S6-01 consent and profile scope | AR-10, AR-06 (GATE-17, GATE-12) |
+| 10 | Proposal views must bind a first name and a conclusion, against GATE-23 | S6-03; S6-04 | CA-07 and CP-02 |
+| 11 | No cooldown policy kind exists, and the GATE-25 values are proposals that are not in the database | S6-03 policy | AR-14; validation before activation |
+| 12 | The deterministic floor is English-only and does not cover Arabic words or Arabic-Indic digits | any pre-Match disclosure path | the GATE-26 floor (AR-15) |
+| 13 | No conclusion producer exists | any real proposal | `QAN-BL-MATCH-03` (Stage 8A); the refusing port meanwhile (GATE-22) |
+| 14 | Phase-blind Shared reads would expose account Names; no END wrapper exists | any birth path | the S6-02 fence and END (`QAN-BL-MATCH-02`; GATE-20; AR-13); END never launch-gated |
+| 15 | Closed-World readers are `STANDARD`-only; reactivation skips the Disclosure Authority; Introduction mutes do not work | S6-05; S6-06 | EI-04, AR-19, AR-18 |
+| 16 | 87 approved or frozen copy units, and the language authorities, conflict with the language rule. The 6 safety replies have no approval record | any Copy Gate that touches them; every S6 Copy Gate (G2.3) | Product Owner Copy Gate approvals (census); one VI-01 amendment; safety review |
+| 17 | Launch: the CW2-08 seams, `INTRODUCTION_BLOCK_POLICY`, entitlement, `QAN-BL-PROD-06`, `QAN-BL-ACCT-01`, `QAN-BL-LAUNCH-04`, `QAN-BL-MATCH-03` | any real user | Stage 9 and Stage 8A (LS rows) |
+| 18 | Shared, Public and Replay world-scoped export has no register owner | Export completeness for launch | a Product Owner designation (§14.4) |
+| 19 | `QAN-BL-PRIV-04`'s owner (S6-07) and `HIGH` rating are WP0's assignment under GATE-19 | S6-07's kickoff (BG-05) | the Product Owner's confirmation (§14.4) |
+
+**Sub-questions the decisions leave open.** The Product Owner decided each gate at the level of the decision text.
+These questions, put under those gates in §10, are not answered by it. Each is for the owning task's Product Decision
+Gate or Task Contract, unless the Product Owner decides it earlier:
+
+| Gate | Open sub-question (§10) |
+|---|---|
+| GATE-09 | environments for pilots; consequential-action re-authentication |
+| GATE-13 | the manual entry's placement, presentation and glyph; what "legitimately entered" means |
+| GATE-14 | where activate, pause, resume and turn-off live; the "how Introductions works" explanation (E2E-I-03) |
+| GATE-15 | the user-facing names ("Introduction Profile", "Introduction Phase", the activation control); the field catalogue beyond the four required categories |
+| GATE-16 | who may be proposed to whom, and the category of partner sought (row 6 above) |
+| GATE-20 | which name applies to each member, including after SUCCESS |
+| GATE-21 | company controls (flag, rollout, kill) and the Matching operational events |
+| GATE-25 | eager sweeping; discovery fairness; the first-recipient direction |
+| GATE-27 | whether a Matching moment is a Proactive candidate (`QAN-BL-NOTIF-02`) |
+| GATE-29 | the Introduction World's name, while active and after END |
+| GATE-31 | the producer's event set and sentences |
+| GATE-33 | how a pending SUCCESS approval is shown; the server caller for prepare / commit |
+| GATE-34 | the neutral END notice (carrier and copy); reactivation timing after SUCCESS |
+| Language rule | which dialect a generated reply uses when the user has stated no preference (§14.8) |
+
+### 14.10 Corrections made by the re-verification
+
+These correct this record's own text, which has not been merged. The original sentences stay in place. Items 1–3 are
+pointed to from §2.5, item 4 from §6, and item 5 is stated in place in §12; the §2.8 item 7 citation `0111:877` (item 4)
+is one branch of the filter range given here.
+
+1. **§2.5, 0141.** The Shared Activity source derivation returns `au.name` to the API for a human message (`0141:65-79`,
+   `:71`). But the producer replaces the sentence with the generic ambient line
+   (`apps/api/src/shared-world/shared-activity.producer.ts:59-61`), so no recipient sees the actor's Name. "Notified as
+   `SHARED` L2 Activity naming the actor" is therefore wrong as to the naming. The Activity item would still be produced,
+   phase-blind, as ambient `SHARED` Activity, and its category is GATE-31's question. The `BIRTH`, `JOINED` and `LEFT`
+   derivations have no Introduction-phase source:
+   - BIRTH reads only direct-invitation acceptances (`0082:357`);
+   - JOINED needs `STANDARD`-only governance;
+   - leave refuses `INTRODUCTION` (`0083:331-333`).
+2. **§2.5, 0148.** The place-sources read (`0148:570-598`, `u.name` `:590`) cannot be reached during the Introduction
+   phase. Semantic passes refuse anything but `ACTIVE` / `STANDARD` (`0148:310`), and the phase only ever moves
+   `INTRODUCTION` → `STANDARD` (`0116:1286`). It becomes reachable after SUCCESS, where the naming rule is open (GATE-20).
+3. **§2.5, precise citations.**
+   - The reachable Name paths in an Introduction-phase World are:
+     - the 0138 member list (`0138:613-630`, `u.name` `:623`, gate `:625`);
+     - the 0139 material list (`0139:110-149`, `author_name` `:139`, gate `:127-131`);
+     - the Shared reply prompt (`shared-conversation-model-input.ts:46`, fed through
+       `shared-world-conversation.service.ts:172-178`).
+   - The send path runs `0139:157-207` → `0090:770-784` → `0118:113` (phase branch `0118:267-284`).
+   - Further `STANDARD` filters exist that §2.5 omits:
+     - the 0141 member-request branch (`:112`);
+     - the former-own-material read (`0140:597`);
+     - the closed read `0148:619`.
+4. **§2.3 and §6, conclusion citations.**
+   - The Sensitive Conclusion Filter spans `0111:810-914`, and `:877` is one branch. It is the only minter of a permitted
+     conclusion (`:1246-1253`).
+   - The definition of the Safe Compatibility Conclusion is CW2-06 §24, and the filter is §25. §20 only lists the
+     conclusion among what a first recipient receives.
+   - "QIR-001 rule 7" (§6) and "QIR rule 7" (GATE-11) refer to a ban on an extra LLM pass that interprets Personal context
+     (`integrated-intelligence-runtime-contract-v1.md:316-318`). Applying it to "any evaluator over Personal context" is
+     this record's reading, not the rule's text.
+   - The refusing-port property is SHARED-VIS-01's alone (§6 note above).
+5. **§12.** No CI runs on this PR (the correction in §12).
+
+### 14.11 Files changed by the decision updates
+
+| File | Change |
+|---|---|
+| `docs/qandeel-canonical-backlog-v1.md` | §4: three index rows after `QAN-BL-LAUNCH-04`. §5: the three items, with every §2 schema field, after `QAN-BL-LAUNCH-04` and before §6. §7: counts (66; 30 / 4 / 10 / 22; 35 / 29 / 2); a dated pointer closing the WP0 paragraph's "none is admitted here"; two new dated paragraphs (Tier 0 and the final package), each with its "Latest index" line. §9: the WP0 row gains two dated decision clauses (its earlier wording kept); the Stage 8A row gains `QAN-BL-MATCH-03`; new `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` and `S6-07 — Activity, Direct Entry and Final Integration` rows. |
+| `QANDEEL_CURRENT_STATE.md` | §1 snapshot: a dated sentence. §3.6: a new "Fixed Arabic copy language" row (the binding decision). §4: a dated note on the Matching / Introductions row. §5: the count tables, the recount note, two "Latest update" sentences and "The 44 active items" with three rows. §7 owners: dated GATE-01 notes on the `I-08` and `I-09` / `CW2-08` rows; `QAN-BL-MATCH-03` on the Stage 8A row; new S6-02 and S6-07 rows. No lifecycle row changes, and no `Stage 6 … **ACTIVE`. |
+| `QANDEEL_PROJECT_MAP.md` | §3: a "Where do I look" row for the language of fixed Arabic copy. The GOV-REC-01 checkpoint's WP0 count note (63, then 65, then 66). A dated note on the §5.1 Stage 6 row, which stays "Not started". The pinned current-task line is untouched. |
+| `QANDEEL_PRODUCT_ROADMAP.md` | A new §6.7 execution note recording the decisions, the approved task map and what stays open. §6.1–§6.6 are untouched. |
+| This record | The status banner (the first wording kept), the header and blockquote; dated notes in §2.3, §2.5, §3.2, §5, §6, §8.1–§8.5, §9, §10, §11, §12 and §13; this §14. |
+| `docs/e2e/QANDEEL_S6_WP0_ARABIC_FIXED_COPY_MSA_CONFLICT_CENSUS_v1.md` | New: the PROPOSED fixed Arabic copy census (§14.8). |
+
+Unchanged:
+- `QAN-BL-MATCH-01` (its row is pinned by `tests/sec-match-00-…:211`), `QAN-BL-ACCT-01`, `QAN-BL-PROD-06` and every
+  other item;
+- every test and CI file;
+- every runtime, migration, API, screen, copy string and frozen Product or copy contract. That includes G2.3, VI-01,
+  `docs/matching-introduction-runtime-v1.md` (whose stale lines §11 already lists) and the proofs.
+
+### 14.12 Validation of the decision updates
+
+The decision updates are documentation and governance only. Validation is therefore the governance gate, the static
+contracts that read the edited documents, the forward-safety mirror, a mechanical recount, a link check and a whitespace
+check. All of them ran locally on the branch (base `13514200`), on Windows with Node, on the final content of the six
+changed files.
+
+| # | Check | Command | Result |
+|---|---|---|---|
+| 1 | Task-closure governance gate (AGENTS.md §10.7) | `npm run test:task-closure-governance-contract` | **PASS 24 / 24** |
+| 2 | The 24 static contracts that read the edited documents (the list of §12, row 2) | `node --test <the 24 files>` | **PASS 367 / 367** |
+| 3 | Forward-safety mirror | `node --test tests/forward-safety-contract.test.mjs` | **PASS 35 / 35** (357 s). An earlier run, before the review corrections, also passed 35 / 35 (456 s) |
+| 4 | Mechanical recount of backlog §4 with the governance test's `INDEX_ROW` shape | a local Node script | 66 rows, no duplicate ID; 30 / 4 / 10 / 22 by status; 35 / 29 / 2 by severity; 44 active (HIGH 18 / MEDIUM 24 / LOW 2). Every index ID has a §5 item or a §6 tombstone. The §7 tables, the last "Latest index" line and the Current State §5 tables agree. The Current State active list holds the 44 index rows byte for byte, in index order. No Current State line matches `Stage 6 … **ACTIVE` |
+| 5 | Relative Markdown links in the six changed files | a local Node script | 547 checked, **0 broken** |
+| 6 | The copy census | a local Node script | All 147 quoted originals found verbatim in their cited files; no stray non-Arabic letters; PW-09 keeps its U+200E mark |
+| 7 | Whitespace | `git diff --check` | clean |
+
+**CI.** No CI workflow runs on this PR. Three workflows have a `pull_request` trigger (`api-ci.yml`, `mobile-ci.yml`,
+`focused-database-verification.yml`), and none of their path filters matches `docs/**` or the root locator Markdown
+files (§12). The local checks above are therefore the PR's only validation. Under `QAN-BL-CI-02` a local forward-safety
+result is not relied on for a merge decision.
+
+**Independent review before commit.** Five read-only reviewers re-read the change, each with one lens:
+- facts and citations (about 120 citations checked): 1 MAJOR, 12 MINOR;
+- governance consistency: 1 BLOCKER (this section, then still unfilled), 9 MINOR;
+- fidelity to the Product Owner's text: 5 MAJOR, 16 MINOR;
+- the Arabic of the copy census: 1 MAJOR, 15 MINOR proposals, and 5 wrong linguistic claims;
+- scope, overreach and clarity: 1 BLOCKER (the same), 4 MAJOR, 17 MINOR.
+
+All were applied, with these exceptions:
+- the "stage count" wording is kept, because it is the Product Owner's own;
+- the Current State Stage 9 owner cell and the §6 / §9 original sentences, which predate the decisions, are left as written.
+
+The main corrections:
+- `QAN-BL-PRIV-04`'s owner and severity are marked as WP0's assignment awaiting the Product Owner's confirmation;
+- "every gate decided" is qualified, and the open sub-questions are listed (§14.9);
+- task-scope readings are no longer presented as approved scope;
+- GATE-35's exclusion is stated in the Product Owner's words;
+- the language rule is recorded in full, with its precedence until the amendments are approved;
+- 16 census proposals were corrected;
+- `QAN-BL-PRIV-04`'s property 2 no longer withholds the reader's own decisions.
+
+**Not run, deliberately:** database verifiers, API and mobile suites, Maestro, and any CI loop. Nothing they cover
+changed.
+
+### 14.13 What these updates did not do
+
+- They wrote no Task Contract. In particular they did not write S6-01's, as the Product Owner directed. The task map is a
+  planning direction, not a plan of record.
+- They started no S6 task. Stage 6's lifecycle stays NEXT / not started in every locator.
+- They changed no runtime, migration, grant, API, screen, copy string, test, CI file or frozen contract. They made and
+  approved no amendment: §14.7 and the census propose and classify only.
+- They did not reconcile the historical S6-01 references or the Return Gate (§14.9 items 1–2), re-anchor the
+  current-task pins, or make the §11 drift notes.
+- They did not merge. The Product Owner decides.
