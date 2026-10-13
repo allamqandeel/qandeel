@@ -3,6 +3,7 @@ import {
   QANDEEL_PERSONALITY_CORE_V1,
   TEXT_V1_BEHAVIORAL_GUIDANCE,
   TEXT_V2_BEHAVIORAL_GUIDANCE,
+  TEXT_V3_BEHAVIORAL_GUIDANCE,
 } from './behavioral-response-policy.service';
 
 describe('BehavioralResponsePolicyService', () => {
@@ -15,7 +16,8 @@ describe('BehavioralResponsePolicyService', () => {
 
   it('ACE-01: builds the deterministic Personal Text v2 — Text v1 unchanged, then the ONE approved personality core', () => {
     const policy = new BehavioralResponsePolicyService();
-    expect(policy.buildTextGuidance()).toBe(TEXT_V2_BEHAVIORAL_GUIDANCE);
+    // LANG-01 Work Package C: the rendered guidance is Text v3 — Text v2 (below) unchanged, then the D4 line.
+    expect(policy.buildTextGuidance()).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
     expect(policy.buildTextGuidance()).toBe(policy.buildTextGuidance());
     expect(TEXT_V2_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V1}`);
     expect(TEXT_V2_BEHAVIORAL_GUIDANCE.split(QANDEEL_PERSONALITY_CORE_V1)).toHaveLength(2);

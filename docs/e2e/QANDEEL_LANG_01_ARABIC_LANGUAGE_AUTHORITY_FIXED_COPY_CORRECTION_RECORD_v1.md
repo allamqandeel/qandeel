@@ -1,6 +1,6 @@
 # QANDEEL — LANG-01 — Arabic Language Authority & Fixed Copy Correction — Record v1
 
-**Status:** `ACTIVE — WORK PACKAGE A ON PR A (#336) AND WORK PACKAGE B ON PR B — NEITHER MERGED; WORK PACKAGE C NOT STARTED; WORK PACKAGE D BLOCKED (INDEPENDENT SAFETY REVIEW)`
+**Status:** `ACTIVE — WORK PACKAGES A (PR A, #336), B (PR B, #337) AND C (PR C) PREPARED — NONE MERGED; WORK PACKAGE D BLOCKED (INDEPENDENT SAFETY REVIEW)`
 **Workstream:** LANG — independent from Stage 6 (WP0 record §14.14, D6).
 **Baseline:** `main = af94748de73cca744c466d8db526984427b94b38` (the merge of PR #335), verified as `origin/main` before
 branching.
@@ -154,6 +154,24 @@ provider selection, cost logic, memory retrieval or HIM behaviour changes, and n
 added. The Shared / Public line reads only the message being answered, so no participant's personal preference reaches
 another participant.
 
+### 5.1 Implemented on PR C
+
+Stacked on PR B. In `apps/api/src/conversation/behavioral-response-policy.service.ts`, the one Behavioral Runtime file:
+- `ARABIC_DEFAULT_LANGUAGE_LINE` and `ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL` hold the amendment's two lines byte for byte
+  (the LANG-01 contract compares them with the amendment);
+- Personal: `TEXT_V3_BEHAVIORAL_GUIDANCE` = `TEXT_V2_BEHAVIORAL_GUIDANCE` (unchanged) + the Personal line, rendered by
+  `buildTextGuidance`; the IP-IMP-01 preference block and the GUIDED humour suspension still follow it, so a standing
+  reply-language preference keeps its stated precedence;
+- Shared / Public: `withWorldNeutralPersonality` appends the world-neutral line after the world-neutral core; the Shared and
+  Public assemblers are unchanged and still read nothing Personal.
+
+`TEXT_V1_BEHAVIORAL_GUIDANCE`, `QANDEEL_PERSONALITY_CORE_V1`, `QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL` and the CA-2 lines are
+byte-identical. Re-anchored: the ACE-01 and ACE-SP-01 root contracts (one line each, marked "RE-ANCHORED by LANG-01") and
+the specs that assert the rendered guidance (Text v2 → Text v3); the specs that assert Text v2's own definition are
+unchanged. New: `conversation/lang-01-generated-language-default.spec.ts` (8 cases: placement, precedence under each
+standing preference, GUIDED order, Shared / Public isolation, determinism). Real-model behaviour stays Stage 8A validation
+(`QAN-BL-IP-02`, `QAN-BL-ACE-02`); no paid model run was made.
+
 ## 6. Work Package D — safety replies
 
 **State: BLOCKED / NOT MERGED.** S-01 … S-06 are editorially approved, but the Task Contract requires an independent
@@ -228,8 +246,8 @@ The exact counts are in the PR description.
 | PR | Scope | State |
 |---|---|---|
 | PR A ([#336](https://github.com/allamqandeel/qandeel/pull/336)) | Work Package A: this record, the manifest, the two amendments, locator notes, the static contract | draft, not merged |
-| PR B | Work Package B: mobile and API fixed copy, with the pins of §4 (§4.1) | draft, stacked on PR A, not merged |
-| PR C | Work Package C: the D4 guidance lines and their focused tests | not started |
+| PR B ([#337](https://github.com/allamqandeel/qandeel/pull/337)) | Work Package B: mobile and API fixed copy, with the pins of §4 (§4.1) | draft, stacked on PR A, not merged |
+| PR C | Work Package C: the D4 guidance lines and their focused tests (§5.1) | draft, stacked on PR B, not merged |
 | PR D | Work Package D: S-01 … S-06, after the independent safety gate | blocked |
 
 Not merged. No launch gate, S6-01 file or Stage 6 lifecycle row is touched.

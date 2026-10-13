@@ -21,7 +21,8 @@ import {
 } from '../shared-world/shared-conversation-model-input';
 import {
   BehavioralResponsePolicyService, QANDEEL_PERSONALITY_CORE_V1, QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL,
-  TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V2_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
+  TEXT_V1_BEHAVIORAL_GUIDANCE, TEXT_V2_BEHAVIORAL_GUIDANCE, TEXT_V3_BEHAVIORAL_GUIDANCE, withWorldNeutralPersonality,
+  ARABIC_DEFAULT_LANGUAGE_LINE, ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL,
 } from './behavioral-response-policy.service';
 import {
   AMBIGUOUS_SAFETY_GUIDANCE, SELF_HARM_GUIDANCE, SafetyResponseGateService, THIRD_PARTY_SUPPORT_GUIDANCE,
@@ -125,11 +126,13 @@ describe('ACE-SP-01 — the world-neutral core is the ONE approved core, derived
 
   it('the helper is pure and append-only: the World prefix is kept, the core follows, the suspension only when guided', () => {
     for (const prefix of [SHARED_PREFIX, PUBLIC_PREFIX]) {
-      expect(withWorldNeutralPersonality(prefix, false)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}`);
-      expect(withWorldNeutralPersonality(prefix, true)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}\n\n${CG_4}`);
+      // LANG-01 Work Package C (LA-17): the world-neutral D4 line follows the world-neutral core.
+      expect(withWorldNeutralPersonality(prefix, false)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`);
+      expect(withWorldNeutralPersonality(prefix, true)).toBe(`${prefix}\n\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}\n\n${CG_4}`);
       expect(withWorldNeutralPersonality(prefix, true)).toBe(withWorldNeutralPersonality(prefix, true));
       const bytes = (text: string) => Buffer.byteLength(text, 'utf8');
-      expect(bytes(withWorldNeutralPersonality(prefix, false)) - bytes(prefix)).toBe(2 + bytes(QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL));
+      expect(bytes(withWorldNeutralPersonality(prefix, false)) - bytes(prefix)).toBe(2 + bytes(QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL) + 2 + bytes(ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL));
+      expect(withWorldNeutralPersonality(prefix, true)).not.toContain(ARABIC_DEFAULT_LANGUAGE_LINE);
       expect(bytes(withWorldNeutralPersonality(prefix, true))).toBeLessThanOrEqual(4096);
     }
   });
@@ -137,8 +140,11 @@ describe('ACE-SP-01 — the world-neutral core is the ONE approved core, derived
   it('Personal guidance is byte-identical to ACE-01 and never carries the world-neutral wording', () => {
     const policy = new BehavioralResponsePolicyService();
     expect(TEXT_V2_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V1}`);
-    expect(policy.buildTextGuidance()).toBe(TEXT_V2_BEHAVIORAL_GUIDANCE);
-    for (const text of [policy.buildTextGuidance(), TEXT_V2_BEHAVIORAL_GUIDANCE]) {
+    // LANG-01 Work Package C: the rendered Personal guidance is Text v2 unchanged, then the Personal D4 line.
+    expect(policy.buildTextGuidance()).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
+    expect(TEXT_V3_BEHAVIORAL_GUIDANCE).toBe(`${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`);
+    for (const text of [policy.buildTextGuidance(), TEXT_V3_BEHAVIORAL_GUIDANCE]) {
+      expect(text).not.toContain(ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL);
       expect(text).not.toContain(CG_1);
       expect(text).not.toContain('anyone\'s expense');
       expect(text).not.toContain('humiliating anyone');
