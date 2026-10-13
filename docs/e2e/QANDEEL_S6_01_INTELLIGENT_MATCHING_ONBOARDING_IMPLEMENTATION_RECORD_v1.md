@@ -182,13 +182,102 @@ is a later Product decision; nothing here decides it.
 
 ---
 
-## 5. Database contract (CP2)
+## 5. Database contract (CP2) — migration `0154`
 
-*Recorded at CP2.*
+`database/migrations/0154_matching_onboarding_preparation_v1.sql`; schema `introductions_preparation_private`, not
+exposed through the Data API. Forward-only; `0001`–`0153` byte-unchanged.
 
-## 6. Application and onboarding contract (CP2 / CP3)
+### 5.1 Relations (every one enumerated by `verify-migration-0154`, not by any earlier verifier's name pattern)
 
-*Recorded at CP2 and CP3.*
+| Relation | Holds | Account reference | Delete rule |
+|---|---|---|---|
+| `gate_states`, `gate_events` | the `PREPARATION` and `ONBOARDING_ASSISTANCE` gates and their audit (0138 pattern) | — | events → states RESTRICT |
+| `area_countries`, `area_regions` | the preparation area catalogue | — | regions → countries RESTRICT |
+| `consent_texts` | each consent version: Arabic, English, SHA-256 of each (a CHECK proves the digests) | — | — |
+| `drafts` | version, optional profile, hard / soft answers and items, skipped steps, review | `user_id` → `public.users` | **CASCADE** |
+| `declared_facts` | the five facts, each with `DECLARED` / `CONFIRMED` / `CORRECTED` and a confirmation time | → `drafts` | **CASCADE** |
+| `notes` | the owner's private notes (written, confirmed or corrected from prior understanding) | → `drafts` | **CASCADE** |
+| `prior_understanding_decisions` | the owner's decision per shown item, **no content**, no FK to Memory | → `drafts` | **CASCADE** |
+| `assistance_consents` | version-bound grants and revocations (no content) | → `public.users` | **CASCADE** |
+| `command_ledger` | each applied command once: kind, SHA-256 fingerprint, outcome, version (no content) | → `public.users` | **CASCADE** |
+
+No relation outside the schema references it, and no trigger is defined on it, so nothing here can make the governed
+erasure fail or wait. The schema and table names avoid `verify-migration-0149`'s Matching name pattern because these
+relations are **not** I-07 relations; the pattern is not relied on for anything — the new verifier enumerates and
+asserts every foreign key and delete rule itself (Product Owner D2 security warning).
+
+### 5.2 Entry points and authority
+
+| Exposed (SECURITY INVOKER pass-through) | Owner entry (DEFINER, `auth.uid()` only) | Gate(s) bound | Live deletion |
+|---|---|---|---|
+| `read_matching_preparation_availability_v1()` | `read_availability_v1` | hint only | — |
+| `read_own_matching_preparation_v1()` | `read_own_preparation_v1` | none (the owner's own data) | readable |
+| `apply_own_matching_preparation_command_v1(command_id, expected_version, kind, payload)` | `apply_own_command_v1` | `PREPARATION` (+ `ONBOARDING_ASSISTANCE` for a prior-item decision) | refused |
+| `discard_own_matching_preparation_v1(command_id)` | `discard_own_v1` | none | allowed |
+| `grant_own_matching_onboarding_assistance_v1(command_id, consent_version)` | `grant_own_assistance_v1` | both | refused |
+| `revoke_own_matching_onboarding_assistance_v1(command_id)` | `revoke_own_assistance_v1` | none | allowed |
+| `read_own_matching_onboarding_assistance_items_v1()` | `read_own_assistance_items_v1` | both, FOR SHARE, and the current consent FOR SHARE | — |
+
+`authenticated` runs these fourteen functions and nothing else; no application role reads or writes a table; `anon`,
+`service_role` and `PUBLIC` reach nothing. The operator functions (`set_gate_v1`, `bind_gate_v1`) and every internal
+core run for no application role. Commands: `SET_FACT`, `CONFIRM_FACT`, `SET_PROFILE`, `SET_REQUIREMENTS`, `ADD_NOTE`,
+`REMOVE_NOTE`, `RECORD_PRIOR_UNDERSTANDING`, `SKIP_STEP`, `CONFIRM_REVIEW`. Outcomes that change nothing (and are not
+ledgered): `UNAVAILABLE`, `ACCOUNT_DELETION_PENDING`, `STALE_VERSION`, `COMMAND_ID_REUSED`, `NOT_ELIGIBLE`,
+`ALREADY_DECIDED`, `NOTE_LIMIT_REACHED`, `NOTHING_TO_CONFIRM`, `NOT_READY_FOR_REVIEW`; an invalid request is `22023`.
+No path raises `40001` (`QAN-BL-PROD-06`).
+
+**Lock order** (never reversed): the account row `FOR KEY SHARE` (a deletion request and the erasure take it
+`FOR UPDATE`) → the owner's advisory lock → the gate row(s) `FOR SHARE` → the current consent `FOR SHARE` → the draft
+`FOR UPDATE` → a Memory row `FOR SHARE`.
+
+### 5.3 The `MATCHING_ONBOARDING_ASSISTANCE` reader (CW2-06A §3)
+
+Returns at most 12 of the caller's Memories that are `ACTIVE`, unexpired, `USER_STATED` / `USER_CONFIRMED`, of type
+`PERSONAL_FACT`, `STABLE_PREFERENCE`, `GOAL` or `DECISION_COMMITMENT`, attributed `SELF`, 2–500 characters, not yet
+decided on — newest first, words exactly as stored, with a deterministic recency (`CURRENT` within 365 days, else
+`NEEDS_RECHECK`). It infers, summarizes and ranks nothing, calls no model, and writes nothing. A confirmation re-reads
+the item under the same rules in the command's own transaction and copies its words; a client cannot assert where a note
+came from. A correction or rejection changes the draft only — never the Memory.
+
+## 6. Application contract (CP2 / CP3)
+
+### 6.1 API — `apps/api/src/introductions-preparation` (composed through `AccountModule`; the application root is pinned)
+
+| Route | Body | Answer |
+|---|---|---|
+| `GET /introductions/availability` | — | `{ preparation, assistance, enrollment: false, hasDraft }` |
+| `GET /introductions/preparation` | — | the record, the authorized prior items, the objective plan, `phrasing: 'UNBOUND'` |
+| `POST /introductions/preparation/commands` | `{ commandId, expectedVersion, kind, payload }` (exact shapes) | `{ outcome, view }` |
+| `POST /introductions/preparation/discard` | `{ commandId }` | `{ outcome, view }` |
+| `POST /introductions/preparation/assistance/grant` | `{ commandId, consentVersion }` | `{ outcome, view }` |
+| `POST /introductions/preparation/assistance/revoke` | `{ commandId }` | `{ outcome, view }` |
+
+Caller's token only; no route takes a user id. Every database answer is decoded strictly — doubt fails closed as one
+sanitized `503`; the database's `22023` is a `400`. Nothing is logged. The module imports no Conversation, Memory,
+Hypothesis, HIM, Model Router, Shared or Public source, and names no I-07 command or relation (structural spec).
+
+### 6.2 The Matching Onboarding Objective selector (Task Contract WP3)
+
+`onboarding-objective-selector.ts`, deterministic and provider-neutral. Inputs: the server-confirmed draft and, only
+with the permission granted and both gates open, the bounded prior items. Order pursued: `OFFER_ASSISTANCE` (once;
+declining is kept) → `RESOLVE_DISCREPANCY` → `RECONFIRM_CORRECTED_FACT` → `CLARIFY_PRIOR_ITEM` (older items first,
+never presumed) → `CONFIRM_PRIOR_ITEM` (at most 5 per plan; "stop showing" ends them) → each required fact
+`ESTABLISH_FACT` / `CONFIRM_DECLARED_FACT` (a confirmed one is skipped) → `ESTABLISH_HARD_REQUIREMENTS` →
+`ESTABLISH_SOFT_PREFERENCES` → optional `ESTABLISH_PRIORITIES` (skipped as already known when the owner confirmed what
+matters to them), `OFFER_SHORT_INTRODUCTION`, `OFFER_WORK_FIELD` → `REVIEW` → nothing. Path: `NEW` / `KNOWN` / `MIXED`.
+An item never answers a required fact. Enrollment is always `UNAVAILABLE`. The phrasing seam is `UNBOUND`
+(Stage 8A; `QAN-BL-MATCH-04`).
+
+### 6.3 Mobile — `apps/mobile/src/introductions`
+
+The manual entry «التعارف مع قنديل» on Personal QANDEEL's own row (after «فهم قنديل»), drawn only while preparation is
+available or a draft exists; the preparation surface over the still-mounted Personal world (a `DepthComposition`
+overlay like Understanding; not a route, tab or World; Android Back and the header Back return exactly; inner editors
+take Back first). The `IntroductionsApiClient` decodes strictly — no answer can claim enrollment or a bound phrasing
+provider. The controller is built per runtime generation and retired with it (no persistence, nothing crosses accounts);
+a change is bound to the draft version shown; a lost answer is retried with the same command id. The attention law
+treats the surface as a non-Analysis Personal depth (`ProductSurface` `INTRODUCTIONS`). No Settings group is drawn (no
+enrolled person exists).
 
 ## 7. Product Copy and Visual Gate (CP3)
 

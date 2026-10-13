@@ -228,7 +228,7 @@ function Summary({ ctx, copy, draft, editable, onEdit }: {
     <View key={key} testID={`qandeel-introductions-summary-${key}`} style={{ paddingTop: 6 }}>
       <Text style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, paddingStart: 24, paddingEnd: 20, writingDirection: ctx.writing }}>{label}</Text>
       <Text style={{ ...typeStyle('body'), color: ctx.palette.primary, paddingStart: 24, paddingEnd: 20, writingDirection: ctx.writing }}>{value}</Text>
-      {editable ? <Action ctx={ctx} label={`${copy.edit} — ${label}`} onPress={() => onEdit(edit)} testID={`qandeel-introductions-edit-${key}`} /> : null}
+      {editable ? <Action ctx={ctx} label={copy.edit} accessibilityLabel={`${copy.edit}: ${label}`} onPress={() => onEdit(edit)} testID={`qandeel-introductions-edit-${key}`} /> : null}
     </View>
   );
   const requirementLine = (side: { readonly answer: string | null; readonly items: readonly IntroductionsRequirementItem[] }, none: string) =>
@@ -346,7 +346,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   } else if (view !== null && draft === null && !started) {
     body = (
       <View testID="qandeel-introductions-intro">
-        <Para ctx={ctx} text={copy.opening} role="statement" />
+        <Para ctx={ctx} text={copy.opening} />
         <Para ctx={ctx} text={copy.privateNote} color={palette.secondary} />
         <Para ctx={ctx} text={copy.enrollmentUnavailable} color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
         {pathLine === null ? null : <Para ctx={ctx} text={pathLine} testID="qandeel-introductions-path" />}
@@ -360,7 +360,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   } else if (view !== null && draft !== null) {
     body = (
       <View testID="qandeel-introductions-reviewed">
-        <Para ctx={ctx} text={copy.reviewed} role="statement" testID="qandeel-introductions-enrollment-unavailable" />
+        <Para ctx={ctx} text={copy.reviewed} testID="qandeel-introductions-enrollment-unavailable" />
         <Summary ctx={ctx} copy={copy} draft={draft} editable onEdit={setEditing} />
         <AssistanceRow ctx={ctx} copy={copy} view={view} controller={controller} />
         <DiscardBlock ctx={ctx} copy={copy} confirming={confirmDiscard} setConfirming={setConfirmDiscard} onDiscard={() => void controller.discard()} />
@@ -464,7 +464,7 @@ function Step({ ctx, copy, view, objective, pathLine, send, controller, correcti
         <View testID="qandeel-introductions-step-OFFER_ASSISTANCE">
           <Heading ctx={ctx} text={copy.assistanceOfferTitle} testID="qandeel-introductions-step-heading" />
           {text === null ? null : <Para ctx={ctx} text={text} testID="qandeel-introductions-consent-text" />}
-          <Action ctx={ctx} label={copy.allowAssistance} primary disabled={text === null} onPress={() => void controller.grantAssistance()} testID="qandeel-introductions-assistance-grant" />
+          <Action ctx={ctx} label={copy.allowAssistance} disabled={text === null} onPress={() => void controller.grantAssistance()} testID="qandeel-introductions-assistance-grant" />
           <Action ctx={ctx} label={copy.continueWithout} onPress={() => void send('SKIP_STEP', { step: 'ASSISTANCE_OFFER' })} testID="qandeel-introductions-assistance-decline" />
         </View>
       );

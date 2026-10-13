@@ -55,22 +55,25 @@ export function Quote({ ctx, text, testID }: { readonly ctx: PartContext; readon
 }
 
 /** One action: a full-width row, 44 points high at least. `primary` is drawn in the rest ink, as every primary act. */
-export function Action({ ctx, label, onPress, testID, primary = false, disabled = false }: {
+export function Action({ ctx, label, onPress, testID, primary = false, disabled = false, accessibilityLabel }: {
   readonly ctx: PartContext; readonly label: string; readonly onPress: () => void; readonly testID: string;
-  readonly primary?: boolean; readonly disabled?: boolean;
+  readonly primary?: boolean; readonly disabled?: boolean; readonly accessibilityLabel?: string;
 }) {
   const off = ctx.busy || disabled;
   return (
     <Control
       palette={ctx.palette}
       language={ctx.language}
-      accessibilityLabel={label}
+      accessibilityLabel={accessibilityLabel ?? label}
       accessibilityState={{ busy: ctx.busy, disabled: off }}
       onPress={off ? () => undefined : onPress}
       testID={testID}
-      style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, opacity: off ? BUSY_OPACITY : 1 }}
+      style={primary
+        ? { minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: 16, paddingEnd: 16, marginStart: ROW_START - 8, marginEnd: ROW_END - 8, marginVertical: 6,
+          borderRadius: 12, backgroundColor: ctx.palette.field, opacity: off ? BUSY_OPACITY : 1 }
+        : { minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, opacity: off ? BUSY_OPACITY : 1 }}
     >
-      <Text style={{ ...typeStyle('action'), color: primary ? ctx.palette.restInk : ctx.palette.primary, writingDirection: ctx.writing }}>{label}</Text>
+      <Text style={{ ...typeStyle('action'), color: ctx.palette.primary, writingDirection: ctx.writing }}>{label}</Text>
     </Control>
   );
 }
@@ -90,7 +93,7 @@ export function Choice({ ctx, label, selected, onPress, testID, multiple = false
       testID={testID}
       style={{
         minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0,
-        backgroundColor: selected ? ctx.palette.field : undefined, flexDirection: 'row', alignItems: 'center', columnGap: 10,
+        backgroundColor: selected ? ctx.palette.field : undefined, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', columnGap: 10,
       }}
     >
       <Text style={{ ...typeStyle('body'), color: ctx.palette.primary, writingDirection: ctx.writing, flexShrink: 1 }}>{label}</Text>
