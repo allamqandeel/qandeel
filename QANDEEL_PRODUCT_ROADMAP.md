@@ -363,7 +363,7 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
 - **Register:** this PR admits `QAN-BL-LAUNCH-04` (Issue #322; owner `Stage 9 — Economy + Launch Closure
   (release-readiness gate)`), `QAN-BL-MATCH-02` (owner `S6-02`), `QAN-BL-MATCH-03` (owner `Stage 8A — QANDEEL AI Brain /
   Production LLM Runtime`) and `QAN-BL-PRIV-04` (owner `S6-07`; WP0's assignment under GATE-19, awaiting the Product
-  Owner's confirmation). The register goes from 62 to 66 items (backlog §7). `QAN-BL-MATCH-01` stays with `S6-01`.
+  Owner's confirmation; confirmed in §6.8). The register goes from 62 to 66 items (backlog §7; 67 after §6.8). `QAN-BL-MATCH-01` stays with `S6-01`.
 - **Before S6-01:**
   - the historical S6-01 lifecycle references (this roadmap's §6.3 "Paused" against "Not started" elsewhere) are
     reconciled before its Task Contract;
@@ -375,3 +375,34 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
   - the hosted deployment gate (`QAN-BL-PROD-06`);
   - Issue #322 itself, which stays `OPEN / NOT PROVEN / RELEASE BLOCKER`;
   - every other independent release blocker.
+
+### 6.8 Execution note — 2026-10-13 (Stage 6 WP0: final decision addendum)
+**Recorded:** 2026-10-13 by the same governance change (PR #335). This is a status note only. It opens no task and
+authorizes no implementation, and §6.7 stays as written.
+- **Decisions** ([WP0 record](docs/e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §14.14):
+  - **D1, GATE-16:** Matching v1 proposes opposite-sex male / female pairs only, on an explicitly declared and confirmed
+    sex fact that is never inferred. A missing or unconfirmed fact is UNKNOWN and never eligible. The I-07 runtime has no
+    sex dimension, so a controlled architecture amendment (CA-09) comes before any implementation.
+  - **D2:** `QAN-BL-PRIV-04` is confirmed with owner `S6-07` and severity `HIGH`. S6-07 is not a cross-world export task.
+  - **D3:** a separately owned account-deletion correction path, provisionally `ACCT-DEL-01`, for `QAN-BL-ACCT-01`. No
+    real Matching enrollment happens before the deletion-blocking footprint is resolved.
+  - **D4:** generated conversation respects an explicitly chosen language or dialect. Otherwise it follows the user's
+    dialect when that is reasonably clear. If neither can be determined, it defaults to neutral simplified Modern
+    Standard Arabic, never to Egyptian for every Arabic user. Fixed Arabic copy stays simplified Modern Standard Arabic.
+  - **D5:** cross-world export completeness goes to `PRIV-EXPORT-01`, coordinating with Stage 7 for Replay
+    (`QAN-BL-PRIV-05` admitted).
+- **Parallel execution strategy (D6), after WP0 closes.** Two independent workstreams:
+  - **LANG:** controlled Arabic authority amendments, Product Owner copy approvals and focused corrections, using the
+    existing 109-unit census;
+  - **S6:** Stage 6 Matching implementation, starting with S6-01 after its historical Return Gate and the required
+    architecture decisions are reconciled.
+
+  They run on independent branches and PRs, with no duplicated implementation. LANG owns existing Arabic copy and its
+  language-authority amendments. S6 owns new Matching UX and follows the approved simplified-MSA rule. A shared text or
+  frozen-contract dependency is resolved in its owning workstream first. Verification is focused per workstream, with
+  proportionate integration verification. The 109-unit census is maintained, not restarted.
+- **Register:** from 66 to 67 items (`QAN-BL-PRIV-05`; backlog §7).
+- **Unchanged:**
+  - neither workstream receives implementation authorization through the addendum;
+  - Stage 6 is still not started, and no Task Contract exists;
+  - PR #335 is not merged.

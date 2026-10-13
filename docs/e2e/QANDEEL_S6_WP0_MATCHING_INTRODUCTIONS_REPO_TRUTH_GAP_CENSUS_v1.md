@@ -6,7 +6,8 @@ Plan`, authorized by the Product Owner's Stage 6 / WP0 brief (2026-10-13).
 brief (Issue #322 → `QAN-BL-LAUNCH-04`, §9). After the Product Owner reviewed it the same day, this record also records
 the Product Owner's decisions (§14): first Tier 0, then the consolidated final approval package. It covers every gate,
 the binding fixed-Arabic-copy language rule and the approved seven-task map, and records three admissions:
-`QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-PRIV-04`. WP0 is not S6-01 and does not start, resume or contract it.
+`QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-PRIV-04`. A final decision addendum (§14.14) resolves GATE-16 and the
+remaining questions and admits `QAN-BL-PRIV-05`. WP0 is not S6-01 and does not start, resume or contract it.
 **Baseline:** `main = 135142004097136336d586e5d5ff6cfd119cd864`, the merge of PR #334 (GOV-REC-01). It was verified on
 GitHub on 2026-10-13, matching the Product Owner's stated starting point. Issue #322 was read on GitHub the same day:
 `OPEN`.
@@ -983,7 +984,7 @@ ACCT-01, CW2-08, #322 and 8A) and made explicit: an integrational closure delive
 | `QAN-BL-CW-05` (Stage 8A), `QAN-BL-ACE-02`, `QAN-BL-IP-02` (Stage 8A) | Bear: Introduction-phase Worlds use the Shared reply path; real-model quality is Stage 8A | Stage 8A; S6-05 records that replies answer `UNAVAILABLE` while unbound |
 | `QAN-BL-CW-06`, `CW-07` (`OPEN — UNASSIGNED`) | Bear only if Introduction Worlds open on the Living Analysis surface (GATE-29) | Noted in S6-05 after GATE-29 |
 | `QAN-BL-VIS-01` (LA-SCALE-01), `QAN-BL-LAUNCH-04` (Issue #322, §9) | Bear only under the same Living Analysis condition | Observed in S6-05 / S6-07 if so; otherwise outside |
-| `QAN-BL-PRIV-01…03` (PRIV-EXPORT-01) | Bear: a candidate owner for Matching export (`0153:314`) | GATE-19 decides *(decided 2026-10-13: GATE-19 led to `QAN-BL-PRIV-04`; WP0 assigned it to S6-07, awaiting the Product Owner's confirmation, and did not choose `PRIV-EXPORT-01`; §14.4)* |
+| `QAN-BL-PRIV-01…03` (PRIV-EXPORT-01) | Bear: a candidate owner for Matching export (`0153:314`) | GATE-19 decides *(decided 2026-10-13: GATE-19 led to `QAN-BL-PRIV-04`; WP0 assigned it to S6-07, awaiting the Product Owner's confirmation, and did not choose `PRIV-EXPORT-01`; §14.4; the owner and severity were confirmed by D2, and the Shared, Public and Replay categories went to `PRIV-EXPORT-01` as `QAN-BL-PRIV-05` by D5, §14.14)* |
 | `QAN-BL-PROD-04` (PROD-AUTH-01), `QAN-BL-PROD-05` (PROD-DATA-01) | Bear: auth-verification cost of new routes; discovery / listing fan-out | Observed in S6-01, S6-03, S6-04, S6-07 |
 | `QAN-BL-CI-01`, `CI-02` | Bear: validation reopen hazards | Observed in every S6 validation |
 | `QAN-BL-LAUNCH-01` | Bears at launch only | Stage 9 |
@@ -1347,7 +1348,7 @@ Three independently owned obligations were admitted, each after a fresh anti-dup
 |---|---|---|---|---|---|
 | `QAN-BL-MATCH-02` | Introduction-Phase Account Name Exposure Through Phase-Blind Shared World Reads | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `HIGH` | `DEFERRED — OWNED` | GATE-03 |
 | `QAN-BL-MATCH-03` | Safe Compatibility Conclusion Production Capability, AI Cost Attribution and Evaluation | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` | GATE-03 |
-| `QAN-BL-PRIV-04` | Export My Data Omits the Reader's Matching and Introductions Data | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` | GATE-19 (owner and severity: WP0's assignment, awaiting the Product Owner's confirmation) |
+| `QAN-BL-PRIV-04` | Export My Data Omits the Reader's Matching and Introductions Data | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` | GATE-19 (owner and severity: WP0's assignment; confirmed by the addendum's D2, §14.14) |
 
 Issue #322 stays `QAN-BL-LAUNCH-04` (Stage 9), `OPEN / NOT PROVEN / RELEASE BLOCKER` (§9; restated by the package).
 
@@ -1375,7 +1376,7 @@ their domain families although Stage 8A owns them.
   frozen pair-privacy law (CW2-06 §28, §33, §38, §53; CW2-08 §2). Today the export is truthful, because it names the
   category as not yet included (`0153:314`). The severity states the consequence of the reopened work, not a present
   defect. **For the Product Owner:** `MEDIUM` would follow the `PRIV-01` … `03` reading of export as completeness only.
-  This record recommends `HIGH`.
+  This record recommends `HIGH`. *(Confirmed by D2, §14.14.)*
 
 **Owner strings.**
 - The Stage 8A string is copied character-exact from the existing rows.
@@ -1384,7 +1385,7 @@ their domain families although Stage 8A owns them.
   (§8.4).
 - `S6-07` for the export follows WP0 §8.2, which placed the export there. S6-07 runs last, after S6-01 … S6-06 create
   every relation the export must cover. The approved name drops the "Data Rights" of WP0's proposed S6-07 name, so the
-  assignment is recorded for the Product Owner's confirmation.
+  assignment is recorded for the Product Owner's confirmation. *(Confirmed by D2, §14.14.)*
 - `PRIV-EXPORT-01` was considered and not chosen:
   - it is named for Understanding facts and holds only single-owner Personal facts;
   - it appears in no stage of the Roadmap or execution map;
@@ -1420,7 +1421,7 @@ carries. Admitting any of them would duplicate an owner or precede the fence it 
 - a narrow deletion correction (GATE-05: "commission an explicitly owned, narrow deletion correction if justified").
   `QAN-BL-ACCT-01` stays `OPEN — UNASSIGNED`. WP0's assessment: a correction is justified only if no pre-enrollment
   design can avoid a permanent footprint (AR-02). It needs CA-02 and a named owner, which the Product Owner is asked to
-  decide (§14.9 item 4);
+  decide (§14.9 item 4) *(answered by D3, §14.14)*;
 - the Replay contract (GATE-35: Introduction material stays excluded from user-facing Replay until Stage 7 defines and
   approves its contract; only whether a register item is admitted for that contract is reconsidered at S6-02's closure,
   when the fence exists);
@@ -1433,7 +1434,8 @@ carries. Admitting any of them would duplicate an owner or precede the fence it 
 **Observation reported, not admitted:** the Shared, Public and Replay world-scoped export categories have no register
 owner. W3-MEGA-S item 9 left them to "each Connected World's integration (Stages 4 – 7)" (`:574`). Stages 4 and 5
 closed with `'shared'` and `'public'` still in `notYetIncluded` (`0153:314`). The Stage 5 records point their gaps at the
-stale E2E-D-16 row, and the Stage 4 records record no export gap. Admitting an owner needs a Product Owner designation (BG-06).
+stale E2E-D-16 row, and the Stage 4 records record no export gap. Admitting an owner needs a Product Owner designation (BG-06). *(Designated by D5: `QAN-BL-PRIV-05`, owner
+`PRIV-EXPORT-01`; §14.14.)*
 
 **Defect reported, not admitted:** on `main`, the Shared removal explanation renders a literal `{0}` in Arabic and
 English. Its template has two `{0}`, and `fill()` replaces only the first (census §6; `apps/mobile/src/shared-world/copy.ts:147-149`).
@@ -1488,7 +1490,7 @@ implementation conflict, LS later-stage obligation.
 | GATE-13 | A manual Introductions entry inside `MY_WORLD`; no fourth top-level World area. QANDEEL may suggest Introductions conversationally after Stage 8A. A suggestion is never enrollment or consent; no repetitive or intrusive suggestions; no misleading pre-entry Activity or notification affordances | APPROVED | EI-01; CP-01; LS-07 | S6-01; S6-07; Stage 8A (suggestion) |
 | GATE-14 | QANDEEL leads a progressive, step-by-step guided onboarding, not a long conventional form. Users can review, correct, return and resume later. Stage 6 uses a deterministic guided flow, and Stage 8A may add natural intelligent conversation. All fixed guided text uses simplified MSA | APPROVED | AR-07; LS-08 | S6-01; Stage 8A |
 | GATE-15 | A progressive Introduction Profile with four required basics: a confirmed Introduction First Name; age, subject to eligibility rules; a broad geographic area, not a detailed address; marital status. Other personality, interest, lifestyle and relationship preferences stay progressive. The required profile and consent set must be complete before real-Matching eligibility. Nothing sensitive is inferred or silently imported | APPROVED | AR-08; LS-09 | S6-01 |
-| GATE-16 | Hard dealbreakers are separate from soft preferences. An explicit, user-confirmed definition of the category of partner sought. Structured, reviewable criteria, not unverified AI inference. An incomplete required set is never matchable. Frozen PASS / FAIL / UNKNOWN semantics hold: UNKNOWN is never PASS | APPROVED | AR-09 (an open question for the Product Owner; §14.9) | S6-01 (capture); S6-03 (evaluation) |
+| GATE-16 | Hard dealbreakers are separate from soft preferences. An explicit, user-confirmed definition of the category of partner sought. Structured, reviewable criteria, not unverified AI inference. An incomplete required set is never matchable. Frozen PASS / FAIL / UNKNOWN semantics hold: UNKNOWN is never PASS | APPROVED | AR-09 (an open question for the Product Owner; §14.9); resolved by D1, which adds CA-09 (§14.14) | S6-01 (capture); S6-03 (evaluation) |
 | GATE-17 | Distinct explicit consent steps; a user-readable confirmation before final enrollment; the approved consent wording and its version evidence preserved. Fixed Arabic follows the simplified-MSA rule. All new and amended wording goes through the Copy Gate | APPROVED | AR-10 | S6-01 |
 
 **`MY_WORLD` context, consent and profile**
@@ -1618,6 +1620,9 @@ needs its own controlled change, approved by the Product Owner and Architecture,
 | CA-07 | GATE-23 | CW2-06 §20 (`:331-335`: the first recipient receives a first name, bounded approved information and a conclusion) and §23. The recipient view binds both (`0110:845-846`, `0112:945-946`) and cannot be materialized without a resolved first name and a permitted conclusion (`0120:462-479`) | A controlled CW2-06 §20 / §23 and I-07B amendment that changes what a recipient view must bind, consistent with neutral-copy-only proposals. If a conclusion is no longer needed, `QAN-BL-MATCH-03` is narrowed or re-owned | S6-03 and S6-04 |
 | CA-08 | GATE-24a | CW2-06 §11 (`:185-189`) and F11 (`:856`): the Pre-Match Disclosure Authority is required to surface a candidate. `0109:768-771` refuses an empty approved-field set. Matchable needs an `ACTIVE` authority (`0111:263-264`) | With no field disclosable, the frozen rules leave two bad outcomes. Either nobody can ever be matchable, or users must approve a field that will never be shown, which is misleading consent. An amendment makes the authority optional or zero-field while the allowlist is empty, or decouples matchability from it. Until then, building it would mean approving a field that is never shown; whether S6-01 builds it is for its Task Contract (GATE-24a) | S6-01's field-approval scope |
 
+*(Final decision addendum, 2026-10-13: CA-09, for GATE-16 as resolved by D1, is recorded in §14.14. The class counts
+above are as first classified.)*
+
 **Controlled Product / copy amendments**
 
 | ID | Gate | Frozen text | What the amendment must settle |
@@ -1647,7 +1652,7 @@ needs its own controlled change, approved by the Product Owner and Architecture,
 | AR-06 | GATE-12 | The first-name store: a reserved profile key (each correction re-binds the authority) or a dedicated store (a new footprint under GATE-05). Owner read-back is a new no-oracle boundary. Seam wiring re-anchors the verify-0111 A03 pins |
 | AR-07 | GATE-14 | "Return and resume later" needs a non-footprint draft (GATE-05), and "review and correct" needs read-back (GATE-12). The flow never passes through the Personal Memory write |
 | AR-08 | GATE-15 | The geographic key must avoid the `0108:421-424` key-ban tokens (`geo`, `address`, `street`, `gps`). Progressive steps belong in a pre-enrollment draft. "Four required categories" is enforced by a reviewed wrapper or catalogue. Age is self-declared only |
-| AR-09 | GATE-16 | A user-confirmed "category of partner sought" can only PASS against a matching self-declared fact about the candidate. If the category is the counterpart's sex (no gender concept exists, §10 GATE-16), none of GATE-15's four required categories can match it, so every candidate would evaluate UNKNOWN (§14.9). The evaluator over the catalogue is S6-03 work |
+| AR-09 | GATE-16 | A user-confirmed "category of partner sought" can only PASS against a matching self-declared fact about the candidate. If the category is the counterpart's sex (no gender concept exists, §10 GATE-16), none of GATE-15's four required categories can match it, so every candidate would evaluate UNKNOWN (§14.9). The evaluator over the catalogue is S6-03 work. *Answered by D1 (§14.14): the category is the counterpart's sex; CA-09* |
 | AR-10 | GATE-17 | Consent-wording version evidence has no column (`0108:202-210`, `:329-335`; the grant's fixed semantics, `:73-74`). It needs an additive relation, itself a footprint under GATE-05 and the verify-0149 naming regex |
 | AR-11 | GATE-18 | `0115:62-64`: the two image stages are independent versions, so the frozen order is enforced in the S6-06 wrapper. No media boundary exists |
 | AR-12 | GATE-19 | Several Matching rows bind two humans (`0110:213-979`), and Matching operational state is private (CW2-06 `:608-624`), so the export content rule, including what counts as confidential reasoning, needs review. That is `QAN-BL-PRIV-04` |
@@ -1765,9 +1770,9 @@ controlled change, not an implementation.
 | 1 | The historical S6-01 lifecycle references are not reconciled: Roadmap §6.3 "Paused" against "Not started"; the S6-01 brief, Reality Check and D1–D6 cited by CI-01 C0 (`docs/e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md:323`) are not in the repository; "resume" (which fires `QAN-BL-MATCH-01`'s reopen) or a fresh start | S6-01's Task Contract | reconciliation on evidence (GATE-01) |
 | 2 | The historical Return Gate is not reconciled | S6-01's start | reconciliation (GATE-02) |
 | 3 | The O-B wrapper shape is forbidden by `QAN-BL-MATCH-01`'s property, verify-0149 NO_BACKDOOR / f3 and the SEC-MATCH-00 contract | any S6-01 server path | CA-01, or the six stay closed (GATE-04) |
-| 4 | Real enrollment would leave a deletion-blocking footprint; `QAN-BL-ACCT-01` is unassigned | real enrollment (GATE-05); launch | a pre-enrollment design that leaves no footprint (AR-02). The Product Owner is asked whether a narrow correction is justified (§14.4) and who owns it; if so, CA-02 |
+| 4 | Real enrollment would leave a deletion-blocking footprint; `QAN-BL-ACCT-01` is unassigned | real enrollment (GATE-05); launch | a pre-enrollment design that leaves no footprint (AR-02). The Product Owner is asked whether a narrow correction is justified (§14.4) and who owns it; if so, CA-02. *D3 approves the direction (`ACCT-DEL-01`, provisional); item 21, §14.14* |
 | 5 | An inactive Pre-Match Disclosure Authority makes nobody matchable, and a non-empty approved set would be misleading consent | S6-01's field-approval scope; any matchability | CA-08 (GATE-24a) |
-| 6 | If GATE-16's "category of partner sought" is a dimension that none of GATE-15's four required categories records (for example the counterpart's sex: no gender concept exists, §10 GATE-16), no candidate fact can satisfy it, and every candidate would evaluate UNKNOWN | real Matching | an open question for the Product Owner: define the category and the structured, user-declared fact about the candidate that it is checked against (AR-09) |
+| 6 | If GATE-16's "category of partner sought" is a dimension that none of GATE-15's four required categories records (for example the counterpart's sex: no gender concept exists, §10 GATE-16), no candidate fact can satisfy it, and every candidate would evaluate UNKNOWN | real Matching | an open question for the Product Owner: define the category and the structured, user-declared fact about the candidate that it is checked against (AR-09). *Resolved by D1; replaced by item 20, §14.14* |
 | 7 | Onboarding assistance needs a new consent family, and nobody owns that amendment | any use of `MY_WORLD` facts in onboarding | CA-05 with a named owner (GATE-11); S6-01 stays explicit-input meanwhile |
 | 8 | Pre-entry Introductions affordances exist on `main` (the filter chip and the Android channel), and P3 freezes the five filters | S6-01 entry truth | EI-01 fix inside an S6 task; CP-01 |
 | 9 | Consent-version evidence and the first-name store have no home, and both are footprints | S6-01 consent and profile scope | AR-10, AR-06 (GATE-17, GATE-12) |
@@ -1779,8 +1784,8 @@ controlled change, not an implementation.
 | 15 | Closed-World readers are `STANDARD`-only; reactivation skips the Disclosure Authority; Introduction mutes do not work | S6-05; S6-06 | EI-04, AR-19, AR-18 |
 | 16 | 87 approved or frozen copy units, and the language authorities, conflict with the language rule. The 6 safety replies have no approval record | any Copy Gate that touches them; every S6 Copy Gate (G2.3) | Product Owner Copy Gate approvals (census); one VI-01 amendment; safety review |
 | 17 | Launch: the CW2-08 seams, `INTRODUCTION_BLOCK_POLICY`, entitlement, `QAN-BL-PROD-06`, `QAN-BL-ACCT-01`, `QAN-BL-LAUNCH-04`, `QAN-BL-MATCH-03` | any real user | Stage 9 and Stage 8A (LS rows) |
-| 18 | Shared, Public and Replay world-scoped export has no register owner | Export completeness for launch | a Product Owner designation (§14.4) |
-| 19 | `QAN-BL-PRIV-04`'s owner (S6-07) and `HIGH` rating are WP0's assignment under GATE-19 | S6-07's kickoff (BG-05) | the Product Owner's confirmation (§14.4) |
+| 18 | Shared, Public and Replay world-scoped export has no register owner | Export completeness for launch | a Product Owner designation (§14.4). *Designated by D5: `QAN-BL-PRIV-05`, §14.14* |
+| 19 | `QAN-BL-PRIV-04`'s owner (S6-07) and `HIGH` rating are WP0's assignment under GATE-19 | S6-07's kickoff (BG-05) | the Product Owner's confirmation (§14.4). *Confirmed by D2, §14.14* |
 
 **Sub-questions the decisions leave open.** The Product Owner decided each gate at the level of the decision text.
 These questions, put under those gates in §10, are not answered by it. Each is for the owning task's Product Decision
@@ -1792,7 +1797,7 @@ Gate or Task Contract, unless the Product Owner decides it earlier:
 | GATE-13 | the manual entry's placement, presentation and glyph; what "legitimately entered" means |
 | GATE-14 | where activate, pause, resume and turn-off live; the "how Introductions works" explanation (E2E-I-03) |
 | GATE-15 | the user-facing names ("Introduction Profile", "Introduction Phase", the activation control); the field catalogue beyond the four required categories |
-| GATE-16 | who may be proposed to whom, and the category of partner sought (row 6 above) |
+| GATE-16 | who may be proposed to whom, and the category of partner sought (row 6 above). *Answered by D1, §14.14* |
 | GATE-20 | which name applies to each member, including after SUCCESS |
 | GATE-21 | company controls (flag, rollout, kill) and the Matching operational events |
 | GATE-25 | eager sweeping; discovery fairness; the first-recipient direction |
@@ -1801,7 +1806,7 @@ Gate or Task Contract, unless the Product Owner decides it earlier:
 | GATE-31 | the producer's event set and sentences |
 | GATE-33 | how a pending SUCCESS approval is shown; the server caller for prepare / commit |
 | GATE-34 | the neutral END notice (carrier and copy); reactivation timing after SUCCESS |
-| Language rule | which dialect a generated reply uses when the user has stated no preference (§14.8) |
+| Language rule | which dialect a generated reply uses when the user has stated no preference (§14.8). *Answered by D4, §14.14* |
 
 ### 14.10 Corrections made by the re-verification
 
@@ -1916,3 +1921,238 @@ changed.
 - They did not reconcile the historical S6-01 references or the Return Gate (§14.9 items 1–2), re-anchor the
   current-task pins, or make the §11 drift notes.
 - They did not merge. The Product Owner decides.
+
+### 14.14 Final decision addendum (2026-10-13)
+
+After §14.1–§14.13 were committed (`e9c7bb9f`), the Product Owner approved the remaining decisions and a parallel
+execution strategy in a **final decision addendum**, D1–D6. It is documentation only: it authorizes no implementation,
+migration, grant, API, screen, copy change, frozen-contract amendment, deployment or merge. It does not authorize S6-01
+or the LANG workstream. The earlier subsections stay as written, and dated pointers in them lead here.
+
+#### D1 — GATE-16: opposite-sex matching rule — APPROVED
+
+This is the Product Owner's precise resolution of GATE-16. It supersedes the earlier, ambiguous phrase "category of
+partner sought" (§14.5; §14.9 item 6; AR-09).
+- Matching v1 proposes opposite-sex male / female pairs only. A man may be matched with a woman only, and a woman with a
+  man only. Same-sex pairings are ineligible in this product capability.
+- The user's sex must be explicitly declared and confirmed as Male / Female. It is never inferred from name, voice,
+  Personal Memory, HIM, model output or other indirect evidence.
+- It is an additional required eligibility fact, alongside GATE-15's four required basic profile categories.
+- A missing or unconfirmed required fact evaluates as UNKNOWN and never counts as eligible. The candidate's
+  corresponding fact must also be explicitly available and confirmed.
+- It is not disclosed beyond the approved privacy boundaries.
+- It is not implemented in production as part of WP0.
+
+**Architectural implication, identified and not implemented: CA-09.** The I-07 runtime on `main` has no sex dimension,
+and nothing in it can express a pair-level eligibility rule of this kind:
+- **Discovery.** `discover_matching_candidates_core_v1` (`0111:442-480`) returns every other currently matchable
+  participant. It excludes only those holding an active Introduction or an open proposal with the requester.
+- **Matchability.** `resolve_matching_setup_state_v1` (`0111:227-275`, rule at `:263`) is `ACTIVE` participation plus
+  the current grant, profile, requirement and disclosure-authority identities. It reads no field value.
+- **The eligibility snapshot.** The snapshot (`0110:345-425`; captured at `0111:498-605`) binds both humans' versions
+  and counts their `HARD_DEALBREAKER` items. It has no pair-level eligibility column.
+- **Hard-requirement outcomes.** These (`0110:441-478`) are keyed to each human's own requirement items (`item_fk`,
+  `:460`). A Product-wide rule therefore has no row of its own, and writing it as a requirement item would misstate it as
+  that person's own dealbreaker. The parts that already fit D1:
+  - the outcome law, under which `UNKNOWN` holds exactly when the source is `NOT_ESTABLISHED` (`:476`);
+  - the source classes (`:469-475`), which cannot spell an inference.
+- **The Introduction Profile.** A profile field (`0108:406-435`) could hold a self-declared value without a schema
+  change. But the profile records no per-field confirmation. And any profile field can be selected by a Pre-Match
+  Disclosure Authority (`0108:578-597`), which makes it a disclosure candidate.
+
+The controlled architecture amendment must settle:
+1. where the declared and confirmed fact lives, and how its confirmation is evidenced;
+2. the pair-level opposite-sex predicate in discovery and snapshot capture, which must fail closed, so that a missing or
+   unconfirmed fact on either side is UNKNOWN and never eligible;
+3. that the fact is never a Pre-Match Disclosure Authority field or a `matching_proposal_safe_field_keys` value
+   (`0110:298-319`), unless the Product Owner approves a privacy boundary that allows it;
+4. how the frozen-body verifiers of the migrations it touches are amended.
+
+The new fact is also part of the reader's own export (`QAN-BL-PRIV-04` property 1) and of the deletion footprint
+(`QAN-BL-ACCT-01`). The amendment is needed before S6-01 captures the fact and before S6-03 evaluates it. Its owner is
+set by those tasks' Task Contracts. No frozen Product text found in this review states a gender-neutral matching rule,
+so the amendment is classed CA, not CP.
+
+| ID | Gate | Frozen authority in the way | What the amendment must settle | Before |
+|---|---|---|---|---|
+| CA-09 | GATE-16 (D1) | `0111:442-480` (discovery has no pair predicate beyond matchability, an active Introduction and an open proposal); `0111:227-275` (matchability reads no field value); `0110:345-425`, `:441-478` (no pair-level eligibility row; outcomes keyed to the owner's own requirement items); `0108:406-435`, `:578-597` (profile fields are unconfirmed and disclosure-selectable) | Items 1–4 above | S6-01 (capture); S6-03 (evaluation); any real Matching |
+
+AR-09 is answered: the category is the counterpart's sex, and each human's own declared and confirmed fact is what the
+rule checks. §14.9 item 6 is replaced by item 20 below.
+
+#### D2 — `QAN-BL-PRIV-04` — APPROVED
+
+The Product Owner confirms both values that WP0 had assigned under GATE-19:
+- **Owner:** `S6-07 — Activity, Direct Entry and Final Integration`.
+- **Severity:** `HIGH`.
+
+The scope is the reader's Matching and Introductions export only, and it respects the other participant's privacy. S6-07
+is not silently expanded into a complete cross-world export implementation. The backlog item, §7, §9, Current State,
+the Project Map and the Roadmap now record the owner and severity as confirmed, not as awaiting confirmation (§14.9
+item 19).
+
+#### D3 — Account deletion — APPROVED DIRECTION
+
+The Product Owner approves a separately owned correction path for `QAN-BL-ACCT-01`, provisionally named `ACCT-DEL-01`:
+- naming and anti-duplication are verified before formal admission;
+- it addresses deletion integrity across the relevant worlds;
+- no real Matching enrollment happens before the deletion-blocking footprint is resolved;
+- the correction is not implemented in WP0.
+
+**Naming and anti-duplication, verified.**
+- The id `ACCT-DEL-01` is unused in the tree, in the history of every ref, and in GitHub issues and PRs.
+- No register item or task other than `QAN-BL-ACCT-01` carries Connected Worlds account deletion:
+  - `ACCOUNT-SEC-EVT-01` owns security-event producers (`QAN-BL-NOTIF-04`);
+  - `QAN-BL-PROD-05` is the export package's size;
+  - `QAN-BL-MATCH-01` and SEC-MATCH-00 stop new Matching footprints and erase nothing;
+  - the W3-MEGA-S Personal deletion is Personal-only.
+
+**Not yet formally admitted.** `QAN-BL-ACCT-01` keeps its index row (`UNASSIGNED`, `HIGH`, `OPEN — UNASSIGNED`), and a
+dated note in its §5 item records the direction. Two things remain before the item can be formally re-owned to
+`ACCT-DEL-01` and become `DEFERRED — OWNED`:
+- the Product Owner's confirmation of the provisional name;
+- the matching update of the index-row pin in `tests/sec-match-00-matching-direct-rpc-protection-contract.test.mjs`,
+  made in the same change.
+
+GATE-05's question (§14.4; §14.9 item 4) is answered: a correction is commissioned, and real enrollment waits for it.
+
+#### D4 — Generated conversation default language — APPROVED
+
+- Respect an explicitly chosen language or dialect.
+- Otherwise, follow the user's dialect when it is reasonably clear from the conversation.
+- If no preference or dialect can be determined, default to neutral simplified Modern Standard Arabic.
+- Do not default every Arabic user to Egyptian.
+- All fixed Arabic application copy remains simplified Modern Standard Arabic, regardless of the user's dialect
+  (§14.1).
+
+This answers the open question of the language rule (§14.9 sub-questions; census §6). It is identified against the
+repository here and changes nothing:
+- **Language authorities.**
+  - LANG-01, VI-01 T2 ("restrained Egyptian for the launch experience"), now conflicts for the undetermined case as well.
+  - LANG-14, I-08A4 §11 (`:337`, Egyptian-compatible warmth "may remain the current/default conversational profile"), is
+    superseded for that case.
+  - I-08N-01 (`:651`, "fall back to the appropriate neutral localized language") already agrees.
+- **Runtime.** The approved model-facing guidance says only to match the user's language or dialect when it is
+  "reasonably inferable" or "reliably supported" (`apps/api/src/conversation/behavioral-response-policy.service.ts:11`,
+  `:29`, `:47`). It states no fallback, and a `DEFAULT` reply-language preference adds no guidance line
+  (`apps/api/src/interaction-preferences/interaction-preference-guidance.ts:58`).
+- **What it needs.** Making D4's fallback explicit is a controlled change to approved model-facing text, and the VI-01
+  and I-08A4 conflicts need language-authority amendments. Both belong to the LANG workstream (D6 rule 3). Neither is
+  made here.
+
+#### D5 — Shared / Public / Replay export — APPROVED DIRECTION
+
+The Product Owner assigns cross-world export completeness to a dedicated, explicitly owned `PRIV-EXPORT-01` planning
+path, coordinating with Stage 7 for Replay. The whole cross-world export problem is not put into S6-07.
+
+**Ownership and anti-duplication, verified.**
+- `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` exists in the register as the owner of
+  `QAN-BL-PRIV-01` … `03`, which are single-owner Personal facts. It is in no Roadmap stage, and no test pins its owner
+  string.
+- No item carries the `'shared'`, `'public'` or `'replay'` categories that `build_personal_export_v1` still lists in
+  `notYetIncluded` (`0153:314`):
+  - `QAN-BL-PRIV-04` excludes them by its own text;
+  - `QAN-BL-ACCT-01` is deletion;
+  - `QAN-BL-PROD-05` is the package size;
+  - W3-MEGA-S item 9 (`:574`) and the E2E rows E2E-D-16 and E2E-D-17 admitted nothing.
+- The id `QAN-BL-PRIV-05` is unused in the tree, in the history of every ref, and in GitHub issues and PRs.
+
+**Admitted: `QAN-BL-PRIV-05`**, "Export My Data Omits the Reader's Shared, Public and Replay World Data". It is `HIGH`
+and `DEFERRED — OWNED`, owned by `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts`, the owner string
+copied character-exact.
+- **Severity.** It is `HIGH` for the reason `QAN-BL-PRIV-04` is: the reopened work decides what of a multi-member World
+  crosses into one member's export (W3-PDG-01 §7.3: "only within the limits of actual ownership and authority").
+- **Owner name.** The owner's name is narrower than its scope after D5. A rename is recorded as a re-owning of all its
+  items.
+- **Replay.** Replay is coordinated with Stage 7. Introduction material stays excluded from user-facing Replay until
+  Stage 7 approves its contract (GATE-35).
+
+#### D6 — Parallel execution strategy — APPROVED
+
+After WP0 closes, two independent workstreams are planned:
+- **LANG:** controlled Arabic authority amendments, Product Owner copy approvals and focused corrections, using the
+  existing 109-unit census.
+- **S6:** Stage 6 Matching implementation, starting with S6-01 after its historical Return Gate and the required
+  architecture decisions are reconciled.
+
+Rules:
+1. Independent branches and PRs.
+2. No duplicated implementation.
+3. LANG owns existing Arabic copy and its language-authority amendments.
+4. S6 owns new Matching UX and follows the approved simplified-MSA rule.
+5. Shared text or frozen-contract dependencies are resolved in the owning workstream first.
+6. Focused verification per workstream, with proportionate integration verification.
+7. The full 109-unit Arabic census is maintained without restarting the research.
+8. Neither workstream receives implementation authorization through this addendum.
+
+D6 creates no register item. The census stays PROPOSED, and none of its 109 units is approved by the addendum. The
+QANDEEL-wide copy sweep that §14.4 recorded as needing a Product Owner designation is now designated as the LANG
+workstream's planning scope. Each workstream's register representation is decided at its own kickoff (BG-05 / BG-06).
+
+#### Register change
+
+| | Before the addendum | After the addendum |
+|---|---|---|
+| Total | 66 | **67** |
+| `DEFERRED — OWNED` / `VALIDATION — OPEN` / `OPEN — UNASSIGNED` / `CLOSED — TOMBSTONE` | 30 / 4 / 10 / 22 | **31 / 4 / 10 / 22** |
+| `HIGH` / `MEDIUM` / `LOW` | 35 / 29 / 2 | **36 / 29 / 2** |
+| Active, as HIGH / MEDIUM / LOW | 44 (18 / 24 / 2) | **45 (19 / 24 / 2)** |
+
+Only `QAN-BL-PRIV-05` is admitted. `QAN-BL-PRIV-04`'s fields are unchanged, and only the wording of its confirmation
+changes. `QAN-BL-ACCT-01`, `QAN-BL-MATCH-01` and `QAN-BL-PROD-06` are unchanged.
+
+#### Blockers after the addendum
+
+Resolved or narrowed in §14.9:
+- item 6 is resolved by D1 and replaced by item 20;
+- item 18 by D5 (`QAN-BL-PRIV-05`);
+- item 19 by D2;
+- item 4 is narrowed by D3: the direction is approved, and the name, the formal admission and the correction itself
+  remain;
+- the GATE-16 and language-rule sub-questions are answered by D1 and D4.
+
+Added:
+
+| # | Blocker | Blocks | Needs |
+|---|---|---|---|
+| 20 | The I-07 runtime has no sex dimension and no pair-level eligibility rule (CA-09) | S6-01's capture of the fact; S6-03's evaluation; any real Matching | the CA-09 controlled architecture amendment, approved before implementation |
+| 21 | `ACCT-DEL-01` is provisional: `QAN-BL-ACCT-01` is not formally re-owned, and its index row is pinned by the SEC-MATCH-00 contract test | real Matching enrollment (D3); launch | the Product Owner's confirmation of the name; one change that re-owns the item and updates the pin; then the correction (CA-02 if `0108` / `0130` bodies change) |
+| 22 | D4's fallback to neutral simplified MSA is not stated in the approved model-facing guidance, and VI-01 T2 and I-08A4 §11 conflict with it | generated replies conforming to D4 | a LANG-workstream controlled change to the guidance and the language-authority amendments (D6 rule 3) |
+
+Items 1–3, 5, 7–17 of §14.9 stay open as written.
+
+#### Files changed by the addendum
+
+| File | Change |
+|---|---|
+| `docs/qandeel-canonical-backlog-v1.md` | §4: the `QAN-BL-PRIV-05` row. §5: `QAN-BL-PRIV-04`'s owner and severity marked confirmed (D2), with a pointer in its "Not in this item"; a dated D3 note in `QAN-BL-ACCT-01` (fields unchanged); the new `QAN-BL-PRIV-05` item. §7: counts (67; 31 / 4 / 10 / 22; 36 / 29 / 2) and a dated addendum paragraph. §9: the `PRIV-EXPORT-01`, `S6-07` and WP0 rows |
+| `QANDEEL_CURRENT_STATE.md` | §1 snapshot sentence; §3.6 language row (D4); §4 Matching note (D1); §5 tables, the recount note, a "Latest update" sentence and "The 45 active items"; the §7 `S6-07` and `PRIV-EXPORT-01` rows |
+| `QANDEEL_PROJECT_MAP.md` | The count note (67); the language row (D4); the Stage 6 row (D1, D2, D6). The pinned current-task line is untouched |
+| `QANDEEL_PRODUCT_ROADMAP.md` | A pointer in §6.7 and a new §6.8 execution note (D1–D6) |
+| This record | Header; dated pointers in §14.4, §14.5, §14.7 and §14.9; this §14.14 |
+| `docs/e2e/QANDEEL_S6_WP0_ARABIC_FIXED_COPY_MSA_CONFLICT_CENSUS_v1.md` | One dated note in §6 (the default-language question answered by D4). No unit, original or proposal changed |
+
+#### Validation of the addendum
+
+The addendum is documentation only, so validation is proportional. Every check ran locally on the branch, on Windows
+with Node, on the final content of the six changed files. No new reviewer panel was run, because no concrete defect
+called for one.
+
+| # | Check | Command | Result |
+|---|---|---|---|
+| 1 | Task-closure governance gate (AGENTS.md §10.7) | `npm run test:task-closure-governance-contract` | **PASS 24 / 24** |
+| 2 | Every static contract under `tests/` and `database/tests/` that reads one of the edited documents (the same 24 files as §14.12) | `node --test <the 24 files>` | **PASS 367 / 367** |
+| 3 | Forward-safety mirror | `node --test tests/forward-safety-contract.test.mjs` | **PASS 35 / 35** (369 s) |
+| 4 | Mechanical recount of backlog §4 (the governance test's `INDEX_ROW` shape) | a local Node script | 67 rows, no duplicate ID: 31 / 4 / 10 / 22 by status, 36 / 29 / 2 by severity, 45 active (HIGH 19 / MEDIUM 24 / LOW 2). Every index ID has a §5 item or a §6 tombstone. The §7 tables, the last "Latest index" line and the Current State §5 tables agree. The Current State active list holds the 45 index rows byte for byte, in index order. No Current State line matches `Stage 6 … **ACTIVE`. The pinned `QAN-BL-ACCT-01` and `QAN-BL-MATCH-01` rows are unchanged |
+| 5 | Relative Markdown links in the six changed files | a local Node script | 553 checked, **0 broken** |
+| 6 | The copy census | `git diff` | One dated note in §6; no unit, original or proposal changed |
+| 7 | Whitespace | `git diff --check` | clean |
+
+**CI.** No workflow runs on this PR, for the reason given in §14.12.
+
+#### What the addendum did not do
+
+- It changed no runtime, migration, grant, API, screen, copy string, test, CI file or frozen contract. CA-09 and the D4
+  guidance change are identified only.
+- It did not re-own `QAN-BL-ACCT-01` (D3 needs the name first), and it did not admit any LANG or S6 workstream item.
+- It wrote no Task Contract, started neither workstream, and did not merge.

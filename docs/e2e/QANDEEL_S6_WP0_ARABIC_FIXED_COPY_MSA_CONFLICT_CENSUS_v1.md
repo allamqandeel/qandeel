@@ -1219,7 +1219,9 @@ re-verified by the implementing task:
 
 - **Open question for the Product Owner.** Rule A does not say which dialect a generated reply uses when the user has
   stated no preference. I-08A4 §11 (`:337`) allows an Egyptian-compatible default, and I-08N-01 (`:651`) points to a
-  neutral fallback.
+  neutral fallback. *(Answered by the Product Owner's D4, 2026-10-13: an explicitly chosen language or dialect, then the
+  user's dialect when reasonably clear, then neutral simplified Modern Standard Arabic; never Egyptian by default.
+  [WP0 record](QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §14.14.)*
 - **The «حاول مرة أخرى» family.** The masculine retry imperative also appears in approved e2e Copy Gate records:
   W1B-01, W2-01, A3-01, S5-01 and S5-03A. So do «أدخل», «اختر», «تأكد» and «لم تعد عضوًا». VI-01 already approves the verbal
   noun «إعادة المحاولة» (T03). One family-wide amendment would clear most of them. The records themselves stay as

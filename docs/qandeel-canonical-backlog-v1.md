@@ -200,6 +200,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MATCH-02` | Introduction-Phase Account Name Exposure Through Phase-Blind Shared World Reads | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-MATCH-03` | Safe Compatibility Conclusion Production Capability, AI Cost Attribution and Evaluation | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-04` | Export My Data Omits the Reader's Matching and Introductions Data | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PRIV-05` | Export My Data Omits the Reader's Shared, Public and Replay World Data | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -694,6 +695,19 @@ not solve it.
 
 This item stays `HIGH`, `OPEN — UNASSIGNED`, its scope unchanged
 ([SEC-MATCH-00 record](e2e/QANDEEL_SEC_MATCH_00_MATCHING_DIRECT_RPC_PROTECTION_IMPLEMENTATION_RECORD_v1.md) §7).
+
+**Product Owner direction (Stage 6 WP0 final decision addendum, 2026-10-13; D3).** The Product Owner approves a
+separately owned correction path for this item, provisionally named `ACCT-DEL-01`. It is to address deletion integrity
+across the relevant worlds. No real Matching enrollment happens before the deletion-blocking footprint is resolved.
+- **Verified:** the id `ACCT-DEL-01` is unused in the tree, in the history of every ref, and in GitHub issues and PRs.
+  No other item or task carries Connected Worlds deletion
+  ([WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §14.14).
+- **Not changed by this note:** none of this item's fields. Two things wait for the Product Owner to confirm the
+  provisional name:
+  - the formal re-owning to `ACCT-DEL-01`, as `DEFERRED — OWNED`;
+  - the update of this item's index-row pin in `tests/sec-match-00-matching-direct-rpc-protection-contract.test.mjs`,
+    made in the same change as the re-owning.
+- **Not implemented:** nothing.
 
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
@@ -2196,15 +2210,17 @@ anti-duplication check above, as a documentation-only governance change. Nothing
   and any pre-enrollment preparation (GATE-05).
 - **Owner task:** `S6-07 — Activity, Direct Entry and Final Integration`.
   - The name comes from the Product Owner's approved Stage 6 task map (2026-10-13), a planning direction subject to the
-    task's own Task Contract. GATE-19 named no owner: the assignment to S6-07 is WP0's, and it awaits the Product Owner's
-    confirmation (record §14.4), because the approved name drops the "Data Rights" of WP0's proposed S6-07 name (§8.2).
+    task's own Task Contract. GATE-19 named no owner. WP0 assigned it to S6-07 (record §14.4), and the Product Owner
+    confirmed the owner and the `HIGH` severity in the final decision addendum the same day (D2; record §14.14).
+  - S6-07's scope here is the reader's Matching and Introductions export only (D2). It is not a cross-world export task:
+    the Shared, Public and Replay categories are `QAN-BL-PRIV-05`'s (`PRIV-EXPORT-01`, D5).
   - S6-07 runs last, after the relations it must cover exist. WP0 §8.2 placed the export there.
   - A domain task adding its own export section has a precedent: IP-IMP-01 in `0153:27-28`, `:222-314`.
   - Every change re-states the whole `build_personal_export_v1` body (`0153:222-224`), so S6-07 reconciles with
     `PRIV-EXPORT-01` and does not overwrite it.
   - A rename, renumbering or fold into another task is recorded here as a re-owning.
-- **Severity:** `HIGH` (WP0's rating, awaiting the Product Owner's confirmation; `MEDIUM` is the alternative, record
-  §14.4). Unlike `QAN-BL-PRIV-01` … `03`, which add one owner's own facts (`MEDIUM`), this data binds two
+- **Severity:** `HIGH` (WP0's rating, confirmed by the Product Owner in the final decision addendum, D2; record §14.4,
+  §14.14). Unlike `QAN-BL-PRIV-01` … `03`, which add one owner's own facts (`MEDIUM`), this data binds two
   humans. Building the section means deciding whether a reader is added over frozen I-07 relations that were designed to
   have no downstream reader (`0110:491-493`, `:516-519`, `:621`, `:647-651`). If reopened, it decides what crosses from one person to the other, against frozen
   pair-privacy law (CW2-06 §28, §33, §38, §53; CW2-08 §2). That is the consequence class of `QAN-BL-MATCH-02`. Today
@@ -2243,10 +2259,79 @@ anti-duplication check above, as a documentation-only governance change. Nothing
   - consent-version evidence (GATE-17).
 - **Not in this item:** the Shared, Public and Replay world-scoped export categories. They are still in `notYetIncluded`
   after Stages 4 and 5 closed, and no register item owns them. WP0 reports this to the Product Owner and admits nothing
-  (§14.4). Deletion stays with `QAN-BL-ACCT-01`, and the export package's size with `QAN-BL-PROD-05`.
+  (§14.4). *(Final decision addendum, 2026-10-13: now carried by `QAN-BL-PRIV-05`, owner `PRIV-EXPORT-01`, D5.)* Deletion stays with `QAN-BL-ACCT-01`, and the export package's size with `QAN-BL-PROD-05`.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted under BG-06 / BG-08 at the Product Owner's explicit GATE-19 decision (Stage 6 WP0 final approval package,
+2026-10-13), after the anti-duplication check above, as a documentation-only governance change. Nothing here authorizes
+implementation (BG-07).
+
+---
+
+### `QAN-BL-PRIV-05` — Export My Data Omits the Reader's Shared, Public and Replay World Data
+
+- **Title / Finding:** Export My Data (`personal_data_private.build_personal_export_v1`, live body `0153:224`) reads no
+  Shared, Public or Replay relation. It names `'shared'`, `'public'` and `'replay'` only in its `notYetIncluded` list
+  (`0153:314`; `0130:15-16`).
+  - W3-MEGA-S left world-scoped export to "each Connected World's integration (Stages 4 – 7: Shared, Public, Matching /
+    Introductions, Replay)" (item 9, `:574`).
+  - Stages 4 and 5 closed without delivering it. The Stage 5 records point their gaps at the stale E2E-D-16 row, and the
+    Stage 4 records record no export gap.
+  - No register item owned these categories (the [Stage 6 WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md)
+    §14.4).
+- **Source:** the Product Owner's final decision addendum to the Stage 6 WP0 (2026-10-13), D5: "Assign cross-world
+  export completeness to a dedicated, explicitly owned `PRIV-EXPORT-01` planning path, coordinating with Stage 7 for
+  Replay" (WP0 record §14.14). The W3-PDG-01 content principle
+  ([closure](canonical-authority/final-product-experience/w3/QANDEEL_W3_PDG01_ACCOUNT_SECURITY_PRIVACY_PRODUCT_DECISION_CLOSURE_v1.0.md)
+  §7.3, `:212-227`).
+- **Current truth:** nothing exported is false, because the package names each category as not yet included. Stages 4
+  and 5 merged Shared and Public footprints into `main`. This states what is merged, not what is deployed.
+- **Anti-duplication:**
+  - `QAN-BL-PRIV-01` … `03` (the same owner) are single-owner Personal facts.
+  - `QAN-BL-PRIV-04` is the reader's Matching and Introductions export only (the `'introductions'` category) and excludes
+    these categories by its own text.
+  - `QAN-BL-ACCT-01` is deletion. `QAN-BL-PROD-05` is the export package's size, not its content.
+  - W3-MEGA-S item 9 assigned world-scoped export to the stages and admitted nothing. The E2E gap matrix's export rows
+    (E2E-D-16, E2E-D-17) predate W3.
+  - No open GitHub issue carries it. The ID `QAN-BL-PRIV-05` was unused in the tree, in the history of every ref, and in
+    GitHub issues and PRs.
+- **Why deferred:** what of a multi-member World belongs to one member's export needs a decision on ownership and
+  authority for each World. W3-PDG-01 §7.3 leaves "the exact wording that excludes other people's material" as an
+  implementation consideration. Replay's user-facing contract is Stage 7's.
+- **Owner task:** `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` (the Product Owner's D5 designation).
+  - The owner string is copied character-exact from `QAN-BL-PRIV-01` … `03`. Its name is narrower than its scope after
+    D5, and a rename is recorded as a re-owning of all its items.
+  - Replay is coordinated with Stage 7 (D5). Introduction material stays excluded from user-facing Replay until Stage 7
+    defines and approves its contract (GATE-35).
+  - `S6-07` does not take this item (D2), and `PRIV-EXPORT-01` does not take `QAN-BL-PRIV-04`. Every change re-states
+    the whole `build_personal_export_v1` body (`0153:222-224`), so the two reconcile and neither overwrites the other.
+- **Severity:** `HIGH` (the Product Owner's D5 designation; the rating follows `QAN-BL-PRIV-04`, confirmed by D2).
+  - If reopened, the work decides what of a multi-member World crosses into one member's export: "only within the
+    limits of actual ownership and authority" (W3-PDG-01 §7.3), with no "other person's material" (the W3-MEGA-S export
+    contract, `:368`).
+  - `QAN-BL-PRIV-01` … `03` are `MEDIUM` because each adds one owner's own facts.
+  - Today nothing is violated: the severity states the consequence of the reopened work.
+- **Reopen condition:**
+  - automatic when `PRIV-EXPORT-01` starts (BG-05);
+  - when Stage 7 defines the Replay contract;
+  - when any task re-states `personal_data_private.build_personal_export_v1` or reads a Shared, Public or Replay
+    relation into it;
+  - in any case, before Export My Data is declared complete for launch.
+- **Required future property** (only what existing authority fixes):
+  1. The reader's own Shared and Public data reaches the governed export as readable facts, only within the limits of
+     actual ownership and authority. Replay / audio material is included when it exists and the reader has a right to it
+     (W3-PDG-01 §7.3).
+  2. The export holds no internal id, secret, token, score, reasoning or other person's material (W3-MEGA-S `:368`).
+  3. Until delivered, the package keeps naming each undelivered category as not yet included (`0153:314`).
+- **Not decided here:**
+  - the ownership rule for each World: authored material, replies, relations, member lists and reactions;
+  - the Replay contract (Stage 7);
+  - format, labels and copy (Copy Gate; the language rule).
+- **Not in this item:** the `'introductions'` category (`QAN-BL-PRIV-04`, `S6-07`); deletion (`QAN-BL-ACCT-01`); the
+  package size (`QAN-BL-PROD-05`).
+- **Status:** `DEFERRED — OWNED`
+
+Admitted under BG-06 / BG-08 at the Product Owner's explicit D5 designation (Stage 6 WP0 final decision addendum,
 2026-10-13), after the anti-duplication check above, as a documentation-only governance change. Nothing here authorizes
 implementation (BG-07).
 
@@ -2698,15 +2783,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 30 |
+| `DEFERRED — OWNED` | 31 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 22 |
-| **Total** | **66** |
+| **Total** | **67** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 35 |
+| `HIGH` | 36 |
 | `MEDIUM` | 29 |
 | `LOW` | 2 |
 
@@ -3346,6 +3431,31 @@ before it.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 66 items; 30 / 4 / 10 / 22 by status, 35 / 29 / 2 by severity**, recounted mechanically from §4.
 
+**Stage 6 WP0 — the Product Owner's final decision addendum (2026-10-13; documentation / governance only; the same pull
+request, PR #335; effective from its merge).** The addendum records six decisions, D1–D6
+([WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §14.14). None authorizes
+implementation. Neither planned workstream, LANG or S6, receives implementation authorization. The paragraph above stays
+as the record of the register before it.
+- **Confirmed — `QAN-BL-PRIV-04`** (D2): owner `S6-07 — Activity, Direct Entry and Final Integration`, and `HIGH`. Both
+  were WP0's assignment until now. Its scope stays the reader's Matching and Introductions export only.
+- **Admitted — `QAN-BL-PRIV-05`** (`HIGH`, `DEFERRED — OWNED`, owner `PRIV-EXPORT-01 — Export My Data: Understanding
+  Resolution Facts`; D5): Export My Data omits the reader's Shared, Public and Replay world data. Replay is coordinated
+  with Stage 7. It was checked against all 66 earlier IDs, every tombstone, the §7 paragraphs and the §9 rows, the
+  W3-MEGA-S record, the E2E gap matrix and the open GitHub issues. The ID had not been used.
+- **Direction recorded, not admitted — `QAN-BL-ACCT-01`** (D3): a separately owned correction path, provisionally
+  `ACCT-DEL-01`; the id was verified unused. No real Matching enrollment happens before the deletion-blocking footprint
+  is resolved. The item stays `UNASSIGNED` and `OPEN — UNASSIGNED` until the Product Owner confirms the name (dated note
+  in §5).
+- **No register item:**
+  - D1 resolves GATE-16: Matching v1 proposes opposite-sex pairs only, on an explicitly declared and confirmed sex fact.
+    The controlled architecture amendment it needs (CA-09) is recorded in the WP0 record.
+  - D4 sets the default language of generated conversation.
+  - D6 plans the LANG and S6 workstreams.
+- **BG-05:** `PRIV-EXPORT-01` now owns four items, and S6-07 still owns one. `QAN-BL-MATCH-01` and `QAN-BL-PROD-06` are
+  unchanged.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 67 items; 31 / 4 / 10 / 22 by status, 36 / 29 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -3396,7 +3506,7 @@ Inherited after T-12 closure reconciliation:
 | `PROD-DATA-01 — List/Fan-out Correction` | `QAN-BL-PROD-05` (PROD-READINESS-01 corrective admission; listed here by GOV-REC-01) |
 | `CI-IOS-01 — Maestro / XCTest Driver Startup Reliability` | `QAN-BL-CI-01` (admitted by S4-01; listed here by GOV-REC-01) |
 | `W3-CORR-U — Understanding Integrity` | none — U-1 … U-5 closed inside the task; admitted `QAN-BL-PRIV-01` |
-| `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02`; `QAN-BL-PRIV-03` (admitted by MEM-AR-01; listed here by GOV-REC-01) |
+| `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02`; `QAN-BL-PRIV-03` (admitted by MEM-AR-01; listed here by GOV-REC-01); `QAN-BL-PRIV-05` (the Shared, Public and Replay world-scoped export; admitted by the Stage 6 WP0 final decision addendum at the Product Owner's D5 designation, 2026-10-13; Replay coordinated with Stage 7) |
 | `AI-COST-01 — Provider-Neutral AI Usage & Cost Ledger + Credit Accounting Foundation` | none — no item names it; none admitted |
 | `W3-MEGA-S-CLOSE-01 — Product Copy Approval + Residual Reconciliation` | none — admitted `QAN-BL-A11Y-01` |
 | `ROADMAP-REC-01 — Canonical Roadmap & Current-State Reconciliation` | none — no item names it; none admitted |
@@ -3422,7 +3532,7 @@ Inherited after T-12 closure reconciliation:
 | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13) |
 | `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01) |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract) |
-| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, and the assignment to it is WP0's, awaiting the Product Owner's confirmation; the task's scope beyond this item is set only by its own Task Contract) |
+| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
@@ -3439,7 +3549,7 @@ Inherited after T-12 closure reconciliation:
 | `ACE-01 — Adaptive Conversational Expression v1` | none — no item names it; admitted `QAN-BL-ACE-01` (Gate B) and `QAN-BL-ACE-02` (Stage 8A); `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05` and `QAN-BL-VOICE-01` observed and left unchanged |
 | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` — authorized by the Product Owner (2026-10-12; D-1 … D-4, Copy Gate 6 / 6); delivered for both Worlds under the ACE-SP-01 controlled amendment and tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-ACE-02`'s validation set extended (D-4; owner and status unchanged); admitted `QAN-BL-GOV-01`; `QAN-BL-CW-02`, `QAN-BL-IP-01` and `QAN-BL-MATCH-01` reconciled with owners unchanged |
 | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `QAN-BL-GOV-01` (admitted by ACE-SP-01; owner name APPROVED by the Product Owner, 2026-10-12 — *as first written: "owner name proposed for the Product Owner's confirmation"*) — delivered; tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-CW-03` tombstoned retroactively for SHARED-VIS-01; Issue #322 not admitted (a Product Owner decision); none admitted |
-| `Stage 6 — Matching & Introductions Kickoff (WP0)` | none — no item names it; research and planning only, no implementation; `QAN-BL-MATCH-01` left with `S6-01`, unchanged (S6-01 not resumed); `QAN-BL-ACCT-01` and `QAN-BL-PROD-06` observed, reopen conditions not fired; admitted `QAN-BL-LAUNCH-04` (Issue #322) at the Product Owner's explicit approval; inherited and adjacent items mapped to the proposed Stage 6 tasks for Product Owner review only ([WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §8); proposed admissions found by WP0 (record §8.5: the Introduction-phase account-Name leak; the Stage 8A Matching conclusion producer, AI-COST family and eval suite; conditional others) await the Product Owner's GATE-03 decision — none admitted. *Product Owner Tier 0 decision (2026-10-13), same PR:* GATE-01 … GATE-03 approved; admitted `QAN-BL-MATCH-02` (owner `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary`) and `QAN-BL-MATCH-03` (owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`); the conditional findings not admitted; `QAN-BL-MATCH-01` unchanged. *Product Owner final approval package (2026-10-13), same PR:* every remaining gate decided as approved Product intent, direction or initial policy proposal, none authorizing implementation; the seven-task Stage 6 map approved as planning direction; admitted `QAN-BL-PRIV-04` (owner `S6-07 — Activity, Direct Entry and Final Integration`, WP0's assignment awaiting the Product Owner's confirmation) at GATE-19; no Task Contract written |
+| `Stage 6 — Matching & Introductions Kickoff (WP0)` | none — no item names it; research and planning only, no implementation; `QAN-BL-MATCH-01` left with `S6-01`, unchanged (S6-01 not resumed); `QAN-BL-ACCT-01` and `QAN-BL-PROD-06` observed, reopen conditions not fired; admitted `QAN-BL-LAUNCH-04` (Issue #322) at the Product Owner's explicit approval; inherited and adjacent items mapped to the proposed Stage 6 tasks for Product Owner review only ([WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §8); proposed admissions found by WP0 (record §8.5: the Introduction-phase account-Name leak; the Stage 8A Matching conclusion producer, AI-COST family and eval suite; conditional others) await the Product Owner's GATE-03 decision — none admitted. *Product Owner Tier 0 decision (2026-10-13), same PR:* GATE-01 … GATE-03 approved; admitted `QAN-BL-MATCH-02` (owner `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary`) and `QAN-BL-MATCH-03` (owner `Stage 8A — QANDEEL AI Brain / Production LLM Runtime`); the conditional findings not admitted; `QAN-BL-MATCH-01` unchanged. *Product Owner final approval package (2026-10-13), same PR:* every remaining gate decided as approved Product intent, direction or initial policy proposal, none authorizing implementation; the seven-task Stage 6 map approved as planning direction; admitted `QAN-BL-PRIV-04` (owner `S6-07 — Activity, Direct Entry and Final Integration`, WP0's assignment awaiting the Product Owner's confirmation) at GATE-19; no Task Contract written. *Product Owner final decision addendum (2026-10-13), same PR:* `QAN-BL-PRIV-04`'s owner and `HIGH` confirmed (D2); admitted `QAN-BL-PRIV-05` (owner `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts`, D5); `QAN-BL-ACCT-01` unchanged, with a dated D3 note (`ACCT-DEL-01` provisional, not yet admitted); GATE-16 resolved (D1; CA-09 identified, not implemented); the default language of generated conversation (D4) and the LANG / S6 workstreams (D6) recorded; no Task Contract written |
 | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `QAN-BL-LAUNCH-04` (admitted by the Stage 6 WP0 at the Product Owner's approval, 2026-10-13; an earlier explicit validation owner may take it when a physical Android device is available, recorded as a re-owning) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
