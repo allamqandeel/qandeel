@@ -52,7 +52,9 @@ appId: com.qandeel.mobile
 - tapOn:
     id: "qandeel-introductions-first-name"
 - inputText: "Sara"
-- hideKeyboard
+# The keyboard is dismissed by tapping the step heading (no flow uses hideKeyboard).
+- tapOn:
+    id: "qandeel-introductions-step-heading"
 - tapOn:
     id: "qandeel-introductions-save"
 - extendedWaitUntil:
@@ -86,7 +88,9 @@ appId: com.qandeel.mobile
 - tapOn:
     id: "qandeel-introductions-birth-year"
 - inputText: "1996"
-- hideKeyboard
+# The keyboard is dismissed by tapping the step heading (no flow uses hideKeyboard).
+- tapOn:
+    id: "qandeel-introductions-step-heading"
 - scrollUntilVisible:
     element:
       id: "qandeel-introductions-month-5"
