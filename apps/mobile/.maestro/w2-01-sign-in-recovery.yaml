@@ -45,7 +45,7 @@ appId: com.qandeel.mobile
 # The one approved generic failure, in either language.
 - extendedWaitUntil:
     visible:
-      text: ".*(Check them and try again|تأكد منها وحاول مرة أخرى).*"
+      text: ".*(Check them and try again|يمكنك مراجعتها والمحاولة مرة أخرى).*"
     timeout: 30000
 - waitForAnimationToEnd:
     timeout: 5000

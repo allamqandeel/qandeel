@@ -11516,7 +11516,7 @@
                    {
                     "type": "View",
                     "props": {
-                     "accessibilityLabel": "تتابع المحادثة الآن",
+                     "accessibilityLabel": "متابعة المحادثة مفعّلة الآن",
                      "accessibilityLanguage": "ar",
                      "accessibilityRole": "button",
                      "accessibilityState": {
@@ -11559,7 +11559,7 @@
                        ]
                       },
                       "children": [
-                       "تتابع المحادثة الآن"
+                       "متابعة المحادثة مفعّلة الآن"
                       ]
                      }
                     ]
@@ -12143,7 +12143,7 @@
                  "accessibilityLanguage": "ar",
                  "accessibilityRole": "text",
                  "accessibilityValue": {
-                  "text": "تتابع المحادثة الآن"
+                  "text": "متابعة المحادثة مفعّلة الآن"
                  },
                  "accessible": true,
                  "onAccessibilityAction": "[fn]",
@@ -12170,7 +12170,7 @@
                    "testID": "qandeel-temporal-navigator:stance"
                   },
                   "children": [
-                   "تتابع المحادثة الآن"
+                   "متابعة المحادثة مفعّلة الآن"
                   ]
                  }
                 ]
@@ -12178,7 +12178,7 @@
                {
                 "type": "TextInput",
                 "props": {
-                 "accessibilityHint": "أدخل رقمًا من 1 إلى 6. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
+                 "accessibilityHint": "يمكنك إدخال رقم من 1 إلى 6. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
                  "accessibilityLabel": "رقم اللحظة",
                  "accessibilityLanguage": "ar",
                  "autoCapitalize": "none",
@@ -24680,7 +24680,7 @@
                    {
                     "type": "View",
                     "props": {
-                     "accessibilityLabel": "تتابع المحادثة الآن",
+                     "accessibilityLabel": "متابعة المحادثة مفعّلة الآن",
                      "accessibilityLanguage": "ar",
                      "accessibilityRole": "button",
                      "accessibilityState": {
@@ -24723,7 +24723,7 @@
                        ]
                       },
                       "children": [
-                       "تتابع المحادثة الآن"
+                       "متابعة المحادثة مفعّلة الآن"
                       ]
                      }
                     ]
@@ -25307,7 +25307,7 @@
                  "accessibilityLanguage": "ar",
                  "accessibilityRole": "text",
                  "accessibilityValue": {
-                  "text": "تتابع المحادثة الآن"
+                  "text": "متابعة المحادثة مفعّلة الآن"
                  },
                  "accessible": true,
                  "onAccessibilityAction": "[fn]",
@@ -25334,7 +25334,7 @@
                    "testID": "qandeel-temporal-navigator:stance"
                   },
                   "children": [
-                   "تتابع المحادثة الآن"
+                   "متابعة المحادثة مفعّلة الآن"
                   ]
                  }
                 ]
@@ -25342,7 +25342,7 @@
                {
                 "type": "TextInput",
                 "props": {
-                 "accessibilityHint": "أدخل رقمًا من 1 إلى 6. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
+                 "accessibilityHint": "يمكنك إدخال رقم من 1 إلى 6. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
                  "accessibilityLabel": "رقم اللحظة",
                  "accessibilityLanguage": "ar",
                  "autoCapitalize": "none",
@@ -43469,7 +43469,7 @@
                    {
                     "type": "View",
                     "props": {
-                     "accessibilityLabel": "تتابع المحادثة الآن",
+                     "accessibilityLabel": "متابعة المحادثة مفعّلة الآن",
                      "accessibilityLanguage": "ar",
                      "accessibilityRole": "button",
                      "accessibilityState": {
@@ -43512,7 +43512,7 @@
                        ]
                       },
                       "children": [
-                       "تتابع المحادثة الآن"
+                       "متابعة المحادثة مفعّلة الآن"
                       ]
                      }
                     ]
@@ -44096,7 +44096,7 @@
                  "accessibilityLanguage": "ar",
                  "accessibilityRole": "text",
                  "accessibilityValue": {
-                  "text": "تتابع المحادثة الآن"
+                  "text": "متابعة المحادثة مفعّلة الآن"
                  },
                  "accessible": true,
                  "onAccessibilityAction": "[fn]",
@@ -44123,7 +44123,7 @@
                    "testID": "qandeel-temporal-navigator:stance"
                   },
                   "children": [
-                   "تتابع المحادثة الآن"
+                   "متابعة المحادثة مفعّلة الآن"
                   ]
                  }
                 ]
@@ -44131,7 +44131,7 @@
                {
                 "type": "TextInput",
                 "props": {
-                 "accessibilityHint": "أدخل رقمًا من 1 إلى 6. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
+                 "accessibilityHint": "يمكنك إدخال رقم من 1 إلى 6. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.",
                  "accessibilityLabel": "رقم اللحظة",
                  "accessibilityLanguage": "ar",
                  "autoCapitalize": "none",

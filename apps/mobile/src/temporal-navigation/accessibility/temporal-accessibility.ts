@@ -26,7 +26,7 @@
  * Live Head next advances they describe different ones.
  *
  * The words are the reader's language, from the W1A-01 Analysis copy (`analysis-language`): the
- * Product Owner's current-edge wording («تتابع المحادثة الآن» / "Following the conversation",
+ * Product Owner's current-edge wording («متابعة المحادثة مفعّلة الآن» / "Following the conversation",
  * «العودة لمتابعة المحادثة» / "Rejoin the conversation") and T-08 / P4-C4's moment wording. "Live"
  * stays a runtime term; it is never said. Nothing here states an analytical fact about anything.
  */

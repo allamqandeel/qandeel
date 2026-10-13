@@ -84,13 +84,15 @@ export interface AnalysisCopy {
 const digits = (value: number): string => String(value);
 
 const AR: AnalysisCopy = Object.freeze<AnalysisCopy>({
-  followingConversation: 'تتابع المحادثة الآن',
+  // Arabic amended by LANG-01 CA-19 (PC-01).
+  followingConversation: 'متابعة المحادثة مفعّلة الآن',
   rejoinConversation: 'العودة لمتابعة المحادثة',
 
   temporalNavigation: 'التنقل الزمني',
   momentNumber: 'رقم اللحظة',
   noMomentYet: 'لا توجد لحظة متاحة بعد.',
-  momentNumberHint: (max) => `أدخل رقمًا من 1 إلى ${digits(max)}. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.`,
+  // Arabic amended by LANG-01 CA-19 (PC-02).
+  momentNumberHint: (max) => `يمكنك إدخال رقم من 1 إلى ${digits(max)}. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.`,
   momentUnavailable: 'هذه اللحظة غير متاحة ضمن الخط الزمني الحالي.',
   previewNextMoment: 'نظرة مؤقتة على اللحظة التالية',
   goToMoment: (n) => `الانتقال إلى اللحظة ${digits(n)}`,

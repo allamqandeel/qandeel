@@ -86,7 +86,7 @@ export interface LiveEdgeTargetProps {
  * `Moment(LH)` and the Live Edge are different Product facts, and only this control produces
  * `FOLLOW_LIVE`. Its label states the mode, so `PINNED(LH)` and `FOLLOW_LIVE` remain distinguishable
  * with motion off, with reduced motion on and to a screen reader. Its words are the Product Owner's
- * current-edge wording («تتابع المحادثة الآن» / «العودة لمتابعة المحادثة»); "Live" is never said.
+ * current-edge wording («متابعة المحادثة مفعّلة الآن» / «العودة لمتابعة المحادثة»); "Live" is never said.
  */
 export function LiveEdgeTarget({ store, preview, following, available, onOutcome, language = 'en' }: LiveEdgeTargetProps) {
   const copy = analysisCopy(language);

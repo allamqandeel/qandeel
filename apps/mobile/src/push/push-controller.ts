@@ -7,7 +7,7 @@
  *     Allow for Proactive QANDEEL, the reader's own visit to Device Notification Settings, or the first legitimate entry
  *     into a Shared World (S4-04: the World's entry verdict is ALLOW — never at launch, never on a refused entry). Entering
  *     Introductions is the fourth moment; that surface does not exist yet (Stage 6);
- *   - «السماح بالإشعارات» hands over to the REAL OS prompt; «مش دلوقتي» keeps everything working, says so once, and
+ *   - «السماح بالإشعارات» hands over to the REAL OS prompt; «ليس الآن» keeps everything working, says so once, and
  *     QANDEEL does not ask again by itself — only the reader's own Device Notification Settings visit offers it again;
  *   - once the OS has an answer it is the platform's: a refusal is never re-prompted by QANDEEL; the settings row then
  *     hands off to the device's own notification settings;
@@ -45,7 +45,7 @@ export interface PushController {
   offer(moment: EducationMoment): 'EDUCATION' | 'SETTINGS' | 'NOTHING';
   /** «السماح بالإشعارات»: the education closes and the REAL OS prompt follows. */
   allow(): Promise<void>;
-  /** «مش دلوقتي». */
+  /** «ليس الآن». */
   notNow(): void;
   openDeviceSettings(): Promise<void>;
   /** Sign-out: this installation stops receiving. Bounded; never throws; never blocks sign-out for long. */

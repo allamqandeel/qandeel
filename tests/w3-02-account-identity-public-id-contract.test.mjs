@@ -3,6 +3,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 
 // W3-02 — Account & Identity Foundation + Public ID v1 (E2E-D-09; E2E-D-02 advances only). Static contract.
 //
@@ -360,13 +361,13 @@ test('the copy is exactly the frozen and approved text; the surfaces write no wo
     const row = byKey.get(key);
     for (const text of [row.ar, row.en]) assert.ok(copy.includes(`'${text}'`) || copy.includes(`"${text}"`), `${key} is byte-for-byte the registry’s: ${text}`);
   }
-  // The Product Owner's W3-02 Copy Gate.
-  for (const text of ['أدخل معرّفًا عامًا صالحًا.', 'Enter a valid Public ID.', 'المعرّف العام هذا غير متاح. اختر معرّفًا آخر.', "This Public ID isn't available. Choose another one."]) {
+  // The Product Owner's W3-02 Copy Gate, its Arabic as amended by LANG-01 CA-09.
+  for (const text of [lang01('أدخل معرّفًا عامًا صالحًا.'), 'Enter a valid Public ID.', lang01('المعرّف العام هذا غير متاح. اختر معرّفًا آخر.'), "This Public ID isn't available. Choose another one."]) {
     assert.ok(copy.includes(`'${text}'`) || copy.includes(`"${text}"`), `approved: ${text}`);
   }
-  // T-14's frozen network sentence, reused verbatim.
+  // T-14's frozen network sentence, reused verbatim (its Arabic as amended by LANG-01 CA-06, at the source and here).
   const t14 = read(`${SRC}/integration/auth-gateway/product-sign-in-copy.ts`);
-  for (const text of ['تعذّر الاتصال. حاول مرة أخرى.', 'Couldn’t connect. Try again.']) {
+  for (const text of [lang01('تعذّر الاتصال. حاول مرة أخرى.'), 'Couldn’t connect. Try again.']) {
     assert.ok(t14.includes(`'${text}'`) && copy.includes(`'${text}'`), `T-14’s network sentence: ${text}`);
   }
   const noWords = (text) => !/['"`][^'"`\n]*[؀-ۿ][^'"`\n]*['"`]/u.test(text) && !/['"`](?:Loading|Saving|Changed|Success|Failed|Error|Try again)[^'"`]*['"`]/u.test(text);

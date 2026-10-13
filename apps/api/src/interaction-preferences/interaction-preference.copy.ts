@@ -34,7 +34,8 @@ const VALUE_LABEL: Readonly<Record<Language, Readonly<Record<InteractionPreferen
 
 const SAVED: Readonly<Record<Language, string>> = { ar: 'تم حفظ التفضيل.', en: 'Preference saved.' };
 const RESET: Readonly<Record<Language, string>> = { ar: 'تمت إعادة التفضيل إلى تلقائي.', en: 'Preference reset to Automatic.' };
-const NOT_SAVED: Readonly<Record<Language, string>> = { ar: 'لم يُحفظ التغيير. حاول مرة أخرى.', en: "Your change wasn't saved. Try again." };
+// Arabic amended by LANG-01 CA-10 (IP-01).
+const NOT_SAVED: Readonly<Record<Language, string>> = { ar: 'لم يُحفظ التغيير. يمكنك المحاولة مرة أخرى.', en: "Your change wasn't saved. Try again." };
 
 /**
  * The reply for one committed outcome. SAVED and UNCHANGED both truthfully report the preference now in effect (an

@@ -174,7 +174,7 @@ describe('final sign-in — one identifier field, Login ID OR Email', () => {
   it('an empty identifier is refused locally in the approved words, and nothing is asked of anyone', async () => {
     const m = await mount({ language: 'ar' });
     await signIn(m.view, '   ', 'pw');
-    expect(noticeSays(m.view, 'qandeel-sign-in-notice', 'أدخل معرّف الدخول أو البريد الإلكتروني.')).toBe(true);
+    expect(noticeSays(m.view, 'qandeel-sign-in-notice', 'يُرجى إدخال معرّف الدخول أو البريد الإلكتروني.')).toBe(true);
     expect(m.port.loginIdSignIns).toEqual([]);
     await m.view.unmount();
   });
@@ -204,7 +204,7 @@ describe('W2-01 R1 — Verify Email after a Login ID sign-in never learns the Em
   }
 
   it('the approved sentences, verbatim', () => {
-    expect(ACCESS.ar.verifyLinkedEmailInstruction).toBe('أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.');
+    expect(ACCESS.ar.verifyLinkedEmailInstruction).toBe('يُرجى إدخال رمز التأكيد المُرسل إلى البريد الإلكتروني المرتبط بحسابك.');
     expect(ACCESS.en.verifyLinkedEmailInstruction).toBe('Enter the verification code sent to the email linked to your account.');
   });
 

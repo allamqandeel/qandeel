@@ -1,6 +1,6 @@
 # QANDEEL — LANG-01 — Arabic Language Authority & Fixed Copy Correction — Record v1
 
-**Status:** `ACTIVE — WORK PACKAGE A (RESOLVED MANIFEST + CONTROLLED AMENDMENTS) PREPARED ON PR A — NOT MERGED; WORK PACKAGES B, C NOT STARTED; WORK PACKAGE D BLOCKED (INDEPENDENT SAFETY REVIEW)`
+**Status:** `ACTIVE — WORK PACKAGE A ON PR A (#336) AND WORK PACKAGE B ON PR B — NEITHER MERGED; WORK PACKAGE C NOT STARTED; WORK PACKAGE D BLOCKED (INDEPENDENT SAFETY REVIEW)`
 **Workstream:** LANG — independent from Stage 6 (WP0 record §14.14, D6).
 **Baseline:** `main = af94748de73cca744c466d8db526984427b94b38` (the merge of PR #335), verified as `origin/main` before
 branching.
@@ -117,6 +117,34 @@ were re-verified at the baseline by searching the whole tree for each original.
 6. No migration holds any amended copy. Activity rows already delivered keep the words they were delivered with.
 7. English copy is not changed anywhere.
 
+### 4.1 Implemented on PR B
+
+All 83 `IMPLEMENT` units, stacked on PR A (base `lang/lang-01-arabic-language-authority`):
+- **Copy.** 92 exact replacements in 18 production modules (mobile: account, access, sign-in, Settings, Interaction
+  Preferences, Activity, push, Shared World, Shared lifecycle, Public authoring, semantic review, field, discussion,
+  orientation chrome, analysis language; API: memory control, the CA-1 Interaction Preference reply, Shared Activity),
+  each the manifest's resolved text, placed by a script that required exactly one occurrence of the original per
+  source and replaced the longest originals first (MEM-15 contains MEM-18 / MEM-19). Every provenance comment on a
+  changed row names its LANG-01 section, and the module headers that described the old register now cite the
+  amendment.
+- **Couplings.** MEM-03's first-section derivation is `«وهناك» → «هناك»`; the subject recogniser keeps all 14 answers
+  it knew and adds «عن شخص آخر», «شخص آخر» and «عني أنا»; PC-01 keeps the full stop only in the T-08 slot; PW-09 keeps
+  U+200E; every `${…}` and `{0}` slot is unchanged. Comments that quoted superseded wording were corrected.
+- **Re-anchored pins.** The root contracts `w1b-01`, `w2-01`, `w3-02`, `w3-mega-s`, `a3-01`, `a3-02`, `s4-01`,
+  `s4-04` and `mem-ar-01` keep their recorded originals for every record check and read the production Arabic
+  through `tests/lang-01-amended-copy.mjs` (`lang01(original)`, from the manifest), so no replacement is typed
+  twice; the MEM-AR-01 mutation probes now mutate the amended bytes («أيضًا» for CQ-1). The Jest expectations, the
+  Jest golden `living-analysis-screen.golden.json` and four Maestro flows follow the copy. User-typed inputs in tests
+  (for example the answer «عن حد تاني») are unchanged: they test recognition, not copy.
+- **Not changed:** any English string (checked mechanically over the whole production diff: no `en:` value and no
+  non-Arabic line changed); `database/verify-migration-0152.mjs` (an opaque reply payload, not a copy pin); every
+  historical record, proof and fixture; the six safety replies.
+- **UI fit.** None of the amended labels sits in a truncating text (`numberOfLines`) — the live-edge target has a
+  44-point minimum height and wraps; the Activity strip's two-line body is unchanged in behaviour, and the Shared
+  Activity sentences are within a few characters of their originals.
+- **SW-07.** The Arabic now has one `{0}`, so Arabic shows no literal placeholder; the English still has two and
+  `fill()` still replaces only the first. Tracked in §9, not claimed fixed.
+
 ## 5. Work Package C — the D4 generated-language default
 
 The model-facing lines are fixed in the amendment (LA-17): one for the Personal conversation, one for Shared and
@@ -173,7 +201,7 @@ unchanged:
 outside the language rule, still visible in English after Work Package B. It is tracked here until closure, where it is
 either fixed by an authorized change or admitted to the backlog with a named owner.
 
-## 10. Validation of PR A
+## 10. Validation
 
 Proportional to a documentation and governance change: no runtime, database, native or end-to-end suite can be
 affected, so none was run.
@@ -182,12 +210,25 @@ affected, so none was run.
   verbatim in its amendment; provenance pins and byte-preserved proofs unchanged; registration.
 - The root static contracts, `npm run test:task-closure-governance-contract` included.
 
+**PR B** (fixed copy):
+- the LANG-01 contract gains two Work Package B tests: every implemented unit's approved text is in each of its
+  sources and its original is gone (PC-01 by surface), the helper agrees with the manifest, the MEM-03 derivation moved,
+  and the recogniser only widened;
+- root static contracts, forward-safety included;
+- API Jest for the affected areas (memory, the memory-control and post-response routes, interaction preferences,
+  Shared World);
+- mobile Jest in full: the only failures are six in `integration/__tests__/depth.test.tsx` and
+  `w2-account-access.test.tsx`, which fail identically on the untouched baseline checkout (a pre-existing local
+  baseline, not LANG);
+- `tsc --noEmit` for both apps; `expo lint` with no error.
+The exact counts are in the PR description.
+
 ## 11. Pull requests
 
 | PR | Scope | State |
 |---|---|---|
-| PR A | Work Package A: this record, the manifest, the two amendments, locator notes, the static contract | prepared |
-| PR B | Work Package B: mobile and API fixed copy, with the pins of §4 | not started |
+| PR A ([#336](https://github.com/allamqandeel/qandeel/pull/336)) | Work Package A: this record, the manifest, the two amendments, locator notes, the static contract | draft, not merged |
+| PR B | Work Package B: mobile and API fixed copy, with the pins of §4 (§4.1) | draft, stacked on PR A, not merged |
 | PR C | Work Package C: the D4 guidance lines and their focused tests | not started |
 | PR D | Work Package D: S-01 … S-06, after the independent safety gate | blocked |
 

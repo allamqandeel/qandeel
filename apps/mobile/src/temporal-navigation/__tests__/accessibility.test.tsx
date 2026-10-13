@@ -249,7 +249,7 @@ describe('W1A-01 — the temporal surface in Arabic', () => {
     expect(view.getByTestId(`${TEMPORAL_NAVIGATOR_TEST_ID}:stance`).props.children).toBe('أنت عند اللحظة 2.');
     const entry = view.getByTestId(TEMPORAL_EXACT_ENTRY_TEST_ID);
     expect(entry.props.accessibilityLabel).toBe('رقم اللحظة');
-    expect(entry.props.accessibilityHint).toBe('أدخل رقمًا من 1 إلى 8. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.');
+    expect(entry.props.accessibilityHint).toBe('يمكنك إدخال رقم من 1 إلى 8. ستظهر نظرة مؤقتة على اللحظة دون الانتقال إليها.');
     expect(view.getByRole('button', { name: 'نظرة مؤقتة على اللحظة التالية' })).toBeTruthy();
     expect(view.getByRole('button', { name: 'العودة لمتابعة المحادثة' })).toBeTruthy();
 
@@ -276,10 +276,10 @@ describe('W1A-01 — the temporal surface in Arabic', () => {
     });
   });
 
-  it('following the conversation reads «تتابع المحادثة الآن», distinct from being at the same moment', async () => {
+  it('following the conversation reads «متابعة المحادثة مفعّلة الآن», distinct from being at the same moment', async () => {
     const following = temporalTestStore({ liveHead: 4 });
     const view = await render(<TemporalNavigator store={following} preview={createTemporalPreviewController()} track={trackOf('session-1', 4)} language="ar" />);
-    expect(view.getByTestId(TEMPORAL_SUMMARY_TEST_ID).props.accessibilityValue.text).toBe('تتابع المحادثة الآن');
+    expect(view.getByTestId(TEMPORAL_SUMMARY_TEST_ID).props.accessibilityValue.text).toBe('متابعة المحادثة مفعّلة الآن');
     for (const old of ['أنت عند آخر المحادثة', 'العودة إلى المحادثة الجارية']) expect(JSON.stringify(view.toJSON())).not.toContain(old);
     await act(async () => {
       view.unmount();

@@ -273,7 +273,7 @@ describe('IP-IMP-01 — the controller and the transport', () => {
   it('every approved string is carried verbatim, in both languages', () => {
     expect(INTERACTION_PREFERENCES_COPY_GATE.ar.row).toBe('تفضيلات التعامل');
     expect(INTERACTION_PREFERENCES_COPY_GATE.en.values.EXPLANATION_STYLE.SIMPLER_AND_DIRECT).toBe('Simple & direct');
-    expect(INTERACTION_PREFERENCES_COPY_GATE.ar.notSaved).toBe('لم يُحفظ التغيير. حاول مرة أخرى.');
+    expect(INTERACTION_PREFERENCES_COPY_GATE.ar.notSaved).toBe('لم يُحفظ التغيير. يمكنك المحاولة مرة أخرى.');
     expect(INTERACTION_PREFERENCES_COPY_GATE.en.noCandidates).toBe('No eligible previous preferences to review.');
     expect(Object.keys(INTERACTION_PREFERENCES_COPY_GATE.ar.values.REPLY_LANGUAGE)).toHaveLength(7);
   });

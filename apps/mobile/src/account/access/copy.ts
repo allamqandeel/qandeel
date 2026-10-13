@@ -3,7 +3,9 @@
  * unable-to-verify-session state.
  *
  * Every string is exactly as the Product Owner approved it for W2-01, and
- * `docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md` §2 records each approval verbatim. Three kinds of
+ * `docs/e2e/QANDEEL_W2_01_IMPLEMENTATION_RECORD_v1.md` §2 records each approval verbatim; the Arabic of the
+ * gender-marked rows is as amended by the LANG-01 controlled amendment (CA-06, CA-07, CA-08;
+ * `docs/canonical-authority/final-product-experience/lang/`), the record keeping the originals as history. Three kinds of
  * string live here, and the record names the source of each:
  *   - approved in the W2-01 task (the recovery entry, the generic recovery result, "Password changed.",
  *     the unable-to-verify sentence and "Try again");
@@ -63,25 +65,25 @@ const ACCESS_AR: AccountAccessCopy = Object.freeze({
   recoveryTitle: 'إعادة تعيين كلمة المرور',
   emailLabel: 'البريد الإلكتروني',
   sendCode: 'إرسال الرمز',
-  invalidEmail: 'أدخل بريدًا إلكترونيًا صحيحًا.',
+  invalidEmail: 'يُرجى إدخال بريد إلكتروني صحيح.',
   recoveryRequested: 'إذا كان هذا البريد مرتبطًا بحساب قنديل، أرسلنا لك رمزًا لإعادة تعيين كلمة المرور.',
   codeLabel: 'رمز إعادة التعيين',
   continueAction: 'متابعة',
-  codeShape: 'أدخل رمز إعادة التعيين المكوّن من 6 أرقام.',
-  codeRejected: 'تعذّر التحقق من الرمز. تأكد منه أو أرسل رمزًا جديدًا.',
+  codeShape: 'رمز إعادة التعيين يتكوّن من 6 أرقام.',
+  codeRejected: 'تعذّر التحقق من الرمز. يُرجى التأكد منه أو طلب رمز جديد.',
   resendAction: 'لم يصلك الرمز؟ إعادة الإرسال',
   newPasswordLabel: 'كلمة المرور الجديدة',
   confirmPasswordLabel: 'تأكيد كلمة المرور الجديدة',
   passwordMismatch: 'كلمتا المرور غير متطابقتين.',
   changePassword: 'تغيير كلمة المرور',
   passwordRejected: 'كلمة المرور لا تستوفي المتطلبات.',
-  updateFailed: 'تعذّر تغيير كلمة المرور الآن. حاول مرة أخرى.',
+  updateFailed: 'تعذّر تغيير كلمة المرور الآن. يمكنك المحاولة مرة أخرى.',
   passwordChanged: 'تم تغيير كلمة المرور.',
   backToSignIn: 'العودة لتسجيل الدخول',
-  network: 'تعذّر الاتصال. حاول مرة أخرى.',
-  sessionUnverified: 'تعذّر التحقق من جلستك الآن. تحقق من اتصالك وحاول مرة أخرى.',
+  network: 'تعذّر الاتصال. يمكنك المحاولة مرة أخرى.',
+  sessionUnverified: 'تعذّر التحقق من جلستك الآن. يُرجى التأكد من اتصالك بالإنترنت والمحاولة مرة أخرى.',
   tryAgain: 'إعادة المحاولة',
-  verifyLinkedEmailInstruction: 'أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك.',
+  verifyLinkedEmailInstruction: 'يُرجى إدخال رمز التأكيد المُرسل إلى البريد الإلكتروني المرتبط بحسابك.',
 });
 
 const ACCESS_EN: AccountAccessCopy = Object.freeze({

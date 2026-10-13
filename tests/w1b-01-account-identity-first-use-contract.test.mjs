@@ -4,6 +4,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 
 // W1B-01 — Account Identity + Verified Sign-up + First Use (E2E-A-09, A-13, A-14, B-02, K-02; the
 // Product Owner's A-10 decision). Static contract.
@@ -73,6 +74,9 @@ const APPROVED = {
   ],
 };
 
+/** The production form: the Arabic as amended by LANG-01 (CA-01, CA-02, CA-06, CA-07); the record keeps APPROVED. */
+const CODE = { ar: APPROVED.ar.map(lang01), en: APPROVED.en };
+
 /** The copy module's literals, with the isolated substitutions written as their placeholders. */
 function copyLiterals() {
   const source = code(read(`${LAYER}/copy.ts`))
@@ -83,11 +87,11 @@ function copyLiterals() {
 
 test('§2 — every approved string is in the one copy module, verbatim', () => {
   const literals = new Set(copyLiterals());
-  for (const text of [...APPROVED.ar, ...APPROVED.en]) assert.ok(literals.has(text), `the approved string is missing or altered: ${text}`);
+  for (const text of [...CODE.ar, ...CODE.en]) assert.ok(literals.has(text), `the approved string is missing or altered: ${text}`);
 });
 
 test('§2 — the copy module contains no string the Product Owner did not approve', () => {
-  const approved = new Set([...APPROVED.ar, ...APPROVED.en]);
+  const approved = new Set([...CODE.ar, ...CODE.en]);
   for (const literal of copyLiterals()) {
     if (literal === 'ar' || literal.startsWith('../') || literal === '${FSI}${value}${PDI}') continue;
     assert.ok(approved.has(literal), `an unapproved string is in the copy module: ${literal}`);

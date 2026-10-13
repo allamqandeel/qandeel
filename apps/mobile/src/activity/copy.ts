@@ -43,7 +43,8 @@ export const ACTIVITY_COPY_GATE = Object.freeze({
     quietStart: { ar: 'من', en: 'From' },
     quietEnd: { ar: 'إلى', en: 'To' },
     /** Notifications & Activity: a change the server did not confirm. */
-    saveFailed: { ar: 'تعذّر حفظ التغيير. حاول مرة أخرى.', en: "The change couldn't be saved. Try again." },
+    // Arabic amended by LANG-01 CA-11 (AC-01).
+    saveFailed: { ar: 'تعذّر حفظ التغيير. يمكنك المحاولة مرة أخرى.', en: "The change couldn't be saved. Try again." },
     /** Notifications & Activity: the page could not be read. */
     settingsUnavailable: { ar: 'تعذّر تحميل إعدادات الإشعارات.', en: "Notification settings couldn't load." },
   }),

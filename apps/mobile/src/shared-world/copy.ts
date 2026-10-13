@@ -65,7 +65,7 @@ const AR: SharedCopy = {
   personalWorld: 'قنديل', // CANON — I-08A4 §8
   sharedWorld: 'العالم المشترك', // CANON — G1.2 §3
   switcherLabel: 'التنقل بين قنديل والعالم المشترك', // APPROVED — S4-01 Product Copy Gate (Product Owner amendment) — accessible name only
-  invitation: '{0} يدعوك لإنشاء عالم مشترك بينكما ومع قنديل.', // APPROVED — S4-01 §1.3
+  invitation: 'دعوة من {0} لإنشاء عالم مشترك بينكما ومع قنديل.', // APPROVED — S4-01 §1.3; Arabic amended by LANG-01 CA-12 (SW-01)
   someone: 'شخص ما', // APPROVED — S4-01 Product Copy Gate
   welcome: 'أهلًا بكما. هذا عالمكما المشترك معي.', // APPROVED — S4-01 §1.6
   back: 'رجوع', // APPROVED — S4-01 Product Copy Gate
@@ -75,7 +75,7 @@ const AR: SharedCopy = {
   sendInvitation: 'إرسال الدعوة', // APPROVED — S4-01 Product Copy Gate
   cancel: 'إلغاء', // APPROVED — S4-01 Product Copy Gate
   invitationSent: 'إذا كان هذا المعرّف صحيحًا، ستصل الدعوة إلى صاحبه.', // APPROVED — S4-01 Product Copy Gate — names nobody
-  invalidSharedId: 'تأكد من المعرّف المشترك وحاول مرة أخرى.', // APPROVED — S4-01 Product Copy Gate (Product Owner amendment)
+  invalidSharedId: 'يُرجى التأكد من المعرّف المشترك والمحاولة مرة أخرى.', // APPROVED — S4-01 Product Copy Gate (Product Owner amendment); Arabic amended by LANG-01 CA-12 (SW-02)
   notOpen: 'العالم المشترك غير متاح بعد.', // APPROVED — S4-01 Product Copy Gate
   actionUnavailable: 'تعذّر ذلك الآن.', // APPROVED — S4-01 Product Copy Gate
   retry: 'إعادة المحاولة', // APPROVED — S4-01 Product Copy Gate
@@ -91,11 +91,11 @@ const AR: SharedCopy = {
   you: 'أنت', // APPROVED — S4-01 Product Copy Gate
   and: ' و', // APPROVED — S4-01 Product Copy Gate — joins two Names
   yourSharedId: 'المعرّف المشترك', // APPROVED — S4-01 Product Copy Gate
-  sharedIdPrivacy: 'معرّفك المشترك خاص. شاركه فقط مع من تريد أن يستطيع دعوتك إلى عالم مشترك.', // APPROVED — S4-01 Product Copy Gate
+  sharedIdPrivacy: 'معرّفك المشترك خاص. مشاركته تعني السماح لمن يحصل عليه بدعوتك إلى عالم مشترك.', // APPROVED — S4-01 Product Copy Gate; Arabic amended by LANG-01 CA-12 (SW-03)
   copy: 'نسخ', // APPROVED — S4-01 Product Copy Gate
   copied: 'تم النسخ', // APPROVED — S4-01 Product Copy Gate
   regenerate: 'إنشاء معرّف جديد', // APPROVED — S4-01 Product Copy Gate
-  regenerateWarning: 'سيتوقف معرّفك الحالي عن العمل، ولن تصل إليك الدعوات المرسلة إليه التي لم تقبلها بعد. عوالمك المشتركة الحالية لن تتأثر.', // APPROVED — S4-01 Product Copy Gate
+  regenerateWarning: 'سيتوقف معرّفك الحالي عن العمل، ولن تصل إليك الدعوات المرسلة إليه التي لم تُقبَل بعد. عوالمك المشتركة الحالية لن تتأثر.', // APPROVED — S4-01 Product Copy Gate; Arabic amended by LANG-01 CA-12 (SW-04)
   regenerateConfirm: 'إنشاء معرّف جديد', // APPROVED — S4-01 Product Copy Gate
   sharedIdNotOpen: 'سيظهر معرّفك المشترك عندما يصبح العالم المشترك متاحًا.', // APPROVED — S4-01 Product Copy Gate
 };
