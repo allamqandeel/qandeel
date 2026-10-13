@@ -3,6 +3,7 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
+import { IntroductionsPreparationModule } from '../introductions-preparation/introductions-preparation.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { AccountIdentityRepository } from './account-identity.repository';
 import { AccountSecurityController } from './account-security.controller';
@@ -37,9 +38,12 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  * governed Personal erasure and the provider account's removal.
  *
  * PROD-OPS-01 makes that pass's outcomes visible through the existing content-free telemetry (ObservabilityModule).
+ *
+ * S6-01 composes the owner's Introductions preparation (IntroductionsPreparationModule) here, because the application
+ * root is pinned: it is the owner's own account-scoped preparation, and it shares nothing with these providers.
  */
 @Module({
-  imports: [ObservabilityModule],
+  imports: [ObservabilityModule, IntroductionsPreparationModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,

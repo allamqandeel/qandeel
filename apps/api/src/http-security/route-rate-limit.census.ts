@@ -84,6 +84,14 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /interaction-preferences/legacy-review': 'AUTHENTICATED',
   'POST /interaction-preferences/legacy-review': 'AUTHENTICATED',
 
+  // Introductions with QANDEEL - the owner's pre-enrollment preparation (S6-01). Owner-only; nothing enrolls.
+  'GET /introductions/availability': 'AUTHENTICATED',
+  'GET /introductions/preparation': 'AUTHENTICATED',
+  'POST /introductions/preparation/commands': 'AUTHENTICATED',
+  'POST /introductions/preparation/discard': 'AUTHENTICATED',
+  'POST /introductions/preparation/assistance/grant': 'AUTHENTICATED',
+  'POST /introductions/preparation/assistance/revoke': 'AUTHENTICATED',
+
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',
   'POST /push/device/detach': 'AUTHENTICATED',

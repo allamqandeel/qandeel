@@ -265,7 +265,10 @@ CREATE TABLE introductions_preparation_private.drafts (
     AND (soft_answer IS NULL AND jsonb_array_length(soft_items) = 0
       OR soft_answer = 'NONE' AND jsonb_array_length(soft_items) = 0
       OR soft_answer = 'ITEMS' AND jsonb_array_length(soft_items) BETWEEN 1 AND 3)),
-  CONSTRAINT drafts_skipped_check CHECK (skipped_steps <@ ARRAY['NOTES', 'SHORT_INTRODUCTION', 'WORK_FIELD']::text[]),
+  -- The optional steps the owner chose to skip, so they are not offered again: notes, short introduction, work field,
+  -- the assistance offer (declining it), and the review of prior-understanding items (ending it).
+  CONSTRAINT drafts_skipped_check CHECK (skipped_steps <@ ARRAY['NOTES', 'SHORT_INTRODUCTION', 'WORK_FIELD', 'ASSISTANCE_OFFER',
+    'PRIOR_UNDERSTANDING']::text[]),
   CONSTRAINT drafts_review_check CHECK ((reviewed_version IS NULL) = (reviewed_at IS NULL)
     AND (reviewed_version IS NULL OR reviewed_version BETWEEN 1 AND draft_version))
 );
@@ -844,7 +847,8 @@ BEGIN
 
   ELSIF p_kind = 'SKIP_STEP' THEN
     IF NOT introductions_preparation_private.has_exact_keys_v1(v_payload, ARRAY['step'])
-       OR (v_payload ->> 'step') IS NULL OR (v_payload ->> 'step') NOT IN ('NOTES', 'SHORT_INTRODUCTION', 'WORK_FIELD') THEN
+       OR (v_payload ->> 'step') IS NULL
+       OR (v_payload ->> 'step') NOT IN ('NOTES', 'SHORT_INTRODUCTION', 'WORK_FIELD', 'ASSISTANCE_OFFER', 'PRIOR_UNDERSTANDING') THEN
       RAISE EXCEPTION 'INVALID_MATCHING_PREPARATION_COMMAND' USING ERRCODE = '22023';
     END IF;
     UPDATE introductions_preparation_private.drafts

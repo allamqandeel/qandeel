@@ -439,6 +439,9 @@ async function verifyDraft() {
     await ok('SKIP_STEP', { step: 'WORK_FIELD' });
     await ok('SKIP_STEP', { step: 'WORK_FIELD' });
     assert.deepEqual((await readOwn(alice)).draft.skippedSteps, ['WORK_FIELD']);
+    await ok('SKIP_STEP', { step: 'ASSISTANCE_OFFER' });
+    await ok('SKIP_STEP', { step: 'PRIOR_UNDERSTANDING' });
+    assert.deepEqual((await readOwn(alice)).draft.skippedSteps, ['ASSISTANCE_OFFER', 'PRIOR_UNDERSTANDING', 'WORK_FIELD'], 'a declined offer is kept, not asked again');
 
     stage = 'draft: review needs every fact confirmed, both answers and no discrepancy; any later change marks it changed';
     assert.equal((await cmd(alice, 'CONFIRM_REVIEW', {}, v)).outcome, 'NOT_READY_FOR_REVIEW');
