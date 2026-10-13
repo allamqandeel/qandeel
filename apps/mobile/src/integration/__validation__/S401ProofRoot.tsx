@@ -107,6 +107,9 @@ export function S401ProofRoot() {
       if (match[1] === 'shared-field' && match[2] === 'seed') world.sharedField();
       if (match[1] === 'introductions' && (match[2] === 'seed-new' || match[2] === 'seed-known' || match[2] === 'seed-mixed' || match[2] === 'close')) {
         world.introductions(match[2]);
+        // The entry reads its availability hint when the Personal world is drawn; a seed after launch asks it again.
+        const phase = runtime.getPhase();
+        if (phase.kind === 'READY') phase.runtime.introductions.refreshAvailability();
       }
     });
     return () => {

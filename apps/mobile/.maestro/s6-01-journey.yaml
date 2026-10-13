@@ -1,0 +1,263 @@
+# S6-01 — Introductions with QANDEEL: the owner's private preparation. VALIDATION ONLY (S401ProofRoot.tsx, the S6-01
+# SYNTHETIC stand-in s601-proof-introductions.ts). Nothing here is a real person, a model or a launched capability.
+#
+# Closed gates: no entry at all → seed-new: the entry on the Personal row → the intro (enrollment not available) → the
+# separate assistance permission, declined → the N path one fact at a time (first name, sex declared then confirmed in its
+# own act, month and year of birth, area, marital status) → dealbreakers and preferences ("none" is valid) → optional steps
+# skipped → review → reviewed ("enrolling isn't available yet") → Back to the same Personal world. Then the K path (a
+# granted permission: the owner's words, confirmed), the C path (a conflict first) and the closed read-only state.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+# 1. Both gates closed and nothing prepared: no entry, no teaser.
+- assertNotVisible:
+    id: "qandeel-introductions-entry"
+- takeScreenshot: ${PREFIX}-01-closed-no-entry
+# 2. The preparation opens: the manual entry on the Personal row, after «فهم قنديل».
+- openLink: "qandeel://s401-proof/introductions/seed-new"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-entry"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-02-personal-row-entry
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-intro"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-introductions-enrollment-unavailable"
+- takeScreenshot: ${PREFIX}-03-intro
+# 3. The separate assistance permission: the exact consent text; declined, and kept.
+- tapOn:
+    id: "qandeel-introductions-start"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-OFFER_ASSISTANCE"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-04-assistance-permission
+- tapOn:
+    id: "qandeel-introductions-assistance-decline"
+# 4. N: the first name, declared then confirmed.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_FACT-INTRODUCTION_FIRST_NAME"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-05-first-name
+- tapOn:
+    id: "qandeel-introductions-first-name"
+- inputText: "Sara"
+- hideKeyboard
+- tapOn:
+    id: "qandeel-introductions-save"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-CONFIRM_DECLARED_FACT-INTRODUCTION_FIRST_NAME"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-06-first-name-confirm
+- tapOn:
+    id: "qandeel-introductions-confirm"
+# 5. Sex: declared, then confirmed in its own act.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_FACT-SEX"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-07-sex
+- tapOn:
+    id: "qandeel-introductions-sex-female"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-CONFIRM_DECLARED_FACT-SEX"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-08-sex-confirm
+- tapOn:
+    id: "qandeel-introductions-confirm"
+# 6. Month and year of birth (no day).
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_FACT-BIRTH_YEAR_MONTH"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-09-birth
+- tapOn:
+    id: "qandeel-introductions-birth-year"
+- inputText: "1996"
+- hideKeyboard
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-month-5"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-month-5"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-save"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-save"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-confirm"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-introductions-confirm"
+# 7. Broad area: a country, then its first-level region; no address.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_FACT-BROAD_AREA"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-10-area
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-country-EG"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-country-EG"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-region-EG-ALX"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-region-EG-ALX"
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-save"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-save"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-confirm"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-introductions-confirm"
+# 8. Marital status: four truthful values; none decides eligibility.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_FACT-MARITAL_STATUS"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-11-marital
+- tapOn:
+    id: "qandeel-introductions-marital-NEVER_MARRIED"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-confirm"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-introductions-confirm"
+# 9. Dealbreakers and preferences, kept apart; "none" is a valid answer for each.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-requirements-HARD"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-12-dealbreakers
+- tapOn:
+    id: "qandeel-introductions-requirements-none"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-requirements-SOFT"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-13-preferences
+- tapOn:
+    id: "qandeel-introductions-requirements-none"
+# 10. Optional steps, offered once and skippable.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_PRIORITIES"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-14-what-matters
+- tapOn:
+    id: "qandeel-introductions-skip"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-OFFER_SHORT_INTRODUCTION"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-introductions-skip"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-OFFER_WORK_FIELD"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-15-work-field
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-skip"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-skip"
+# 11. Review, then reviewed: enrolling is not available yet.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-REVIEW"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-16-review
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-review-confirm"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-review-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-reviewed"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-17-reviewed
+# 12. Back returns to the same Personal world.
+- tapOn:
+    id: "qandeel-introductions-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-introductions-entry"
+# 13. K: the permission granted; the owner's own words, confirmed.
+- openLink: "qandeel://s401-proof/introductions/seed-known"
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-intro"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-18-known-intro
+- tapOn:
+    id: "qandeel-introductions-start"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-CONFIRM_PRIOR_ITEM"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-19-known-item
+- tapOn:
+    id: "qandeel-introductions-prior-yes"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-CONFIRM_PRIOR_ITEM"
+    timeout: 30000
+- tapOn:
+    id: "qandeel-introductions-back"
+# 14. C: the owner's own conflict first, then the older item asked about.
+- openLink: "qandeel://s401-proof/introductions/seed-mixed"
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-RESOLVE_DISCREPANCY"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-20-mixed-conflict
+- tapOn:
+    id: "qandeel-introductions-back"
+# 15. Closed: read-only; what was prepared stays visible and deletable.
+- openLink: "qandeel://s401-proof/introductions/close"
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-read-only"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-21-closed-read-only
+- tapOn:
+    id: "qandeel-introductions-back"
