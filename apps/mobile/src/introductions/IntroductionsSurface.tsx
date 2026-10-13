@@ -58,7 +58,7 @@ const factTitle = (fact: IntroductionsFact, copy: IntroductionsCopy) => ({
 })[fact];
 
 function itemWords(item: IntroductionsRequirementItem, copy: IntroductionsCopy, language: ChromeLanguage): string {
-  if (item.dimension === 'AGE_RANGE') return `${copy.AGE_RANGE}: ${item.min}–${item.max}`;
+  if (item.dimension === 'AGE_RANGE') return `${copy.AGE_RANGE}: ${copy.ageRange.replace('{min}', String(item.min)).replace('{max}', String(item.max))}`;
   if (item.dimension === 'MARITAL_STATUS') return `${copy.MARITAL_STATUS}: ${(item.accepted ?? []).map((v) => copy[v as (typeof MARITAL)[number]]).join(language === 'ar' ? '، ' : ', ')}`;
   const regions = item.regionCodes?.map((r) => areaName(r, language)).join(language === 'ar' ? '، ' : ', ');
   return `${copy.AREA}: ${areaName(item.countryCode ?? '', language)}${regions ? ` (${regions})` : ''}`;
@@ -302,6 +302,11 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     : next === null ? `stage-${view?.plan.stage ?? 'loading'}` : `${next.kind}-${'fact' in next ? next.fact : 'item' in next ? next.item.memoryId : ''}`;
   // The screen reader arrives on the step's heading (or the page title) once per step.
   const titleRef = useRef<Text | null>(null);
+  // Each step opens at its top: a new step never inherits the previous one's scroll position.
+  const scrollRef = useRef<ScrollView | null>(null);
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [stepKey]);
   useEffect(() => {
     if (!ready) return;
     const node = titleRef.current === null ? null : findNodeHandle(titleRef.current);
@@ -406,6 +411,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
         {notice === null ? null : <Para ctx={ctx} text={notice} role="supporting" color={state.notice === 'CHANGED_ELSEWHERE' ? palette.secondary : palette.error} />}
       </View>
       <ScrollView
+        ref={scrollRef}
         testID="qandeel-introductions-body"
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"

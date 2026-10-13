@@ -110,6 +110,7 @@ const ROWS = {
   AREA: { ar: 'المنطقة', en: 'Area' }, // PROPOSED
   ageFrom: { ar: 'من', en: 'From' }, // PROPOSED
   ageTo: { ar: 'إلى', en: 'To' }, // PROPOSED
+  ageRange: { ar: 'من {min} إلى {max}', en: '{min} to {max}' }, // PROPOSED — words, not a dash: unambiguous in right-to-left text
   discrepancyTitle: { ar: 'تعارض يحتاج إلى قرارك', en: 'A conflict that needs your decision' }, // PROPOSED
   discrepancyBody: { ar: 'أحد تفضيلاتك يقع خارج شرط أساسي في البند نفسه:', en: 'One of your preferences falls outside a dealbreaker on the same point:' }, // PROPOSED
   editHard: { ar: 'تعديل الشرط', en: 'Edit the dealbreaker' }, // PROPOSED
