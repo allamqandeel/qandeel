@@ -433,13 +433,52 @@ save (retry is the same command); value not accepted.
 
 ### 7.4 Visual proof (320 dp, Arabic and English)
 
-*Recorded after the emulator run.*
+Native Android, the validation-only S4-01 proof root (`S401_SHARED_PROOF=1`; the product entry restored after the build; the
+Introductions data come from the synthetic stand-in `s601-proof-introductions.ts`, never from the API). Built from `a3708210`;
+APK SHA-256 `d16fa6a349dcf38fad4f8b6a4255efeed33c9f5696266a00b90ddeb4286d6924`. Emulator `QANDEEL_API36`, display overridden
+to 640×1386 at 320 dpi (= 320 × 693 dp, recorded in `<leg>-device.txt`), app locale `ar-EG` / `en-US`. Flow
+`apps/mobile/.maestro/s6-01-journey.yaml` — **PASS on both legs**, 21 screenshots each. The evidence stays outside the
+repository, in `.s6-01-visual-proof/shots-ar-narrow/2026-10-14_005807` and `shots-en-narrow/2026-10-14_010051`.
+
+| # | Screen |
+|---|---|
+| 01 | `closed-no-entry` — both gates closed, no draft: nothing drawn on the Personal row |
+| 02 | `personal-row-entry` — preparation open: «التعارف مع قنديل» after «فهم قنديل» |
+| 03 | `intro` — C01, C02 replacement, private note, enrollment unavailable, NEW path (C05 replacement), Start |
+| 04 | `assistance-permission` — C03 (a) title, consent text v1, Allow / Continue without it at equal weight |
+| 05 | `first-name` |
+| 06 | `first-name-confirm` |
+| 07 | `sex` — Male / Female, "never inferred" |
+| 08 | `sex-confirm` — its own separate confirmation line |
+| 09 | `birth` — month and year only |
+| 10 | `area` — country, then region |
+| 11 | `marital` — the four values |
+| 12 | `dealbreakers` — "No additional dealbreakers" / set; the system-rules note |
+| 13 | `preferences` — "No preferences" / set |
+| 14 | `what-matters` — optional, private; Save / Skip |
+| 15 | `work-field` — the thirteen broad fields |
+| 16 | `review` — C06 replacement; every part editable («تعديل», the field named for the screen reader) |
+| 17 | `reviewed` — complete; enrollment unavailable |
+| 18 | `known-intro` — KNOWN path (C04 replacement), shown only with a CURRENT item |
+| 19 | `known-item` — the owner's words quoted as stored; Yes / Correct the wording / No longer true / Don't use it; the Memory note |
+| 20 | `mixed-conflict` — a preference outside a dealbreaker on the same point (Age) |
+| 21 | `closed-read-only` — gates closed: the reason and the draft, read-only; Delete preparation |
+
+Fixed after the first Arabic run (an earlier build, before `dbcc3ecf` / `26d215d9`): the opening crowded 320 dp in the display
+role; primary acts drawn in a dim ink; choice labels centred; a new step inheriting the previous scroll position; the age
+range written with a dash, ambiguous in right-to-left text. None remains.
+
+Observed, and put to the Product Owner rather than changed (7.5): in English only, at 320 dp, (a) the approved C01 name wraps
+to two lines in the title role; (b) the Personal row shows two entries side by side and truncates both («QANDEEL Un…»,
+«Introductions w…»); the full name stays the accessible label. Arabic fits on one line in both places.
 
 ### 7.5 What the Product Owner is asked to decide
 
 1. Approve, revise or reject each PROPOSED row (7.3), including the controlled replacements of C02–C06 and the two C03 rows.
 2. Confirm C01 unchanged and C07 deferred (not displayed).
 3. Approve the screen structure (7.1) on the 320 dp proof (7.4).
+4. The two English-only 320 dp observations of 7.4: accept them as they are, or ask for a layout change (a smaller title
+   role for a long name; the two Personal-row entries on two lines).
 
 Until then the gate is OPEN, and S6-01 is not ready for merge (Task Contract §8 item 4).
 
