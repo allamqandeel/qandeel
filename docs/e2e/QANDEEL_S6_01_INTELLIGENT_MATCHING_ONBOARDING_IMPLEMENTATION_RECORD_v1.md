@@ -279,14 +279,194 @@ a change is bound to the draft version shown; a lost answer is retried with the 
 treats the surface as a non-Analysis Personal depth (`ProductSurface` `INTRODUCTIONS`). No Settings group is drawn (no
 enrolled person exists).
 
-## 7. Product Copy and Visual Gate (CP3)
+## 7. Product Copy and Visual Gate (CP3) — OPEN, awaiting the Product Owner
 
-*Recorded at CP3.* The historically approved C01–C07 pairs are preserved here verbatim when the gate package is
-recorded, beside each controlled replacement; none is silently rewritten.
+**Status:** `OPEN — every new and replacement row PROPOSED`. The words live in one place,
+`apps/mobile/src/introductions/copy.ts` (`INTRODUCTIONS_COPY_GATE`); the table below is generated from that file, so the
+package and the code cannot differ. Fixed Arabic is simplified MSA and gender-considerate: where a second-person verb
+would mark gender, a row uses a noun or a form spelled alike for both (WP0 §14.1, GATE-28). S6 owns this new Matching
+copy (D6 rule 4); no existing language file is touched and none of the 109 LANG units is absorbed.
 
-## 8. Validation
+### 7.1 Screen structure (the approved structure: a Personal-world overlay; nothing new at the World level)
 
-*Recorded per checkpoint.*
+| # | Screen | When | What it shows |
+|---|---|---|---|
+| 0 | Personal row entry | preparation available, or a draft exists | the word «التعارف مع قنديل» after «فهم قنديل» on Personal QANDEEL's own row; nothing is drawn while both gates are closed and nothing was prepared |
+| 1 | Intro | no draft yet | C01 title; C02 replacement; private note; "enrollment isn't available yet"; the path line (NEW / KNOWN / MIXED); Start |
+| 2 | Assistance offer | assistance available, never decided | C03 (a) title; the consent text of the current version (stored with its SHA-256); Allow / Continue without it |
+| 3 | Prior item — confirm (K) | permission granted, a CURRENT item | C04 replacement; the owner's words, quoted as stored; Yes / Correct the wording / No longer true / Don't use it; "won't change what QANDEEL remembers"; Stop showing |
+| 4 | Prior item — clarify (C) | an older item | the clarification lead and question instead of a presumption |
+| 5 | Fact — establish | a required fact is missing | first name (with "can differ from your account name"); sex (Male / Female, with "QANDEEL never infers this"); month + year of birth; country, then region; marital status (four values) |
+| 6 | Fact — confirm / reconfirm | declared, or changed after confirmation | the value; "Is this correct?" (sex: its own separate-step line); Yes / Edit |
+| 7 | Dealbreakers | not answered | "No additional dealbreakers" or set: age range, accepted marital statuses, area; the system-rules note |
+| 8 | Preferences | not answered | "No preferences" or set, on the same three dimensions |
+| 9 | Conflict | a preference outside a dealbreaker on the same point | names the point; Edit the dealbreaker / Edit the preference |
+| 10 | What matters (optional) | no notes, not skipped | free words, private; Save / Skip |
+| 11 | Short introduction / work field (optional) | not answered, not skipped | 20–280 characters, not shown before a mutual match; thirteen broad fields; Skip |
+| 12 | Review | everything required confirmed | C06 replacement; the whole draft, each part editable; "enrollment isn't available yet"; Confirm review |
+| 13 | Reviewed | review confirmed and unchanged | "Your preparation is complete. Enrolling isn't available yet…"; the draft; the assistance permission (withdraw / allow); Delete preparation |
+| 14 | Read-only | gates closed, or account deletion pending | the reason; the draft read-only; Delete preparation |
+
+Notices (one polite live region): changed on another device; unavailable now; deletion pending; note limit; couldn't
+save (retry is the same command); value not accepted.
+
+### 7.2 The historically approved pairs and their disposition
+
+| ID | Disposition | Row |
+|---|---|---|
+| C01 | **used unchanged** (AR and EN) | `name` |
+| C02 | Arabic: controlled replacement (dialect «خليني … اللي», masculine «تختارها» → «ضمن حدود من اختيارك»); English kept as approved | `opening` |
+| C03 | **split in two purpose-exact rows** (one sentence carried onboarding personalization AND "help with matching"; GATE-11 / GATE-17 / CW2-06A §3): (a) the onboarding-assistance permission title, displayed; (b) the Matching Context Grant label, recorded for the enrollment path and **not displayed** in S6-01 | `assistanceOfferTitle`, `matchingContextGrantLabel` |
+| C04 | Arabic: controlled replacement (dialect «هسألك … مخصوصة ليك … مع بعض»); English kept as approved; shown only when the authorized reader returned a CURRENT item | `pathKnown` |
+| C05 | Arabic: controlled replacement (dialect «لسه … ده … خليني … شوية … إيه … ليك»); English kept as approved | `pathNew` |
+| C06 | Arabic: controlled replacement (dialect and the masculine imperatives «راجعها … عدّل»); English kept as approved | `reviewLead` |
+| C07 | **deferred, never displayed** (GATE-24a, CA-08: no profile field is disclosed before a Mutual Match) | — |
+
+### 7.3 Every row (generated from `copy.ts`)
+
+| ID | Arabic (approved 2026-10-09, verbatim) | English (approved, verbatim) |
+|---|---|---|
+| C01 | التعارف مع قنديل | Introductions with QANDEEL |
+| C02 | خليني أساعدك تكتشف فرصة تعارف مناسبة بهدف الزواج، بطريقتك وبالحدود اللي تختارها. | Let me help you explore a meaningful introduction for marriage, on your terms. |
+| C03 | تحب أستفيد من فهمي السابق ليك علشان أخصص حوارنا وأساعدك في التوفيق؟ | May I use what I've learned about you to personalize our conversation and help with matching? |
+| C04 | عندي فهم سابق لبعض أولوياتك. هسألك أسئلة مخصوصة ليك علشان نتأكد من فهمي ونكمل الصورة مع بعض. | I already have some understanding of your priorities. I'll ask questions tailored to you so we can check my understanding together. |
+| C05 | لسه بنتعرف على بعض، وده طبيعي. خليني أسألك شوية أسئلة تساعدني أفهم إيه المهم ليك فعلًا. | We're still getting to know each other. I'll ask a few questions to understand what truly matters to you. |
+| C06 | دي الصورة اللي وصلنا لها مع بعض. راجعها وعدّل أي حاجة مش بتعبّر عنك. | Here's the introduction profile we've put together. Review it and change anything that doesn't feel right. |
+| C07 | اختار المعلومات اللي تسمح لقنديل يعرضها عند اقتراح تعارف. بياناتك وتحليلاتك الخاصة مش جزء من البطاقة. | Choose what QANDEEL may show in an introduction proposal. Your private data and analysis are not part of this profile. |
+
+| # | Key | Arabic | English | Status |
+|---|---|---|---|---|
+| 1 | `name` | التعارف مع قنديل | Introductions with QANDEEL | APPROVED — C01 (Product Owner, 2026-10-09), unchanged |
+| 2 | `opening` | سأساعدك على استكشاف فرصة تعارف مناسبة بهدف الزواج، بطريقتك وضمن حدود من اختيارك. | Let me help you explore a meaningful introduction for marriage, on your terms. | PROPOSED — controlled replacement of C02 (Arabic); English as approved |
+| 3 | `privateNote` | هذا تحضير خاص بك وحدك، ولا يراه أحد غيرك. | This is a private preparation, for you only. No one else sees it. | PROPOSED |
+| 4 | `enrollmentUnavailable` | التسجيل في التعارف غير متاح حاليًا. يمكنك التحضير الآن ومراجعة ما أعددته في أي وقت. | Enrolling in Introductions isn't available yet. You can prepare now and review what you've prepared at any time. | PROPOSED |
+| 5 | `start` | بدء التحضير | Start preparing | PROPOSED |
+| 6 | `continue` | متابعة التحضير | Continue preparing | PROPOSED |
+| 7 | `pathNew` | ما زلنا في بداية التعارف، وهذا طبيعي. سأطرح عليك بعض الأسئلة لأفهم ما يهمك فعلًا. | We're still getting to know each other. I'll ask a few questions to understand what truly matters to you. | PROPOSED — controlled replacement of C05 (Arabic); English as approved |
+| 8 | `pathKnown` | لديّ فهم سابق لبعض أولوياتك. سأطرح عليك أسئلة خاصة بك لنتأكد من فهمي ونكمل الصورة معًا. | I already have some understanding of your priorities. I'll ask questions tailored to you so we can check my understanding together. | PROPOSED — controlled replacement of C04 (Arabic); English as approved |
+| 9 | `pathMixed` | بعض ما أعرفه عنك ربما تغيّر. سأسألك عنه أولًا قبل أن أعتمد عليه. | Some of what I know about you may have changed. I'll ask you about it first before relying on it. | PROPOSED |
+| 10 | `assistanceOfferTitle` | الاستفادة مما يعرفه قنديل عنك في التحضير | Using what QANDEEL knows about you to prepare | PROPOSED — C03 split (a): the onboarding-assistance permission |
+| 11 | `matchingContextGrantLabel` | السماح باستخدام فهم قنديل لك في التوفيق | Allow QANDEEL's understanding of you to be used for matching | PROPOSED — C03 split (b): the Matching Context Grant; NOT DISPLAYED in S6-01 |
+| 12 | `allowAssistance` | السماح | Allow | PROPOSED |
+| 13 | `continueWithout` | المتابعة دون ذلك | Continue without it | PROPOSED |
+| 14 | `assistanceOn` | يستفيد قنديل مما يعرفه عنك في التحضير. | QANDEEL uses what it knows about you to help you prepare. | PROPOSED |
+| 15 | `assistanceOff` | لا يستفيد قنديل مما يعرفه عنك في التحضير. | QANDEEL doesn't use what it knows about you to help you prepare. | PROPOSED |
+| 16 | `stopAssistance` | إيقاف هذا الإذن | Withdraw this permission | PROPOSED |
+| 17 | `priorLead` | مما شاركته معي سابقًا: | Something you've shared with me: | PROPOSED |
+| 18 | `priorConfirmQuestion` | هل ما زال هذا صحيحًا ومهمًا لك في التعارف؟ | Is this still true, and does it matter to you for Introductions? | PROPOSED |
+| 19 | `priorClarifyLead` | شاركت هذا معي منذ مدة، وربما تغيّر: | You shared this with me a while ago, and it may have changed: | PROPOSED |
+| 20 | `priorClarifyQuestion` | هل ما زال يعبّر عنك؟ | Does it still describe you? | PROPOSED |
+| 21 | `priorYes` | نعم، صحيح | Yes, that's right | PROPOSED |
+| 22 | `priorEdit` | تصحيح الصياغة | Correct the wording | PROPOSED |
+| 23 | `priorNoLonger` | لم يعد صحيحًا | No longer true | PROPOSED |
+| 24 | `priorDecline` | عدم استخدامه | Don't use it | PROPOSED |
+| 25 | `priorCorrectionLabel` | الصياغة الصحيحة بكلماتك | The right wording, in your words | PROPOSED |
+| 26 | `priorMemoryNote` | لن يغيّر ذلك ما يتذكره قنديل في محادثاتك. | This won't change what QANDEEL remembers in your conversations. | PROPOSED |
+| 27 | `priorStop` | التوقف عن عرض ما أعرفه | Stop showing what I know | PROPOSED |
+| 28 | `firstNameTitle` | الاسم الأول للتعارف | First name for Introductions | PROPOSED |
+| 29 | `firstNameHint` | الاسم الذي يُستخدم في التعارف، وقد يختلف عن اسم حسابك. | The name used in Introductions. It can differ from your account name. | PROPOSED |
+| 30 | `sexTitle` | الجنس | Sex | PROPOSED |
+| 31 | `sexHint` | يكون التعارف بين رجل وامرأة فقط. لا يستنتج قنديل هذه المعلومة من أي شيء آخر. | Introductions are only between a man and a woman. QANDEEL never infers this from anything else. | PROPOSED |
+| 32 | `male` | ذكر | Male | PROPOSED |
+| 33 | `female` | أنثى | Female | PROPOSED |
+| 34 | `sexConfirmQuestion` | هل هذه المعلومة صحيحة؟ تأكيدها خطوة مستقلة عن إدخالها. | Is this correct? Confirming it is a separate step from entering it. | PROPOSED |
+| 35 | `birthTitle` | شهر الميلاد وسنته | Month and year of birth | PROPOSED |
+| 36 | `birthHint` | لا نطلب يوم الميلاد، وتبقى هذه المعلومة خاصة. | We don't ask for the day, and this stays private. | PROPOSED |
+| 37 | `birthYear` | السنة | Year | PROPOSED |
+| 38 | `birthMonth` | الشهر | Month | PROPOSED |
+| 39 | `areaTitle` | المنطقة | Area | PROPOSED |
+| 40 | `areaHint` | منطقة عامة فقط، دون عنوان. | A broad area only, no address. | PROPOSED |
+| 41 | `country` | الدولة | Country | PROPOSED |
+| 42 | `region` | المنطقة داخل الدولة | Region | PROPOSED |
+| 43 | `maritalTitle` | الحالة الاجتماعية | Marital status | PROPOSED |
+| 44 | `NEVER_MARRIED` | لم يسبق الزواج | Never married | PROPOSED |
+| 45 | `DIVORCED` | مطلّق أو مطلّقة | Divorced | PROPOSED |
+| 46 | `WIDOWED` | أرمل أو أرملة | Widowed | PROPOSED |
+| 47 | `CURRENTLY_MARRIED` | متزوج أو متزوجة حاليًا | Currently married | PROPOSED |
+| 48 | `factConfirmQuestion` | هل هذه المعلومة صحيحة؟ | Is this correct? | PROPOSED |
+| 49 | `factReconfirm` | غُيّرت هذه المعلومة بعد تأكيدها. هل القيمة الجديدة صحيحة؟ | This changed after it was confirmed. Is the new value correct? | PROPOSED |
+| 50 | `yesCorrect` | نعم، صحيحة | Yes, it's correct | PROPOSED |
+| 51 | `edit` | تعديل | Edit | PROPOSED |
+| 52 | `save` | حفظ | Save | PROPOSED |
+| 53 | `cancel` | إلغاء | Cancel | PROPOSED |
+| 54 | `hardTitle` | الشروط الأساسية | Dealbreakers | PROPOSED |
+| 55 | `hardBody` | ما لا يمكن قبوله في شريك الحياة. | What you can't accept in a life partner. | PROPOSED |
+| 56 | `hardNone` | لا توجد شروط أساسية إضافية | No additional dealbreakers | PROPOSED |
+| 57 | `hardSet` | تحديد شروط أساسية | Set dealbreakers | PROPOSED |
+| 58 | `systemRulesNote` | يطبّق قنديل قواعد التعارف العامة، مثل السن القانونية، دون أن تُكتب شرطًا لك. | QANDEEL applies the general rules, such as legal age, without writing them as your dealbreaker. | PROPOSED |
+| 59 | `softTitle` | التفضيلات | Preferences | PROPOSED |
+| 60 | `softBody` | ما يُفضَّل لديك دون أن يكون شرطًا. | What you prefer, without it being a dealbreaker. | PROPOSED |
+| 61 | `softNone` | لا توجد تفضيلات | No preferences | PROPOSED |
+| 62 | `softSet` | تحديد تفضيلات | Set preferences | PROPOSED |
+| 63 | `AGE_RANGE` | العمر | Age | PROPOSED |
+| 64 | `MARITAL_STATUS` | الحالة الاجتماعية | Marital status | PROPOSED |
+| 65 | `AREA` | المنطقة | Area | PROPOSED |
+| 66 | `ageFrom` | من | From | PROPOSED |
+| 67 | `ageTo` | إلى | To | PROPOSED |
+| 68 | `ageRange` | من {min} إلى {max} | {min} to {max} | PROPOSED — words, not a dash: unambiguous in right-to-left text |
+| 69 | `discrepancyTitle` | تعارض يحتاج إلى قرارك | A conflict that needs your decision | PROPOSED |
+| 70 | `discrepancyBody` | أحد تفضيلاتك يقع خارج شرط أساسي في البند نفسه: | One of your preferences falls outside a dealbreaker on the same point: | PROPOSED |
+| 71 | `editHard` | تعديل الشرط | Edit the dealbreaker | PROPOSED |
+| 72 | `editSoft` | تعديل التفضيل | Edit the preference | PROPOSED |
+| 73 | `prioritiesTitle` | ما الذي يهمك في شريك الحياة؟ | What matters to you in a life partner? | PROPOSED |
+| 74 | `prioritiesHint` | بكلماتك. لا يراه أحد غيرك. | In your own words. No one else sees it. | PROPOSED |
+| 75 | `shortIntroTitle` | نبذة قصيرة عنك (اختيارية) | A short introduction (optional) | PROPOSED |
+| 76 | `shortIntroHint` | من 20 إلى 280 حرفًا. لا تُعرض على أحد قبل التوافق المتبادل. | 20 to 280 characters. Not shown to anyone before a mutual match. | PROPOSED |
+| 77 | `workFieldTitle` | مجال العمل (اختياري) | Work field (optional) | PROPOSED |
+| 78 | `skip` | تخطي هذه الخطوة | Skip this step | PROPOSED |
+| 79 | `reviewLead` | هذه الصورة التي وصلنا إليها معًا. يمكنك مراجعتها وتعديل أي شيء لا يعبّر عنك. | Here's the introduction profile we've put together. Review it and change anything that doesn't feel right. | PROPOSED — controlled replacement of C06 (Arabic); English as approved |
+| 80 | `reviewConfirm` | تأكيد المراجعة | Confirm review | PROPOSED |
+| 81 | `reviewed` | اكتمل تحضيرك. التسجيل في التعارف غير متاح بعد، ويبقى ما أعددته محفوظًا لك وحدك. | Your preparation is complete. Enrolling in Introductions isn't available yet, and what you've prepared stays saved, for you only. | PROPOSED |
+| 82 | `notesHeading` | ما يهمك | What matters to you | PROPOSED |
+| 83 | `notSet` | لم يُحدَّد بعد | Not set yet | PROPOSED |
+| 84 | `discard` | حذف التحضير | Delete preparation | PROPOSED |
+| 85 | `discardConfirm` | سيُحذف كل ما أعددته هنا نهائيًا. | Everything you've prepared here will be deleted permanently. | PROPOSED |
+| 86 | `discardYes` | حذف | Delete | PROPOSED |
+| 87 | `unavailable` | التحضير للتعارف غير متاح الآن. | Preparing for Introductions isn't available right now. | PROPOSED |
+| 88 | `deletionPending` | لا يمكن تعديل التحضير أثناء طلب حذف الحساب. | Your preparation can't be changed while your account deletion is pending. | PROPOSED |
+| 89 | `changedElsewhere` | تغيّر التحضير من جهاز آخر، وهذه أحدث نسخة منه. | Your preparation changed on another device. This is the latest version. | PROPOSED |
+| 90 | `noteLimit` | وصلت إلى الحد الأقصى من الملاحظات. | You've reached the most notes you can add. | PROPOSED |
+| 91 | `failed` | تعذّر الحفظ. يمكن المحاولة مرة أخرى. | Couldn't save. Please try again. | PROPOSED |
+| 92 | `invalid` | هذه القيمة غير مقبولة. | This value isn't accepted. | PROPOSED |
+| 93 | `tryAgain` | إعادة المحاولة | Try again | REUSED meaning — PROPOSED wording |
+| 94 | `back` | رجوع | Back | PROPOSED |
+
+### 7.4 Visual proof (320 dp, Arabic and English)
+
+*Recorded after the emulator run.*
+
+### 7.5 What the Product Owner is asked to decide
+
+1. Approve, revise or reject each PROPOSED row (7.3), including the controlled replacements of C02–C06 and the two C03 rows.
+2. Confirm C01 unchanged and C07 deferred (not displayed).
+3. Approve the screen structure (7.1) on the 320 dp proof (7.4).
+
+Until then the gate is OPEN, and S6-01 is not ready for merge (Task Contract §8 item 4).
+
+## 8. Validation (actually run; proportional to each boundary)
+
+### 8.1 CP2 — PostgreSQL and API
+
+| # | Check | Where | Result |
+|---|---|---|---|
+| 1 | `verify-migration-0154` (own enumeration of the schema; gates; CAS; idempotency; validation; isolation; consent and reader; no Memory / attribution / Hypothesis / HIM write; revocation, first-write and deletion races on two connections; erasure `ERASED` with zero rows) | local disposable PostgreSQL 17 (embedded, port 55461), full migration chain | **PASS**, twice on the same database (fixtures removed and checked) |
+| 2 | the same | GitHub focused workflow, `migration-0154`, on `dde3d289` | **PASS** — run [38390942196](https://github.com/allamqandeel/qandeel/actions/runs/38390942196) |
+| 3 | `verify-migration-0149` (SEC-MATCH-00, `NO_BACKDOOR`, deletion baseline), `0150` (no `40001` escape), `0152` (Memory writers), `0153`, `0026` (Memory authority surface), `0132`, `0108`, `0109` — unchanged | local PostgreSQL 17 with `0154` applied | **PASS** each |
+| 4 | `verify-migration-0130` (governed erasure, footprint) — unchanged | local | **PASS** on the second run; the first failed the known Windows clock-skew assertion (`grace <= 7`, class C, seen in S5-02) |
+| 5 | `verify-migration-0133` (hosted default-privilege replay), `0134`, `0135` — unchanged | GitHub focused workflow on `dde3d289` (locally: no `psql`; `spawnSync npm.cmd EINVAL` on Node 24 — class C) | **PASS** — runs [38390947016](https://github.com/allamqandeel/qandeel/actions/runs/38390947016), [38390950974](https://github.com/allamqandeel/qandeel/actions/runs/38390950974), [38390955074](https://github.com/allamqandeel/qandeel/actions/runs/38390955074) |
+| 6 | API: selector (N / K / C), service (exact shapes, fail-closed decoding, consent-gated reader, no phrasing provider), structural isolation, route census | `npx jest src/introductions-preparation src/http-security` | **152 / 152** |
+| 7 | API full suite | `npx jest --ci` (apps/api) | **5780 / 5780** |
+| 8 | Static contracts (every `tests/*.mjs` but the forward-safety mirror) | `node --test` | **1321 / 1321** |
+| 9 | Verifier hazard lint | `node --test database/tests/verifier-hazard-contract-v1.test.mjs` | **33 / 33** (three H4 literal counts converted to deltas / exact lists) |
+
+### 8.2 CP3 — mobile
+
+| # | Check | Where | Result |
+|---|---|---|---|
+| 1 | Introductions surface, controller, entry, transport, catalogue / consent-text parity with `0154`, copy-gate integrity (C01 unchanged, C07 never displayed, no dialect in Arabic rows) | `npx jest src/introductions src/runtime-entry` | **279 / 279** |
+| 2 | Proof stand-in guard | `npx jest src/integration/__tests__/s6-01-proof-introductions.test.ts` | **PASS** |
+| 3 | Mobile full suite | `npx jest --ci` (apps/mobile) | **2435 pass, 6 fail** — exactly the known `ar-EG` host-locale baseline (`depth.test.tsx` 3, `w2-account-access.test.tsx` 3: English labels expected, Arabic rendered; class B, recorded since S5-03A) |
+| 4 | Typecheck; lint of every touched file | `tsc --noEmit`; `eslint` | clean (two pre-existing duplicate-import warnings in `integration-runtime.ts`, present on `main`) |
 
 ## 9. `QAN-BL-MATCH-04` — admitted at CP1
 
