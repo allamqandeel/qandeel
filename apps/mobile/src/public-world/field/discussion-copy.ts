@@ -70,7 +70,7 @@ const AR = {
   composerName: 'مشاركتك في هذا النقاش', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
   reply: 'ردّ', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
   replyingTo: 'ردّ على {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
-  invokeHint: 'اكتب ‎@qandeel لتسأل قنديل هنا، وردّه يظهر للجميع.', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
+  invokeHint: 'يمكنك كتابة ‎@qandeel لتوجيه سؤال إلى قنديل هنا، وردّه يظهر للجميع.', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08); Arabic amended by LANG-01 CA-18 (PW-09)
   publishedOn: 'نُشرت في {0}', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
   morePosts: 'عرض المزيد من المشاركات', // APPROVED — S5-04 Product Copy Gate (Product Owner, 2026-10-08)
 } as const;

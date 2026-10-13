@@ -134,14 +134,14 @@ describe('S4-04 A — the Shared Activity producer publishes genuine Shared fact
     await h.producer.memberRequest(SOURCE);
     const [candidate] = h.items();
     expect(candidate).toMatchObject({ contextLabel: null, entry: { destination: 'NONE' }, interruptionClass: 3 });
-    expect(candidate.body).toEqual({ ar: 'شخص ما يقترح انضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.', en: 'Someone proposed that you join a Shared World, and all its members approved.' });
+    expect(candidate.body).toEqual({ ar: 'اقتراح من شخص ما بانضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.', en: 'Someone proposed that you join a Shared World, and all its members approved.' });
     expect(JSON.stringify(candidate)).not.toContain('Hidden name');
   });
 
   it('a join tells the other members and withdraws the joiner\'s own request; a birth tells the inviter', async () => {
     const h = harness({ JOINED: [sourceRow({ actor_name: 'Lina' })], BIRTH: [sourceRow({ actor_name: 'Lina' })] });
     await h.producer.joined(SOURCE, ITEM, OTHER);
-    expect(h.items()[0]).toMatchObject({ interruptionClass: 3, body: { ar: 'انضم Lina إلى هذا العالم.', en: 'Lina joined this world.' } });
+    expect(h.items()[0]).toMatchObject({ interruptionClass: 3, body: { ar: 'تمّ انضمام Lina إلى هذا العالم.', en: 'Lina joined this world.' } });
     expect(h.publisher.withdraw).toHaveBeenCalledWith(OTHER, `shared:member-request:${ITEM}`);
     await h.producer.birth(WORLD_A);
     expect(h.sources.source).toHaveBeenLastCalledWith('BIRTH', WORLD_A);

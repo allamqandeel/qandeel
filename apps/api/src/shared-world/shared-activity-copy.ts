@@ -45,11 +45,14 @@ export const SHARED_ACTIVITY_COPY = Object.freeze({
   /** REUSED — S4-03 Product Copy Gate. {0}: the proposer's own Name. */
   proposedBy: { ar: 'اقتراح من {0}', en: 'Proposed by {0}' },
   /** REUSED — S4-03 Product Copy Gate. {0}: the proposer's own Name; nothing of the World before acceptance. */
-  memberRequestAdd: { ar: '{0} يقترح انضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.', en: '{0} proposed that you join a Shared World, and all its members approved.' },
+  // Arabic amended by LANG-01 CA-13 (SW-05).
+  memberRequestAdd: { ar: 'اقتراح من {0} بانضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.', en: '{0} proposed that you join a Shared World, and all its members approved.' },
   /** REUSED — S4-03 Product Copy Gate. */
-  memberRequestRejoin: { ar: '{0} يقترح عودتك إلى عالم مشترك كنت فيه، وقد وافق عليها كل أعضائه.', en: '{0} proposed that you return to a Shared World you were in, and all its members approved.' },
+  // Arabic amended by LANG-01 CA-13 (SW-06).
+  memberRequestRejoin: { ar: 'اقتراح من {0} بعودتك إلى عالم مشترك كنت فيه، وقد وافق عليه كل أعضائه.', en: '{0} proposed that you return to a Shared World you were in, and all its members approved.' },
   /** APPROVED — S4-04 Product Copy Gate (Product Owner, 2026-10-06). {0}: the person's own Name. */
-  joined: { ar: 'انضم {0} إلى هذا العالم.', en: '{0} joined this world.' },
+  // Arabic amended by LANG-01 CA-14 (SW-15).
+  joined: { ar: 'تمّ انضمام {0} إلى هذا العالم.', en: '{0} joined this world.' },
 });
 
 /** One Name into one `{0}` slot (every occurrence); an absent Name is the approved «شخص ما» / Someone. */

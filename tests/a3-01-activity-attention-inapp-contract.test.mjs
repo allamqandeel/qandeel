@@ -23,6 +23,7 @@ import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 
 const root = new URL('../', import.meta.url);
 const read = (path) => readFileSync(new URL(path, root), 'utf8').replace(/\r\n/gu, '\n');
@@ -225,7 +226,7 @@ test('10 — copy authority: APPROVED / CANON byte-equal to the pinned registry;
     snoozeShorter: ['تقليل ساعة', 'Subtract an hour'],
     quietStart: ['من', 'From'],
     quietEnd: ['إلى', 'To'],
-    saveFailed: ['تعذّر حفظ التغيير. حاول مرة أخرى.', "The change couldn't be saved. Try again."],
+    saveFailed: [lang01('تعذّر حفظ التغيير. حاول مرة أخرى.'), "The change couldn't be saved. Try again."], // Arabic: LANG-01 CA-11
     settingsUnavailable: ['تعذّر تحميل إعدادات الإشعارات.', "Notification settings couldn't load."],
   };
   const gate = copy.slice(copy.indexOf('rows: Object.freeze({'), copy.indexOf('type Gate ='));

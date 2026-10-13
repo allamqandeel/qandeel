@@ -5,7 +5,7 @@
  *   - QANDEEL speaks in the first person and asks for a genuine decision — no fear, no guilt, no implication that the
  *     Product needs permission to work;
  *   - two text acts: «السماح بالإشعارات» / Allow notifications, which hands over to the REAL OS prompt (never drawn or
- *     imitated here), and «مش دلوقتي» / Not now, which keeps everything working; the scrim, Android's Back and the
+ *     imitated here), and «ليس الآن» / Not now, which keeps everything working; the scrim, Android's Back and the
  *     screen reader's escape gesture all mean "Not now";
  *   - every target is at least 44 pt; the sheet follows the non-Analysis appearance (it is never shown in the Analysis).
  *

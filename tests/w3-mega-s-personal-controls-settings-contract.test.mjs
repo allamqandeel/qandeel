@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 
 // W3-MEGA-S — Personal Controls & Settings Integration v1 (E2E-D-11 App Language, D-12 Accessibility parity, D-16 Export
 // My Data, the Personal-world part of D-17 Delete Account, D-02 advanced). Static contract.
@@ -221,7 +222,7 @@ const APPROVED_W3_MEGA_S = [
   ['deleteFinalizing', 'يجري حذف حسابك الآن.', 'Your account is being deleted now.'],
   ['deleteNotCancellable', 'لم يعد إلغاء الحذف ممكنًا.', 'The deletion can no longer be cancelled.'],
   ['deleteBlocked', 'يتعذّر إتمام الحذف حاليًا، ويبقى حسابك كما هو.', "The deletion can't be completed right now. Your account stays as it is."],
-  ['enterPassword', 'أدخل كلمة المرور.', 'Enter your password.'],
+  ['enterPassword', lang01('أدخل كلمة المرور.'), 'Enter your password.'], // Arabic as amended by LANG-01 CA-06 (A-18)
 ];
 const SUPERSEDED_EXPORT_EXPLAIN_AR = 'سنجهّز نسخة من بياناتك، ويمكنك تنزيلها من هنا حين تجهز لمدة محدودة.';
 

@@ -12,6 +12,8 @@
 //     the D4 model-facing lines are stated once;
 //   * nothing frozen was rewritten: I-08A4 still matches its provenance pin and the byte-preserved proofs keep their
 //     bytes; the census keeps its units and status line;
+//   * Work Package B: every implemented unit is in each of its production sources and its original is gone; the
+//     memory-control couplings moved with the copy and recognition only widened;
 //   * Work Package D is not integrated before its independent safety gate: the six in-force replies are unchanged;
 //   * the record, the locators (when present), the backlog kickoff row and the CI registration.
 //
@@ -220,6 +222,44 @@ test('the record, the locators, the authority index and the backlog kickoff row 
     assert.ok(text.includes(AMENDMENT), 'locator links the amendment');
   }
   assert.match(backlog, /^\| `LANG-01 — Arabic Language Authority & Fixed Copy Correction` \| none — no item names it/mu, 'BG-05 kickoff row');
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Work Package B — the fixed copy in production.
+// ---------------------------------------------------------------------------------------------------------------------
+
+/** PC-01: W1A-01 keeps the full stop only in the T-08 stance slot; the analysis-language surface carries none. */
+const surfaceForm = (item, location, text) => (item.id === 'PC-01' && location.path.endsWith('analysis-copy.ts') ? text.replace(/\.$/u, '') : text);
+
+test('Work Package B: every implemented unit is in each of its production sources, and its original is gone', async () => {
+  const implemented = manifest.items.filter((item) => item.disposition === 'IMPLEMENT');
+  assert.equal(implemented.length, 83);
+  for (const item of implemented) {
+    for (const location of item.locations) {
+      const source = await read(location.path);
+      assert.ok(source.includes(surfaceForm(item, location, item.resolvedText)), `${item.id}: ${location.path} carries the approved text`);
+      assert.ok(!source.includes(surfaceForm(item, location, item.original)), `${item.id}: ${location.path} no longer carries the superseded text`);
+    }
+  }
+  const { lang01 } = await import('./lang-01-amended-copy.mjs');
+  for (const item of implemented) assert.equal(lang01(item.original), item.resolvedText, `${item.id}: the re-anchor helper reads the manifest`);
+  assert.equal(lang01('تعذّر إنشاء الحساب بهذه البيانات.'), 'تعذّر إنشاء الحساب بهذه البيانات.', 'an unamended string is itself');
+});
+
+test('Work Package B: the memory-control couplings move with the copy, and recognition only widens', async () => {
+  const copy = await read('apps/api/src/memory/memory-control.copy.ts');
+  assert.ok(copy.includes(".replace(/^وهناك/u, 'هناك')"), 'MEM-03: the first-section form drops the amended leading «و»');
+  assert.ok(!copy.includes('/^وفيه/u'), 'the superseded derivation is gone');
+  const interpreter = await read('apps/api/src/memory/memory-control.interpreter.ts');
+  const set = (name) => new Set([...new RegExp(`const ${name} = new Set\\(\\[([^\\]]*)\\]\\);`, 'u').exec(interpreter)[1].matchAll(/'([^']*)'/gu)].map((match) => match[1]));
+  const other = set('SUBJECT_OTHER');
+  const self = set('SUBJECT_SELF');
+  for (const answer of ['مش عني', 'لا مش عني', 'عن حد تاني', 'حد تاني', 'someone else', 'not me']) assert.ok(other.has(answer), `OTHER still recognises ${answer}`);
+  for (const answer of ['عني', 'انا', 'ليا', 'عن نفسي', 'بتاعي', 'me', 'about me', 'myself']) assert.ok(self.has(answer), `SELF still recognises ${answer}`);
+  for (const answer of ['عن شخص اخر', 'شخص اخر']) assert.ok(other.has(answer), `OTHER recognises the MSA echo ${answer}`);
+  assert.ok(self.has('عني انا'), 'SELF recognises the MSA echo عني انا');
+  assert.equal(other.size, 8, 'OTHER gains exactly the two MSA echoes');
+  assert.equal(self.size, 9, 'SELF gains exactly the one MSA echo');
 });
 
 test('this contract is registered as a root script and runs once in API CI, before the forward-safety gate', () => {

@@ -5,6 +5,7 @@
 // planted defects below. Behaviour is proven elsewhere (API Jest on the production route and the R2 route; real
 // PostgreSQL in database/verify-migration-0152.mjs); this contract keeps the SHAPE from drifting.
 import test from 'node:test';
+import { lang01 } from './lang-01-amended-copy.mjs';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
@@ -131,7 +132,8 @@ const LOCKED = [
   // L-10 (Product Owner, 2026-10-12): the subject labels of otherwise identical clarification options.
   ["aboutYou: { ar: 'عنك إنت', en: 'about you' },", 'the about-you label'],
   ["aboutSomeoneElse: { ar: 'عن حد تاني', en: 'about someone else' },", 'the about-someone-else label'],
-];
+// LANG-01 CA-04 (MEM-15 … MEM-19): the production Arabic is the amended wording; the lines above stay as recorded.
+].map(([text, label]) => [text.replace(/ar: '([^']*)'/gu, (_, ar) => `ar: '${lang01(ar)}'`), label]);
 function copyViolations(w) {
   const out = [];
   for (const [text, label] of LOCKED) if (!w.copy.includes(text)) out.push(`${label} is not the locked copy`);
@@ -254,8 +256,8 @@ const planted = [
   ['MF-1 claims an unattributed Memory was asked for', 'evidenceViolations', (w) => ({ ...w, modelRouter: w.modelRouter.replace('which neither shows that the user asked to store it nor makes it a personal fact about the user', 'which the user asked to store') })],
   ['a runtime path creates a Hypothesis directly', 'hypothesisCreationViolations', (w) => ({ ...w, runtime: { ...w.runtime, [conversationRepositoryPath]: `${w.runtime[conversationRepositoryPath]}\nawait this.serviceApi.rpc('server_create_hypothesis_v1',{});` } })],
   ['a runtime path starts calling the background creation wrapper', 'hypothesisCreationViolations', (w) => ({ ...w, runtime: { ...w.runtime, 'apps/api/src/background-intelligence/background-intelligence-enrichment.service.ts': `${w.enrichment}\nawait this.data.createSystemHypothesis(context, input);` } })],
-  ['the locked subject question drifts', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace('المعلومة دي عنك إنت، ولا عن حد تاني؟', 'ده عنك ولا عن حد تاني؟') })],
-  ['the CQ-1 heading keeps «كمان»', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace("ar: 'فيه حاجات حكيتلي عنها تخص ناس تانية:'", "ar: 'فيه كمان حاجات حكيتلي عنها تخص ناس تانية:'") })],
+  ['the locked subject question drifts', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace(lang01('المعلومة دي عنك إنت، ولا عن حد تاني؟'), 'ده عنك ولا عن حد تاني؟') })],
+  ['the CQ-1 heading keeps «أيضًا» (LANG-01 CA-04)', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace(`ar: '${lang01('فيه حاجات حكيتلي عنها تخص ناس تانية:')}'`, "ar: 'هناك أيضًا أشياء أخبرتني بها عن أشخاص آخرين:'") })],
   ...['FORGOTTEN', 'DISABLED'].map((disposition) => [`v2 retires ${disposition} copies whatever their subject`, 'subjectIsolationViolations', (w) => {
     const v2 = sqlFunction(w.migration, 'server_finalize_memory_control_turn_v2');
     const loop = disposalLoop(v2, disposition);
@@ -263,7 +265,7 @@ const planted = [
   }]),
   ['the plan folds a SELF and an OTHER copy into one candidate', 'subjectIsolationViolations', (w) => ({ ...w, control: w.control.replace(SUBJECT_KEYED, 'const key = words;') })],
   ['an UNATTRIBUTED copy is offered in place of the attributed fact', 'subjectIsolationViolations', (w) => ({ ...w, control: w.control.replace('if (!memory.subject && attributed.has(words)) return false;', '') })],
-  ['the about-you label drifts', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace("aboutYou: { ar: 'عنك إنت'", "aboutYou: { ar: 'عنك'") })],
+  ['the about-you label drifts', 'copyViolations', (w) => ({ ...w, copy: w.copy.replace(`aboutYou: { ar: '${lang01('عنك إنت')}'`, "aboutYou: { ar: 'عنك'") })],
   ['an UNATTRIBUTED option is labelled', 'decisionViolations', (w) => ({ ...w, copy: w.copy.replace(LABEL_RULE, 'return (subject !== undefined)') })],
   ['the plan stops handing subjects to the copy', 'decisionViolations', (w) => ({ ...w, control: w.control.replace(OPTION_SUBJECTS, 'clarificationReply(language, options.map(({ content }) => content), oneAtATime)') })],
   ['the plan resolves an UNATTRIBUTED correction by inference', 'decisionViolations', (w) => ({ ...w, control: w.control.replace(PLAN_ASKS, 'if (false) {') })],

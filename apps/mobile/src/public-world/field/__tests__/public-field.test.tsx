@@ -985,7 +985,7 @@ describe('S5-03B — isolation and the Product Copy Gate', () => {
     expect(publicFieldCopy('ar').empty).toBe('لا يوجد شيء في العالم العام بعد.');
     expect(publicFieldCopy('en').fieldLabel).toBe("Public World's field of meaning");
     expect(publicFieldCopy('en').empty).toBe('Nothing is in Public World yet.');
-    expect(publicFieldCopy('ar').searchLabel).toBe('ابحث عن تجربة أو شعور أو معنى');
+    expect(publicFieldCopy('ar').searchLabel).toBe('البحث عن تجربة أو شعور أو معنى');
     expect(publicFieldCopy('ar').placeReady).toBe('تم تحديد مكانها.');
     expect(publicFieldCopy('en').searchLabel).toBe('Search for an experience, feeling, or meaning');
     expect(publicFieldCopy('en').placeReady).toBe('Its place has been set.');

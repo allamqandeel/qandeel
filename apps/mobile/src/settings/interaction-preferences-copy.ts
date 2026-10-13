@@ -45,8 +45,10 @@ export const INTERACTION_PREFERENCES_COPY_GATE = Object.freeze({
     replace: 'استبدال التفضيل الحالي',
     saved: 'تم حفظ التفضيل.',
     reset: 'تمت إعادة التفضيل إلى تلقائي.',
-    notSaved: 'لم يُحفظ التغيير. حاول مرة أخرى.',
-    loadFailed: 'تعذّر تحميل تفضيلاتك. حاول مرة أخرى.',
+    // Arabic amended by LANG-01 CA-10 (IP-01).
+    notSaved: 'لم يُحفظ التغيير. يمكنك المحاولة مرة أخرى.',
+    // Arabic amended by LANG-01 CA-10 (IP-02).
+    loadFailed: 'تعذّر تحميل تفضيلاتك. يمكنك المحاولة مرة أخرى.',
     noCandidates: 'لا توجد تفضيلات سابقة مؤهلة للمراجعة.',
   }),
   en: Object.freeze<InteractionPreferencesCopy>({

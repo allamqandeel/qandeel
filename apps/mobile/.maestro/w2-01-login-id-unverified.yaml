@@ -47,7 +47,7 @@ appId: com.qandeel.mobile
     timeout: 5000
 # The approved generic instruction, in either language, and no address anywhere on the step.
 - assertVisible:
-    text: "(Enter the verification code sent to the email linked to your account\\.|أدخل رمز التأكيد الذي أُرسل إلى البريد الإلكتروني المرتبط بحسابك\\.)"
+    text: "(Enter the verification code sent to the email linked to your account\\.|يُرجى إدخال رمز التأكيد المُرسل إلى البريد الإلكتروني المرتبط بحسابك\\.)"
 - assertNotVisible:
     text: ".*@.*"
 - assertNotVisible:
@@ -98,7 +98,7 @@ appId: com.qandeel.mobile
 # fewer-than-six sentence) — either way the step answered, and named no address.
 - extendedWaitUntil:
     visible:
-      text: ".*(We couldn't verify your email right now\\. Try again\\.|تعذّر تأكيد البريد الإلكتروني الآن\\. حاول مرة أخرى\\.|The verification code is incorrect\\.|رمز التأكيد غير صحيح\\.).*"
+      text: ".*(We couldn't verify your email right now\\. Try again\\.|تعذّر تأكيد البريد الإلكتروني الآن\\. يمكنك المحاولة مرة أخرى\\.|The verification code is incorrect\\.|رمز التأكيد غير صحيح\\.).*"
     timeout: 30000
 - waitForAnimationToEnd:
     timeout: 5000

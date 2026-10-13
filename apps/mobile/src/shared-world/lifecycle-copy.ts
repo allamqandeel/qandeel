@@ -147,32 +147,32 @@ const AR_OWN = {
   addMemberExplain: 'تحتاج إضافة عضو جديد موافقة جميع الأعضاء الحاليين، ثم قبول الشخص نفسه. لن تظهر هويته لباقي الأعضاء قبل أن يقبل.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — P1 §5.2; Product Owner decision 2026-10-05
   sendRequest: 'إرسال الطلب', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   memberRequestSent: 'إذا كان هذا المعرّف صحيحًا، سيُطلب من الأعضاء الموافقة.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — names nobody (the S4-01 invitationSent pattern)
-  memberRequestAdd: '{0} يقترح انضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — {0}: the proposer's own Name; nothing of the World before acceptance
-  memberRequestRejoin: '{0} يقترح عودتك إلى عالم مشترك كنت فيه، وقد وافق عليها كل أعضائه.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
+  memberRequestAdd: 'اقتراح من {0} بانضمامك إلى عالم مشترك، وقد وافق عليه كل أعضائه.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — {0}: the proposer's own Name; nothing of the World before acceptance; Arabic amended by LANG-01 CA-13 (SW-05)
+  memberRequestRejoin: 'اقتراح من {0} بعودتك إلى عالم مشترك كنت فيه، وقد وافق عليه كل أعضائه.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05); Arabic amended by LANG-01 CA-13 (SW-06)
   proposeRemoval: 'اقتراح إزالة عضو', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  removeExplain: 'تحتاج إزالة {0} موافقة جميع الأعضاء الآخرين. لا يحتاج {0} إلى الموافقة، ويبقى كلامه السابق باسمه.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — CW2-03 §25
+  removeExplain: 'تحتاج إزالة {0} موافقة جميع الأعضاء الآخرين، ولا تُطلب موافقة العضو المقترح إزالته. ويبقى الكلام السابق في هذا العالم باسم صاحبه.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — CW2-03 §25; Arabic amended by LANG-01 CA-13 (SW-07)
   confirmRemoval: 'اقتراح إزالة العضو', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  shareExplain: 'الانضمام إلى العالم لا يفتح كل تاريخه السابق تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة معه، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — CW2-03 §17–§21
+  shareExplain: 'الانضمام إلى العالم لا يفتح كل تاريخه السابق تلقائيًا. يمكنك اقتراح مشاركة رسائل سابقة مع هذا العضو، ولا تتم مشاركة أي رسالة إلا بعد اكتمال الموافقات المطلوبة عليها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — CW2-03 §17–§21; Arabic amended by LANG-01 CA-13 (SW-08)
   shareWith: 'مشاركة مع {0}', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   noCandidates: 'لا توجد رسائل سابقة يمكن مشاركتها مع {0}.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  previewHeading: 'سيرى {0} هذه الرسائل فقط:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the exact preview (CW2-03 §21)
+  previewHeading: 'ستظهر هذه الرسائل فقط لـ{0}:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the exact preview (CW2-03 §21); Arabic amended by LANG-01 CA-13 (SW-09)
   proposeShare: 'اقتراح المشاركة', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   shareRequestsHeading: 'طلبات مشاركة قيد الموافقة', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
-  shareRequest: 'اقتراح بأن يرى {0} الرسائل السابقة التالية:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — only the reader's own words are shown
-  formerShareRequest: 'اقتراح بأن يرى عضو في عالم مشترك لم تعد عضوًا فيه كلامك السابق هذا. موافقتك لا تعيدك إلى العالم:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — material authority survives membership (CW2-03 §24); no grantee, no World state
+  shareRequest: 'اقتراح بمشاركة الرسائل السابقة التالية مع {0}:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — only the reader's own words are shown; Arabic amended by LANG-01 CA-13 (SW-10)
+  formerShareRequest: 'اقتراح بإتاحة كلامك السابق هذا لعضو في عالم مشترك انتهت عضويتك فيه. موافقتك لا تعيدك إلى العالم:', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — material authority survives membership (CW2-03 §24); no grantee, no World state; Arabic amended by LANG-01 CA-13 (SW-11)
   granted: 'تمت المشاركة.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   historyNotOpen: 'مشاركة الرسائل السابقة غير متاحة بعد.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — the history scope is closed
   leave: 'مغادرة هذا العالم', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
-  leaveExplain: 'ستغادر فورًا، ولن تتمكن من رؤية هذا العالم وأنت خارجه. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — the consequence before the act (CW2-03 §23–§24)
+  leaveExplain: 'المغادرة فورية، ولن يظهر لك هذا العالم ما دمت خارجه. يبقى كلامك السابق فيه، ويمكنك حذفه لاحقًا من الإعدادات ← الخصوصية والبيانات.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — the consequence before the act (CW2-03 §23–§24); Arabic amended by LANG-01 CA-13 (SW-12)
   leaveConfirm: 'مغادرة', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   left: 'غادرت العالم.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endWorld: 'إنهاء هذا العالم', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endExplain: 'ينتهي العالم فقط إذا وافق جميع الأعضاء الحاليين. بعدها يصبح للقراءة فقط، ويظل كل شخص يرى فقط ما كان متاحًا له.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — archival closure (CW2-03 §31–§33)
   endConfirm: 'اقتراح الإنهاء', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05)
   endedNotice: 'انتهى هذا العالم. يمكنك قراءة ما كان متاحًا لك فقط.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — read-only, entitlement only
-  formerRow: 'كلامك في عوالم مشتركة لم تعد عضوًا فيها', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — Privacy & Data row (E2E-G-18)
+  formerRow: 'كلامك في عوالم مشتركة انتهت عضويتك فيها', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06) — Privacy & Data row (E2E-G-18); Arabic amended by LANG-01 CA-13 (SW-13)
   formerExplain: 'هذا كلامك أنت فقط. لا يظهر هنا شيء آخر من تلك العوالم.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05) — no World browsing (CW2-03 §24)
-  formerEmpty: 'لا يوجد لك كلام في عوالم مشتركة لم تعد عضوًا فيها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06)
+  formerEmpty: 'لا يوجد لك كلام في عوالم مشتركة انتهت عضويتك فيها.', // APPROVED — S4-03 Product Copy Gate (Product Owner, 2026-10-05; review correction 2026-10-06); Arabic amended by LANG-01 CA-13 (SW-14)
 } as const;
 
 const EN_OWN = {
