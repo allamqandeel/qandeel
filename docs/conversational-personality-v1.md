@@ -4,6 +4,12 @@
 **Governing principle (Product Owner, P1–P9, 2026-10-10):** **ONE QANDEEL PERSONALITY — ADAPTIVE NATURAL EXPRESSION.**
 **Authority:** [CI-01 C0 Interaction Style annex](e2e/QANDEEL_CI_01_C0_INTERACTION_STYLE_ANNEX_v1.md) (P1–P9 approved with controlled amendments) · [C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) · frozen records in §1
 **Companion:** [QANDEEL Intelligence Evidence Baseline v1](intelligence-evidence-baseline-v1.md) · **Static contract:** `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs`
+**Post-merge note (GOV-REC-01, 2026-10-12; the banner above is kept as written at C1-A):** CI-01 merged through PR #325 as `44a440cfbb2c05421ed36639a5cf67ee7a8d25e5`. This record stays a design record, and its texts stay OPEN COPY here. The personality it designs was later approved and implemented by its own tasks:
+- ACE-01 (PR #332, `141a3190deb02bc6695d2ace05da275e623a2754`), for Personal replies, with the wording approved in ACE-01's Product Copy Gate (Gate A);
+- ACE-SP-01 (PR #333, `84dd486c905cd3512bb206e48a2d7a63aa1c2d9b`), in its world-neutral form, for Shared / Public replies, under its controlled amendment;
+- IP-IMP-01 (PR #331, `424cd0231429e5280a0e70be25c2f83437e117c8`), for the durable interaction preferences.
+
+The production wording is the one recorded in those records, not the drafts here. Real-model quality remains Stage 8A's (`QAN-BL-IP-02`, `QAN-BL-ACE-02`).
 
 > **Every conversational text in this record — every directive wording, every Arabic or English line, every scenario — is OPEN COPY until the Product Copy Gate. Nothing here is frozen copy.**
 >

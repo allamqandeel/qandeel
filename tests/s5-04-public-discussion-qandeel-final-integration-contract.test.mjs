@@ -170,7 +170,12 @@ test('9 — governance: the record, the backlog and the locators tell the same S
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /\| `QAN-BL-VIS-01` \| Heavy-History \/ Long-Term Living Analysis World Density \+ LOD Stress Proof \| `LA-SCALE-01 — Living Analysis Heavy-History \/ Dense-World Scale & LOD Proof` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
   assert.match(backlog, /\| `QAN-BL-CW-04` \| Public Lightweight Reactions Runtime \(PG-07\) \| `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` \| `MEDIUM` \| `DEFERRED — OWNED` \|/u);
-  assert.match(backlog, /\| `QAN-BL-CW-03` \|[^\n]*`DEFERRED — OWNED` \|/u, 'SHARED-VIS-01 is not started here');
+  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only; tightened by its review R1): SHARED-VIS-01 (PR #321) later
+  // delivered QAN-BL-CW-03 and GOV-REC-01 tombstones it retroactively (from the merge of PR #334). S5-04 did not start it:
+  // the ONE row is `CLOSED — TOMBSTONE`, and the tombstone names SHARED-VIS-01.
+  assert.equal((backlog.match(/^\| `QAN-BL-CW-03` \|/gmu) ?? []).length, 1);
+  assert.match(backlog, /^\| `QAN-BL-CW-03` \|[^\n]*\| `CLOSED — TOMBSTONE` \|$/mu, 'SHARED-VIS-01 is not started here');
+  assert.match(backlog, /### `QAN-BL-CW-03` — [^\n]*\n\n- \*\*Closing task:\*\* `SHARED-VIS-01 — /u, 'closed by SHARED-VIS-01, not by S5-04');
   // The root locators are asserted wherever they exist: always in the repository, never in the forward-safety mirror,
   // which carries only the source trees.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {

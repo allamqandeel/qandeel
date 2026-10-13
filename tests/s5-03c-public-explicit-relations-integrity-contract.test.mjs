@@ -184,7 +184,12 @@ test('8 — governance: the record, the backlog and the locators tell the same t
   assert.match(backlog, /\| `S5-03C — Public Explicit Relations \+ Integrity Closure` \| none — no item names it;/u);
   // RE-ANCHORED by S5-04 (validation only): the Product Owner re-owned QAN-BL-VIS-01 to LA-SCALE-01 (S5-04 D6).
   assert.match(backlog, /\| `QAN-BL-VIS-01` \| [^\n]*\| `(OPEN — UNASSIGNED|DEFERRED — OWNED)` \|/u);
-  assert.match(backlog, /\| `QAN-BL-CW-03` \| [^\n]*\| `DEFERRED — OWNED` \|/u);
+  // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only; tightened by its review R1): SHARED-VIS-01 (PR #321)
+  // delivered QAN-BL-CW-03 and GOV-REC-01 tombstones it retroactively (from the merge of PR #334). S5-03C neither started
+  // nor closed it: the ONE row is `CLOSED — TOMBSTONE`, and the tombstone names SHARED-VIS-01.
+  assert.equal((backlog.match(/^\| `QAN-BL-CW-03` \|/gmu) ?? []).length, 1);
+  assert.match(backlog, /^\| `QAN-BL-CW-03` \| [^\n]*\| `CLOSED — TOMBSTONE` \|$/mu);
+  assert.match(backlog, /### `QAN-BL-CW-03` — [^\n]*\n\n- \*\*Closing task:\*\* `SHARED-VIS-01 — /u, 'closed by SHARED-VIS-01, not by S5-03C');
   assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]*\| `OPEN — UNASSIGNED` \|/u);
   // The locators are not mirrored by the forward-safety gate; read them only where they exist.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
@@ -201,7 +206,10 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     const map = read('QANDEEL_PROJECT_MAP.md');
     // RE-ANCHORED by S5-04 (validation only): S5-03C merged; S5-04 is the current (closed, unmerged) task.
     // RE-ANCHORED by SHARED-VIS-01 (validation only): after Stage 5, SHARED-VIS-01 is the current task.
-    assert.match(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0(3C — Public Explicit Relations \+ Integrity Closure|4 — )|SHARED-VIS-01 — )/u);
+    // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only; tightened by its review R1): S5-03C, S5-04 and SHARED-VIS-01
+    // have merged; the governance task GOV-REC-01 is the current task, and no merged task is named current again.
+    assert.match(map, /^> \*\*CURRENT TASK: GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0(3C|4)|SHARED-VIS-01)/u, 'no merged task is the current task');
     assert.match(map, /\*\*NEXT \/ NOT STARTED\*\*|S5-04[^\n]*CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION/u);
   }
   const s503b = read('docs/e2e/QANDEEL_S5_03B_PUBLIC_SEMANTIC_FIELD_VIEWER_RUNTIME_IMPLEMENTATION_RECORD_v1.md');

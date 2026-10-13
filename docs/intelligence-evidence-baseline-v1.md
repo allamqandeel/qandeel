@@ -1,6 +1,7 @@
 # QANDEEL — Intelligence Evidence Baseline v1
 
-**Status:** `CANONICAL BASELINE RECORD — C1-A AND C1-B DELIVERED · C1 CLOSING CHANGE DELIVERED · DRAFT PR #325 OPEN · API / MOBILE CI VERIFIED GREEN ON a99a1b2 · CORRECTED HEAD PENDING EXACT-HEAD VALIDATION · NOT MERGED` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` · **Date:** 2026-10-10
+**Status:** `CANONICAL BASELINE RECORD — CI-01 DONE / MERGED THROUGH PR #325 AS 44a440cfbb2c05421ed36639a5cf67ee7a8d25e5 (2026-10-10) · CENSUS ROWS ARE HISTORICAL AT THEIR CENSUS VERSION · POST-MERGE NOTES IN §2.3 (GOV-REC-01, 2026-10-12) · NO MEASUREMENT CHANGED` · **Task:** `CI-01 — Shared Intelligence Learning Evidence & Baseline` · **Date:** 2026-10-10
+**Status at the C1 closing change (historical, kept verbatim):** `CANONICAL BASELINE RECORD — C1-A AND C1-B DELIVERED · C1 CLOSING CHANGE DELIVERED · DRAFT PR #325 OPEN · API / MOBILE CI VERIFIED GREEN ON a99a1b2 · CORRECTED HEAD PENDING EXACT-HEAD VALIDATION · NOT MERGED`
 **Baseline SHA:** `main` `6a5fa42186c880d8c8cb2eee88f7b2b97cf44b24` (merge of PR #324; migrations `0001`–`0150`; `0150` NOT DEPLOYED) · **Census version:** `census-v2 @ 272a567` (INTEL-TM-01 updated row C-16 on its implementation SHA; PR open, not merged; `census-v1 @ 6a5fa42` described the CI-01 baseline)
 **Authority:** [CI-01 C0 Decision Report](e2e/QANDEEL_CI_01_C0_DECISION_REPORT_v1.md) (D1–D10, Product Owner 2026-10-10) · [C1 Task Contract](e2e/QANDEEL_CI_01_C1_TASK_CONTRACT_DRAFT_v1.md) (approved with mandatory amendments, 2026-10-10) · **Static contract:** `tests/ci-01-intelligence-evidence-baseline-contract.test.mjs`
 **Companion:** [QANDEEL Conversational Personality & Interaction Adaptation v1](conversational-personality-v1.md)
@@ -22,12 +23,16 @@
 | D6 | PG-02 and its neighbours are bounded C2 slices after C1; evidence loss ≠ hypothesis false; re-evaluation without inventing Confidence | §6, `QAN-BL-INTEL-01` |
 | D7 | only structural, synthetic measurements before a real LLM test | §3, §7 |
 | D8 / D9 | no Shared, cross-user, aggregate, training or fine-tuning path; synthetic evaluation permitted | §4 (L1, L2), §7 |
-| D10 | the stale SHARED-VIS-01 banners are an independent documentary gap, not repaired here | §8 |
+| D10 | the stale SHARED-VIS-01 banners are an independent documentary gap, not repaired here *(repaired later by GOV-REC-01, 2026-10-12, under `QAN-BL-GOV-01`)* | §8 |
 | Mandatory Correction 3 | no defect pinning: §2 is a baseline, not a contract | preamble, §2, §9 |
 
 ---
 
 ## 2. Capability Census (`census-v1 @ 6a5fa42`) — current state, cited; **not a rule**
+
+> **Read with §2.3 (GOV-REC-01, 2026-10-12).** "Current state" here means the state at the census version: `census-v1 @
+> 6a5fa42`, with C-16 updated at `census-v2 @ 272a567`. Rows C-22, C-23, C-30 and C-31 are marked historical. What changed
+> on `main` after ACE-01 and ACE-SP-01 is recorded in §2.3 as a later note. No row below was re-measured or rewritten.
 
 Legend: **ACTIVE** = implemented and runs on `main` without a provider; **PROVIDER-GATED** = implemented, needs a key or the Stage-8A binding; **DECIDED-NOT-IMPL** = frozen vocabulary / contract with no producer; **DEFERRED** = explicitly deferred, owner shown; **ABSENT** = nothing exists and nothing is decided.
 
@@ -54,16 +59,16 @@ Legend: **ACTIVE** = implemented and runs on `main` without a provider; **PROVID
 | C-19 | HIM trends / calibration evaluations | infrastructure exists; `HimTrendService` not registered; `comparisonStatus: RECORDED_NOT_EVALUATED` | DECIDED-NOT-IMPL / DEFERRED | QHIA freeze; `apps/api/src/human-model/him-calculation.types.ts` |
 | C-20 | Model Router (conversational) | Claude + OpenAI adapters, FAST / DEEP deterministic routing (no LLM classifier), `MODEL_PROVIDER` empty, throws on first generate; no fallback / ranking | PROVIDER-GATED (Stage 8A) | `apps/api/src/model-router/model-router.module.ts`; `.env.example` |
 | C-21 | Structured ports | `PublicSemanticInterpreter`, `PublicSpatialPlacer`, `SharedSemanticInterpreter`, `SharedSpatialPlacer` refuse; never a fallback | PROVIDER-GATED (Stage 8A) | `apps/api/src/public-world/public-semantic-interpreter.ts`; `apps/api/src/shared-world/shared-semantic-interpreter.ts` |
-| C-22 | Shared QANDEEL reply context | Shared-native history only through EffectiveContext; private lane fail-closed and unused; "Personal Memory, Understanding, HIM, hypotheses and conversation never enter a Shared reply" | ACTIVE (bounded) | S4-02 record §7.1; backlog `QAN-BL-CW-02` |
-| C-23 | Public QANDEEL reply context | served version, reviewed meaning, package items, last 40 posts, last 20 responses, related meanings; no author, Personal, Shared, memory, human-model or hypothesis material | ACTIVE behind a fail-closed entitlement seam | S5-04 record §8 |
+| C-22 | Shared QANDEEL reply context | Shared-native history only through EffectiveContext; private lane fail-closed and unused; "Personal Memory, Understanding, HIM, hypotheses and conversation never enter a Shared reply" | ACTIVE (bounded) — *historical at `census-v1 @ 6a5fa42`; see §2.3* | S4-02 record §7.1; backlog `QAN-BL-CW-02` |
+| C-23 | Public QANDEEL reply context | served version, reviewed meaning, package items, last 40 posts, last 20 responses, related meanings; no author, Personal, Shared, memory, human-model or hypothesis material | ACTIVE behind a fail-closed entitlement seam — *historical at `census-v1 @ 6a5fa42`; see §2.3* | S5-04 record §8 |
 | C-24 | Public semantic review | publisher accepts or corrects QANDEEL's proposed meaning before publication; `semantic_reviews.decision IN (ACCEPTED, CORRECTED)` per version; no code reads it as a feedback or quality signal; lineage-based F05 erasure covers it | ACTIVE (interpreter PROVIDER-GATED) | `0144`; S5-03A record §13; `0143` |
 | C-25 | AI usage / cost ledger | per call: account, session, turn, provider, model, one of 8 feature families, FAST / DEEP path, token kinds; no prompt / response / transcript, no latency, no quality field; no Price Card registered; Credit Policy DRAFT-only | ACTIVE | `0135` |
 | C-26 | Brain bake-off harness | 24 synthetic conversations, blinded 1–5 rubric (9 items), paid run gated; never run; `validateEvaluationSuite` requires 20–30 cases per suite | IMPLEMENTED, NOT RUN | [Brain bake-off harness](brain-bakeoff-harness.md); `apps/api/src/brain-eval/brain-eval.validation.ts` |
 | C-27 | Telemetry / outbox | closed label registries; anything else dropped; outbox rows carry ids only, `contains_content = false` by CHECK | ACTIVE | `apps/api/src/runtime-events/runtime-event.types.ts`; `0019_runtime_event_outbox_publisher_v1.sql` |
 | C-28 | Export My Data | memory in every state (labelled "forgotten" / "not relied on" / "replaced"), Understanding items + disagreements; excludes scores, evidence refs, HIM, command records | ACTIVE (`QAN-BL-PRIV-01 / 02` open) | `0130` |
 | C-29 | Personal erasure | physical delete of memory, hypotheses, confidence, contests, HIM through 16 guards; `BLOCKED` by Connected Worlds (`QAN-BL-ACCT-01`) | ACTIVE for Personal | `0130` |
-| C-30 | Conversational language signal | the conversational request carries `locale: 'und'` always; dialect is left to the model under the guidance line "when reasonably inferable" | current state (a C2 slice will replace it; **not pinned**) | `apps/api/src/conversation/conversation-orchestrator.service.ts`; `public-qandeel-model-input.ts`; `shared-conversation-model-input.ts` |
-| C-31 | Behavioural guidance text | `BehavioralResponsePolicyService.buildTextGuidance()` returns one static string (8 lines) rendered by `composeServerGuidance` | ACTIVE (policy text, not a runtime; **not pinned**) | `apps/api/src/conversation/behavioral-response-policy.service.ts`; `apps/api/src/model-router/model-router.types.ts` |
+| C-30 | Conversational language signal | the conversational request carries `locale: 'und'` always; dialect is left to the model under the guidance line "when reasonably inferable" | current state (a C2 slice will replace it; **not pinned**) — *historical at `census-v1 @ 6a5fa42`; replaced for Personal turns by ACE-01, see §2.3* | `apps/api/src/conversation/conversation-orchestrator.service.ts`; `public-qandeel-model-input.ts`; `shared-conversation-model-input.ts` |
+| C-31 | Behavioural guidance text | `BehavioralResponsePolicyService.buildTextGuidance()` returns one static string (8 lines) rendered by `composeServerGuidance` | ACTIVE (policy text, not a runtime; **not pinned**) — *historical at `census-v1 @ 6a5fa42`; see §2.3* | `apps/api/src/conversation/behavioral-response-policy.service.ts`; `apps/api/src/model-router/model-router.types.ts` |
 | C-32 | Any cross-user, aggregate, training, fine-tuning, reward or outcome-feedback mechanism | none; every "cross-user" mention in code or docs is a prohibition | **ABSENT** (and forbidden without consent by L1 / L2) | comment-stripped sweep of `apps/api/src` for fine-tuning / training-job / reward-model identifiers: 0 hits at the baseline |
 
 ### 2.1 Synthetic reality findings carried from C0 (2026-10-09, `main` `5973123`; synthetic accounts only; superseded as evidence by the C1-B re-run in §2.2, kept as history)
@@ -104,6 +109,26 @@ Every scenario reproduced the C0 observation of 2026-10-09; nothing in §2.1 div
 Known limits of this measurement: the hypothesis providers and the conversational router are doubles, so nothing here
 measures what a real model would do (D7); the fixtures are fixed synthetic Egyptian Arabic and few; the counts are
 structural yields of deterministic code, not a capability pass.
+
+### 2.3 Post-merge notes (GOV-REC-01, 2026-10-12) — not a re-measurement
+
+These notes record what changed on `main` after the census. They are read from the merged records.
+- They measure nothing, change no row above and attribute no test or result to CI-01.
+- They do not bump the census version. Every row above stays the truth at `census-v1 @ 6a5fa42` (C-16 at
+  `census-v2 @ 272a567`), and every §2.1 / §2.2 figure stays tied to its own SHA.
+- A task that re-measures a row updates that row and bumps the version (§9).
+
+| Row | At the census (kept above) | On `main` after IP-IMP-01 (PR #331, `424cd023`), ACE-01 (PR #332, `141a3190`) and ACE-SP-01 (PR #333, `84dd486c`) | Source |
+|---|---|---|---|
+| C-22 Shared QANDEEL reply context | Shared-native history only; no Personal material | The context is unchanged: still no Personal Memory, Understanding, HIM, hypothesis, conversation or preference. The model-facing guidance now carries, after Text v1 and the unchanged Shared frame, the world-neutral QANDEEL personality core; on a Safety `GUIDED` turn only, it adds the approved humour-suspension line (the ACE-SP-01 controlled amendment). `locale` stays `und` | [ACE-SP-01 record](e2e/QANDEEL_ACE_SP_01_SHARED_PUBLIC_PERSONALITY_CORE_IMPLEMENTATION_RECORD_v1.md) §3, §5, §6 |
+| C-23 Public QANDEEL reply context | Public-only context | The same: the context is unchanged; the guidance adds the world-neutral core, plus the `GUIDED` line on those turns; `locale` stays `und` | ACE-SP-01 record §3, §5, §6 |
+| C-30 Conversational language signal | `locale: 'und'` always | **Personal turns:** `locale` is computed per turn by ACE-01's pure compiler — an explicit whole-message language request first, then the durable reply language (IP-IMP-01), then a conservative script reading. The result is `ar`, `en` or `und`: a language, never a dialect, and no provider adapter renders it. **Shared and Public:** still `und` | [ACE-01 record](e2e/QANDEEL_ACE_01_ADAPTIVE_CONVERSATIONAL_EXPRESSION_IMPLEMENTATION_RECORD_v1.md) §2 (DD-4), §4 |
+| C-31 Behavioural guidance text | one static string (8 lines) | **Personal:** Text v2 — the frozen Text v1 plus the approved eight-paragraph personality core (ACE-01). It is followed by the compiled interaction-preference block when the owner has one (IP-IMP-01), and by one Safety humour-suspension line on every `GUIDED` turn. **Shared / Public:** Text v1 + the World frame + the world-neutral core (ACE-SP-01). Text v1 itself is byte-identical. It is still policy text rendered through `composeServerGuidance`, not a runtime | ACE-01 record §2 (DD-1), §3; [IP-IMP-01 record](e2e/QANDEEL_IP_IMP_01_INTERACTION_PREFERENCES_IMPLEMENTATION_RECORD_v1.md) §2 (DD-9, DD-10); ACE-SP-01 record §3 |
+
+Lifecycle notes on other rows, with no content change:
+- C-16: INTEL-TM-01 merged through PR #326 (`995d5ae9bf2530ac8e655b870526e0976be7cbf4`).
+- Rows that MEM-AR-01 (PRs #328–#330) and IP-IMP-01 changed — Memory capture, recall and correction, and the export
+  section — are not annotated here. Their records state what changed; re-measuring them is a separate task.
 
 ---
 
@@ -184,7 +209,7 @@ Each system's own approved deletion and history behaviour governs. **CI-01 inven
 |---|---|---|---|
 | **PG-02** — Personal Evidence Invalidation → Derived Understanding Re-evaluation | **`QAN-BL-INTEL-01`** → `INTEL-TM-01` (`HIGH`, `CLOSED — TOMBSTONE` after PR #326 / `995d5ae9bf2530ac8e655b870526e0976be7cbf4`, migration `0151` merged, not deployed) | existing `0006`, `0035`, `0036`, `0128`; INTEL-TM-01 CC-1 … CC-4 | implemented and merged; historical C1 defect measurements retained |
 | General Question Bind-Time Version / Lifecycle R3-G | `QAN-BL-QIR-01` → `QIR-006-R1` (`MEDIUM`, `DEFERRED — OWNED`) | separate from `0151` reliance race; requires QIR-006 commit-point policy + concurrency proof | admitted at INTEL-TM-01 post-merge closure; not implementation-authorized |
-| Memory correction & Arabic acquisition (duplicate supersession, natural reversal, feminine form, Unicode `\b`, third-party statements) | no backlog item; proposed C2 slice 2 of the C1 contract §12 | a Product decision on the subject marker (own vs other); `0128` command path; L1 | documented; proposed slice; no admission (BG-06: not yet designated) |
+| Memory correction & Arabic acquisition (duplicate supersession, natural reversal, feminine form, Unicode `\b`, third-party statements) | no backlog item; proposed C2 slice 2 of the C1 contract §12 *(later delivered by MEM-AR-01, PRs #328–#330, which admitted `QAN-BL-INTEL-03` and `QAN-BL-PRIV-03` — note by GOV-REC-01, 2026-10-12)* | a Product decision on the subject marker (own vs other); `0128` command path; L1 | documented; proposed slice; no admission (BG-06: not yet designated) |
 | `PG-04` — Selective Understanding Sharing | none (P1 §11.7 names the gap) | Shared Standing Context (`QAN-BL-CW-02`) | documented only |
 | Runtime-backed Conversational Relevance | `QAN-BL-CTX-01` → `QAN-CTX-01` | — | referenced; unchanged |
 | Shared Standing Context Product & private-source integration | `QAN-BL-CW-02` → `SHARED-CTX-01` | the `0083` grant; Product Definition divergence noted in C0 §11.4 | referenced; unchanged |
@@ -192,7 +217,7 @@ Each system's own approved deletion and history behaviour governs. **CI-01 inven
 | Export completeness (agreement facts; preferences and mutes) | `QAN-BL-PRIV-01`, `QAN-BL-PRIV-02` → `PRIV-EXPORT-01` | — | referenced; unchanged |
 | Auto SUPPORTED / WEAK / REJECTED / RETIRED; evidence weights | deferred, no owner (lifecycle doc §8–§9) | calibrated Confidence | documented only |
 | ABS Part 9 experiment framework / outcome attribution / learning feedback | none (`docs/reasoning-recommendation-integration-v1.md`) | L2 consent design; Stage 8A | documented only; **forbidden without L2 consent** |
-| Conversational language / dialect signal (`locale: 'und'`) | proposed C2 slice 4 (*Adaptive Conversational Expression*) | the companion record; QIR-004 byte accounting | documented; not pinned |
+| Conversational language / dialect signal (`locale: 'und'`) | proposed C2 slice 4 (*Adaptive Conversational Expression*) *(later delivered by ACE-01, PR #332, for Personal turns; see §2.3 — note by GOV-REC-01, 2026-10-12)* | the companion record; QIR-004 byte accounting | documented; not pinned |
 | Retention and reuse of the `0029` / `0033` ledger content after forget / do-not-rely | **`QAN-BL-INTEL-02`** → owner `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` (admitted by the closing change; owner name PO-APPROVED 2026-10-10; `HIGH`, `VALIDATION — OPEN`) | a Product decision on provenance, retention and deletion of derived copies; `INTEL-TM-01` (same forget authority) | admitted; no migration change |
 
 ---
@@ -207,7 +232,7 @@ Each system's own approved deletion and history behaviour governs. **CI-01 inven
 
 ## 8. Documentary notes (no action in CI-01)
 
-1. **Stale SHARED-VIS-01 banners** (Project Map §5.1, Current State :140 / :167, record banner, `QAN-BL-CW-03` row): an independent governance-reconciliation gap (D10). Issue #322 and every Release Gate stay open.
+1. **Stale SHARED-VIS-01 banners** (Project Map §5.1, Current State :140 / :167, record banner, `QAN-BL-CW-03` row): an independent governance-reconciliation gap (D10). Issue #322 and every Release Gate stay open. *(Repaired by GOV-REC-01, 2026-10-12: the record, locators and backlog now state the PR #321 merge, and `QAN-BL-CW-03` is tombstoned. Issue #322 and every Release Gate still stay open.)*
 2. **Two stale docs** predate the association wiring (`docs/fresh-evidence-hypothesis-association-authority-foundation-v1.md`, `docs/hypothesis-evidence-association-provider-binding-v1.md`); the dispatcher does run the Gemini-bound association today.
 3. **Name collision** `CI-01` vs `QAN-BL-CI-01` (D2).
 4. **Leave-vs-grant divergence** between `0083` / `database/README.md` and the Shared World Product Definition; relevant to `SHARED-CTX-01` only.

@@ -1,10 +1,13 @@
 # QANDEEL — SHARED-VIS-01 Shared World Living Analysis Map Product Integration — Implementation Record v1
 
-**Status:** `ACTIVE — IMPLEMENTED ON feat/shared-vis-01-shared-living-analysis — NOT MERGED; NOT CLOSED`
+**Status:** `CLOSED / MERGED — PR #321 merged as 5973123153e26494d702a4a859a79631ede225cd (2026-10-09) — CLOSURE RECORDED RETROACTIVELY BY GOV-REC-01 (2026-10-12) — NOT DEPLOYED — ISSUE #322 OPEN / NOT PROVEN / RELEASE BLOCKER`
+
+**Status before the merge (historical, kept verbatim):** `ACTIVE — IMPLEMENTED ON feat/shared-vis-01-shared-living-analysis — NOT MERGED; NOT CLOSED`.
+§1–§14 were written before the merge and are kept as written. The post-merge facts are in §15.
 
 **SHARED-VIS-01 PRODUCT COPY GATE:** `CLOSED — 6 / 6 APPROVED` (Product Owner, 2026-10-08; four rows as revised by the Owner; §12).
 
-Closure waits on: the Product Owner's visual acceptance of the corrected native screenshots (§11, §13 — **not granted yet**) and green CI
+*(Historical, before the merge:)* Closure waits on: the Product Owner's visual acceptance of the corrected native screenshots (§11, §13 — **not granted yet**) and green CI
 on the exact final head. Merge waits on the Product Owner's «ادمج». Stage 6 is not started.
 
 | | |
@@ -369,3 +372,45 @@ logging that was never committed).**
   missing label was captured before rest; it is not a rendering defect.
 
 **Product visual acceptance: PENDING — not granted.** PR #321 stays open; no merge; Stage 6 unopened.
+
+## 15. Post-merge Governance Reconciliation (GOV-REC-01, 2026-10-12)
+
+This section is added by `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` under BG-09: a governance
+reconciliation recorded explicitly, never a quiet rewrite. §1–§14 stay exactly as written; their "not merged", "PENDING"
+and "PR #321 stays open" describe the state when they were written.
+
+**GitHub truth (read 2026-10-12).**
+
+| | |
+|---|---|
+| PR | [#321](https://github.com/allamqandeel/qandeel/pull/321) — MERGED 2026-10-09 07:29 UTC |
+| Merge commit | `5973123153e26494d702a4a859a79631ede225cd` |
+| Approved head | `8563e5699a100fe88c3e5ef451ca825c98d4c18e` (the §14 head) |
+| Product Owner decision | the comment on PR #321 of 2026-10-09: approved to merge now, with an explicit pre-launch condition |
+| Pre-launch condition | [Issue #322](https://github.com/allamqandeel/qandeel/issues/322), `OPEN` |
+| Deployment | none; migration `0148` is not on the hosted database (`QAN-BL-PROD-06`) |
+
+**What did not land.** The closing change this record planned (§10: `QAN-BL-CW-03` "stays `DEFERRED — OWNED` … until this
+task's closing change tombstones it") never reached `main` before the merge. The banner, the backlog disposition and the
+locator rows still read ACTIVE / not merged. CI-01 recorded the drift (C0 decision D10). ACE-SP-01 admitted it as
+`QAN-BL-GOV-01` at the Product Owner's direction, and GOV-REC-01 repairs it.
+
+**Reconciled now (BG-08 / BG-09):**
+- The banner above states `CLOSED / MERGED`; the pre-merge banner is kept beside it.
+- `QAN-BL-CW-03` is `CLOSED — TOMBSTONE` (backlog §6). The tombstone checks each required property of the item against
+  §3–§9, §13 and §14 and records what the Product Owner dispositioned elsewhere: `QAN-BL-CW-05` (Stage 8A),
+  `QAN-BL-CW-06` and `QAN-BL-CW-07` (unassigned), scale under `LA-SCALE-01`, and the provider binding under Stage 8A. No
+  gap inside the item's own scope was found.
+- Current State, the Project Map, the Roadmap and the backlog §9 record SHARED-VIS-01 as merged.
+
+**Not changed by this reconciliation.**
+- **Issue #322 is not closed and is not proven.**
+  - §14's "Product visual acceptance: PENDING" is the state at that time. The Product Owner's merge decision is recorded
+    on the PR.
+  - Issue #322 records that merging, CI and accepting the visual design are not proof of the device condition.
+  - The required evidence is a physical Android phone on a release-representative build: at least 12 panel-scroll-Back
+    and 4 rapid open / Back cycles, with no ANR, stall, lost touch or wrong focus. It is still missing, so the result is
+    **NOT PROVEN / LAUNCH BLOCKED**.
+  - It is owned by the Stage 9 Economy + Launch Closure / release-readiness gate.
+  - It is not a backlog item; admitting it is a Product Owner decision.
+- Nothing in §1–§14 is rewritten. No code, migration, copy or Product decision changes.

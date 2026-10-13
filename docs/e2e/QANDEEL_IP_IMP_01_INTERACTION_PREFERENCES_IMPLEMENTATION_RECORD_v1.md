@@ -1,6 +1,10 @@
 # QANDEEL — IP-IMP-01 — Interaction Preferences — Implementation Record v1
 
-**Status:** `IP-IMP-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
+**Status:** `IP-IMP-01` — **CLOSED / MERGED through PR #331 as `424cd0231429e5280a0e70be25c2f83437e117c8` (2026-10-12);
+migration `0153` NOT DEPLOYED.** The post-merge status is recorded by GOV-REC-01 (2026-10-12, §12). §1–§11 are kept as
+written before the merge.
+
+**Status at the closing change (historical, kept verbatim):** `IP-IMP-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
 WP0–WP7 are implemented on one branch with migration `0153`, and this record carries the closing change (BG-08 / BG-09).
 **Not merged** (merge only on «ادمج»), **migration not applied to any hosted database, nothing deployed.** The PO Copy
 Addendum in §8 is closed: CA-1 and CA-2 (as corrected in R2) are `APPROVED`, and the owner name `PUBLIC-PREF-01` is
@@ -410,3 +414,22 @@ see §10 (filled after push).
   51 suites, 1437/1437.
 - API `tsc --noEmit`: clean.
 - No migration, SQL or mobile file changed, so the focused database runs on `be73bdc5` remain the database proof.
+
+## 12. Post-merge Governance Reconciliation (GOV-REC-01, 2026-10-12)
+
+Added by `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` (BG-09: recorded explicitly, never a quiet
+rewrite). §1–§11 are unchanged. Their "PR open", "Draft, not merged" and "nothing was merged" describe the state before
+the merge, and their test results stay tied to the trees and heads they name.
+
+**GitHub truth (read 2026-10-12):**
+- [PR #331](https://github.com/allamqandeel/qandeel/pull/331) was MERGED on 2026-10-12 at 09:37 UTC as merge commit
+  `424cd0231429e5280a0e70be25c2f83437e117c8`, from the final head `cad6e66ab98dc3d3e69cc84573907d41423d88b3`.
+- Migration `0153` is on `main`. It is not applied to the hosted database: `QAN-BL-PROD-06` owns the catch-up.
+
+**Lifecycle:** `CLOSED / MERGED`. This task's own closing change carried the BG-08 half (§9). After the merge, only the
+locators had drifted: Current State and the Project Map had no IP-IMP-01 row, and the backlog §9 had no Stage 8A entry for
+`QAN-BL-IP-02` and no `PUBLIC-PREF-01` row. GOV-REC-01 adds them (`QAN-BL-GOV-01`, finding 1 and finding 4). No owner,
+scope, severity or status changes. `QAN-BL-IP-01` and `QAN-BL-IP-02` stay as admitted.
+
+**Not changed:** the canonical record, the grammar, the Settings surface, the approved copy (CA-1, CA-2) and every Product
+decision.

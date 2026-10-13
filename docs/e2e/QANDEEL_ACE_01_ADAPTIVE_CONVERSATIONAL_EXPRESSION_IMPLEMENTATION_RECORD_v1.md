@@ -1,6 +1,10 @@
 # QANDEEL — ACE-01 — Adaptive Conversational Expression — Implementation Record v1
 
-**Status:** `ACE-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
+**Status:** `ACE-01` — **CLOSED / MERGED through PR #332 as `141a3190deb02bc6695d2ace05da275e623a2754` (2026-10-12); no
+migration; NOT DEPLOYED.** The post-merge status is recorded by GOV-REC-01 (2026-10-12, §13). §1–§12 are kept as written
+before the merge.
+
+**Status at the closing change (historical, kept verbatim):** `ACE-01` — **IMPLEMENTATION COMPLETE / READY FOR INDEPENDENT REVIEW AND THE PRODUCT OWNER'S MERGE DECISION.**
 WP0–WP5 are implemented on one branch, and this record carries the closing change (BG-08 / BG-09). **Not merged**: merge
 happens only on «ادمج». No migration was added and nothing is deployed. The independent review's one correction (R1,
 temporary language requests) is applied (§11), and the review's CI correction R2 is applied (§12). **Gate B is decided:
@@ -366,3 +370,21 @@ pin. Commit `96f6c7a0`, pushed to the branch from outside this session, re-ancho
 turns are plain English with no reply-language preference, so the locale is `en`. No other assertion is touched. The
 remaining `locale: 'und'` in `apps/api/scripts/integrated-brain-e2e-hardening-v2/human-intelligence-capacity.ts` builds a
 request fixture and is not an expectation.
+
+## 13. Post-merge Governance Reconciliation (GOV-REC-01, 2026-10-12)
+
+Added by `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` (BG-09: recorded explicitly, never a quiet
+rewrite). §1–§12 are unchanged. Their "PR open" and "not merged" describe the state before the merge, and their results
+stay tied to the trees and heads they name.
+
+**GitHub truth (read 2026-10-12):** [PR #332](https://github.com/allamqandeel/qandeel/pull/332) was MERGED on 2026-10-12
+at 16:19 UTC as merge commit `141a3190deb02bc6695d2ace05da275e623a2754`, from the final head
+`94fc3d76b3e729cd229f2334cfea61f01890fb48` (the R2 re-anchor of §12). No migration. Nothing is deployed.
+
+**Lifecycle:** `CLOSED / MERGED`. This task's own closing change carried the BG-08 half (§9). After the merge:
+- `QAN-BL-ACE-01` was delivered and tombstoned by ACE-SP-01 (PR #333). GOV-REC-01 fills in that tombstone's merge SHA.
+- `QAN-BL-ACE-02` stays `VALIDATION — OPEN` under Stage 8A, its validation set extended by ACE-SP-01 (D-4).
+- Current State and the Project Map had no ACE-01 row. GOV-REC-01 adds it (`QAN-BL-GOV-01`, finding 1).
+
+**Not changed:** the personality core, Text v1 / v2, the locale compiler, the Golden Conversations suite and every
+Product decision (Gate A, Gate B).
