@@ -156,6 +156,12 @@ export type {
 } from './interaction-preferences-api';
 export { InteractionPreferencesApiClient } from './interaction-preferences-api';
 export type {
+  IntroductionsAvailability, IntroductionsAvailabilityRead, IntroductionsChange, IntroductionsCommandKind, IntroductionsCommandOutcome,
+  IntroductionsDimension, IntroductionsDraft, IntroductionsFact, IntroductionsFactState, IntroductionsObjective, IntroductionsPriorClass,
+  IntroductionsPriorItem, IntroductionsRead, IntroductionsRequirementItem, IntroductionsSkipStep, IntroductionsView,
+} from './introductions-api';
+export { IntroductionsApiClient } from './introductions-api';
+export type {
   SharedAcceptResult, SharedDeclineResult, SharedDeleteResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
   SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,
   SharedApproveResult, SharedClosedWorld, SharedClosedWorldResult, SharedHistoryApproveResult, SharedHistoryCandidate, SharedHistoryCandidatesResult,

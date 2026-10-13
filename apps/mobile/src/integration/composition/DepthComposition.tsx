@@ -91,6 +91,7 @@ import { ConversationOpening, FirstUseGate } from '../../account';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface } from '../../understanding';
+import { IntroductionsEntry, IntroductionsSurface } from '../../introductions';
 import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
@@ -157,6 +158,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // W3-MEGA-U — the Understanding depth, the same kind of local presentation choice as Settings.
   const [understandingShown, setUnderstandingShown] = useState(false);
   const [returnedFromUnderstanding, setReturnedFromUnderstanding] = useState(false);
+  // S6-01 — the Introductions preparation, the same kind of local presentation choice as Understanding.
+  const [introductionsShown, setIntroductionsShown] = useState(false);
+  const [returnedFromIntroductions, setReturnedFromIntroductions] = useState(false);
   // A3-01 — Activity, the same kind of local presentation choice; Settings may open over it on its own page.
   const [activityShown, setActivityShown] = useState(false);
   const [returnedFromActivity, setReturnedFromActivity] = useState(false);
@@ -291,6 +295,25 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     return () => subscription.remove();
   }, [closeUnderstanding, understandingShown]);
 
+  // S6-01 — the Introductions preparation over the Conversation. Back returns to exactly where the reader was.
+  const openIntroductions = useCallback(() => {
+    setReturnedFromIntroductions(false);
+    setIntroductionsShown(true);
+  }, []);
+  const closeIntroductions = useCallback(() => {
+    setIntroductionsShown(false);
+    setReturnedFromIntroductions(true);
+  }, []);
+  // Android system Back while the preparation is shown is its own Back (its editors take it first), and nothing else.
+  useEffect(() => {
+    if (!introductionsShown) return undefined;
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      closeIntroductions();
+      return true;
+    });
+    return () => subscription.remove();
+  }, [closeIntroductions, introductionsShown]);
+
   // A3-01 — Activity over the Conversation. Back returns to exactly where the reader was.
   const openActivity = useCallback(() => {
     setReturnedFromActivity(false);
@@ -316,6 +339,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // A revalidated Direct Entry, executed only into a Product surface that exists (D38–D43).
   const enter = useCallback((destination: DirectEntryDestination) => {
+    setIntroductionsShown(false);
     setActivityShown(false);
     setReturnedFromActivity(false);
     if (destination.kind === 'SHARED_WORLD') {
@@ -361,7 +385,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
 
   // The surface truth the attention law reads: the composition's own state, never a second navigation state.
   const surface: ProductSurface = depth === 'ANALYSIS' ? 'ANALYSIS'
-    : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : activityShown ? 'ACTIVITY' : area === 'SHARED_WORLD' ? 'SHARED_WORLD' : area === 'PUBLIC_WORLD' ? 'PUBLIC_WORLD' : 'CONVERSATION';
+    : settingsShown ? 'SETTINGS' : understandingShown ? 'UNDERSTANDING' : introductionsShown ? 'INTRODUCTIONS' : activityShown ? 'ACTIVITY' : area === 'SHARED_WORLD' ? 'SHARED_WORLD' : area === 'PUBLIC_WORLD' ? 'PUBLIC_WORLD' : 'CONVERSATION';
   const attention = runtime.attention;
   useEffect(() => {
     attention.start();
@@ -422,6 +446,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     if (onSignOut === undefined) return undefined;
     const consume = () => {
       if (!publicLinks.take()) return;
+      setIntroductionsShown(false);
       setActivityShown(false);
       setReturnedFromActivity(false);
       setSettingsShown(false);
@@ -465,6 +490,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         focusSettingsEntry={returnedFromSettings && !settingsShown}
         personalEntry={onSignOut === undefined ? null : (
           <UnderstandingEntry language={locale.language} onOpen={openUnderstanding} focus={returnedFromUnderstanding && !understandingShown} />
+        )}
+        personalSecondEntry={onSignOut === undefined ? null : (
+          <IntroductionsEntry controller={runtime.introductions} language={locale.language} onOpen={openIntroductions} focus={returnedFromIntroductions && !introductionsShown} />
         )}
         discussion={<UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />}
         chromeStart={onSignOut === undefined ? null : (
@@ -527,6 +555,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           const reachable = current && !settingsShown && !understandingShown;
           // A3-01: beneath Activity, too, the Personal world stays mounted and out of reach.
           const personalReachable = reachable && !activityShown && area === 'MY_WORLD';
+          // S6-01: beneath the Introductions preparation, too.
+          const personalOpen = personalReachable && !introductionsShown;
           return (
             <Animated.View
               key={which}
@@ -534,9 +564,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               style={[StyleSheet.absoluteFill, current && leaving !== null ? incomingStyle : null]}
               // The Analysis world reports its own composition instead (see `beginFade`).
               onLayout={current && leaving !== null && which === 'CONVERSATION' ? beginFade : undefined}
-              pointerEvents={personalReachable ? 'auto' : 'none'}
-              importantForAccessibility={personalReachable ? 'auto' : 'no-hide-descendants'}
-              accessibilityElementsHidden={!personalReachable}
+              pointerEvents={personalOpen ? 'auto' : 'none'}
+              importantForAccessibility={personalOpen ? 'auto' : 'no-hide-descendants'}
+              accessibilityElementsHidden={!personalOpen}
             >
               {layer(which, current)}
             </Animated.View>
@@ -580,7 +610,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
             />
           </View>
         ) : null}
-        {depth === 'CONVERSATION' && leaving === null && onSignOut !== undefined && !settingsShown && !understandingShown && !activityShown ? (
+        {depth === 'CONVERSATION' && leaving === null && onSignOut !== undefined && !settingsShown && !understandingShown && !activityShown && !introductionsShown ? (
           <View style={styles.switcher}>
             <GlobalSwitcher area={area} language={locale.language} bottomInset={edges.bottom} onSelect={setArea} />
           </View>
@@ -603,6 +633,11 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         {understandingShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
             <UnderstandingSurface controller={runtime.understanding} language={locale.language} insets={edges} onBack={closeUnderstanding} onTalk={talkedAboutItem} />
+          </View>
+        ) : null}
+        {introductionsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <View style={StyleSheet.absoluteFill}>
+            <IntroductionsSurface controller={runtime.introductions} language={locale.language} insets={edges} onBack={closeIntroductions} />
           </View>
         ) : null}
         {/*
