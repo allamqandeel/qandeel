@@ -14,6 +14,7 @@
 //     bytes; the census keeps its units and status line;
 //   * Work Package B: every implemented unit is in each of its production sources and its original is gone; the
 //     memory-control couplings moved with the copy and recognition only widened;
+//   * Work Package C: the D4 lines are the amendment bytes, appended after the cores; Text v1 / v2 and the cores unchanged;
 //   * Work Package D is not integrated before its independent safety gate: the six in-force replies are unchanged;
 //   * the record, the locators (when present), the backlog kickoff row and the CI registration.
 //
@@ -260,6 +261,31 @@ test('Work Package B: the memory-control couplings move with the copy, and recog
   assert.ok(self.has('عني انا'), 'SELF recognises the MSA echo عني انا');
   assert.equal(other.size, 8, 'OTHER gains exactly the two MSA echoes');
   assert.equal(self.size, 9, 'SELF gains exactly the one MSA echo');
+});
+
+// ---------------------------------------------------------------------------------------------------------------------
+// Work Package C — the D4 generated-language default in the model-facing guidance.
+// ---------------------------------------------------------------------------------------------------------------------
+
+test('Work Package C: the D4 lines are the amendment bytes, appended after the core, with Text v1 / v2 and the cores untouched', async () => {
+  const policy = await read('apps/api/src/conversation/behavioral-response-policy.service.ts');
+  const literal = (text) => `'${text.replaceAll('\'', '\\\'')}'`;
+  assert.ok(policy.includes(`export const ARABIC_DEFAULT_LANGUAGE_LINE = ${literal(D4_PERSONAL_LINE)};`), 'the Personal D4 line is the amendment bytes');
+  assert.ok(policy.includes(`export const ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL = ${literal(D4_WORLD_LINE)};`), 'the Shared / Public D4 line is the amendment bytes');
+  for (const line of [D4_PERSONAL_LINE, D4_WORLD_LINE]) assert.equal(policy.split(literal(line)).length - 1, 1, 'each line has exactly one literal');
+  // Personal: Text v2 (Text v1 + the approved core) unchanged, then the D4 line, then the preference block when there is one.
+  assert.ok(policy.includes('export const TEXT_V2_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\\n\\n${QANDEEL_PERSONALITY_CORE_V1}`;'));
+  assert.ok(policy.includes('export const TEXT_V3_BEHAVIORAL_GUIDANCE = `${TEXT_V2_BEHAVIORAL_GUIDANCE}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE}`;'));
+  assert.ok(policy.includes('    return preferences === undefined ? TEXT_V3_BEHAVIORAL_GUIDANCE : `${TEXT_V3_BEHAVIORAL_GUIDANCE}\\n\\n${preferences}`;'),
+    'the standing preference block still follows, and still takes precedence over anything inferred');
+  // Shared / Public: the World prefix, the world-neutral core, then the world D4 line; the humour suspension stays last.
+  assert.ok(policy.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;'));
+  assert.ok(policy.includes('  return safetyGuided ? `${guidance}\\n\\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;'));
+  // The Worlds still receive no Personal authority: their sources name neither the Personal line nor any preference.
+  for (const path of ['apps/api/src/shared-world/shared-conversation-model-input.ts', 'apps/api/src/public-world/public-qandeel-model-input.ts']) {
+    const source = await read(path);
+    assert.doesNotMatch(source, /ARABIC_DEFAULT_LANGUAGE_LINE|TEXT_V3_BEHAVIORAL_GUIDANCE|interaction-preference/u, `${path} reads nothing Personal`);
+  }
 });
 
 test('this contract is registered as a root script and runs once in API CI, before the forward-safety gate', () => {

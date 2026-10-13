@@ -26,7 +26,7 @@ import { ConversationOrchestratorService } from './conversation-orchestrator.ser
 import type { ConversationRepository } from './conversation.repository';
 import type { ConversationTurn } from './conversation.types';
 import type { ContextBuilder } from './context-builder.types';
-import { BehavioralResponsePolicyService, TEXT_V2_BEHAVIORAL_GUIDANCE } from './behavioral-response-policy.service';
+import { BehavioralResponsePolicyService, TEXT_V2_BEHAVIORAL_GUIDANCE, TEXT_V3_BEHAVIORAL_GUIDANCE } from './behavioral-response-policy.service';
 import type { SafetyResponseGate, SafetyResponseGateResult } from './safety-response-gate.types';
 import type { MemoryRetrieverService } from '../memory/memory-retriever.service';
 import type { HypothesisReasoningContextService } from '../hypothesis/hypothesis-reasoning-context.service';
@@ -116,7 +116,7 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
   it('(1) every Personal request carries the ONE personality core exactly once, after the frozen Text v1, in the Mandatory Core', async () => {
     await orchestrator.orchestrate('token', 'user', turnOf('hello'));
     const request = dispatched();
-    expect(request.behavioralGuidance).toBe(TEXT_V2_BEHAVIORAL_GUIDANCE);
+    expect(request.behavioralGuidance).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
     expect(request.behavioralGuidance.startsWith(`${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V1}`)).toBe(true);
     const rendered = composeServerGuidance(request);
     expect(rendered.split(QANDEEL_PERSONALITY_CORE_V1)).toHaveLength(2);
@@ -137,7 +137,7 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
     expect(router.generate).toHaveBeenCalledTimes(messages.length);
     const guidance = router.generate.mock.calls.map(([request]) => (request as ModelRouterRequest).behavioralGuidance);
     expect(new Set(guidance).size).toBe(1);
-    expect(guidance[0]).toBe(TEXT_V2_BEHAVIORAL_GUIDANCE);
+    expect(guidance[0]).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
     // Each request has the same fields: the conversation differs, no tone field exists.
     const keys = router.generate.mock.calls.map(([request]) => Object.keys(request as object).sort().join(','));
     expect(new Set(keys).size).toBe(1);
@@ -161,7 +161,7 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
       await orchestrator.orchestrate('token', 'user', turnOf('كنت هولع في نفسي من الزهق 😂'));
       expect(router.generate).toHaveBeenCalledTimes(1);
       const request = dispatched();
-      expect(request.behavioralGuidance.startsWith(TEXT_V2_BEHAVIORAL_GUIDANCE)).toBe(true);
+      expect(request.behavioralGuidance.startsWith(TEXT_V3_BEHAVIORAL_GUIDANCE)).toBe(true);
       expect(request.behavioralGuidance.endsWith(`\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}`)).toBe(true);
       expect(request.behavioralGuidance).not.toContain('light humour is welcome');
       expect(request.safetyGuidance).toBe('Respond supportively.');
@@ -216,7 +216,7 @@ describe('ACE-01 — one personality, adaptive natural expression, on the one no
     memoryRetrieve.mockResolvedValue([{ type: 'STABLE_PREFERENCE', content: 'أنا بحب الهزار وبحب الكلام بالإنجليزي.', source: 'CONVERSATION', about: 'USER' }]);
     await orchestrator.orchestrate('token', 'user', turnOf('صباح الخير'));
     const request = dispatched();
-    expect(request.behavioralGuidance).toBe(TEXT_V2_BEHAVIORAL_GUIDANCE);
+    expect(request.behavioralGuidance).toBe(TEXT_V3_BEHAVIORAL_GUIDANCE);
     expect(request.locale).toBe('ar');
     expect(request.memoryContext).toHaveLength(1);
     const rendered = composeServerGuidance(request);

@@ -64,7 +64,9 @@ test('WP1: the ONE personality core is the approved Product Copy Gate wording, i
   for (const line of APPROVED_CORE) assert.ok(core.includes(`'${line}'`) || core.includes(`"${line}"`), `approved line present verbatim: ${line.slice(0, 40)}`);
   assert.equal((core.match(/^\s+['"]/gmu) ?? []).length, APPROVED_CORE.length, 'no extra line was added to the approved core');
   assert.match(policy, /export const TEXT_V2_BEHAVIORAL_GUIDANCE = `\$\{TEXT_V1_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{QANDEEL_PERSONALITY_CORE_V1\}`;/u);
-  assert.match(policy, /return preferences === undefined \? TEXT_V2_BEHAVIORAL_GUIDANCE : `\$\{TEXT_V2_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{preferences\}`;/u);
+  // RE-ANCHORED by LANG-01 Work Package C (LA-17, D4): Personal guidance is Text v3 = Text v2 unchanged + the D4 line.
+  assert.match(policy, /export const TEXT_V3_BEHAVIORAL_GUIDANCE = `\$\{TEXT_V2_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{ARABIC_DEFAULT_LANGUAGE_LINE\}`;/u);
+  assert.match(policy, /return preferences === undefined \? TEXT_V3_BEHAVIORAL_GUIDANCE : `\$\{TEXT_V3_BEHAVIORAL_GUIDANCE\}\\n\\n\$\{preferences\}`;/u);
 });
 
 // RE-ANCHORED by ACE-SP-01 (2026-10-12; Gate B Option A, the ACE-SP-01 controlled amendment): Shared / Public keep Text v1

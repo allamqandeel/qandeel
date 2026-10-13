@@ -39,6 +39,19 @@ export const QANDEEL_PERSONALITY_CORE_V1 = [
 // observations worded apart from facts, no invented identity facts), so v1 stays whole instead of being replaced.
 export const TEXT_V2_BEHAVIORAL_GUIDANCE = `${TEXT_V1_BEHAVIORAL_GUIDANCE}\n\n${QANDEEL_PERSONALITY_CORE_V1}`;
 
+// LANG-01 (LA-17) — the Product Owner's D4 default for genuinely generated Arabic (Stage 6 WP0 record §14.14): an explicit
+// request, then a standing reply-language preference, then the user's reasonably clear dialect; otherwise neutral simplified
+// Modern Standard Arabic, never Egyptian by default. Exact bytes of the LANG-01 controlled amendment
+// (docs/canonical-authority/final-product-experience/lang/), one line per world type, appended after the personality core so
+// Text v1, the approved core and its world-neutral form stay byte-identical. It is guidance only: no model call, classifier or
+// dialect detector reads or decides anything.
+export const ARABIC_DEFAULT_LANGUAGE_LINE = 'When you reply in Arabic and neither an explicit request, a standing reply-language preference, nor a reasonably clear dialect in the user\'s own messages settles which Arabic to use, reply in neutral simplified Modern Standard Arabic. Never default to Egyptian Arabic or any other regional dialect.';
+// Shared / Public: only the message being answered counts, so no participant's preference or dialect reaches another (CG-1).
+export const ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL = 'When you reply in Arabic and neither an explicit current request nor a reasonably clear dialect in the message you are answering settles which Arabic to use, reply in neutral simplified Modern Standard Arabic. Never default to Egyptian Arabic or any other regional dialect, and never treat one participant\'s language or dialect as a standing preference for anyone else.';
+
+// Text v3 — the Personal conversation's guidance after LANG-01: Text v2 unchanged, then the D4 default.
+export const TEXT_V3_BEHAVIORAL_GUIDANCE = `${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE}`;
+
 // ACE-SP-01 — the SAME personality for Shared World and Public World QANDEEL replies (the ACE-SP-01 controlled amendment;
 // Product Copy Gate CG-1 … CG-6, approved by the Product Owner on 2026-10-12). Derived from the approved core by
 // reference, so no paragraph exists twice: paragraphs 1, 2, 4, 5 and 8 are the approved bytes (CG-5); paragraph 3 drops
@@ -54,10 +67,10 @@ export const QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL = QANDEEL_PERSONALITY_COR
 }).join('\n');
 
 // The Shared / Public guidance: the World's own prefix, unchanged (Text v1 + its structural frame), then the world-neutral
-// core, then — on a Safety GUIDED turn only — the approved humour suspension (CG-4). Pure and append-only: it reads no
-// preference, person or state, and chooses nothing.
+// core, then the LANG-01 world-neutral D4 line, then — on a Safety GUIDED turn only — the approved humour suspension (CG-4).
+// Pure and append-only: it reads no preference, person or state, and chooses nothing.
 export function withWorldNeutralPersonality(worldPrefix: string, safetyGuided: boolean): string {
-  const guidance = `${worldPrefix}\n\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}`;
+  const guidance = `${worldPrefix}\n\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}\n\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;
   return safetyGuided ? `${guidance}\n\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;
 }
 
@@ -65,6 +78,6 @@ export function withWorldNeutralPersonality(worldPrefix: string, safetyGuided: b
 export class BehavioralResponsePolicyService implements BehavioralResponsePolicy {
   buildTextGuidance(interaction?: InteractionPreferenceGuidanceInput): string {
     const preferences = interaction === undefined ? undefined : compileInteractionPreferenceGuidance(interaction);
-    return preferences === undefined ? TEXT_V2_BEHAVIORAL_GUIDANCE : `${TEXT_V2_BEHAVIORAL_GUIDANCE}\n\n${preferences}`;
+    return preferences === undefined ? TEXT_V3_BEHAVIORAL_GUIDANCE : `${TEXT_V3_BEHAVIORAL_GUIDANCE}\n\n${preferences}`;
   }
 }

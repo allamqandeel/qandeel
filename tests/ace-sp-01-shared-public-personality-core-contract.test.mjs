@@ -65,7 +65,8 @@ test('one pure, append-only helper adds the approved Safety humour suspension on
   const start = policy.indexOf('export function withWorldNeutralPersonality(worldPrefix: string, safetyGuided: boolean): string {');
   assert.ok(start >= 0, 'the helper exists with its exact signature');
   const body = policy.slice(start, policy.indexOf('\n}\n', start) + 2);
-  assert.ok(body.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}`;'), 'the World prefix stays first');
+  // RE-ANCHORED by LANG-01 Work Package C (LA-17, D4): the world-neutral D4 line follows the world-neutral core.
+  assert.ok(body.includes('  const guidance = `${worldPrefix}\\n\\n${QANDEEL_PERSONALITY_CORE_V1_WORLD_NEUTRAL}\\n\\n${ARABIC_DEFAULT_LANGUAGE_LINE_WORLD_NEUTRAL}`;'), 'the World prefix stays first');
   assert.ok(body.includes('  return safetyGuided ? `${guidance}\\n\\n${SAFETY_HUMOUR_SUSPENSION_LINE}` : guidance;'), 'the line only when guided');
   assert.doesNotMatch(body, /await |this\.|preference|Preference|process\.env|fetch\(/u, 'pure: it reads nothing');
   assert.equal(count(policy, CG_4), 0, 'the suspension line is never copied: its only literal stays in the IP-IMP-01 module');
