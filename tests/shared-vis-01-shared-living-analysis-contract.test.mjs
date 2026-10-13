@@ -167,7 +167,11 @@ test('7 — lifecycle and backlog truth: Stage 5 DONE / MERGED; SHARED-VIS-01 me
       'Current State §3.7 records SHARED-VIS-01 merged, and Issue #322 open');
     assert.match(state, /\*\*SHARED-VIS-01 is DONE \/ MERGED\*\* through PR #321 as `5973123153e26494d702a4a859a79631ede225cd`/u, 'Current State §7: Stage 4 records the merge');
     assert.match(state, /^\| `Stage 9 — Economy \+ Launch Closure` \(release-readiness gate\)[^\n]*\[Issue #322\][^\n]*`OPEN \/ NOT PROVEN \/ RELEASE BLOCKER`/mu, 'the release gate keeps Issue #322 open');
-    assert.doesNotMatch(state, /Stage 6[^\n]*\*\*ACTIVE/u, 'Stage 6 is not started');
+    // RE-ANCHORED by S6-01 (2026-10-13, validation only): the Product Owner's S6-01 Final Implementation Authorization
+    // started Stage 6. Every line that calls Stage 6 ACTIVE must name S6-01 as the task that started it.
+    for (const line of state.split('\n').filter((l) => /Stage 6[^\n]*\*\*ACTIVE/u.test(l))) {
+      assert.match(line, /S6-01/u, 'Stage 6 is ACTIVE only through S6-01');
+    }
   }
   if (existsSync(new URL('QANDEEL_PROJECT_MAP.md', root))) {
     const map = read('QANDEEL_PROJECT_MAP.md');

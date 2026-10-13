@@ -201,6 +201,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MATCH-03` | Safe Compatibility Conclusion Production Capability, AI Cost Attribution and Evaluation | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-04` | Export My Data Omits the Reader's Matching and Introductions Data | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-05` | Export My Data Omits the Reader's Shared, Public and Replay World Data | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-MATCH-04` | Understanding Readiness Before Real Matching | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1212,6 +1213,14 @@ Admitted by SHARED-VIS-01 at the Product Owner's D5 (2026-10-08). Admission auth
   fail-closed, server-canonical launch path that the Product Owner approves. The deployment rule stays: `0108` /
   `0109` never reach live signed-in users without `0149` in the same controlled window.
 - **Status:** `DEFERRED — OWNED`
+
+**S6-01 note (2026-10-13).** The reopen condition fired: the Product Owner's S6-01 Final Implementation Authorization
+started S6-01. Its D1 keeps the six commands closed in S6-01: no wrapper, grant or re-created function, and
+`NO_BACKDOOR` unchanged. S6-01 builds an erasable pre-enrollment preparation draft outside the I-07 relations instead
+([CW2-06A](canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06A_MATCHING_ONBOARDING_PREPARATION_ASSISTANCE_CONTROLLED_AMENDMENT_v1.0.md)).
+The secure enrollment path, any `CA-01` amendment and `CA-10` wait for account-deletion integrity (`ACCT-DEL-01`). At
+S6-01's closing change this item is re-owned to `S6-07 — Activity, Direct Entry and Final Integration` with that
+dependency; it is not tombstoned. Until then, its fields are unchanged.
 
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: it is a canonical record's explicit deferral to a named future task. The
 entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes implementation (BG-07).
@@ -2335,6 +2344,64 @@ Admitted under BG-06 / BG-08 at the Product Owner's explicit D5 designation (Sta
 2026-10-13), after the anti-duplication check above, as a documentation-only governance change. Nothing here authorizes
 implementation (BG-07).
 
+### `QAN-BL-MATCH-04` — Understanding Readiness Before Real Matching
+
+- **Title / Finding:** the Product Owner's non-negotiable rule is **no real Matching without QANDEEL's actual,
+  authorized, correctable and reusable understanding of the user** (S6-01 Intelligence Reality Check §0, 2026-10-09).
+  Understanding must be real, evidenced, revisable, available across relevant time and context, and able to change both
+  the onboarding questions and future proposal evaluation. Repository truth does not meet it yet, and no register item
+  owns the gap:
+  - **natural acquisition.** On the latest CI-01 evidence (`scripts/ci-01/results/023f68e4….json`, MEM-AR-01 01C),
+    natural statements are not captured (N1 capture 0 / 4; K1 4 / 6). Only anchored first-person patterns become Memory;
+  - **current, correctable understanding.** A natural reversal is not captured, and the stale item is still served
+    (C1 stale served 2 / 3). An explicit correction works, and duplicates no longer survive it (C1 duplicates 0);
+  - **meaningful cross-session retrieval.** Recall is lexical (K1 recall 2 / 4; N1 1 / 2);
+  - **real-model behaviour.** No run has used a real, authorized model: every intelligence proof uses deterministic
+    doubles;
+  - **adequacy before eligibility.** Nothing decides whether QANDEEL understands a person well enough to make them
+    eligible for real proposals;
+  - **HIM.** HIM is organically empty (H1). Its permissible advisory contribution to Matching (for example adapting the
+    conversation's style, with consent) was never reviewed. It must never become an eligibility criterion or a profile
+    fact (the Product Owner's historical return gate item CI-05, kept conditional).
+  What is proven: truth integrity, forgetting, subject identity (`SELF` / `OTHER`) and isolation. S6-01 delivers
+  deterministic preparation and a consent-gated, item-by-item confirmation of the owner's own `SELF` Memory. It does not
+  deliver understanding, and its preparation is never eligibility.
+- **Source:** the S6-01 Intelligence Reality Check (2026-10-09) §0; the Product Owner's S6-01 Final Implementation
+  Authorization (2026-10-13), D7 ("admit `QAN-BL-MATCH-04` after a focused anti-duplication check"); the
+  [S6-01 record](e2e/QANDEEL_S6_01_INTELLIGENT_MATCHING_ONBOARDING_IMPLEMENTATION_RECORD_v1.md) §0 and §9; the
+  [CW2-06A amendment](canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06A_MATCHING_ONBOARDING_PREPARATION_ASSISTANCE_CONTROLLED_AMENDMENT_v1.0.md)
+  §1 and §8; the CI-01 results named above. The Product Owner's local roadmap notes of 2026-10-09 / 10 (the "return
+  gate", CI-02 … CI-05) are context, not repository authority (WP0 record §6).
+- **Anti-duplication:** checked against all 67 earlier IDs, every tombstone, the §7 paragraphs and the §9 rows.
+  - `QAN-BL-MATCH-03` is the Safe Compatibility Conclusion producer only. It stays separate and unchanged.
+  - `QAN-BL-CTX-01` is relevance to the current conversation, not acquisition, truth maintenance or adequacy.
+  - `QAN-BL-INTEL-02` is ledger retention after forgetting; `QAN-BL-INTEL-03` is Hypothesis semantic support.
+  - `QAN-BL-IP-02` and `QAN-BL-ACE-02` validate reply behaviour, not understanding.
+  - `QAN-BL-CW-05` is Shared semantic-place sourcing.
+  - The ID was unused in the tree, in the history of every ref, and in GitHub issues and PRs.
+- **Owner task:** `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` (D7).
+- **Severity:** `HIGH`. Real Matching cannot begin without it, and a weak substitute would present a person as
+  understood or eligible when they are not.
+- **Reopen condition:** automatic when Stage 8A starts; and before any task makes a person eligible for real Matching
+  proposals.
+- **Required future property:**
+  1. Understanding is acquired from the user's own natural conversation, stays current and correctable (a reversal or
+     correction governs every derivative), and is retrievable by meaning across sessions, within the existing Personal
+     Core: no separate Matching intelligence engine.
+  2. Real-model behaviour is verified with an authorized model on a synthetic corpus before it is relied on.
+  3. An explicit adequacy condition must hold before a person becomes eligible for real proposals. Deterministic
+     preparation never satisfies it alone.
+  4. HIM's contribution, if any, is advisory, consented and reviewed. It is never an eligibility criterion, a profile
+     fact or evidence of anyone's intent.
+  5. Hypotheses stay hypotheses, information about other people never becomes the user's own, and every read for
+     Matching is purpose-authorized (CW2-06 §7; CW2-06A §3).
+- **Not in this item:** the compatibility conclusion (`QAN-BL-MATCH-03`); proposals, evaluation and the pair predicate
+  (S6-03); enrollment (`QAN-BL-MATCH-01`); deletion (`QAN-BL-ACCT-01`).
+- **Status:** `DEFERRED — OWNED`
+
+Admitted under BG-06 / BG-08 by S6-01 at its CP1 (2026-10-13), at the Product Owner's D7 approval, after the
+anti-duplication check above. Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -2783,15 +2850,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 31 |
+| `DEFERRED — OWNED` | 32 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 22 |
-| **Total** | **67** |
+| **Total** | **68** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 36 |
+| `HIGH` | 37 |
 | `MEDIUM` | 29 |
 | `LOW` | 2 |
 
@@ -3456,6 +3523,18 @@ as the record of the register before it.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 67 items; 31 / 4 / 10 / 22 by status, 36 / 29 / 2 by severity**, recounted mechanically from §4.
 
+**S6-01 CP1 (2026-10-13; the S6-01 pull request, not merged).** Under the Product Owner's S6-01 Final Implementation
+Authorization, S6-01 is the current implementation task.
+- **Admitted — `QAN-BL-MATCH-04`** (`HIGH`, `DEFERRED — OWNED`, owner `Stage 8A — QANDEEL AI Brain / Production LLM
+  Runtime`; D7): understanding readiness before real Matching. Checked against all 67 earlier IDs, every tombstone, the
+  §7 paragraphs and the §9 rows; the ID had not been used (§5 item).
+- **Inherited — `QAN-BL-MATCH-01`:** unchanged until S6-01's closing change, which re-owns it (D1). It is not tombstoned
+  while the six `0149` commands stay closed.
+- **BG-05:** Stage 8A now owns five open items (`QAN-BL-CW-05`, `QAN-BL-IP-02`, `QAN-BL-ACE-02`, `QAN-BL-MATCH-03`,
+  `QAN-BL-MATCH-04`). `QAN-BL-ACCT-01`, `QAN-BL-PROD-06` and `QAN-BL-PRIV-04` are unchanged.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 68 items; 32 / 4 / 10 / 22 by status, 37 / 29 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -3529,8 +3608,8 @@ Inherited after T-12 closure reconciliation:
 | `S5-04 — Public Discussion + @qandeel + Public Activity / Direct Entry + Final Public Integration` | none — no item names it; `QAN-BL-VIS-01` re-owned to `LA-SCALE-01` (Product Owner D6; S5-03B G04 / G05 and S5-03C's read bounds reconciled under it); `QAN-BL-CW-04` admitted (Product Owner D3); `QAN-BL-VOICE-01`, `QAN-BL-ACCT-01`, `QAN-BL-CW-03` and `QAN-BL-NOTIF-02` … `05` observed and left unchanged |
 | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
-| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13) |
-| `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01) |
+| `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13) |
+| `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned* |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract) |
 | `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |

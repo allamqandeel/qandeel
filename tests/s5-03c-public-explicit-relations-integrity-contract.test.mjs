@@ -208,7 +208,9 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     // RE-ANCHORED by SHARED-VIS-01 (validation only): after Stage 5, SHARED-VIS-01 is the current task.
     // RE-ANCHORED by GOV-REC-01 (2026-10-12, validation only; tightened by its review R1): S5-03C, S5-04 and SHARED-VIS-01
     // have merged; the governance task GOV-REC-01 is the current task, and no merged task is named current again.
-    assert.match(map, /^> \*\*CURRENT TASK: GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation\*\*/mu);
+    // RE-ANCHORED by S6-01 (2026-10-13, validation only): GOV-REC-01 (PR #334) and the Stage 6 WP0 (PR #335) have
+    // merged; the Product Owner's S6-01 Final Implementation Authorization makes S6-01 the current implementation task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-01 — Intelligent Matching Onboarding\*\*/mu);
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0(3C|4)|SHARED-VIS-01)/u, 'no merged task is the current task');
     assert.match(map, /\*\*NEXT \/ NOT STARTED\*\*|S5-04[^\n]*CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION/u);
   }

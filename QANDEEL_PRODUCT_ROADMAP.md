@@ -406,3 +406,18 @@ authorizes no implementation, and §6.7 stays as written.
   - neither workstream receives implementation authorization through the addendum;
   - Stage 6 is still not started, and no Task Contract exists;
   - PR #335 is not merged.
+
+### 6.9 Execution note — 2026-10-13 (S6-01 start)
+**Recorded:** 2026-10-13 by S6-01 at its CP1, in the S6-01 pull request (not merged). This is a status note only, and
+§6.3, §6.7 and §6.8 stay as written.
+- **Started:** the Product Owner's S6-01 Final Implementation Authorization (2026-10-13, D1–D7) starts **S6-01 —
+  Intelligent Matching Onboarding** as the current implementation task, from `main` at
+  `af94748de73cca744c466d8db526984427b94b38` (PR #335). The read-only WP-A reconciled the historical Return Gate and the
+  architecture decisions first. §6.3's "Paused" was true at its date and is reconciled by this start.
+- **Shape:** one task, one pull request, checkpoints CP1–CP4. S6-01 delivers a private, guided *preparation* inside
+  `MY_WORLD` behind closed operator gates, under the CW2-06A controlled amendment
+  ([S6-01 record](docs/e2e/QANDEEL_S6_01_INTELLIGENT_MATCHING_ONBOARDING_IMPLEMENTATION_RECORD_v1.md)).
+- **Not changed:** the six `0149` commands stay closed (D1), so real enrollment is unavailable; S6-01 is not Intelligent
+  Matching complete; nothing is deployed and no gate is opened; Issue #322 stays open as a release blocker.
+- **Register:** from 67 to 68 items (`QAN-BL-MATCH-04`, Stage 8A, D7; backlog §7). `QAN-BL-MATCH-01` is re-owned to
+  S6-07 (dependency `ACCT-DEL-01`) at S6-01's closing change.
