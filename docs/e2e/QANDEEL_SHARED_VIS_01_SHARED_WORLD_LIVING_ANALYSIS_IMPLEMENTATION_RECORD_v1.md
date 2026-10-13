@@ -412,5 +412,7 @@ locator rows still read ACTIVE / not merged. CI-01 recorded the drift (C0 decisi
     and 4 rapid open / Back cycles, with no ANR, stall, lost touch or wrong focus. It is still missing, so the result is
     **NOT PROVEN / LAUNCH BLOCKED**.
   - It is owned by the Stage 9 Economy + Launch Closure / release-readiness gate.
-  - It is not a backlog item; admitting it is a Product Owner decision.
+  - It is not a backlog item; admitting it is a Product Owner decision. *(Stage 6 WP0, 2026-10-13:)* the Product Owner
+    approved the admission; its register entry is `QAN-BL-LAUNCH-04` (`HIGH`, `DEFERRED — OWNED`), and the issue stays
+    open.
 - Nothing in §1–§14 is rewritten. No code, migration, copy or Product decision changes.

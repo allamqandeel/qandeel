@@ -196,6 +196,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-ACE-01` | The QANDEEL Personality Core Does Not Reach Shared / Public QANDEEL Replies (Gate B) | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-ACE-02` | Adaptive Conversational Expression: Real-Model Personality Behaviour on the Golden Conversations Suite | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
 | `QAN-BL-GOV-01` | Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `MEDIUM` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-LAUNCH-04` | Shared / Public Living Analysis — Physical Android Rapid-Interaction & Resize Stability Proof | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1863,6 +1864,68 @@ authorizes implementation (BG-07).
 Admitted by ACE-SP-01 under BG-06 in its closing change, as the Product Owner designated (§6 of the authorization).
 Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-LAUNCH-04` — Shared / Public Living Analysis — Physical Android Rapid-Interaction & Resize Stability Proof
+
+- **Title / Finding:** SHARED-VIS-01 (PR #321, merged as `5973123153e26494d702a4a859a79631ede225cd`) put the Shared World
+  on the common Living Analysis stack and, through the Controlled Frozen Map Correction, changed the shared `WorldCanvas`
+  so that a frame resize no longer resets the camera plane. Shared and Public consume that stack. The fix is proven only
+  off-device: focused deterministic resize / camera race tests (12 / 12), 12 / 12 regular panel-scroll-Back cycles on an
+  Android emulator, and emulator TalkBack checks for Shared and Public (named in the Product Owner's PR #321 merge decision;
+  GOV-REC-01 record §2). No physical Android device was connected. The
+  bounded emulator stress attempt of rapid open / Back cycles ended in an ANR / freeze; emulator software-GPU or memory
+  pressure is a plausible contributing cause, and is not proof that the production app is unaffected. Whether the
+  release app stays responsive and correct on real Android hardware under rapid interaction, and under resize during
+  active camera motion, in both consumers, is **NOT PROVEN**.
+- **Source:** GitHub [Issue #322](https://github.com/allamqandeel/qandeel/issues/322), *Physical Android rapid
+  interaction & resize stability proof* — the Product Owner's binding pre-launch gate of 2026-10-09, the condition of the
+  PR #321 merge (exact reviewed head `8563e5699a100fe88c3e5ef451ca825c98d4c18e`); the
+  [SHARED-VIS-01 record](e2e/QANDEEL_SHARED_VIS_01_SHARED_WORLD_LIVING_ANALYSIS_IMPLEMENTATION_RECORD_v1.md) §11, §13.1
+  and §14 (the native proof and the correction); the
+  [GOV-REC-01 record](e2e/QANDEEL_GOV_REC_01_POST_MERGE_LOCATOR_CLOSURE_RECORD_RECONCILIATION_v1.md) §7 (the admission
+  proposal); and the Product Owner's explicit approval of this admission in the Stage 6 WP0 brief (2026-10-13, §8),
+  recorded in the [Stage 6 WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §9.
+- **Current truth:** Issue #322 is `OPEN / NOT PROVEN / RELEASE BLOCKER`. Merging PR #321, green CI, the visual
+  acceptance, the deterministic race tests and the emulator passes are not device evidence (Issue #322; the
+  `QAN-BL-CW-03` tombstone). This admission closes, waives and reclassifies nothing, and does not reopen SHARED-VIS-01:
+  the issue stays the home of the evidence, and this item is its register entry.
+- **Anti-duplication:** no other item carries this obligation. `QAN-BL-NOTIF-05` covers the native-Push physical-device
+  Exit Gates PD-01 … PD-09 only. `QAN-BL-VIS-01` covers heavy-history scale, LOD and real-device scale / performance (its
+  D6, and LA-VIS-01's real-phone performance), not stability under rapid interaction or resize at any scale. `QAN-BL-MOT-03` and `QAN-BL-RSP-01` are T-12 tombstones for the Personal world on
+  `02bff1b6…`, before the Shared consumer and the `WorldCanvas` correction existed. `QAN-BL-CW-03` is tombstoned and puts
+  this release evidence explicitly outside its scope. `QAN-BL-CI-01` is the iOS simulator Maestro driver. The ID
+  `QAN-BL-LAUNCH-04` was unused.
+- **Why deferred:** the proof needs a physical Android phone and a release-representative build, which no task has had.
+  The issue places the obligation at the release-readiness gate, or earlier when a device is available, and says it is
+  not an instruction to reopen SHARED-VIS-01, run endless CI or change the visuals now.
+- **Owner task:** `Stage 9 — Economy + Launch Closure (release-readiness gate)`. As the issue allows, an earlier explicit
+  validation owner may take it when a physical Android device becomes available; that change is recorded here as a
+  re-owning, never made silently.
+- **Severity:** `HIGH`. A stall, lost touch or wrong focus in the Shared and Public Living Analysis consumers breaks the
+  core World experience on real devices, and the Product Owner made the proof a release blocker.
+- **Reopen condition:** automatic when Stage 9 / Release Hardening & Launch starts; earlier, when a physical Android device
+  is available for validation; and in any case before any public production launch of QANDEEL.
+- **Required future property (Exit Gate) — exactly the evidence Issue #322 defines:**
+  1. a physical Android phone and a release-representative app build;
+  2. both affected Living Analysis consumers, Shared and Public: FAR → MID → NEAR, focusing a semantic place,
+     opening and scrolling the panel, Back, and the return to an interactive map;
+  3. at least **12 panel-scroll-Back cycles and 4 rapid open / Back cycles** on the device, each with correct focus and
+     labels, visible and hittable places, no stuck movement and correct camera / World isolation; the rapid cycles cover
+     resize during active camera motion; a harness's stale coordinates or snapshots are not counted as Product failures;
+  4. no ANR, unrecovered stall, lost touch, labels that stay missing, or incorrect focus / target — one observed Product
+     failure is a FAIL, diagnosed and fixed before release;
+  5. auditable proof — the exact tested SHA and APK hash, the device model and Android version, step-by-step PASS / FAIL,
+     the relevant screenshots, device logs or screen recording, and any exception classification — with the outcome
+     recorded in canonical release-readiness evidence;
+  6. with no physical device the result stays `NOT PROVEN / LAUNCH BLOCKED`, never PASS. No waiver without a new
+     explicit Product Owner decision recorded with the release risk.
+- **Closure rule:** only the owning task tombstones this item, citing that evidence, and Issue #322 closes with the same
+  evidence. Neither closes on CI, emulator runs, a merge or a visual acceptance.
+- **Status:** `DEFERRED — OWNED`
+
+Admitted under BG-06 / BG-08 at the Product Owner's explicit approval (Stage 6 WP0 brief, 2026-10-13, §8), as a
+documentation-only governance change; GOV-REC-01 had left the admission to the Product Owner (its record §7). Issue #322
+stays `OPEN / NOT PROVEN / RELEASE BLOCKER`. Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -2271,6 +2334,10 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
     proofs.
   - No register item carries it today: `QAN-BL-NOTIF-05` covers native Push only, and `QAN-BL-VIS-01` covers scale and
     LOD. Whether it is admitted as an item is left to the Product Owner (GOV-REC-01 record §7).
+  - *(Stage 6 WP0, 2026-10-13:)* the Product Owner approved the admission. The obligation is now the register item
+    `QAN-BL-LAUNCH-04` (§5; `HIGH`, `DEFERRED — OWNED`, owner `Stage 9 — Economy + Launch Closure (release-readiness
+    gate)`). The issue itself stays open, and this tombstone's disposition is unchanged. The bullet above describes the
+    register as GOV-REC-01 left it.
 - **Status:** `CLOSED — TOMBSTONE`
 
 ### `QAN-BL-GOV-01` — Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges
@@ -2307,15 +2374,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 26 |
+| `DEFERRED — OWNED` | 27 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 22 |
-| **Total** | **62** |
+| **Total** | **63** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 31 |
+| `HIGH` | 32 |
 | `MEDIUM` | 29 |
 | `LOW` | 2 |
 
@@ -2841,6 +2908,31 @@ register that calls one of these tasks "PR open", "Draft PR" or "not merged" des
   adds no migration.
 - **Latest index: 62 items; 26 / 4 / 10 / 22 by status, 31 / 29 / 2 by severity**, recounted mechanically from §4.
 
+**Stage 6 WP0 governance admission (2026-10-13; documentation / governance only; from `main` at
+`135142004097136336d586e5d5ff6cfd119cd864`, the merge of PR #334; effective from the merge of the pull request that carries
+it).** The Product Owner authorized WP0 of *Stage 6 — Matching & Introductions Kickoff*: research, anti-duplication and a
+Product Decision Gate only. WP0 changes no Stage 6 lifecycle state (the locators still record Stage 6 as NEXT / not
+started) and implements nothing: no runtime, migration, API, screen or frozen Product contract changes
+([Stage 6 WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md)).
+
+- **Admitted — `QAN-BL-LAUNCH-04`** (`HIGH`, `DEFERRED — OWNED`, owner `Stage 9 — Economy + Launch Closure
+  (release-readiness gate)`): GitHub Issue #322, the physical-Android rapid-interaction and resize stability proof for the
+  Shared and Public Living Analysis consumers. This is the Product Owner's explicit approval (WP0 brief §8) of the
+  decision GOV-REC-01 left open (its record §7; the GOV-REC-01 paragraph above records the register before it). The
+  anti-duplication check ran against the whole register first (§5 item). Issue #322 stays
+  `OPEN / NOT PROVEN / RELEASE BLOCKER`; it is not closed, waived or reclassified, and SHARED-VIS-01 is not reopened. The
+  `QAN-BL-CW-03` tombstone gains a dated pointer; its disposition is unchanged.
+- **BG-05 at the kickoff (WP0 is not S6-01):** no open item names the WP0 or the Kickoff. `QAN-BL-MATCH-01` stays
+  `DEFERRED — OWNED` by `S6-01 — Intelligent Matching Onboarding`, unchanged, because WP0 opens no implementation and does
+  not resume S6-01. WP0 takes nothing toward users, so the reopen conditions of `QAN-BL-ACCT-01` and `QAN-BL-PROD-06` do
+  not fire. It maps every inherited and adjacent item to the proposed Stage 6 tasks for the Product Owner's review (WP0
+  record §8); none of that mapping is an assignment until the Product Owner approves it. The cross-task residue WP0 found
+  — the Introduction-phase account-Name leak (record §2.5), the Stage 8A Matching conclusion producer with its AI-COST
+  family and eval suite, and conditional others (record §8.5) — awaits the Product Owner's decision (record §10, GATE-03);
+  none is admitted here.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 63 items; 27 / 4 / 10 / 22 by status, 32 / 29 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -2932,6 +3024,8 @@ Inherited after T-12 closure reconciliation:
 | `ACE-01 — Adaptive Conversational Expression v1` | none — no item names it; admitted `QAN-BL-ACE-01` (Gate B) and `QAN-BL-ACE-02` (Stage 8A); `QAN-BL-IP-01`, `QAN-BL-IP-02`, `QAN-BL-CW-02`, `QAN-BL-CW-05` and `QAN-BL-VOICE-01` observed and left unchanged |
 | `ACE-SP-01 — Shared / Public QANDEEL Personality Core Decision` | `QAN-BL-ACE-01` — authorized by the Product Owner (2026-10-12; D-1 … D-4, Copy Gate 6 / 6); delivered for both Worlds under the ACE-SP-01 controlled amendment and tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-ACE-02`'s validation set extended (D-4; owner and status unchanged); admitted `QAN-BL-GOV-01`; `QAN-BL-CW-02`, `QAN-BL-IP-01` and `QAN-BL-MATCH-01` reconciled with owners unchanged |
 | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `QAN-BL-GOV-01` (admitted by ACE-SP-01; owner name APPROVED by the Product Owner, 2026-10-12 — *as first written: "owner name proposed for the Product Owner's confirmation"*) — delivered; tombstoned by itself under BG-08 (effective from its merge); `QAN-BL-CW-03` tombstoned retroactively for SHARED-VIS-01; Issue #322 not admitted (a Product Owner decision); none admitted |
+| `Stage 6 — Matching & Introductions Kickoff (WP0)` | none — no item names it; research and planning only, no implementation; `QAN-BL-MATCH-01` left with `S6-01`, unchanged (S6-01 not resumed); `QAN-BL-ACCT-01` and `QAN-BL-PROD-06` observed, reopen conditions not fired; admitted `QAN-BL-LAUNCH-04` (Issue #322) at the Product Owner's explicit approval; inherited and adjacent items mapped to the proposed Stage 6 tasks for Product Owner review only ([WP0 record](e2e/QANDEEL_S6_WP0_MATCHING_INTRODUCTIONS_REPO_TRUTH_GAP_CENSUS_v1.md) §8); proposed admissions found by WP0 (record §8.5: the Introduction-phase account-Name leak; the Stage 8A Matching conclusion producer, AI-COST family and eval suite; conditional others) await the Product Owner's GATE-03 decision — none admitted |
+| `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `QAN-BL-LAUNCH-04` (admitted by the Stage 6 WP0 at the Product Owner's approval, 2026-10-13; an earlier explicit validation owner may take it when a physical Android device is available, recorded as a re-owning) |
 
 T-11 inherits nothing from this backlog. That historical kickoff invariant remains true after T-12 closure reconciliation.
 

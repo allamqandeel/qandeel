@@ -190,9 +190,12 @@ that lagged behind it. Evidence: the
 - **Open, unchanged:**
   - GitHub Issue #322 — the physical-Android rapid-interaction and resize stability proof — is
     `OPEN / NOT PROVEN / RELEASE BLOCKER`, under the Stage 9 release-readiness gate. It is not a backlog item; admitting
-    it is the Product Owner's decision.
+    it is the Product Owner's decision. *(Stage 6 WP0, 2026-10-13:)* the Product Owner approved the admission: its
+    register entry is `QAN-BL-LAUNCH-04` (`HIGH`, `DEFERRED — OWNED`, owner
+    `Stage 9 — Economy + Launch Closure (release-readiness gate)`), and the issue stays open.
   - `QAN-BL-PROD-06` (`HOSTED-DEPLOY-01`) and every other release blocker.
 - **Backlog:** 62 items, 26 / 4 / 10 / 22 by status, after `QAN-BL-CW-03` and `QAN-BL-GOV-01` are tombstoned.
+  *(Stage 6 WP0, 2026-10-13:)* 63 items, 27 / 4 / 10 / 22 by status, after `QAN-BL-LAUNCH-04` is admitted (backlog §7).
 - The checkpoints below are historical snapshots. Their "not merged", "PR open" and "CURRENT" labels describe their own
   dates.
 
