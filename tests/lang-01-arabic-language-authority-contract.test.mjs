@@ -13,7 +13,7 @@
 //   * nothing frozen was rewritten: I-08A4 still matches its provenance pin and the byte-preserved proofs keep their
 //     bytes; the census keeps its units and status line;
 //   * Work Package D is not integrated before its independent safety gate: the six in-force replies are unchanged;
-//   * the record, the locators, the backlog kickoff row and the CI registration.
+//   * the record, the locators (when present), the backlog kickoff row and the CI registration.
 //
 // File reads only. No database, no network, no `.env`, no provider key.
 import assert from 'node:assert/strict';
@@ -58,8 +58,10 @@ const amendment = await read(AMENDMENT);
 const g23 = await read(G23_AMENDMENT);
 const record = await read(RECORD);
 const backlog = await read('docs/qandeel-canonical-backlog-v1.md');
-const currentState = await read('QANDEEL_CURRENT_STATE.md');
-const projectMap = await read('QANDEEL_PROJECT_MAP.md');
+const authorityIndex = await read('docs/canonical-authority/CANONICAL_AUTHORITY_INDEX.md');
+// The root locators are not part of the forward-safety mirror, so they are checked when present.
+const locators = await Promise.all(['QANDEEL_CURRENT_STATE.md', 'QANDEEL_PROJECT_MAP.md']
+  .filter((file) => existsSync(new URL(file, root))).map((file) => read(file)));
 const packageJson = JSON.parse(await read('package.json'));
 const apiCi = await read('.github/workflows/api-ci.yml');
 
@@ -209,11 +211,11 @@ test('Work Package D is not integrated before its independent safety gate', asyn
   }
 });
 
-test('the record, the locators and the backlog kickoff row point at the manifest and the amendments', () => {
+test('the record, the locators, the authority index and the backlog kickoff row point at the manifest and the amendments', () => {
   assert.match(record, /^# QANDEEL — LANG-01 — Arabic Language Authority & Fixed Copy Correction — Record v1$/mu);
   assert.match(record, /^\*\*Status:\*\* `ACTIVE — /mu);
   assert.match(record, /WORK PACKAGE D BLOCKED \(INDEPENDENT SAFETY REVIEW\)/u);
-  for (const text of [currentState, projectMap]) {
+  for (const text of locators) {
     assert.ok(text.includes('docs/e2e/lang-01/QANDEEL_LANG_01_RESOLVED_APPROVAL_MANIFEST_v1.json'), 'locator links the manifest');
     assert.ok(text.includes(AMENDMENT), 'locator links the amendment');
   }

@@ -70,7 +70,8 @@ Delivered on PR A (documentation and governance only; no runtime change):
 - the [G2.3 LANG-01 controlled amendment](../design/i-08b3.1-g2.3/G2_3_LANG01_MATCHING_COPY_CONTROLLED_AMENDMENT.md)
   (M-01 … M-03), beside G2.3 on the pattern of the T-11 amendment.
 
-Two documents carry all 87 amendment units; no per-string governance document was created.
+Two documents carry all 87 amendment units; no per-string governance document was created. Both are registered in
+the [Canonical Authority Index](../canonical-authority/CANONICAL_AUTHORITY_INDEX.md), beside the W1B-01 amendment.
 
 **Preserved.** No frozen or approved record is edited. I-08A4 still matches its provenance pin; G2.3, G1.1, P4-C4,
 W1B-01, VI-01, E1R, T-14 and every e2e Copy Gate record are byte-identical; the byte-preserved proof and vendored canon
