@@ -621,9 +621,40 @@ just below the fold at 320 dp in English. **Reused unchanged from VIS-3:** en-no
 arrival motion (`Arrival`) is unchanged, and the moved name keeps its arrival wrapper; Reduced Motion parity stays pinned in
 jest.
 
-Remaining observation, not a defect: at 320 dp in English, on the first KNOWN item (v03), the secondary chips start just
-below the fold. The question and the primary act are in view, and the chips are one short scroll away. Before VIS-3P, the
-first secondary row was visible.
+An observation from that proof, corrected below (R1): at 320 dp in English, on the first KNOWN item (v03), the secondary chips
+started just below the fold.
+
+**VIS-3P R1 — secondary-choice discoverability (Product Owner final review of `0c8d1786`).** The PO required that the
+correction, no-longer-accurate and decline choices for a remembered item be clearly discoverable beside "Yes". The fix
+uses the smallest layout change, with no content, copy, target or semantic change:
+
+- `353cd3e4`: a step whose item waits in the band (a decision) opens at least at the existing portrait glimpse. From
+  there it scrolls further toward the page's end, where its choices are, as far as it can while the band (the complete
+  remembered statement) and any arrival stay in view. The portrait keeps the room left above.
+- `9c8f1faa`: the native large-text check found that the new reach could scroll "Added to your preparation." (R4) out of
+  view, because that line was measured only once and sometimes before it was laid out. It is now measured whenever the
+  place is applied (band layout, page size, and its own layout). Until then, the step keeps the glimpse.
+- `fe3e0943` + `4e996fb1`: a repeated probe found a pre-existing placement race. The same probe on the earlier VIS-3
+  build misplaced this step in 3 of 6 runs. The race came from two causes: a step's layout reported before the
+  step-change effect (which then reset the page to the top), and a scroll applied while the native page still had the
+  previous step's height (clamped to 0). Each step is now placed once by the first layout that reports it. The effect
+  does not reset a placed step. The place is applied again over the next two frames, unless the owner scrolls or the
+  keyboard comes up.
+
+Native verification (final APK `45a8d9c5…` from `4e996fb1`):
+
+- **Repeated KNOWN probe** (fresh app state each run): English 1.3× text, 10 of 10 placed, with "Yes" and all three
+  choices in view and the band at the top. English 320 dp, 5 of 5 placed, with every choice and the memory note in view.
+  Arabic 320 dp, 3 of 3 placed; two further runs met the emulator's render stall (a blank app window after many cold
+  launches, also seen before this change).
+- **Flow legs** `s6-01-vis3-portrait.yaml`, en-narrow, ar-narrow and en-large: **PASS** each. This includes the R4
+  "Added" assertion after "Yes" and Save with the keyboard up.
+
+At 1.3× text after an arrival, "Added" keeps priority: "Yes" and the first choice are in full view, and the next chip
+row is visibly cut at the bottom edge, so more choices are evident. Evidence is in `.s6-01-visual-proof/vis3p-r1/`, with
+the superseded builds' runs kept and labelled. The before/after ZIP is `S6-01-VIS-3P-final-before-after.zip`. The
+emulator render stall needed two emulator restarts during this check; it is an environment limit (class C), not an app
+defect.
 
 ## 8. Validation (actually run; proportional to each boundary)
 
@@ -654,6 +685,9 @@ first secondary row was visible.
 | 7 | VIS-3P: proof guard, W3 Personal row, Activity surfaces | `npx jest src/integration/__tests__/s6-01-proof-introductions src/integration/__tests__/w3-settings-appearance-signout src/activity/__tests__/surfaces` | **40 / 40** |
 | 8 | VIS-3P: typecheck; lint of the touched files | `tsc --noEmit`; `eslint src/introductions` | clean |
 | 9 | VIS-3P native proof, five legs + screen-reader dump | §7.7 | **PASS** every leg |
+| 10 | VIS-3P R1: Introductions surface + runtime entry (incl. three new placement tests: the decision's reach, the arrival kept in view before and after it can be measured) | `npx jest src/introductions src/runtime-entry`, on `4e996fb1` | **322 / 322** |
+| 11 | VIS-3P R1: proof guard, W3 Personal row, Activity surfaces; typecheck; lint | as rows 7–8, on `4e996fb1` | **40 / 40**; clean |
+| 12 | VIS-3P R1 native: repeated KNOWN probe and three flow legs | §7.7 | **PASS** (probe 18 of 18 placed on the runs the emulator rendered) |
 
 ## 9. `QAN-BL-MATCH-04` — admitted at CP1
 
