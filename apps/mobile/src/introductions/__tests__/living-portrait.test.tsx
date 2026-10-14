@@ -245,9 +245,11 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     expect(view.getByTestId('qandeel-introductions-save')).toBeTruthy();
   });
 
-  it('R2 — a saved answer closes the keyboard, so the next step is never left beneath it', async () => {
-    const dismiss = jest.spyOn(ReactNative.Keyboard, 'dismiss').mockImplementation(() => undefined);
+  it('R2 — sending an answer closes the keyboard while its field still exists, so the next step is never left beneath it', async () => {
     const fake = server(viewOf({ kind: 'ESTABLISH_PRIORITIES' }));
+    // Dismissing blurs the focused field: it must happen before the answer can replace the step.
+    const dismissedAfter: number[] = [];
+    const dismiss = jest.spyOn(ReactNative.Keyboard, 'dismiss').mockImplementation(() => { dismissedAfter.push(fake.commands.length); });
     const view = await surface(language, fake);
     await fireEvent.changeText(view.getByTestId('qandeel-introductions-priority'), 'Honesty');
     expect(dismiss).not.toHaveBeenCalled();
@@ -255,6 +257,7 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     await press(view, 'qandeel-introductions-save');
     expect(fake.commands.map((c) => c.kind)).toEqual(['ADD_NOTE']);
     expect(dismiss).toHaveBeenCalledTimes(1);
+    expect(dismissedAfter).toEqual([0]);
   });
 
   const reviewed = viewOf(null, {

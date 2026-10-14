@@ -316,10 +316,11 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   const send = async (kind: Parameters<IntroductionsController['command']>[0], payload: Record<string, unknown>) => {
     const before = portraitRef.current;
     setLanded(NONE);
+    // Sending an answer closes the keyboard while its field still exists (dismissing blurs the focused field, and the
+    // server's answer may replace the step): the next step — a confirmation, a choice — is never left beneath it.
+    Keyboard.dismiss();
     const ok = await controller.command(kind, payload);
     if (ok) {
-      // A saved answer closes the keyboard: the next step (its confirmation, a choice) is never left beneath it.
-      Keyboard.dismiss();
       setEditing(null);
       setCorrecting(null);
       setCorrection('');
