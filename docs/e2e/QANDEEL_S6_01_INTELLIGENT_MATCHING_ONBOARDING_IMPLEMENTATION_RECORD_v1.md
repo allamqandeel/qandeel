@@ -393,7 +393,7 @@ save (retry is the same command); value not accepted.
 | 55 | `hardBody` | ما لا يمكن قبوله في شريك الحياة. | What you can't accept in a life partner. | PROPOSED |
 | 56 | `hardNone` | لا توجد شروط أساسية إضافية | No additional dealbreakers | PROPOSED |
 | 57 | `hardSet` | تحديد شروط أساسية | Set dealbreakers | PROPOSED |
-| 58 | `systemRulesNote` | يطبّق قنديل قواعد التعارف العامة، مثل السن القانونية، دون أن تُكتب شرطًا لك. | QANDEEL applies the general rules, such as legal age, without writing them as your dealbreaker. | PROPOSED |
+| 58 | `systemRulesNote` | عند إتاحة التعارف، ستُطبَّق قواعد الأهلية المعتمدة، بما فيها السن القانونية. وهذه ليست شروطًا شخصية تختارها. | When Introductions becomes available, the approved eligibility rules, including the applicable legal age, will apply. These are not your personal dealbreakers. | CORRECTED — the Product Owner's future-facing wording (CP3 redesign brief), applied in VIS-2 |
 | 59 | `softTitle` | التفضيلات | Preferences | PROPOSED |
 | 60 | `softBody` | ما يُفضَّل لديك دون أن يكون شرطًا. | What you prefer, without it being a dealbreaker. | PROPOSED |
 | 61 | `softNone` | لا توجد تفضيلات | No preferences | PROPOSED |
@@ -430,6 +430,13 @@ save (retry is the same command); value not accepted.
 | 92 | `invalid` | هذه القيمة غير مقبولة. | This value isn't accepted. | PROPOSED |
 | 93 | `tryAgain` | إعادة المحاولة | Try again | REUSED meaning — PROPOSED wording |
 | 94 | `back` | رجوع | Back | PROPOSED |
+| 95 | `clusterAbout` | عنك | About you | PROPOSED — VIS-2 delta r1 (7.6) |
+| 96 | `clusterBounds` | الشروط والتفضيلات | Dealbreakers and preferences | PROPOSED — VIS-2 delta r1 (7.6) |
+| 97 | `clusterOpen` | لم يُحسم بعد | Not settled yet | PROPOSED — VIS-2 delta r1 (7.6) |
+| 98 | `afterConfirmPrior` | عند التأكيد، يُضاف إلى تحضيرك بكلماتك كما هي. | Once confirmed, it's added to your preparation in your own words. | PROPOSED — VIS-2 delta r1 (7.6) |
+| 99 | `added` | أُضيف إلى تحضيرك. | Added to your preparation. | PROPOSED — VIS-2 delta r1 (7.6) |
+| 100 | `stateDeclared` | لم يُؤكَّد بعد | Not confirmed yet | PROPOSED — VIS-2 delta r1 (7.6) |
+| 101 | `stateNotIncluded` | غير مُضمَّن | Not included | PROPOSED — VIS-2 delta r1 (7.6) |
 
 ### 7.4 Visual proof (320 dp, Arabic and English)
 
@@ -481,6 +488,63 @@ to two lines in the title role; (b) the Personal row shows two entries side by s
    role for a long name; the two Personal-row entries on two lines).
 
 Until then the gate is OPEN, and S6-01 is not ready for merge (Task Contract §8 item 4).
+
+### 7.6 VIS-2 / VIS-3 — the Living Portrait (direction A), natively
+
+**Decision.** On 2026-10-14 the Product Owner approved the 94 rows and the C01–C07 treatment, required a redesign of the
+experience («Living Introduction»), rejected the first prototype round, and then selected direction **A — Living Portrait**
+over B — Editorial Intelligence, *approved with four binding refinements* (R1–R4), as the design reference for native
+implementation. This section records how the native surface resolves each refinement. It is a presentation change only:
+migration `0154`, the API and controller, the objective selector (N / K / C), confirmation and correction semantics, the
+assistance permission and its revocation, account-deletion safety, draft versioning, SEC-MATCH-00, the closed enrollment
+commands and every launch gate are unchanged.
+
+**Structure.** One pure projection, `portrait-projection.ts` (`projectPortrait`), places the canonical `IntroductionsView`:
+what the server says is settled is drawn on the World as the owner's portrait (`Portrait.tsx`, three groups: About you,
+What matters to you, Dealbreakers and preferences); the one thing the current step is about waits in "Not settled yet"
+(the band) with a ring mark; the current question is the one prominent act, on the Field (the sheet). The portrait is
+never a second source of truth.
+
+| | Refinement | Resolution |
+|---|---|---|
+| R1 | The portrait grows from real understanding | Only server-confirmed content is drawn: CONFIRMED facts, the owner's profile choices, the owner's notes (written, or confirmed from prior understanding — `0154` makes a PERSONAL_FACT an ABOUT_ME note, anything else WHAT_MATTERS) and answered requirements. DECLARED / CORRECTED facts, remembered items awaiting the owner and conflicts are in "Not settled yet" with a ring (awaiting confirmation) or an open ring (to decide), never inside the portrait. Nothing is drawn for what is missing: no empty diagram, no slot, no count; the beginning shows no portrait at all. A remembered item's destination is shown as a dashed landing place with words, never as content. |
+| R2 | The question stays primary | While preparing, the portrait is COMPACT (each group keeps its newest words, two lines) unless the screen has room (≥ 720 pt at the reader's text size) or the owner opens it; it is always compact while the keyboard is up. The group name is the disclosure (button, `expanded` state; no new words). The question is a header in the 20/32 role and is where the screen reader arrives on every step. `KeyboardAvoidingView` keeps the sheet above the keyboard; the focused field is brought into view with its question above it, and a saved answer closes the keyboard so the next step is never left beneath it. The REVIEW step opens with its lead question, before the portrait it introduces. No fixed widths; text scales with the system. |
+| R3 | REVIEWED is a meaningful portrait | The review (REVIEW step and REVIEWED) is the COMPOSED portrait: the first name in 24/38, confirmed facts as plain lines, the owner's priorities in their own quoted words, a dealbreaker as a closed outline and a preference as an open one (four corners) — shape and ink only (E1). Details and edits are disclosed per part by its own Edit (About you: the five facts, work field, short introduction; Dealbreakers and preferences: each side); every existing editor, correction, deletion, the assistance permission and Delete preparation remain. Skipped optional steps are named once ("Not included"). The completion line — the preparation is complete, enrolling is not available yet, it stays private — opens REVIEWED, before the portrait it completes. |
+| R4 | Light communicates a real event | **Not authorized within scope; no light is used.** QANDEEL Light is governed by D2R (`docs/design/canonical-artifacts/qandeel-light/i-08b3.1-d2r/D2R_IMPLEMENTATION_BOUNDARIES.md` §1): its four categories (FIELD, DIRECTION, CONVERGENCE, EMERGENCE) are analytical events of the Analysis map, "a fifth kind of light event is a new Product decision", and "Meaning Light is never used for activity, loading, focus, selection or confidence". The mobile illumination tokens exist only in the Analysis map visuals (`map/visual/*.generated.ts`); the conversation palette carries none. The non-illuminated transition is used instead: after an APPLIED answer, the words that the change ADDED rise into place (opacity and a 12 pt rise, T-10 **M3** semantic disclosure, ≤ 260 ms, `QANDEEL_EASE_OUT`), "Added to your preparation." is written under them, and it is announced to the screen reader — whether or not motion runs. Reduced Motion shows the same words at once. Nothing is shown arriving before the server applied it; a declined item never lands. The narrowest legitimate amendment, should the Product Owner want light here later: a controlled amendment of D2R §1 admitting one new event kind ("owner-confirmed preparation content", Personal depth only, decaying to exactly zero, with a Reduced-Motion residue), owned by the visual-authority track — not by S6-01. |
+
+**Typography** (the approved calmer hierarchy; local sizes on the shipped Estedad Medium face, no generated token and no
+new weight): header 17/30 Medium; question 20/32 Medium; first name 24/38 Medium in the composed (review) portrait only;
+body 17/30, supporting 15/25, action 14/23 Medium, metadata 12/20 from E3. The 32/50 statement role is no longer used here.
+
+**Personal row.** The two entries («فهم قنديل», «التعارف مع قنديل») wrap onto two lines instead of being cut short; the row
+is at least 44 pt (the W3 pin now reads `height ?? minHeight`). This resolves 7.4 observation (b).
+
+**Copy delta r1** (`INTRODUCTIONS_COPY_DELTA` in `copy.ts`; rows 95–101 of 7.3) — accepted as a design direction,
+**PROPOSED** until the Product Owner's final byte-exact approval. No other fixed copy was added; the disclosure controls use
+the group names and the platform's own expanded / collapsed announcement.
+
+| Key | Arabic | English | Where |
+|---|---|---|---|
+| `clusterAbout` | عنك | About you | the first group of the portrait |
+| `clusterBounds` | الشروط والتفضيلات | Dealbreakers and preferences | the third group |
+| `clusterOpen` | لم يُحسم بعد | Not settled yet | the band holding the current unsettled item; read-only unsettled facts |
+| `afterConfirmPrior` | عند التأكيد، يُضاف إلى تحضيرك بكلماتك كما هي. | Once confirmed, it's added to your preparation in your own words. | inside the landing place of a remembered item |
+| `added` | أُضيف إلى تحضيرك. | Added to your preparation. | under words that just arrived; announced |
+| `stateDeclared` | لم يُؤكَّد بعد | Not confirmed yet | the accessible name of an item awaiting confirmation |
+| `stateNotIncluded` | غير مُضمَّن | Not included | skipped optional steps in the review; an empty optional value in a part's details |
+
+`systemRulesNote` carries the Product Owner's future-facing correction (row 58).
+
+**Visual critique and corrective pass (on the native screens, before the proof).** One deliberate critique of the first
+native runs (Arabic and English, 320 dp) found five defects; each was corrected and is pinned by a test:
+
+| # | Seen on the device | Correction | Commit |
+|---|---|---|---|
+| 1 | After Save, the keyboard stayed up over the next step (the declared value's confirmation, the Sex choice) | The keyboard closes as an answer is sent, while its field still exists (dismissing after the server's answer was too late: the step had already replaced the focused field) | `8c97e780`, `fe69c0a0` |
+| 2 | REVIEW at 320 dp: the composed portrait filled the screen and its question was below the fold (against R2) | The review's lead question opens the screen; the portrait follows; Confirm review rests below | `8c97e780` |
+| 3 | REVIEWED looked like REVIEW: "Your preparation is complete…" was below the fold (against R3) | The completion line opens REVIEWED, before the portrait it completes | `8c97e780` |
+| 4 | English, 320 dp: Delete preparation opened its confirmation and Cancel below the fold, so nothing visibly changed | The page's last block is brought into view when the confirmation opens | `a0bfdd8b` |
+| 5 | English: "Yes, that's right" / "Yes, it's correct" drawn as "Yes, that's" / "Yes, it's" (last word clipped after a re-render) | The primary label spans its button and is centred by alignment instead of being shrink-wrapped | `b7d80156` |
 
 ## 8. Validation (actually run; proportional to each boundary)
 
