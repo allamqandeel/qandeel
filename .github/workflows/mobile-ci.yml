@@ -238,6 +238,57 @@ jobs:
       # dependency validation, Expo Doctor and prebuild idempotency. This job
       # exists to prove native generation and build; the consumer proves install and boot.
       - {name: Generate the Android project (CNG), if: steps.native-build-cache.outputs.cache-hit != 'true', run: npm run prebuild:android --workspace @qandeel/mobile}
+      # S6-01 CI-R2 — the NDK is PROVISIONED and VERIFIED here, before Gradle, instead of being downloaded implicitly
+      # inside it. `ubuntu-24.04` (image 20261004.327.1) does not ship NDK 27.1.12297006, so every build fetched it
+      # through Gradle's SDK installer, which has no retry. That normally takes about 20 s. On run 38585872503 it
+      # stalled for six minutes and then failed with `SocketException: Connection reset` / `InstallFailedException`,
+      # and the whole APK build failed before compiling anything.
+      #
+      # The version is NOT chosen here. React Native declares it (`node_modules/react-native/gradle/libs.versions.toml`,
+      # RN 0.86.3), and this step refuses to run if that declaration ever differs from the pin below. A copy already on
+      # the runner is used only after the same verification. Otherwise `sdkmanager` (which checks the package's
+      # repository checksum) installs it: at most three attempts, each bounded, with backoff. Each attempt starts from
+      # an empty directory, and a copy that fails verification is deleted, never used. Nothing is cached.
+      - name: Provision the pinned Android NDK (verified; bounded retry)
+        if: steps.native-build-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 25
+        env:
+          ANDROID_NDK_PIN: 27.1.12297006
+        run: |
+          set -euo pipefail
+          declared="$(sed -n 's/^ndkVersion = "\(.*\)"$/\1/p' node_modules/react-native/gradle/libs.versions.toml)"
+          if [ "$declared" != "$ANDROID_NDK_PIN" ]; then
+            echo "::error::React Native declares NDK '${declared}', the pin is ${ANDROID_NDK_PIN}. Change the pin deliberately; never to make CI green."
+            exit 1
+          fi
+          sdk="${ANDROID_HOME:?ANDROID_HOME is not set on this runner}"
+          ndk="$sdk/ndk/$ANDROID_NDK_PIN"
+          verified() {
+            grep -Eq "^Pkg\.Revision *= *${ANDROID_NDK_PIN//./\\.}$" "$ndk/source.properties" 2>/dev/null \
+              && test -x "$ndk/ndk-build" \
+              && "$ndk/toolchains/llvm/prebuilt/linux-x86_64/bin/clang" --version > /dev/null 2>&1
+          }
+          if verified; then
+            echo "NDK $ANDROID_NDK_PIN is already on the runner and verified"
+          else
+            for attempt in 1 2 3; do
+              rm -rf "$ndk"
+              if node scripts/validation/bounded-run.mjs --seconds 420 --label android-ndk-provision -- \
+                   "$sdk/cmdline-tools/latest/bin/sdkmanager" --install "ndk;$ANDROID_NDK_PIN" > "$RUNNER_TEMP/sdkmanager-ndk.log" 2>&1 \
+                 && verified; then
+                break
+              fi
+              tail -n 20 "$RUNNER_TEMP/sdkmanager-ndk.log" || true
+              rm -rf "$ndk"
+              if [ "$attempt" -eq 3 ]; then
+                echo "::error title=INFRASTRUCTURE — android-ndk-provision::NDK $ANDROID_NDK_PIN could not be installed and verified in 3 bounded attempts"
+                exit 1
+              fi
+              echo "::warning title=INFRASTRUCTURE — android-ndk-provision::attempt $attempt failed; retrying after $((attempt * 30)) s"
+              sleep $((attempt * 30))
+            done
+          fi
+          echo "### Android NDK: \`$(grep -E '^Pkg\.Revision' "$ndk/source.properties")\` (verified before Gradle)" >> "$GITHUB_STEP_SUMMARY"
       - name: Build the Release APK (x86_64 for the emulator)
         if: steps.native-build-cache.outputs.cache-hit != 'true'
         working-directory: apps/mobile/android
@@ -502,6 +553,14 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       IOS_SIMULATOR_NAME: iPhone 17
       IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+      # S6-01 CI-R1. Maestro waits for its XCTest driver for a FIXED 120 s unless this is set
+      # (`LocalXCTestInstaller.SERVER_LAUNCH_TIMEOUT_MS`, cli-2.10.0), and that window only opens after the
+      # runner is installed. Unset, it fired before the 300 s readiness bound ever could, so the bound never
+      # classified anything. Measured: runs 38222765239 (be73bdc5) and 38570981700 (4b94c04d) both ended in
+      # `IOSDriverTimeoutException` at 228 s and 185 s, before any app launch. Green readiness probes took
+      # 102–270 s. 300 s is the value `t12-phase-m-cloud-validation.yml` already measured for the same exception.
+      # Job-scoped, so the Android consumer keeps its own default.
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
     steps:
       - {name: Checkout, uses: actions/checkout@v4}
       - name: Setup Node.js 22
@@ -576,15 +635,49 @@ jobs:
           maestro --version
           maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
       # VAL-01: the XCTest driver must answer before the flow starts. A dead driver is classified INFRASTRUCTURE
-      # here in at most five minutes, instead of a smoke that idles to its limit with no Product step run.
-      - name: Maestro driver readiness (bounded)
-        timeout-minutes: 6
-        run: node scripts/validation/bounded-run.mjs --seconds 300 --label ios-driver-readiness --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --compact
-      # Bounded at the STEP for the same reason. The simulator is already booted and the verified app
-      # already installed, so this bounds the Maestro smoke alone; a timeout stays red, like any failure.
+      # here, instead of a smoke that idles to its limit with no Product step run.
+      # CI-R1: each probe's bound ENCLOSES Maestro's own window. 480 s covers the 300 s MAESTRO_DRIVER_STARTUP_TIMEOUT
+      # plus the time before that window opens (JVM start and runner install; up to 108 s measured).
+      #
+      # CI-R2: the failure is a runner LAUNCH that never completes, not a slow one, so waiting longer does not cure it.
+      # Same image (macos-26-arm64 20260907.0351.1), Xcode 26.6, iOS 26.5 and Maestro 2.10.0 in all of the last
+      # 11 runs: 8 green, 3 failed. Every failure refused 127.0.0.1:22087 for the whole window: the runner never
+      # listened. Two left their `test-without-building` process hung to the end of the job (38222765239, 38570981700).
+      # The third exited by itself after the full 300 s window (38585872503). So:
+      #   1. `--no-reinstall-driver` keeps the driver this probe proved alive. The smoke below reuses it
+      #      (`startXCTestRunner` returns on a live channel) instead of a second cold launch that can hang the same
+      #      way. Maestro's default uninstalls and relaunches the driver on EVERY CLI call.
+      #   2. If the first probe fails, ONE clean recovery, never a loop: record the evidence; end the hung runner
+      #      launch; uninstall the runner app; reboot the simulator, which restarts its XCTest services and keeps
+      #      the verified app installed. Then probe once more. A second failure stays red.
+      # The smoke itself is never retried, and its assertions are unchanged.
+      - name: Maestro driver readiness (bounded; at most one clean driver recovery)
+        timeout-minutes: 22
+        run: |
+          if node scripts/validation/bounded-run.mjs --seconds 480 --label ios-driver-readiness --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --no-reinstall-driver --compact; then
+            exit 0
+          fi
+          echo '::warning title=INFRASTRUCTURE — ios-driver-readiness::the XCTest driver never answered; recording evidence, then ONE clean driver recovery'
+          bash scripts/validation/ios-driver-diagnostics.sh "$IOS_SIM_UDID"
+          pkill -f "test-without-building.*$IOS_SIM_UDID" || true
+          xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner || true
+          xcrun simctl uninstall "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner || true
+          xcrun simctl shutdown "$IOS_SIM_UDID"
+          xcrun simctl boot "$IOS_SIM_UDID"
+          node scripts/validation/bounded-run.mjs --seconds 300 --label ios-simulator-reboot -- xcrun simctl bootstatus "$IOS_SIM_UDID" -b
+          node scripts/validation/bounded-run.mjs --seconds 480 --label ios-driver-readiness-after-recovery --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --no-reinstall-driver --compact
+      # Bounded at the STEP for the same reason. The simulator is already booted, the verified app already
+      # installed and the driver already proven, so this bounds the Maestro smoke alone. A timeout stays red, like
+      # any failure.
       - name: Boot smoke on the iOS simulator
         timeout-minutes: 15
-        run: node scripts/validation/bounded-run.mjs --seconds 780 --label ios-boot-smoke -- maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
+        run: node scripts/validation/bounded-run.mjs --seconds 780 --label ios-boot-smoke -- maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml --no-reinstall-driver
+      # Evidence only, on a failure that has already happened. It reads logs and changes no result: the job is red
+      # before this runs, and stays red.
+      - name: Driver diagnostics (failure only; read-only)
+        if: ${{ failure() }}
+        timeout-minutes: 4
+        run: bash scripts/validation/ios-driver-diagnostics.sh "$IOS_SIM_UDID"
 
   # -------------------------------------------------------------------------------------------------
   # VAL-01 — bound contracts and evidence

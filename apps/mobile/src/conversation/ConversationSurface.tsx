@@ -88,6 +88,11 @@ export interface ConversationSurfaceProps {
    * (the row exists only with the Settings entry). Presentation only; this layer writes none of its words.
    */
   readonly personalEntry?: ReactElement | null;
+  /**
+   * S6-01 (GATE-13): a second Personal-world entry, drawn after `personalEntry` on the same row (the Introductions
+   * preparation). Presentation only; this layer writes none of its words.
+   */
+  readonly personalSecondEntry?: ReactElement | null;
   /** W3-MEGA-U: a bounded context line the Personal world supplies, drawn above the composer. Presentation only. */
   readonly discussion?: ReactElement | null;
   /**
@@ -231,6 +236,7 @@ export function ConversationSurface({
   onOpenSettings,
   focusSettingsEntry = false,
   personalEntry = null,
+  personalSecondEntry = null,
   discussion = null,
   chromeStart = null,
 }: ConversationSurfaceProps) {
@@ -411,7 +417,8 @@ export function ConversationSurface({
           style={{
             paddingLeft: insets.left + 10,
             paddingRight: insets.right + 10,
-            height: PERSONAL_ROW_HEIGHT,
+            // S6-01: with a second entry the row may grow, so no entry is ever cut short (320 points, large text).
+            ...(personalSecondEntry === null ? { height: PERSONAL_ROW_HEIGHT } : { minHeight: PERSONAL_ROW_HEIGHT }),
             // With a start-edge entry the row is laid out from the reader's start, so the screen reader reaches the
             // entry first in both languages; the entry takes the free width and the Settings entry keeps the end edge.
             flexDirection: personalEntry !== null && endSide === 'left' ? 'row-reverse' : 'row',
@@ -420,8 +427,9 @@ export function ConversationSurface({
           }}
         >
           {personalEntry === null ? null : (
-            <View testID="qandeel-personal-row-start" style={{ flex: 1, flexDirection: endSide === 'right' ? 'row' : 'row-reverse' }}>
+            <View testID="qandeel-personal-row-start" style={{ flex: 1, flexDirection: endSide === 'right' ? 'row' : 'row-reverse', flexWrap: personalSecondEntry === null ? 'nowrap' : 'wrap' }}>
               {personalEntry}
+              {personalSecondEntry ?? null}
             </View>
           )}
           <Control

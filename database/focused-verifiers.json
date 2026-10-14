@@ -15,6 +15,20 @@
   ],
   "version": 1,
   "groups": {
+    "s6-01": {
+      "title": "S6-01 - Matching Onboarding Preparation (migration 0154) with the Matching protection, deletion, export-preparation, privilege-matrix, retry-hazard, Memory-authority and Memory-writer verifiers it must leave unchanged",
+      "verifiers": [
+        "database/verify-migration-0154.mjs",
+        "database/verify-migration-0149.mjs",
+        "database/verify-migration-0130.mjs",
+        "database/verify-migration-0132.mjs",
+        "database/verify-migration-0133.mjs",
+        "database/verify-migration-0150.mjs",
+        "database/verify-migration-0152.mjs",
+        "database/verify-migration-0153.mjs",
+        "database/verify-migration-0026.mjs"
+      ]
+    },
     "ip-imp-01": {
       "title": "IP-IMP-01 - Interaction Preferences (migration 0153) with the export, export-preparation, privilege-matrix and Memory-writer verifiers it touches",
       "verifiers": [

@@ -4594,3 +4594,51 @@ conversation command (one transaction with its reply and completed-turn event, r
 leaves nothing, no Memory / attribution / Memory command written), the SELF-only legacy review that never changes a Memory,
 two concurrent first writes serializing without deadlock (committed fixtures, removed and checked), the export in readable
 words and the governed erasure.
+
+## S6-01 - Matching Onboarding Preparation (migration 0154)
+
+`0154_matching_onboarding_preparation_v1.sql` is the database part of `S6-01` under the Product Owner's S6-01 Final
+Implementation Authorization (2026-10-13, D1-D7) and the
+[CW2-06A controlled amendment](../docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06A_MATCHING_ONBOARDING_PREPARATION_ASSISTANCE_CONTROLLED_AMENDMENT_v1.0.md).
+No historical migration is edited. Record:
+[S6-01 implementation record](../docs/e2e/QANDEEL_S6_01_INTELLIGENT_MATCHING_ONBOARDING_IMPLEMENTATION_RECORD_v1.md).
+
+**Why.** Real enrollment stays closed (`0149`; D1), so a person can prepare for Introductions only in a store that is
+not the I-07 runtime: owner-only, versioned, erasable with the account, and never enrollment.
+
+**What 0154 does** (schema `introductions_preparation_private`, not exposed through the Data API).
+
+```text
+gate_states / gate_events                 PREPARATION and ONBOARDING_ASSISTANCE operator gates (0138 pattern); absent =
+                                          closed; changed only by set_gate_v1, which no application role can run
+area_countries / area_regions             the preparation area catalogue (22 countries, regions listed for 8)
+consent_texts                             each MATCHING_ONBOARDING_ASSISTANCE consent version: Arabic, English, SHA-256
+drafts / declared_facts / notes /         the owner's draft: facts with DECLARED / CONFIRMED / CORRECTED states,
+prior_understanding_decisions             optional profile, hard requirements and soft preferences, private notes,
+                                          decisions on prior-understanding items (no content)
+assistance_consents                       version-bound, revocable grants
+command_ledger                            each applied command once (kind, fingerprint, outcome, version; no content)
+public.*_matching_preparation_* and       seven SECURITY INVOKER pass-throughs to owner entry points that take the
+public.*_matching_onboarding_assistance_* human from auth.uid() only
+```
+
+**Grants.** `authenticated` runs the seven owner entry points and nothing else; no application role reads or writes a
+table; `service_role`, `anon` and `PUBLIC` reach nothing. Every account reference cascades from `public.users`, and no
+outside relation references the schema, so the governed erasure (0130) removes everything and is never `BLOCKED` by it.
+Writes are refused while the owner's account deletion is live; read, revoke and discard stay available.
+
+**What it does not do.** No I-07 relation is read or written and none of the six `0149` commands is named; no Memory,
+Hypothesis or HIM write; no dynamic SQL; no `40001`; Export My Data unchanged (`QAN-BL-PRIV-04`, S6-07).
+
+**Deployment.** Not deployed; nothing opens a gate. `QAN-BL-PROD-06` owns the hosted catch-up.
+
+```sh
+npm run verify:matching-onboarding-preparation:integration
+```
+
+`verify-migration-0154.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It enumerates the schema itself
+(relations, RLS and privileges, every foreign key and its delete rule, every function with its security mode, search_path,
+owner and executors; the six `0149` commands still closed) and proves: closed gates; the owner draft with compare-and-set,
+idempotent command ids and field validation; isolation; the consent and its bounded reader (SELF / ACTIVE / four classes /
+at most 12; no Memory, attribution, Hypothesis or HIM write); revocation, first-write and deletion races on two
+connections (committed fixtures, removed); and the governed erasure ERASED with zero rows left.

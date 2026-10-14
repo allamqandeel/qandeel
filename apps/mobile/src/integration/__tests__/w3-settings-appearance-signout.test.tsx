@@ -159,7 +159,9 @@ describe('E2E-D-01 — the ONE General Settings destination, entered from Person
     expect(style(entry)).toMatchObject({ width: 44, height: 44, minWidth: 44, minHeight: 44 });
     // Logical END: the reader's end edge is the LEFT in Arabic and the RIGHT in English (explicit LTR frame).
     expect(style(row).justifyContent).toBe(LANGUAGE === 'ar' ? 'flex-start' : 'flex-end');
-    expect(style(row).height).toBe(44);
+    // 44 points high; S6-01 (VIS-2): with the Introductions entry on the same row it is AT LEAST 44, so a long English
+    // entry wraps onto a second line at 320 points instead of being cut short.
+    expect(style(row).height ?? style(row).minHeight).toBe(44);
     h.dispose();
   });
 

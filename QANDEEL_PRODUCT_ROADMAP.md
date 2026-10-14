@@ -406,3 +406,40 @@ authorizes no implementation, and §6.7 stays as written.
   - neither workstream receives implementation authorization through the addendum;
   - Stage 6 is still not started, and no Task Contract exists;
   - PR #335 is not merged.
+
+### 6.9 Execution note — 2026-10-13 (S6-01 start)
+**Recorded:** 2026-10-13 by S6-01 at its CP1, in the S6-01 pull request (not merged). This is a status note only, and
+§6.3, §6.7 and §6.8 stay as written.
+- **Started:** the Product Owner's S6-01 Final Implementation Authorization (2026-10-13, D1–D7) starts **S6-01 —
+  Intelligent Matching Onboarding** as the current implementation task, from `main` at
+  `af94748de73cca744c466d8db526984427b94b38` (PR #335). The read-only WP-A reconciled the historical Return Gate and the
+  architecture decisions first. §6.3's "Paused" was true at its date and is reconciled by this start.
+- **Shape:** one task, one pull request, checkpoints CP1–CP4. S6-01 delivers a private, guided *preparation* inside
+  `MY_WORLD` behind closed operator gates, under the CW2-06A controlled amendment
+  ([S6-01 record](docs/e2e/QANDEEL_S6_01_INTELLIGENT_MATCHING_ONBOARDING_IMPLEMENTATION_RECORD_v1.md)).
+- **Not changed:** the six `0149` commands stay closed (D1), so real enrollment is unavailable; S6-01 is not Intelligent
+  Matching complete; nothing is deployed and no gate is opened; Issue #322 stays open as a release blocker.
+- **Register:** from 67 to 68 items (`QAN-BL-MATCH-04`, Stage 8A, D7; backlog §7). `QAN-BL-MATCH-01` is re-owned to
+  S6-07 (dependency `ACCT-DEL-01`) at S6-01's closing change.
+
+### 6.10 Execution note — 2026-10-14 (S6-01 closing change)
+**Recorded:** 2026-10-14 by S6-01 at CP4, in the S6-01 pull request (not merged). This is a status note only; §6.9
+stays as written.
+- **Status:** S6-01 is **CLOSED (CP4) — READY FOR PRODUCT OWNER REVIEW — NOT MERGED / NOT DEPLOYED**, on one draft pull
+  request. Merging needs the Product Owner's explicit decision.
+- **Delivered:**
+  - preparation functionality (migration `0154`, API, the Living Portrait mobile surface);
+  - VIS-2 / VIS-3 / VIS-3P and the VIS-3P R1 correction, with native proof
+    ([S6-01 record](docs/e2e/QANDEEL_S6_01_INTELLIGENT_MATCHING_ONBOARDING_IMPLEMENTATION_RECORD_v1.md) §7.6, §7.7, §8).
+- **Not delivered:**
+  - real enrollment, which stays unavailable;
+  - actual Matching intelligence (`QAN-BL-MATCH-04`, Stage 8A);
+  - deployment and launch clearance.
+- **Copy Gate:** CLOSED. The Product Owner approved the seven VIS-2 rows (95–101) byte-exact, 7 / 7, on 2026-10-14
+  (record §7, §10.4).
+- **Still open:**
+  - every operator and launch gate, which stay closed;
+  - Issue #322, which stays open as a release blocker.
+- **Register:** `QAN-BL-MATCH-01` is re-owned to `S6-07` (mandatory dependency `ACCT-DEL-01`), effective from the merge.
+  The register stays at 68 items (backlog §7).
+- **Next:** the Product Owner's review of the S6-01 pull request. No later Stage 6 task is started by this note.

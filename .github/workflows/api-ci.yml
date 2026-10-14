@@ -991,6 +991,12 @@ jobs:
       # owner-only privileges, Export My Data (the 0130 body plus one section) and the governed erasure.
       - name: Verify IP-IMP-01 Interaction Preferences against real PostgreSQL
         run: npm run verify:interaction-preferences:integration
+      # S6-01: migration 0154 - the pre-enrollment preparation draft (CW2-06A), by its own enumeration of every relation,
+      # foreign key, grant and function: closed operator gates; owner-only commands with compare-and-set and idempotent
+      # command ids; the MATCHING_ONBOARDING_ASSISTANCE consent and its bounded SELF-Memory reader (no Memory write);
+      # revocation and deletion races; the governed erasure ERASED with zero footprint; the six 0149 commands still closed.
+      - name: Verify S6-01 Matching Onboarding Preparation against real PostgreSQL
+        run: npm run verify:matching-onboarding-preparation:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

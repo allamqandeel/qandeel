@@ -44,6 +44,10 @@
  *
  *   qandeel://s401-proof/shared-field/seed   two Worlds of the reader with the places of the SYNTHETIC fixture
  *                                            `shared-vis-proof-field.ts`
+ *
+ * S6-01 — the Introductions preparation (the SYNTHETIC stand-in `s601-proof-introductions.ts`):
+ *
+ *   qandeel://s401-proof/introductions/seed-new | seed-known | seed-mixed | seed-portrait | close
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -58,7 +62,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -101,6 +105,12 @@ export function S401ProofRoot() {
       if (match[1] === 'public' && match[2] === 'relation-accept') world.relationAccept();
       if (match[1] === 'public' && match[2] === 'peer-reply') world.peerReply();
       if (match[1] === 'shared-field' && match[2] === 'seed') world.sharedField();
+      if (match[1] === 'introductions' && (match[2] === 'seed-new' || match[2] === 'seed-known' || match[2] === 'seed-mixed' || match[2] === 'seed-portrait' || match[2] === 'close')) {
+        world.introductions(match[2]);
+        // The entry reads its availability hint when the Personal world is drawn; a seed after launch asks it again.
+        const phase = runtime.getPhase();
+        if (phase.kind === 'READY') phase.runtime.introductions.refreshAvailability();
+      }
     });
     return () => {
       subscription.remove();
