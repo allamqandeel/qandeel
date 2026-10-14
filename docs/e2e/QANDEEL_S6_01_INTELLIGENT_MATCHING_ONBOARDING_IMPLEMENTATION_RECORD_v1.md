@@ -1,9 +1,13 @@
 # QANDEEL — S6-01 — Intelligent Matching Onboarding — Implementation Record v1
 
-**Status:** `S6-01` — **CLOSED (CP4) — READY FOR PRODUCT OWNER REVIEW — NOT MERGED / NOT DEPLOYED.** CP1–CP4 are
-recorded on one draft pull request, PR #339 (§10). Merging needs the Product Owner's explicit decision. The Product Copy
-Gate is still open for seven rows (95–101, PROPOSED; §7, §10.4). Nothing is deployed, no gate is opened and no
-enrollment happens.
+**Status:** `S6-01` — **CLOSED (CP4) — PRODUCT COPY GATE CLOSED — READY FOR THE PRODUCT OWNER'S MERGE DECISION — NOT
+MERGED / NOT DEPLOYED.** CP1–CP4 are recorded on one draft pull request, PR #339 (§10). The Product Owner approved rows
+95–101 byte-exact, 7 / 7, without modification, on 2026-10-14. That closed the Product Copy Gate (§7, §10.4). Merging
+needs the Product Owner's separate explicit authorization. Nothing is deployed, no gate is opened and no enrollment
+happens.
+
+*As written at CP4:* `S6-01` — CLOSED (CP4) — READY FOR PRODUCT OWNER REVIEW — NOT MERGED / NOT DEPLOYED. The Product
+Copy Gate was still open for seven rows (95–101, PROPOSED).
 
 *As written at CP1:* `S6-01` — IN PROGRESS — CP1 (authority and field contracts) recorded. Not merged, nothing deployed,
 no gate opened. CP2 (database and API), CP3 (copy / visual gate and mobile) and CP4 (exact-head verification and closure)
@@ -284,9 +288,25 @@ a change is bound to the draft version shown; a lost answer is retried with the 
 treats the surface as a non-Analysis Personal depth (`ProductSurface` `INTRODUCTIONS`). No Settings group is drawn (no
 enrolled person exists).
 
-## 7. Product Copy and Visual Gate (CP3) — OPEN for rows 95–101 only
+## 7. Product Copy and Visual Gate (CP3) — CLOSED
 
-**Status at CP4 (2026-10-14):** `OPEN — seven rows PROPOSED`.
+**Status at closure (2026-10-14):** `CLOSED — 101 / 101 rows APPROVED`.
+- The Product Owner's **S6-01 Final Product Copy Approval** (2026-10-14, "APPROVED — 7/7") approves the exact Arabic and
+  English of rows 95–101 in `copy.ts`, without modification. Their wording is in §10.4.
+- This closes the gate, together with the 94 rows and the C01–C07 treatment approved earlier the same day (7.6), and
+  the controlled replacements (7.2).
+- Every earlier Copy Gate decision stands as recorded:
+  - C01 is used unchanged;
+  - C02–C06 keep their controlled replacements;
+  - C03 stays split into two rows;
+  - **C07 stays DEFERRED and is never displayed**;
+  - `systemRulesNote` (row 58) carries the Product Owner's own correction.
+- No copy string, application code, database, design or architecture changed for this approval.
+- The in-code status markers of `copy.ts` are left as written, because the approval directs that no application code
+  changes. These are `INTRODUCTIONS_COPY_GATE.status`, `INTRODUCTIONS_COPY_DELTA.status` and the per-row comments.
+  The same applies to the status column of 7.3. Where they say OPEN or PROPOSED, this section and §10.4 bind.
+
+*As written at CP4 (2026-10-14):* `OPEN — seven rows PROPOSED`.
 - On 2026-10-14 the Product Owner approved the 94 rows and the C01–C07 treatment (7.6). `systemRulesNote` carries the
   Product Owner's own correction (row 58).
 - The seven VIS-2 delta rows, 95–101, are PROPOSED. Their formal byte-exact decision has not been given (§10.4).
@@ -716,6 +736,7 @@ The closing change touches documentation and one contract pin. No code, migratio
 | 3 | Every static contract except the forward-safety mirror (incl. the S6-01 locator pins of s5-03b, s5-03c and shared-vis-01) | `node --test tests/*.test.mjs` | **1332 / 1332** |
 | 4 | Seven-row byte check: rows 95–101 of §10.4 against `copy.ts` | a one-off byte comparison (Arabic and English) | **7 / 7 identical** |
 | 5 | Exact-head CI (API CI, Mobile CI) on the pull request's final head | GitHub, PR #339 | Reported on the pull request. A record cannot carry the result of the commit that contains it |
+| 6 | Copy Gate closure (2026-10-14): rows 95–101 of §10.4 re-checked byte for byte against `copy.ts`, and the governance, SEC-MATCH-00 and static contracts re-run. The change is documentation only, with no file under `apps/`, `packages/` or `database/` | as rows 1–4 | **7 / 7 identical**; **24 / 24**; **9 / 9**; **1332 / 1332** |
 
 ## 9. `QAN-BL-MATCH-04` — admitted at CP1
 
@@ -761,7 +782,8 @@ S6-01 is not "Intelligent Matching complete".
   - the export of the draft: `QAN-BL-PRIV-04`;
   - enrollment and the Introductions Settings group: `QAN-BL-MATCH-01`;
   - gate opening: CW2-08 / Stage 9.
-- The open Copy Gate rows are an active-task decision and stay here (BG-01; §10.4).
+- The Copy Gate rows were an active-task decision and stayed here (BG-01). The Product Owner approved them 7 / 7 on
+  2026-10-14, so nothing about them is left for a successor (§10.4).
 - An optional D2R §1 light amendment (7.6, R4) is a possible future Product decision, not an obligation.
 
 **Register:** 68 items; 32 / 4 / 10 / 22 by status; 37 / 29 / 2 by severity. It was recounted mechanically, and a
@@ -794,10 +816,16 @@ re-owning changes no count.
 - The native proof ran only on the validation-only S4-01 proof root, over a synthetic stand-in (§7.4). The product entry
   is unchanged.
 
-### 10.4 Pending Product Owner decisions
+### 10.4 Product Owner decisions
 
-1. **The Product Copy Gate for the seven VIS-2 delta rows**, byte-exact as `copy.ts` holds them. They have not been
-   approved; their formal decision is not recorded anywhere:
+1. **The Product Copy Gate for the seven VIS-2 delta rows — APPROVED, 7 / 7 (Product Owner, 2026-10-14).**
+   - **Decision:** the S6-01 Final Product Copy Approval, which approves the exact Arabic and English below, as
+     `copy.ts` holds them, without modification. It closes the gate (§7).
+   - **Check:** the wording was re-checked byte for byte against `copy.ts` after the decision (§8.3, row 6).
+   - **Before the decision:** item 1 stood open, and the seven tags stayed PROPOSED.
+
+   *As written at CP4:* "They have not been approved; their formal decision is not recorded anywhere", and "Until that
+   decision the gate stays open for these rows (Task Contract §8 item 4)."
 
    | # | Key | Arabic | English |
    |---|---|---|---|
@@ -809,9 +837,8 @@ re-owning changes no count.
    | 100 | `stateDeclared` | لم يُؤكَّد بعد | Not confirmed yet |
    | 101 | `stateNotIncluded` | غير مُضمَّن | Not included |
 
-   Until that decision the gate stays open for these rows (Task Contract §8 item 4), and their tags stay PROPOSED.
-2. **The merge of PR #339.** Merging needs the Product Owner's explicit decision. Deploying and opening any gate each
-   need their own separate authorization.
+2. **Still pending: the merge of PR #339.** Merging needs the Product Owner's separate explicit authorization.
+   Deploying and opening any gate each need their own authorization too.
 
 Outside S6-01, and not a condition of this merge: the Product Owner's confirmation of the `ACCT-DEL-01` name
 (`QAN-BL-ACCT-01`, WP0 addendum D3). It gates the S6-07 enrollment path, not this pull request.

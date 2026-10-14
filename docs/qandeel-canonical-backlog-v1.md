@@ -3560,7 +3560,8 @@ paragraph above stays as the record of the register before it.
   - Its deferrals already have owners: natural-language phrasing and understanding readiness (`QAN-BL-MATCH-04`), the
     compatibility conclusion (`QAN-BL-MATCH-03`), the export of the preparation draft (`QAN-BL-PRIV-04`), enrollment and
     the Introductions Settings group (`QAN-BL-MATCH-01`), and gate opening (CW2-08 / Stage 9).
-  - Its open Copy Gate rows are an active-task decision and stay in the task (BG-01).
+  - Its Copy Gate rows were an active-task decision and stayed in the task (BG-01). The Product Owner approved them
+    7 / 7 on 2026-10-14, so the gate is closed and nothing passes to a successor.
   - An optional D2R §1 light amendment is a possible future Product decision, not an obligation.
 - **BG-05:** `S6-07` now owns two open items (`QAN-BL-PRIV-04`, `QAN-BL-MATCH-01`). S6-01 owns none.
 - **Untouched:** every other item, owner, severity and status. This includes `QAN-BL-PROD-06`, `QAN-BL-MATCH-02`,

@@ -435,8 +435,9 @@ stays as written.
   - real enrollment, which stays unavailable;
   - actual Matching intelligence (`QAN-BL-MATCH-04`, Stage 8A);
   - deployment and launch clearance.
+- **Copy Gate:** CLOSED. The Product Owner approved the seven VIS-2 rows (95–101) byte-exact, 7 / 7, on 2026-10-14
+  (record §7, §10.4).
 - **Still open:**
-  - the Product Copy Gate, for the seven VIS-2 rows (95–101, PROPOSED);
   - every operator and launch gate, which stay closed;
   - Issue #322, which stays open as a release blocker.
 - **Register:** `QAN-BL-MATCH-01` is re-owned to `S6-07` (mandatory dependency `ACCT-DEL-01`), effective from the merge.
