@@ -208,7 +208,11 @@ test('the canonical records carry the amendment, and QAN-BL-ACCT-01 stays open',
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /^\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `UNASSIGNED` \| `HIGH` \| `OPEN — UNASSIGNED` \|$/mu,
     'QAN-BL-ACCT-01 is not closed or absorbed');
-  assert.match(backlog, /^\| `QAN-BL-MATCH-01` \| .* \| `S6-01 — Intelligent Matching Onboarding` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu);
+  // RE-ANCHORED by S6-01's closing change (2026-10-14, validation only): the Product Owner's D1 re-owns the item to
+  // S6-07 with a mandatory dependency on ACCT-DEL-01. It stays open: the six commands stay closed.
+  assert.match(backlog, /^\| `QAN-BL-MATCH-01` \| .* \| `S6-07 — Activity, Direct Entry and Final Integration` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu);
+  assert.match(backlog, /^- \*\*Dependency:\*\* account-deletion integrity, the separately governed `ACCT-DEL-01` correction path/mu,
+    'QAN-BL-MATCH-01 keeps its ACCT-DEL-01 dependency');
   assert.match(backlog, /^### `QAN-BL-MATCH-01` — /mu);
   assert.match(backlog, /\*\*Current-truth note \(SEC-MATCH-00, 2026-10-09; implemented, not merged\)\.\*\*/u);
   const record = read('docs/e2e/QANDEEL_SEC_MATCH_00_MATCHING_DIRECT_RPC_PROTECTION_IMPLEMENTATION_RECORD_v1.md');

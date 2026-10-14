@@ -1,7 +1,12 @@
 # QANDEEL — S6-01 — Intelligent Matching Onboarding — Implementation Record v1
 
-**Status:** `S6-01` — **IN PROGRESS — CP1 (authority and field contracts) recorded.** Not merged, nothing deployed, no
-gate opened. CP2 (database and API), CP3 (copy / visual gate and mobile) and CP4 (exact-head verification and closure)
+**Status:** `S6-01` — **CLOSED (CP4) — READY FOR PRODUCT OWNER REVIEW — NOT MERGED / NOT DEPLOYED.** CP1–CP4 are
+recorded on one draft pull request, PR #339 (§10). Merging needs the Product Owner's explicit decision. The Product Copy
+Gate is still open for seven rows (95–101, PROPOSED; §7, §10.4). Nothing is deployed, no gate is opened and no
+enrollment happens.
+
+*As written at CP1:* `S6-01` — IN PROGRESS — CP1 (authority and field contracts) recorded. Not merged, nothing deployed,
+no gate opened. CP2 (database and API), CP3 (copy / visual gate and mobile) and CP4 (exact-head verification and closure)
 follow in the same pull request.
 
 **Authority:** the Product Owner's **S6-01 Final Implementation Authorization** (2026-10-13; "APPROVED — PROCEED WITH
@@ -279,9 +284,15 @@ a change is bound to the draft version shown; a lost answer is retried with the 
 treats the surface as a non-Analysis Personal depth (`ProductSurface` `INTRODUCTIONS`). No Settings group is drawn (no
 enrolled person exists).
 
-## 7. Product Copy and Visual Gate (CP3) — OPEN, awaiting the Product Owner
+## 7. Product Copy and Visual Gate (CP3) — OPEN for rows 95–101 only
 
-**Status:** `OPEN — every new and replacement row PROPOSED`. The words live in one place,
+**Status at CP4 (2026-10-14):** `OPEN — seven rows PROPOSED`.
+- On 2026-10-14 the Product Owner approved the 94 rows and the C01–C07 treatment (7.6). `systemRulesNote` carries the
+  Product Owner's own correction (row 58).
+- The seven VIS-2 delta rows, 95–101, are PROPOSED. Their formal byte-exact decision has not been given (§10.4).
+- The per-row tags in `copy.ts` and in 7.3 are left as written. The gate is marked CLOSED there only by that decision.
+
+*As written at CP3:* `OPEN — every new and replacement row PROPOSED`. The words live in one place,
 `apps/mobile/src/introductions/copy.ts` (`INTRODUCTIONS_COPY_GATE`); the table below is generated from that file, so the
 package and the code cannot differ. Fixed Arabic is simplified MSA and gender-considerate: where a second-person verb
 would mark gender, a row uses a noun or a form spelled alike for both (WP0 §14.1, GATE-28). S6 owns this new Matching
@@ -689,6 +700,23 @@ defect.
 | 11 | VIS-3P R1: proof guard, W3 Personal row, Activity surfaces; typecheck; lint | as rows 7–8, on `4e996fb1` | **40 / 40**; clean |
 | 12 | VIS-3P R1 native: repeated KNOWN probe and three flow legs | §7.7 | **PASS** (probe 18 of 18 placed on the runs the emulator rendered) |
 
+### 8.3 CP4 — the closing change (proportional)
+
+The closing change touches documentation and one contract pin. No code, migration, copy row or screen changes in it.
+- **Code:** no file under `apps/`, `packages/` or `database/` changed after `4e996fb1`, so rows 10–12 of 8.2 still stand
+  for the code.
+- **Database and API:** neither `database/` nor `apps/api/src/introductions-preparation` changed after `dde3d289`, so
+  the focused runs of 8.1 still stand. The only API change in that range is the LANG-01 merge from `main`.
+- **Native proof:** not repeated, because nothing it covers has changed.
+
+| # | Check | Where | Result |
+|---|---|---|---|
+| 1 | Task-closure governance (BG-09, closure rules) | `npm run test:task-closure-governance-contract` | **24 / 24** |
+| 2 | SEC-MATCH-00 contract, `QAN-BL-MATCH-01` pin re-anchored to S6-07 plus its `ACCT-DEL-01` dependency | `node --test tests/sec-match-00-matching-direct-rpc-protection-contract.test.mjs` | **9 / 9** |
+| 3 | Every static contract except the forward-safety mirror (incl. the S6-01 locator pins of s5-03b, s5-03c and shared-vis-01) | `node --test tests/*.test.mjs` | **1332 / 1332** |
+| 4 | Seven-row byte check: rows 95–101 of §10.4 against `copy.ts` | a one-off byte comparison (Arabic and English) | **7 / 7 identical** |
+| 5 | Exact-head CI (API CI, Mobile CI) on the pull request's final head | GitHub, PR #339 | Reported on the pull request. A record cannot carry the result of the commit that contains it |
+
 ## 9. `QAN-BL-MATCH-04` — admitted at CP1
 
 The Product Owner approved the admission in principle after a focused anti-duplication check (D7). The check and the
@@ -697,5 +725,93 @@ item are in the [canonical backlog](../qandeel-canonical-backlog-v1.md) §5 and 
 
 ## 10. Closing change (BG-08 / BG-09)
 
-*Recorded at CP4.* Planned: `QAN-BL-MATCH-01` re-owned to `S6-07 — Activity, Direct Entry and Final Integration`, with
-a mandatory dependency on `ACCT-DEL-01`; it is not tombstoned while the six commands stay closed.
+Recorded at CP4 (2026-10-14), under the Product Owner's direction "S6-01 — Final CP4 Closure Only".
+- **Before the closing change:** the branch head was `d0b98ee2a095617443a8c1a49f683f8f185b46eb`. It contains `main` at
+  `8bc10060bb5ebb05f0cdec24523b1907ba4b4b18` (the merge of PR #338).
+- **The closing change:** documentation and one re-anchored contract pin. It changes no code, migration, copy row or
+  screen.
+- **Pull request:** one draft, PR #339.
+
+*As planned at CP1:* `QAN-BL-MATCH-01` re-owned to `S6-07 — Activity, Direct Entry and Final Integration`, with a
+mandatory dependency on `ACCT-DEL-01`; it is not tombstoned while the six commands stay closed.
+
+### 10.1 Closure statement (§0, unchanged)
+
+> **Preparation functionality delivered — real enrollment still unavailable — actual Matching intelligence not yet
+> complete — no production deployment — no launch clearance.**
+
+S6-01 is not "Intelligent Matching complete".
+
+### 10.2 BG-08 — every item the task inherited or bore
+
+| Item | How S6-01 met it | Disposition at closure |
+|---|---|---|
+| `QAN-BL-MATCH-01` | inherited (owner S6-01) | **Re-owned** to `S6-07 — Activity, Direct Entry and Final Integration`, with a mandatory dependency on `ACCT-DEL-01` (D1); effective from the merge. Not tombstoned: the six `0149` commands stay closed. `HIGH`, `DEFERRED — OWNED`, unchanged |
+| `QAN-BL-MATCH-04` | admitted at CP1 (D7; §9) | Stage 8A, `DEFERRED — OWNED`, unchanged |
+| `QAN-BL-ACCT-01` | bearing | **Unchanged**, `OPEN — UNASSIGNED`. S6-01 adds no deletion-blocking footprint (§5.2). The `ACCT-DEL-01` name still needs the Product Owner's confirmation (backlog §5, D3 note). S6-01 does not close or absorb the dependency |
+| `QAN-BL-PROD-06` | bearing | Unchanged; S6-01 adds no `40001` path (§1.3) |
+| `QAN-BL-PRIV-04` | bearing | Unchanged, owner S6-07; the export of the preparation draft is inside its scope |
+| `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` | bearing | Unchanged |
+| `QAN-BL-LAUNCH-04` | bearing | Unchanged; Issue #322 stays OPEN as a release blocker |
+
+**BG-06 — new residue: none admitted.**
+- Every deferral S6-01 makes already has an owner:
+  - natural-language phrasing and understanding readiness: `QAN-BL-MATCH-04`;
+  - the compatibility conclusion: `QAN-BL-MATCH-03`;
+  - the export of the draft: `QAN-BL-PRIV-04`;
+  - enrollment and the Introductions Settings group: `QAN-BL-MATCH-01`;
+  - gate opening: CW2-08 / Stage 9.
+- The open Copy Gate rows are an active-task decision and stay here (BG-01; §10.4).
+- An optional D2R §1 light amendment (7.6, R4) is a possible future Product decision, not an obligation.
+
+**Register:** 68 items; 32 / 4 / 10 / 22 by status; 37 / 29 / 2 by severity. It was recounted mechanically, and a
+re-owning changes no count.
+
+**BG-09:** this record's banner moves from its CP1 state to its closure state in this same change.
+
+**Locators** updated in the same change:
+- the [canonical backlog](../qandeel-canonical-backlog-v1.md): §4 index row, §5 item, §7 paragraph, §9 rows for
+  S6-01 and S6-07;
+- `QANDEEL_CURRENT_STATE.md`;
+- `QANDEEL_PROJECT_MAP.md`;
+- `QANDEEL_PRODUCT_ROADMAP.md` §6.10;
+- the `QAN-BL-MATCH-01` index-row pin in `tests/sec-match-00-matching-direct-rpc-protection-contract.test.mjs`
+  (re-anchored, validation only).
+
+### 10.3 Enrollment and launch gates: all closed
+
+- The two operator gates, `PREPARATION` and `ONBOARDING_ASSISTANCE`, are absent, which means closed. S6-01 opens neither,
+  on any environment.
+- No enrollment can happen:
+  - the six `0149` commands stay closed;
+  - `NO_BACKDOOR` and the SEC-MATCH-00 protections are unchanged;
+  - no migration after `0149` names any of the six (pinned by the SEC-MATCH-00 contract);
+  - `verify-migration-0149` and `0150` pass unchanged (§8.1).
+- Nothing is deployed. Migration `0154` has not reached the hosted database, and `QAN-BL-PROD-06` still gates hosted
+  deployment.
+- There is no production LLM and no compatibility inference: the phrasing port is `UNBOUND` (§6.2).
+- The CW2-08 launch gates are closed, and Issue #322 stays OPEN.
+- The native proof ran only on the validation-only S4-01 proof root, over a synthetic stand-in (§7.4). The product entry
+  is unchanged.
+
+### 10.4 Pending Product Owner decisions
+
+1. **The Product Copy Gate for the seven VIS-2 delta rows**, byte-exact as `copy.ts` holds them. They have not been
+   approved; their formal decision is not recorded anywhere:
+
+   | # | Key | Arabic | English |
+   |---|---|---|---|
+   | 95 | `clusterAbout` | عنك | About you |
+   | 96 | `clusterBounds` | الشروط والتفضيلات | Dealbreakers and preferences |
+   | 97 | `clusterOpen` | لم يُحسم بعد | Not settled yet |
+   | 98 | `afterConfirmPrior` | عند التأكيد، يُضاف إلى تحضيرك بكلماتك كما هي. | Once confirmed, it's added to your preparation in your own words. |
+   | 99 | `added` | أُضيف إلى تحضيرك. | Added to your preparation. |
+   | 100 | `stateDeclared` | لم يُؤكَّد بعد | Not confirmed yet |
+   | 101 | `stateNotIncluded` | غير مُضمَّن | Not included |
+
+   Until that decision the gate stays open for these rows (Task Contract §8 item 4), and their tags stay PROPOSED.
+2. **The merge of PR #339.** Merging needs the Product Owner's explicit decision. Deploying and opening any gate each
+   need their own separate authorization.
+
+Outside S6-01, and not a condition of this merge: the Product Owner's confirmation of the `ACCT-DEL-01` name
+(`QAN-BL-ACCT-01`, WP0 addendum D3). It gates the S6-07 enrollment path, not this pull request.

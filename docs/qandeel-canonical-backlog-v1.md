@@ -182,7 +182,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CW-05` | QANDEEL Conversational Output Cannot Be a Shared Semantic-Place Source | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-06` | The Ended Shared World Has No Read-Only Living Analysis View | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
 | `QAN-BL-CW-07` | Shared World Temporal Navigation | `UNASSIGNED` | `MEDIUM` | `OPEN — UNASSIGNED` |
-| `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-01 — Intelligent Matching Onboarding` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation) | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-07` | Post-v16 PostgREST: Race-Converging `40001` Paths and Genuine Deadlocks Lose the Server-Side Re-run | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `LOW` | `DEFERRED — OWNED` |
 | `QAN-BL-INTEL-01` | Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02) | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `HIGH` | `CLOSED — TOMBSTONE` |
@@ -1204,10 +1204,16 @@ Admitted by SHARED-VIS-01 at the Product Owner's D5 (2026-10-08). Admission auth
 - **Why deferred:** Matching is not launched and the `CW2-08` launch gates are closed. Reopening enrollment needs a
   reviewed, launch-gated, owner-authorized path. That path must not commit a deletion-blocking footprint for an
   account that has not truly enrolled (`QAN-BL-ACCT-01`). This is Stage 6 Product work, not a security hot-fix.
-- **Owner task:** `S6-01 — Intelligent Matching Onboarding`
+- **Owner task:** `S6-07 — Activity, Direct Entry and Final Integration`. Re-owned from `S6-01 — Intelligent Matching
+  Onboarding` by S6-01's closing change (2026-10-14; effective from its merge), at the Product Owner's D1.
+- **Dependency:** account-deletion integrity, the separately governed `ACCT-DEL-01` correction path of `QAN-BL-ACCT-01`
+  (Stage 6 WP0 final decision addendum, D3). It is mandatory: no enrollment path, `CA-01` amendment or `CA-10` opens
+  before it is resolved. The dependency is recorded here only; `QAN-BL-ACCT-01` keeps every field.
 - **Severity:** `HIGH`. Matching cannot launch to users while enrollment and correction are closed. Reopening them
   carelessly would bring back the deletion-blocking exposure SEC-MATCH-00 closed.
-- **Reopen condition:** automatic when S6-01 resumes, or when any task takes Matching toward users.
+- **Reopen condition:** automatic at S6-07's kickoff (BG-05), or when any task takes Matching toward users. Neither
+  reopens the six commands before `ACCT-DEL-01` is resolved. *(Until S6-01's closing change: "automatic when S6-01 resumes, or when any task takes Matching toward
+  users.")*
 - **Required future property:** no application role regains direct `EXECUTE` on the six through a plain grant, a
   default privilege, a re-created function or a client-executable wrapper. Any reopening runs behind a reviewed,
   fail-closed, server-canonical launch path that the Product Owner approves. The deployment rule stays: `0108` /
@@ -1221,6 +1227,13 @@ started S6-01. Its D1 keeps the six commands closed in S6-01: no wrapper, grant 
 The secure enrollment path, any `CA-01` amendment and `CA-10` wait for account-deletion integrity (`ACCT-DEL-01`). At
 S6-01's closing change this item is re-owned to `S6-07 — Activity, Direct Entry and Final Integration` with that
 dependency; it is not tombstoned. Until then, its fields are unchanged.
+
+**S6-01 closing note (2026-10-14; the S6-01 pull request, not merged).** Done as planned. S6-01 delivered the
+pre-enrollment preparation (migration `0154`) and kept the six commands closed: no wrapper, grant, re-created function
+or later migration names any of them, `verify-migration-0149` and `0150` pass unchanged, and no enrollment happens
+([S6-01 record](e2e/QANDEEL_S6_01_INTELLIGENT_MATCHING_ONBOARDING_IMPLEMENTATION_RECORD_v1.md) §10). The obligation is
+therefore not discharged: the owner is now `S6-07`, with the `ACCT-DEL-01` dependency above. Severity and status are
+unchanged.
 
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: it is a canonical record's explicit deferral to a named future task. The
 entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes implementation (BG-07).
@@ -3535,6 +3548,26 @@ Authorization, S6-01 is the current implementation task.
 - **Untouched:** every other item, owner, severity and status.
 - **Latest index: 68 items; 32 / 4 / 10 / 22 by status, 37 / 29 / 2 by severity**, recounted mechanically from §4.
 
+**S6-01 closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge).** BG-08 at S6-01's
+closure ([S6-01 record](e2e/QANDEEL_S6_01_INTELLIGENT_MATCHING_ONBOARDING_IMPLEMENTATION_RECORD_v1.md) §10). The
+paragraph above stays as the record of the register before it.
+- **Re-owned — `QAN-BL-MATCH-01`:** from `S6-01` to `S6-07 — Activity, Direct Entry and Final Integration`, with a
+  mandatory dependency on `ACCT-DEL-01` (D1). It is not tombstoned: the six `0149` commands stay closed. `HIGH` and
+  `DEFERRED — OWNED` are unchanged.
+- **Unchanged, with the dependency kept open:** `QAN-BL-ACCT-01` (`OPEN — UNASSIGNED`). The `ACCT-DEL-01` name still
+  needs the Product Owner's confirmation (D3 note in §5). S6-01 neither closes nor absorbs it.
+- **Checked and not admitted (BG-06):** S6-01 leaves no new qualifying cross-task residue.
+  - Its deferrals already have owners: natural-language phrasing and understanding readiness (`QAN-BL-MATCH-04`), the
+    compatibility conclusion (`QAN-BL-MATCH-03`), the export of the preparation draft (`QAN-BL-PRIV-04`), enrollment and
+    the Introductions Settings group (`QAN-BL-MATCH-01`), and gate opening (CW2-08 / Stage 9).
+  - Its open Copy Gate rows are an active-task decision and stay in the task (BG-01).
+  - An optional D2R §1 light amendment is a possible future Product decision, not an obligation.
+- **BG-05:** `S6-07` now owns two open items (`QAN-BL-PRIV-04`, `QAN-BL-MATCH-01`). S6-01 owns none.
+- **Untouched:** every other item, owner, severity and status. This includes `QAN-BL-PROD-06`, `QAN-BL-MATCH-02`,
+  `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN).
+- **Latest index: 68 items; 32 / 4 / 10 / 22 by status, 37 / 29 / 2 by severity**, recounted mechanically from §4. A
+  re-owning changes no count.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -3609,9 +3642,9 @@ Inherited after T-12 closure reconciliation:
 | `LA-SCALE-01 — Living Analysis Heavy-History / Dense-World Scale & LOD Proof` | `QAN-BL-VIS-01` |
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
 | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13) |
-| `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned* |
+| `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned*. *Closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-01` re-owned to `S6-07` with the mandatory `ACCT-DEL-01` dependency; admitted `QAN-BL-MATCH-04` at CP1 (Stage 8A, D7); `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`, `QAN-BL-PRIV-04`, `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-LAUNCH-04` observed and left unchanged; no further admission (§7). S6-01 owns no open item |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract) |
-| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract) |
+| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
