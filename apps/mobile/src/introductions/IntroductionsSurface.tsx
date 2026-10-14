@@ -22,7 +22,7 @@
  *       and Reduced Motion shows the same words at once.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AccessibilityInfo, BackHandler, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View, findNodeHandle, useWindowDimensions } from 'react-native';
+import { AccessibilityInfo, BackHandler, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, View, findNodeHandle, useWindowDimensions } from 'react-native';
 
 import { AppearanceStatusBar } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, useReduceMotion } from '../conversation';
@@ -51,6 +51,8 @@ const SHEET_RADIUS = 24;
 const ROOMY_HEIGHT = 720;
 /** After a step changes, this share of the viewport above the current item still shows the portrait it joins. */
 const PORTRAIT_GLIMPSE = 0.35;
+/** With the keyboard up, the field being typed in sits this far down, so its question stays readable above it. */
+const FIELD_CONTEXT = 132;
 const NONE: ReadonlySet<string> = new Set();
 
 type Editing = { readonly kind: 'FACT'; readonly fact: IntroductionsFact } | { readonly kind: 'HARD' | 'SOFT' | 'PROFILE' } | null;
@@ -334,6 +336,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     : next === null ? `stage-${view?.plan.stage ?? 'loading'}-${started}` : `${next.kind}-${'fact' in next ? next.fact : 'item' in next ? next.item.memoryId : ''}-${started}`;
   const titleRef = useRef<Text | null>(null);
   const scrollRef = useRef<ScrollView | null>(null);
+  const contentRef = useRef<View | null>(null);
   const viewportHeight = useRef(0);
   const placeOnLayout = useRef(true);
   // Each step opens with its current item in view, a glimpse of the portrait above it: never the previous scroll position.
@@ -346,9 +349,15 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     placeOnLayout.current = false;
     scrollRef.current?.scrollTo({ y: Math.max(0, y - viewportHeight.current * PORTRAIT_GLIMPSE), animated: false });
   };
-  // With the keyboard up, the sheet's end (its field and its act) stays above it.
+  // With the keyboard up, the field being typed in comes into view with its question above it and its act below it.
   useEffect(() => {
-    if (keyboard) scrollRef.current?.scrollToEnd({ animated: !reduceMotion });
+    if (!keyboard) return;
+    const input = TextInput.State.currentlyFocusedInput();
+    const content = contentRef.current;
+    if (!input || !content) return;
+    input.measureLayout(content, (_x, y) => {
+      scrollRef.current?.scrollTo({ y: Math.max(0, y - Math.min(FIELD_CONTEXT, viewportHeight.current * 0.3)), animated: !reduceMotion });
+    }, () => undefined);
   }, [keyboard, reduceMotion]);
   // The screen reader arrives on the step's question (or the page title) once per step; a confirmation is announced
   // after it, whether or not anything is shown moving.
@@ -542,11 +551,13 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
         onLayout={(e) => { viewportHeight.current = e.nativeEvent.layout.height; }}
         contentContainerStyle={{ flexGrow: 1, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: act === null ? insets.bottom + 16 : 0 }}
       >
-        {world}
-        {/* The sheet rests at the bottom of a short page; a long one simply scrolls. */}
-        <View style={{ flexGrow: 1, minHeight: act === null ? 0 : 16 }} />
-        {band}
-        {act}
+        <View ref={contentRef} style={{ flexGrow: 1 }}>
+          {world}
+          {/* The sheet rests at the bottom of a short page; a long one simply scrolls. */}
+          <View style={{ flexGrow: 1, minHeight: act === null ? 0 : 16 }} />
+          {band}
+          {act}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );

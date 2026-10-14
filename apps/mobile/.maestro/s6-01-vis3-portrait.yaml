@@ -1,0 +1,180 @@
+# S6-01 / CP3 VIS-3 — the Living Portrait on the device. VALIDATION ONLY (S401ProofRoot.tsx, the S6-01 SYNTHETIC stand-in
+# s601-proof-introductions.ts). Nothing here is a real person, a model or a launched capability.
+#
+# The Personal row entry → K: a remembered item awaiting the owner, then the same words in the portrait after "Yes" →
+# the next item → a fact entered with the keyboard up (the field and Save stay visible) → the declared value waiting in
+# "Not settled yet" → C: a genuine conflict, a closed dealbreaker beside an open preference → the dealbreaker editor →
+# the portrait seed: review, reviewed, one part's details disclosed, its editor, the last control reached and activated →
+# read-only → Back to the same Personal world.
+appId: com.qandeel.mobile
+---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 120000
+# 1. The Personal row: both entries readable in full.
+- openLink: "qandeel://s401-proof/introductions/seed-known"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-entry"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v01-personal-row
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-intro"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v02-beginning
+- tapOn:
+    id: "qandeel-introductions-start"
+# 2. K: the owner's own words wait in "Not settled yet"; the place they would take is shown, not the words.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-CONFIRM_PRIOR_ITEM"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-introductions-prior-yes"
+- takeScreenshot: ${PREFIX}-v03-known-item
+- tapOn:
+    id: "qandeel-introductions-prior-yes"
+# 3. After the server applied it: the same words in What matters, "Added to your preparation.", the next item waiting.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-added"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-introductions-prior-yes"
+- takeScreenshot: ${PREFIX}-v04-known-after-confirm
+- tapOn:
+    id: "qandeel-introductions-prior-yes"
+# 4. A fact with the keyboard up: the question, the field and Save stay in view.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_FACT-INTRODUCTION_FIRST_NAME"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v05-new-first-question
+- tapOn:
+    id: "qandeel-introductions-first-name"
+- inputText: "Sara"
+- assertVisible:
+    id: "qandeel-introductions-save"
+- takeScreenshot: ${PREFIX}-v06-keyboard-up
+- tapOn:
+    id: "qandeel-introductions-save"
+# 5. The declared value waits in "Not settled yet" for its own confirmation.
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-CONFIRM_DECLARED_FACT-INTRODUCTION_FIRST_NAME"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v07-declared-waits
+- tapOn:
+    id: "qandeel-introductions-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-ESTABLISH_FACT-SEX"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v08-name-confirmed
+- tapOn:
+    id: "qandeel-introductions-back"
+# 6. C: a genuine conflict; a closed dealbreaker beside an open preference.
+- openLink: "qandeel://s401-proof/introductions/seed-mixed"
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-RESOLVE_DISCREPANCY"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v09-mixed-conflict
+- tapOn:
+    id: "qandeel-introductions-edit-hard"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-requirements-HARD"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v10-dealbreaker-editor
+- tapOn:
+    id: "qandeel-introductions-back"
+- tapOn:
+    id: "qandeel-introductions-back"
+# 7. The portrait seed: review, then reviewed.
+- openLink: "qandeel://s401-proof/introductions/seed-portrait"
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-step-REVIEW"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v11-review
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-review-confirm"
+    direction: DOWN
+- takeScreenshot: ${PREFIX}-v12-review-confirm
+- tapOn:
+    id: "qandeel-introductions-review-confirm"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-reviewed"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v13-reviewed
+# 8. One part's details, disclosed by its own Edit; its editor; Back leaves the editor only.
+- tapOn:
+    id: "qandeel-introductions-edit-group-ABOUT"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-details-ABOUT"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v14-details-open
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-edit-BIRTH_YEAR_MONTH"
+    direction: DOWN
+- tapOn:
+    id: "qandeel-introductions-edit-BIRTH_YEAR_MONTH"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-edit-BIRTH_YEAR_MONTH"
+    timeout: 30000
+- takeScreenshot: ${PREFIX}-v15-edit-sheet
+- tapOn:
+    id: "qandeel-introductions-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-reviewed"
+    timeout: 30000
+# 9. The last control is reachable and acts (then cancelled: nothing is deleted).
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-discard"
+    direction: DOWN
+- takeScreenshot: ${PREFIX}-v16-reviewed-end
+- tapOn:
+    id: "qandeel-introductions-discard"
+- assertVisible:
+    id: "qandeel-introductions-discard-cancel"
+- tapOn:
+    id: "qandeel-introductions-discard-cancel"
+- tapOn:
+    id: "qandeel-introductions-back"
+# 10. Read-only: the portrait stays visible and deletable; nothing is editable.
+- openLink: "qandeel://s401-proof/introductions/close"
+- tapOn:
+    id: "qandeel-introductions-entry"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-introductions-read-only"
+    timeout: 30000
+- assertNotVisible:
+    id: "qandeel-introductions-edit-group-ABOUT"
+- takeScreenshot: ${PREFIX}-v17-read-only
+- tapOn:
+    id: "qandeel-introductions-back"
+- extendedWaitUntil:
+    visible:
+      id: "qandeel-conversation-thread"
+    timeout: 30000
+- assertVisible:
+    id: "qandeel-introductions-entry"
+- takeScreenshot: ${PREFIX}-v18-back-personal
