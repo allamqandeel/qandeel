@@ -168,6 +168,8 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     // The question is the step's heading, in the approved 20/32 role; the header is the calm 17.
     expect(style(view.getByTestId('qandeel-introductions-step-heading'))).toMatchObject({ fontSize: 20, lineHeight: 32, fontFamily: 'Estedad-Medium' });
     expect(style(view.getByTestId('qandeel-introductions-title'))).toMatchObject({ fontSize: 17, lineHeight: 30 });
+    // The primary act's label spans its button (never shrink-wrapped, which Android can clip after a re-render).
+    expect(style(view.getByText(copy.priorYes))).toMatchObject({ alignSelf: 'stretch', textAlign: 'center' });
   });
 
   it('after the server applies "Yes", the owner\'s words appear in What matters, "Added" is written and announced, and the next item waits', async () => {

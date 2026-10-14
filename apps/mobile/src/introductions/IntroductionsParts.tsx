@@ -148,9 +148,11 @@ export function Action({ ctx, label, onPress, testID, primary = false, disabled 
         testID={testID}
         style={{ minHeight: PRIMARY_MIN_HEIGHT, paddingVertical: 12, paddingHorizontal: 18, marginStart: ROW_START, marginEnd: ROW_END, marginVertical: 8,
           borderRadius: PRIMARY_RADIUS, backgroundColor: ctx.palette.world, borderWidth: PRIMARY_OUTLINE, borderColor: ctx.palette.primary,
-          alignItems: 'center', opacity: off ? BUSY_OPACITY : 1 }}
+          opacity: off ? BUSY_OPACITY : 1 }}
       >
-        <Text style={{ ...typeStyle('action'), color: ctx.palette.primary, textAlign: 'center', writingDirection: ctx.writing }}>{label}</Text>
+        {/* The label spans the button and is centred by its alignment, not shrink-wrapped: on Android a shrink-wrapped
+            label can be measured narrower than it draws after a re-render, and its last word is clipped (seen at 320 dp). */}
+        <Text style={{ ...typeStyle('action'), color: ctx.palette.primary, textAlign: 'center', alignSelf: 'stretch', writingDirection: ctx.writing }}>{label}</Text>
       </Control>
     );
   }
