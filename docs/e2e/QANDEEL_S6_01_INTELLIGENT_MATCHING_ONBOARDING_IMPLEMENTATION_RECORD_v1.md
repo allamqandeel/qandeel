@@ -577,6 +577,54 @@ shows the same words and the same "Added" line (and the announcement is pinned i
 leg; nothing undecided is drawn as known (v03, v07, v09); no score, percentage or matching state appears anywhere.
 Device runs only: no hosted environment, no gate, no enrollment command.
 
+### 7.7 VIS-3P — premium visual polish (Product Owner authorization 2026-10-14; one bounded cycle)
+
+Focused visual craft on the approved direction A. **No copy was added or changed**: the seven VIS-2 rows (95–101) stay
+**PROPOSED**, and the `systemRulesNote` correction is unchanged. No behaviour, sequencing, contract, consent, Memory,
+deletion or enrollment change was made, and no test identifier changed. Only `IntroductionsParts.tsx`,
+`Portrait.tsx`, `IntroductionsSurface.tsx` (secondary rows → chips) and their test were touched. The audit used the design
+principles it names (Taste, High-End Visual Design, Impeccable, Redesign Existing Projects, Minimalist UI), applied to the
+VIS-3 native screens:
+
+| # | Weakness seen natively (VIS-3) | Principle | Correction | Component |
+|---|---|---|---|---|
+| 1 | REVIEWED: the name floated above its own part; the "About you" caption and its Edit separated it from the facts it heads | composition, hierarchy (High-End) | the name heads the About part (caption → name 24/38 → facts) in every mode | `Portrait` |
+| 2 | every fact line had the same bright weight as the owner's words | hierarchy by ink, not size (Impeccable, Minimalist) | facts are the name's quieter subtitle (secondary ink); the owner's own words are the brightest text after the name | `Portrait` |
+| 3 | quoted statements formed one undifferentiated stack; the opening mark broke the left (right, in Arabic) edge of every wrapped line | typographic craft (Taste) | hanging punctuation: the opening mark in its own column in the margin, both marks in the quiet ink; more space between statements | `Quote` |
+| 4 | the parts ran together as a vertical report | rhythm, section transitions (High-End) | an even 22-point rhythm and a hairline between parts (the band's own hairline grammar) | `Portrait` |
+| 5 | the open preference outline (four corner brackets) read as a camera viewfinder or debug overlay; strokes were heavy | intentional detail, restraint (Taste, Minimalist) | dealbreaker: closed hairline outline; preference: one bracket on the reading side; kind (secondary) › label (tertiary) › value (primary). Each frame is announced as one item that begins with its kind, so the meaning never depends on the shape | `Frame` |
+| 6 | the landing place was a dashed box around a sentence, like a drop zone | meaningful destination (Redesign) | a blank dashed line opened by a quotation mark, where the owner's words will be written, with its existing sentence beneath | `Landing` |
+| 7 | secondary choices were bare grey words with no affordance beside an outlined primary | interaction clarity (Impeccable) | quiet 44-point chips on the World's ground, aligned with the primary's edges, never outlined | `Action chip`, `ActionRow chips` |
+
+**Critique and the one corrective pass** (APK `58e8225d…` from `530da7e6` → APK `530897e1…` from `4d992de6`):
+(a) in Arabic the hung mark sat at the far side of its column, which Android resolves the text alignment against the
+text's own direction. It is now placed by layout (`alignItems: 'flex-end'`), which mirrors. (b) The landing line clipped its
+last dash; it now draws whole dashes only. (c) English chips wrapped 1 + 2 at 320 dp; with tighter padding they wrap 2 + 1,
+as the words did.
+
+**Native proof (final APK `530897e1…` from `4d992de6`)** — flow `s6-01-vis3-portrait.yaml` (the 18 scenes of §7.6). The
+journey was re-run where the chips changed what is tapped. Screenshots: `.s6-01-visual-proof/vis3p/` (first pass in
+`vis3p-pass1/`); before/after sheets beside them.
+
+| Leg | Language | Width | Text | Journey | Portrait (18) |
+|---|---|---|---|---|---|
+| ar-narrow | Arabic | 320 dp | 1.0 | **PASS** | **PASS** |
+| en-narrow | English | 320 dp | 1.0 | — | **PASS** |
+| ar-normal | Arabic | 411 dp | 1.0 | — | **PASS** |
+| ar-large | Arabic | 320 dp | 1.3 | — | **PASS** |
+| en-large | English | 320 dp | 1.3 | — | **PASS** |
+
+The screen reader (compressed dump, Arabic and English, KNOWN and REVIEWED) passes. Frames read "Dealbreakers, Area: Egypt"
+and «الشروط الأساسية، المنطقة: مصر»; the hung opening mark is not announced; the conversation beneath contributes 0
+nodes. The SR harness now scrolls to the Dealbreakers Edit before tapping it, because with the new rhythm that Edit sits
+just below the fold at 320 dp in English. **Reused unchanged from VIS-3:** en-normal, and ar-still (Reduced Motion). The
+arrival motion (`Arrival`) is unchanged, and the moved name keeps its arrival wrapper; Reduced Motion parity stays pinned in
+jest.
+
+Remaining observation, not a defect: at 320 dp in English, on the first KNOWN item (v03), the secondary chips start just
+below the fold. The question and the primary act are in view, and the chips are one short scroll away. Before VIS-3P, the
+first secondary row was visible.
+
 ## 8. Validation (actually run; proportional to each boundary)
 
 ### 8.1 CP2 — PostgreSQL and API
@@ -602,6 +650,10 @@ Device runs only: no hosted environment, no gate, no enrollment command.
 | 3 | Mobile full suite | `npx jest --ci` (apps/mobile), on `111b4664` | **2474 pass, 6 fail** — exactly the known `ar-EG` host-locale baseline (`depth.test.tsx` 3, `w2-account-access.test.tsx` 3: English labels expected, Arabic rendered; class B, recorded since S5-03A) |
 | 4 | Typecheck; lint of every touched file | `tsc --noEmit`; `eslint` | clean; no error (pre-existing warnings only, in lines this task did not change) |
 | 5 | VIS-3 native proof, seven legs + screen-reader dump | §7.6 | **PASS** every leg |
+| 6 | VIS-3P: Introductions surface + runtime entry (incl. two new VIS-3P tests: hierarchy, hung quiet marks, frame announcements, chips, landing) | `npx jest src/introductions src/runtime-entry`, on `4d992de6` | **318 / 318** |
+| 7 | VIS-3P: proof guard, W3 Personal row, Activity surfaces | `npx jest src/integration/__tests__/s6-01-proof-introductions src/integration/__tests__/w3-settings-appearance-signout src/activity/__tests__/surfaces` | **40 / 40** |
+| 8 | VIS-3P: typecheck; lint of the touched files | `tsc --noEmit`; `eslint src/introductions` | clean |
+| 9 | VIS-3P native proof, five legs + screen-reader dump | §7.7 | **PASS** every leg |
 
 ## 9. `QAN-BL-MATCH-04` — admitted at CP1
 
