@@ -502,6 +502,14 @@ jobs:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
       IOS_SIMULATOR_NAME: iPhone 17
       IOS_SIMULATOR_RUNTIME_SUFFIX: iOS-26-5
+      # S6-01 CI-R1. Maestro waits for its XCTest driver for a FIXED 120 s unless this is set
+      # (`LocalXCTestInstaller.SERVER_LAUNCH_TIMEOUT_MS`, cli-2.10.0), and that window only opens after the
+      # runner is installed. Unset, it fired before the 300 s readiness bound ever could, so the bound never
+      # classified anything. Measured: runs 38222765239 (be73bdc5) and 38570981700 (4b94c04d) both ended in
+      # `IOSDriverTimeoutException` at 228 s and 185 s, before any app launch. Green readiness probes took
+      # 102–270 s. 300 s is the value `t12-phase-m-cloud-validation.yml` already measured for the same exception.
+      # Job-scoped, so the Android consumer keeps its own default.
+      MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
     steps:
       - {name: Checkout, uses: actions/checkout@v4}
       - name: Setup Node.js 22
@@ -576,15 +584,33 @@ jobs:
           maestro --version
           maestro --version 2>/dev/null | grep -qx "${MAESTRO_VERSION}"
       # VAL-01: the XCTest driver must answer before the flow starts. A dead driver is classified INFRASTRUCTURE
-      # here in at most five minutes, instead of a smoke that idles to its limit with no Product step run.
+      # here in at most eight minutes, instead of a smoke that idles to its limit with no Product step run.
+      # CI-R1: the bound ENCLOSES Maestro's own window. 480 s covers the 300 s MAESTRO_DRIVER_STARTUP_TIMEOUT plus
+      # the time before that window opens (JVM start and runner install; up to 108 s measured), so Maestro's
+      # specific error is the one a slow driver reports, and the watchdog is left for a hung CLI.
       - name: Maestro driver readiness (bounded)
-        timeout-minutes: 6
-        run: node scripts/validation/bounded-run.mjs --seconds 300 --label ios-driver-readiness --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --compact
+        timeout-minutes: 9
+        run: node scripts/validation/bounded-run.mjs --seconds 480 --label ios-driver-readiness --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --compact
       # Bounded at the STEP for the same reason. The simulator is already booted and the verified app
       # already installed, so this bounds the Maestro smoke alone; a timeout stays red, like any failure.
       - name: Boot smoke on the iOS simulator
         timeout-minutes: 15
         run: node scripts/validation/bounded-run.mjs --seconds 780 --label ios-boot-smoke -- maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml
+      # CI-R1: evidence only, on a failure that has already happened. It reads logs and changes no result: the
+      # job is red before this runs, and stays red. Without it, a driver failure leaves only Maestro's one-line
+      # exception. The paths are the ones Maestro documents at cli-2.10.0 (CONTRIBUTING.md).
+      - name: Driver diagnostics (failure only; read-only)
+        if: ${{ failure() }}
+        timeout-minutes: 2
+        run: |
+          xcrun simctl list devices booted || true
+          for dir in $(ls -td "$HOME"/.maestro/tests/*/ 2>/dev/null | head -n 2); do
+            echo "::group::maestro.log — $dir"; tail -n 150 "$dir/maestro.log" 2>/dev/null || true; echo '::endgroup::'
+          done
+          runner_logs="$HOME/Library/Logs/maestro/xctest_runner_logs"
+          for log in $(ls -t "$runner_logs" 2>/dev/null | head -n 2); do
+            echo "::group::xctest runner — $log"; tail -n 150 "$runner_logs/$log" 2>/dev/null || true; echo '::endgroup::'
+          done
 
   # -------------------------------------------------------------------------------------------------
   # VAL-01 — bound contracts and evidence
