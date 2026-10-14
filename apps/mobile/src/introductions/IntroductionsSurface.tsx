@@ -10,18 +10,30 @@
  *   - Nothing reads as enrollment, participation, eligibility or a match: the end of preparation says plainly that
  *     enrollment is not available yet.
  *   - Arabic and English mirror by logical layout; every target is 44 points; nothing has a fixed width (320 points).
+ *
+ * VIS-2 — the Living Portrait (Product Owner decision 2026-10-14, direction A with R1–R4). What the server says is
+ * settled is drawn on the World as the owner's portrait (`LivingPortrait`); the one thing the current step is about
+ * waits in "Not settled yet" (`OpenBand`); the current question is the one prominent act, on the Field ("the sheet").
+ *   R1  the portrait grows only from confirmed content: nothing is drawn for what was not given, and nothing counts.
+ *   R2  while preparing, the portrait is compact unless there is room (or the owner opens it), and always compact while
+ *       the keyboard is up; the question is where the screen reader arrives, and the sheet stays above the keyboard.
+ *   R3  the review is the composed portrait, each part editable by progressive disclosure.
+ *   R4  no light: a server-confirmed arrival may rise into place (T-10 M3); the confirmation is announced regardless,
+ *       and Reduced Motion shows the same words at once.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AccessibilityInfo, BackHandler, ScrollView, Text, View, findNodeHandle } from 'react-native';
+import { AccessibilityInfo, BackHandler, Keyboard, KeyboardAvoidingView, Platform, ScrollView, Text, View, findNodeHandle, useWindowDimensions } from 'react-native';
 
 import { AppearanceStatusBar } from '../appearance';
-import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette } from '../conversation';
+import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, useReduceMotion } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
-import type { IntroductionsDraft, IntroductionsFact, IntroductionsObjective, IntroductionsRequirementItem, IntroductionsView } from '../runtime-entry';
+import type { IntroductionsDraft, IntroductionsFact, IntroductionsObjective, IntroductionsView } from '../runtime-entry';
 import { AREA_COUNTRIES, areaName, regionsOf } from './area-catalogue';
 import { ASSISTANCE_CONSENT_TEXT, MONTHS, WORK_FIELD_NAMES, introductionsCopy, type IntroductionsCopy } from './copy';
 import type { IntroductionsController } from './introductions-controller';
-import { Action, Choice, Field, Heading, Para, Quote, type PartContext } from './IntroductionsParts';
+import { Action, ActionRow, Choice, Field, Heading, LOCAL_TYPE, Para, Question, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
+import { LivingPortrait, OpenBand, type PortraitGroup } from './Portrait';
+import { MARITAL, arrivals, factTitle, factValue, portraitIsEmpty, projectPortrait, requirementWords, type Portrait } from './portrait-projection';
 
 export const INTRODUCTIONS_SURFACE_TEST_ID = 'qandeel-introductions';
 
@@ -34,38 +46,17 @@ export interface IntroductionsSurfaceProps {
 }
 
 const HEADER_MIN_HEIGHT = 48;
-const MARITAL = ['NEVER_MARRIED', 'DIVORCED', 'WIDOWED', 'CURRENTLY_MARRIED'] as const;
+const SHEET_RADIUS = 24;
+/** A screen at least this tall (in points at the reader's text size) has room for the whole portrait while preparing. */
+const ROOMY_HEIGHT = 720;
+/** After a step changes, this share of the viewport above the current item still shows the portrait it joins. */
+const PORTRAIT_GLIMPSE = 0.35;
+const NONE: ReadonlySet<string> = new Set();
 
 type Editing = { readonly kind: 'FACT'; readonly fact: IntroductionsFact } | { readonly kind: 'HARD' | 'SOFT' | 'PROFILE' } | null;
 
 // ------------------------------------------------------------------------------------------------------------------
-// Values in words.
-
-function factValue(draft: IntroductionsDraft | null, fact: IntroductionsFact, copy: IntroductionsCopy, language: ChromeLanguage): string | null {
-  const f = draft?.facts;
-  if (!f) return null;
-  switch (fact) {
-    case 'INTRODUCTION_FIRST_NAME': return f.firstName?.value ?? null;
-    case 'SEX': return f.sex === null ? null : f.sex.value === 'MALE' ? copy.male : copy.female;
-    case 'BIRTH_YEAR_MONTH': return f.birthYearMonth === null ? null : `${MONTHS[language][f.birthYearMonth.month - 1]} ${f.birthYearMonth.year}`;
-    case 'BROAD_AREA': return f.area === null ? null
-      : f.area.regionCode === null ? areaName(f.area.countryCode, language) : `${areaName(f.area.regionCode, language)}${language === 'ar' ? '، ' : ', '}${areaName(f.area.countryCode, language)}`;
-    default: return f.maritalStatus === null ? null : copy[f.maritalStatus.value as (typeof MARITAL)[number]];
-  }
-}
-const factTitle = (fact: IntroductionsFact, copy: IntroductionsCopy) => ({
-  INTRODUCTION_FIRST_NAME: copy.firstNameTitle, SEX: copy.sexTitle, BIRTH_YEAR_MONTH: copy.birthTitle, BROAD_AREA: copy.areaTitle, MARITAL_STATUS: copy.maritalTitle,
-})[fact];
-
-function itemWords(item: IntroductionsRequirementItem, copy: IntroductionsCopy, language: ChromeLanguage): string {
-  if (item.dimension === 'AGE_RANGE') return `${copy.AGE_RANGE}: ${copy.ageRange.replace('{min}', String(item.min)).replace('{max}', String(item.max))}`;
-  if (item.dimension === 'MARITAL_STATUS') return `${copy.MARITAL_STATUS}: ${(item.accepted ?? []).map((v) => copy[v as (typeof MARITAL)[number]]).join(language === 'ar' ? '، ' : ', ')}`;
-  const regions = item.regionCodes?.map((r) => areaName(r, language)).join(language === 'ar' ? '، ' : ', ');
-  return `${copy.AREA}: ${areaName(item.countryCode ?? '', language)}${regions ? ` (${regions})` : ''}`;
-}
-
-// ------------------------------------------------------------------------------------------------------------------
-// Editors.
+// Editors (on the sheet).
 
 function FactEditor({ ctx, copy, fact, draft, onSave, onCancel }: {
   readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly fact: IntroductionsFact; readonly draft: IntroductionsDraft | null;
@@ -98,7 +89,7 @@ function FactEditor({ ctx, copy, fact, draft, onSave, onCancel }: {
     body = (<>
       <Para ctx={ctx} text={copy.birthHint} role="supporting" color={ctx.palette.secondary} />
       <Field ctx={ctx} label={copy.birthYear} value={year} onChange={(t) => setYear(t.replace(/[^0-9]/gu, ''))} testID="qandeel-introductions-birth-year" maxLength={4} numeric direction="ltr" />
-      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingTop: 6, paddingStart: 24, paddingEnd: 20, writingDirection: ctx.writing }}>{copy.birthMonth}</Text>
+      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingTop: 6, paddingStart: ROW_START, paddingEnd: ROW_END, writingDirection: ctx.writing }}>{copy.birthMonth}</Text>
       {MONTHS[ctx.language].map((label, index) => (
         <Choice key={label} ctx={ctx} label={label} selected={month === index + 1} onPress={() => setMonth(index + 1)} testID={`qandeel-introductions-month-${index + 1}`} />
       ))}
@@ -126,7 +117,7 @@ function FactEditor({ ctx, copy, fact, draft, onSave, onCancel }: {
       ))}
     </>);
   }
-  return <View testID={`qandeel-introductions-edit-${fact}`}><Heading ctx={ctx} text={title} testID="qandeel-introductions-step-heading" />{body}{cancel}</View>;
+  return <View testID={`qandeel-introductions-edit-${fact}`}><Question ctx={ctx} text={title} testID="qandeel-introductions-step-heading" />{body}{cancel}</View>;
 }
 
 function RequirementsEditor({ ctx, copy, strength, draft, onSave, onCancel }: {
@@ -155,7 +146,7 @@ function RequirementsEditor({ ctx, copy, strength, draft, onSave, onCancel }: {
   const title = strength === 'HARD' ? copy.hardTitle : copy.softTitle;
   return (
     <View testID={`qandeel-introductions-requirements-${strength}`}>
-      <Heading ctx={ctx} text={title} testID="qandeel-introductions-step-heading" />
+      <Question ctx={ctx} text={title} testID="qandeel-introductions-step-heading" />
       <Para ctx={ctx} text={strength === 'HARD' ? copy.hardBody : copy.softBody} />
       {strength === 'HARD' ? <Para ctx={ctx} text={copy.systemRulesNote} role="supporting" color={ctx.palette.secondary} /> : null}
       <Choice ctx={ctx} label={strength === 'HARD' ? copy.hardNone : copy.softNone} selected={!setting && (strength === 'HARD' ? draft?.requirements.hard.answer === 'NONE_ADDITIONAL' : draft?.requirements.soft.answer === 'NONE')}
@@ -198,14 +189,14 @@ function ProfileEditor({ ctx, copy, draft, onSave, onCancel, show }: {
   return (
     <View testID="qandeel-introductions-profile">
       {show !== 'WORK_FIELD' ? (<>
-        <Heading ctx={ctx} text={copy.shortIntroTitle} testID="qandeel-introductions-step-heading" />
+        <Question ctx={ctx} text={copy.shortIntroTitle} testID="qandeel-introductions-step-heading" />
         <Para ctx={ctx} text={copy.shortIntroHint} role="supporting" color={ctx.palette.secondary} />
         <Field ctx={ctx} label={copy.shortIntroTitle} value={intro} onChange={setIntro} testID="qandeel-introductions-short-intro" maxLength={280} multiline />
         <Action ctx={ctx} label={copy.save} primary disabled={trimmed.length === 0 || !introValid}
           onPress={() => onSave({ shortIntroduction: trimmed, workField })} testID="qandeel-introductions-save" />
       </>) : null}
       {show !== 'SHORT_INTRODUCTION' ? (<>
-        <Heading ctx={ctx} text={copy.workFieldTitle} testID={show === 'WORK_FIELD' ? 'qandeel-introductions-step-heading' : undefined} />
+        {show === 'WORK_FIELD' ? <Question ctx={ctx} text={copy.workFieldTitle} testID="qandeel-introductions-step-heading" /> : <Heading ctx={ctx} text={copy.workFieldTitle} />}
         {Object.keys(WORK_FIELD_NAMES).map((code) => (
           <Choice key={code} ctx={ctx} label={WORK_FIELD_NAMES[code][ctx.language]} selected={workField === code}
             onPress={() => onSave({ shortIntroduction: draft?.profile.shortIntroduction ?? null, workField: code })} testID={`qandeel-introductions-work-${code}`} />
@@ -217,32 +208,35 @@ function ProfileEditor({ ctx, copy, draft, onSave, onCancel, show }: {
 }
 
 // ------------------------------------------------------------------------------------------------------------------
-// The review: what the owner prepared, every part editable.
+// The details of one part of the review, disclosed by its Edit: every value with its own Edit (R3).
 
-function Summary({ ctx, copy, draft, editable, onEdit }: {
-  readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly draft: IntroductionsDraft;
-  readonly editable: boolean; readonly onEdit: (editing: Editing) => void;
+function PartDetails({ ctx, copy, draft, group, onEdit }: {
+  readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly draft: IntroductionsDraft; readonly group: PortraitGroup;
+  readonly onEdit: (editing: Editing) => void;
 }) {
-  const facts: IntroductionsFact[] = ['INTRODUCTION_FIRST_NAME', 'SEX', 'BIRTH_YEAR_MONTH', 'BROAD_AREA', 'MARITAL_STATUS'];
+  const sheet: PartContext = { ...ctx, onSheet: true };
   const row = (key: string, label: string, value: string, edit: Editing) => (
-    <View key={key} testID={`qandeel-introductions-summary-${key}`} style={{ paddingTop: 6 }}>
-      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, paddingStart: 24, paddingEnd: 20, writingDirection: ctx.writing }}>{label}</Text>
-      <Text style={{ ...typeStyle('body'), color: ctx.palette.primary, paddingStart: 24, paddingEnd: 20, writingDirection: ctx.writing }}>{value}</Text>
-      {editable ? <Action ctx={ctx} label={copy.edit} accessibilityLabel={`${copy.edit}: ${label}`} onPress={() => onEdit(edit)} testID={`qandeel-introductions-edit-${key}`} /> : null}
+    <View key={key} testID={`qandeel-introductions-summary-${key}`} style={{ flexDirection: 'row', alignItems: 'center', columnGap: 8, minHeight: 56, paddingStart: 16, paddingEnd: 8 }}>
+      <View style={{ flex: 1 }}>
+        <Text style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, writingDirection: ctx.writing }}>{label}</Text>
+        <Text style={{ ...typeStyle('body'), color: ctx.palette.primary, writingDirection: ctx.writing }}>{value}</Text>
+      </View>
+      <Action ctx={sheet} inline label={copy.edit} accessibilityLabel={`${copy.edit}: ${label}`} onPress={() => onEdit(edit)} testID={`qandeel-introductions-edit-${key}`} />
     </View>
   );
-  const requirementLine = (side: { readonly answer: string | null; readonly items: readonly IntroductionsRequirementItem[] }, none: string) =>
-    side.answer === null ? copy.notSet : side.answer === 'ITEMS' ? side.items.map((i) => itemWords(i, copy, ctx.language)).join(ctx.language === 'ar' ? '؛ ' : '; ') : none;
+  const requirementLine = (side: IntroductionsDraft['requirements']['hard'] | IntroductionsDraft['requirements']['soft'], none: string) =>
+    side.answer === null ? copy.notSet : side.answer === 'ITEMS'
+      ? side.items.map((i) => { const w = requirementWords(i, copy, ctx.language); return `${w.label}: ${w.value}`; }).join(ctx.language === 'ar' ? '؛ ' : '; ') : none;
+  const facts: IntroductionsFact[] = ['INTRODUCTION_FIRST_NAME', 'SEX', 'BIRTH_YEAR_MONTH', 'BROAD_AREA', 'MARITAL_STATUS'];
   return (
-    <View testID="qandeel-introductions-summary">
-      {facts.map((fact) => row(fact, factTitle(fact, copy), factValue(draft, fact, copy, ctx.language) ?? copy.notSet, { kind: 'FACT', fact }))}
-      {row('HARD', copy.hardTitle, requirementLine(draft.requirements.hard, copy.hardNone), { kind: 'HARD' })}
-      {row('SOFT', copy.softTitle, requirementLine(draft.requirements.soft, copy.softNone), { kind: 'SOFT' })}
-      {row('PROFILE', copy.shortIntroTitle, draft.profile.shortIntroduction ?? copy.notSet, { kind: 'PROFILE' })}
-      {row('WORK', copy.workFieldTitle, draft.profile.workField === null ? copy.notSet : WORK_FIELD_NAMES[draft.profile.workField]?.[ctx.language] ?? copy.notSet, { kind: 'PROFILE' })}
-      {draft.notes.length === 0 ? null : (<>
-        <Heading ctx={ctx} text={copy.notesHeading} />
-        {draft.notes.map((note) => <Quote key={note.id} ctx={ctx} text={note.body} testID={`qandeel-introductions-note-${note.id}`} />)}
+    <View testID={`qandeel-introductions-details-${group}`} style={{ marginTop: 8, borderRadius: 16, backgroundColor: ctx.palette.field, paddingVertical: 4 }}>
+      {group === 'ABOUT' ? (<>
+        {facts.map((fact) => row(fact, factTitle(fact, copy), factValue(draft, fact, copy, ctx.language) ?? copy.notSet, { kind: 'FACT', fact }))}
+        {row('WORK', copy.workFieldTitle, draft.profile.workField === null ? copy.stateNotIncluded : WORK_FIELD_NAMES[draft.profile.workField]?.[ctx.language] ?? copy.notSet, { kind: 'PROFILE' })}
+        {row('PROFILE', copy.shortIntroTitle, draft.profile.shortIntroduction ?? copy.stateNotIncluded, { kind: 'PROFILE' })}
+      </>) : (<>
+        {row('HARD', copy.hardTitle, requirementLine(draft.requirements.hard, copy.hardNone), { kind: 'HARD' })}
+        {row('SOFT', copy.softTitle, requirementLine(draft.requirements.soft, copy.softNone), { kind: 'SOFT' })}
       </>)}
     </View>
   );
@@ -253,10 +247,15 @@ function Summary({ ctx, copy, draft, editable, onEdit }: {
 export function IntroductionsSurface({ controller, language, insets, onBack }: IntroductionsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
+  const reduceMotion = useReduceMotion();
+  const { height: windowHeight, fontScale } = useWindowDimensions();
   const copy = introductionsCopy(language);
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
-  const ctx: PartContext = { palette, language, writing, busy: state.busy };
+  const headingRef = useRef<Text | null>(null);
+  const onHeading = useCallback((node: Text | null) => { headingRef.current = node; }, []);
+  const ctx: PartContext = { palette, language, writing, busy: state.busy, onHeading };
+  const sheetCtx: PartContext = { ...ctx, onSheet: true };
   const view = state.view;
   const draft = view?.draft ?? null;
   const [started, setStarted] = useState(false);
@@ -265,53 +264,105 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   const [correction, setCorrection] = useState('');
   const [note, setNote] = useState('');
   const [confirmDiscard, setConfirmDiscard] = useState(false);
+  const [openPart, setOpenPart] = useState<PortraitGroup | null>(null);
+  const [expandedChoice, setExpandedChoice] = useState<boolean | null>(null);
+  const [keyboard, setKeyboard] = useState(false);
+  const [landed, setLanded] = useState<ReadonlySet<string>>(NONE);
+  const [arrivalTick, setArrivalTick] = useState(0);
+
+  const portrait: Portrait | null = view === null ? null : projectPortrait(view, copy, language);
+  // The portrait the owner was shown when they acted: an arrival is what the server's answer added to it.
+  const portraitRef = useRef<Portrait | null>(null);
+  useEffect(() => {
+    portraitRef.current = portrait;
+  });
 
   useEffect(() => {
     controller.open();
   }, [controller]);
 
-  // Android system Back inside an editor leaves the editor, and nothing else.
-  const local = editing !== null || correcting !== null || confirmDiscard;
-  const leaveLocal = useCallback(() => {
+  useEffect(() => {
+    const shown = Keyboard.addListener('keyboardDidShow', () => setKeyboard(true));
+    const hidden = Keyboard.addListener('keyboardDidHide', () => setKeyboard(false));
+    return () => {
+      shown.remove();
+      hidden.remove();
+    };
+  }, []);
+
+  // Android system Back inside an editor or an opened part leaves it, and nothing else.
+  const local = editing !== null || correcting !== null || confirmDiscard || openPart !== null;
+  // Memoization is the React Compiler's (no manual useCallback that it could not preserve).
+  const leaveLocal = () => {
     setEditing(null);
     setCorrecting(null);
     setConfirmDiscard(false);
-  }, []);
+    setOpenPart(null);
+  };
   useEffect(() => {
     if (!local) return undefined;
     const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
-      leaveLocal();
+      setEditing(null);
+      setCorrecting(null);
+      setConfirmDiscard(false);
+      setOpenPart(null);
       return true;
     });
     return () => subscription.remove();
-  }, [local, leaveLocal]);
+  }, [local]);
 
-  const send = useCallback(async (kind: Parameters<IntroductionsController['command']>[0], payload: Record<string, unknown>) => {
+  const send = async (kind: Parameters<IntroductionsController['command']>[0], payload: Record<string, unknown>) => {
+    const before = portraitRef.current;
+    setLanded(NONE);
     const ok = await controller.command(kind, payload);
     if (ok) {
       setEditing(null);
       setCorrecting(null);
       setCorrection('');
       setNote('');
+      // What this server-confirmed change ADDED to the portrait — nothing is shown arriving before the server applied it.
+      const after = controller.getState().view;
+      const added = after === null ? NONE : arrivals(before, projectPortrait(after, introductionsCopy(language), language));
+      setLanded(added);
+      if (added.size > 0) setArrivalTick((t) => t + 1);
     }
     return ok;
-  }, [controller]);
+  };
 
   const next = view?.plan.next ?? null;
   const stepKey = editing !== null ? `edit-${editing.kind}-${'fact' in editing ? editing.fact : ''}`
-    : next === null ? `stage-${view?.plan.stage ?? 'loading'}` : `${next.kind}-${'fact' in next ? next.fact : 'item' in next ? next.item.memoryId : ''}`;
-  // The screen reader arrives on the step's heading (or the page title) once per step.
+    : next === null ? `stage-${view?.plan.stage ?? 'loading'}-${started}` : `${next.kind}-${'fact' in next ? next.fact : 'item' in next ? next.item.memoryId : ''}-${started}`;
   const titleRef = useRef<Text | null>(null);
-  // Each step opens at its top: a new step never inherits the previous one's scroll position.
   const scrollRef = useRef<ScrollView | null>(null);
+  const viewportHeight = useRef(0);
+  const placeOnLayout = useRef(true);
+  // Each step opens with its current item in view, a glimpse of the portrait above it: never the previous scroll position.
   useEffect(() => {
+    placeOnLayout.current = true;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [stepKey]);
+  const placeActive = (y: number) => {
+    if (!placeOnLayout.current) return;
+    placeOnLayout.current = false;
+    scrollRef.current?.scrollTo({ y: Math.max(0, y - viewportHeight.current * PORTRAIT_GLIMPSE), animated: false });
+  };
+  // With the keyboard up, the sheet's end (its field and its act) stays above it.
+  useEffect(() => {
+    if (keyboard) scrollRef.current?.scrollToEnd({ animated: !reduceMotion });
+  }, [keyboard, reduceMotion]);
+  // The screen reader arrives on the step's question (or the page title) once per step; a confirmation is announced
+  // after it, whether or not anything is shown moving.
   useEffect(() => {
     if (!ready) return;
-    const node = titleRef.current === null ? null : findNodeHandle(titleRef.current);
+    const target = headingRef.current ?? titleRef.current;
+    const node = target === null ? null : findNodeHandle(target);
     if (node !== null) AccessibilityInfo.setAccessibilityFocus(node);
   }, [ready, stepKey]);
+  useEffect(() => {
+    if (arrivalTick === 0) return;
+    if (Platform.OS === 'ios') AccessibilityInfo.announceForAccessibilityWithOptions(copy.added, { queue: true });
+    else AccessibilityInfo.announceForAccessibility(copy.added);
+  }, [arrivalTick, copy.added]);
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={INTRODUCTIONS_SURFACE_TEST_ID} />;
 
@@ -322,51 +373,118 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
 
   const pathLine = view === null ? null : view.plan.path === 'KNOWN' ? copy.pathKnown : view.plan.path === 'MIXED' ? copy.pathMixed : copy.pathNew;
   const readOnly = view !== null && (!view.availability.preparation || view.accountDeletionPending);
+  const roomy = windowHeight / Math.max(1, fontScale) >= ROOMY_HEIGHT;
+  const expanded = !keyboard && (expandedChoice ?? roomy);
 
-  let body: ReactNode = null;
+  const sheet = (children: ReactNode, onLayout = true) => (
+    <View
+      testID="qandeel-introductions-sheet"
+      onLayout={onLayout ? (e) => placeActive(e.nativeEvent.layout.y) : undefined}
+      style={{ backgroundColor: palette.field, borderTopStartRadius: SHEET_RADIUS, borderTopEndRadius: SHEET_RADIUS, paddingTop: 14, paddingBottom: insets.bottom + 16, marginTop: 8 }}
+    >
+      {children}
+    </View>
+  );
+  const composed = (p: Portrait, editable: boolean) => (
+    <LivingPortrait ctx={ctx} copy={copy} portrait={p} mode="COMPOSED" landed={landed} reduceMotion={reduceMotion}
+      edit={!editable || draft === null ? undefined : {
+        open: openPart, onEdit: (g) => setOpenPart(openPart === g ? null : g),
+        details: openPart === null ? null : <PartDetails ctx={ctx} copy={copy} draft={draft} group={openPart} onEdit={(e) => { setOpenPart(null); setEditing(e); }} />,
+      }} />
+  );
+
+  // World (what is settled) · the band (what the current step is about) · the sheet (the current act).
+  let world: ReactNode = null;
+  let band: ReactNode = null;
+  let act: ReactNode = null;
   if (state.status === 'UNAVAILABLE' && view === null) {
-    body = (
+    world = (
       <View testID="qandeel-introductions-unavailable">
         <Para ctx={ctx} text={copy.unavailable} color={palette.error} />
         <Action ctx={ctx} label={copy.tryAgain} onPress={() => controller.open()} testID="qandeel-introductions-retry" />
       </View>
     );
-  } else if (view !== null && readOnly) {
+  } else if (view !== null && portrait !== null && readOnly) {
     // Closed, or a deletion is pending: the owner may still see and delete what they prepared — nothing else.
-    body = (
+    const unsettled = portrait.open.filter((item) => item.key.startsWith('fact:'));
+    world = (
       <View testID="qandeel-introductions-read-only">
         <Para ctx={ctx} text={view.accountDeletionPending ? copy.deletionPending : copy.unavailable} color={palette.secondary} />
-        {draft === null ? null : <Summary ctx={ctx} copy={copy} draft={draft} editable={false} onEdit={setEditing} />}
+        {draft === null ? null : composed(portrait, false)}
+        {unsettled.map((item) => (
+          <View key={item.key} style={{ paddingTop: 12 }}>
+            <OpenBand ctx={ctx} copy={copy} item={item} title={factTitle(item.key.slice(5) as IntroductionsFact, copy)} textTestID={`qandeel-introductions-open-${item.key}`} />
+          </View>
+        ))}
         {draft === null ? null : <DiscardBlock ctx={ctx} copy={copy} confirming={confirmDiscard} setConfirming={setConfirmDiscard} onDiscard={() => void controller.discard()} />}
       </View>
     );
   } else if (view !== null && editing !== null) {
-    if (editing.kind === 'FACT') {
-      body = <FactEditor ctx={ctx} copy={copy} fact={editing.fact} draft={draft} onSave={(p) => void send('SET_FACT', p)} onCancel={() => setEditing(null)} />;
-    } else if (editing.kind === 'PROFILE') {
-      body = <ProfileEditor ctx={ctx} copy={copy} draft={draft} show="BOTH" onSave={(p) => void send('SET_PROFILE', p)} onCancel={() => setEditing(null)} />;
-    } else {
-      body = <RequirementsEditor ctx={ctx} copy={copy} strength={editing.kind} draft={draft} onSave={(p) => void send('SET_REQUIREMENTS', p)} onCancel={() => setEditing(null)} />;
-    }
+    act = sheet(editing.kind === 'FACT'
+      ? <FactEditor ctx={sheetCtx} copy={copy} fact={editing.fact} draft={draft} onSave={(p) => void send('SET_FACT', p)} onCancel={() => setEditing(null)} />
+      : editing.kind === 'PROFILE'
+        ? <ProfileEditor ctx={sheetCtx} copy={copy} draft={draft} show="BOTH" onSave={(p) => void send('SET_PROFILE', p)} onCancel={() => setEditing(null)} />
+        : <RequirementsEditor ctx={sheetCtx} copy={copy} strength={editing.kind} draft={draft} onSave={(p) => void send('SET_REQUIREMENTS', p)} onCancel={() => setEditing(null)} />);
   } else if (view !== null && draft === null && !started) {
-    body = (
-      <View testID="qandeel-introductions-intro">
-        <Para ctx={ctx} text={copy.opening} />
-        <Para ctx={ctx} text={copy.privateNote} color={palette.secondary} />
-        <Para ctx={ctx} text={copy.enrollmentUnavailable} color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
-        {pathLine === null ? null : <Para ctx={ctx} text={pathLine} testID="qandeel-introductions-path" />}
-        <Action ctx={ctx} label={copy.start} primary onPress={() => setStarted(true)} testID="qandeel-introductions-start" />
+    // The restrained beginning: nothing is drawn for what is not known yet (R1).
+    world = (
+      <View testID="qandeel-introductions-intro" style={{ paddingTop: 12 }}>
+        <Question ctx={ctx} text={copy.opening} />
+        <Para ctx={ctx} text={copy.privateNote} role="supporting" color={palette.secondary} />
       </View>
     );
-  } else if (view !== null && next !== null) {
-    body = <Step ctx={ctx} copy={copy} view={view} objective={next} pathLine={pathLine} send={send} controller={controller}
+    act = sheet(<>
+      {pathLine === null ? null : <Para ctx={sheetCtx} text={pathLine} role="supporting" color={palette.secondary} testID="qandeel-introductions-path" />}
+      <Action ctx={sheetCtx} label={copy.start} primary onPress={() => setStarted(true)} testID="qandeel-introductions-start" />
+      <Para ctx={sheetCtx} text={copy.enrollmentUnavailable} role="metadata" color={palette.tertiary} testID="qandeel-introductions-enrollment-unavailable" />
+    </>);
+  } else if (view !== null && portrait !== null && next !== null && next.kind === 'REVIEW') {
+    world = composed(portrait, true);
+    act = sheet(
+      <View testID="qandeel-introductions-step-REVIEW">
+        <Question ctx={sheetCtx} text={copy.reviewLead} testID="qandeel-introductions-step-heading" />
+        <Para ctx={sheetCtx} text={copy.enrollmentUnavailable} role="supporting" color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
+        <Action ctx={sheetCtx} label={copy.reviewConfirm} primary onPress={() => void send('CONFIRM_REVIEW', {})} testID="qandeel-introductions-review-confirm" />
+      </View>,
+      false,
+    );
+  } else if (view !== null && portrait !== null && next !== null) {
+    const priorStep = next.kind === 'CONFIRM_PRIOR_ITEM' || next.kind === 'CLARIFY_PRIOR_ITEM';
+    const showPath = pathLine !== null && ((priorStep && (draft?.notes.length ?? 0) === 0)
+      || (next.kind === 'ESTABLISH_FACT' && next.fact === 'INTRODUCTION_FIRST_NAME' && draft?.facts.firstName == null && view.plan.path === 'NEW'));
+    const current = portrait.current;
+    world = (<>
+      {showPath ? <View style={{ paddingTop: 12 }}><Para ctx={ctx} text={pathLine} role="supporting" color={palette.secondary} testID="qandeel-introductions-path" /></View> : null}
+      {portraitIsEmpty(portrait) && current?.lands == null ? null : (
+        <LivingPortrait ctx={ctx} copy={copy} portrait={portrait} mode={expanded ? 'EXPANDED' : 'COMPACT'} landed={landed} reduceMotion={reduceMotion}
+          current={priorStep ? current : null} onToggle={() => setExpandedChoice(!expanded)} />
+      )}
+    </>);
+    if (current !== null && next.kind !== 'RESOLVE_DISCREPANCY') {
+      const clarify = next.kind === 'CLARIFY_PRIOR_ITEM';
+      band = (
+        <View onLayout={(e) => placeActive(e.nativeEvent.layout.y)}>
+          <OpenBand ctx={ctx} copy={copy} item={current}
+            lead={priorStep ? (clarify ? copy.priorClarifyLead : copy.priorLead) : null}
+            title={priorStep ? null : factTitle((next as { fact: IntroductionsFact }).fact, copy)}
+            textTestID={priorStep ? 'qandeel-introductions-prior-words' : 'qandeel-introductions-fact-value'}
+            trailing={priorStep && correcting === null
+              ? <Action ctx={ctx} inline label={copy.priorStop} onPress={() => void send('SKIP_STEP', { step: 'PRIOR_UNDERSTANDING' })} testID="qandeel-introductions-prior-stop" />
+              : null} />
+        </View>
+      );
+    }
+    act = sheet(<Step ctx={sheetCtx} copy={copy} view={view} objective={next} send={send} controller={controller}
       correcting={correcting} setCorrecting={setCorrecting} correction={correction} setCorrection={setCorrection}
-      note={note} setNote={setNote} onEdit={setEditing} />;
-  } else if (view !== null && draft !== null) {
-    body = (
+      note={note} setNote={setNote} onEdit={setEditing} />, band === null);
+  } else if (view !== null && portrait !== null && draft !== null) {
+    // The private preparation, complete — and plainly not enrollment.
+    world = (
       <View testID="qandeel-introductions-reviewed">
-        <Para ctx={ctx} text={copy.reviewed} testID="qandeel-introductions-enrollment-unavailable" />
-        <Summary ctx={ctx} copy={copy} draft={draft} editable onEdit={setEditing} />
+        {composed(portrait, true)}
+        <View style={{ paddingTop: 20 }}>
+          <Para ctx={ctx} text={copy.reviewed} role="supporting" color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
+        </View>
         <AssistanceRow ctx={ctx} copy={copy} view={view} controller={controller} />
         <DiscardBlock ctx={ctx} copy={copy} confirming={confirmDiscard} setConfirming={setConfirmDiscard} onDiscard={() => void controller.discard()} />
       </View>
@@ -374,7 +492,13 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   }
 
   return (
-    <View testID={INTRODUCTIONS_SURFACE_TEST_ID} accessibilityLanguage={language} style={{ flex: 1, backgroundColor: palette.world, direction: writing }}>
+    <KeyboardAvoidingView
+      testID={INTRODUCTIONS_SURFACE_TEST_ID}
+      // The sheet's field and act stay above the keyboard (Android 15+ is edge-to-edge and no longer resizes the window).
+      behavior="padding"
+      accessibilityLanguage={language}
+      style={{ flex: 1, backgroundColor: palette.world, direction: writing }}
+    >
       <AppearanceStatusBar />
       <View
         style={{
@@ -402,7 +526,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
           testID="qandeel-introductions-title"
           accessibilityRole="header"
           accessibilityLanguage={language}
-          style={{ ...typeStyle('statement'), color: palette.primary, flexShrink: 1, paddingHorizontal: 2, writingDirection: writing }}
+          style={{ ...LOCAL_TYPE.header, color: palette.primary, flexShrink: 1, paddingHorizontal: 2, writingDirection: writing }}
         >
           {copy.name}
         </Text>
@@ -415,11 +539,16 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
         testID="qandeel-introductions-body"
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: insets.bottom + 16, paddingLeft: insets.left, paddingRight: insets.right }}
+        onLayout={(e) => { viewportHeight.current = e.nativeEvent.layout.height; }}
+        contentContainerStyle={{ flexGrow: 1, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: act === null ? insets.bottom + 16 : 0 }}
       >
-        {body}
+        {world}
+        {/* The sheet rests at the bottom of a short page; a long one simply scrolls. */}
+        <View style={{ flexGrow: 1, minHeight: act === null ? 0 : 16 }} />
+        {band}
+        {act}
       </ScrollView>
-    </View>
+    </KeyboardAvoidingView>
   );
 }
 
@@ -427,7 +556,7 @@ function DiscardBlock({ ctx, copy, confirming, setConfirming, onDiscard }: {
   readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly confirming: boolean; readonly setConfirming: (v: boolean) => void; readonly onDiscard: () => void;
 }) {
   return (
-    <View testID="qandeel-introductions-discard-block" style={{ paddingTop: 20 }}>
+    <View testID="qandeel-introductions-discard-block" style={{ paddingTop: 12 }}>
       {confirming ? (<>
         <Para ctx={ctx} text={copy.discardConfirm} color={ctx.palette.error} />
         <Action ctx={ctx} label={copy.discardYes} onPress={onDiscard} testID="qandeel-introductions-discard-confirm" />
@@ -446,7 +575,7 @@ function AssistanceRow({ ctx, copy, view, controller }: {
   const granted = view.assistance.consent === 'GRANTED';
   return (
     <View testID="qandeel-introductions-assistance" style={{ paddingTop: 12 }}>
-      <Para ctx={ctx} text={granted ? copy.assistanceOn : copy.assistanceOff} role="supporting" color={ctx.palette.secondary} />
+      <Para ctx={ctx} text={granted ? copy.assistanceOn : copy.assistanceOff} role="metadata" color={ctx.palette.tertiary} />
       {granted
         ? <Action ctx={ctx} label={copy.stopAssistance} onPress={() => void controller.revokeAssistance()} testID="qandeel-introductions-assistance-revoke" />
         : <Action ctx={ctx} label={copy.allowAssistance} onPress={() => void controller.grantAssistance()} testID="qandeel-introductions-assistance-grant" />}
@@ -454,9 +583,10 @@ function AssistanceRow({ ctx, copy, view, controller }: {
   );
 }
 
-function Step({ ctx, copy, view, objective, pathLine, send, controller, correcting, setCorrecting, correction, setCorrection, note, setNote, onEdit }: {
+/** The current act, on the sheet. What it is about (a remembered item, a value to confirm) is in the band above it. */
+function Step({ ctx, copy, view, objective, send, controller, correcting, setCorrecting, correction, setCorrection, note, setNote, onEdit }: {
   readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly view: IntroductionsView; readonly objective: IntroductionsObjective;
-  readonly pathLine: string | null; readonly send: (kind: Parameters<IntroductionsController['command']>[0], payload: Record<string, unknown>) => Promise<boolean>;
+  readonly send: (kind: Parameters<IntroductionsController['command']>[0], payload: Record<string, unknown>) => Promise<boolean>;
   readonly controller: IntroductionsController;
   readonly correcting: string | null; readonly setCorrecting: (id: string | null) => void;
   readonly correction: string; readonly setCorrection: (t: string) => void;
@@ -466,10 +596,11 @@ function Step({ ctx, copy, view, objective, pathLine, send, controller, correcti
   switch (objective.kind) {
     case 'OFFER_ASSISTANCE': {
       const text = view.assistance.currentVersion === null ? null : ASSISTANCE_CONSENT_TEXT[view.assistance.currentVersion]?.[ctx.language] ?? null;
+      // Two equal acts: permission is never nudged.
       return (
         <View testID="qandeel-introductions-step-OFFER_ASSISTANCE">
-          <Heading ctx={ctx} text={copy.assistanceOfferTitle} testID="qandeel-introductions-step-heading" />
-          {text === null ? null : <Para ctx={ctx} text={text} testID="qandeel-introductions-consent-text" />}
+          <Question ctx={ctx} text={copy.assistanceOfferTitle} testID="qandeel-introductions-step-heading" />
+          {text === null ? null : <Para ctx={ctx} text={text} role="supporting" testID="qandeel-introductions-consent-text" />}
           <Action ctx={ctx} label={copy.allowAssistance} disabled={text === null} onPress={() => void controller.grantAssistance()} testID="qandeel-introductions-assistance-grant" />
           <Action ctx={ctx} label={copy.continueWithout} onPress={() => void send('SKIP_STEP', { step: 'ASSISTANCE_OFFER' })} testID="qandeel-introductions-assistance-decline" />
         </View>
@@ -482,55 +613,52 @@ function Step({ ctx, copy, view, objective, pathLine, send, controller, correcti
       const decide = (decision: string, extra: Record<string, unknown> = {}) => void send('RECORD_PRIOR_UNDERSTANDING', { memoryId: item.memoryId, decision, ...extra });
       return (
         <View testID={`qandeel-introductions-step-${objective.kind}`}>
-          {pathLine === null ? null : <Para ctx={ctx} text={pathLine} color={ctx.palette.secondary} testID="qandeel-introductions-path" />}
-          <Heading ctx={ctx} text={clarify ? copy.priorClarifyLead : copy.priorLead} testID="qandeel-introductions-step-heading" />
-          <Quote ctx={ctx} text={item.words} testID="qandeel-introductions-prior-words" />
           {correcting === item.memoryId ? (<>
+            <Question ctx={ctx} text={copy.priorEdit} testID="qandeel-introductions-step-heading" />
             <Field ctx={ctx} label={copy.priorCorrectionLabel} value={correction} onChange={setCorrection} testID="qandeel-introductions-prior-correction" maxLength={500} multiline />
             <Action ctx={ctx} label={copy.save} primary disabled={correction.trim().length < 2} onPress={() => decide('CORRECTED', { correctedBody: correction.trim() })} testID="qandeel-introductions-save" />
             <Action ctx={ctx} label={copy.cancel} onPress={() => setCorrecting(null)} testID="qandeel-introductions-cancel" />
           </>) : (<>
-            <Para ctx={ctx} text={clarify ? copy.priorClarifyQuestion : copy.priorConfirmQuestion} />
+            <Question ctx={ctx} text={clarify ? copy.priorClarifyQuestion : copy.priorConfirmQuestion} testID="qandeel-introductions-step-heading" />
             <Action ctx={ctx} label={copy.priorYes} primary onPress={() => decide('CONFIRMED')} testID="qandeel-introductions-prior-yes" />
-            <Action ctx={ctx} label={copy.priorEdit} onPress={() => { setCorrection(item.words); setCorrecting(item.memoryId); }} testID="qandeel-introductions-prior-edit" />
-            <Action ctx={ctx} label={copy.priorNoLonger} onPress={() => decide('NO_LONGER_ACCURATE')} testID="qandeel-introductions-prior-no-longer" />
-            <Action ctx={ctx} label={copy.priorDecline} onPress={() => decide('DECLINED')} testID="qandeel-introductions-prior-decline" />
-            <Para ctx={ctx} text={copy.priorMemoryNote} role="supporting" color={ctx.palette.tertiary} />
-            <Action ctx={ctx} label={copy.priorStop} onPress={() => void send('SKIP_STEP', { step: 'PRIOR_UNDERSTANDING' })} testID="qandeel-introductions-prior-stop" />
+            <ActionRow>
+              <Action ctx={ctx} inline label={copy.priorEdit} onPress={() => { setCorrection(item.words); setCorrecting(item.memoryId); }} testID="qandeel-introductions-prior-edit" />
+              <Action ctx={ctx} inline label={copy.priorNoLonger} onPress={() => decide('NO_LONGER_ACCURATE')} testID="qandeel-introductions-prior-no-longer" />
+              <Action ctx={ctx} inline label={copy.priorDecline} onPress={() => decide('DECLINED')} testID="qandeel-introductions-prior-decline" />
+            </ActionRow>
+            <Para ctx={ctx} text={copy.priorMemoryNote} role="metadata" color={ctx.palette.tertiary} testID="qandeel-introductions-prior-note" />
           </>)}
         </View>
       );
     }
-    case 'ESTABLISH_FACT': {
-      const first = objective.fact === 'INTRODUCTION_FIRST_NAME' && draft?.facts.firstName == null;
+    case 'ESTABLISH_FACT':
       return (
         <View testID={`qandeel-introductions-step-ESTABLISH_FACT-${objective.fact}`}>
-          {first && pathLine !== null && view.plan.path === 'NEW' ? <Para ctx={ctx} text={pathLine} color={ctx.palette.secondary} testID="qandeel-introductions-path" /> : null}
           <FactEditor ctx={ctx} copy={copy} fact={objective.fact} draft={draft} onSave={(p) => void send('SET_FACT', p)} onCancel={null} />
         </View>
       );
-    }
     case 'CONFIRM_DECLARED_FACT':
     case 'RECONFIRM_CORRECTED_FACT': {
-      const value = factValue(draft, objective.fact, copy, ctx.language) ?? '';
       const question = objective.kind === 'RECONFIRM_CORRECTED_FACT' ? copy.factReconfirm : objective.fact === 'SEX' ? copy.sexConfirmQuestion : copy.factConfirmQuestion;
       return (
         <View testID={`qandeel-introductions-step-${objective.kind}-${objective.fact}`}>
-          <Heading ctx={ctx} text={factTitle(objective.fact, copy)} testID="qandeel-introductions-step-heading" />
-          <Quote ctx={ctx} text={value} testID="qandeel-introductions-fact-value" />
-          <Para ctx={ctx} text={question} />
+          <Question ctx={ctx} text={question} testID="qandeel-introductions-step-heading" />
           <Action ctx={ctx} label={copy.yesCorrect} primary onPress={() => void send('CONFIRM_FACT', { fact: objective.fact })} testID="qandeel-introductions-confirm" />
-          <Action ctx={ctx} label={copy.edit} onPress={() => onEdit({ kind: 'FACT', fact: objective.fact })} testID="qandeel-introductions-edit" />
+          <ActionRow>
+            <Action ctx={ctx} inline label={copy.edit} accessibilityLabel={`${copy.edit}: ${factTitle(objective.fact, copy)}`} onPress={() => onEdit({ kind: 'FACT', fact: objective.fact })} testID="qandeel-introductions-edit" />
+          </ActionRow>
         </View>
       );
     }
     case 'RESOLVE_DISCREPANCY':
       return (
         <View testID="qandeel-introductions-step-RESOLVE_DISCREPANCY">
-          <Heading ctx={ctx} text={copy.discrepancyTitle} testID="qandeel-introductions-step-heading" />
+          <Question ctx={ctx} text={copy.discrepancyTitle} testID="qandeel-introductions-step-heading" />
           <Para ctx={ctx} text={`${copy.discrepancyBody} ${objective.dimensions.map((d) => copy[d]).join(ctx.language === 'ar' ? '، ' : ', ')}`} />
-          <Action ctx={ctx} label={copy.editHard} onPress={() => onEdit({ kind: 'HARD' })} testID="qandeel-introductions-edit-hard" />
-          <Action ctx={ctx} label={copy.editSoft} onPress={() => onEdit({ kind: 'SOFT' })} testID="qandeel-introductions-edit-soft" />
+          <ActionRow>
+            <Action ctx={ctx} inline label={copy.editHard} onPress={() => onEdit({ kind: 'HARD' })} testID="qandeel-introductions-edit-hard" />
+            <Action ctx={ctx} inline label={copy.editSoft} onPress={() => onEdit({ kind: 'SOFT' })} testID="qandeel-introductions-edit-soft" />
+          </ActionRow>
         </View>
       );
     case 'ESTABLISH_HARD_REQUIREMENTS':
@@ -540,7 +668,7 @@ function Step({ ctx, copy, view, objective, pathLine, send, controller, correcti
     case 'ESTABLISH_PRIORITIES':
       return (
         <View testID="qandeel-introductions-step-ESTABLISH_PRIORITIES">
-          <Heading ctx={ctx} text={copy.prioritiesTitle} testID="qandeel-introductions-step-heading" />
+          <Question ctx={ctx} text={copy.prioritiesTitle} testID="qandeel-introductions-step-heading" />
           <Para ctx={ctx} text={copy.prioritiesHint} role="supporting" color={ctx.palette.secondary} />
           <Field ctx={ctx} label={copy.prioritiesTitle} value={note} onChange={setNote} testID="qandeel-introductions-priority" maxLength={500} multiline />
           <Action ctx={ctx} label={copy.save} primary disabled={note.trim().length < 2} onPress={() => void send('ADD_NOTE', { kind: 'WHAT_MATTERS', body: note.trim() })} testID="qandeel-introductions-save" />
@@ -554,15 +682,6 @@ function Step({ ctx, copy, view, objective, pathLine, send, controller, correcti
           <ProfileEditor ctx={ctx} copy={copy} draft={draft} show={objective.kind === 'OFFER_WORK_FIELD' ? 'WORK_FIELD' : 'SHORT_INTRODUCTION'}
             onSave={(p) => void send('SET_PROFILE', p)} onCancel={null} />
           <Action ctx={ctx} label={copy.skip} onPress={() => void send('SKIP_STEP', { step: objective.kind === 'OFFER_WORK_FIELD' ? 'WORK_FIELD' : 'SHORT_INTRODUCTION' })} testID="qandeel-introductions-skip" />
-        </View>
-      );
-    case 'REVIEW':
-      return (
-        <View testID="qandeel-introductions-step-REVIEW">
-          <Heading ctx={ctx} text={copy.reviewLead} testID="qandeel-introductions-step-heading" />
-          {draft === null ? null : <Summary ctx={ctx} copy={copy} draft={draft} editable onEdit={onEdit} />}
-          <Para ctx={ctx} text={copy.enrollmentUnavailable} color={ctx.palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
-          <Action ctx={ctx} label={copy.reviewConfirm} primary onPress={() => void send('CONFIRM_REVIEW', {})} testID="qandeel-introductions-review-confirm" />
         </View>
       );
     default:

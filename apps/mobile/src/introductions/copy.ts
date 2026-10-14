@@ -100,7 +100,7 @@ const ROWS = {
   hardBody: { ar: 'ما لا يمكن قبوله في شريك الحياة.', en: "What you can't accept in a life partner." }, // PROPOSED
   hardNone: { ar: 'لا توجد شروط أساسية إضافية', en: 'No additional dealbreakers' }, // PROPOSED
   hardSet: { ar: 'تحديد شروط أساسية', en: 'Set dealbreakers' }, // PROPOSED
-  systemRulesNote: { ar: 'يطبّق قنديل قواعد التعارف العامة، مثل السن القانونية، دون أن تُكتب شرطًا لك.', en: 'QANDEEL applies the general rules, such as legal age, without writing them as your dealbreaker.' }, // PROPOSED
+  systemRulesNote: { ar: 'عند إتاحة التعارف، ستُطبَّق قواعد الأهلية المعتمدة، بما فيها السن القانونية. وهذه ليست شروطًا شخصية تختارها.', en: 'When Introductions becomes available, the approved eligibility rules, including the applicable legal age, will apply. These are not your personal dealbreakers.' }, // CORRECTED — the Product Owner's future-facing wording (CP3 redesign brief, applied in VIS-2)
   softTitle: { ar: 'التفضيلات', en: 'Preferences' }, // PROPOSED
   softBody: { ar: 'ما يُفضَّل لديك دون أن يكون شرطًا.', en: 'What you prefer, without it being a dealbreaker.' }, // PROPOSED
   softNone: { ar: 'لا توجد تفضيلات', en: 'No preferences' }, // PROPOSED
@@ -137,6 +137,15 @@ const ROWS = {
   invalid: { ar: 'هذه القيمة غير مقبولة.', en: "This value isn't accepted." }, // PROPOSED
   tryAgain: { ar: 'إعادة المحاولة', en: 'Try again' }, // REUSED meaning — PROPOSED wording
   back: { ar: 'رجوع', en: 'Back' }, // PROPOSED
+  // VIS-2 COPY DELTA r1 — the seven rows of the Living Portrait (direction A). Accepted by the Product Owner as a design
+  // direction on 2026-10-14; PROPOSED until the final byte-exact Copy Gate approval (INTRODUCTIONS_COPY_DELTA below).
+  clusterAbout: { ar: 'عنك', en: 'About you' }, // PROPOSED — VIS-2 delta r1
+  clusterBounds: { ar: 'الشروط والتفضيلات', en: 'Dealbreakers and preferences' }, // PROPOSED — VIS-2 delta r1
+  clusterOpen: { ar: 'لم يُحسم بعد', en: 'Not settled yet' }, // PROPOSED — VIS-2 delta r1
+  afterConfirmPrior: { ar: 'عند التأكيد، يُضاف إلى تحضيرك بكلماتك كما هي.', en: "Once confirmed, it's added to your preparation in your own words." }, // PROPOSED — VIS-2 delta r1
+  added: { ar: 'أُضيف إلى تحضيرك.', en: 'Added to your preparation.' }, // PROPOSED — VIS-2 delta r1
+  stateDeclared: { ar: 'لم يُؤكَّد بعد', en: 'Not confirmed yet' }, // PROPOSED — VIS-2 delta r1 (accessibility name of an unsettled item)
+  stateNotIncluded: { ar: 'غير مُضمَّن', en: 'Not included' }, // PROPOSED — VIS-2 delta r1
 } as const satisfies Record<string, Pair>;
 
 export type IntroductionsCopy = { readonly [K in keyof typeof ROWS]: string };
@@ -149,6 +158,17 @@ const EN = pick('en');
 export function introductionsCopy(language: ChromeLanguage): IntroductionsCopy {
   return language === 'ar' ? AR : EN;
 }
+
+/**
+ * The VIS-2 copy delta, versioned: exactly the seven rows the Living Portrait adds, and where each is used. Nothing else
+ * was added to the fixed copy by the redesign; `systemRulesNote` carries the Product Owner's own correction.
+ */
+export const INTRODUCTIONS_COPY_DELTA = Object.freeze({
+  version: 'VIS-2 r1 (2026-10-14)',
+  status: 'PROPOSED — accepted as a design direction; awaiting final byte-exact Product Owner approval',
+  rows: ['clusterAbout', 'clusterBounds', 'clusterOpen', 'afterConfirmPrior', 'added', 'stateDeclared', 'stateNotIncluded'] as const,
+  corrected: ['systemRulesNote'] as const,
+});
 
 /** Every row, both languages — for the Product Copy Gate package and its tests. */
 export const INTRODUCTIONS_COPY_ROWS: Readonly<Record<keyof typeof ROWS, Pair>> = ROWS;

@@ -109,7 +109,9 @@ describe.each(['ar', 'en'] as const)('%s — Introductions with QANDEEL', (langu
 
   it('N — the intro says what this is, that it is private, that enrollment is not available, and nothing more', async () => {
     const { view } = await surface(language, server(viewOf({ kind: 'OFFER_ASSISTANCE' }, { draft: null }, 'NEW', 'NOT_STARTED')));
-    expect(words(view)).toEqual([copy.name, copy.opening, copy.privateNote, copy.enrollmentUnavailable, copy.pathNew, copy.start]);
+    // VIS-2: the restrained beginning — no portrait is drawn for what is not known yet (R1); the act is on the sheet.
+    expect(words(view)).toEqual([copy.name, copy.opening, copy.privateNote, copy.pathNew, copy.start, copy.enrollmentUnavailable]);
+    expect(view.queryByTestId('qandeel-introductions-portrait')).toBeNull();
     expect(style(view.getByTestId('qandeel-introductions')).direction).toBe(writing);
     expect(view.getByTestId('qandeel-introductions-title').props.accessibilityRole).toBe('header');
     expect(words(view).join(' ')).not.toMatch(/active|matched|eligible|نشط|مؤهل|تطابق/iu);

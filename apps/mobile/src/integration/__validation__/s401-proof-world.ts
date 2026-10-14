@@ -229,7 +229,7 @@ export interface S401ProofWorld {
   /** S5-03B: the Public field answers from the SYNTHETIC visual-review fixture (`s503b-visual-field.ts`). */
   publicSeed(): void;
   /** S6-01: the Introductions preparation opens with the N, K or C synthetic scenario, or its gates close. */
-  introductions(action: 'seed-new' | 'seed-known' | 'seed-mixed' | 'close'): void;
+  introductions(action: 'seed-new' | 'seed-known' | 'seed-mixed' | 'seed-portrait' | 'close'): void;
   /** S5-03C smoke: the synthetic other side accepts every relation the reader requested. */
   relationAccept(): void;
   /** S5-04 smoke: a synthetic other person replies to the reader's latest own post; its Public Activity item appears. */
@@ -855,6 +855,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       if (action === 'seed-new') introductions.seedNew();
       if (action === 'seed-known') introductions.seedKnown();
       if (action === 'seed-mixed') introductions.seedMixed();
+      if (action === 'seed-portrait') introductions.seedPortrait();
       if (action === 'close') introductions.close();
     },
     peerDelete: () => {

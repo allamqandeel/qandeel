@@ -50,7 +50,7 @@ export function IntroductionsEntry({ controller, language, onOpen, focus = false
       }}
       style={{ paddingHorizontal: 12, flexShrink: 1 }}
     >
-      <Text numberOfLines={1} style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: language === 'ar' ? 'rtl' : 'ltr' }}>
+      <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: language === 'ar' ? 'rtl' : 'ltr' }}>
         {copy.name}
       </Text>
     </Control>

@@ -54,4 +54,14 @@ describe('S6-01 proof stand-in', () => {
     expect(closed.draft).not.toBeNull();
     expect((await body(mixed.route('/introductions/preparation/commands', 'POST', { commandId: 'c', expectedVersion: 7, kind: 'SKIP_STEP', payload: { step: 'NOTES' } }))).outcome).toBe('UNAVAILABLE');
   });
+
+  it('VIS-2: the portrait seed is a synthetic preparation ready for review — every fact confirmed, both kinds of requirement, notes of both kinds', async () => {
+    const proof = createS601ProofIntroductions('en');
+    proof.seedPortrait();
+    const view = await body(proof.route('/introductions/preparation', 'GET', undefined));
+    expect(view.plan).toMatchObject({ next: { kind: 'REVIEW' }, enrollment: 'UNAVAILABLE' });
+    expect(Object.values(view.draft.facts as Record<string, { state: string }>).every((f) => f.state === 'CONFIRMED')).toBe(true);
+    expect(view.draft.notes.map((n: { kind: string }) => n.kind).sort()).toEqual(['ABOUT_ME', 'WHAT_MATTERS', 'WHAT_MATTERS', 'WHAT_MATTERS']);
+    expect(view.availability.enrollment).toBe(false);
+  });
 });

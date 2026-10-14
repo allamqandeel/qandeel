@@ -2,6 +2,10 @@
  * S6-01 — the small building blocks of the Introductions preparation surface: paragraphs, choices, actions and fields
  * in the Personal page composition (the same rows, ink and 44-point targets as Settings and Understanding). Logical
  * layout only (start / end), so Arabic and English mirror correctly; no fixed width, so 320 points fit.
+ *
+ * VIS-2 (Living Portrait): the current act is drawn on the Field — "the sheet" — while what is settled stays on the
+ * World. A part on the sheet takes the World as its contrasting ground (inputs, the selected choice, the primary act),
+ * so nothing disappears into the surface it stands on, in Dark and Light alike.
  */
 import { useState, type ReactNode } from 'react';
 import { Text, TextInput, View } from 'react-native';
@@ -14,19 +18,58 @@ export const ROW_END = 20;
 export const BUSY_OPACITY = 0.6;
 const FIELD_MIN_HEIGHT = 48;
 const FIELD_RADIUS = 12;
+const PRIMARY_MIN_HEIGHT = 52;
+const PRIMARY_RADIUS = 14;
+const PRIMARY_OUTLINE = 1.5;
+
+/**
+ * The approved calmer hierarchy (Product Owner, VIS-1 decision): local sizes on the shipped Estedad Medium face — the
+ * E3 `action` role's face, so no new weight and no generated token is touched. Text still scales with the system.
+ */
+const medium = (fontSize: number, lineHeight: number) => ({ ...typeStyle('action'), fontSize, lineHeight });
+export const LOCAL_TYPE = Object.freeze({
+  /** The compact header title. */
+  header: medium(17, 30),
+  /** The one current question or decision. */
+  question: medium(20, 32),
+  /** The owner's first name, in the composed (review) portrait only. */
+  name: medium(24, 38),
+});
 
 export interface PartContext {
   readonly palette: ConversationPalette;
   readonly language: ChromeLanguage;
   readonly writing: 'rtl' | 'ltr';
   readonly busy: boolean;
+  /** Drawn on the sheet (the Field): the contrasting ground of its parts is the World. */
+  readonly onSheet?: boolean;
+  /** Receives the current step's question, where the screen reader arrives once per step. */
+  readonly onHeading?: (node: Text | null) => void;
 }
+
+const groundOf = (ctx: PartContext) => (ctx.onSheet ? ctx.palette.world : ctx.palette.field);
 
 export function Para({ ctx, text, role = 'body', color, testID }: {
   readonly ctx: PartContext; readonly text: string; readonly role?: 'body' | 'supporting' | 'metadata' | 'statement'; readonly color?: string; readonly testID?: string;
 }) {
   return (
     <Text testID={testID} style={{ ...typeStyle(role), color: color ?? ctx.palette.primary, paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 4, writingDirection: ctx.writing }}>
+      {text}
+    </Text>
+  );
+}
+
+/** The one current question or decision of a step: the most prominent words on the screen. */
+export function Question({ ctx, text, testID }: { readonly ctx: PartContext; readonly text: string; readonly testID?: string }) {
+  const { onHeading, language, palette, writing } = ctx;
+  return (
+    <Text
+      ref={onHeading}
+      accessibilityRole="header"
+      accessibilityLanguage={language}
+      testID={testID}
+      style={{ ...LOCAL_TYPE.question, color: palette.primary, paddingTop: 6, paddingBottom: 6, paddingStart: ROW_START, paddingEnd: ROW_END, writingDirection: writing }}
+    >
       {text}
     </Text>
   );
@@ -45,27 +88,93 @@ export function Heading({ ctx, text, testID }: { readonly ctx: PartContext; read
   );
 }
 
-/** The owner's own words, set apart and never rewritten. */
-export function Quote({ ctx, text, testID }: { readonly ctx: PartContext; readonly text: string; readonly testID?: string }) {
+/** Quotation marks by reading language: the owner's words are always shown as quoted, never as QANDEEL's own. */
+export const QUOTE_MARKS: Readonly<Record<ChromeLanguage, readonly [string, string]>> = Object.freeze({ ar: ['«', '»'], en: ['\u201C', '\u201D'] });
+
+/** The owner's own words, quoted and never rewritten. The words themselves are one text node (`testID`). */
+export function Quote({ ctx, text, testID, role = 'body', color, numberOfLines }: {
+  readonly ctx: PartContext; readonly text: string; readonly testID?: string; readonly role?: 'body' | 'supporting'; readonly color?: string; readonly numberOfLines?: number;
+}) {
+  const [open, close] = QUOTE_MARKS[ctx.language];
   return (
-    <View style={{ marginStart: ROW_START, marginEnd: ROW_END, marginVertical: 8, paddingStart: 12, borderStartWidth: 2, borderColor: ctx.palette.tertiary }}>
-      <Text testID={testID} style={{ ...typeStyle('body'), color: ctx.palette.primary, writingDirection: ctx.writing }}>{text}</Text>
-    </View>
+    <Text numberOfLines={numberOfLines} style={{ ...typeStyle(role), color: color ?? ctx.palette.primary, writingDirection: ctx.writing }}>
+      {open}<Text testID={testID}>{text}</Text>{close}
+    </Text>
   );
 }
 
-/** One action: a full-width row, 44 points high at least. `primary` is drawn in the rest ink, as every primary act. */
-export function Action({ ctx, label, onPress, testID, primary = false, disabled = false, accessibilityLabel }: {
+/**
+ * The mark of something NOT settled (E1: shape and ink, never a hue): a ring when it awaits the owner's confirmation; an
+ * open ring when it is changed, older or in conflict and must be decided. Decorative — the words carry the meaning.
+ */
+export function OpenMark({ ctx, state }: { readonly ctx: PartContext; readonly state: 'TO_CONFIRM' | 'TO_DECIDE' }) {
+  return (
+    <View
+      accessible={false}
+      importantForAccessibility="no-hide-descendants"
+      accessibilityElementsHidden
+      testID={`qandeel-introductions-mark-${state}`}
+      style={{
+        width: 11, height: 11, borderRadius: 5.5, borderWidth: 1.5,
+        borderColor: state === 'TO_DECIDE' ? ctx.palette.primary : ctx.palette.secondary,
+        borderTopColor: state === 'TO_DECIDE' ? 'transparent' : ctx.palette.secondary,
+        transform: state === 'TO_DECIDE' ? [{ rotate: '-45deg' }] : undefined,
+      }}
+    />
+  );
+}
+
+/**
+ * One action, 44 points high at least. A secondary act is a full-width row (or, `inline`, one of an `ActionRow`) in the
+ * rest ink. The `primary` act — at most one per step — is the one prominent control: on the sheet, an outlined shape on
+ * the World; elsewhere, the Field.
+ */
+export function Action({ ctx, label, onPress, testID, primary = false, disabled = false, accessibilityLabel, inline = false, expanded }: {
   readonly ctx: PartContext; readonly label: string; readonly onPress: () => void; readonly testID: string;
-  readonly primary?: boolean; readonly disabled?: boolean; readonly accessibilityLabel?: string;
+  readonly primary?: boolean; readonly disabled?: boolean; readonly accessibilityLabel?: string; readonly inline?: boolean;
+  /** A disclosure: whether what it opens is open. */
+  readonly expanded?: boolean;
 }) {
   const off = ctx.busy || disabled;
+  const state = { busy: ctx.busy, disabled: off, ...(expanded === undefined ? {} : { expanded }) };
+  if (primary && ctx.onSheet) {
+    return (
+      <Control
+        palette={ctx.palette}
+        language={ctx.language}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityState={state}
+        onPress={off ? () => undefined : onPress}
+        testID={testID}
+        style={{ minHeight: PRIMARY_MIN_HEIGHT, paddingVertical: 12, paddingHorizontal: 18, marginStart: ROW_START, marginEnd: ROW_END, marginVertical: 8,
+          borderRadius: PRIMARY_RADIUS, backgroundColor: ctx.palette.world, borderWidth: PRIMARY_OUTLINE, borderColor: ctx.palette.primary,
+          alignItems: 'center', opacity: off ? BUSY_OPACITY : 1 }}
+      >
+        <Text style={{ ...typeStyle('action'), color: ctx.palette.primary, textAlign: 'center', writingDirection: ctx.writing }}>{label}</Text>
+      </Control>
+    );
+  }
+  if (inline) {
+    return (
+      <Control
+        palette={ctx.palette}
+        language={ctx.language}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityState={state}
+        onPress={off ? () => undefined : onPress}
+        testID={testID}
+        style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingHorizontal: 8, opacity: off ? BUSY_OPACITY : 1 }}
+      >
+        <Text style={{ ...typeStyle('action'), color: ctx.palette.restInk, writingDirection: ctx.writing }}>{label}</Text>
+      </Control>
+    );
+  }
   return (
     <Control
       palette={ctx.palette}
       language={ctx.language}
       accessibilityLabel={accessibilityLabel ?? label}
-      accessibilityState={{ busy: ctx.busy, disabled: off }}
+      accessibilityState={state}
       onPress={off ? () => undefined : onPress}
       testID={testID}
       style={primary
@@ -73,9 +182,14 @@ export function Action({ ctx, label, onPress, testID, primary = false, disabled 
           borderRadius: 12, backgroundColor: ctx.palette.field, opacity: off ? BUSY_OPACITY : 1 }
         : { minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0, opacity: off ? BUSY_OPACITY : 1 }}
     >
-      <Text style={{ ...typeStyle('action'), color: ctx.palette.primary, writingDirection: ctx.writing }}>{label}</Text>
+      <Text style={{ ...typeStyle('action'), color: primary ? ctx.palette.primary : ctx.palette.restInk, writingDirection: ctx.writing }}>{label}</Text>
     </Control>
   );
+}
+
+/** Secondary acts side by side, wrapping onto the next line on a narrow screen or with large text. */
+export function ActionRow({ children }: { readonly children: ReactNode }) {
+  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, paddingStart: ROW_START - 8, paddingEnd: ROW_END - 8 }}>{children}</View>;
 }
 
 /** One choice of a closed set. A radio (one of) or a toggle (any of); its state is announced, never colour alone. */
@@ -93,7 +207,7 @@ export function Choice({ ctx, label, selected, onPress, testID, multiple = false
       testID={testID}
       style={{
         minHeight: MIN_TARGET, paddingVertical: 10, paddingStart: ROW_START, paddingEnd: ROW_END, borderRadius: 0,
-        backgroundColor: selected ? ctx.palette.field : undefined, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', columnGap: 10,
+        backgroundColor: selected ? groundOf(ctx) : undefined, flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-start', columnGap: 10,
       }}
     >
       <Text style={{ ...typeStyle('body'), color: ctx.palette.primary, writingDirection: ctx.writing, flexShrink: 1 }}>{label}</Text>
@@ -132,13 +246,13 @@ export function Field({ ctx, label, value, onChange, testID, maxLength, numeric 
         style={{
           ...typeStyle('body'),
           color: ctx.palette.primary,
-          backgroundColor: ctx.palette.field,
+          backgroundColor: groundOf(ctx),
           minHeight: multiline ? FIELD_MIN_HEIGHT * 2 : FIELD_MIN_HEIGHT,
           borderRadius: FIELD_RADIUS,
           paddingHorizontal: 14,
           paddingVertical: 9,
           borderWidth: ctx.palette.focusThickness,
-          borderColor: focused ? ctx.palette.focusIndicator : ctx.palette.field,
+          borderColor: focused ? ctx.palette.focusIndicator : ctx.onSheet ? ctx.palette.tertiary : ctx.palette.field,
           textAlign: writing === 'rtl' ? 'right' : 'left',
           textAlignVertical: multiline ? 'top' : 'center',
           writingDirection: writing,

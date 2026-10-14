@@ -9,6 +9,8 @@
  *   qandeel://s401-proof/introductions/seed-known   K: the permission granted; two CURRENT synthetic items
  *   qandeel://s401-proof/introductions/seed-mixed   C: one older synthetic item, a corrected fact and a dealbreaker /
  *                                                   preference conflict
+ *   qandeel://s401-proof/introductions/seed-portrait VIS-2: a synthetic preparation ready for review (the Living Portrait:
+ *                                                   About you, What matters, a dealbreaker and a preference)
  *   qandeel://s401-proof/introductions/close        the gates close (a draft stays readable and deletable)
  *
  * It answers in the shapes `apps/api/src/introductions-preparation` returns. The plan below is a compact SYNTHETIC
@@ -34,6 +36,7 @@ export interface S601ProofIntroductions {
   seedNew(): void;
   seedKnown(): void;
   seedMixed(): void;
+  seedPortrait(): void;
   close(): void;
 }
 
@@ -179,6 +182,29 @@ export function createS601ProofIntroductions(language: ChromeLanguage): S601Proo
         soft: { answer: 'ITEMS', items: [{ dimension: 'AGE_RANGE', min: 30, max: 40 }] },
         discrepancies: ['AGE_RANGE'],
       };
+    },
+    seedPortrait() {
+      seeded = true; open = true; consent = true; items = [];
+      const ar = language === 'ar';
+      draft = emptyDraft();
+      const x = d();
+      x.version = 16;
+      x.priorUnderstandingDecisions = 3;
+      x.facts = {
+        firstName: { value: ar ? 'سلمى' : 'Salma', state: 'CONFIRMED' }, sex: { value: 'FEMALE', state: 'CONFIRMED' },
+        birthYearMonth: { year: 1996, month: 5, state: 'CONFIRMED' }, area: { countryCode: 'EG', regionCode: 'EG-ALX', state: 'CONFIRMED' },
+        maritalStatus: { value: 'NEVER_MARRIED', state: 'CONFIRMED' },
+      };
+      x.profile = { shortIntroduction: null, workField: 'EDUCATION' };
+      x.requirements = { hard: { answer: 'ITEMS', items: [{ dimension: 'AREA', countryCode: 'EG' }] }, soft: { answer: 'ITEMS', items: [{ dimension: 'AGE_RANGE', min: 28, max: 36 }] }, discrepancies: [] };
+      const note = (n: number, kind: string, origin: string, body: string) => ({ id: `56010000-0000-4000-8000-00000000040${n}`, kind, origin, body });
+      x.notes = [
+        note(1, 'WHAT_MATTERS', 'CONFIRMED_FROM_PRIOR_UNDERSTANDING', ar ? 'أريد أن أبقى قريبة من أهلي في الإسكندرية بعد الزواج.' : 'I want to stay close to my family in Alexandria after marriage.'),
+        note(2, 'ABOUT_ME', 'CONFIRMED_FROM_PRIOR_UNDERSTANDING', ar ? 'أعمل معلمة، وأحب عملي ولا أنوي تركه.' : "I'm a teacher. I love my work and don't plan to leave it."),
+        note(3, 'WHAT_MATTERS', 'CONFIRMED_FROM_PRIOR_UNDERSTANDING', ar ? 'أتمنى بيتًا فيه حوار، لا صمت.' : 'I hope for a home with conversation, not silence.'),
+        note(4, 'WHAT_MATTERS', 'USER_AUTHORED', ar ? 'الصدق، والهدوء عند الاختلاف.' : 'Honesty, and staying calm when we disagree.'),
+      ];
+      x.skippedSteps = ['SHORT_INTRODUCTION'];
     },
     close() { open = false; },
   };
