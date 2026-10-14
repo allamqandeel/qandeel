@@ -275,8 +275,9 @@ export function OpenBand({ ctx, copy, item, lead, title, trailing, textTestID }:
   return (
     <View testID="qandeel-introductions-band" style={{ paddingStart: ROW_START, paddingEnd: ROW_END, paddingBottom: 12 }}>
       <View style={{ height: 1, backgroundColor: ctx.palette.tertiary, opacity: 0.3 }} />
-      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', minHeight: trailing ? 44 : 32, columnGap: 12, marginEnd: trailing ? -8 : 0 }}>
-        <Text accessibilityRole="header" style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, flexShrink: 1, writingDirection: ctx.writing }}>{copy.clusterOpen}</Text>
+      {/* The caption is never broken inside a word; when the row has no room (large text), the action moves under it. */}
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', minHeight: trailing ? 44 : 32, columnGap: 12, marginEnd: trailing ? -8 : 0 }}>
+        <Text accessibilityRole="header" style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, flexShrink: 0, writingDirection: ctx.writing }}>{copy.clusterOpen}</Text>
         {trailing ?? null}
       </View>
       {lead ? <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingBottom: 2, writingDirection: ctx.writing }}>{lead}</Text> : null}

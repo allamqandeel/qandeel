@@ -49,10 +49,15 @@ const HEADER_MIN_HEIGHT = 48;
 const SHEET_RADIUS = 24;
 /** A screen at least this tall (in points at the reader's text size) has room for the whole portrait while preparing. */
 const ROOMY_HEIGHT = 720;
-/** After a step changes, this share of the viewport above the current item still shows the portrait it joins. */
+/** After a step changes, this share of the viewport above the current item still shows the portrait it joins — less
+ * at a large text size, where the item, its question and its act need the room (R2). */
 const PORTRAIT_GLIMPSE = 0.35;
-/** With the keyboard up, the field being typed in sits this far down, so its question stays readable above it. */
+const PORTRAIT_GLIMPSE_LARGE_TEXT = 0.12;
+const LARGE_TEXT = 1.15;
+/** With the keyboard up, the field being typed in sits this far down, so its question stays readable above it… */
 const FIELD_CONTEXT = 132;
+/** …unless that would hide its act (Save) beneath the keyboard: the act comes first (R2). */
+const ACT_ROOM = 76;
 const NONE: ReadonlySet<string> = new Set();
 
 type Editing = { readonly kind: 'FACT'; readonly fact: IntroductionsFact } | { readonly kind: 'HARD' | 'SOFT' | 'PROFILE' } | null;
@@ -341,27 +346,35 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   const scrollRef = useRef<ScrollView | null>(null);
   const contentRef = useRef<View | null>(null);
   const viewportHeight = useRef(0);
+  const [viewport, setViewport] = useState(0);
   const placeOnLayout = useRef(true);
+  /** The current item's place, applied again once the page has grown to hold it (a scroll is clamped to the content). */
+  const placement = useRef<number | null>(null);
   // Each step opens with its current item in view, a glimpse of the portrait above it: never the previous scroll position.
   useEffect(() => {
     placeOnLayout.current = true;
+    placement.current = null;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [stepKey]);
   const placeActive = (y: number) => {
     if (!placeOnLayout.current) return;
     placeOnLayout.current = false;
-    scrollRef.current?.scrollTo({ y: Math.max(0, y - viewportHeight.current * PORTRAIT_GLIMPSE), animated: false });
+    placement.current = Math.max(0, y - viewportHeight.current * (fontScale > LARGE_TEXT ? PORTRAIT_GLIMPSE_LARGE_TEXT : PORTRAIT_GLIMPSE));
+    scrollRef.current?.scrollTo({ y: placement.current, animated: false });
   };
-  // With the keyboard up, the field being typed in comes into view with its question above it and its act below it.
+  // With the keyboard up, the field being typed in comes into view with its act below it and, room permitting, its
+  // question above it. Measured again when the keyboard has shrunk the page (the earlier scroll was clamped).
   useEffect(() => {
     if (!keyboard) return;
     const input = TextInput.State.currentlyFocusedInput();
     const content = contentRef.current;
     if (!input || !content) return;
-    input.measureLayout(content, (_x, y) => {
-      scrollRef.current?.scrollTo({ y: Math.max(0, y - Math.min(FIELD_CONTEXT, viewportHeight.current * 0.3)), animated: !reduceMotion });
+    input.measureLayout(content, (_x, y, _w, h) => {
+      const withQuestion = y - Math.min(FIELD_CONTEXT, viewport * 0.3);
+      const withAct = y + h + ACT_ROOM - viewport;
+      scrollRef.current?.scrollTo({ y: Math.max(0, Math.min(y, Math.max(withQuestion, withAct))), animated: !reduceMotion });
     }, () => undefined);
-  }, [keyboard, reduceMotion]);
+  }, [keyboard, viewport, reduceMotion]);
   // The screen reader arrives on the step's question (or the page title) once per step; a confirmation is announced
   // after it, whether or not anything is shown moving.
   useEffect(() => {
@@ -555,9 +568,13 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
         testID="qandeel-introductions-body"
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
-        onLayout={(e) => { viewportHeight.current = e.nativeEvent.layout.height; }}
-        // Delete preparation is the page's last block: its confirmation opens in view, never below the fold.
-        onContentSizeChange={() => { if (confirmDiscard) scrollRef.current?.scrollToEnd({ animated: !reduceMotion }); }}
+        onLayout={(e) => { viewportHeight.current = e.nativeEvent.layout.height; setViewport(e.nativeEvent.layout.height); }}
+        onScrollBeginDrag={() => { placement.current = null; }}
+        onContentSizeChange={() => {
+          // Delete preparation is the page's last block: its confirmation opens in view, never below the fold.
+          if (confirmDiscard) scrollRef.current?.scrollToEnd({ animated: !reduceMotion });
+          else if (placement.current !== null) scrollRef.current?.scrollTo({ y: placement.current, animated: false });
+        }}
         contentContainerStyle={{ flexGrow: 1, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: act === null ? insets.bottom + 16 : 0 }}
       >
         <View ref={contentRef} style={{ flexGrow: 1 }}>

@@ -230,6 +230,51 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     expect(view.getByTestId('qandeel-introductions-portrait-caption-MATTERS').props.accessibilityState).toMatchObject({ expanded: true });
   });
 
+  it('R2 — with the keyboard up, the field keeps its act (Save) in view; its question only when there is room', async () => {
+    const handlers: Record<string, () => void> = {};
+    jest.spyOn(ReactNative.Keyboard, 'addListener').mockImplementation(((event: string, handler: () => void) => {
+      handlers[event] = handler;
+      return { remove: () => undefined };
+    }) as never);
+    const scrollTo = jest.spyOn(ReactNative.ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+    // The focused field: 52 points tall, 900 points down the page.
+    const field = { measureLayout: (_to: unknown, done: (x: number, y: number, w: number, h: number) => void) => done(0, 900, 288, 52) };
+    jest.spyOn(ReactNative.TextInput.State, 'currentlyFocusedInput').mockReturnValue(field as never);
+    const view = await surface(language, server(viewOf({ kind: 'ESTABLISH_PRIORITIES' })));
+    const body = view.getByTestId('qandeel-introductions-body');
+    const shown = async (viewport: number) => {
+      scrollTo.mockClear();
+      await act(async () => { body.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 320, height: viewport } } }); await flush(); });
+      return (scrollTo.mock.calls.at(-1)?.[0] as { y: number } | undefined)?.y;
+    };
+    await act(async () => { handlers.keyboardDidShow(); await flush(); });
+    // Room for both: the question's context above the field (132 points), Save below it.
+    expect(await shown(600)).toBe(900 - 132);
+    // A page the keyboard has shrunk (large text, 320 dp): the act wins; the field itself never leaves the top.
+    expect(await shown(150)).toBe(900 + 52 + 76 - 150);
+    expect(await shown(60)).toBe(900);
+  });
+
+  it('R2 — at a large text size the current item opens with less of the portrait above it; its caption is never broken', async () => {
+    windowSize.fontScale = 1.3;
+    try {
+      const scrollTo = jest.spyOn(ReactNative.ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+      const view = await surface(language, server(known));
+      await act(async () => { view.getByTestId('qandeel-introductions-body').props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 320, height: 500 } } }); await flush(); });
+      scrollTo.mockClear();
+      // The band's own layout places the step (the wrapper around the band reports it).
+      const band = view.getByTestId('qandeel-introductions-band');
+      const placer = [band.parent, band.parent?.parent].find((node) => typeof node?.props.onLayout === 'function');
+      await act(async () => { placer?.props.onLayout({ nativeEvent: { layout: { x: 0, y: 400, width: 320, height: 120 } } }); await flush(); });
+      expect((scrollTo.mock.calls.at(-1)?.[0] as { y: number }).y).toBeCloseTo(400 - 500 * 0.12);
+      const caption = view.getByText(copy.clusterOpen);
+      expect(style(caption)).toMatchObject({ flexShrink: 0 });
+      expect(style(caption.parent as never)).toMatchObject({ flexWrap: 'wrap' });
+    } finally {
+      windowSize.fontScale = 1;
+    }
+  });
+
   it('R2 — a roomy screen shows the whole portrait, until the keyboard comes up', async () => {
     screen(900);
     const handlers: Record<string, () => void> = {};
