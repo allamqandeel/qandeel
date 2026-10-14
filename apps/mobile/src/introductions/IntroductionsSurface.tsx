@@ -556,6 +556,8 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
         style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         onLayout={(e) => { viewportHeight.current = e.nativeEvent.layout.height; }}
+        // Delete preparation is the page's last block: its confirmation opens in view, never below the fold.
+        onContentSizeChange={() => { if (confirmDiscard) scrollRef.current?.scrollToEnd({ animated: !reduceMotion }); }}
         contentContainerStyle={{ flexGrow: 1, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: act === null ? insets.bottom + 16 : 0 }}
       >
         <View ref={contentRef} style={{ flexGrow: 1 }}>

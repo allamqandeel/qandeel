@@ -174,12 +174,20 @@ appId: com.qandeel.mobile
       id: "qandeel-introductions-step-ESTABLISH_PRIORITIES"
     timeout: 30000
 - takeScreenshot: ${PREFIX}-14-what-matters
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-skip"
+    direction: DOWN
 - tapOn:
     id: "qandeel-introductions-skip"
 - extendedWaitUntil:
     visible:
       id: "qandeel-introductions-step-OFFER_SHORT_INTRODUCTION"
     timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: "qandeel-introductions-skip"
+    direction: DOWN
 - tapOn:
     id: "qandeel-introductions-skip"
 - extendedWaitUntil:

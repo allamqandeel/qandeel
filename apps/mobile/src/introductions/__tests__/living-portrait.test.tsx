@@ -311,6 +311,20 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     expect(texts(view)).toContain(copy.systemRulesNote);
   });
 
+  it('Delete preparation opens its confirmation in view — the page\'s last block is brought up, not left below the fold', async () => {
+    const view = await surface(language, server(reviewed));
+    const body = view.getByTestId('qandeel-introductions-body');
+    const toEnd = jest.spyOn(ReactNative.ScrollView.prototype, 'scrollToEnd').mockImplementation(() => undefined);
+    // A prototype spy keeps its history across tests: start the count from nothing.
+    toEnd.mockClear();
+    await act(async () => { body.props.onContentSizeChange(320, 1400); await flush(); });
+    expect(toEnd).not.toHaveBeenCalled();
+    await press(view, 'qandeel-introductions-discard');
+    await act(async () => { view.getByTestId('qandeel-introductions-body').props.onContentSizeChange(320, 1600); await flush(); });
+    expect(toEnd).toHaveBeenCalledTimes(1);
+    expect(view.getByTestId('qandeel-introductions-discard-cancel')).toBeTruthy();
+  });
+
   it('read-only: the composed portrait, what was not settled marked as such, delete — and no Edit anywhere', async () => {
     const draft = emptyDraft({ facts: { ...emptyDraft().facts, firstName: { value: 'Salma', state: 'CONFIRMED' }, sex: { value: 'FEMALE', state: 'DECLARED' } } });
     const view = await surface(language, server(viewOf({ kind: 'CONFIRM_DECLARED_FACT', fact: 'SEX' }, { draft, accountDeletionPending: true })));
