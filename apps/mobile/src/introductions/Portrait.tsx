@@ -15,6 +15,12 @@
  * their own words; a dealbreaker is a closed outline and a preference an open one. Something NOT settled is never drawn
  * here — it waits in "Not settled yet" (`OpenBand`) with its own mark.
  *
+ * VIS-3P (premium polish, no new copy): one hierarchy for the whole portrait. The name heads the facts it is the subject
+ * of, and the facts are its quieter subtitle; the owner's own words are the brightest text after the name, their quotation
+ * marks hung in the margin; in the review, a hairline and an even rhythm separate the parts; a preference's open outline is
+ * a single bracket on the reading side (the closed outline's counterpart); and the place a remembered item would take is a
+ * blank line waiting for the owner's words.
+ *
  * A change the server applied may be SHOWN arriving (T-10 M3, ≤ 260 ms, opacity and a short rise from the band below);
  * no light is used (R4: QANDEEL Light is the D2R Analysis grammar, and a fifth kind of light event is a Product decision).
  * Under Reduced Motion the same words appear at once, and the confirmation is announced either way by the surface.
@@ -25,15 +31,19 @@ import { Animated, Easing, PixelRatio, Text, View } from 'react-native';
 import { typeStyle } from '../conversation';
 import { MOTION_DURATIONS_MS, QANDEEL_EASE_OUT } from '../motion';
 import type { IntroductionsCopy } from './copy';
-import { Action, LOCAL_TYPE, OpenMark, Quote, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
+import { Action, LOCAL_TYPE, OpenMark, Quote, QUOTE_MARKS, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
 import type { Portrait, PortraitBound, PortraitOpenItem, PortraitValue } from './portrait-projection';
 
 export type PortraitMode = 'COMPACT' | 'EXPANDED' | 'COMPOSED';
 export type PortraitGroup = 'ABOUT' | 'MATTERS' | 'BOUNDS';
 
 const FRAME_RADIUS = 14;
-const FRAME_STROKE = 1.5;
-const BRACKET = 16;
+const FRAME_STROKE = 1;
+/** The open outline: one bracket on the reading side, as tall as the frame. */
+const BRACKET = 12;
+/** The review's rhythm: the same space before every part, and a hairline between parts. */
+const PART_GAP = 22;
+const DASHES = 80;
 const RISE = 12;
 /** Two frames share a line while each keeps this much room; with larger text they stack. */
 const FRAME_BASIS = 128;
@@ -95,7 +105,7 @@ function ValueLine({ ctx, values, landed, reduceMotion }: {
       {values.map((v, i) => (
         <Arrival key={v.key} arriving={landed.has(v.key)} reduceMotion={reduceMotion}>
           <View style={{ flexDirection: 'row' }}>
-            <Text testID={`qandeel-introductions-portrait-${v.key}`} style={{ ...typeStyle('supporting'), color: ctx.palette.primary, writingDirection: ctx.writing }}>{v.value}</Text>
+            <Text testID={`qandeel-introductions-portrait-${v.key}`} style={{ ...typeStyle('supporting'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{v.value}</Text>
             {i < values.length - 1 ? (
               <Text accessibilityElementsHidden importantForAccessibility="no" style={{ ...typeStyle('supporting'), color: ctx.palette.tertiary, paddingHorizontal: 6 }}>·</Text>
             ) : null}
@@ -106,12 +116,20 @@ function ValueLine({ ctx, values, landed, reduceMotion }: {
   );
 }
 
-/** The place a remembered item would take once the owner confirms it — a dashed outline, never content. */
+/**
+ * The place a remembered item would take once the owner confirms it — never content: a blank, dashed line opened by a
+ * quotation mark (the owner's words will be written here), with what confirming does beneath it.
+ */
 function Landing({ ctx, copy }: { readonly ctx: PartContext; readonly copy: IntroductionsCopy }) {
   return (
-    <View testID="qandeel-introductions-landing" style={{ marginTop: 6, borderRadius: FRAME_RADIUS, borderWidth: FRAME_STROKE, borderStyle: 'dashed', borderColor: ctx.palette.tertiary,
-      paddingHorizontal: 14, paddingVertical: 8 }}>
-      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, writingDirection: ctx.writing }}>{copy.afterConfirmPrior}</Text>
+    <View testID="qandeel-introductions-landing" style={{ paddingTop: 10 }}>
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ flexDirection: 'row', alignItems: 'center', columnGap: 6, minHeight: 24 }}>
+        <Text style={{ ...typeStyle('supporting'), color: ctx.palette.tertiary }}>{QUOTE_MARKS[ctx.language][0]}</Text>
+        <View style={{ flex: 1, flexDirection: 'row', columnGap: 5, overflow: 'hidden' }}>
+          {Array.from({ length: DASHES }, (_, i) => <View key={i} style={{ width: 6, height: 1.5, borderRadius: 1, backgroundColor: ctx.palette.tertiary }} />)}
+        </View>
+      </View>
+      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, paddingTop: 2, writingDirection: ctx.writing }}>{copy.afterConfirmPrior}</Text>
     </View>
   );
 }
@@ -120,28 +138,29 @@ function Added({ ctx, copy, at }: { readonly ctx: PartContext; readonly copy: In
   return <Text ref={at} testID="qandeel-introductions-added" style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{copy.added}</Text>;
 }
 
-/** A dealbreaker is a closed outline; a preference is an open one (four corners). Shape and ink, never a hue. */
+/**
+ * A dealbreaker is a closed outline; a preference an open one — a single bracket on the reading side. Shape and ink,
+ * never a hue; and the words say it too: each frame is announced as one item that begins with its kind.
+ */
 function Frame({ ctx, kind, title, items, testID }: {
   readonly ctx: PartContext; readonly kind: 'HARD' | 'SOFT'; readonly title: string; readonly items: readonly PortraitBound[]; readonly testID: string;
 }) {
   const ink = kind === 'HARD' ? ctx.palette.primary : ctx.palette.secondary;
-  const base = { position: 'absolute' as const, width: BRACKET, height: BRACKET, borderColor: ink };
-  const corners = [
-    { top: 0, start: 0, borderTopWidth: FRAME_STROKE, borderStartWidth: FRAME_STROKE, borderTopStartRadius: FRAME_RADIUS },
-    { top: 0, end: 0, borderTopWidth: FRAME_STROKE, borderEndWidth: FRAME_STROKE, borderTopEndRadius: FRAME_RADIUS },
-    { bottom: 0, start: 0, borderBottomWidth: FRAME_STROKE, borderStartWidth: FRAME_STROKE, borderBottomStartRadius: FRAME_RADIUS },
-    { bottom: 0, end: 0, borderBottomWidth: FRAME_STROKE, borderEndWidth: FRAME_STROKE, borderBottomEndRadius: FRAME_RADIUS },
-  ];
+  const label = [title, ...items.map((item) => (item.label === null ? item.value : `${item.label}: ${item.value}`))].join(ctx.language === 'ar' ? '، ' : ', ');
   return (
-    <View testID={testID} style={{
-      flexGrow: 1, flexBasis: FRAME_BASIS * Math.max(1, PixelRatio.getFontScale()), minHeight: 52, borderRadius: FRAME_RADIUS, paddingHorizontal: 12, paddingTop: 8, paddingBottom: 10,
+    <View testID={testID} accessible accessibilityLabel={label} accessibilityLanguage={ctx.language} style={{
+      flexGrow: 1, flexBasis: FRAME_BASIS * Math.max(1, PixelRatio.getFontScale()), minHeight: 56, borderRadius: FRAME_RADIUS,
+      paddingStart: kind === 'HARD' ? 14 : 18, paddingEnd: 14, paddingTop: 10, paddingBottom: 12,
       ...(kind === 'HARD' ? { borderWidth: FRAME_STROKE, borderColor: ink } : {}),
     }}>
-      {kind === 'SOFT' ? corners.map((corner, i) => <View key={i} pointerEvents="none" style={{ ...base, ...corner }} />) : null}
-      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, writingDirection: ctx.writing }}>{title}</Text>
+      {kind === 'SOFT' ? (
+        <View pointerEvents="none" style={{ position: 'absolute', top: 0, bottom: 0, start: 0, width: BRACKET, borderColor: ink, borderTopWidth: FRAME_STROKE,
+          borderStartWidth: FRAME_STROKE, borderBottomWidth: FRAME_STROKE, borderTopStartRadius: FRAME_RADIUS, borderBottomStartRadius: FRAME_RADIUS }} />
+      ) : null}
+      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{title}</Text>
       {items.map((item, i) => (
-        <View key={`${item.label ?? ''}${i}`} style={{ paddingTop: item.label === null ? 0 : 4 }}>
-          {item.label === null ? null : <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{item.label}</Text>}
+        <View key={`${item.label ?? ''}${i}`} style={{ paddingTop: 6 }}>
+          {item.label === null ? null : <Text style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, writingDirection: ctx.writing }}>{item.label}</Text>}
           <Text style={{ ...typeStyle('supporting'), color: ctx.palette.primary, writingDirection: ctx.writing }}>{item.value}</Text>
         </View>
       ))}
@@ -191,33 +210,33 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
   const hasAbout = p.name !== null || p.lines.length > 0 || aboutQuotes.length > 0 || landsIn === 'ABOUT';
   const hasMatters = p.matters.length > 0 || landsIn === 'MATTERS';
   const hasBounds = p.hard !== null || p.soft !== null;
+  const composed = mode === 'COMPOSED';
+  const firstGroup: PortraitGroup = hasAbout ? 'ABOUT' : hasMatters ? 'MATTERS' : 'BOUNDS';
   const group = (key: PortraitGroup, children: ReactNode) => (
-    <View key={key} testID={`qandeel-introductions-portrait-${key}`} style={{ paddingTop: 12 }}>{children}</View>
+    <View key={key} testID={`qandeel-introductions-portrait-${key}`} style={{ paddingTop: !composed ? 12 : key === firstGroup ? 8 : PART_GAP }}>
+      {composed && key !== firstGroup ? <View style={{ height: 1, backgroundColor: ctx.palette.tertiary, opacity: 0.3, marginBottom: 10 }} /> : null}
+      {children}
+    </View>
   );
 
   return (
     <View testID="qandeel-introductions-portrait" accessibilityLanguage={ctx.language} style={{ paddingStart: ROW_START, paddingEnd: ROW_END }}>
-      {mode === 'COMPOSED' && p.name !== null ? (
-        <Arrival arriving={landed.has(p.name.key)} reduceMotion={reduceMotion}>
-          <Text testID="qandeel-introductions-portrait-name" accessibilityRole="header" style={{ ...LOCAL_TYPE.name, color: ctx.palette.primary, paddingTop: 8, writingDirection: ctx.writing }}>
-            {p.name.value}
-          </Text>
-        </Arrival>
-      ) : null}
-
       {!hasAbout ? null : group('ABOUT', (<>
         <Caption ctx={ctx} text={copy.clusterAbout} toggle={toggle(aboutQuotes.length > 0)} edit={editOf('ABOUT')} testID="qandeel-introductions-portrait-caption-ABOUT" />
-        {mode !== 'COMPOSED' && p.name !== null ? (
+        {/* The name heads the facts it is the subject of: in the review in the 24/38 role, while preparing in the 17. */}
+        {p.name === null ? null : (
           <Arrival arriving={landed.has(p.name.key)} reduceMotion={reduceMotion}>
-            <Text testID="qandeel-introductions-portrait-name" style={{ ...LOCAL_TYPE.header, color: ctx.palette.primary, writingDirection: ctx.writing }}>{p.name.value}</Text>
+            {composed
+              ? <Text testID="qandeel-introductions-portrait-name" accessibilityRole="header" style={{ ...LOCAL_TYPE.name, color: ctx.palette.primary, paddingBottom: 2, writingDirection: ctx.writing }}>{p.name.value}</Text>
+              : <Text testID="qandeel-introductions-portrait-name" style={{ ...LOCAL_TYPE.header, color: ctx.palette.primary, writingDirection: ctx.writing }}>{p.name.value}</Text>}
           </Arrival>
-        ) : null}
+        )}
         {p.lines.map((line) => <ValueLine key={line.map((v) => v.key).join('|')} ctx={ctx} values={line} landed={landed} reduceMotion={reduceMotion} />)}
         {factArrived ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
         {visible(aboutQuotes).map((q) => (
           <Arrival key={q.key} arriving={landed.has(q.key)} reduceMotion={reduceMotion}>
-            <View style={{ paddingTop: 6 }}>
-              <Quote ctx={ctx} text={q.body} role={q.role} color={ctx.palette.secondary} numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${q.key}`} />
+            <View style={{ paddingTop: 10 }}>
+              <Quote ctx={ctx} text={q.body} role={q.role} outdent numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${q.key}`} />
               {addedAfter(q.key) ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
             </View>
           </Arrival>
@@ -230,8 +249,8 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
         <Caption ctx={ctx} text={copy.notesHeading} toggle={toggle(p.matters.length > 0)} testID="qandeel-introductions-portrait-caption-MATTERS" />
         {visible(p.matters).map((n) => (
           <Arrival key={n.key} arriving={landed.has(n.key)} reduceMotion={reduceMotion}>
-            <View style={{ paddingBottom: 6 }}>
-              <Quote ctx={ctx} text={n.body} numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${n.key}`} />
+            <View style={{ paddingBottom: composed ? 12 : 6 }}>
+              <Quote ctx={ctx} text={n.body} outdent numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${n.key}`} />
               {addedAfter(n.key) ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
             </View>
           </Arrival>
@@ -251,8 +270,8 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
         {edit?.open === 'BOUNDS' ? edit.details : null}
       </>))}
 
-      {mode === 'COMPOSED' && p.notIncluded.length > 0 ? (
-        <Text testID="qandeel-introductions-not-included" style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, paddingTop: 14, writingDirection: ctx.writing }}>
+      {composed && p.notIncluded.length > 0 ? (
+        <Text testID="qandeel-introductions-not-included" style={{ ...typeStyle('metadata'), color: ctx.palette.tertiary, paddingTop: 16, writingDirection: ctx.writing }}>
           {`${copy.stateNotIncluded}: ${p.notIncluded.join(ctx.language === 'ar' ? '، ' : ', ')}`}
         </Text>
       ) : null}

@@ -674,10 +674,10 @@ function Step({ ctx, copy, view, objective, send, controller, correcting, setCor
           </>) : (<>
             <Question ctx={ctx} text={clarify ? copy.priorClarifyQuestion : copy.priorConfirmQuestion} testID="qandeel-introductions-step-heading" />
             <Action ctx={ctx} label={copy.priorYes} primary onPress={() => decide('CONFIRMED')} testID="qandeel-introductions-prior-yes" />
-            <ActionRow>
-              <Action ctx={ctx} inline label={copy.priorEdit} onPress={() => { setCorrection(item.words); setCorrecting(item.memoryId); }} testID="qandeel-introductions-prior-edit" />
-              <Action ctx={ctx} inline label={copy.priorNoLonger} onPress={() => decide('NO_LONGER_ACCURATE')} testID="qandeel-introductions-prior-no-longer" />
-              <Action ctx={ctx} inline label={copy.priorDecline} onPress={() => decide('DECLINED')} testID="qandeel-introductions-prior-decline" />
+            <ActionRow chips>
+              <Action ctx={ctx} chip label={copy.priorEdit} onPress={() => { setCorrection(item.words); setCorrecting(item.memoryId); }} testID="qandeel-introductions-prior-edit" />
+              <Action ctx={ctx} chip label={copy.priorNoLonger} onPress={() => decide('NO_LONGER_ACCURATE')} testID="qandeel-introductions-prior-no-longer" />
+              <Action ctx={ctx} chip label={copy.priorDecline} onPress={() => decide('DECLINED')} testID="qandeel-introductions-prior-decline" />
             </ActionRow>
             <Para ctx={ctx} text={copy.priorMemoryNote} role="metadata" color={ctx.palette.tertiary} testID="qandeel-introductions-prior-note" />
           </>)}
@@ -697,8 +697,8 @@ function Step({ ctx, copy, view, objective, send, controller, correcting, setCor
         <View testID={`qandeel-introductions-step-${objective.kind}-${objective.fact}`}>
           <Question ctx={ctx} text={question} testID="qandeel-introductions-step-heading" />
           <Action ctx={ctx} label={copy.yesCorrect} primary onPress={() => void send('CONFIRM_FACT', { fact: objective.fact })} testID="qandeel-introductions-confirm" />
-          <ActionRow>
-            <Action ctx={ctx} inline label={copy.edit} accessibilityLabel={`${copy.edit}: ${factTitle(objective.fact, copy)}`} onPress={() => onEdit({ kind: 'FACT', fact: objective.fact })} testID="qandeel-introductions-edit" />
+          <ActionRow chips>
+            <Action ctx={ctx} chip label={copy.edit} accessibilityLabel={`${copy.edit}: ${factTitle(objective.fact, copy)}`} onPress={() => onEdit({ kind: 'FACT', fact: objective.fact })} testID="qandeel-introductions-edit" />
           </ActionRow>
         </View>
       );
@@ -708,9 +708,9 @@ function Step({ ctx, copy, view, objective, send, controller, correcting, setCor
         <View testID="qandeel-introductions-step-RESOLVE_DISCREPANCY">
           <Question ctx={ctx} text={copy.discrepancyTitle} testID="qandeel-introductions-step-heading" />
           <Para ctx={ctx} text={`${copy.discrepancyBody} ${objective.dimensions.map((d) => copy[d]).join(ctx.language === 'ar' ? '، ' : ', ')}`} />
-          <ActionRow>
-            <Action ctx={ctx} inline label={copy.editHard} onPress={() => onEdit({ kind: 'HARD' })} testID="qandeel-introductions-edit-hard" />
-            <Action ctx={ctx} inline label={copy.editSoft} onPress={() => onEdit({ kind: 'SOFT' })} testID="qandeel-introductions-edit-soft" />
+          <ActionRow chips>
+            <Action ctx={ctx} chip label={copy.editHard} onPress={() => onEdit({ kind: 'HARD' })} testID="qandeel-introductions-edit-hard" />
+            <Action ctx={ctx} chip label={copy.editSoft} onPress={() => onEdit({ kind: 'SOFT' })} testID="qandeel-introductions-edit-soft" />
           </ActionRow>
         </View>
       );

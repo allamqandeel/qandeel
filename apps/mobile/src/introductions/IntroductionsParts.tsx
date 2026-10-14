@@ -8,7 +8,7 @@
  * so nothing disappears into the surface it stands on, in Dark and Light alike.
  */
 import { useState, type ReactNode } from 'react';
-import { Text, TextInput, View } from 'react-native';
+import { PixelRatio, Text, TextInput, View } from 'react-native';
 
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
@@ -21,6 +21,9 @@ const FIELD_RADIUS = 12;
 const PRIMARY_MIN_HEIGHT = 52;
 const PRIMARY_RADIUS = 14;
 const PRIMARY_OUTLINE = 1.5;
+/** The column an opening quotation mark hangs in, so every line of the owner's words starts on one edge. */
+const HANG = 12;
+const CHIP_RADIUS = 14;
 
 /**
  * The approved calmer hierarchy (Product Owner, VIS-1 decision): local sizes on the shipped Estedad Medium face — the
@@ -91,15 +94,30 @@ export function Heading({ ctx, text, testID }: { readonly ctx: PartContext; read
 /** Quotation marks by reading language: the owner's words are always shown as quoted, never as QANDEEL's own. */
 export const QUOTE_MARKS: Readonly<Record<ChromeLanguage, readonly [string, string]>> = Object.freeze({ ar: ['«', '»'], en: ['\u201C', '\u201D'] });
 
-/** The owner's own words, quoted and never rewritten. The words themselves are one text node (`testID`). */
-export function Quote({ ctx, text, testID, role = 'body', color, numberOfLines }: {
+/**
+ * The owner's own words, quoted and never rewritten. The words themselves are one text node (`testID`).
+ *
+ * VIS-3P: the marks are punctuation, not content — drawn in the quiet ink, the opening one hung in its own column so a
+ * statement that wraps keeps one clean edge (`outdent`: the column sits in the row's margin, outside the text edge).
+ */
+export function Quote({ ctx, text, testID, role = 'body', color, numberOfLines, outdent = false }: {
   readonly ctx: PartContext; readonly text: string; readonly testID?: string; readonly role?: 'body' | 'supporting'; readonly color?: string; readonly numberOfLines?: number;
+  readonly outdent?: boolean;
 }) {
   const [open, close] = QUOTE_MARKS[ctx.language];
+  const marks = ctx.palette.tertiary;
+  const hang = Math.round(HANG * Math.max(1, PixelRatio.getFontScale()));
   return (
-    <Text numberOfLines={numberOfLines} style={{ ...typeStyle(role), color: color ?? ctx.palette.primary, writingDirection: ctx.writing }}>
-      {open}<Text testID={testID}>{text}</Text>{close}
-    </Text>
+    <View style={{ flexDirection: 'row', marginStart: outdent ? -Math.min(hang, ROW_START - 6) : 0 }}>
+      {/* Mark beside the words (end of its column): the column is on the reading start, so in Arabic its left edge. */}
+      <Text accessibilityElementsHidden importantForAccessibility="no"
+        style={{ ...typeStyle(role), color: marks, width: hang, paddingEnd: 2, textAlign: ctx.writing === 'rtl' ? 'left' : 'right', writingDirection: ctx.writing }}>
+        {open}
+      </Text>
+      <Text numberOfLines={numberOfLines} style={{ ...typeStyle(role), color: color ?? ctx.palette.primary, flex: 1, writingDirection: ctx.writing }}>
+        <Text testID={testID}>{text}</Text><Text style={{ color: marks }}>{close}</Text>
+      </Text>
+    </View>
   );
 }
 
@@ -127,11 +145,12 @@ export function OpenMark({ ctx, state }: { readonly ctx: PartContext; readonly s
 /**
  * One action, 44 points high at least. A secondary act is a full-width row (or, `inline`, one of an `ActionRow`) in the
  * rest ink. The `primary` act — at most one per step — is the one prominent control: on the sheet, an outlined shape on
- * the World; elsewhere, the Field.
+ * the World; elsewhere, the Field. A `chip` (VIS-3P) is a secondary choice beside the primary on the sheet: the same
+ * shape on the World's ground, without the outline, so it reads as a control yet never competes with the primary.
  */
-export function Action({ ctx, label, onPress, testID, primary = false, disabled = false, accessibilityLabel, inline = false, expanded }: {
+export function Action({ ctx, label, onPress, testID, primary = false, disabled = false, accessibilityLabel, inline = false, chip = false, expanded }: {
   readonly ctx: PartContext; readonly label: string; readonly onPress: () => void; readonly testID: string;
-  readonly primary?: boolean; readonly disabled?: boolean; readonly accessibilityLabel?: string; readonly inline?: boolean;
+  readonly primary?: boolean; readonly disabled?: boolean; readonly accessibilityLabel?: string; readonly inline?: boolean; readonly chip?: boolean;
   /** A disclosure: whether what it opens is open. */
   readonly expanded?: boolean;
 }) {
@@ -153,6 +172,21 @@ export function Action({ ctx, label, onPress, testID, primary = false, disabled 
         {/* The label spans the button and is centred by its alignment, not shrink-wrapped: on Android a shrink-wrapped
             label can be measured narrower than it draws after a re-render, and its last word is clipped (seen at 320 dp). */}
         <Text style={{ ...typeStyle('action'), color: ctx.palette.primary, textAlign: 'center', alignSelf: 'stretch', writingDirection: ctx.writing }}>{label}</Text>
+      </Control>
+    );
+  }
+  if (chip) {
+    return (
+      <Control
+        palette={ctx.palette}
+        language={ctx.language}
+        accessibilityLabel={accessibilityLabel ?? label}
+        accessibilityState={state}
+        onPress={off ? () => undefined : onPress}
+        testID={testID}
+        style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingHorizontal: 16, borderRadius: CHIP_RADIUS, backgroundColor: groundOf(ctx), opacity: off ? BUSY_OPACITY : 1 }}
+      >
+        <Text style={{ ...typeStyle('action'), color: ctx.palette.restInk, writingDirection: ctx.writing }}>{label}</Text>
       </Control>
     );
   }
@@ -189,9 +223,14 @@ export function Action({ ctx, label, onPress, testID, primary = false, disabled 
   );
 }
 
-/** Secondary acts side by side, wrapping onto the next line on a narrow screen or with large text. */
-export function ActionRow({ children }: { readonly children: ReactNode }) {
-  return <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, paddingStart: ROW_START - 8, paddingEnd: ROW_END - 8 }}>{children}</View>;
+/**
+ * Secondary acts side by side, wrapping onto the next line on a narrow screen or with large text. `chips`: they are
+ * `chip` actions, whose edges align with the primary act's above them.
+ */
+export function ActionRow({ children, chips = false }: { readonly children: ReactNode; readonly chips?: boolean }) {
+  return chips
+    ? <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 8, rowGap: 8, paddingStart: ROW_START, paddingEnd: ROW_END, paddingTop: 2, paddingBottom: 6 }}>{children}</View>
+    : <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 14, paddingStart: ROW_START - 8, paddingEnd: ROW_END - 8 }}>{children}</View>;
 }
 
 /** One choice of a closed set. A radio (one of) or a toggle (any of); its state is announced, never colour alone. */

@@ -12,7 +12,7 @@
  *
  * The appearance is the REAL authority; the controller is the REAL controller over a scripted transport.
  */
-import { act, fireEvent, render, type RenderResult } from '@testing-library/react-native';
+import { act, fireEvent, render, within, type RenderResult } from '@testing-library/react-native';
 import * as ReactNative from 'react-native';
 import { AccessibilityInfo, StyleSheet } from 'react-native';
 
@@ -22,6 +22,7 @@ import type { ChromeLanguage } from '../../orientation-chrome';
 import type { IntroductionsChange, IntroductionsDraft, IntroductionsObjective, IntroductionsPriorItem, IntroductionsView } from '../../runtime-entry';
 import { IntroductionsSurface, createIntroductionsController, introductionsCopy } from '..';
 import { INTRODUCTIONS_COPY_DELTA, INTRODUCTIONS_COPY_ROWS } from '../copy';
+import { QUOTE_MARKS } from '../IntroductionsParts';
 import { arrivals, projectPortrait } from '../portrait-projection';
 
 jest.mock('react-native/Libraries/ReactNative/RendererProxy', () => ({
@@ -350,7 +351,7 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     const view = await surface(language, server(reviewed));
     expect(style(view.getByTestId('qandeel-introductions-portrait-name'))).toMatchObject({ fontSize: 24, lineHeight: 38 });
     for (const part of ['ABOUT', 'MATTERS', 'BOUNDS']) expect(view.getByTestId(`qandeel-introductions-portrait-${part}`)).toBeTruthy();
-    expect(style(view.getByTestId('qandeel-introductions-portrait-hard'))).toMatchObject({ borderWidth: 1.5 });
+    expect(style(view.getByTestId('qandeel-introductions-portrait-hard'))).toMatchObject({ borderWidth: 1 });
     expect(style(view.getByTestId('qandeel-introductions-portrait-soft')).borderWidth).toBeUndefined();
     expect(texts(view)).toEqual(expect.arrayContaining(['Salma', copy.female, 'Honesty', 'I teach', copy.reviewed, `${copy.stateNotIncluded}: ${copy.shortIntroTitle}`]));
     expect(texts(view).join(' ')).not.toMatch(/%|score|match(ed|ing)? |eligible|نشط|مؤهل|مطابق|نسبة/iu);
@@ -358,6 +359,44 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     expect(texts(view).indexOf(copy.reviewed)).toBeLessThan(texts(view).indexOf('Salma'));
     // Nothing of the review is a long form: no detail row is shown until a part is opened.
     expect(view.queryByTestId('qandeel-introductions-edit-SEX')).toBeNull();
+  });
+
+  it('VIS-3P — one hierarchy: the name heads its facts, the owner\'s words outshine their quiet marks, each frame says its kind', async () => {
+    const view = await surface(language, server(reviewed));
+    const about = view.getByTestId('qandeel-introductions-portrait-ABOUT');
+    const name = view.getByTestId('qandeel-introductions-portrait-name');
+    // The name is the subject of About you: it heads its part, after the part's caption and Edit.
+    expect(within(about).getByTestId('qandeel-introductions-portrait-name')).toBe(name);
+    const order = texts(view);
+    expect(order.indexOf(copy.clusterAbout)).toBeLessThan(order.indexOf('Salma'));
+    expect(order.indexOf('Salma')).toBeLessThan(order.indexOf(copy.female));
+    // The facts are the name's quieter subtitle; the quiet ink is the caption's.
+    const quiet = style(view.getByTestId('qandeel-introductions-portrait-caption-MATTERS')).color;
+    expect(style(view.getByTestId('qandeel-introductions-portrait-fact:SEX')).color).not.toBe(style(name).color);
+    // Quotation marks are punctuation: the opening one hangs apart (hidden from the screen reader), both in the quiet ink.
+    const [open, close] = QUOTE_MARKS[language];
+    const opens = view.getAllByText(open, { includeHiddenElements: true });
+    expect(opens.length).toBeGreaterThanOrEqual(3);
+    for (const mark of opens) expect(style(mark)).toMatchObject({ color: quiet });
+    for (const mark of view.getAllByText(close, { includeHiddenElements: true })) expect(style(mark)).toMatchObject({ color: quiet });
+    expect(view.queryByText(open)).toBeNull();
+    // The parts are set apart by an even rhythm: About opens the portrait; every later part keeps the same space.
+    expect(style(view.getByTestId('qandeel-introductions-portrait-MATTERS')).paddingTop).toBe(style(view.getByTestId('qandeel-introductions-portrait-BOUNDS')).paddingTop);
+    // Shape is never the only signal: each frame is announced as one item that begins with its kind.
+    expect(view.getByTestId('qandeel-introductions-portrait-hard').props.accessibilityLabel).toMatch(new RegExp(`^${copy.hardTitle}`, 'u'));
+    expect(view.getByTestId('qandeel-introductions-portrait-soft').props.accessibilityLabel).toMatch(new RegExp(`^${copy.softTitle}`, 'u'));
+  });
+
+  it('VIS-3P — a step\'s secondary choices are quiet controls on the sheet: 44 points, the World\'s ground, never the primary\'s outline', async () => {
+    const view = await surface(language, server(known));
+    const primary = style(view.getByTestId('qandeel-introductions-prior-yes'));
+    for (const id of ['qandeel-introductions-prior-edit', 'qandeel-introductions-prior-no-longer', 'qandeel-introductions-prior-decline']) {
+      const chip = style(view.getByTestId(id));
+      expect(chip).toMatchObject({ minHeight: 44, backgroundColor: primary.backgroundColor });
+      expect(chip.borderWidth).toBeUndefined();
+    }
+    // The blank line a remembered item would take is drawn, never a box around words.
+    expect(style(view.getByTestId('qandeel-introductions-landing')).borderWidth).toBeUndefined();
   });
 
   it('R2 — before it is confirmed, the review opens with its lead question; the portrait follows; Confirm review rests below', async () => {
