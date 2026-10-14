@@ -247,9 +247,15 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
       await act(async () => { body.props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 320, height: viewport } } }); await flush(); });
       return (scrollTo.mock.calls.at(-1)?.[0] as { y: number } | undefined)?.y;
     };
+    // The step opened at its own place first (the sheet's layout)…
+    await act(async () => { view.getByTestId('qandeel-introductions-sheet').props.onLayout({ nativeEvent: { layout: { x: 0, y: 700, width: 320, height: 400 } } }); await flush(); });
     await act(async () => { handlers.keyboardDidShow(); await flush(); });
     // Room for both: the question's context above the field (132 points), Save below it.
     expect(await shown(600)).toBe(900 - 132);
+    // …and the keyboard shrinking the page never re-applies that opening place over the field.
+    scrollTo.mockClear();
+    await act(async () => { body.props.onContentSizeChange(320, 1200); await flush(); });
+    expect(scrollTo).not.toHaveBeenCalled();
     // A page the keyboard has shrunk (large text, 320 dp): the act wins; the field itself never leaves the top.
     expect(await shown(150)).toBe(900 + 52 + 76 - 150);
     expect(await shown(60)).toBe(900);

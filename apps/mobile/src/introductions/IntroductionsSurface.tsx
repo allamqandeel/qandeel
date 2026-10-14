@@ -366,6 +366,8 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   // question above it. Measured again when the keyboard has shrunk the page (the earlier scroll was clamped).
   useEffect(() => {
     if (!keyboard) return;
+    // The field now decides the scroll: the step's opening place is not applied again over it.
+    placement.current = null;
     const input = TextInput.State.currentlyFocusedInput();
     const content = contentRef.current;
     if (!input || !content) return;
@@ -573,7 +575,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
         onContentSizeChange={() => {
           // Delete preparation is the page's last block: its confirmation opens in view, never below the fold.
           if (confirmDiscard) scrollRef.current?.scrollToEnd({ animated: !reduceMotion });
-          else if (placement.current !== null) scrollRef.current?.scrollTo({ y: placement.current, animated: false });
+          else if (placement.current !== null && !keyboard) scrollRef.current?.scrollTo({ y: placement.current, animated: false });
         }}
         contentContainerStyle={{ flexGrow: 1, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: act === null ? insets.bottom + 16 : 0 }}
       >
