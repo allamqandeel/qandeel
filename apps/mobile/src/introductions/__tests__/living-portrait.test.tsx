@@ -306,6 +306,30 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     }
   });
 
+  it('VIS-3P — a decision about a remembered item opens with every choice in view beside "Yes", never past the item itself', async () => {
+    const scrollTo = jest.spyOn(ReactNative.ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+    const view = await surface(language, server(known));
+    const body = () => view.getByTestId('qandeel-introductions-body');
+    await act(async () => { body().props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 320, height: 500 } } }); await flush(); });
+    await act(async () => { body().props.onContentSizeChange(320, 1000); await flush(); });
+    scrollTo.mockClear();
+    const band = view.getByTestId('qandeel-introductions-band');
+    const placer = [band.parent, band.parent?.parent].find((node) => typeof node?.props.onLayout === 'function');
+    await act(async () => { placer?.props.onLayout({ nativeEvent: { layout: { x: 0, y: 400, width: 320, height: 120 } } }); await flush(); });
+    const last = () => (scrollTo.mock.calls.at(-1)?.[0] as { y: number }).y;
+    // The page reaches 500 below the band's top: the step stops with the band 8 points from the top, not at the 35 % glimpse (225).
+    expect(last()).toBe(400 - 8);
+    // When the whole decision fits sooner, it stops at the page's end and leaves the rest of the room to the portrait.
+    await act(async () => { body().props.onContentSizeChange(320, 760); await flush(); });
+    expect(last()).toBe(760 - 500);
+    // Never less than the glimpse; and once the owner scrolls, the page is theirs.
+    await act(async () => { body().props.onContentSizeChange(320, 600); await flush(); });
+    expect(last()).toBe(400 - 500 * 0.35);
+    scrollTo.mockClear();
+    await act(async () => { body().props.onScrollBeginDrag(); body().props.onContentSizeChange(320, 1000); await flush(); });
+    expect(scrollTo).not.toHaveBeenCalled();
+  });
+
   it('R2 — a roomy screen shows the whole portrait, until the keyboard comes up', async () => {
     screen(900);
     const handlers: Record<string, () => void> = {};

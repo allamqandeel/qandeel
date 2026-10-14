@@ -56,6 +56,8 @@ const PORTRAIT_GLIMPSE_LARGE_TEXT = 0.12;
 const LARGE_TEXT = 1.15;
 /** Room left above "Added to your preparation." when the step opens with an arrival in view. */
 const ARRIVAL_MARGIN = 12;
+/** Room left above the band ("Not settled yet") when a decision opens as far toward its choices as it can. */
+const BAND_MARGIN = 8;
 /** With the keyboard up, the field being typed in sits this far down, so its question stays readable above it… */
 const FIELD_CONTEXT = 132;
 /** …unless that would hide its act (Save) beneath the keyboard: the act comes first (R2). */
@@ -350,8 +352,17 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   const viewportHeight = useRef(0);
   const [viewport, setViewport] = useState(0);
   const placeOnLayout = useRef(true);
-  /** The current item's place, applied again once the page has grown to hold it (a scroll is clamped to the content). */
-  const placement = useRef<number | null>(null);
+  const contentHeight = useRef(0);
+  /**
+   * The current item's place, applied again once the page has grown to hold it (a scroll is clamped to the content):
+   * at least `floor`; for a decision, as much further toward the page's end — its choices — as `cap` allows.
+   */
+  const placement = useRef<{ readonly floor: number; readonly cap: number } | null>(null);
+  const placedAt = (p: { readonly floor: number; readonly cap: number }) =>
+    Math.max(0, p.floor, Math.min(contentHeight.current - viewportHeight.current, p.cap));
+  const applyPlacement = () => {
+    if (placement.current !== null) scrollRef.current?.scrollTo({ y: placedAt(placement.current), animated: false });
+  };
   // Each step opens with its current item in view, a glimpse of the portrait above it: never the previous scroll position.
   useEffect(() => {
     placeOnLayout.current = true;
@@ -360,21 +371,30 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   }, [stepKey]);
   /** "Added to your preparation.", while an arrival is shown: the step opens with it in view (R4), however large the text. */
   const addedNode = useRef<Text | null>(null);
-  const placeActive = (y: number) => {
+  /**
+   * `decision`: the current item waits in the band and the sheet decides it. Every choice belongs in view beside the
+   * primary one (VIS-3P), so the page opens as far toward its end as keeps the band — the item itself — and any arrival
+   * in view; the portrait keeps whatever room is left above them.
+   */
+  const placeActive = (y: number, decision = false) => {
     if (!placeOnLayout.current) return;
     placeOnLayout.current = false;
-    const place = (top: number) => {
-      placement.current = Math.max(0, top);
-      scrollRef.current?.scrollTo({ y: placement.current, animated: false });
+    const place = (floor: number, cap: number) => {
+      placement.current = { floor, cap: Math.max(floor, cap) };
+      applyPlacement();
     };
     const glimpse = y - viewportHeight.current * (fontScale > LARGE_TEXT ? PORTRAIT_GLIMPSE_LARGE_TEXT : PORTRAIT_GLIMPSE);
+    const reach = decision ? y - BAND_MARGIN : glimpse;
     const added = addedNode.current;
     const content = contentRef.current;
     if (added === null || content === null) {
-      place(glimpse);
+      place(glimpse, reach);
       return;
     }
-    added.measureLayout(content, (_x, addedY) => place(Math.min(glimpse, addedY - ARRIVAL_MARGIN)), () => place(glimpse));
+    added.measureLayout(content, (_x, addedY) => {
+      const arrival = addedY - ARRIVAL_MARGIN;
+      place(Math.min(glimpse, arrival), Math.min(reach, arrival));
+    }, () => place(glimpse, reach));
   };
   // With the keyboard up, the field being typed in comes into view with its act below it and, room permitting, its
   // question above it. Measured again when the keyboard has shrunk the page (the earlier scroll was clamped).
@@ -510,7 +530,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     if (current !== null && next.kind !== 'RESOLVE_DISCREPANCY') {
       const clarify = next.kind === 'CLARIFY_PRIOR_ITEM';
       band = (
-        <View onLayout={(e) => placeActive(e.nativeEvent.layout.y)}>
+        <View onLayout={(e) => placeActive(e.nativeEvent.layout.y, true)}>
           <OpenBand ctx={ctx} copy={copy} item={current}
             lead={priorStep ? (clarify ? copy.priorClarifyLead : copy.priorLead) : null}
             title={priorStep ? null : factTitle((next as { fact: IntroductionsFact }).fact, copy)}
@@ -586,10 +606,11 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
         keyboardShouldPersistTaps="handled"
         onLayout={(e) => { viewportHeight.current = e.nativeEvent.layout.height; setViewport(e.nativeEvent.layout.height); }}
         onScrollBeginDrag={() => { placement.current = null; }}
-        onContentSizeChange={() => {
+        onContentSizeChange={(_w, h) => {
+          contentHeight.current = h;
           // Delete preparation is the page's last block: its confirmation opens in view, never below the fold.
           if (confirmDiscard) scrollRef.current?.scrollToEnd({ animated: !reduceMotion });
-          else if (placement.current !== null && !keyboard) scrollRef.current?.scrollTo({ y: placement.current, animated: false });
+          else if (!keyboard) applyPlacement();
         }}
         contentContainerStyle={{ flexGrow: 1, paddingLeft: insets.left, paddingRight: insets.right, paddingBottom: act === null ? insets.bottom + 16 : 0 }}
       >
