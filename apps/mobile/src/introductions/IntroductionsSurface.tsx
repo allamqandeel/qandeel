@@ -318,6 +318,8 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     setLanded(NONE);
     const ok = await controller.command(kind, payload);
     if (ok) {
+      // A saved answer closes the keyboard: the next step (its confirmation, a choice) is never left beneath it.
+      Keyboard.dismiss();
       setEditing(null);
       setCorrecting(null);
       setCorrection('');
@@ -448,13 +450,19 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
       <Para ctx={sheetCtx} text={copy.enrollmentUnavailable} role="metadata" color={palette.tertiary} testID="qandeel-introductions-enrollment-unavailable" />
     </>);
   } else if (view !== null && portrait !== null && next !== null && next.kind === 'REVIEW') {
-    world = composed(portrait, true);
+    // The review's lead opens the screen (R2: on 320dp the portrait never pushes the question out of view); the
+    // portrait it introduces follows, and the act that confirms it rests below.
+    world = (
+      <View testID="qandeel-introductions-step-REVIEW" style={{ paddingTop: 12 }}>
+        <Question ctx={ctx} text={copy.reviewLead} testID="qandeel-introductions-step-heading" />
+        {composed(portrait, true)}
+      </View>
+    );
     act = sheet(
-      <View testID="qandeel-introductions-step-REVIEW">
-        <Question ctx={sheetCtx} text={copy.reviewLead} testID="qandeel-introductions-step-heading" />
+      <>
         <Para ctx={sheetCtx} text={copy.enrollmentUnavailable} role="supporting" color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
         <Action ctx={sheetCtx} label={copy.reviewConfirm} primary onPress={() => void send('CONFIRM_REVIEW', {})} testID="qandeel-introductions-review-confirm" />
-      </View>,
+      </>,
       false,
     );
   } else if (view !== null && portrait !== null && next !== null) {
@@ -487,13 +495,11 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
       correcting={correcting} setCorrecting={setCorrecting} correction={correction} setCorrection={setCorrection}
       note={note} setNote={setNote} onEdit={setEditing} />, band === null);
   } else if (view !== null && portrait !== null && draft !== null) {
-    // The private preparation, complete — and plainly not enrollment.
+    // The private preparation, complete — and plainly not enrollment: said first (R3), before the portrait it completes.
     world = (
-      <View testID="qandeel-introductions-reviewed">
+      <View testID="qandeel-introductions-reviewed" style={{ paddingTop: 12 }}>
+        <Para ctx={ctx} text={copy.reviewed} role="supporting" color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
         {composed(portrait, true)}
-        <View style={{ paddingTop: 20 }}>
-          <Para ctx={ctx} text={copy.reviewed} role="supporting" color={palette.secondary} testID="qandeel-introductions-enrollment-unavailable" />
-        </View>
         <AssistanceRow ctx={ctx} copy={copy} view={view} controller={controller} />
         <DiscardBlock ctx={ctx} copy={copy} confirming={confirmDiscard} setConfirming={setConfirmDiscard} onDiscard={() => void controller.discard()} />
       </View>

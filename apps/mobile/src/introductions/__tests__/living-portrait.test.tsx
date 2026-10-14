@@ -245,6 +245,18 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     expect(view.getByTestId('qandeel-introductions-save')).toBeTruthy();
   });
 
+  it('R2 — a saved answer closes the keyboard, so the next step is never left beneath it', async () => {
+    const dismiss = jest.spyOn(ReactNative.Keyboard, 'dismiss').mockImplementation(() => undefined);
+    const fake = server(viewOf({ kind: 'ESTABLISH_PRIORITIES' }));
+    const view = await surface(language, fake);
+    await fireEvent.changeText(view.getByTestId('qandeel-introductions-priority'), 'Honesty');
+    expect(dismiss).not.toHaveBeenCalled();
+    fake.answer({ kind: 'ANSWERED', outcome: 'APPLIED', view: viewOf({ kind: 'ESTABLISH_PRIORITIES' }, { draft: emptyDraft({ version: 3, notes: [note('n1', 'WHAT_MATTERS', 'Honesty', 'USER_AUTHORED')] }) }) });
+    await press(view, 'qandeel-introductions-save');
+    expect(fake.commands.map((c) => c.kind)).toEqual(['ADD_NOTE']);
+    expect(dismiss).toHaveBeenCalledTimes(1);
+  });
+
   const reviewed = viewOf(null, {
     draft: emptyDraft({
       facts: confirmedFacts, profile: { shortIntroduction: null, workField: 'EDUCATION' },
@@ -262,8 +274,20 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     expect(style(view.getByTestId('qandeel-introductions-portrait-soft')).borderWidth).toBeUndefined();
     expect(texts(view)).toEqual(expect.arrayContaining(['Salma', copy.female, 'Honesty', 'I teach', copy.reviewed, `${copy.stateNotIncluded}: ${copy.shortIntroTitle}`]));
     expect(texts(view).join(' ')).not.toMatch(/%|score|match(ed|ing)? |eligible|نشط|مؤهل|مطابق|نسبة/iu);
+    // The completed private preparation is said first, before the portrait it completes.
+    expect(texts(view).indexOf(copy.reviewed)).toBeLessThan(texts(view).indexOf('Salma'));
     // Nothing of the review is a long form: no detail row is shown until a part is opened.
     expect(view.queryByTestId('qandeel-introductions-edit-SEX')).toBeNull();
+  });
+
+  it('R2 — before it is confirmed, the review opens with its lead question; the portrait follows; Confirm review rests below', async () => {
+    const draft = reviewed.draft as IntroductionsDraft;
+    const view = await surface(language, server(viewOf({ kind: 'REVIEW' }, { draft: { ...draft, review: { state: 'NOT_REVIEWED' } } }, 'KNOWN')));
+    const order = texts(view);
+    expect(view.getByTestId('qandeel-introductions-step-heading').props.children).toBe(copy.reviewLead);
+    expect(order.indexOf(copy.reviewLead)).toBeLessThan(order.indexOf('Salma'));
+    expect(order.indexOf('Salma')).toBeLessThan(order.indexOf(copy.reviewConfirm));
+    expect(view.getByTestId('qandeel-introductions-edit-group-ABOUT')).toBeTruthy();
   });
 
   it('R3 — each part\'s details and edits are disclosed by its own Edit; Back closes them; every edit capability remains', async () => {
