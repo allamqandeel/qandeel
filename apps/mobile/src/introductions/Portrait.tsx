@@ -135,8 +135,10 @@ function Landing({ ctx, copy }: { readonly ctx: PartContext; readonly copy: Intr
   );
 }
 
-function Added({ ctx, copy, at }: { readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly at?: (node: Text | null) => void }) {
-  return <Text ref={at} testID="qandeel-introductions-added" style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{copy.added}</Text>;
+function Added({ ctx, copy, at, laid }: {
+  readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly at?: (node: Text | null) => void; readonly laid?: () => void;
+}) {
+  return <Text ref={at} onLayout={laid} testID="qandeel-introductions-added" style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{copy.added}</Text>;
 }
 
 /**
@@ -185,9 +187,11 @@ export interface LivingPortraitProps {
   readonly edit?: { readonly open: PortraitGroup | null; readonly onEdit: (group: PortraitGroup) => void; readonly details: ReactNode };
   /** Receives "Added to your preparation." when it is shown, so the step can open with the arrival in view. */
   readonly addedAt?: (node: Text | null) => void;
+  /** Told when that line has been laid out, so the step can measure where it is. */
+  readonly addedLaid?: () => void;
 }
 
-export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMotion, current = null, onToggle, edit, addedAt }: LivingPortraitProps) {
+export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMotion, current = null, onToggle, edit, addedAt, addedLaid }: LivingPortraitProps) {
   const compact = mode === 'COMPACT';
   const landsIn = current?.lands ?? null;
   // Compact keeps each group's newest words (or the ones that just arrived); the rest stays one tap away.
@@ -233,12 +237,12 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
           </Arrival>
         )}
         {p.lines.map((line) => <ValueLine key={line.map((v) => v.key).join('|')} ctx={ctx} values={line} landed={landed} reduceMotion={reduceMotion} />)}
-        {factArrived ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
+        {factArrived ? <Added ctx={ctx} copy={copy} at={addedAt} laid={addedLaid} /> : null}
         {visible(aboutQuotes).map((q) => (
           <Arrival key={q.key} arriving={landed.has(q.key)} reduceMotion={reduceMotion}>
             <View style={{ paddingTop: 10 }}>
               <Quote ctx={ctx} text={q.body} role={q.role} outdent numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${q.key}`} />
-              {addedAfter(q.key) ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
+              {addedAfter(q.key) ? <Added ctx={ctx} copy={copy} at={addedAt} laid={addedLaid} /> : null}
             </View>
           </Arrival>
         ))}
@@ -252,7 +256,7 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
           <Arrival key={n.key} arriving={landed.has(n.key)} reduceMotion={reduceMotion}>
             <View style={{ paddingBottom: composed ? 12 : 6 }}>
               <Quote ctx={ctx} text={n.body} outdent numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${n.key}`} />
-              {addedAfter(n.key) ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
+              {addedAfter(n.key) ? <Added ctx={ctx} copy={copy} at={addedAt} laid={addedLaid} /> : null}
             </View>
           </Arrival>
         ))}
@@ -266,7 +270,7 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
             {p.hard === null ? null : <Frame ctx={ctx} kind="HARD" title={copy.hardTitle} items={p.hard} testID="qandeel-introductions-portrait-hard" />}
             {p.soft === null ? null : <Frame ctx={ctx} kind="SOFT" title={copy.softTitle} items={p.soft} testID="qandeel-introductions-portrait-soft" />}
           </View>
-          {addedAfter('hard') || addedAfter('soft') ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
+          {addedAfter('hard') || addedAfter('soft') ? <Added ctx={ctx} copy={copy} at={addedAt} laid={addedLaid} /> : null}
         </Arrival>
         {edit?.open === 'BOUNDS' ? edit.details : null}
       </>))}

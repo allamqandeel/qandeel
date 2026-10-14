@@ -330,6 +330,36 @@ describe.each(['ar', 'en'] as const)('%s — the Living Portrait', (language) =>
     expect(scrollTo).not.toHaveBeenCalled();
   });
 
+  it('VIS-3P — reaching for the choices never scrolls an arrival away, even before "Added" can be measured (large text)', async () => {
+    windowSize.fontScale = 1.3;
+    try {
+      const scrollTo = jest.spyOn(ReactNative.ScrollView.prototype, 'scrollTo').mockImplementation(() => undefined);
+      const fake = server(known);
+      const view = await surface(language, fake);
+      fake.answer({ kind: 'ANSWERED', outcome: 'APPLIED', view: afterYes });
+      await press(view, 'qandeel-introductions-prior-yes');
+      const body = () => view.getByTestId('qandeel-introductions-body');
+      await act(async () => { body().props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 320, height: 500 } } }); await flush(); });
+      await act(async () => { body().props.onContentSizeChange(320, 1400); await flush(); });
+      // "Added" is not laid out yet when the band is: it cannot be measured.
+      const textType = ReactNative.Text as unknown as { prototype: { measureLayout: (to: unknown, done: (x: number, y: number) => void, fail: () => void) => void } };
+      const measure = jest.spyOn(textType.prototype, 'measureLayout').mockImplementation((_to, _done, fail) => fail());
+      scrollTo.mockClear();
+      const band = view.getByTestId('qandeel-introductions-band');
+      const placer = [band.parent, band.parent?.parent].find((node) => typeof node?.props.onLayout === 'function');
+      await act(async () => { placer?.props.onLayout({ nativeEvent: { layout: { x: 0, y: 400, width: 320, height: 120 } } }); await flush(); });
+      const last = () => (scrollTo.mock.calls.at(-1)?.[0] as { y: number }).y;
+      // The step keeps the glimpse (400 − 12 % of 500), never the decision's reach (392), while the arrival is unmeasured.
+      expect(last()).toBeCloseTo(400 - 500 * 0.12);
+      // Once laid out, "Added" (200 points down) is measured and kept in view.
+      measure.mockImplementation((_to, done) => done(0, 200));
+      await act(async () => { view.getByTestId('qandeel-introductions-added').props.onLayout({ nativeEvent: { layout: { x: 0, y: 0, width: 280, height: 24 } } }); await flush(); });
+      expect(last()).toBe(200 - 12);
+    } finally {
+      windowSize.fontScale = 1;
+    }
+  });
+
   it('R2 — a roomy screen shows the whole portrait, until the keyboard comes up', async () => {
     screen(900);
     const handlers: Record<string, () => void> = {};

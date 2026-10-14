@@ -354,14 +354,33 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   const placeOnLayout = useRef(true);
   const contentHeight = useRef(0);
   /**
-   * The current item's place, applied again once the page has grown to hold it (a scroll is clamped to the content):
-   * at least `floor`; for a decision, as much further toward the page's end — its choices — as `cap` allows.
+   * The current item's place, applied again whenever the page changes size (a scroll is clamped to the content): at
+   * least the portrait `glimpse` above the item; for a decision, further toward the page's end — its choices — as far as
+   * `reach` allows.
    */
-  const placement = useRef<{ readonly floor: number; readonly cap: number } | null>(null);
-  const placedAt = (p: { readonly floor: number; readonly cap: number }) =>
-    Math.max(0, p.floor, Math.min(contentHeight.current - viewportHeight.current, p.cap));
+  const placement = useRef<{ readonly glimpse: number; readonly reach: number } | null>(null);
+  /** "Added to your preparation.", while an arrival is shown: the step opens with it in view (R4), however large the text. */
+  const addedNode = useRef<Text | null>(null);
   const applyPlacement = () => {
-    if (placement.current !== null) scrollRef.current?.scrollTo({ y: placedAt(placement.current), animated: false });
+    const p = placement.current;
+    if (p === null) return;
+    const scroll = (floor: number, cap: number) => {
+      if (placement.current !== p) return;
+      const end = contentHeight.current - viewportHeight.current;
+      scrollRef.current?.scrollTo({ y: Math.max(0, floor, Math.min(end, Math.max(floor, cap))), animated: false });
+    };
+    const added = addedNode.current;
+    const content = contentRef.current;
+    // The arrival is measured each time, since it may not be laid out yet when the band is. Until it is, the step keeps
+    // the glimpse and reaches no further: an arrival is never scrolled out of view to show the choices.
+    if (added === null || content === null) {
+      scroll(p.glimpse, landed.size > 0 ? p.glimpse : p.reach);
+      return;
+    }
+    added.measureLayout(content, (_x, addedY) => {
+      const arrival = addedY - ARRIVAL_MARGIN;
+      scroll(Math.min(p.glimpse, arrival), Math.min(p.reach, arrival));
+    }, () => scroll(p.glimpse, p.glimpse));
   };
   // Each step opens with its current item in view, a glimpse of the portrait above it: never the previous scroll position.
   useEffect(() => {
@@ -369,8 +388,6 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     placement.current = null;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [stepKey]);
-  /** "Added to your preparation.", while an arrival is shown: the step opens with it in view (R4), however large the text. */
-  const addedNode = useRef<Text | null>(null);
   /**
    * `decision`: the current item waits in the band and the sheet decides it. Every choice belongs in view beside the
    * primary one (VIS-3P), so the page opens as far toward its end as keeps the band — the item itself — and any arrival
@@ -379,22 +396,9 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   const placeActive = (y: number, decision = false) => {
     if (!placeOnLayout.current) return;
     placeOnLayout.current = false;
-    const place = (floor: number, cap: number) => {
-      placement.current = { floor, cap: Math.max(floor, cap) };
-      applyPlacement();
-    };
     const glimpse = y - viewportHeight.current * (fontScale > LARGE_TEXT ? PORTRAIT_GLIMPSE_LARGE_TEXT : PORTRAIT_GLIMPSE);
-    const reach = decision ? y - BAND_MARGIN : glimpse;
-    const added = addedNode.current;
-    const content = contentRef.current;
-    if (added === null || content === null) {
-      place(glimpse, reach);
-      return;
-    }
-    added.measureLayout(content, (_x, addedY) => {
-      const arrival = addedY - ARRIVAL_MARGIN;
-      place(Math.min(glimpse, arrival), Math.min(reach, arrival));
-    }, () => place(glimpse, reach));
+    placement.current = { glimpse, reach: decision ? y - BAND_MARGIN : glimpse };
+    applyPlacement();
   };
   // With the keyboard up, the field being typed in comes into view with its act below it and, room permitting, its
   // question above it. Measured again when the keyboard has shrunk the page (the earlier scroll was clamped).
@@ -524,7 +528,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
       {showPath ? <View style={{ paddingTop: 12 }}><Para ctx={ctx} text={pathLine} role="supporting" color={palette.secondary} testID="qandeel-introductions-path" /></View> : null}
       {portraitIsEmpty(portrait) && current?.lands == null ? null : (
         <LivingPortrait ctx={ctx} copy={copy} portrait={portrait} mode={expanded ? 'EXPANDED' : 'COMPACT'} landed={landed} reduceMotion={reduceMotion}
-          current={priorStep ? current : null} onToggle={() => setExpandedChoice(!expanded)} addedAt={(node) => { addedNode.current = node; }} />
+          current={priorStep ? current : null} onToggle={() => setExpandedChoice(!expanded)} addedAt={(node) => { addedNode.current = node; }} addedLaid={() => { if (!keyboard) applyPlacement(); }} />
       )}
     </>);
     if (current !== null && next.kind !== 'RESOLVE_DISCREPANCY') {
