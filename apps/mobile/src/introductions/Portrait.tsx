@@ -125,7 +125,8 @@ function Landing({ ctx, copy }: { readonly ctx: PartContext; readonly copy: Intr
     <View testID="qandeel-introductions-landing" style={{ paddingTop: 10 }}>
       <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ flexDirection: 'row', alignItems: 'center', columnGap: 6, minHeight: 24 }}>
         <Text style={{ ...typeStyle('supporting'), color: ctx.palette.tertiary }}>{QUOTE_MARKS[ctx.language][0]}</Text>
-        <View style={{ flex: 1, flexDirection: 'row', columnGap: 5, overflow: 'hidden' }}>
+        {/* Whole dashes only: those that do not fit wrap onto a hidden second line. */}
+        <View style={{ flex: 1, height: 2, flexDirection: 'row', flexWrap: 'wrap', columnGap: 5, overflow: 'hidden' }}>
           {Array.from({ length: DASHES }, (_, i) => <View key={i} style={{ width: 6, height: 1.5, borderRadius: 1, backgroundColor: ctx.palette.tertiary }} />)}
         </View>
       </View>

@@ -109,11 +109,11 @@ export function Quote({ ctx, text, testID, role = 'body', color, numberOfLines, 
   const hang = Math.round(HANG * Math.max(1, PixelRatio.getFontScale()));
   return (
     <View style={{ flexDirection: 'row', marginStart: outdent ? -Math.min(hang, ROW_START - 6) : 0 }}>
-      {/* Mark beside the words (end of its column): the column is on the reading start, so in Arabic its left edge. */}
-      <Text accessibilityElementsHidden importantForAccessibility="no"
-        style={{ ...typeStyle(role), color: marks, width: hang, paddingEnd: 2, textAlign: ctx.writing === 'rtl' ? 'left' : 'right', writingDirection: ctx.writing }}>
-        {open}
-      </Text>
+      {/* The mark rests at its column's end, against the words — placed by layout, which mirrors with the reading
+          direction (Android resolves a text alignment against the text's own direction, seen as a gap in Arabic). */}
+      <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants" style={{ width: hang, alignItems: 'flex-end', paddingEnd: 2 }}>
+        <Text style={{ ...typeStyle(role), color: marks, writingDirection: ctx.writing }}>{open}</Text>
+      </View>
       <Text numberOfLines={numberOfLines} style={{ ...typeStyle(role), color: color ?? ctx.palette.primary, flex: 1, writingDirection: ctx.writing }}>
         <Text testID={testID}>{text}</Text><Text style={{ color: marks }}>{close}</Text>
       </Text>
@@ -184,7 +184,7 @@ export function Action({ ctx, label, onPress, testID, primary = false, disabled 
         accessibilityState={state}
         onPress={off ? () => undefined : onPress}
         testID={testID}
-        style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingHorizontal: 16, borderRadius: CHIP_RADIUS, backgroundColor: groundOf(ctx), opacity: off ? BUSY_OPACITY : 1 }}
+        style={{ minHeight: MIN_TARGET, paddingVertical: 10, paddingHorizontal: 12, borderRadius: CHIP_RADIUS, backgroundColor: groundOf(ctx), opacity: off ? BUSY_OPACITY : 1 }}
       >
         <Text style={{ ...typeStyle('action'), color: ctx.palette.restInk, writingDirection: ctx.writing }}>{label}</Text>
       </Control>
