@@ -351,7 +351,8 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
   const contentRef = useRef<View | null>(null);
   const viewportHeight = useRef(0);
   const [viewport, setViewport] = useState(0);
-  const placeOnLayout = useRef(true);
+  /** The step the page has been placed for: each step is placed once, by the first layout that reports it. */
+  const placedFor = useRef<string | null>(null);
   const contentHeight = useRef(0);
   /**
    * The current item's place, applied again whenever the page changes size (a scroll is clamped to the content): at
@@ -383,8 +384,9 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     }, () => scroll(p.glimpse, p.glimpse));
   };
   // Each step opens with its current item in view, a glimpse of the portrait above it: never the previous scroll position.
+  // A step's layout can be reported before this effect runs; a step already placed is then not reset to the top.
   useEffect(() => {
-    placeOnLayout.current = true;
+    if (placedFor.current === stepKey) return;
     placement.current = null;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [stepKey]);
@@ -394,8 +396,8 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
    * in view; the portrait keeps whatever room is left above them.
    */
   const placeActive = (y: number, decision = false) => {
-    if (!placeOnLayout.current) return;
-    placeOnLayout.current = false;
+    if (placedFor.current === stepKey) return;
+    placedFor.current = stepKey;
     const glimpse = y - viewportHeight.current * (fontScale > LARGE_TEXT ? PORTRAIT_GLIMPSE_LARGE_TEXT : PORTRAIT_GLIMPSE);
     placement.current = { glimpse, reach: decision ? y - BAND_MARGIN : glimpse };
     applyPlacement();
