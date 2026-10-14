@@ -536,7 +536,7 @@ the group names and the platform's own expanded / collapsed announcement.
 `systemRulesNote` carries the Product Owner's future-facing correction (row 58).
 
 **Visual critique and corrective pass (on the native screens, before the proof).** One deliberate critique of the first
-native runs (Arabic and English, 320 dp) found five defects; each was corrected and is pinned by a test:
+native runs (Arabic and English; 320 dp, then 1.3× text) found eight defects; each was corrected and is pinned by a test:
 
 | # | Seen on the device | Correction | Commit |
 |---|---|---|---|
@@ -545,6 +545,37 @@ native runs (Arabic and English, 320 dp) found five defects; each was corrected 
 | 3 | REVIEWED looked like REVIEW: "Your preparation is complete…" was below the fold (against R3) | The completion line opens REVIEWED, before the portrait it completes | `8c97e780` |
 | 4 | English, 320 dp: Delete preparation opened its confirmation and Cancel below the fold, so nothing visibly changed | The page's last block is brought into view when the confirmation opens | `a0bfdd8b` |
 | 5 | English: "Yes, that's right" / "Yes, it's correct" drawn as "Yes, that's" / "Yes, it's" (last word clipped after a re-render) | The primary label spans its button and is centred by alignment instead of being shrink-wrapped | `b7d80156` |
+| 6 | 1.3× text, keyboard up: Save beneath the keyboard (the field's scroll was clamped before the keyboard shrank the page) | The field is placed again when the page shrinks; its act comes first, its question's context only when there is room; the step's own opening place is never re-applied while the keyboard is up | `02c4adc1`, `647e1455` |
+| 7 | 1.3× text, English: "Not settled yet" broken inside a word beside "Stop showing what I know" | The caption never shrinks; the action wraps under it | `02c4adc1` |
+| 8 | 1.3× text: the item, its question and its act did not fit under the 35 % portrait glimpse — and with a smaller glimpse "Added to your preparation." opened above the screen | 12 % glimpse at a large text size; whenever an arrival is shown, the step opens with that line in view | `02c4adc1`, `111b4664` |
+
+**VIS-3 — native proof (APK `2fa4d300…` from `111b4664`, Android 16 emulator, the S4-01 proof entry over the S6-01
+SYNTHETIC stand-in; nothing is a real person, a model or a launched capability).** Flow `apps/mobile/.maestro/s6-01-vis3-portrait.yaml`
+(18 scenes: v01 Personal row · v02 NEW beginning · v03 KNOWN item awaiting confirmation · v04 after "Yes" (arrival, "Added") ·
+v05 NEW first question · v06 keyboard up (field and Save in view) · v07 the declared value waits in "Not settled yet" · v08 confirmed ·
+v09 MIXED conflict · v10 dealbreaker editor (hard beside soft) · v11 REVIEW · v12 Confirm review reached · v13 REVIEWED ·
+v14 one part's details open · v15 its editor · v16 the last control reached and acted (Delete → Cancel) · v17 READ-ONLY (no Edit) ·
+v18 Back to the same Personal world) and the regression journey `s6-01-journey.yaml` (21 scenes). Screenshots and contact sheets:
+`.s6-01-visual-proof/vis3/` (local, untracked).
+
+| Leg | Language | Width | Text | Motion | Journey | Portrait (18) |
+|---|---|---|---|---|---|---|
+| ar-narrow | Arabic | 320 dp | 1.0 | on | **PASS** | **PASS** |
+| en-narrow | English | 320 dp | 1.0 | on | **PASS** | **PASS** |
+| ar-normal | Arabic | 411 dp | 1.0 | on | — | **PASS** |
+| en-normal | English | 411 dp | 1.0 | on | — | **PASS** |
+| ar-large | Arabic | 320 dp | 1.3 | on | — | **PASS** |
+| en-large | English | 320 dp | 1.3 | on | — | **PASS** |
+| ar-still | Arabic | 320 dp | 1.0 | off (Reduced Motion) | — | **PASS** |
+
+Screen-reader semantics on the device (uiautomator, Arabic and English): the item awaiting the owner is one element named
+"Not confirmed yet: <words>" / «لم يُؤكَّد بعد: …»; the step's question is its own element; a group name is a disclosure; an open
+part's control reads "Cancel: Dealbreakers and preferences", its rows "Edit: Dealbreakers" / "Edit: Preferences". While the
+surface is open the Personal world beneath is hidden from accessibility: the compressed (accessibility-only) dump holds the
+introductions surface and no node of the conversation (the full dump lists hidden views too). Reduced Motion
+shows the same words and the same "Added" line (and the announcement is pinned in jest). No English label is truncated in any
+leg; nothing undecided is drawn as known (v03, v07, v09); no score, percentage or matching state appears anywhere.
+Device runs only: no hosted environment, no gate, no enrollment command.
 
 ## 8. Validation (actually run; proportional to each boundary)
 
@@ -566,10 +597,11 @@ native runs (Arabic and English, 320 dp) found five defects; each was corrected 
 
 | # | Check | Where | Result |
 |---|---|---|---|
-| 1 | Introductions surface, controller, entry, transport, catalogue / consent-text parity with `0154`, copy-gate integrity (C01 unchanged, C07 never displayed, no dialect in Arabic rows) | `npx jest src/introductions src/runtime-entry` | **279 / 279** |
-| 2 | Proof stand-in guard | `npx jest src/integration/__tests__/s6-01-proof-introductions.test.ts` | **PASS** |
-| 3 | Mobile full suite | `npx jest --ci` (apps/mobile) | **2435 pass, 6 fail** — exactly the known `ar-EG` host-locale baseline (`depth.test.tsx` 3, `w2-account-access.test.tsx` 3: English labels expected, Arabic rendered; class B, recorded since S5-03A) |
-| 4 | Typecheck; lint of every touched file | `tsc --noEmit`; `eslint` | clean (two pre-existing duplicate-import warnings in `integration-runtime.ts`, present on `main`) |
+| 1 | Introductions surface (incl. the Living Portrait R1–R4, the copy delta and the corrective pass), controller, entry, transport, catalogue / consent-text parity with `0154`, copy-gate integrity (C01 unchanged, C07 never displayed, no dialect in Arabic rows) | `npx jest src/introductions src/runtime-entry` | **314 / 314** (on `111b4664`) |
+| 2 | Proof stand-in guard; W3 Personal-row pin | `npx jest src/integration/__tests__/s6-01-proof-introductions src/integration/__tests__/w3-settings-appearance-signout` | **19 / 19** |
+| 3 | Mobile full suite | `npx jest --ci` (apps/mobile), on `111b4664` | **2474 pass, 6 fail** — exactly the known `ar-EG` host-locale baseline (`depth.test.tsx` 3, `w2-account-access.test.tsx` 3: English labels expected, Arabic rendered; class B, recorded since S5-03A) |
+| 4 | Typecheck; lint of every touched file | `tsc --noEmit`; `eslint` | clean; no error (pre-existing warnings only, in lines this task did not change) |
+| 5 | VIS-3 native proof, seven legs + screen-reader dump | §7.6 | **PASS** every leg |
 
 ## 9. `QAN-BL-MATCH-04` — admitted at CP1
 
