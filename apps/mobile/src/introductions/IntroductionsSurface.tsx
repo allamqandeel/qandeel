@@ -399,8 +399,18 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     if (placedFor.current === stepKey) return;
     placedFor.current = stepKey;
     const glimpse = y - viewportHeight.current * (fontScale > LARGE_TEXT ? PORTRAIT_GLIMPSE_LARGE_TEXT : PORTRAIT_GLIMPSE);
-    placement.current = { glimpse, reach: decision ? y - BAND_MARGIN : glimpse };
+    const placed = { glimpse, reach: decision ? y - BAND_MARGIN : glimpse };
+    placement.current = placed;
     applyPlacement();
+    // A scroll the native page cannot hold yet (it still has the previous step's height) is clamped, and the page may
+    // already have reported its new size: the place is applied again over the next two frames, unless the owner scrolls.
+    const again = (frames: number) => requestAnimationFrame(() => {
+      // The keyboard and a drag each clear the placement.
+      if (placement.current !== placed) return;
+      applyPlacement();
+      if (frames > 1) again(frames - 1);
+    });
+    again(2);
   };
   // With the keyboard up, the field being typed in comes into view with its act below it and, room permitting, its
   // question above it. Measured again when the keyboard has shrunk the page (the earlier scroll was clamped).
