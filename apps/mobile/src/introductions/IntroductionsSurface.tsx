@@ -54,6 +54,8 @@ const ROOMY_HEIGHT = 720;
 const PORTRAIT_GLIMPSE = 0.35;
 const PORTRAIT_GLIMPSE_LARGE_TEXT = 0.12;
 const LARGE_TEXT = 1.15;
+/** Room left above "Added to your preparation." when the step opens with an arrival in view. */
+const ARRIVAL_MARGIN = 12;
 /** With the keyboard up, the field being typed in sits this far down, so its question stays readable above it… */
 const FIELD_CONTEXT = 132;
 /** …unless that would hide its act (Save) beneath the keyboard: the act comes first (R2). */
@@ -356,11 +358,23 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
     placement.current = null;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
   }, [stepKey]);
+  /** "Added to your preparation.", while an arrival is shown: the step opens with it in view (R4), however large the text. */
+  const addedNode = useRef<Text | null>(null);
   const placeActive = (y: number) => {
     if (!placeOnLayout.current) return;
     placeOnLayout.current = false;
-    placement.current = Math.max(0, y - viewportHeight.current * (fontScale > LARGE_TEXT ? PORTRAIT_GLIMPSE_LARGE_TEXT : PORTRAIT_GLIMPSE));
-    scrollRef.current?.scrollTo({ y: placement.current, animated: false });
+    const place = (top: number) => {
+      placement.current = Math.max(0, top);
+      scrollRef.current?.scrollTo({ y: placement.current, animated: false });
+    };
+    const glimpse = y - viewportHeight.current * (fontScale > LARGE_TEXT ? PORTRAIT_GLIMPSE_LARGE_TEXT : PORTRAIT_GLIMPSE);
+    const added = addedNode.current;
+    const content = contentRef.current;
+    if (added === null || content === null) {
+      place(glimpse);
+      return;
+    }
+    added.measureLayout(content, (_x, addedY) => place(Math.min(glimpse, addedY - ARRIVAL_MARGIN)), () => place(glimpse));
   };
   // With the keyboard up, the field being typed in comes into view with its act below it and, room permitting, its
   // question above it. Measured again when the keyboard has shrunk the page (the earlier scroll was clamped).
@@ -490,7 +504,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
       {showPath ? <View style={{ paddingTop: 12 }}><Para ctx={ctx} text={pathLine} role="supporting" color={palette.secondary} testID="qandeel-introductions-path" /></View> : null}
       {portraitIsEmpty(portrait) && current?.lands == null ? null : (
         <LivingPortrait ctx={ctx} copy={copy} portrait={portrait} mode={expanded ? 'EXPANDED' : 'COMPACT'} landed={landed} reduceMotion={reduceMotion}
-          current={priorStep ? current : null} onToggle={() => setExpandedChoice(!expanded)} />
+          current={priorStep ? current : null} onToggle={() => setExpandedChoice(!expanded)} addedAt={(node) => { addedNode.current = node; }} />
       )}
     </>);
     if (current !== null && next.kind !== 'RESOLVE_DISCREPANCY') {

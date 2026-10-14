@@ -116,8 +116,8 @@ function Landing({ ctx, copy }: { readonly ctx: PartContext; readonly copy: Intr
   );
 }
 
-function Added({ ctx, copy }: { readonly ctx: PartContext; readonly copy: IntroductionsCopy }) {
-  return <Text testID="qandeel-introductions-added" style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{copy.added}</Text>;
+function Added({ ctx, copy, at }: { readonly ctx: PartContext; readonly copy: IntroductionsCopy; readonly at?: (node: Text | null) => void }) {
+  return <Text ref={at} testID="qandeel-introductions-added" style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, writingDirection: ctx.writing }}>{copy.added}</Text>;
 }
 
 /** A dealbreaker is a closed outline; a preference is an open one (four corners). Shape and ink, never a hue. */
@@ -163,9 +163,11 @@ export interface LivingPortraitProps {
   readonly onToggle?: () => void;
   /** COMPOSED: the part whose details are open, and how to open one. Absent: read-only. */
   readonly edit?: { readonly open: PortraitGroup | null; readonly onEdit: (group: PortraitGroup) => void; readonly details: ReactNode };
+  /** Receives "Added to your preparation." when it is shown, so the step can open with the arrival in view. */
+  readonly addedAt?: (node: Text | null) => void;
 }
 
-export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMotion, current = null, onToggle, edit }: LivingPortraitProps) {
+export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMotion, current = null, onToggle, edit, addedAt }: LivingPortraitProps) {
   const compact = mode === 'COMPACT';
   const landsIn = current?.lands ?? null;
   // Compact keeps each group's newest words (or the ones that just arrived); the rest stays one tap away.
@@ -211,12 +213,12 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
           </Arrival>
         ) : null}
         {p.lines.map((line) => <ValueLine key={line.map((v) => v.key).join('|')} ctx={ctx} values={line} landed={landed} reduceMotion={reduceMotion} />)}
-        {factArrived ? <Added ctx={ctx} copy={copy} /> : null}
+        {factArrived ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
         {visible(aboutQuotes).map((q) => (
           <Arrival key={q.key} arriving={landed.has(q.key)} reduceMotion={reduceMotion}>
             <View style={{ paddingTop: 6 }}>
               <Quote ctx={ctx} text={q.body} role={q.role} color={ctx.palette.secondary} numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${q.key}`} />
-              {addedAfter(q.key) ? <Added ctx={ctx} copy={copy} /> : null}
+              {addedAfter(q.key) ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
             </View>
           </Arrival>
         ))}
@@ -230,7 +232,7 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
           <Arrival key={n.key} arriving={landed.has(n.key)} reduceMotion={reduceMotion}>
             <View style={{ paddingBottom: 6 }}>
               <Quote ctx={ctx} text={n.body} numberOfLines={quoteLines} testID={`qandeel-introductions-portrait-${n.key}`} />
-              {addedAfter(n.key) ? <Added ctx={ctx} copy={copy} /> : null}
+              {addedAfter(n.key) ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
             </View>
           </Arrival>
         ))}
@@ -244,7 +246,7 @@ export function LivingPortrait({ ctx, copy, portrait: p, mode, landed, reduceMot
             {p.hard === null ? null : <Frame ctx={ctx} kind="HARD" title={copy.hardTitle} items={p.hard} testID="qandeel-introductions-portrait-hard" />}
             {p.soft === null ? null : <Frame ctx={ctx} kind="SOFT" title={copy.softTitle} items={p.soft} testID="qandeel-introductions-portrait-soft" />}
           </View>
-          {addedAfter('hard') || addedAfter('soft') ? <Added ctx={ctx} copy={copy} /> : null}
+          {addedAfter('hard') || addedAfter('soft') ? <Added ctx={ctx} copy={copy} at={addedAt} /> : null}
         </Arrival>
         {edit?.open === 'BOUNDS' ? edit.details : null}
       </>))}
