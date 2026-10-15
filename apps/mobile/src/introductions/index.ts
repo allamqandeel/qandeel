@@ -20,3 +20,10 @@ export type { IntroductionsEntryProps } from './IntroductionsEntry';
 export { IntroductionsEntry } from './IntroductionsEntry';
 export type { IntroductionsSurfaceProps } from './IntroductionsSurface';
 export { INTRODUCTIONS_SURFACE_TEST_ID, IntroductionsSurface } from './IntroductionsSurface';
+// S6-04 — a human's own private Introduction proposals, inside the same experience (never a feed, a search or a ranking).
+export type { ProposalsController, ProposalsControllerOptions, ProposalsNotice, ProposalsState, ProposalsTransport } from './proposals-controller';
+export { awaitsDecision, createProposalsController } from './proposals-controller';
+export type { ProposalsCopy } from './proposals-copy';
+export { PROPOSALS_COPY_GATE, PROPOSALS_COPY_ROWS, PROPOSALS_LANG01_APPROVED, proposalsCopy } from './proposals-copy';
+export type { ProposalsSurfaceProps } from './ProposalsSurface';
+export { PROPOSALS_SURFACE_TEST_ID, ProposalsCue, ProposalsSurface } from './ProposalsSurface';

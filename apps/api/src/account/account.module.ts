@@ -5,6 +5,7 @@ import { SupabaseDataApiService } from '../conversation/supabase-data-api.servic
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
 import { IntroductionsLifecycleModule } from '../introductions-lifecycle/introductions-lifecycle.module';
 import { IntroductionsPreparationModule } from '../introductions-preparation/introductions-preparation.module';
+import { IntroductionsProposalsModule } from '../introductions-proposals/introductions-proposals.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { AccountIdentityRepository } from './account-identity.repository';
 import { AccountSecurityController } from './account-security.controller';
@@ -45,9 +46,12 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  *
  * S6-02 composes the Introduction lifecycle boundary (IntroductionsLifecycleModule: the unilateral END) here for the same
  * reason. It shares nothing with these providers or with the preparation module.
+ *
+ * S6-04 composes the private proposal review and decision boundary (IntroductionsProposalsModule) here for the same
+ * reason. It shares nothing with these providers, the preparation module or the lifecycle module.
  */
 @Module({
-  imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule],
+  imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,

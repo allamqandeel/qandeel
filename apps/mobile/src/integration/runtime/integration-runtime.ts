@@ -102,7 +102,7 @@ import {
 } from '../../settings';
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import { createInteractionPreferencesController, type InteractionPreferencesController } from '../../settings';
-import { createIntroductionsController, type IntroductionsController } from '../../introductions';
+import { createIntroductionsController, createProposalsController, type IntroductionsController, type ProposalsController } from '../../introductions';
 import {
   createActivityAttentionController,
   createActivityFeedController,
@@ -246,6 +246,12 @@ export interface IntegrationSessionRuntime {
    * reaches the next.
    */
   readonly introductions: IntroductionsController;
+  /**
+   * S6-04: this identity's own private Introduction proposals, on the transport bound to it. Read when the Personal world
+   * draws the Introductions entry and when the proposals are opened; retired with the generation, so no proposal of one
+   * account reaches the next.
+   */
+  readonly introductionProposals: ProposalsController;
   /**
    * A3-01: the reader's Activity attention (the presence mark and the one Attention Strip), feed and Notifications &
    * Activity preferences, for THIS identity, on the Activity transport bound to it. Attention follows the runtime entry's
@@ -430,6 +436,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.understanding.retire();
     session.interactionPreferences.retire();
     session.introductions.retire();
+    session.introductionProposals.retire();
     session.attention.retire();
     session.activityFeed.retire();
     session.activityPreferences.retire();
@@ -546,6 +553,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       understanding: createUnderstandingController({ transport: entry.understandingFor(bundle), isCurrent }),
       interactionPreferences: createInteractionPreferencesController({ transport: entry.interactionPreferencesFor(bundle), isCurrent }),
       introductions: createIntroductionsController({ transport: entry.introductionsFor(bundle), isCurrent }),
+      introductionProposals: createProposalsController({ transport: entry.introductionProposalsFor(bundle), isCurrent }),
       // A3-01: Activity, on the Activity transport bound to this identity. Attention re-reads when a row is seen or opened.
       attention: createActivityAttentionController({ transport: activity, foreground: entry.foreground, isCurrent }),
       activityFeed: createActivityFeedController({ transport: activity, isCurrent, onAttentionChanged: () => built.attention.refresh() }),

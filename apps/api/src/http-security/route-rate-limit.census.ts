@@ -93,6 +93,12 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /introductions/preparation/assistance/revoke': 'AUTHENTICATED',
   // The Introduction's unilateral END (S6-02). An exit right, never throttled like a credential act.
   'POST /introductions/worlds/:worldId/end': 'AUTHENTICATED',
+  // A human's own private proposals and the three decisions (S6-04). Owner-only; no acceptance route exists.
+  'GET /introductions/proposals': 'AUTHENTICATED',
+  'GET /introductions/proposals/:proposalId': 'AUTHENTICATED',
+  'POST /introductions/proposals/:proposalId/forward-approval': 'AUTHENTICATED',
+  'POST /introductions/proposals/:proposalId/decline': 'AUTHENTICATED',
+  'POST /introductions/proposals/:proposalId/withdrawal': 'AUTHENTICATED',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',

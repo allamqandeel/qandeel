@@ -31,6 +31,8 @@ import type { IntroductionsDraft, IntroductionsFact, IntroductionsObjective, Int
 import { AREA_COUNTRIES, areaName, regionsOf } from './area-catalogue';
 import { ASSISTANCE_CONSENT_TEXT, MONTHS, WORK_FIELD_NAMES, introductionsCopy, type IntroductionsCopy } from './copy';
 import type { IntroductionsController } from './introductions-controller';
+import type { ProposalsController } from './proposals-controller';
+import { ProposalsCue } from './ProposalsSurface';
 import { Action, ActionRow, Choice, Field, Heading, LOCAL_TYPE, Para, Question, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
 import { LivingPortrait, OpenBand, type PortraitGroup } from './Portrait';
 import { MARITAL, arrivals, factTitle, factValue, portraitIsEmpty, projectPortrait, requirementWords, type Portrait } from './portrait-projection';
@@ -43,6 +45,9 @@ export interface IntroductionsSurfaceProps {
   readonly insets: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
   /** Back to the Personal world, exactly as it was. */
   readonly onBack: () => void;
+  /** S6-04: this human's own private proposals; the quiet cue and the way into their space. Absent: nothing is drawn. */
+  readonly proposals?: ProposalsController;
+  readonly onOpenProposals?: () => void;
 }
 
 const HEADER_MIN_HEIGHT = 48;
@@ -255,7 +260,7 @@ function PartDetails({ ctx, copy, draft, group, onEdit }: {
 
 // ------------------------------------------------------------------------------------------------------------------
 
-export function IntroductionsSurface({ controller, language, insets, onBack }: IntroductionsSurfaceProps) {
+export function IntroductionsSurface({ controller, language, insets, onBack, proposals, onOpenProposals }: IntroductionsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const reduceMotion = useReduceMotion();
@@ -615,6 +620,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack }: I
       <View testID="qandeel-introductions-notice" accessibilityLiveRegion="polite">
         {notice === null ? null : <Para ctx={ctx} text={notice} role="supporting" color={state.notice === 'CHANGED_ELSEWHERE' ? palette.secondary : palette.error} />}
       </View>
+      {proposals === undefined || onOpenProposals === undefined ? null : <ProposalsCue controller={proposals} language={language} onOpen={onOpenProposals} />}
       <ScrollView
         ref={scrollRef}
         testID="qandeel-introductions-body"

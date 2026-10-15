@@ -163,7 +163,9 @@ test('6 — D1: the ONE END boundary, ungated, and the ONE named exception of th
   assert.match(read(MIGRATION), /REVOKE ALL ON FUNCTION public\.end_own_introduction_v1\(uuid, uuid\) FROM PUBLIC;/u);
   const verifier = read('database/verify-migration-0149.mjs');
   assert.match(verifier, /const S6_02_INTRODUCTION_END = 'public\.end_own_introduction_v1\(uuid, uuid\)';/u);
-  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\)\]\.sort\(\)/u, 'the census admits exactly the retained four and the one END boundary');
+  // S6-04 (2026-10-15) appends its three named decision boundaries after the END exception; the END exception itself is
+  // unchanged and still named exactly once in the census.
+  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary and the three named S6-04 decisions');
   assert.equal((verifier.match(/S6_02_INTRODUCTION_END/gu) ?? []).length, 7, 'the exception is named, not generalized');
   for (const probe of ['f4 the census refuses a second client-executable wrapper around the END core',
     'f5 the census refuses the END boundary granted beyond authenticated']) assert.ok(verifier.includes(probe), probe);
@@ -185,7 +187,8 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   assert.match(repository, /\{ p_command_id: commandId, p_world_id: worldId \}/u);
   assert.doesNotMatch(repository, /ServiceRole|service_role/u, 'the caller\'s own token');
   assert.match(read('apps/api/src/http-security/route-rate-limit.census.ts'), /'POST \/introductions\/worlds\/:worldId\/end': 'AUTHENTICATED'/u);
-  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule\]/u);
+  // S6-04 (2026-10-15) appends its own proposal module; the S6-02 module stays composed here, exactly once.
+  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
   for (const file of mobile('apps/mobile/src/')) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction|introductions\/worlds\//u, `mobile ${file} wires no END (S6-05)`);
