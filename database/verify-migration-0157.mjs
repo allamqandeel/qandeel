@@ -582,7 +582,7 @@ async function verifyIntermediateDecisions(report, humans) {
 }
 
 // ------------------------------------------------------------------ N. admission, orchestrator, sweeper
-async function verifyAdmissionAndOrchestration(report, humans, productionGate) {
+async function verifyAdmissionAndOrchestration(report, humans, productionGate, productionFirstName) {
   const [a, b, c, d, e] = humans;
   const readiness = await rt.captureMatchingSeam(FN.READINESS);
   const pairSeam = await rt.captureMatchingSeam(FN.PAIR_SEAM);
@@ -659,6 +659,53 @@ async function verifyAdmissionAndOrchestration(report, humans, productionGate) {
       assert.equal((await rt.proposalRow(staling)).proposal_state, 'STALE');
       assert.equal(await count(P.VIEWS, 'proposal_id = ANY($1::uuid[])', [[expiring, staling]]), 0, 'N04 and disclosed nothing');
     });
+
+    await report.isolated('N05 the admission requires a confirmed Introduction First Name for both humans (PO decision §8.1)', async () => {
+      // The PRODUCTION first-name seam, inside this rolled-back scenario: the confirmed fact version is its only source.
+      await q(productionFirstName.definition);
+      const written = () => rows(`SELECT (SELECT count(*) FROM ${P.PAIRS}) p, (SELECT count(*) FROM ${P.SNAPSHOTS}) s,
+          (SELECT count(*) FROM ${P.FACT_BINDINGS}) b, (SELECT count(*) FROM ${P.PROPOSALS}) r,
+          (SELECT count(*) FROM ${P.PRIVATE_NOTES}) n, (SELECT count(*) FROM ${P.VIEWS}) v`);
+      const before = await written();
+
+      // 0. Both names confirmed and no policy installed: the policy gate still decides.
+      await familyOnly(a, { firstName: 'Sara', sex: 'MALE', maritalStatus: 'NEVER_MARRIED' });
+      await familyOnly(b, { firstName: 'Omar', sex: 'FEMALE', maritalStatus: 'DIVORCED' });
+      assert.equal(await admission(a, b), 'POLICY_UNCONFIGURED', 'N05 with both names, an unconfigured policy still decides');
+
+      // 1. The FIRST human's current version carries no confirmed first name: refused, in either argument order,
+      //    even with every policy installed and both synthetic seams cleared.
+      await rt.recordFacts(a, { sex: 'MALE', maritalStatus: 'NEVER_MARRIED' });
+      assert.equal((await rt.currentFacts(a)).first_name, null, 'N05 the current version carries no first name');
+      await rt.installPolicies({ safeFieldKeys: ['life_stage'] });
+      await replaceSeam(FN.READINESS, 'READY');
+      await replaceSeam(FN.PAIR_SEAM, 'CLEARED');
+      assert.equal(await admission(a, b), 'FIRST_NAME_NOT_CONFIRMED', 'N05 the first human has no confirmed first name');
+      assert.equal(await admission(b, a), 'FIRST_NAME_NOT_CONFIRMED', 'N05 the same answer in the reverse order');
+      assert.deepEqual(await orchestrate(a), { examined: 1, admitted: 0, prepared: 0 }, 'N05 the orchestrator admits nothing');
+      assert.deepEqual(await orchestrate(b), { examined: 1, admitted: 0, prepared: 0 }, 'N05 from the other side too');
+      assert.deepEqual(await written(), before, 'N05 zero pairs, snapshots, bindings, proposals, private notes or views');
+
+      // 2. The SECOND human's current version carries no confirmed first name: refused.
+      await rt.recordFacts(a, { firstName: 'Sara', sex: 'MALE', maritalStatus: 'NEVER_MARRIED' });
+      await rt.recordFacts(b, { sex: 'FEMALE', maritalStatus: 'DIVORCED' });
+      assert.equal(await admission(a, b), 'FIRST_NAME_NOT_CONFIRMED', 'N05 the second human has no confirmed first name');
+      assert.equal(await admission(b, a), 'FIRST_NAME_NOT_CONFIRMED', 'N05 the same answer in the reverse order');
+      assert.deepEqual(await orchestrate(a), { examined: 1, admitted: 0, prepared: 0 }, 'N05 the orchestrator admits nothing');
+      assert.deepEqual(await written(), before, 'N05 still nothing written');
+
+      // 3. Both names confirmed: the name condition is passed and every other gate still decides.
+      await rt.recordFacts(b, { firstName: 'Omar', sex: 'FEMALE', maritalStatus: 'DIVORCED' });
+      assert.equal(await admission(a, b), 'ADMITTED', 'N05 both names confirmed and both synthetic seams cleared');
+      await replaceSeam(FN.PAIR_SEAM, 'NOT_EVALUATED');
+      assert.equal(await admission(a, b), 'PREREQUISITES_NOT_CLEARED', 'N05 the pair-scoped CW2-08 seam still decides');
+      await rt.restoreMatchingSeam(readiness);
+      assert.equal(await admission(a, b), 'PRODUCER_UNAVAILABLE', 'N05 the production producer seam still decides');
+      await rt.recordFacts(b, { firstName: 'Omar', sex: 'MALE', maritalStatus: 'DIVORCED' });
+      assert.equal(await admission(a, b), 'PAIR_RULE_NOT_SATISFIED', 'N05 the pair rule still decides');
+      assert.deepEqual(await written(), before, 'N05 and the admission itself never writes');
+      await rt.restoreMatchingSeam(pairSeam);
+    });
   } finally {
     await q('ROLLBACK');
     await rt.restoreMatchingSeam(readiness);
@@ -698,7 +745,7 @@ await runVerifier('0157', async (setStage) => {
     setStage('intermediate decisions');
     await verifyIntermediateDecisions(report, humans);
     setStage('admission and orchestration');
-    await verifyAdmissionAndOrchestration(report, humans, seams[1]);
+    await verifyAdmissionAndOrchestration(report, humans, seams[1], seams[0]);
   } finally {
     await asRole('postgres');
     for (const seam of seams) await rt.restoreMatchingSeam(seam);

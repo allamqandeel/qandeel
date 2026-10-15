@@ -4736,7 +4736,8 @@ install_matching_proposal_policy_version_     CW2-06B-13: the owner-only policy 
 **What 0157 does.** The continuing automatic re-proposal block (derived from the transition chain; EXPIRED blocks and is
 not a refusal; STALE and CANCELLED_BY_COMPETING_MATCH do not block) in Discovery and Prepare; the R4-A preparation instant
 (one real instant before the first write, used only in two refusals); the producer readiness seam (`UNAVAILABLE`), the
-pair-scoped CW2-08 seam (`NOT_EVALUATED`), the fail-closed admission; the internal orchestrator and sweeper.
+pair-scoped CW2-08 seam (`NOT_EVALUATED`), the fail-closed admission (which also requires a confirmed Introduction First
+Name for both humans, `FIRST_NAME_NOT_CONFIRMED`); the internal orchestrator and sweeper.
 
 **Grants.** None. Every new and replaced function is executable by no application role; the six `0149` commands stay
 closed; no route, worker or schedule calls anything here.

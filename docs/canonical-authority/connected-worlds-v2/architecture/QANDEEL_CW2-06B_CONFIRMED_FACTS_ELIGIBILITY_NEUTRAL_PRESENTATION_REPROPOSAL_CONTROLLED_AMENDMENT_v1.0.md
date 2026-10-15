@@ -594,6 +594,9 @@ architecture.
    snapshot or proposal is written. It answers `ADMITTED` only when all of the following hold:
    - both humans are currently matchable;
    - the pair rule passes on current facts;
+   - both humans hold a confirmed Introduction First Name, read through the same canonical seam
+     `resolve_matching_canonical_first_name_v1` the disclosure gate reads (CW2-06B-01). Otherwise the answer is
+     `FIRST_NAME_NOT_CONFIRMED` (Product Owner decision of 2026-10-15 on the S6-03 review, record §8.1);
    - the pair is not blocked;
    - every required policy is configured;
    - the producer seam answers `READY`;

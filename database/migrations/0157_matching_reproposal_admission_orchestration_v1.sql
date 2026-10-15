@@ -114,11 +114,11 @@ END$$;
 --
 --    Evaluated before any pair, snapshot or proposal is written. ADMITTED only
 --    when both humans are currently matchable and hold no active Introduction,
---    the pair rule passes on their current confirmed facts, the pair is not
---    blocked, every required policy is configured, the producer seam answers
---    READY and the pair-scoped CW2-08 seam answers CLEARED. Today it never
---    admits, so no PREPARED row is written that a later check already knew could
---    not be delivered.
+--    the pair rule passes on their current confirmed facts, both hold a
+--    confirmed Introduction First Name, the pair is not blocked, every required
+--    policy is configured, the producer seam answers READY and the pair-scoped
+--    CW2-08 seam answers CLEARED. Today it never admits, so no PREPARED row is
+--    written that a later check already knew could not be delivered.
 -- ---------------------------------------------------------------------------
 CREATE FUNCTION public.resolve_matching_pair_admission_v1(p_user_a uuid, p_user_b uuid)
 RETURNS TABLE (admission text)
@@ -143,6 +143,12 @@ BEGIN
   SELECT * INTO high_facts FROM public.resolve_matching_confirmed_facts_v1(hi);
   IF low_facts.sex IS NULL OR high_facts.sex IS NULL OR low_facts.sex = high_facts.sex THEN
     RETURN QUERY SELECT 'PAIR_RULE_NOT_SATISFIED'::text; RETURN;
+  END IF;
+  -- The first name is read through the ONE canonical seam the disclosure gate
+  -- reads, so a pair whose proposal that gate would refuse is never prepared.
+  IF (SELECT r.resolution FROM public.resolve_matching_canonical_first_name_v1(lo) r) IS DISTINCT FROM 'RESOLVED'
+     OR (SELECT r.resolution FROM public.resolve_matching_canonical_first_name_v1(hi) r) IS DISTINCT FROM 'RESOLVED' THEN
+    RETURN QUERY SELECT 'FIRST_NAME_NOT_CONFIRMED'::text; RETURN;
   END IF;
   IF (SELECT b.blocked FROM public.resolve_matching_pair_reproposal_block_v1(lo, hi) b) THEN
     RETURN QUERY SELECT 'REPROPOSAL_BLOCKED'::text; RETURN;
