@@ -39,7 +39,7 @@ The initial findings 1–14 of this record's first version stand. The completed 
 | `database/verify-migration-0155.mjs` | the focused real-PostgreSQL verifier (37 scenarios) |
 | `database/prove-0155-introduction-end-postgrest.mjs` | the live PostgREST proof, run in API CI on every supported line |
 | `database/verify-migration-0149.mjs` | D1: `NO_BACKDOOR` admits exactly `public.end_own_introduction_v1(uuid, uuid)` (name, signature, no overload, authenticated-only); probes f4 / f5 |
-| `tests/s6-02-introduction-privacy-end-boundary-contract.test.mjs` | the static contract (8 tests); `tests/s5-03b…`, `tests/s5-03c…` re-anchored to S6-02 as the current task (validation only) |
+| `tests/s6-02-introduction-privacy-end-boundary-contract.test.mjs` | the static contract (8 tests); `tests/s5-03b…`, `tests/s5-03c…` re-anchored to S6-02 as the current task (validation only); `tests/conversation-focus-runtime-integration-readiness-contract.test.mjs` re-anchored to admit the END service as the one new exact reader of the typed database identity (22023 only) |
 | `apps/api/src/introductions-lifecycle/*` | `POST /introductions/worlds/:worldId/end` `{ commandId }` → `ENDED` / `ALREADY_SETTLED` / `UNAVAILABLE`; caller token; no gate, retry or log; composed through `AccountModule`; route census `AUTHENTICATED` |
 | `package.json`, `.github/workflows/api-ci.yml`, `database/README.md` | scripts, CI steps (verifier after migrations; wire proof inside the PostgREST loop; static contract), the 0155 section |
 | Backlog, Current State, Project Map, Roadmap, this record | the closing change (§10) |

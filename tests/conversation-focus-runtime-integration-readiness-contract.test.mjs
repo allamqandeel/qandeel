@@ -320,8 +320,17 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   // the frozen 0081 rotation — 23505 SHARED_INVITE_CREDENTIAL_REF_UNAVAILABLE (draw another Shared ID) and 40001 (another
   // request rotated first: read the current value) — under the same rule. (PROD-RETRY-01: that stale-state refusal is
   // PT409 from migration 0150 on; the service accepts both codes with the exact message.)
+  // RE-ANCHORED by S6-02 (migration 0155): the Introduction END service reads it to recognise exactly one typed
+  // refusal, 22023 (the database refuses the request as malformed), as the client's INVALID_REQUEST; every other
+  // refusal is unavailable, under the same rule.
   // The list stays exact: any further production reader fails here.)
-  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/introductions-lifecycle/introduction-end.service.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  const introductionEnd = stripComments(read('apps/api/src/introductions-lifecycle/introduction-end.service.ts'));
+  assert.equal((introductionEnd.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, 'the Introduction END service reads the identity once');
+  assert.match(introductionEnd, /error\.status === 400 && readDataApiUpstreamIdentity\(error\)\.databaseCode === '22023'\) return invalid\(\);/u,
+    'it recognises exactly the one typed malformed-request refusal');
+  assert.doesNotMatch(introductionEnd, /console\.|Logger|\$\{|databaseMessage|identity\.database(Code|Message)\s*[,)}]/u,
+    'the raw identity is never logged, interpolated or returned');
   const account = stripComments(read('apps/api/src/account/account.service.ts'));
   assert.equal((account.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, 'the account service reads the identity once');
   assert.match(account, /identity\.databaseCode === '23505' && identity\.databaseMessage === 'PUBLIC_ID_COMMAND_CONFLICT'/u,
