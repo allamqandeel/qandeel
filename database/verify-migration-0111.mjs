@@ -249,9 +249,19 @@ async function verifyResolvers(report, humans) {
       const a = await seedSetup(one);
       await seedSetup(two);
       await seedSetup(three);
+      // RE-ANCHORED by S6-03 (migration 0157, CW2-06B-05 §2): discovery also requires both humans' CURRENT confirmed
+      // facts to satisfy the Product pair rule, so the three humans are given confirmed sexes first.
+      await rt.assignSex(one, 'MALE');
+      await rt.assignSex(two, 'FEMALE');
+      await rt.assignSex(three, 'FEMALE');
       const found = await rt.discover(one, 10);
       assert.deepEqual(found.map((r) => r.candidate_user_id).sort(), [two, three].sort(),
         'B04 discovery finds every currently matchable human but the caller');
+      // S6-03: a same-sex human is not a candidate, whatever else they hold.
+      await rt.assignSex(three, 'MALE');
+      assert.deepEqual((await rt.discover(one, 10)).map((r) => r.candidate_user_id), [two],
+        'B04 a human whose confirmed sex is the caller\'s own is not a candidate');
+      await rt.assignSex(three, 'FEMALE');
       for (const row of found) {
         assert.ok(row.lower_user_id < row.higher_user_id, 'B04 and answers with canonical pair members');
       }

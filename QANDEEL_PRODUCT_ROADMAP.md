@@ -463,3 +463,24 @@ only; §6.9 and §6.10 stay as written.
   #322 stays open as a release blocker.
 - **Register:** `QAN-BL-MATCH-02` tombstoned and `QAN-BL-MATCH-05` admitted, from the merge: 69 items (backlog §7).
 - **Next:** the Product Owner's review of the S6-02 pull request. No later Stage 6 task is started by this note.
+
+### 6.12 Execution note — 2026-10-15 (S6-02 merged; S6-03 implementation and closing change)
+**Recorded:** 2026-10-15 by S6-03 at its closing change, in the S6-03 pull request (not merged). This is a status note
+only; §6.9 … §6.11 stay as written.
+- **Merged:** S6-02 through PR #340 as `8e85b40dcf9b4ba35439f9424997ad0c3a0c1113` (2026-10-15; not deployed). Its
+  tombstone of `QAN-BL-MATCH-02` and its admission of `QAN-BL-MATCH-05` hold from that merge.
+- **Started and closed:** the Product Owner's S6-03 Task Contract v1.3 (2026-10-15; D1–D7, C1–C8, R1, R2), with the
+  CP1 approval of the exact text of the Controlled Amendment [CW2-06B](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06B_CONFIRMED_FACTS_ELIGIBILITY_NEUTRAL_PRESENTATION_REPROPOSAL_CONTROLLED_AMENDMENT_v1.0.md), started **S6-03 — Matching Proposal
+  Pipeline & Intelligence Prerequisites** from `main` at `8e85b40d`. It is **CLOSED / READY FOR PRODUCT OWNER MERGE
+  DECISION — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-03 record](docs/e2e/QANDEEL_S6_03_IMPLEMENTATION_RECORD_v1.md)).
+- **Delivered:** migrations `0156` / `0157` - confirmed facts with one internal writer, the confirmed first name,
+  deterministic eligibility (the pair rule, the structured requirements, the R3 age rule, the R4 horizon), B4 and the
+  neutral recipient projection, the Arabic/English privacy floor, the owner-only policy primitive, the re-proposal
+  block, the fail-closed admission, orchestrator and sweeper - with their verifiers and static contract.
+- **Not delivered (each its own owner's):** enrollment, promotion and correction (S6-07, `QAN-BL-MATCH-01`); deletion
+  (`ACCT-DEL-01`); the real conclusion producer and understanding readiness (Stage 8A); policy values, activation and
+  any re-proposal relaxation (Stage 9); the proposal screens and their copy (S6-04).
+- **Still closed:** every Matching and launch gate; the six `0149` commands. No proposal, Match or Introduction can
+  exist. Issue #322 stays open as a release blocker.
+- **Register:** `QAN-BL-MATCH-05` tombstoned from the merge; nothing admitted: 69 items (backlog §7).
+- **Next:** the Product Owner's review of the S6-03 pull request. No later Stage 6 task is started by this note.

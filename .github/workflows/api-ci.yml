@@ -1005,6 +1005,19 @@ jobs:
       # retries, outsiders, OFF, SUCCESS and END x END / END x SUCCESS races proven on real connections.
       - name: Verify S6-02 Introduction privacy isolation and safe END boundary against real PostgreSQL
         run: npm run verify:introduction-privacy-end-boundary:integration
+      # S6-03: migration 0156 (CW2-06B) - confirmed Matching facts through the ONE no-role internal writer (versions,
+      # compare-and-swap, the S6-01 catalogue), the confirmed first name only, the strict structured encoding with the R3
+      # all-possible-days age rule and the R4 horizon, the deterministic evaluator, the Product pair rule and the snapshot
+      # fact binding with its currentness race, B4 zero fields with the NULL projection and a zero-field Handoff, the
+      # Arabic/English privacy floor (delta-only CHECK = classifier), the owner-only policy primitive, deletion BLOCKED.
+      - name: Verify S6-03 confirmed facts, deterministic eligibility and neutral presentation against real PostgreSQL
+        run: npm run verify:matching-confirmed-facts-eligibility:integration
+      # S6-03: migration 0157 (CW2-06B-14 / -15, R4-A / R4-B) - the continuing automatic re-proposal block (D6.6 cases
+      # 1-13, R1, R2) in Discovery and Prepare with its decline and Match-commit races, the preparation instant (horizon
+      # under two expiry values, the lock-wait test and its discrimination control), intermediate decisions that cannot
+      # get around the gates, the fail-closed admission, the orchestrator's zero writes and the sweeper without clearance.
+      - name: Verify S6-03 re-proposal protection, admission, orchestrator and sweeper against real PostgreSQL
+        run: npm run verify:matching-reproposal-admission:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
