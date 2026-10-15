@@ -4784,3 +4784,32 @@ npm run prove:proposal-decisions:postgrest
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its positive paths run on synthetic fixture humans
 inside rolled-back transactions with the CW2-08 seam replaced for the run and restored byte for byte, and its two races
 commit their fixtures and remove them. The wire proof also needs `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only).
+
+## S6-05 - Mutual Match acceptance (migration 0159, CP2)
+
+`0159_matching_mutual_match_acceptance_v1.sql` is the CP2 database part of `S6-05` under the Product Owner's Task
+Contract v1.0 (D1–D7) and CP2 authorization (2026-10-15). No historical migration is edited; the frozen `0114` Mutual
+Match core is wrapped, never copied. Record: [S6-05 implementation record](../docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md).
+
+```text
+resolve_my_matching_proposal_presentation_v1   nobody (REDEFINED): the 0158 helper; the second recipient AWAITING_YOU is now
+                                               offered ACCEPT and DECLINE, and ACCEPT is presented only when CW2-08 clears
+accept_my_matching_proposal_v1                 authenticated: (command, proposal, view) only; the nine other identities
+                                               derived on the server from (human, proposal, command); lock -> replay or
+                                               offered? -> commit_matching_mutual_match_v1 (0114, CW2-08 last)
+```
+
+It answers MATCHED (+ the born World) / CHANGED / UNAVAILABLE / NOT_AVAILABLE_NOW / COMMAND_CONFLICT, absorbs the core's
+`40001` (named with `PT409`) and rolls back everything a refusal touched; a non-committable Match and an expiry at the birth
+instant are UNAVAILABLE, so no reason is revealed. `verify-0149` NO_BACKDOOR admits it by exact signature (probes f8 / f9),
+`verify-0150` names it as an absorber and `verify-0112` B01 admits it as the one shell over the Match core. In production
+the CW2-08 seam answers NOT_EVALUATED and no proposal exists: nobody is shown ACCEPT and nothing can be accepted.
+
+```sh
+npm run verify:matching-mutual-match-acceptance:integration
+npm run prove:mutual-match-acceptance:postgrest
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its positive paths run on synthetic fixture humans
+inside rolled-back transactions with the CW2-08 seam replaced for the run and restored byte for byte, and its six races
+commit their fixtures and remove them. The wire proof also needs `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only).

@@ -504,3 +504,18 @@ as written.
 - **Register:** nothing inherited, tombstoned or admitted: 69 items (backlog §7).
 - **Next:** the Product Owner's review of the S6-04 pull request and the merge decision. No later Stage 6 task is started
   by this note.
+
+### 6.14 Execution note — 2026-10-16 (S6-04 merged; S6-05 in progress)
+**Recorded:** 2026-10-16 by S6-05, in the S6-05 pull request (not merged). This is a status note only; §6.9 … §6.13 stay
+as written.
+- **Merged:** S6-04 through PR #342 as `35ad4e19ad7e449255e7d087d4420b5d3775cf86` (2026-10-15; not deployed).
+- **Started:** the Product Owner's S6-05 Task Contract v1.0 (D1–D7, 2026-10-15) started **S6-05 — Mutual Match &
+  Introduction World** from `main` at `35ad4e19`. It is **IN PROGRESS — CP2 DELIVERED (MUTUAL MATCH SECURE INTEGRATION) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
+- **Decided (2026-10-15):** R-1 … R-8 (R-1: D3 is within GATE-30, ACE-SP-01 unchanged); the Visual Gate and the Copy Gate
+  closed; CP2 authorized.
+- **Delivered (CP2):** migration `0159` (the second recipient's acceptance over the frozen `0114` core) and its API route,
+  with the verifier, the live-PostgREST proof, the re-anchored census pins and a static contract.
+- **Not delivered yet:** CP3 (Introduction reads and messages), CP4 (END on mobile, closed history), CP5 (mobile). The
+  forward producer is `QAN-BL-MATCH-06` (S6-07, admitted).
+- **Still closed:** every Matching and launch gate; nobody is shown ACCEPT in production. Issue #322 stays open.
+- **Next:** the Product Owner's review of the CP2 report. No later checkpoint is started by this note.

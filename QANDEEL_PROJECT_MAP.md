@@ -163,7 +163,24 @@ any of them closed.
 
 ## 5. Current forward roadmap
 
-### S6-04 — 2026-10-15 (CURRENT)
+### S6-05 — 2026-10-16 (CURRENT)
+
+This is a **locator note, not a new Product authority**. S6-04 merged through PR #342 as
+`35ad4e19ad7e449255e7d087d4420b5d3775cf86` (2026-10-15; not deployed). On that `main`, the Product Owner's S6-05 Task Contract v1.0 and its decisions
+D1–D7 (2026-10-15) made **S6-05 — Mutual Match & Introduction World** the current implementation task. Evidence: the
+[S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md).
+- S6-05 is **IN PROGRESS — CP2 DELIVERED (MUTUAL MATCH SECURE INTEGRATION) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request from `s6/s6-05-mutual-match-introduction-world`. Merging needs the Product
+  Owner's explicit «ادمج».
+- CP0 (read-only) and its rulings R-1 … R-8; CP1: the Visual Gate and the Copy Gate closed by the Product Owner on
+  2026-10-15 ([gate record](docs/e2e/QANDEEL_S6_05_VISUAL_COPY_GATE_v1.md)); R-1: ACE-SP-01 is not amended (GATE-30).
+- CP2, migration `0159`: the second recipient's acceptance, one authenticated shell over the frozen `0114` Mutual Match
+  core (server-derived identities; lock, offered decision, core; anti-oracle answers; `40001` absorbed), ACCEPT offered
+  only while CW2-08 clears, and `POST /introductions/proposals/:proposalId/acceptance`. CP3 – CP5 are not started.
+- Register: `QAN-BL-MATCH-06` admitted (S6-07, R-4): 70 items (backlog §7).
+- Stage 6 stays active. S6-06 and S6-07 are not started. GitHub Issue #322 (`QAN-BL-LAUNCH-04`) stays
+  `OPEN / NOT PROVEN / RELEASE BLOCKER`.
+
+### S6-04 — 2026-10-15 (historical: S6-04 merged as PR #342)
 
 This is a **locator note, not a new Product authority**. S6-03 merged through PR #341 as
 `869b3ca63ec8dde830aaa31847588e7f03b55d05` (2026-10-15; not deployed). On that `main`, the Product Owner's S6-04 Task Contract v1.0 and its
@@ -468,7 +485,7 @@ contradiction.
 | **8B — Voice Runtime** | **LATER** (runtime / provider-gated) | Voice Notes and Live Calls: realtime audio, ASR/TTS, barge-in, background/interruption, durable audio and provider integration | consume G1.2/P2/P4 frozen Product/non-signal visual law; only runtime-gated truth is newly resolved |
 | **9 — Economy + Launch Closure** | **LATER.** The AI-COST-01 accounting foundation is DONE (PR #303). The final Product economy and provider selection are not | Plans/Credits/Usage from measured provider economics; Lantern; maintenance/min-version; security, device/store/legal/operations and release hardening | consume all prior frozen/implemented work, including AI-COST-01's ledger, Price Cards and inactive Credit Policy contract; this stage closes release-specific gaps rather than reopening Product foundations |
 
-> **CURRENT IMPLEMENTATION TASK: S6-04 — Private Proposal Review and Decisions** (Stage 6; no backlog item) from `869b3ca63ec8dde830aaa31847588e7f03b55d05` (the merge of PR #341, S6-03), under the Product Owner's Task Contract v1.0 (D1–D12, 2026-10-15) — **IMPLEMENTED — READY FOR PRODUCT OWNER REVIEW — PRODUCT COPY GATE CLOSED on `s6/s6-04-private-proposal-review-decisions` (one pull request), NOT MERGED / NOT DEPLOYED.** Migration `0158` (five authenticated boundaries over the existing cores, no acceptance), its real-PostgreSQL verifier and live-PostgREST proof, the `/introductions/proposals` API, the mobile proposals space and a static contract; no gate is opened ([S6-04 record](docs/e2e/QANDEEL_S6_04_IMPLEMENTATION_RECORD_v1.md)).
+> **CURRENT IMPLEMENTATION TASK: S6-05 — Mutual Match & Introduction World** (Stage 6; no backlog item at kickoff) from `35ad4e19ad7e449255e7d087d4420b5d3775cf86` (the merge of PR #342, S6-04), under the Product Owner's Task Contract v1.0 (D1–D7, 2026-10-15) — **IN PROGRESS — CP2 DELIVERED (MUTUAL MATCH SECURE INTEGRATION) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED** on `s6/s6-05-mutual-match-introduction-world` (one pull request). Visual Gate and Copy Gate closed (2026-10-15); CP2: migration `0159` (one acceptance shell over the frozen `0114` core), its real-PostgreSQL verifier and live-PostgREST proof, the acceptance API route and a static contract; CP3 – CP5 not started; no gate is opened ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
 
 *(Historical: S6-03 was the current task until PR #341 merged as `869b3ca63ec8dde830aaa31847588e7f03b55d05` (2026-10-15). The paragraph below is kept as written then, apart from its opening label.)*
 *(Historical, S6-03:)* **S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites** (Stage 6; `QAN-BL-MATCH-05`) from `8e85b40dcf9b4ba35439f9424997ad0c3a0c1113` (the merge of PR #340, S6-02), under the Product Owner's Task Contract v1.3 and the approved Controlled Amendment [CW2-06B](docs/canonical-authority/connected-worlds-v2/architecture/QANDEEL_CW2-06B_CONFIRMED_FACTS_ELIGIBILITY_NEUTRAL_PRESENTATION_REPROPOSAL_CONTROLLED_AMENDMENT_v1.0.md) (2026-10-15) — **CLOSED / READY FOR PRODUCT OWNER MERGE DECISION on `s6/s6-03-matching-proposal-pipeline` (one pull request), NOT MERGED / NOT DEPLOYED.** Migrations `0156` and `0157`, two real-PostgreSQL verifiers, a static contract and an additive TypeScript vocabulary; no route, worker, grant, policy row, mobile change or copy; the six `0149` commands stay closed and no gate is opened ([S6-03 record](docs/e2e/QANDEEL_S6_03_IMPLEMENTATION_RECORD_v1.md)).
