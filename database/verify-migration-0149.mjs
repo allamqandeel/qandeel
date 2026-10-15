@@ -17,8 +17,9 @@
 //                              different request is 23505; a replay of a suspended command is refused (42501)
 //   X01                        two concurrent retained commands of one human serialize on the caller's own lock row
 //   NO_BACKDOOR                followed transitively, the only application-executable functions that reach a Matching
-//                              setup write are the four retained commands; nothing wraps the six; no relation exposes
-//                              Matching state
+//                              setup write are the four retained commands and - S6-02 (decision D1, migration 0155) - the
+//                              ONE named Introduction END boundary, authenticated-only; nothing wraps the six; no relation
+//                              exposes Matching state
 //   DELETION_BASELINE_UNCHANGED  every Matching reference to an account is still RESTRICT; an existing footprint still
 //                              holds one, so 0149 erases nothing and QAN-BL-ACCT-01 stays open
 //   HOSTED_DEFAULT_PRIVILEGES  re-applying 0149 over the hosted Supabase posture (every client role granted, plus an
@@ -28,6 +29,8 @@
 //
 //   f1..f3 the refused weakenings: a posture in which authenticated inherits the owner, a reopened direct grant, and a
 //          client-executable wrapper around one of the six
+//   f4..f5 S6-02 (D1): the one END exception is not a rule - a second client-executable wrapper around the END core and
+//          the END boundary granted to service_role are both refused
 //
 // Behaviour that needs Matching state from BEFORE 0149 is reached the only honest way on a database where 0149 is
 // already applied: as the owner with the exact human's claims, inside a transaction that rolls back. Every probe of a
@@ -54,6 +57,10 @@ const REQUIREMENTS = [['faith_practice_level', 'HARD_DEALBREAKER', 'practising']
 const WRITES_MATCHING = new RegExp(
   String.raw`(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+public\.(${MATCHING_TABLES.map((t) => t.slice('public.'.length)).join('|')})\b`, 'iu');
 const nameOf = (signature) => signature.slice('public.'.length, signature.indexOf('('));
+// S6-02 (Product Owner decision D1, migration 0155): the ONE authenticated Introduction END boundary over the frozen 0116
+// END core. That core writes Matching participation state, so the transitive census reaches it - by name and exact
+// signature, and nothing else is admitted with it.
+const S6_02_INTRODUCTION_END = 'public.end_own_introduction_v1(uuid, uuid)';
 
 /** The 0149 body with its own transaction control removed, so it can be re-applied inside a scenario that rolls back. */
 function migrationBody() {
@@ -147,8 +154,13 @@ async function verifyNoBackdoor() {
   }
   const executable = functions.filter((f) => reach.has(f.proname) && (f.public || f.anon || f.authenticated || f.service_role));
   const retainedWriters = SEC_MATCH_00_RETAINED.filter((fn) => fn !== MFN.SETUP).map(nameOf).sort();
-  assert.deepEqual(executable.map((f) => f.proname).sort(), retainedWriters,
-    'NO_BACKDOOR the only application-executable functions reaching a Matching setup write are the four retained commands');
+  assert.deepEqual(executable.map((f) => f.proname).sort(), [...retainedWriters, nameOf(S6_02_INTRODUCTION_END)].sort(),
+    'NO_BACKDOOR the only application-executable functions reaching a Matching setup write are the four retained commands and the one S6-02 END boundary');
+  const [end] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
+  [S6_02_INTRODUCTION_END, nameOf(S6_02_INTRODUCTION_END)]);
+  assert.deepEqual(end, { overloads: 1, exact: true }, `NO_BACKDOOR the S6-02 exception is exactly ${S6_02_INTRODUCTION_END}, with no overload`);
+  assert.equal(await rt.canExecute('authenticated', S6_02_INTRODUCTION_END), true, 'NO_BACKDOOR authenticated executes the one END boundary');
   for (const f of executable) {
     assert.deepEqual([f.public, f.anon, f.service_role], [false, false, false], `NO_BACKDOOR ${f.proname} is authenticated-only`);
   }
@@ -463,6 +475,29 @@ async function verifyForwardSafety(report, humans) {
         await q(text);
         await q('GRANT EXECUTE ON FUNCTION public.sec_match_00_probe_wrapper_v1() TO authenticated');
       },
+      reject: () => verifyNoBackdoor(),
+    });
+
+    // S6-02 (D1): the admitted END boundary is one named exception, not a rule that any END wrapper is fine.
+    await report.probe('f4 the census refuses a second client-executable wrapper around the END core', {
+      pristine: `CREATE FUNCTION public.s6_02_probe_end_wrapper_v1() RETURNS SETOF record
+                 LANGUAGE sql SECURITY DEFINER SET search_path='' AS $probe$
+                   SELECT * FROM public.get_my_matching_setup_v1() $probe$`,
+      mutate: (text) => text.replace('SELECT * FROM public.get_my_matching_setup_v1()',
+        'SELECT * FROM public.commit_introduction_end_v1(gen_random_uuid(), gen_random_uuid(), gen_random_uuid(), gen_random_uuid())'),
+      marker: 'commit_introduction_end_v1',
+      apply: async (text) => {
+        await q(text);
+        await q('GRANT EXECUTE ON FUNCTION public.s6_02_probe_end_wrapper_v1() TO authenticated');
+      },
+      reject: () => verifyNoBackdoor(),
+    });
+
+    await report.probe('f5 the census refuses the END boundary granted beyond authenticated', {
+      pristine: `REVOKE EXECUTE ON FUNCTION ${S6_02_INTRODUCTION_END} FROM service_role`,
+      mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM service_role', ' TO service_role'),
+      marker: 'TO service_role',
+      apply: (text) => q(text),
       reject: () => verifyNoBackdoor(),
     });
 
