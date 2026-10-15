@@ -138,6 +138,7 @@ jobs:
       - {name: "Verify LANG-01 Arabic language authority static contract (register, derived manifest, one disposition per unit, verbatim amendments, preserved proofs, safety gate)", run: npm run test:lang-01-arabic-language-authority-contract}
       - {name: "Verify S6-02 Introduction privacy isolation and safe END boundary static contract (one projection, D4 fences, A1, Replay era, one END exception)", run: npm run test:s6-02-introduction-privacy-end-boundary-contract}
       - {name: "Verify S6-04 private proposal review and decisions static contract (thin shells over the cores, no name or acceptance, withdrawal ungated, named exceptions)", run: npm run test:s6-04-private-proposal-review-decisions-contract}
+      - {name: "Verify S6-05 Mutual Match acceptance static contract (one shell over the frozen 0114 core, server-derived identities, ACCEPT gated on CW2-08, named exceptions)", run: npm run test:s6-05-mutual-match-acceptance-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1025,6 +1026,12 @@ jobs:
       # refusals that write nothing, replay and reused ids, no Match or World, and two races on real connections.
       - name: Verify S6-04 private proposal review and decisions against real PostgreSQL
         run: npm run verify:matching-proposal-review-decisions:integration
+      # S6-05 (CP2): migration 0159 - the second recipient's acceptance, one shell over the frozen 0114 Mutual Match core:
+      # server-derived identities, the lock and the offered decision before the core, ACCEPT only while CW2-08 clears,
+      # one atomic Match / World / Introduction or nothing, anti-oracle refusals that write nothing, replay and reused ids,
+      # no ghost birth after a late failure, END still independent, and six races on real connections.
+      - name: Verify S6-05 Mutual Match acceptance against real PostgreSQL
+        run: npm run verify:matching-mutual-match-acceptance:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1090,6 +1097,9 @@ jobs:
             # S6-04: the proposal reads and decisions on the wire - anon and service_role refused, four neutral columns, a
             # stale-view decision (the cores' 40001) answered ONCE as CHANGED on every line, replay, reused id, withdrawal.
             POSTGREST_VERSION="$version" npm run --silent prove:proposal-decisions:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # S6-05: the acceptance on the wire - anon and service_role refused, ACCEPT offered to the second recipient only,
+            # the core's 40001 (a stale view, a stale first approval) answered ONCE on every line, MATCHED, replay, reused id.
+            POSTGREST_VERSION="$version" npm run --silent prove:mutual-match-acceptance:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

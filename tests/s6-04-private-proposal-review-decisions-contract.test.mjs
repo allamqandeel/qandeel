@@ -124,19 +124,23 @@ test('4 — the decisions are thin shells over the existing cores, lock first; w
 test('5 — the named exceptions: 0149 NO_BACKDOOR admits exactly the three decisions; 0150 names them as absorbers', () => {
   const nb = read('database/verify-migration-0149.mjs');
   assert.match(nb, /const S6_04_PROPOSAL_DECISIONS = \[\n  'public\.approve_my_matching_proposal_forward_v1\(uuid, uuid, uuid\)',\n  'public\.decline_my_matching_proposal_v1\(uuid, uuid, uuid\)',\n  'public\.withdraw_my_matching_proposal_v1\(uuid, uuid, uuid\)',\n\];/u);
-  assert.match(nb, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\)\]\.sort\(\)/u);
+  // RE-ANCHORED by S6-05 (2026-10-16, migration 0159): its one acceptance boundary is appended after the three decisions.
+  assert.match(nb, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\)\]\.sort\(\)/u);
   for (const probe of ['f6 the census refuses a fourth client-executable wrapper around a proposal decision core',
     'f7 the census refuses an S6-04 decision boundary granted beyond authenticated']) assert.ok(nb.includes(probe), probe);
   const guard = read('database/verify-migration-0150.mjs');
-  assert.match(guard, /'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',\n\];/u);
+  // RE-ANCHORED by S6-05 (2026-10-16, migration 0159): the acceptance absorber follows the three decisions.
+  assert.match(guard, /'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',\n  'accept_my_matching_proposal_v1',\n\];/u);
 });
 
 test('6 — the API takes a command id and a view only, calls the five boundaries with the caller token, logs and retries nothing', () => {
   const controller = code(`${API}/introduction-proposals.controller.ts`);
+  // RE-ANCHORED by S6-05 (2026-10-16, migration 0159): exactly one acceptance route follows the three decisions; it takes
+  // the same { commandId, viewId } body and no identity or World (tests/s6-05-mutual-match-acceptance-contract.test.mjs).
   assert.deepEqual([...controller.matchAll(/@(Get|Post)\('([^']+)'\)/gu)].map((m) => `${m[1]} ${m[2]}`), [
     'Get proposals', 'Get proposals/:proposalId', 'Post proposals/:proposalId/forward-approval',
-    'Post proposals/:proposalId/decline', 'Post proposals/:proposalId/withdrawal']);
-  assert.doesNotMatch(controller, /accept|userId|counterpart/iu);
+    'Post proposals/:proposalId/decline', 'Post proposals/:proposalId/withdrawal', 'Post proposals/:proposalId/acceptance']);
+  assert.doesNotMatch(controller, /userId|counterpart|worldId/iu);
   const service = code(`${API}/introduction-proposals.service.ts`);
   assert.match(service, /key !== 'commandId' && key !== 'viewId'/u, 'the body is exactly { commandId, viewId }');
   assert.doesNotMatch(service, /retry|setTimeout|console\.|Logger/u);

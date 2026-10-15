@@ -10,9 +10,12 @@ const PAGE_MAX = 20;
 export type ProposalStatus = 'AWAITING_YOU' | 'IN_PROGRESS' | 'CLOSED_BY_YOU' | 'NO_LONGER_AVAILABLE' | 'MATCH_CONCLUDED';
 const STATUSES: readonly ProposalStatus[] = ['AWAITING_YOU', 'IN_PROGRESS', 'CLOSED_BY_YOU', 'NO_LONGER_AVAILABLE', 'MATCH_CONCLUDED'];
 
-/** What the server says this human may do now. There is no acceptance: that is the Mutual Match commit (S6-05). */
-export type ProposalAction = 'APPROVE_FORWARD' | 'DECLINE' | 'WITHDRAW';
-const ACTIONS: readonly ProposalAction[] = ['APPROVE_FORWARD', 'DECLINE', 'WITHDRAW'];
+/**
+ * What the server says this human may do now. ACCEPT (S6-05, migration 0159) is the second recipient's Mutual Match; the
+ * server offers it only while the launch seam is cleared, so in production it never appears.
+ */
+export type ProposalAction = 'APPROVE_FORWARD' | 'DECLINE' | 'WITHDRAW' | 'ACCEPT';
+const ACTIONS: readonly ProposalAction[] = ['APPROVE_FORWARD', 'DECLINE', 'WITHDRAW', 'ACCEPT'];
 
 /**
  * RECORDED: committed (or the replay of the committed command). CHANGED: the view or the proposal moved; read again.
@@ -21,6 +24,13 @@ const ACTIONS: readonly ProposalAction[] = ['APPROVE_FORWARD', 'DECLINE', 'WITHD
  */
 export type ProposalDecisionOutcome = 'RECORDED' | 'CHANGED' | 'UNAVAILABLE' | 'NOT_AVAILABLE_NOW' | 'COMMAND_CONFLICT';
 const OUTCOMES: readonly ProposalDecisionOutcome[] = ['RECORDED', 'CHANGED', 'UNAVAILABLE', 'NOT_AVAILABLE_NOW', 'COMMAND_CONFLICT'];
+
+/**
+ * S6-05: MATCHED is the committed Mutual Match (or the replay of that commit), and only it names the born World. Every
+ * other answer means what it means for the decisions, with no World.
+ */
+export type ProposalAcceptanceOutcome = 'MATCHED' | 'CHANGED' | 'UNAVAILABLE' | 'NOT_AVAILABLE_NOW' | 'COMMAND_CONFLICT';
+const ACCEPTANCE_OUTCOMES: readonly ProposalAcceptanceOutcome[] = ['MATCHED', 'CHANGED', 'UNAVAILABLE', 'NOT_AVAILABLE_NOW', 'COMMAND_CONFLICT'];
 
 /** One private proposal as its recipient may see it: no name, conclusion, field, role, state, date or counterparty. */
 export interface PrivateProposal {
@@ -47,6 +57,15 @@ function decode(row: ProposalRow | undefined): PrivateProposal {
     proposalId: row.matching_proposal_id.toLowerCase(), viewId: row.recipient_view_id.toLowerCase(),
     status: row.neutral_outcome as ProposalStatus, actions: Object.freeze([...actions] as ProposalAction[]),
   });
+}
+
+/** A decision or acceptance body is exactly { commandId, viewId }, two identifiers; anything else is the client's own error. */
+function commandOf(body: unknown): { readonly commandId: string; readonly viewId: string } {
+  const value = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
+  if (Object.keys(value).some((key) => key !== 'commandId' && key !== 'viewId')
+      || typeof value.commandId !== 'string' || !UUID.test(value.commandId)
+      || typeof value.viewId !== 'string' || !UUID.test(value.viewId)) invalid();
+  return { commandId: (value.commandId as string).toLowerCase(), viewId: (value.viewId as string).toLowerCase() };
 }
 
 /**
@@ -79,19 +98,36 @@ export class IntroductionProposalsService {
 
   async decide(token: string, kind: ProposalDecisionKind, proposalId: string, body: unknown)
     : Promise<{ readonly outcome: ProposalDecisionOutcome; readonly proposal: PrivateProposal | null }> {
-    const value = body && typeof body === 'object' && !Array.isArray(body) ? body as Record<string, unknown> : {};
-    if (Object.keys(value).some((key) => key !== 'commandId' && key !== 'viewId')
-        || typeof value.commandId !== 'string' || !UUID.test(value.commandId)
-        || typeof value.viewId !== 'string' || !UUID.test(value.viewId)) invalid();
+    const { commandId, viewId } = commandOf(body);
     if (!UUID.test(proposalId)) return { outcome: 'UNAVAILABLE', proposal: null };
-    const rows = await this.guard(() => this.repository.decide(token, kind,
-      (value.commandId as string).toLowerCase(), proposalId.toLowerCase(), (value.viewId as string).toLowerCase()));
+    const rows = await this.guard(() => this.repository.decide(token, kind, commandId, proposalId.toLowerCase(), viewId));
     const outcome = OUTCOMES.find((candidate) => Array.isArray(rows) && rows.length === 1 && candidate === rows[0]?.outcome);
     if (outcome === undefined) return unavailable();
     // The answer carries what the human may see NOW, so a client never acts on the view it already had. If that read
     // fails, the decision's own answer still stands (proposal: null) and the client reads the list again.
     const proposal = await this.get(token, proposalId).then((answer) => answer.proposal, () => null);
     return { outcome, proposal };
+  }
+
+  /**
+   * S6-05 (D2) - the second recipient accepts their own proposal: one command id and the exact view, nothing else. The
+   * database commits the Mutual Match and its World atomically, or nothing, and answers one fixed word; MATCHED carries
+   * the World this human enters, and nothing else ever does. No retry here: a repeated request is the same command,
+   * answered from its committed row.
+   */
+  async accept(token: string, proposalId: string, body: unknown)
+    : Promise<{ readonly outcome: ProposalAcceptanceOutcome; readonly worldId: string | null; readonly proposal: PrivateProposal | null }> {
+    const { commandId, viewId } = commandOf(body);
+    if (!UUID.test(proposalId)) return { outcome: 'UNAVAILABLE', worldId: null, proposal: null };
+    const rows = await this.guard(() => this.repository.accept(token, commandId, proposalId.toLowerCase(), viewId));
+    const row = Array.isArray(rows) && rows.length === 1 ? rows[0] : undefined;
+    const outcome = ACCEPTANCE_OUTCOMES.find((candidate) => candidate === row?.outcome);
+    const world = row?.introduction_world_id;
+    if (outcome === undefined || Object.keys(row ?? {}).length !== 2
+        || (outcome === 'MATCHED' ? typeof world !== 'string' || !UUID.test(world) : world !== null)) return unavailable();
+    // As for the decisions: the answer carries what the human may see NOW; if that read fails the acceptance still stands.
+    const proposal = await this.get(token, proposalId).then((answer) => answer.proposal, () => null);
+    return { outcome, worldId: outcome === 'MATCHED' ? (world as string).toLowerCase() : null, proposal };
   }
 
   private async guard<T>(call: () => Promise<T>): Promise<T> {
