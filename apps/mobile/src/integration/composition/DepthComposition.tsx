@@ -91,7 +91,7 @@ import { ConversationOpening, FirstUseGate } from '../../account';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../../appearance';
 import { SettingsSurface } from '../../settings';
 import { UnderstandingDiscussionStrip, UnderstandingEntry, UnderstandingSurface } from '../../understanding';
-import { IntroductionsEntry, IntroductionsSurface } from '../../introductions';
+import { IntroductionsEntry, IntroductionsSurface, ProposalsSurface } from '../../introductions';
 import { ActivityEntry, ActivitySurface, AttentionStrip, type ProductSurface } from '../../activity';
 import { PermissionEducationSheet } from '../../push';
 import { GLOBAL_SWITCHER_HEIGHT, GlobalSwitcher, SharedWorldArea, type WorldArea } from '../../shared-world';
@@ -161,6 +161,9 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
   // S6-01 — the Introductions preparation, the same kind of local presentation choice as Understanding.
   const [introductionsShown, setIntroductionsShown] = useState(false);
   const [returnedFromIntroductions, setReturnedFromIntroductions] = useState(false);
+  // S6-04 — the private proposals space, opened from inside the Introductions experience; Back returns to it.
+  const [proposalsShown, setProposalsShown] = useState(false);
+  const [returnedFromProposals, setReturnedFromProposals] = useState(false);
   // A3-01 — Activity, the same kind of local presentation choice; Settings may open over it on its own page.
   const [activityShown, setActivityShown] = useState(false);
   const [returnedFromActivity, setReturnedFromActivity] = useState(false);
@@ -301,8 +304,17 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
     setIntroductionsShown(true);
   }, []);
   const closeIntroductions = useCallback(() => {
+    setProposalsShown(false);
     setIntroductionsShown(false);
     setReturnedFromIntroductions(true);
+  }, []);
+  const openProposals = useCallback(() => {
+    setReturnedFromProposals(false);
+    setProposalsShown(true);
+  }, []);
+  const closeProposals = useCallback(() => {
+    setProposalsShown(false);
+    setReturnedFromProposals(true);
   }, []);
   // Android system Back while the preparation is shown is its own Back (its editors take it first), and nothing else.
   useEffect(() => {
@@ -492,7 +504,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           <UnderstandingEntry language={locale.language} onOpen={openUnderstanding} focus={returnedFromUnderstanding && !understandingShown} />
         )}
         personalSecondEntry={onSignOut === undefined ? null : (
-          <IntroductionsEntry controller={runtime.introductions} language={locale.language} onOpen={openIntroductions} focus={returnedFromIntroductions && !introductionsShown} />
+          <IntroductionsEntry controller={runtime.introductions} proposals={runtime.introductionProposals} language={locale.language} onOpen={openIntroductions} focus={returnedFromIntroductions && !introductionsShown} />
         )}
         discussion={<UnderstandingDiscussionStrip controller={runtime.understanding} language={locale.language} insets={edges} />}
         chromeStart={onSignOut === undefined ? null : (
@@ -636,8 +648,19 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
           </View>
         ) : null}
         {introductionsShown && depth === 'CONVERSATION' && onSignOut !== undefined ? (
+          <View
+            style={StyleSheet.absoluteFill}
+            // Covered by the proposals space, the preparation is not read out from beneath it.
+            accessibilityElementsHidden={proposalsShown}
+            importantForAccessibility={proposalsShown ? 'no-hide-descendants' : 'auto'}
+          >
+            <IntroductionsSurface controller={runtime.introductions} language={locale.language} insets={edges} onBack={closeIntroductions}
+              proposals={runtime.introductionProposals} onOpenProposals={openProposals} focusProposals={returnedFromProposals && !proposalsShown} />
+          </View>
+        ) : null}
+        {introductionsShown && proposalsShown && depth === 'CONVERSATION' && onSignOut !== undefined && runtime.introductionProposals !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <IntroductionsSurface controller={runtime.introductions} language={locale.language} insets={edges} onBack={closeIntroductions} />
+            <ProposalsSurface controller={runtime.introductionProposals} language={locale.language} insets={edges} onBack={closeProposals} />
           </View>
         ) : null}
         {/*

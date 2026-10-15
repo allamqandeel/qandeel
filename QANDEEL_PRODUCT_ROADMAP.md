@@ -484,3 +484,23 @@ only; §6.9 … §6.11 stay as written.
   exist. Issue #322 stays open as a release blocker.
 - **Register:** `QAN-BL-MATCH-05` tombstoned from the merge; nothing admitted: 69 items (backlog §7).
 - **Next:** the Product Owner's review of the S6-03 pull request. No later Stage 6 task is started by this note.
+
+### 6.13 Execution note — 2026-10-15 (S6-03 merged; S6-04 implementation)
+**Recorded:** 2026-10-15 by S6-04, in the S6-04 pull request (not merged). This is a status note only; §6.9 … §6.12 stay
+as written.
+- **Merged:** S6-03 through PR #341 as `869b3ca63ec8dde830aaa31847588e7f03b55d05` (2026-10-15; not deployed). Its tombstone of
+  `QAN-BL-MATCH-05` holds from that merge.
+- **Started:** the Product Owner's S6-04 Task Contract v1.0 (D1–D12, 2026-10-15) started **S6-04 — Private Proposal
+  Review and Decisions** from `main` at `869b3ca6`. It is **IMPLEMENTED — READY FOR PRODUCT OWNER REVIEW — PRODUCT COPY
+  GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-04 record](docs/e2e/QANDEEL_S6_04_IMPLEMENTATION_RECORD_v1.md)).
+- **Delivered:** migration `0158` (the caller's own proposals and three decision boundaries over the existing cores), the
+  API routes and the mobile proposals space, with their verifier, live-PostgREST proof, tests and static contract, and the
+  consolidated Copy Gate package, which the Product Owner closed on 2026-10-15 (CG-2: M-01 kept, not displayed).
+- **Not delivered (each its own owner's):** the second recipient's acceptance, the Mutual Match and the Introduction
+  surfaces (S6-05); Activity, Direct Entry and notifications (S6-07); the real conclusion producer (Stage 8A); launch
+  clearance and policies (Stage 9 / CW2-08); enrollment (S6-07).
+- **Still closed:** every Matching and launch gate. No proposal can exist, so nothing is listed or decided in production.
+  Issue #322 stays open as a release blocker.
+- **Register:** nothing inherited, tombstoned or admitted: 69 items (backlog §7).
+- **Next:** the Product Owner's review of the S6-04 pull request and the merge decision. No later Stage 6 task is started
+  by this note.

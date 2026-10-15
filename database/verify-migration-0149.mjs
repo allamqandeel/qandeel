@@ -18,7 +18,9 @@
 //   X01                        two concurrent retained commands of one human serialize on the caller's own lock row
 //   NO_BACKDOOR                followed transitively, the only application-executable functions that reach a Matching
 //                              setup write are the four retained commands and - S6-02 (decision D1, migration 0155) - the
-//                              ONE named Introduction END boundary, authenticated-only; nothing wraps the six; no relation
+//                              ONE named Introduction END boundary, authenticated-only; and - S6-04 (Task Contract v1.0, WP2,
+//                              migration 0158) - the THREE named proposal decision boundaries over the frozen 0114 / 0120
+//                              cores, authenticated-only, each through the pair lock; nothing wraps the six; no relation
 //                              exposes Matching state
 //   DELETION_BASELINE_UNCHANGED  every Matching reference to an account is still RESTRICT; an existing footprint still
 //                              holds one, so 0149 erases nothing and QAN-BL-ACCT-01 stays open
@@ -31,6 +33,8 @@
 //          client-executable wrapper around one of the six
 //   f4..f5 S6-02 (D1): the one END exception is not a rule - a second client-executable wrapper around the END core and
 //          the END boundary granted to service_role are both refused
+//   f6..f7 S6-04 (WP2): the three decision boundaries are named exceptions, not a rule - a fourth client-executable
+//          wrapper around a decision core and a decision boundary granted to service_role are both refused
 //
 // Behaviour that needs Matching state from BEFORE 0149 is reached the only honest way on a database where 0149 is
 // already applied: as the owner with the exact human's claims, inside a transaction that rolls back. Every probe of a
@@ -61,6 +65,15 @@ const nameOf = (signature) => signature.slice('public.'.length, signature.indexO
 // END core. That core writes Matching participation state, so the transitive census reaches it - by name and exact
 // signature, and nothing else is admitted with it.
 const S6_02_INTRODUCTION_END = 'public.end_own_introduction_v1(uuid, uuid)';
+// S6-04 (Task Contract v1.0, WP2, migration 0158): the THREE authenticated proposal decision boundaries over the frozen
+// I-07B / I-07C human-decision cores. Each enters through the canonical two-human lock, which upserts both humans'
+// matching_setup_locks rows, so the transitive census reaches them - by name and exact signature, and nothing else is
+// admitted with them. The two S6-04 reads reach no Matching setup write and are not admitted here.
+const S6_04_PROPOSAL_DECISIONS = [
+  'public.approve_my_matching_proposal_forward_v1(uuid, uuid, uuid)',
+  'public.decline_my_matching_proposal_v1(uuid, uuid, uuid)',
+  'public.withdraw_my_matching_proposal_v1(uuid, uuid, uuid)',
+];
 
 /** The 0149 body with its own transaction control removed, so it can be re-applied inside a scenario that rolls back. */
 function migrationBody() {
@@ -154,13 +167,21 @@ async function verifyNoBackdoor() {
   }
   const executable = functions.filter((f) => reach.has(f.proname) && (f.public || f.anon || f.authenticated || f.service_role));
   const retainedWriters = SEC_MATCH_00_RETAINED.filter((fn) => fn !== MFN.SETUP).map(nameOf).sort();
-  assert.deepEqual(executable.map((f) => f.proname).sort(), [...retainedWriters, nameOf(S6_02_INTRODUCTION_END)].sort(),
-    'NO_BACKDOOR the only application-executable functions reaching a Matching setup write are the four retained commands and the one S6-02 END boundary');
+  assert.deepEqual(executable.map((f) => f.proname).sort(),
+    [...retainedWriters, nameOf(S6_02_INTRODUCTION_END), ...S6_04_PROPOSAL_DECISIONS.map(nameOf)].sort(),
+    'NO_BACKDOOR the only application-executable functions reaching a Matching setup write are the four retained commands, the one S6-02 END boundary and the three S6-04 decision boundaries');
   const [end] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
   [S6_02_INTRODUCTION_END, nameOf(S6_02_INTRODUCTION_END)]);
   assert.deepEqual(end, { overloads: 1, exact: true }, `NO_BACKDOOR the S6-02 exception is exactly ${S6_02_INTRODUCTION_END}, with no overload`);
   assert.equal(await rt.canExecute('authenticated', S6_02_INTRODUCTION_END), true, 'NO_BACKDOOR authenticated executes the one END boundary');
+  for (const decision of S6_04_PROPOSAL_DECISIONS) {
+    const [one] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
+       FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
+    [decision, nameOf(decision)]);
+    assert.deepEqual(one, { overloads: 1, exact: true }, `NO_BACKDOOR the S6-04 exception is exactly ${decision}, with no overload`);
+    assert.equal(await rt.canExecute('authenticated', decision), true, `NO_BACKDOOR authenticated executes ${decision}`);
+  }
   for (const f of executable) {
     assert.deepEqual([f.public, f.anon, f.service_role], [false, false, false], `NO_BACKDOOR ${f.proname} is authenticated-only`);
   }
@@ -495,6 +516,29 @@ async function verifyForwardSafety(report, humans) {
 
     await report.probe('f5 the census refuses the END boundary granted beyond authenticated', {
       pristine: `REVOKE EXECUTE ON FUNCTION ${S6_02_INTRODUCTION_END} FROM service_role`,
+      mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM service_role', ' TO service_role'),
+      marker: 'TO service_role',
+      apply: (text) => q(text),
+      reject: () => verifyNoBackdoor(),
+    });
+
+    // S6-04 (WP2): the three admitted decision boundaries are named exceptions, not a rule that any decision wrapper is fine.
+    await report.probe('f6 the census refuses a fourth client-executable wrapper around a proposal decision core', {
+      pristine: `CREATE FUNCTION public.s6_04_probe_decision_wrapper_v1() RETURNS SETOF record
+                 LANGUAGE sql SECURITY DEFINER SET search_path='' AS $probe$
+                   SELECT * FROM public.get_my_matching_setup_v1() $probe$`,
+      mutate: (text) => text.replace('SELECT * FROM public.get_my_matching_setup_v1()',
+        'SELECT * FROM public.decline_matching_proposal_as_first_core_v1(gen_random_uuid(), gen_random_uuid(), gen_random_uuid())'),
+      marker: 'decline_matching_proposal_as_first_core_v1',
+      apply: async (text) => {
+        await q(text);
+        await q('GRANT EXECUTE ON FUNCTION public.s6_04_probe_decision_wrapper_v1() TO authenticated');
+      },
+      reject: () => verifyNoBackdoor(),
+    });
+
+    await report.probe('f7 the census refuses an S6-04 decision boundary granted beyond authenticated', {
+      pristine: `REVOKE EXECUTE ON FUNCTION ${S6_04_PROPOSAL_DECISIONS[2]} FROM service_role`,
       mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM service_role', ' TO service_role'),
       marker: 'TO service_role',
       apply: (text) => q(text),

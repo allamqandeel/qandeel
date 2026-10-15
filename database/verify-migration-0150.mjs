@@ -112,10 +112,17 @@ const RETAINED = {
   post_own_public_discussion_v1: ['40001|PUBLIC_EXPERIENCE_STALE|public.ensure_public_identity_v1(uuid,uuid,text,text)', 'RACE_CONVERGING'],
   commit_own_public_experience_ready_v1: ['40001|PUBLIC_EXPERIENCE_STALE|public.commit_public_experience_ready_for_review_v1(uuid,uuid,uuid)', 'REPLAY_GUARDED'],
 };
-/** The entry points that reach a 40001 raise and absorb every one of them in a handler. */
+/**
+ * The entry points that reach a 40001 raise and absorb every one of them in a handler.
+ *
+ * S6-04 (migration 0158): the three proposal decision boundaries reach the frozen I-07B / I-07C cores' 40001 stale-view,
+ * stale-state and no-longer-valid refusals and answer each with the fixed word CHANGED from a handler that names PT409
+ * too, so none of them reaches PostgREST. Named here exactly; the analysis still proves the absorption from the catalog.
+ */
 const ABSORBED = [
   'complete_shared_world_qandeel_reply_v1', 'approve_shared_world_proposal_v1', 'accept_shared_membership_request_v1',
   'approve_shared_world_history_share_v1', 'complete_shared_semantic_place_v1', 'approve_own_public_package_v1',
+  'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',
 ];
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
 const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1'];
