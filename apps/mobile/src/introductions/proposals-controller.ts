@@ -75,10 +75,19 @@ export function createProposalsController({ transport, isCurrent, newCommandId =
   /** The last decision whose answer was lost: retried with the same id when the human repeats exactly that decision. */
   let pending: { readonly key: string; readonly id: string } | null = null;
 
-  const replace = (proposalId: string, proposal: PrivateProposal | null): readonly PrivateProposal[] =>
-    Object.freeze(proposal === null
-      ? state.proposals.filter((p) => p.proposalId !== proposalId)
-      : state.proposals.map((p) => (p.proposalId === proposalId ? proposal : p)));
+  const replace = (proposalId: string, proposal: PrivateProposal): readonly PrivateProposal[] =>
+    Object.freeze(state.proposals.map((p) => (p.proposalId === proposalId ? proposal : p)));
+
+  const refresh = () => {
+    const read = ++reads;
+    set({ status: state.status === 'READY' ? 'READY' : 'LOADING', loadingMore: false });
+    void transport.list(null).then((answer) => {
+      if (read !== reads) return;
+      if (answer.kind === 'READ') set({ status: 'READY', proposals: Object.freeze([...answer.proposals]), next: answer.next });
+      // A failed read shows nothing it cannot vouch for: no earlier page stays on screen with its decisions.
+      else set({ status: answer.kind, proposals: INITIAL.proposals, next: null });
+    });
+  };
 
   return {
     getState: () => state,
@@ -86,16 +95,7 @@ export function createProposalsController({ transport, isCurrent, newCommandId =
       listeners.add(listener);
       return () => listeners.delete(listener);
     },
-    refresh() {
-      const read = ++reads;
-      set({ status: state.status === 'READY' ? 'READY' : 'LOADING', loadingMore: false });
-      void transport.list(null).then((answer) => {
-        if (read !== reads) return;
-        if (answer.kind === 'READ') set({ status: 'READY', proposals: Object.freeze([...answer.proposals]), next: answer.next });
-        // A failed read shows nothing it cannot vouch for: no earlier page stays on screen with its decisions.
-        else set({ status: answer.kind, proposals: INITIAL.proposals, next: null });
-      });
-    },
+    refresh,
     more() {
       if (state.next === null || state.loadingMore || state.status !== 'READY') return;
       const read = reads;
@@ -117,7 +117,9 @@ export function createProposalsController({ transport, isCurrent, newCommandId =
       const key = `${action}|${proposalId}|${shown.viewId}`;
       const id = pending !== null && pending.key === key ? pending.id : newCommandId();
       pending = { key, id };
-      set({ busy: true, notice: null });
+      // A read already in flight answers about the time before this decision: it is dropped, never laid over its answer.
+      reads += 1;
+      set({ busy: true, notice: null, loadingMore: false });
       const answer = await transport.decide(KIND[action], proposalId, id, shown.viewId);
       if (!live()) return false;
       if (answer.kind === 'FAILED') {
@@ -134,7 +136,13 @@ export function createProposalsController({ transport, isCurrent, newCommandId =
         : answer.outcome === 'NOT_AVAILABLE_NOW' ? 'NOT_NOW'
           : answer.outcome === 'UNAVAILABLE' ? 'UNAVAILABLE'
             : 'CHANGED';
-      set({ busy: false, proposals: replace(proposalId, answer.proposal), notice });
+      if (answer.proposal === null) {
+        // The decision's answer stands; what the human may see now was not read with it, so the list is read again.
+        set({ busy: false, notice });
+        refresh();
+      } else {
+        set({ busy: false, proposals: replace(proposalId, answer.proposal), notice });
+      }
       return answer.outcome === 'RECORDED';
     },
     dismissNotice() {

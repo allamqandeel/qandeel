@@ -57,7 +57,7 @@ Activity and notification system; the Arabic Copy of earlier tasks; Issue #322.
 
 | Function | Who | What |
 |---|---|---|
-| `resolve_my_matching_proposal_presentation_v1(proposal)` | nobody | Calls the frozen `resolve_my_matching_proposal_v1` (so the NULL name / conclusion projection is the source), then derives the decisions offered now from the caller's own current view: first recipient + AWAITING_YOU → `APPROVE_FORWARD`, `DECLINE`; second recipient + AWAITING_YOU → `DECLINE`; first recipient + IN_PROGRESS (forward-approved or forwarded) → `WITHDRAW`; otherwise none. A live proposal past its deadline (database clock) reads `NO_LONGER_AVAILABLE` with no decision. `presented_actions` drops the two consequential decisions unless the CW2-08 seam answers `CLEARED`; withdrawal is never dropped |
+| `resolve_my_matching_proposal_presentation_v1(proposal)` | nobody | Calls the frozen `resolve_my_matching_proposal_v1` (so the NULL name / conclusion projection is the source), then derives the decisions offered now from the caller's own current view: first recipient + AWAITING_YOU → `APPROVE_FORWARD`, `DECLINE`; second recipient + AWAITING_YOU → `DECLINE`; first recipient + IN_PROGRESS (forward-approved or forwarded) → `WITHDRAW`; otherwise none. A live proposal past its deadline (database clock) or failing its own revalidation (the boolean of `resolve_matching_proposal_validity_v1`, never the reason) reads `NO_LONGER_AVAILABLE` with no decision, so what is read and what is accepted never disagree. `presented_actions` drops the two consequential decisions unless the CW2-08 seam answers `CLEARED`; withdrawal is never dropped |
 | `list_my_matching_proposals_v1(after, limit)` | authenticated | The caller's own delivered proposals (rows of their own recipient view state), newest first delivery first, at most 20 per page; the cursor is the last proposal of the previous page, and a cursor that is not the caller's own is the end of the list. Columns: view id, proposal id, neutral outcome, available actions |
 | `get_my_matching_proposal_v1(proposal)` | authenticated | The same row for one proposal, or no row for anything else |
 | `approve_my_matching_proposal_forward_v1(command, proposal, view)` | authenticated | over `approve_matching_proposal_forward_core_v1` |
@@ -116,31 +116,41 @@ exact head is the confirmation gate.
 | Neutral equality: second decline = expiry = staleness; competing Match NO_LONGER_AVAILABLE to both; withdrawal = expiry for the second recipient | `verify-0158` E01–E03 |
 | A superseded view: CHANGED, nothing written | `verify-0158` F02; `prove-0158` (on the wire, every PostgREST line) |
 | Past the deadline: NO_LONGER_AVAILABLE, every decision UNAVAILABLE, nothing written | `verify-0158` F03 |
-| Failed revalidation: UNAVAILABLE without a reason, nothing written | `verify-0158` F04 |
+| Failed revalidation: the reads say NO_LONGER_AVAILABLE with no decision for both recipients, every decision is UNAVAILABLE, nothing written (not even a lock-row version) | `verify-0158` F04 |
 | CW2-08 closed: no consequential decision presented or taken; withdrawal still works (D7) | `verify-0158` F05 |
 | Replay answers from the committed row; a reused id for another act or view is COMMAND_CONFLICT | `verify-0158` G01; `prove-0158` |
 | Races on two real connections: two decisions of one human; withdrawal against the second decline | `verify-0158` I01, I02 |
 | Result | **`verify-0158` 25 / 25** on a fresh database |
 | Regression on one fresh database with `0158` | `verify-0108` … `0122`, `0130`, `0132`, `0149` (24 / 24 with f6, f7), `0150` (28 / 28), `0154`, `0155`, `0156`, `0157`, `0158`: **24 / 24 verifiers pass** |
-| API | `introduction-proposals.spec.ts` **45 / 45**; with the lifecycle and census specs 148 / 148; `npm run build:api` passes |
-| Mobile | `proposals.test.tsx` **42 / 42**; `src/introductions` + `src/runtime-entry` + the S6-01 proof **368 / 368**; `tsc --noEmit` passes; full suite §3.1 |
+| API | `introduction-proposals.spec.ts` **46 / 46**; `npm run build:api` passes |
+| Mobile | `proposals.test.tsx` **45 / 45**; `src/introductions` + `src/runtime-entry` + the S6-01 proof + S4-04 **383 / 383**; `tsc --noEmit` passes; full suite §3.1 |
 | Static contract | `tests/s6-04-private-proposal-review-decisions-contract.test.mjs` **8 / 8**; root contracts §3.1 |
 
-### 3.1 Full suites
+### 3.1 Full suites (before the review fixes of §8; the affected suites were re-run after them)
 
-Recorded at the closing change of this pull request (§9): the root contract suite and the full mobile suite, each with its
-known baseline named.
+- Root contracts: **1383 / 1383**. `npm run test:database`: **1310 / 1310**.
+- Mobile, the whole suite: **2524 / 2530**. The six failures are the documented host-locale baseline (`ar-EG` on this
+  machine): three W1A-01 cases in `depth.test.tsx` and three session-end cases in `w2-account-access.test.tsx`, the same
+  without S6-04. A seventh failure caused by S6-04 (S4-04's "no Shared proposals read" matched `/introductions/proposals`)
+  was fixed by the re-anchor in §5.
+- After the §8 fixes: `verify-0158` 25 / 25, `verify-0149` 24 / 24, `verify-0150` 28 / 28, `verify-0112` 22 / 22,
+  `verify-0114` 35 / 35, `verify-0120` 27 / 27, `verify-0156` 31 / 31, `verify-0157` 33 / 33 on a fresh database; the
+  API, mobile and contract suites above.
 
 ## 4. Privacy and fail-closed report
 
 - **Identity** comes only from the verified session: the API passes the caller's token; every database boundary derives
   the human from `auth.uid()`; no boundary has an actor, recipient, role or state parameter (A02, API spec, contract 2).
 - **No oracle:** another human's proposal, one never offered, one the second recipient holds no view of yet and one that
-  does not exist are the same empty read and the same `UNAVAILABLE` decision, and none writes even a lock row (F01, B01).
+  does not exist are the same empty read and the same `UNAVAILABLE` decision; a non-member writes no lock row and a
+  member's refused attempt leaves no lock-row version behind (F01 compares `xmin`, B01). The one difference left is the
+  frozen 0112 design's: a member waits on the pair lock where a stranger is answered at once, which needs the proposal's
+  opaque id, never shown to a candidate before forwarding (review finding 9).
 - **No disclosure before Mutual Match:** the reads are built on the frozen NULL projection and return four columns; the
   API and the mobile transport refuse any row with any other field.
 - **Neutral endings:** every ending caused by the other side, by time or by a private invalidation reads
-  `NO_LONGER_AVAILABLE`; no reason, date or state name leaves the database.
+  `NO_LONGER_AVAILABLE` — a live proposal past its deadline or failing its revalidation already reads so, before any
+  sweeper — and no reason, date or state name leaves the database.
 - **Launch stays closed:** the two consequential decisions need CW2-08 `CLEARED`, which production never answers; nothing
   installs a policy, a producer or a seam; no proposal can exist. Withdrawal alone is ungated, as D7 and the core require.
 - **No mutation on refusal:** every refusal is raised inside the boundary's own block and rolled back with the lock upsert.
@@ -174,7 +184,21 @@ M-02 is not used. The gate is not closed and this record does not claim it.
 
 ## 8. Independent review
 
-Recorded at the closing change (§9).
+An independent read-only review of the two commits (identity, privileges, lock order, oracles, retry safety, API, mobile,
+verifier honesty, governance claims) found **no BLOCKER and no MAJOR**. Its findings and their resolution:
+
+| # | Severity | Finding | Resolution |
+|---|---|---|---|
+| 1 | MINOR | a proposal that failed its revalidation still read AWAITING_YOU with APPROVE_FORWARD offered while forward approval answered UNAVAILABLE: the read and the act disagreed, which could hint at a private change, and the UI could loop | **fixed**: the helper reads the validity boolean; such a proposal reads NO_LONGER_AVAILABLE with no decision, for both recipients (`verify-0158` F04 rewritten) |
+| 2 | MINOR | that divergence survived only as a task-local residue | resolved by fix 1; nothing to admit |
+| 3 | MINOR | F01's "not even a lock row" could not detect a committed upsert for a member | **fixed**: the footprint compares the lock rows' `xmin`; refusals are compared with it, replays (a frozen no-op lock upsert) without it (G01) |
+| 4 | MINOR | a list read in flight could overwrite the answer of a later decision | **fixed**: a decision drops every read in flight (mobile test) |
+| 5 | MINOR | the Introductions surface stayed readable under the proposals space; focus did not return to the way in | **fixed**: hidden from the screen reader while covered; focus returns to the cue's control (mobile test) |
+| 6 | MINOR | a recorded decision whose re-read failed was reported as unavailable / "could not be sent" | **fixed**: the API answers the decision with `proposal: null`; the controller keeps the list and reads it again (API and mobile tests) |
+| 7 | NIT | the S4-04 re-anchor excluded every `/introductions/` URL | **fixed**: narrowed to `/introductions/proposals` |
+| 8 | NIT | a command id reused for another operation on the same proposal answers NOT_AVAILABLE_NOW / UNAVAILABLE rather than COMMAND_CONFLICT; it never commits (`append_…` refuses it) | accepted as recorded; the shipped client never reuses an id across operations |
+| 9 | NIT | a member waits on the pair lock where a stranger is answered at once (the 0112 design) | accepted as recorded in §4; it needs the proposal's opaque id |
+| 10 | NIT | until `0158` is hosted, the entry's read answers 503 (drawn as nothing) | an operational note for `HOSTED-DEPLOY-01`: deploy `0158` with the API |
 
 ## 9. Backlog disposition (BG-08) and locator reconciliation
 
@@ -196,6 +220,5 @@ Recorded at the closing change (§9).
 | Acceptance by the second recipient, Mutual Match, Introduction surfaces | S6-05 | not offered anywhere in S6-04 |
 | Activity, Direct Entry, push for a delivered proposal | S6-07 | S6-04's cue is in-app only |
 | A real proposal at all | Stage 8A (producer), Stage 9 / CW2-08 (clearance, policies), S6-07 (enrollment) | none can exist today |
-| A proposal that failed its own revalidation still reads AWAITING_YOU until the sweeper stales it; forward approval answers UNAVAILABLE meanwhile | Stage 9 (sweeper activation) | the frozen projection decides the outcome; the S6-04 reads add no validity read, so no private change is surfaced earlier than the existing mechanism does |
 | TalkBack on a device (AC-09) | S6-04, before merge | jest proves the roles, labels, heading focus, live regions, 44-point targets, RTL / LTR and Back; a native TalkBack run on an emulator (a proof stand-in serving synthetic proposals, as S6-01 did) has not been executed yet and is reported open, not claimed |
-| `0158` not deployed | `HOSTED-DEPLOY-01` | with `0149` / `0150` in the same controlled window |
+| `0158` not deployed | `HOSTED-DEPLOY-01` | with `0149` / `0150` in the same controlled window, and before or with the API that reads it (review finding 10) |

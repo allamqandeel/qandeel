@@ -338,20 +338,34 @@ function Review({ ctx, copy, proposal }: { readonly ctx: PartContext; readonly c
  * way back to the space whenever the human has any. Never a count, never repeated, never urgent; nothing when there is
  * no proposal at all.
  */
-export function ProposalsCue({ controller, language, onOpen }: {
+export function ProposalsCue({ controller, language, onOpen, focus = false }: {
   readonly controller: ProposalsController; readonly language: ChromeLanguage; readonly onOpen: () => void;
+  /** Put the screen reader back on the way into the space once, when the human returns from it. */
+  readonly focus?: boolean;
 }) {
   const palette = usePalette();
   const copy = proposalsCopy(language);
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const ctx: PartContext = { palette, language, writing, busy: false };
-  if (state.status !== 'READY' || state.proposals.length === 0) return null;
+  const node = useRef<View | null>(null);
+  const shown = state.status === 'READY' && state.proposals.length > 0;
+  useEffect(() => {
+    if (!shown || !focus || node.current === null) return;
+    const handle = findNodeHandle(node.current);
+    if (handle !== null) AccessibilityInfo.setAccessibilityFocus(handle);
+  }, [focus, shown]);
+  if (!shown) return null;
   const waiting = awaitsDecision(state);
+  const label = waiting ? copy.openSpace : copy.spaceTitle;
   return (
     <View testID="qandeel-proposals-cue" style={{ paddingTop: 4, paddingBottom: 4 }}>
       {waiting ? <Para ctx={ctx} text={copy.arrival} testID="qandeel-proposals-arrival" /> : null}
-      <Action ctx={ctx} inline label={waiting ? copy.openSpace : copy.spaceTitle} onPress={onOpen} testID="qandeel-proposals-open" />
+      <Control palette={palette} language={language} accessibilityLabel={label} onPress={onOpen} testID="qandeel-proposals-open"
+        controlRef={(value) => { node.current = value; }}
+        style={{ alignSelf: 'flex-start', marginStart: ROW_START - 8, paddingHorizontal: 8, minHeight: MIN_TARGET, justifyContent: 'center' }}>
+        <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{label}</Text>
+      </Control>
     </View>
   );
 }

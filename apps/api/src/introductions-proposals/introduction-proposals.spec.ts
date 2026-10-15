@@ -114,6 +114,12 @@ describe('S6-04 - IntroductionProposalsService', () => {
       expect(decide).not.toHaveBeenCalled();
     });
 
+    it('a decision stands when the read after it fails: its answer, with no proposal', async () => {
+      get.mockRejectedValue(new DataApiError(503));
+      await expect(service.decide('token', 'decline', PROPOSAL, { commandId: COMMAND, viewId: VIEW })).resolves.toEqual({ outcome: 'RECORDED', proposal: null });
+      expect(decide).toHaveBeenCalledTimes(1);
+    });
+
     it('a proposal that is not an identifier is UNAVAILABLE without a database call', async () => {
       await expect(service.decide('token', 'decline', 'nope', { commandId: COMMAND, viewId: VIEW })).resolves.toEqual({ outcome: 'UNAVAILABLE', proposal: null });
       expect(decide).not.toHaveBeenCalled();

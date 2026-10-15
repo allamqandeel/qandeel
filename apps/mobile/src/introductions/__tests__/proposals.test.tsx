@@ -327,6 +327,51 @@ describe('the controller', () => {
     expect(fake.decisions).toEqual([]);
   });
 
+  it('a read in flight when a decision is taken is dropped, never laid over the answer of the decision', async () => {
+    const fake = server([proposal()]);
+    let release: (read: ProposalsRead) => void = () => undefined;
+    let reads = 0;
+    const controller = createProposalsController({
+      transport: {
+        // The first read answers at once; the second answers only after the decision, with the page from before it.
+        list: (after) => (++reads === 1 ? fake.transport.list(after) : new Promise<ProposalsRead>((resolve) => { release = resolve; })),
+        decide: async () => ({ kind: 'ANSWERED' as const, outcome: 'RECORDED' as const, proposal: proposal({ status: 'IN_PROGRESS', actions: ['WITHDRAW'] }) }),
+      },
+      isCurrent: () => true,
+    });
+    controller.refresh();
+    await act(async () => { await flush(); });
+    controller.refresh();
+    await controller.decide(P1, 'APPROVE_FORWARD');
+    release({ kind: 'READ', proposals: [proposal()], next: null });
+    await act(async () => { await flush(); });
+    expect(controller.getState().proposals).toEqual([proposal({ status: 'IN_PROGRESS', actions: ['WITHDRAW'] })]);
+  });
+
+  it('a decision answered without the proposal keeps the list and reads it again', async () => {
+    const fake = server([proposal()]);
+    fake.answer({ kind: 'ANSWERED', outcome: 'RECORDED', proposal: null });
+    const controller = createProposalsController({ transport: fake.transport, isCurrent: () => true });
+    controller.refresh();
+    await act(async () => { await flush(); });
+    fake.set({ kind: 'READ', proposals: [proposal({ status: 'CLOSED_BY_YOU', actions: [] })], next: null });
+    await controller.decide(P1, 'DECLINE');
+    await act(async () => { await flush(); });
+    expect(fake.reads).toEqual([null, null]);
+    expect(controller.getState().proposals).toEqual([proposal({ status: 'CLOSED_BY_YOU', actions: [] })]);
+    expect(controller.getState().notice).toBe('RECORDED_DECLINE');
+  });
+
+  it('returning from the space puts the screen reader back on the way into it', async () => {
+    const controller = createProposalsController({ transport: server([proposal()]).transport, isCurrent: () => true });
+    controller.refresh();
+    await act(async () => { await flush(); });
+    const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
+    await render(<AppearanceProvider authority={appearance()}><ProposalsCue controller={controller} language="ar" onOpen={() => undefined} focus /></AppearanceProvider>);
+    await act(async () => { await flush(); });
+    expect(focus).toHaveBeenCalledWith(4242);
+  });
+
   it('a failed read shows nothing it cannot vouch for', async () => {
     const fake = server([proposal()]);
     const controller = createProposalsController({ transport: fake.transport, isCurrent: () => true });

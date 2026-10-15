@@ -88,8 +88,9 @@ export class IntroductionProposalsService {
       (value.commandId as string).toLowerCase(), proposalId.toLowerCase(), (value.viewId as string).toLowerCase()));
     const outcome = OUTCOMES.find((candidate) => Array.isArray(rows) && rows.length === 1 && candidate === rows[0]?.outcome);
     if (outcome === undefined) return unavailable();
-    // The answer carries what the human may see NOW, so a client never acts on the view it already had.
-    const { proposal } = await this.get(token, proposalId);
+    // The answer carries what the human may see NOW, so a client never acts on the view it already had. If that read
+    // fails, the decision's own answer still stands (proposal: null) and the client reads the list again.
+    const proposal = await this.get(token, proposalId).then((answer) => answer.proposal, () => null);
     return { outcome, proposal };
   }
 

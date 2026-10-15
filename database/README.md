@@ -4761,7 +4761,8 @@ changes. Record: [S6-04 implementation record](../docs/e2e/QANDEEL_S6_04_IMPLEME
 resolve_my_matching_proposal_presentation_v1   nobody: the frozen NULL projection (0156) plus the decisions offered now -
                                                first recipient AWAITING_YOU: APPROVE_FORWARD, DECLINE; second recipient
                                                AWAITING_YOU: DECLINE; first recipient IN_PROGRESS: WITHDRAW; a live
-                                               proposal past its deadline (database clock) reads NO_LONGER_AVAILABLE
+                                               proposal past its deadline (database clock) or failing its own
+                                               revalidation reads NO_LONGER_AVAILABLE
 list_my_matching_proposals_v1 / get_my_…_v1    authenticated: the caller's own delivered proposals (<= 20 per page,
                                                non-oracle cursor) or one of them; four columns, no name or conclusion
 approve_my_matching_proposal_forward_v1        authenticated: lock -> offered? -> the 0114 core (CW2-08 last)

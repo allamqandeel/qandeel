@@ -48,6 +48,8 @@ export interface IntroductionsSurfaceProps {
   /** S6-04: this human's own private proposals; the quiet cue and the way into their space. Absent: nothing is drawn. */
   readonly proposals?: ProposalsController;
   readonly onOpenProposals?: () => void;
+  /** Put the screen reader back on the way into the proposals once, when the human returns from them. */
+  readonly focusProposals?: boolean;
 }
 
 const HEADER_MIN_HEIGHT = 48;
@@ -260,7 +262,7 @@ function PartDetails({ ctx, copy, draft, group, onEdit }: {
 
 // ------------------------------------------------------------------------------------------------------------------
 
-export function IntroductionsSurface({ controller, language, insets, onBack, proposals, onOpenProposals }: IntroductionsSurfaceProps) {
+export function IntroductionsSurface({ controller, language, insets, onBack, proposals, onOpenProposals, focusProposals = false }: IntroductionsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const reduceMotion = useReduceMotion();
@@ -620,7 +622,7 @@ export function IntroductionsSurface({ controller, language, insets, onBack, pro
       <View testID="qandeel-introductions-notice" accessibilityLiveRegion="polite">
         {notice === null ? null : <Para ctx={ctx} text={notice} role="supporting" color={state.notice === 'CHANGED_ELSEWHERE' ? palette.secondary : palette.error} />}
       </View>
-      {proposals === undefined || onOpenProposals === undefined ? null : <ProposalsCue controller={proposals} language={language} onOpen={onOpenProposals} />}
+      {proposals === undefined || onOpenProposals === undefined ? null : <ProposalsCue controller={proposals} language={language} onOpen={onOpenProposals} focus={focusProposals} />}
       <ScrollView
         ref={scrollRef}
         testID="qandeel-introductions-body"

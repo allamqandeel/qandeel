@@ -79,6 +79,9 @@ async function footprint(proposal, humans = []) {
     approvalBindings: await count(MATCH.BINDINGS, 'proposal_id = $1', [proposal]),
     views: await count(P.VIEWS, 'proposal_id = $1', [proposal]),
     locks: await count('public.matching_setup_locks', 'user_id = ANY($1::uuid[])', [humans]),
+    // A rolled-back upsert leaves the row's version unchanged; a committed one, even with the same values, does not.
+    lockVersions: (await rows('SELECT user_id::text u, xmin::text x FROM public.matching_setup_locks WHERE user_id = ANY($1::uuid[]) ORDER BY 1', [humans]))
+      .map((r) => `${r.u}:${r.x}`),
   };
 }
 
@@ -371,7 +374,8 @@ async function verifyRuntime(report, humans, gateSeam) {
           assert.equal((await decide(fn, human, randomUUID(), f.firstView)).outcome, answer.outcome, 'F01 the same as a guessed id');
         }
       }
-      assert.deepEqual(await footprint(f.proposal, [first, a, outsider, fresh]), before, 'F01 not even a lock row was written');
+      assert.deepEqual(await footprint(f.proposal, [first, a, outsider, fresh]), before,
+        'F01 not even a lock row was written - for the candidate, a member whose row exists, no row version changed either');
       assert.equal(await count('public.matching_setup_locks', 'user_id = ANY($1::uuid[])', [[outsider, fresh]]), 0);
     });
 
@@ -405,15 +409,26 @@ async function verifyRuntime(report, humans, gateSeam) {
       }
     });
 
-    await report.isolated('F04 a proposal that failed its revalidation is UNAVAILABLE to forward approval (no reason), and writes nothing', async () => {
-      await facts([[first, 'FEMALE', 'Mona'], [a, 'MALE', 'Omar']]);
+    await report.isolated('F04 a proposal that failed its revalidation reads NO_LONGER_AVAILABLE, decides nothing, and writes nothing', async () => {
+      await facts([[first, 'FEMALE', 'Mona'], [a, 'MALE', 'Omar'], [b, 'MALE', 'Ali']]);
       const f = await rt.bringToOffered(first, a);
-      await actAs(a);
-      await rt.pause(randomUUID(), f.byUser[a].event);
+      const g = await rt.bringToForwarded(first, b);
+      for (const [human, other] of [[a, f], [b, g]]) {
+        await actAs(human);
+        await rt.pause(randomUUID(), other.byUser[human].event);
+      }
       await asRole('postgres');
-      const before = await footprint(f.proposal, [first, a]);
-      assert.equal((await approve(first, f.proposal, f.firstView)).outcome, 'UNAVAILABLE');
-      assert.deepEqual(await footprint(f.proposal, [first, a]), before);
+      assert.equal((await rt.proposalRow(f.proposal)).proposal_state, 'OFFERED_TO_FIRST', 'F04 nothing has staled it yet');
+      // The read and the act agree: nothing is offered, so no refused-but-offered decision can reveal a private change.
+      assert.deepEqual(await shown(first, f.proposal), { outcome: 'NO_LONGER_AVAILABLE', actions: [], view: f.firstView });
+      assert.deepEqual(await shown(b, g.proposal), { outcome: 'NO_LONGER_AVAILABLE', actions: [], view: g.secondView });
+      assert.deepEqual(await shown(first, g.proposal), { outcome: 'NO_LONGER_AVAILABLE', actions: [], view: g.firstView });
+      for (const [human, p, view, fns] of [[first, f.proposal, f.firstView, [FN.APPROVE, FN.DECLINE]], [b, g.proposal, g.secondView, [FN.DECLINE]],
+        [first, g.proposal, g.firstView, [FN.WITHDRAW]]]) {
+        const before = await footprint(p, [first, a, b]);
+        for (const fn of fns) assert.equal((await decide(fn, human, p, view)).outcome, 'UNAVAILABLE', `F04 ${fn}`);
+        assert.deepEqual(await footprint(p, [first, a, b]), before, 'F04 nothing written, not even a lock row version');
+      }
     });
 
     await report.isolated('F05 with the launch seam closed: no consequential decision is presented or taken; withdrawal still works (D7)', async () => {
@@ -439,20 +454,25 @@ async function verifyRuntime(report, humans, gateSeam) {
       const f = await rt.bringToOffered(first, a);
       const command = randomUUID();
       const one = await approve(first, f.proposal, f.firstView, command);
-      const after = await footprint(f.proposal, [first, a]);
+      // A replay answers from the committed row and writes no state. It passes the frozen pair lock, whose upsert is a
+      // no-op version bump (the cores do the same when replayed directly), so a replay is compared without row versions;
+      // a refusal rolls back and is compared WITH them.
+      const semantic = async (p, hs) => { const { lockVersions, ...rest } = await footprint(p, hs); return rest; };
+      const after = await semantic(f.proposal, [first, a]);
       const again = await approve(first, f.proposal, f.firstView, command);
       assert.deepEqual([again.outcome, again.neutral_outcome], [one.outcome, one.neutral_outcome], 'G01 the same answer');
-      assert.deepEqual(await footprint(f.proposal, [first, a]), after, 'G01 and nothing new');
+      assert.deepEqual(await semantic(f.proposal, [first, a]), after, 'G01 and nothing new');
+      const settled = await footprint(f.proposal, [first, a]);
       assert.equal((await withdraw(first, f.proposal, f.firstView, command)).outcome, 'COMMAND_CONFLICT', 'G01 the approval id reused to withdraw');
       assert.equal((await approve(first, f.proposal, randomUUID(), command)).outcome, 'COMMAND_CONFLICT', 'G01 the approval id with another view');
-      assert.deepEqual(await footprint(f.proposal, [first, a]), after);
+      assert.deepEqual(await footprint(f.proposal, [first, a]), settled, 'G01 the refusals write nothing, not even a lock row version');
       // A committed withdrawal replays even though the proposal is no longer live, with the durable prior state.
       const g = await rt.bringToApproved(first, b);
       const w = randomUUID();
       assert.equal((await withdraw(first, g.proposal, g.firstView, w)).outcome, 'RECORDED');
-      const done = await footprint(g.proposal, [first, b]);
+      const done = await semantic(g.proposal, [first, b]);
       assert.deepEqual(await withdraw(first, g.proposal, g.firstView, w), { outcome: 'RECORDED', neutral_outcome: 'CLOSED_BY_YOU', command: w });
-      assert.deepEqual(await footprint(g.proposal, [first, b]), done);
+      assert.deepEqual(await semantic(g.proposal, [first, b]), done);
     });
 
     await report.isolated('H01 nothing any S6-04 boundary did produced a Match, a World, an Introduction or a claim', async () => {

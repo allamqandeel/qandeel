@@ -46,12 +46,17 @@
 -- NOT_EVALUATED in production, so the listing presents neither and the cores refuse both. WITHDRAW ends the human's own
 -- exposure and is deliberately ungated, exactly as the 0112 core is (D7): it is never hidden because launch is closed.
 --
--- ## Clock enforcement after expiry
+-- ## Clock enforcement after expiry, and a proposal that no longer revalidates
 --
 -- The decision cores never read the proposal deadline; only expiry and the sweeper do (0112 section 8, 0157). A live
 -- proposal whose deadline has passed is therefore presented as NO_LONGER_AVAILABLE with no decision - the answer an
 -- expiry already gives - and every decision refuses it, deciding against the database clock read AFTER the canonical
 -- two-human lock, so a decision that waited past the deadline decides nothing (the 0120 ASSURE-F01 lesson).
+--
+-- In the same way, a live proposal that fails its own revalidation (resolve_matching_proposal_validity_v1: a pause, an
+-- opt-out, a moved authority...) is presented as NO_LONGER_AVAILABLE with no decision, the answer the sweeper's STALE
+-- will give. What is read and what is accepted therefore never disagree, so no private change can be inferred from a
+-- decision refused while the read still offers it; only the boolean is read, never the private reason.
 --
 -- ## Order, idempotency and refusals
 --
@@ -66,7 +71,8 @@
 --   CHANGED           the exact view or the proposal moved underneath the caller (the cores' 40001): read again
 --                     (the one 40001 that is not a move - the proposal failing its own revalidation - is UNAVAILABLE)
 --   UNAVAILABLE       nothing to decide: not theirs, not offered to them, no longer live, past its deadline, no longer
---                     valid, or not a decision offered now - one answer, so it reveals none of those reasons
+--                     valid, or not a decision offered now - one answer, so it reveals none of those reasons (and the
+--                     reads already present each of those as NO_LONGER_AVAILABLE or as no row)
 --   NOT_AVAILABLE_NOW the CW2-08 seam did not answer CLEARED (55000)
 --   COMMAND_CONFLICT  this command id already names a different request (23505)
 --
@@ -96,7 +102,7 @@ DECLARE
   role_of text;
   outcome text;
   actions text[] := ARRAY[]::text[];
-  gate record;
+  valid boolean;
 BEGIN
   IF u IS NULL THEN RAISE EXCEPTION 'MATCHING_AUTHENTICATION_REQUIRED' USING ERRCODE = '42501'; END IF;
   -- The frozen neutral projection: the caller's own current view, or the bounded not-found (P0002).
@@ -105,8 +111,12 @@ BEGIN
   SELECT v.recipient_role INTO role_of FROM public.matching_recipient_proposal_views v WHERE v.id = mine.recipient_view_id;
   outcome := mine.neutral_outcome;
 
-  IF outcome IN ('AWAITING_YOU', 'IN_PROGRESS') AND proposal.expires_at <= clock_timestamp() THEN
-    -- Past its deadline a live proposal decides nothing and reads as any other ending does.
+  IF outcome IN ('AWAITING_YOU', 'IN_PROGRESS') THEN
+    SELECT v.still_valid INTO valid FROM public.resolve_matching_proposal_validity_v1(p_proposal_id) v;
+  END IF;
+
+  IF outcome IN ('AWAITING_YOU', 'IN_PROGRESS') AND (proposal.expires_at <= clock_timestamp() OR valid IS NOT TRUE) THEN
+    -- Past its deadline, or no longer valid, a live proposal decides nothing and reads as any other ending does.
     outcome := 'NO_LONGER_AVAILABLE';
   ELSIF outcome = 'AWAITING_YOU' AND role_of = 'FIRST_RECIPIENT' THEN
     actions := ARRAY['APPROVE_FORWARD', 'DECLINE'];
@@ -128,7 +138,7 @@ END$$;
 COMMENT ON FUNCTION public.resolve_my_matching_proposal_presentation_v1(uuid) IS
   'S6-04: the frozen neutral projection of the caller''s own current view plus the decisions this human may take now '
   '(decision_actions: whatever the launch seam says; presented_actions: what may be shown). A live proposal past its '
-  'deadline reads NO_LONGER_AVAILABLE and offers nothing. Private: executable by nobody; role and state never leave '
+  'deadline, or failing its own revalidation, reads NO_LONGER_AVAILABLE and offers nothing. Private: executable by nobody; role and state never leave '
   'the S6-04 boundaries.';
 
 -- ---------------------------------------------------------------------------

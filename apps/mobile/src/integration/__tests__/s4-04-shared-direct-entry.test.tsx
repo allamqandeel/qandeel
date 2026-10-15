@@ -277,7 +277,7 @@ describe('S4-04 C — per-World mutes in Notifications & Activity', () => {
     expect(sharedReads(h).filter((c) => !c.url.endsWith('/alerts'))).toHaveLength(0);
     // RE-ANCHORED by S6-04 (2026-10-15): the Personal row's Introductions entry now reads the reader's OWN private
     // Introduction proposals (`/introductions/proposals`), which is not a Shared World read; Shared proposals stay unread.
-    expect(h.http.calls.filter((c) => !c.url.includes('/introductions/')
+    expect(h.http.calls.filter((c) => !c.url.includes('/introductions/proposals')
       && (c.url.includes('/messages') || c.url.includes('/leave') || c.url.includes('/proposals')))).toHaveLength(0);
     h.dispose();
   });
