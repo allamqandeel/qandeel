@@ -4642,3 +4642,63 @@ owner and executors; the six `0149` commands still closed) and proves: closed ga
 idempotent command ids and field validation; isolation; the consent and its bounded reader (SELF / ACTIVE / four classes /
 at most 12; no Memory, attribution, Hypothesis or HIM write); revocation, first-write and deletion races on two
 connections (committed fixtures, removed); and the governed erasure ERASED with zero rows left.
+
+## S6-02 - Introduction Privacy Isolation & Safe END Boundary (migration 0155)
+
+`0155_introduction_privacy_isolation_end_boundary_v1.sql` is the database part of `S6-02` under the Product Owner's
+approved Task Contract v1.2 and its implementation authorization (2026-10-15; decisions A, A1, D1-D5). No historical
+migration is edited. Record: [S6-02 implementation record](../docs/e2e/QANDEEL_S6_02_IMPLEMENTATION_RECORD_v1.md).
+
+**Why.** The Stage 4 Shared reads (`0138`-`0141`, `0148`) and S5-02 Public authoring admitted a World by its lifecycle
+alone and projected `public.users.name`. A Matching-born World (`shared_worlds.birth_basis = 'MUTUAL_MATCH'`) would
+have exposed each matched person's account Name, inside its Introduction and after SUCCESS (`QAN-BL-MATCH-02`), and no
+safe END boundary existed over the frozen `0116` core.
+
+**What 0155 does.**
+
+```text
+shared_private.shared_person_name_v1          the ONE display-name projection: account Name for an ACCEPTED_INVITATION
+                                              World (unchanged); otherwise only the handoff first name presented to this
+                                              viewer about this subject, every binding proven, else NULL (the viewer's own
+                                              row is NULL); never users.name, a 0154 draft or a FULL_NAME disclosure
+shared_private.is_introduction_era_history_   GATE-35 / D5: Matching-born World items are Introduction-era unless they
+  item_v1 / without_introduction_era_         occurred strictly after the World's valid SUCCESS; derived, never stored
+  history_v1
+public.end_own_introduction_v1(command,       the ONE authenticated, ungated END over the frozen 0116 core; participation
+  world)                                      events derived from the command (LOWER / HIGHER); ENDED | ALREADY_SETTLED |
+                                              UNAVAILABLE; an outsider is UNAVAILABLE before the core runs
+27 forward CREATE OR REPLACE                  Stage 4 reads, send and QANDEEL reply work refuse an Introduction-phase World
+                                              (D4); every name projection uses the projection (A / D2); propose / approve /
+                                              accept refuse ADD and REJOIN in a Matching-born World (A1 / D3); Replay
+                                              capture and source currency filter the visible set; S5-02 Public authoring
+                                              neither lists nor packages Introduction-era material
+```
+
+**Grants.** `authenticated` runs `end_own_introduction_v1` and nothing else new; `PUBLIC`, `anon` and `service_role`
+do not. The three helpers are executable by no application role. Every redefinition keeps its signature, its
+`RETURNS TABLE`, its owner and its ACL. The frozen I-04 / I-07 cores (`0083`-`0086`, `0116`, `0118`, `0119`, `0143`)
+are unchanged, the `0119` resolver keeps its exact consumer set, and no Replay relation gains a column.
+
+**`verify-migration-0149.mjs` (Product Owner decision D1).** `NO_BACKDOOR` admits exactly the four retained commands and
+`public.end_own_introduction_v1(uuid, uuid)` by name and signature, authenticated-only; two new probes prove that a
+second client-executable wrapper around the END core (f4) and the END boundary granted to `service_role` (f5) are both
+still refused. The six `0149` commands stay closed.
+
+**What it does not do.** No change to `0111`'s first-name resolver or to `0154` (wiring the confirmed first name is
+`S6-03`'s, `QAN-BL-MATCH-05`); no Introduction surface, SUCCESS boundary or FULL_NAME display consent (`S6-05` /
+`S6-06`); no launch gate; no `40001`.
+
+**Deployment.** Not deployed; nothing opens a gate. `QAN-BL-PROD-06` owns the hosted catch-up.
+
+```sh
+npm run verify:introduction-privacy-end-boundary:integration
+npm run prove:introduction-end:postgrest
+```
+
+`verify-migration-0155.mjs` needs `DATABASE_URL` pointing at a FULLY migrated database. It builds every Matching-born
+World through the real I-07A-I-07D boundaries (seams cleared and restored byte for byte) and calls every read and command
+as the client does (`authenticated` with claims, or `service_role`). It proves the posture (P01-P06), the Introduction
+fences (I01-I04), the names before and after SUCCESS, closed and ordinary (N01-N03), A1 (M01-M05), the END boundary
+(E01-E08), Replay including the SUCCESS-instant boundary and an already-captured source (R01-R06), Public authoring
+(A01-A02), and END x END / END x SUCCESS on two real connections (X01-X02; committed fixtures, removed). The wire proof
+runs inside API CI's PostgREST loop on every supported line.

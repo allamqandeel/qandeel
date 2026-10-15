@@ -91,6 +91,8 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /introductions/preparation/discard': 'AUTHENTICATED',
   'POST /introductions/preparation/assistance/grant': 'AUTHENTICATED',
   'POST /introductions/preparation/assistance/revoke': 'AUTHENTICATED',
+  // The Introduction's unilateral END (S6-02). An exit right, never throttled like a credential act.
+  'POST /introductions/worlds/:worldId/end': 'AUTHENTICATED',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',

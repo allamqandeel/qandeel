@@ -443,3 +443,23 @@ stays as written.
 - **Register:** `QAN-BL-MATCH-01` is re-owned to `S6-07` (mandatory dependency `ACCT-DEL-01`), effective from the merge.
   The register stays at 68 items (backlog §7).
 - **Next:** the Product Owner's review of the S6-01 pull request. No later Stage 6 task is started by this note.
+
+### 6.11 Execution note — 2026-10-15 (S6-01 merged; S6-02 implementation and closing change)
+**Recorded:** 2026-10-15 by S6-02 at its closing change, in the S6-02 pull request (not merged). This is a status note
+only; §6.9 and §6.10 stay as written.
+- **Merged:** S6-01 through PR #339 as `2224c47f3dc83b16ad011ccbbdcf2aac19bf41f5` (2026-10-14; not deployed). Its re-owning
+  of `QAN-BL-MATCH-01` to S6-07 holds from that merge.
+- **Started and closed:** the Product Owner's implementation authorization of the approved Task Contract v1.2 (2026-10-15;
+  A, A1, D1–D5 and six final clarifications) started **S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary**
+  from `main` at `2224c47f`. It is **CLOSED / READY FOR PRODUCT OWNER MERGE DECISION — NOT MERGED / NOT DEPLOYED**, on one
+  pull request ([S6-02 record](docs/e2e/QANDEEL_S6_02_IMPLEMENTATION_RECORD_v1.md)).
+- **Delivered:** migration `0155` (one recipient-scoped name projection; Stage 4 Introduction-phase fences; no ADD /
+  REJOIN in a Matching-born World; Replay and Public authoring exclude Introduction-era material; the one ungated END
+  boundary over the frozen `0116` core), the END route, and their verifier, wire proof and static contract.
+- **Not delivered (each its own task's):** the Introduction surfaces and the END mobile surface (S6-05); `FULL_NAME`
+  display consent (S6-06); Activity producers and Direct Entry (S6-07); the Replay product (Stage 7); the canonical
+  first-name source (`QAN-BL-MATCH-05`, S6-03).
+- **Still closed:** every Matching and launch gate; the six `0149` commands. No Introduction World is reachable. Issue
+  #322 stays open as a release blocker.
+- **Register:** `QAN-BL-MATCH-02` tombstoned and `QAN-BL-MATCH-05` admitted, from the merge: 69 items (backlog §7).
+- **Next:** the Product Owner's review of the S6-02 pull request. No later Stage 6 task is started by this note.

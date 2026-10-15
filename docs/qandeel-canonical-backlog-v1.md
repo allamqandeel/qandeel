@@ -197,11 +197,12 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-ACE-02` | Adaptive Conversational Expression: Real-Model Personality Behaviour on the Golden Conversations Suite | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `MEDIUM` | `VALIDATION — OPEN` |
 | `QAN-BL-GOV-01` | Locator and Closure-Record Drift After the IP-IMP-01, ACE-01 and SHARED-VIS-01 Merges | `GOV-REC-01 — Post-merge Locator & Closure-Record Reconciliation` | `MEDIUM` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-LAUNCH-04` | Shared / Public Living Analysis — Physical Android Rapid-Interaction & Resize Stability Proof | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-MATCH-02` | Introduction-Phase Account Name Exposure Through Phase-Blind Shared World Reads | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-MATCH-02` | Introduction-Phase Account Name Exposure Through Phase-Blind Shared World Reads | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-MATCH-03` | Safe Compatibility Conclusion Production Capability, AI Cost Attribution and Evaluation | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-04` | Export My Data Omits the Reader's Matching and Introductions Data | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PRIV-05` | Export My Data Omits the Reader's Shared, Public and Replay World Data | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-MATCH-04` | Understanding Readiness Before Real Matching | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-MATCH-05` | The Confirmed Introduction First Name Is Not the Canonical Matching First-Name Source | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -1969,6 +1970,10 @@ stays `OPEN / NOT PROVEN / RELEASE BLOCKER`. Nothing here authorizes implementat
 
 ### `QAN-BL-MATCH-02` — Introduction-Phase Account Name Exposure Through Phase-Blind Shared World Reads
 
+> **Historical pre-closure schema.** This block records the item as admitted by the Stage 6 WP0, with one dated
+> amendment note below. It is not the current lifecycle state; the current state is the `CLOSED — TOMBSTONE` record in
+> §6 below (S6-02).
+
 - **Title / Finding:** the Stage 4 Shared reads, and the Shared QANDEEL reply prompt built from them, admit a World by
   its lifecycle (`ACTIVE`) and never by its phase. They project the account Name (`public.users.name`, migration
   `0123:23-26`). An Introduction-phase World (`SHARED_WORLD` / `ACTIVE` / `INTRODUCTION`, born only by the I-07C Mutual
@@ -2055,6 +2060,14 @@ stays `OPEN / NOT PROVEN / RELEASE BLOCKER`. Nothing here authorizes implementat
     - the exact interim answer of each surface;
     - which name applies after SUCCESS;
     - the presentation of the World (GATE-29: final visual design approved separately).
+- **Amendment (Product Owner decisions A and A1, S6-02 Task Contract v1.1 / v1.2, 2026-10-15; binding over the required
+  property above, which is stricter now, not weaker):** the protection follows the World's persisted origin
+  (`birth_basis = 'MUTUAL_MATCH'`), not its current phase. The approved Introduction first name stays the display name
+  across SUCCESS; the account Name never becomes the display name automatically, and the move to `STANDARD` is no
+  consent to anything. A `FULL_NAME` disclosure is not a display consent: showing the full account Name as the display
+  name needs its owner's own, separate, explicit authorization for that use (S6-06). One person's disclosure reveals
+  nothing of the other's. A Matching-born World admits no third member and no rejoin in v1 (A1 / D3). Where no
+  approved first name is proven, the answer is `NULL` and the existing neutral fallback, never `users.name` (D2).
 - **Not in this item:** the GATE-03 admission is the account Name exposure only. The rest of the Introduction-phase fence
   that GATE-20 approved is, in the WP0 decision record's reading, S6-02's planning scope (§14.5; not an assignment: the
   scope is set by S6-02's Task Contract), not separate register items. It covers:
@@ -2414,6 +2427,49 @@ implementation (BG-07).
 
 Admitted under BG-06 / BG-08 by S6-01 at its CP1 (2026-10-13), at the Product Owner's D7 approval, after the
 anti-duplication check above. Nothing here authorizes implementation (BG-07).
+
+---
+
+### `QAN-BL-MATCH-05` — The Confirmed Introduction First Name Is Not the Canonical Matching First-Name Source
+
+- **Title / Finding:** the person's separately confirmed Introduction First Name exists only in the S6-01 preparation
+  draft (`introductions_preparation_private.declared_facts`: `first_name`, `first_name_state`, `first_name_confirmed_at`;
+  migration `0154`). The canonical Matching first-name source the proposal views read,
+  `resolve_matching_canonical_first_name_v1` (`0111`), still answers `UNRESOLVED_NO_CANONICAL_SOURCE` for everybody, so
+  no recipient view and therefore no Match handoff (`matching_match_handoff_subjects.presented_first_name`, `0113` /
+  `0114`) can carry a confirmed first name. S6-02 projects that handoff name and answers `NULL` without it.
+- **Source:** the S6-02 Task Contract v1.1 / v1.2, decision D2 (Product Owner, 2026-10-15): "S6-03 owns wiring the
+  confirmed first name of `0154` into `0111`'s canonical resolver and proving the source's authority"; the Product
+  Owner's implementation authorization (2026-10-15): record this obligation under S6-03 at S6-02's closure without
+  opening a new task. Frozen authority: [P1](qandeel-p1-user-identity-preferences-understanding-canonical-closure.md)
+  §4 and §13 (the Introduction First Name is self-authored, separately confirmed and never split from the account Name);
+  CW2-06 §12; GATE-12.
+- **Current truth:** latent. No proposal, Match or Introduction World can exist (the six `0149` commands stay closed; the
+  CW2-08 seams answer `NOT_EVALUATED`). `0154` exposes the draft to its owner only; nothing reads it as a Matching
+  source. S6-02 neither reads the draft nor changes `0111`
+  ([S6-02 record](e2e/QANDEEL_S6_02_IMPLEMENTATION_RECORD_v1.md)).
+- **Anti-duplication:** checked against all 68 earlier IDs, every tombstone, the §7 paragraphs and the §9 rows, the WP0
+  record (its J03 / J06 rows name the first name only as S6-03 planning scope, not as a register item), the S6-01 record,
+  the E2E gap matrix and the open GitHub issues. `QAN-BL-MATCH-01` is enrollment; `QAN-BL-MATCH-03` is the compatibility
+  conclusion; `QAN-BL-MATCH-04` is understanding readiness; `QAN-BL-PRIV-04` is export. None carries the first-name source.
+  The ID had not been used.
+- **Why deferred:** it belongs to the proposal pipeline that makes recipient views exist at all, which is S6-03's; S6-02
+  is the privacy fence, and its contract forbids it to fix `0111` or to copy draft data into a Shared World.
+- **Owner task:** `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` (the Product Owner's approved Stage 6
+  task map, 2026-10-13; the assignment is the Product Owner's D2).
+- **Severity:** `HIGH`. Without it no Introduction can present an approved first name, and a weak substitute (the
+  account Name, or an unconfirmed draft value) would break P1 §13.
+- **Reopen condition:** automatic at S6-03's kickoff; and before any task makes a proposal presentable.
+- **Required future property:** the canonical resolver answers only the owner's CONFIRMED Introduction First Name (never
+  `users.name`, never a split of it, never a `DECLARED` or `CORRECTED`-but-unconfirmed value), at the moment of
+  presentation, with its authority proven; a later correction never rewrites a handoff already presented; the S6-02
+  projection keeps reading the handoff only.
+- **Not in this item:** the S6-02 projection and fences (delivered, `QAN-BL-MATCH-02` tombstone); the Introduction
+  surfaces that show the name (S6-05); `FULL_NAME` display consent (S6-06).
+- **Status:** `DEFERRED — OWNED`
+
+Admitted under BG-06 / BG-08 by S6-02 at its closing change (2026-10-15), at the Product Owner's D2 assignment and
+implementation authorization, after the anti-duplication check above. Nothing here authorizes implementation (BG-07).
 
 ## 6. Tombstones
 
@@ -2859,6 +2915,32 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 ---
 
+### `QAN-BL-MATCH-02` — Introduction-Phase Account Name Exposure Through Phase-Blind Shared World Reads
+
+- **Closing task:** `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary`, under the Product Owner's
+  approved Task Contract v1.2 and implementation authorization (2026-10-15; decisions A, A1, D1–D5).
+- **PR / SHA:** the S6-02 pull request from branch `s6/s6-02-introduction-privacy-end-boundary`, from `main` at
+  `2224c47f3dc83b16ad011ccbbdcf2aac19bf41f5` (the merge of PR #339). Implementation commits `83a67026` (migration
+  `0155`, verifiers, wire proof, contract) and `144d6479` (the END route); the closing change records them. Not merged,
+  not deployed. The tombstone holds from the merge of that pull request; until then this item is not closed.
+- **Disposition:** completed, with the stricter rule of the dated amendment in §5
+  ([S6-02 record](e2e/QANDEEL_S6_02_IMPLEMENTATION_RECORD_v1.md)):
+  1. one recipient-scoped name projection (`shared_private.shared_person_name_v1`, `0155`) replaces every `users.name`
+     projection of `0138`–`0141`, `0143` and `0148`: the account Name for an `ACCEPTED_INVITATION` World as before; for a
+     Matching-born World only the proven handoff first name presented to that viewer, else `NULL` - before and after
+     SUCCESS, never a `0154` draft name or a `FULL_NAME` disclosure;
+  2. the member list, the material list (and so the Shared QANDEEL reply prompt built from it), the entry verdict,
+     send, QANDEEL reply work, per-World alerts, the Activity source and the Shared field refuse an Introduction-phase
+     World (D4);
+  3. A1: no `ADD_MEMBER` or `REJOIN_MEMBER` in a Matching-born World; Replay and S5-02 Public authoring exclude
+     Introduction-era material (D5); the one ungated END boundary over the frozen `0116` core (D1).
+
+  Evidence on real PostgreSQL 17: `verify-migration-0155` 37 / 37 and the amended `verify-migration-0149` 22 / 22; the
+  live PostgREST proof runs in API CI on every supported line. No Introduction World is reachable in production.
+- **Status:** `CLOSED — TOMBSTONE`
+
+---
+
 ## 7. Counts at this baseline
 
 | Status | Count |
@@ -2866,12 +2948,12 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 | `DEFERRED — OWNED` | 32 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
-| `CLOSED — TOMBSTONE` | 22 |
-| **Total** | **68** |
+| `CLOSED — TOMBSTONE` | 23 |
+| **Total** | **69** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 37 |
+| `HIGH` | 38 |
 | `MEDIUM` | 29 |
 | `LOW` | 2 |
 
@@ -3569,6 +3651,26 @@ paragraph above stays as the record of the register before it.
 - **Latest index: 68 items; 32 / 4 / 10 / 22 by status, 37 / 29 / 2 by severity**, recounted mechanically from §4. A
   re-owning changes no count.
 
+**S6-02 closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge).** BG-08 at S6-02's
+closure ([S6-02 record](e2e/QANDEEL_S6_02_IMPLEMENTATION_RECORD_v1.md) §10). S6-01 merged as PR #339
+(`2224c47f3dc83b16ad011ccbbdcf2aac19bf41f5`, 2026-10-14), so its re-owning of `QAN-BL-MATCH-01` holds. The paragraph
+above stays as the record of the register before it.
+- **Tombstoned — `QAN-BL-MATCH-02`** (§6), with the Product Owner's stricter decision A recorded as a dated amendment in
+  its §5 block. It is S6-02's only inherited item.
+- **Admitted — `QAN-BL-MATCH-05`** (`HIGH`, `DEFERRED — OWNED`, owner `S6-03 — Matching Proposal Pipeline &
+  Intelligence Prerequisites`; D2): the confirmed Introduction First Name is not yet the canonical Matching first-name
+  source. Checked against all 68 earlier IDs; the ID had not been used (§5 item). No new task is opened.
+- **Checked and not admitted (BG-06):** the Introduction surfaces that consume the projection, the END mobile surface and
+  the Introduction closed history are S6-05's by the approved task map; `FULL_NAME` display consent is S6-06's; Activity
+  producers and Direct Entry are S6-07's; the Replay product is Stage 7's (GATE-35). Each is that task's own Task Contract
+  scope, not a residue S6-02 leaves. The S5-02 Public authoring era rule is applied fail-closed and reported for the
+  Product Owner's confirmation (record §9); it is not an open obligation.
+- **BG-05:** `S6-03` owns one open item (`QAN-BL-MATCH-05`); `S6-07` still owns two (`QAN-BL-PRIV-04`, `QAN-BL-MATCH-01`);
+  S6-02 owns none from the merge.
+- **Untouched:** every other item, owner, severity and status. This includes `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`,
+  `QAN-BL-MATCH-01`, `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN).
+- **Latest index: 69 items; 32 / 4 / 10 / 23 by status, 38 / 29 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -3644,7 +3746,8 @@ Inherited after T-12 closure reconciliation:
 | `PUBLIC-REACTIONS-01 — Public Lightweight Reactions Runtime` | `QAN-BL-CW-04` |
 | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `QAN-BL-CW-05` (its authority / source review; Product Owner deferral, 2026-10-08); `QAN-BL-IP-02` (IP-IMP-01 closing change; listed here by GOV-REC-01); `QAN-BL-ACE-02` (ACE-01 closing change; validation set extended to Shared / Public by ACE-SP-01, D-4); `QAN-BL-MATCH-03` (the Safe Compatibility Conclusion production capability with its AI cost attribution and evaluation; admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13); `QAN-BL-MATCH-04` (understanding readiness before real Matching; admitted by S6-01 at its CP1 at the Product Owner's D7 approval, 2026-10-13) |
 | `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned*. *Closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-01` re-owned to `S6-07` with the mandatory `ACCT-DEL-01` dependency; admitted `QAN-BL-MATCH-04` at CP1 (Stage 8A, D7); `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`, `QAN-BL-PRIV-04`, `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-LAUNCH-04` observed and left unchanged; no further admission (§7). S6-01 owns no open item |
-| `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract) |
+| `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract). *Closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-02` tombstoned with the Product Owner's stricter decision A; admitted `QAN-BL-MATCH-05` to `S6-03` (D2); nothing else admitted (§7). S6-02 owns no open item |
+| `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). S6-03 is not started and has no Task Contract |
 | `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |

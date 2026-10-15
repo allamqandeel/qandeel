@@ -210,7 +210,10 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     // have merged; the governance task GOV-REC-01 is the current task, and no merged task is named current again.
     // RE-ANCHORED by S6-01 (2026-10-13, validation only): GOV-REC-01 (PR #334) and the Stage 6 WP0 (PR #335) have
     // merged; the Product Owner's S6-01 Final Implementation Authorization makes S6-01 the current implementation task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-01 — Intelligent Matching Onboarding\*\*/mu);
+    // RE-ANCHORED by S6-02 (2026-10-15, validation only): S6-01 merged as PR #339 (`2224c47f`); the Product Owner's
+    // implementation authorization of the S6-02 Task Contract v1.2 makes S6-02 the current implementation task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-01/u, 'the merged S6-01 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0(3C|4)|SHARED-VIS-01)/u, 'no merged task is the current task');
     assert.match(map, /\*\*NEXT \/ NOT STARTED\*\*|S5-04[^\n]*CLOSED \/ READY FOR PRODUCT OWNER MERGE DECISION/u);
   }
