@@ -4,7 +4,7 @@
  * decoder (no person, name, conclusion or date); a decision is accepted only on the exact view, only when offered, and
  * a command id answers the same way when sent again.
  */
-import { decodePrivateProposal } from '../../runtime-entry/introduction-proposals-api';
+import { IntroductionProposalsApiClient } from '../../runtime-entry';
 import { createS604ProofProposals } from '../__validation__/s604-proof-proposals';
 
 const body = async (answer: { json: () => Promise<unknown> } | undefined) => (answer === undefined ? undefined : await answer.json()) as Record<string, any>;
@@ -19,11 +19,15 @@ describe('S6-04 proof stand-in', () => {
   it('serves four synthetic proposals the strict decoder accepts: allow + decline, decline only, withdraw, nothing', async () => {
     const proof = createS604ProofProposals();
     proof.seed();
-    const page = await body(proof.route('/introductions/proposals', 'GET', undefined));
-    expect(page.next).toBeNull();
-    const decoded = page.proposals.map(decodePrivateProposal);
-    expect(decoded.every((p: unknown) => p !== null)).toBe(true);
-    expect(decoded.map((p: any) => [p.status, p.actions])).toEqual([
+    // Read through the shipped client, so its strict decoder judges every row.
+    const client = new IntroductionProposalsApiClient({
+      baseUrl: 'https://proof',
+      fetch: async (input, init) => proof.route(input.replace('https://proof', '').split('?')[0], init?.method ?? 'GET', undefined)!,
+    });
+    const read = await client.list(null);
+    if (read.kind !== 'READ') throw new Error(`the strict decoder refused the stand-in: ${read.kind}`);
+    expect(read.next).toBeNull();
+    expect(read.proposals.map((p) => [p.status, p.actions])).toEqual([
       ['AWAITING_YOU', ['APPROVE_FORWARD', 'DECLINE']], ['AWAITING_YOU', ['DECLINE']], ['IN_PROGRESS', ['WITHDRAW']], ['NO_LONGER_AVAILABLE', []],
     ]);
   });

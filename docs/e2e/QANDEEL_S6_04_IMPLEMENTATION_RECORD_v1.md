@@ -5,9 +5,10 @@
 **Product authority:** the Product Owner's S6-04 Task Contract v1.0 and its twelve binding decisions D1–D12
 (2026-10-15), with the earlier Stage 6 decisions it names (GATE-21, GATE-23, GATE-27, GATE-28, GATE-37) and the binding
 records it lists. No merge or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **IMPLEMENTED — READY FOR PRODUCT OWNER REVIEW — PRODUCT COPY GATE OPEN — NOT MERGED / NOT DEPLOYED**
-(2026-10-15). The Product Copy Gate ([package](QANDEEL_S6_04_PRODUCT_COPY_GATE_PACKAGE_v1.md)) is not closed: every new
-row is PROPOSED until the Product Owner approves the package (AC-13).  
+**Status:** **IMPLEMENTED — READY FOR PRODUCT OWNER REVIEW — PRODUCT COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**
+(2026-10-15). The Product Owner closed the Product Copy Gate on 2026-10-15 ([package](QANDEEL_S6_04_PRODUCT_COPY_GATE_PACKAGE_v1.md)
+§0, §7 below): CG-1 and CG-3 … CG-7 approved; under CG-2, M-01 is kept but not displayed in S6-04. The TalkBack proof
+ran on an emulator only (§3.2), which is not a device proof.  
 **Base:** `main` = merged PR #341 (S6-03) at `869b3ca63ec8dde830aaa31847588e7f03b55d05`, re-verified at the start.  
 **Branch:** `s6/s6-04-private-proposal-review-decisions` (one pull request).  
 **Migration:** `0158_matching_private_proposal_review_decisions_v1.sql` (the number was free at the base).
@@ -87,7 +88,7 @@ answer; one call, never retried; nothing logged. Five census entries.
   sent only when the server offered it, bound to the exact view shown; a lost answer is retried with the same command id;
   one decision at a time; a failed read shows nothing it cannot vouch for.
 - `ProposalsSurface.tsx`: the space (neutral cards: «مقترح تعارف خاص» and the status — nothing about anyone), the review
-  (M-01, the review lead, QANDEEL's role, what forward approval means and that it does not start an introduction, M-03),
+  (the review lead — M-01 is not displayed, CG-2 —, QANDEEL's role, what forward approval means and that it does not start an introduction, M-03),
   the short confirmations (forward approval restates its meaning; decline asks for no reason; withdrawal explains its
   effect first), the neutral endings, the loading / empty / unavailable / offline states, "show more"; Back walks one
   level at a time (Android system Back too); the screen reader lands on each level's heading; notices in a polite live
@@ -95,7 +96,10 @@ answer; one call, never retried; nothing logged. Five census entries.
 - `ProposalsCue` inside the Introductions surface and a quiet mark on the Introductions entry while a delivered proposal
   waits (D1, D11): never a count, never repeated, never urgent; the entry's screen-reader label carries the arrival line.
   With no proposal the entry and the surface are exactly the S6-01 ones.
-- `proposals-copy.ts`: 46 Arabic / English rows, each marked with its gate state (§7).
+- `proposals-copy.ts`: 45 Arabic / English rows, each marked `APPROVED` (§7); M-01 kept in `PROPOSALS_LANG01_APPROVED`, not rendered.
+- Validation only: `integration/__validation__/s604-proof-proposals.ts`, four SYNTHETIC opaque proposals behind
+  `qandeel://s401-proof/introductions/seed-proposals` in the S4-01 proof build (never the production bundle; answers
+  nothing until seeded; guarded by `s6-04-proof-proposals.test.ts`), for the TalkBack proof of §3.2.
 
 ## 3. Evidence
 
@@ -123,7 +127,7 @@ exact head is the confirmation gate.
 | Result | **`verify-0158` 25 / 25** on a fresh database |
 | Regression on one fresh database with `0158` | `verify-0108` … `0122`, `0130`, `0132`, `0149` (24 / 24 with f6, f7), `0150` (28 / 28), `0154`, `0155`, `0156`, `0157`, `0158`: **24 / 24 verifiers pass** |
 | API | `introduction-proposals.spec.ts` **46 / 46**; `npm run build:api` passes |
-| Mobile | `proposals.test.tsx` **45 / 45**; `src/introductions` + `src/runtime-entry` + the S6-01 proof + S4-04 **383 / 383**; `tsc --noEmit` passes; full suite §3.1 |
+| Mobile | `proposals.test.tsx` **45 / 45** (after CG-2); the proof stand-in guard `s6-04-proof-proposals.test.ts` **3 / 3**; `src/introductions` + `src/runtime-entry` + S4-04 **379 / 379**; `tsc --noEmit` passes; full suite §3.1, §3.3 |
 | Static contract | `tests/s6-04-private-proposal-review-decisions-contract.test.mjs` **8 / 8**; root contracts §3.1 |
 
 ### 3.1 Full suites (before the review fixes of §8; the affected suites were re-run after them)
@@ -136,6 +140,71 @@ exact head is the confirmation gate.
 - After the §8 fixes: `verify-0158` 25 / 25, `verify-0149` 24 / 24, `verify-0150` 28 / 28, `verify-0112` 22 / 22,
   `verify-0114` 35 / 35, `verify-0120` 27 / 27, `verify-0156` 31 / 31, `verify-0157` 33 / 33 on a fresh database; the
   API, mobile and contract suites above.
+- After the Copy Gate decision and the TalkBack proof stand-in (2026-10-15): root contracts **1383 / 1383** (forward-safety
+  35 / 35), `npm run test:database` **1310 / 1310**, task-closure governance **24 / 24**, mobile `tsc --noEmit` passes;
+  the whole mobile suite §3.3.
+
+### 3.2 TalkBack on an Android emulator (AC-09) — PASS 13 / 13, one finding; not a device proof
+
+Run on 2026-10-15 at the Product Owner's request: bounded, diagnosed, no blind retries. Code `d606e3ba`; proof APK sha256
+`ec3ff4d6499d1836f79c82357345bff87d9ce07a82a90161cabecbc75be5dd95` (x86_64 release, S4-01 proof entry); emulator
+`QANDEEL_API36` (API 36, 1080 × 2400); **no physical device**. SYNTHETIC data only (four opaque proposals from
+`s604-proof-proposals.ts`). Gestures are real touchscreen events, so they pass through TalkBack's touch exploration; focus
+is TalkBack's outline measured in each screenshot; labels come from the accessibility tree (full and compressed). Arabic
+(RTL) full walk, English (LTR) entry → space → review. Evidence (screenshots, dumps, step table):
+`.s6-04-native-proof/talkback/EVIDENCE.md` (local, untracked, like the earlier native proofs).
+
+| # | Check | Result |
+|---|---|---|
+| T1–T2 | entry drawn only with a delivered proposal, label carries the arrival line, the quiet mark is not a separate stop | PASS |
+| T3 | double-tap into «التعارف مع قنديل», the cue, and the proposals space | PASS |
+| T4 | each card reads "title، status" (CG-7); nothing about anyone | PASS |
+| T5 | while the space is open nothing beneath it is offered to the screen reader (compressed tree) | PASS |
+| T6 | first-recipient review: lead, role, the meaning of allowing, M-03 verbatim, **no M-01** (ar and en), only allow / decline | PASS |
+| T7–T8 | allow → confirmation → in progress with withdrawal; withdraw → confirmation → ended, notice in the polite live region | PASS |
+| T9 | second recipient: «خيار بدء التعارف من هذا المقترح غير متاح بعد.», decline only, no reason asked, recorded | PASS |
+| T10 | an unavailable proposal offers no decision | PASS |
+| T11 | on-screen Back (double-tap) and system Back through every level | PASS |
+| T12 | with nothing waiting the arrival line and the mark disappear (D11) | PASS |
+| T13 | English LTR labels and the approved English review | PASS |
+
+- **F-1 (MINOR, cross-cutting) — programmatic focus is not reliably honoured.** The surface asks the screen reader to
+  land on each level's heading and, on the way back, on the cue and the entry (`setAccessibilityFocus` right after the
+  screen changes; jest proves the request). TalkBack honoured it after the three asynchronous decisions (forward
+  approval, withdrawal, decline: focus on the heading) but not when a level opened or closed: focus stayed on the bar
+  title (Arabic) or the Back control (English), and on return went to the Introductions title and then the Analysis door.
+  Opening the allow confirmation briefly left focus where the allow button had been — now the confirm button — before
+  TalkBack moved it to the title; the following double-tap landed on the title and did nothing. **No decision was taken
+  without an explicit explore and double-tap on the decision control.** The likely cause is a race between the request
+  and TalkBack's own placement after a window-content change. Every surface of the app uses the same immediate pattern
+  (S6-01, Settings, Activity, Shared), so this is not specific to S6-04. It is recorded, not silently fixed, and the
+  Product Owner decides its handling (§10).
+- **Not verified:** speech. The emulator's TTS never initialised (TalkBack: "TTS is not ready"), so what TalkBack says
+  aloud, including live-region announcements, is unverified; the nodes and their texts are verified.
+- **Harness limits (not counted as Product failures):** injected explore touches were sometimes not registered after a
+  first success; TalkBack keyboard shortcuts need a physical keyboard.
+
+An emulator run does not replace a physical-device TalkBack proof before launch (Product Owner, 2026-10-15; §10).
+
+### 3.3 The six mobile failures are the base's own
+
+The whole mobile suite on a detached worktree of the base `869b3ca6` (same `node_modules`, same machine, host locale
+`ar-EG`) fails exactly six tests, **the same six by full name** as on the S6-04 head: three W1A-01 cases in
+`depth.test.tsx` and three session-end cases in `w2-account-access.test.tsx`. Base: 2482 / 2488. Head (the CG-2 change on `ad514e51`, before the
+proof stand-in): 2526 / 2533, the six plus `s4-03-proof-world` Journey A, a load timeout while both suites ran at once;
+it passes alone and in the clean run. **Clean run of the whole suite at `d606e3ba` (alone): 2530 / 2536, exactly the same six.** No closed task is reopened.
+
+### 3.4 CI — the API infrastructure failure and the exact head
+
+- **What failed on `ad514e51`:** API CI's `verify-api` job never started its steps. Initialising its PostgreSQL service
+  container, the runner's pull of `public.ecr.aws/docker/library/postgres:17@sha256:2d2b8998…` answered
+  `toomanyrequests: Data limit exceeded` three times (the anonymous ECR Public quota); `Validation evidence (VAL-01)` then
+  reported the gate NOT GREEN. No test ran, so nothing about S6-04's code was measured.
+- **Why it is infrastructure:** the same digest-pinned image was pulled and API CI passed on `main` `869b3ca6` the same
+  morning (run 38729965165), and on S6-03's heads before it.
+- **Narrowest action:** no workflow, image or code change. The next push re-runs the job on the new head; if the quota
+  error recurred, only the failed job would be re-run.
+- **Exact-head result:** recorded in the pull request against the final head, because writing it here would change the head.
 
 ## 4. Privacy and fail-closed report
 
@@ -175,12 +244,22 @@ exact head is the confirmation gate.
 S6-04 adds no relation. Its decisions write only through the existing cores, into the existing `0110` / `0113` / `0120`
 relations, which are already in `QAN-BL-ACCT-01` / `QAN-BL-PRIV-04`'s footprint. Nothing is committed in production.
 
-## 7. Product Copy Gate — OPEN
+## 7. Product Copy Gate — CLOSED (Product Owner, 2026-10-15)
 
-The consolidated package is [QANDEEL_S6_04_PRODUCT_COPY_GATE_PACKAGE_v1.md](QANDEEL_S6_04_PRODUCT_COPY_GATE_PACKAGE_v1.md):
-46 rows (44 PROPOSED, 2 LANG-01-approved Arabic used verbatim with their context PROPOSED) and seven decisions CG-1 …
-CG-7, including the simplified-MSA replacement of the contract's colloquial review line and the truth condition for M-01.
-M-02 is not used. The gate is not closed and this record does not claim it.
+The consolidated package is [QANDEEL_S6_04_PRODUCT_COPY_GATE_PACKAGE_v1.md](QANDEEL_S6_04_PRODUCT_COPY_GATE_PACKAGE_v1.md);
+its §0 records the Product Owner's decision verbatim.
+
+- **Approved:** CG-1 (the simplified-MSA `reviewLead` replacing «راجع المقترح وخد قرارك براحتك»), CG-3 (M-03 verbatim on
+  the review of a waiting proposal), CG-4 (`acceptNotYet`), CG-5 (`MATCH_CONCLUDED`, `concludedBody`), CG-6 (every English
+  row), CG-7 (the accessibility labels), and the package's texts. All 45 displayed rows are marked `APPROVED` in
+  `proposals-copy.ts`; no `PROPOSED` marker remains (mobile test and contract 7).
+- **CG-2 — not approved as proposed.** The Product Owner did not accept that a stored permitted conclusion by itself
+  proves QANDEEL's genuine understanding of both people. M-01 is kept byte-exact in `PROPOSALS_LANG01_APPROVED` and is
+  displayed nowhere in S6-04: the `opening` row and its use are removed and `reviewLead` is the review's first line
+  (commit `d606e3ba`). Tests prove no displayed row, Arabic or English, carries it, and the contract proves the review
+  draws none. Its future display needs real Stage 8A evidence; nothing replaces it with an unproven compatibility claim.
+- **M-02** stays unused (CW2-06B-07 / -08).
+- **Open:** nothing in S6-04's copy. The future display of M-01 is a Stage 8A-conditioned decision (§10).
 
 ## 8. Independent review
 
@@ -209,6 +288,9 @@ verifier honesty, governance claims) found **no BLOCKER and no MAJOR**. Its find
 - **Checked and not admitted (BG-06):** the second recipient's acceptance, the Match and the World (S6-05, by the approved
   task map); Activity, Direct Entry and notifications (S6-07); the real conclusion producer (Stage 8A); launch clearance,
   policies and any limits (Stage 9 / CW2-08). Each has its owner; nothing is left only in this record.
+- **Proposed, not admitted (awaiting the Product Owner, BG-06):** the physical-device TalkBack proof of the S6-04 surfaces
+  and F-1 (§3.2, §10). They are named here and in the pull request so that neither survives only in a report; each
+  becomes a register item, or an S6-04 fix, only on the Product Owner's decision.
 - **Locators:** S6-03's merge (PR #341 as `869b3ca6`) is reconciled in Current State, the Project Map and the Roadmap; the
   register stays 69 items.
 
@@ -216,9 +298,10 @@ verifier honesty, governance claims) found **no BLOCKER and no MAJOR**. Its find
 
 | Item | Owner | Note |
 |---|---|---|
-| Product Copy Gate | the Product Owner | 46 rows and CG-1 … CG-7 await approval; no row is final until then |
+| Showing M-01 at all | Stage 8A, then the Product Owner | kept, not displayed (CG-2); only real Stage 8A evidence of QANDEEL's understanding of both people can justify it |
 | Acceptance by the second recipient, Mutual Match, Introduction surfaces | S6-05 | not offered anywhere in S6-04 |
 | Activity, Direct Entry, push for a delivered proposal | S6-07 | S6-04's cue is in-app only |
 | A real proposal at all | Stage 8A (producer), Stage 9 / CW2-08 (clearance, policies), S6-07 (enrollment) | none can exist today |
-| TalkBack on a device (AC-09) | S6-04, before merge | jest proves the roles, labels, heading focus, live regions, 44-point targets, RTL / LTR and Back; a native TalkBack run on an emulator (a proof stand-in serving synthetic proposals, as S6-01 did) has not been executed yet and is reported open, not claimed |
+| TalkBack on a physical device | **proposed:** Stage 9 release-readiness gate (with `QAN-BL-LAUNCH-04`'s device validation) — awaiting the Product Owner's admission decision | the emulator run (§3.2) passed 13 / 13 checks and is not a device proof; the Product Owner requires real-device TalkBack before launch |
+| F-1 — programmatic screen-reader focus not reliably honoured (§3.2) | **proposed:** the Product Owner decides — fix inside S6-04, or admit a cross-cutting item (every surface uses the same pattern) | MINOR; no decision is ever taken without an explicit explore + double-tap; recorded, not silently fixed |
 | `0158` not deployed | `HOSTED-DEPLOY-01` | with `0149` / `0150` in the same controlled window, and before or with the API that reads it (review finding 10) |
