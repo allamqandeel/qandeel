@@ -233,7 +233,10 @@ test('9 — governance: the record, the backlog and the locators tell the same t
     assert.equal((map.match(/^> \*\*CURRENT (IMPLEMENTATION )?TASK: /gmu) ?? []).length, 1, 'one current-task line');
     // RE-ANCHORED by S6-01 (2026-10-13, validation only): GOV-REC-01 (PR #334) and the Stage 6 WP0 (PR #335) have
     // merged; the Product Owner's S6-01 Final Implementation Authorization makes S6-01 the current implementation task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-01 — Intelligent Matching Onboarding\*\*/mu, 'a later task is current (RE-ANCHORED by S5-04, SHARED-VIS-01 and GOV-REC-01, validation only)');
+    // RE-ANCHORED by S6-02 (2026-10-15, validation only): S6-01 merged as PR #339 (`2224c47f`); the Product Owner's
+    // implementation authorization of the S6-02 Task Contract v1.2 makes S6-02 the current implementation task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-01/u, 'the merged S6-01 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0|SHARED-VIS-01)/u, 'no merged task is the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S5-03B/u, 'S5-03B is no longer the current task');
     assert.match(map, /`S5-03B — Public Semantic Field \+ Viewer Runtime` = \*\*`DONE \/ MERGED` through PR #317 at `afd5e8caecc06884b5adfdb381eef8e650e03c1f`\*\*/u);
