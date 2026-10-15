@@ -52,9 +52,14 @@ describe('S6-02 — IntroductionEndService', () => {
     }
   });
 
-  it('a database 400 is the client\'s invalid request; any other failure is unavailable and is not retried', async () => {
-    end.mockRejectedValue(new DataApiError(400));
+  it('only a database 22023 is the client\'s invalid request; any other failure is unavailable and is not retried', async () => {
+    end.mockRejectedValue(new DataApiError(400, { databaseCode: '22023' }));
     await expect(service.end('token', WORLD, { commandId: COMMAND })).rejects.toBeInstanceOf(BadRequestException);
+    // A contradictory server state (P0001, which PostgREST answers 400) is never blamed on the person leaving.
+    end.mockReset().mockRejectedValue(new DataApiError(400, { databaseCode: 'P0001' }));
+    await expect(service.end('token', WORLD, { commandId: COMMAND })).rejects.toBeInstanceOf(ServiceUnavailableException);
+    end.mockReset().mockRejectedValue(new DataApiError(400));
+    await expect(service.end('token', WORLD, { commandId: COMMAND })).rejects.toBeInstanceOf(ServiceUnavailableException);
     for (const status of [401, 403, 404, 409, 500, 503]) {
       end.mockReset().mockRejectedValue(new DataApiError(status));
       await expect(service.end('token', WORLD, { commandId: COMMAND })).rejects.toBeInstanceOf(ServiceUnavailableException);

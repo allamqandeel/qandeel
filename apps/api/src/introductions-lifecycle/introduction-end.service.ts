@@ -1,5 +1,5 @@
 import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { DataApiError } from '../conversation/supabase-data-api.service';
+import { DataApiError, readDataApiUpstreamIdentity } from '../conversation/supabase-data-api.service';
 import { IntroductionEndRepository } from './introduction-end.repository';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
@@ -34,8 +34,9 @@ export class IntroductionEndService {
       return outcome === undefined ? unavailable() : { outcome };
     } catch (error) {
       if (error instanceof BadRequestException || error instanceof ServiceUnavailableException) throw error;
-      // A request the database itself refuses as malformed (22023 → 400): the client's own contradiction.
-      if (error instanceof DataApiError && error.status === 400) return invalid();
+      // Only a request the database refuses as malformed (22023) is the client's own contradiction. Any other refusal -
+      // a contradictory server state included - is unavailable: an exit is never blamed on the person leaving.
+      if (error instanceof DataApiError && error.status === 400 && readDataApiUpstreamIdentity(error).databaseCode === '22023') return invalid();
       return unavailable();
     }
   }

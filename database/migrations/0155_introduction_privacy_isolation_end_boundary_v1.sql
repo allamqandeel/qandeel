@@ -145,6 +145,9 @@ RETURNS uuid[]
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = '' AS $$
   SELECT CASE
            WHEN p_history_item_ids IS NULL THEN NULL::uuid[]
+           -- An ordinary World has no Introduction era: its set is answered as given, with one lookup, not one per item.
+           WHEN EXISTS (SELECT 1 FROM public.shared_worlds w
+                         WHERE w.id = p_world_id AND w.birth_basis = 'ACCEPTED_INVITATION') THEN p_history_item_ids
            ELSE coalesce((SELECT array_agg(x.item ORDER BY x.ordinal)
                             FROM unnest(p_history_item_ids) WITH ORDINALITY AS x(item, ordinal)
                            WHERE NOT shared_private.is_introduction_era_history_item_v1(p_world_id, x.item)),
