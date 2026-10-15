@@ -237,7 +237,10 @@ test('9 — governance: the record, the backlog and the locators tell the same t
     // implementation authorization of the S6-02 Task Contract v1.2 makes S6-02 the current implementation task.
     // RE-ANCHORED by S6-03 (2026-10-15, validation only): S6-02 merged as PR #340 (`8e85b40d`); the Product Owner's
     // S6-03 Task Contract v1.3 and the approved CW2-06B make S6-03 the current implementation task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites\*\*/mu);
+    // RE-ANCHORED by S6-04 (2026-10-15, validation only): S6-03 merged as PR #341 (`869b3ca6`); the Product Owner's
+    // S6-04 Task Contract v1.0 makes S6-04 the current implementation task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-04 — Private Proposal Review and Decisions\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-03/u, 'the merged S6-03 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-02/u, 'the merged S6-02 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-01/u, 'the merged S6-01 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: (S5-0|SHARED-VIS-01)/u, 'no merged task is the current task');

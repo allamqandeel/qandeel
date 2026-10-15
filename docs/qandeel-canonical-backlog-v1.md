@@ -3732,6 +3732,19 @@ register before it.
   `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN).
 - **Latest index: 69 items; 31 / 4 / 10 / 24 by status, 38 / 29 / 2 by severity**, recounted mechanically from §4.
 
+**S6-04 (2026-10-15; the S6-04 pull request, not merged).** BG-08 at S6-04 ([S6-04 record](e2e/QANDEEL_S6_04_IMPLEMENTATION_RECORD_v1.md) §9). S6-03 merged as PR #341
+(`869b3ca63ec8dde830aaa31847588e7f03b55d05`, 2026-10-15), so its tombstone of `QAN-BL-MATCH-05` holds. The paragraph above stays as
+the record of the register before it.
+- **Inherited:** none (BG-05: no item is owned by `S6-04`).
+- **Checked and not admitted (BG-06):** the second recipient's acceptance, the Mutual Match and the Introduction surfaces
+  (S6-05, the approved task map); Activity, Direct Entry and notifications for a delivered proposal (S6-07); the real
+  conclusion producer (Stage 8A); launch clearance, policies and limits (Stage 9 / CW2-08); the S6-04 Product Copy Gate is
+  this task's own open gate, not a residue. Each has its owner.
+- **Untouched:** every item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-ACCT-01`, `QAN-BL-PRIV-04`,
+  `QAN-BL-MATCH-01`, `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN). S6-04 adds no
+  relation, so no deletion or export footprint changes.
+- **Latest index: 69 items; 31 / 4 / 10 / 24 by status, 38 / 29 / 2 by severity**, unchanged.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.

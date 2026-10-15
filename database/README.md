@@ -4750,3 +4750,36 @@ npm run verify:matching-reproposal-admission:integration
 Both need `DATABASE_URL` pointing at a FULLY migrated database. Every fact row they write belongs to a synthetic fixture
 human they create and remove. `verify-migration-0157` commits its race fixtures (the lock-wait test, the decline and
 Match-commit races) and removes them.
+
+## S6-04 - Private Proposal Review and Decisions (migration 0158)
+
+`0158_matching_private_proposal_review_decisions_v1.sql` is the database part of `S6-04` under the Product Owner's Task
+Contract v1.0 (D1–D12, 2026-10-15). No historical migration is edited and no I-07 core, projection, seam or privilege
+changes. Record: [S6-04 implementation record](../docs/e2e/QANDEEL_S6_04_IMPLEMENTATION_RECORD_v1.md).
+
+```text
+resolve_my_matching_proposal_presentation_v1   nobody: the frozen NULL projection (0156) plus the decisions offered now -
+                                               first recipient AWAITING_YOU: APPROVE_FORWARD, DECLINE; second recipient
+                                               AWAITING_YOU: DECLINE; first recipient IN_PROGRESS: WITHDRAW; a live
+                                               proposal past its deadline (database clock) reads NO_LONGER_AVAILABLE
+list_my_matching_proposals_v1 / get_my_…_v1    authenticated: the caller's own delivered proposals (<= 20 per page,
+                                               non-oracle cursor) or one of them; four columns, no name or conclusion
+approve_my_matching_proposal_forward_v1        authenticated: lock -> offered? -> the 0114 core (CW2-08 last)
+decline_my_matching_proposal_v1                authenticated: lock -> offered? -> the 0120 first- or second-recipient core
+withdraw_my_matching_proposal_v1               authenticated: lock -> offered? -> the 0120 core with the state read under
+                                               the lock; ungated (D7)
+```
+
+Every decision answers RECORDED / CHANGED / UNAVAILABLE / NOT_AVAILABLE_NOW / COMMAND_CONFLICT, absorbs the cores' `40001`
+(a PostgREST before v16 never re-runs it) and rolls back everything a refusal touched. `verify-0149` NO_BACKDOOR admits the
+three decision boundaries by exact signature; `verify-0150` names them as absorbers. In production the CW2-08 seam answers
+NOT_EVALUATED and no proposal exists: nothing is listed and nothing can be decided.
+
+```sh
+npm run verify:matching-proposal-review-decisions:integration
+npm run prove:proposal-decisions:postgrest
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its positive paths run on synthetic fixture humans
+inside rolled-back transactions with the CW2-08 seam replaced for the run and restored byte for byte, and its two races
+commit their fixtures and remove them. The wire proof also needs `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only).
