@@ -4702,3 +4702,50 @@ fences (I01-I04), the names before and after SUCCESS, closed and ordinary (N01-N
 (E01-E08), Replay including the SUCCESS-instant boundary and an already-captured source (R01-R06), Public authoring
 (A01-A02), and END x END / END x SUCCESS on two real connections (X01-X02; committed fixtures, removed). The wire proof
 runs inside API CI's PostgREST loop on every supported line.
+
+## S6-03 - Matching Proposal Pipeline & Intelligence Prerequisites (migrations 0156, 0157)
+
+`0156_matching_confirmed_facts_eligibility_neutral_disclosure_v1.sql` and
+`0157_matching_reproposal_admission_orchestration_v1.sql` are the database part of `S6-03` under the Product Owner's Task
+Contract v1.3 and the approved Controlled Amendment `CW2-06B` (2026-10-15). No historical migration is edited. Record:
+[S6-03 implementation record](../docs/e2e/QANDEEL_S6_03_IMPLEMENTATION_RECORD_v1.md).
+
+**What 0156 does.**
+
+```text
+matching_confirmed_fact_versions / _state     CW2-06B-01: one human's CONFIRMED facts (first name, sex, birth year and
+                                              month, country / region, marital status) as an append-only version chain
+                                              with one current pointer; absent = UNKNOWN; no consent or source claim (R5)
+record_matching_confirmed_facts_core_v1       CW2-06B-02: the ONE internal writer - executable by no role, wrapped by
+                                              nothing; owner lock, compare-and-swap, idempotent, S6-01 area catalogue
+resolve_matching_canonical_first_name_v1      the confirmed Introduction First Name, else UNRESOLVED (never users.name,
+                                              a Public identity or the 0154 draft)
+matching_structured_*_v1, evaluator           CW2-06B-03 / -05: encoding v1, the R3 all-possible-days age rule, the R4
+                                              horizon, the ONE deterministic evaluator; the manual recorder refuses a
+                                              family key
+matching_eligibility_snapshot_fact_bindings   the pair rule OPPOSITE_SEX_CONFIRMED_V1 at capture; revalidation answers
+                                              MATCHING_FACT_VERSION_CHANGED when a bound version moves
+B4 / neutral projection                       zero fields only under an explicitly empty Product allowlist; the recipient
+                                              projection presents NULL name and conclusion in every state
+privacy floor                                 five delta classifiers (non-ASCII only, built with chr()), each 0111
+                                              classifier = old rule OR delta, 13 delta CHECKs = NOT delta
+install_matching_proposal_policy_version_     CW2-06B-13: the owner-only policy primitive; nothing installed
+  core_v1
+```
+
+**What 0157 does.** The continuing automatic re-proposal block (derived from the transition chain; EXPIRED blocks and is
+not a refusal; STALE and CANCELLED_BY_COMPETING_MATCH do not block) in Discovery and Prepare; the R4-A preparation instant
+(one real instant before the first write, used only in two refusals); the producer readiness seam (`UNAVAILABLE`), the
+pair-scoped CW2-08 seam (`NOT_EVALUATED`), the fail-closed admission; the internal orchestrator and sweeper.
+
+**Grants.** None. Every new and replaced function is executable by no application role; the six `0149` commands stay
+closed; no route, worker or schedule calls anything here.
+
+```sh
+npm run verify:matching-confirmed-facts-eligibility:integration
+npm run verify:matching-reproposal-admission:integration
+```
+
+Both need `DATABASE_URL` pointing at a FULLY migrated database. Every fact row they write belongs to a synthetic fixture
+human they create and remove. `verify-migration-0157` commits its race fixtures (the lock-wait test, the decline and
+Match-commit races) and removes them.
