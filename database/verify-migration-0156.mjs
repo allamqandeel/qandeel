@@ -130,6 +130,7 @@ const DOCUMENTED_FALSE_POSITIVES = [
   ['كلاكما حامل لقيم العائلة', PFN.SENSITIVE], // "bearer of family values" - the word also means "pregnant"
   ['يحب الحديث في الهاتف مع أهله', PFN.CONTACT_ROUTE], // "likes talking with his family on the phone"
   ['يحب البريد الإلكتروني أكثر من الرسائل', PFN.CONTACT_ROUTE], // "prefers e-mail to letters"
+  ['هاتف', PFN.CONTACT_ROUTE], // the rare given name Hatif is also the word "phone": refused as a confirmed first name
 ];
 
 // ------------------------------------------------------------------ small helpers
@@ -764,6 +765,8 @@ async function verifyFloor(report, [one, two]) {
         await rt.recordFacts(one, { firstName: name });
       }
       await rejected(() => rt.recordFacts(one, { firstName: 'واتساب' }), ['22023'], /MATCHING_CONFIRMED_FACT_INVALID/u);
+      // The documented fail-closed cost at the name level: the given name «هاتف» is refused too.
+      await rejected(() => rt.recordFacts(one, { firstName: 'هاتف' }), ['22023'], /MATCHING_CONFIRMED_FACT_INVALID/u);
       await rt.recordFacts(one, { sex: 'MALE' });
       await rt.recordFacts(two, { sex: 'FEMALE' });
       const f = await rt.seedEligible(one, two, { safeFieldKeys: APPROVED });

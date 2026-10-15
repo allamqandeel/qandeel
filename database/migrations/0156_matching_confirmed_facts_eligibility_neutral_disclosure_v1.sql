@@ -471,18 +471,19 @@ RETURNS TABLE (fact_version_id uuid, first_name text, sex text, birth_year integ
                country_code text, region_code text, marital_status text)
 LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path='' AS $$
 DECLARE
-  found public.matching_confirmed_fact_versions;
+  current_version public.matching_confirmed_fact_versions;
 BEGIN
   IF p_user_id IS NULL THEN
     RAISE EXCEPTION 'MATCHING_SUBJECT_REQUIRED' USING ERRCODE='22023';
   END IF;
-  SELECT f.* INTO found
+  SELECT f.* INTO current_version
     FROM public.matching_confirmed_fact_state s
     JOIN public.matching_confirmed_fact_versions f
       ON f.id = s.current_fact_version_id AND f.owner_user_id = s.owner_user_id
    WHERE s.owner_user_id = p_user_id;
-  RETURN QUERY SELECT found.id, found.first_name, found.sex, found.birth_year::integer, found.birth_month::integer,
-                      found.country_code, found.region_code, found.marital_status;
+  RETURN QUERY SELECT current_version.id, current_version.first_name, current_version.sex,
+                      current_version.birth_year::integer, current_version.birth_month::integer,
+                      current_version.country_code, current_version.region_code, current_version.marital_status;
 END$$;
 
 -- ---------------------------------------------------------------------------
@@ -1832,7 +1833,7 @@ BEGIN
     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
     CROSS JOIN (SELECT rolname FROM pg_roles WHERE rolname IN ('anon', 'authenticated', 'service_role')) r
    WHERE n.nspname = 'public'
-     AND p.proname IN ('record_matching_confirmed_facts_core_v1', 'resolve_matching_confirmed_facts_v1',
+     AND (p.proname IN ('record_matching_confirmed_facts_core_v1', 'resolve_matching_confirmed_facts_v1',
                        'matching_structured_requirement_family_v1', 'matching_structured_age_range_v1',
                        'matching_structured_marital_set_v1', 'matching_structured_area_v1',
                        'matching_structured_age_outcome_v1', 'matching_structured_age_horizon_v1',
@@ -1843,6 +1844,7 @@ BEGIN
                        'materialize_matching_recipient_view_core_v1', 'resolve_my_matching_proposal_v1',
                        'reject_matching_confirmed_fact_mutation_v1', 'matching_confirmed_fact_state_truth_v1',
                        'matching_snapshot_fact_binding_truth_v1')
+         OR p.proname ~ '^matching_text_carries_')
      AND has_function_privilege(r.rolname, p.oid, 'EXECUTE');
   IF offending IS NOT NULL THEN
     RAISE EXCEPTION 'S6-03: no application role may execute a Matching core, reader, helper or writer: %', offending;

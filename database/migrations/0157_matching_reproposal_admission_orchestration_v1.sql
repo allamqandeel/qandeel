@@ -207,8 +207,10 @@ BEGIN
        AND (SELECT f.sex FROM public.resolve_matching_confirmed_facts_v1(c.participant_user_id) f)
            IS DISTINCT FROM self_facts.sex
        AND (SELECT f.sex FROM public.resolve_matching_confirmed_facts_v1(c.participant_user_id) f) IS NOT NULL
-       AND NOT (SELECT b.blocked
-                  FROM public.resolve_matching_pair_reproposal_block_v1(p_for_user_id, c.participant_user_id) b)
+       AND NOT (CASE WHEN c.participant_user_id = p_for_user_id THEN true
+                     ELSE (SELECT b.blocked
+                             FROM public.resolve_matching_pair_reproposal_block_v1(p_for_user_id, c.participant_user_id) b)
+                END)
        AND (SELECT r.matchable FROM public.resolve_matching_setup_state_v1(c.participant_user_id) r)
        AND NOT (SELECT r.has_active_introduction
                   FROM public.resolve_matching_active_introduction_v1(c.participant_user_id) r)
@@ -326,8 +328,11 @@ BEGIN
 
   -- S6-03 (R4): an age PASS is certain only before its horizon, so the
   -- proposal may live only while every AGE_RANGE PASS of this snapshot stays
-  -- certain. No AGE_RANGE PASS means no horizon condition.
-  SELECT min(public.matching_structured_age_horizon_v1(f.birth_year, f.birth_month, a.max_age)) INTO horizon
+  -- certain. No AGE_RANGE PASS means no horizon condition; a PASS whose value
+  -- does not decode has no provable horizon and fails closed.
+  SELECT min(CASE WHEN a.max_age IS NULL THEN '-infinity'::timestamptz
+                  ELSE public.matching_structured_age_horizon_v1(f.birth_year, f.birth_month, a.max_age) END)
+    INTO horizon
     FROM public.matching_hard_requirement_results r
     JOIN public.matching_requirement_items i
       ON i.requirement_version_id = r.requirement_version_id AND i.requirement_key = r.requirement_key
@@ -335,7 +340,7 @@ BEGIN
     JOIN public.matching_confirmed_fact_versions f
       ON f.id = CASE r.evaluated_for_user_id WHEN b.lower_user_id THEN b.higher_fact_version_id
                                              ELSE b.lower_fact_version_id END
-    CROSS JOIN LATERAL public.matching_structured_age_range_v1(i.requirement_value) a
+    LEFT JOIN LATERAL public.matching_structured_age_range_v1(i.requirement_value) a ON true
    WHERE r.eligibility_snapshot_id = p_eligibility_snapshot_id AND r.requirement_key = 'age_range_v1'
      AND r.requirement_outcome = 'PASS';
 
@@ -376,6 +381,12 @@ END$function$;
 
 -- ---------------------------------------------------------------------------
 -- 6. THE INTERNAL ORCHESTRATOR (CW2-06B-15, CP5.2).
+--
+--    LOCK DISCIPLINE FOR ANY FUTURE CALLER: each attempt takes the canonical
+--    two-human lock of its own pair and keeps it until the transaction ends, so
+--    a caller must run ONE attempt (p_max = 1) per transaction. A batch in one
+--    transaction holds many pairs' locks in no global order and can deadlock
+--    against a human decision. No caller exists in S6-03.
 --
 --    discovery -> admission -> (only if admitted) pair -> capture ->
 --    deterministic evaluation -> preparation, bounded, for one human as the
@@ -438,9 +449,15 @@ BEGIN
       END IF;
       PERFORM 1 FROM public.prepare_matching_proposal_core_v1(gen_random_uuid(), snapshot_id, p_for_user_id);
       n_prepared := n_prepared + 1;
-    EXCEPTION WHEN SQLSTATE '55000' OR unique_violation THEN
-      -- Refused closed: a core said no, and nothing of this attempt survives.
-      NULL;
+    EXCEPTION
+      WHEN SQLSTATE '55000' THEN
+        -- Refused closed: a core said no, and nothing of this attempt survives.
+        NULL;
+      WHEN unique_violation THEN
+        -- Only the one-live-proposal race is an ordinary refusal; any other 23505 is an integrity anomaly.
+        IF SQLERRM <> 'MATCHING_LIVE_PROPOSAL_ALREADY_EXISTS' THEN
+          RAISE;
+        END IF;
     END;
   END LOOP;
 
@@ -449,6 +466,12 @@ END$$;
 
 -- ---------------------------------------------------------------------------
 -- 7. THE INTERNAL SWEEPER (CP5.3).
+--
+--    LOCK DISCIPLINE FOR ANY FUTURE CALLER: each attempt takes the canonical
+--    two-human lock of its own pair and keeps it until the transaction ends, so
+--    a caller must run ONE attempt (p_max = 1) per transaction. A batch in one
+--    transaction holds many pairs' locks in no global order and can deadlock
+--    against a human decision. No caller exists in S6-03.
 --
 --    Bounded. A live proposal past its deadline is expired, and every other live
 --    proposal is revalidated, through the EXISTING expiry and revalidation cores

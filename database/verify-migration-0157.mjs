@@ -410,6 +410,20 @@ async function verifyHorizon(report, humans) {
         }
       });
     }
+    await report.isolated('L05 an AGE_RANGE PASS whose value does not decode has no provable horizon and fails closed', async () => {
+      await rt.provisionMatchableHuman(a, { profile: [['life_stage', 'settled']], requirements: [['age_range_v1', 'HARD_DEALBREAKER', 'thirty to forty']], approvedKeys: ['life_stage'] });
+      await rt.provisionMatchableHuman(b, { profile: [['life_stage', 'settled']], requirements: [['shared_language', 'SOFT_PREFERENCE', 'arabic']], approvedKeys: ['life_stage'] });
+      await rt.installPolicies({ expiryHours: 1, safeFieldKeys: ['life_stage'] });
+      const [pair] = await rt.ensurePair(randomUUID(), a, b);
+      const snapshot = randomUUID();
+      await rt.capture(snapshot, pair.pair_id, a, b);
+      // Unreachable through the runtime (only the evaluator writes a family result, and it answers UNKNOWN here), so
+      // the PASS is written directly to prove preparation does not fail open on it.
+      const [{ version }] = await rows('SELECT lower_requirement_version_id AS version FROM public.matching_eligibility_snapshots WHERE id = $1 AND lower_user_id = $2 UNION ALL SELECT higher_requirement_version_id FROM public.matching_eligibility_snapshots WHERE id = $1 AND higher_user_id = $2', [snapshot, a]);
+      await q(`INSERT INTO ${P.HARD_RESULTS} (eligibility_snapshot_id, evaluated_for_user_id, requirement_version_id, requirement_key,
+                 requirement_outcome, evidence_source_class) VALUES ($1, $2, $3, 'age_range_v1', 'PASS', 'EXPLICIT_MATCHING_ANSWER')`, [snapshot, a, version]);
+      await rejected(() => rt.prepare(randomUUID(), snapshot, a), ['55000'], /MATCHING_ELIGIBILITY_HORIZON_EXCEEDED/u);
+    });
     await report.isolated('L02 a snapshot with no AGE_RANGE PASS has no horizon condition, whatever the expiry', async () => {
       const f = await rt.seedEligible(a, b, { expiryHours: 24 * 365 * 50 });
       const [prepared] = await rt.prepare(randomUUID(), f.snapshot, a);
