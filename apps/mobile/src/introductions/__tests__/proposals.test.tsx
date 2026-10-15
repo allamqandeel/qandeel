@@ -136,7 +136,7 @@ describe.each(['ar', 'en'] as const)('%s — Introduction proposals', (language)
     const focus = jest.spyOn(AccessibilityInfo, 'setAccessibilityFocus');
     await press(view, `qandeel-proposals-card-${P1}`);
     expect(focus).toHaveBeenCalled();
-    expect(words(view)).toEqual([copy.spaceTitle, copy.cardTitle, copy.AWAITING_YOU, copy.opening, copy.reviewLead, copy.qandeelRole,
+    expect(words(view)).toEqual([copy.spaceTitle, copy.cardTitle, copy.AWAITING_YOU, copy.reviewLead, copy.qandeelRole,
       copy.forwardTitle, copy.forwardMeaning, copy.forwardNotYet, copy.forwardMutual, copy.forwardWithdrawNote, copy.privacy,
       copy.allowAction, copy.declineAction]);
     onlyCopy(view, language);
@@ -190,7 +190,7 @@ describe.each(['ar', 'en'] as const)('%s — Introduction proposals', (language)
   it('the second recipient may only decline: acceptance is not offered, and nothing says what the other person did', async () => {
     const { view } = await space(language, server([proposal({ actions: ['DECLINE'] })]));
     await press(view, `qandeel-proposals-card-${P1}`);
-    expect(words(view)).toEqual([copy.spaceTitle, copy.cardTitle, copy.AWAITING_YOU, copy.opening, copy.reviewLead, copy.qandeelRole,
+    expect(words(view)).toEqual([copy.spaceTitle, copy.cardTitle, copy.AWAITING_YOU, copy.reviewLead, copy.qandeelRole,
       copy.acceptNotYet, copy.privacy, copy.declineAction]);
     expect(view.queryByTestId('qandeel-proposals-allow')).toBeNull();
     expect(words(view).filter((w) => w !== copy.acceptNotYet).join(' ')).not.toMatch(ACCEPT);
@@ -418,19 +418,25 @@ describe('the transport decodes strictly', () => {
 });
 
 describe('the S6-04 copy gate', () => {
-  it('M-01 and M-03 are the LANG-01 approved Arabic, byte for byte; M-02 is not used anywhere', () => {
+  it('M-01 and M-03 are the LANG-01 approved Arabic, byte for byte; M-01 is kept but displayed nowhere (CG-2); M-02 is not used', () => {
     for (const text of [PROPOSALS_LANG01_APPROVED.M01, PROPOSALS_LANG01_APPROVED.M03]) expect(AMENDMENT).toContain(`> **${text}**`);
-    expect(PROPOSALS_COPY_ROWS.opening.ar).toBe(PROPOSALS_LANG01_APPROVED.M01);
     expect(PROPOSALS_COPY_ROWS.privacy.ar).toBe(PROPOSALS_LANG01_APPROVED.M03);
+    expect(PROPOSALS_COPY_GATE.retainedNotDisplayed).toEqual(['M-01']);
     expect(PROPOSALS_COPY_GATE.notUsed).toEqual(['M-02']);
+    for (const pair of Object.values(PROPOSALS_COPY_ROWS)) {
+      expect(pair.ar).not.toContain(PROPOSALS_LANG01_APPROVED.M01);
+      expect(pair.ar).not.toMatch(/بناءً على فهمه/u);
+      expect(pair.en).not.toMatch(/understanding of each of you/iu);
+    }
     for (const pair of Object.values(PROPOSALS_COPY_ROWS)) expect(pair.ar).not.toMatch(/نقاط اتفاق/u);
   });
 
-  it('every row is marked with its gate state; the gate is open until the Product Owner closes it', () => {
+  it('every displayed row is marked approved; the gate is closed by the Product Owner decision of 2026-10-15', () => {
     const lines = COPY_SOURCE.split('\n').filter((line) => /^\s{2}[A-Za-z_]+: \{ ar: /u.test(line));
     expect(lines).toHaveLength(Object.keys(PROPOSALS_COPY_ROWS).length);
-    for (const line of lines) expect(line).toMatch(/\/\/ (PROPOSED|APPROVED — LANG-01 M-0[13])/u);
-    expect(PROPOSALS_COPY_GATE.status).toMatch(/OPEN/u);
+    for (const line of lines) expect(line).toMatch(/\/\/ APPROVED (\(Product Owner, 2026-10-15\)|— LANG-01 M-03)/u);
+    expect(COPY_SOURCE).not.toMatch(/\/\/ PROPOSED/u);
+    expect(PROPOSALS_COPY_GATE.status).toMatch(/— CLOSED —/u);
   });
 
   it('Arabic is simplified MSA with no Latin letter (no English word to reorder); English carries no Arabic letter', () => {

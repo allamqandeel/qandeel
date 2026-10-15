@@ -97,6 +97,7 @@ import { FIXTURE_OWN_EXPERIENCE_ID, fixtureEntry, fixtureExperience, fixtureFiel
 import { SHARED_VIS_WORLD_A, SHARED_VIS_WORLD_B, pick, type SharedVisFixtureWorld } from './shared-vis-proof-field';
 import { createVport01ProofWorld } from './vport01-proof-world';
 import { createS601ProofIntroductions } from './s601-proof-introductions';
+import { createS604ProofProposals } from './s604-proof-proposals';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
 /** S5-02: the reader's own SYNTHETIC earlier words offered as existing material — a validation fixture, never Product copy. */
@@ -230,6 +231,8 @@ export interface S401ProofWorld {
   publicSeed(): void;
   /** S6-01: the Introductions preparation opens with the N, K or C synthetic scenario, or its gates close. */
   introductions(action: 'seed-new' | 'seed-known' | 'seed-mixed' | 'seed-portrait' | 'close'): void;
+  /** S6-04: four SYNTHETIC private proposals delivered to the reader (`s604-proof-proposals.ts`). */
+  proposals(): void;
   /** S5-03C smoke: the synthetic other side accepts every relation the reader requested. */
   relationAccept(): void;
   /** S5-04 smoke: a synthetic other person replies to the reader's latest own post; its Public Activity item appears. */
@@ -242,6 +245,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const base = createVport01ProofWorld(language);
   // S6-01: answers nothing until a scenario is seeded, so every earlier leg meets the proof world exactly as before.
   const introductions = createS601ProofIntroductions(language);
+  // S6-04: answers nothing until seeded, likewise.
+  const privateProposals = createS604ProofProposals();
   const held = new Set<string>();
   let releases: (() => void)[] = [];
   // S5-01: the held Public World entries, and the reader's Public display mode.
@@ -753,6 +758,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
         return json(200, fixtureExperience(id, active, discussionOf(id).length));
       }
     }
+    const proposalsAnswer = privateProposals.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
+    if (proposalsAnswer !== undefined) return proposalsAnswer;
     const introductionsAnswer = introductions.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     if (introductionsAnswer !== undefined) return introductionsAnswer;
     if (path === '/shared' || path.startsWith('/shared/')) {
@@ -858,6 +865,7 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       if (action === 'seed-portrait') introductions.seedPortrait();
       if (action === 'close') introductions.close();
     },
+    proposals: () => privateProposals.seed(),
     peerDelete: () => {
       for (const lines of threads.values()) {
         const index = lines.findIndex((line) => line.text === S403_PROOF_LINES.peerToDelete);

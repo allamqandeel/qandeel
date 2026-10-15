@@ -161,7 +161,10 @@ test('7 — mobile draws only what the server answered: no person, score, accept
   const transport = code('apps/mobile/src/runtime-entry/introduction-proposals-api.ts');
   assert.match(transport, /Object\.keys\(value\)\.length !== 4/u, 'a proposal with any other field is no answer');
   const copy = read(`${MOBILE}/proposals-copy.ts`);
-  assert.match(copy, /status: 'S6-04 PRODUCT COPY GATE — OPEN/u, 'the copy gate stays open until the Product Owner closes it');
+  assert.match(copy, /status: 'S6-04 PRODUCT COPY GATE — CLOSED/u, 'the copy gate was closed by the Product Owner (2026-10-15)');
+  assert.match(copy, /retainedNotDisplayed: \['M-01'\]/u, 'M-01 is kept exactly but not displayed in S6-04 (CG-2)');
+  assert.doesNotMatch(copy, /PROPOSALS_LANG01_APPROVED\.M01/u, 'no displayed row carries M-01');
+  assert.doesNotMatch(code(`${MOBILE}/ProposalsSurface.tsx`), /copy\.opening|M01/u, 'the review draws no M-01');
 });
 
 test('8 — the verifier, the wire proof and the contract are wired into the toolchain and API CI', () => {

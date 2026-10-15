@@ -296,7 +296,6 @@ function Review({ ctx, copy, proposal }: { readonly ctx: PartContext; readonly c
     return (
       <View testID="qandeel-proposals-review">
         {head}
-        <Para ctx={ctx} text={copy.opening} testID="qandeel-proposals-opening" />
         <Para ctx={ctx} text={copy.reviewLead} />
         <Para ctx={ctx} text={copy.qandeelRole} role="supporting" color={palette.secondary} />
         {forward ? (
