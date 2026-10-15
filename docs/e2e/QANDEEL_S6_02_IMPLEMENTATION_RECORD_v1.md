@@ -83,7 +83,7 @@ A separate review agent read the full diff, compared each of the 27 bodies with 
 
 | Finding | Disposition |
 |---|---|
-| **MAJOR — Public approval request label.** S5-02's `list_own_public_approval_requests_v1` shows the *publisher's* Public display label; under the publisher's own `REAL_NAME` Public display mode that label is their account Name, so a matched counterpart asked to approve post-SUCCESS material could see it. | **Open Product Owner ruling, §9.1.** Not changed: the label is the owner's own explicit Public-identity choice (P1 §13 Public column), and changing Public identity is outside the contract. |
+| **MAJOR — Public approval request label.** S5-02's `list_own_public_approval_requests_v1` shows the *publisher's* Public display label; under the publisher's own `REAL_NAME` Public display mode that label is their account Name, so a matched counterpart asked to approve post-SUCCESS material could see it. | **RESOLVED — Product Owner approved option (a), 2026-10-15 (PR #340 decision comment).** The publisher's independently selected Public `REAL_NAME` label is their own consented Public identity, not permission to show account Name inside the Matching-born Shared World or override its separate full-name disclosure/display consent. No runtime change. |
 | m1 — the name-leak scans are textual (aliased `public.users` only) | recorded; the projection is the structural guarantee, and §9.1 names the one derived-label path |
 | m2 — per-item era lookup on every currency check | **fixed:** an ACCEPTED_INVITATION World returns its set after one lookup |
 | m3 — END mapped a server contradiction (P0001 → HTTP 400) to `INVALID_REQUEST` | **fixed:** only 22023 is invalid; anything else is `UNAVAILABLE` |
@@ -100,11 +100,13 @@ No merge, no deployment, no launch or Matching gate opened, none of the six `014
 - `144d6479` — the END API route
 - the closing change (this record, Backlog, locators, re-anchors) and the review fixes — see the PR's commit list
 
-## 9. Open ruling and residual risks (owner)
+## 9. Resolved Product Owner rulings and residual risks (owner)
 
-### 9.1 Product Owner ruling requested — Public display label in a Matching-born context
+### 9.1 Product Owner ruling APPROVED — Public display label in a Matching-born context
 
-When a human whose Public display mode is `REAL_NAME` prepares a Public package from post-SUCCESS material of a Matching-born World, the required approver (the other matched human) sees that publisher's Public label, which is their account Name. Options: **(a)** treat the Public identity as the owner's own separate, consented identity (P1 §13: "only if the user chooses real-name display"), outside decision A — no change; **(b)** exclude Matching-born material from S5-02 entirely or force a pseudonymous label for such approvals — a change to S5-02 Public identity, outside this contract. Recommendation: **(a)**, recorded explicitly. Also applied fail-closed and reported for confirmation: S5-02 neither lists nor packages *Introduction-era* material (the D5 rule extended to Public authoring, since Public is a wider exposure than private Replay).
+**APPROVED by the Product Owner on 2026-10-15 — option (a).** For a Public package sourced from **post-SUCCESS** material of a Matching-born World, the required approver may see the publisher's own Public display label, including their account Name if the publisher separately chose Public `REAL_NAME` display (P1 §13). This is a consented **Public identity only**; it never authorizes substituting account Name in that person's Matching-born Shared World, nor waives separate owner-controlled `FULL_NAME` disclosure and display consent there. No change to S5-02 Public identity semantics is authorized or required.
+
+**APPROVED by the Product Owner on 2026-10-15 — Introduction-era Public exclusion.** The implemented fail-closed D5 safeguard remains: S5-02 must neither list Introduction-era material as an authoring source nor put it in **new** Public packages, even after SUCCESS. Only post-SUCCESS material may proceed under ordinary Public rights and explicit approvals. Neither ruling opens a Launch Gate, expands scope, or authorizes deployment. Decision provenance: [PR #340 Product Owner decision comment](https://github.com/allamqandeel/qandeel/pull/340#issuecomment-6182239086).
 
 ### 9.2 Residual risks (not register items; no qualifying cross-task residue)
 
