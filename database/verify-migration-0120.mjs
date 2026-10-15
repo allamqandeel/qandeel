@@ -245,11 +245,36 @@ async function verifyPosture() {
   // terminal's stale clock can only decline to fire. Replacing either would have
   // widened rather than narrowed, so "we did not" is asserted rather than
   // claimed.
-  for (const fn of [PFN.PREPARE, PFN.EXPIRE]) {
-    const { prosrc } = await rt.functionPosture(fn);
-    assert.match(prosrc, /CURRENT_TIMESTAMP/u, `P03 ${fn} keeps its classified-safe transaction clock`);
+  {
+    const { prosrc } = await rt.functionPosture(PFN.EXPIRE);
+    assert.match(prosrc, /CURRENT_TIMESTAMP/u, `P03 ${PFN.EXPIRE} keeps its classified-safe transaction clock`);
     assert.doesNotMatch(prosrc, /clock_timestamp/u,
-      `P03 ${fn} was classified SAFE and is out of scope; it gained no wall clock`);
+      `P03 ${PFN.EXPIRE} was classified SAFE and is out of scope; it gained no wall clock`);
+  }
+  // RE-ANCHORED by S6-03 (migration 0157, CW2-06B-05 §7 R4-A, approved by the Product Owner on 2026-10-15). The
+  // preparation half asserts what the classification protects rather than the absence of every wall clock: the
+  // deadline and the cadence window are still minted from the transaction instant, so no proposal's life can be
+  // lengthened; and the ONE real instant preparation now reads is used only in its two refusals before the first
+  // write, and is never assigned to the deadline.
+  {
+    const { prosrc } = await rt.functionPosture(PFN.PREPARE);
+    assert.ok(prosrc.includes('deadline := CURRENT_TIMESTAMP + make_interval(hours => expiry_hours);'),
+      `P03 ${PFN.PREPARE} still mints the deadline from its classified-safe transaction clock`);
+    assert.ok(prosrc.includes('p.prepared_at > CURRENT_TIMESTAMP - make_interval(days => cadence_window)'),
+      `P03 ${PFN.PREPARE} still derives the cadence window from the same transaction clock`);
+    assert.equal(prosrc.split('clock_timestamp').length - 1, 1,
+      `P03 ${PFN.PREPARE} reads exactly one wall clock`);
+    assert.equal(prosrc.split('deadline :=').length - 1, 1, `P03 ${PFN.PREPARE} assigns the deadline exactly once`);
+    const body = stripComments(prosrc);
+    const read = body.indexOf('checked_at := clock_timestamp();');
+    const write = body.indexOf('INSERT INTO public.matching_proposals');
+    assert.ok(read > body.indexOf('deadline := CURRENT_TIMESTAMP') && read < write,
+      `P03 ${PFN.PREPARE} reads the real instant after the deadline is minted and before the first write`);
+    assert.equal(body.split('checked_at').length - 1, 3,
+      `P03 ${PFN.PREPARE} names the real instant only where it is declared, read and compared`);
+    for (const use of ['checked_at timestamptz;', 'checked_at := clock_timestamp();', 'IF deadline <= checked_at THEN']) {
+      assert.ok(body.includes(use), `P03 ${PFN.PREPARE} carries ${use}: the real instant is only ever a refusal, never stored`);
+    }
   }
 
   // P04 ASSURE-F08: THE THREE CORRECTED DECISIONS.

@@ -284,8 +284,11 @@ async function verifyCatalog() {
   for (const reason of [...I07B_PRIVATE_REASONS, COMPETING_REASON]) {
     assert.ok(reasons.includes(`'${reason}'`), `P05 ${reason} is representable`);
   }
-  assert.equal((reasons.match(/'[A-Z_]+'/gu) ?? []).length, I07B_PRIVATE_REASONS.length + 1,
-    'P05 the vocabulary is the eleven 0110 codes plus exactly COMPETING_MATCH_COMMITTED');
+  // RE-ANCHORED by S6-03 (migration 0156, CW2-06B-16): the same DROP / ADD pattern adds exactly one more private
+  // reason, MATCHING_FACT_VERSION_CHANGED. Every code above is still representable and nothing else is.
+  assert.ok(reasons.includes("'MATCHING_FACT_VERSION_CHANGED'"), 'P05 the S6-03 reason is representable');
+  assert.equal((reasons.match(/'[A-Z_]+'/gu) ?? []).length, I07B_PRIVATE_REASONS.length + 2,
+    'P05 the vocabulary is the eleven 0110 codes, COMPETING_MATCH_COMMITTED, and exactly the S6-03 MATCHING_FACT_VERSION_CHANGED');
 
   // P06 THE MATCH-SCOPE CENSUS IS EXACTLY THIS SLICE.
   for (const name of I07C_LIFECYCLE_RELATIONS) {

@@ -171,10 +171,20 @@ export const REM02_LIFECYCLE_RELATIONS = [
   'matching_proposal_delivery_view_bindings',
 ];
 
+/**
+ * The one relation S6-03 adds in migration 0156 that a lifecycle census predicate can reach: the binding of an
+ * eligibility snapshot to the exact confirmed fact versions it was captured on (CW2-06B-05). It carries the census
+ * words `eligibility` and `snapshot` because it genuinely is eligibility state, and it is NAMED here rather than renamed
+ * out of the pattern. The two confirmed-fact relations carry no census word, so no census demands them.
+ */
+export const S6_03_LIFECYCLE_RELATIONS = [
+  'matching_eligibility_snapshot_fact_bindings',
+];
+
 /** The ONE reviewed ownership list every lifecycle census compares against. */
 export const LATER_SLICE_LIFECYCLE_RELATIONS = [
   ...I07B_LIFECYCLE_RELATIONS, ...I07C_LIFECYCLE_RELATIONS, ...I07D_LIFECYCLE_RELATIONS,
-  ...REM02_LIFECYCLE_RELATIONS,
+  ...REM02_LIFECYCLE_RELATIONS, ...S6_03_LIFECYCLE_RELATIONS,
 ].sort();
 
 /**

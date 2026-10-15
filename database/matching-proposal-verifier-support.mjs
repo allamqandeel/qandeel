@@ -46,6 +46,10 @@ export const P = Object.freeze({
   VIEW_STATE: 'public.matching_recipient_proposal_view_state',
   DECISION_BINDINGS: 'public.matching_proposal_decision_view_bindings',
   DELIVERY_BINDINGS: 'public.matching_proposal_delivery_view_bindings',
+  // S6-03 (migration 0156, CW2-06B-01 / -05)
+  FACT_VERSIONS: 'public.matching_confirmed_fact_versions',
+  FACT_STATE: 'public.matching_confirmed_fact_state',
+  FACT_BINDINGS: 'public.matching_eligibility_snapshot_fact_bindings',
 });
 
 /** Every relation 0110 creates, in the order its terminal self-assertion names them. */
@@ -86,6 +90,17 @@ export const PROPOSAL_IMMUTABLE = [
 export const REM02_IMMUTABLE = [
   [P.DELIVERY_BINDINGS, 'matching_proposal_delivery_view_bindings_immutable'],
   [P.DECISION_BINDINGS, 'matching_proposal_decision_view_bindings_immutable'],
+];
+
+/**
+ * The three relations S6-03 adds in migration 0156, with their guards. Named separately for the reason REM02's are:
+ * they are not 0110's, and the shared teardown peels them because a committed capture now binds its snapshot to two
+ * confirmed fact versions restrictively, and a fact version binds its human.
+ */
+export const S603_GUARDS = [
+  [P.FACT_VERSIONS, 'matching_confirmed_fact_versions_immutable'],
+  [P.FACT_BINDINGS, 'matching_eligibility_snapshot_fact_bindings_immutable'],
+  [P.FACT_STATE, 'matching_confirmed_fact_state_truth'],
 ];
 
 /** The controlled relations, with the truth guard that bounds how they may change. */
@@ -311,8 +326,63 @@ export function createProposalRuntime(databaseUrl) {
     rows('SELECT * FROM public.resolve_matching_setup_state_v1($1)', [human]);
   const activeIntroduction = async (human) =>
     (await rows('SELECT * FROM public.resolve_matching_active_introduction_v1($1)', [human]))[0].has_active_introduction;
-  const capture = (snapshot, pair, a, b) =>
-    rows('SELECT * FROM public.capture_matching_eligibility_snapshot_core_v1($1, $2, $3, $4)', [snapshot, pair, a, b]);
+  // ---- S6-03: confirmed Matching facts (0156), through the ONE internal writer
+  /** The current confirmed facts of one human (one row, every value null when there is none). */
+  const currentFacts = async (human) =>
+    (await rows('SELECT * FROM public.resolve_matching_confirmed_facts_v1($1)', [human]))[0];
+  /**
+   * Records one confirmed fact version for a SYNTHETIC fixture human, superseding the current one. A row written here is
+   * test data: it proves how the runtime behaves, never that anybody confirmed anything (CW2-06B-02 §3-4, R5).
+   */
+  async function recordFacts(human, facts = {}, { version = randomUUID(), at = '2026-10-01T00:00:00Z' } = {}) {
+    await rt.asRole('postgres');
+    const current = await currentFacts(human);
+    const value = (k) => (facts[k] === undefined ? null : facts[k]);
+    const when = (k) => (value(k) === null ? null : at);
+    await rows(`SELECT * FROM public.record_matching_confirmed_facts_core_v1(
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15)`, [
+      version, human, current.fact_version_id,
+      value('firstName'), when('firstName'), value('sex'), when('sex'),
+      value('birthYear'), value('birthMonth'), when('birthYear'),
+      value('countryCode'), value('regionCode'), when('countryCode'),
+      value('maritalStatus'), when('maritalStatus')]);
+    return version;
+  }
+  const factsOf = (row) => ({
+    firstName: row.first_name, sex: row.sex, birthYear: row.birth_year, birthMonth: row.birth_month,
+    countryCode: row.country_code, regionCode: row.region_code, maritalStatus: row.marital_status,
+  });
+  /** Gives a human a confirmed sex, keeping every other current fact; a no-op when it already is that sex. */
+  async function assignSex(human, sex) {
+    await rt.asRole('postgres');
+    const current = await currentFacts(human);
+    if (current.sex === sex) return current.fact_version_id;
+    return recordFacts(human, { ...factsOf(current), sex });
+  }
+  const isHuman = async (human) => typeof human === 'string' && /^[0-9a-f-]{36}$/u.test(human)
+    && (await rows('SELECT 1 FROM public.users WHERE id = $1', [human])).length === 1;
+  /**
+   * THE CW2-06B-05 CAPTURE GATE, satisfied for a fixture pair: one confirmed MALE and one confirmed FEMALE. A human who
+   * already has a confirmed sex keeps it, the other gets the opposite one, and two humans with none become MALE and
+   * FEMALE in argument order. Only a pair whose two humans already share a sex gets a NEW version for the second one;
+   * a scenario whose pairs cannot all be opposite-sex (verify-0114 C06) assigns explicitly first.
+   */
+  async function ensureOppositeSexFacts(a, b) {
+    await rt.asRole('postgres');
+    if (a === b || !(await isHuman(a)) || !(await isHuman(b))) return;
+    const [fa, fb] = [await currentFacts(a), await currentFacts(b)];
+    const other = (s) => (s === 'MALE' ? 'FEMALE' : 'MALE');
+    if (fa.sex && fb.sex && fa.sex !== fb.sex) return;
+    if (fa.sex) { await assignSex(b, other(fa.sex)); return; }
+    if (fb.sex) { await assignSex(a, other(fb.sex)); return; }
+    await assignSex(a, 'MALE');
+    await assignSex(b, 'FEMALE');
+  }
+  /** Capture, with the fixture pair made opposite-sex first unless the scenario says otherwise. */
+  const capture = async (snapshot, pair, a, b, { facts = true } = {}) => {
+    if (facts) await ensureOppositeSexFacts(a, b);
+    return rows('SELECT * FROM public.capture_matching_eligibility_snapshot_core_v1($1, $2, $3, $4)', [snapshot, pair, a, b]);
+  };
   const evaluate = (snapshot, human, key, outcome, source) =>
     rows('SELECT * FROM public.evaluate_matching_hard_requirement_core_v1($1, $2, $3, $4, $5)',
       [snapshot, human, key, outcome, source]);
@@ -642,7 +712,24 @@ export function createProposalRuntime(databaseUrl) {
       await q(`DELETE FROM ${P.CONCLUSION_CANDIDATES} WHERE eligibility_snapshot_id IN ${snapshots}`, [humans]);
       await q(`DELETE FROM ${P.PRIVATE_NOTES} WHERE eligibility_snapshot_id IN ${snapshots}`, [humans]);
       await q(`DELETE FROM ${P.HARD_RESULTS} WHERE eligibility_snapshot_id IN ${snapshots}`, [humans]);
+      // S6-03: a snapshot's fact binding binds it and two fact versions restrictively, so it goes first, and the
+      // humans' confirmed facts go after it, leaf-first along each chain.
+      for (const [table, trigger] of S603_GUARDS) {
+        await q(`ALTER TABLE ${table} DISABLE TRIGGER ${trigger}`);
+      }
+      await q(`DELETE FROM ${P.FACT_BINDINGS} WHERE eligibility_snapshot_id IN ${snapshots}
+                  OR lower_user_id = ANY($1::uuid[]) OR higher_user_id = ANY($1::uuid[])`, [humans]);
       await q(`DELETE FROM ${P.SNAPSHOTS} WHERE pair_id IN ${pairs}`, [humans]);
+      await q(`DELETE FROM ${P.FACT_STATE} WHERE owner_user_id = ANY($1::uuid[])`, [humans]);
+      for (let pass = 0; pass < 64; pass += 1) {
+        const result = await q(
+          `DELETE FROM ${P.FACT_VERSIONS} f WHERE f.owner_user_id = ANY($1::uuid[])
+             AND NOT EXISTS (SELECT 1 FROM ${P.FACT_VERSIONS} c WHERE c.prior_fact_version_id = f.id)`, [humans]);
+        if (result.rowCount === 0) break;
+      }
+      for (const [table, trigger] of S603_GUARDS) {
+        await q(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
+      }
       await q(`DELETE FROM ${P.PAIRS} WHERE lower_user_id = ANY($1::uuid[]) OR higher_user_id = ANY($1::uuid[])`, [humans]);
       for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED, ...REM02_IMMUTABLE]) {
         await q(`ALTER TABLE ${table} ENABLE TRIGGER ${trigger}`);
@@ -654,6 +741,9 @@ export function createProposalRuntime(databaseUrl) {
     }
     for (const [table, trigger] of [...PROPOSAL_IMMUTABLE, ...PROPOSAL_GUARDED, ...REM02_IMMUTABLE]) {
       assert.equal(await rt.triggerEnabled(table, trigger), true, `${trigger} is enabled again after I-07B teardown`);
+    }
+    for (const [table, trigger] of S603_GUARDS) {
+      assert.equal(await rt.triggerEnabled(table, trigger), true, `${trigger} is enabled again after S6-03 teardown`);
     }
   }
 
@@ -696,6 +786,7 @@ export function createProposalRuntime(databaseUrl) {
     decisionBindingOf, deliveryBindingOf, removeDecisionBinding, removeDeliveryBinding,
     installPolicies, supersedePolicy, captureMatchingSeam, restoreMatchingSeam,
     clearProposalPrerequisites, resolveFirstName,
+    currentFacts, recordFacts, assignSex, ensureOppositeSexFacts,
     provisionMatchableHuman, removeCommittedMatchState, removeCommittedProposalState, removeCommittedPolicies,
   };
 }

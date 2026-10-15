@@ -95,10 +95,19 @@ const CREATED = [
 // ------------------------------------------------------------------ small helpers
 const source = (file) => readFileSync(new URL(file, MIGRATIONS), 'utf8').replace(/\r\n/gu, '\n');
 const migrationFiles = () => readdirSync(MIGRATIONS).filter((f) => /^\d{4}_.*\.sql$/u.test(f)).sort();
-/** The body of the LAST `CREATE [OR REPLACE] FUNCTION public.<name>(` before 0155, between its dollar tags. */
+/**
+ * RE-ANCHORED by S6-03: a frozen core a REVIEWED later migration redefines forward, with that migration. S6-02 did not
+ * change it, and it is compared against its definition in that later migration instead. CW2-06B-01 (migration 0156)
+ * replaces the first-name resolver's body so it reads the confirmed Introduction First Name; its signature, its
+ * answers and its posture are unchanged, and P04 still proves 0155 itself does not define it.
+ */
+const REDEFINED_AFTER_0155 = Object.freeze({
+  resolve_matching_canonical_first_name_v1: '0156_matching_confirmed_facts_eligibility_neutral_disclosure_v1.sql',
+});
+/** The body of the LAST `CREATE [OR REPLACE] FUNCTION public.<name>(` before 0155 (or in its named later redefinition), between its dollar tags. */
 function definingBody(name) {
   let found = null;
-  for (const file of migrationFiles().filter((f) => f < M0155)) {
+  for (const file of migrationFiles().filter((f) => f < M0155 || f === REDEFINED_AFTER_0155[name])) {
     const text = source(file);
     const pattern = new RegExp(String.raw`CREATE (?:OR REPLACE )?FUNCTION public\.${name}\(`, 'gu');
     for (const match of text.matchAll(pattern)) {

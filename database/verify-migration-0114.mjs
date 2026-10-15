@@ -915,6 +915,13 @@ async function verifyRaces(report, humans) {
       // and every live proposal involving them, in canonical order, so the two
       // Matches serialize on the crossing proposal rows and BOTH commit, each
       // cancelling the crossing proposals it finds still live.
+      // RE-ANCHORED by S6-03 (migration 0156, CW2-06B-05): every captured pair must be one confirmed MALE and one
+      // confirmed FEMALE human, and the four live pairs (one,two), (three,four), (one,three) and (two,four) are all
+      // opposite-sex under exactly this assignment, so it is made explicitly before the first capture.
+      await rt.assignSex(one, 'MALE');
+      await rt.assignSex(two, 'FEMALE');
+      await rt.assignSex(three, 'FEMALE');
+      await rt.assignSex(four, 'MALE');
       const p1 = await rt.bringToForwarded(one, two);
       const p4 = await rt.bringToForwarded(three, four, { reusePolicy: p1.policy });
       const p2 = await rt.bringToOffered(one, three, { reusePolicy: p1.policy });

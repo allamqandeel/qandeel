@@ -483,10 +483,19 @@ async function verifyPrivacy(report, humans) {
       // The two views are DIFFERENT DISCLOSURES over different subjects; they
       // are not the same wording with the names swapped.
       const [theirs] = await rt.myProposal(f.proposal);
-      assert.notEqual(mine.presented_first_name, theirs.presented_first_name,
-        'C04 each recipient is shown the OTHER human');
-      assert.notEqual(mine.safe_compatibility_conclusion, theirs.safe_compatibility_conclusion,
-        'C04 and a conclusion written for them');
+      // RE-ANCHORED by S6-03 (migration 0156, CW2-06B-07): bound internally, presented neutrally. The projection now
+      // presents NO first name and NO conclusion to either recipient, so independence is proven on the two BOUND views:
+      // each is about the OTHER human and binds a conclusion written for its own recipient.
+      for (const answer of [mine, theirs]) {
+        assert.equal(answer.presented_first_name, null, 'C04 no first name is presented before or after Mutual Match');
+        assert.equal(answer.safe_compatibility_conclusion, null, 'C04 and no conclusion is presented');
+      }
+      await asRole('postgres');
+      const [boundMine] = await rows(`SELECT * FROM ${P.VIEWS} v WHERE v.id = $1`, [mine.recipient_view_id]);
+      const [boundTheirs] = await rows(`SELECT * FROM ${P.VIEWS} v WHERE v.id = $1`, [theirs.recipient_view_id]);
+      assert.notEqual(boundMine.subject_user_id, boundTheirs.subject_user_id, 'C04 each recipient view is bound to the OTHER human');
+      assert.notEqual(boundMine.permitted_conclusion_id, boundTheirs.permitted_conclusion_id,
+        'C04 and to a conclusion written for them');
       assert.ok(mineFields.length > 0 && theirFields.length > 0, 'C04 each view carries its own disclosed fields');
     });
 
