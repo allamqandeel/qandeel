@@ -150,7 +150,8 @@ test('5 — the API: four routes, the caller token, SECURITY_SENSITIVE send (R-8
   assert.doesNotMatch(controller, /delete/iu, 'no second deletion route: the existing owner deletion is reused');
   const account = read('apps/api/src/account/account.module.ts');
   assert.equal((account.match(/IntroductionsWorldModule/gu) ?? []).length, 3, 'imported, documented and composed once');
-  assert.match(account, /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule\]/u);
+  // RE-ANCHORED by S6-06 (2026-10-16, CP1): its two modules are composed after this one.
+  assert.match(account, /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule\]/u);
   // The Stage 4 send keeps its Activity, and only it: the Introduction module calls no producer (R-7).
   assert.equal((read('apps/api/src/shared-world/shared-world.controller.ts').match(/this\.activity\.humanText\(/gu) ?? []).length, 1);
 });
