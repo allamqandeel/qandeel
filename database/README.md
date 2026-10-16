@@ -4813,3 +4813,37 @@ npm run prove:mutual-match-acceptance:postgrest
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its positive paths run on synthetic fixture humans
 inside rolled-back transactions with the CW2-08 seam replaced for the run and restored byte for byte, and its six races
 commit their fixtures and remove them. The wire proof also needs `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only).
+
+## S6-05 - Introduction World reading and human messaging (migration 0160, CP3)
+
+`0160_introduction_world_human_messaging_v1.sql` is the CP3 database part of `S6-05` under the Product Owner's CP3
+authorization (2026-10-16). It creates three functions beside the S6-02 fence and replaces nothing: no Stage 4 fence is
+lifted, and the frozen `0090` / `0118` human text core, the `0089` material resolver and the `0139` derivation are composed,
+never copied. Record: [S6-05 implementation record](../docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md) §9–§12.
+
+```text
+list_my_introduction_worlds_v1          authenticated: the caller's own Introduction Worlds (either human): World,
+                                        proposal, ACTIVE | ENDED, the other's handoff first name (S6-02 projection)
+read_my_introduction_messages_v1        authenticated: (world, before instant, before id, limit); no row = not theirs /
+                                        unknown / not an Introduction; ACTIVE rows (one empty for an empty page); one
+                                        empty ENDED row after END; human text only, through resolve_shared_world_material_v1
+send_my_introduction_text_v1            authenticated: (command, world, text); membership -> replay or World row FOR
+                                        UPDATE -> commit_shared_world_human_text_v1 once (0118), the 0139 derivation
+                                        under Introduction-only namespaces (never a Stage 4 message identity);
+                                        COMMITTED / ENDED (members only) / UNAVAILABLE / COMMAND_CONFLICT
+```
+
+Membership is the immutable Introduction Record, decided before any lock or read, so an outsider is indistinguishable
+from an unknown World before and after END. Nothing reaches a QANDEEL reply, weaving, Living Analysis, Activity, a launch
+gate, an account Name, a grant or Personal Context (asserted at deploy time). Deleting one's own message is the existing
+`delete_own_shared_world_material_v1` (R-5). None of the three reaches a `40001`. In production no Introduction World
+exists: CW2-08 answers NOT_EVALUATED and nothing can be accepted.
+
+```sh
+npm run verify:introduction-world-messaging:integration
+npm run prove:introduction-world-messaging:postgrest
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its scenarios run in rolled-back transactions
+with the CW2-08 and I-07D seams replaced for the run and restored byte for byte, and its four races commit their fixtures
+and remove them. The wire proof also needs `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only).

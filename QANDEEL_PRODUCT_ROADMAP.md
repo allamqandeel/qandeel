@@ -510,12 +510,16 @@ as written.
 as written.
 - **Merged:** S6-04 through PR #342 as `35ad4e19ad7e449255e7d087d4420b5d3775cf86` (2026-10-15; not deployed).
 - **Started:** the Product Owner's S6-05 Task Contract v1.0 (D1–D7, 2026-10-15) started **S6-05 — Mutual Match &
-  Introduction World** from `main` at `35ad4e19`. It is **IN PROGRESS — CP2 DELIVERED (MUTUAL MATCH SECURE INTEGRATION) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
+  Introduction World** from `main` at `35ad4e19`. It is **IN PROGRESS — CP2 APPROVED, CP3 DELIVERED (INTRODUCTION WORLD & HUMAN MESSAGING) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
 - **Decided (2026-10-15):** R-1 … R-8 (R-1: D3 is within GATE-30, ACE-SP-01 unchanged); the Visual Gate and the Copy Gate
   closed; CP2 authorized.
 - **Delivered (CP2):** migration `0159` (the second recipient's acceptance over the frozen `0114` core) and its API route,
   with the verifier, the live-PostgREST proof, the re-anchored census pins and a static contract.
-- **Not delivered yet:** CP3 (Introduction reads and messages), CP4 (END on mobile, closed history), CP5 (mobile). The
+- **Approved (2026-10-16):** CP2, after green exact-head CI and live PostgREST on the four lines; CP3 authorized.
+- **Delivered (CP3):** migration `0160` (discovery, reading and human text messaging in the Introduction World beside the
+  S6-02 fence; no AI, weaving, Activity or grant) and its API routes, with the verifier, the live-PostgREST proof and a
+  static contract.
+- **Not delivered yet:** CP4 (END on mobile, closed history), CP5 (mobile). The
   forward producer is `QAN-BL-MATCH-06` (S6-07, admitted).
 - **Still closed:** every Matching and launch gate; nobody is shown ACCEPT in production. Issue #322 stays open.
 - **Next:** the Product Owner's review of the CP2 report. No later checkpoint is started by this note.
