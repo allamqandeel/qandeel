@@ -93,7 +93,7 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /introductions/preparation/assistance/revoke': 'AUTHENTICATED',
   // The Introduction's unilateral END (S6-02). An exit right, never throttled like a credential act.
   'POST /introductions/worlds/:worldId/end': 'AUTHENTICATED',
-  // A human's own private proposals and the three decisions (S6-04). Owner-only; no acceptance route exists.
+  // A human's own private proposals and the three decisions (S6-04). Owner-only.
   'GET /introductions/proposals': 'AUTHENTICATED',
   'GET /introductions/proposals/:proposalId': 'AUTHENTICATED',
   'POST /introductions/proposals/:proposalId/forward-approval': 'AUTHENTICATED',
@@ -101,6 +101,12 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'POST /introductions/proposals/:proposalId/withdrawal': 'AUTHENTICATED',
   // S6-05 (migration 0159): the second recipient's acceptance, a decision of the same class as the three above.
   'POST /introductions/proposals/:proposalId/acceptance': 'AUTHENTICATED',
+  // S6-05 (CP3, migration 0160): the Introduction World's human conversation. Reading is an ordinary authenticated act;
+  // a message is held to the strict class, as the Stage 4 send is (R-8), though it starts no provider generation.
+  'GET /introductions/worlds': 'AUTHENTICATED',
+  'GET /introductions/worlds/:worldId/messages': 'AUTHENTICATED',
+  'GET /introductions/worlds/:worldId/messages/before/:materialId/:establishedAt': 'AUTHENTICATED',
+  'POST /introductions/worlds/:worldId/messages': 'SECURITY_SENSITIVE',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',

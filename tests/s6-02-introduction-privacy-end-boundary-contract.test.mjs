@@ -188,8 +188,9 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   assert.match(repository, /\{ p_command_id: commandId, p_world_id: worldId \}/u);
   assert.doesNotMatch(repository, /ServiceRole|service_role/u, 'the caller\'s own token');
   assert.match(read('apps/api/src/http-security/route-rate-limit.census.ts'), /'POST \/introductions\/worlds\/:worldId\/end': 'AUTHENTICATED'/u);
-  // S6-04 (2026-10-15) appends its own proposal module; the S6-02 module stays composed here, exactly once.
-  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule\]/u);
+  // S6-04 (2026-10-15) appends its own proposal module, and S6-05 (2026-10-16, CP3) its Introduction World module after
+  // it; the S6-02 module stays composed here, exactly once.
+  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
   for (const file of mobile('apps/mobile/src/')) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction|introductions\/worlds\//u, `mobile ${file} wires no END (S6-05)`);

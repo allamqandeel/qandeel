@@ -139,6 +139,7 @@ jobs:
       - {name: "Verify S6-02 Introduction privacy isolation and safe END boundary static contract (one projection, D4 fences, A1, Replay era, one END exception)", run: npm run test:s6-02-introduction-privacy-end-boundary-contract}
       - {name: "Verify S6-04 private proposal review and decisions static contract (thin shells over the cores, no name or acceptance, withdrawal ungated, named exceptions)", run: npm run test:s6-04-private-proposal-review-decisions-contract}
       - {name: "Verify S6-05 Mutual Match acceptance static contract (one shell over the frozen 0114 core, server-derived identities, ACCEPT gated on CW2-08, named exceptions)", run: npm run test:s6-05-mutual-match-acceptance-contract}
+      - {name: "Verify S6-05 Introduction World messaging static contract (three boundaries beside the S6-02 fence, human words only, no AI or Activity, owner deletion reused)", run: npm run test:s6-05-introduction-world-messaging-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1032,6 +1033,11 @@ jobs:
       # no ghost birth after a late failure, END still independent, and six races on real connections.
       - name: Verify S6-05 Mutual Match acceptance against real PostgreSQL
         run: npm run verify:matching-mutual-match-acceptance:integration
+      # S6-05 (CP3): migration 0160 - the Introduction World's discovery, reading and human messaging beside the S6-02 fence:
+      # both humans find the World, an outsider nothing; human words only (no reply, weaving, analysis, Activity or grant);
+      # ENDED to the two humans only; owner deletion reused; replay and reused ids; races against END and SUCCESS.
+      - name: Verify S6-05 Introduction World messaging against real PostgreSQL
+        run: npm run verify:introduction-world-messaging:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1100,6 +1106,9 @@ jobs:
             # S6-05: the acceptance on the wire - anon and service_role refused, ACCEPT offered to the second recipient only,
             # the core's 40001 (a stale view, a stale first approval) answered ONCE on every line, MATCHED, replay, reused id.
             POSTGREST_VERSION="$version" npm run --silent prove:mutual-match-acceptance:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # S6-05 (CP3): the Introduction World on the wire - anon and service_role refused, both humans list it and an outsider
+            # nothing, a message committed, read, retried and conflicted, owner deletion reused, ENDED to the two humans only.
+            POSTGREST_VERSION="$version" npm run --silent prove:introduction-world-messaging:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"
