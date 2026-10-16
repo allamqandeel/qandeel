@@ -72,5 +72,5 @@ export function introductionWorldCopy(language: ChromeLanguage): IntroductionWor
 
 /** IW-11 with the first name the server presented to this reader, or IW-11b when it vouches for none. */
 export function introductionTitle(copy: IntroductionWorldCopy, firstName: string | null): string {
-  return firstName === null ? copy.titleNoName : copy.title.replace('{0}', firstName);
+  return firstName === null ? copy.titleNoName : copy.title.replace('{0}', () => firstName);
 }

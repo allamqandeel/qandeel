@@ -26,7 +26,7 @@ import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type Re
 import { AccessibilityInfo, BackHandler, KeyboardAvoidingView, ScrollView, Text, View, findNodeHandle, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
 import { AppearanceStatusBar } from '../appearance';
-import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, withAlpha } from '../conversation';
+import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { IntroductionMessage, SharedMaterial } from '../runtime-entry';
 import { sharedConversationCopy } from '../shared-world/conversation-copy';
@@ -45,8 +45,8 @@ const SHEET_RADIUS = 24;
 /** V-1: the opening's inner gap between the seam and its words, and between the name block and the welcome. */
 const SEAM_GAP = 14;
 const OPENING_GAP = 12;
-/** V-1 hairline under the opening and above the closed banner: the tertiary ink at the mock-up's 35%. */
-const HAIRLINE_ALPHA = 0.35;
+/** V-1 hairline under the opening and above the closed banner: the existing GlobalSwitcher hairline (tertiary ink, 0.4). */
+const HAIRLINE_OPACITY = 0.4;
 
 export interface IntroductionWorldSurfaceProps {
   readonly controller: IntroductionWorldsController;
@@ -227,8 +227,8 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
       </ScrollView>
       {closed ? (
         <View testID="qandeel-introduction-closed-banner" accessible accessibilityLanguage={language} accessibilityLiveRegion="polite"
-          style={{ marginStart: ROW_START, marginEnd: ROW_END, paddingTop: 12, paddingBottom: insets.bottom + 18,
-            borderTopWidth: 1, borderTopColor: withAlpha(palette.tertiary, HAIRLINE_ALPHA) }}>
+          style={{ marginStart: ROW_START, marginEnd: ROW_END, paddingTop: 0, paddingBottom: insets.bottom + 18 }}>
+          <View style={{ height: 1, marginBottom: 12, backgroundColor: palette.tertiary, opacity: HAIRLINE_OPACITY }} />
           <Text style={{ ...typeStyle('supporting'), color: palette.secondary, writingDirection: writing }}>{copy.closedBanner}</Text>
         </View>
       ) : (
@@ -255,7 +255,7 @@ function Opening({ ctx, copy, title }: { readonly ctx: PartContext; readonly cop
         <Text testID="qandeel-introduction-welcome" style={{ ...typeStyle('body'), color: palette.primary, writingDirection: writing }}>{copy.welcome}</Text>
         <Text testID="qandeel-introduction-note" style={{ ...typeStyle('supporting'), color: palette.secondary, marginTop: 6, writingDirection: writing }}>{copy.note}</Text>
       </View>
-      <View testID="qandeel-introduction-hairline" style={{ height: 1, marginTop: 14, marginBottom: 4, marginStart: ROW_START, marginEnd: ROW_END, backgroundColor: withAlpha(palette.tertiary, HAIRLINE_ALPHA) }} />
+      <View testID="qandeel-introduction-hairline" style={{ height: 1, marginTop: 14, marginBottom: 4, marginStart: ROW_START, marginEnd: ROW_END, backgroundColor: palette.tertiary, opacity: HAIRLINE_OPACITY }} />
     </>
   );
 }

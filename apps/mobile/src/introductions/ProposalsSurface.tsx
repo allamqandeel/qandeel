@@ -188,6 +188,7 @@ export function ProposalsSurface({ controller, language, insets, onBack, worlds 
     } else {
       body = <AcceptConfirmation ctx={ctx} iw={iw} />;
       const agree = async () => {
+        if (controller.getState().busy) return;
         const worldId = await controller.accept(selected.proposalId);
         if (worldId !== null) setScreen({ kind: 'BEGUN', id: selected.proposalId, worldId });
         else if (controller.getState().notice !== 'FAILED') setScreen({ kind: 'REVIEW', id: selected.proposalId });

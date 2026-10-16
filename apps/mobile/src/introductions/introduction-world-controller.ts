@@ -17,6 +17,10 @@
  *     decides each once. One message and one END at a time.
  *   - The ENDED state of a send is shown only when the server itself answered it (IW-35): a network failure, a timeout, a
  *     5xx or a doubtful body leaves the message unsent with its retry, never "ended".
+ *   - One World is open at a time for the whole generation: the hosts (the proposals and «العالم المشترك») never draw
+ *     the Introduction surface at the same time (DepthComposition shows one area or the other).
+ *   - A message or an END whose answer was lost keeps its command id for that World for the whole generation, across
+ *     leaving and re-opening it, so a later retry is still the same request.
  *   - Nothing here reaches QANDEEL's reply, weaving, Living Analysis, Activity or Push: an Introduction is the two humans'
  *     words only (R-1, R-7). Deletion is the existing Shared owner deletion (R-5).
  */
@@ -106,11 +110,16 @@ const fresh = (worldId: string): IntroductionWorldView => Object.freeze({
   worldId, status: 'LOADING', messages: EMPTY, hasOlder: false, loadingOlder: false, pending: null, end: 'IDLE', deleting: null, notice: null,
 });
 
-/** Strictly older than `than` in the server's order (instant, then identity). */
+/** An instant to the microsecond the server keeps: the millisecond, then the three digits `Date.parse` drops. */
+const instantOf = (value: string): readonly [number, number] => {
+  const fraction = /\.(\d{1,6})/u.exec(value)?.[1] ?? '';
+  return [Date.parse(value), Number(fraction.padEnd(6, '0').slice(3))];
+};
+/** Strictly older than `than` in the server's order (instant to the microsecond, then identity). */
 const isOlder = (a: IntroductionMessage, than: IntroductionMessage): boolean => {
-  const at = Date.parse(a.establishedAt);
-  const bt = Date.parse(than.establishedAt);
-  return at < bt || (at === bt && a.materialId < than.materialId);
+  const [am, au] = instantOf(a.establishedAt);
+  const [bm, bu] = instantOf(than.establishedAt);
+  return am < bm || (am === bm && (au < bu || (au === bu && a.materialId < than.materialId)));
 };
 
 /**
@@ -142,10 +151,10 @@ export function createIntroductionWorldsController({
   /** One number per opening: an answer about an earlier opening (or another World) is never applied. */
   let opening = 0;
   let reads = 0;
-  /** The pending message's command id, kept until the server answers it. */
-  let sendId: string | null = null;
-  /** The END's command id, kept until the server answers it. */
-  let endId: string | null = null;
+  /** Per World, the message whose answer is not known yet — its words and command id — until the server answers it. */
+  const unsent = new Map<string, { readonly id: string; readonly text: string }>();
+  /** Per World, the END command id whose answer is not known yet. */
+  const ends = new Map<string, string>();
   /** The last deletion whose answer was lost: retried with the same id when the reader deletes exactly that message again. */
   let pendingDelete: { readonly materialId: string; readonly id: string } | null = null;
 
@@ -193,7 +202,7 @@ export function createIntroductionWorldsController({
         return;
       }
       // The server says this human's Introduction has ended: the closed record is read from their own entitlement.
-      patch(token, worldId, { status: 'CLOSED', messages: EMPTY, hasOlder: false, end: 'IDLE' });
+      patch(token, worldId, { status: 'CLOSED', messages: EMPTY, hasOlder: false, end: 'IDLE', pending: closedPending(now.pending, worldId) });
       readList();
       return readOpen(token, worldId);
     }
@@ -210,22 +219,38 @@ export function createIntroductionWorldsController({
     }
   };
 
+  /**
+   * Nothing is sent after END (S12): a message whose answer is not known is no longer offered for retry — if it was
+   * committed, the closed history shows it. Only the server's own ENDED answer to the send keeps its words (IW-35).
+   */
+  const closedPending = (pending: IntroductionPending | null, worldId: string): IntroductionPending | null => {
+    if (pending === null || pending.status === 'ENDED' || pending.status === 'SENDING') return pending;
+    unsent.delete(worldId);
+    return null;
+  };
   const toClosed = (token: number, worldId: string, next: Partial<IntroductionWorldView> = {}) => {
-    patch(token, worldId, { status: 'CLOSED', messages: EMPTY, hasOlder: false, loadingOlder: false, end: 'IDLE', ...next });
+    const now = current(token, worldId);
+    patch(token, worldId, { status: 'CLOSED', messages: EMPTY, hasOlder: false, loadingOlder: false, end: 'IDLE',
+      pending: closedPending(now?.pending ?? null, worldId), ...next });
     readList();
     void readOpen(token, worldId);
   };
 
   const dispatchSend = async (token: number, worldId: string, text: string) => {
-    if (sendId === null) sendId = newCommandId();
-    const id = sendId;
+    let entry = unsent.get(worldId);
+    if (entry === undefined || entry.text !== text) {
+      entry = { id: newCommandId(), text };
+      unsent.set(worldId, entry);
+    }
+    const { id } = entry;
     patch(token, worldId, { pending: Object.freeze({ text, status: 'SENDING' }) });
     const answer = await transport.send(worldId, id, text);
+    // An answer the server gave settles the message for this World even if the reader has left it since.
+    if (answer.kind !== 'FAILED' && answer.kind !== 'OFFLINE' && unsent.get(worldId)?.id === id) unsent.delete(worldId);
     const now = current(token, worldId);
-    if (now === null || sendId !== id) return;
+    if (now === null) return;
     switch (answer.kind) {
       case 'COMMITTED': {
-        sendId = null;
         const mine: IntroductionMessage = Object.freeze({ materialId: answer.materialId, producer: 'SELF', text, establishedAt: answer.establishedAt, canDelete: true });
         const known = now.messages.some((m) => m.materialId === mine.materialId);
         patch(token, worldId, { pending: null, messages: known || now.status !== 'ACTIVE' ? now.messages : Object.freeze([...now.messages, mine]) });
@@ -234,19 +259,16 @@ export function createIntroductionWorldsController({
       }
       case 'ENDED':
         // The server's own answer for this member's own World, and only it, shows IW-35 (S15b). The words were not stored.
-        sendId = null;
         if (now.status === 'CLOSED') patch(token, worldId, { pending: Object.freeze({ text, status: 'ENDED' }) });
         else toClosed(token, worldId, { pending: Object.freeze({ text, status: 'ENDED' }) });
         return;
       case 'UNAVAILABLE':
-        sendId = null;
         patch(token, worldId, { ...fresh(worldId), status: 'UNAVAILABLE' });
         readList();
         return;
       case 'COMMAND_CONFLICT':
       case 'INVALID':
-        // Refused as a request: asking again with this id would be refused again.
-        sendId = null;
+        // Refused as a request: asking again with this id would be refused again (a retry takes a new one).
         patch(token, worldId, { pending: Object.freeze({ text, status: 'FAILED' }) });
         return;
       default:
@@ -274,10 +296,10 @@ export function createIntroductionWorldsController({
     open(worldId) {
       opening += 1;
       reads += 1;
-      sendId = null;
-      endId = null;
       pendingDelete = null;
-      publish({ ...state, open: fresh(worldId) });
+      // A message of this World whose answer was lost before the reader left stays theirs to retry, with its own id.
+      const held = unsent.get(worldId);
+      publish({ ...state, open: held === undefined ? fresh(worldId) : Object.freeze({ ...fresh(worldId), pending: Object.freeze({ text: held.text, status: 'FAILED' as const }) }) });
       readList();
       void readOpen(opening, worldId);
     },
@@ -290,8 +312,6 @@ export function createIntroductionWorldsController({
     close() {
       opening += 1;
       reads += 1;
-      sendId = null;
-      endId = null;
       pendingDelete = null;
       publish({ ...state, open: null });
       readList();
@@ -328,13 +348,13 @@ export function createIntroductionWorldsController({
       const open = state.open;
       if (!live() || open === null || open.status !== 'ACTIVE' || open.pending !== null) return false;
       if (text.trim().length === 0 || text.length > INTRODUCTION_MESSAGE_MAX_LENGTH) return false;
-      sendId = null;
       void dispatchSend(opening, open.worldId, text);
       return true;
     },
     retrySend() {
       const open = state.open;
-      if (!live() || open === null || open.pending === null || (open.pending.status !== 'FAILED' && open.pending.status !== 'OFFLINE')) return;
+      // Only while the Introduction lives: nothing is sent after END.
+      if (!live() || open === null || open.status !== 'ACTIVE' || open.pending === null || (open.pending.status !== 'FAILED' && open.pending.status !== 'OFFLINE')) return;
       void dispatchSend(opening, open.worldId, open.pending.text);
     },
     async endIntroduction() {
@@ -342,27 +362,25 @@ export function createIntroductionWorldsController({
       if (!live() || open === null || open.status !== 'ACTIVE' || open.end === 'RUNNING') return null;
       const token = opening;
       const { worldId } = open;
-      if (endId === null) endId = newCommandId();
-      const id = endId;
+      const id = ends.get(worldId) ?? newCommandId();
+      ends.set(worldId, id);
       patch(token, worldId, { end: 'RUNNING', notice: null });
       const answer = await transport.end(worldId, id);
-      if (current(token, worldId) === null || endId !== id) return null;
+      // An answer the server gave settles the END for this World even if the reader has left it since.
+      if (answer.kind !== 'FAILED' && answer.kind !== 'OFFLINE' && ends.get(worldId) === id) ends.delete(worldId);
+      if (current(token, worldId) === null) return null;
       switch (answer.kind) {
         case 'ENDED':
-          endId = null;
           toClosed(token, worldId);
           break;
         case 'ALREADY_SETTLED':
-          endId = null;
           toClosed(token, worldId, { notice: 'ALREADY_ENDED' });
           break;
         case 'UNAVAILABLE':
-          endId = null;
           patch(token, worldId, { ...fresh(worldId), status: 'UNAVAILABLE' });
           readList();
           break;
         case 'INVALID':
-          endId = null;
           patch(token, worldId, { end: 'FAILED' });
           break;
         default:

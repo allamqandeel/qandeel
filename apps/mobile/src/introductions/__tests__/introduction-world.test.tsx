@@ -396,6 +396,61 @@ describe('the Introduction World controller', () => {
     expect(c.getState().open?.status).toBe('ACTIVE');
   });
 
+  it('nothing is sent after END: a message whose answer was lost is not offered again once the Introduction closed', async () => {
+    for (const close of ['own END', 'a re-read answering ENDED'] as const) {
+      const server = worldsServer();
+      const c = controllerOf(server);
+      c.open(W1);
+      await flush();
+      server.q.send.push({ kind: 'OFFLINE' });
+      c.send('lost');
+      await flush();
+      expect(c.getState().open?.pending?.status).toBe('OFFLINE');
+      if (close === 'own END') await c.endIntroduction();
+      else { server.q.messages.push({ kind: 'ENDED' }); c.refresh(); }
+      await flush();
+      await flush();
+      expect(c.getState().open).toMatchObject({ status: 'CLOSED', pending: null });
+      c.retrySend();
+      await flush();
+      expect(server.calls.send).toHaveLength(1);
+    }
+  });
+
+  it('leaving and re-opening a World keeps a lost message (its words and id) and a lost END\'s id', async () => {
+    const server = worldsServer();
+    const c = controllerOf(server);
+    c.open(W1);
+    await flush();
+    server.q.send.push({ kind: 'FAILED' });
+    server.q.end.push({ kind: 'OFFLINE' });
+    c.send('kept');
+    await flush();
+    await c.endIntroduction();
+    c.close();
+    c.open(W1);
+    expect(c.getState().open?.pending).toEqual({ text: 'kept', status: 'FAILED' });
+    await flush();
+    c.retrySend();
+    await flush();
+    expect(server.calls.send.map((s) => s.commandId)).toEqual([server.calls.send[0].commandId, server.calls.send[0].commandId]);
+    await c.endIntroduction();
+    expect(server.calls.end.map((e) => e.commandId)).toEqual([server.calls.end[0].commandId, server.calls.end[0].commandId]);
+  });
+
+  it('the server\'s order is kept to the microsecond: a message deleted inside the newest page\'s span does not come back', async () => {
+    const DELETED = msg('00000000-0000-4000-8000-000000000001', 'SELF', 'gone', '2026-10-16T10:00:00.123600+00:00');
+    const OLDEST = msg('ffffffff-ffff-4fff-8fff-ffffffffffff', 'HUMAN', 'older', '2026-10-16T10:00:00.123500+00:00');
+    const server = worldsServer();
+    server.q.messages.push({ kind: 'PAGE', messages: [DELETED, MINE], hasOlder: true }, { kind: 'PAGE', messages: [OLDEST, MINE], hasOlder: true });
+    const c = controllerOf(server);
+    c.open(W1);
+    await flush();
+    c.refresh();
+    await flush();
+    expect(c.getState().open?.messages).toEqual([OLDEST, MINE]);
+  });
+
   it('older pages join beneath what the reader holds, from the right reader (live or closed)', async () => {
     const server = worldsServer();
     const OLD = msg('56666666-6666-4666-8666-666666666660', 'HUMAN', 'Earlier', '2026-10-16T09:00:00+00:00');

@@ -95,7 +95,10 @@ test('4 — IW-35 only on the server\'s own ended answer; a lost message or END 
   const surface = code(`${INTRO}/IntroductionWorldSurface.tsx`);
   assert.equal((surface.match(/copy\.sendEnded/gu) ?? []).length, 1, 'IW-35 is drawn in one place');
   assert.match(surface, /pending\.status === 'ENDED' \? \(/u, 'and only for the ENDED pending state');
-  assert.match(controller, /if \(endId === null\) endId = newCommandId\(\);/u, 'END keeps its id until answered');
+  assert.match(controller, /const id = ends\.get\(worldId\) \?\? newCommandId\(\);\n\s+ends\.set\(worldId, id\);/u, 'END keeps its id per World until answered');
+  // Nothing is sent after END: retry only while the Introduction lives, and a message of unknown outcome is dropped on closing.
+  assert.match(controller, /if \(!live\(\) \|\| open === null \|\| open\.status !== 'ACTIVE' \|\| open\.pending === null/u);
+  assert.match(controller, /if \(pending === null \|\| pending\.status === 'ENDED' \|\| pending\.status === 'SENDING'\) return pending;\n\s+unsent\.delete\(worldId\);\n\s+return null;/u);
 });
 
 test('5 — V-1 is structural: the existing selectedMarker at its markerThickness; no colour literal in any CP5 file', () => {
