@@ -121,12 +121,17 @@ const RETAINED = {
  *
  * S6-05 (migration 0159): the one acceptance boundary reaches the frozen 0114 Mutual Match core's 40001 refusals (stale
  * view, stale state, not committable) and answers each with a fixed word from a handler that names PT409 too.
+ *
+ * S6-06 (migration 0163): the approval and withdrawal boundaries reach the frozen 0116 approval core's 40001 stale-state
+ * refusal, and the reactivation boundary reaches the frozen 0117 core's; each answers CHANGED from a handler that names
+ * PT409 too. The SUCCESS completion reaches no 40001 raise of its own and is not listed.
  */
 const ABSORBED = [
   'complete_shared_world_qandeel_reply_v1', 'approve_shared_world_proposal_v1', 'accept_shared_membership_request_v1',
   'approve_shared_world_history_share_v1', 'complete_shared_semantic_place_v1', 'approve_own_public_package_v1',
   'approve_my_matching_proposal_forward_v1', 'decline_my_matching_proposal_v1', 'withdraw_my_matching_proposal_v1',
   'accept_my_matching_proposal_v1',
+  'approve_my_introduction_success_v1', 'withdraw_my_introduction_success_v1', 'reactivate_my_introductions_v1',
 ];
 /** PT409 before 0150: 0135's AI-usage ledger conflicts. */
 const PRIOR_PT409 = ['public.begin_ai_provider_call_v1', 'public.settle_ai_provider_call_v1'];
