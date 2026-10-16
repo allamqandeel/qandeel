@@ -107,6 +107,9 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   'GET /introductions/worlds/:worldId/messages': 'AUTHENTICATED',
   'GET /introductions/worlds/:worldId/messages/before/:materialId/:establishedAt': 'AUTHENTICATED',
   'POST /introductions/worlds/:worldId/messages': 'SECURITY_SENSITIVE',
+  // S6-05 (CP4, migration 0161): the closed history after END - a read, like the CP3 reads.
+  'GET /introductions/worlds/:worldId/history': 'AUTHENTICATED',
+  'GET /introductions/worlds/:worldId/history/before/:materialId/:establishedAt': 'AUTHENTICATED',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',

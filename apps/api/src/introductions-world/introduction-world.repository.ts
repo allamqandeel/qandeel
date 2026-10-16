@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 
-/** Exactly the migration 0160 result shapes. */
+/** Exactly the migration 0160 result shapes (the closed history, 0161, answers the message shape). */
 export interface IntroductionWorldRow {
   readonly world_id?: unknown;
   readonly matching_proposal_id?: unknown;
@@ -28,7 +28,7 @@ export interface IntroductionMessageCursor {
 }
 
 /**
- * S6-05 (CP3) - the human's own Introduction World calls (migration 0160), on the CALLER's token: the database derives
+ * S6-05 (CP3, CP4) - the human's own Introduction World calls (migrations 0160 and 0161), on the CALLER's token: the database derives
  * the human from `auth.uid()`. Nothing here sends a user, a counterpart, an audience, a kind or a persistence identity -
  * only the World, the caller's command and the words. Deletion is not here: it is the existing Shared owner deletion (R-5).
  */
@@ -47,6 +47,13 @@ export class IntroductionWorldRepository {
   /** Newest first: the newest page, or the page strictly older than `before`. */
   messages(token: string, worldId: string, before: IntroductionMessageCursor | null, limit: number) {
     return this.rpc<IntroductionMessageRow>(token, 'read_my_introduction_messages_v1', {
+      p_world_id: worldId, p_before_established_at: before?.establishedAt ?? null, p_before_material_id: before?.materialId ?? null, p_limit: limit,
+    });
+  }
+
+  /** CP4 (migration 0161): the closed history the caller is entitled to keep, newest first, the same keyset as `messages`. */
+  history(token: string, worldId: string, before: IntroductionMessageCursor | null, limit: number) {
+    return this.rpc<IntroductionMessageRow>(token, 'read_my_introduction_history_v1', {
       p_world_id: worldId, p_before_established_at: before?.establishedAt ?? null, p_before_material_id: before?.materialId ?? null, p_limit: limit,
     });
   }

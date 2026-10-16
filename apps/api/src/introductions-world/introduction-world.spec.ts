@@ -10,6 +10,7 @@ import { IntroductionsWorldModule } from './introductions-world.module';
 // S6-05 (CP3) - the API boundary of the Introduction World's human conversation (migration 0160): the exact request
 // shapes, strict decoding of every row, ENDED only on the server's own answer, one call per request and never a retry,
 // no identity from the client, nothing of the database's answer passed on, and no AI, Activity or notification anywhere.
+// CP4 adds the closed history after END (migration 0161): the same strict decoding, ENDED rows only, one answer otherwise.
 
 const WORLD = '11111111-1111-4111-8111-111111111111';
 const PROPOSAL = '22222222-2222-4222-8222-222222222222';
@@ -30,14 +31,16 @@ const send = (overrides: Record<string, unknown> = {}) => ({ outcome: 'COMMITTED
 describe('S6-05 - IntroductionWorldService', () => {
   let worlds: jest.Mock;
   let messages: jest.Mock;
+  let history: jest.Mock;
   let sendText: jest.Mock;
   let service: IntroductionWorldService;
 
   beforeEach(() => {
     worlds = jest.fn().mockResolvedValue([worldRow()]);
     messages = jest.fn().mockResolvedValue([messageRow()]);
+    history = jest.fn().mockResolvedValue([messageRow({ introduction_state: 'ENDED' })]);
     sendText = jest.fn().mockResolvedValue([send()]);
-    service = new IntroductionWorldService({ worlds, messages, send: sendText } as unknown as IntroductionWorldRepository);
+    service = new IntroductionWorldService({ worlds, messages, history, send: sendText } as unknown as IntroductionWorldRepository);
   });
 
   describe('discovery', () => {
@@ -126,6 +129,68 @@ describe('S6-05 - IntroductionWorldService', () => {
     });
   });
 
+  describe('the closed history after END (CP4)', () => {
+    it('reads one page of the reader\'s own entitlement, oldest first to the reader; their own words stay deletable (R-5)', async () => {
+      history.mockResolvedValue([
+        messageRow({ introduction_state: 'ENDED' }),
+        messageRow({ introduction_state: 'ENDED', material_id: OTHER, established_at: EARLIER, is_self: false, text_body: 'hi' }),
+      ]);
+      await expect(service.history('token', WORLD)).resolves.toEqual({
+        outcome: 'ENDED', hasOlder: false, messages: [
+          { materialId: OTHER, producer: 'HUMAN', text: 'hi', establishedAt: EARLIER, canDelete: false },
+          { materialId: MATERIAL, producer: 'SELF', text: 'hello', establishedAt: AT, canDelete: true },
+        ],
+      });
+      expect(history).toHaveBeenCalledWith('token', WORLD, null, 51);
+      expect(messages).not.toHaveBeenCalled();
+    });
+
+    it('one row beyond the page says older messages exist; the older page is strictly older than a cursor', async () => {
+      history.mockResolvedValue(Array.from({ length: 51 }, () => messageRow({ introduction_state: 'ENDED' })));
+      const page = await service.history('token', WORLD);
+      expect(page).toMatchObject({ outcome: 'ENDED', hasOlder: true });
+      expect((page as unknown as { messages: unknown[] }).messages).toHaveLength(50);
+      await service.olderHistory('token', WORLD, MATERIAL, AT);
+      expect(history).toHaveBeenLastCalledWith('token', WORLD, { materialId: MATERIAL, establishedAt: AT }, 51);
+    });
+
+    it('an entitled reader with nothing left is ENDED with no message; no row is UNAVAILABLE', async () => {
+      history.mockResolvedValue([emptyRow('ENDED')]);
+      await expect(service.history('token', WORLD)).resolves.toEqual({ outcome: 'ENDED', messages: [], hasOlder: false });
+      history.mockResolvedValue([]);
+      await expect(service.history('token', WORLD)).resolves.toEqual({ outcome: 'UNAVAILABLE' });
+    });
+
+    it('a World that is not an identifier is UNAVAILABLE, and a malformed cursor the client\'s error, without a database call', async () => {
+      await expect(service.history('token', 'nope')).resolves.toEqual({ outcome: 'UNAVAILABLE' });
+      await expect(service.olderHistory('token', WORLD, MATERIAL, '2026-02-30T09:40:19Z')).rejects.toBeInstanceOf(BadRequestException);
+      await expect(service.olderHistory('token', WORLD, 'x', AT)).rejects.toBeInstanceOf(BadRequestException);
+      expect(history).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      ['an ACTIVE row', [messageRow()]],
+      ['an empty ACTIVE row', [emptyRow('ACTIVE')]],
+      ['mixed states', [messageRow({ introduction_state: 'ENDED' }), messageRow()]],
+      ['an empty ENDED row among messages', [messageRow({ introduction_state: 'ENDED' }), emptyRow('ENDED')]],
+      ['an author column', [messageRow({ introduction_state: 'ENDED', author_user_id: OTHER })]],
+      ['a non-boolean self', [messageRow({ introduction_state: 'ENDED', is_self: 'true' })]],
+      ['a malformed instant', [messageRow({ introduction_state: 'ENDED', established_at: 'now' })]],
+      ['more rows than asked for', Array.from({ length: 52 }, () => messageRow({ introduction_state: 'ENDED' }))],
+    ])('fails closed on %s', async (_label, rows) => {
+      history.mockResolvedValue(rows);
+      await expect(service.history('token', WORLD)).rejects.toBeInstanceOf(ServiceUnavailableException);
+    });
+
+    it('only a database 22023 is the client\'s invalid request; every other failure is unavailable, said once, never retried', async () => {
+      history.mockRejectedValue(new DataApiError(400, { databaseCode: '22023', databaseMessage: 'INTRODUCTION_HISTORY_READ_INVALID' }));
+      await expect(service.history('token', WORLD)).rejects.toBeInstanceOf(BadRequestException);
+      history.mockReset().mockRejectedValue(new Error('network'));
+      await expect(service.history('token', WORLD)).rejects.toBeInstanceOf(ServiceUnavailableException);
+      expect(history).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('sending', () => {
     it('sends exactly the command and the words, once, and answers the committed message', async () => {
       await expect(service.send('token', WORLD, { commandId: COMMAND, content: 'Hello Mona' }))
@@ -183,18 +248,22 @@ describe('S6-05 - IntroductionWorldService', () => {
 });
 
 describe('S6-05 - IntroductionWorldRepository', () => {
-  it('calls only the three migration 0160 boundaries, with the caller token and exactly their parameters', async () => {
+  it('calls only the three migration 0160 boundaries and the one 0161 reader, with the caller token and exactly their parameters', async () => {
     const request = jest.fn().mockResolvedValue([]);
     const repository = new IntroductionWorldRepository({ request } as unknown as SupabaseDataApiService);
     await repository.worlds('caller-token');
     await repository.messages('caller-token', WORLD, null, 51);
     await repository.messages('caller-token', WORLD, { materialId: MATERIAL, establishedAt: AT }, 51);
     await repository.send('caller-token', COMMAND, WORLD, 'Hello');
+    await repository.history('caller-token', WORLD, null, 51);
+    await repository.history('caller-token', WORLD, { materialId: MATERIAL, establishedAt: AT }, 51);
     expect(request.mock.calls).toEqual([
       ['caller-token', 'rpc/list_my_introduction_worlds_v1', { method: 'POST', body: JSON.stringify({}) }],
       ['caller-token', 'rpc/read_my_introduction_messages_v1', { method: 'POST', body: JSON.stringify({ p_world_id: WORLD, p_before_established_at: null, p_before_material_id: null, p_limit: 51 }) }],
       ['caller-token', 'rpc/read_my_introduction_messages_v1', { method: 'POST', body: JSON.stringify({ p_world_id: WORLD, p_before_established_at: AT, p_before_material_id: MATERIAL, p_limit: 51 }) }],
       ['caller-token', 'rpc/send_my_introduction_text_v1', { method: 'POST', body: JSON.stringify({ p_command_id: COMMAND, p_world_id: WORLD, p_content: 'Hello' }) }],
+      ['caller-token', 'rpc/read_my_introduction_history_v1', { method: 'POST', body: JSON.stringify({ p_world_id: WORLD, p_before_established_at: null, p_before_material_id: null, p_limit: 51 }) }],
+      ['caller-token', 'rpc/read_my_introduction_history_v1', { method: 'POST', body: JSON.stringify({ p_world_id: WORLD, p_before_established_at: AT, p_before_material_id: MATERIAL, p_limit: 51 }) }],
     ]);
   });
 });
@@ -224,12 +293,14 @@ describe('S6-05 - the Introduction World module is isolated and runs no AI', () 
     expect(Reflect.getMetadata(MODULE_METADATA.IMPORTS, IntroductionsWorldModule) ?? []).toEqual([]);
   });
 
-  it('has exactly the four routes and takes no identity from the client', () => {
+  it('has exactly the six routes (four CP3, two CP4) and takes no identity from the client', () => {
     const controller = readFileSync(join(dir, 'introduction-world.controller.ts'), 'utf8').replace(/\/\*[\s\S]*?\*\//gu, '');
     expect([...controller.matchAll(/@(Get|Post|Put|Patch|Delete)\('([^']+)'\)/gu)].map((m) => `${m[1]} ${m[2]}`)).toEqual([
       'Get worlds', 'Get worlds/:worldId/messages', 'Get worlds/:worldId/messages/before/:materialId/:establishedAt', 'Post worlds/:worldId/messages',
+      'Get worlds/:worldId/history', 'Get worlds/:worldId/history/before/:materialId/:establishedAt',
     ]);
-    expect([...controller.matchAll(/@Param\('([^']+)'\)/gu)].map((m) => m[1])).toEqual(['worldId', 'worldId', 'materialId', 'establishedAt', 'worldId']);
+    expect([...controller.matchAll(/@Param\('([^']+)'\)/gu)].map((m) => m[1])).toEqual(
+      ['worldId', 'worldId', 'materialId', 'establishedAt', 'worldId', 'worldId', 'worldId', 'materialId', 'establishedAt']);
     expect(controller).not.toMatch(/@Query|userId|recipient|author|role/iu);
     expect(controller).toMatch(/@UseGuards\(SupabaseAuthGuard\)/u);
   });

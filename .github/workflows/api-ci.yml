@@ -140,6 +140,7 @@ jobs:
       - {name: "Verify S6-04 private proposal review and decisions static contract (thin shells over the cores, no name or acceptance, withdrawal ungated, named exceptions)", run: npm run test:s6-04-private-proposal-review-decisions-contract}
       - {name: "Verify S6-05 Mutual Match acceptance static contract (one shell over the frozen 0114 core, server-derived identities, ACCEPT gated on CW2-08, named exceptions)", run: npm run test:s6-05-mutual-match-acceptance-contract}
       - {name: "Verify S6-05 Introduction World messaging static contract (three boundaries beside the S6-02 fence, human words only, no AI or Activity, owner deletion reused)", run: npm run test:s6-05-introduction-world-messaging-contract}
+      - {name: "Verify S6-05 closed Introduction history static contract (one STABLE reader over the frozen entitlement, END and owner deletion reused, no AI or Activity)", run: npm run test:s6-05-introduction-closed-history-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1038,6 +1039,11 @@ jobs:
       # ENDED to the two humans only; owner deletion reused; replay and reused ids; races against END and SUCCESS.
       - name: Verify S6-05 Introduction World messaging against real PostgreSQL
         run: npm run verify:introduction-world-messaging:integration
+      # S6-05 (CP4): migration 0161 - END (S6-02, reused) and the closed Introduction history: either human ends alone,
+      # CW2-08 closed; each reads exactly their own frozen entitlement, independently; owner deletion after END removes a
+      # message for both; no entitlement created or widened; no send, reply, Activity or Push; races of END and deletion.
+      - name: Verify S6-05 END and the closed Introduction history against real PostgreSQL
+        run: npm run verify:introduction-closed-history:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1109,6 +1115,9 @@ jobs:
             # S6-05 (CP3): the Introduction World on the wire - anon and service_role refused, both humans list it and an outsider
             # nothing, a message committed, read, retried and conflicted, owner deletion reused, ENDED to the two humans only.
             POSTGREST_VERSION="$version" npm run --silent prove:introduction-world-messaging:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # S6-05 (CP4): END and the closed history on the wire - anon and service_role refused, one human ends alone, each
+            # reads their own closed history and an outsider nothing, owner deletion removes a message from both, nothing after END.
+            POSTGREST_VERSION="$version" npm run --silent prove:introduction-closed-history:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"

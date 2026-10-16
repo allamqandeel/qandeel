@@ -36,6 +36,14 @@ export type IntroductionMessagesView =
   | { readonly outcome: 'ENDED' }
   /** Anything else: not theirs, no such World, or no longer an Introduction - one answer. */
   | { readonly outcome: 'UNAVAILABLE' };
+/**
+ * CP4 (migration 0161): the closed history after END - what THIS reader's own frozen entitlement holds, after every owner
+ * deletion. Oldest first, one bounded page; `canDelete` marks the reader's own words, which they may still delete (R-5).
+ */
+export type IntroductionHistoryView =
+  | { readonly outcome: 'ENDED'; readonly messages: readonly IntroductionMessage[]; readonly hasOlder: boolean }
+  /** Anything else: no entitlement, no such World, not an ended Introduction - one answer. */
+  | { readonly outcome: 'UNAVAILABLE' };
 export type IntroductionSendView =
   | { readonly outcome: 'COMMITTED'; readonly materialId: string; readonly establishedAt: string }
   | { readonly outcome: 'ENDED' | 'UNAVAILABLE' | 'COMMAND_CONFLICT' };
@@ -85,8 +93,8 @@ function cursorOf(materialId: string, establishedAt: string): IntroductionMessag
 }
 
 /**
- * S6-05 (CP3) - the Introduction World's human conversation (D2-D5, migration 0160): find one's own Introduction Worlds,
- * read a page of the two humans' words, and send one. Identity is the verified token only. This module calls NO QANDEEL
+ * S6-05 (CP3, CP4) - the Introduction World's human conversation (D2-D5, migration 0160): find one's own Introduction
+ * Worlds, read a page of the two humans' words, and send one; after END, read the closed history (migration 0161). Identity is the verified token only. This module calls NO QANDEEL
  * reply, Model Router, weaving, Living Analysis, Activity or notification, and reads no Personal Context or Matching
  * Context Grant: an Introduction World is human words only until Stage 8A (R-1). No retry here: a repeated send is the
  * same command, answered from its committed row. Nothing is logged.
@@ -131,6 +139,35 @@ export class IntroductionWorldService {
     const messages = rows.slice(0, INTRODUCTION_MESSAGE_PAGE).map(messageOf);
     // Canonical order for reading: oldest first.
     return { outcome: 'ACTIVE', messages: messages.reverse(), hasOlder: rows.length > INTRODUCTION_MESSAGE_PAGE };
+  }
+
+  /** CP4: the newest page of the closed history the reader is entitled to keep. */
+  history(token: string, worldId: string): Promise<IntroductionHistoryView> {
+    return this.closedPage(token, worldId, null);
+  }
+
+  /** CP4: the one page of the closed history strictly older than the oldest message the reader holds. */
+  olderHistory(token: string, worldId: string, materialId: string, establishedAt: string): Promise<IntroductionHistoryView> {
+    let before: IntroductionMessageCursor;
+    try {
+      before = cursorOf(materialId, establishedAt);
+    } catch (error) {
+      return Promise.reject(error);
+    }
+    return this.closedPage(token, worldId, before);
+  }
+
+  private async closedPage(token: string, worldId: string, before: IntroductionMessageCursor | null): Promise<IntroductionHistoryView> {
+    if (!UUID.test(worldId)) return { outcome: 'UNAVAILABLE' };
+    const rows = await this.guard(() => this.repository.history(token, worldId.toLowerCase(), before, INTRODUCTION_MESSAGE_PAGE + 1));
+    if (!Array.isArray(rows) || rows.length > INTRODUCTION_MESSAGE_PAGE + 1) return unavailable();
+    // No row: no entitlement of this reader, no such World, or not an ended Introduction - decided by the database, one answer.
+    if (rows.length === 0) return { outcome: 'UNAVAILABLE' };
+    if (rows.some((row) => !row || typeof row !== 'object' || !keysAre(row, MESSAGE_KEYS) || row.introduction_state !== 'ENDED')) return unavailable();
+    if (rows.length === 1 && isEmptyRow(rows[0])) return { outcome: 'ENDED', messages: [], hasOlder: false };
+    const messages = rows.slice(0, INTRODUCTION_MESSAGE_PAGE).map(messageOf);
+    // Canonical order for reading: oldest first.
+    return { outcome: 'ENDED', messages: messages.reverse(), hasOlder: rows.length > INTRODUCTION_MESSAGE_PAGE };
   }
 
   async send(token: string, worldId: string, body: unknown): Promise<IntroductionSendView> {

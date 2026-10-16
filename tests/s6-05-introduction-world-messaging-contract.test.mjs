@@ -130,13 +130,16 @@ test('4 — human words only: no reply, weaving, analysis, Activity, gate, accou
 
 test('5 — the API: four routes, the caller token, SECURITY_SENSITIVE send (R-8), owner deletion reused (R-5), composed once', () => {
   const controller = code(`${API}/introduction-world.controller.ts`);
-  assert.deepEqual([...controller.matchAll(/@(Get|Post|Put|Patch|Delete)\('([^']+)'\)/gu)].map((m) => `${m[1]} ${m[2]}`), [
+  // CP4 (2026-10-16) adds the two closed-history reads after these four; tests/s6-05-introduction-closed-history-contract pins them.
+  assert.deepEqual([...controller.matchAll(/@(Get|Post|Put|Patch|Delete)\('([^']+)'\)/gu)].map((m) => `${m[1]} ${m[2]}`).slice(0, 4), [
     'Get worlds', 'Get worlds/:worldId/messages', 'Get worlds/:worldId/messages/before/:materialId/:establishedAt', 'Post worlds/:worldId/messages',
   ]);
   assert.match(controller, /@Controller\('introductions'\)/u);
   assert.match(controller, /@UseGuards\(SupabaseAuthGuard\)/u);
   const repository = code(`${API}/introduction-world.repository.ts`);
-  assert.deepEqual([...repository.matchAll(/'(list_my_introduction_worlds_v1|read_my_introduction_messages_v1|send_my_introduction_text_v1|[a-z_]+_v1)'/gu)].map((m) => m[1]), BOUNDARIES);
+  // CP4 (2026-10-16) adds the one 0161 reader beside the three 0160 boundaries.
+  assert.deepEqual([...repository.matchAll(/'(list_my_introduction_worlds_v1|read_my_introduction_messages_v1|send_my_introduction_text_v1|[a-z_]+_v1)'/gu)].map((m) => m[1]),
+    [...BOUNDARIES.slice(0, 2), 'read_my_introduction_history_v1', BOUNDARIES[2]]);
   const census = read('apps/api/src/http-security/route-rate-limit.census.ts');
   for (const [route, rate] of [['GET /introductions/worlds', 'AUTHENTICATED'], ['GET /introductions/worlds/:worldId/messages', 'AUTHENTICATED'],
     ['GET /introductions/worlds/:worldId/messages/before/:materialId/:establishedAt', 'AUTHENTICATED'],
