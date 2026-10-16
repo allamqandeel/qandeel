@@ -443,7 +443,7 @@ async function verifyRaces(report, H) {
       assert.equal(await rt.waitForLockWait((t, v) => q(t, v), extra.pid), true, `${label}: the second attempt is in a lock wait`);
       await q('COMMIT');
       const late = await pending;
-      await extra.qx('COMMIT').catch(() => undefined);
+      await extra.qx('COMMIT');
       assert.ok(!(late instanceof Error), `${label}: the waiting attempt is answered, not failed: ${late?.code ?? ''} ${late?.message ?? ''}`);
       return { first, late };
     } finally {
