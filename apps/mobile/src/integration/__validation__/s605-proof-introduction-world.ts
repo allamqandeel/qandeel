@@ -15,7 +15,8 @@
  *
  * It answers in the exact shapes `apps/api/src/introductions-proposals`, `apps/api/src/introductions-world`,
  * `apps/api/src/introductions-lifecycle` and the Shared owner deletion return; a command id answers the same way when it
- * is sent again — the server's rules in miniature, enough to walk S1–S15b.
+ * is sent again — the server's rules in miniature, enough to walk S1–S15b. In the proof build the acceptance, the END and
+ * the first read of the live World answer after `delayMs`, so their transient states (IW-07, IW-30, S13) can be photographed.
  */
 import type { ChromeLanguage } from '../../orientation-chrome';
 
@@ -53,7 +54,7 @@ export interface S605ProofIntroductionWorld {
   offline(): void;
 }
 
-export function createS605ProofIntroductionWorld(language: ChromeLanguage): S605ProofIntroductionWorld {
+export function createS605ProofIntroductionWorld(language: ChromeLanguage, { delayMs = 0 }: { readonly delayMs?: number } = {}): S605ProofIntroductionWorld {
   const t = TEXT[language];
   let proposals: Proposal[] | null = null;
   let worlds: World[] = [];
@@ -63,6 +64,8 @@ export function createS605ProofIntroductionWorld(language: ChromeLanguage): S605
   const at = () => new Date(Date.UTC(2026, 9, 16, 10, 0, clock++)).toISOString().replace('Z', '+00:00');
   const answered = new Map<string, Json>();
   const json = (status: number, body: unknown): Answer => ({ ok: status >= 200 && status < 300, status, json: async () => body });
+  const slow = (status: number, body: unknown): Answer => ({ ok: true, status, json: () => new Promise((resolve) => { setTimeout(() => resolve(body), delayMs); }) });
+  let firstLiveRead = true;
   const out = (p: Proposal): Json => ({ proposalId: p.proposalId, viewId: p.viewId, status: p.status, actions: [...p.actions] });
   const line = (self: boolean, text: string): Line => ({ materialId: ID(next++), self, text, establishedAt: at() });
   const message = (l: Line): Json => ({ materialId: l.materialId, producer: l.self ? 'SELF' : 'HUMAN', text: l.text, establishedAt: l.establishedAt, canDelete: l.self });
@@ -80,6 +83,7 @@ export function createS605ProofIntroductionWorld(language: ChromeLanguage): S605
   return {
     seed() {
       answered.clear();
+      firstLiveRead = true;
       clock = 0;
       failNextSend = false;
       proposals = [
@@ -123,7 +127,7 @@ export function createS605ProofIntroductionWorld(language: ChromeLanguage): S605
           answer = { outcome: 'RECORDED', proposal: out(proposal) };
         }
         answered.set(body.commandId, answer);
-        return json(200, answer);
+        return accept ? slow(200, answer) : json(200, answer);
       }
       if (path === '/introductions/worlds' && method === 'GET') {
         return json(200, { worlds: worlds.map((w) => ({ worldId: w.worldId, proposalId: w.proposalId, state: w.ended ? 'ENDED' : 'ACTIVE', otherFirstName: w.name })) });
@@ -133,6 +137,10 @@ export function createS605ProofIntroductionWorld(language: ChromeLanguage): S605
         const world = worlds.find((w) => w.worldId === read[1]);
         if (world === undefined) return json(200, { outcome: 'UNAVAILABLE' });
         const before = read[3] ?? null;
+        if (read[2] === 'messages' && world.worldId === W_LIVE && firstLiveRead) {
+          firstLiveRead = false;
+          return slow(200, world.ended ? { outcome: 'ENDED' } : page('ACTIVE', world.lines, before));
+        }
         if (read[2] === 'messages') return json(200, world.ended ? { outcome: 'ENDED' } : page('ACTIVE', world.lines, before));
         if (!world.ended) return json(200, { outcome: 'UNAVAILABLE' });
         return json(200, page('ENDED', world.lines.filter((l) => world.frozen!.includes(l.materialId)), before));
@@ -167,7 +175,7 @@ export function createS605ProofIntroductionWorld(language: ChromeLanguage): S605
         const world = worlds.find((w) => w.worldId === ending[1]);
         const answer = world === undefined ? { outcome: 'UNAVAILABLE' } : world.ended ? { outcome: 'ALREADY_SETTLED' } : (end(world), { outcome: 'ENDED' });
         answered.set(body.commandId, answer);
-        return json(200, answer);
+        return slow(200, answer);
       }
       const deletion = /^\/shared\/worlds\/([0-9a-f-]{36})\/materials\/([0-9a-f-]{36})\/delete$/u.exec(path);
       if (deletion !== null && method === 'POST') {

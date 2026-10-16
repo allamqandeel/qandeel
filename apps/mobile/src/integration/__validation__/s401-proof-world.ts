@@ -251,7 +251,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   // S6-04: answers nothing until seeded, likewise.
   const privateProposals = createS604ProofProposals();
   // S6-05: answers nothing until seeded, likewise.
-  const introductionWorld = createS605ProofIntroductionWorld(language);
+  // Its acceptance, END and first live read answer after a moment, so their transient states can be photographed.
+  const introductionWorld = createS605ProofIntroductionWorld(language, { delayMs: 2500 });
   const held = new Set<string>();
   let releases: (() => void)[] = [];
   // S5-01: the held Public World entries, and the reader's Public display mode.
