@@ -10,7 +10,7 @@
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
 import { act, cleanup, fireEvent, render, type RenderResult } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { Keyboard, StyleSheet } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { CANONICAL_VISUAL } from '../../conversation/visual/canonical-visual.generated';
@@ -544,10 +544,12 @@ describe.each([['ar', 'DARK'], ['en', 'LIGHT']] as const)('the Introduction Worl
   it('S15b: on the server\'s ended answer — IW-35, the closed banner IW-31, and the composer and END are gone', async () => {
     const server = worldsServer();
     server.q.send.push({ kind: 'ENDED' });
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
     const { view } = await worldView(language, server, preference);
     await fireEvent.changeText(view.getByTestId('qandeel-shared-input'), 'Cooking, a lot.');
     await press(view, 'qandeel-shared-send');
     expect(view.getByTestId('qandeel-introduction-send-ended').props.children).toBe(copy.sendEnded);
+    expect(dismiss).toHaveBeenCalled();
     expect(view.getByTestId('qandeel-introduction-closed-banner')).toBeTruthy();
     expect(view.getByText(copy.closedBanner)).toBeTruthy();
     expect(view.queryByTestId('qandeel-shared-input')).toBeNull();

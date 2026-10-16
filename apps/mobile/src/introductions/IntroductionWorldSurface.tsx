@@ -23,7 +23,7 @@
  * QANDEEL never speaks here: no reply, weaving, analysis, Activity or Push (R-1, R-7).
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AccessibilityInfo, BackHandler, KeyboardAvoidingView, ScrollView, Text, View, findNodeHandle, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
+import { AccessibilityInfo, BackHandler, Keyboard, KeyboardAvoidingView, ScrollView, Text, View, findNodeHandle, type NativeScrollEvent, type NativeSyntheticEvent } from 'react-native';
 
 import { AppearanceStatusBar } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette } from '../conversation';
@@ -93,6 +93,10 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
   // The confirmation stands only while the Introduction is live: once the END is decided (CLOSED, or not this reader's
   // any more) it is gone.
   const confirmingEnd = askedToEnd && status === 'ACTIVE';
+  // Once the Introduction is closed there is no composer: the keyboard it opened goes with it.
+  useEffect(() => {
+    if (status === 'CLOSED') Keyboard.dismiss();
+  }, [status]);
 
   const back = () => {
     if (confirmingEnd) {
