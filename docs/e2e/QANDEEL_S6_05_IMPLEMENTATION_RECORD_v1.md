@@ -5,9 +5,12 @@
 **Product authority:** the Product Owner's S6-05 Task Contract v1.0 and its decisions D1–D7 (2026-10-15); the CP0 rulings
 R-1 … R-8 and the approval of V-1 as the visual direction (2026-10-15); the «S6-05 — CP1 Final Approval & CP2
 Authorization» (2026-10-15). No merge or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **IN PROGRESS — CP3 APPROVED, CP4 DELIVERED (INTRODUCTION END & CLOSED HISTORY) — VISUAL GATE AND COPY GATE
-CLOSED — NOT MERGED / NOT DEPLOYED** (2026-10-16). CP4 waits for the Product Owner's review; CP5, the last checkpoint, is
-not started.
+**Status:** **CLOSED / READY FOR PRODUCT OWNER REVIEW / MERGE DECISION — CP4 APPROVED, CP5 DELIVERED (MOBILE
+INTRODUCTION EXPERIENCE) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED** (2026-10-16). CP5 is S6-05's
+last checkpoint; this closing change carries BG-08 / BG-09 (§16). Merging needs the Product Owner's explicit «ادمج»; S6-06
+is not started.
+*As written at CP4 (2026-10-16):* IN PROGRESS — CP3 APPROVED, CP4 DELIVERED (INTRODUCTION END & CLOSED HISTORY) — VISUAL
+GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED; CP4 waited for the Product Owner's review; CP5 was not started.
 *As written at CP3 (2026-10-16):* IN PROGRESS — CP2 APPROVED, CP3 DELIVERED (INTRODUCTION WORLD & HUMAN MESSAGING) — VISUAL
 GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED; CP3 waited for the Product Owner's review; CP4 and CP5 were not
 started.  
@@ -19,7 +22,8 @@ started.
 No checkpoint launches Matching. There are still no real proposals, no enrollment, no installed policy, no
 compatibility or forward producer and no open launch gate. The CW2-08 seam still answers `NOT_EVALUATED`, so in
 production nobody is shown ACCEPT, every acceptance is refused before anything is written, and no Introduction World
-exists for CP3's reads and messages, or CP4's closed history, to reach.
+exists for CP3's reads and messages, CP4's closed history or CP5's mobile surfaces to reach (CP5 shows IW-01 only
+when the server offers ACCEPT, so production keeps `acceptNotYet`).
 
 ## 1. CP0 — repository truth (read-only, 2026-10-15)
 
@@ -56,6 +60,8 @@ exists for CP3's reads and messages, or CP4's closed history, to reach.
 | CP3 CI decision | (2026-10-16, «S6-05 — CP3 Review / CI Decision») CP3 accepted in principle, closure pending green exact-head CI and the real PostgREST proof; on a repeated registry limit, stop and propose a source for the same pinned image. After the investigation the Product Owner deferred the image-source (GHCR) decision and approved one line in `verify-migration-0160.mjs` («S6-05 — CP3 One-Line Test Correction»; §10.1) |
 | CP3 result | **Approved** (2026-10-16, «S6-05 / CP4 — Introduction END & Closed History Integration»): CP0–CP3 approved; CP3's tests green on `18988bc2`, including API CI, real PostgreSQL and the PostgREST proof on the four lines (§10.1). CP4 authorized |
 | CP4 | Authorized (2026-10-16), in the same branch and PR: the closed Introduction history on the frozen closed-view entitlements and the existing historical source of truth (`resolve_shared_world_closed_history_visibility_v1`), each human's rights independent, owner deletion removing a message for both even after END, read-only, keyset paging, no identity or HIM / Matching data; END integration through the existing `POST /introductions/worlds/:worldId/end` (outcomes `ENDED` / `ALREADY_SETTLED` / `UNAVAILABLE`, alone, without the other's consent, not conditioned on CW2-08, nothing after it, no leak to non-members); owner deletion through the existing route. Not authorized: re-doing CP2 / CP3, old migrations or frozen contracts, Visual / Copy Gate or approved text changes, CP5 or its screens, CW2-08 or production gates, the forward producer, Activity / Push / AI, a new task, merging |
+| CP4 result | **Approved** (2026-10-16, «S6-05 / CP5 FINAL IMPLEMENTATION — Mobile Introduction Experience, Integration & Task Closure»): CP4 approved at `206af2577b14f7aa5c2c144e9c4440dcd6ee5b06` after green exact-head CI (§13.9); CP5 authorized as the last checkpoint |
+| CP5 | Authorized (2026-10-16), in the same branch and PR: the mobile surfaces approved at CP1, unchanged in design and copy — A: the Mutual Match acceptance (IW-01 only when the server offers ACCEPT; IW-02 … IW-04; the CP2 route; the same command id on retry; MATCHED / CHANGED / UNAVAILABLE / COMMAND_CONFLICT handled; IW-05 / IW-05b / IW-06; `acceptNotYet` kept otherwise); B: a separate «التعارف» section in «العالم المشترك» on the CP3 reads, both humans, the permitted first name only, IW-11 / IW-11b / IW-12, refreshed on entry, return and foreground, never shown as a Standard Shared World; C: the human conversation (M-11, IW-22, IW-23 verbatim; no M-12; human messages only; the same message on retry; bounded older pages; own-message deletion on the existing route; no AI, weaving, Activity, Push, HIM or Matching data); D: END and the closed history (IW-26 … IW-32; either party, no reason; no reopening or sending after END; each reads their own entitlement; deletion after END for both; IW-35 only on a server-confirmed ENDED). Visual and copy fidelity with a visual proof against the approved screens; validation of the whole journey; the documentation and BG-08 / BG-09 inside CP5. Not authorized: re-doing CP2 – CP4, frozen contracts, the Copy Gate, CW2-08 or launch, S6-06 / S6-07, `QAN-BL-MATCH-06`, Activity / Push / SUCCESS / disclosure, CI images or GHCR, a new task or a separate documentation PR, merging |
 | Checkpoint rule | (2026-10-16, «S6-05 — Documentation & Checkpoint Closure Rule») Checkpoints are not separate tasks: each checkpoint updates this record, Current State, the Project Map and the Roadmap with its own work, and records the previous checkpoint's approval with its GitHub evidence. **CP5 is S6-05's last checkpoint**: the mobile surfaces, integration and tests, the final documentation and BG-08 / BG-09, in this PR. No sixth checkpoint and no separate documentation or reconciliation task; closed records keep their history; no merge and no S6-06 without the Product Owner |
 
 ## 3. CP2 — what was built
@@ -452,9 +458,213 @@ contract pins all six routes exactly.
 - **Residual — G-1 still applies** (`QAN-BL-MATCH-06`, S6-07): no real Introduction World can exist before it.
 - **Governance:** CP4 admits nothing; the register stays 70 items. BG-08 / BG-09 are CP5's (§2, checkpoint rule).
 
+### 13.9 CP4 on the exact head in CI (PR #343, head `206af257`, 2026-10-16)
+
+| Check | Result |
+|---|---|
+| API CI run `38900157194`, attempt 1 | **green**: `verify-api` (235 steps, none failed), the change-aware plan and the VAL-01 evidence. In it: `verify-migration-0161.mjs` **20 / 20** on real PostgreSQL 17 (A01 … G04); `test:database` **1310 / 1310**; the API suite **5941 / 5941**; the S6-05 static contracts CP2 8 / 8, CP3 7 / 7, CP4 5 / 5; the image pulled at the first attempt |
+| Live PostgREST (`prove-0161`, same job) | **passed on v12.2.9, v13.0.8, v14.18 and v16.4** ("Verified S6-05 CP4 through live PostgREST …" on each line), beside `prove-0160` and every earlier wire proof |
+| Mobile CI run `38900157053` | **green** (the fast contract gate; build and device jobs skipped as unaffected) |
+
+This supersedes §13.5's stand-in line for CP4. The Product Owner approved CP4 on this evidence (§2).
+
 ## 14. Not delivered by CP4 (each its own checkpoint or owner)
 
 CP5, the last checkpoint: every mobile surface — the Introduction World, END (IW-27 … IW-32, S15), the closed record and
 history, deletion — the approved copy module, RTL / LTR proofs, the final documentation and BG-08 / BG-09. Elsewhere: the
 forward producer (`QAN-BL-MATCH-06`, S6-07); Activity, Push and Direct Entry (S6-07); photos, disclosure, SUCCESS and
 reactivation (S6-06); Introduction intelligence (Stage 8A); launch clearance and policies (Stage 9 / CW2-08).
+
+## 15. CP5 — the mobile Introduction experience: what was built (the last checkpoint)
+
+### 15.1 Preflight (read-only, before any change)
+
+`origin/main` was still `35ad4e19`; PR #343's head was `206af257` (CP4, green exact-head CI, §13.9). The approved V-1
+package (CP1 rev.3: all 16 screens, S1 … S15b, in Dark and Light, and the copy table) was available outside the
+repository and was used as the reference; nothing was guessed. Every server route CP5 needs already existed, so CP5 adds
+**no migration, no API route and no server change**.
+
+| Need | Existing path | Decision |
+|---|---|---|
+| Accept as the second recipient | CP2 `POST /introductions/proposals/:proposalId/acceptance`; the S6-04 proposals client, controller and surface | **REUSE**: the client decodes `ACCEPT` and gains `accept()`; the controller gains `accept()` with the S6-04 retry rule (the same command id for the same proposal and view until the server answers) |
+| Find, read, send, page | CP3 `GET /introductions/worlds`, `…/messages[/before/…]`, `POST …/messages` | **NEW client** `runtime-entry/introduction-worlds-api.ts` (the one mobile client of these routes), strict decoding like every other client |
+| END | S6-02 `POST /introductions/worlds/:worldId/end` | **REUSE** the route, through the same client |
+| The closed history | CP4 `GET /introductions/worlds/:worldId/history[/before/…]` | **REUSE** the route, through the same client |
+| Delete one's own words (R-5) | `SharedWorldApiClient.deleteMaterial` → `POST /shared/worlds/:worldId/materials/:materialId/delete` | **REUSE** unchanged, on the same identity-bound Shared transport |
+| Bubbles, delete confirmation, composer | `SharedWorldThread.tsx` | **REUSE**: the deletable row (`SharedOwnMaterial`) and the composer (`SharedComposer`) are extracted as they were, `SharedThread` / `SharedSendBar` now use them, behaviour unchanged |
+| The «العالم المشترك» root | `SharedWorldArea.tsx` | **EXTEND**: a separate «التعارف» section and the ended Introductions among «عوالم منتهية» |
+| Approved copy | the gate record's table | **NEW module** `introductions/introduction-world-copy.ts`, generated from that table word for word; reused rows imported from their own modules |
+| Identity / generation isolation | the runtime entry's AC-01 seam, `isCurrent`, the one foreground signal | **REUSE**: one controller per runtime generation, retired with it |
+
+### 15.2 What was added
+
+- **Client** (`runtime-entry/introduction-worlds-api.ts`): list, messages, history, send, end. Exact keys only; a message's
+  deletion right must equal its authorship; `ENDED` only from a 2xx body that is exactly `{ outcome: 'ENDED' }`; a
+  network failure is `OFFLINE`, a non-2xx `FAILED` (400 `INVALID`), a doubtful body `FAILED`. No user id, counterpart,
+  audience, retry or persistence.
+- **Controller** (`introductions/introduction-world-controller.ts`): the reader's list and the one open World. Nothing of
+  a World is drawn before the server's read of it (S13); `UNAVAILABLE` clears everything (S14); every answer is bound to
+  its World and its opening, so a late answer about another World or an earlier opening is dropped. One message and one
+  END at a time; a message or END whose answer was lost keeps its words and command id for that World for the whole
+  generation (across leaving and re-opening). Nothing is sent after END. The list and the open World are read again on
+  entry, return and foreground.
+- **Surface** (`introductions/IntroductionWorldSurface.tsx`) — S6 – S15b: the opening, the conversation, END, the closed
+  record; and **cards** (`IntroductionWorldCards.tsx`) for S5.
+- **Proposals** (`ProposalsSurface.tsx`): IW-01 on the review only when the server offers `ACCEPT` (otherwise
+  `acceptNotYet`, unchanged); S2 (IW-02, IW-03a – d, IW-04; IW-07 while running); S3 (IW-05 in the seam, IW-05b, IW-06);
+  the MATCH_CONCLUDED card's entry (IW-06) when the server lists a World of this reader joined to that proposal — the
+  first party's way in; the Introduction World opened from there, Back returning to where it was opened.
+- **Composition**: `integration-runtime.ts` builds `introductionWorlds` on `introductionWorldsFor(bundle)` with deletion on
+  the same Shared transport, the foreground signal and `isCurrent`, and retires it with the generation;
+  `DepthComposition.tsx` hands it to the proposals and to the Shared area — nothing of the Personal world.
+- **Validation only**: the device-proof stand-in `integration/__validation__/s605-proof-introduction-world.ts`, reachable
+  only from the S4-01 proof entry (never the production bundle), and its guard test.
+
+### 15.3 V-1 and copy fidelity
+
+- **Copy.** The 30 APPROVED rows are generated from the gate record's table and compared with it in both languages by the
+  jest suite and the CP5 contract; M-12 appears nowhere in the app; IW-03b is the rev.3 text; IW-22 keeps «ولكل».
+  Reused rows come from their own approved modules: «رجوع», «إعادة المحاولة», «تعذّر ذلك الآن.», «هذا غير متاح الآن.»,
+  «جارٍ الفتح», «تعذّر إرسال الرسالة.», «كلامك هنا», «عوالم منتهية», «حذف», the S6-04 proposals copy (`acceptNotYet`,
+  `changed`, `notNow`, `failed`, `offline`, `unavailableBody`, `cardTitle`, `MATCH_CONCLUDED`).
+- **Structure.** One opening block with a 2px start-edge seam drawn from the existing `selectedMarker` at its
+  `markerThickness` (no new colour, token or component), holding IW-11 / IW-11b, M-11, IW-22 and IW-23; the same seam on
+  «بدأ التعارف» (S3) and on a live Introduction's card (S5); no «قنديل» label; tools are back and «إنهاء التعارف» only; no
+  Living Analysis, Manage World, members or QANDEEL welcome; END with no red destructive style; the closed record with no
+  composer and no END.
+- **Choices recorded for the Product Owner** (each from the existing system, none a new design):
+  - the delete step reuses the Shared World's whole own-message interaction — tap the message, «حذف», then the S4-02
+    confirmation «سيختفي هذا الكلام من هذا العالم المشترك عند الجميع…» with «حذف عند الجميع» / «إلغاء» — the mock-up
+    caption said only "«حذف» (reused from Shared World)";
+  - «عرض رسائل أقدم» (S4-02) reads older pages, one bounded page on request;
+  - sizes are the app's own type roles where the mock-up approximated them (the opening name at the question size, IW-05 at
+    the `statement` large title, M-11 at `metadata`), and the hairlines are the existing GlobalSwitcher hairline
+    (tertiary, 0.4);
+  - the existing «العالم المشترك» root keeps its own headings and rows («العوالم», plain rows): the mock-up's «عوالمك» and
+    card styling of ordinary Worlds were an approximation, and ordinary Worlds are not CP5's to restyle;
+  - a failed load of the World says «تعذّر ذلك الآن.» with «إعادة المحاولة» (as S11's failure), and S15a adds the
+    S6-04 offline line only when no answer arrived at all.
+
+### 15.4 Evidence (local, 2026-10-16)
+
+| Check | Result |
+|---|---|
+| CP5 jest suite `introductions/__tests__/introduction-world.test.tsx` | **47 / 47** — the copy against the gate record; the strict client; the controller (retry ids, isolation, ENDED only from the server, END, deletion before and after END, foreground, microsecond order, nothing sent after END, ids kept across re-opening); the surfaces S1 – S15b in Arabic / Dark and English / Light (seam style, tools, IW-35 only on ENDED, S15a never IW-35, END, ALREADY_SETTLED, Back level by level), both humans' entry, the «التعارف» section |
+| Proof stand-in guard `integration/__tests__/s6-05-proof-introduction-world.test.ts` | **3 / 3** (every answer passes the shipped strict clients) |
+| Introductions + Shared World + runtime-entry suites | **510 / 510 (26 suites: introductions, shared-world, runtime-entry)** |
+| Whole mobile suite (`npm run test:mobile`) | **2580 / 2586 on this machine — the 6 failures are the known local baseline (W1A-01 ×3, "session end versus unknown" ×3), reproduced by name on the untouched CP4 head `206af257` in a temporary worktree; a run overlapping a Gradle build timed out 22 (5 s jest timeouts) and was re-run idle. Mobile CI runs the whole suite green (§17)** |
+| `tsc` (mobile) / ESLint on the changed folders | clean / no error, no new warning |
+| CP5 static contract `tests/s6-05-introduction-mobile-contract.test.mjs` | **7 / 7** |
+| Root static contracts (`node --test tests/*.test.mjs`) | **1410 / 1410 (with this closing change's documents)** |
+
+### 15.5 Visual proof against the approved screens (validation only)
+
+Validation only: the CP5 code (`2c3b7bb9`) built as a release APK (sha256 `ad2c1a1d56379d8a…`) from a separate worktree with
+the S4-01 proof entry, on the Android emulator `QANDEEL_API36` (API 36, 1080 × 2400, 420 dpi), driven by a Maestro journey
+over the SYNTHETIC stand-in `s605-proof-introduction-world.ts` (it offers ACCEPT as only a CLEARED CW2-08 seam would).
+Four legs — Arabic / Dark, Arabic / Light, English / Dark, English / Light — each one clean install, the appearance chosen
+in the app's own Settings, every step passed, 17 screenshots per leg. Each approved screen was then rendered live from the
+CP1 package's own markup and CSS, in Dark and Light, beside the four legs. Evidence (outside the repository, like the CP1
+package): `.s6-05-reports/cp5-native-proof/` (`EVIDENCE.md`, `v3/comparison/S1 … S15b.png`, the four legs, the scripts).
+
+| Screen | Device vs approved |
+|---|---|
+| S1 review, S2 confirmation (and IW-07 running), S3 «بدأ التعارف» | match: IW-01 / IW-02 / IW-03a – d / IW-04 / IW-05 / IW-05b / IW-06 word for word; the seam on IW-05; one primary act on the sheet. S1 keeps the approved S6-04 review layout above IW-01 (header «مقترحات التعارف», the status line) |
+| S4 MATCH_CONCLUDED with IW-06; S5 «التعارف» section, ended among «عوالم منتهية» | match: the seam on the live card only; IW-10 / IW-11 / IW-21 / IW-12. The Shared root keeps its own create action and headings («العوالم») |
+| S6 / S7 opening; S9 LTR | match: one seam block (IW-11, M-11, IW-22, IW-23), the hairline, tools back and «إنهاء التعارف» only, no «قنديل» label; English mirrors to LTR with the chevron flipped |
+| S8 conversation; S12 closed record with «حذف» | match: the Shared bubbles (the other person's words under the first name), the title in the header once scrolled; S12 with the IW-31 banner, no composer, no END |
+| S10 / S11 END | match: IW-27 … IW-29, «رجوع», no red; IW-30 while running |
+| S13 loading | match: «جارٍ الفتح», nothing of the World |
+| S15a / S15b | match: S15a «تعذّر إرسال الرسالة.» · «إعادة المحاولة» and the offline line, never IW-35; S15b IW-35 under the unsent words, the IW-31 banner, no composer or END |
+| S14 unavailable | not photographed (the stand-in has no route to it); proven in the jest suite |
+
+The messages typed by the journey are Latin text (the device input tool types ASCII); the fixture messages are the
+package's own Arabic / English. **The device run found one defect, fixed in CP5** (`80ac4b4d`, `2c3b7bb9`): after an
+Introduction closed, the keyboard of the composer that had just gone stayed up over the closed record and the switcher; the
+shared composer now blurs its input as it unmounts, and the surface dismisses the keyboard on CLOSED. **Not proven:** a
+device run against a real server, a physical device, and iOS screens (iOS is covered only by the CI simulator build and
+boot smoke).
+
+### 15.6 Re-anchors (each tied to the one truth CP5 changes; none weakens a security assertion)
+
+| Pin | Change |
+|---|---|
+| `tests/s6-02-…` test 7 | END reaches mobile only through S6-05's one client (and its suite and the validation stand-in); still no mobile file names the database function |
+| `tests/s6-04-…` test 7 | the acceptance is now wired in the proposals files — exactly one `/acceptance` route, IW-01 only when offered; still no person, score, Match core, END or World route there |
+| `tests/s6-05-introduction-world-messaging-contract…` test 6, `…closed-history-contract…` test 4 | "mobile untouched" becomes "only the one CP5 client (and its suite and the stand-in) names the routes; nothing names a database function" |
+| `tests/s4-01-…` test 4 | the Shared area's props add `introductions` (the reader's own Introduction Worlds) — still nothing of the Personal world |
+| `introductions/__tests__/proposals.test.tsx` | `ACCEPT` is now a decodable action; an action nobody offers is still no answer |
+| `runtime-entry/__tests__/scope.test.ts` | the barrel and the plain-class list gain `IntroductionWorldsApiClient` |
+
+### 15.7 Accessibility
+
+- **Proven (jest):** every level's heading carries the header role and receives focus on arrival; the composer's
+  accessible name is IW-24; END is IW-26; every control is at least 44 points; Back walks back one level.
+- **Proven (emulator, accessibility tree):** at S5, S6, S10, S1 and S2 (Arabic, Dark) every actionable CP5 node has an
+  accessible name and is at least 44 × 44 dp — 0 below, 0 unnamed (`.s6-05-reports/cp5-native-proof/a11y/A11Y.md`).
+- **Not proven:** spoken TalkBack output (the emulator's TTS does not initialise, as S6-04 found) and VoiceOver; a
+  physical-device screen-reader proof stays the open proposal S6-04 left with the Product Owner; F-1 (programmatic focus
+  overridden by TalkBack after a screen change) is app-wide and unchanged.
+
+### 15.8 Independent review (2026-10-16)
+
+An independent read-only review of the CP5 commit found no BLOCKER. Fixed: **MAJOR** — after END (the reader's own, or a
+re-read answering ENDED) the closed record still offered «إعادة المحاولة» for a message whose answer had been lost, which
+would have sent after END (the server refuses it, but the Product requires that nothing is sent); a message of unknown
+outcome is now dropped from view on closing (if it was committed, the closed history shows it) and a retry requires the
+live Introduction. **MINOR** — a lost message or END id was forgotten on leaving the World; both are now kept per World for
+the generation. **MINOR** — the merge compared instants to the millisecond; it now keeps the server's microsecond order.
+**MINOR** — one open World per generation is now documented (the hosts never draw it at once). Fixed NITs: the name is
+inserted as text, never a replacement pattern; the hairline is the existing GlobalSwitcher precedent instead of a derived
+tint; a double tap on IW-04 agrees once. Recorded, not changed: if the list read fails while a World is open, its title
+falls back to IW-11b until the next read (never a wrong name). Checked and sound: IW-01 only when offered; the retry ids;
+the first party's entry; isolation and late answers; never a Standard World; copy and seam; IW-35 only on the server's
+exact ENDED; every re-anchor; the Shared refactor; strict decoding with nothing logged or persisted; the stand-in
+unreachable from production.
+
+### 15.9 Privacy, security and residual risks
+
+- One strict client, the caller's own token, no identity from the client; the only personal word shown is the first name
+  the server presented to this reader (IW-11), never an account Name, HIM or Matching data.
+- No answer is laid over another World or opening; the controller is per runtime generation; nothing is persisted.
+- IW-35 only on the server's exact `ENDED`; a network failure, timeout, 5xx or `UNAVAILABLE` never shows it.
+- **Residual — no end-to-end device run against a real server.** No Docker / Supabase stack runs on this machine, so the
+  device journey ran against the validation stand-in; the server side of the same journey is proven by
+  `verify-migration-0159` / `0160` / `0161` on real PostgreSQL and their live-PostgREST proofs in API CI, and the client by
+  the jest suite against the strict decoders. A real-server device run is **not proven**.
+- **Residual — the physical-device screen-reader proof** (TalkBack / VoiceOver) is the same open proposal S6-04 left with
+  the Product Owner; F-1 (programmatic focus) is app-wide (§15.7).
+- **Residual — G-1** (`QAN-BL-MATCH-06`, S6-07): no real proposal reaches a second recipient, so no real Introduction World
+  can exist yet; in production CW2-08 stays closed and nobody is shown ACCEPT.
+- **Residual — performance** (§13.8) unchanged; the client reads one page of 50 at a time.
+
+## 16. S6-05 closure — BG-08 / BG-09 (in CP5, the last checkpoint)
+
+- **BG-05 / BG-08.** Inherited: none. Admitted by S6-05: `QAN-BL-MATCH-06` only (CP2, owner `S6-07`). Nothing is
+  tombstoned or re-owned; S6-05 owns no open item. Checked and not admitted: photos, disclosure, SUCCESS and reactivation
+  (S6-06); Activity, Push, Direct Entry and the forward producer (S6-07); Introduction intelligence (Stage 8A); launch
+  clearance (Stage 9 / CW2-08); GATE-29 does not bear (no Living Analysis stack). The physical-device screen-reader proof
+  is reported, not admitted (the same proposal S6-04 left with the Product Owner). Register: **70 items; 32 / 4 / 10 / 24;
+  39 / 29 / 2**, unchanged ([backlog](../qandeel-canonical-backlog-v1.md) §7, "S6-05 closing change").
+- **BG-09.** This record's banner moves from IN PROGRESS to **CLOSED / READY FOR PRODUCT OWNER REVIEW / MERGE DECISION**
+  in this same closing change; the Visual / Copy Gate record stays CLOSED as approved. Current State, the Project Map and
+  the Roadmap state the same status, with their earlier lines kept as written.
+- **Launch gates — all closed.** CW2-08 seam `NOT_EVALUATED` (nobody is shown ACCEPT; every acceptance refused); no
+  enrollment, policy, compatibility producer or forward producer; no Activity or Push from an Introduction; Stage 9
+  launch closure untouched; nothing deployed; GHCR / CI image sources unchanged.
+- **Not delivered by S6-05 (each with its owner):** the forward producer `QAN-BL-MATCH-06` and Activity, Push, Direct
+  Entry (S6-07); photos, progressive disclosure, SUCCESS and reactivation, `PAUSED_POST_INTRODUCTION` resume (S6-06);
+  Introduction intelligence (Stage 8A); launch clearance, policies and limits (Stage 9 / CW2-08); the physical-device
+  screen-reader proof (proposed, the Product Owner's decision).
+
+## 17. Final heads in CI
+
+| Head / run | Result |
+|---|---|
+| `af1625c2` (the CP5 implementation and the review fixes), API CI run `38912221627` | **green**: `verify-api` (236 steps, none failed) with the CP5 contract **7 / 7**, every re-anchored S6-02 / S6-04 / S6-05 / S4-01 contract, the API suite **5941 / 5941**, `test:database` **1310 / 1310**, and the live-PostgREST loop on v12.2.9, v13.0.8, v14.18 and v16.4 (CP2 – CP4 wire proofs among them) |
+| `af1625c2`, Mobile CI run `38912221725` | **green**: the fast contract gate with type-check, lint and the whole jest suite **2586 / 2586** (207 suites); the Android release APK and iOS release simulator app built; Android API 36 emulator and iOS 26.5 simulator boot smokes passed |
+| `2c3b7bb9` (the keyboard fix the device proof found: two mobile files and the suite), API CI run `38923671846` | **green**: the change-aware plan (VAL-01) carried the API gate forward — `LATEST_DELTA_IRRELEVANT_AND_PREDECESSOR_PROVEN_GREEN` — because the delta touches only mobile files |
+| `2c3b7bb9`, Mobile CI run `38923671813` | **green**: the fast contract gate (jest **2586 / 2586**, 207 suites), both native builds and both boot smokes |
+
+This closing change adds documents only on top of `2c3b7bb9`; its own CI is reported with the pull request. No CI image,
+image source (GHCR) or Secret was changed.

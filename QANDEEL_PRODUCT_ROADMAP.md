@@ -505,12 +505,12 @@ as written.
 - **Next:** the Product Owner's review of the S6-04 pull request and the merge decision. No later Stage 6 task is started
   by this note.
 
-### 6.14 Execution note — 2026-10-16 (S6-04 merged; S6-05 in progress)
+### 6.14 Execution note — 2026-10-16 (S6-04 merged; S6-05 closed, ready for the merge decision)
 **Recorded:** 2026-10-16 by S6-05, in the S6-05 pull request (not merged). This is a status note only; §6.9 … §6.13 stay
 as written.
 - **Merged:** S6-04 through PR #342 as `35ad4e19ad7e449255e7d087d4420b5d3775cf86` (2026-10-15; not deployed).
 - **Started:** the Product Owner's S6-05 Task Contract v1.0 (D1–D7, 2026-10-15) started **S6-05 — Mutual Match &
-  Introduction World** from `main` at `35ad4e19`. It is **IN PROGRESS — CP3 APPROVED, CP4 DELIVERED (INTRODUCTION END & CLOSED HISTORY) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
+  Introduction World** from `main` at `35ad4e19`. It is **CLOSED / READY FOR PRODUCT OWNER REVIEW / MERGE DECISION — CP4 APPROVED, CP5 DELIVERED (MOBILE INTRODUCTION EXPERIENCE) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
 - **Decided (2026-10-15):** R-1 … R-8 (R-1: D3 is within GATE-30, ACE-SP-01 unchanged); the Visual Gate and the Copy Gate
   closed; CP2 authorized.
 - **Delivered (CP2):** migration `0159` (the second recipient's acceptance over the frozen `0114` core) and its API route,
@@ -525,8 +525,17 @@ as written.
 - **Delivered (CP4):** migration `0161` (the closed Introduction history on each human's own frozen entitlement; END
   and owner deletion reused unchanged) and its API routes, with the verifier, the live-PostgREST proof and a static
   contract.
-- **Not delivered yet:** CP5 (every mobile surface, END on mobile included). *(As written at CP3: "CP4 (END on mobile,
-  closed history), CP5 (mobile)".)* The forward producer is `QAN-BL-MATCH-06` (S6-07, admitted).
+- **Approved (2026-10-16):** CP4, after green exact-head CI on `206af257` (real PostgreSQL and live PostgREST on the
+  four lines); CP5 authorized as S6-05's last checkpoint.
+- **Delivered (CP5):** the mobile Introduction experience on exactly the approved V-1 and copy (acceptance, «بدأ
+  التعارف», the «التعارف» section, the Introduction World, END and the closed record), through one strict client of the
+  existing routes, with no server change; a validation-only native visual proof; the closing change (BG-08 / BG-09):
+  nothing inherited, tombstoned or re-owned, 70 items unchanged.
+- **Not delivered by S6-05 (each its own owner):** the forward producer `QAN-BL-MATCH-06` (S6-07); Activity, Push and
+  Direct Entry (S6-07); photos, disclosure, SUCCESS and reactivation (S6-06); Introduction intelligence (Stage 8A);
+  launch clearance (Stage 9 / CW2-08). *(As written at CP4: "Not delivered yet: CP5 (every mobile surface, END on mobile
+  included)"; as written at CP3: "CP4 (END on mobile, closed history), CP5 (mobile)".)*
 - **Still closed:** every Matching and launch gate; nobody is shown ACCEPT in production. Issue #322 stays open.
-- **Next:** the Product Owner's review of the CP4 report. No later checkpoint is started by this note. *(As written at
-  CP2: "the Product Owner's review of the CP2 report".)*
+- **Next:** the Product Owner's review of S6-05 and the merge decision («ادمج»). S6-06 is not started. *(As written at
+  CP4: "the Product Owner's review of the CP4 report"; as written at CP2: "the Product Owner's review of the CP2
+  report".)*

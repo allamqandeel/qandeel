@@ -3805,6 +3805,25 @@ the record of the register before it.
   deletion or export footprint changes.
 - **Latest index: 70 items; 32 / 4 / 10 / 24 by status, 39 / 29 / 2 by severity**, recounted mechanically from §4.
 
+**S6-05 closing change (CP5, 2026-10-16; the S6-05 pull request, not merged; effective from its merge).** BG-08 / BG-09 at
+S6-05's closure, in its last checkpoint ([S6-05 record](e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md) §16), under the
+Product Owner's checkpoint rule (no separate documentation task). The paragraph above stays as the record of the register
+before it.
+- **Inherited:** none (BG-05: no item named `S6-05` at kickoff), so nothing is tombstoned or re-owned.
+- **Admitted by S6-05:** `QAN-BL-MATCH-06` only (CP2; owner `S6-07`, the Product Owner's R-4); unchanged by CP3 – CP5.
+- **Checked and not admitted (BG-06):** photos, progressive disclosure, SUCCESS and reactivation (S6-06); Activity, Push,
+  Direct Entry and the forward producer (S6-07, `QAN-BL-MATCH-06`); Introduction intelligence (Stage 8A, R-1); launch
+  clearance, policies and limits (Stage 9 / CW2-08). Each is that task's own Task Contract scope. GATE-29: S6-05 uses no
+  Living Analysis stack (V-1, no field), so `QAN-BL-VIS-01` and `QAN-BL-LAUNCH-04` do not bear on it. The proof of the
+  mobile surfaces on a physical device with TalkBack / VoiceOver is the same proposal S6-04 left with the Product Owner
+  (record §15.7); it is reported, not admitted.
+- **BG-05:** S6-05 owns no open item from its merge; `S6-07` owns three (`QAN-BL-PRIV-04`, `QAN-BL-MATCH-01`,
+  `QAN-BL-MATCH-06`).
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-ACCT-01`,
+  `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN). S6-05's migrations
+  (`0159` – `0161`) create functions only and no relation, so no deletion or export footprint changes.
+- **Latest index: 70 items; 32 / 4 / 10 / 24 by status, 39 / 29 / 2 by severity**, unchanged.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -3882,7 +3901,7 @@ Inherited after T-12 closure reconciliation:
 | `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned*. *Closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-01` re-owned to `S6-07` with the mandatory `ACCT-DEL-01` dependency; admitted `QAN-BL-MATCH-04` at CP1 (Stage 8A, D7); `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`, `QAN-BL-PRIV-04`, `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-LAUNCH-04` observed and left unchanged; no further admission (§7). S6-01 owns no open item |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract). *Closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-02` tombstoned with the Product Owner's stricter decision A; admitted `QAN-BL-MATCH-05` to `S6-03` (D2); nothing else admitted (§7). S6-02 owns no open item |
 | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). *S6-03 started 2026-10-15 (Task Contract v1.3; CW2-06B approved at CP1). Closing change (2026-10-15; the S6-03 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-05` tombstoned; dated notes on `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04`; nothing admitted (§7). S6-03 owns no open item |
-| `S6-05 — Mutual Match & Introduction World` | none — no item names it at kickoff (BG-05). *CP2 (2026-10-16; the S6-05 pull request, not merged; effective from its merge):* admitted `QAN-BL-MATCH-06` (owner `S6-07`, the Product Owner's R-4); nothing tombstoned or re-owned (§7). S6-05 owns no open item |
+| `S6-05 — Mutual Match & Introduction World` | none — no item names it at kickoff (BG-05). *CP2 (2026-10-16; the S6-05 pull request, not merged; effective from its merge):* admitted `QAN-BL-MATCH-06` (owner `S6-07`, the Product Owner's R-4); nothing tombstoned or re-owned (§7). S6-05 owns no open item. *Closing change (CP5, 2026-10-16; the S6-05 pull request, not merged; effective from its merge):* nothing inherited, tombstoned or re-owned; `QAN-BL-MATCH-06` stays with `S6-07`; S6-05 owns no open item (§7) |
 | `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed); `QAN-BL-MATCH-06` (admitted by S6-05 at CP2, 2026-10-16, at the Product Owner's R-4: the runtime producer of the forward step) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
