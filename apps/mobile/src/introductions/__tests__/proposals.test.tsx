@@ -387,13 +387,15 @@ describe('the controller', () => {
 describe('the transport decodes strictly', () => {
   const answer = (status: number, body: unknown) => async () => ({ ok: status >= 200 && status < 300, status, json: async () => body });
   const wire = { proposals: [{ proposalId: P1, viewId: V1, status: 'AWAITING_YOU', actions: ['APPROVE_FORWARD', 'DECLINE'] }], next: null };
-  it('a proposal with any other field, an unknown status or an acceptance is no answer', async () => {
+  // RE-ANCHORED by S6-05 (CP5, 2026-10-16): ACCEPT is now a decision the server may offer the second recipient (CP2,
+  // migration 0159; only when the CW2-08 seam clears), so the client decodes it; an action nobody offers is still no answer.
+  it('a proposal with any other field, an unknown status or an unknown action is no answer', async () => {
     expect((await new IntroductionProposalsApiClient({ baseUrl: 'x', fetch: answer(200, wire) }).list(null)).kind).toBe('READ');
     for (const bad of [
       { ...wire, proposals: [{ ...wire.proposals[0], firstName: 'Sara' }] },
       { ...wire, proposals: [{ ...wire.proposals[0], conclusion: 'x' }] },
       { ...wire, proposals: [{ ...wire.proposals[0], status: 'FORWARDED_TO_SECOND' }] },
-      { ...wire, proposals: [{ ...wire.proposals[0], actions: ['ACCEPT'] }] },
+      { ...wire, proposals: [{ ...wire.proposals[0], actions: ['MATCH'] }] },
       { ...wire, next: 'not-a-cursor' },
     ]) {
       expect((await new IntroductionProposalsApiClient({ baseUrl: 'x', fetch: answer(200, bad) }).list(null)).kind).toBe('UNAVAILABLE');

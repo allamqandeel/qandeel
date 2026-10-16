@@ -154,14 +154,18 @@ test('6 — the API takes a command id and a view only, calls the five boundarie
   }
 });
 
-test('7 — mobile draws only what the server answered: no person, score, acceptance, Match or END wiring', () => {
+// RE-ANCHORED by S6-05 CP5 (2026-10-16): the second recipient's acceptance (CP2, migration 0159) is now wired in these
+// files — offered only when the server offers ACCEPT, through exactly one route; still no person, score, Match core or END.
+test('7 — mobile draws only what the server answered: no person, score, Match core or END wiring; one acceptance route (S6-05)', () => {
   const files = readdirSync(new URL(`${MOBILE}/`, root)).filter((f) => /^(Proposals|proposals-)/u.test(f));
   assert.deepEqual(files.sort(), ['ProposalsSurface.tsx', 'proposals-controller.ts', 'proposals-copy.ts']);
   for (const file of [...files.map((f) => `${MOBILE}/${f}`), 'apps/mobile/src/runtime-entry/introduction-proposals-api.ts']) {
     const text = code(file);
     assert.doesNotMatch(text, /firstName|first_name|presentedFirstName|conclusion|photo|birth|score|percent|ranking|swipe/iu, `${file} names no person or score`);
-    assert.doesNotMatch(text, /'ACCEPT'|accept\(|\/accept|commit_matching|end_own_introduction|introductions\/worlds\//u, `${file} wires no acceptance, Match or END`);
+    assert.doesNotMatch(text, /commit_matching|end_own_introduction|introductions\/worlds\//u, `${file} wires no Match core or END`);
   }
+  assert.equal((code('apps/mobile/src/runtime-entry/introduction-proposals-api.ts').match(/\/acceptance`/gu) ?? []).length, 1, 'one acceptance route');
+  assert.match(code(`${MOBILE}/ProposalsSurface.tsx`), /offered\.includes\('ACCEPT'\) \?/u, 'IW-01 only when the server offers ACCEPT');
   const transport = code('apps/mobile/src/runtime-entry/introduction-proposals-api.ts');
   assert.match(transport, /Object\.keys\(value\)\.length !== 4/u, 'a proposal with any other field is no answer');
   const copy = read(`${MOBILE}/proposals-copy.ts`);

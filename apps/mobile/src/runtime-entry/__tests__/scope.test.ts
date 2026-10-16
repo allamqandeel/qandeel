@@ -31,6 +31,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // S6-04 added exactly one: IntroductionProposalsApiClient, the private proposals transport (a plain class).
   // S5-02 added exactly one: PublicAuthoringApiClient, the Public authoring transport (a plain class; PublicWorldApiClient
   // carries one on the same identity-bound fetch).
+  // S6-05 added exactly one: IntroductionWorldsApiClient, the Introduction World transport (a plain class).
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
@@ -40,6 +41,7 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'FOREGROUND_CATCH_UP_INTERVAL_MS',
     'InteractionPreferencesApiClient',
     'IntroductionProposalsApiClient',
+    'IntroductionWorldsApiClient',
     'IntroductionsApiClient',
     'LoginIdAvailabilityClient',
     'MAX_CATCH_UP_BACKOFF_MS',
@@ -87,7 +89,8 @@ test('P55/P57 — the layer exports no React component and no reader-facing copy
     // W1B-01's two account transports are plain classes too.
     // W3-MEGA-U's Understanding transport is a plain class too, and so are A3-01's Activity and A3-02's push transports,
     // and S4-01's Shared World transport, and S5-01's Public World transport, and S5-02's Public authoring transport.
-    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient'].includes(name)) continue;
+    // S6-05's Introduction World transport is a plain class too.
+    if (['ConversationSessionApiClient', 'ConversationTurnApiClient', 'AccountApiClient', 'LoginIdAvailabilityClient', 'UnderstandingApiClient', 'ActivityApiClient', 'PushApiClient', 'SharedWorldApiClient', 'PublicWorldApiClient', 'PublicAuthoringApiClient', 'InteractionPreferencesApiClient', 'IntroductionsApiClient', 'IntroductionProposalsApiClient', 'IntroductionWorldsApiClient'].includes(name)) continue;
     expect(name[0]).toBe(name[0].toLowerCase());
   }
   // The only strings the layer exports are config KEY NAMES and client option flags — never a

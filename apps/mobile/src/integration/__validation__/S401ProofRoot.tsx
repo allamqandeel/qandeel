@@ -52,6 +52,10 @@
  * S6-04 — the private Introduction proposals (the SYNTHETIC stand-in `s604-proof-proposals.ts`):
  *
  *   qandeel://s401-proof/introductions/seed-proposals
+ *
+ * S6-05 — the Mutual Match acceptance and the Introduction World (the SYNTHETIC stand-in `s605-proof-introduction-world.ts`):
+ *
+ *   qandeel://s401-proof/introductions/seed-match | peer-end | offline
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -66,7 +70,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -120,6 +124,15 @@ export function S401ProofRoot() {
         // The entry reads the proposals when the Personal world is drawn; a seed after launch asks again.
         const phase = runtime.getPhase();
         if (phase.kind === 'READY') phase.runtime.introductionProposals.refresh();
+      }
+      if (match[1] === 'introductions' && (match[2] === 'seed-match' || match[2] === 'peer-end' || match[2] === 'offline')) {
+        world.introductionWorld(match[2]);
+        // The proposals and the Introduction Worlds are read when shown; a seed after launch asks again.
+        const phase = runtime.getPhase();
+        if (phase.kind === 'READY' && match[2] === 'seed-match') {
+          phase.runtime.introductionProposals.refresh();
+          phase.runtime.introductionWorlds.refresh();
+        }
       }
     });
     return () => {

@@ -5,8 +5,15 @@
  * It is a quiet page inside «التعارف مع قنديل», never a feed, a search or a ranking: each card says only that a private
  * opportunity exists and its permitted status — no name, photo, age, work, place, account or analysis of anyone (D3).
  * Three levels, each with its own heading where the screen reader arrives: the space, one proposal's review, and the
- * short confirmation of one decision. A button is drawn only for a decision the server offered; there is no acceptance
- * here (S6-05). Everything after a decision is the server's answer, said neutrally.
+ * short confirmation of one decision. A button is drawn only for a decision the server offered. Everything after a
+ * decision is the server's answer, said neutrally.
+ *
+ * S6-05 (CP5, V-1 S1–S4): when — and only when — the server offers the second recipient `ACCEPT`, the review draws IW-01;
+ * one confirmation (IW-02, IW-03a–d, IW-04) states what agreeing does without claiming the other person agreed; a real
+ * `MATCHED` answer shows «بدأ التعارف» (IW-05 / IW-05b) inside the same 2px start-edge seam as the World's opening, with
+ * the entry (IW-06) as the one primary act. A MATCH_CONCLUDED card gains the same entry, for either human, once the
+ * server lists a World of theirs joined to that proposal. The World itself is `IntroductionWorldSurface`; Back from it
+ * returns here. While the launch gate is closed nothing offers ACCEPT, and `acceptNotYet` stays.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
 import { AccessibilityInfo, BackHandler, ScrollView, Text, View, findNodeHandle } from 'react-native';
@@ -15,7 +22,10 @@ import { AppearanceStatusBar } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
 import type { PrivateProposal, ProposalAction } from '../runtime-entry';
-import { Action, Heading, LOCAL_TYPE, Para, Question, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
+import { introductionWorldCopy, type IntroductionWorldCopy } from './introduction-world-copy';
+import { worldOfProposal, type IntroductionWorldsController } from './introduction-world-controller';
+import { IntroductionWorldSurface } from './IntroductionWorldSurface';
+import { Action, BUSY_OPACITY, Heading, LOCAL_TYPE, Para, Question, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
 import { proposalsCopy, type ProposalsCopy } from './proposals-copy';
 import { awaitsDecision, type ProposalsController, type ProposalsNotice } from './proposals-controller';
 
@@ -29,12 +39,20 @@ export interface ProposalsSurfaceProps {
   readonly language: ChromeLanguage;
   readonly insets: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
   readonly onBack: () => void;
+  /** S6-05: the reader's own Introduction Worlds (the entry IW-06 and the World itself); absent, no entry is drawn. */
+  readonly worlds?: IntroductionWorldsController;
 }
 
 type Screen =
   | { readonly kind: 'SPACE' }
   | { readonly kind: 'REVIEW'; readonly id: string }
-  | { readonly kind: 'CONFIRM'; readonly id: string; readonly action: ProposalAction };
+  | { readonly kind: 'CONFIRM'; readonly id: string; readonly action: Exclude<ProposalAction, 'ACCEPT'> }
+  /** S6-05 S2: the one acceptance confirmation. */
+  | { readonly kind: 'ACCEPT'; readonly id: string }
+  /** S6-05 S3: the server answered MATCHED and bound this World. */
+  | { readonly kind: 'BEGUN'; readonly id: string; readonly worldId: string }
+  /** S6-05: the Introduction World, opened from `from`. */
+  | { readonly kind: 'WORLD'; readonly worldId: string; readonly from: Exclude<Screen, { readonly kind: 'WORLD' }> };
 
 const noticeText = (notice: ProposalsNotice, copy: ProposalsCopy): string | null => (notice === null ? null : ({
   RECORDED_DECLINE: copy.recordedDecline, RECORDED_WITHDRAW: copy.recordedWithdraw, CHANGED: copy.changed,
@@ -44,10 +62,11 @@ const noticeText = (notice: ProposalsNotice, copy: ProposalsCopy): string | null
 /** The comma that joins a card's title and status for the screen reader, in the reading language. */
 const joined = (language: ChromeLanguage, a: string, b: string) => `${a}${language === 'ar' ? '، ' : ', '}${b}`;
 
-export function ProposalsSurface({ controller, language, insets, onBack }: ProposalsSurfaceProps) {
+export function ProposalsSurface({ controller, language, insets, onBack, worlds }: ProposalsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = proposalsCopy(language);
+  const iw = introductionWorldCopy(language);
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const headingRef = useRef<Text | null>(null);
@@ -60,11 +79,18 @@ export function ProposalsSurface({ controller, language, insets, onBack }: Propo
   useEffect(() => {
     controller.refresh();
   }, [controller]);
+  // S6-05: the reader's own Introduction Worlds, read again whenever the space is shown (the MATCH_CONCLUDED entry).
+  const onSpace = screen.kind === 'SPACE';
+  useEffect(() => {
+    if (onSpace) worlds?.refresh();
+  }, [worlds, onSpace]);
 
   // Android system Back walks back one level, and leaves the space only from its first level.
   const back = () => {
     controller.dismissNotice();
-    if (screen.kind === 'CONFIRM') setScreen({ kind: 'REVIEW', id: screen.id });
+    if (screen.kind === 'CONFIRM' || screen.kind === 'ACCEPT' || screen.kind === 'BEGUN') {
+      if (!state.busy) setScreen({ kind: 'REVIEW', id: screen.id });
+    } else if (screen.kind === 'WORLD') setScreen(screen.from);
     else if (screen.kind === 'REVIEW') setScreen({ kind: 'SPACE' });
     else onBack();
   };
@@ -81,7 +107,8 @@ export function ProposalsSurface({ controller, language, insets, onBack }: Propo
   }, []);
 
   // The screen reader arrives on each level's heading once, and the page starts at its top.
-  const screenKey = screen.kind === 'SPACE' ? 'SPACE' : `${screen.kind}|${screen.id}|${screen.kind === 'CONFIRM' ? screen.action : ''}`;
+  const screenKey = screen.kind === 'SPACE' ? 'SPACE' : screen.kind === 'WORLD' ? `WORLD|${screen.worldId}`
+    : `${screen.kind}|${screen.id}|${screen.kind === 'CONFIRM' ? screen.action : ''}`;
   useEffect(() => {
     if (!ready) return;
     scrollRef.current?.scrollTo({ y: 0, animated: false });
@@ -91,7 +118,16 @@ export function ProposalsSurface({ controller, language, insets, onBack }: Propo
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={PROPOSALS_SURFACE_TEST_ID} />;
 
-  const selected = screen.kind === 'SPACE' ? null : state.proposals.find((p) => p.proposalId === screen.id) ?? null;
+  if (screen.kind === 'WORLD' && worlds !== undefined) {
+    // S6-05: the Introduction World itself. Back returns to exactly where it was opened from.
+    return <IntroductionWorldSurface controller={worlds} worldId={screen.worldId} language={language} insets={insets} onBack={() => setScreen(screen.from)} />;
+  }
+  const enter = (worldId: string, from: Exclude<Screen, { readonly kind: 'WORLD' }>) => {
+    controller.dismissNotice();
+    setScreen({ kind: 'WORLD', worldId, from });
+  };
+
+  const selected = screen.kind === 'SPACE' || screen.kind === 'WORLD' ? null : state.proposals.find((p) => p.proposalId === screen.id) ?? null;
   const notice = noticeText(state.notice, copy);
 
   const sheet = (children: ReactNode) => (
@@ -104,8 +140,16 @@ export function ProposalsSurface({ controller, language, insets, onBack }: Propo
   let body: ReactNode;
   let act: ReactNode = null;
   if (screen.kind === 'SPACE') {
-    body = <Space ctx={ctx} copy={copy} controller={controller} onOpen={(id) => { controller.dismissNotice(); setScreen({ kind: 'REVIEW', id }); }} />;
-  } else if (selected === null) {
+    body = <Space ctx={ctx} copy={copy} controller={controller} onOpen={(id) => { controller.dismissNotice(); setScreen({ kind: 'REVIEW', id }); }}
+      worlds={worlds} iw={iw} onEnter={(worldId) => enter(worldId, { kind: 'SPACE' })} />;
+  } else if (screen.kind === 'BEGUN') {
+    // S3 — a real result for the second party: the server's MATCHED and its World, nothing else.
+    body = <Begun ctx={ctx} iw={iw} />;
+    const worldId = screen.worldId;
+    act = worlds === undefined ? null : sheet(
+      <Action ctx={sheetCtx} primary label={iw.enter} onPress={() => enter(worldId, { kind: 'REVIEW', id: screen.id })} testID="qandeel-proposals-enter-world" />,
+    );
+  } else if (selected === null || screen.kind === 'WORLD') {
     // The proposal is no longer among this human's own (it cannot be vouched for): one neutral line.
     body = (
       <View testID="qandeel-proposals-review">
@@ -118,6 +162,11 @@ export function ProposalsSurface({ controller, language, insets, onBack }: Propo
     const offered = selected.actions;
     if (offered.length > 0) {
       act = sheet(<>
+        {offered.includes('ACCEPT') ? (
+          // IW-01: only because the server offers ACCEPT now (S6-05).
+          <Action ctx={sheetCtx} primary label={iw.acceptAction} onPress={() => setScreen({ kind: 'ACCEPT', id: selected.proposalId })}
+            testID="qandeel-proposals-accept" />
+        ) : null}
         {offered.includes('APPROVE_FORWARD') ? (
           <Action ctx={sheetCtx} primary label={copy.allowAction} onPress={() => setScreen({ kind: 'CONFIRM', id: selected.proposalId, action: 'APPROVE_FORWARD' })}
             testID="qandeel-proposals-allow" />
@@ -130,6 +179,24 @@ export function ProposalsSurface({ controller, language, insets, onBack }: Propo
           <Action ctx={sheetCtx} label={copy.withdrawAction} onPress={() => setScreen({ kind: 'CONFIRM', id: selected.proposalId, action: 'WITHDRAW' })}
             testID="qandeel-proposals-withdraw" />
         ) : null}
+      </>);
+    }
+  } else if (screen.kind === 'ACCEPT') {
+    if (!selected.actions.includes('ACCEPT')) {
+      // The server no longer offers it (the proposal changed underneath): back to what is true now.
+      body = <Review ctx={ctx} copy={copy} proposal={selected} />;
+    } else {
+      body = <AcceptConfirmation ctx={ctx} iw={iw} />;
+      const agree = async () => {
+        const worldId = await controller.accept(selected.proposalId);
+        if (worldId !== null) setScreen({ kind: 'BEGUN', id: selected.proposalId, worldId });
+        else if (controller.getState().notice !== 'FAILED') setScreen({ kind: 'REVIEW', id: selected.proposalId });
+      };
+      act = sheet(<>
+        <View style={{ opacity: state.busy ? BUSY_OPACITY : 1 }}>
+          <Action ctx={sheetCtx} primary label={state.busy ? iw.accepting : iw.acceptConfirm} onPress={() => void agree()} testID="qandeel-proposals-accept-confirm" />
+        </View>
+        <Action ctx={sheetCtx} label={copy.back} onPress={() => { if (!state.busy) setScreen({ kind: 'REVIEW', id: selected.proposalId }); }} testID="qandeel-proposals-accept-cancel" />
       </>);
     }
   } else {
@@ -208,10 +275,12 @@ export function ProposalsSurface({ controller, language, insets, onBack }: Propo
 }
 
 /** The space: what the server answered about this human's own proposals, newest first, and nothing else. */
-function Space({ ctx, copy, controller, onOpen }: {
+function Space({ ctx, copy, controller, onOpen, worlds, iw, onEnter }: {
   readonly ctx: PartContext; readonly copy: ProposalsCopy; readonly controller: ProposalsController; readonly onOpen: (id: string) => void;
+  readonly worlds: IntroductionWorldsController | undefined; readonly iw: IntroductionWorldCopy; readonly onEnter: (worldId: string) => void;
 }) {
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
+  const worldsState = useSyncExternalStore(worlds?.subscribe ?? noSubscription, worlds?.getState ?? noWorlds);
   const { palette } = ctx;
   const heading = <Question ctx={ctx} text={copy.spaceTitle} testID="qandeel-proposals-heading" />;
   if (state.status === 'IDLE' || state.status === 'LOADING') {
@@ -244,7 +313,22 @@ function Space({ ctx, copy, controller, onOpen }: {
       {heading}
       <Para ctx={ctx} text={copy.spaceIntro} role="supporting" color={palette.secondary} />
       <View style={{ rowGap: 10, paddingTop: 8 }}>
-        {state.proposals.map((p) => <Card key={p.proposalId} ctx={ctx} copy={copy} proposal={p} onOpen={() => onOpen(p.proposalId)} />)}
+        {state.proposals.map((p) => {
+          const card = <Card key={p.proposalId} ctx={ctx} copy={copy} proposal={p} onOpen={() => onOpen(p.proposalId)} />;
+          // S4: a World the server lists for this human, joined to the same proposal, gains its entry (IW-06) — either human.
+          const world = p.status === 'MATCH_CONCLUDED' && worldsState !== null ? worldOfProposal(worldsState, p.proposalId) : null;
+          if (world === null) return card;
+          return (
+            <View key={p.proposalId} style={{ marginStart: ROW_START - 8, marginEnd: ROW_END - 8, borderRadius: CARD_RADIUS, backgroundColor: ctx.palette.field }}>
+              <Card ctx={ctx} copy={copy} proposal={p} onOpen={() => onOpen(p.proposalId)} joined />
+              <Control palette={ctx.palette} language={ctx.language} accessibilityLabel={iw.enter} onPress={() => onEnter(world.worldId)}
+                testID={`qandeel-proposals-enter-${p.proposalId}`}
+                style={{ alignSelf: 'flex-start', minHeight: MIN_TARGET, marginStart: 26, marginEnd: 16, marginBottom: 6, paddingHorizontal: 8, justifyContent: 'center' }}>
+                <Text style={{ ...typeStyle('action'), color: ctx.palette.primary, writingDirection: ctx.writing }}>{iw.enter}</Text>
+              </Control>
+            </View>
+          );
+        })}
       </View>
       {state.next === null ? null : (
         <Action ctx={{ ...ctx, busy: ctx.busy || state.loadingMore }} label={copy.more} onPress={() => controller.more()} testID="qandeel-proposals-more" />
@@ -254,8 +338,10 @@ function Space({ ctx, copy, controller, onOpen }: {
 }
 
 /** The neutral card: a private opportunity exists, and its permitted status. Nothing about anyone. */
-function Card({ ctx, copy, proposal, onOpen }: {
+function Card({ ctx, copy, proposal, onOpen, joined: inCard = false }: {
   readonly ctx: PartContext; readonly copy: ProposalsCopy; readonly proposal: PrivateProposal; readonly onOpen: () => void;
+  /** S6-05: drawn inside a card that also holds its World's entry. */
+  readonly joined?: boolean;
 }) {
   const { palette, language, writing } = ctx;
   const status = copy[proposal.status];
@@ -267,7 +353,7 @@ function Card({ ctx, copy, proposal, onOpen }: {
       accessibilityLabel={joined(language, copy.cardTitle, status)}
       onPress={onOpen}
       testID={`qandeel-proposals-card-${proposal.proposalId}`}
-      style={{ marginStart: ROW_START - 8, marginEnd: ROW_END - 8, paddingVertical: 14, paddingHorizontal: 16, borderRadius: CARD_RADIUS,
+      style={{ marginStart: inCard ? 0 : ROW_START - 8, marginEnd: inCard ? 0 : ROW_END - 8, paddingVertical: 14, paddingHorizontal: 16, borderRadius: CARD_RADIUS,
         backgroundColor: palette.field, alignItems: 'stretch', minHeight: MIN_TARGET }}
     >
       <View style={{ flexDirection: 'row', alignItems: 'center', columnGap: 10 }}>
@@ -292,7 +378,9 @@ function Review({ ctx, copy, proposal }: { readonly ctx: PartContext; readonly c
   </>);
   if (proposal.status === 'AWAITING_YOU') {
     const forward = proposal.actions.includes('APPROVE_FORWARD');
-    const declineOnly = !forward && proposal.actions.includes('DECLINE');
+    // S6-05: ACCEPT offered (S1) — the review stays as approved, and only the primary act (IW-01) is new.
+    const accept = proposal.actions.includes('ACCEPT');
+    const declineOnly = !forward && !accept && proposal.actions.includes('DECLINE');
     return (
       <View testID="qandeel-proposals-review">
         {head}
@@ -306,7 +394,7 @@ function Review({ ctx, copy, proposal }: { readonly ctx: PartContext; readonly c
             <Para ctx={ctx} text={copy.forwardMutual} />
             <Para ctx={ctx} text={copy.forwardWithdrawNote} role="supporting" color={palette.secondary} />
           </View>
-        ) : declineOnly ? (
+        ) : accept ? null : declineOnly ? (
           <Para ctx={ctx} text={copy.acceptNotYet} role="supporting" color={palette.secondary} testID="qandeel-proposals-accept-not-yet" />
         ) : (
           <Para ctx={ctx} text={copy.decisionsPaused} role="supporting" color={palette.secondary} testID="qandeel-proposals-paused" />
@@ -328,6 +416,45 @@ function Review({ ctx, copy, proposal }: { readonly ctx: PartContext; readonly c
       {proposal.actions.includes('WITHDRAW') ? (
         <Para ctx={ctx} text={copy.forwardWithdrawNote} role="supporting" color={palette.secondary} />
       ) : null}
+    </View>
+  );
+}
+
+const noSubscription = () => () => undefined;
+const noWorlds = () => null;
+
+/** S2 — one confirmation: what agreeing does, never that the other person already agreed. No checkbox; one explicit act. */
+function AcceptConfirmation({ ctx, iw }: { readonly ctx: PartContext; readonly iw: IntroductionWorldCopy }) {
+  const { palette, writing } = ctx;
+  const points = [iw.acceptBegins, iw.acceptNameOnly, iw.acceptProtected, iw.acceptEitherEnds];
+  return (
+    <View testID="qandeel-proposals-accept-confirmation">
+      <Question ctx={ctx} text={iw.acceptTitle} testID="qandeel-proposals-heading" />
+      <View style={{ rowGap: 6, paddingTop: 4 }}>
+        {points.map((point, index) => (
+          <View key={index} testID={`qandeel-proposals-accept-point-${index}`} style={{ flexDirection: 'row', alignItems: 'flex-start', paddingStart: ROW_START, paddingEnd: ROW_END, columnGap: 10 }}>
+            <View accessibilityElementsHidden importantForAccessibility="no-hide-descendants"
+              style={{ width: 5, height: 5, borderRadius: 2.5, marginTop: 12, backgroundColor: palette.secondary }} />
+            <Text style={{ ...typeStyle('body'), color: palette.primary, flexShrink: 1, writingDirection: writing }}>{point}</Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+/** S3 — «بدأ التعارف» inside the same 2px start-edge seam as the World's opening, at the existing large-title size. */
+function Begun({ ctx, iw }: { readonly ctx: PartContext; readonly iw: IntroductionWorldCopy }) {
+  const { palette, language, writing, onHeading } = ctx;
+  return (
+    <View testID="qandeel-proposals-begun">
+      <View testID="qandeel-proposals-begun-seam"
+        style={{ marginStart: ROW_START, marginEnd: ROW_END, marginTop: 34, marginBottom: 10, paddingVertical: 10, paddingStart: 14,
+          borderStartWidth: palette.markerThickness, borderStartColor: palette.selectedMarker }}>
+        <Text ref={onHeading} accessibilityRole="header" accessibilityLanguage={language} testID="qandeel-proposals-heading"
+          style={{ ...typeStyle('statement'), color: palette.primary, writingDirection: writing }}>{iw.begunTitle}</Text>
+      </View>
+      <Para ctx={ctx} text={iw.begunBody} testID="qandeel-proposals-begun-body" />
     </View>
   );
 }

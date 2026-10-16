@@ -155,9 +155,17 @@ test('5 — the API: four routes, the caller token, SECURITY_SENSITIVE send (R-8
   assert.equal((read('apps/api/src/shared-world/shared-world.controller.ts').match(/this\.activity\.humanText\(/gu) ?? []).length, 1);
 });
 
-test('6 — mobile is untouched in CP3 (CP5 owns every surface)', () => {
+// RE-ANCHORED by S6-05 CP5 (2026-10-16): CP3 added no mobile code; CP5 wires the Introduction World through exactly ONE
+// mobile client (and its test); nothing else in mobile names the routes or any database function.
+test('6 — mobile reaches the Introduction World only through its one CP5 client', () => {
+  // The client, its suite, and the validation-only device-proof stand-in (never in the production bundle).
+  const S6_05_MOBILE_CLIENT = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
+    'integration/__validation__/s605-proof-introduction-world.ts'];
+  const naming = readdirSync(new URL('apps/mobile/src/', root), { recursive: true }).map((f) => String(f).replace(/\\/gu, '/'))
+    .filter((f) => /\.(ts|tsx)$/u.test(f) && /introductions\/worlds/u.test(read(`apps/mobile/src/${f}`)));
+  assert.deepEqual(naming.sort(), [...S6_05_MOBILE_CLIENT].sort(), 'one client names the routes');
   for (const file of readdirSync(new URL('apps/mobile/src/', root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)))) {
-    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds|_my_introduction_/u, `mobile ${file} wires no Introduction World yet`);
+    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /_my_introduction_/u, `mobile ${file} names no database function`);
   }
 });
 

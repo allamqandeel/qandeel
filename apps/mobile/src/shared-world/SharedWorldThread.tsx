@@ -97,6 +97,71 @@ export function SharedReadOnlyMaterial({ material, language, palette }: {
   );
 }
 
+/**
+ * One material the reader may delete — their own words — behind the calm confirmation that states what deletion does.
+ * Reused as it is by the S6-05 Introduction World (R-5): the selection and the deletion itself belong to the caller.
+ */
+export function SharedOwnMaterial({ material, language, palette, open, confirming, busy, onToggle, onAsk, onKeep, onDelete }: {
+  readonly material: SharedMaterial;
+  readonly language: ChromeLanguage;
+  readonly palette: ConversationPalette;
+  /** The Delete action is offered under the words. */
+  readonly open: boolean;
+  /** The confirmation is shown. */
+  readonly confirming: boolean;
+  /** The deletion is on its way. */
+  readonly busy: boolean;
+  readonly onToggle: () => void;
+  readonly onAsk: () => void;
+  readonly onKeep: () => void;
+  readonly onDelete: () => void;
+}) {
+  const copy = sharedConversationCopy(language);
+  const fallback = language === 'ar' ? 'rtl' : 'ltr';
+  const mine = material.producer === 'SELF';
+  const name = material.authorName ?? copy.someone;
+  const slab = (
+    <View style={{ backgroundColor: mine ? palette.utterance : palette.field, paddingTop: 10, paddingBottom: 11, paddingHorizontal: 16, borderRadius: 18, rowGap: 2 }}>
+      {mine ? null : <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{name}</Text>}
+      <Words text={material.text} fallback={fallback} palette={palette} />
+    </View>
+  );
+  const label = mine ? copy.selfTurnName(material.text) : copy.otherTurnName(name, material.text);
+  const testID = `qandeel-shared-material-${mine ? 'self' : 'human'}-${material.materialId}`;
+  const place = { alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: 20, maxWidth: '88%', marginHorizontal: GUTTER - 8 } as const;
+  return (
+    <View style={{ ...place, marginEnd: SLAB_END_INSET, rowGap: 6, opacity: busy ? BUSY_OPACITY : 1 }}>
+      <Control palette={palette} language={language} accessibilityLabel={label} onPress={onToggle}
+        testID={testID} style={{ borderRadius: 18 }}>
+        {slab}
+      </Control>
+      {open && !confirming ? (
+        <Control palette={palette} language={language} accessibilityLabel={copy.delete} onPress={onAsk}
+          testID="qandeel-shared-delete" style={{ alignSelf: 'flex-start', minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center' }}>
+          <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.delete}</Text>
+        </Control>
+      ) : null}
+      {confirming ? (
+        <View testID="qandeel-shared-delete-confirm" style={{ rowGap: 8 }}>
+          <Text style={{ ...typeStyle('supporting'), color: palette.secondary, writingDirection: fallback }}>{copy.deleteExplanation}</Text>
+          <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 8 }}>
+            <Control palette={palette} language={language} accessibilityLabel={copy.cancel} accessibilityState={{ disabled: busy }}
+              onPress={() => { if (!busy) onKeep(); }} testID="qandeel-shared-delete-keep"
+              style={{ minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center' }}>
+              <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.cancel}</Text>
+            </Control>
+            <Control palette={palette} language={language} accessibilityLabel={copy.deleteConfirm} accessibilityState={{ busy, disabled: busy }}
+              onPress={onDelete}
+              testID="qandeel-shared-delete-confirm-action" style={{ minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center', backgroundColor: palette.field }}>
+              <Text style={{ ...typeStyle('action'), color: palette.primary }}>{copy.deleteConfirm}</Text>
+            </Control>
+          </View>
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 /** The World's visible material, oldest first, with the reader's own words deletable behind a confirmation. */
 export function SharedThread({ controller, language, palette }: {
   readonly controller: SharedWorldController;
@@ -118,54 +183,20 @@ export function SharedThread({ controller, language, palette }: {
     if (material.producer === 'QANDEEL' || !material.canDelete) {
       return <SharedReadOnlyMaterial key={material.materialId} material={material} language={language} palette={palette} />;
     }
-    const mine = material.producer === 'SELF';
-    const name = material.authorName ?? copy.someone;
-    const slab = (
-      <View style={{ backgroundColor: mine ? palette.utterance : palette.field, paddingTop: 10, paddingBottom: 11, paddingHorizontal: 16, borderRadius: 18, rowGap: 2 }}>
-        {mine ? null : <Text style={{ ...typeStyle('metadata'), color: palette.tertiary, writingDirection: fallback }}>{name}</Text>}
-        <Words text={material.text} fallback={fallback} palette={palette} />
-      </View>
-    );
-    const label = mine ? copy.selfTurnName(material.text) : copy.otherTurnName(name, material.text);
-    const testID = `qandeel-shared-material-${mine ? 'self' : 'human'}-${material.materialId}`;
-    const place = { alignSelf: mine ? 'flex-start' : 'flex-end', marginTop: 20, maxWidth: '88%', marginHorizontal: GUTTER - 8 } as const;
     const open = selected === material.materialId;
-    const busy = thread.deleting === material.materialId;
     return (
-      <View key={material.materialId} style={{ ...place, marginEnd: SLAB_END_INSET, rowGap: 6, opacity: busy ? BUSY_OPACITY : 1 }}>
-        <Control palette={palette} language={language} accessibilityLabel={label} onPress={() => { setSelected(open ? null : material.materialId); setConfirming(null); }}
-          testID={testID} style={{ borderRadius: 18 }}>
-          {slab}
-        </Control>
-        {open && confirming !== material.materialId ? (
-          <Control palette={palette} language={language} accessibilityLabel={copy.delete} onPress={() => setConfirming(material.materialId)}
-            testID="qandeel-shared-delete" style={{ alignSelf: 'flex-start', minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center' }}>
-            <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.delete}</Text>
-          </Control>
-        ) : null}
-        {confirming === material.materialId ? (
-          <View testID="qandeel-shared-delete-confirm" style={{ rowGap: 8 }}>
-            <Text style={{ ...typeStyle('supporting'), color: palette.secondary, writingDirection: fallback }}>{copy.deleteExplanation}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', columnGap: 12, rowGap: 8 }}>
-              <Control palette={palette} language={language} accessibilityLabel={copy.cancel} accessibilityState={{ disabled: busy }}
-                onPress={() => { if (!busy) { setConfirming(null); setSelected(null); } }} testID="qandeel-shared-delete-keep"
-                style={{ minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center' }}>
-                <Text style={{ ...typeStyle('action'), color: palette.restInk }}>{copy.cancel}</Text>
-              </Control>
-              <Control palette={palette} language={language} accessibilityLabel={copy.deleteConfirm} accessibilityState={{ busy, disabled: busy }}
-                onPress={() => { void controller.deleteMaterial(material.materialId).then(() => { setConfirming(null); setSelected(null); }); }}
-                testID="qandeel-shared-delete-confirm-action" style={{ minHeight: MIN_TARGET, paddingHorizontal: 12, justifyContent: 'center', backgroundColor: palette.field }}>
-                <Text style={{ ...typeStyle('action'), color: palette.primary }}>{copy.deleteConfirm}</Text>
-              </Control>
-            </View>
-          </View>
-        ) : null}
-      </View>
+      <SharedOwnMaterial key={material.materialId} material={material} language={language} palette={palette}
+        open={open} confirming={confirming === material.materialId} busy={thread.deleting === material.materialId}
+        onToggle={() => { setSelected(open ? null : material.materialId); setConfirming(null); }}
+        onAsk={() => setConfirming(material.materialId)}
+        onKeep={() => { setConfirming(null); setSelected(null); }}
+        onDelete={() => { void controller.deleteMaterial(material.materialId).then(() => { setConfirming(null); setSelected(null); }); }} />
     );
   };
 
   return (
     <View testID="qandeel-shared-thread" style={{ paddingTop: 8 }}>
+
       {thread.hasOlder ? (
         // Older history is read one bounded page at a time, and only when the reader asks for it.
         <Control palette={palette} language={language} accessibilityLabel={copy.olderMessages} accessibilityState={{ busy: thread.loadingOlder, disabled: thread.loadingOlder }}
@@ -207,20 +238,40 @@ export function SharedSendBar({ controller, language, palette, bottomInset }: {
   readonly bottomInset: number;
 }) {
   const copy = sharedConversationCopy(language);
-  const fallback = language === 'ar' ? 'rtl' : 'ltr';
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
+  if (!(state.thread.status === 'READY' && state.thread.conversation)) return null;
+  // The words are cleared only once the server confirmed they are committed.
+  return (
+    <SharedComposer language={language} palette={palette} bottomInset={bottomInset} accessibilityLabel={copy.composerName}
+      sending={state.thread.sending !== null} maxLength={SHARED_MESSAGE_MAX_LENGTH} onSend={(draft) => controller.send(draft)} />
+  );
+}
+
+/**
+ * The composer itself: the multiline input and its Send. `onSend` answers whether the words may leave the input (the
+ * Shared World: once committed; the S6-05 Introduction: once they stand as the pending message). Reused by S6-05 with
+ * its own accessible name (IW-24).
+ */
+export function SharedComposer({ language, palette, bottomInset, accessibilityLabel, sending, maxLength, onSend }: {
+  readonly language: ChromeLanguage;
+  readonly palette: ConversationPalette;
+  readonly bottomInset: number;
+  readonly accessibilityLabel: string;
+  readonly sending: boolean;
+  readonly maxLength: number;
+  readonly onSend: (draft: string) => boolean | Promise<boolean>;
+}) {
+  const copy = sharedConversationCopy(language);
+  const fallback = language === 'ar' ? 'rtl' : 'ltr';
   const [draft, setDraft] = useState('');
   const [focused, setFocused] = useState(false);
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
-  if (!(state.thread.status === 'READY' && state.thread.conversation)) return null;
-  const sending = state.thread.sending !== null;
-  const canSend = !sending && draft.trim().length > 0 && draft.length <= SHARED_MESSAGE_MAX_LENGTH;
+  const canSend = !sending && draft.trim().length > 0 && draft.length <= maxLength;
   const send = async () => {
     if (!canSend) return;
-    const committed = await controller.send(draft);
-    // The words are cleared only once the server confirmed they are committed.
-    if (committed && mounted.current) setDraft('');
+    const cleared = await onSend(draft);
+    if (cleared && mounted.current) setDraft('');
   };
   return (
     <View testID="qandeel-shared-send-bar" style={{ flexDirection: 'row', alignItems: 'flex-end', columnGap: 6, paddingHorizontal: 12, paddingTop: 8, paddingBottom: bottomInset + 8 }}>
@@ -230,10 +281,10 @@ export function SharedSendBar({ controller, language, palette, bottomInset }: {
         onChangeText={setDraft}
         editable={!sending}
         multiline
-        maxLength={SHARED_MESSAGE_MAX_LENGTH}
+        maxLength={maxLength}
         placeholder={copy.composerPlaceholder}
         placeholderTextColor={palette.tertiary}
-        accessibilityLabel={copy.composerName}
+        accessibilityLabel={accessibilityLabel}
         accessibilityLanguage={language}
         onFocus={() => setFocused(true)}
         onBlur={() => setFocused(false)}

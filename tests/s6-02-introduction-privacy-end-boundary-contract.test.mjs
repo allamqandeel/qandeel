@@ -174,7 +174,9 @@ test('6 — D1: the ONE END boundary, ungated, and the ONE named exception of th
     /export const SEC_MATCH_00_RETAINED = \[MFN\.PAUSE, MFN\.TURN_OFF, MFN\.REVOKE_CONTEXT, MFN\.REVOKE_DISCLOSURE, MFN\.SETUP\];/u, 'the retained set is unchanged');
 });
 
-test('7 — the API route takes the World and one command id, is an exit right, and logs and retries nothing; mobile is untouched', () => {
+// RE-ANCHORED by S6-05 CP5 (2026-10-16): the END reaches mobile through S6-05's one Introduction World client (and its
+// test); nothing else in mobile names the route, and nothing in mobile names the database function.
+test('7 — the API route takes the World and one command id, is an exit right, and logs and retries nothing; mobile reaches it through one S6-05 client', () => {
   const controller = code(`${API}/introduction-end.controller.ts`);
   assert.match(controller, /@Controller\('introductions'\)/u);
   assert.match(controller, /@Post\('worlds\/:worldId\/end'\)/u);
@@ -192,8 +194,11 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   // it; the S6-02 module stays composed here, exactly once.
   assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
-  for (const file of mobile('apps/mobile/src/')) {
-    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction|introductions\/worlds\//u, `mobile ${file} wires no END (S6-05)`);
+  const client = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
+    'integration/__validation__/s605-proof-introduction-world.ts'];
+  for (const file of mobile('apps/mobile/src/').map((f) => String(f).replace(/\\/gu, '/'))) {
+    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction/u, `mobile ${file} names no database function`);
+    if (!client.includes(file)) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds\//u, `mobile ${file} wires no END outside the S6-05 client`);
   }
 });
 

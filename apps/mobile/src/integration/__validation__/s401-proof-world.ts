@@ -98,6 +98,7 @@ import { SHARED_VIS_WORLD_A, SHARED_VIS_WORLD_B, pick, type SharedVisFixtureWorl
 import { createVport01ProofWorld } from './vport01-proof-world';
 import { createS601ProofIntroductions } from './s601-proof-introductions';
 import { createS604ProofProposals } from './s604-proof-proposals';
+import { createS605ProofIntroductionWorld } from './s605-proof-introduction-world';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
 /** S5-02: the reader's own SYNTHETIC earlier words offered as existing material — a validation fixture, never Product copy. */
@@ -233,6 +234,8 @@ export interface S401ProofWorld {
   introductions(action: 'seed-new' | 'seed-known' | 'seed-mixed' | 'seed-portrait' | 'close'): void;
   /** S6-04: four SYNTHETIC private proposals delivered to the reader (`s604-proof-proposals.ts`). */
   proposals(): void;
+  /** S6-05: the SYNTHETIC Mutual Match and Introduction Worlds (`s605-proof-introduction-world.ts`). */
+  introductionWorld(action: 'seed-match' | 'peer-end' | 'offline'): void;
   /** S5-03C smoke: the synthetic other side accepts every relation the reader requested. */
   relationAccept(): void;
   /** S5-04 smoke: a synthetic other person replies to the reader's latest own post; its Public Activity item appears. */
@@ -247,6 +250,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   const introductions = createS601ProofIntroductions(language);
   // S6-04: answers nothing until seeded, likewise.
   const privateProposals = createS604ProofProposals();
+  // S6-05: answers nothing until seeded, likewise.
+  const introductionWorld = createS605ProofIntroductionWorld(language);
   const held = new Set<string>();
   let releases: (() => void)[] = [];
   // S5-01: the held Public World entries, and the reader's Public display mode.
@@ -758,6 +763,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
         return json(200, fixtureExperience(id, active, discussionOf(id).length));
       }
     }
+    const introductionWorldAnswer = introductionWorld.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
+    if (introductionWorldAnswer !== undefined) return introductionWorldAnswer;
     const proposalsAnswer = privateProposals.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     if (proposalsAnswer !== undefined) return proposalsAnswer;
     const introductionsAnswer = introductions.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
@@ -866,6 +873,11 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       if (action === 'close') introductions.close();
     },
     proposals: () => privateProposals.seed(),
+    introductionWorld: (action) => {
+      if (action === 'seed-match') introductionWorld.seed();
+      else if (action === 'peer-end') introductionWorld.peerEnd();
+      else introductionWorld.offline();
+    },
     peerDelete: () => {
       for (const lines of threads.values()) {
         const index = lines.findIndex((line) => line.text === S403_PROOF_LINES.peerToDelete);

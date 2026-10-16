@@ -116,10 +116,22 @@ test('3 — the API: two history routes on the existing module, the caller token
   assert.deepEqual([...end.matchAll(/@(Get|Post)\('([^']+)'\)/gu)].map((m) => `${m[1]} ${m[2]}`), ['Post worlds/:worldId/end'], 'the S6-02 END, unchanged');
 });
 
-test('4 — mobile is untouched in CP4 (CP5 owns every surface, the END client included)', () => {
+// RE-ANCHORED by S6-05 CP5 (2026-10-16): CP4 added no mobile code; CP5, the last checkpoint, wires the Introduction World —
+// END and the closed history included — through exactly ONE mobile client (and its test). Nothing else in mobile names the
+// routes, and nothing in mobile names a database function.
+test('4 — mobile reaches the Introduction World, END and the closed history only through its one CP5 client', () => {
+  // The client, its suite, and the validation-only device-proof stand-in (never in the production bundle).
+  const S6_05_MOBILE_CLIENT = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
+    'integration/__validation__/s605-proof-introduction-world.ts'];
+  const naming = readdirSync(new URL('apps/mobile/src/', root), { recursive: true }).map((f) => String(f).replace(/\\/gu, '/'))
+    .filter((f) => /\.(ts|tsx)$/u.test(f) && /introductions\/worlds/u.test(read(`apps/mobile/src/${f}`)));
+  assert.deepEqual(naming.sort(), [...S6_05_MOBILE_CLIENT].sort(), 'one client names the routes');
   for (const file of readdirSync(new URL('apps/mobile/src/', root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)))) {
-    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds|_my_introduction_|end_own_introduction/u, `mobile ${file} wires no Introduction World yet`);
+    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /_my_introduction_|end_own_introduction/u, `mobile ${file} names no database function`);
   }
+  const client = code('apps/mobile/src/runtime-entry/introduction-worlds-api.ts');
+  assert.match(client, /\/introductions\/worlds\/\$\{encodeURIComponent\(worldId\)\}\/end`, \{ commandId \}/u, 'END is the S6-02 route with exactly { commandId }');
+  assert.match(client, /pagePath\(worldId, 'history', before\)/u, 'the closed history is the CP4 reader');
 });
 
 test('5 — the verifier, the wire proof and the contract are wired into the toolchain and API CI', () => {
