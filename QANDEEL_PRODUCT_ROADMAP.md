@@ -510,7 +510,7 @@ as written.
 as written.
 - **Merged:** S6-04 through PR #342 as `35ad4e19ad7e449255e7d087d4420b5d3775cf86` (2026-10-15; not deployed).
 - **Started:** the Product Owner's S6-05 Task Contract v1.0 (D1–D7, 2026-10-15) started **S6-05 — Mutual Match &
-  Introduction World** from `main` at `35ad4e19`. It is **IN PROGRESS — CP2 APPROVED, CP3 DELIVERED (INTRODUCTION WORLD & HUMAN MESSAGING) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
+  Introduction World** from `main` at `35ad4e19`. It is **IN PROGRESS — CP3 APPROVED, CP4 DELIVERED (INTRODUCTION END & CLOSED HISTORY) — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED**, on one pull request ([S6-05 record](docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md)).
 - **Decided (2026-10-15):** R-1 … R-8 (R-1: D3 is within GATE-30, ACE-SP-01 unchanged); the Visual Gate and the Copy Gate
   closed; CP2 authorized.
 - **Delivered (CP2):** migration `0159` (the second recipient's acceptance over the frozen `0114` core) and its API route,
@@ -519,7 +519,14 @@ as written.
 - **Delivered (CP3):** migration `0160` (discovery, reading and human text messaging in the Introduction World beside the
   S6-02 fence; no AI, weaving, Activity or grant) and its API routes, with the verifier, the live-PostgREST proof and a
   static contract.
-- **Not delivered yet:** CP4 (END on mobile, closed history), CP5 (mobile). The
-  forward producer is `QAN-BL-MATCH-06` (S6-07, admitted).
+- **Approved (2026-10-16):** CP3, after green exact-head CI on `18988bc2` (real PostgreSQL and live PostgREST on the
+  four lines); CP4 authorized. The Product Owner's checkpoint rule makes CP5 S6-05's last checkpoint (mobile surfaces,
+  integration, tests, final documentation and BG-08 / BG-09 in the same pull request).
+- **Delivered (CP4):** migration `0161` (the closed Introduction history on each human's own frozen entitlement; END
+  and owner deletion reused unchanged) and its API routes, with the verifier, the live-PostgREST proof and a static
+  contract.
+- **Not delivered yet:** CP5 (every mobile surface, END on mobile included). *(As written at CP3: "CP4 (END on mobile,
+  closed history), CP5 (mobile)".)* The forward producer is `QAN-BL-MATCH-06` (S6-07, admitted).
 - **Still closed:** every Matching and launch gate; nobody is shown ACCEPT in production. Issue #322 stays open.
-- **Next:** the Product Owner's review of the CP2 report. No later checkpoint is started by this note.
+- **Next:** the Product Owner's review of the CP4 report. No later checkpoint is started by this note. *(As written at
+  CP2: "the Product Owner's review of the CP2 report".)*

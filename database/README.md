@@ -4847,3 +4847,35 @@ npm run prove:introduction-world-messaging:postgrest
 The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its scenarios run in rolled-back transactions
 with the CW2-08 and I-07D seams replaced for the run and restored byte for byte, and its four races commit their fixtures
 and remove them. The wire proof also needs `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only).
+
+## S6-05 - END and the closed Introduction history (migration 0161, CP4)
+
+`0161_introduction_closed_history_v1.sql` is the CP4 database part of `S6-05` under the Product Owner's CP4
+authorization (2026-10-16). It creates one STABLE reader and replaces nothing. END is the S6-02
+`end_own_introduction_v1` over the frozen `0116` core, and deletion is the existing `delete_own_shared_world_material_v1`
+(R-5); neither is rebuilt. Record: [S6-05 implementation record](../docs/e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md) §13.
+
+```text
+read_my_introduction_history_v1         authenticated, STABLE: (world, before instant, before id, limit); no row = the
+                                        caller holds no closed-view entitlement over an Introduction END closed (outsider,
+                                        unknown World, live Introduction, a World SUCCESS made Standard); ENDED rows (one
+                                        empty for an empty page); human text only, through resolve_shared_world_material_v1
+                                        -> the one historical entry point -> resolve_shared_world_closed_history_visibility_v1
+```
+
+The authority is the caller's OWN frozen `introduction_closed_view_entitlements` row (written by END, `0116`), decided
+before anything of the history is read; active membership is never consulted. Each human therefore reads their own
+snapshot, independently of the other, and availability still dominates it: an owner deletion after END removes the
+message for both. No entitlement, item or grant is created or widened, and nothing reaches a QANDEEL reply, weaving,
+analysis, Activity, Push, a launch gate, an account Name, a grant or Personal Context (asserted at deploy time). It
+reaches no `40001`. In production no Introduction World exists: CW2-08 answers NOT_EVALUATED and nothing can be accepted.
+
+```sh
+npm run verify:introduction-closed-history:integration
+npm run prove:introduction-closed-history:postgrest
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its scenarios run in rolled-back transactions
+with the CW2-08 and I-07D seams replaced for the run and restored byte for byte (B01 puts CW2-08 back to fail-closed
+before END), and its four races commit their fixtures and remove them. The wire proof also needs `POSTGREST_URL` and
+`POSTGREST_JWT_SECRET` (CI only).

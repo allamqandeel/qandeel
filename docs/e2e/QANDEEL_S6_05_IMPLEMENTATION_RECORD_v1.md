@@ -5,17 +5,21 @@
 **Product authority:** the Product Owner's S6-05 Task Contract v1.0 and its decisions D1–D7 (2026-10-15); the CP0 rulings
 R-1 … R-8 and the approval of V-1 as the visual direction (2026-10-15); the «S6-05 — CP1 Final Approval & CP2
 Authorization» (2026-10-15). No merge or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **IN PROGRESS — CP2 APPROVED, CP3 DELIVERED (INTRODUCTION WORLD & HUMAN MESSAGING) — VISUAL GATE AND COPY GATE
-CLOSED — NOT MERGED / NOT DEPLOYED** (2026-10-16). CP3 waits for the Product Owner's review; CP4 and CP5 are not started.  
+**Status:** **IN PROGRESS — CP3 APPROVED, CP4 DELIVERED (INTRODUCTION END & CLOSED HISTORY) — VISUAL GATE AND COPY GATE
+CLOSED — NOT MERGED / NOT DEPLOYED** (2026-10-16). CP4 waits for the Product Owner's review; CP5, the last checkpoint, is
+not started.
+*As written at CP3 (2026-10-16):* IN PROGRESS — CP2 APPROVED, CP3 DELIVERED (INTRODUCTION WORLD & HUMAN MESSAGING) — VISUAL
+GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED; CP3 waited for the Product Owner's review; CP4 and CP5 were not
+started.  
 **Base:** `main` = merged PR #342 (S6-04) at `35ad4e19ad7e449255e7d087d4420b5d3775cf86`, re-verified before the branch.  
 **Branch:** `s6/s6-05-mutual-match-introduction-world` (one pull request for the whole task, #343, draft).  
-**Migrations:** `0159_matching_mutual_match_acceptance_v1.sql` (CP2) and `0160_introduction_world_human_messaging_v1.sql`
-(CP3); both numbers were free.
+**Migrations:** `0159_matching_mutual_match_acceptance_v1.sql` (CP2), `0160_introduction_world_human_messaging_v1.sql`
+(CP3) and `0161_introduction_closed_history_v1.sql` (CP4); each number was free.
 
-Neither checkpoint launches Matching. There are still no real proposals, no enrollment, no installed policy, no
+No checkpoint launches Matching. There are still no real proposals, no enrollment, no installed policy, no
 compatibility or forward producer and no open launch gate. The CW2-08 seam still answers `NOT_EVALUATED`, so in
 production nobody is shown ACCEPT, every acceptance is refused before anything is written, and no Introduction World
-exists for CP3's reads and messages to reach.
+exists for CP3's reads and messages, or CP4's closed history, to reach.
 
 ## 1. CP0 — repository truth (read-only, 2026-10-15)
 
@@ -49,6 +53,10 @@ exists for CP3's reads and messages to reach.
 | CP2 | Authorized: a narrow wrapper over the frozen core, server-derived identities, idempotency and retry safety, owner and current-view checks, CW2-08 kept closed, no reason or other-party data revealed, NO_BACKDOOR and PROD-RETRY-01 kept. Any future `ENDED` answer is membership-checked and reveals nothing to anyone not entitled |
 | CP2 result | **Approved** (2026-10-16, «S6-05 — CP2 Approved / CP3 Next Checkpoint») after an independent review of PR #343 at `f13dc26b` and green API CI, Mobile CI and live PostgREST on the four lines (§4.2). No rework of CP2, and nothing further for the earlier Docker pull failure |
 | CP3 | Authorized (2026-10-16), in the same branch and PR: a safe read of the active Introduction World for its two humans only, the S6-02 isolation kept everywhere else; the first party's discovery of the World with no identity leaked; human text messages only, reusing the Shared storage and message components; no AI Reply, Model Router, Semantic Weaving, Living Analysis, Personal Context or Matching Context Grant transfer; R-8, R-7 and R-5 applied; `ENDED` only to an entitled member on the server's own confirmation, a neutral answer to anyone else; send-vs-END races, retries, read / write rights and nothing after END proven; the ordinary Shared World unchanged. Not authorized: re-doing CP2 / 0159, opening CW2-08, the forward producer, CP4 / CP5, F-1, frozen-contract changes, merging |
+| CP3 CI decision | (2026-10-16, «S6-05 — CP3 Review / CI Decision») CP3 accepted in principle, closure pending green exact-head CI and the real PostgREST proof; on a repeated registry limit, stop and propose a source for the same pinned image. After the investigation the Product Owner deferred the image-source (GHCR) decision and approved one line in `verify-migration-0160.mjs` («S6-05 — CP3 One-Line Test Correction»; §10.1) |
+| CP3 result | **Approved** (2026-10-16, «S6-05 / CP4 — Introduction END & Closed History Integration»): CP0–CP3 approved; CP3's tests green on `18988bc2`, including API CI, real PostgreSQL and the PostgREST proof on the four lines (§10.1). CP4 authorized |
+| CP4 | Authorized (2026-10-16), in the same branch and PR: the closed Introduction history on the frozen closed-view entitlements and the existing historical source of truth (`resolve_shared_world_closed_history_visibility_v1`), each human's rights independent, owner deletion removing a message for both even after END, read-only, keyset paging, no identity or HIM / Matching data; END integration through the existing `POST /introductions/worlds/:worldId/end` (outcomes `ENDED` / `ALREADY_SETTLED` / `UNAVAILABLE`, alone, without the other's consent, not conditioned on CW2-08, nothing after it, no leak to non-members); owner deletion through the existing route. Not authorized: re-doing CP2 / CP3, old migrations or frozen contracts, Visual / Copy Gate or approved text changes, CP5 or its screens, CW2-08 or production gates, the forward producer, Activity / Push / AI, a new task, merging |
+| Checkpoint rule | (2026-10-16, «S6-05 — Documentation & Checkpoint Closure Rule») Checkpoints are not separate tasks: each checkpoint updates this record, Current State, the Project Map and the Roadmap with its own work, and records the previous checkpoint's approval with its GitHub evidence. **CP5 is S6-05's last checkpoint**: the mobile surfaces, integration and tests, the final documentation and BG-08 / BG-09, in this PR. No sixth checkpoint and no separate documentation or reconciliation task; closed records keep their history; no merge and no S6-06 without the Product Owner |
 
 ## 3. CP2 — what was built
 
@@ -276,6 +284,20 @@ row while END waits → `COMMITTED`, then `ENDED`, and END's closed-view snapsho
 first → the waiting message is `ENDED` and nothing is written; the same command twice at once → one message, both
 answers name it; SUCCESS first → the waiting message is `UNAVAILABLE` and nothing lands in the now-Standard World.
 
+### 10.1 CP3 on the exact head in CI (PR #343, 2026-10-16)
+
+| Head / run | Result |
+|---|---|
+| `a70d00a4`, API CI run `38866614505`, attempts 1 and 2 | **failed before any test**, at "Initialize containers": the pinned `public.ecr.aws/docker/library/postgres:17@sha256:2d2b8998…` service image was refused, `toomanyrequests: Data limit exceeded` (the registry's anonymous data quota, shared by runner IPs). Reported; the Product Owner's investigation deferred the image-source decision (GHCR). No workflow, image source or Secret was changed |
+| `a70d00a4`, the same run, attempt 3 | the image pulled; **failed** in `test:database` (1309 / 1310): `verifier-hazard-contract-v1` found an H2 aborted-transaction hazard in the race helper of `verify-migration-0160.mjs` (`.catch(() => undefined)` on the waiting connection's COMMIT). The local claim of 1310 / 1310 in §10 was made before that line was committed in this form and did not hold for the committed file |
+| `18988bc2` | the one line the Product Owner approved: the waiting transaction's COMMIT no longer swallows an error. No race, production code or workflow change |
+| `18988bc2`, API CI run `38892360036`, attempt 1 | **green**: `verify-api` (233 / 233 steps) and the VAL-01 evidence. In it: `verify-migration-0160.mjs` **19 / 19** and `verify-migration-0159.mjs` on real PostgreSQL 17; `test:database` 1310, no failure; the S6-05 static contracts CP3 7 / 7 and CP2 8 / 8; the API suite **5928 / 5928** (252 suites) |
+| Live PostgREST (`prove-0160`, same job) | **passed on v12.2.9, v13.0.8, v14.18 and v16.4**, each engine checked against its pinned sha256 and run as user 1000: exact parameters, anon and service_role refused, both humans find the World and an outsider nothing, COMMITTED / retry / COMMAND_CONFLICT, owner deletion, after END `ENDED` to the two humans and `UNAVAILABLE` to an outsider. Every earlier wire proof in the same loop passed on the four lines |
+| Mobile CI run `38892360011` | **green** |
+
+This supersedes §10's stand-in line for CP3: the wire proof is proven against the real engine. The registry risk remains
+(the image happened to pull); its source decision stays with the Product Owner.
+
 ## 11. CP3 re-anchors, privacy and residual risks
 
 **Re-anchors.** `tests/s6-02-…` test 7: the Account module's imports pin gains `IntroductionsWorldModule` after
@@ -326,3 +348,113 @@ END on mobile and the closed Introduction history (CP4); every mobile surface, t
 proofs (CP5); the forward producer (`QAN-BL-MATCH-06`, S6-07); Activity, Push and Direct Entry (S6-07); photos,
 disclosure, SUCCESS and reactivation (S6-06); Introduction intelligence (Stage 8A); launch clearance and policies
 (Stage 9 / CW2-08).
+
+## 13. CP4 — Introduction END & Closed History Integration: what was built
+
+### 13.1 Preflight and anti-duplication (read-only, before any change)
+
+`origin/main` was still `35ad4e19` and PR #343's head `18988bc2` (main its ancestor).
+
+| Need | Existing path | Decision |
+|---|---|---|
+| End the Introduction | `end_own_introduction_v1` (S6-02, `0155`) over the frozen `0116` END core, and `POST /introductions/worlds/:worldId/end`: either human alone, no consent, no seam ("there is no seam here, by design"), `ENDED` / `ALREADY_SETTLED` / `UNAVAILABLE`, membership from the Record before anything | **REUSE**, unchanged (blob-pinned) |
+| Freeze each human's rights at END | `0116` writes one `introduction_closed_view_entitlements` row per matched human and their exact item snapshot through the one visibility entry point, while the World is still ACTIVE, before any membership ends; both relations immutable | **REUSE**: nothing new is frozen, copied or widened |
+| Decide what a human sees after END | `resolve_shared_world_material_v1` (`0089`) → `resolve_shared_world_history_visibility_v1` (`0119`) → for `READ_ONLY_CLOSED`, `resolve_shared_world_closed_history_visibility_v1` (`0119`), whose Introduction branch reads exactly the caller's entitlement items that are `AVAILABLE` now | **REUSE**, unchanged |
+| Read it as a client | none: the CP3 read answers a member one empty `ENDED` row; the S4-03 closed readers (`list_own_closed_shared_world_material_v1` / members) are fenced to `STANDARD` by S6-02 and also add QANDEEL material and names | **NEW**, one reader beside the fence; the S4-03 readers are **NOT** widened to Introduction (that would lift the S6-02 fence) |
+| Delete one's own message after END | `delete_own_shared_world_material_v1` and `POST /shared/worlds/:worldId/materials/:materialId/delete` (works `READ_ONLY_CLOSED`, author from `auth.uid()`) | **REUSE**, unchanged; the new reader gives the author their own message ids (`canDelete`) |
+| END against a message, a deletion or another END | the World row lock taken first by END, the human text core and owner deletion | **REUSE**: proven by races, no new lock |
+
+### 13.2 The CP4 / CP5 boundary
+
+Until CP4 this record named "END on mobile and the closed history" as CP4's. The Visual and Copy Gates assign every mobile
+surface to CP5, the END screens included (IW-27 … IW-32, S15), and the Product Owner's checkpoint rule (§2) makes CP5 the
+checkpoint of the mobile surfaces and their integration. CP4 is therefore the server and API side only: END is the
+existing S6-02 route, unchanged, and the closed history is a new reader and two API routes. **No mobile code is added in
+CP4** (asserted by the CP4 contract); the END client, the confirmation and closed-record screens and the history list are
+CP5's, on exactly the approved copy.
+
+### 13.3 Migration `0161` — one STABLE reader, nothing replaced
+
+| Function | What it answers |
+|---|---|
+| `read_my_introduction_history_v1(world, before instant, before id, limit)` | One newest-first keyset page of the human words the caller is entitled to keep, one snapshot: **no row** — the caller holds no closed-view entitlement over an Introduction END closed (an outsider, a member of another Introduction, an unknown World, a live Introduction, a World SUCCESS made Standard: one answer); **ENDED rows**; **one empty ENDED row** — entitled, nothing left on this page. Same row shape as the CP3 read |
+
+**Order.** 42501 without a human; 22023 for a malformed page request → the caller's OWN entitlement row joined to its
+Introduction Record (`CLOSED`) and World (`READ_ONLY_CLOSED` / `INTRODUCTION`), before anything of the history is read →
+the frozen material resolver for (World, caller), human text only. Membership episodes are never read: they ended with
+the Introduction. It is STABLE (writes nothing), locks nothing and reaches no `40001`.
+
+**Self-assertions.** The migration refuses to deploy unless the reader is a postgres-owned, STABLE, pinned definer
+executable by authenticated only; names no reply, weaving, analysis, Activity, alert, gate, account Name, grant, Personal
+Context, Memory or membership; writes, locks and re-raises nothing; answers the entitlement before the resolver; and the
+closed resolver stays executable by no application role.
+
+### 13.4 API — the same `IntroductionsWorldModule`
+
+| Route | Rate class | Answer |
+|---|---|---|
+| `GET /introductions/worlds/:worldId/history` | `AUTHENTICATED` | `{ outcome: 'ENDED', messages, hasOlder }` (oldest first; `producer` `SELF` / `HUMAN`; `canDelete` for one's own) or `{ outcome: 'UNAVAILABLE' }` |
+| `GET /introductions/worlds/:worldId/history/before/:materialId/:establishedAt` | `AUTHENTICATED` | the same, strictly older |
+
+The CP3 decoders are reused: exact columns, only `ENDED` rows, the one empty row only alone, a malformed cursor the
+client's 400, a database 22023 the client's `INVALID_REQUEST`, anything else a neutral 503; one call, no retry, nothing
+logged. END stays `POST /introductions/worlds/:worldId/end` (S6-02) and deletion
+`POST /shared/worlds/:worldId/materials/:materialId/delete`: no second END or deletion route exists.
+
+### 13.5 Evidence (local, 2026-10-16)
+
+| Check | Result |
+|---|---|
+| `verify-migration-0161.mjs` (real PostgreSQL 17, fresh database) | **20 / 20**: posture A01–A03 (the composed authority, END, deletion, the CP3 boundaries and the S4-03 closed readers byte-identical to their defining migrations); END B01–B03 (either human alone, no consent, every CW2-08 / I-07D seam put back to fail-closed for the END; retry, `ALREADY_SETTLED`, reused id, outsider, unknown World; exactly two entitlements and one terminal outcome); history C01–C06 (keyset paging, both sides; two genuinely different frozen sets stay different and a row written after closure widens neither; no row for an outsider, a member of another Introduction, an unknown World, a live Introduction or a World SUCCESS made Standard; refusals; neither a disclosure nor a text-bodied QANDEEL material frozen into both entitlements is a message); deletion D01–D02 (the author finds their own id and deletes after END, gone for both and never back, nobody deletes another's; deleted before END in neither history); after END E01–E02 (no send, no second END, no Stage 4 path, the S4-03 closed readers still fenced; no reply, QANDEEL material, Activity or Push; reading and deleting create or widen no entitlement, item or grant); races G01–G04 |
+| Affected verifiers, each on a fresh copy of the fully migrated database | 0089, 0090, 0108 26/26, 0112 22/22, 0113 17/17, 0114 35/35, 0115 25/25, 0116 33/33, 0117 14/14, 0118 15/15, 0119 25/25, 0120 27/27, 0139, 0140, 0143, 0149 26/26, 0150 28/28 (the reader reaches no 40001: no new ABSORBED entry), 0155 37/37, 0156 31/31, 0157 33/33, 0158 25/25, 0159 24/24, 0160 19/19, 0161 20/20 — all pass; no verifier census needed a change |
+| CP4 static contract `tests/s6-05-introduction-closed-history-contract.test.mjs` | **5 / 5** (the three S6-05 contracts and `verifier-hazard-contract-v1` together 53 / 53) |
+| `test:database` | **1310 / 1310** |
+| Root static contracts (`node --test tests/*.test.mjs`) | **1403 tests; the final local run 1401 pass, 2 fail**: two `forward-safety-contract` scenarios, each failing only on its mirror replay of the expo check `expo install --check and expo-doctor both pass deterministically, offline`. `expo-doctor` intermittently cannot reach `exp.host` from this machine (connect timeout); the run before failed the same way 3 times (the direct check too). CP4 changes no mobile file or dependency. The same contracts were green in API CI on `18988bc2`; CI decides |
+| API spec `introductions-world` + `http-security` | green (149 tests in the two folders); the whole API suite **5941 / 5941** (252 suites); `tsc --noEmit` clean |
+| `prove-0161` / `prove-0160` wire proofs | locally against the minimal PostgREST stand-in only: both pass. **Not a substitute** for the real proof, which runs in API CI on the four PostgREST lines |
+
+What the races prove (two real connections, the interleaving pinned on the World-row lock wait): END against END by the
+two humans → one `ENDED`, one `ALREADY_SETTLED`, one terminal outcome; the same END command twice at once → both
+`ENDED`, one outcome; a deletion holding the World row while END waits → `DELETED` then `ENDED`, and the item is in
+neither frozen entitlement; END first, the deletion waiting → `ENDED` then `DELETED`, the item is in both entitlements
+yet gone from both histories (availability dominates).
+
+### 13.6 Re-anchors (each tied to the one truth CP4 changes)
+
+| Pin | Change |
+|---|---|
+| `tests/s6-05-introduction-world-messaging-contract.test.mjs` test 5 | the controller's first four routes stay pinned exactly; the two CP4 reads follow them; the repository's call list gains `read_my_introduction_history_v1` |
+| `introduction-world.spec.ts` | the route list (six) and the repository call list; new CP4 cases |
+| `route-rate-limit.census.ts` | the two history routes, `AUTHENTICATED` |
+
+### 13.7 Independent review (2026-10-16)
+
+An independent read-only review of the uncommitted change found no BLOCKER and no MAJOR: no exposure beyond the caller's
+frozen, available entitlement; no error code distinguishes World states (the entitlement check proves, in the same
+snapshot, everything the resolver could refuse); deletion after END removes a message for both; the S6-02 fence and the
+reused END and deletion are unchanged; no verifier hazard (H1–H7). Fixed, both about proof strength: **MINOR** — B01
+restored only the CW2-08 prerequisite seam; it now restores all four seams to fail-closed before END. **MINOR** — C05
+would have passed without the reader's human-words filter (a disclosure has no text body); it now freezes a text-bodied
+QANDEEL material into both entitlements and proves it is never a message. Fixed NITs: E01's message says what it shows
+(the S4-03 fence is pinned by A03); the migration's self-assertion also names Push and proves the no-entitlement guard
+`IF NOT FOUND THEN RETURN` sits between the entitlement and the resolver; A03 asserts one definition per function; the CP4
+contract pins all six routes exactly.
+
+### 13.8 Privacy, security and residual risks
+
+- The authority is the frozen entitlement, never membership; it is the caller's own row, so neither human can read with
+  the other's rights, and an outsider's answer is the same as an unknown World's (no existence or ending leak).
+- Human words only, `is_self` and nothing else: no name, account, HIM, Matching or disclosure data.
+- **Resolved:** CP3's residual "`ENDED` in the read carries no history" (§11): a member now reads their closed history,
+  and finds the ids of their own messages to delete.
+- **Residual — performance.** Like the Stage 4 and CP3 reads, the reader pages over the resolver's full visible set;
+  bounded by one Introduction's history. Recorded, not changed.
+- **Residual — G-1 still applies** (`QAN-BL-MATCH-06`, S6-07): no real Introduction World can exist before it.
+- **Governance:** CP4 admits nothing; the register stays 70 items. BG-08 / BG-09 are CP5's (§2, checkpoint rule).
+
+## 14. Not delivered by CP4 (each its own checkpoint or owner)
+
+CP5, the last checkpoint: every mobile surface — the Introduction World, END (IW-27 … IW-32, S15), the closed record and
+history, deletion — the approved copy module, RTL / LTR proofs, the final documentation and BG-08 / BG-09. Elsewhere: the
+forward producer (`QAN-BL-MATCH-06`, S6-07); Activity, Push and Direct Entry (S6-07); photos, disclosure, SUCCESS and
+reactivation (S6-06); Introduction intelligence (Stage 8A); launch clearance and policies (Stage 9 / CW2-08).
