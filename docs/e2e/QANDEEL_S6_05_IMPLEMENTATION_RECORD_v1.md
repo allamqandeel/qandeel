@@ -585,6 +585,8 @@ shared composer now blurs its input as it unmounts, and the surface dismisses th
 device run against a real server, a physical device, and iOS screens (iOS is covered only by the CI simulator build and
 boot smoke).
 
+**Product Owner visual acceptance (2026-10-16, after CP5 review):** the Product Owner explicitly reviewed the delivered V-1 visual result and approved it. This records the Product Owner's acceptance of the mobile visual presentation; it is distinct from the validation-only device proof above. The approved visual/copy gates and their exact text are unchanged.
+
 ### 15.6 Re-anchors (each tied to the one truth CP5 changes; none weakens a security assertion)
 
 | Pin | Change |
