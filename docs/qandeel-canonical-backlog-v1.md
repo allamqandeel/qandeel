@@ -185,6 +185,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MATCH-01` | Matching Setup Enrollment, Correction and Resume Suspended Before Launch (SEC-MATCH-00) | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-06` | Data API Unbounded `40001` Retry on PostgREST Before v16 (Core Conversation, Hypothesis, Shared Standing Context, Matching, Shared ID Rotation) | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-07` | Post-v16 PostgREST: Race-Converging `40001` Paths and Genuine Deadlocks Lose the Server-Side Re-run | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `LOW` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-08` | Introduction Photo Object Store: Hosted Supabase Storage Provisioning and Live Conformance | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-INTEL-01` | Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02) | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-QIR-01` | General Question Bind-Time Version and Lifecycle Recheck (R3-G) | `QIR-006-R1 — Formal Question Bind-Time Version & Lifecycle Recheck` | `MEDIUM` | `DEFERRED — OWNED` |
 | `QAN-BL-INTEL-02` | Post-Response Intelligence Ledger Content (`0029` Intent Span, `0033` Candidate Plan): Retention and Reuse After Forget / Do-Not-Rely | `INTEL-RET-01 — Post-Response Intelligence Ledger Retention & Provenance Review` | `HIGH` | `VALIDATION — OPEN` |
@@ -624,6 +625,12 @@ exception, too, is S5-02's. `QAN-BL-ACCT-01` is not absorbed and stays `OPEN —
   `matching_confirmed_fact_state` and `matching_eligibility_snapshot_fact_bindings` (`0156`). Any committed row makes
   the `0130` erasure answer a truthful `BLOCKED` with nothing erased (`verify-migration-0156` J02). No production row
   exists. Owner, severity and status unchanged ([S6-03 record](e2e/QANDEEL_S6_03_IMPLEMENTATION_RECORD_v1.md) §7).
+- **Dated note (S6-06 CP1, 2026-10-16; not merged; effective from its merge):** six relations join the Connected Worlds
+  footprint in `introduction_sharing_private` (`0162`): `image_series` binds its owner `ON DELETE RESTRICT`, and the
+  display-consent events bind the owner's exact disclosure version the same way. Photo bytes live outside PostgreSQL, in
+  the private object store; an owner's removal erases them (DELETE + HEAD, from database truth), but no account-level
+  deletion reaches them yet. No production row or object can exist (CW2-08 closed). Owner, severity and status unchanged
+  ([S6-06 record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §8).
 - **Status:** `OPEN — UNASSIGNED`
 
 Admitted by the W3-PDG-01 Product Decision Closure under BG-06, as a canonical record's explicit deferral. This
@@ -1376,6 +1383,31 @@ nothing here authorizes implementation, an upgrade or a migration (BG-07).
 - **Required future property:** on PostgREST v16+, a race-converging `40001` and a genuine `40P01` are retried a
   bounded number of times by the server channel that issued them, only where the request is idempotent, or are answered
   with a typed retryable outcome; nothing here weakens the `PT409` stale-state contract of `0150`.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-PROD-08` — Introduction Photo Object Store: Hosted Supabase Storage Provisioning and Live Conformance
+
+- **Title / Finding:** S6-06 (D-01) stores Introduction photos in a private S3-protocol object store through one adapter
+  (`apps/api/src/introductions-disclosure/introduction-media.store.ts`): Supabase Storage's S3 endpoint when hosted. CI
+  proves the adapter, the database boundary and the erasure worker against `rclone serve s3` (`prove-0162`), which is a
+  real S3 server but not Supabase. Nothing provisions the hosted bucket, holds its S3 keys or proves Supabase's own
+  behaviour (Put / Get / Head / Delete / ListObjectsV2, deletion with no versioning, refusal of unsigned and
+  session-token requests with no `storage.objects` policy).
+- **Source:** [S6-06 implementation record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §1 (D-01, approved
+  2026-10-16) and §5.
+- **Anti-duplication:** `QAN-BL-PROD-06` is the Data API retry gate of the same deployment task and names no object
+  store; no other item mentions media storage. `QAN-BL-LAUNCH-03` is the Shared ID sealing key, not storage credentials.
+- **Why deferred:** S6-06 deploys nothing; enabling the S3 connection, creating the private bucket, generating its keys
+  and placing them in the API's secret store are hosted deployment steps that need the Product Owner's separate approval.
+- **Owner task:** `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate`.
+- **Severity:** `HIGH`. Until it closes, the photo routes answer `UNAVAILABLE` on a hosted API (the adapter refuses an
+  unconfigured or non-TLS endpoint), and CW2-08 keeps photos closed in any case.
+- **Reopen condition:** automatic before the first hosted deployment that reaches `0162`, or before photos are offered to
+  any real user.
+- **Required future property:** a private bucket with no public access and no `storage.objects` policy; the S3 keys only
+  in the API's secret store; `prove-0162`'s storage scenarios (P02 – P08) run against the hosted S3 endpoint with the
+  evidence read on the hosted project itself; a deleted object proven absent by HEAD and by the provider's own object
+  listing; nothing of QANDEEL's records changed.
 - **Status:** `DEFERRED — OWNED`
 
 ---
@@ -2312,6 +2344,11 @@ anti-duplication check above, as a documentation-only governance change. Nothing
 - **Dated note (S6-03 closing change, 2026-10-15; effective from its merge):** the three `0156` relations
   (`matching_confirmed_fact_versions`, `matching_confirmed_fact_state`, `matching_eligibility_snapshot_fact_bindings`)
   join this item's Matching export footprint. Owner, severity and status unchanged ([S6-03 record](e2e/QANDEEL_S6_03_IMPLEMENTATION_RECORD_v1.md) §7).
+- **Dated note (S6-06 CP1, 2026-10-16; not merged; effective from its merge):** the reader's own photo series and their
+  stages, the photo bytes in the private object store (read through `server_read_introduction_media_key_v1` only), and
+  the reader's own display-consent acts (`introduction_sharing_private`, `0162`) join this item's export footprint; the
+  reader's own shares across every Introduction are already listed by `list_my_introduction_shares_v1`. Owner, severity
+  and status unchanged ([S6-06 record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §8).
 - **Status:** `DEFERRED — OWNED`
 
 Admitted under BG-06 / BG-08 at the Product Owner's explicit GATE-19 decision (Stage 6 WP0 final approval package,
@@ -3028,15 +3065,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 32 |
+| `DEFERRED — OWNED` | 33 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 24 |
-| **Total** | **70** |
+| **Total** | **71** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 39 |
+| `HIGH` | 40 |
 | `MEDIUM` | 29 |
 | `LOW` | 2 |
 
@@ -3823,6 +3860,20 @@ before it.
   `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN). S6-05's migrations
   (`0159` – `0161`) create functions only and no relation, so no deletion or export footprint changes.
 - **Latest index: 70 items; 32 / 4 / 10 / 24 by status, 39 / 29 / 2 by severity**, unchanged.
+
+**S6-06 CP1 (2026-10-16; the S6-06 pull request, not merged; effective from its merge).** Under the Product Owner's
+checkpoint rule (every checkpoint updates the record and the locators; the last one closes BG-08 / BG-09)
+([S6-06 record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §8). S6-05 merged as PR #343 (`88a475ab`).
+- **Inherited (BG-05):** no item names `S6-06`. The scope earlier tasks assigned it as "checked and not admitted" -
+  photos, progressive disclosure, SUCCESS, reactivation and the `FULL_NAME` display consent (S6-02 A / A1) - is S6-06's
+  own Task Contract scope and is delivered by `0162` / `0163` (D-09).
+- **Admitted:** `QAN-BL-PROD-08` (`HIGH`, `DEFERRED — OWNED`, owner `HOSTED-DEPLOY-01`): the hosted Supabase Storage
+  provisioning and live conformance of the photo object store (D-01).
+- **Dated notes:** `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04` record the new `0162` relations and the stored photo objects in
+  their deletion and export footprints; owners, severities and statuses unchanged.
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-MATCH-01`,
+  `QAN-BL-MATCH-06` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN).
+- **Latest index: 71 items; 33 / 4 / 10 / 24 by status, 40 / 29 / 2 by severity**, recounted mechanically from §4.
 
 ## 8. What is deliberately not in this backlog
 

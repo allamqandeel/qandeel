@@ -347,7 +347,7 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
   - `S6-03` — Matching Proposal Pipeline & Intelligence Prerequisites;
   - `S6-04` — Private Proposal Review and Decisions;
   - `S6-05` — Mutual Match & Introduction World;
-  - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation;
+  - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation (photos and the `FULL_NAME` display consent included); *(2026-10-16: in progress, CP1 delivered, §6.15)*;
   - `S6-07` — Activity, Direct Entry and Final Integration.
 
   The package states that every task must undergo research, repository truth, anti-duplication, the Product Decision /
@@ -539,3 +539,22 @@ as written.
 - **Next:** the Product Owner's review of S6-05 and the merge decision («ادمج»). S6-06 is not started. *(As written at
   CP4: "the Product Owner's review of the CP4 report"; as written at CP2: "the Product Owner's review of the CP2
   report".)*
+
+### 6.15 Execution note — 2026-10-16 (S6-05 merged; S6-06 CP1 delivered)
+**Recorded:** 2026-10-16 by S6-06, in the S6-06 pull request (not merged). This is a status note only; §6.9 … §6.14 stay
+as written.
+- **Merged:** S6-05 through PR #343 as `88a475ab6798edbf511e42f78a2f70e5cdb37c34` (2026-10-16; not deployed).
+- **Started:** the Product Owner's S6-06 Task Contract v1.0 started **S6-06 — Progressive Disclosure, Photos, SUCCESS &
+  Reactivation** from `main` at `88a475ab`. WP0 v1.1 and its five-point correction were approved on 2026-10-16 (D-01 …
+  D-12, three execution conditions inside CP1). It is **IN PROGRESS — CP1 DELIVERED (SECURE BACKEND & MEDIA) — VISUAL GATE
+  AND COPY GATE PRESENTED, NOT APPROVED — NOT MERGED / NOT DEPLOYED**, on one pull request
+  ([S6-06 record](docs/e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md)).
+- **Delivered (CP1):** migrations `0162` (text shares, the three-stage photo, the `FULL_NAME` display consent) and `0163`
+  (SUCCESS as two approvals and a separate system completion; reactivation); the API's sharing and continuation modules,
+  the private S3-protocol object store, the in-memory pipeline and the erasure worker; the verifiers, the live proofs with
+  PostgREST, rclone and the compiled API, and a static contract; the Visual / Copy Gate package (74 PROPOSED rows, real
+  blur samples) presented. `QAN-BL-PROD-08` admitted (owner `HOSTED-DEPLOY-01`).
+- **Still closed:** every launch gate; nothing is shared, stored or shown in production; no SUCCESS version exists before
+  Stage 8A. Issue #322 stays open.
+- **Next:** the Product Owner's review of the CP1 report and the explicit approval of the Visual Gate, the Copy Gate and
+  the D-04 values, before any mobile surface (CP2).
