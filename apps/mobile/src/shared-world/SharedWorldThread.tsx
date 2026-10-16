@@ -17,7 +17,7 @@
  * keeps the reader's words until the server confirms they are committed, and carries no microphone or voice control:
  * Shared Voice Notes wait on a durable audio runtime that does not exist yet (QAN-BL-VOICE-01).
  */
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { AccessibilityInfo, Text, TextInput, View } from 'react-native';
 
 import {
@@ -267,6 +267,9 @@ export function SharedComposer({ language, palette, bottomInset, accessibilityLa
   const [focused, setFocused] = useState(false);
   const mounted = useRef(true);
   useEffect(() => () => { mounted.current = false; }, []);
+  // A composer that leaves the screen (an Introduction that ended) takes its keyboard with it: blurred while it still exists.
+  const input = useRef<TextInput | null>(null);
+  useLayoutEffect(() => () => { input.current?.blur(); }, []);
   const canSend = !sending && draft.trim().length > 0 && draft.length <= maxLength;
   const send = async () => {
     if (!canSend) return;
@@ -276,6 +279,7 @@ export function SharedComposer({ language, palette, bottomInset, accessibilityLa
   return (
     <View testID="qandeel-shared-send-bar" style={{ flexDirection: 'row', alignItems: 'flex-end', columnGap: 6, paddingHorizontal: 12, paddingTop: 8, paddingBottom: bottomInset + 8 }}>
       <TextInput
+        ref={input}
         testID="qandeel-shared-input"
         value={draft}
         onChangeText={setDraft}
