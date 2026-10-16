@@ -158,9 +158,9 @@ reaches a disclosure relation or function.
   `0155`, `0158`, `0159`, `0160`, `0161` all green; the full 156-verifier sweep is reported in §7.1.
 - `prove-0162-introduction-media-store` and `prove-0163-introduction-success-postgrest`: **pass** (one line locally; CI
   runs all four).
-- API: the three new specs (pipeline 6, disclosure 34, continuation 15) and the full suite (§7.1).
+- API: the three new specs (pipeline 6, disclosure 35, continuation 15) and the full suite (§7.1).
 - Root contracts: all pass, including `forward-safety` (35) and the new `s6-06-introduction-disclosure-contract` (7).
-- Exact-head CI: **pending** (the branch is not yet pushed).
+- Exact-head CI: the first head `70a93201` failed at `prove-0162` P02; the cause and the correction are in §7.2.
 
 ### 7.1 Full sweeps
 
@@ -169,6 +169,28 @@ reaches a disclosure relation or function.
   known; CI runs it).
 - **The whole API suite:** 255 suites, 5996 tests, all pass.
 - **Every root contract** (`tests/*.test.mjs`): all pass.
+
+### 7.2 CI correction R1 — parallel first writes on rclone serve s3
+
+- **Failure (exact head `70a93201`, API CI, PostgREST v12.2.9 line):** `prove-0162` P02 answered `UNAVAILABLE`
+  instead of `READY`; the storage log shows `Dir.Rename error: file does not exist` on the first of the three
+  renditions, which the API then wrote concurrently (`Promise.all`).
+- **Root cause (rclone v1.75.1 source, confirmed by the CI log):** `serve s3` keeps S3 keys as files under a VFS.
+  `PutObject` runs `mkdirRecursive` - a Stat followed by a Mkdir, not atomic - and `vfs.Dir.Mkdir` registers a NEW
+  directory node that replaces the existing one; `DeleteObject` removes the emptied `intro-media/` directory again
+  (`rmdirRecursive`). Three concurrent first writes into the absent directory therefore registered three nodes (the CI
+  log has three `vAddDir "intro-media"` lines for one upload); the first upload's temporary object belonged to a node
+  already replaced, so its rename into place found nothing. Real S3 / Supabase Storage has no directories; the race is
+  the CI store's, and it could not be reproduced on the Windows build used locally (100 / 100 trials passed).
+- **Correction (smallest safe one, no change to the hosted target):** the service writes the three renditions **one at a
+  time, in stage order**; the first failure stops before the next object is written (the series is removed and its
+  keys queued, as before). No store ever sees concurrent first writes under one prefix. P02 and its conditions are
+  unchanged; a new spec pins one-at-a-time order and stop-on-failure; P06 keeps the race - the first object is held in
+  flight, the photo is removed, nothing is erased before the deadline, all three objects land late, the completion is
+  refused, and all three are erased after the deadline - and now also asserts that nothing had landed before the
+  removal.
+- **Re-run locally on an EMPTY rclone data directory (the CI starting state):** both proofs pass; the storage log has no
+  `Dir.Rename` error, and `intro-media/` was recreated five times, each by a single write.
 
 ## 8. Backlog (BG-05 / BG-06, CP1)
 

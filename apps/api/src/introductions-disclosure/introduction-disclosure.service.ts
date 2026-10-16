@@ -238,7 +238,10 @@ export class IntroductionDisclosureService {
     const signal = AbortSignal.timeout(UPLOAD_BUDGET_MS);
     try {
       const { strong, medium, clear } = prepared.renditions;
-      await Promise.all([strong, medium, clear].map((rendition, i) => this.store.put(keys[i].storage_key, rendition, signal)));
+      // One object at a time: the first failure stops before the next is written, and no store sees concurrent first
+      // writes under one prefix (rclone serve s3, the CI store, replaces its directory node on each - see the S6-06 record §7.2).
+      const renditions = [strong, medium, clear];
+      for (let i = 0; i < renditions.length; i += 1) await this.store.put(keys[i].storage_key, renditions[i], signal);
     } catch {
       await this.discard(token, world, series);
       return { outcome: 'UNAVAILABLE' };

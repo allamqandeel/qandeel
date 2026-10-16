@@ -14,8 +14,9 @@
 //   P04  removal: refused at once while the objects still exist; the worker then erases them, proven by HEAD and by the
 //        data directory; no trace of the keys or handles survives in the database
 //   P05  failures: the storage delete fails twice, the key is deferred and kept, and erased on the retry
-//   P06  condition 1: an upload still in flight when the photo is removed - its keys wait out the upload deadline, the
-//        late objects are erased; and an object written after its erasure is found by the listing reconciliation
+//   P06  condition 1: an upload still in flight when the photo is removed (its first object held, the three written one
+//        at a time) - its keys wait out the upload deadline, all three land late and are erased; and an object written
+//        after its erasure is found by the listing reconciliation
 //   P07  condition 2: an aborted upload leaves no partial or hidden file (the server removes it, and the directory scan
 //        confirms); a storage server KILLED mid-upload leaves a hidden temporary file that ListObjects does not show -
 //        the harness janitor removes it, and only the directory scan can prove that
@@ -266,16 +267,21 @@ async function main() {
     const command = randomUUID();
     const pending = slowService.uploadImage(tokens.a, world, command, await photo());
     let inflight = null;
-    for (let i = 0; i < 200 && entered < 3; i += 1) await new Promise((resolve) => { setTimeout(resolve, 100); });
-    assert.equal(entered, 3, 'P06 the three uploads are in flight');
+    for (let i = 0; i < 200 && entered < 1; i += 1) await new Promise((resolve) => { setTimeout(resolve, 100); });
+    await new Promise((resolve) => { setTimeout(resolve, 300); });
+    // The renditions are written one at a time: the first is held in flight and the other two have not started.
+    assert.equal(entered, 1, 'P06 the upload is in flight, one object at a time');
     inflight = (await rows('SELECT id FROM introduction_sharing_private.image_series WHERE begin_command_id = $1', [command]))[0]?.id ?? null;
     assert.ok(inflight, 'P06 the intent exists before any byte is stored');
     const lateKeys = (await rows('SELECT storage_key FROM introduction_sharing_private.image_renditions WHERE series_id = $1', [inflight])).map((r) => r.storage_key);
+    assert.equal(lateKeys.length, 3, 'P06 the intent holds all three keys');
+    assert.equal(lateKeys.some((k) => existsSync(fileOf(k))), false, 'P06 nothing has landed yet');
     assert.equal((await call(tokens.a, 'POST', `/introductions/worlds/${world}/image-removal`, { commandId: randomUUID(), seriesId: inflight })).json?.outcome, 'REMOVED');
     const due = await worker.runOnce();
     assert.equal(due.erased, 0, 'P06 the keys of an upload still in flight are not erased before its deadline');
     release();
     assert.equal((await pending).outcome, 'UNAVAILABLE', 'P06 the late completion is refused');
+    assert.equal(entered, 3, 'P06 all three objects were written after the removal');
     assert.equal(lateKeys.every((k) => existsSync(fileOf(k))), true, 'P06 the late objects did land');
     await rows(`UPDATE introduction_sharing_private.media_erasure_queue SET not_before = clock_timestamp() WHERE storage_key = ANY($1::text[])`, [lateKeys]);
     assert.equal((await worker.runOnce()).erased, 3, 'P06 and are erased once the deadline has passed');

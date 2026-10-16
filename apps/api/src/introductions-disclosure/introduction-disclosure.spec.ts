@@ -148,9 +148,31 @@ describe('S6-06 IntroductionDisclosureService — the photo upload (D-06, condit
     });
     const store = fakeStore();
     expect(await new IntroductionDisclosureService(r, store).uploadImage(TOKEN, W, C, await photo())).toEqual({ outcome: 'READY', seriesId: S });
-    expect(store.puts.sort()).toEqual(KEYS.map((k) => k.storage_key).sort());
+    expect(store.puts).toEqual(KEYS.map((k) => k.storage_key));
     expect(r.completeImage).toHaveBeenCalledWith(S);
     expect(r.removeImage).not.toHaveBeenCalled();
+  });
+
+  it('writes the renditions one at a time in stage order, and a failure stops before the next object', async () => {
+    const r = repo({ beginImage: jest.fn().mockResolvedValue([{ outcome: 'BEGUN', image_series_id: S }]), uploadKeys: jest.fn().mockResolvedValue(KEYS) });
+    let open = 0;
+    let widest = 0;
+    const attempted: string[] = [];
+    const store = fakeStore({
+      put: async (key) => {
+        attempted.push(key);
+        open += 1;
+        widest = Math.max(widest, open);
+        await new Promise((resolve) => { setTimeout(resolve, 5); });
+        open -= 1;
+        if (attempted.length === 2) throw new Error('store down');
+      },
+    });
+    expect(await new IntroductionDisclosureService(r, store).uploadImage(TOKEN, W, C, await photo())).toEqual({ outcome: 'UNAVAILABLE' });
+    expect(widest).toBe(1);
+    expect(attempted).toEqual([KEYS[0].storage_key, KEYS[1].storage_key]);
+    expect(r.completeImage).not.toHaveBeenCalled();
+    expect(r.removeImage).toHaveBeenCalledTimes(1);
   });
 
   it('a refused photo, a storage failure or a late completion each remove the series (its keys go to the erasure queue)', async () => {
