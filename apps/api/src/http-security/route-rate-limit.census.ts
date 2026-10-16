@@ -110,6 +110,24 @@ export const ROUTE_RATE_LIMIT_CENSUS: Readonly<Record<string, Exclude<RateLimitC
   // S6-05 (CP4, migration 0161): the closed history after END - a read, like the CP3 reads.
   'GET /introductions/worlds/:worldId/history': 'AUTHENTICATED',
   'GET /introductions/worlds/:worldId/history/before/:materialId/:establishedAt': 'AUTHENTICATED',
+  // S6-06 (CP1, migration 0162): sharing in an Introduction. A share, a photo and a display grant are held to the strict
+  // class; reading, the photo bytes, removing and going back to the first name are ordinary acts - a privacy act is
+  // never throttled like a credential act.
+  'GET /introductions/worlds/:worldId/disclosures': 'AUTHENTICATED',
+  'POST /introductions/worlds/:worldId/disclosures/text': 'SECURITY_SENSITIVE',
+  'POST /introductions/worlds/:worldId/image/:commandId': 'SECURITY_SENSITIVE',
+  'POST /introductions/worlds/:worldId/image-stages': 'SECURITY_SENSITIVE',
+  'POST /introductions/worlds/:worldId/image-removal': 'AUTHENTICATED',
+  'GET /introductions/worlds/:worldId/media/:handle': 'AUTHENTICATED',
+  'POST /introductions/worlds/:worldId/display-name/grant': 'SECURITY_SENSITIVE',
+  'POST /introductions/worlds/:worldId/display-name/revoke': 'AUTHENTICATED',
+  'GET /introductions/shares': 'AUTHENTICATED',
+  // S6-06 (CP1, migration 0163): SUCCESS decisions and the explicit resume, decisions of the same class as S6-04's.
+  'GET /introductions/worlds/:worldId/success': 'AUTHENTICATED',
+  'POST /introductions/worlds/:worldId/success/approval': 'AUTHENTICATED',
+  'POST /introductions/worlds/:worldId/success/withdrawal': 'AUTHENTICATED',
+  'GET /introductions/participation': 'AUTHENTICATED',
+  'POST /introductions/participation/resume': 'AUTHENTICATED',
 
   // Native Push device boundary (A3-02). A sync per sign-in / foreground / token rotation; no route sends.
   'PUT /push/device': 'AUTHENTICATED',

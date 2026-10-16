@@ -3,6 +3,8 @@ import { SupabaseAuthGuard } from '../auth/supabase-auth.guard';
 import { SupabaseAuthService } from '../auth/supabase-auth.service';
 import { SupabaseDataApiService } from '../conversation/supabase-data-api.service';
 import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-role-api.service';
+import { IntroductionsContinuationModule } from '../introductions-continuation/introductions-continuation.module';
+import { IntroductionsDisclosureModule } from '../introductions-disclosure/introductions-disclosure.module';
 import { IntroductionsLifecycleModule } from '../introductions-lifecycle/introductions-lifecycle.module';
 import { IntroductionsPreparationModule } from '../introductions-preparation/introductions-preparation.module';
 import { IntroductionsProposalsModule } from '../introductions-proposals/introductions-proposals.module';
@@ -53,9 +55,14 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  *
  * S6-05 (CP3) composes the Introduction World's human conversation (IntroductionsWorldModule) here for the same reason.
  * It shares nothing with these providers or with the other Introductions modules, and imports no AI runtime.
+ *
+ * S6-06 (CP1) composes sharing, photos and the display-name consent (IntroductionsDisclosureModule) and SUCCESS and the
+ * explicit resume (IntroductionsContinuationModule) here for the same reason. Neither shares anything with these
+ * providers or the other Introductions modules, and neither imports an AI runtime.
  */
 @Module({
-  imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule],
+  imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,
+    IntroductionsDisclosureModule, IntroductionsContinuationModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,
