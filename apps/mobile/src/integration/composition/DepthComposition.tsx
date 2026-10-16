@@ -600,6 +600,7 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
               language={locale.language}
               insets={{ ...edges, bottom: 0 }}
               activity={{ controller: runtime.attention, onOpen: openActivity, focus: returnedFromActivity && !activityShown }}
+              introductions={runtime.introductionWorlds}
             />
           </View>
         ) : null}
@@ -660,7 +661,8 @@ export function DepthComposition({ runtime, locale, insets, fontScale, envelope,
         ) : null}
         {introductionsShown && proposalsShown && depth === 'CONVERSATION' && onSignOut !== undefined && runtime.introductionProposals !== undefined ? (
           <View style={StyleSheet.absoluteFill}>
-            <ProposalsSurface controller={runtime.introductionProposals} language={locale.language} insets={edges} onBack={closeProposals} />
+            <ProposalsSurface controller={runtime.introductionProposals} language={locale.language} insets={edges} onBack={closeProposals}
+              worlds={runtime.introductionWorlds} />
           </View>
         ) : null}
         {/*

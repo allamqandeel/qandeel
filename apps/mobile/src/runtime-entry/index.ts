@@ -162,10 +162,15 @@ export type {
 } from './introductions-api';
 export { IntroductionsApiClient } from './introductions-api';
 export type {
-  IntroductionProposalsApiConfig, PrivateProposal, ProposalAction, ProposalDecision, ProposalDecisionKind, ProposalDecisionOutcome,
-  ProposalStatus, ProposalsRead,
+  IntroductionProposalsApiConfig, PrivateProposal, ProposalAcceptance, ProposalAcceptanceOutcome, ProposalAction, ProposalDecision,
+  ProposalDecisionKind, ProposalDecisionOutcome, ProposalStatus, ProposalsRead,
 } from './introduction-proposals-api';
 export { IntroductionProposalsApiClient } from './introduction-proposals-api';
+export type {
+  IntroductionEndResult, IntroductionHistoryRead, IntroductionMessage, IntroductionMessageCursor, IntroductionMessagesRead, IntroductionSendResult,
+  IntroductionWorld, IntroductionWorldsApiConfig, IntroductionWorldsRead,
+} from './introduction-worlds-api';
+export { IntroductionWorldsApiClient } from './introduction-worlds-api';
 export type {
   SharedAcceptResult, SharedDeclineResult, SharedDeleteResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
   SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,

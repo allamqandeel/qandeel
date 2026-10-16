@@ -7,7 +7,8 @@
 //   C  the listing: own delivered views only, the second recipient sees nothing before forward approval, bounded pages
 //      with a non-oracle cursor, no first name, conclusion, field, role, state or date
 //   D  the decisions: forward approval, first and second decline, withdrawal, each over its existing core, each offered
-//      only when the server says so; the second recipient is never offered acceptance
+//      only when the server says so; no S6-04 boundary accepts (since S6-05 / 0159 the second recipient is OFFERED
+//      acceptance, which is S6-05's own boundary and proven by verify-migration-0159.mjs)
 //   E  neutrality: every ending the other human caused reads the same; the second recipient keeps a neutral view after a
 //      withdrawal
 //   F  refusals change nothing: another human, a stale view, an expired proposal, a proposal that failed revalidation,
@@ -128,7 +129,11 @@ async function verifyPosture(report) {
     for (const fn of [...EXPOSED, FN.PRESENT]) {
       const src = (await rt.functionPosture(fn)).prosrc;
       assert.doesNotMatch(src, /first_name|permitted_text|disclosed_value|private_reason_code|subject_user_id|_fields_v1/iu, `A03 ${fn}`);
-      assert.doesNotMatch(src, /commit_matching_mutual_match|shared_worlds|introduction_records|accept/iu, `A03 ${fn} accepts nothing and births nothing`);
+      assert.doesNotMatch(src, /commit_matching_mutual_match|shared_worlds|introduction_records/iu, `A03 ${fn} births nothing`);
+      // RE-ANCHORED by S6-05 (migration 0159, R-6): the presentation helper now OFFERS the second recipient ACCEPT, the
+      // atomic Mutual Match commit, through S6-05's own boundary (verify-migration-0159.mjs). It still reaches no Match
+      // or World itself, and no S6-04 boundary accepts anything.
+      if (fn !== FN.PRESENT) assert.doesNotMatch(src, /accept/iu, `A03 ${fn} accepts nothing`);
     }
   });
 
@@ -210,8 +215,10 @@ async function verifyRuntime(report, humans, gateSeam) {
       assert.equal(await shown(a, f.proposal), null, 'C01 approval alone delivers nothing to the candidate');
       const secondView = randomUUID();
       await rt.forward(randomUUID(), f.proposal, secondView, f.conclusionForCandidate);
-      assert.deepEqual(await shown(a, f.proposal), { outcome: 'AWAITING_YOU', actions: ['DECLINE'], view: secondView },
-        'C01 the second recipient may decline and is never offered acceptance (S6-05)');
+      // RE-ANCHORED by S6-05 (migration 0159, R-6): the second recipient is offered acceptance - the atomic Mutual Match
+      // commit, S6-05's boundary - beside decline, and both only while the launch seam is cleared (F05).
+      assert.deepEqual(await shown(a, f.proposal), { outcome: 'AWAITING_YOU', actions: ['ACCEPT', 'DECLINE'], view: secondView },
+        'C01 the second recipient may accept (S6-05) or decline');
       assert.deepEqual(await shown(first, f.proposal), { outcome: 'IN_PROGRESS', actions: ['WITHDRAW'], view: f.firstView });
     });
 

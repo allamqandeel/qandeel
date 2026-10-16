@@ -530,8 +530,12 @@ test('the predecessor forward-safety seams were reconciled in this slice rather 
   assert.match(PREDECESSOR['0110'], /const COLUMN_BAN = \/[^\n]*match_commit\|introduction_slot/u, 'the I-07B proposal column ban is preserved');
   // 0112 asserted "no producer" for the reserved states and for acceptance; both
   // are now equalities against the one reviewed producer, and the one-writer law stands.
-  assert.equal((PREDECESSOR['0112'].match(/\[I07C_MATCH_PRODUCER\]/gu) ?? []).length, 2,
-    'the 0112 producer census and the acceptance census are equalities against the reviewed I-07C producer');
+  // RE-ANCHORED by S6-05 (2026-10-16, migration 0159, R-6): the 0112 acceptance census now admits the reviewed producer
+  // AND its one S6-05 shell, accept_my_matching_proposal_v1, by exact name; the reserved-state producer census is unchanged.
+  assert.equal((PREDECESSOR['0112'].match(/\[I07C_MATCH_PRODUCER\]/gu) ?? []).length, 1,
+    'the 0112 producer census is an equality against the reviewed I-07C producer');
+  assert.equal((PREDECESSOR['0112'].match(/\['accept_my_matching_proposal_v1', I07C_MATCH_PRODUCER\]\.sort\(\)/gu) ?? []).length, 1,
+    'and the acceptance census an equality against that producer and its one named S6-05 shell');
   assert.match(PREDECESSOR['0112'], /assert\.deepEqual\(writers\.map\(\(r\) => r\.proname\), \['append_matching_proposal_transition_v1'\]/u,
     'and the one-writer law is still an equality');
   assert.match(proposalSupport, /export const I07C_MATCH_PRODUCER = 'commit_matching_mutual_match_v1';/u, 'the producer name is owned by the support module');

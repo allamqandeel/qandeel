@@ -203,6 +203,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-PRIV-05` | Export My Data Omits the Reader's Shared, Public and Replay World Data | `PRIV-EXPORT-01 — Export My Data: Understanding Resolution Facts` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-MATCH-04` | Understanding Readiness Before Real Matching | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-MATCH-05` | The Confirmed Introduction First Name Is Not the Canonical Matching First-Name Source | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `HIGH` | `CLOSED — TOMBSTONE` |
+| `QAN-BL-MATCH-06` | No Runtime Producer Forwards a First-Approved Proposal to the Second Recipient | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -2490,6 +2491,44 @@ anti-duplication check above. Nothing here authorizes implementation (BG-07).
 Admitted under BG-06 / BG-08 by S6-02 at its closing change (2026-10-15), at the Product Owner's D2 assignment and
 implementation authorization, after the anti-duplication check above. Nothing here authorizes implementation (BG-07).
 
+---
+
+### `QAN-BL-MATCH-06` — No Runtime Producer Forwards a First-Approved Proposal to the Second Recipient
+
+- **Title / Finding:** after the first recipient approves forwarding (S6-04, `FIRST_FORWARD_APPROVED`), the proposal reaches
+  the second recipient only through `forward_matching_proposal_to_second_core_v1` (`0112:560`, redefined `0120:690`),
+  which materializes the candidate's view and moves the proposal to `FORWARDED_TO_SECOND`. That core is executable by
+  nobody and nothing calls it: no producer, orchestrator, sweeper or boundary runs the step. So no real proposal can ever
+  be offered to a second recipient, and the second recipient's acceptance (S6-05, migration `0159`) can be exercised only
+  on synthetic fixtures that call the core as the owner.
+- **Source:** the [S6-05 record](e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md) §1 (CP0, gap G-1, 2026-10-15) and §7; the
+  Product Owner's ruling R-4 (2026-10-15): owner S6-07, severity `HIGH`, after a duplication check. Frozen authority:
+  CW2-06 §16 and §35 (the second recipient receives an independent proposal only after the first party's forward
+  approval); I-07 §21 – §22.
+- **Current truth:** latent. No proposal can exist in production (no enrollment, policy or producer; the CW2-08 seams
+  answer `NOT_EVALUATED`), so nothing waits to be forwarded. The verifiers bring a proposal to `FORWARDED_TO_SECOND` by
+  calling the core directly as the owner (`matching-match-verifier-support.mjs`).
+- **Anti-duplication:** checked against all 69 earlier IDs, every tombstone, the §7 paragraphs and the §9 rows.
+  `QAN-BL-MATCH-01` is enrollment, correction and resume; `QAN-BL-MATCH-03` is the compatibility conclusion producer;
+  `QAN-BL-MATCH-04` is understanding readiness; `QAN-BL-PRIV-04` is export. S6-04's BG-06 line names "notifications for
+  a delivered proposal (S6-07)", which is the notification only, not the step that delivers. The ID was unused in the
+  tree and in the history of every ref.
+- **Why deferred:** S6-05's contract owns the second recipient's acceptance, the Mutual Match and the Introduction World,
+  not the Matching runtime that delivers proposals; building the producer there would widen it past its contract.
+- **Owner task:** `S6-07 — Activity, Direct Entry and Final Integration` (the Product Owner's R-4, 2026-10-15).
+- **Severity:** `HIGH`. Without it the Mutual Match can never happen for real users, however complete every surface is.
+- **Reopen condition:** automatic at S6-07's kickoff (BG-05); and before any task takes Matching toward real users.
+- **Required future property:** the step runs only for a proposal in `FIRST_FORWARD_APPROVED` whose binding to the
+  first recipient's exact approved view is still current, through the existing core and its one writer, under the same
+  revalidation and launch seam, idempotently, and never as a human's decision; it reveals nothing to either human beyond
+  the neutral projection; it composes with the S6-07 notifications rather than duplicating them.
+- **Not in this item:** the acceptance and the Introduction World (S6-05); the notifications themselves and Direct Entry
+  (S6-07's own scope); the conclusion producer (`QAN-BL-MATCH-03`); launch clearance and policies (Stage 9 / CW2-08).
+- **Status:** `DEFERRED — OWNED`
+
+Admitted under BG-06 / BG-08 by S6-05 at CP2 (2026-10-16), at the Product Owner's R-4 decision, after the
+anti-duplication check above. Nothing here authorizes implementation (BG-07).
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -2989,15 +3028,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 31 |
+| `DEFERRED — OWNED` | 32 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 24 |
-| **Total** | **69** |
+| **Total** | **70** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 38 |
+| `HIGH` | 39 |
 | `MEDIUM` | 29 |
 | `LOW` | 2 |
 
@@ -3750,6 +3789,41 @@ the record of the register before it.
   relation, so no deletion or export footprint changes.
 - **Latest index: 69 items; 31 / 4 / 10 / 24 by status, 38 / 29 / 2 by severity**, unchanged.
 
+**S6-05 CP2 (2026-10-16; the S6-05 pull request, not merged; effective from its merge).** BG-06 / BG-08 at S6-05's CP2
+([S6-05 record](e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md) §7). S6-04 merged as PR #342
+(`35ad4e19ad7e449255e7d087d4420b5d3775cf86`, 2026-10-15). The paragraph above stays as the record of the register before it.
+- **Inherited:** none (BG-05: no item is owned by `S6-05`).
+- **Admitted — `QAN-BL-MATCH-06`** (`HIGH`, `DEFERRED — OWNED`, owner `S6-07 — Activity, Direct Entry and Final
+  Integration`; the Product Owner's R-4, 2026-10-15): no runtime producer forwards a first-approved proposal to the second
+  recipient (§5 item). Checked against all 69 earlier IDs; the ID had not been used.
+- **Checked and not admitted (BG-06):** the Introduction reads and messaging, END on mobile and the closed history, and the
+  mobile surfaces are S6-05's own later checkpoints (CP3 – CP5); Activity, Push and Direct Entry stay S6-07's; photos,
+  disclosure, SUCCESS and reactivation S6-06's; Introduction intelligence Stage 8A's (GATE-30, R-1). Each has its owner.
+- **BG-05:** `S6-07` now owns three open items (`QAN-BL-PRIV-04`, `QAN-BL-MATCH-01`, `QAN-BL-MATCH-06`).
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-ACCT-01`,
+  `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN). S6-05 CP2 adds no relation, so no
+  deletion or export footprint changes.
+- **Latest index: 70 items; 32 / 4 / 10 / 24 by status, 39 / 29 / 2 by severity**, recounted mechanically from §4.
+
+**S6-05 closing change (CP5, 2026-10-16; the S6-05 pull request, not merged; effective from its merge).** BG-08 / BG-09 at
+S6-05's closure, in its last checkpoint ([S6-05 record](e2e/QANDEEL_S6_05_IMPLEMENTATION_RECORD_v1.md) §16), under the
+Product Owner's checkpoint rule (no separate documentation task). The paragraph above stays as the record of the register
+before it.
+- **Inherited:** none (BG-05: no item named `S6-05` at kickoff), so nothing is tombstoned or re-owned.
+- **Admitted by S6-05:** `QAN-BL-MATCH-06` only (CP2; owner `S6-07`, the Product Owner's R-4); unchanged by CP3 – CP5.
+- **Checked and not admitted (BG-06):** photos, progressive disclosure, SUCCESS and reactivation (S6-06); Activity, Push,
+  Direct Entry and the forward producer (S6-07, `QAN-BL-MATCH-06`); Introduction intelligence (Stage 8A, R-1); launch
+  clearance, policies and limits (Stage 9 / CW2-08). Each is that task's own Task Contract scope. GATE-29: S6-05 uses no
+  Living Analysis stack (V-1, no field), so `QAN-BL-VIS-01` and `QAN-BL-LAUNCH-04` do not bear on it. The proof of the
+  mobile surfaces on a physical device with TalkBack / VoiceOver is the same proposal S6-04 left with the Product Owner
+  (record §15.7); it is reported, not admitted.
+- **BG-05:** S6-05 owns no open item from its merge; `S6-07` owns three (`QAN-BL-PRIV-04`, `QAN-BL-MATCH-01`,
+  `QAN-BL-MATCH-06`).
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-ACCT-01`,
+  `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN). S6-05's migrations
+  (`0159` – `0161`) create functions only and no relation, so no deletion or export footprint changes.
+- **Latest index: 70 items; 32 / 4 / 10 / 24 by status, 39 / 29 / 2 by severity**, unchanged.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -3827,7 +3901,8 @@ Inherited after T-12 closure reconciliation:
 | `S6-01 — Intelligent Matching Onboarding` | `QAN-BL-MATCH-01` (admitted by SEC-MATCH-00; listed here by GOV-REC-01). *S6-01 started 2026-10-13 (the Product Owner's Final Implementation Authorization); at its closing change the item is re-owned to `S6-07` with a dependency on `ACCT-DEL-01` (D1), not tombstoned*. *Closing change (2026-10-14; the S6-01 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-01` re-owned to `S6-07` with the mandatory `ACCT-DEL-01` dependency; admitted `QAN-BL-MATCH-04` at CP1 (Stage 8A, D7); `QAN-BL-ACCT-01`, `QAN-BL-PROD-06`, `QAN-BL-PRIV-04`, `QAN-BL-MATCH-02`, `QAN-BL-MATCH-03` and `QAN-BL-LAUNCH-04` observed and left unchanged; no further admission (§7). S6-01 owns no open item |
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract). *Closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-02` tombstoned with the Product Owner's stricter decision A; admitted `QAN-BL-MATCH-05` to `S6-03` (D2); nothing else admitted (§7). S6-02 owns no open item |
 | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). *S6-03 started 2026-10-15 (Task Contract v1.3; CW2-06B approved at CP1). Closing change (2026-10-15; the S6-03 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-05` tombstoned; dated notes on `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04`; nothing admitted (§7). S6-03 owns no open item |
-| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed) |
+| `S6-05 — Mutual Match & Introduction World` | none — no item names it at kickoff (BG-05). *CP2 (2026-10-16; the S6-05 pull request, not merged; effective from its merge):* admitted `QAN-BL-MATCH-06` (owner `S6-07`, the Product Owner's R-4); nothing tombstoned or re-owned (§7). S6-05 owns no open item. *Closing change (CP5, 2026-10-16; the S6-05 pull request, not merged; effective from its merge):* nothing inherited, tombstoned or re-owned; `QAN-BL-MATCH-06` stays with `S6-07`; S6-05 owns no open item (§7) |
+| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed); `QAN-BL-MATCH-06` (admitted by S6-05 at CP2, 2026-10-16, at the Product Owner's R-4: the runtime producer of the forward step) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |

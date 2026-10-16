@@ -102,7 +102,10 @@ import {
 } from '../../settings';
 import { createUnderstandingController, type UnderstandingController } from '../../understanding';
 import { createInteractionPreferencesController, type InteractionPreferencesController } from '../../settings';
-import { createIntroductionsController, createProposalsController, type IntroductionsController, type ProposalsController } from '../../introductions';
+import {
+  createIntroductionWorldsController, createIntroductionsController, createProposalsController, type IntroductionWorldsController, type IntroductionsController,
+  type ProposalsController,
+} from '../../introductions';
 import {
   createActivityAttentionController,
   createActivityFeedController,
@@ -252,6 +255,12 @@ export interface IntegrationSessionRuntime {
    * account reaches the next.
    */
   readonly introductionProposals: ProposalsController;
+  /**
+   * S6-05: this identity's own Introduction Worlds — the two humans' words, END and the closed history — on the transport
+   * bound to it; the reader's own words are deleted through the same identity-bound Shared transport (R-5). It follows the
+   * runtime entry's ONE foreground signal and is retired with the generation, so no word of one account reaches the next.
+   */
+  readonly introductionWorlds: IntroductionWorldsController;
   /**
    * A3-01: the reader's Activity attention (the presence mark and the one Attention Strip), feed and Notifications &
    * Activity preferences, for THIS identity, on the Activity transport bound to it. Attention follows the runtime entry's
@@ -437,6 +446,7 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
     session.interactionPreferences.retire();
     session.introductions.retire();
     session.introductionProposals.retire();
+    session.introductionWorlds.retire();
     session.attention.retire();
     session.activityFeed.retire();
     session.activityPreferences.retire();
@@ -554,6 +564,8 @@ export function createIntegrationRuntime(options: IntegrationRuntimeOptions = {}
       interactionPreferences: createInteractionPreferencesController({ transport: entry.interactionPreferencesFor(bundle), isCurrent }),
       introductions: createIntroductionsController({ transport: entry.introductionsFor(bundle), isCurrent }),
       introductionProposals: createProposalsController({ transport: entry.introductionProposalsFor(bundle), isCurrent }),
+      // S6-05: the Introduction Worlds; deletion is the existing Shared owner deletion on the Shared transport (R-5).
+      introductionWorlds: createIntroductionWorldsController({ transport: entry.introductionWorldsFor(bundle), deletion: shared, isCurrent, foreground: entry.foreground }),
       // A3-01: Activity, on the Activity transport bound to this identity. Attention re-reads when a row is seen or opened.
       attention: createActivityAttentionController({ transport: activity, foreground: entry.foreground, isCurrent }),
       activityFeed: createActivityFeedController({ transport: activity, isCurrent, onAttentionChanged: () => built.attention.refresh() }),

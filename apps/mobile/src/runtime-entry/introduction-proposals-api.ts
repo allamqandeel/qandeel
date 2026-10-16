@@ -5,18 +5,25 @@
  *   POST /introductions/proposals/:proposalId/forward-approval      — { commandId, viewId } → { outcome, proposal }
  *   POST /introductions/proposals/:proposalId/decline               — { commandId, viewId } → { outcome, proposal }
  *   POST /introductions/proposals/:proposalId/withdrawal            — { commandId, viewId } → { outcome, proposal }
+ *   POST /introductions/proposals/:proposalId/acceptance            — { commandId, viewId } → { outcome, worldId, proposal }  (S6-05)
  *
  * A transport and nothing else: no credential of its own (the AC-01 request-time seam its caller hands it), no user id,
  * no role, no state, no retry, no persistence. It decodes STRICTLY: a proposal is an opaque proposal and view identity,
  * one of the five neutral statuses and the decisions the server offers now — any other field (a name, a conclusion, a
- * date) or any acceptance makes the whole answer unusable, so nothing the Product does not allow can reach the page.
+ * date) makes the whole answer unusable, so nothing the Product does not allow can reach the page.
+ *
+ * S6-05 (CP5): `ACCEPT` is a decision the server may offer the second recipient, and only when the CW2-08 seam clears
+ * (in production it never does yet, so it is never offered). The acceptance answers one fixed word; only `MATCHED` names
+ * a World, and it must.
  */
 import type { RuntimeHttpFetch } from './conversation/conversation-session-api';
 
 export type ProposalStatus = 'AWAITING_YOU' | 'IN_PROGRESS' | 'CLOSED_BY_YOU' | 'NO_LONGER_AVAILABLE' | 'MATCH_CONCLUDED';
-export type ProposalAction = 'APPROVE_FORWARD' | 'DECLINE' | 'WITHDRAW';
+export type ProposalAction = 'APPROVE_FORWARD' | 'DECLINE' | 'WITHDRAW' | 'ACCEPT';
 export type ProposalDecisionKind = 'forward-approval' | 'decline' | 'withdrawal';
 export type ProposalDecisionOutcome = 'RECORDED' | 'CHANGED' | 'UNAVAILABLE' | 'NOT_AVAILABLE_NOW' | 'COMMAND_CONFLICT';
+/** S6-05: the acceptance's one word. MATCHED is the committed Mutual Match (or the replay of that commit). */
+export type ProposalAcceptanceOutcome = 'MATCHED' | 'CHANGED' | 'UNAVAILABLE' | 'NOT_AVAILABLE_NOW' | 'COMMAND_CONFLICT';
 
 export interface PrivateProposal {
   readonly proposalId: string;
@@ -35,6 +42,11 @@ export type ProposalDecision =
   | { readonly kind: 'ANSWERED'; readonly outcome: ProposalDecisionOutcome; readonly proposal: PrivateProposal | null }
   | { readonly kind: 'INVALID' }
   | { readonly kind: 'FAILED' };
+/** S6-05: as a decision; MATCHED alone carries the World the accepting human now belongs to. */
+export type ProposalAcceptance =
+  | { readonly kind: 'ANSWERED'; readonly outcome: ProposalAcceptanceOutcome; readonly worldId: string | null; readonly proposal: PrivateProposal | null }
+  | { readonly kind: 'INVALID' }
+  | { readonly kind: 'FAILED' };
 
 export interface IntroductionProposalsApiConfig {
   readonly baseUrl: string;
@@ -43,8 +55,9 @@ export interface IntroductionProposalsApiConfig {
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
 const STATUSES: readonly string[] = ['AWAITING_YOU', 'IN_PROGRESS', 'CLOSED_BY_YOU', 'NO_LONGER_AVAILABLE', 'MATCH_CONCLUDED'];
-const ACTIONS: readonly string[] = ['APPROVE_FORWARD', 'DECLINE', 'WITHDRAW'];
+const ACTIONS: readonly string[] = ['APPROVE_FORWARD', 'DECLINE', 'WITHDRAW', 'ACCEPT'];
 const OUTCOMES: readonly string[] = ['RECORDED', 'CHANGED', 'UNAVAILABLE', 'NOT_AVAILABLE_NOW', 'COMMAND_CONFLICT'];
+const ACCEPTANCE_OUTCOMES: readonly string[] = ['MATCHED', 'CHANGED', 'UNAVAILABLE', 'NOT_AVAILABLE_NOW', 'COMMAND_CONFLICT'];
 const isRecord = (value: unknown): value is Record<string, unknown> => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /** One proposal, or `null` when anything is doubtful — an extra field included. */
@@ -80,6 +93,18 @@ export class IntroductionProposalsApiClient {
     const proposal = body.proposal === null ? null : decodePrivateProposal(body.proposal);
     if (body.proposal !== null && proposal === null) return { kind: 'FAILED' };
     return { kind: 'ANSWERED', outcome: body.outcome as ProposalDecisionOutcome, proposal };
+  }
+
+  /** S6-05: the second recipient's acceptance, bound to the exact view they were shown. */
+  async accept(proposalId: string, commandId: string, viewId: string): Promise<ProposalAcceptance> {
+    const { status, body } = await this.request('POST', `/introductions/proposals/${encodeURIComponent(proposalId)}/acceptance`, { commandId, viewId });
+    if (status === 400) return { kind: 'INVALID' };
+    if (!isRecord(body) || Object.keys(body).length !== 3 || typeof body.outcome !== 'string' || !ACCEPTANCE_OUTCOMES.includes(body.outcome)) return { kind: 'FAILED' };
+    const { outcome, worldId } = body;
+    if (outcome === 'MATCHED' ? typeof worldId !== 'string' || !UUID.test(worldId) : worldId !== null) return { kind: 'FAILED' };
+    const proposal = body.proposal === null ? null : decodePrivateProposal(body.proposal);
+    if (body.proposal !== null && proposal === null) return { kind: 'FAILED' };
+    return { kind: 'ANSWERED', outcome: outcome as ProposalAcceptanceOutcome, worldId: worldId === null ? null : (worldId as string).toLowerCase(), proposal };
   }
 
   /** The status and decoded JSON of an answer; `body` is `undefined` for anything but a 2xx. Never thrown. */

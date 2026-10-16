@@ -163,9 +163,10 @@ test('6 — D1: the ONE END boundary, ungated, and the ONE named exception of th
   assert.match(read(MIGRATION), /REVOKE ALL ON FUNCTION public\.end_own_introduction_v1\(uuid, uuid\) FROM PUBLIC;/u);
   const verifier = read('database/verify-migration-0149.mjs');
   assert.match(verifier, /const S6_02_INTRODUCTION_END = 'public\.end_own_introduction_v1\(uuid, uuid\)';/u);
-  // S6-04 (2026-10-15) appends its three named decision boundaries after the END exception; the END exception itself is
-  // unchanged and still named exactly once in the census.
-  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary and the three named S6-04 decisions');
+  // S6-04 (2026-10-15) appends its three named decision boundaries after the END exception, and S6-05 (2026-10-16,
+  // migration 0159) its one acceptance boundary after them; the END exception itself is unchanged and still named
+  // exactly once in the census.
+  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary, the three named S6-04 decisions and the one S6-05 acceptance');
   assert.equal((verifier.match(/S6_02_INTRODUCTION_END/gu) ?? []).length, 7, 'the exception is named, not generalized');
   for (const probe of ['f4 the census refuses a second client-executable wrapper around the END core',
     'f5 the census refuses the END boundary granted beyond authenticated']) assert.ok(verifier.includes(probe), probe);
@@ -173,7 +174,9 @@ test('6 — D1: the ONE END boundary, ungated, and the ONE named exception of th
     /export const SEC_MATCH_00_RETAINED = \[MFN\.PAUSE, MFN\.TURN_OFF, MFN\.REVOKE_CONTEXT, MFN\.REVOKE_DISCLOSURE, MFN\.SETUP\];/u, 'the retained set is unchanged');
 });
 
-test('7 — the API route takes the World and one command id, is an exit right, and logs and retries nothing; mobile is untouched', () => {
+// RE-ANCHORED by S6-05 CP5 (2026-10-16): the END reaches mobile through S6-05's one Introduction World client (and its
+// test); nothing else in mobile names the route, and nothing in mobile names the database function.
+test('7 — the API route takes the World and one command id, is an exit right, and logs and retries nothing; mobile reaches it through one S6-05 client', () => {
   const controller = code(`${API}/introduction-end.controller.ts`);
   assert.match(controller, /@Controller\('introductions'\)/u);
   assert.match(controller, /@Post\('worlds\/:worldId\/end'\)/u);
@@ -187,11 +190,15 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   assert.match(repository, /\{ p_command_id: commandId, p_world_id: worldId \}/u);
   assert.doesNotMatch(repository, /ServiceRole|service_role/u, 'the caller\'s own token');
   assert.match(read('apps/api/src/http-security/route-rate-limit.census.ts'), /'POST \/introductions\/worlds\/:worldId\/end': 'AUTHENTICATED'/u);
-  // S6-04 (2026-10-15) appends its own proposal module; the S6-02 module stays composed here, exactly once.
-  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule\]/u);
+  // S6-04 (2026-10-15) appends its own proposal module, and S6-05 (2026-10-16, CP3) its Introduction World module after
+  // it; the S6-02 module stays composed here, exactly once.
+  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
-  for (const file of mobile('apps/mobile/src/')) {
-    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction|introductions\/worlds\//u, `mobile ${file} wires no END (S6-05)`);
+  const client = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
+    'integration/__validation__/s605-proof-introduction-world.ts'];
+  for (const file of mobile('apps/mobile/src/').map((f) => String(f).replace(/\\/gu, '/'))) {
+    assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction/u, `mobile ${file} names no database function`);
+    if (!client.includes(file)) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds\//u, `mobile ${file} wires no END outside the S6-05 client`);
   }
 });
 

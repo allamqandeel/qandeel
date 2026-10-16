@@ -27,3 +27,14 @@ export type { ProposalsCopy } from './proposals-copy';
 export { PROPOSALS_COPY_GATE, PROPOSALS_COPY_ROWS, PROPOSALS_LANG01_APPROVED, proposalsCopy } from './proposals-copy';
 export type { ProposalsSurfaceProps } from './ProposalsSurface';
 export { PROPOSALS_SURFACE_TEST_ID, ProposalsCue, ProposalsSurface } from './ProposalsSurface';
+// S6-05 — the Mutual Match's Introduction World: the two humans' words, END and the closed record (V-1).
+export type {
+  IntroductionDeletionTransport, IntroductionPending, IntroductionWorldNotice, IntroductionWorldView, IntroductionWorldsController,
+  IntroductionWorldsControllerOptions, IntroductionWorldsState, IntroductionWorldsTransport,
+} from './introduction-world-controller';
+export { INTRODUCTION_MESSAGE_MAX_LENGTH, createIntroductionWorldsController, firstNameOf, worldOfProposal } from './introduction-world-controller';
+export type { IntroductionWorldCopy, IntroductionWorldCopyKey } from './introduction-world-copy';
+export { INTRODUCTION_WORLD_COPY_GATE, INTRODUCTION_WORLD_COPY_ROWS, introductionTitle, introductionWorldCopy } from './introduction-world-copy';
+export type { IntroductionWorldSurfaceProps } from './IntroductionWorldSurface';
+export { INTRODUCTION_WORLD_TEST_ID, IntroductionWorldSurface } from './IntroductionWorldSurface';
+export { IntroductionWorldCards } from './IntroductionWorldCards';

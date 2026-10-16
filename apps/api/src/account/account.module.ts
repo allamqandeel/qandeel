@@ -6,6 +6,7 @@ import { SupabaseServiceRoleApiService } from '../conversation/supabase-service-
 import { IntroductionsLifecycleModule } from '../introductions-lifecycle/introductions-lifecycle.module';
 import { IntroductionsPreparationModule } from '../introductions-preparation/introductions-preparation.module';
 import { IntroductionsProposalsModule } from '../introductions-proposals/introductions-proposals.module';
+import { IntroductionsWorldModule } from '../introductions-world/introductions-world.module';
 import { ObservabilityModule } from '../observability/observability.module';
 import { AccountIdentityRepository } from './account-identity.repository';
 import { AccountSecurityController } from './account-security.controller';
@@ -49,9 +50,12 @@ import { SupabasePasswordGrantService } from './supabase-password-grant.service'
  *
  * S6-04 composes the private proposal review and decision boundary (IntroductionsProposalsModule) here for the same
  * reason. It shares nothing with these providers, the preparation module or the lifecycle module.
+ *
+ * S6-05 (CP3) composes the Introduction World's human conversation (IntroductionsWorldModule) here for the same reason.
+ * It shares nothing with these providers or with the other Introductions modules, and imports no AI runtime.
  */
 @Module({
-  imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule],
+  imports: [ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule],
   controllers: [AccountController, LoginIdSignInController, AccountSecurityController, PrivacyDataController],
   providers: [
     SupabaseAuthService,

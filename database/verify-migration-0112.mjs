@@ -191,8 +191,11 @@ async function verifyChoreography(report, humans) {
       const accept = await rows(
         `SELECT pr.proname FROM pg_proc pr JOIN pg_namespace n ON n.oid = pr.pronamespace
           WHERE n.nspname = 'public' AND pr.proname ~* '(accept|mutual_match)' AND pr.proname ~* 'match' ORDER BY 1`);
-      assert.deepEqual(accept.map((r) => r.proname), [I07C_MATCH_PRODUCER],
-        'B01 the second acceptance exists exactly once, as the reviewed I-07C Match commit, and I-07B has none of its own');
+      // RE-ANCHORED by S6-05 (migration 0159, R-6): the second recipient's acceptance is now reachable through exactly
+      // ONE authenticated shell over that same core, accept_my_matching_proposal_v1, which commits nothing of its own
+      // (verify-migration-0159.mjs). The acceptance itself is still the one Match commit; I-07B still has none.
+      assert.deepEqual(accept.map((r) => r.proname), ['accept_my_matching_proposal_v1', I07C_MATCH_PRODUCER].sort(),
+        'B01 the second acceptance exists exactly once, as the reviewed I-07C Match commit and its one S6-05 shell, and I-07B has none of its own');
     });
 
     await report.isolated('B02 the candidate is not notified by the first offer', async () => {

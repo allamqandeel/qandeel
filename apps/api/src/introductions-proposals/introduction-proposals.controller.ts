@@ -11,8 +11,10 @@ import { IntroductionProposalsService } from './introduction-proposals.service';
  *   POST /introductions/proposals/:proposalId/forward-approval    { commandId, viewId } -> { outcome, proposal }
  *   POST /introductions/proposals/:proposalId/decline             { commandId, viewId } -> { outcome, proposal }
  *   POST /introductions/proposals/:proposalId/withdrawal          { commandId, viewId } -> { outcome, proposal }
+ *   POST /introductions/proposals/:proposalId/acceptance          { commandId, viewId } -> { outcome, worldId, proposal }
  *
- * No route takes a user id, a counterpart, a role or a state; there is no acceptance route (S6-05).
+ * No route takes a user id, a counterpart, a role, a state or a World. The acceptance (S6-05, migration 0159) is the
+ * second recipient's Mutual Match: the database derives everything else and answers the born World only on MATCHED.
  */
 @Controller('introductions')
 @UseGuards(SupabaseAuthGuard)
@@ -45,5 +47,11 @@ export class IntroductionProposalsController {
   @HttpCode(200)
   withdraw(@Req() request: AuthenticatedRequest, @Param('proposalId') proposalId: string, @Body() body: unknown) {
     return this.proposals.decide(request.authenticatedUser.accessToken, 'withdrawal', proposalId, body);
+  }
+
+  @Post('proposals/:proposalId/acceptance')
+  @HttpCode(200)
+  accept(@Req() request: AuthenticatedRequest, @Param('proposalId') proposalId: string, @Body() body: unknown) {
+    return this.proposals.accept(request.authenticatedUser.accessToken, proposalId, body);
   }
 }

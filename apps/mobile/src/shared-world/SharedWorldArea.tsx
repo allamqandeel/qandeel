@@ -26,6 +26,10 @@
  * S4-01 / S4-02 World screen above, unchanged; its Back returns to the same World's field. Back inside the field first
  * releases a focused place.
  *
+ * S6-05 (CP5): a separate «التعارف» section above the ordinary Worlds lists the reader's own Introduction Worlds; an
+ * ended one stands in «عوالم منتهية». An Introduction World opens its own surface (`../introductions`), never this
+ * area's World screen: no Living Analysis, no Manage World, no members, no QANDEEL welcome.
+ *
  * Nothing here reads the Personal world: no Session, camera, focus or time is passed in, so none can transfer.
  */
 import { useCallback, useEffect, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
@@ -35,6 +39,10 @@ import { ActivityEntry, type ActivityAttentionController } from '../activity';
 import { AnalysisAppearanceScope, AppearanceStatusBar } from '../appearance';
 import { Control, Glyph, MIN_TARGET, typeStyle, usePalette, useConversationTypeface, type ConversationPalette } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
+import { IntroductionWorldCards } from '../introductions/IntroductionWorldCards';
+import type { IntroductionWorldsController, IntroductionWorldsState } from '../introductions/introduction-world-controller';
+import { introductionWorldCopy } from '../introductions/introduction-world-copy';
+import { IntroductionWorldSurface } from '../introductions/IntroductionWorldSurface';
 import { fill, sharedCopy, worldLabel, type SharedCopy } from './copy';
 import { sharedLifecycleCopy } from './lifecycle-copy';
 import type { SharedWorldController } from './shared-world-controller';
@@ -60,9 +68,11 @@ export interface SharedWorldAreaProps {
   readonly insets: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
   /** The one global Activity entry for this non-Analysis upper chrome (P3 §3); absent when the host has none. */
   readonly activity?: { readonly controller: ActivityAttentionController; readonly onOpen: () => void; readonly focus: boolean };
+  /** S6-05: the reader's own Introduction Worlds — the «التعارف» section and the Introduction surface. */
+  readonly introductions?: IntroductionWorldsController;
 }
 
-export function SharedWorldArea({ controller, language, insets, activity }: SharedWorldAreaProps) {
+export function SharedWorldArea({ controller, language, insets, activity, introductions }: SharedWorldAreaProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = sharedCopy(language);
@@ -85,6 +95,11 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
   useEffect(() => {
     controller.enter();
   }, [controller]);
+  // S6-05: the Introduction World open from the root, if any; entering the area re-reads the reader's Introduction Worlds.
+  const [introduction, setIntroduction] = useState<string | null>(null);
+  useEffect(() => {
+    introductions?.refresh();
+  }, [introductions]);
 
   // Local Back: from a World to the area's root. At the root nothing is registered — Back is local-only and never
   // silently returns to the Personal world (I-08A4 §4).
@@ -136,6 +151,15 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
       <View testID={testID} style={{ flex: 1 }}>{children}</View>
     </View>
   );
+
+  if (introduction !== null && introductions !== undefined) {
+    // S6-05: the Introduction World on its own surface; Back returns to this root.
+    return (
+      <View testID={SHARED_AREA_TEST_ID} accessibilityLanguage={language} style={{ flex: 1, backgroundColor: palette.world }}>
+        <IntroductionWorldSurface controller={introductions} worldId={introduction} language={language} insets={insets} onBack={() => setIntroduction(null)} />
+      </View>
+    );
+  }
 
   if (state.place.kind === 'MANAGE') {
     // «إدارة العالم» / Manage World: the World's own management place. Its fields stay above the keyboard on both
@@ -240,7 +264,8 @@ export function SharedWorldArea({ controller, language, insets, activity }: Shar
   return frame(
     <>
       {header(copy.sharedWorld, false)}
-      <SharedRoot controller={controller} copy={copy} language={language} palette={palette} insets={insets} />
+      <SharedRoot controller={controller} copy={copy} language={language} palette={palette} insets={insets}
+        introductions={introductions} onOpenIntroduction={(worldId) => setIntroduction(worldId)} />
     </>,
     'qandeel-shared-root',
   );
@@ -255,15 +280,33 @@ function SectionHeading({ text, palette, language }: { readonly text: string; re
   );
 }
 
-function SharedRoot({ controller, copy, language, palette, insets }: {
+const noSubscription = () => () => undefined;
+const noIntroductions = (): IntroductionWorldsState | null => null;
+
+function SharedRoot({ controller, copy, language, palette, insets, introductions, onOpenIntroduction }: {
   readonly controller: SharedWorldController;
   readonly copy: SharedCopy;
   readonly language: ChromeLanguage;
   readonly palette: ConversationPalette;
   readonly insets: { readonly right: number; readonly bottom: number; readonly left: number };
+  readonly introductions: IntroductionWorldsController | undefined;
+  readonly onOpenIntroduction: (worldId: string) => void;
 }) {
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
+  // S6-05: the reader's own Introduction Worlds, drawn in their own section (and the ended ones among the ended Worlds).
+  const introductionState = useSyncExternalStore(introductions?.subscribe ?? noSubscription, introductions?.getState ?? noIntroductions);
+  const introductionsOf = (which: 'ACTIVE' | 'ENDED') => introductionState !== null && introductionState.list.status === 'READY'
+    && introductionState.list.worlds.some((w) => w.state === which);
+  const activeIntroductions = introductions !== undefined && introductionsOf('ACTIVE') ? (
+    <View testID="qandeel-shared-introductions">
+      <SectionHeading text={introductionWorldCopy(language).sectionHeading} palette={palette} language={language} />
+      <IntroductionWorldCards controller={introductions} which="ACTIVE" language={language} palette={palette} onOpen={onOpenIntroduction} />
+    </View>
+  ) : null;
+  const endedIntroductions = introductions !== undefined && introductionsOf('ENDED')
+    ? <IntroductionWorldCards controller={introductions} which="ENDED" language={language} palette={palette} onOpen={onOpenIntroduction} />
+    : null;
   const root = state.root.data;
   const [inviting, setInviting] = useState(false);
   const lifecycle = sharedLifecycleCopy(language);
@@ -352,6 +395,9 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
             </View>
           ) : null}
 
+          {/* S6-05: «التعارف», a separate section above the ordinary Worlds. */}
+          {activeIntroductions}
+
           <View testID="qandeel-shared-worlds">
             <SectionHeading text={copy.worldsHeading} palette={palette} language={language} />
             {root.worlds.length === 0 ? (
@@ -369,8 +415,9 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
             })}
           </View>
 
-          {/* S4-03: the ended Worlds the reader may still read — a separate, read-only place each. */}
-          {root.closedWorlds.length > 0 ? (
+          {/* S4-03: the ended Worlds the reader may still read — a separate, read-only place each. S6-05: an ended
+              Introduction stands here too, opening its own closed record. */}
+          {root.closedWorlds.length > 0 || endedIntroductions !== null ? (
             <View testID="qandeel-shared-ended-worlds">
               <SectionHeading text={lifecycle.endedHeading} palette={palette} language={language} />
               {root.closedWorlds.map((world) => {
@@ -382,10 +429,23 @@ function SharedRoot({ controller, copy, language, palette, insets }: {
                   </Control>
                 );
               })}
+              {endedIntroductions}
             </View>
           ) : null}
         </>
       )}
+      {/* S6-05: while the Shared root itself is not read, the reader's Introduction Worlds still stand on their own read. */}
+      {root === null && (activeIntroductions !== null || endedIntroductions !== null) ? (
+        <>
+          {activeIntroductions}
+          {endedIntroductions === null ? null : (
+            <View testID="qandeel-shared-ended-introductions">
+              <SectionHeading text={sharedLifecycleCopy(language).endedHeading} palette={palette} language={language} />
+              {endedIntroductions}
+            </View>
+          )}
+        </>
+      ) : null}
     </ScrollView>
   );
 }
