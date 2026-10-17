@@ -7,7 +7,7 @@
  * World. A part on the sheet takes the World as its contrasting ground (inputs, the selected choice, the primary act),
  * so nothing disappears into the surface it stands on, in Dark and Light alike.
  */
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PixelRatio, Text, TextInput, View } from 'react-native';
 
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
@@ -267,10 +267,15 @@ export function Field({ ctx, label, value, onChange, testID, maxLength, numeric 
 }) {
   const [focused, setFocused] = useState(false);
   const writing = direction ?? ctx.writing;
+  // S6-06 (found on the device): a field that leaves the screen takes its keyboard with it — blurred while it still
+  // exists, as the Shared composer does; once it is gone the keyboard has no input to belong to and would stay up.
+  const input = useRef<TextInput | null>(null);
+  useLayoutEffect(() => () => { input.current?.blur(); }, []);
   return (
     <View style={{ paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 6 }}>
       {showLabel ? <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingBottom: 4, writingDirection: ctx.writing }}>{label}</Text> : null}
       <TextInput
+        ref={input}
         testID={testID}
         value={value}
         onChangeText={onChange}
