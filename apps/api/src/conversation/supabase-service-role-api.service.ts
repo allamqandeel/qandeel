@@ -6,9 +6,12 @@ import { DataApiError, parseDataApiUpstreamIdentity } from './supabase-data-api.
 // a caller-supplied user token, so a server command can never be executed with a
 // client credential. It fails closed when server authority is not configured
 // rather than falling back to authenticated-client authority.
+/** The server channel's default bound on one call; a caller with a longer, known-bounded unit of work names its own. */
+export const SERVICE_ROLE_RPC_DEFAULT_TIMEOUT_MS = 5000;
+
 @Injectable()
 export class SupabaseServiceRoleApiService {
-  async rpc<T>(name: string, body: Record<string, unknown>): Promise<T> {
+  async rpc<T>(name: string, body: Record<string, unknown>, options: { readonly timeoutMs?: number } = {}): Promise<T> {
     const baseUrl = process.env.SUPABASE_URL?.replace(/\/$/u, '');
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
     if (!baseUrl || !serviceRoleKey) {
@@ -24,7 +27,7 @@ export class SupabaseServiceRoleApiService {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(body),
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(options.timeoutMs ?? SERVICE_ROLE_RPC_DEFAULT_TIMEOUT_MS),
       });
     } catch {
       throw new ServiceUnavailableException('Server conversation authority is unavailable.');

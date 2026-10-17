@@ -19,7 +19,9 @@ type DeletionStep = 'erase' | 'provider_remove' | 'complete';
  *
  *   1. prepares pending export packages and discards expired ones (the database does both, in its own transaction);
  *   2. claims the deletions that are due (a short database lease, so several servers never advance one request), and
- *      for each: runs the ONE governed Personal erasure (for an ERASED request, its residual sweep), then removes the
+ *      for each: runs the ONE governed account erasure - ACCT-DEL-01 (migration 0164): the account's Matching /
+ *      Introductions footprint and the unchanged Personal erasure in one transaction (for an ERASED request, the
+ *      Personal erasure's residual sweep) - then removes the
  *      provider account once the database says ERASED, then records it COMPLETED. Every step is idempotent and judged again by the database,
  *      so a crash or lost answer anywhere resumes on a later cycle and never reports a deletion it did not finish.
  *   3. PROD-OPS-01: reads the database's aggregate operational state (migration 0132) and emits it as numbers.
@@ -92,8 +94,10 @@ export class PrivacyMaintenanceWorker implements OnModuleInit, OnModuleDestroy {
       const outcome = await this.repository.erase(deletion.deletionId);
       if (outcome !== 'ERASED' && outcome !== 'ALREADY_ERASED') {
         // BLOCKED is Connected Worlds' legitimate answer, and a cancelled or not-yet-due request lost a race it is
-        // meant to lose: neither is an operational failure. Any other answer is one the database never gives.
-        this.signal('ACCOUNT_DELETION', 'erase', outcome === 'BLOCKED' ? 'blocked_expected' : outcome === 'CANCELLED' || outcome === 'NOT_DUE' ? 'superseded_expected' : 'integrity_failure');
+        // meant to lose: neither is an operational failure. ACCT-DEL-01: RETRY is a contended pass the database itself
+        // put under a backoff, also expected; INTEGRITY is a real failure, held under the database's own growing
+        // backoff and counted by the erasure summary. Any other answer is one the database never gives.
+        this.signal('ACCOUNT_DELETION', 'erase', outcome === 'BLOCKED' ? 'blocked_expected' : outcome === 'CANCELLED' || outcome === 'NOT_DUE' ? 'superseded_expected' : outcome === 'RETRY' ? 'retry_expected' : 'integrity_failure');
         return;
       }
       this.signal('ACCOUNT_DELETION', 'erase', 'success');

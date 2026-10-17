@@ -38,13 +38,16 @@ const CLOSED_RESOLVER = 'public.resolve_shared_world_closed_history_visibility_v
 const FROZEN = [
   ['public', 'resolve_shared_world_material_v1', '0089_shared_world_material_persistence_v1.sql'],
   ['public', 'resolve_shared_world_history_visibility_v1', '0119_shared_historical_authority_remediation_v1.sql'],
-  ['public', 'resolve_shared_world_closed_history_visibility_v1', '0119_shared_historical_authority_remediation_v1.sql'],
+  // RE-ANCHORED by ACCT-DEL-01 (Product Owner decisions P-2 / P-4, migration 0164): the closed resolver's Introduction
+  // branch, the CP3 discovery and the CP3 live read accept the counterpart's retained view after the other human's
+  // account erasure. 0164 is now their defining migration; the pin is as strict as before, byte for byte.
+  ['public', 'resolve_shared_world_closed_history_visibility_v1', '0164_account_deletion_matching_introductions_v1.sql'],
   ['public', 'commit_introduction_end_v1', '0116_introduction_terminal_lifecycle_v1.sql'],
   ['public', 'end_own_introduction_v1', '0155_introduction_privacy_isolation_end_boundary_v1.sql'],
   ['public', 'delete_own_shared_world_material_v1', '0139_shared_world_conversation_material_v1.sql'],
   ['public', 'delete_shared_world_owned_material_v1', '0143_public_authoring_rights_privacy_v1.sql'],
-  ['public', 'list_my_introduction_worlds_v1', '0160_introduction_world_human_messaging_v1.sql'],
-  ['public', 'read_my_introduction_messages_v1', '0160_introduction_world_human_messaging_v1.sql'],
+  ['public', 'list_my_introduction_worlds_v1', '0164_account_deletion_matching_introductions_v1.sql'],
+  ['public', 'read_my_introduction_messages_v1', '0164_account_deletion_matching_introductions_v1.sql'],
   ['public', 'send_my_introduction_text_v1', '0160_introduction_world_human_messaging_v1.sql'],
   ['shared_private', 'list_own_closed_shared_world_material_v1', '0155_introduction_privacy_isolation_end_boundary_v1.sql'],
   ['shared_private', 'list_own_closed_shared_world_members_v1', '0155_introduction_privacy_isolation_end_boundary_v1.sql'],

@@ -69,7 +69,10 @@ const QUESTION_FOREGROUND_POLICY_VERSION='1';
 const OPERATION_FAILURES=['transport_failure','integrity_failure'] as const;
 const OPERATIONAL_OUTCOMES:ReadonlyMap<string,ReadonlyMap<string,ReadonlySet<string>>>=new Map([
  ['PRIVACY_EXPORT',new Map([['prepare',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
- ['ACCOUNT_DELETION',new Map([['claim',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','blocked_expected','superseded_expected',...OPERATION_FAILURES])],['provider_remove',new Set(['success','provider_unavailable'])],['complete',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
+ // ACCT-DEL-01: a RETRY the database itself put under a backoff (contention) is `retry_expected`, not a failure.
+ ['ACCOUNT_DELETION',new Map([['claim',new Set(['success',...OPERATION_FAILURES])],['erase',new Set(['success','blocked_expected','superseded_expected','retry_expected',...OPERATION_FAILURES])],['provider_remove',new Set(['success','provider_unavailable'])],['complete',new Set(['success',...OPERATION_FAILURES])],['stuck_scan',new Set(['success',...OPERATION_FAILURES])]])],
+ // ACCT-DEL-01 (P-3): the account erasure's recovery and visibility pass - the re-arm and its aggregate scan.
+ ['ACCOUNT_ERASURE',new Map([['rearm',new Set(['success',...OPERATION_FAILURES])],['operations_scan',new Set(['success',...OPERATION_FAILURES])]])],
  ['UNDERSTANDING_CONFIDENCE',new Map([['confidence_reevaluate',new Set(['success','retry_pending'])]])],
  // INTEL-TM-01 (CC-4): the fail-soft withdrawal housekeeping step of the post-response dispatcher. Outcome classes only.
  ['PERSONAL_EVIDENCE_TRUTH_MAINTENANCE',new Map([['withdrawal_reevaluate',new Set(['success',...OPERATION_FAILURES])]])],
@@ -95,6 +98,10 @@ const OPERATIONAL_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSPORT','INTE
 const PRIVACY_OPERATION_STATES:ReadonlyMap<string,ReadonlyMap<string,boolean>>=new Map([
  ['PRIVACY_EXPORT',new Map([['preparing',false],['retrying',false],['stuck_preparing',true],['failed_total',false],['failed_recent',false]])],
  ['ACCOUNT_DELETION',new Map([['stuck_due',true],['stuck_provider_pending',true]])],
+ // ACCT-DEL-01 (migration 0164): BLOCKED by residue class, the two backoffs, photo files not yet proven gone (with the
+ // oldest), and the uncovered classes. Counts only; a person, a request or a class of a person is never a label.
+ ['ACCOUNT_ERASURE',new Map([['blocked_shared_standard',false],['blocked_public',false],['blocked_replay',false],['blocked_unregistered',false],
+  ['blocked_unclassified',false],['retrying',false],['integrity_holding',false],['media_pending',true],['uncovered_classes',false]])],
 ]);
 const PRIVACY_EXPORT_FAILURE_CLASSES:ReadonlySet<string>=new Set(['TRANSIENT_DATABASE','CONSTRAINT_OR_INTEGRITY','RESOURCE_OR_CAPACITY','INTERNAL_OTHER']);
 const OPERATIONS_POLICY_VERSION='1';

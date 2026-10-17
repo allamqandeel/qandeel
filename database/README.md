@@ -4952,3 +4952,50 @@ transactions with the CW2-08 and I-07D seams replaced for the run and restored b
 their fixtures and remove them. The wire proofs need `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only); the media
 proof also needs the CI-only `QANDEEL_MEDIA_S3_*` values, `RCLONE_DATA_DIR`, `RCLONE_LOG_FILE` and `RCLONE_BIN`, and the
 compiled API (`npm run build:api`).
+
+## ACCT-DEL-01 - Account deletion across Matching / Introductions (migration 0164, CP1)
+
+`0164_account_deletion_matching_introductions_v1.sql` adds ONE governed account erasure for the Matching / Introductions
+footprint, beside the unchanged `0130` Personal erasure, and the controlled forward amendments it needs
+(`docs/matching-introduction-runtime-v1.md` §49). Record: `docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md`.
+
+```text
+server_erase_account_v1(deletion)            service_role only: ERASED | BLOCKED | RETRY | INTEGRITY, and 0130's
+                                             NOT_DUE | CANCELLED | ALREADY_ERASED | UNKNOWN
+server_rearm_blocked_account_deletions_v1(n) service_role only: re-arms a BLOCKED request whose classes are all covered
+                                             and whose census is clean (fresh 7-day grace, cancellable)
+server_read_account_erasure_operations_v1()  service_role only: counts and one age, never an identity
+server_read_account_erasure_coverage_v1()    service_role only: every residue class, whether covered, its owner
+```
+
+- **One transaction or nothing.** Locks in the published order (Introduction Worlds, Records, every setup lock
+  ascending, proposals, participation pointers, claims, the account row, the request), a 2 s `lock_timeout`, a
+  read-only residue census under them, then ONE subtransaction around every write and the unchanged `0130` call; `0130`
+  answers `BLOCKED` without raising, so any answer but `ERASED` is raised and undoes everything.
+- **Coverage.** `account_erasure_private.coverage_registry` names every relation that references the account, every
+  module relation and every relation that references one; `verify-0164` A04 refuses an unregistered one (a planted
+  `RESTRICT` relation is caught). A new relation that references the account, or a relation the erasure deletes from,
+  must be registered in its own migration with its coverage class.
+- **Residue.** Shared `STANDARD`, Public and Replay rows answer `BLOCKED` with their class (owners `ACCT-DEL-02`,
+  Stage 7). No class is covered by `0164`; a module that covers one flips its class in the same migration.
+  *(ACCT-DEL-01 closing change:)* `QAN-BL-ACCT-01` (Shared `STANDARD` / Public, `ACCT-DEL-02`) and `QAN-BL-ACCT-02`
+  (Replay, Stage 7) carry them.
+- **Deployment.** Not deployed; nothing opens a gate. `QAN-BL-PROD-06` owns the hosted catch-up. `QAN-BL-PROD-09` is
+  `HOSTED-DEPLOY-01`'s mandatory condition. No World opens in production until an automated, fail-closed check on the
+  hosted project reads every class that World can create as covered, finds no unregistered account reference, and has
+  measured the erasure within its bound: the `service_role` `statement_timeout`, and the 42 account columns without a
+  leading index. The coverage reader and the CI census are not by themselves a deployment block.
+- **The counterpart.** A retained view of their own words (`introduction_retained_views` / `_items`; four readers
+  replaced forward) and an exact Matching lineage (`matching_counterpart_erasure_releases`; the `0117` core replaced
+  forward at gate 7a only).
+- **Photos.** Every storage key goes to the `0162` queue and is tracked in `account_erasure_private.media_pending`
+  until the worker's confirmed deletion; the last one sets `media_erased_at`.
+
+```sh
+npm run verify:account-deletion-matching-introductions:integration
+npm run test:acct-del-01-account-erasure-contract
+```
+
+The verifier needs `DATABASE_URL` pointing at a FULLY migrated database. Its behaviour scenarios run in one rolled-back
+transaction with the CW2-08 / I-07D seams replaced for the run and restored byte for byte; its races commit their own
+fresh humans and erase them through the erasure itself (an erased account can never be provisioned again).

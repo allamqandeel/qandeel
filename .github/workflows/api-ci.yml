@@ -45,30 +45,127 @@ jobs:
   verify-api:
     needs: [plan]
     if: ${{ !cancelled() && needs.plan.outputs.api_heavy != 'CARRY_FORWARD' }}
-    runs-on: ubuntu-latest
-    # The service images are the Docker Official Images served by Amazon ECR Public, pinned by digest (the same
-    # digests Docker Hub serves): Docker Hub's anonymous pull limit, shared by every job on the runner's address,
-    # refused postgres:17 before any step ran. PostgreSQL 17.11 and Redis 7.4.11; a newer image is a deliberate edit.
-    services:
-      postgres:
-        image: public.ecr.aws/docker/library/postgres:17@sha256:2d2b8998d31037bf721cfdf764d76ba74171b4fab3431b7f72c27c56ddbdf9e3
-        env: {POSTGRES_USER: postgres, POSTGRES_PASSWORD: postgres, POSTGRES_DB: qandeel_test}
-        ports: ['5432:5432']
-        options: >-
-          --health-cmd="pg_isready -U postgres -d qandeel_test"
-          --health-interval=5s --health-timeout=5s --health-retries=12
-      redis:
-        image: public.ecr.aws/docker/library/redis:7@sha256:4fa24486b8bcca8eec45ee0eb166edc674795e53a2b53d1a9ef263eecebaac85
-        ports: ['6379:6379']
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=5s --health-timeout=5s --health-retries=12
+    # PostgreSQL and Redis are NOT service containers. Every registry that served the pinned images refused them in
+    # "Initialize containers", before any step ran: Docker Hub's anonymous pull limit, then Amazon ECR Public's
+    # anonymous data quota (`toomanyrequests: Data limit exceeded`, both attempts on one head; ACCT-DEL-01). Both are
+    # installed instead as packages from each project's own signed apt repository, at the exact versions the images
+    # carried (PostgreSQL 17.11, Redis 7.4.11), on the Ubuntu 24.04 runner those packages are built for - so the runner
+    # is pinned rather than `ubuntu-latest`. Each repository's signing key is refused unless its fingerprint is the one
+    # pinned in the install step; apt then refuses any index or package that key did not sign. A newer version is a
+    # deliberate edit. DATABASE_URL, REDIS_URL, the database, the superuser, its password and the authentication are
+    # what the images provided.
+    runs-on: ubuntu-24.04
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/qandeel_test
       PGPASSWORD: postgres
       REDIS_URL: redis://localhost:6379
     steps:
       - {name: Checkout, uses: actions/checkout@v4}
+      - name: Install PostgreSQL 17 and Redis 7.4 from their official signed apt repositories
+        env:
+          # PGDG (the PostgreSQL project's apt repository). Its archive suite keeps every build it ever published, so
+          # this exact pin does not disappear when a later 17.x minor replaces it in the main suite.
+          PG_APT_URL: https://apt-archive.postgresql.org/pub/repos/apt
+          PG_APT_SUITE: noble-pgdg-archive
+          PG_KEY_URL: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          PG_KEY_FINGERPRINT: B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
+          PG_PACKAGE_VERSION: '17.11-1.pgdg24.04+2'
+          # Redis Ltd.'s own apt repository (packages.redis.io), which keeps every 7.4 build it published.
+          REDIS_APT_URL: https://packages.redis.io/deb
+          REDIS_APT_SUITE: noble
+          REDIS_KEY_URL: https://packages.redis.io/gpg
+          REDIS_KEY_FINGERPRINT: 54318FA4052D1E61A6B6F7BB5F4349D6BF53AA0C
+          REDIS_PACKAGE_VERSION: '6:7.4.11-1rl1~noble1'
+        run: |
+          set -euo pipefail
+          fail() { echo "::error title=API CI database provisioning::$1"; exit 1; }
+          . /etc/os-release
+          [ "$VERSION_CODENAME" = noble ] || fail "the pinned packages are built for Ubuntu 24.04 (noble); this runner is $PRETTY_NAME"
+          # A key file is accepted only if it holds exactly one primary key and that key is the pinned one.
+          trust_key() { # name url fingerprint
+            local file="$RUNNER_TEMP/$1.asc" primaries fingerprint
+            curl -fsSL --retry 3 -o "$file" "$2" || fail "could not download the $1 signing key from $2"
+            primaries="$(gpg --show-keys --with-colons "$file" | grep -c '^pub:' || true)"
+            fingerprint="$(gpg --show-keys --with-colons "$file" | awk -F: '$1 == "pub" { primary = 1; next } primary && $1 == "fpr" { print $10; exit }')"
+            [ "$primaries" = 1 ] && [ "$fingerprint" = "$3" ] ||
+              fail "the $1 signing key at $2 is ${primaries} key(s) with fingerprint '${fingerprint:-none}', not the one pinned key $3"
+            sudo install -D -m 0644 "$file" "/etc/apt/keyrings/qandeel-ci-$1.asc"
+          }
+          trust_key pgdg "$PG_KEY_URL" "$PG_KEY_FINGERPRINT"
+          trust_key redis "$REDIS_KEY_URL" "$REDIS_KEY_FINGERPRINT"
+          echo "deb [signed-by=/etc/apt/keyrings/qandeel-ci-pgdg.asc] $PG_APT_URL $PG_APT_SUITE main" | sudo tee /etc/apt/sources.list.d/qandeel-ci-pgdg.list
+          echo "deb [signed-by=/etc/apt/keyrings/qandeel-ci-redis.asc] $REDIS_APT_URL $REDIS_APT_SUITE main" | sudo tee /etc/apt/sources.list.d/qandeel-ci-redis.list
+          # Install only. No packaged cluster is created and no packaged service is started; the next step starts both,
+          # so the servers the tests reach are the ones this job configured and nothing the runner image left behind.
+          sudo mkdir -p /etc/postgresql-common
+          echo 'create_main_cluster = false' | sudo tee -a /etc/postgresql-common/createcluster.conf >/dev/null
+          printf '#!/bin/sh\nexit 101\n' | sudo tee /usr/sbin/policy-rc.d >/dev/null
+          sudo chmod 0755 /usr/sbin/policy-rc.d
+          sudo apt-get update -q -o Acquire::Retries=3 ||
+            fail "apt-get update failed: a repository did not answer, or an index is not signed by its pinned key"
+          sudo DEBIAN_FRONTEND=noninteractive apt-get install -y -q --no-install-recommends -o Acquire::Retries=3 -o Dpkg::Options::=--force-confold \
+            "postgresql-17=$PG_PACKAGE_VERSION" "postgresql-client-17=$PG_PACKAGE_VERSION" \
+            "redis-server=$REDIS_PACKAGE_VERSION" "redis-tools=$REDIS_PACKAGE_VERSION" ||
+            fail "apt-get could not install postgresql-17 $PG_PACKAGE_VERSION and redis-server $REDIS_PACKAGE_VERSION from the signed repositories"
+          sudo rm -f /usr/sbin/policy-rc.d
+          for pin in "postgresql-17=$PG_PACKAGE_VERSION" "postgresql-client-17=$PG_PACKAGE_VERSION" \
+            "redis-server=$REDIS_PACKAGE_VERSION" "redis-tools=$REDIS_PACKAGE_VERSION"; do
+            installed="$(dpkg-query -W -f='${Version}' "${pin%%=*}" 2>/dev/null || true)"
+            [ "$installed" = "${pin#*=}" ] || fail "${pin%%=*} is '${installed:-not installed}', not the pinned ${pin#*=}"
+            echo "${pin%%=*} $installed"
+          done
+          printf '### API CI databases\n- PostgreSQL `postgresql-17=%s` from %s %s (key %s)\n- Redis `redis-server=%s` from %s %s (key %s)\n' \
+            "$PG_PACKAGE_VERSION" "$PG_APT_URL" "$PG_APT_SUITE" "$PG_KEY_FINGERPRINT" \
+            "$REDIS_PACKAGE_VERSION" "$REDIS_APT_URL" "$REDIS_APT_SUITE" "$REDIS_KEY_FINGERPRINT" >> "$GITHUB_STEP_SUMMARY"
+      - name: Start PostgreSQL 17 and Redis 7.4 and prove both ready before any test
+        run: |
+          set -euo pipefail
+          fail() { echo "::error title=API CI database start::$1"; exit 1; }
+          for port in 5432 6379; do
+            if ss -Hltn "sport = :$port" | grep -q .; then
+              sudo ss -ltnp "sport = :$port" || true
+              fail "port $port is already taken on this runner, so what answers there would not be the server installed above"
+            fi
+          done
+          # PostgreSQL as the official image initialized it: superuser `postgres` with the job's password, UTF8 with the
+          # en_US.UTF-8 locale, UTC, trust on the local socket and scram-sha-256 over TCP, then the database DATABASE_URL names.
+          pg_bin=/usr/lib/postgresql/17/bin
+          pg_data="$RUNNER_TEMP/postgresql-17"
+          pg_log="$RUNNER_TEMP/postgresql-17.log"
+          database="${DATABASE_URL##*/}"
+          locale -a | grep -qix 'en_us\.utf-\?8' || sudo locale-gen en_US.UTF-8 >/dev/null
+          printf '%s\n' "$PGPASSWORD" > "$RUNNER_TEMP/postgres-password"
+          TZ=Etc/UTC "$pg_bin/initdb" -D "$pg_data" --username=postgres --pwfile="$RUNNER_TEMP/postgres-password" \
+            --encoding=UTF8 --locale=en_US.UTF-8 --auth-local=trust --auth-host=scram-sha-256 >/dev/null ||
+            fail "initdb could not create the PostgreSQL 17 data directory"
+          rm -f "$RUNNER_TEMP/postgres-password"
+          "$pg_bin/pg_ctl" -D "$pg_data" -l "$pg_log" -w -t 60 \
+            -o "-c listen_addresses=localhost -c port=5432 -c unix_socket_directories=$RUNNER_TEMP" start ||
+            { cat "$pg_log"; fail "PostgreSQL 17 did not start within 60 s; its log is printed above"; }
+          psql "${DATABASE_URL%/*}/postgres" -X -v ON_ERROR_STOP=1 -q -c "CREATE DATABASE \"$database\"" ||
+            fail "could not create the database $database"
+          pg_isready -d "$DATABASE_URL" -t 30 || fail "PostgreSQL is not accepting connections at DATABASE_URL"
+          server="$(psql "$DATABASE_URL" -X -A -t -q -c 'SHOW server_version')" || fail "could not query PostgreSQL at DATABASE_URL"
+          expected="$(dpkg-query -W -f='${Version}' postgresql-17)"; expected="${expected%%-*}"
+          case "$server" in "$expected"|"$expected "*) ;; *) fail "DATABASE_URL answers PostgreSQL '$server', not the installed $expected";; esac
+          case "$expected" in 17.*) ;; *) fail "the installed PostgreSQL is $expected, not 17";; esac
+          echo "PostgreSQL ready at DATABASE_URL: $server; $(psql --version)"
+          # Redis as the official image runs it: the server's defaults and no configuration file, on the loopback.
+          redis_log="$RUNNER_TEMP/redis.log"
+          redis-server --port 6379 --bind 127.0.0.1 -::1 --daemonize yes --dir "$RUNNER_TEMP" --logfile "$redis_log" ||
+            fail "redis-server did not start"
+          for _ in $(seq 1 30); do
+            [ "$(redis-cli -u "$REDIS_URL" ping 2>/dev/null)" = PONG ] && break
+            sleep 1
+          done
+          [ "$(redis-cli -u "$REDIS_URL" ping 2>/dev/null)" = PONG ] ||
+            { cat "$redis_log"; fail "Redis did not answer PING at REDIS_URL within 30 s; its log is printed above"; }
+          redis_version="$(redis-cli -u "$REDIS_URL" info server | tr -d '\r' | sed -n 's/^redis_version://p')"
+          expected="$(dpkg-query -W -f='${Version}' redis-server)"; expected="${expected#*:}"; expected="${expected%%-*}"
+          [ "$redis_version" = "$expected" ] || fail "REDIS_URL answers Redis '${redis_version:-unknown}', not the installed $expected"
+          case "$expected" in 7.4.*) ;; *) fail "the installed Redis is $expected, not 7.4";; esac
+          echo "Redis ready at REDIS_URL: $redis_version"
+          printf -- '- PostgreSQL ready: %s\n- Redis ready: %s\n' "$server" "$redis_version" >> "$GITHUB_STEP_SUMMARY"
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with: {node-version: '22', cache: npm}
@@ -144,6 +241,7 @@ jobs:
       - {name: "Verify S6-05 mobile Introduction experience static contract (approved copy word for word, one strict client of the existing routes, IW-35 only on the server ENDED, V-1 structural, no AI or Activity)", run: npm run test:s6-05-introduction-mobile-contract}
       - {name: "Verify S6-06 Introduction sharing, photos and continuation static contract (shells over the frozen cores, private object store, erasure from database truth, no service_role Matching path, pinned rclone)", run: npm run test:s6-06-introduction-disclosure-contract}
       - {name: "Verify S6-06 mobile sharing experience static contract (approved copy word for word, one strict client of the CP1 routes, renditions from memory only with no image cache, picker copies deleted, no camera / microphone / storage permission, V-1 kept)", run: npm run test:s6-06-introduction-mobile-contract}
+      - {name: "Verify ACCT-DEL-01 governed account erasure static contract (0130 untouched, twenty DELETE-only guard prefixes, the 0130 call inside one subtransaction, one service_role entry, RESTRICT kept, the pass on the governed erasure)", run: npm run test:acct-del-01-account-erasure-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1057,6 +1155,13 @@ jobs:
       # a closed gate or an injected 40001 leaving both approvals untouched, one terminal commit; reactivation gated last.
       - name: Verify S6-06 SUCCESS and reactivation against real PostgreSQL
         run: npm run verify:introduction-success-reactivation:integration
+      # ACCT-DEL-01 (CP1): migration 0164 - the ONE governed account erasure: the maximum Matching / Introductions footprint
+      # ERASED with zero references; a Shared STANDARD / Public footprint BLOCKED with nothing touched; 0130 refusing after
+      # the module ran rolls EVERYTHING back (RETRY, then an honest BLOCKED); INTEGRITY under a bounded backoff; the
+      # counterpart's retained words, ordinary END and exact reactivation lineage; two-level photo erasure; re-arm; the
+      # coverage census with a planted relation; eight races on two real connections, none deadlocking.
+      - name: Verify ACCT-DEL-01 account erasure across Matching / Introductions against real PostgreSQL
+        run: npm run verify:account-deletion-matching-introductions:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

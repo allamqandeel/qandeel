@@ -1476,3 +1476,57 @@ the four retained commands no longer hang a PostgREST before v16, but any future
 raises `40001` (including the restoration of the six under `QAN-BL-MATCH-01`) is refused by the PROD-RETRY-01 catalog
 guard (`database/verify-migration-0150.mjs`) until it is converted or proven safe. `I-07` and its slices remain
 **CLOSED / FROZEN**; this is not a reopening. Record: [PROD-RETRY-01](e2e/QANDEEL_PROD_RETRY_01_DATA_API_STALE_STATE_IMPLEMENTATION_RECORD_v1.md).
+
+## 49. `ACCT-DEL-01` — controlled forward amendment for account deletion across Matching / Introductions
+
+**Lifecycle:** CP1 implemented on `acct/acct-del-01-account-erasure` and approved by the Product Owner on `90681312`;
+CP2 (the closure) delivered in the same pull request (#345); awaiting the Product Owner's merge decision. Not deployed.
+*(Until CP2: "awaiting the Product Owner's CP1 review, then CP2 (closure) and the merge decision".)* This amendment's
+text is unchanged by CP2. Record:
+[ACCT-DEL-01 implementation record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md). The Product Owner approved
+this amendment as decision **P-4** (2026-10-17); the WP0 called it "§48", which `PROD-RETRY-01` had already taken.
+
+Every `I-07` relation references the account `ON DELETE RESTRICT` and almost every one refuses `DELETE` for every role,
+so an account with any Matching or Introductions history could not be deleted (`QAN-BL-ACCT-01`). Forward migration
+`0164_account_deletion_matching_introductions_v1.sql` adds ONE governed account erasure and amends the frozen surface in
+exactly these places, and nowhere else:
+
+- **The twenty `I-07` DELETE guards** (`0108`, `0110`, `0113`, `0115`, `0116`, `0117`, `0122`, `0156`, `0162`) are
+  redefined in place, the `0130` pattern: each keeps its body byte for byte after one prefix that admits a `DELETE` —
+  never an `UPDATE` — only when the transaction-local `qandeel.account_erasure` equals the current transaction id AND an
+  authorization row for that transaction exists, which only the erasure coordinator writes. The GUC alone, the row
+  alone, or a stale transaction id each still refuse.
+- **One named `NO_BACKDOOR` exception of a new kind:** `public.server_erase_account_v1(uuid)`, `service_role` only — a
+  system entry, never a human's decision wrapper. Its coordinator and module are executable by no role. No other
+  `service_role` path reaches a Matching write; the six suspended commands stay suspended; no `authenticated` path is
+  added; the `I-07B` … `I-07D` cores stay executable by no application role.
+- **A live Introduction ends exactly as the erased human's own S6-02 END would:** through `end_own_introduction_v1` over
+  the frozen `0116` core, with that human as `auth.uid()` — authorized by their own re-authenticated, grace-expired
+  deletion request, and by nothing else. The counterpart sees an ordinary END (`PAUSED / POST_INTRODUCTION`, the claim
+  released, their own frozen entitlement), and nothing that says the account was deleted.
+- **The counterpart's retained view (P-2, consistent with CW2-03 §37):** they keep their own human words from that
+  Introduction — a subset of their own frozen closed-view entitlement, never a widening — in two relations they own
+  (`introduction_retained_views`, `introduction_retained_view_items`). Four readers are replaced forward to accept it:
+  the Introduction branch of `resolve_shared_world_closed_history_visibility_v1`, `read_my_introduction_history_v1`,
+  `list_my_introduction_worlds_v1` (listed `ENDED`, the proposal identity they held, no name) and
+  `read_my_introduction_messages_v1` (one `ENDED` row, as after END). The erased human's words, name, disclosures and
+  photos — and the counterpart's disclosures and photos shown only to them — are erased; the existing owner deletion
+  works on the retained words (R-5).
+- **The counterpart's continuity (CW2-06):** `matching_counterpart_erasure_releases` freezes, at the erasure and under
+  its locks, the exact gate 7a–7c proof the `0117` core would otherwise need rows naming the erased human for. The `0117`
+  core is replaced forward so gate 7a also accepts that release of the exact anchor and records the reactivation in the
+  sibling `matching_counterpart_erasure_reactivation_commands`; both idempotency passes read both relations. Gates 1–6,
+  the lock law, the single instant and the `CW2-08` gate LAST are unchanged; no proposal is touched; reactivation stays
+  the human's own act and answers `NOT_AVAILABLE_NOW` while `CW2-08` is closed, exactly as after any END. A counterpart
+  who had already reactivated keeps that audit, moved to the sibling relation with the same identities.
+
+What does NOT change: `0130` (byte for byte, with its own GUC, table and grants); every foreign key (`RESTRICT` stays the
+safety net); every seam (`NOT_EVALUATED`); every other `I-07` body. No trigger is disabled and no replication role is
+used. Shared `STANDARD`, Public and Replay footprints are not erased: they answer a truthful, recorded `BLOCKED` with
+their residue class and stay with `QAN-BL-ACCT-01`'s future owners (P-1).
+
+**Verification.** `verify-migration-0164.mjs` (real PostgreSQL, real `SET ROLE`, two real connections for the races);
+re-anchored, with reasons in place: `verify-migration-0149.mjs` (`NO_BACKDOOR` + probes f12 / f13),
+`verify-migration-0122.mjs` (the erasure census names the account erasure), `verify-migration-0161.mjs` (the three
+replaced readers' defining migration is now `0164`). `I-07` and its slices remain **CLOSED / FROZEN**; this is a
+controlled amendment, not a reopening of Product scope.

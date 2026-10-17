@@ -564,6 +564,13 @@ jobs:
       # 102–270 s. 300 s is the value `t12-phase-m-cloud-validation.yml` already measured for the same exception.
       # Job-scoped, so the Android consumer keeps its own default.
       MAESTRO_DRIVER_STARTUP_TIMEOUT: 300000
+      # ACCT-DEL-01 CI-iOS correction. The ONE port the XCTest driver serves on, for the probe and the smoke alike.
+      # In cli-2.10.0, `hierarchy` serves the driver on `defaultXcTestPort` 22087 (MaestroSessionManager), but `test`
+      # without `--driver-host-port` takes an OS-chosen free port (TestCommand.selectPort: `ServerSocket(0)`). So the
+      # smoke never found the driver the probe had proven. It cold-launched a SECOND runner while the first was still
+      # alive. Run 39047797516: probe on 22087 (runner pid 11920, alive until 16:42:40); smoke on 51962 (runner pid
+      # 17221), whose `/deviceInfo` stalled finding SpringBoard until the driver's 100 s handler bound answered 500.
+      MAESTRO_IOS_DRIVER_PORT: 22087
     steps:
       - {name: Checkout, uses: actions/checkout@v4}
       - name: Setup Node.js 22
@@ -654,13 +661,32 @@ jobs:
       #      launch; uninstall the runner app; reboot the simulator, which restarts its XCTest services and keeps
       #      the verified app installed. Then probe once more. A second failure stays red.
       # The smoke itself is never retried, and its assertions are unchanged.
+      #
+      # ACCT-DEL-01 CI-iOS correction. Point 1 above never held in cli-2.10.0: the smoke picked its own port
+      # and launched a second runner (MAESTRO_IOS_DRIVER_PORT). The probe now proves the driver the smoke will
+      # actually use, and the smoke names that same port:
+      #   - `hierarchy` (which itself sends /deviceInfo, then /viewHierarchy);
+      #   - then, on MAESTRO_IOS_DRIVER_PORT, `GET /status` (the check by which `test` decides to reuse the driver,
+      #     `LocalXCTestInstaller.startXCTestRunner`);
+      #   - then the exact first request of the smoke, `POST /deviceInfo` with `{}`, bounded at 110 s around the
+      #     driver's own 100 s handler bound, and answered only by a DeviceInfo.
+      # Any of the three failing is a readiness failure, and gets the same ONE clean recovery as before.
       - name: Maestro driver readiness (bounded; at most one clean driver recovery)
         timeout-minutes: 22
         run: |
-          if node scripts/validation/bounded-run.mjs --seconds 480 --label ios-driver-readiness --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --no-reinstall-driver --compact; then
+          driver_answers() {
+            curl --fail --silent --show-error --max-time 10 "http://127.0.0.1:$MAESTRO_IOS_DRIVER_PORT/status" >/dev/null ||
+              { echo "::warning title=INFRASTRUCTURE — ios-driver-readiness::no XCTest driver serves /status on port $MAESTRO_IOS_DRIVER_PORT, the port the smoke uses"; return 1; }
+            info="$(curl --fail --silent --show-error --max-time 110 -X POST -H 'Content-Type: application/json' --data '{}' \
+              "http://127.0.0.1:$MAESTRO_IOS_DRIVER_PORT/deviceInfo")" ||
+              { echo "::warning title=INFRASTRUCTURE — ios-driver-readiness::the XCTest driver on port $MAESTRO_IOS_DRIVER_PORT did not answer POST /deviceInfo"; return 1; }
+            case "$info" in *'"widthPoints"'*) echo "XCTest driver ready on port $MAESTRO_IOS_DRIVER_PORT; /deviceInfo: $info" ;;
+              *) echo "::warning title=INFRASTRUCTURE — ios-driver-readiness::/deviceInfo answered without a DeviceInfo: $info"; return 1 ;; esac
+          }
+          if node scripts/validation/bounded-run.mjs --seconds 480 --fail-fast maestro-xctest-device-info-500 --label ios-driver-readiness --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --no-reinstall-driver --compact && driver_answers; then
             exit 0
           fi
-          echo '::warning title=INFRASTRUCTURE — ios-driver-readiness::the XCTest driver never answered; recording evidence, then ONE clean driver recovery'
+          echo '::warning title=INFRASTRUCTURE — ios-driver-readiness::the XCTest driver did not prove ready; recording evidence, then ONE clean driver recovery'
           bash scripts/validation/ios-driver-diagnostics.sh "$IOS_SIM_UDID"
           pkill -f "test-without-building.*$IOS_SIM_UDID" || true
           xcrun simctl terminate "$IOS_SIM_UDID" dev.mobile.maestro-driver-iosUITests.xctrunner || true
@@ -668,13 +694,20 @@ jobs:
           xcrun simctl shutdown "$IOS_SIM_UDID"
           xcrun simctl boot "$IOS_SIM_UDID"
           node scripts/validation/bounded-run.mjs --seconds 300 --label ios-simulator-reboot -- xcrun simctl bootstatus "$IOS_SIM_UDID" -b
-          node scripts/validation/bounded-run.mjs --seconds 480 --label ios-driver-readiness-after-recovery --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --no-reinstall-driver --compact
+          node scripts/validation/bounded-run.mjs --seconds 480 --fail-fast maestro-xctest-device-info-500 --label ios-driver-readiness-after-recovery --quiet -- maestro --device "$IOS_SIM_UDID" hierarchy --no-reinstall-driver --compact
+          driver_answers
       # Bounded at the STEP for the same reason. The simulator is already booted, the verified app already
       # installed and the driver already proven, so this bounds the Maestro smoke alone. A timeout stays red, like
       # any failure.
+      # ACCT-DEL-01 CI-iOS correction:
+      #   - `--driver-host-port` makes the smoke connect to the driver the probe proved, instead of launching
+      #     another one.
+      #   - `--fail-fast` ends the run at once on the ONE known Maestro / XCTest failure: the CLI dead (uncaught) of a
+      #     driver HTTP 500 on /deviceInfo, after which the JVM hangs to the bound. Exit 125, INFRASTRUCTURE, red. Any
+      #     other failure, including every app assertion, is untouched and still ends in its own status or at the bound.
       - name: Boot smoke on the iOS simulator
         timeout-minutes: 15
-        run: node scripts/validation/bounded-run.mjs --seconds 780 --label ios-boot-smoke -- maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml --no-reinstall-driver
+        run: node scripts/validation/bounded-run.mjs --seconds 780 --fail-fast maestro-xctest-device-info-500 --label ios-boot-smoke -- maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml --no-reinstall-driver --driver-host-port "$MAESTRO_IOS_DRIVER_PORT"
       # Evidence only, on a failure that has already happened. It reads logs and changes no result: the job is red
       # before this runs, and stays red.
       - name: Driver diagnostics (failure only; read-only)

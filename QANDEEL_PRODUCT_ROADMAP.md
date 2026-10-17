@@ -349,6 +349,7 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
   - `S6-05` — Mutual Match & Introduction World;
   - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation (photos and the `FULL_NAME` display consent included); *(2026-10-16: in progress, CP1 delivered, §6.15; 2026-10-17: CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.16)*;
   - `S6-07` — Activity, Direct Entry and Final Integration.
+  - *(Product Owner, 2026-10-17:)* `ACCT-DEL-01` — Account Deletion Across Matching / Introductions, before S6-07 (`QAN-BL-MATCH-01`'s dependency); CP1 delivered, §6.17; CP1 approved and CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.18.
 
   The package states that every task must undergo research, repository truth, anti-duplication, the Product Decision /
   Copy Gate where required, a Product Owner-approved Task Contract, proportional validation, independent review and the
@@ -574,3 +575,47 @@ as written.
   ([S6-06 record](docs/e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md)).
 - **Still closed:** every launch gate; nothing is shared, stored or shown in production. Issue #322 stays open.
 - **Next:** the Product Owner's review of PR #344 and the merge decision («ادمج»). S6-07 is not started.
+
+### 6.17 Execution note — 2026-10-17 (S6-06 merged; ACCT-DEL-01 CP1 delivered)
+**Recorded:** 2026-10-17 by ACCT-DEL-01, in the ACCT-DEL-01 pull request (not merged). This is a status note only; §6.9 …
+§6.16 stay as written.
+- **Merged:** S6-06 through PR #344 as `4233c06739149fb19b441db782837497815d8be6` (2026-10-17; not deployed).
+- **Decided:** the Product Owner approved the ACCT-DEL-01 WP0 report v1, its review addendum v1.1 and decisions P-1 … P-4
+  (2026-10-17), and authorized **ACCT-DEL-01 — Account Deletion Across Matching / Introductions** in one pull request (CP1,
+  then CP2), before S6-07: `QAN-BL-MATCH-01`'s mandatory dependency. `QAN-BL-ACCT-01` is re-owned to ACCT-DEL-01 and stays
+  open (P-1).
+- **Delivered (CP1):** migration `0164` — one governed account erasure over the account's whole Matching / Introductions
+  footprint and the unchanged `0130` Personal erasure, in one transaction or nothing; the counterpart's retained words, an
+  ordinary END and an exact Matching lineage; residue classes with recovery; two-level photo erasure — its real-PostgreSQL
+  verifier and static contract, and the API pass on it
+  ([ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md)).
+- **Not closed by it:** account deletion for Shared `STANDARD` and Public (`ACCT-DEL-02`) and Replay (Stage 7); those
+  footprints answer a truthful, recorded `BLOCKED`. No Connected World other than Matching / Introductions has a
+  complete, proven account-deletion path.
+- **Still closed:** every launch gate and CW2-08.
+- **Next:** the Product Owner's CP1 review. CP2 (the closure, same pull request) only after its approval. S6-07 is not
+  started.
+
+### 6.18 Execution note — 2026-10-17 (ACCT-DEL-01 CP1 approved; CP2 delivered; ACCT-DEL-01 closed, not merged)
+**Recorded:** 2026-10-17 by ACCT-DEL-01's closing change (CP2), in the same pull request (#345, not merged). This is a status
+note only; §6.17 stays as written.
+- **Decided:** the Product Owner verified CP1 independently on GitHub and approved it on its exact head `90681312` (API CI
+  and Mobile CI green, `0164` on real PostgreSQL included), and started CP2 in the same pull request.
+- **Delivered (CP2, documentation and governance only):**
+  - **Status:** ACCT-DEL-01 is **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — NOT MERGED / NOT DEPLOYED**
+    ([ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md) §8).
+  - **Handled:** account deletion across Matching / Introductions.
+  - **Still open:**
+    - `QAN-BL-ACCT-01` stays open, re-owned to `ACCT-DEL-02` (Shared `STANDARD` / Public);
+    - `QAN-BL-ACCT-02` (Replay) is owned by Stage 7.
+  - **Release gate:** `QAN-BL-PROD-09` is a mandatory condition of `HOSTED-DEPLOY-01`. No World opens in production
+    without an automated account-deletion coverage check read on the hosted project. The repository's coverage check is
+    not by itself a deployment block.
+- **Sequencing (Product Owner direction, recorded; it authorizes nothing):**
+  - **S6-07:** `QAN-BL-MATCH-01`'s `ACCT-DEL-01` dependency is met in engineering from the merge. S6-07 — Activity,
+    Direct Entry and Final Integration — stays the next Stage 6 task, not started, needing its own authorization.
+  - **`ACCT-DEL-02`:** not opened.
+  - **Stage 7:** LATER.
+- **Still closed:** every launch gate, CW2-08 and the six suspended Matching commands. Account deletion in QANDEEL as a
+  whole is not closed.
+- **Next:** the Product Owner's review and merge decision («ادمج») on the final head. S6-07 is not started.

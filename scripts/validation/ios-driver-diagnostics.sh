@@ -18,6 +18,13 @@ echo '::group::simulators (booted)'
 xcrun simctl list devices booted 2>&1 || true
 echo '::endgroup::'
 
+# ACCT-DEL-01 CI-iOS correction: how many XCTest runner launches are alive, and which port each driver serves.
+# Run 39047797516 had two (ports 22087 and 51962) at once. The smoke must reuse the probe's single driver.
+echo '::group::XCTest runner launches and driver ports (live)'
+pgrep -fl 'test-without-building' 2>&1 || echo 'no test-without-building process'
+lsof -nP -iTCP -sTCP:LISTEN 2>/dev/null | grep -i 'maestro-d\|xctrunner\|iosUITests' || echo 'no XCTest driver port listening'
+echo '::endgroup::'
+
 for dir in $(ls -td "$HOME"/.maestro/tests/*/ 2>/dev/null | head -n 3); do
   echo "::group::maestro.log, launch lines — $dir"
   grep -nE 'Running command line operation|Install|test-without-building|Exception|ERROR|WARN' "$dir/maestro.log" 2>/dev/null | head -n 60 || true
