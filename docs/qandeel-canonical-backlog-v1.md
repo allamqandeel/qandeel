@@ -205,6 +205,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MATCH-04` | Understanding Readiness Before Real Matching | `Stage 8A — QANDEEL AI Brain / Production LLM Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-MATCH-05` | The Confirmed Introduction First Name Is Not the Canonical Matching First-Name Source | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-MATCH-06` | No Runtime Producer Forwards a First-Approved Proposal to the Second Recipient | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-LAUNCH-05` | Introduction Photos on iOS: Device Cache Proof and Store Review of the Purpose Strings | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
 
 ---
 
@@ -2566,6 +2567,38 @@ implementation authorization, after the anti-duplication check above. Nothing he
 Admitted under BG-06 / BG-08 by S6-05 at CP2 (2026-10-16), at the Product Owner's R-4 decision, after the
 anti-duplication check above. Nothing here authorizes implementation (BG-07).
 
+### `QAN-BL-LAUNCH-05` — Introduction Photos on iOS: Device Cache Proof and Store Review of the Purpose Strings
+
+Admitted under BG-06 / BG-08 by S6-06 at its closing change (2026-10-17): validation explicitly carried forward that no
+task in this repository can perform. Nothing here authorizes implementation (BG-07).
+
+- **Title / Finding:** S6-06 (CP2) proved on an Android emulator that no Introduction photo byte remains in the app's
+  private storage after the photo flows (the picker's copy deleted, renditions drawn from memory with expo-image's cache
+  off) and that the build requests no camera, microphone, storage or media permission. The same proof on **iOS** — no image
+  file in `Library/Caches` or `tmp` after the flows (expo-image-picker's `ImagePicker` directory, and the Caches root
+  when the caches path ends in "/") — needs an iOS simulator or device run that this Windows host cannot make; Mobile CI
+  builds and boot-smokes iOS but runs no photo flow. And the iOS build removes the camera and microphone purpose strings
+  (`cameraPermission` / `microphonePermission: false`) while keeping the app's own Photos purpose string (PD-83, Arabic
+  and English): whether App Store review accepts that binary without ITMS-90683 is known only at a store submission.
+- **Source:** [S6-06 implementation record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §11.5, §13.2 and §16; WP0 v1.1
+  §5 (the iOS Simulator cache proof) and correction 4 (ITMS-90683), approved by the Product Owner on 2026-10-16.
+- **Anti-duplication:** `QAN-BL-LAUNCH-04` is the physical-Android Living Analysis stability proof; `QAN-BL-NOTIF-05`
+  the native-Push device gates; `QAN-BL-CI-01` the iOS simulator Maestro driver; `QAN-BL-PROD-08` the hosted object
+  store. None carries the iOS photo-cache proof or the store review of the purpose strings. The ID `QAN-BL-LAUNCH-05` was
+  unused.
+- **Why deferred:** it needs a macOS host with the iOS simulator (or an iPhone) and an App Store Connect submission, which
+  no task has had; in production photos are closed by CW2-08 in any case.
+- **Owner task:** `Stage 9 — Economy + Launch Closure (release-readiness gate)`. An earlier validation owner may take it when a macOS host or an iPhone becomes available; that
+  change is recorded here as a re-owning, never made silently.
+- **Severity:** `MEDIUM`. A photo file left on an iPhone would break the Product Owner's no-retention rule for the most
+  sensitive Introduction material; a rejected binary would delay the release, not expose data.
+- **Reopen condition:** automatic before photos are offered to any real user on iOS, or before the first App Store
+  submission that carries expo-image-picker.
+- **Required future property:** after the S6-06 photo flows on iOS (choose, upload, preview two stages, draw the other
+  person's photo), no JPEG / PNG / WebP / HEIC file under the app's container (`Library/Caches`, `tmp`, `Documents`),
+  proven by a file scan and not by a listing alone; Info.plist with PD-83 and no camera, microphone or add-to-library key,
+  accepted by App Store review without ITMS-90683.
+
 ## 6. Tombstones
 
 ### `QAN-BL-INTEL-01` — Personal Evidence Invalidation → Derived Understanding Re-evaluation (PG-02)
@@ -3065,16 +3098,16 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 33 |
+| `DEFERRED — OWNED` | 34 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 10 |
 | `CLOSED — TOMBSTONE` | 24 |
-| **Total** | **71** |
+| **Total** | **72** |
 
 | Severity | Count |
 | --- | ---: |
 | `HIGH` | 40 |
-| `MEDIUM` | 29 |
+| `MEDIUM` | 30 |
 | `LOW` | 2 |
 
 These totals are counted mechanically from the §4 index, one row per ID.
@@ -3874,6 +3907,27 @@ checkpoint rule (every checkpoint updates the record and the locators; the last 
 - **Untouched:** every other item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-MATCH-01`,
   `QAN-BL-MATCH-06` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN).
 - **Latest index: 71 items; 33 / 4 / 10 / 24 by status, 40 / 29 / 2 by severity**, recounted mechanically from §4.
+
+
+**S6-06 closing change (CP2, 2026-10-17; the S6-06 pull request, not merged; effective from its merge).** BG-08 / BG-09 at
+S6-06's closure, in its last checkpoint ([S6-06 record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §15), under the
+Product Owner's checkpoint rule (no separate documentation task). The paragraph above stays as the record of the register
+before it.
+- **Inherited:** none (BG-05: no item named `S6-06` at kickoff), so nothing is tombstoned or re-owned. The scope earlier
+  tasks assigned to S6-06 - photos, progressive disclosure, SUCCESS, reactivation and the `FULL_NAME` display consent -
+  is delivered by CP1 (`0162`, `0163`, the API) and CP2 (mobile).
+- **Admitted by S6-06:** `QAN-BL-PROD-08` (CP1; owner `HOSTED-DEPLOY-01`, unchanged) and, at this closure,
+  `QAN-BL-LAUNCH-05` (`MEDIUM`, `DEFERRED — OWNED`, owner `Stage 9 — Economy + Launch Closure (release-readiness gate)`): the iOS photo-cache proof and the store
+  review of the purpose strings (§5). Checked against all 71 earlier IDs; the ID had not been used.
+- **Checked and not admitted (BG-06):** a SUCCESS producer and real transitions (Stage 8A, GATE-33); photo moderation and
+  launch clearance (CW2-08 / Stage 9); Activity, Push and Direct Entry for shares (S6-07); the physical Android / TalkBack
+  proof (the proposal S6-04 and S6-05 left with the Product Owner; reported, not admitted). Each has its owner.
+- **BG-05:** S6-06 owns no open item from its merge; `S6-07` owns three (`QAN-BL-PRIV-04`, `QAN-BL-MATCH-01`,
+  `QAN-BL-MATCH-06`).
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-ACCT-01`,
+  `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN). CP2 adds no relation, so no
+  deletion or export footprint changes beyond CP1's dated notes.
+- **Latest index: 72 items; 34 / 4 / 10 / 24 by status, 40 / 30 / 2 by severity**, recounted mechanically from §4.
 
 ## 8. What is deliberately not in this backlog
 

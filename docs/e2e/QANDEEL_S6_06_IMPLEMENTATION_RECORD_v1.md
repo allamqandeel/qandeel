@@ -5,9 +5,8 @@
 **Product authority:** the Product Owner's S6-06 Task Contract v1.0; WP0 v1.1 and its five-point correction, approved
 on 2026-10-16 («S6-06 — اعتماد WP0 وبدء CP1»), with decisions D-01 … D-12 approved within the agreed limits and three
 execution conditions inside CP1. No merge or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **IN PROGRESS — CP1 DELIVERED (SECURE BACKEND & MEDIA) — COPY GATE APPROVED (74 / 74) AND D-04 DECIDED (2026-10-17) — VISUAL GATE PRESENTED, NOT APPROVED —
-NOT MERGED / NOT DEPLOYED** (2026-10-16). CP1 waits for the Product Owner's review; CP2 (mobile, end-to-end and closure)
-is not started, and no user-interface code exists.  
+**Status:** **S6-06 CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 AND CP2 DELIVERED — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED** (CP1 2026-10-16; the Visual Gate rev.2 and the Copy Gate closed, CP2 and the closure
+2026-10-17, §10 – §17). One pull request (#344); merging needs the Product Owner's explicit «ادمج».  
 **Base:** `main` = merged PR #343 (S6-05) at `88a475ab6798edbf511e42f78a2f70e5cdb37c34`, re-verified before the branch.  
 **Branch:** `s6/s6-06-progressive-disclosure-photos` (one pull request for the whole task).  
 **Migrations:** `0162_introduction_progressive_disclosure_media_v1.sql` and `0163_introduction_success_reactivation_v1.sql`
@@ -207,3 +206,203 @@ Every mobile surface and the picker (CP2, after both gates close); the native pe
 cache-directory proof (CP2); a SUCCESS producer (Stage 8A); content moderation of photos (CW2-08 / Stage 9); Activity,
 Push and Direct Entry (S6-07); erasure telemetry beyond the count-only state RPC (the PROD-OPS-01 outcome map is pinned
 by its own contract; CP2 decides it inside S6-06).
+
+## 10. The Product Owner's decisions after CP1 (2026-10-17)
+
+CP1 was proven on GitHub at the exact head `f474d7a4` (API CI and Mobile CI green), then presented with the Visual Gate
+rev.2 package. The Product Owner decided, in two messages, both recorded word for word in substance in the
+[gate record](QANDEEL_S6_06_VISUAL_COPY_GATE_v1.md) §4 and §5:
+
+| Decision | Recorded |
+|---|---|
+| «S6-06 — اعتماد Copy Gate» | the 74 rows approved; the 16 gender-neutral Arabic alternatives under LANG-01; PD-03 «مشاركاتي»; C-1 … C-8 as recommended with PD-79 kept; the SUCCESS rows approved and never shown before Stage 8A; D-04 = 12 / 48 / 1600, unchanged; no separate test cycle for the copy edits |
+| «S6-06 — اعتماد البوابات وبدء CP2» | Visual Gate rev.2 approved (P0 – P16, the ✓ choice pattern for the personal keys); the Copy Gate confirmed; CP2 authorized inside S6-06 and PR #344 under six conditions (V-1 kept, CP1's limits and gates kept, the picker's temporary files and the permissions as WP0 designed them, both languages / directions / appearances and accessibility, focused tests with the mandatory CI running normally, the documents updated in the same work); no new pull request, no closed task reopened, no merge or deployment without explicit approval |
+
+D-04's values are the pipeline's current values (CP1), so no code changed for them.
+
+## 11. CP2 — what was built
+
+### 11.1 Mobile clients (`apps/mobile/src/runtime-entry`)
+
+- **`introduction-sharing-api.ts`** — one strict client of the CP1 sharing routes (§2.3): the World's disclosures, a text
+  share, the photo upload (the raw bytes, in memory), a stage, the removal, a rendition, the display-name grant and
+  revoke, and the reader's own shares. Fail-closed decoding: an extra field, an unknown word, the other person's series,
+  a stage that does not fit its type, or a personal key without its kind makes the answer unusable. A rendition is asked
+  for `no-store` and handed back only as an in-memory `data:image/jpeg;base64,…` URI; it is never a URL, a header or a
+  cache key.
+- **`introduction-continuation-api.ts`** — SUCCESS (read, approve, withdraw) and resume. Nothing about the other person's
+  decision can come back; no route prepares a transition.
+- Both are built on the AC-01 seam in `mobile-runtime-entry.ts` (the seam sets the bearer and passes the platform's
+  request and response through, so the photo's bytes go out and a rendition's come back unchanged) and are retired with
+  the runtime generation. The runtime-entry barrel adds exactly these two classes.
+
+### 11.2 Controllers (`apps/mobile/src/introductions`, `apps/mobile/src/settings`)
+
+- **`introduction-sharing-controller.ts`** — the World open now: its read, every sharing act, the display name and
+  SUCCESS. An act whose answer was lost keeps its command id (the same request again); a definitive answer forgets it;
+  one act at a time. A rendition is fetched only to be drawn, held in memory for the open World only, dropped the moment
+  its share leaves the server's read, and everything is dropped — with expo-image's memory cache — when the World closes
+  or the generation ends.
+- **`photo-source.ts`** — the system picker for one photo (no camera, editing, EXIF or base64; iOS returns a compatible
+  JPEG for a HEIC original); the picker's copy is read into memory once and deleted exactly (`new File(uri).delete()` after
+  `.exists`); every URI it hands back goes into an in-memory ledger; the `ImagePicker` cache sub-directory is swept on
+  opening the photo flow and once per runtime generation; on Android a result delivered after the app was stopped is
+  deleted unused. Nothing is written or persisted.
+- **`participation-controller.ts`** — the status line: only the pauses the Introduction lifecycle produces (during an
+  Introduction, after one, after SUCCESS, and OFF after having taken part); RESUME carries no channel, an ACTIVATE from OFF
+  is the reader's manual entry; a lost answer keeps its id.
+- **`settings/introduction-shares-controller.ts`** — the Settings page: read when opened; a text share deleted through the
+  existing Shared owner deletion, a photo removed whole, the display name revoked — in every Introduction state.
+
+### 11.3 Screens (the approved P0 – P16)
+
+| Screens | Where |
+|---|---|
+| P0 | `IntroductionWorldSurface.tsx`: «المشاركة» (PD-00) beside «إنهاء التعارف» while the Introduction lives, in IW-26's quiet text style; V-1 is otherwise unchanged (the opening, the seam, the thread and the composer are S6-05's) |
+| P1 – P9, P14a / P14c, P15 | `IntroductionSharingPanel.tsx`, a level of the World (Back returns to it exactly as it was): the panel, the type sheet, the text steps (the ✓ choice pattern for the four keys), the exact preview and one explicit act, the photo explained before choosing, each stage previewed exactly as it will be sent and shared as its own act, the other person's photo at the newest stage they shared, deletion and removal behind their true words, the gate closed said plainly, and the display-name consent |
+| P15g | the World's title and the other person's name on their words are the full name ONLY as the server returns it (`otherDisplayName`), otherwise the first name |
+| P10 – P12 | `IntroductionSuccessCard.tsx`: the proposal in the opening's place inside the same seam, ONLY when the server returns a real transition; the reader's own approval and withdrawal; COMPLETED hands the same World to the existing Shared World screen (`SharedWorldArea`) |
+| P13 / P14b | `IntroductionsStatusLine.tsx` in «التعارف مع قنديل» |
+| P16 | `settings/IntroductionSharesSection.tsx`: the row in «الخصوصية والبيانات» beside «كلامك في عوالم مشتركة انتهت عضويتك فيها», and the page |
+
+Everything is drawn from the existing Introductions parts and the canonical palette; no colour literal, token, type role
+or component library is added. The four rendering details that follow from that rule (sheets without a scrim colour,
+the P1b display-name line drawn as the P15 section, the Settings page title in the existing sub-page pattern, the ring)
+are recorded in the gate record §5. One shared part changed: `Field` gained an optional hidden label and an invalid
+state, and now blurs its input as it unmounts (§13.2).
+
+### 11.4 Copy
+
+`introduction-sharing-copy.ts` is generated from the gate record's table: the 74 APPROVED rows word for word, in both
+languages, with a test that compares the two. Reused rows come from their own modules (Back, Cancel, Try again, «تعذّر
+ذلك الآن.», «هذا غير متاح الآن.», «جارٍ الفتح», offline, «متابعة», IW-31, «تم الحذف.»). PD-83 lives in the native build.
+
+### 11.5 Native build (`apps/mobile/app.json`)
+
+- **Dependencies (D-03):** `expo-image ~57.0.4` and `expo-image-picker ~57.0.16`, Expo SDK 57's bundled versions (installed
+  57.0.5 / 57.0.20).
+- **Plugin:** `expo-image-picker` with `cameraPermission: false`, `microphonePermission: false` and `photosPermission` =
+  PD-83 (English); `locales/ar.json` and `locales/en.json` carry PD-83 in both languages as `InfoPlist.strings` — the
+  app's own purpose string is kept so the build stays valid (ITMS-90683).
+- **Android:** `blockedPermissions` READ / WRITE_EXTERNAL_STORAGE (the picker library and expo-file-system both declare
+  them up to API 32); the plugin blocks CAMERA and RECORD_AUDIO. The system Photo Picker needs no permission.
+- **Gate:** `apps/mobile/scripts/verify-introduction-photo-native.mjs` (`npm run prebuild:introduction-photo:mobile`, in
+  Mobile CI after the W2-02 gate) proves the GENERATED projects: every one of those four permissions declared
+  `tools:node="remove"`, no READ_MEDIA_* permission, Info.plist's purpose string = PD-83 and no camera / microphone /
+  add-to-library key, PD-83 in `ar.lproj` and `en.lproj`; six planted defects, each caught.
+
+### 11.6 API: the erasure telemetry decision (CP1 §9)
+
+The erasure worker's outcomes are now visible as content-free telemetry through PROD-OPS-01's existing operational
+relation, as A3-02, AI-COST-01 and INTEL-TM-01 added theirs: domain `INTRODUCTION_MEDIA_ERASURE`, operations `sweep`,
+`erase` (`success` = DELETE proven by HEAD, `deferred`, failures) and `reconcile`; finite classes only — never a key,
+handle, World, person or count as a label; fail-soft (a telemetry failure never reaches an erasure). The worker takes the
+telemetry service as an optional dependency, so the CP1 proofs construct it unchanged. Nothing else in the API changed.
+
+## 12. Languages, directions, appearances and accessibility
+
+- Arabic (RTL) and English (LTR) by logical layout only (start / end); a contact is written left to right in both. Dark
+  and Light from the one appearance authority; the canonical palette only.
+- Every act is a `Control` of at least 44 points with its accessible name and state (busy, disabled, checked); the
+  personal keys are radios; each step's heading is where the screen reader arrives once; a server's answer is announced
+  in a polite live region; a rendition carries an accessible name (PD-10 with its stage); what a sheet stands over is
+  hidden from the screen reader while it is open; the ring turns only without Reduced Motion.
+
+## 13. Verification
+
+### 13.1 Local (this host)
+
+- **Mobile jest-expo:** the three new suites — `introduction-sharing.test.tsx` (25: the Copy Gate word for word against the
+  record and PD-83 against the native build, the 16 neutral rows, P0 – P16 in Arabic / English and Dark / Light, the retry
+  identities, the in-memory renditions and their release, SUCCESS only with a transition), `photo-source.test.ts` (6) and
+  `introduction-sharing-api.test.ts` (9); the affected suites (introductions, settings, shared world, runtime entry, the
+  proof worlds). The whole suite: 2626 tests, 2620 pass; the 6 that fail are the known local baseline (the W1A-01 and session-end cases of `depth.test.tsx` and `w2-account-access.test.tsx`), which fail identically on `f474d7a4` before CP2 and pass in CI.
+- **API:** the disclosure, continuation and observability specs (84), including the new erasure-telemetry spec.
+- **Type-check and lint:** `tsc --noEmit` clean for mobile and API; `expo lint` 0 errors.
+- **Root contracts:** every root contract (1425), including the new `s6-06-introduction-mobile-contract` (8) and `forward-safety`, after the re-anchors of §14.
+- **Native gate:** `verify-introduction-photo-native` on the generated Android project (Windows generates Android only;
+  CI on Linux generates and proves both) — pass, three planted defects caught.
+
+### 13.2 The device proof (Android emulator, validation only)
+
+The approved screens on a real Android runtime, built from this branch with the S4-01 proof entry (validation tooling
+only, restored after the build) and the SYNTHETIC S6-06 stand-in
+(`apps/mobile/src/integration/__validation__/s606-proof-introduction-sharing.ts`), which answers as only a CLEARED CW2-08
+seam and a Stage 8A transition would. Evidence (outside the repository, as S6-05's): `.s6-06-reports/cp2-native-proof/`
+— `S6-06_CP2_DEVICE_EVIDENCE.pdf` (31 pages), `png/`, the five legs' screenshots, scans and logs, and `scripts/`.
+
+| Item | Value |
+|---|---|
+| Code / APK | `4fe3c1cc` (the later commits move five constants onto the runtime-entry barrel and add the documents; nothing a device runs changes); release, x86_64, sha256 `36cd37f46b63…`; the GENERATED release manifest of the proof build (discarded) allowed cleartext only so the stand-in could reach the proof media server on the host |
+| Device | emulator `QANDEEL_API36` (Android 16, `google_apis`), 1080 × 2400 px at 420 dpi (411 dp) and 480 dpi (360 dp) |
+| Legs | Arabic Dark, Arabic Light, English Dark, English Light at 411 dp, and Arabic Dark at 360 dp: Maestro 2.10.0, one clean install each, 30 screenshots each, every step passed |
+| The photo | one synthetic drawn image (no person) in the emulator's gallery, chosen in the system Photo Picker, which asked for no permission |
+| Renditions | the approved D-04 bytes, served by a proof media server on the host with `Cache-Control: no-store, private` exactly as the API answers, and fetched by the app through React Native's own OkHttp stack |
+
+**Device scan after every leg** (root shell): every file under `/data/data/com.qandeel.mobile` and `/data/user_de/…`
+inspected by its first bytes — **zero JPEG / PNG / WebP files in all five legs**, after choosing, uploading, previewing
+two stages and drawing the other person's photo at two stages; the `ImagePicker` cache directory empty; OkHttp's
+`http-cache` holding only its journal; no image-engine disk cache. The installed package requests and holds **none** of
+CAMERA, RECORD_AUDIO, READ / WRITE_EXTERNAL_STORAGE or READ_MEDIA_*; the merged release manifest says the same.
+
+**Network proof of the stages** (the proof media server's request log, every leg): the other person's photo was requested
+at its first stage only, until they shared the clear stage; the medium stage they never shared was never requested. The
+reader's own photo was requested at the strong stage (the P6 preview) and the medium stage (the P7a preview) only — the
+clear stage, never previewed or shared, was never requested.
+
+**A defect the device found, fixed in CP2:** the keyboard opened for the full name stayed up over the preview and hid
+«مشاركة الآن» (`Keyboard.dismiss()` cannot act once the focused field has unmounted). The shared `Field` now blurs its
+input as it leaves the screen, as the Shared composer does since S6-05 (`d078f427`, `52152097`); the jest flow pins the
+dismissal.
+
+### 13.3 Exact-head CI
+
+The mandatory API CI and Mobile CI of PR #344 run on the head that carries this record. CI R1's correction (`f474d7a4`)
+was green before CP2. The CP2 result is read on the pull request itself; no separate test cycle is added.
+
+## 14. Contracts re-anchored in CP2 (only where S6-06 changes their truth)
+
+| File | Why |
+|---|---|
+| `tests/mobile-foundation-toolchain-contract.test.mjs` | the two approved dependencies (D-03) and the `expo-image-picker` plugin |
+| `tests/living-analysis-map-runtime-contract.test.mjs`, `temporal-navigation-layer-contract`, `return-navigation-layer-contract`, `w2-02-production-launch-identity-contract`, `w3-mega-s-personal-controls-settings-contract` | their pins of the exact plugin list now include `expo-image-picker` (typed mods only, no dangerous mod) |
+| `tests/s4-01-shared-world-reachability-contract.test.mjs` | the Shared area is also handed the Introduction sharing controller — still nothing of the Personal world |
+| `tests/s6-02-introduction-privacy-end-boundary-contract.test.mjs`, `s6-05-introduction-world-messaging-contract`, `s6-05-introduction-closed-history-contract` | the S6-06 clients (and their suite) name the World's sharing and SUCCESS routes, never the messages, END or history routes, which stay the S6-05 client's |
+| `apps/mobile/src/runtime-entry/__tests__/scope.test.ts` | the runtime-entry barrel adds exactly the two S6-06 client classes and the five server bounds of a share (constants), so consumers keep reaching the layer only through its barrel (T-12P) |
+| `apps/api/src/observability/observability.spec.ts` | the legal operational relation quoted independently now includes `INTRODUCTION_MEDIA_ERASURE` |
+
+The W3-MEGA-M conversation-first detector (no "memory" in a mobile file name) and the T-12 Phase M rule (no
+`expo-file-system` in the validation directory) are kept, not re-anchored: the release helper is
+`rendition-release.ts`, and the proof stand-in writes nothing on the device.
+
+## 15. Backlog (BG-08 / BG-09 at S6-06's closure)
+
+- **Inherited (BG-05):** none named `S6-06` (§8); the scope earlier tasks assigned to it — photos, progressive disclosure,
+  SUCCESS, reactivation and the `FULL_NAME` display consent — is delivered by CP1 and CP2.
+- **Admitted by S6-06:** `QAN-BL-PROD-08` (CP1; owner `HOSTED-DEPLOY-01`, unchanged) and, at this closure,
+  **`QAN-BL-LAUNCH-05` — Introduction Photos on iOS: Device Cache Proof and Store Review of the Purpose Strings**
+  (`MEDIUM`, `DEFERRED — OWNED`, owner `Stage 9 — Economy + Launch Closure (release-readiness gate)`): the zero-file proof
+  on iOS (`Library/Caches`, `tmp`) and the App Store's acceptance of the camera / microphone keys' absence (ITMS-90683)
+  need a macOS device run and a store submission that no task in this repository has.
+- **Checked and not admitted (BG-06):** a SUCCESS producer and real transitions (Stage 8A, GATE-33); content moderation of
+  photos and launch clearance (CW2-08 / Stage 9); Activity, Push and Direct Entry for shares (S6-07); a physical Android /
+  TalkBack proof (the same proposal S6-04 and S6-05 left with the Product Owner, reported, not admitted); the export and
+  deletion footprints (`QAN-BL-PRIV-04`, `QAN-BL-ACCT-01`, dated notes in CP1). Each has its owner.
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-PROD-06`, `QAN-BL-MATCH-01`,
+  `QAN-BL-MATCH-03`, `QAN-BL-MATCH-04`, `QAN-BL-MATCH-06` and `QAN-BL-LAUNCH-04` (Issue #322 stays OPEN).
+- **BG-09:** this record, the gate record and the locators carry the final lifecycle state in the same change.
+
+## 16. Deliberately not done, and not proven
+
+- **Not done:** no migration, no frozen engine and no CW2-08 seam changed; no route added; no SUCCESS producer; no photo
+  moderation; no Activity, Push or Direct Entry; nothing deployed. In production every share and every resume answers
+  NOT_AVAILABLE_NOW and no SUCCESS transition exists, so the sharing panel says so (P14) and SUCCESS is never drawn.
+- **Not proven here:** the server's behaviour on the device (the stand-in is not a server — the server's truth is
+  `verify-0162` / `0163` and their live proofs); a physical device; iOS screens and the iOS cache directories (the iOS
+  simulator build and boot smoke run in CI only; `QAN-BL-LAUNCH-05`); spoken TalkBack / VoiceOver output.
+
+## 17. Final status
+
+**S6-06 CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 AND CP2 DELIVERED — NOT MERGED / NOT DEPLOYED**
+(2026-10-17), on the one pull request #344. Merging needs the Product Owner's explicit «ادمج»; deployment is a separate
+decision. `MERGED ≠ DEPLOYED ≠ LAUNCH-READY`. S6-07 is not started.

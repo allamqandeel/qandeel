@@ -2,11 +2,12 @@
 
 **Task:** S6-06 — Progressive Disclosure, Photos, SUCCESS & Reactivation (Task Contract v1.0, WP0 v1.1 and its
 five-point correction, approved 2026-10-16)  
-**Checkpoint:** CP1 — Secure Backend & Media (the gates are presented in CP1, before any user-interface code)  
-**Status:** **COPY GATE CLOSED — 74 / 74 APPROVED; D-04 DECIDED (12 / 48 / 1600) — VISUAL GATE PRESENTED (rev.2), NOT YET
-APPROVED** (Product Owner, 2026-10-17, «S6-06 — اعتماد Copy Gate»; §4). The approved wording is implemented in CP2 and
-verified by CP2's own tests; no separate test cycle or corrective task is opened for it. No mobile surface is built until
-the Visual Gate is approved as well. Record: [S6-06 implementation record](QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md).
+**Checkpoint:** CP1 — Secure Backend & Media (the gates are presented in CP1, before any user-interface code); implemented in
+CP2 — Mobile, end-to-end and closure  
+**Status:** **VISUAL GATE CLOSED — COPY GATE CLOSED — 74 / 74 APPROVED; D-04 DECIDED (12 / 48 / 1600)** (Product Owner,
+2026-10-17: «S6-06 — اعتماد Copy Gate», §4, then «S6-06 — اعتماد البوابات وبدء CP2», §5). The approved screens and wording are
+implemented in CP2 and verified by CP2's own tests; no separate test cycle or corrective task is opened for them. Record:
+[S6-06 implementation record](QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md).
 
 The visual package itself (CP1 rev.1, then rev.2 of 2026-10-17 with one state per screen, P14 «غير متاح الآن» and the
 full-name entry screens: phone mock-ups P0–P16 in Arabic and English, RTL / LTR, Dark and Light, at two
@@ -18,7 +19,7 @@ recorded against it word for word.
 
 1. **D-04 — the blur values.** One value per stage, chosen from the real samples in §2. **DECIDED 2026-10-17: strong
    12 px, medium 48 px, clear 1600 px**, the proposed values unchanged (they are the pipeline's current values).
-2. **Visual Gate.** The screens P0–P16: the one new header action in the live Introduction World (P0, D-12; V-1 is
+2. **Visual Gate.** **CLOSED 2026-10-17: rev.2 APPROVED, P0 – P16** (§5). The screens P0–P16: the one new header action in the live Introduction World (P0, D-12; V-1 is
    otherwise unchanged), the sharing panel and its sheets, the three-stage photo, deletion and removal, SUCCESS (not
    shown in production before Stage 8A), the status line and resume, the display-name consent in the World (P15) and the
    new Settings page «ما شاركته في التعارف» (P16, reachable in every state: live, after END and after SUCCESS).
@@ -176,8 +177,7 @@ changed and its earlier wording.
 - These copy edits get no separate test cycle and no corrective task. They are recorded here, in S6-06, and
   implemented in CP2 under CP2's ordinary tests. CP1 and the closed tasks are not reopened, no new pull request is opened,
   and nothing is merged without the Product Owner's explicit approval.
-- **Not decided by this message:** the Visual Gate (V-1 … V-6, screens P0–P16 of rev.2). It stays PRESENTED, and
-  no user-interface code is written before it is approved.
+- **Not decided by this message:** the Visual Gate (V-1 … V-6, screens P0–P16 of rev.2). It stayed PRESENTED until §5.
 
 ### Rows the decision changed (22)
 
@@ -205,3 +205,36 @@ changed and its earlier wording.
 | PD-80 | (unchanged) | Here is what you shared in each Introduction, even after it ended or continued as a Shared World. You can delete anything you shared, and go back to your first name at any time. | (unchanged) | Here is what you shared in each introduction, even after it ended or continued as a Shared World. You can delete anything you shared, and go back to your first name at any time. |
 | PD-81 | لم تشارك شيئًا في أي تعارف. | You haven't shared anything in any Introduction. | لا توجد مشاركات لك في أي تعارف. | You haven't shared anything in any introduction. |
 | PD-83 | يستخدم قنديل الصورة التي تختارها فقط، لمشاركتها في تعارفك. | QANDEEL uses only the photo you choose, to share it in your Introduction. | يستخدم قنديل الصورة المختارة فقط، لمشاركتها في تعارفك. | QANDEEL uses only the photo you choose, to share it in your introduction. |
+
+## 5. The Visual Gate decision and CP2 (2026-10-17)
+
+«S6-06 — اعتماد البوابات وبدء CP2»:
+
+- **Visual Gate rev.2 is approved**, with its designs P0 – P16, the original blur values 12 / 48 / 1600, and the ✓ choice
+  pattern for the personal keys (V-3).
+- The Copy Gate is confirmed as in §4: the 74 rows, the 16 gender-neutral Arabic alternatives under LANG-01, PD-03
+  «مشاركاتي», PD-79 kept, C-1 … C-8 as reviewed, and the SUCCESS rows approved and never shown before Stage 8A.
+- CP2 starts inside S6-06 and PR #344: the mobile surfaces as designed; V-1 unchanged apart from the sharing action; the
+  CP1 privacy limits and gates kept, CW2-08 not opened and no frozen engine changed; the picker's temporary files and the
+  Android / iOS permissions as WP0 designed them; Arabic and English, RTL / LTR, Light and Dark, accessibility; focused
+  tests for CP2's changes with the mandatory CI running normally; the approval record and the documents updated in the
+  same work. No new pull request, no closed task reopened, no merge or deployment without the Product Owner's explicit
+  approval.
+
+### How the approved screens are built (CP2)
+
+The screens are built from the existing parts and the canonical palette only — no new colour, token, type role or
+component library. Four rendering details follow from that rule and are recorded here so the review can compare like with
+like:
+
+1. **Sheets (P2, P9a, P9b, P15b)** stand over the panel exactly as drawn, on the Field with the 24-point top radius. The
+   mock-ups darkened the panel behind with a translucent scrim colour; no such colour exists in the canonical palette, so
+   the panel behind recedes to 35 % opacity and is hidden from the screen reader while the sheet is open.
+2. **The display-name line inside the full-name card (P1b)** is drawn as the P15 section under «مشاركاتي» (PD-70 with
+   PD-71 / PD-75 / PD-78 and its action), as P15a – P15f show it. The reader's own first name is not part of the World's
+   disclosure read, so the card cannot name it without a new server field.
+3. **The Settings page title (P16b)** follows the existing Settings sub-page pattern (the statement-size heading inside the
+   page, as «كلامك في عوالم مشتركة انتهت عضويتك فيها» does); the Settings header itself is unchanged.
+4. **The loading ring (P1c, P5b)** is a 28-point ring in the tertiary ink that turns, and stays still under Reduced Motion;
+   «جارٍ الفتح» / PD-28 are its accessible names.
+

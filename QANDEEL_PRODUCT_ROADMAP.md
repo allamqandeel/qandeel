@@ -347,7 +347,7 @@ rewrites no earlier section, opens no task and authorizes no implementation. The
   - `S6-03` — Matching Proposal Pipeline & Intelligence Prerequisites;
   - `S6-04` — Private Proposal Review and Decisions;
   - `S6-05` — Mutual Match & Introduction World;
-  - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation (photos and the `FULL_NAME` display consent included); *(2026-10-16: in progress, CP1 delivered, §6.15)*;
+  - `S6-06` — Progressive Disclosure, SUCCESS and Reactivation (photos and the `FULL_NAME` display consent included); *(2026-10-16: in progress, CP1 delivered, §6.15; 2026-10-17: CP2 delivered, closed and ready for the Product Owner's review and merge decision, not merged, §6.16)*;
   - `S6-07` — Activity, Direct Entry and Final Integration.
 
   The package states that every task must undergo research, repository truth, anti-duplication, the Product Decision /
@@ -558,3 +558,19 @@ as written.
   Stage 8A. Issue #322 stays open.
 - **Next:** the Product Owner's review of the CP1 report and the explicit approval of the Visual Gate, the Copy Gate and
   the D-04 values, before any mobile surface (CP2).
+
+### 6.16 Execution note — 2026-10-17 (S6-06 CP2 delivered; S6-06 closed, not merged)
+**Recorded:** 2026-10-17 by S6-06, in the S6-06 pull request (not merged). This is a status note only; §6.9 … §6.15 stay
+as written.
+- **Decided:** CP1 proven on GitHub at `f474d7a4`; the Copy Gate (74 rows, the 16 gender-neutral Arabic rows under
+  LANG-01, PD-03 «مشاركاتي»), D-04 = 12 / 48 / 1600 and the Visual Gate rev.2 (P0 – P16) approved by the Product Owner;
+  CP2 authorized inside S6-06 and PR #344 ([gate record](docs/e2e/QANDEEL_S6_06_VISUAL_COPY_GATE_v1.md) §4 – §5).
+- **Delivered (CP2):** the mobile surfaces as approved — the sharing panel in the live Introduction World, the
+  three-stage photo drawn from memory only, deletion and removal, the display-name consent, SUCCESS (drawn only with a
+  real transition, so never before Stage 8A), the status line and resume, and the Settings page «ما شاركته في التعارف»;
+  no camera, microphone, storage or media permission; content-free erasure telemetry; an Android emulator proof in five
+  legs with zero image files left on the device. `QAN-BL-LAUNCH-05` admitted (iOS photo-cache proof and store review,
+  Stage 9). S6-06 is **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — NOT MERGED / NOT DEPLOYED**
+  ([S6-06 record](docs/e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md)).
+- **Still closed:** every launch gate; nothing is shared, stored or shown in production. Issue #322 stays open.
+- **Next:** the Product Owner's review of PR #344 and the merge decision («ادمج»). S6-07 is not started.
