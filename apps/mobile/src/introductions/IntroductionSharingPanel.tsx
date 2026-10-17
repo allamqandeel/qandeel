@@ -26,8 +26,10 @@ import { AccessibilityInfo, Animated, BackHandler, Easing, Keyboard, KeyboardAvo
 import { accountAccessCopy } from '../account/access/copy';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, useReduceMotion } from '../conversation';
 import type { ChromeLanguage } from '../orientation-chrome';
-import type { IntroductionDisclosures, IntroductionPersonalKey, IntroductionShare, IntroductionStage, IntroductionTextType } from '../runtime-entry';
-import { INTRODUCTION_HOMETOWN_MAX_LENGTH, INTRODUCTION_TEXT_MAX_LENGTH } from '../runtime-entry/introduction-sharing-api';
+import {
+  INTRODUCTION_HOMETOWN_MAX_LENGTH, INTRODUCTION_TEXT_MAX_LENGTH, type IntroductionDisclosures, type IntroductionPersonalKey, type IntroductionShare,
+  type IntroductionStage, type IntroductionTextType,
+} from '../runtime-entry';
 import { sharedConversationCopy } from '../shared-world/conversation-copy';
 import { sharedCopy } from '../shared-world/copy';
 import { fillSharing, introductionSharingCopy, type IntroductionSharingCopy } from './introduction-sharing-copy';

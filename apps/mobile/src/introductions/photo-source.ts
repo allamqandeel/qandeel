@@ -15,7 +15,7 @@ import { Directory, File, Paths } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 import { Platform } from 'react-native';
 
-import { INTRODUCTION_IMAGE_MAX_BYTES, INTRODUCTION_IMAGE_TYPES } from '../runtime-entry/introduction-sharing-api';
+import { INTRODUCTION_IMAGE_MAX_BYTES, INTRODUCTION_IMAGE_TYPES } from '../runtime-entry';
 
 /** CHOSEN: the bytes, in memory, and the copy to delete. The other words say why nothing was chosen. */
 export type PhotoChoice =

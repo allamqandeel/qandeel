@@ -177,7 +177,10 @@ export type {
   IntroductionShareState, IntroductionSharesRead, IntroductionSharesWorld, IntroductionSharingApiConfig, IntroductionSharingFetch, IntroductionStage,
   IntroductionTextType, IntroductionUploadResult,
 } from './introduction-sharing-api';
-export { IntroductionSharingApiClient } from './introduction-sharing-api';
+export {
+  INTRODUCTION_HOMETOWN_MAX_LENGTH, INTRODUCTION_IMAGE_MAX_BYTES, INTRODUCTION_IMAGE_TYPES, INTRODUCTION_PERSONAL_KEYS, INTRODUCTION_TEXT_MAX_LENGTH,
+  IntroductionSharingApiClient,
+} from './introduction-sharing-api';
 export type {
   IntroductionContinuationApiConfig, IntroductionParticipation, IntroductionParticipationRead, IntroductionPauseReason, IntroductionResumeResult,
   IntroductionSuccessRead, IntroductionSuccessResult,

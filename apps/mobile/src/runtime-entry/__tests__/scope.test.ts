@@ -33,7 +33,8 @@ test('§12 — the public barrel is exactly this surface, and the three private 
   // carries one on the same identity-bound fetch).
   // S6-05 added exactly one: IntroductionWorldsApiClient, the Introduction World transport (a plain class).
   // S6-06 added exactly two: IntroductionSharingApiClient (sharing, the three-stage photo, the display-name consent) and
-  // IntroductionContinuationApiClient (SUCCESS and resuming), both plain classes on the same identity-bound fetch.
+  // IntroductionContinuationApiClient (SUCCESS and resuming), both plain classes on the same identity-bound fetch, and the
+  // five server bounds of a share (the text, home town and photo limits, the photo types and the personal keys) as constants.
   expect(Object.keys(runtimeEntry).sort()).toEqual([
     'AccountApiClient',
     'ActivityApiClient',
@@ -41,6 +42,11 @@ test('§12 — the public barrel is exactly this surface, and the three private 
     'ConversationSessionApiClient',
     'ConversationTurnApiClient',
     'FOREGROUND_CATCH_UP_INTERVAL_MS',
+    'INTRODUCTION_HOMETOWN_MAX_LENGTH',
+    'INTRODUCTION_IMAGE_MAX_BYTES',
+    'INTRODUCTION_IMAGE_TYPES',
+    'INTRODUCTION_PERSONAL_KEYS',
+    'INTRODUCTION_TEXT_MAX_LENGTH',
     'InteractionPreferencesApiClient',
     'IntroductionContinuationApiClient',
     'IntroductionProposalsApiClient',
