@@ -144,6 +144,7 @@ jobs:
       - {name: "Verify S6-05 mobile Introduction experience static contract (approved copy word for word, one strict client of the existing routes, IW-35 only on the server ENDED, V-1 structural, no AI or Activity)", run: npm run test:s6-05-introduction-mobile-contract}
       - {name: "Verify S6-06 Introduction sharing, photos and continuation static contract (shells over the frozen cores, private object store, erasure from database truth, no service_role Matching path, pinned rclone)", run: npm run test:s6-06-introduction-disclosure-contract}
       - {name: "Verify S6-06 mobile sharing experience static contract (approved copy word for word, one strict client of the CP1 routes, renditions from memory only with no image cache, picker copies deleted, no camera / microphone / storage permission, V-1 kept)", run: npm run test:s6-06-introduction-mobile-contract}
+      - {name: "Verify ACCT-DEL-01 governed account erasure static contract (0130 untouched, twenty DELETE-only guard prefixes, the 0130 call inside one subtransaction, one service_role entry, RESTRICT kept, the pass on the governed erasure)", run: npm run test:acct-del-01-account-erasure-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1057,6 +1058,13 @@ jobs:
       # a closed gate or an injected 40001 leaving both approvals untouched, one terminal commit; reactivation gated last.
       - name: Verify S6-06 SUCCESS and reactivation against real PostgreSQL
         run: npm run verify:introduction-success-reactivation:integration
+      # ACCT-DEL-01 (CP1): migration 0164 - the ONE governed account erasure: the maximum Matching / Introductions footprint
+      # ERASED with zero references; a Shared STANDARD / Public footprint BLOCKED with nothing touched; 0130 refusing after
+      # the module ran rolls EVERYTHING back (RETRY, then an honest BLOCKED); INTEGRITY under a bounded backoff; the
+      # counterpart's retained words, ordinary END and exact reactivation lineage; two-level photo erasure; re-arm; the
+      # coverage census with a planted relation; eight races on two real connections, none deadlocking.
+      - name: Verify ACCT-DEL-01 account erasure across Matching / Introductions against real PostgreSQL
+        run: npm run verify:account-deletion-matching-introductions:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the

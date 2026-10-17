@@ -203,7 +203,9 @@ test('8 — governance: the record, QAN-BL-CW-01 tombstoned, QAN-BL-ACCT-01 stil
   }
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /\| `QAN-BL-CW-01` \| [^\n]* \| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \| `HIGH` \| `CLOSED — TOMBSTONE` \|/u);
-  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]* \| `UNASSIGNED` \| `HIGH` \| `OPEN — UNASSIGNED` \|/u);
+  // RE-ANCHORED by ACCT-DEL-01 (2026-10-17): the Product Owner re-owned QAN-BL-ACCT-01 to ACCT-DEL-01 (DEFERRED — OWNED);
+  // it stays an open Connected Worlds launch blocker, never tombstoned by assignment (P-1).
+  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]* \| `ACCT-DEL-01 — Account Deletion Across Matching \/ Introductions` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
   assert.match(backlog, /\*\*Current-truth note \(S5-02, 2026-10-06\)\.\*\* S5-02 creates a real Public authoring footprint/u);
   assert.match(backlog, /\*\*S5-02 reconciliation \(2026-10-06; Draft PR, not merged\)\.\*\*/u);
   // The root locators are asserted wherever they exist: always in the repository, never in the forward-safety mirror,

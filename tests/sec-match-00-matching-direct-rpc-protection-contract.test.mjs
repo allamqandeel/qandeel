@@ -206,7 +206,9 @@ test('the canonical records carry the amendment, and QAN-BL-ACCT-01 stays open',
   assert.match(runtime, /^## 47\. `SEC-MATCH-00` — controlled forward amendment to the `I-07A` direct-execute surface$/mu);
   assert.match(runtime, /^\*\*Phase:\*\* `I-07 — Introductions \/ Matching Runtime` — \*\*CLOSED \/ FROZEN\*\*$/mu, 'the phase banner is unchanged');
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
-  assert.match(backlog, /^\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `UNASSIGNED` \| `HIGH` \| `OPEN — UNASSIGNED` \|$/mu,
+  // RE-ANCHORED by ACCT-DEL-01 (2026-10-17): the Product Owner confirmed the name, and the item is re-owned to
+  // ACCT-DEL-01 as DEFERRED — OWNED in the same change as this pin, exactly as its D3 note required. It stays open (P-1).
+  assert.match(backlog, /^\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `ACCT-DEL-01 — Account Deletion Across Matching \/ Introductions` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu,
     'QAN-BL-ACCT-01 is not closed or absorbed');
   // RE-ANCHORED by S6-01's closing change (2026-10-14, validation only): the Product Owner's D1 re-owns the item to
   // S6-07 with a mandatory dependency on ACCT-DEL-01. It stays open: the six commands stay closed.

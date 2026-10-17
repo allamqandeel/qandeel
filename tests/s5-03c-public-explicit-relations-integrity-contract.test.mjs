@@ -190,7 +190,9 @@ test('8 — governance: the record, the backlog and the locators tell the same t
   assert.equal((backlog.match(/^\| `QAN-BL-CW-03` \|/gmu) ?? []).length, 1);
   assert.match(backlog, /^\| `QAN-BL-CW-03` \| [^\n]*\| `CLOSED — TOMBSTONE` \|$/mu);
   assert.match(backlog, /### `QAN-BL-CW-03` — [^\n]*\n\n- \*\*Closing task:\*\* `SHARED-VIS-01 — /u, 'closed by SHARED-VIS-01, not by S5-03C');
-  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]*\| `OPEN — UNASSIGNED` \|/u);
+  // RE-ANCHORED by ACCT-DEL-01 (2026-10-17): the Product Owner re-owned QAN-BL-ACCT-01 to ACCT-DEL-01 (DEFERRED — OWNED);
+  // it stays an open Connected Worlds launch blocker, never tombstoned by assignment (P-1).
+  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]*\| `DEFERRED — OWNED` \|/u);
   // The locators are not mirrored by the forward-safety gate; read them only where they exist.
   if (existsSync(new URL('QANDEEL_CURRENT_STATE.md', root))) {
     const state = read('QANDEEL_CURRENT_STATE.md');
@@ -220,7 +222,10 @@ test('8 — governance: the record, the backlog and the locators tell the same t
     // S6-05 Task Contract v1.0 makes S6-05 the current implementation task.
     // RE-ANCHORED by S6-06 (2026-10-16, validation only): S6-05 merged as PR #343 (`88a475ab`); the Product Owner's
     // S6-06 Task Contract v1.0 makes S6-06 the current implementation task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-06 — Progressive Disclosure, Photos, SUCCESS & Reactivation\*\*/mu);
+    // RE-ANCHORED by ACCT-DEL-01 (2026-10-17, validation only): S6-06 merged as PR #344 (`4233c067`); the Product Owner's
+    // approval of the ACCT-DEL-01 WP0 v1.1 (P-1 … P-4) makes ACCT-DEL-01 the current implementation task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: ACCT-DEL-01 — Account Deletion Across Matching \/ Introductions\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-06/u, 'the merged S6-06 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-05/u, 'the merged S6-05 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-04/u, 'the merged S6-04 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-03/u, 'the merged S6-03 is no longer the current task');

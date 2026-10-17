@@ -186,7 +186,9 @@ test('7 — governance: the record, E2E-H-08 and QAN-BL-CW-01 owned by S5-02 wit
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   assert.match(backlog, /\| `QAN-BL-CW-01` \| Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative \(`ASSURE-F05`\) \| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \| `HIGH` \| `CLOSED — TOMBSTONE` \|/u,
     'RE-ANCHORED by S5-02: the owner S5-01 designated closed the item (tombstone effective from the S5-02 merge)');
-  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `UNASSIGNED` \| `HIGH` \| `OPEN — UNASSIGNED` \|/u);
+  // RE-ANCHORED by ACCT-DEL-01 (2026-10-17): the Product Owner re-owned QAN-BL-ACCT-01 to ACCT-DEL-01 (DEFERRED — OWNED);
+  // it stays an open Connected Worlds launch blocker, never tombstoned by assignment (P-1).
+  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `ACCT-DEL-01 — Account Deletion Across Matching \/ Introductions` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
   assert.match(backlog, /physically erased/u, 'the Product Owner ASSURE-F05 decision is recorded');
   assert.match(backlog, /\| `S5-02 — Publishing \+ Rights \+ Draft\/Review \+ Privacy Closure` \|[^\n]*`E2E-H-08`[^\n]*80-character account Name by a reviewed forward migration/u, 'S5-02 owns the E2E-H-08 closure and the Name-length reconciliation');
   assert.doesNotMatch(sql(MIGRATION), /public_experience_text_derivative/u, 'ASSURE-F05 is not implemented here');
