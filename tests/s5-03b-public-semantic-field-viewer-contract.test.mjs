@@ -210,8 +210,9 @@ test('9 — governance: the record, the backlog and the locators tell the same t
   }
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   // RE-ANCHORED by ACCT-DEL-01 (2026-10-17): the Product Owner re-owned QAN-BL-ACCT-01 to ACCT-DEL-01 (DEFERRED — OWNED);
-  // it stays an open Connected Worlds launch blocker, never tombstoned by assignment (P-1).
-  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]* \| `ACCT-DEL-01 — Account Deletion Across Matching \/ Introductions` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
+  // it stays an open Connected Worlds launch blocker, never tombstoned by assignment (P-1). ACCT-DEL-01's closing change
+  // (CP2) re-owns it, still open, to ACCT-DEL-02 for the Shared STANDARD / Public residue.
+  assert.match(backlog, /\| `QAN-BL-ACCT-01` \| [^\n]* \| `ACCT-DEL-02 — Account Deletion Across Shared STANDARD \/ Public` \| `HIGH` \| `DEFERRED — OWNED` \|/u);
   assert.match(backlog, /\*\*Current-truth note \(S5-03B, 2026-10-06\)\.\*\*/u);
   assert.match(backlog, /\*\*S5-03B reconciliation \(2026-10-06; not merged\)\.\*\*/u);
   assert.match(backlog, /\| `S5-03B — Public Semantic Field \+ Stable Spatial Placement \+ Viewer Runtime` \| none — no item names it;/u);

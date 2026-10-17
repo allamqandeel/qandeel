@@ -208,7 +208,9 @@ test('the canonical records carry the amendment, and QAN-BL-ACCT-01 stays open',
   const backlog = read('docs/qandeel-canonical-backlog-v1.md');
   // RE-ANCHORED by ACCT-DEL-01 (2026-10-17): the Product Owner confirmed the name, and the item is re-owned to
   // ACCT-DEL-01 as DEFERRED — OWNED in the same change as this pin, exactly as its D3 note required. It stays open (P-1).
-  assert.match(backlog, /^\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `ACCT-DEL-01 — Account Deletion Across Matching \/ Introductions` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu,
+  // At ACCT-DEL-01's closing change (CP2) the Matching / Introductions part is delivered and the item, still open, is
+  // re-owned to ACCT-DEL-02 for Shared STANDARD / Public (Replay is QAN-BL-ACCT-02, Stage 7).
+  assert.match(backlog, /^\| `QAN-BL-ACCT-01` \| Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker \| `ACCT-DEL-02 — Account Deletion Across Shared STANDARD \/ Public` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu,
     'QAN-BL-ACCT-01 is not closed or absorbed');
   // RE-ANCHORED by S6-01's closing change (2026-10-14, validation only): the Product Owner's D1 re-owns the item to
   // S6-07 with a mandatory dependency on ACCT-DEL-01. It stays open: the six commands stay closed.

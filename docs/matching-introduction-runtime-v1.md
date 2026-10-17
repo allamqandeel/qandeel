@@ -1479,8 +1479,10 @@ guard (`database/verify-migration-0150.mjs`) until it is converted or proven saf
 
 ## 49. `ACCT-DEL-01` — controlled forward amendment for account deletion across Matching / Introductions
 
-**Lifecycle:** CP1 implemented on `acct/acct-del-01-account-erasure`; awaiting the Product Owner's CP1 review, then CP2
-(closure) and the merge decision. Not deployed. Record:
+**Lifecycle:** CP1 implemented on `acct/acct-del-01-account-erasure` and approved by the Product Owner on `90681312`;
+CP2 (the closure) delivered in the same pull request (#345); awaiting the Product Owner's merge decision. Not deployed.
+*(Until CP2: "awaiting the Product Owner's CP1 review, then CP2 (closure) and the merge decision".)* This amendment's
+text is unchanged by CP2. Record:
 [ACCT-DEL-01 implementation record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md). The Product Owner approved
 this amendment as decision **P-4** (2026-10-17); the WP0 called it "§48", which `PROD-RETRY-01` had already taken.
 

@@ -158,7 +158,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-02` | API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04) | `PROD-SEC-01 — API Baseline Hardening` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-03` | Operational Readiness & Silent-Failure Visibility: Readiness Probe (PR01-S05), Privacy Deletion / Export Preparation / Confidence Re-evaluation Silent Failures (P-1 / P-5 / U-4), Stuck-Job Visibility | `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` | `HIGH` | `CLOSED — TOMBSTONE` |
@@ -206,6 +206,8 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-MATCH-05` | The Confirmed Introduction First Name Is Not the Canonical Matching First-Name Source | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-MATCH-06` | No Runtime Producer Forwards a First-Approved Proposal to the Second Recipient | `S6-07 — Activity, Direct Entry and Final Integration` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-LAUNCH-05` | Introduction Photos on iOS: Device Cache Proof and Store Review of the Purpose Strings | `Stage 9 — Economy + Launch Closure (release-readiness gate)` | `MEDIUM` | `DEFERRED — OWNED` |
+| `QAN-BL-ACCT-02` | Replay Has No Account-Deletion Module: an Account's Replay Footprint Blocks Its Erasure | `Stage 7 — Replay` | `HIGH` | `DEFERRED — OWNED` |
+| `QAN-BL-PROD-09` | No World Opens in Production Without an Automated Account-Deletion Coverage Check | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |
 
 ---
 
@@ -613,8 +615,9 @@ exception, too, is S5-02's. `QAN-BL-ACCT-01` is not absorbed and stays `OPEN —
 - **Why deferred:** the Product Owner explicitly left the exact Shared / Public / Connected Worlds deletion behaviour
   open (closure §8.5), and forbade inventing a remedy for foreign keys or retained derivatives inside W3-PDG-01. The
   proposed W3 tasks, which are not opened, cover the Personal world only (closure §9).
-- **Owner task:** `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` (re-owned 2026-10-17; see the
-  ACCT-DEL-01 CP1 note below; was `UNASSIGNED`)
+- **Owner task:** `ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` (re-owned by ACCT-DEL-01's closing
+  change, 2026-10-17, for the residue ACCT-DEL-01 does not cover; see the ACCT-DEL-01 closing note below. Before it:
+  `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` from its CP1, and `UNASSIGNED` before that)
 - **Severity:** `HIGH`. If this is reopened, it decides whether any Connected World may launch (closure §8.4 item 9),
   and it lands on the frozen CW2-08 §2 non-waivable deleted-content non-serving law.
 - **Reopen condition:** Architecture or the Product Owner opens a task to take any Connected World toward
@@ -633,7 +636,8 @@ exception, too, is S5-02's. `QAN-BL-ACCT-01` is not absorbed and stays `OPEN —
   the private object store; an owner's removal erases them (DELETE + HEAD, from database truth), but no account-level
   deletion reaches them yet. No production row or object can exist (CW2-08 closed). Owner, severity and status unchanged
   ([S6-06 record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §8).
-- **Status:** `DEFERRED — OWNED` (was `OPEN — UNASSIGNED` until the ACCT-DEL-01 re-owning, 2026-10-17)
+- **Status:** `DEFERRED — OWNED` (was `OPEN — UNASSIGNED` until the ACCT-DEL-01 re-owning, 2026-10-17; it stays open
+  at ACCT-DEL-01's closure, P-1)
 
 Admitted by the W3-PDG-01 Product Decision Closure under BG-06, as a canonical record's explicit deferral. This
 entry chooses no deletion mechanism, erasure exception or retention rule. Nothing here authorizes implementation
@@ -744,6 +748,27 @@ above required. The item's earlier "Current truth" line ("no account-deletion co
   uncovered (closure §8.4 item 9). Account deletion in QANDEEL as a whole is **not** closed.
 - **At CP2** (the same pull request): this item's narrowed disposition and its future owners are recorded, with
   `QAN-BL-MATCH-01`'s `ACCT-DEL-01` dependency marked met.
+
+**ACCT-DEL-01 closing note (CP2, 2026-10-17; the ACCT-DEL-01 pull request, PR #345, not merged; effective from its
+merge).** The Product Owner approved CP1 on its exact head `906813121683960fda4baaf08be1a39c3c6fc438` (API CI
+`39030890618` and Mobile CI `39030890572` green, `verify-migration-0164` on real PostgreSQL included). BG-08 disposition:
+**re-owned and narrowed, not tombstoned.**
+- **Handled by ACCT-DEL-01:** account deletion across Matching / Introductions, the Introduction World's own dependencies
+  included (`0164`, record §2–§4). That part of this item's finding no longer holds for an account whose footprint is
+  Matching / Introductions and Personal only. Nothing is deployed: the hosted database stops at `0074`.
+- **Still open, and this item stays open (P-1):** the account deletion of Shared `STANDARD` Worlds (post-SUCCESS
+  Introduction Worlds included) and of the Public World. Owner: `ACCT-DEL-02 — Account Deletion Across Shared STANDARD /
+  Public`, a future task with its own Product decisions and Task Contract; it is not opened or started by this note, and
+  the descriptive half of its name is this change's until its Task Contract names it. `ACCT-DEL-02` covers its classes in
+  `account_erasure_private.residue_class_coverage` in the same change as its erasure module, and can tombstone this item
+  only once both classes are covered and proven (Replay's class is `QAN-BL-ACCT-02`'s).
+- **Replay** is not in this item any more: its residue is admitted as `QAN-BL-ACCT-02` (owner `Stage 7 — Replay`), so
+  that each residue class has exactly one owner (BG-02).
+- **The release gate** (closure §8.4 item 9; P-1) is admitted as `QAN-BL-PROD-09` (owner `HOSTED-DEPLOY-01`): no World
+  opens in production before an automated check on the hosted project proves that its account-deletion coverage is
+  complete. The repository's own coverage truth (the coverage census in CI, `server_read_account_erasure_coverage_v1`) is
+  not by itself an executable deployment block, and nothing claims it is.
+- Account deletion in QANDEEL as a whole is **not** closed. The required future property above is unchanged.
 
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
@@ -1261,6 +1286,23 @@ Admitted by SHARED-VIS-01 at the Product Owner's D5 (2026-10-08). Admission auth
   to the exact fact version and the exact confirmed draft version, and that evidence as a precondition of the facts
   reader; and it owns `CA-10` (`NONE_ADDITIONAL` against `0109`'s non-empty requirement set) and post-enrollment
   correction, under NO_BACKDOOR and with the `ACCT-DEL-01` dependency. Owner, severity and status unchanged ([S6-03 record](e2e/QANDEEL_S6_03_IMPLEMENTATION_RECORD_v1.md) §9).
+- **Dated note (ACCT-DEL-01 closing change, 2026-10-17; PR #345, not merged; effective from its merge):** the
+  `ACCT-DEL-01` dependency is **met in engineering**. `0164` erases an account's whole Matching / Introductions footprint
+  together with its Personal erasure, in one transaction or nothing, with the counterparts' continuity; an account that
+  also has a Shared `STANDARD`, Public or Replay footprint gets a truthful, recorded `BLOCKED` and nothing is erased. So an
+  enrollment path would no longer commit a footprint that has no governed deletion
+  ([ACCT-DEL-01 record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md) §8).
+  - **What it does not do:** it reopens none of the six commands. They stay executable by no application role until
+    `S6-07`'s own Task Contract and the Product Owner approve the launch path (`NO_BACKDOOR`, the required future
+    property above). It opens no launch gate; `CW2-08` stays closed and nothing is deployed.
+  - **What `S6-07` carries from it:** every new relation that references the account, or a Matching / Introductions
+    relation, is registered in `account_erasure_private.coverage_registry` and erased by the module in the same change.
+    CI refuses an unregistered one (`verify-migration-0164` A04 and the ACCT-DEL-01 static contract).
+  - **What still blocks:** the residue that stays open (`QAN-BL-ACCT-01` for Shared `STANDARD` / Public, and
+    `QAN-BL-ACCT-02` for Replay) does not reinstate this dependency. It does block the production opening of those worlds
+    (`QAN-BL-PROD-09`).
+
+  Owner, severity and status unchanged.
 - **Status:** `DEFERRED — OWNED`
 
 **S6-01 note (2026-10-13).** The reopen condition fired: the Product Owner's S6-01 Final Implementation Authorization
@@ -1374,6 +1416,13 @@ entry chooses no launch mechanism, wrapper or gate. Nothing here authorizes impl
     condition then fires.
 
   A retry-loop reproduction on the hosted environment is never evidence, and none may be attempted.
+- **Dated note (ACCT-DEL-01 closing change, 2026-10-17; PR #345, not merged; effective from its merge):** `0164` adds
+  four Data API entry points: `server_erase_account_v1`, `server_rearm_blocked_account_deletions_v1`,
+  `server_read_account_erasure_operations_v1` and `server_read_account_erasure_coverage_v1`, all `service_role` only. The
+  cross-schema guard of `verify-migration-0150` passes with `0164` applied, so none of them lets a deterministic `40001`
+  escape. The coordinator answers lock contention with a recorded `RETRY` and a bounded backoff. Nothing in this item
+  changes. The erasure's hosted timing (the `service_role` `statement_timeout`, the unindexed account columns) is
+  `QAN-BL-PROD-09`'s.
 - **Status:** `DEFERRED — OWNED`
 
 Admitted by SEC-MATCH-00 under BG-08 / BG-06: Architecture and the Product Owner explicitly designated it at the
@@ -1429,6 +1478,12 @@ nothing here authorizes implementation, an upgrade or a migration (BG-07).
   in the API's secret store; `prove-0162`'s storage scenarios (P02 – P08) run against the hosted S3 endpoint with the
   evidence read on the hosted project itself; a deleted object proven absent by HEAD and by the provider's own object
   listing; nothing of QANDEEL's records changed.
+- **Dated note (ACCT-DEL-01 closing change, 2026-10-17; PR #345, not merged; effective from its merge):** the governed
+  account erasure (`0164`) queues every photo storage key of the erased account to the `0162` erasure queue, and tracks
+  them for the request in `account_erasure_private.media_pending`. It sets `media_erased_at` only when the `0162` worker has
+  deleted the last of them (DELETE, then HEAD 404). On a hosted API that second level depends on this item's object store:
+  until it closes, the queue holds and `media_erased_at` stays empty, and the `ACCOUNT_ERASURE` telemetry reports it.
+  `prove-0162` against the hosted endpoint covers the erasure's keys as well; nothing else is added to this item.
 - **Status:** `DEFERRED — OWNED`
 
 ---
@@ -2370,6 +2425,13 @@ anti-duplication check above, as a documentation-only governance change. Nothing
   the reader's own display-consent acts (`introduction_sharing_private`, `0162`) join this item's export footprint; the
   reader's own shares across every Introduction are already listed by `list_my_introduction_shares_v1`. Owner, severity
   and status unchanged ([S6-06 record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §8).
+- **Dated note (ACCT-DEL-01 closing change, 2026-10-17; PR #345, not merged; effective from its merge):** a counterpart's
+  retained view (`introduction_retained_views` / `_items`, `0164`) joins this item's export footprint. It holds the
+  reader's own words in an Introduction whose other participant erased their account; P-2 gives the reader the right to
+  export them, and no export reaches them yet. The export carries the reader's own items only: never the erased
+  participant's words or name, which the retained view does not hold. The released Matching lineage
+  (`matching_counterpart_erasure_releases`, the sibling reactivation commands) is the reader's Matching data too.
+  Owner, severity and status unchanged ([ACCT-DEL-01 record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md) §8).
 - **Status:** `DEFERRED — OWNED`
 
 Admitted under BG-06 / BG-08 at the Product Owner's explicit GATE-19 decision (Stage 6 WP0 final approval package,
@@ -2618,6 +2680,95 @@ task in this repository can perform. Nothing here authorizes implementation (BG-
   person's photo), no JPEG / PNG / WebP / HEIC file under the app's container (`Library/Caches`, `tmp`, `Documents`),
   proven by a file scan and not by a listing alone; Info.plist with PD-83 and no camera, microphone or add-to-library key,
   accepted by App Store review without ITMS-90683.
+
+### `QAN-BL-ACCT-02` — Replay Has No Account-Deletion Module: an Account's Replay Footprint Blocks Its Erasure
+
+Admitted under BG-06 / BG-08 by ACCT-DEL-01 at its closing change (2026-10-17; PR #345, not merged; effective from its
+merge), at the Product Owner's P-1 designation (Replay's account deletion belongs to Stage 7). Nothing here authorizes
+implementation (BG-07).
+
+- **Title / Finding:** three I-06 Replay relations reference the account `ON DELETE RESTRICT`:
+  - `replays.created_by_user_id` (`0100`);
+  - `replay_distribution_required_approvers.approver_user_id` and
+    `replay_distribution_authorizations.authorized_by_user_id` (`0104`).
+
+  `replay_source_manifest_versions` / `_items` (`0100`) hang from `replays`. No erasure module covers any of them. The governed account erasure (`0164`) registers them as residue class `REPLAY`,
+  uncovered. An account with any Replay row answers a truthful, recorded `BLOCKED (REPLAY)` and nothing is erased; it is
+  re-armed with a fresh grace when the class is covered.
+- **Source:** the Product Owner's P-1 (ACCT-DEL-01, 2026-10-17); the
+  [ACCT-DEL-01 record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md) §6 and §8;
+  `account_erasure_private.residue_class_coverage` (`0164`, owner `Stage 7 - Replay`). Before this admission the
+  residue was part of `QAN-BL-ACCT-01`'s finding (Replay is one of the Connected Worlds it names).
+- **Anti-duplication:** `QAN-BL-ACCT-01` keeps Shared `STANDARD` and Public (`ACCT-DEL-02`); `QAN-BL-PRIV-05` is the
+  Replay export, not its deletion; GATE-35 keeps Introduction material out of user-facing Replay. No other item carries
+  Replay's account deletion. The ID `QAN-BL-ACCT-02` was unused in the tree and in the history of every ref.
+- **Current truth:** no API route or mobile surface calls a Replay function, and Replay stays closed until Stage 7, so
+  no product path creates a Replay row today. Nothing is deployed.
+- **Why deferred:** Replay's product contract, its retention and its distribution semantics are Stage 7's. A deletion
+  module cannot be designed before them without inventing them.
+- **Owner task:** `Stage 7 — Replay`.
+- **Severity:** `HIGH`. If reopened, it decides whether Replay may launch (W3-PDG-01 closure §8.4 item 9), and it lands
+  on the CW2-08 §2 deleted-content non-serving law.
+- **Reopen condition:** automatic at Stage 7's kickoff (BG-05); and before any path, Product or server, creates a Replay
+  row for a real account.
+- **Required future property:** Stage 7 delivers Replay's erasure module in the same change as its first user-reachable
+  Replay relation. That change also:
+  - registers every Replay relation in `account_erasure_private.coverage_registry`;
+  - covers `REPLAY` in `residue_class_coverage`;
+  - proves on real PostgreSQL the same properties `verify-migration-0164` proves: one transaction or nothing, the lock
+    order with no deadlock, a truthful `BLOCKED`, and the re-arm.
+
+  The other participants' rights in a shared Replay are Stage 7's Product decision. Replay is not production-ready for
+  users while this item is open.
+- **Status:** `DEFERRED — OWNED`
+
+### `QAN-BL-PROD-09` — No World Opens in Production Without an Automated Account-Deletion Coverage Check
+
+Admitted under BG-06 / BG-08 by ACCT-DEL-01 at its closing change (2026-10-17; PR #345, not merged; effective from its
+merge), at the Product Owner's direction at the CP1 approval (a mandatory condition of `HOSTED-DEPLOY-01`). Nothing here
+authorizes implementation, a deployment or a gate (BG-07).
+
+- **Title / Finding:** P-1 requires a release gate: no World launches without a complete, proven account-deletion path.
+  ACCT-DEL-01 enforces it **only in the repository**:
+  - the coverage census in CI (`verify-migration-0164` A04 / A05 and the static contract) refuses any relation that
+    references the account but has no registered class;
+  - `server_read_account_erasure_coverage_v1` (`service_role` only) reads each residue class, whether a module covers it,
+    and its owner;
+  - `QAN-BL-ACCT-01` and `QAN-BL-ACCT-02` stay open.
+
+  None of these is an executable block on a production deployment or on a launch capability. The Shared launch
+  capability has no notion of an environment, and six existing verifiers enable it, so ACCT-DEL-01 deliberately added no
+  runtime block. Nothing may claim the coverage check stops a deployment.
+- **Also part of a proven path on the hosted project:**
+  - the erasure's bound there: the `service_role` `statement_timeout` against the API's 60 s erasure bound;
+  - the 42 account columns that have no leading index and belong to other owners' relations (Personal, Public, Shared
+    `STANDARD`). Each is a scan inside the erasure's final `DELETE` at production scale.
+
+  The maximum Matching / Introductions footprint erases in 198 ms locally.
+- **Source:** the Product Owner's P-1 and the CP1 approval (2026-10-17); the
+  [ACCT-DEL-01 record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md) §3, §6 and §8; W3-PDG-01 closure §8.4
+  item 9.
+- **Anti-duplication:** `QAN-BL-ACCT-01` and `QAN-BL-ACCT-02` are the missing modules, not the gate that holds the
+  worlds closed until they exist. `QAN-BL-PROD-06` is the Data API retry gate. `QAN-BL-PROD-08` is the photo object
+  store. CW2-08 is the Product launch law. None requires an automated coverage check at the deployment that opens a
+  World. The ID `QAN-BL-PROD-09` was unused in the tree and in the history of every ref.
+- **Why deferred:** it is a hosted deployment and launch procedure. Nothing is deployed (the hosted database stops at
+  `0074`), and opening any World needs the Product Owner's separate approval.
+- **Owner task:** `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate`. A later launch task
+  (Stage 9) that opens a World inherits the same check; it does not replace it.
+- **Severity:** `HIGH`. Without it, a World could open in production with an account-deletion path that answers
+  `BLOCKED` for every participant.
+- **Reopen condition:** automatic at `HOSTED-DEPLOY-01`'s kickoff (BG-05), and before any deployment or configuration
+  change that opens a World (a launch capability, a CW2-08 gate) to real users.
+- **Required future property:** before a World opens in production, an automated, fail-closed check runs against the
+  hosted project itself, and the opening is refused unless all of these hold:
+  - every residue class that World can create is covered (`server_read_account_erasure_coverage_v1` or its successor);
+  - the hosted catalog has no relation that references the account and is missing from the coverage registry;
+  - the erasure has been measured within its bound at production-shaped scale.
+
+  The evidence is read on the hosted project, never inferred from a CI run or from this repository. Matching /
+  Introductions (covered by ACCT-DEL-01) still opens only under CW2-08 and the Product Owner's approval.
+- **Status:** `DEFERRED — OWNED`
 
 ## 6. Tombstones
 
@@ -3118,15 +3269,15 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 35 |
+| `DEFERRED — OWNED` | 37 |
 | `VALIDATION — OPEN` | 4 |
 | `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 24 |
-| **Total** | **72** |
+| **Total** | **74** |
 
 | Severity | Count |
 | --- | ---: |
-| `HIGH` | 40 |
+| `HIGH` | 42 |
 | `MEDIUM` | 30 |
 | `LOW` | 2 |
 
@@ -3959,6 +4110,44 @@ PR #344 (`4233c067`).
   as met at CP2), `QAN-BL-PROD-06` and `QAN-BL-PROD-08`.
 - **Latest index: 72 items; 35 / 4 / 9 / 24 by status, 40 / 30 / 2 by severity**, recounted mechanically from §4.
 
+**ACCT-DEL-01 closing change (CP2, 2026-10-17; PR #345, not merged; effective from its merge).** BG-08 / BG-09 at
+ACCT-DEL-01's closure, in its last checkpoint
+([ACCT-DEL-01 record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md) §8), under the Product Owner's checkpoint rule
+(no separate documentation task). The Product Owner approved CP1 on its exact head `90681312` (API CI `39030890618`,
+Mobile CI `39030890572`, both green). The paragraph above stays as the record of the register before it.
+- **Inherited (BG-05):** `QAN-BL-ACCT-01`. **Re-owned, not tombstoned** (P-1):
+  - the Matching / Introductions part is delivered;
+  - Shared `STANDARD` and Public stay with this item, now owned by `ACCT-DEL-02 — Account Deletion Across Shared
+    STANDARD / Public`;
+  - Replay is admitted separately (below), so that each residue has one owner (BG-02).
+
+  The item's index-row pins in the contracts that read it are re-anchored in the same change.
+- **Admitted (BG-06, at the Product Owner's designation):**
+  - `QAN-BL-ACCT-02` (`HIGH`; owner `Stage 7 — Replay`): Replay's account-deletion module;
+  - `QAN-BL-PROD-09` (`HIGH`; owner `HOSTED-DEPLOY-01`): no World opens in production without an automated, fail-closed
+    account-deletion coverage check on the hosted project, together with the erasure's hosted bound.
+
+  Both IDs were checked against all 72 earlier IDs and the history of every ref; neither had been used.
+- **Dated notes:**
+  - `QAN-BL-MATCH-01`: its `ACCT-DEL-01` dependency is met in engineering. The six commands, CW2-08 and every gate stay
+    closed.
+  - `QAN-BL-PROD-06`: the four new `service_role` entry points let no deterministic `40001` escape.
+  - `QAN-BL-PROD-08`: the erasure's second photo level waits on the hosted object store.
+  - `QAN-BL-PRIV-04`: the counterpart's retained view joins the export footprint.
+- **Checked and not admitted (BG-06):**
+  - the retained view in `Export My Data` (`QAN-BL-PRIV-04`, `S6-07`, which already covers the reader's Introductions
+    data; recorded there as a dated note);
+  - registering S6-07's new relations in the coverage registry (enforced by CI and recorded on `QAN-BL-MATCH-01`; no
+    item is needed);
+  - the hosted `NOT_DEPLOYED` state (`HOSTED-DEPLOY-01`).
+- **BG-05:** ACCT-DEL-01 owns no open item from its merge.
+  - `ACCT-DEL-02` owns `QAN-BL-ACCT-01`.
+  - `Stage 7 — Replay` owns `QAN-BL-ACCT-02`.
+  - `HOSTED-DEPLOY-01` owns `QAN-BL-PROD-06`, `QAN-BL-PROD-08` and `QAN-BL-PROD-09`.
+  - `S6-07` keeps `QAN-BL-PRIV-04`, `QAN-BL-MATCH-01` and `QAN-BL-MATCH-06`.
+- **Untouched:** every other item, owner, severity and status.
+- **Latest index: 74 items; 37 / 4 / 9 / 24 by status, 42 / 30 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -4037,11 +4226,13 @@ Inherited after T-12 closure reconciliation:
 | `S6-02 — Introduction-Phase Privacy Isolation & Safe END Boundary` | `QAN-BL-MATCH-02` (admitted by the Stage 6 WP0 at the Product Owner's GATE-03 decision, 2026-10-13; the task id is the Product Owner's (GATE-03) and so is the name (the approved Stage 6 task map, same day); the task's scope beyond this item is set only by its own Task Contract). *Closing change (2026-10-15; the S6-02 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-02` tombstoned with the Product Owner's stricter decision A; admitted `QAN-BL-MATCH-05` to `S6-03` (D2); nothing else admitted (§7). S6-02 owns no open item |
 | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). *S6-03 started 2026-10-15 (Task Contract v1.3; CW2-06B approved at CP1). Closing change (2026-10-15; the S6-03 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-05` tombstoned; dated notes on `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04`; nothing admitted (§7). S6-03 owns no open item |
 | `S6-05 — Mutual Match & Introduction World` | none — no item names it at kickoff (BG-05). *CP2 (2026-10-16; the S6-05 pull request, not merged; effective from its merge):* admitted `QAN-BL-MATCH-06` (owner `S6-07`, the Product Owner's R-4); nothing tombstoned or re-owned (§7). S6-05 owns no open item. *Closing change (CP5, 2026-10-16; the S6-05 pull request, not merged; effective from its merge):* nothing inherited, tombstoned or re-owned; `QAN-BL-MATCH-06` stays with `S6-07`; S6-05 owns no open item (§7) |
-| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed); `QAN-BL-MATCH-06` (admitted by S6-05 at CP2, 2026-10-16, at the Product Owner's R-4: the runtime producer of the forward step) |
-| `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `QAN-BL-ACCT-01` (re-owned from `UNASSIGNED` by ACCT-DEL-01 CP1, 2026-10-17, the Product Owner having confirmed the name and approved WP0 v1.1 with P-1 … P-4; effective from its merge; it stays open — Shared `STANDARD` and Public go to `ACCT-DEL-02` and Replay to Stage 7 at CP2, P-1) |
+| `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed); `QAN-BL-MATCH-06` (admitted by S6-05 at CP2, 2026-10-16, at the Product Owner's R-4: the runtime producer of the forward step). *ACCT-DEL-01 closing change (2026-10-17; PR #345, not merged; effective from its merge):* `QAN-BL-MATCH-01`'s `ACCT-DEL-01` dependency is met in engineering; the six commands, CW2-08 and every launch gate stay closed, and S6-07 registers its new relations in the account-erasure coverage registry |
+| `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `QAN-BL-ACCT-01` (re-owned from `UNASSIGNED` by ACCT-DEL-01 CP1, 2026-10-17, the Product Owner having confirmed the name and approved WP0 v1.1 with P-1 … P-4; effective from its merge; it stays open — Shared `STANDARD` and Public go to `ACCT-DEL-02` and Replay to Stage 7 at CP2, P-1). *Closing change (CP2, 2026-10-17; PR #345, not merged; effective from its merge):* the Matching / Introductions part delivered; `QAN-BL-ACCT-01` re-owned to `ACCT-DEL-02` (still open); admitted `QAN-BL-ACCT-02` (Stage 7) and `QAN-BL-PROD-09` (`HOSTED-DEPLOY-01`); dated notes on `QAN-BL-MATCH-01` (dependency met in engineering), `QAN-BL-PROD-06`, `QAN-BL-PROD-08` and `QAN-BL-PRIV-04` (§7). ACCT-DEL-01 owns no open item |
+| `ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `QAN-BL-ACCT-01` (re-owned from `ACCT-DEL-01` by its closing change, 2026-10-17, at the Product Owner's P-1; effective from its merge; a future task, not opened; the descriptive half of the name is ACCT-DEL-01's until its own Task Contract) |
+| `Stage 7 — Replay` | `QAN-BL-ACCT-02` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's P-1; Replay's account-deletion module) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
-| `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
+| `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself; `QAN-BL-PROD-08` (admitted by S6-06 CP1; listed here by ACCT-DEL-01); `QAN-BL-PROD-09` (admitted by ACCT-DEL-01's closing change, 2026-10-17, at the Product Owner's direction: a **mandatory condition** — no World opens in production without an automated, fail-closed account-deletion coverage check read on the hosted project) |
 | `PROD-RETRY-02 — Post-v16 Data API Retry Semantics` | `QAN-BL-PROD-07` |
 | `CI-01 — Shared Intelligence Learning Evidence & Baseline` | none — no item names it; admitted `QAN-BL-INTEL-01` (C1-A, Product Owner decision 3), `QAN-BL-INTEL-02` and `QAN-BL-CI-02` (closing change, Product Owner closing decisions 2 and 3); `QAN-BL-CTX-01`, `QAN-BL-CW-02`, `QAN-BL-CW-05`, `QAN-BL-PRIV-01` and `QAN-BL-PRIV-02` cited and left unchanged |
 | `INTEL-TM-01 — Personal Evidence Truth Maintenance (PG-02)` | `QAN-BL-INTEL-01` tombstoned after merged PR #326; `QAN-BL-QIR-01` admitted under `QIR-006-R1`; `QAN-BL-INTEL-02` remains `VALIDATION — OPEN` under `INTEL-RET-01`; no deployment or global erasure claim |

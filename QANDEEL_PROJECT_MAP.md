@@ -170,8 +170,10 @@ This is a **locator note, not a new Product authority**. S6-06 merged through PR
 ACCT-DEL-01 WP0 v1 / review addendum v1.1 and decisions P-1 … P-4 (2026-10-17) made **ACCT-DEL-01 — Account Deletion
 Across Matching / Introductions** the current implementation task; it owns `QAN-BL-ACCT-01` (re-owned in its CP1). S6-07 is
 not started. Evidence: the [ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md).
-- ACCT-DEL-01 is **CP1 DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW — NOT MERGED / NOT DEPLOYED**, on one pull request
-  from `acct/acct-del-01-account-erasure` (CP2, the closure, follows the CP1 approval in the same pull request).
+- ACCT-DEL-01 is **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 APPROVED, CP2 (CLOSURE) DELIVERED —
+  NOT MERGED / NOT DEPLOYED**, on one pull request ([#345](https://github.com/allamqandeel/qandeel/pull/345)) from
+  `acct/acct-del-01-account-erasure`. The Product Owner approved CP1 on its exact head `90681312` (API CI and Mobile CI
+  green). *Until CP2: CP1 DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW.*
 - CP1: migration `0164` (the ONE governed account erasure — `public.server_erase_account_v1`, service_role only — over
   the account's whole Matching / Introductions footprint and the unchanged `0130` Personal erasure, in one transaction or
   nothing; the counterpart's retained view and lineage release; residue classes, recovery and two-level photo erasure),
@@ -181,6 +183,18 @@ not started. Evidence: the [ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMP
   [`matching-introduction-runtime-v1.md` §49](docs/matching-introduction-runtime-v1.md); `I-07` stays CLOSED / FROZEN.
 - Not closed by it (P-1): account deletion for Shared `STANDARD` and Public (`ACCT-DEL-02`) and Replay (Stage 7) — those
   footprints answer a truthful, recorded `BLOCKED`; `QAN-BL-ACCT-01` stays open. No gate is opened.
+- Where the residue lives after its closure (backlog §5):
+  - `QAN-BL-ACCT-01` is re-owned, still open, to `ACCT-DEL-02` (Shared `STANDARD` / Public);
+  - `QAN-BL-ACCT-02` (Replay) is owned by `Stage 7 — Replay`;
+  - `QAN-BL-PROD-09` is `HOSTED-DEPLOY-01`'s mandatory condition: no World opens in production without an automated
+    account-deletion coverage check read on the hosted project.
+
+  The coverage truth in the repository (`account_erasure_private.coverage_registry` / `residue_class_coverage`, the CI
+  census, `server_read_account_erasure_coverage_v1`) is where a deletion module registers. It is not by itself a deployment
+  block.
+- For S6-07: `QAN-BL-MATCH-01`'s `ACCT-DEL-01` dependency is met in engineering from the merge. The six commands, CW2-08
+  and every launch gate stay closed. S6-07 is not started, and every relation it adds must be registered in the coverage
+  registry.
 
 ### S6-06 — 2026-10-16 (historical: S6-06 merged as PR #344)
 
@@ -541,7 +555,7 @@ contradiction.
 | **8B — Voice Runtime** | **LATER** (runtime / provider-gated) | Voice Notes and Live Calls: realtime audio, ASR/TTS, barge-in, background/interruption, durable audio and provider integration | consume G1.2/P2/P4 frozen Product/non-signal visual law; only runtime-gated truth is newly resolved |
 | **9 — Economy + Launch Closure** | **LATER.** The AI-COST-01 accounting foundation is DONE (PR #303). The final Product economy and provider selection are not | Plans/Credits/Usage from measured provider economics; Lantern; maintenance/min-version; security, device/store/legal/operations and release hardening | consume all prior frozen/implemented work, including AI-COST-01's ledger, Price Cards and inactive Credit Policy contract; this stage closes release-specific gaps rather than reopening Product foundations |
 
-> **CURRENT IMPLEMENTATION TASK: ACCT-DEL-01 — Account Deletion Across Matching / Introductions** (owns `QAN-BL-ACCT-01`, re-owned in its CP1) from `4233c06739149fb19b441db782837497815d8be6` (the merge of PR #344, S6-06), under the Product Owner's approval of the WP0 v1 / review addendum v1.1 and decisions P-1 … P-4 (2026-10-17) — **CP1 DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW — NOT MERGED / NOT DEPLOYED** on `acct/acct-del-01-account-erasure` (one pull request; CP2, the closure, follows the CP1 approval). CP1: migration `0164` (the ONE governed account erasure over the account's Matching / Introductions footprint and the unchanged `0130` Personal erasure, in one transaction or nothing; the counterpart's retained view and Matching lineage; residue classes, recovery and two-level photo erasure), its verifier and static contract, and the API pass on it. Shared `STANDARD`, Public and Replay are not covered (P-1: `ACCT-DEL-02`, Stage 7); no gate is opened ([ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md)).
+> **CURRENT IMPLEMENTATION TASK: ACCT-DEL-01 — Account Deletion Across Matching / Introductions** (owned `QAN-BL-ACCT-01` from its CP1; its closing change re-owns the item, still open, to `ACCT-DEL-02`) from `4233c06739149fb19b441db782837497815d8be6` (the merge of PR #344, S6-06), under the Product Owner's approval of the WP0 v1 / review addendum v1.1 and decisions P-1 … P-4 (2026-10-17) — **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 APPROVED, CP2 (CLOSURE) DELIVERED — NOT MERGED / NOT DEPLOYED** on `acct/acct-del-01-account-erasure` (one pull request, #345; CP1 approved by the Product Owner on `90681312`, API CI and Mobile CI green). CP1: migration `0164` (the ONE governed account erasure over the account's Matching / Introductions footprint and the unchanged `0130` Personal erasure, in one transaction or nothing; the counterpart's retained view and Matching lineage; residue classes, recovery and two-level photo erasure), its verifier and static contract, and the API pass on it. Shared `STANDARD`, Public and Replay are not covered (P-1: `ACCT-DEL-02`, Stage 7); no gate is opened. CP2 (the closure, documentation and governance only): `QAN-BL-ACCT-01` re-owned to `ACCT-DEL-02`; `QAN-BL-ACCT-02` (Replay, Stage 7) and `QAN-BL-PROD-09` (`HOSTED-DEPLOY-01`'s mandatory account-deletion coverage check before any World opens in production) admitted; `QAN-BL-MATCH-01`'s dependency met in engineering. S6-07 is not started ([ACCT-DEL-01 record](docs/e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md)).
 >
 > *(Previous, S6-06, as written at its closing change:)* **CURRENT IMPLEMENTATION TASK: S6-06 — Progressive Disclosure, Photos, SUCCESS & Reactivation** (Stage 6; no backlog item named S6-06 at kickoff) from `88a475ab6798edbf511e42f78a2f70e5cdb37c34` (the merge of PR #343, S6-05), under the Product Owner's Task Contract v1.0 with WP0 v1.1 and its five-point correction approved (D-01 … D-12, conditions 1–3, 2026-10-16) — **CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 AND CP2 DELIVERED — VISUAL GATE AND COPY GATE CLOSED — NOT MERGED / NOT DEPLOYED** on `s6/s6-06-progressive-disclosure-photos` (one pull request). CP1: migrations `0162` (disclosure, photos, display consent) and `0163` (SUCCESS, reactivation), their verifiers and live proofs, two API modules, the private S3-protocol object store and its erasure worker, the S6-06 static contract; then CP2 (2026-10-17, after the Visual Gate rev.2 and the Copy Gate closed): the mobile sharing panel in the live Introduction World (P0 – P15, V-1 otherwise unchanged), the three-stage photo drawn from memory only (expo-image, cache off; the picker's copy deleted), the display-name consent, SUCCESS drawn only with a real transition, the status line and resume, the Settings page «ما شاركته في التعارف» (P16); no camera, microphone, storage or media permission (a native gate in Mobile CI); content-free erasure telemetry; an Android emulator proof in five legs with zero image files left on the device. `QAN-BL-LAUNCH-05` admitted (iOS photo-cache proof and store review, Stage 9); no gate is opened ([S6-06 record](docs/e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md)).
 

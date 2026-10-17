@@ -4978,6 +4978,13 @@ server_read_account_erasure_coverage_v1()    service_role only: every residue cl
   must be registered in its own migration with its coverage class.
 - **Residue.** Shared `STANDARD`, Public and Replay rows answer `BLOCKED` with their class (owners `ACCT-DEL-02`,
   Stage 7). No class is covered by `0164`; a module that covers one flips its class in the same migration.
+  *(ACCT-DEL-01 closing change:)* `QAN-BL-ACCT-01` (Shared `STANDARD` / Public, `ACCT-DEL-02`) and `QAN-BL-ACCT-02`
+  (Replay, Stage 7) carry them.
+- **Deployment.** Not deployed; nothing opens a gate. `QAN-BL-PROD-06` owns the hosted catch-up. `QAN-BL-PROD-09` is
+  `HOSTED-DEPLOY-01`'s mandatory condition. No World opens in production until an automated, fail-closed check on the
+  hosted project reads every class that World can create as covered, finds no unregistered account reference, and has
+  measured the erasure within its bound: the `service_role` `statement_timeout`, and the 42 account columns without a
+  leading index. The coverage reader and the CI census are not by themselves a deployment block.
 - **The counterpart.** A retained view of their own words (`introduction_retained_views` / `_items`; four readers
   replaced forward) and an exact Matching lineage (`matching_counterpart_erasure_releases`; the `0117` core replaced
   forward at gate 7a only).

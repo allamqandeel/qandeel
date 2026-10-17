@@ -109,7 +109,11 @@ function wiringViolations(w) {
   if (!/run: npm run test:acct-del-01-account-erasure-contract/u.test(w.workflow)) out.push('CI does not run this contract');
   if (!/^## 49\. `ACCT-DEL-01` — controlled forward amendment for account deletion across Matching \/ Introductions$/mu.test(w.runtime)) out.push('the I-07 record does not carry the §49 amendment');
   if (!/^\*\*Phase:\*\* `I-07 — Introductions \/ Matching Runtime` — \*\*CLOSED \/ FROZEN\*\*$/mu.test(w.runtime)) out.push('the I-07 phase banner changed');
-  if (!/^\| `QAN-BL-ACCT-01` \| .* \| `ACCT-DEL-01 — Account Deletion Across Matching \/ Introductions` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('QAN-BL-ACCT-01 is not owned by ACCT-DEL-01, or was closed');
+  // The closure (CP2, P-1): QAN-BL-ACCT-01 stays open with ACCT-DEL-02 (Shared STANDARD / Public), Replay is its own item
+  // with Stage 7, and the release gate is HOSTED-DEPLOY-01's mandatory condition. None may be closed by this task.
+  if (!/^\| `QAN-BL-ACCT-01` \| .* \| `ACCT-DEL-02 — Account Deletion Across Shared STANDARD \/ Public` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('QAN-BL-ACCT-01 is not owned by ACCT-DEL-02, or was closed');
+  if (!/^\| `QAN-BL-ACCT-02` \| .* \| `Stage 7 — Replay` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('Replay account deletion is not owned by Stage 7, or was closed');
+  if (!/^\| `QAN-BL-PROD-09` \| .* \| `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` \| `HIGH` \| `DEFERRED — OWNED` \|$/mu.test(w.backlog)) out.push('the release gate is not a HOSTED-DEPLOY-01 condition, or was closed');
   for (const required of ['P-1', 'P-2', 'P-3', 'P-4', 'ACCT-DEL-02', 'Stage 7', 'NOT_DEPLOYED', '0130']) {
     if (!w.record.includes(required)) out.push(`the record does not state ${required}`);
   }
@@ -137,7 +141,9 @@ const PLANTED = [
   ['BLOCKED counted as an operational failure', 'apiViolations', () => plant('worker', "outcome === 'BLOCKED' ? 'blocked_expected'", "outcome === 'BLOCKED' ? 'integrity_failure'")],
   ['RETRY counted as a failure', 'apiViolations', () => plant('worker', "outcome === 'RETRY' ? 'retry_expected'", "outcome === 'RETRY' ? 'integrity_failure'")],
   ['the verifier dropped from CI', 'wiringViolations', () => plant('workflow', 'run: npm run verify:account-deletion-matching-introductions:integration', 'run: echo skipped')],
-  ['QAN-BL-ACCT-01 closed', 'wiringViolations', () => plant('backlog', "`ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `HIGH` | `DEFERRED — OWNED` |", "`ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `HIGH` | `CLOSED — TOMBSTONE` |")],
+  ['QAN-BL-ACCT-01 closed', 'wiringViolations', () => plant('backlog', "`ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `HIGH` | `DEFERRED — OWNED` |", "`ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` | `HIGH` | `CLOSED — TOMBSTONE` |")],
+  ['Replay deletion handed to no one', 'wiringViolations', () => plant('backlog', "`Stage 7 — Replay` | `HIGH` | `DEFERRED — OWNED` |", "`UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |")],
+  ['the release gate closed', 'wiringViolations', () => plant('backlog', "| `QAN-BL-PROD-09` | No World Opens in Production Without an Automated Account-Deletion Coverage Check | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `DEFERRED — OWNED` |", "| `QAN-BL-PROD-09` | No World Opens in Production Without an Automated Account-Deletion Coverage Check | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `HIGH` | `CLOSED — TOMBSTONE` |")],
 ];
 
 for (const [name, detector, world] of PLANTED) {

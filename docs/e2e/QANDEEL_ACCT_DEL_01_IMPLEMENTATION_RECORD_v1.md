@@ -1,12 +1,18 @@
 # QANDEEL — ACCT-DEL-01 Implementation Record v1
 
 **Task:** ACCT-DEL-01 — Account Deletion Across Matching / Introductions  
-**Owns:** `QAN-BL-ACCT-01` (re-owned in this change from `OPEN — UNASSIGNED` to `DEFERRED — OWNED`; it stays open, P-1)  
+**Owned:** `QAN-BL-ACCT-01` (re-owned by CP1 from `OPEN — UNASSIGNED` to `DEFERRED — OWNED`; at this closure re-owned to
+`ACCT-DEL-02`, still open, P-1; §8). ACCT-DEL-01 owns no open item from its merge.  
 **Product authority:** the Product Owner's approval (2026-10-17) of the ACCT-DEL-01 WP0 report v1, its review addendum
 v1.1 and decisions P-1 … P-4, with the final review notes («ACCT-DEL-01 — Final Implementation Authorization»). W3-PDG-01
 §8 (Delete Account), CW2-06 and CW2-03 §37 as cited. No merge or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **CP1 DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW — CP2 (CLOSURE) NOT STARTED — NOT MERGED / NOT
-DEPLOYED** (2026-10-17).  
+**Status:** **ACCT-DEL-01 CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION — CP1 APPROVED, CP2 (CLOSURE)
+DELIVERED — NOT MERGED / NOT DEPLOYED** (CP1 2026-10-17, approved by the Product Owner on its exact head `90681312`, API CI
+and Mobile CI green; CP2, this closure, 2026-10-17). *Until CP2: "CP1 DELIVERED — AWAITING THE PRODUCT OWNER'S CP1 REVIEW —
+CP2 (CLOSURE) NOT STARTED — NOT MERGED / NOT DEPLOYED".* Matching / Introductions account deletion is handled; account
+deletion in QANDEEL as a whole is **not** closed (§8).  
+**Pull request:** [#345](https://github.com/allamqandeel/qandeel/pull/345) (draft; merging needs the Product Owner's
+explicit «ادمج»).  
 **Base:** `main` = merged PR #344 (S6-06) at `4233c06739149fb19b441db782837497815d8be6`, re-verified before the branch.  
 **Branch:** `acct/acct-del-01-account-erasure` (one pull request for the whole task: CP1, then CP2).  
 **Migration:** `0164_account_deletion_matching_introductions_v1.sql` (the number was free).
@@ -118,7 +124,7 @@ shows the existing `deleteScheduled` copy with its new date.
 - **The bound** — the maximum footprint (E01) erases in **198 ms** locally against the 60 s bound. 56 of the 116 account
   columns had no leading index; the 14 in covered relations are indexed by `0164`. The other 42 (Personal, Public, Shared
   `STANDARD`) are other owners' relations: at production scale each is a scan inside the final `DELETE`, recorded for
-  `HOSTED-DEPLOY-01` (`QAN-BL-PROD-06`), together with the hosted `statement_timeout` of `service_role`. Splitting the
+  `HOSTED-DEPLOY-01` (`QAN-BL-PROD-09`, admitted at CP2; §8), together with the hosted `statement_timeout` of `service_role`. Splitting the
   erasure over several transactions is refused: it would commit a partial erasure.
 
 ## 4. Verification (local: real PostgreSQL 17.10)
@@ -158,6 +164,7 @@ The `verify-0149` re-anchor keeps the census expression the S6-02 / S6-04 / S6-0
 - **CP2 (this PR, after the Product Owner's CP1 approval):** the closure — this record's final state, `QAN-BL-ACCT-01`'s
   narrowed disposition (Shared `STANDARD` + Public to `ACCT-DEL-02`, Replay to Stage 7), the dated notes on
   `QAN-BL-MATCH-01` (its `ACCT-DEL-01` dependency met), `QAN-BL-PROD-06` and `QAN-BL-PROD-08`, and the locators.
+  *Delivered: §8.*
 - **`ACCT-DEL-02`:** Shared `STANDARD` (post-SUCCESS Worlds included) and Public deletion, with their own Product decisions.
 - **Stage 7:** Replay's erasure module, registered in the coverage registry from its first relation.
 - **Stage 9 / `HOSTED-DEPLOY-01`:** the release gate is enforced in CI and governance (`server_read_account_erasure_coverage_v1`,
@@ -175,4 +182,103 @@ the backlog itself changes for them.
 
 ## 7. Final status (CP1)
 
-To be completed with the exact-head CI results when CP1 is pushed.
+CP1 was pushed as four commits on `4233c067` to [PR #345](https://github.com/allamqandeel/qandeel/pull/345). Its exact
+head is `906813121683960fda4baaf08be1a39c3c6fc438`.
+
+| Required check on `90681312` | Run | Result |
+|---|---|---|
+| API CI: `verify-api` (contracts, every migration verifier on real PostgreSQL, `verify-migration-0164` and the ACCT-DEL-01 static contract included, the API build and Jest), Change-aware plan, Validation evidence (VAL-01) | [`39030890618`](https://github.com/allamqandeel/qandeel/actions/runs/39030890618) | success |
+| Mobile CI: fast mobile contract gate, Android Release APK and API 36 emulator boot smoke, iOS Release simulator app and iPhone 17 / iOS 26.5 boot smoke, Change-aware plan, Validation evidence (VAL-01) | [`39030890572`](https://github.com/allamqandeel/qandeel/actions/runs/39030890572) | success |
+
+The Product Owner verified both runs on GitHub independently and **approved CP1** on that head («ACCT-DEL-01 — CP1
+Approved / Start CP2», 2026-10-17), authorizing CP2 in the same pull request.
+
+## 8. Closure (CP2) — BG-08 / BG-09
+
+CP2 is documentation and governance only, under the Product Owner's checkpoint rule (no separate documentation task or
+pull request). It changes no migration, API, mobile or test behaviour. Its only test edits re-anchor the
+`QAN-BL-ACCT-01` index-row pins to the item's new owner, the change the re-owning makes true.
+
+### 8.1 What ACCT-DEL-01 resolved
+
+**Account deletion across Matching / Introductions** is handled in the repository:
+- the governed erasure takes an account's whole Matching / Introductions footprint, the Introduction World's own
+  dependencies included, together with the unchanged `0130` Personal erasure, in one transaction or nothing;
+- the counterpart keeps their own words, read and deletable (§2.1), an ordinary END and an exact Matching lineage;
+- an uncovered footprint answers a truthful, recorded `BLOCKED` and is re-armed with a fresh grace when covered;
+- photos are erased at two levels.
+
+The proof is §3 and §4, and both CI runs in §7 are green on the exact head. Nothing is deployed: the hosted database
+stops at `0074`.
+
+### 8.2 What stays open (P-1)
+
+| Residue | Owner | Register |
+|---|---|---|
+| Shared `STANDARD` Worlds (post-SUCCESS Introduction Worlds included) and the Public World | `ACCT-DEL-02 — Account Deletion Across Shared STANDARD / Public` (future; not opened) | `QAN-BL-ACCT-01`, **re-owned, still open** |
+| Replay | `Stage 7 — Replay` | `QAN-BL-ACCT-02`, **admitted** |
+| The release gate: no World opens in production without an automated account-deletion coverage check on the hosted project; the erasure's hosted bound (the `service_role` `statement_timeout`, the 42 unindexed account columns) | `HOSTED-DEPLOY-01` (a mandatory condition) | `QAN-BL-PROD-09`, **admitted** |
+
+`ACCT-DEL-02` and Stage 7 are not started, and nothing of theirs is implemented here. Each one covers its class in
+`account_erasure_private.residue_class_coverage` in the same change as its module. Until then, every footprint of that
+class answers `BLOCKED (SHARED_STANDARD | PUBLIC | REPLAY)` and nothing is erased.
+
+**The coverage check is not a deployment block.** The coverage census in CI and `server_read_account_erasure_coverage_v1`
+make the repository's coverage truth checkable. Neither one stops a deployment or a launch capability by itself, and
+this record does not claim otherwise. `QAN-BL-PROD-09` owns the executable check on the hosted project.
+
+**Account deletion in QANDEEL as a whole is not closed.**
+
+### 8.3 S6-07's dependency
+
+`QAN-BL-MATCH-01`'s mandatory `ACCT-DEL-01` dependency (the Stage 6 WP0 final decision addendum, D3) is **met in
+engineering** from this pull request's merge: an enrollment path would no longer commit a footprint without a governed
+deletion. That changes no gate:
+- the six `0149` commands stay executable by no application role until S6-07's own Task Contract and the Product Owner
+  approve the launch path (`NO_BACKDOOR`);
+- CW2-08 and every launch gate stay closed;
+- S6-07 is not started.
+
+S6-07 registers every new relation it adds in the coverage registry (CI refuses otherwise), and `QAN-BL-PRIV-04`
+exports the retained view.
+
+### 8.4 BG-08 reconciliation
+
+| Item | Disposition |
+|---|---|
+| `QAN-BL-ACCT-01` (inherited) | **Re-owned**, not tombstoned: the Matching / Introductions part delivered; Shared `STANDARD` and Public to `ACCT-DEL-02`; Replay split to `QAN-BL-ACCT-02` (BG-02: one owner per item). Index-row pins re-anchored in the same change |
+| `QAN-BL-ACCT-02` | **Admitted** (`HIGH`, `DEFERRED — OWNED`, owner `Stage 7 — Replay`) at the Product Owner's P-1 |
+| `QAN-BL-PROD-09` | **Admitted** (`HIGH`, `DEFERRED — OWNED`, owner `HOSTED-DEPLOY-01`) at the Product Owner's CP1-approval direction |
+| `QAN-BL-MATCH-01` | Dated note: the dependency is met in engineering; owner `S6-07`, severity and status unchanged |
+| `QAN-BL-PROD-06` | Dated note: the four new `service_role` entry points let no deterministic `40001` escape (`verify-migration-0150`'s cross-schema guard) |
+| `QAN-BL-PROD-08` | Dated note: the erasure's second photo level (`media_erased_at`) waits on the hosted object store |
+| `QAN-BL-PRIV-04` | Dated note: the retained view and the released lineage join the export footprint |
+| Every other item | Untouched |
+
+Register: **74 items; 37 / 4 / 9 / 24 by status, 42 / 30 / 2 by severity**, recounted mechanically from backlog §4.
+ACCT-DEL-01 owns no open item from its merge.
+
+**Contracts re-anchored at CP2** (only the owner field of the `QAN-BL-ACCT-01` row, which CP1 had pinned to
+`ACCT-DEL-01`):
+- `tests/sec-match-00-…`, `w3-mega-s-…`, `s5-01-…`, `s5-02-…`, `s5-03a-…` and `s5-03b-…` (the s5-03c pin reads the status
+  only);
+- `tests/acct-del-01-account-erasure-contract.test.mjs`. It now also pins `QAN-BL-ACCT-02` with Stage 7 and
+  `QAN-BL-PROD-09` with `HOSTED-DEPLOY-01`, each still open, and refuses two more planted defects (Replay deletion handed
+  to no one; the release gate closed): 14 tests.
+
+### 8.5 BG-09 and the locators
+
+- **This record:** from its CP1 banner to `CLOSED / READY FOR PRODUCT OWNER REVIEW AND MERGE DECISION`, in this change.
+- **Locators updated in the same change:**
+  - [`QANDEEL_CURRENT_STATE.md`](../../QANDEEL_CURRENT_STATE.md): the lifecycle row, the register mirror, the D-17 note,
+    the sequencing and the owner rows;
+  - [`QANDEEL_PROJECT_MAP.md`](../../QANDEEL_PROJECT_MAP.md);
+  - [`QANDEEL_PRODUCT_ROADMAP.md`](../../QANDEEL_PRODUCT_ROADMAP.md) §6.18.
+- **`I-07`** stays `CLOSED / FROZEN`. At CP2, §49's text is unchanged; only its lifecycle line moves to the closure.
+- [`database/README.md`](../../database/README.md): ACCT-DEL-01's residue owners and a deployment paragraph
+  (`QAN-BL-PROD-09`).
+
+**Verification at CP2:** the documentation and governance contracts affected by these edits, run locally; CP1's
+PostgreSQL and mobile proofs were not repeated (no behaviour changed). The mandatory CI runs on the final head.
+
+**Not done, by instruction:** no merge, no deployment, no gate opened, S6-07 not started, CP1's code not reopened.
