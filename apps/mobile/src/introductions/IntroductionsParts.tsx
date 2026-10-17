@@ -7,7 +7,7 @@
  * World. A part on the sheet takes the World as its contrasting ground (inputs, the selected choice, the primary act),
  * so nothing disappears into the surface it stands on, in Dark and Light alike.
  */
-import { useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { PixelRatio, Text, TextInput, View } from 'react-native';
 
 import { Control, MIN_TARGET, typeStyle, type ConversationPalette } from '../conversation';
@@ -257,16 +257,25 @@ export function Choice({ ctx, label, selected, onPress, testID, multiple = false
   );
 }
 
-export function Field({ ctx, label, value, onChange, testID, maxLength, numeric = false, multiline = false, direction }: {
+export function Field({ ctx, label, value, onChange, testID, maxLength, numeric = false, multiline = false, direction, showLabel = true, invalid = false }: {
   readonly ctx: PartContext; readonly label: string; readonly value: string; readonly onChange: (text: string) => void; readonly testID: string;
   readonly maxLength: number; readonly numeric?: boolean; readonly multiline?: boolean; readonly direction?: 'rtl' | 'ltr';
+  /** S6-06: false when the screen's own title already names the field — the label is then its accessible name only. */
+  readonly showLabel?: boolean;
+  /** S6-06: the server refused what is written here; the words below the field say why (never colour alone). */
+  readonly invalid?: boolean;
 }) {
   const [focused, setFocused] = useState(false);
   const writing = direction ?? ctx.writing;
+  // S6-06 (found on the device): a field that leaves the screen takes its keyboard with it — blurred while it still
+  // exists, as the Shared composer does; once it is gone the keyboard has no input to belong to and would stay up.
+  const input = useRef<TextInput | null>(null);
+  useLayoutEffect(() => () => { input.current?.blur(); }, []);
   return (
     <View style={{ paddingStart: ROW_START, paddingEnd: ROW_END, paddingVertical: 6 }}>
-      <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingBottom: 4, writingDirection: ctx.writing }}>{label}</Text>
+      {showLabel ? <Text style={{ ...typeStyle('metadata'), color: ctx.palette.secondary, paddingBottom: 4, writingDirection: ctx.writing }}>{label}</Text> : null}
       <TextInput
+        ref={input}
         testID={testID}
         value={value}
         onChangeText={onChange}
@@ -293,7 +302,7 @@ export function Field({ ctx, label, value, onChange, testID, maxLength, numeric 
           paddingHorizontal: 14,
           paddingVertical: 9,
           borderWidth: ctx.palette.focusThickness,
-          borderColor: focused ? ctx.palette.focusIndicator : ctx.onSheet ? ctx.palette.tertiary : ctx.palette.field,
+          borderColor: invalid ? ctx.palette.error : focused ? ctx.palette.focusIndicator : ctx.onSheet ? ctx.palette.tertiary : ctx.palette.field,
           textAlign: writing === 'rtl' ? 'right' : 'left',
           textAlignVertical: multiline ? 'top' : 'center',
           writingDirection: writing,

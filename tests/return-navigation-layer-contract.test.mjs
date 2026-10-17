@@ -705,7 +705,10 @@ test('the T-07 gate is registered at the root and in Mobile CI without a new nat
   // T-07 adds no plugin; the only later plugin is W2-02's launch identity.
   // A3-02 RE-ANCHOR: native Push adds exactly two plugins — its own typed manifest mod (no dangerous mod) and Expo's
   // first-party expo-notifications (iOS aps-environment). Nothing else may enter; the order is load-bearing (A3-02 record §5).
-  assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }]]);
+  // S6-06 RE-ANCHOR (D-03, WP0 correction 4): Expo's first-party expo-image-picker, last, with the camera and the microphone
+  // OFF and the app's own approved Photos purpose string (PD-83); typed mods only, no dangerous mod, no generated project.
+  assert.deepEqual(appConfig.expo.plugins, ['expo-router', './plugins/with-qandeel-launch-identity', './plugins/with-qandeel-push', ['expo-notifications', { mode: 'production' }],
+    ['expo-image-picker', { photosPermission: 'QANDEEL uses only the photo you choose, to share it in your introduction.', cameraPermission: false, microphonePermission: false }]]);
   assert.equal(existsSync(new URL('apps/mobile/ios', root)), false);
   assert.equal(existsSync(new URL('apps/mobile/android', root)), false);
 });

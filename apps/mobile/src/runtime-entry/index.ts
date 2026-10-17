@@ -172,6 +172,21 @@ export type {
 } from './introduction-worlds-api';
 export { IntroductionWorldsApiClient } from './introduction-worlds-api';
 export type {
+  IntroductionDiscloseResult, IntroductionDisclosures, IntroductionDisclosuresRead, IntroductionGrantResult, IntroductionImageRefusal, IntroductionMediaRead,
+  IntroductionMyPhoto, IntroductionOwnShare, IntroductionPersonalKey, IntroductionRemoveResult, IntroductionRevokeResult, IntroductionShare,
+  IntroductionShareState, IntroductionSharesRead, IntroductionSharesWorld, IntroductionSharingApiConfig, IntroductionSharingFetch, IntroductionStage,
+  IntroductionTextType, IntroductionUploadResult,
+} from './introduction-sharing-api';
+export {
+  INTRODUCTION_HOMETOWN_MAX_LENGTH, INTRODUCTION_IMAGE_MAX_BYTES, INTRODUCTION_IMAGE_TYPES, INTRODUCTION_PERSONAL_KEYS, INTRODUCTION_TEXT_MAX_LENGTH,
+  IntroductionSharingApiClient,
+} from './introduction-sharing-api';
+export type {
+  IntroductionContinuationApiConfig, IntroductionParticipation, IntroductionParticipationRead, IntroductionPauseReason, IntroductionResumeResult,
+  IntroductionSuccessRead, IntroductionSuccessResult,
+} from './introduction-continuation-api';
+export { IntroductionContinuationApiClient } from './introduction-continuation-api';
+export type {
   SharedAcceptResult, SharedDeclineResult, SharedDeleteResult, SharedEntryResult, SharedIdentityResult, SharedInvitation, SharedInviteResult,
   SharedMaterial, SharedMaterialCursor, SharedMaterialsResult, SharedMember, SharedRoot, SharedRootResult, SharedSendResult, SharedWorldShell, SharedWorldSummary,
   SharedApproveResult, SharedClosedWorld, SharedClosedWorldResult, SharedHistoryApproveResult, SharedHistoryCandidate, SharedHistoryCandidatesResult,

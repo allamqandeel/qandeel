@@ -99,6 +99,7 @@ import { createVport01ProofWorld } from './vport01-proof-world';
 import { createS601ProofIntroductions } from './s601-proof-introductions';
 import { createS604ProofProposals } from './s604-proof-proposals';
 import { createS605ProofIntroductionWorld } from './s605-proof-introduction-world';
+import { createS606ProofIntroductionSharing } from './s606-proof-introduction-sharing';
 
 /** SYNTHETIC Names — validation fixtures, never Product copy. */
 /** S5-02: the reader's own SYNTHETIC earlier words offered as existing material — a validation fixture, never Product copy. */
@@ -236,6 +237,8 @@ export interface S401ProofWorld {
   proposals(): void;
   /** S6-05: the SYNTHETIC Mutual Match and Introduction Worlds (`s605-proof-introduction-world.ts`). */
   introductionWorld(action: 'seed-match' | 'peer-end' | 'offline'): void;
+  /** S6-06: the SYNTHETIC shares, photo stages, display name, SUCCESS and resume (`s606-proof-introduction-sharing.ts`). */
+  introductionSharing(action: 'seed-sharing' | 'sharing-closed' | 'sharing-open' | 'sharing-more' | 'sharing-success' | 'sharing-complete'): void;
   /** S5-03C smoke: the synthetic other side accepts every relation the reader requested. */
   relationAccept(): void;
   /** S5-04 smoke: a synthetic other person replies to the reader's latest own post; its Public Activity item appears. */
@@ -253,6 +256,8 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
   // S6-05: answers nothing until seeded, likewise.
   // Its acceptance, END and first live read answer after a moment, so their transient states can be photographed.
   const introductionWorld = createS605ProofIntroductionWorld(language, { delayMs: 2500 });
+  // S6-06: answers nothing until seeded, likewise.
+  const introductionSharing = createS606ProofIntroductionSharing(language);
   const held = new Set<string>();
   let releases: (() => void)[] = [];
   // S5-01: the held Public World entries, and the reader's Public display mode.
@@ -764,6 +769,10 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
         return json(200, fixtureExperience(id, active, discussionOf(id).length));
       }
     }
+    // S6-06 first: a photo upload carries raw bytes, never JSON.
+    const rawBody = (init as { body?: unknown } | undefined)?.body;
+    const sharingAnswer = introductionSharing.route(path, method, rawBody === undefined ? undefined : typeof rawBody === 'string' ? JSON.parse(rawBody) as unknown : rawBody);
+    if (sharingAnswer !== undefined) return sharingAnswer as unknown as ReturnType<RuntimeHttpFetch>;
     const introductionWorldAnswer = introductionWorld.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
     if (introductionWorldAnswer !== undefined) return introductionWorldAnswer;
     const proposalsAnswer = privateProposals.route(path, method, init?.body === undefined ? undefined : JSON.parse(init.body) as Record<string, unknown>);
@@ -878,6 +887,14 @@ export function createS401ProofWorld(language: ChromeLanguage): S401ProofWorld {
       if (action === 'seed-match') introductionWorld.seed();
       else if (action === 'peer-end') introductionWorld.peerEnd();
       else introductionWorld.offline();
+    },
+    introductionSharing: (action) => {
+      if (action === 'seed-sharing') introductionSharing.seed();
+      else if (action === 'sharing-closed') introductionSharing.closeGate();
+      else if (action === 'sharing-open') introductionSharing.openGate();
+      else if (action === 'sharing-more') introductionSharing.more();
+      else if (action === 'sharing-success') introductionSharing.success();
+      else introductionSharing.complete();
     },
     peerDelete: () => {
       for (const lines of threads.values()) {

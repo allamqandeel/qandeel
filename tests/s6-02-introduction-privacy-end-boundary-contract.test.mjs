@@ -165,8 +165,8 @@ test('6 — D1: the ONE END boundary, ungated, and the ONE named exception of th
   assert.match(verifier, /const S6_02_INTRODUCTION_END = 'public\.end_own_introduction_v1\(uuid, uuid\)';/u);
   // S6-04 (2026-10-15) appends its three named decision boundaries after the END exception, and S6-05 (2026-10-16,
   // migration 0159) its one acceptance boundary after them; the END exception itself is unchanged and still named
-  // exactly once in the census.
-  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary, the three named S6-04 decisions and the one S6-05 acceptance');
+  // exactly once in the census. S6-06 (2026-10-16, migration 0163) appends its two continuation boundaries after them.
+  assert.match(verifier, /\[\.\.\.retainedWriters, nameOf\(S6_02_INTRODUCTION_END\), \.\.\.S6_04_PROPOSAL_DECISIONS\.map\(nameOf\), nameOf\(S6_05_MUTUAL_MATCH_ACCEPT\),\n {6}\.\.\.S6_06_INTRODUCTION_CONTINUATION\.map\(nameOf\)\]\.sort\(\)/u, 'the census admits exactly the retained four, the one END boundary, the three named S6-04 decisions, the one S6-05 acceptance and the two S6-06 continuation boundaries');
   assert.equal((verifier.match(/S6_02_INTRODUCTION_END/gu) ?? []).length, 7, 'the exception is named, not generalized');
   for (const probe of ['f4 the census refuses a second client-executable wrapper around the END core',
     'f5 the census refuses the END boundary granted beyond authenticated']) assert.ok(verifier.includes(probe), probe);
@@ -191,14 +191,18 @@ test('7 — the API route takes the World and one command id, is an exit right, 
   assert.doesNotMatch(repository, /ServiceRole|service_role/u, 'the caller\'s own token');
   assert.match(read('apps/api/src/http-security/route-rate-limit.census.ts'), /'POST \/introductions\/worlds\/:worldId\/end': 'AUTHENTICATED'/u);
   // S6-04 (2026-10-15) appends its own proposal module, and S6-05 (2026-10-16, CP3) its Introduction World module after
-  // it; the S6-02 module stays composed here, exactly once.
-  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule\]/u);
+  // it, and S6-06 (2026-10-16, CP1) its two modules after that; the S6-02 module stays composed here, exactly once.
+  assert.match(read('apps/api/src/account/account.module.ts'), /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule\]/u);
   const mobile = (dir) => readdirSync(new URL(dir, root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)));
   const client = ['runtime-entry/introduction-worlds-api.ts', 'introductions/__tests__/introduction-world.test.tsx',
     'integration/__validation__/s605-proof-introduction-world.ts'];
+  // RE-ANCHORED by S6-06 CP2 (2026-10-17): the S6-06 sharing and continuation clients (and their suite) name the
+  // Introduction World routes for disclosure, photos and SUCCESS — and never the END, which stays the S6-05 client's.
+  const sharing = ['runtime-entry/introduction-sharing-api.ts', 'runtime-entry/introduction-continuation-api.ts', 'runtime-entry/__tests__/introduction-sharing-api.test.ts'];
+  for (const file of sharing) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /\/end\b|end_own_introduction/u, `mobile ${file} wires no END`);
   for (const file of mobile('apps/mobile/src/').map((f) => String(f).replace(/\\/gu, '/'))) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /end_own_introduction/u, `mobile ${file} names no database function`);
-    if (!client.includes(file)) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds\//u, `mobile ${file} wires no END outside the S6-05 client`);
+    if (!client.includes(file) && !sharing.includes(file)) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /introductions\/worlds\//u, `mobile ${file} wires no END outside the S6-05 client`);
   }
 });
 

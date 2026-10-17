@@ -150,7 +150,8 @@ test('5 — the API: four routes, the caller token, SECURITY_SENSITIVE send (R-8
   assert.doesNotMatch(controller, /delete/iu, 'no second deletion route: the existing owner deletion is reused');
   const account = read('apps/api/src/account/account.module.ts');
   assert.equal((account.match(/IntroductionsWorldModule/gu) ?? []).length, 3, 'imported, documented and composed once');
-  assert.match(account, /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule\]/u);
+  // RE-ANCHORED by S6-06 (2026-10-16, CP1): its two modules are composed after this one.
+  assert.match(account, /imports: \[ObservabilityModule, IntroductionsPreparationModule, IntroductionsLifecycleModule, IntroductionsProposalsModule, IntroductionsWorldModule,\n {4}IntroductionsDisclosureModule, IntroductionsContinuationModule\]/u);
   // The Stage 4 send keeps its Activity, and only it: the Introduction module calls no producer (R-7).
   assert.equal((read('apps/api/src/shared-world/shared-world.controller.ts').match(/this\.activity\.humanText\(/gu) ?? []).length, 1);
 });
@@ -163,7 +164,11 @@ test('6 — mobile reaches the Introduction World only through its one CP5 clien
     'integration/__validation__/s605-proof-introduction-world.ts'];
   const naming = readdirSync(new URL('apps/mobile/src/', root), { recursive: true }).map((f) => String(f).replace(/\\/gu, '/'))
     .filter((f) => /\.(ts|tsx)$/u.test(f) && /introductions\/worlds/u.test(read(`apps/mobile/src/${f}`)));
-  assert.deepEqual(naming.sort(), [...S6_05_MOBILE_CLIENT].sort(), 'one client names the routes');
+  // RE-ANCHORED by S6-06 CP2 (2026-10-17): the S6-06 sharing and continuation clients (and their suite) name the World's
+  // disclosure, photo and SUCCESS routes; the messages, END and history routes stay the S6-05 client's alone.
+  const S6_06_MOBILE_CLIENTS = ['runtime-entry/introduction-sharing-api.ts', 'runtime-entry/introduction-continuation-api.ts', 'runtime-entry/__tests__/introduction-sharing-api.test.ts'];
+  assert.deepEqual(naming.sort(), [...S6_05_MOBILE_CLIENT, ...S6_06_MOBILE_CLIENTS].sort(), 'one client names the routes');
+  for (const file of S6_06_MOBILE_CLIENTS) assert.doesNotMatch(read(`apps/mobile/src/${file}`), /\/(?:messages|end|history)\b/u, `${file} names no S6-05 route`);
   for (const file of readdirSync(new URL('apps/mobile/src/', root), { recursive: true }).filter((f) => /\.(ts|tsx)$/u.test(String(f)))) {
     assert.doesNotMatch(read(`apps/mobile/src/${file}`), /_my_introduction_/u, `mobile ${file} names no database function`);
   }

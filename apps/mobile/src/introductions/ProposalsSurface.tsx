@@ -24,6 +24,7 @@ import type { ChromeLanguage } from '../orientation-chrome';
 import type { PrivateProposal, ProposalAction } from '../runtime-entry';
 import { introductionWorldCopy, type IntroductionWorldCopy } from './introduction-world-copy';
 import { worldOfProposal, type IntroductionWorldsController } from './introduction-world-controller';
+import type { IntroductionSharingController } from './introduction-sharing-controller';
 import { IntroductionWorldSurface } from './IntroductionWorldSurface';
 import { Action, BUSY_OPACITY, Heading, LOCAL_TYPE, Para, Question, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
 import { proposalsCopy, type ProposalsCopy } from './proposals-copy';
@@ -41,6 +42,8 @@ export interface ProposalsSurfaceProps {
   readonly onBack: () => void;
   /** S6-05: the reader's own Introduction Worlds (the entry IW-06 and the World itself); absent, no entry is drawn. */
   readonly worlds?: IntroductionWorldsController;
+  /** S6-06: sharing, the display-name consent and SUCCESS inside the Introduction World. */
+  readonly sharing?: IntroductionSharingController;
 }
 
 type Screen =
@@ -62,7 +65,7 @@ const noticeText = (notice: ProposalsNotice, copy: ProposalsCopy): string | null
 /** The comma that joins a card's title and status for the screen reader, in the reading language. */
 const joined = (language: ChromeLanguage, a: string, b: string) => `${a}${language === 'ar' ? '، ' : ', '}${b}`;
 
-export function ProposalsSurface({ controller, language, insets, onBack, worlds }: ProposalsSurfaceProps) {
+export function ProposalsSurface({ controller, language, insets, onBack, worlds, sharing }: ProposalsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = proposalsCopy(language);
@@ -120,7 +123,8 @@ export function ProposalsSurface({ controller, language, insets, onBack, worlds 
 
   if (screen.kind === 'WORLD' && worlds !== undefined) {
     // S6-05: the Introduction World itself. Back returns to exactly where it was opened from.
-    return <IntroductionWorldSurface controller={worlds} worldId={screen.worldId} language={language} insets={insets} onBack={() => setScreen(screen.from)} />;
+    // S6-06: no hand-off from here — after SUCCESS the World is found in «العالم المشترك», where the reader opens it.
+    return <IntroductionWorldSurface controller={worlds} worldId={screen.worldId} language={language} insets={insets} onBack={() => setScreen(screen.from)} sharing={sharing} />;
   }
   const enter = (worldId: string, from: Exclude<Screen, { readonly kind: 'WORLD' }>) => {
     controller.dismissNotice();

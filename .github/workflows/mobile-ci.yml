@@ -174,6 +174,9 @@ jobs:
       # W2-02: the GENERATED Android + iOS projects carry the I-08B2.5 icon bytes unchanged and the World-only
       # launch, with a planted defect proved caught for every check family. Linux generates both platforms.
       - {name: Native launch identity gate (W2-02), run: npm run prebuild:launch-identity:mobile}
+      # S6-06: the GENERATED projects request no camera, microphone, storage or media permission for the Introduction
+      # photo (the system pickers need none), and iOS keeps its own approved Photos purpose string (PD-83) in both languages.
+      - {name: Native Introduction photo permission gate (S6-06), run: npm run prebuild:introduction-photo:mobile}
 
   # -------------------------------------------------------------------------------------------------
   # Android — BUILD PRODUCER, then VALIDATION CONSUMER

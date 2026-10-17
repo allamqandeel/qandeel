@@ -77,6 +77,8 @@ import { PublicIdChangeSurface, PublicIdRow } from './PublicIdSection';
 import { SharedIdPage, SharedIdRow } from './SharedIdSection';
 import { FormerSharedMaterialPage, FormerSharedMaterialRow } from './FormerSharedMaterialSection';
 import type { FormerSharedMaterialController } from './former-shared-material-controller';
+import { IntroductionSharesPage, IntroductionSharesRow } from './IntroductionSharesSection';
+import type { IntroductionSharesController } from './introduction-shares-controller';
 import type { SharedAlertsController, SharedIdController } from '../shared-world';
 import type { PublicDisplayController } from './public-display-controller';
 import { PublicDisplaySection } from './PublicDisplaySection';
@@ -104,6 +106,8 @@ export interface SettingsSurfaceProps {
   readonly privacy?: PrivacyDataController;
   /** S4-03: the reader's own words in Shared Worlds they no longer belong to; read only when its page is opened. */
   readonly formerShared?: FormerSharedMaterialController;
+  /** S6-06 (P16): everything the reader shared in any Introduction; read only when its page is opened. */
+  readonly introductionShares?: IntroductionSharesController;
   /** S4-04 — the per-World Shared mute rows of Notifications & Activity. */
   readonly sharedAlerts?: SharedAlertsController;
   /** A3-01: the reader's Notifications & Activity preferences for this runtime generation. Without it, that group is not drawn. */
@@ -117,7 +121,7 @@ export interface SettingsSurfaceProps {
 }
 
 /** The change shown in place of the groups, if any. */
-type Change = 'PUBLIC_ID' | 'SHARED_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS' | 'FORMER_SHARED' | 'INTERACTION_PREFERENCES';
+type Change = 'PUBLIC_ID' | 'SHARED_ID' | 'NAME' | 'LOGIN_ID' | 'EMAIL' | 'PASSWORD' | 'EXPORT' | 'DELETE' | 'NOTIFICATIONS' | 'FORMER_SHARED' | 'INTRODUCTION_SHARES' | 'INTERACTION_PREFERENCES';
 /** Where the screen reader returns when a change closes. */
 type RowKey = Change;
 
@@ -223,7 +227,7 @@ function AppearanceChoice({ preference, label, selected, onChoose, language, pal
   );
 }
 
-export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, sharedAlerts, notifications, push, interactionPreferences, initialPage }: SettingsSurfaceProps) {
+export function SettingsSurface({ language, insets, onBack, onSignOut, identity, publicId, sharedId, publicDisplay, privacy, formerShared, introductionShares, sharedAlerts, notifications, push, interactionPreferences, initialPage }: SettingsSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = settingsCopy(language);
@@ -441,6 +445,10 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
     change = <FormerSharedMaterialPage controller={formerShared} language={language} palette={palette} />;
   }
 
+  if (changing === 'INTRODUCTION_SHARES' && introductionShares !== undefined) {
+    change = <IntroductionSharesPage controller={introductionShares} language={language} palette={palette} />;
+  }
+
   if (changing === 'INTERACTION_PREFERENCES' && interactionPreferences !== undefined) {
     change = <InteractionPreferencesPage controller={interactionPreferences} language={language} palette={palette} busyChanged={onCommitBusy} />;
   }
@@ -610,6 +618,9 @@ export function SettingsSurface({ language, insets, onBack, onSignOut, identity,
                 />
                 {formerShared !== undefined ? (
                   <FormerSharedMaterialRow language={language} palette={palette} onOpen={() => openChange('FORMER_SHARED')} rowRef={rowRef('FORMER_SHARED')} />
+                ) : null}
+                {introductionShares !== undefined ? (
+                  <IntroductionSharesRow language={language} palette={palette} onOpen={() => openChange('INTRODUCTION_SHARES')} rowRef={rowRef('INTRODUCTION_SHARES')} />
                 ) : null}
               </View>
             ) : null}

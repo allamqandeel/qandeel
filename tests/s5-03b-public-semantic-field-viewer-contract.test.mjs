@@ -241,7 +241,10 @@ test('9 — governance: the record, the backlog and the locators tell the same t
     // S6-04 Task Contract v1.0 makes S6-04 the current implementation task.
     // RE-ANCHORED by S6-05 (2026-10-16, validation only): S6-04 merged as PR #342 (`35ad4e19`); the Product Owner's
     // S6-05 Task Contract v1.0 makes S6-05 the current implementation task.
-    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-05 — Mutual Match & Introduction World\*\*/mu);
+    // RE-ANCHORED by S6-06 (2026-10-16, validation only): S6-05 merged as PR #343 (`88a475ab`); the Product Owner's
+    // S6-06 Task Contract v1.0 makes S6-06 the current implementation task.
+    assert.match(map, /^> \*\*CURRENT IMPLEMENTATION TASK: S6-06 — Progressive Disclosure, Photos, SUCCESS & Reactivation\*\*/mu);
+    assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-05/u, 'the merged S6-05 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-04/u, 'the merged S6-04 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-03/u, 'the merged S6-03 is no longer the current task');
     assert.doesNotMatch(map, /> \*\*CURRENT IMPLEMENTATION TASK: S6-02/u, 'the merged S6-02 is no longer the current task');

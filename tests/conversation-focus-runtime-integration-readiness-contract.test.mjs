@@ -327,8 +327,19 @@ test('the typed database error transport is additive, bounded, opaque, and sourc
   // refusal, 22023, as the client's INVALID_REQUEST; every other refusal is unavailable, under the same rule.
   // RE-ANCHORED by S6-05 CP3 (migration 0160): the Introduction World service reads it for exactly the same one typed
   // refusal, 22023, as the client's INVALID_REQUEST; every other refusal is unavailable, under the same rule.
+  // RE-ANCHORED by S6-06 CP1 (migrations 0162, 0163): the Introduction sharing service and the Introduction continuation
+  // service each read it for exactly the same one typed refusal, 22023, as the client's INVALID_REQUEST; every other
+  // refusal is unavailable, under the same rule.
   // The list stays exact: any further production reader fails here.)
-  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/introductions-lifecycle/introduction-end.service.ts', 'apps/api/src/introductions-proposals/introduction-proposals.service.ts', 'apps/api/src/introductions-world/introduction-world.service.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  assert.deepEqual(readers, ['apps/api/src/account/account.service.ts', 'apps/api/src/conversation/conversation.service.ts', `${FOCUS_DIR}/conversation-focus-runtime.repository.ts`, 'apps/api/src/historical-projection/historical-projection.repository.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts', 'apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-lifecycle/introduction-end.service.ts', 'apps/api/src/introductions-proposals/introduction-proposals.service.ts', 'apps/api/src/introductions-world/introduction-world.service.ts', 'apps/api/src/shared-world/shared-world.service.ts', 'apps/api/src/thread-lifecycle/conversation-thread-lifecycle-runtime.repository.ts']);
+  for (const file of ['apps/api/src/introductions-disclosure/introduction-disclosure.service.ts', 'apps/api/src/introductions-continuation/introduction-continuation.service.ts']) {
+    const source = stripComments(read(file));
+    assert.equal((source.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, `${file} reads the identity once`);
+    assert.match(source, /error\.status === 400 && readDataApiUpstreamIdentity\(error\)\.databaseCode === '22023'\) return invalid\(\);/u,
+      'it recognises exactly the one typed malformed-request refusal');
+    assert.doesNotMatch(source, /console\.|Logger|\$\{|databaseMessage|identity\.database(Code|Message)\s*[,)}]/u,
+      'the raw identity is never logged, interpolated or returned');
+  }
   const introductionWorld = stripComments(read('apps/api/src/introductions-world/introduction-world.service.ts'));
   assert.equal((introductionWorld.match(/readDataApiUpstreamIdentity\(/gu) ?? []).length, 1, 'the Introduction World service reads the identity once');
   assert.match(introductionWorld, /error\.status === 400 && readDataApiUpstreamIdentity\(error\)\.databaseCode === '22023'\) return invalid\(\);/u,

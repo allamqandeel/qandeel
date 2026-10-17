@@ -4879,3 +4879,76 @@ The verifier needs `DATABASE_URL` pointing at a FULLY migrated database; its sce
 with the CW2-08 and I-07D seams replaced for the run and restored byte for byte (B01 puts CW2-08 back to fail-closed
 before END), and its four races commit their fixtures and remove them. The wire proof also needs `POSTGREST_URL` and
 `POSTGREST_JWT_SECRET` (CI only).
+
+## S6-06 - Introduction sharing, photos and the display consent (migration 0162, CP1)
+
+`0162_introduction_progressive_disclosure_media_v1.sql` is the CP1 database part of `S6-06` for progressive disclosure,
+the three-stage photo and the `FULL_NAME` display consent, under the Product Owner's approval of WP0 v1.1 and its
+five-point correction (2026-10-16). It creates one private schema, six relations and the functions below, and replaces
+nothing: the frozen disclosure core (`0115` / `0122`), its CW2-08 seam (checked last, `NOT_EVALUATED`) and the owner
+deletion (`0139` over `0143`) are composed, never rebuilt. Record:
+[S6-06 implementation record](../docs/e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §2.
+
+```text
+introduction_sharing_private        image_series, image_renditions, image_stage_disclosures, media_erasure_queue,
+                                    name_display_events, name_display_state: RLS on, no policy, no privilege for any
+                                    application role; no column holds a digest, size, dimension or ETag (0122)
+disclose_my_introduction_text_v1    authenticated: FULL_NAME / CONTACT_METHOD / DEEPER_PERSONAL_FIELD (four keys only),
+                                    the contact floor, through the frozen core; DISCLOSED | CONTACT_REFUSED |
+                                    NOT_AVAILABLE_NOW | DELETED | COMMAND_CONFLICT | UNAVAILABLE
+begin_my_introduction_image_v1      authenticated, gated: a PENDING series + three renditions (random handle, separate
+                                    random storage key) BEFORE any byte, with an upload deadline; one active photo
+disclose_my_introduction_image_stage_v1  authenticated: strictly stage n = shared + 1; RETIRED once a shared stage was
+                                    deleted; one frozen-core delivery per stage (PARTIAL_IMAGE 1-2, FULL_IMAGE 3)
+remove_my_introduction_image_v1     authenticated, ungated, ACTIVE or READ_ONLY_CLOSED: every visible stage through the
+                                    frozen owner deletion, renditions deleted, storage keys alone queued
+read_my_introduction_disclosures_v1 / list_my_introduction_shares_v1 / read_my_introduction_display_names_v1
+                                    authenticated, STABLE: visibility is the frozen resolver's; never a user id or key
+authorize_my_introduction_media_v1  authenticated, STABLE: AUTHORIZED | UNAVAILABLE, re-decided on every byte request
+grant_ / revoke_my_introduction_name_display_v1  authenticated: grant one exact FULL_NAME version (gated); revoke in
+                                    every state (ungated)
+server_* (nine)                     service_role only: upload keys, completion, the key behind an authorized handle, the
+                                    sweep, the erasure lease / confirm / defer, the listing reconciliation, a count-only
+                                    state - the API's storage boundary, holding no human identity
+```
+
+Erasure: access is refused the moment a deletion commits (the rendition row goes in that transaction); the queue row
+holds one storage key and its retry state; the API worker deletes the object, proves it gone with HEAD, and only then
+removes the row; a failure defers with a back-off and is never dropped; a key of an upload still in flight waits for
+its deadline plus a grace period.
+
+```sh
+npm run verify:introduction-disclosure-media:integration
+npm run prove:introduction-media-store:postgrest
+```
+
+## S6-06 - Introduction SUCCESS and reactivation (migration 0163, CP1)
+
+`0163_introduction_success_reactivation_v1.sql` is the same checkpoint's SUCCESS and reactivation part. It creates the
+functions below and replaces nothing; the frozen `0116` / `0117` cores and their seams are composed. `prepare` stays
+closed and producer-less (Stage 8A), so in production there is no transition to approve.
+
+```text
+read_my_introduction_success_v1     authenticated, STABLE: the latest version and the reader's OWN approval state only
+approve_my_introduction_success_v1  authenticated, gated: the frozen approval core as auth.uid(), in its own transaction;
+                                    APPROVED | CHANGED (40001 / PT409 absorbed) | NOT_AVAILABLE_NOW | COMMAND_CONFLICT
+withdraw_my_introduction_success_v1 authenticated, ungated
+complete_my_introduction_success_v1 authenticated: the system attempt, a SEPARATE transaction; no actor; identities
+                                    derived from the version alone, so one terminal commit whoever triggers it;
+                                    COMPLETED | PENDING (never an oracle of the other human's decision) | UNAVAILABLE
+reactivate_my_introductions_v1      authenticated: the frozen 0117 boundary, CW2-08 last
+```
+
+There is no `SAVEPOINT` and no service_role path: a failed attempt (the gate, a `40001`, an incomplete pair) rolls back
+only its own transaction, so both approvals stay exactly as they were and the gate is read, never written.
+
+```sh
+npm run verify:introduction-success-reactivation:integration
+npm run prove:introduction-success:postgrest
+```
+
+Both verifiers need `DATABASE_URL` pointing at a FULLY migrated database; their scenarios run in rolled-back
+transactions with the CW2-08 and I-07D seams replaced for the run and restored byte for byte, and their races commit
+their fixtures and remove them. The wire proofs need `POSTGREST_URL` and `POSTGREST_JWT_SECRET` (CI only); the media
+proof also needs the CI-only `QANDEEL_MEDIA_S3_*` values, `RCLONE_DATA_DIR`, `RCLONE_LOG_FILE` and `RCLONE_BIN`, and the
+compiled API (`npm run build:api`).

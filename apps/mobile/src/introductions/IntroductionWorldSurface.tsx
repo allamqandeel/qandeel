@@ -12,7 +12,13 @@
  *   - S8: the two humans' words in the Shared World's own bubbles (`SharedReadOnlyMaterial` / `SharedOwnMaterial`) and its
  *     composer (`SharedComposer`, IW-24 as its accessible name); the reader deletes their own words through the existing
  *     Shared owner deletion (R-5). When the opening scrolls away, the title moves into the header.
- *   - Tools: back and «إنهاء التعارف» only (D4). No Manage World, no members, no add, no Living Analysis, no field.
+ *   - Tools: back and «إنهاء التعارف» (D4), and — S6-06 (D-12, P0) — the one sharing action «المشاركة» beside it while the
+ *     Introduction lives; V-1 is otherwise unchanged. No Manage World, no members, no add, no Living Analysis, no field.
+ *   - S6-06 (P15g): the other person's name is the first name the server presented, or — only while THEY consent to show it
+ *     to this reader, and only as the server returns it — the full name they shared (D-09). The device swaps the label
+ *     only from what the server returns; hiding or showing it here is not the protection.
+ *   - S6-06 (P10 – P12): SUCCESS takes the opening's place only when the server returns a real transition (never before
+ *     Stage 8A); once completed, the reader is handed to the existing Shared World screen.
  *   - S10 / S11: one confirmation, no reason asked, no red destructive style; the END is S6-02's, retried with the same
  *     command id.
  *   - S12: the closed record — no composer, no END, no management; what this human's own entitlement keeps, after every
@@ -37,6 +43,10 @@ import {
   INTRODUCTION_MESSAGE_MAX_LENGTH, firstNameOf, type IntroductionPending, type IntroductionWorldsController, type IntroductionWorldView,
 } from './introduction-world-controller';
 import { Action, BUSY_OPACITY, LOCAL_TYPE, Para, ROW_END, ROW_START, type PartContext } from './IntroductionsParts';
+import type { IntroductionSharingController, IntroductionSharingState } from './introduction-sharing-controller';
+import { introductionSharingCopy } from './introduction-sharing-copy';
+import { IntroductionSharingPanel } from './IntroductionSharingPanel';
+import { SuccessCompleted, SuccessProposal } from './IntroductionSuccessCard';
 import { proposalsCopy } from './proposals-copy';
 
 export const INTRODUCTION_WORLD_TEST_ID = 'qandeel-introduction-world';
@@ -55,7 +65,14 @@ export interface IntroductionWorldSurfaceProps {
   readonly insets: { readonly top: number; readonly right: number; readonly bottom: number; readonly left: number };
   /** Returns to wherever the World was opened from (the proposals or «العالم المشترك»). */
   readonly onBack: () => void;
+  /** S6-06 — sharing, the display-name consent and SUCCESS for this World. Absent: none of them is drawn. */
+  readonly sharing?: IntroductionSharingController;
+  /** S6-06 (P12) — after SUCCESS, the same World in the existing Shared World screen. */
+  readonly onOpenSharedWorld?: (worldId: string) => void;
 }
+
+const NO_SHARING: IntroductionSharingState = Object.freeze({ open: null });
+const noSubscription = () => () => undefined;
 
 /** A message as the Shared bubbles draw it: the other person's words under their first name, never an account Name. */
 const asMaterial = (message: IntroductionMessage, otherName: string): SharedMaterial => ({
@@ -63,14 +80,16 @@ const asMaterial = (message: IntroductionMessage, otherName: string): SharedMate
   text: message.text, establishedAt: message.establishedAt, canDelete: message.canDelete,
 });
 
-export function IntroductionWorldSurface({ controller, worldId, language, insets, onBack }: IntroductionWorldSurfaceProps) {
+export function IntroductionWorldSurface({ controller, worldId, language, insets, onBack, sharing, onOpenSharedWorld }: IntroductionWorldSurfaceProps) {
   const ready = useConversationTypeface();
   const palette = usePalette();
   const copy = introductionWorldCopy(language);
   const shared = sharedCopy(language);
   const state = useSyncExternalStore(controller.subscribe, controller.getState);
+  const sharingState = useSyncExternalStore(sharing === undefined ? noSubscription : sharing.subscribe, sharing === undefined ? () => NO_SHARING : sharing.getState);
   const writing = language === 'ar' ? 'rtl' : 'ltr';
   const [askedToEnd, setConfirmingEnd] = useState(false);
+  const [sharingOpen, setSharingOpen] = useState(false);
   const [titleInHeader, setTitleInHeader] = useState(false);
   const openingBottom = useRef(0);
   const heldEnds = useRef<{ readonly oldest: string | null; readonly newest: string | null }>({ oldest: null, newest: null });
@@ -83,11 +102,21 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
     controller.open(worldId);
     return () => controller.close();
   }, [controller, worldId]);
+  // S6-06: the World's shares, display names and SUCCESS are read with it, and forgotten with it (renditions included).
+  useEffect(() => {
+    if (sharing === undefined) return undefined;
+    sharing.open(worldId);
+    return () => sharing.close();
+  }, [sharing, worldId]);
 
   const view: IntroductionWorldView | null = state.open !== null && state.open.worldId === worldId ? state.open : null;
   const status = view?.status ?? 'LOADING';
-  const firstName = firstNameOf(state, worldId);
+  const sharingView = sharingState.open !== null && sharingState.open.worldId === worldId ? sharingState.open : null;
+  // P15g: the full name only as the server returns it, only while the other person consents; otherwise the first name.
+  const firstName = sharingView?.disclosures?.otherDisplayName ?? firstNameOf(state, worldId);
   const title = introductionTitle(copy, firstName);
+  const success = sharingView?.success ?? null;
+  const completed = success?.status === 'COMPLETED' || sharingView?.disclosures?.introductionState === 'SHARED_WORLD';
   const ending = view?.end === 'RUNNING';
 
   // The confirmation stands only while the Introduction is live: once the END is decided (CLOSED, or not this reader's
@@ -118,7 +147,7 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
   }, []);
 
   // The screen reader arrives once on each level's heading.
-  const levelKey = `${confirmingEnd ? 'END' : 'WORLD'}|${status}`;
+  const levelKey = `${confirmingEnd ? 'END' : 'WORLD'}|${status}|${sharingOpen ? 'SHARING' : ''}|${completed ? 'COMPLETED' : success?.status ?? ''}`;
   useEffect(() => {
     if (!ready) return;
     const node = headingRef.current === null ? null : findNodeHandle(headingRef.current);
@@ -126,6 +155,11 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
   }, [ready, levelKey]);
 
   if (!ready) return <View style={{ flex: 1, backgroundColor: palette.world }} testID={INTRODUCTION_WORLD_TEST_ID} />;
+
+  // S6-06 — the sharing panel is a level of this World: Back returns here, exactly as it was.
+  if (sharingOpen && sharing !== undefined) {
+    return <IntroductionSharingPanel sharing={sharing} language={language} insets={insets} otherName={firstName ?? shared.someone} onBack={() => setSharingOpen(false)} />;
+  }
 
   const ctx: PartContext = { palette, language, writing, busy: ending, onHeading };
   const sheetCtx: PartContext = { ...ctx, onSheet: true };
@@ -150,8 +184,15 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
           {headerTitle}
         </Text>
       )}
-      {!confirmingEnd && status === 'ACTIVE' ? (
-        // IW-26: the one tool beside Back (D4).
+      {!confirmingEnd && status === 'ACTIVE' && sharing !== undefined && !completed ? (
+        // PD-00 (D-12, P0): the one sharing action, in the same quiet text style as IW-26.
+        <Control palette={palette} language={language} accessibilityLabel={introductionSharingCopy(language).sharingAction} onPress={() => setSharingOpen(true)} testID="qandeel-introduction-sharing"
+          style={{ minHeight: MIN_TARGET, paddingHorizontal: 8, justifyContent: 'center' }}>
+          <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{introductionSharingCopy(language).sharingAction}</Text>
+        </Control>
+      ) : null}
+      {!confirmingEnd && status === 'ACTIVE' && !completed ? (
+        // IW-26: beside Back (D4), with the sharing action (D-12).
         <Control palette={palette} language={language} accessibilityLabel={copy.endAction} onPress={() => setConfirmingEnd(true)} testID="qandeel-introduction-end"
           style={{ minHeight: MIN_TARGET, paddingHorizontal: 8, justifyContent: 'center' }}>
           <Text style={{ ...typeStyle('action'), color: palette.restInk, writingDirection: writing }}>{copy.endAction}</Text>
@@ -183,6 +224,11 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
         </View>
       </ScrollView>
     </>, 'qandeel-introduction-end-screen');
+  }
+
+  if (completed && sharing !== undefined) {
+    // P12 — SUCCESS completed: the same World continues as a Shared World, opened in the existing screen.
+    return frame(<>{header}<SuccessCompleted ctx={ctx} onOpen={onOpenSharedWorld === undefined ? undefined : () => onOpenSharedWorld(worldId)} /></>, 'qandeel-introduction-continued');
   }
 
   if (!authorized) {
@@ -224,7 +270,10 @@ export function IntroductionWorldSurface({ controller, worldId, language, insets
         contentContainerStyle={{ paddingBottom: 16, paddingLeft: insets.left, paddingRight: insets.right }}>
         {closed ? null : (
           <View onLayout={(event) => { openingBottom.current = event.nativeEvent.layout.y + event.nativeEvent.layout.height; }}>
-            <Opening ctx={ctx} copy={copy} title={title} />
+            {success !== null && success.status === 'TRANSITION' && sharing !== undefined
+              // P10 / P11: in the opening's place, only with a real transition (Stage 8A).
+              ? <SuccessProposal ctx={ctx} sharing={sharing} success={success} />
+              : <Opening ctx={ctx} copy={copy} title={title} />}
           </View>
         )}
         <Thread controller={controller} view={view!} ctx={ctx} copy={copy} otherName={otherName} />

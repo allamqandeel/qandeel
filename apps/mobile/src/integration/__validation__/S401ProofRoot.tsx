@@ -56,6 +56,9 @@
  * S6-05 — the Mutual Match acceptance and the Introduction World (the SYNTHETIC stand-in `s605-proof-introduction-world.ts`):
  *
  *   qandeel://s401-proof/introductions/seed-match | peer-end | offline
+ *
+ * S6-06 — sharing, photos, the display name, SUCCESS and resume (the SYNTHETIC stand-in `s606-proof-introduction-sharing.ts`):
+ *   qandeel://s401-proof/introductions/seed-sharing | sharing-closed | sharing-open | sharing-more | sharing-success | sharing-complete
  */
 import { useEffect, useState } from 'react';
 import { Linking, StyleSheet, View } from 'react-native';
@@ -70,7 +73,7 @@ import { deviceProductLanguage } from '../locale/device-locale';
 import { createIntegrationRuntime, type IntegrationRuntime } from '../runtime/integration-runtime';
 import { createS401ProofWorld, type S401ProofWorld } from './s401-proof-world';
 
-const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline)$/u;
+const LINK = /^qandeel:\/\/s401-proof\/(invite|world|conversation|lifecycle|history|public|shared-field|introductions)\/(arrive|seed|allow|revoke|peer|approve|grant|delete|relation-accept|peer-reply|seed-new|seed-known|seed-mixed|seed-portrait|close|seed-proposals|seed-match|peer-end|offline|seed-sharing|sharing-closed|sharing-open|sharing-more|sharing-success|sharing-complete)$/u;
 
 function buildProofRuntime(world: S401ProofWorld): IntegrationRuntime {
   const built = createIntegrationRuntime({
@@ -124,6 +127,15 @@ export function S401ProofRoot() {
         // The entry reads the proposals when the Personal world is drawn; a seed after launch asks again.
         const phase = runtime.getPhase();
         if (phase.kind === 'READY') phase.runtime.introductionProposals.refresh();
+      }
+      if (match[1] === 'introductions' && (match[2] === 'seed-sharing' || match[2].startsWith('sharing-'))) {
+        world.introductionSharing(match[2] as Parameters<typeof world.introductionSharing>[0]);
+        // The World's shares and the status line are read when shown; a seed after launch asks again.
+        const phase = runtime.getPhase();
+        if (phase.kind === 'READY') {
+          phase.runtime.introductionSharing.refresh();
+          phase.runtime.introductionParticipation.refresh();
+        }
       }
       if (match[1] === 'introductions' && (match[2] === 'seed-match' || match[2] === 'peer-end' || match[2] === 'offline')) {
         world.introductionWorld(match[2]);

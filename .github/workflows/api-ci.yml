@@ -142,6 +142,8 @@ jobs:
       - {name: "Verify S6-05 Introduction World messaging static contract (three boundaries beside the S6-02 fence, human words only, no AI or Activity, owner deletion reused)", run: npm run test:s6-05-introduction-world-messaging-contract}
       - {name: "Verify S6-05 closed Introduction history static contract (one STABLE reader over the frozen entitlement, END and owner deletion reused, no AI or Activity)", run: npm run test:s6-05-introduction-closed-history-contract}
       - {name: "Verify S6-05 mobile Introduction experience static contract (approved copy word for word, one strict client of the existing routes, IW-35 only on the server ENDED, V-1 structural, no AI or Activity)", run: npm run test:s6-05-introduction-mobile-contract}
+      - {name: "Verify S6-06 Introduction sharing, photos and continuation static contract (shells over the frozen cores, private object store, erasure from database truth, no service_role Matching path, pinned rclone)", run: npm run test:s6-06-introduction-disclosure-contract}
+      - {name: "Verify S6-06 mobile sharing experience static contract (approved copy word for word, one strict client of the CP1 routes, renditions from memory only with no image cache, picker copies deleted, no camera / microphone / storage permission, V-1 kept)", run: npm run test:s6-06-introduction-mobile-contract}
       # Cross-cutting, and deliberately last of the static contracts: it mirrors the repository,
       # performs the authorized future changes that are known to be coming (a new mobile gate, a new
       # migration, T-10 motion, T-11 responsive work, T-12 shell integration, a new root
@@ -1045,6 +1047,16 @@ jobs:
       # message for both; no entitlement created or widened; no send, reply, Activity or Push; races of END and deletion.
       - name: Verify S6-05 END and the closed Introduction history against real PostgreSQL
         run: npm run verify:introduction-closed-history:integration
+      # S6-06 (CP1): migration 0162 - text shares, the three-stage photo and the full-name display consent through the
+      # frozen disclosure core (CW2-08 last, closed in production); write-ahead photo intent, strict stage order, removal
+      # through the frozen owner deletion with only the storage key queued, the sweep, the lease / defer / confirm queue,
+      # no surviving trace (0122); revoke in every state; races of removal against a stage and an upload.
+      - name: Verify S6-06 Introduction sharing, photos and the display consent against real PostgreSQL
+        run: npm run verify:introduction-disclosure-media:integration
+      # S6-06 (CP1): migration 0163 - SUCCESS: two approvals each in their own transaction, the system attempt in another,
+      # a closed gate or an injected 40001 leaving both approvals untouched, one terminal commit; reactivation gated last.
+      - name: Verify S6-06 SUCCESS and reactivation against real PostgreSQL
+        run: npm run verify:introduction-success-reactivation:integration
       - {name: Verify Redis Streams dispatch runtime, run: npm run verify:post-response-dispatch:integration}
       - {name: Verify A2 end-to-end runtime smoke, run: npm run verify:a2-e2e-runtime-smoke}
       # MEM-AR-01C (RC-C1): the foreground smoke transport's table-read translation - the pinned Memory subject embed, the
@@ -1065,10 +1077,38 @@ jobs:
         env:
           POSTGREST_URL: http://localhost:3001
           POSTGREST_JWT_SECRET: ci-only-throwaway-postgrest-signing-secret-prod-sec-02
+          # S6-06 (D-01): a CI-only S3-protocol server for the photo path. These are throwaway values for this job's own
+          # loopback server, never a deployment credential; the hosted bucket and its keys belong to HOSTED-DEPLOY-01.
+          QANDEEL_MEDIA_S3_ENDPOINT: http://127.0.0.1:9310
+          QANDEEL_MEDIA_S3_REGION: us-east-1
+          QANDEEL_MEDIA_S3_BUCKET: qandeel-media
+          QANDEEL_MEDIA_S3_ACCESS_KEY_ID: ci-s6-06-access
+          QANDEEL_MEDIA_S3_SECRET_ACCESS_KEY: ci-only-throwaway-rclone-secret-s6-06
         run: |
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "CREATE ROLE authenticator LOGIN PASSWORD 'authenticator' NOINHERIT" -c "GRANT anon, authenticated, service_role TO authenticator"
-          # PROD-RETRY-01: whatever happens, no engine container outlives this step.
-          trap 'docker ps -q --filter "name=postgrest-v" | xargs -r docker stop >/dev/null 2>&1 || true' EXIT
+          # S6-06 (D-01): rclone serve s3, from rclone's own release asset at a pinned version, refused unless its sha256 is
+          # the one pinned here - the PostgREST pattern below: no registry, no image, no new service.
+          rclone_version=v1.75.1
+          rclone_sha256=982b5aa772841168f8e380f139e9e787b2a105403e32b94da8676a0e1c0a13ab
+          rclone_zip="$RUNNER_TEMP/rclone-$rclone_version-linux-amd64.zip"
+          curl -fsSL --retry 3 -o "$rclone_zip" "https://github.com/rclone/rclone/releases/download/$rclone_version/rclone-$rclone_version-linux-amd64.zip"
+          echo "$rclone_sha256  $rclone_zip" | sha256sum --check --strict
+          unzip -q -o "$rclone_zip" -d "$RUNNER_TEMP/rclone"
+          export RCLONE_BIN="$RUNNER_TEMP/rclone/rclone-$rclone_version-linux-amd64/rclone"
+          export RCLONE_DATA_DIR="$RUNNER_TEMP/rclone-s3"
+          export RCLONE_LOG_FILE="$RUNNER_TEMP/rclone-s3.log"
+          mkdir -p "$RCLONE_DATA_DIR/$QANDEEL_MEDIA_S3_BUCKET"
+          "$RCLONE_BIN" version | head -1
+          "$RCLONE_BIN" serve s3 --addr 127.0.0.1:9310 --auth-key "$QANDEEL_MEDIA_S3_ACCESS_KEY_ID,$QANDEEL_MEDIA_S3_SECRET_ACCESS_KEY" \
+            --log-level DEBUG --log-file "$RCLONE_LOG_FILE" "$RCLONE_DATA_DIR" &
+          rclone_pid=$!
+          # PROD-RETRY-01: whatever happens, no engine container outlives this step; S6-06: nor the S3 server.
+          trap 'docker ps -q --filter "name=postgrest-v" | xargs -r docker stop >/dev/null 2>&1 || true; kill "$rclone_pid" >/dev/null 2>&1 || true' EXIT
+          for attempt in $(seq 1 30); do
+            status=$(curl -s -o /dev/null -w '%{http_code}' "$QANDEEL_MEDIA_S3_ENDPOINT/" || true)
+            [ "$status" != "000" ] && break
+            sleep 1
+          done
           declare -A release_sha256=(
             [v12.2.9]=cfed98394d6f81a96a37225fe0792a6b0094c62dcde04009e6c5c9d2fddfb0bc
             [v13.0.8]=eb4471a7b8112a54e103539f2348c4d7f1c5b9b390649700ad62836e9211e279
@@ -1119,6 +1159,13 @@ jobs:
             # S6-05 (CP4): END and the closed history on the wire - anon and service_role refused, one human ends alone, each
             # reads their own closed history and an outsider nothing, owner deletion removes a message from both, nothing after END.
             POSTGREST_VERSION="$version" npm run --silent prove:introduction-closed-history:postgrest || { docker logs "postgrest-$version"; exit 1; }
+            # S6-06 (CP1): the photo path with the compiled API, the S3 adapter against rclone and the erasure worker - per-stage
+            # reads witnessed by the storage log, removal refused at once, erasure proven by HEAD and by the data directory,
+            # failures retried, an in-flight upload outlived (condition 1), aborted and killed uploads cleaned (condition 2).
+            POSTGREST_VERSION="$version" npm run --silent prove:introduction-media-store:postgrest || { docker logs "postgrest-$version"; tail -n 80 "$RCLONE_LOG_FILE"; exit 1; }
+            # S6-06 (CP1): SUCCESS on the wire with the compiled continuation service - a failed system attempt leaves both
+            # approvals, a closed gate writes nothing, the next read completes once (condition 3); reactivation gated then explicit.
+            POSTGREST_VERSION="$version" npm run --silent prove:introduction-success:postgrest || { docker logs "postgrest-$version"; exit 1; }
             docker stop "postgrest-$version" >/dev/null
           done
           psql "$DATABASE_URL" -v ON_ERROR_STOP=1 -c "DROP ROLE authenticator"
