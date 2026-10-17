@@ -170,7 +170,14 @@ async function verifyPosture() {
        FROM pg_proc pr JOIN pg_namespace ns ON ns.oid = pr.pronamespace
       WHERE ${APP_SCHEMAS} AND pr.prokind = 'f' AND pr.prorettype <> 'trigger'::regtype::oid`);
   const sourcesOf = (schema, name) => callable.filter((f) => f.schema === schema && f.name === name).map((f) => f.prosrc);
-  for (const eraser of callable.filter((f) => /eras/u.test(f.name))) {
+  // RE-ANCHORED by ACCT-DEL-01 (Product Owner decision P-4, migration 0164): the governed ACCOUNT erasure is the second,
+  // separately governed erasure that may reach the Introduction disclosure, exactly as 0130 was for Personal. It is named
+  // here, it lives in its own private schema executable by no role (the one service_role entry wraps the coordinator),
+  // and it DELETES the erased account's disclosures whole - verifier, payload and version with the row, never a verifier
+  // erased in place - so the one-way verifier erasure below stays owner deletion's alone. Every other erasure-named
+  // function is still refused.
+  const ACCOUNT_ERASURE = ['account_erasure_private.erase_account_v1', 'account_erasure_private.erase_matching_introductions_v1'];
+  for (const eraser of callable.filter((f) => /eras/u.test(f.name) && !ACCOUNT_ERASURE.includes(`${f.schema}.${f.name}`))) {
     const delegates = [...eraser.prosrc.matchAll(/\b([a-z_][a-z0-9_]*)\.([a-z_][a-z0-9_]*)\s*\(/giu)]
       .flatMap(([, schema, name]) => sourcesOf(schema.toLowerCase(), name.toLowerCase()));
     for (const source of [eraser.prosrc, ...delegates]) {
@@ -181,8 +188,16 @@ async function verifyPosture() {
   const disclosureWriters = callable
     .filter((f) => /\b(?:UPDATE|DELETE\s+FROM)\s+(?:public\.)?introduction_disclosure_commands\b/iu.test(f.prosrc))
     .map((f) => `${f.schema}.${f.name}`).sort();
-  assert.deepEqual(disclosureWriters, ['public.delete_shared_world_owned_material_v1'],
-    'in every application schema, only owner deletion writes the disclosure command relation');
+  assert.deepEqual(disclosureWriters, ['account_erasure_private.erase_matching_introductions_v1', 'public.delete_shared_world_owned_material_v1'],
+    'in every application schema, only owner deletion and the named account erasure write the disclosure command relation');
+  for (const fn of ACCOUNT_ERASURE) {
+    const [{ reachable }] = await rows(`SELECT bool_or(has_function_privilege(r, (SELECT p.oid FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
+        WHERE n.nspname || '.' || p.proname = $1), 'EXECUTE')) reachable FROM unnest(ARRAY['public','anon','authenticated','service_role']) r`, [fn]);
+    assert.equal(reachable, false, `${fn} is executable by no role`);
+  }
+  const accountErasure = callable.find((f) => `${f.schema}.${f.name}` === ACCOUNT_ERASURE[1]);
+  assert.doesNotMatch(accountErasure.prosrc, /UPDATE\s+(?:public\.)?introduction_disclosure_commands/iu,
+    'the account erasure deletes a disclosure command whole and never erases a verifier in place');
 
   // EXACTLY ONE FUNCTION ERASES A VERIFIER, and it is owner deletion.
   const erasers = await rows(

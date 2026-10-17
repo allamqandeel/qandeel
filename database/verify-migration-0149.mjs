@@ -43,6 +43,8 @@
 //          wrapper around the Mutual Match core and the acceptance granted to service_role are both refused
 //   f10..f11 S6-06 (CP1): the two continuation boundaries are named exceptions, not a rule - a third client-executable
 //          wrapper around the SUCCESS commit and a continuation boundary granted to service_role are both refused
+//   f12..f13 ACCT-DEL-01 (P-4, migration 0164): the one service_role account erasure is a named SYSTEM exception, not a
+//          rule - a second service_role wrapper around its coordinator and the entry granted to a client are both refused
 //
 // Behaviour that needs Matching state from BEFORE 0149 is reached the only honest way on a database where 0149 is
 // already applied: as the owner with the exact human's claims, inside a transaction that rolls back. Every probe of a
@@ -95,6 +97,14 @@ const S6_06_INTRODUCTION_CONTINUATION = [
   'public.complete_my_introduction_success_v1(uuid)',
   'public.reactivate_my_introductions_v1(uuid, uuid, text)',
 ];
+// RE-ANCHORED by ACCT-DEL-01 (Product Owner decision P-4, migration 0164): the ONE service_role SYSTEM exception. The
+// governed account erasure reaches a Matching setup write - it DELETES the erased account's whole Matching footprint, and
+// ends a live Introduction through the S6-02 END boundary as that human, so the frozen 0116 END core writes the
+// counterpart's POST_INTRODUCTION act. It is admitted by name and exact signature, for service_role ONLY (never anon,
+// authenticated or PUBLIC); its private coordinator and module are executable by nobody; and probes f12 / f13 refuse a
+// second service_role wrapper and this entry granted to a client role. The rule "no service_role Matching writer" stays a
+// rule for every other function.
+const ACCT_DEL_01_ACCOUNT_ERASURE = 'public.server_erase_account_v1(uuid)';
 
 /** The 0149 body with its own transaction control removed, so it can be re-applied inside a scenario that rolls back. */
 function migrationBody() {
@@ -186,12 +196,24 @@ async function verifyNoBackdoor() {
       if ([...reach].some((name) => new RegExp(String.raw`\b${name}\s*\(`, 'u').test(f.prosrc))) { reach.add(f.proname); grown = true; }
     }
   }
-  const executable = functions.filter((f) => reach.has(f.proname) && (f.public || f.anon || f.authenticated || f.service_role));
+  // RE-ANCHORED by ACCT-DEL-01: the one service_role SYSTEM exception is held apart and proven exactly below; the census
+  // of every other application-executable route is the one it was, unchanged.
+  const erasureEntry = functions.filter((f) => reach.has(f.proname) && f.proname === nameOf(ACCT_DEL_01_ACCOUNT_ERASURE));
+  const executable = functions.filter((f) => reach.has(f.proname) && (f.public || f.anon || f.authenticated || f.service_role)
+    && f.proname !== nameOf(ACCT_DEL_01_ACCOUNT_ERASURE));
   const retainedWriters = SEC_MATCH_00_RETAINED.filter((fn) => fn !== MFN.SETUP).map(nameOf).sort();
   assert.deepEqual(executable.map((f) => f.proname).sort(),
     [...retainedWriters, nameOf(S6_02_INTRODUCTION_END), ...S6_04_PROPOSAL_DECISIONS.map(nameOf), nameOf(S6_05_MUTUAL_MATCH_ACCEPT),
       ...S6_06_INTRODUCTION_CONTINUATION.map(nameOf)].sort(),
     'NO_BACKDOOR the only application-executable functions reaching a Matching setup write are the four retained commands, the one S6-02 END boundary, the three S6-04 decision boundaries, the one S6-05 acceptance and the two S6-06 continuation boundaries');
+  // RE-ANCHORED by ACCT-DEL-01: the one system exception, exactly - one function, one overload, service_role only.
+  assert.equal(erasureEntry.length, 1, `NO_BACKDOOR the ACCT-DEL-01 exception ${ACCT_DEL_01_ACCOUNT_ERASURE} exists once and reaches a Matching write`);
+  const [erasure] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
+     FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
+  [ACCT_DEL_01_ACCOUNT_ERASURE, nameOf(ACCT_DEL_01_ACCOUNT_ERASURE)]);
+  assert.deepEqual(erasure, { overloads: 1, exact: true }, `NO_BACKDOOR the ACCT-DEL-01 exception is exactly ${ACCT_DEL_01_ACCOUNT_ERASURE}, with no overload`);
+  assert.deepEqual([erasureEntry[0].public, erasureEntry[0].anon, erasureEntry[0].authenticated, erasureEntry[0].service_role], [false, false, false, true],
+    'NO_BACKDOOR the account erasure is service_role-only');
   const [end] = await rows(`SELECT count(*)::int AS overloads, bool_and(p.oid = to_regprocedure($1)) AS exact
      FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace WHERE n.nspname = 'public' AND p.proname = $2`,
   [S6_02_INTRODUCTION_END, nameOf(S6_02_INTRODUCTION_END)]);
@@ -609,6 +631,28 @@ async function verifyForwardSafety(report, humans) {
       pristine: `REVOKE EXECUTE ON FUNCTION ${S6_06_INTRODUCTION_CONTINUATION[0]} FROM service_role`,
       mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM service_role', ' TO service_role'),
       marker: 'TO service_role',
+      apply: (text) => q(text),
+      reject: () => verifyNoBackdoor(),
+    });
+
+    // RE-ANCHORED by ACCT-DEL-01: the one service_role account erasure is a named exception, not a rule that a
+    // service_role Matching writer is fine.
+    await report.probe('f12 the census refuses a second service_role wrapper around the account erasure coordinator', {
+      pristine: `CREATE FUNCTION public.acct_del_01_probe_erasure_wrapper_v1(p uuid) RETURNS text
+                 LANGUAGE sql SECURITY DEFINER SET search_path='' AS $probe$ SELECT p::text $probe$`,
+      mutate: (text) => text.replace('SELECT p::text', 'SELECT account_erasure_private.erase_account_v1(p)'),
+      marker: 'erase_account_v1',
+      apply: async (text) => {
+        await q(text);
+        await q('GRANT EXECUTE ON FUNCTION public.acct_del_01_probe_erasure_wrapper_v1(uuid) TO service_role');
+      },
+      reject: () => verifyNoBackdoor(),
+    });
+
+    await report.probe('f13 the census refuses the account erasure granted to a client role', {
+      pristine: `REVOKE EXECUTE ON FUNCTION ${ACCT_DEL_01_ACCOUNT_ERASURE} FROM authenticated`,
+      mutate: (text) => text.replace('REVOKE EXECUTE', 'GRANT EXECUTE').replace(' FROM authenticated', ' TO authenticated'),
+      marker: 'TO authenticated',
       apply: (text) => q(text),
       reject: () => verifyNoBackdoor(),
     });
