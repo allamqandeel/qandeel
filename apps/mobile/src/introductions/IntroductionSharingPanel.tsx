@@ -21,7 +21,7 @@
  */
 import { Image } from 'expo-image';
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type ReactNode } from 'react';
-import { AccessibilityInfo, Animated, BackHandler, Easing, KeyboardAvoidingView, ScrollView, Text, View, findNodeHandle } from 'react-native';
+import { AccessibilityInfo, Animated, BackHandler, Easing, Keyboard, KeyboardAvoidingView, ScrollView, Text, View, findNodeHandle } from 'react-native';
 
 import { accountAccessCopy } from '../account/access/copy';
 import { Control, Glyph, MIN_TARGET, typeStyle, useConversationTypeface, usePalette, useReduceMotion } from '../conversation';
@@ -127,6 +127,12 @@ export function IntroductionSharingPanel({ sharing, language, insets, otherName,
     });
     return () => subscription.remove();
   }, []);
+
+  // The keyboard belongs to the text step alone: once its field has left the screen, the keyboard goes with it (found on
+  // the device: it otherwise stays up over the preview and hides «مشاركة الآن»).
+  useEffect(() => {
+    if (step.kind !== 'TEXT') Keyboard.dismiss();
+  }, [step.kind]);
 
   // The screen reader arrives once on each step's heading.
   useEffect(() => {

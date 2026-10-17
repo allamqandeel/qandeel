@@ -9,7 +9,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { act, cleanup, fireEvent, render } from '@testing-library/react-native';
-import { StyleSheet } from 'react-native';
+import { Keyboard, StyleSheet } from 'react-native';
 
 import { AppearanceProvider, createAppearanceAuthority, createEphemeralAppearancePreferenceStore } from '../../appearance';
 import { CANONICAL_VISUAL } from '../../conversation/visual/canonical-visual.generated';
@@ -259,7 +259,10 @@ describe('S6-06 — text shares (P3, P4, P9d, P14a)', () => {
     await press(s.getByTestId('qandeel-sharing-type-full_name'));
     expect(s.getByTestId('qandeel-sharing-field').props.value).toBe('');
     await act(async () => { fireEvent.changeText(s.getByTestId('qandeel-sharing-field'), 'سامي فؤاد'); });
+    const dismiss = jest.spyOn(Keyboard, 'dismiss');
     await press(s.getByTestId('qandeel-sharing-continue'));
+    // The keyboard leaves with the field (the device run found it staying over the preview).
+    expect(dismiss).toHaveBeenCalled();
     expect(s.getByText(fillSharing(copy.previewHeading, { name: 'Reem' }))).toBeTruthy();
     expect(s.getByText('سامي فؤاد')).toBeTruthy();
     expect(s.getByText(copy.confirmNote)).toBeTruthy();
