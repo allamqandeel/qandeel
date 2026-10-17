@@ -336,3 +336,83 @@ Public image digests.
 - The key and fingerprint logic was exercised against both real keys and against a wrong key and a two-key file, both
   refused. The PGDG archive and Redis `InRelease` files verified against the pinned keys.
 - The binding proof is API CI on this pull request's new head.
+
+## 10. CI-iOS correction (same pull request)
+
+**The failure.** On the §9 head `5a3afe76` everything else passed in run
+[`39047797516`](https://github.com/allamqandeel/qandeel/actions/runs/39047797516): API CI, the Android build and emulator
+smoke, and the iOS Release build. The iOS boot smoke (job `117445673117`) failed inside Maestro / XCTest, and the
+Validation evidence job failed only because of it. The Product Owner reviewed the logs independently and authorized a
+limited correction in this pull request («ACCT-DEL-01 — CI-iOS Correction / PR #345»).
+
+**The proven cause.** The readiness probe and the smoke talked to **two different XCTest runners**, at the same time.
+
+| | Readiness probe (`maestro hierarchy`) | Boot smoke (`maestro test`) |
+|---|---|---|
+| Driver port | `22087` | `51962` |
+| Runner | pid 11920, `xcodebuild` 7888 | pid 17221, a second cold launch at 16:39:26 |
+| `POST /deviceInfo` | 16:38:42, answered in 0.8 s; `/viewHierarchy` followed | 16:40:24: SpringBoard lookup took 13.6 s, then retries 1 and 2; driver handler bound (100 s) answered **500** at 16:42:23 |
+| Lifetime | alive until 16:42:40, when its `testHttpServer` failed | — |
+
+- **Why the ports differed:** in Maestro cli-2.10.0, `hierarchy` serves the driver on `defaultXcTestPort` 22087
+  (`MaestroSessionManager`). `test` without `--driver-host-port` takes an OS-chosen free port
+  (`TestCommand.selectPort`, `ServerSocket(0)`). Its status check therefore never found the probe's driver, and
+  `startXCTestRunner` launched another. S6-01 CI-R2's premise, "the smoke reuses the driver the probe proved alive",
+  never held. Every run since then launched two runners; most survived the overlap, this one did not.
+- **So `hierarchy` passing proved nothing about the smoke's `/deviceInfo`:** each ran against a different runner.
+  `hierarchy` itself sends `/deviceInfo` too, and on the first runner it succeeded.
+- **Why it took 780 s:** Maestro's CLI main thread died of the uncaught `UnknownFailure` at 16:42:31. The JVM did not
+  exit, so `bounded-run` ended it only at its 780 s bound (exit 124).
+- **No Product failure:** no QANDEEL step or app assertion ran.
+
+**The correction.**
+
+| Part | Change |
+|---|---|
+| A — true readiness | `verify-ios` pins `MAESTRO_IOS_DRIVER_PORT=22087`, and the smoke passes `--driver-host-port` with it. `test` then finds the probe's driver alive and reuses it (`startXCTestRunner`: "UI Test runner already running"), so no second runner launches. After `hierarchy`, readiness checks **that port**: `GET /status`, then the smoke's own first request, `POST /deviceInfo` with `{}`, bounded at 110 s around the driver's 100 s handler, accepted only if a DeviceInfo comes back. Any failure gets the existing ONE clean recovery, then one more probe. A second failure stays red. |
+| B — fail-fast | `scripts/validation/bounded-run.mjs` gains an opt-in `--fail-fast <signature>` that names one entry of a closed set. The only entry is `maestro-xctest-device-info-500`: Maestro's `Exception in thread "main" UnknownFailure(... http://127.0.0.1:<port>/deviceInfo failed, code: 500` followed within 20 lines by the `xcuitest.XCTestDriverClient.deviceInfo` frame. On it, the runner classifies INFRASTRUCTURE, writes the evidence file, sends SIGTERM to the whole process group, then SIGKILLs any survivor, and exits **125**, never 0. Any other 500, driver route or app assertion is untouched. |
+| Evidence | `ios-driver-diagnostics.sh` (read-only) also lists the live runner launches and the driver ports they listen on. |
+
+**C — no cosmetic success:**
+- no `continue-on-error`, and no smoke retry;
+- the app's assertions and the flow are unchanged;
+- no bound is raised: 480 s / 780 s / 22 and 15 minutes stay as they were;
+- Maestro 2.10.0, Xcode 26.6, iPhone 17 / iOS 26.5 and the retry budget are unchanged;
+- without `--fail-fast` the runner's streams and behaviour are byte-for-byte the original, and Android and every other
+  bounded command are not armed.
+
+**Tests** (VAL-01 contract, additive; test 13 unchanged). One gap: the process-group kill is exercised on the Linux
+runners; locally (Windows) only the direct child can be killed.
+- **13b:** the signature matches run `39047797516`'s exact transcript and nothing else: an app or API 500, another
+  driver route or status, a non-loopback host, header or frame alone, a frame beyond the window, an app assertion.
+  The set is closed.
+- **13c:**
+  - the normal path forwards output and passes the command's own status through;
+  - an app failure keeps its own status;
+  - on the signature with a SIGTERM-ignoring grandchild, the run ends in seconds with 125 and INFRASTRUCTURE, and the
+    grandchild is killed;
+  - a signature followed by exit 0 is still 125;
+  - an unrelated 500 followed by a hang still ends at the bound with 124.
+
+  A planted disarmed scanner makes 13c fail (it ends at the 60 s bound with 124), so the test is not vacuous.
+- **13d:** the workflow structure:
+  - one port, `/status` and `POST /deviceInfo` on it, both gating readiness;
+  - exactly one recovery and no loop;
+  - the smoke's exact line;
+  - no `continue-on-error` anywhere;
+  - Android's lines verbatim;
+  - `--fail-fast` only in `verify-ios`.
+
+**Rebuild, by contract.** `.github/workflows/` and `scripts/validation/` are native-fingerprint inputs by design
+(QAN-INF-04: a workflow is the build recipe), so this head rebuilds the APK and the `.app` under the usual identity
+and provenance checks. Nothing is bypassed to save time.
+
+**Not changed:** migration `0164`, the API, mobile Product code, the ACCT-DEL-01 erasure, the closure records of closed
+phases, the CI gates and their success conditions.
+
+**Remaining risk:**
+- `test --driver-host-port` first asks the JVM whether the port is free (`isPortAvailable`, an IPv6-wildcard bind)
+  while the probe's driver listens on IPv4 `127.0.0.1`. By Maestro's own note on that probe (`SocketUtils.getFreePort`)
+  and BSD bind rules, it answers "free". If it ever did not, the smoke would stop within seconds with Maestro's
+  `Requested driver host port … is not available`: red, never hung.
+- Reusing one runner for both commands is new to this workflow; this pull request's CI is its first proof.

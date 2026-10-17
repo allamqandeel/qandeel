@@ -40,7 +40,7 @@ import {
 import { DISPOSITIONS, assertSimulatorMatrix, buildPlatformGraph, parseLegRunner, selectPlatformLegs } from '../scripts/validation/proof-legs.mjs';
 import { PROOF_SUITES } from '../scripts/validation/proof-suites.mjs';
 import { MAX_ATTEMPTS, EXHAUSTED, retryVerdict } from '../scripts/validation/retry-budget.mjs';
-import { TIMEOUT_EXIT_CODE, parseArgs } from '../scripts/validation/bounded-run.mjs';
+import { FAIL_FAST_EXIT_CODE, FAIL_FAST_SIGNATURES, TIMEOUT_EXIT_CODE, parseArgs, signatureScanner } from '../scripts/validation/bounded-run.mjs';
 import { gateOutcome } from '../scripts/validation/plan-validation.mjs';
 import {
   FINGERPRINT_DOMAIN,
@@ -550,6 +550,155 @@ test('13 — a dead driver is terminated within its bound and classified INFRAST
   }
   // Non-vacuity: the predicate sees a planted unbounded call.
   assert.doesNotMatch('  maestro test "$FLOWS/x.yaml"', /\$BOUND --seconds /u);
+});
+
+// ------------------------------------------------------------------------------------------------
+// 13b–13d — ACCT-DEL-01 CI-iOS correction (run 39047797516). Additive: test 13 above is unchanged.
+// The iOS smoke must reuse the driver its readiness probe proved. Maestro's known terminal driver failure (main
+// thread dead of HTTP 500 on /deviceInfo, then a JVM that hangs) ends at once as INFRASTRUCTURE and stays red.
+// Nothing else is reclassified.
+// ------------------------------------------------------------------------------------------------
+
+const BOUNDED_RUN = () => join(rootPath, 'scripts/validation/bounded-run.mjs');
+const SIGNATURE = 'maestro-xctest-device-info-500';
+// The lines Maestro cli-2.10.0 printed in run 39047797516, job 117445673117 (16:42:31), colour code included.
+const DEVICE_INFO_500 = [
+  '\u001b[31mException in thread "main" UnknownFailure(errorResponse=Request for http://127.0.0.1:51962/deviceInfo failed, code: 500, body: )',
+  '\tat xcuitest.XCTestDriverClient.handleExceptions(XCTestDriverClient.kt:355)',
+  '\tat xcuitest.XCTestDriverClient.processResponse(XCTestDriverClient.kt:300)',
+  '\tat xcuitest.XCTestDriverClient.deviceInfo(XCTestDriverClient.kt:215)',
+];
+const printLines = (stream, lines) => lines.map((line) => `process.${stream}.write(${JSON.stringify(`${line}\n`)});`).join('');
+
+test('13b — the fail-fast signature is exact: Maestro\'s own /deviceInfo 500, nothing else', () => {
+  const sees = (lines) => {
+    const scan = signatureScanner(SIGNATURE);
+    return lines.some((line) => scan(line));
+  };
+  assert.equal(sees(DEVICE_INFO_500), true, 'the transcript of run 39047797516');
+  // Not an infrastructure signature, each of them:
+  assert.equal(sees(['Request for https://api.qandeel.example/v1/me failed, code: 500']), false, 'an app or API 500');
+  assert.equal(sees([
+    'Exception in thread "main" UnknownFailure(errorResponse=Request for http://127.0.0.1:22087/viewHierarchy failed, code: 500, body: )',
+    '\tat xcuitest.XCTestDriverClient.viewHierarchy(XCTestDriverClient.kt:83)',
+  ]), false, 'another driver route');
+  assert.equal(sees(['Exception in thread "main" UnknownFailure(errorResponse=Request for http://127.0.0.1:22087/deviceInfo failed, code: 503, body: )',
+    '\tat xcuitest.XCTestDriverClient.deviceInfo(XCTestDriverClient.kt:215)']), false, 'another status');
+  assert.equal(sees(['Exception in thread "main" UnknownFailure(errorResponse=Request for http://10.0.0.5:22087/deviceInfo failed, code: 500, body: )',
+    '\tat xcuitest.XCTestDriverClient.deviceInfo(XCTestDriverClient.kt:215)']), false, 'not the loopback driver');
+  assert.equal(sees(DEVICE_INFO_500.slice(1)), false, 'the frame without the main thread dying');
+  assert.equal(sees([DEVICE_INFO_500[0]]), false, 'the header without Maestro\'s deviceInfo frame');
+  assert.equal(sees([DEVICE_INFO_500[0], ...Array.from({ length: 25 }, (_, i) => `\tat x.y${i}(Z.kt:1)`), DEVICE_INFO_500[3]]), false,
+    'a frame beyond the window is not this failure');
+  assert.equal(sees(['Assertion is false: "QANDEEL" is visible', '\tat xcuitest.XCTestDriverClient.deviceInfo(XCTestDriverClient.kt:215)']), false,
+    'an app assertion');
+
+  // The set is closed: a free pattern or an unknown name is refused, and absence changes nothing.
+  assert.deepEqual(Object.keys(FAIL_FAST_SIGNATURES), [SIGNATURE]);
+  assert.ok(parseArgs(['--seconds', '5', '--label', 'x', '--fail-fast', 'code: 500', '--', 'x']).error);
+  assert.ok(parseArgs(['--seconds', '5', '--label', 'x', '--fail-fast', '--', 'x']).error);
+  assert.equal(parseArgs(['--seconds', '5', '--label', 'x', '--fail-fast', SIGNATURE, '--', 'x']).failFast, SIGNATURE);
+  assert.equal(parseArgs(['--seconds', '5', '--label', 'x', '--', 'x']).failFast, undefined);
+});
+
+test('13c — on the signature the whole process group ends at once, classified INFRASTRUCTURE, and the run stays red', () => {
+  const mirror = createHarnessMirror('qandeel-val01-failfast-');
+  const run = (script, extra = []) => {
+    const started = Date.now();
+    const result = spawnSync(process.execPath, [BOUNDED_RUN(), '--seconds', '60', '--grace-seconds', '1', '--fail-fast', SIGNATURE,
+      ...extra, '--label', 'ios-boot-smoke', '--out', mirror, '--', process.execPath, '-e', script], { cwd: mirror, encoding: 'utf8', timeout: 90_000 });
+    return { ...result, elapsed: (Date.now() - started) / 1000 };
+  };
+  try {
+    // 1. The normal path: the command's output is forwarded unchanged and its own status passes through.
+    const green = run(`${printLines('stdout', ['Flow boot-smoke', 'Assert that "QANDEEL" is visible... COMPLETED'])}${printLines('stderr', ['a warning'])}`);
+    assert.equal(green.status, 0, green.stderr);
+    assert.match(green.stdout, /Flow boot-smoke\nAssert that "QANDEEL" is visible\.\.\. COMPLETED\n/u);
+    assert.match(green.stderr, /a warning/u);
+    assert.doesNotMatch(green.stdout, /::error/u);
+    const own = run(`${printLines('stdout', ['Assertion is false: "QANDEEL" is visible'])}process.exit(1);`);
+    assert.equal(own.status, 1, 'an app failure keeps its own status: not reclassified');
+    assert.doesNotMatch(own.stdout, /::error/u);
+    const quiet = run(`${printLines('stdout', ['<hierarchy>'])}`, ['--quiet']);
+    assert.equal(quiet.status, 0);
+    assert.doesNotMatch(quiet.stdout, /<hierarchy>/u, 'a --quiet probe still forwards nothing from stdout');
+
+    // 2 + 3. The signature, then a hang, with a child that ignores SIGTERM: ended in seconds, nothing left behind.
+    const marker = join(mirror, 'the-grandchild-outlived-the-runner');
+    const grandchild = `process.on('SIGTERM', () => {}); setTimeout(() => { require('node:fs').writeFileSync(${JSON.stringify(marker)}, 'x'); process.exit(0); }, 6000);`;
+    const hung = run(`require('node:child_process').spawn(process.execPath, ['-e', ${JSON.stringify(grandchild)}], { stdio: 'ignore' });`
+      + `${printLines('stderr', DEVICE_INFO_500)}setInterval(() => {}, 1000);`);
+    assert.equal(hung.status, FAIL_FAST_EXIT_CODE, `exit ${hung.status}: ${hung.stdout}${hung.stderr}`);
+    assert.ok(hung.elapsed < 20, `not left to its 60 s bound: ${hung.elapsed}s`);
+    assert.match(hung.stdout, /::error title=INFRASTRUCTURE — ios-boot-smoke::INFRASTRUCTURE: ios-boot-smoke — the Maestro CLI main thread died on the XCTest driver answering HTTP 500 to \/deviceInfo \(signature maestro-xctest-device-info-500\)/u);
+    assert.match(hung.stderr, /Request for http:\/\/127\.0\.0\.1:51962\/deviceInfo failed, code: 500/u, 'the evidence itself is forwarded');
+    assert.match(readFileSync(join(mirror, 'watchdog-ios-boot-smoke.txt'), 'utf8'), /^INFRASTRUCTURE: ios-boot-smoke — .*signature maestro-xctest-device-info-500/u);
+    if (process.platform !== 'win32') {
+      // A process group exists only on POSIX, where CI runs this. On Windows the runner can end only its direct child.
+      spawnSync(process.execPath, ['-e', 'setTimeout(() => {}, 7000)'], { cwd: mirror });
+      assert.equal(existsSync(marker), false, 'the SIGTERM-ignoring grandchild was killed, not left running');
+    }
+
+    // 4. Never a success: a command that prints the signature and then exits 0 by itself is still red.
+    const laundered = run(`${printLines('stdout', DEVICE_INFO_500)}process.exit(0);`);
+    assert.equal(laundered.status, FAIL_FAST_EXIT_CODE, 'the signature is never laundered into a pass');
+
+    // Without the signature, the armed runner changes nothing: an unrelated 500 then a hang ends at the bound (124).
+    const unrelated = spawnSync(process.execPath, [BOUNDED_RUN(), '--seconds', '2', '--grace-seconds', '1', '--fail-fast', SIGNATURE,
+      '--label', 'x', '--', process.execPath, '-e', `${printLines('stderr', ['Request for https://api.qandeel.example/v1/me failed, code: 500'])}setInterval(() => {}, 1000);`],
+    { cwd: mirror, encoding: 'utf8', timeout: 30_000 });
+    assert.equal(unrelated.status, TIMEOUT_EXIT_CODE);
+    assert.match(unrelated.stdout, /exceeded its 2s bound/u);
+  } finally {
+    if (process.platform === 'win32') spawnSync(process.execPath, ['-e', 'setTimeout(() => {}, 7000)']);
+    removeHarnessMirror(mirror);
+  }
+});
+
+test('13d — the iOS smoke reuses the driver its probe proved; Android and every other bound are untouched; no retry is added', () => {
+  const jobs = workflow(MOBILE_CI).jobs;
+  const ios = jobs['verify-ios'];
+  assert.equal(String(ios.env.MAESTRO_IOS_DRIVER_PORT), '22087', 'cli-2.10.0 defaultXcTestPort, the port `hierarchy` serves on');
+  const readiness = ios.steps.find((step) => /^Maestro driver readiness/u.test(step.name ?? ''));
+  const smoke = ios.steps.find((step) => step.name === 'Boot smoke on the iOS simulator');
+  const probe = stripFullLineComments('x.sh', readiness.run);
+
+  // The probe proves the very driver the smoke will reach, by the smoke's own first request.
+  assert.match(probe, /"http:\/\/127\.0\.0\.1:\$MAESTRO_IOS_DRIVER_PORT\/status"/u);
+  assert.match(probe, /--max-time 110 -X POST -H 'Content-Type: application\/json' --data '\{\}' \\\n\s*"http:\/\/127\.0\.0\.1:\$MAESTRO_IOS_DRIVER_PORT\/deviceInfo"/u);
+  assert.match(probe, /\*'"widthPoints"'\*\)/u, 'only a DeviceInfo answer counts');
+  assert.match(probe, /--no-reinstall-driver --compact && driver_answers; then/u, 'both the probe and the driver checks gate readiness');
+  // At most ONE clean recovery, never a loop; the probes keep their bounds.
+  assert.equal((probe.match(/xcrun simctl shutdown/gu) ?? []).length, 1);
+  assert.doesNotMatch(probe, /^\s*(?:for|while|until)\b/mu);
+  assert.equal((probe.match(/bounded-run\.mjs --seconds 480 --fail-fast maestro-xctest-device-info-500 --label ios-driver-readiness(?:-after-recovery)? --quiet -- maestro --device "\$IOS_SIM_UDID" hierarchy --no-reinstall-driver --compact/gu) ?? []).length, 2);
+  assert.equal(readiness['timeout-minutes'], 22);
+
+  // The smoke: once, on the proven port, same bounds, same flow, never retried.
+  const smokeCalls = smoke.run.match(/\bmaestro\b[^\n]*\btest\b/gu) ?? [];
+  assert.equal(smokeCalls.length, 1);
+  assert.equal(smoke.run, 'node scripts/validation/bounded-run.mjs --seconds 780 --fail-fast maestro-xctest-device-info-500 --label ios-boot-smoke -- '
+    + 'maestro --device "$IOS_SIM_UDID" test apps/mobile/.maestro/boot-smoke.yaml --no-reinstall-driver --driver-host-port "$MAESTRO_IOS_DRIVER_PORT"');
+  assert.equal(smoke['timeout-minutes'], 15);
+
+  // Nothing is softened anywhere in the workflow.
+  for (const [name, job] of Object.entries(jobs)) {
+    assert.equal(job['continue-on-error'], undefined, `${name}: no continue-on-error`);
+    for (const step of job.steps ?? []) assert.equal(step['continue-on-error'], undefined, `${name} / ${step.name}: no continue-on-error`);
+  }
+  // Android and every other bounded command keep their exact lines; --fail-fast lives only in the iOS consumer.
+  const android = jobs['verify-android'].steps.map(stepText).join('\n');
+  assert.ok(android.includes('node scripts/validation/bounded-run.mjs --seconds 240 --label android-driver-readiness --quiet -- maestro hierarchy --compact'));
+  assert.ok(android.includes('node scripts/validation/bounded-run.mjs --seconds 300 --label android-boot-smoke -- maestro test apps/mobile/.maestro/boot-smoke.yaml'));
+  for (const [name, job] of Object.entries(jobs)) {
+    if (name !== 'verify-ios') assert.doesNotMatch(job.steps?.map(stepText).join('\n') ?? '', /--fail-fast/u, `${name} is not armed`);
+  }
+  for (const file of [A3, 'scripts/a3/run-proof-leg.sh', 'scripts/a3/run-ios-proof-leg.sh', API_CI]) {
+    assert.doesNotMatch(read(file), /--fail-fast/u, `${file} is not armed`);
+  }
+  // Without the flag the runner's streams are exactly the original ones.
+  assert.match(read('scripts/validation/bounded-run.mjs'), /const stdout = failFast \? 'pipe' : \(quiet \? 'ignore' : 'inherit'\);/u);
+  assert.match(read('scripts/validation/bounded-run.mjs'), /stdio: \['inherit', stdout, failFast \? 'pipe' : 'inherit'\]/u);
 });
 
 // ------------------------------------------------------------------------------------------------
