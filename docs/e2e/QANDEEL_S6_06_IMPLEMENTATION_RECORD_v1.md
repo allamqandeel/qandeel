@@ -5,7 +5,7 @@
 **Product authority:** the Product Owner's S6-06 Task Contract v1.0; WP0 v1.1 and its five-point correction, approved
 on 2026-10-16 («S6-06 — اعتماد WP0 وبدء CP1»), with decisions D-01 … D-12 approved within the agreed limits and three
 execution conditions inside CP1. No merge or deployment without the Product Owner's explicit «ادمج».  
-**Status:** **IN PROGRESS — CP1 DELIVERED (SECURE BACKEND & MEDIA) — VISUAL GATE AND COPY GATE PRESENTED, NOT APPROVED —
+**Status:** **IN PROGRESS — CP1 DELIVERED (SECURE BACKEND & MEDIA) — COPY GATE APPROVED (74 / 74) AND D-04 DECIDED (2026-10-17) — VISUAL GATE PRESENTED, NOT APPROVED —
 NOT MERGED / NOT DEPLOYED** (2026-10-16). CP1 waits for the Product Owner's review; CP2 (mobile, end-to-end and closure)
 is not started, and no user-interface code exists.  
 **Base:** `main` = merged PR #343 (S6-05) at `88a475ab6798edbf511e42f78a2f70e5cdb37c34`, re-verified before the branch.  
@@ -28,7 +28,7 @@ reply followed. The Product Owner approved all three on 2026-10-16.
 | D-01 | Supabase Storage over its S3 protocol, credentials in the API only; CI: `rclone serve s3` at a pinned version, sha256-verified, the PostgREST pattern. Supabase conformance belongs to `HOSTED-DEPLOY-01` (§8, `QAN-BL-PROD-08`) |
 | D-02 | The raw upload is never stored; the cleaned clear rendition is the stored original |
 | D-03 | `sharp` and `@aws-sdk/client-s3` in the API, pinned exactly (`0.35.5`, `3.1142.0`); `expo-image-picker` and `expo-image` in the mobile app (CP2) |
-| D-04 | 12 / 48 / 1600 px are technical candidates; the values are decided in the Visual Gate on real samples |
+| D-04 | 12 / 48 / 1600 px are technical candidates; the values are decided in the Visual Gate on real samples. **Decided 2026-10-17: 12 / 48 / 1600, unchanged** ([gate record](QANDEEL_S6_06_VISUAL_COPY_GATE_v1.md) §4) |
 | D-05 | One active photo per person; a deleted shared stage retires its series; a new photo is a new series with all-new approvals |
 | D-06 | Storing a photo is gated by the disclosure seam |
 | D-07 | Approve gated, withdraw ungated, the commit a separate system execution, `prepare` Stage 8A's |
@@ -119,7 +119,7 @@ the next approval or read by either human.
 | 2 | Built and proven (§3, `verify-0162` C03–C08, `prove-0162` P04–P05): refused at once, erased by DELETE + HEAD, deferred on failure and never dropped, no key / handle / media reference left (`0122`) |
 | 3 | Built and proven (§3) |
 | 4 | Permissions (`cameraPermission: false`, `microphonePermission: false`, `android.blockedPermissions` for storage, our own iOS Photos purpose string PD-83) are CP2's native build. The revoke is reachable in every state: in the World (P15) and on the Settings page P16 over `list_my_introduction_shares_v1` (`verify-0162` D02, D04) |
-| 5 | PD-26b and PD-31 corrected; the true count is 68 in WP0 v1.1 and 74 in rev.1 ([gate record](QANDEEL_S6_06_VISUAL_COPY_GATE_v1.md)) |
+| 5 | PD-26b and PD-31 corrected; the true count is 68 in WP0 v1.1 and 74 in rev.1 ([gate record](QANDEEL_S6_06_VISUAL_COPY_GATE_v1.md)). The Copy Gate closed on 2026-10-17 with 74 / 74 approved, the correction kept |
 
 ## 5. Security and privacy posture
 
