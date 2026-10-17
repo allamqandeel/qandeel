@@ -158,7 +158,7 @@ agreement between a closed task's own banner and the closure the register alread
 | `QAN-BL-CTX-01` | Runtime-backed Conversational Relevance | `QAN-CTX-01 — Conversational Relevance Runtime` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-CW-01` | Owner Deletion Does Not Reach the Public DRAFT Source-Content Derivative (`ASSURE-F05`) | `S5-02 — Publishing + Rights + Draft/Review + Privacy Closure` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-LANTERN-01` | Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization | `QANDEEL — Lantern Gateway Identity Moment v1` | `HIGH` | `DEFERRED — OWNED` |
-| `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `UNASSIGNED` | `HIGH` | `OPEN — UNASSIGNED` |
+| `QAN-BL-ACCT-01` | Account Deletion Across Connected Worlds — Explicit Connected-Worlds Deletion Blocker | `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `HIGH` | `DEFERRED — OWNED` |
 | `QAN-BL-PROD-01` | Unbounded Per-Account Turn Admission and Foreground AI Spend (PR01-S02) | `PROD-SEC-02 — Turn Admission Concurrency & Cost Bound` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-02` | API Baseline Hardening: Rate Limiting, Trusted Proxy, Header Baseline (PR01-S01 / S-03 / S-04) | `PROD-SEC-01 — API Baseline Hardening` | `HIGH` | `CLOSED — TOMBSTONE` |
 | `QAN-BL-PROD-03` | Operational Readiness & Silent-Failure Visibility: Readiness Probe (PR01-S05), Privacy Deletion / Export Preparation / Confidence Re-evaluation Silent Failures (P-1 / P-5 / U-4), Stuck-Job Visibility | `PROD-OPS-01 — Operational Readiness & Silent-Failure Visibility` | `HIGH` | `CLOSED — TOMBSTONE` |
@@ -613,7 +613,8 @@ exception, too, is S5-02's. `QAN-BL-ACCT-01` is not absorbed and stays `OPEN —
 - **Why deferred:** the Product Owner explicitly left the exact Shared / Public / Connected Worlds deletion behaviour
   open (closure §8.5), and forbade inventing a remedy for foreign keys or retained derivatives inside W3-PDG-01. The
   proposed W3 tasks, which are not opened, cover the Personal world only (closure §9).
-- **Owner task:** `UNASSIGNED`
+- **Owner task:** `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` (re-owned 2026-10-17; see the
+  ACCT-DEL-01 CP1 note below; was `UNASSIGNED`)
 - **Severity:** `HIGH`. If this is reopened, it decides whether any Connected World may launch (closure §8.4 item 9),
   and it lands on the frozen CW2-08 §2 non-waivable deleted-content non-serving law.
 - **Reopen condition:** Architecture or the Product Owner opens a task to take any Connected World toward
@@ -632,7 +633,7 @@ exception, too, is S5-02's. `QAN-BL-ACCT-01` is not absorbed and stays `OPEN —
   the private object store; an owner's removal erases them (DELETE + HEAD, from database truth), but no account-level
   deletion reaches them yet. No production row or object can exist (CW2-08 closed). Owner, severity and status unchanged
   ([S6-06 record](e2e/QANDEEL_S6_06_IMPLEMENTATION_RECORD_v1.md) §8).
-- **Status:** `OPEN — UNASSIGNED`
+- **Status:** `DEFERRED — OWNED` (was `OPEN — UNASSIGNED` until the ACCT-DEL-01 re-owning, 2026-10-17)
 
 Admitted by the W3-PDG-01 Product Decision Closure under BG-06, as a canonical record's explicit deferral. This
 entry chooses no deletion mechanism, erasure exception or retention rule. Nothing here authorizes implementation
@@ -724,6 +725,25 @@ across the relevant worlds. No real Matching enrollment happens before the delet
   - the update of this item's index-row pin in `tests/sec-match-00-matching-direct-rpc-protection-contract.test.mjs`,
     made in the same change as the re-owning.
 - **Not implemented:** nothing.
+
+**Current-truth note (ACCT-DEL-01 CP1, 2026-10-17; the ACCT-DEL-01 pull request, not merged; effective from its
+merge).** The Product Owner confirmed the name and approved the ACCT-DEL-01 WP0 v1.1 design with P-1 … P-4. This item is
+re-owned to `ACCT-DEL-01` as `DEFERRED — OWNED`, and its index-row pin is updated in the same change, exactly as the note
+above required. The item's earlier "Current truth" line ("no account-deletion code exists") was already superseded by
+`0130` (Personal erasure, Connected Worlds `BLOCKED`); it is left as the record of its date.
+- **Implemented in CP1 (`0164`, not deployed):** one governed account erasure that removes an account's whole Matching /
+  Introductions footprint and runs the unchanged `0130` Personal erasure in the same transaction, or nothing. The
+  counterpart keeps their own words (a retained view), an ordinary END and an exact Matching lineage. A footprint the
+  erasure does not cover answers a truthful, recorded `BLOCKED` with its residue class, and nothing is touched; it is
+  re-armed with a fresh grace when a module covers its class
+  ([ACCT-DEL-01 record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md)).
+- **Still open, and this item stays open (P-1):** Shared `STANDARD` (post-SUCCESS Worlds included) and Public — future
+  owner `ACCT-DEL-02`; Replay — Stage 7. The coverage registry (`0164`) names every uncovered residue class and its owner,
+  and CI refuses a new relation that references the account without one. No Connected World other than Matching /
+  Introductions has a complete, proven account-deletion path; none is production-ready for users while its class is
+  uncovered (closure §8.4 item 9). Account deletion in QANDEEL as a whole is **not** closed.
+- **At CP2** (the same pull request): this item's narrowed disposition and its future owners are recorded, with
+  `QAN-BL-MATCH-01`'s `ACCT-DEL-01` dependency marked met.
 
 ### `QAN-BL-LANTERN-01` — Lantern Gateway Identity Moment v1 — Creative / Motion / Interaction Realization
 
@@ -3098,9 +3118,9 @@ credential security through `QAN-BL-SEC-01`, which T-14 left untouched.
 
 | Status | Count |
 | --- | ---: |
-| `DEFERRED — OWNED` | 34 |
+| `DEFERRED — OWNED` | 35 |
 | `VALIDATION — OPEN` | 4 |
-| `OPEN — UNASSIGNED` | 10 |
+| `OPEN — UNASSIGNED` | 9 |
 | `CLOSED — TOMBSTONE` | 24 |
 | **Total** | **72** |
 
@@ -3929,6 +3949,16 @@ before it.
   deletion or export footprint changes beyond CP1's dated notes.
 - **Latest index: 72 items; 34 / 4 / 10 / 24 by status, 40 / 30 / 2 by severity**, recounted mechanically from §4.
 
+**ACCT-DEL-01 CP1 (2026-10-17; the ACCT-DEL-01 pull request, not merged; effective from its merge).** Under the Product
+Owner's checkpoint rule ([ACCT-DEL-01 record](e2e/QANDEEL_ACCT_DEL_01_IMPLEMENTATION_RECORD_v1.md) §6). S6-06 merged as
+PR #344 (`4233c067`).
+- **Inherited (BG-05):** `QAN-BL-ACCT-01`, re-owned in this change from `OPEN — UNASSIGNED` to `DEFERRED — OWNED`
+  (owner `ACCT-DEL-01`), with its index-row pin; it stays open (P-1) and is dispositioned at CP2.
+- **Admitted:** none in CP1.
+- **Untouched:** every other item, owner, severity and status, including `QAN-BL-MATCH-01` (its dependency is recorded
+  as met at CP2), `QAN-BL-PROD-06` and `QAN-BL-PROD-08`.
+- **Latest index: 72 items; 35 / 4 / 9 / 24 by status, 40 / 30 / 2 by severity**, recounted mechanically from §4.
+
 ## 8. What is deliberately not in this backlog
 
 - **Current unresolved blockers.** By BG-01 they do not belong here at all.
@@ -4008,6 +4038,7 @@ Inherited after T-12 closure reconciliation:
 | `S6-03 — Matching Proposal Pipeline & Intelligence Prerequisites` | `QAN-BL-MATCH-05` (admitted by S6-02's closing change, 2026-10-15, at the Product Owner's D2 assignment; the name is the approved Stage 6 task map's). *S6-03 started 2026-10-15 (Task Contract v1.3; CW2-06B approved at CP1). Closing change (2026-10-15; the S6-03 pull request, not merged; effective from its merge):* `QAN-BL-MATCH-05` tombstoned; dated notes on `QAN-BL-MATCH-01`, `QAN-BL-ACCT-01` and `QAN-BL-PRIV-04`; nothing admitted (§7). S6-03 owns no open item |
 | `S6-05 — Mutual Match & Introduction World` | none — no item names it at kickoff (BG-05). *CP2 (2026-10-16; the S6-05 pull request, not merged; effective from its merge):* admitted `QAN-BL-MATCH-06` (owner `S6-07`, the Product Owner's R-4); nothing tombstoned or re-owned (§7). S6-05 owns no open item. *Closing change (CP5, 2026-10-16; the S6-05 pull request, not merged; effective from its merge):* nothing inherited, tombstoned or re-owned; `QAN-BL-MATCH-06` stays with `S6-07`; S6-05 owns no open item (§7) |
 | `S6-07 — Activity, Direct Entry and Final Integration` | `QAN-BL-PRIV-04` (admitted by the Stage 6 WP0 at the Product Owner's GATE-19 decision, 2026-10-13; the name is the Product Owner's approved Stage 6 task map, the assignment to it was WP0's, and the Product Owner confirmed it and the `HIGH` severity in the final decision addendum (D2), which also keeps S6-07 from becoming a cross-world export task; the task's scope beyond this item is set only by its own Task Contract); `QAN-BL-MATCH-01` (re-owned from `S6-01` by S6-01's closing change, 2026-10-14, effective from its merge, at the Product Owner's D1; mandatory dependency on `ACCT-DEL-01`; not tombstoned while the six `0149` commands stay closed); `QAN-BL-MATCH-06` (admitted by S6-05 at CP2, 2026-10-16, at the Product Owner's R-4: the runtime producer of the forward step) |
+| `ACCT-DEL-01 — Account Deletion Across Matching / Introductions` | `QAN-BL-ACCT-01` (re-owned from `UNASSIGNED` by ACCT-DEL-01 CP1, 2026-10-17, the Product Owner having confirmed the name and approved WP0 v1.1 with P-1 … P-4; effective from its merge; it stays open — Shared `STANDARD` and Public go to `ACCT-DEL-02` and Replay to Stage 7 at CP2, P-1) |
 | `LA-VIS-01 — Living Analysis graphics-only fidelity upgrade` | none — no item names it; `QAN-BL-VIS-01` observed and left `OPEN — UNASSIGNED` (not closed by LA-VIS-01); `QAN-BL-CW-03` left `DEFERRED — OWNED`, unchanged; none admitted |
 | `PROD-RETRY-01 — Data API 40001 Retry Hazard Closure` | `QAN-BL-PROD-06` — scope amended and resolved in the repository (migration `0150`); re-owned by its closing change to `HOSTED-DEPLOY-01` (not tombstoned: `0150` is not deployed); admitted `QAN-BL-PROD-07` |
 | `HOSTED-DEPLOY-01 — Hosted Database Catch-up Deployment & Data API Retry Gate` | `QAN-BL-PROD-06` — the hosted deployment gate; closes only on evidence read on the hosted project itself |
